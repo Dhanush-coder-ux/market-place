@@ -1,0 +1,114 @@
+import type React from "react";
+
+
+
+export type GradientButtonProps = {
+  children: React.ReactNode;
+  onClick?: () => void;
+  disabled?: boolean;
+  className?: string;
+  type?: "button" | "submit" | "reset";
+  icon?:React.ReactNode
+  variant?: "gradient" | "outline";
+};
+
+export interface InputProps {
+  value: string;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  placeholder?: string;
+  type?: string;
+  disabled?: boolean;
+  className?: string;
+  leftIcon?: React.ReactNode;  
+}
+
+
+export type InfoCardProps = {
+  value: number | string;
+  title: string;
+  subtitle?: string;
+  valueColor?: string;
+};
+
+export type SearchActionCardProps = {
+  searchValue: string;
+  onSearchChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  placeholder?: string;
+  buttonLabel: string;
+  buttonLink: string;
+};
+
+// for table type 
+export type TableColumn = {
+  key: string;
+  label: string;
+  className?: string;
+};
+
+export type TableProps = {
+  columns: TableColumn[];
+  data: Record<string, any>[];
+  rowKey?: string; // fallback: index
+  onRowClick?: (row: any) => void;
+  className?: string;
+};
+
+// for drawer
+export interface DrawerProps {
+  isOpen: boolean;
+  onClose: () => void;
+  title?: string;
+  children: React.ReactNode;
+}
+
+// for detail view 
+export interface DetailField {
+  icon?: React.ReactNode;
+  label: string;
+  value: string | number | React.ReactNode;
+}
+
+export interface DetailSection {
+  title: string;
+  fields: DetailField[];
+}
+
+export interface DetailViewProps {
+  title?: string;
+  subtitle?: string;
+  sections: DetailSection[];
+  onEdit?: () => void;
+  onDelete?: () => void;
+}
+
+// for search select reusable component 
+export interface ComboboxOption {
+  value: string
+  label: string
+}
+
+export interface ReusableComboboxProps {
+  options: ComboboxOption[]
+  value?: string
+  onChange: (value: string) => void
+  placeholder?: string
+  searchPlaceholder?: string
+  emptyMessage?: string
+  className?: string
+}
+// for seleect reusable 
+export interface SelectOption {
+  value: string
+  label: string
+  icon?: React.ReactNode // Optional icon from props
+}
+
+export interface ReusableSelectProps {
+  options: SelectOption[]
+  value?: string
+  onValueChange: (value: string) => void
+  placeholder?: string
+  label?: string
+  className?: string
+  error?: string
+}

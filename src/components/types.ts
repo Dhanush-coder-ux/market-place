@@ -1,10 +1,11 @@
 import type React from "react";
+import { ReactNode } from "react";
 
 
-export type TitleProps ={
-  title:string
-  subtitle:string
-  icon:React.ReactNode
+export interface TitleProps {
+  title: string;
+  subtitle?: string; 
+  icon?: ReactNode;   
 }
 
 export type GradientButtonProps = {

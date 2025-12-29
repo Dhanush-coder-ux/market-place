@@ -1,9 +1,9 @@
-import React, { useState } from "react";
 import { ReceiptText, User, CreditCard,  Download, Printer, CircleDot } from "lucide-react";
 import GradientButton from "@/components/ui/GradientButton";
+import { useState } from "react";
 
 const BillingDetailView = () => {
-  const [paymentType, setPaymentType] = useState("Online"); // Toggle state
+  const [paymentType, setPaymentType] = useState<"Online" | "Offline">("Online"); // Toggle state
 
   const billingInfo = {
     billNo: "BILL-10245",

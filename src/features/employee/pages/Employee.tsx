@@ -5,7 +5,7 @@ import Table from "@/components/common/Table"
 import { useState } from "react"
 import Drawer from "@/components/common/Drawer"
 import DetailView from "@/components/common/DetaileView"
-import { Link } from "react-router-dom"
+
 
 const Employee = () => {
   const [ Isopen, setIsOpen ] = useState(false);

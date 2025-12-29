@@ -65,8 +65,8 @@ const handleBarClick = (month:any) => {
           valueType: "Category",
           majorGridLines: { width: 0 },
           majorTickLines: { width: 0 },
-          labelStyle: { color: "#6b7280", fontWeight: 600 },
-          axisLine: { width: 0 },
+          labelStyle: { color: "#6b7280", fontWeight:"600" },
+          // axisLine: { width: 0 },
           interval: 1,
         }}
         primaryYAxis={{
@@ -76,7 +76,7 @@ const handleBarClick = (month:any) => {
           labelFormat: "₹{value}k",
           lineStyle: { width: 0 },
           majorTickLines: { width: 0 },
-          labelStyle: { color: "#9ca3af", fontWeight: 500 },
+          labelStyle: { color: "#9ca3af", fontWeight:"500" },
           majorGridLines: { color: "#f3f4f6", dashArray: "4,4" },
         }}
         chartArea={{ border: { width: 0 } }}

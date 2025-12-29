@@ -1,4 +1,4 @@
-import { Barcode, ChevronDown,FileText, Layers, Package, Plus, Tag, Upload } from "lucide-react";
+import { Barcode, FileText, Layers, Package, Tag, Upload } from "lucide-react";
 import Title from "../../../components/common/Title";
 import { Link } from "react-router-dom";
 import { BiRupee } from "react-icons/bi";
@@ -7,7 +7,6 @@ import { FormButton } from "../components/HelperFunctions";
 import { ReusableCombobox } from "@/components/ui/ReusableCombobox";
 import FormCard from "@/components/common/FormCard";
 import { ReusableSelect } from "@/components/ui/ReusableSelect";
-import { options } from "@/features/billing/components/BillingHeader";
 
 const InventoryForm = () => {
   const CATEGORIES = [
@@ -57,6 +56,7 @@ const InventoryForm = () => {
                 <div className="relative">
                  
                   <Input
+                  onChange={()=>("")}
                     type="text"
                     value="123"
                     placeholder="Enter item name..."
@@ -72,6 +72,8 @@ const InventoryForm = () => {
                 <div className="relative">
                  
                   <Input
+                   onChange={()=>("")}
+                   value=""
                     type="text"
                     placeholder="Enter item name..."
                     leftIcon={ <Tag className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors" size={20} />}
@@ -132,7 +134,7 @@ const InventoryForm = () => {
               <label className="text-[10px] font-black text-gray-400 uppercase">Current Stock</label>
               <div className="flex items-center gap-2">
                 
-                <Input leftIcon={<Layers size={18} className="text-gray-400"/>} type="number" value="0" className="w-full bg-transparent font-bold text-gray-700 outline-none" />
+                <Input  onChange={()=>("")} value="" leftIcon={<Layers size={18} className="text-gray-400"/>} type="number"  className="w-full bg-transparent font-bold text-gray-700 outline-none" />
               </div>
             </div>
 
@@ -140,7 +142,7 @@ const InventoryForm = () => {
             <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100 space-y-2">
               <label className="text-[10px] font-black text-gray-400 uppercase">Cost Price</label>
               <div className="flex items-center gap-1">
-                <Input leftIcon={<BiRupee size={18}/>} type="number" placeholder="0.00" className="w-full bg-transparent font-bold text-gray-700 outline-none" />
+                <Input  onChange={()=>("")} value="" leftIcon={<BiRupee size={18}/>} type="number" placeholder="0.00" className="w-full bg-transparent font-bold text-gray-700 outline-none" />
               </div>
             </div>
 
@@ -149,7 +151,7 @@ const InventoryForm = () => {
               <label className="text-[10px] font-black text-blue-100 uppercase">Selling Price</label>
               <div className="flex items-center gap-1 text-white">
                 <BiRupee size={18} className="text-blue-200" />
-                <Input  type="number" placeholder="0.00" className="w-full bg-transparent font-bold placeholder:text-blue-300 outline-none text-white" />
+                <Input  onChange={()=>("")} value=""  type="number" placeholder="0.00" className="w-full bg-transparent font-bold placeholder:text-blue-300 outline-none text-white" />
               </div>
             </div>
 

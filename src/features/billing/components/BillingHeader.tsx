@@ -118,9 +118,10 @@ const BillingHeader: React.FC<BillingHeaderProps> = ({ items,setIsOpen }) => {
 
         <GradientButton 
         type="submit"
-        
-        icon={<ScanBarcode size={30}/>}
-        />
+      
+        >
+          <ScanBarcode size={30}/>
+        </GradientButton>
 
         
       </div>

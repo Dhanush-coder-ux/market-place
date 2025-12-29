@@ -13,8 +13,10 @@
     "moduleDetection": "force",
     "noEmit": true,
     "jsx": "react-jsx",
+    
+    /* ADDED THIS LINE */
+    "skipLibCheck": true, 
 
-    /* ADD THESE TWO LINES BELOW */
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"]
@@ -22,6 +24,7 @@
 
     /* Linting */
     "strict": true,
+    /* OPTIONAL: Change these to false if you want to ignore the 'Unused' errors from your first message */
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true

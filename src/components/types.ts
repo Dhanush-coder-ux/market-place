@@ -1,6 +1,11 @@
 import type React from "react";
 
 
+export type TitleProps ={
+  title:string
+  subtitle:string
+  icon:React.ReactNode
+}
 
 export type GradientButtonProps = {
   children: React.ReactNode;

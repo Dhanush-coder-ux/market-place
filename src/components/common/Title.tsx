@@ -1,5 +1,7 @@
 import React from "react";
-import type { TitleProps } from "../../types/types";
+import { TitleProps } from "../types";
+
+
 
 
 

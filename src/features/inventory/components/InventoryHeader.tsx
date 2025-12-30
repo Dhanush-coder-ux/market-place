@@ -24,7 +24,7 @@ const InventoryHeader: React.FC<InventoryHeaderProps> = ({
       icon={Package}
       theme="blue"
     />
-    <div onClick={()=>setShowAlert(true)}>
+    
     <HeaderCard
       value={lowestStockValue}
       title={lowestStockLabel}
@@ -32,9 +32,7 @@ const InventoryHeader: React.FC<InventoryHeaderProps> = ({
       icon={PackageX}
       theme="red"
     />
-    </div>
  
-      
       <SearchActionCard
         searchValue={searchValue}
         onSearchChange={onSearchChange}

@@ -1,23 +1,29 @@
+import Loader from "@/components/common/Loader";
+import React, { Suspense } from "react";
 import { createBrowserRouter } from "react-router-dom";
-import MainLayout from "../components/layouts/MainLayout";
-import DashBoard from "../features/dashboard/pages/DashBoard";
-import Employee from "../features/employee/pages/Employee";
-import Inventory from "../features/inventory/pages/Inventory";
-import Order from "../features/order/pages/Order";
-import Profile from "../features/profile/pages/Profile";
-import Shop from "../features/shop/pages/Shop";
-import Login from "../features/auth/pages/Login";
-import Billing from "../features/billing/pages/Billing";
-import EmployeeForm from "../features/employee/pages/EmployeeForm";
-import InventoryForm from "../features/inventory/pages/InventoryForm";
-import ProfileForm from "../features/profile/pages/ProfileForm";
+const MainLayout      =   React.lazy(() => import ("../components/layouts/MainLayout"));
+const DashBoard       =   React.lazy(() => import ("../features/dashboard/pages/DashBoard"));
+const Employee        =   React.lazy(()=> import ("../features/employee/pages/Employee"));
+const Inventory       =   React.lazy(()=>  import ("../features/inventory/pages/Inventory"));
+const Order           =   React.lazy(() =>  import ("../features/order/pages/Order"));
+const Profile         =   React.lazy(()=>  import ("../features/profile/pages/Profile"));
+const Shop            =   React.lazy(()=>  import ("../features/shop/pages/Shop"));
+const Login           =   React.lazy(()=>  import ("../features/auth/pages/Login"));
+const Billing         =   React.lazy(()=>  import ("../features/billing/pages/Billing"));
+const EmployeeForm    =   React.lazy(()=>  import ("../features/employee/pages/EmployeeForm"));
+const InventoryForm   =   React.lazy(()=>  import ("../features/inventory/pages/InventoryForm"));
+const ProfileForm     =   React.lazy(()=>  import ("../features/profile/pages/ProfileForm"));
 
 
 export const router = createBrowserRouter([
     
     { 
         path: '/', 
-        element:<MainLayout/>,
+        element:(
+        <Suspense fallback={<Loader/>}>    
+        <MainLayout/>
+        </Suspense>
+        ),
         children:[
             { index:true, element:<DashBoard/> },
             { path:'/employee', element:<Employee/> },

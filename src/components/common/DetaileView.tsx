@@ -13,7 +13,7 @@ const DetailView: React.FC<DetailViewProps> = ({
   return (
     <div className="max-w-5xl mx-auto p-6 space-y-8 animate-in fade-in duration-500">
       
-      {/* --- HEADER SECTION --- */}
+      {/* --- header --- */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-gray-100 pb-6">
         <div>
           <h2 className="text-3xl font-bold text-gray-900 tracking-tight">{title}</h2>
@@ -43,7 +43,7 @@ const DetailView: React.FC<DetailViewProps> = ({
         </div>
       </div>
 
-      {/* --- CONTENT SECTIONS --- */}
+      {/* --- content --- */}
       <div className="grid grid-cols-1 gap-8">
         {sections.map((section, idx) => (
           <div key={idx} className="group">
@@ -60,12 +60,12 @@ const DetailView: React.FC<DetailViewProps> = ({
                   key={index}
                   className="relative overflow-hidden flex items-start gap-4 p-4 rounded-2xl bg-white border border-gray-100 shadow-sm hover:shadow-md hover:border-blue-100 transition-all group/card"
                 >
-                  {/* Subtle Background Accent */}
+                 
                   <div className="absolute top-0 right-0 p-1 opacity-0 group-hover/card:opacity-100 transition-opacity">
                     <ChevronRight size={14} className="text-blue-200" />
                   </div>
 
-                  {/* Icon Container */}
+                 
                   {field.icon && (
                     <div className="flex-shrink-0 flex items-center justify-center w-10 h-10 rounded-xl bg-blue-50 text-blue-600">
                       {field.icon}

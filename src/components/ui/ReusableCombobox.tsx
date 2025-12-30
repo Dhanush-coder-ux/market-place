@@ -55,7 +55,7 @@ export function ReusableCombobox({
       
       <PopoverContent 
         align="start"
-        side="right"
+       
         className="w-[--radix-popover-trigger-width] p-0 rounded-2xl shadow-2xl border-gray-100 overflow-hidden animate-in fade-in zoom-in-95 duration-200"
       >
         <Command className="rounded-2xl">

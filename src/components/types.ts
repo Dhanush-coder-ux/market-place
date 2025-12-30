@@ -54,7 +54,7 @@ export type TableColumn = {
 export type TableProps = {
   columns: TableColumn[];
   data: Record<string, any>[];
-  rowKey?: string; // fallback: index
+  rowKey?: string;
   onRowClick?: (row: any) => void;
   className?: string;
 };

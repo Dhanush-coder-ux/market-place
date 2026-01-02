@@ -14,14 +14,17 @@ const Inventory = () => {
     console.log("hello")
   }
   const columns = [
+  { key: "barcode", label: "BarCode" },
   { key: "name", label: "Name" },
-  { key: "age", label: "Age" },
-  { key: "email", label: "Email" },
+  { key: "price", label: "Price" },
+  { key: "stock", label: "Stock" },
 ];
 
 const data = [
-  { id: 1, name: "Dhanush", age: 21, email: "dhanush@gmail.com" },
-  { id: 2, name: "Zoya", age: 20, email: "zoya@gmail.com" },
+  { barcode: 1, name: "Dhanush", price: 21, stock: 2344},
+  { barcode: 2, name: "Zoya", price: 20, stock: 44553},
+  { barcode: 3, name: "Zoya", price: 20, stock:550 },
+  { barcode: 4, name: "Zoya", price: 20, stock: 44555 },
 ];
 const handleRowClick =(row:any) => {
   setSelectedItem(row);

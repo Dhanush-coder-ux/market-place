@@ -5,8 +5,9 @@ import type { HelperFunction } from "../types";
 export const FormButton: React.FC<HelperFunction> = ({ label, onClick }) => {
   return (
     <div className="pt-4">
-      <button
+   <button
         onClick={onClick}
+        type="submit"
         className="w-full group relative overflow-hidden bg-gray-900 text-white py-5 rounded-[20px] font-bold text-lg hover:bg-blue-600 transition-all duration-300 shadow-xl active:scale-[0.98]"
       >
         <span className="relative z-10 flex items-center justify-center gap-2">

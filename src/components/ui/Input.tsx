@@ -3,6 +3,7 @@ import type { InputProps } from "../types";
 
 const Input: React.FC<InputProps> = ({
   value,
+  name,
   onChange,
   placeholder = "",
   type = "text",
@@ -19,6 +20,7 @@ const Input: React.FC<InputProps> = ({
       )}
 
       <input
+      name={name}
         type={type}
         value={value}
         onChange={onChange}

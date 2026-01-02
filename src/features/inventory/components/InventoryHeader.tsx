@@ -50,4 +50,4 @@ const InventoryHeader: React.FC<InventoryHeaderProps> = ({
   );
 };
 
-export default InventoryHeader;
+export default InventoryHeader; 

@@ -38,6 +38,7 @@ const EmployeeForm = () => {
               Employee Name
             </label>
             <Input
+            name="name"
               placeholder="Enter employee name"
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -51,6 +52,7 @@ const EmployeeForm = () => {
               Email Address
             </label>
             <Input
+            name="email"
               type="email"
               placeholder="Enter email address"
               value={email}

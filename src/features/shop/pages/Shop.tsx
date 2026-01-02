@@ -1,4 +1,6 @@
 import { CircleFadingPlus, Store, ArrowRight } from "lucide-react";
+import StoreCard from "../components/StoreCard";
+
 
 const Shop = () => {
   return (
@@ -36,7 +38,7 @@ const Shop = () => {
           </p>
         </div>
 
-        {/* Grid Section */}
+      
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           
           {/* Create New Shop Card */}
@@ -56,7 +58,7 @@ const Shop = () => {
           </button>
 
           {/* existing Shop Card  */}
-          <div className="group relative flex flex-col p-8 bg-white border border-slate-100 rounded-3xl shadow-sm transition-all duration-300 hover:shadow-2xl hover:shadow-slate-200 hover:-translate-y-1">
+          {/* <div className="group relative flex flex-col p-8 bg-white border border-slate-100 rounded-3xl shadow-sm transition-all duration-300 hover:shadow-2xl hover:shadow-slate-200 hover:-translate-y-1">
             <div className="flex justify-between items-start mb-6">
               <div className="bg-slate-50 p-3 rounded-xl">
                 <Store className="text-slate-700" size={24} />
@@ -73,10 +75,12 @@ const Shop = () => {
                 <ArrowRight size={14} />
               </div>
             </div>
-          </div>
-
+          </div> */}
+        <StoreCard/>
         </div>
+      
       </div>
+       
     </div>
   );
 };

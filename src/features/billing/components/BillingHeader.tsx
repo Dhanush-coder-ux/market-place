@@ -89,6 +89,7 @@ const BillingHeader: React.FC<BillingHeaderProps> = ({ items,setIsOpen }) => {
       {/* PHONE INPUT */}
       <div className="flex flex-col w-[280px]">
         <Input
+        name=""
         type="tel"
         leftIcon={<Phone size={20} color="blue"/>}
         placeholder="Enter mobile number"

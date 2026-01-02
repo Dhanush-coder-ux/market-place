@@ -18,6 +18,7 @@ const SearchActionCard: React.FC<SearchActionCardProps> = ({
     <div className="card p-6 card-hover flex flex-col sm:flex-row gap-4 items-center justify-between w-full h-full">
     
       <Input
+      name=""
       value={searchValue}
       onChange={onSearchChange}
       placeholder={placeholder}

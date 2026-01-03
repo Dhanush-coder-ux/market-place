@@ -98,17 +98,6 @@ const BillingHeader: React.FC<BillingHeaderProps> = ({ items,setIsOpen }) => {
         />
       </div>
 
-      {/* ORDER STATUS */}
-      <div className="flex flex-col">
-        
-        <ReusableSelect
-        placeholder="Order Status"
-        options={options}
-        value={status}
-        onValueChange={setStatus}
-        />
-      </div>
-
       {/* BUTTONS */}
       <div className="flex gap-3">
         

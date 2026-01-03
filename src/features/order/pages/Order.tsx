@@ -10,6 +10,8 @@ const Order = () => {
   const [orderType, setOrderType] = useState("Offline");
   const [status, setStatus] = useState("COMPLETED");
   const [ isOpen, setIsOpen ] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>();
+
 
 const orderTypeOptions = [
   {
@@ -72,8 +74,8 @@ const orderDetailData = {
   ],
   subtotal: 3896,
   gstPercent: 18,
-  gstAmount: 3896 * 0.18,   // 701.28
-  grandTotal: 3896 + 3896 * 0.18, // 4597.28
+  gstAmount: 3896 * 0.18,  
+  grandTotal: 3896 + 3896 * 0.18, 
 };
 
 
@@ -85,7 +87,10 @@ const orderDetailData = {
         setStatus={setStatus}
         orderType={orderType}
         setOrderType={setOrderType}
-        orderTypeOptions={orderTypeOptions}/>
+        orderTypeOptions={orderTypeOptions}
+        selectedDate={selectedDate}
+        setSelectedDate={setSelectedDate}
+        />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 my-4">
       {ordersData.map((order) => (

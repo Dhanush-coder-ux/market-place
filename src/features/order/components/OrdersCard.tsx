@@ -43,6 +43,16 @@ const OrdersCard: React.FC<{
             >
               {order.orderType}
             </span>
+            <span
+              className={`text-xs font-semibold px-3 py-1 rounded-full ${
+                order.status === "COMPLETED"
+                  ? "bg-green-100 text-green-700"
+                  : order.status=== "PENDING"? "bg-orange-100 text-orange-400"
+                  : order.status === "CANCELLED" ? "bg-red-200 text-red-700" : ''
+              }`}
+            >
+              {order.status}
+            </span>
           </div>
 
           {/* Customer Info */}

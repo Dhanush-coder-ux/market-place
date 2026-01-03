@@ -16,15 +16,17 @@ const Inventory = () => {
   const columns = [
   { key: "barcode", label: "BarCode" },
   { key: "name", label: "Name" },
-  { key: "price", label: "Price" },
+  { key: "description", label: "Description" },
+  { key: "buyprice", label: "Buy Price" },
+  { key: "sellprice", label: "Sell Price" },
   { key: "stock", label: "Stock" },
 ];
 
 const data = [
-  { barcode: 1, name: "Dhanush", price: 21, stock: 2344},
-  { barcode: 2, name: "Zoya", price: 20, stock: 44553},
-  { barcode: 3, name: "Zoya", price: 20, stock:550 },
-  { barcode: 4, name: "Zoya", price: 20, stock: 44555 },
+  { barcode: 1, name: "Dhanush", description: "A product", buyprice: 21, sellprice: 25, stock: 2344 },
+  { barcode: 2, name: "Zoya", description: "Another product", buyprice: 20, sellprice: 24, stock: 44553},
+  { barcode: 3, name: "Zoya", description: "Yet another product", buyprice: 20, sellprice: 24, stock:550 },
+  { barcode: 4, name: "Zoya", description: "Yet another product", buyprice: 20, sellprice: 24, stock: 44555 },
 ];
 const handleRowClick =(row:any) => {
   setSelectedItem(row);

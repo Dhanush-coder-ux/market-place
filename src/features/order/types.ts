@@ -24,6 +24,7 @@ export type OrdersHeaderProps = {
   status: string;
   setStatus: React.Dispatch<React.SetStateAction<string>>;
 
-  selectedDate?: Date;
-  setSelectedDate: React.Dispatch<React.SetStateAction<Date | undefined>>;
+
+  setIsCalenderOpen:React.Dispatch<React.SetStateAction<boolean>>;
+  
 };

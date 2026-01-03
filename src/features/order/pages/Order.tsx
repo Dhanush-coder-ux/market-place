@@ -5,11 +5,13 @@ import OrdersCard from "../components/OrdersCard"
 import { useState } from "react"
 import Drawer from "@/components/common/Drawer"
 import OrderDetailView from "../components/OrdersDetailView"
+import OrderDateFilter from "../components/OrderDateFilter"
 
 const Order = () => {
   const [orderType, setOrderType] = useState("Offline");
   const [status, setStatus] = useState("COMPLETED");
   const [ isOpen, setIsOpen ] = useState(false);
+  const [  calenderOpen, setIsCalenderOpen ] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
 
 
@@ -88,8 +90,7 @@ const orderDetailData = {
         orderType={orderType}
         setOrderType={setOrderType}
         orderTypeOptions={orderTypeOptions}
-        selectedDate={selectedDate}
-        setSelectedDate={setSelectedDate}
+        setIsCalenderOpen={setIsCalenderOpen}
         />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 my-4">
@@ -102,8 +103,25 @@ const orderDetailData = {
       onClose={()=> setIsOpen(false)}
       title="Customer's Order Info"
       >
-        <OrderDetailView
+      <OrderDetailView
         order={orderDetailData}
+        />
+        {calenderOpen && 
+        <OrderDateFilter 
+        value={selectedDate}
+        onChange={setSelectedDate}
+        />
+        }
+      </Drawer>
+      {/*  Calender */}
+      <Drawer
+      isOpen={calenderOpen}
+      onClose={()=>setIsCalenderOpen(false)}
+      title="Filter Order By Date"
+      >
+         <OrderDateFilter 
+        value={selectedDate}
+        onChange={setSelectedDate}
         />
       </Drawer>
       

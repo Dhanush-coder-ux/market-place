@@ -4,7 +4,7 @@ import { options } from "@/features/billing/components/BillingHeader";
 import { OrdersHeaderProps } from "../types";
 import OrderDateFilter from "./OrderDateFilter";
 import GradientButton from "@/components/ui/GradientButton";
-import { Calendar as CalendarIcon, X } from "lucide-react";
+import { Calendar as CalendarIcon} from "lucide-react";
 import { useState } from "react";
 
 const OrdersHeader: React.FC<OrdersHeaderProps> = ({

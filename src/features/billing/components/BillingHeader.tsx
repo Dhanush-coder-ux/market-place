@@ -1,6 +1,6 @@
 import GradientButton from "@/components/ui/GradientButton";
 import Input from "@/components/ui/Input";
-import { ReusableSelect } from "@/components/ui/ReusableSelect";
+
 import { Check, Clock, Phone, ScanBarcode, XCircle } from "lucide-react";
 import React, { useState, useMemo } from "react";
 
@@ -22,7 +22,7 @@ export const options = [
 const BillingHeader: React.FC<BillingHeaderProps> = ({ items,setIsOpen }) => {
   const [includeGst, setIncludeGst] = useState(false);
   const [phone, setPhone] = useState("");
-  const [status, setStatus] = useState("COMPLETED");
+
 
   const GST_PERCENT = 18;
 

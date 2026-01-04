@@ -1,5 +1,4 @@
 import { CircleFadingPlus, Store, ArrowRight } from "lucide-react";
-import SamplePage from "../components/StoreCard";
 import StoreCard from "../components/StoreCard";
 
 

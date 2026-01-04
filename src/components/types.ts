@@ -119,3 +119,10 @@ export interface ReusableSelectProps {
   className?: string
   error?: string
 }
+export interface ImageUploadProps {
+  label?: string;
+  value?: File | null;
+  onChange: (file: File | null) => void;
+  maxSizeMB?: number;
+  accept?: string;
+}

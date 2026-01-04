@@ -1,48 +1,17 @@
 import { Link } from "react-router-dom";
 import Title from "../../../components/common/Title";
-import {  Upload, User, Mail, Phone, MapPin, Globe, FileText, UserCheck2 } from "lucide-react";
+import {   User, Mail, Phone, MapPin, Globe, FileText, UserCheck2 } from "lucide-react";
 import FormCard from "@/components/common/FormCard";
 import Input from "@/components/ui/Input";
 import { GradientButton } from "@/components/ui/GradientButton";
-import { useEffect, useRef, useState } from "react";
+import ImageUpload from "@/components/common/ImageUpload";
+import { useState } from "react";
 
 const ProfileForm = () => {
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
-
-  const [formData, setFormData] = useState<{
-    image: File | null;
-  }>({
-    image: null,
-  });
-
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
-
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (imagePreview) {
-      URL.revokeObjectURL(imagePreview);
-    }
-
-    const previewUrl = URL.createObjectURL(file);
-
-    setFormData((prev) => ({
-      ...prev,
-      image: file,
-    }));
-
-    setImagePreview(previewUrl);
-  };
-  useEffect(() => {
-  return () => {
-    if (imagePreview) {
-      URL.revokeObjectURL(imagePreview);
-    }
-  };
-}, [imagePreview]);
+    const [ image, setImage ] = useState<File | null>(null);
   return (
     <div className="pb-10">
-      {/* Header */}
+     
       <div className="flex items-center gap-2 mb-6">
         <Link to={'/profile'} viewTransition>
           <Title title="Profile" icon={<UserCheck2 size={30} />} />
@@ -54,52 +23,11 @@ const ProfileForm = () => {
         <FormCard>
         <div className="flex items-center justify-center">
           {/* Profile Image Upload */}
-                <div className="lg:w-1/3 flex flex-col items-center justify-start">
-              <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest mb-4">
-                Product Image
-              </label>
-
-              <div
-                className="relative w-full aspect-square max-w-[240px] group"
-                onClick={() => fileInputRef.current?.click()}
-              >
-                <div className="absolute inset-0 bg-blue-500/5 rounded-[30px] border-2 border-dashed border-blue-200 group-hover:border-blue-400 group-hover:bg-blue-500/10 transition-all flex items-center justify-center cursor-pointer overflow-hidden">
-
-                  {imagePreview ? (
-                    <>
-                      <img
-                        src={imagePreview}
-                        alt="Product Preview"
-                        className="w-full h-full object-cover rounded-[28px]"
-                      />
-                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex flex-col items-center justify-center text-white">
-                        <span className="text-sm font-bold">Change Image</span>
-                        <span className="text-[10px] opacity-80 truncate px-4">
-                          {formData.image?.name}
-                        </span>
-                      </div>
-                    </>
-                  ) : (
-                    <div className="flex flex-col items-center">
-                      <div className="p-4 bg-white rounded-2xl shadow-sm mb-3 group-hover:scale-110 transition-transform">
-                        <Upload className="text-blue-600" size={28} />
-                      </div>
-                      <span className="text-sm font-bold text-blue-600">Upload Image</span>
-                      <span className="text-[10px] text-gray-400 mt-1 uppercase tracking-tighter">
-                        PNG, JPG up to 10MB
-                      </span>
-                    </div>
-               )}
-                </div>
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  onChange={handleImageChange}
-                  accept="image/png, image/jpeg"
-                  className="hidden"
-                />
-              </div>
-            </div>
+            <ImageUpload 
+            label="Profile Image"
+            value={image}
+            onChange={setImage}
+            />
         </div>
 
        

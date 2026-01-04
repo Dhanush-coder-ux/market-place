@@ -1,9 +1,9 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import GradientButton from "./GradientButton";
 import type { SearchActionCardProps } from "../types";
 import Input from "./Input";
 import { Search } from "lucide-react";
+import { GradientButton } from "./GradientButton";
 
 
 

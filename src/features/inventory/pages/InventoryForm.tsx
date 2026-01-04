@@ -7,14 +7,14 @@ import { FormButton } from "../components/HelperFunctions";
 import { ReusableCombobox } from "@/components/ui/ReusableCombobox";
 import FormCard from "@/components/common/FormCard";
 import { ReusableSelect } from "@/components/ui/ReusableSelect";
-import { useState, useRef } from "react";
-import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { addItem, inventorySelectors } from "../InventorySlice";
+import { useState, useRef, useEffect } from "react";
+
 
 
 const InventoryForm = () => {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
     barcode: "",
@@ -33,10 +33,6 @@ const InventoryForm = () => {
     { value: "clothing", label: "Clothing" },
   ];
 
-  const dispatch = useAppDispatch();
-  const inventory =useAppSelector(inventorySelectors.selectAll)
-  console.log(inventory);
-  
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -47,29 +43,26 @@ const InventoryForm = () => {
   };
 
 
+const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const file = e.target.files?.[0];
+  if (!file) return;
+  if (imagePreview) {
+    URL.revokeObjectURL(imagePreview);
+  }
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setFormData(prev => ({ ...prev, image: e.target.files![0] }));
-    }
-  };
+  const previewUrl = URL.createObjectURL(file);
+
+  setFormData((prev) => ({
+    ...prev,
+    image: file,
+  }));
+
+  setImagePreview(previewUrl);
+};
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     console.log("Form Submitted:", formData);
-    dispatch(addItem({
-      id: Date.now().toString(),
-      barcode: formData.barcode,
-      name: formData.name,
-      description: formData.description,
-      currentStock: Number(formData.currentStock),
-      category: formData.category,
-      costPrice: Number(formData.costPrice),
-      sellingPrice: Number(formData.sellingPrice),
-      lowStockThreshold:0
-      // imageUrl: formData.image ? URL.createObjectURL(formData.image) : undefined,
-      
-    }))
       setFormData({
       barcode: "",
       name: "",
@@ -81,6 +74,14 @@ const InventoryForm = () => {
       image: null,
     });
   };
+
+  useEffect(() => {
+  return () => {
+    if (imagePreview) {
+      URL.revokeObjectURL(imagePreview);
+    }
+  };
+}, [imagePreview]);
 
   return (
     <div>
@@ -136,34 +137,49 @@ const InventoryForm = () => {
             </div>
 
             {/* Image Upload */}
-            <div className="lg:w-1/3 flex flex-col items-center justify-start">
-              <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest mb-4">Product Image</label>
-              <div 
+               <div className="lg:w-1/3 flex flex-col items-center justify-start">
+              <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest mb-4">
+                Product Image
+              </label>
+
+              <div
                 className="relative w-full aspect-square max-w-[240px] group"
-                onClick={() => fileInputRef.current?.click()} 
+                onClick={() => fileInputRef.current?.click()}
               >
-                <div className="absolute inset-0 bg-blue-500/5 rounded-[30px] border-2 border-dashed border-blue-200 group-hover:border-blue-400 group-hover:bg-blue-500/10 transition-all flex flex-col items-center justify-center cursor-pointer overflow-hidden">
-                  {formData.image ? (
-                     <div className="text-center">
-                        <span className="text-sm font-bold text-blue-600 truncate px-4">{formData.image.name}</span>
-                        <p className="text-[10px] text-gray-500">Click to change</p>
-                     </div>
-                  ) : (
+                <div className="absolute inset-0 bg-blue-500/5 rounded-[30px] border-2 border-dashed border-blue-200 group-hover:border-blue-400 group-hover:bg-blue-500/10 transition-all flex items-center justify-center cursor-pointer overflow-hidden">
+
+                  {imagePreview ? (
                     <>
+                      <img
+                        src={imagePreview}
+                        alt="Product Preview"
+                        className="w-full h-full object-cover rounded-[28px]"
+                      />
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex flex-col items-center justify-center text-white">
+                        <span className="text-sm font-bold">Change Image</span>
+                        <span className="text-[10px] opacity-80 truncate px-4">
+                          {formData.image?.name}
+                        </span>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="flex flex-col items-center">
                       <div className="p-4 bg-white rounded-2xl shadow-sm mb-3 group-hover:scale-110 transition-transform">
                         <Upload className="text-blue-600" size={28} />
                       </div>
                       <span className="text-sm font-bold text-blue-600">Upload Image</span>
-                      <span className="text-[10px] text-gray-400 mt-1 uppercase tracking-tighter">PNG, JPG up to 10MB</span>
-                    </>
-                  )}
+                      <span className="text-[10px] text-gray-400 mt-1 uppercase tracking-tighter">
+                        PNG, JPG up to 10MB
+                      </span>
+                    </div>
+               )}
                 </div>
-                <input 
-                  type="file" 
+                <input
+                  type="file"
                   ref={fileInputRef}
                   onChange={handleImageChange}
                   accept="image/png, image/jpeg"
-                  className="hidden" 
+                  className="hidden"
                 />
               </div>
             </div>

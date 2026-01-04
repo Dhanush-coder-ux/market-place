@@ -1,8 +1,8 @@
 import { ReceiptText, User, CreditCard,  Download, Printer, CircleDot } from "lucide-react";
-import GradientButton from "@/components/ui/GradientButton";
 import { useState } from "react";
 import { ReusableSelect } from "@/components/ui/ReusableSelect";
 import { options } from "./BillingHeader";
+import { GradientButton } from "@/components/ui/GradientButton";
 
 const BillingDetailView = () => {
   const [paymentType, setPaymentType] = useState<"Online" | "Offline">("Online"); // Toggle state
@@ -77,7 +77,7 @@ const BillingDetailView = () => {
       </div>
 
        <div className="flex items-center justify-center gap-4">
-        <GradientButton icon={ <Printer size={18} />}>
+        <GradientButton variant="outline" icon={ <Printer size={18} />}>
          
           Generate Invoice
         </GradientButton>

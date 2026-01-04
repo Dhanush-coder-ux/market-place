@@ -1,9 +1,9 @@
-import GradientButton from "@/components/ui/GradientButton";
 import { ReusableSelect } from "@/components/ui/ReusableSelect";
 import { options } from "@/features/billing/components/BillingHeader";
 import { Phone, User, IndianRupee, CircleDot, Printer } from "lucide-react";
 import React from "react";
 import { OrderCardType } from "../types";
+import { GradientButton } from "@/components/ui/GradientButton";
 
 
 const OrdersCard: React.FC<{

@@ -3,8 +3,43 @@ import Title from "../../../components/common/Title";
 import {  Upload, User, Mail, Phone, MapPin, Globe, FileText, UserCheck2 } from "lucide-react";
 import FormCard from "@/components/common/FormCard";
 import Input from "@/components/ui/Input";
+import { GradientButton } from "@/components/ui/GradientButton";
+import { useEffect, useRef, useState } from "react";
 
 const ProfileForm = () => {
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const [formData, setFormData] = useState<{
+    image: File | null;
+  }>({
+    image: null,
+  });
+
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (imagePreview) {
+      URL.revokeObjectURL(imagePreview);
+    }
+
+    const previewUrl = URL.createObjectURL(file);
+
+    setFormData((prev) => ({
+      ...prev,
+      image: file,
+    }));
+
+    setImagePreview(previewUrl);
+  };
+  useEffect(() => {
+  return () => {
+    if (imagePreview) {
+      URL.revokeObjectURL(imagePreview);
+    }
+  };
+}, [imagePreview]);
   return (
     <div className="pb-10">
       {/* Header */}
@@ -15,22 +50,57 @@ const ProfileForm = () => {
         <Title title="/ Profile Management" />
       </div>
 
-      {/* FORM */}
       <form className="max-w-4xl mx-auto">
         <FormCard>
-
+        <div className="flex items-center justify-center">
           {/* Profile Image Upload */}
-          <div className="flex flex-col items-center gap-3 pb-6 border-b border-gray-200 mb-6">
-            <div className="w-28 h-28 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden border">
-              <User size={40} className="text-gray-400" />
-            </div>
+                <div className="lg:w-1/3 flex flex-col items-center justify-start">
+              <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest mb-4">
+                Product Image
+              </label>
 
-            <label className="cursor-pointer px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 flex items-center gap-2">
-              <Upload size={16} />
-              Upload Profile Photo
-              <input type="file" className="hidden" />
-            </label>
-          </div>
+              <div
+                className="relative w-full aspect-square max-w-[240px] group"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <div className="absolute inset-0 bg-blue-500/5 rounded-[30px] border-2 border-dashed border-blue-200 group-hover:border-blue-400 group-hover:bg-blue-500/10 transition-all flex items-center justify-center cursor-pointer overflow-hidden">
+
+                  {imagePreview ? (
+                    <>
+                      <img
+                        src={imagePreview}
+                        alt="Product Preview"
+                        className="w-full h-full object-cover rounded-[28px]"
+                      />
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex flex-col items-center justify-center text-white">
+                        <span className="text-sm font-bold">Change Image</span>
+                        <span className="text-[10px] opacity-80 truncate px-4">
+                          {formData.image?.name}
+                        </span>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="flex flex-col items-center">
+                      <div className="p-4 bg-white rounded-2xl shadow-sm mb-3 group-hover:scale-110 transition-transform">
+                        <Upload className="text-blue-600" size={28} />
+                      </div>
+                      <span className="text-sm font-bold text-blue-600">Upload Image</span>
+                      <span className="text-[10px] text-gray-400 mt-1 uppercase tracking-tighter">
+                        PNG, JPG up to 10MB
+                      </span>
+                    </div>
+               )}
+                </div>
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleImageChange}
+                  accept="image/png, image/jpeg"
+                  className="hidden"
+                />
+              </div>
+            </div>
+        </div>
 
        
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -127,19 +197,19 @@ const ProfileForm = () => {
 
           {/* BUTTONS */}
           <div className="flex justify-end gap-3 mt-8">
-            <button
+            <GradientButton
               type="button"
-              className="px-5 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 text-sm"
+              variant="outline"
             >
               Cancel
-            </button>
-
-            <button
-              type="submit"
-              className="px-5 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 text-sm shadow-sm"
+            </GradientButton>
+            <GradientButton
+              type="button"
             >
               Save Changes
-            </button>
+            </GradientButton>
+
+          
           </div>
 
         </FormCard>

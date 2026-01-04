@@ -1,4 +1,5 @@
-import GradientButton from "@/components/ui/GradientButton";
+
+import { GradientButton } from "@/components/ui/GradientButton";
 import Input from "@/components/ui/Input";
 
 import { Check, Clock, Phone, ScanBarcode, XCircle } from "lucide-react";
@@ -109,6 +110,7 @@ const BillingHeader: React.FC<BillingHeaderProps> = ({ items,setIsOpen }) => {
 
         <GradientButton 
         type="submit"
+        variant="outline"
       
         >
           <ScanBarcode size={30}/>

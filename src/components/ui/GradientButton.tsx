@@ -1,38 +1,24 @@
-import React from "react";
-import type { GradientButtonProps } from "../types";
+import React from 'react';
 
-const GradientButton: React.FC<GradientButtonProps> = ({
-  children,
-  onClick,
-  disabled = false,
-  className = "",
-  type = "button",
-  icon,
-  variant = "gradient", 
-}) => {
-  const baseStyles = "inline-flex items-center justify-center gap-2 rounded-xl transition-all font-medium active:scale-95";
+interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  variant?: 'primary' | 'outline';
+  children: React.ReactNode;
+  icon?: React.ReactNode;
+}
 
-  const gradientStyles = "btn-gradient-blue text-white px-4 py-2.5 shadow-sm";
-
-  const outlineStyles =
-    "px-4 py-2.5 bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-blue-300 hover:text-blue-600 shadow-sm";
+export  const GradientButton: React.FC<ButtonProps> = ({ variant = 'primary', children, icon, className, ...props }) => {
+  const baseStyles = "px-6 py-3 rounded-lg font-medium transition-all duration-300 transform hover:scale-105 cursor-pointer";
+  
+  
+  const variants = {
+    primary: "flex bg-gradient-to-r from-blue-600 to-blue-400 text-white shadow-lg hover:shadow-blue-500/30 ",
+    outline: "flex bg-transparent border-1 border-blue-400 text-[#1b68cf]"
+  };
 
   return (
-    <button
-      type={type}
-      disabled={disabled}
-      onClick={onClick}
-      className={`
-        ${baseStyles}
-        ${variant === "gradient" ? gradientStyles : outlineStyles}
-        ${disabled ? "opacity-50 cursor-not-allowed" : ""}
-        ${className}
-      `}
-    >
-      {icon}
+    <button  className={`${baseStyles} ${variants[variant]} ${className || ''}`} {...props}>
+      {icon && <span className="mr-2 flex items-center">{icon}</span>}
       {children}
     </button>
   );
 };
-
-export default GradientButton;

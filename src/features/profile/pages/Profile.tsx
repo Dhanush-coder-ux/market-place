@@ -6,6 +6,7 @@ import {
   UserCheck2,
   LogOut
 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 
 
 const Profile = () => {
@@ -84,13 +85,10 @@ const Profile = () => {
 
           {/* Toggle */}
           <div className="flex gap-2">
-            <button className="flex items-center gap-2 text-xs">
-              <div className="w-10 h-5 flex items-center rounded-full p-0.5 bg-gray-300 justify-start">
-                <div className="w-4 h-4 bg-white rounded-full shadow-sm"></div>
-              </div>
-            </button>
-
-            <h1>Show shop on online</h1>
+              <Switch  id="show-on-app"/>
+              <label htmlFor="show-on-app" className="text-sm font-medium text-gray-700">
+                Show On App
+              </label>
           </div>
 
           <div className="border-t border-gray-200 my-4"></div>

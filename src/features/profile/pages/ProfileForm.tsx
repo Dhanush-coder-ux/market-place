@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import Title from "../../../components/common/Title";
-import {   User, Mail, Phone, MapPin, Globe, FileText, UserCheck2 } from "lucide-react";
+import { User, Mail, Phone, MapPin, Globe, FileText, UserCheck2 } from "lucide-react";
 import FormCard from "@/components/common/FormCard";
 import Input from "@/components/ui/Input";
 import { GradientButton } from "@/components/ui/GradientButton";
@@ -8,10 +8,10 @@ import ImageUpload from "@/components/common/ImageUpload";
 import { useState } from "react";
 
 const ProfileForm = () => {
-    const [ image, setImage ] = useState<File | null>(null);
+  const [image, setImage] = useState<File | null>(null);
   return (
     <div className="pb-10">
-     
+
       <div className="flex items-center gap-2 mb-6">
         <Link to={'/profile'} viewTransition>
           <Title title="Profile" icon={<UserCheck2 size={30} />} />
@@ -21,16 +21,16 @@ const ProfileForm = () => {
 
       <form className="max-w-4xl mx-auto">
         <FormCard>
-        <div className="flex items-center justify-center">
-          {/* Profile Image Upload */}
-            <ImageUpload 
-            label="Profile Image"
-            value={image}
-            onChange={setImage}
+          <div className="flex items-center justify-center">
+            {/* Profile Image Upload */}
+            <ImageUpload
+              label="Profile Image"
+              value={image}
+              onChange={setImage}
             />
-        </div>
+          </div>
 
-       
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
 
             {/* Name */}
@@ -38,10 +38,10 @@ const ProfileForm = () => {
               <label className="text-sm font-medium text-gray-700 flex items-center gap-1 mb-1">
                 <User size={16} /> Full Name
               </label>
-              
+
               <Input
                 value={""}
-                onChange={()=>("")}
+                onChange={() => ("")}
                 name=""
                 type="text"
                 placeholder="Enter your full name"
@@ -56,7 +56,7 @@ const ProfileForm = () => {
               </label>
               <Input
                 value={""}
-                onChange={()=>("")}
+                onChange={() => ("")}
                 name=""
                 type="email"
                 placeholder="Email address"
@@ -71,7 +71,7 @@ const ProfileForm = () => {
               </label>
               <Input
                 value={""}
-                onChange={()=>("")}
+                onChange={() => ("")}
                 name=""
                 type="text"
                 placeholder="Phone number"
@@ -86,7 +86,7 @@ const ProfileForm = () => {
               </label>
               <Input
                 value={""}
-                onChange={()=>("")}
+                onChange={() => ("")}
                 name=""
                 type="text"
                 placeholder="Website link"
@@ -99,9 +99,9 @@ const ProfileForm = () => {
               <label className="text-sm font-medium text-gray-700 flex items-center gap-1 mb-1">
                 <MapPin size={16} /> Address
               </label>
-                <Input
+              <Input
                 value={""}
-                onChange={()=>("")}
+                onChange={() => ("")}
                 name=""
                 type="text"
                 placeholder="House No, Street, Area"
@@ -137,7 +137,7 @@ const ProfileForm = () => {
               Save Changes
             </GradientButton>
 
-          
+
           </div>
 
         </FormCard>

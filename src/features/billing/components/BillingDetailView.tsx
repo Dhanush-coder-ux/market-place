@@ -3,9 +3,10 @@ import { useState } from "react";
 import { ReusableSelect } from "@/components/ui/ReusableSelect";
 import { options } from "./BillingHeader";
 import { GradientButton } from "@/components/ui/GradientButton";
+import { InfoCard } from "./InfoCard";
 
 const BillingDetailView = () => {
-  const [paymentType, setPaymentType] = useState<"Online" | "Offline">("Online"); // Toggle state
+  const [paymentType, setPaymentType] = useState<"Online" | "Offline">("Online"); 
   const [status, setStatus] = useState("COMPLETED");
 
   const billingInfo = {
@@ -43,6 +44,7 @@ const BillingDetailView = () => {
 
         <div>
               <ReusableSelect
+              
                 placeholder="Order Status"
                 options={options}
                 value={status}
@@ -87,53 +89,61 @@ const BillingDetailView = () => {
         </GradientButton>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        
-        {/* Bill Info */}
-        <div className="relative group p-6 bg-white rounded-[24px] shadow-sm border border-gray-100 hover:shadow-md transition-all">
-          <div className="absolute top-6 right-6 p-2 bg-blue-50 rounded-lg text-blue-500">
-            <ReceiptText size={20} />
-          </div>
-          <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-4">Billing Info</h3>
-          <div className="space-y-3">
-            <div className="flex justify-between items-center text-sm">
-              <span className="text-gray-500">Bill Number</span>
-              <span className="font-bold text-gray-800">{billingInfo.billNo}</span>
-            </div>
-            <div className="flex justify-between items-center text-sm">
-              <span className="text-gray-500">Status</span>
-               <span className={`px-3 py-1 bg-green-50 ${status==="COMPLETED" ? "text-green-600" : status==="PENDING" ? "text-orange-500" : status==="CANCELLED" ?  "text-red-600" : ''} rounded-full text-[10px] font-black uppercase`}>
-                {status}
-              </span>
-            </div>
-          </div>
-        </div>
+    
+    {/* 1. Bill Info Card */}
+    <InfoCard
+      title="Billing Info"
+      icon={<ReceiptText size={20} />}
+      iconClassName="bg-blue-50 text-blue-500"
+    >
+      <div className="flex justify-between items-center text-sm">
+        <span className="text-gray-500">Bill Number</span>
+        <span className="font-bold text-gray-800">{billingInfo.billNo}</span>
+      </div>
+      <div className="flex justify-between items-center text-sm">
+        <span className="text-gray-500">Status</span>
+        <span
+          className={`px-3 py-1 rounded-full text-[10px] font-black uppercase ${
+            status === "COMPLETED" ? "bg-green-50 text-green-600" : 
+            status === "PENDING" ? "bg-orange-50 text-orange-500" : 
+            status === "CANCELLED" ? "bg-red-50 text-red-600" : ""
+          }`}
+        >
+          {status}
+        </span>
+      </div>
+    </InfoCard>
 
-        {/* Customer */}
-        <div className="relative group p-6 bg-white rounded-[24px] shadow-sm border border-gray-100 hover:shadow-md transition-all">
-          <div className="absolute top-6 right-6 p-2 bg-purple-50 rounded-lg text-purple-500">
-            <User size={20} />
-          </div>
-          <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-4">Customer</h3>
-          <div className="space-y-3">
-            <div className="flex justify-between items-center text-sm font-bold text-gray-800">
-              {billingInfo.customerName}
-            </div>
-            <div className="text-xs text-gray-500">{billingInfo.phone}</div>
-          </div>
+    {/* 2. Customer Card */}
+    <InfoCard
+      title="Customer"
+      icon={<User size={20} />}
+      iconClassName="bg-purple-50 text-purple-500"
+    >
+      <div className="flex flex-col gap-1">
+        <div className="text-sm font-bold text-gray-800">
+          {billingInfo.customerName}
         </div>
+        <div className="text-xs text-gray-500">{billingInfo.phone}</div>
+      </div>
+    </InfoCard>
 
-        {/* Final Amount */}
-        <div className="relative group p-6 bg-gray-900 rounded-[24px] shadow-xl text-white">
-          <div className="absolute top-6 right-6 p-2 bg-white/10 rounded-lg text-white">
-            <CreditCard size={20} />
-          </div>
-          <h3 className="text-xs font-black text-white/40 uppercase tracking-widest mb-4">Amount Due</h3>
-          <div className="space-y-1">
-            <div className="text-3xl font-black italic">₹{totalAmt.toLocaleString()}</div>
-            <div className="text-[10px] text-white/50 tracking-tight">Includes ₹{gstAmt.toFixed(2)} GST ({billingInfo.gstPercent}%)</div>
-          </div>
+    {/* 3. Final Amount Card (Dark Variant) */}
+    <InfoCard
+      title="Amount Due"
+      variant="default"
+      icon={<CreditCard size={20} />}
+    >
+      <div className="space-y-1">
+        <div className="text-3xl font-black italic">
+            ₹{totalAmt.toLocaleString()}
+        </div>
+        <div className="text-[10px] text-black tracking-tight">
+            Includes ₹{gstAmt.toFixed(2)} GST ({billingInfo.gstPercent}%)
         </div>
       </div>
+    </InfoCard>
+    </div>
 
 
       <div className="bg-white rounded-[24px] shadow-sm border border-gray-100 overflow-hidden">
@@ -193,6 +203,7 @@ const BillingDetailView = () => {
      
 
     </div>
+    
   );
 };
 

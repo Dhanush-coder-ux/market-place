@@ -8,7 +8,6 @@ export type InventoryInfoCardProps = {
 export type InventoryHeaderProps = {
   totalCount: number;
   lowestStockValue: number;
-  lowestStockLabel: string;
   searchValue: string;
   onSearchChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
 };

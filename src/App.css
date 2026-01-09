@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Elms+Sans:ital,wght@0,100..900;1,100..900&family=Roboto+Mono:ital,wght@0,100..700;1,100..700&display=swap');
 @import "tailwindcss";
 @import "tw-animate-css";
 
@@ -242,6 +243,11 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background  text-foreground  font-sans;
   }
+  @theme {
+  --font-sans: "Elms Sans", system-ui, sans-serif;
+  --font-mono: "Roboto Mono", monospace;
+}
+
 }

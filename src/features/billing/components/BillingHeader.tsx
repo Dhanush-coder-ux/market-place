@@ -2,7 +2,7 @@
 import { GradientButton } from "@/components/ui/GradientButton";
 import Input from "@/components/ui/Input";
 
-import { Check, Clock, Phone, ScanBarcode, XCircle } from "lucide-react";
+import { Check, Clock, Phone, ScanBarcode, User, XCircle } from "lucide-react";
 import React, { useState, useMemo } from "react";
 
 interface BillingHeaderProps {
@@ -88,7 +88,15 @@ const BillingHeader: React.FC<BillingHeaderProps> = ({ items,setIsOpen }) => {
       <div className="w-[1px] h-16 bg-blue-300 hidden md:block"></div>
 
       {/* PHONE INPUT */}
-      <div className="flex flex-col w-[280px]">
+      <div className="flex space-y-4 flex-col w-[280px]">
+        <Input
+        name=""
+        type="name"
+        leftIcon={<User size={20} color="blue"/>}
+        placeholder="Enter Customer name"
+        value={phone}
+        onChange={(e)=> setPhone(e.target.value)}
+        />
         <Input
         name=""
         type="tel"

@@ -13,7 +13,7 @@ const THEMES = {
     iconBg: "bg-red-50",
     iconColor: "text-red-500",
     valueColor: "text-red-600",
-    gradient: "from-blue-500 to-cyan-400",
+    gradient: "from-red-500 to-red-400",
   },
   yellow: {
     iconBg: "bg-yellow-50",

@@ -1,5 +1,4 @@
-import { Layers, TicketPlus, Users, Users2 } from "lucide-react"
-import Title from "../../../components/common/Title"
+import { Layers, TicketPlus, Users2 } from "lucide-react"
 import EmployeeHeader from "../components/EmployeeHeader"
 import Table from "@/components/common/Table"
 import { useState } from "react"
@@ -10,7 +9,9 @@ import DetailView from "@/components/common/DetaileView"
 const Employee = () => {
   const [ Isopen, setIsOpen ] = useState(false);
   const [ selectedItem, setSelectedItem ] = useState<any>(null);
+    const [selectedRows, setSelectedRows] = useState<any[]>([]); // Stores Barcodes
    const columns = [
+    {key:"employeeId",label:"Employee Id"},
    {key:"Role",label:'Role'}, 
   { key: "name", label: "Name" },
   { key: "age", label: "Age" },
@@ -20,8 +21,8 @@ const Employee = () => {
 ];
 
 const data = [
-  {id:1, Role: "Admin", name: "Dhanush", age: 21, email: "dhanush@gmail.com", isAccepted:"not accepted"},
-  {id:2, Role: "Employee", name: "Zoya", age: 20, email: "zoya@gmail.com",isAccepted:"accepted" },
+  {employeeId:1, Role: "Admin", name: "Dhanush", age: 21, email: "dhanush@gmail.com", isAccepted:"not accepted"},
+  {employeeId:2, Role: "Employee", name: "Zoya", age: 20, email: "zoya@gmail.com",isAccepted:"accepted" },
 ];
 const handleRowClick =(row:any) => {
     setSelectedItem(row)
@@ -29,8 +30,6 @@ const handleRowClick =(row:any) => {
 }
   return (
     <div>
-       
-      <Title icon={<Users size={30}/>} title="Employees" subtitle="Manage your employee information and details" />  
 
       <EmployeeHeader
       accepted={10}
@@ -42,6 +41,9 @@ const handleRowClick =(row:any) => {
         columns={columns}
         data={data}
         onRowClick={(row)=>handleRowClick(row)}
+        selectedIds={selectedRows}
+        onSelectionChange={setSelectedRows}
+        rowKey="employeeId"
       />
       <Drawer
       isOpen={Isopen}
@@ -78,7 +80,7 @@ const handleRowClick =(row:any) => {
             },
             {
               icon: <TicketPlus size={20} />,
-              label: "Price",
+              label: "Status",
               value: selectedItem.isAccepted,
             },
           ],

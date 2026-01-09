@@ -1,14 +1,11 @@
-import { Barcode, FileText, Layers, Package, Tag} from "lucide-react";
-import Title from "../../../components/common/Title";
-import { Link } from "react-router-dom";
+import {  FileText, Layers, Package, Tag} from "lucide-react";
 import { BiRupee } from "react-icons/bi";
 import Input from "../../../components/ui/Input";
-import { FormButton } from "../components/HelperFunctions";
 import { ReusableCombobox } from "@/components/ui/ReusableCombobox";
-import FormCard from "@/components/common/FormCard";
 import { ReusableSelect } from "@/components/ui/ReusableSelect";
 import ImageUpload from "@/components/common/ImageUpload";
 import { useState } from "react";
+import { GradientButton } from "@/components/ui/GradientButton";
 
 
 
@@ -58,15 +55,10 @@ const InventoryForm = () => {
 
   return (
     <div>
-      <div className="flex items-center gap-2 mb-6">
-        <Link to={'/inventory'} viewTransition>
-          <Title title="Inventory" icon={<Package size={30} />} />
-        </Link>
-        <Title title="/ Inventory Management" />
-      </div>
+  
 
       <form onSubmit={handleSubmit}>
-        <FormCard>
+     
        
           <div className="flex flex-col lg:flex-row gap-10">
             <div className="flex-1 space-y-6">
@@ -81,7 +73,7 @@ const InventoryForm = () => {
               <div className="group space-y-2">
                 <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest ml-1">Barcode / SKU</label>
                 <div className="relative">
-                  <Barcode className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors z-10" size={20} />
+                
                   <ReusableCombobox
                     options={CATEGORIES} 
                     value={formData.barcode}
@@ -199,11 +191,13 @@ const InventoryForm = () => {
 
           </div>
 
-          <div className="mt-8">
-            <FormButton label="Save Inventory"  />
+          <div className=" flex justify-end gap-4 mt-10">
+            <GradientButton variant="outline">cancel</GradientButton>
+            <GradientButton>save</GradientButton>
+            <GradientButton>save & add more</GradientButton>
           </div>
           
-        </FormCard>
+     
       </form>
     </div>
   );

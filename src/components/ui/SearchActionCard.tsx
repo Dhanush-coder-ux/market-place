@@ -1,35 +1,68 @@
 import React from "react";
-import { Link } from "react-router-dom";
 import type { SearchActionCardProps } from "../types";
 import Input from "./Input";
-import { Search } from "lucide-react";
-import { GradientButton } from "./GradientButton";
-
+import { Search, Package, PackageX, AlertTriangle} from "lucide-react"; 
+import { ReusableSelect } from "./ReusableSelect";
 
 
 const SearchActionCard: React.FC<SearchActionCardProps> = ({
   searchValue,
   onSearchChange,
-  placeholder = "Search...",
-  buttonLabel,
-  buttonLink,
+  placeholder = "Search inventory",
+ 
 }) => {
-  return (
-    <div className="card p-6 card-hover flex flex-col sm:flex-row gap-4 items-center justify-between w-full h-full">
+ const InvetoryOption = [
     
-      <Input
-      name=""
-      value={searchValue}
-      onChange={onSearchChange}
-      placeholder={placeholder}
-      leftIcon={<Search size={20} color="blue"/>}
-      
-      />
-      <Link to={buttonLink} className="w-full sm:w-auto">
-       <GradientButton>
-          {buttonLabel}
-       </GradientButton>
-      </Link>
+    { label: "hightstock", value: "HIGHTSTOCK", icon: <Package size={16} color="green" /> },
+    { label: "lowstock", value: "LOWSTOCK", icon: <PackageX size={16} color="red" />   },
+    { label: "outofstock", value: "OUTOFSTOCK", icon: <AlertTriangle size={16} color="orange" /> },
+]
+//    const EmployeeStatus = [
+    
+//     { label: "accepted", value: "HIGHTSTOCK", icon: <UserCircle2 size={16} color="green" /> },
+//     { label: "not accepted", value: "LOWSTOCK", icon: <UserX size={16} color="red" />   },
+  
+// ]
+  return (
+    <div className="flex flex-col gap-3 w-full">
+    
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 w-full">
+        
+      {/* left side */}
+        <div className="w-full sm:flex-1">
+          <Input
+            name="search"
+            value={searchValue}
+            onChange={onSearchChange}
+            placeholder={placeholder}
+            leftIcon={<Search size={18} className="text-gray-400" />} 
+            className="w-full bg-white"
+          />
+        </div>
+  {/* right side */}
+        <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
+          
+          <button 
+            className="text-sm font-medium text-blue-600 hover:text-blue-700 whitespace-nowrap px-1"
+            onClick={() => console.log("Clear all filters")}
+          >
+            Clear all
+          </button>
+
+          <div className="relative">
+           
+             <div className="relative">
+                <ReusableSelect
+                    onValueChange={() => ""}
+                    options={InvetoryOption}
+                   placeholder="Filter"
+                />
+             </div>
+          </div>
+          
+        </div>
+      </div>
+   
     </div>
   );
 };

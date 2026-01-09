@@ -19,7 +19,7 @@ const Shop = () => {
           <h1 className="text-4xl md:text-5xl text-slate-900 font-extrabold tracking-tight mb-4">
             Choose your
             <span className="relative inline-block text-blue-600 ml-3">
-              Digital Store
+              Existing Store
               <svg
                 className="absolute -bottom-4 left-0 w-full h-4 text-blue-500"
                 viewBox="0 0 100 10"

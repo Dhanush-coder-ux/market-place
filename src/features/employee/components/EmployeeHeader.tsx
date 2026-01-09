@@ -1,8 +1,12 @@
-import React from "react"
+import React, { useState } from "react"
 import { EmployeeHeaderProps } from "../types"
 import SearchActionCard from "@/components/ui/SearchActionCard"
 import HeaderCard from "@/components/common/HeaderCard"
-import { PersonStanding, UserX } from "lucide-react"
+import {  PersonStanding, UserCircle2, UserX } from "lucide-react"
+import Title from "@/components/common/Title"
+import { GradientButton } from "@/components/ui/GradientButton"
+import { FloatingFormCard } from "@/components/common/FloatingFormCard"
+import EmployeeForm from "../pages/EmployeeForm"
 
 
 const EmployeeHeader:React.FC<EmployeeHeaderProps> = ({
@@ -11,7 +15,21 @@ const EmployeeHeader:React.FC<EmployeeHeaderProps> = ({
     searchValue,
     onSearchChange
 }) => {
+
+  const [modelShow, SetIsModelShow ] = useState(false);
   return (
+    <div className="my-4">
+         <div className="flex justify-between my-4"> 
+      <Title title="Employee" icon={<UserCircle2 size={30}/>}/>
+      <GradientButton
+      variant="outline"
+      type="button"
+      onClick={()=>SetIsModelShow(true)}
+      >
+        {"+ Add Employee"}
+      </GradientButton>
+      </div>
+   
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 mb-10">
   
       <HeaderCard
@@ -29,14 +47,22 @@ const EmployeeHeader:React.FC<EmployeeHeaderProps> = ({
       icon={UserX}
       />
     
-      <SearchActionCard
+  
+    </div>
+        <SearchActionCard
       searchValue={searchValue}
       onSearchChange={onSearchChange}
       placeholder="Search Employees"
-      buttonLabel="+ New"
-      buttonLink="/employee/add"
       />
-    </div>
+      <FloatingFormCard
+        isOpen={modelShow}
+        onClose={() => SetIsModelShow(false)}
+        title="Add New Employee"
+        maxWidth="max-w-4xl"
+      >
+        <EmployeeForm/>
+      </FloatingFormCard>
+     </div>
   )
 }
 

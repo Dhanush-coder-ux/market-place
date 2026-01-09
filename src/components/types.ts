@@ -41,8 +41,8 @@ export type SearchActionCardProps = {
   searchValue: string;
   onSearchChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   placeholder?: string;
-  buttonLabel: string;
-  buttonLink: string;
+  FilterOption?: string;
+
 };
 
 // for table type 

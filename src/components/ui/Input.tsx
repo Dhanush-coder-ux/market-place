@@ -26,7 +26,7 @@ const Input: React.FC<InputProps> = ({
         onChange={onChange}
         placeholder={placeholder}
         disabled={disabled}
-        className={`w-full px-4 py-3 rounded-xl border border-gray-300 
+        className={`w-full px-4 py-3 rounded-lg border border-gray-300 
           focus:ring-2 focus:ring-blue-400 outline-none
           ${leftIcon ? "pl-10" : ""}  // <-- add extra padding when icon is present
           ${disabled ? "opacity-50 cursor-not-allowed" : ""}

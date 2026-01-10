@@ -93,7 +93,7 @@ const orderDetailData = {
         setIsCalenderOpen={setIsCalenderOpen}
         />
 
-      <div className="grid grid-cols-1  gap-4 my-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2  gap-4 my-4">
       {ordersData.map((order) => (
         <OrdersCard key={order.billNo} order={order} setIsOpen={setIsOpen} />
       ))}

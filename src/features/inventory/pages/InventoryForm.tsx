@@ -174,8 +174,8 @@ const InventoryForm = () => {
             </div>
 
             {/* Selling Price */}
-            <div className="p-4 bg-blue-600 rounded-2xl border border-blue-700 space-y-2 shadow-lg shadow-blue-200">
-              <label className="text-[10px] font-black text-blue-100 uppercase">Selling Price</label>
+            <div className="p-4  rounded-2xl space-y-2 ">
+              <label className="text-[10px] font-black text-gray-400 uppercase">Selling Price</label>
               <div className="flex items-center gap-1 text-white">
                 <BiRupee size={18} className="text-blue-200" />
                 <Input

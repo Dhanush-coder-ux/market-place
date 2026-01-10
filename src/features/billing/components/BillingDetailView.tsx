@@ -168,7 +168,7 @@ const BillingDetailView = () => {
                 <tr key={idx} className="hover:bg-blue-50/30 transition-colors group">
                   <td className="px-6 py-4 font-mono text-xs text-blue-600">{item.code}</td>
                   <td className="px-6 py-4">
-                    <div className="font-bold text-gray-800">{item.name}</div>
+                    <div className=" text-gray-800">{item.name}</div>
                   </td>
                   <td className="px-6 py-4 text-center">
                     <span className="px-2 py-1 bg-gray-100 rounded-md font-bold text-xs">{item.qty}</span>

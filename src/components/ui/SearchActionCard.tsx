@@ -1,8 +1,10 @@
 import React from "react";
 import type { SearchActionCardProps } from "../types";
 import Input from "./Input";
-import { Search, Package, PackageX, AlertTriangle} from "lucide-react"; 
+import { Search, Package, PackageX, AlertTriangle, MoreVertical, Upload, Download} from "lucide-react"; 
 import { ReusableSelect } from "./ReusableSelect";
+import DropDown from "../common/Dropdown";
+
 
 
 const SearchActionCard: React.FC<SearchActionCardProps> = ({
@@ -23,6 +25,12 @@ const SearchActionCard: React.FC<SearchActionCardProps> = ({
 //     { label: "not accepted", value: "LOWSTOCK", icon: <UserX size={16} color="red" />   },
   
 // ]
+   const ImportExport = [
+    
+    { label: "import", icon: <Upload size={16} color="green" />, onClick: () => console.log("import clicked") },
+    { label: "export", icon: <Download size={16} color="red" />, onClick: () => console.log("export clicked") },
+  
+]
   return (
     <div className="flex flex-col gap-3 w-full">
     
@@ -59,6 +67,15 @@ const SearchActionCard: React.FC<SearchActionCardProps> = ({
                 />
              </div>
           </div>
+          <div className="">
+          
+          <DropDown
+          triggerIcon={<MoreVertical size={20} className="text-gray-500"/>}
+          items={ImportExport}  
+          
+          />
+          </div>
+       
           
         </div>
       </div>

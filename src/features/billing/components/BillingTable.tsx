@@ -123,23 +123,23 @@ const BillingTable: React.FC = () => {
 
                 {/* PRODUCT NAME DROPDOWN */}
                 <td className="p-2 border-r min-w-[200px]">
-                 
-                  <ReusableCombobox
-                      options={nameOptions}
-                      value={item.name}
-                      placeholder="Select Name"
-                      onChange={(selected) => {
-                        const opt = nameOptions.find((o) => o.value === selected);
-                        if (!opt) return;
 
-                        const prod = opt.payload;
-                        updateItem(item.id, {
-                          code: prod.product_barcode,
-                          name: prod.product_name,
-                          price: prod.product_price,
-                        });
-                      }}
-                    />
+                  <ReusableCombobox
+                    options={nameOptions}
+                    value={item.name}
+                    placeholder="Select Name"
+                    onChange={(selected) => {
+                      const opt = nameOptions.find((o) => o.value === selected);
+                      if (!opt) return;
+
+                      const prod = opt.payload;
+                      updateItem(item.id, {
+                        code: prod.product_barcode,
+                        name: prod.product_name,
+                        price: prod.product_price,
+                      });
+                    }}
+                  />
 
                 </td>
 
@@ -163,6 +163,7 @@ const BillingTable: React.FC = () => {
                     className="w-full px-3 py-2 rounded-md "
                     value={item.price}
                     min="0"
+                    disabled
                     onChange={(e) =>
                       updateItem(item.id, { price: Number(e.target.value) })
                     }

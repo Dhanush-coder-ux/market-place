@@ -17,7 +17,7 @@ const InventoryForm = () => {
     description: "",
     currentStock: "", 
     category: "",
-    costPrice: "",
+    currentPrice: "",
     sellingPrice: "",
     image: null as File | null 
   });
@@ -47,7 +47,7 @@ const InventoryForm = () => {
       description: "",
       currentStock: "",
       category: "",
-      costPrice: "",
+      currentPrice: "",
       sellingPrice: "",
       image: null,
     });
@@ -70,7 +70,7 @@ const InventoryForm = () => {
               </div>
 
               {/* Product Code */}
-              <div className="group space-y-2">
+              <div className="group space-y-1">
                 <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest ml-1">Barcode / SKU</label>
                 <div className="relative">
                 
@@ -85,7 +85,7 @@ const InventoryForm = () => {
               </div>
 
               {/* Product Name */}
-              <div className="group space-y-2">
+              <div className="group space-y-1">
                 <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest ml-1">Product Name</label>
                 <div className="relative">
                   <Input
@@ -95,7 +95,7 @@ const InventoryForm = () => {
                     type="text"
                     placeholder="Enter item name..."
                     leftIcon={<Tag className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors" size={20} />}
-                    className="w-full pl-12 pr-4 py-4 bg-gray-50 border-transparent border-2 rounded-2xl focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all font-medium"
+                    className="w-full pl-12 pr-4 py-2 bg-gray-50 border-transparent border-2 rounded-2xl focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all font-medium"
                   />
                 </div>
               </div>
@@ -110,7 +110,7 @@ const InventoryForm = () => {
           </div>
 
           {/* Description */}
-          <div className="group space-y-2 mt-6">
+          <div className="group space-y-2 mt-2">
             <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest ml-1">Description</label>
             <div className="relative">
               <FileText className="absolute left-4 top-4 text-gray-400 group-focus-within:text-blue-500 transition-colors" size={20} />
@@ -120,16 +120,16 @@ const InventoryForm = () => {
                 value={formData.description}
                 onChange={handleInputChange}
                 placeholder="Describe the product features..."
-                className="w-full pl-12 pr-4 py-4 bg-gray-50 border-transparent border-2 rounded-2xl focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all font-medium resize-none"
+                className="w-full pl-12 pr-4 py-2 bg-gray-50 border-transparent border-2 rounded-2xl focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all font-medium resize-none"
               />
             </div>
           </div>
 
        
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-3">
 
             {/* Category */}
-            <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100 space-y-2 group">
+            <div className="p-2 bg-gray-50 rounded-2xl border border-gray-100 space-y-2 group">
               <label className="text-[10px] font-black text-gray-400 uppercase">Category</label>
               <div className="relative cursor-pointer">
                 <ReusableSelect
@@ -142,7 +142,7 @@ const InventoryForm = () => {
             </div>
 
             {/* Stock */}
-            <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100 space-y-2">
+            <div className="p-2 bg-gray-50 rounded-2xl border border-gray-100 space-y-2">
               <label className="text-[10px] font-black text-gray-400 uppercase">Current Stock</label>
               <div className="flex items-center gap-2">
                 <Input
@@ -157,14 +157,14 @@ const InventoryForm = () => {
               </div>
             </div>
 
-            {/* Cost Price */}
-            <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100 space-y-2">
-              <label className="text-[10px] font-black text-gray-400 uppercase">Cost Price</label>
+            {/* Current Price */}
+            <div className="p-2 bg-gray-50 rounded-2xl border border-gray-100 space-y-2">
+              <label className="text-[10px] font-black text-gray-400 uppercase">Currentt Price</label>
               <div className="flex items-center gap-1">
                 <Input
-                  name="costPrice"
+                  name="currentPrice"
                   onChange={handleInputChange}
-                  value={formData.costPrice}
+                  value={formData.currentPrice}
                   leftIcon={<BiRupee size={18} />}
                   type="number"
                   placeholder="0.00"
@@ -174,7 +174,7 @@ const InventoryForm = () => {
             </div>
 
             {/* Selling Price */}
-            <div className="p-4  rounded-2xl space-y-2 ">
+            <div className="p-2  rounded-2xl space-y-2 ">
               <label className="text-[10px] font-black text-gray-400 uppercase">Selling Price</label>
               <div className="flex items-center gap-1 text-white">
                 <BiRupee size={18} className="text-blue-200" />
@@ -191,10 +191,10 @@ const InventoryForm = () => {
 
           </div>
 
-          <div className=" flex justify-end gap-4 mt-10">
-            <GradientButton variant="outline">cancel</GradientButton>
-            <GradientButton>save</GradientButton>
+          <div className=" flex justify-end gap-4 mt-5">
             <GradientButton>save & add more</GradientButton>
+            <GradientButton>save</GradientButton>
+            <GradientButton variant="danger">cancel</GradientButton>
           </div>
           
      

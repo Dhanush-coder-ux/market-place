@@ -24,7 +24,6 @@ const InventoryHeader: React.FC<InventoryHeaderProps> = ({
     <div className="flex justify-between my-4"> 
       <Title title="Inventory" icon={<Package2 size={30}/>}/>
       <GradientButton
-      variant="outline"
       type="button"
       onClick={()=>setIsModalOpen(true)}
       >
@@ -66,7 +65,7 @@ const InventoryHeader: React.FC<InventoryHeaderProps> = ({
       /> */}
     </div>
        <SearchActionCard
-        searchValue={searchValue}
+        searchValue={""}
         onSearchChange={onSearchChange}
         placeholder="Search products..."
       

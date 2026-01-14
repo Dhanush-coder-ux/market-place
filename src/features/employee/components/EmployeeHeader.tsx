@@ -22,7 +22,6 @@ const EmployeeHeader:React.FC<EmployeeHeaderProps> = ({
          <div className="flex justify-between my-4"> 
       <Title title="Employee" icon={<UserCircle2 size={30}/>}/>
       <GradientButton
-      variant="outline"
       type="button"
       onClick={()=>SetIsModelShow(true)}
       >
@@ -50,7 +49,7 @@ const EmployeeHeader:React.FC<EmployeeHeaderProps> = ({
   
     </div>
         <SearchActionCard
-      searchValue={searchValue}
+      searchValue={""}
       onSearchChange={onSearchChange}
       placeholder="Search Employees"
       />

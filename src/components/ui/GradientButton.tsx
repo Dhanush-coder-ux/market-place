@@ -1,7 +1,7 @@
 import React from 'react';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'outline';
+  variant?: 'primary' | 'outline'| 'danger';
   children: React.ReactNode;
   icon?: React.ReactNode;
 }
@@ -19,7 +19,8 @@ export const GradientButton: React.FC<ButtonProps> = ({
   const variants = {
    
     primary: "bg-gradient-to-r from-blue-600 to-blue-400 text-white shadow-lg hover:shadow-blue-500/30",
-    outline: "bg-transparent border border-blue-400 text-[#1b68cf] hover:bg-blue-50"
+    outline: "bg-transparent border border-blue-400 text-[#1b68cf] hover:bg-blue-50",
+    danger: "bg-transparent border border-red-400 text-red-500 hover:bg-red-50",
   };
 
   return (

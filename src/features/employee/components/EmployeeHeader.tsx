@@ -19,16 +19,19 @@ const EmployeeHeader:React.FC<EmployeeHeaderProps> = ({
   const [modelShow, SetIsModelShow ] = useState(false);
   return (
     <div className="my-4">
-         <div className="flex justify-between my-4"> 
+         <div className="flex justify-between mb-4"> 
       <Title title="Employee" icon={<UserCircle2 size={30}/>}/>
-      <GradientButton
+    
+      </div>
+      <div className="flex justify-end items-end mb-4">
+          <GradientButton
       type="button"
       onClick={()=>SetIsModelShow(true)}
       >
         {"+ Add Employee"}
       </GradientButton>
       </div>
-   
+    
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 mb-10">
   
       <HeaderCard

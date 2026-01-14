@@ -22,7 +22,11 @@ const InventoryHeader: React.FC<InventoryHeaderProps> = ({
     <div>
     <div className="flex justify-between my-4"> 
       <Title title="Inventory" icon={<Package2 size={30}/>}/>
-      <GradientButton
+     
+      </div>
+
+      <div className="flex justify-end items-end mb-4">
+         <GradientButton
       type="button"
       onClick={()=>setIsModalOpen(true)}
       >

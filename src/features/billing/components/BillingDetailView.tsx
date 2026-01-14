@@ -174,7 +174,7 @@ const BillingDetailView = () => {
                     <span className="px-2 py-1 bg-gray-100 rounded-md font-bold text-xs">{item.qty}</span>
                   </td>
                   <td className="px-6 py-4 text-right text-gray-500 font-medium">₹{item.price.toFixed(2)}</td>
-                  <td className="px-6 py-4 text-right font-black text-gray-900">₹{item.tprice.toFixed(2)}</td>
+                  <td className="px-6 py-4 text-right  text-gray-900">₹{item.tprice.toFixed(2)}</td>
                 </tr>
               ))}
             </tbody>

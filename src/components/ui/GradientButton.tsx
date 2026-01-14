@@ -14,7 +14,7 @@ export const GradientButton: React.FC<ButtonProps> = ({
   ...props 
 }) => {
 
-  const baseStyles = "flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-medium transition-all duration-300 transform hover:scale-105 cursor-pointer active:scale-95";
+  const baseStyles = "flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-300 transform hover:scale-105 cursor-pointer active:scale-95";
   
   const variants = {
    

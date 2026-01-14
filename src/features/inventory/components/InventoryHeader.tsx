@@ -14,7 +14,6 @@ import InventoryForm from "../pages/InventoryForm";
 const InventoryHeader: React.FC<InventoryHeaderProps> = ({
   totalCount,
   lowestStockValue,
-  searchValue,
   onSearchChange,
 }) => {
   // const [showAlert, setShowAlert] = useState(false);

@@ -12,7 +12,7 @@ import EmployeeForm from "../pages/EmployeeForm"
 const EmployeeHeader:React.FC<EmployeeHeaderProps> = ({
     accepted,
     notAccepted,
-    searchValue,
+   
     onSearchChange
 }) => {
 

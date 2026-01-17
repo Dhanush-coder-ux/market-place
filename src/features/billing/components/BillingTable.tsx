@@ -114,6 +114,7 @@ const BillingTable: React.FC = () => {
                         code: prod.product_barcode,
                         name: prod.product_name,
                         price: prod.product_price,
+                        qty: item.qty === 0 ? 1 : item.qty,
                       });
                     }}
                   />
@@ -137,6 +138,7 @@ const BillingTable: React.FC = () => {
                         code: prod.product_barcode,
                         name: prod.product_name,
                         price: prod.product_price,
+                        qty: item.qty === 0 ? 1 : item.qty,
                       });
                     }}
                   />
@@ -153,6 +155,11 @@ const BillingTable: React.FC = () => {
                     onChange={(e) =>
                       updateItem(item.id, { qty: Number(e.target.value) })
                     }
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        handleAddRow();
+                      }
+                    }}
                   />
                 </td>
 
@@ -172,7 +179,7 @@ const BillingTable: React.FC = () => {
 
                 {/* TOTAL PRICE */}
                 <td className="p-2 border-r font-semibold text-gray-800">
-                  ₹{item.tprice.toFixed(2)}
+                  ₹ {item.tprice.toFixed(2)}
                 </td>
 
                 {/* DELETE */}

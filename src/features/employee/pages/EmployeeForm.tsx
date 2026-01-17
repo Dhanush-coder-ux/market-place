@@ -63,9 +63,9 @@ const EmployeeForm = () => {
 
 
       <div className=" flex justify-end gap-4 mt-10">
-        <GradientButton>save & add more</GradientButton>
-        <GradientButton>save</GradientButton>
-        <GradientButton variant="danger">cancel</GradientButton>
+        <GradientButton>Save & Add More</GradientButton>
+        <GradientButton>Save</GradientButton>
+        <GradientButton variant="danger">Cancel</GradientButton>
       </div>
     </div>
   );

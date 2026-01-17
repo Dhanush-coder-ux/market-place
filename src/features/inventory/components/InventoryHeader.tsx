@@ -3,7 +3,6 @@ import SearchActionCard from "../../../components/ui/SearchActionCard";
 import type { InventoryHeaderProps } from "../types";
 import { AlertTriangleIcon, Package, Package2, PackageX } from "lucide-react";
 import HeaderCard from "../../../components/common/HeaderCard";
-import Chips from "./Chips";
 import { GradientButton } from "@/components/ui/GradientButton";
 import Title from "@/components/common/Title";
 import { FloatingFormCard } from "@/components/common/FloatingFormCard";
@@ -73,18 +72,7 @@ const InventoryHeader: React.FC<InventoryHeaderProps> = ({
         placeholder="Search products..."
       
       />
-      <div className="flex flex-wrap items-center gap-2 bg-accent py-2 my-3 rounded-lg px-2 ">
-        <Chips
-        label="Low Stock"
-        action="Re-stock now"
-        dot="red"
-        />
-        <Chips
-        label="Out of Stock"
-        action="Re-stock now"
-        dot="orange"
-        />
-      </div>
+
       <FloatingFormCard
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}

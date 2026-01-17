@@ -51,6 +51,7 @@ const Inventory = () => {
       )}
 
       <Table
+      className="mt-5"
         columns={columns}
         data={data}
         rowKey="barcode" 

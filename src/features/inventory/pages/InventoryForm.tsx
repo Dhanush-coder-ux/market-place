@@ -192,9 +192,9 @@ const InventoryForm = () => {
           </div>
 
           <div className=" flex justify-end gap-4 mt-5">
-            <GradientButton>save & add more</GradientButton>
-            <GradientButton>save</GradientButton>
-            <GradientButton variant="danger">cancel</GradientButton>
+            <GradientButton>Save & Add More</GradientButton>
+            <GradientButton>Aave</GradientButton>
+            <GradientButton variant="danger">Cancel</GradientButton>
           </div>
           
      

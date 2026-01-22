@@ -1,4 +1,4 @@
-import { Layers, TicketPlus, Users2 } from "lucide-react"
+import { Layers, TicketPlus, Trash, Users2 } from "lucide-react"
 import EmployeeHeader from "../components/EmployeeHeader"
 import Table from "@/components/common/Table"
 import { useState } from "react"
@@ -37,7 +37,15 @@ const handleRowClick =(row:any) => {
       searchValue="siva"
       onSearchChange={()=>("")}
       />
+          {selectedRows.length > 0 && (
+        <div className="p-2 my-5 flex justify-between bg-blue-100 text-blue-800 rounded mb-2">
+          <p>{selectedRows.length} items selected for action</p>
+          <Trash size={18} className="text-red-400 hover:text-red-600"/>
+
+        </div>
+      )}
       <Table
+      className="mt-5"
         columns={columns}
         data={data}
         onRowClick={(row)=>handleRowClick(row)}

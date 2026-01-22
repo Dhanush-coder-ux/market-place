@@ -1,4 +1,4 @@
-import { Boxes, Layers, Package, IndianRupee } from "lucide-react"; // Import IndianRupee if available or use generic
+import { Boxes, Layers, Package, IndianRupee, Trash } from "lucide-react"; // Import IndianRupee if available or use generic
 import Table from "../../../components/common/Table";
 import InventoryHeader from "../components/InventoryHeader";
 import { useState } from "react";
@@ -45,8 +45,10 @@ const Inventory = () => {
       />
       
       {selectedRows.length > 0 && (
-        <div className="p-2 bg-blue-100 text-blue-800 rounded mb-2">
-          {selectedRows.length} items selected for action
+        <div className="p-2 my-5 flex justify-between bg-blue-100 text-blue-800 rounded mb-2">
+          <p>{selectedRows.length} items selected for action</p>
+          <Trash size={18} className="text-red-400 hover:text-red-600"/>
+
         </div>
       )}
 

@@ -1,4 +1,5 @@
 import Loader from "@/components/common/Loader";
+import RefillPage from "@/features/Refill/pages/LowStockRefill";
 import React, { Suspense } from "react";
 import { createBrowserRouter } from "react-router-dom";
 const MainLayout      =   React.lazy(() => import ("../components/layouts/MainLayout"));
@@ -34,7 +35,8 @@ export const router = createBrowserRouter([
             { path:'/orders', element:<Order/> },
             { path:'/profile', element:<Profile/> },
             { path:'/profile/add', element:<ProfileForm/> },
-            { path:'/shop', element:<Shop/>}
+            { path:'/shop', element:<Shop/>},
+            {path:'/re-fill',element:<RefillPage/>}
         ]
     },
     {

@@ -1,4 +1,4 @@
-import { Boxes, Layers, Package, IndianRupee, Trash } from "lucide-react"; // Import IndianRupee if available or use generic
+import { Boxes, Layers, Package, IndianRupee, Trash, RefreshCcw } from "lucide-react"; // 1. Added RefreshCcw
 import Table from "../../../components/common/Table";
 import InventoryHeader from "../components/InventoryHeader";
 import { useState } from "react";
@@ -7,11 +7,17 @@ import DetailView from "../../../components/common/DetaileView";
 
 const Inventory = () => {
   const [selectedItem, setSelectedItem] = useState<any>(null);
-  const [selectedRows, setSelectedRows] = useState<any[]>([]); 
+  const [selectedRows, setSelectedRows] = useState<any[]>([]);
   const [isOpen, setIsopen] = useState(false);
 
   const Hello = () => {
     console.log("hello");
+  };
+
+  // 2. Handler for the Refill Action
+  const handleRefill = () => {
+    console.log("Refill stock for:", selectedRows);
+    // Add your stock update logic here (e.g., open a modal or call an API)
   };
 
   const columns = [
@@ -43,20 +49,32 @@ const Inventory = () => {
         onSearchChange={() => Hello()}
         totalCount={10}
       />
-      
-      {selectedRows.length > 0 && (
-        <div className="p-2 my-5 flex justify-between bg-blue-100 text-blue-800 rounded mb-2">
-          <p>{selectedRows.length} items selected for action</p>
-          <Trash size={18} className="text-red-400 hover:text-red-600"/>
 
+      {/* 3. Updated Bulk Action Bar */}
+      {selectedRows.length > 0 && (
+        <div className="p-3 my-5 flex justify-between items-center bg-blue-50 text-blue-800 rounded-lg border border-blue-200 shadow-sm">
+          <p className="font-medium text-sm">
+            {selectedRows.length} {selectedRows.length === 1 ? 'item' : 'items'} selected
+          </p>
+          
+          <div className="flex items-center gap-4">
+            <div className="h-6 w-px bg-blue-200"></div>
+
+            <button 
+              className="flex items-center gap-2 text-red-500 hover:text-red-700 transition-colors px-2"
+              title="Delete Selected"
+            >
+              <Trash size={18} />
+            </button>
+          </div>
         </div>
       )}
 
       <Table
-      className="mt-5"
+        className="mt-5"
         columns={columns}
         data={data}
-        rowKey="barcode" 
+        rowKey="barcode"
         onRowClick={(row) => handleRowClick(row)}
         selectedIds={selectedRows}
         onSelectionChange={setSelectedRows}
@@ -82,7 +100,7 @@ const Inventory = () => {
                   {
                     icon: <Layers size={20} />,
                     label: "Description",
-                    value: selectedItem.description, 
+                    value: selectedItem.description,
                   },
                 ],
               },
@@ -92,12 +110,12 @@ const Inventory = () => {
                   {
                     icon: <Boxes size={20} />,
                     label: "Available Stock",
-                    value: selectedItem.stock, 
+                    value: selectedItem.stock,
                   },
                   {
-                    icon: <IndianRupee size={20} />, 
+                    icon: <IndianRupee size={20} />,
                     label: "Sell Price",
-                    value: `₹${selectedItem.sellprice}`, 
+                    value: `₹${selectedItem.sellprice}`,
                   },
                 ],
               },

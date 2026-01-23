@@ -19,7 +19,7 @@ export type GradientButtonProps = {
 };
 
 export interface InputProps {
-  name:string
+  name?:string
   value: string | number;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   placeholder?: string;
@@ -112,6 +112,7 @@ export interface SelectOption {
 
 export interface ReusableSelectProps {
   options: SelectOption[]
+  required?:React.ReactNode
   value?: string
   onValueChange: (value: string) => void
   placeholder?: string

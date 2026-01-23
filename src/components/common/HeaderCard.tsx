@@ -1,72 +1,147 @@
-import { LucideIcon } from "lucide-react";
+import React from "react";
+import { LucideIcon, TrendingDown, TrendingUp, Minus } from "lucide-react";
 
 type LowStockCardProps = {
   value: number | string;
   title?: string;
   subtitle?: string;
   icon?: LucideIcon;
-  theme?: "red" | "yellow" | "green" | "blue";
+  theme?: "red" | "yellow" | "green" | "blue" | "purple";
+  trend?: string; 
+  trendDirection?: "up" | "down" | "neutral";
+  onClick?: () => void;
 };
 
 const THEMES = {
   red: {
-    iconBg: "bg-red-50",
-    iconColor: "text-red-500",
-    valueColor: "text-red-600",
-    gradient: "from-red-500 to-red-400",
+    bg: "bg-red-50 hover:bg-red-100/80",
+    border: "border-red-100",
+    iconBg: "bg-white text-red-600 shadow-red-100",
+    text: "text-red-900",
+    subtext: "text-red-600/80",
+    trend: "text-red-600 bg-red-100",
+    ring: "focus:ring-red-500/20",
+    accent: "bg-red-500",
   },
   yellow: {
-    iconBg: "bg-yellow-50",
-    iconColor: "text-yellow-600",
-    valueColor: "text-yellow-600",
-    gradient: "from-yellow-500 to-orange-400",
+    bg: "bg-amber-50 hover:bg-amber-100/80",
+    border: "border-amber-100",
+    iconBg: "bg-white text-amber-600 shadow-amber-100",
+    text: "text-amber-900",
+    subtext: "text-amber-600/80",
+    trend: "text-amber-700 bg-amber-100",
+    ring: "focus:ring-amber-500/20",
+    accent: "bg-amber-500",
   },
   green: {
-    iconBg: "bg-green-50",
-    iconColor: "text-green-600",
-    valueColor: "text-green-600",
-    gradient: "from-green-500 to-emerald-400",
+    bg: "bg-emerald-50 hover:bg-emerald-100/80",
+    border: "border-emerald-100",
+    iconBg: "bg-white text-emerald-600 shadow-emerald-100",
+    text: "text-emerald-900",
+    subtext: "text-emerald-600/80",
+    trend: "text-emerald-600 bg-emerald-100",
+    ring: "focus:ring-emerald-500/20",
+    accent: "bg-emerald-500",
   },
   blue: {
-    iconBg: "bg-blue-50",
-    iconColor: "text-blue-600",
-    valueColor: "text-blue-600",
-    gradient: "from-blue-500 to-cyan-400",
+    bg: "bg-blue-50 hover:bg-blue-100/80",
+    border: "border-blue-100",
+    iconBg: "bg-white text-blue-600 shadow-blue-100",
+    text: "text-blue-900",
+    subtext: "text-blue-600/80",
+    trend: "text-blue-600 bg-blue-100",
+    ring: "focus:ring-blue-500/20",
+    accent: "bg-blue-500",
+  },
+  purple: {
+    bg: "bg-violet-50 hover:bg-violet-100/80",
+    border: "border-violet-100",
+    iconBg: "bg-white text-violet-600 shadow-violet-100",
+    text: "text-violet-900",
+    subtext: "text-violet-600/80",
+    trend: "text-violet-600 bg-violet-100",
+    ring: "focus:ring-violet-500/20",
+    accent: "bg-violet-500",
   },
 };
 
 const HeaderCard: React.FC<LowStockCardProps> = ({
   value,
-  title = "Lowest Stock",
-  subtitle = "Items in critical level",
+  title = "Stat",
+  subtitle,
   icon: Icon,
   theme = "red",
+  trend,
+  trendDirection = "neutral",
+  onClick,
 }) => {
-  const style = THEMES[theme];
+  const t = THEMES[theme];
 
   return (
     <div
+      onClick={onClick}
       className={`
-        relative overflow-hidden rounded-2xl p-[2px] 
-        bg-gradient-to-r ${style.gradient}
-        shadow-md hover:shadow-xl transition-all duration-300
+        group relative w-full overflow-hidden rounded-2xl border ${t.border} ${t.bg}
+        p-5 transition-all duration-300 ease-in-out
+        hover:-translate-y-1 hover:shadow-lg hover:shadow-${theme}-500/10 cursor-pointer
+        active:scale-[0.98] active:shadow-sm
       `}
     >
-      <div className="bg-white rounded-[1rem] p-5 flex items-center gap-4">
+      {/* Decorative Background Pattern (Dots) */}
+      <div className="absolute right-0 top-0 -mt-4 -mr-4 h-24 w-24 rounded-full bg-current opacity-[0.03] group-hover:scale-150 transition-transform duration-500" />
+      
+      <div className="relative flex justify-between items-start">
+        {/* Left Side: Content */}
+        <div className="flex flex-col gap-1 z-10">
+          <span className={`text-sm font-bold tracking-wide uppercase ${t.subtext}`}>
+            {title}
+          </span>
+          
+          <div className="flex items-baseline gap-2 mt-1">
+            <h2 className={`text-3xl font-black tracking-tight ${t.text}`}>
+              {value}
+            </h2>
+          </div>
 
-        {/* Icon */}
-        <div className={`w-12 h-12 ${style.iconBg} rounded-xl flex items-center justify-center`}>
-          {Icon && <Icon className={style.iconColor} size={26} />}
+          {/* Subtitle / Trend Row */}
+          <div className="flex items-center gap-2 mt-2">
+            {trend && (
+              <span className={`
+                flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-md
+                ${t.trend}
+              `}>
+                {trendDirection === "up" && <TrendingUp size={12} />}
+                {trendDirection === "down" && <TrendingDown size={12} />}
+                {trendDirection === "neutral" && <Minus size={12} />}
+                {trend}
+              </span>
+            )}
+            {subtitle && (
+              <p className={`text-xs font-medium ${t.subtext} opacity-80`}>
+                {subtitle}
+              </p>
+            )}
+          </div>
         </div>
 
-        {/* Content */}
-        <div className="flex flex-col">
-          <span className={`text-3xl font-bold ${style.valueColor}`}>{value}</span>
-          <span className="text-sm font-semibold text-slate-700">{title}</span>
-          <span className="text-xs text-slate-400">{subtitle}</span>
-        </div>
+        {/* Right Side: Icon & Action */}
+        <div className="flex flex-col items-end justify-between h-full gap-4">
+          
+          {/* Main Icon with Animation */}
+          <div className={`
+            p-3 rounded-xl shadow-sm ${t.iconBg}
+            transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3
+          `}>
+            {Icon && <Icon size={22} strokeWidth={2.5} />}
+          </div>
 
+       
+
+        </div>
       </div>
+      
+      {/* Bottom Progress Bar / Accent Line */}
+      <div className={`absolute bottom-0 left-0 h-1 w-full ${t.accent} opacity-0 group-hover:opacity-100 transition-opacity duration-300`} />
     </div>
   );
 };

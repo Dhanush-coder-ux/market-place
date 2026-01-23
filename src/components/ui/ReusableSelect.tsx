@@ -18,12 +18,13 @@ export function ReusableSelect({
   label,
   className,
   error,
+  required
 }: ReusableSelectProps) {
   return (
     <div className="space-y-2 w-full">
       {label && (
-        <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">
-          {label}
+        <label className="text-xs font-semibold text-gray-500 uppercase tracking-widest ml-1">
+          {label}{required}
         </label>
       )}
       

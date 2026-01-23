@@ -38,7 +38,7 @@ const handleRowClick =(row:any) => {
       onSearchChange={()=>("")}
       />
           {selectedRows.length > 0 && (
-        <div className="p-2 my-5 flex justify-between bg-blue-100 text-blue-800 rounded mb-2">
+        <div className="p-3 my-5 flex justify-between items-center bg-blue-50 text-blue-800 rounded-lg border border-blue-200 shadow-sm">
           <p>{selectedRows.length} items selected for action</p>
           <Trash size={18} className="text-red-400 hover:text-red-600"/>
 

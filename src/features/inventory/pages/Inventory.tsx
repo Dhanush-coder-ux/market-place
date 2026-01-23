@@ -1,4 +1,4 @@
-import { Boxes, Layers, Package, IndianRupee, Trash, RefreshCcw } from "lucide-react"; // 1. Added RefreshCcw
+import { Boxes, Layers, Package, IndianRupee, Trash,} from "lucide-react"; // 1. Added RefreshCcw
 import Table from "../../../components/common/Table";
 import InventoryHeader from "../components/InventoryHeader";
 import { useState } from "react";
@@ -14,12 +14,7 @@ const Inventory = () => {
     console.log("hello");
   };
 
-  // 2. Handler for the Refill Action
-  const handleRefill = () => {
-    console.log("Refill stock for:", selectedRows);
-    // Add your stock update logic here (e.g., open a modal or call an API)
-  };
-
+ 
   const columns = [
     { key: "barcode", label: "BarCode" },
     { key: "name", label: "Name" },

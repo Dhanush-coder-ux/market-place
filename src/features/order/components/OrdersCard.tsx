@@ -1,5 +1,4 @@
 import { ReusableSelect } from "@/components/ui/ReusableSelect";
-import { options } from "@/features/billing/components/BillingHeader";
 import { Phone, User, IndianRupee, CircleDot, Printer } from "lucide-react";
 import React from "react";
 import { OrderCardType } from "../types";
@@ -79,7 +78,13 @@ const OrdersCard: React.FC<{
         {/* Right side select options */}
         <div className="flex flex-col gap-3 min-w-[180px]">
           <ReusableSelect
-            options={options}
+            options={
+              [
+                { label: "COMPLETED", value: "COMPLETED" },
+                { label: "PENDING", value: "PENDING" },
+                { label: "CANCELLED", value: "CANCELLED" },
+              ]
+            }
             value={order.status}
             onValueChange={() => ""}
             placeholder="Select Status"

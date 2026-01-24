@@ -1,7 +1,6 @@
 import { Link } from "react-router-dom";
 import Title from "../../../components/common/Title";
 import { User, Mail, Phone, MapPin, Globe, FileText, UserCheck2 } from "lucide-react";
-import FormCard from "@/components/common/FormCard";
 import Input from "@/components/ui/Input";
 import { GradientButton } from "@/components/ui/GradientButton";
 import ImageUpload from "@/components/common/ImageUpload";
@@ -20,7 +19,7 @@ const ProfileForm = () => {
       </div>
 
       <form className="max-w-4xl mx-auto">
-        <FormCard>
+       
           <div className="flex items-center justify-center">
             {/* Profile Image Upload */}
             <ImageUpload
@@ -139,8 +138,6 @@ const ProfileForm = () => {
 
 
           </div>
-
-        </FormCard>
       </form>
     </div>
   );

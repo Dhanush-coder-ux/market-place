@@ -1,6 +1,5 @@
 import ToggleSelect from '@/components/common/ToggleSelect'
 import { ReusableSelect } from '@/components/ui/ReusableSelect'
-import { options } from '@/features/billing/components/BillingHeader'
 import { OrdersHeaderProps } from '../types'
 import { Calendar } from 'lucide-react'
 import { GradientButton } from '@/components/ui/GradientButton'
@@ -20,7 +19,11 @@ const OrdersHeader : React.FC<OrdersHeaderProps>= ({
       <div>
         <ReusableSelect
         placeholder='Order Status'
-        options={options}
+        options={[
+          { label: "COMPLETED", value: "COMPLETED" },
+          { label: "PENDING", value: "PENDING" },
+          { label: "CANCELLED", value: "CANCELLED" },
+        ]}
         value={status}
         onValueChange={setStatus}
         />

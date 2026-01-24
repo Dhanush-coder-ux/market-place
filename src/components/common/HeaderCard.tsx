@@ -7,7 +7,7 @@ type LowStockCardProps = {
   subtitle?: string;
   icon?: LucideIcon;
   theme?: "red" | "yellow" | "green" | "blue" | "purple";
-  trend?: string; 
+  trend?: string;
   trendDirection?: "up" | "down" | "neutral";
   onClick?: () => void;
 };
@@ -80,44 +80,47 @@ const HeaderCard: React.FC<LowStockCardProps> = ({
   return (
     <div
       onClick={onClick}
+      // CHANGED: reduced padding (p-3), reduced rounded (rounded-xl)
       className={`
-        group relative w-full overflow-hidden rounded-2xl border ${t.border} ${t.bg}
-        p-5 transition-all duration-300 ease-in-out
+        group relative w-full overflow-hidden rounded-xl border ${t.border} ${t.bg}
+        p-3 transition-all duration-300 ease-in-out
         hover:-translate-y-1 hover:shadow-lg hover:shadow-${theme}-500/10 cursor-pointer
         active:scale-[0.98] active:shadow-sm
       `}
     >
-      {/* Decorative Background Pattern (Dots) */}
-      <div className="absolute right-0 top-0 -mt-4 -mr-4 h-24 w-24 rounded-full bg-current opacity-[0.03] group-hover:scale-150 transition-transform duration-500" />
+      {/* Decorative Background Pattern */}
+      <div className="absolute right-0 top-0 -mt-2 -mr-2 h-16 w-16 rounded-full bg-current opacity-[0.03] group-hover:scale-150 transition-transform duration-500" />
       
       <div className="relative flex justify-between items-start">
         {/* Left Side: Content */}
-        <div className="flex flex-col gap-1 z-10">
-          <span className={`text-sm font-bold tracking-wide uppercase ${t.subtext}`}>
+        <div className="flex flex-col gap-0.5 z-10">
+          {/* CHANGED: text-xs instead of text-sm */}
+          <span className={`text-xs font-bold tracking-wide uppercase ${t.subtext}`}>
             {title}
           </span>
           
-          <div className="flex items-baseline gap-2 mt-1">
-            <h2 className={`text-3xl font-black tracking-tight ${t.text}`}>
+          <div className="flex items-baseline gap-2 mt-0.5">
+            {/* CHANGED: text-2xl instead of text-3xl */}
+            <h2 className={`text-2xl font-black tracking-tight ${t.text}`}>
               {value}
             </h2>
           </div>
 
           {/* Subtitle / Trend Row */}
-          <div className="flex items-center gap-2 mt-2">
+          <div className="flex items-center gap-2 mt-1.5">
             {trend && (
               <span className={`
                 flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-md
                 ${t.trend}
               `}>
-                {trendDirection === "up" && <TrendingUp size={12} />}
-                {trendDirection === "down" && <TrendingDown size={12} />}
-                {trendDirection === "neutral" && <Minus size={12} />}
+                {trendDirection === "up" && <TrendingUp size={10} />}
+                {trendDirection === "down" && <TrendingDown size={10} />}
+                {trendDirection === "neutral" && <Minus size={10} />}
                 {trend}
               </span>
             )}
             {subtitle && (
-              <p className={`text-xs font-medium ${t.subtext} opacity-80`}>
+              <p className={`text-[10px] font-medium ${t.subtext} opacity-80`}>
                 {subtitle}
               </p>
             )}
@@ -125,23 +128,21 @@ const HeaderCard: React.FC<LowStockCardProps> = ({
         </div>
 
         {/* Right Side: Icon & Action */}
-        <div className="flex flex-col items-end justify-between h-full gap-4">
+        <div className="flex flex-col items-end justify-between h-full gap-2">
           
-          {/* Main Icon with Animation */}
+          {/* Main Icon - CHANGED: p-2 instead of p-3 */}
           <div className={`
-            p-3 rounded-xl shadow-sm ${t.iconBg}
+            p-2 rounded-lg shadow-sm ${t.iconBg}
             transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3
           `}>
-            {Icon && <Icon size={22} strokeWidth={2.5} />}
+             {/* CHANGED: size={18} instead of 22 */}
+            {Icon && <Icon size={18} strokeWidth={2.5} />}
           </div>
-
-       
-
         </div>
       </div>
       
       {/* Bottom Progress Bar / Accent Line */}
-      <div className={`absolute bottom-0 left-0 h-1 w-full ${t.accent} opacity-0 group-hover:opacity-100 transition-opacity duration-300`} />
+      <div className={`absolute bottom-0 left-0 h-0.5 w-full ${t.accent} opacity-0 group-hover:opacity-100 transition-opacity duration-300`} />
     </div>
   );
 };

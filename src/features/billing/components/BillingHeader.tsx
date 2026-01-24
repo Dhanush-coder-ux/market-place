@@ -1,8 +1,6 @@
-
 import { GradientButton } from "@/components/ui/GradientButton";
 import Input from "@/components/ui/Input";
-
-import { Check, Clock, Phone, ScanBarcode, User, XCircle } from "lucide-react";
+import {  Phone, ScanBarcode, User,  Receipt, UserCircle2 } from "lucide-react";
 import React, { useState, useMemo } from "react";
 
 interface BillingHeaderProps {
@@ -13,17 +11,10 @@ interface BillingHeaderProps {
   setIsOpen: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
-export const options = [
-    
-    { label: "Completed", value: "COMPLETED", icon: <Check size={16} color="green" /> },
-    { label: "Pending", value: "PENDING", icon: <Clock size={16} color="orange" />   },
-    { label: "Cancelled", value: "CANCELLED", icon: <XCircle size={16} color="red" /> },
-]
-
-const BillingHeader: React.FC<BillingHeaderProps> = ({ items,setIsOpen }) => {
+const BillingHeader: React.FC<BillingHeaderProps> = ({ items, setIsOpen }) => {
   const [includeGst, setIncludeGst] = useState(false);
+  const [customerName, setCustomerName] = useState("");
   const [phone, setPhone] = useState("");
-
 
   const GST_PERCENT = 18;
 
@@ -42,89 +33,117 @@ const BillingHeader: React.FC<BillingHeaderProps> = ({ items,setIsOpen }) => {
     : totalAmount;
 
   return (
-    <div className="w-full my-5 p-5 border-l-4 border-r-4 border-blue-400 bg-white rounded-2xl shadow-lg border flex flex-wrap items-center justify-between gap-6">
-
-      {/* --- TOTAL QUANTITY BOX --- */}
-      <div className="flex flex-col items-start bg-gray-50 p-4 rounded-xl border w-[180px]">
-        <span className="text-gray-500 text-sm tracking-wide font-semibold">
-          TOTAL QUANTITY
-        </span>
-        <span className="text-3xl font-bold mt-1 text-gray-800">{totalQty}</span>
+    <div className="w-full my-6 bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+      
+      {/* Top Bar: Title & Status (Optional) */}
+      <div className="bg-slate-50 px-6 py-3 border-b border-slate-100 flex justify-between items-center">
+        <div className="flex items-center gap-2 text-slate-700">
+           <Receipt size={18} className="text-blue-600" />
+           <span className="font-semibold text-sm tracking-wide uppercase">New Invoice</span>
+        </div>
+        <div className="text-xs font-medium text-slate-400">
+           {new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+        </div>
       </div>
 
-      {/* --- TOTAL PRICE BOX --- */}
-      <div className="flex flex-col bg-gray-50 p-4 rounded-xl border w-[220px]">
-        <span className="text-gray-500 text-sm tracking-wide font-semibold">
-          TOTAL PRICE
-        </span>
-
-        <span className="text-3xl font-bold mt-1 text-gray-900">
-          ₹{finalAmount.toFixed(2)}
-        </span>
-
-        {/* GST Toggle */}
-      <div className="flex items-center gap-2 mt-2">
-        <span className="text-green-500 text-xs">
-            {includeGst ? `Including GST (${GST_PERCENT}%)` : "Excluding GST"}
-        </span>
-
-        <label className="relative inline-flex cursor-pointer">
-            <input
-            type="checkbox"
-            className="sr-only peer"
-            checked={includeGst}
-            onChange={() => setIncludeGst(!includeGst)}
-            />
-
-            <div className="w-10 h-5 bg-gray-300 rounded-full peer peer-checked:bg-blue-500 transition-all"></div>
-
-            <span className="absolute w-4 h-4 bg-white rounded-full top-0.5 left-1 peer-checked:translate-x-5 transition-all shadow"></span>
-        </label>
+      <div className="p-6 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        
+        {/* --- LEFT: CUSTOMER DETAILS (Span 5 cols) --- */}
+        <div className="lg:col-span-5 flex flex-col gap-4">
+          <div className="flex items-center gap-2 mb-1">
+             <UserCircle2 className="text-slate-400" size={20} />
+             <h3 className="text-sm font-semibold text-slate-800">Customer Details</h3>
+          </div>
+          
+          <div className="space-y-3">
+             <Input
+                name="customerName"
+                type="text"
+                leftIcon={<User size={18} className="text-slate-400"/>}
+                placeholder="Customer Name"
+                value={customerName}
+                onChange={(e) => setCustomerName(e.target.value)}
+                className="bg-white"
+             />
+             <Input
+                name="customerPhone"
+                type="tel"
+                leftIcon={<Phone size={18} className="text-slate-400"/>}
+                placeholder="Phone Number"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                className="bg-white"
+             />
+          </div>
         </div>
 
-      </div>
+        {/* --- MIDDLE: VERTICAL DIVIDER (Hidden on mobile) --- */}
+        <div className="hidden lg:block lg:col-span-1 h-full border-r border-slate-100 mx-auto w-px"></div>
 
-      {/* VERTICAL DIVIDER */}
-      <div className="w-[1px] h-16 bg-blue-300 hidden md:block"></div>
+        {/* --- RIGHT: PAYMENT SUMMARY & ACTIONS (Span 6 cols) --- */}
+        <div className="lg:col-span-6 flex flex-col justify-between h-full">
+          
+          {/* Summary Stats */}
+          <div className="flex flex-col sm:flex-row justify-between items-end sm:items-center gap-6 pb-6 border-b border-dashed border-slate-200">
+             
+             {/* Qty Badge */}
+             <div className="text-center sm:text-left">
+                <p className="text-xs text-slate-500 font-medium uppercase tracking-wider mb-1">Total Items</p>
+                <div className="inline-flex items-center justify-center bg-blue-50 text-blue-700 font-bold px-4 py-1.5 rounded-lg text-lg border border-blue-100">
+                   {totalQty}
+                </div>
+             </div>
 
-      {/* PHONE INPUT */}
-      <div className="flex space-y-4 flex-col w-[280px]">
-        <Input
-        name=""
-        type="name"
-        leftIcon={<User size={20} color="blue"/>}
-        placeholder="Enter Customer name"
-        value={phone}
-        onChange={(e)=> setPhone(e.target.value)}
-        />
-        <Input
-        name=""
-        type="tel"
-        leftIcon={<Phone size={20} color="blue"/>}
-        placeholder="Enter mobile number"
-        value={phone}
-        onChange={(e)=> setPhone(e.target.value)}
-        />
-      </div>
+             {/* Total Price */}
+             <div className="text-right">
+                <p className="text-xs text-slate-500 font-medium uppercase tracking-wider mb-1">Grand Total</p>
+                <h1 className="text-4xl font-black text-slate-900 tracking-tight">
+                  <span className="text-2xl align-top text-slate-400 font-medium mr-1">₹</span>
+                  {finalAmount.toFixed(2)}
+                </h1>
+                
+                {/* GST Toggle Switch */}
+                <div className="flex items-center justify-end gap-2 mt-2">
+                   <span className={`text-xs font-medium ${includeGst ? 'text-blue-600' : 'text-slate-400'}`}>
+                      {includeGst ? '+ 18% GST Applied' : 'Tax Excluded'}
+                   </span>
+                   <button
+                     onClick={() => setIncludeGst(!includeGst)}
+                     className={`
+                       relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent 
+                       transition-colors duration-200 ease-in-out focus:outline-none focus-visible:ring-2 
+                       focus-visible:ring-blue-600 focus-visible:ring-offset-2
+                       ${includeGst ? 'bg-blue-600' : 'bg-slate-200'}
+                     `}
+                   >
+                     <span
+                       className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${includeGst ? 'translate-x-4' : 'translate-x-0'}`}
+                     />
+                   </button>
+                </div>
+             </div>
+          </div>
 
-      {/* BUTTONS */}
-      <div className="flex gap-3">
-        
-        <GradientButton
-        onClick={()=>setIsOpen(true)}
-        >
-            Generate Bill
-        </GradientButton>
+          {/* Action Buttons */}
+          <div className="flex gap-3 mt-6 justify-end">
+            <GradientButton
+               type="button"
+               variant="outline"
+               className="px-4"
+               title="Scan Barcode"
+            >
+               <ScanBarcode size={20} className="text-slate-600" />
+            </GradientButton>
 
-        <GradientButton 
-        type="submit"
-        variant="outline"
-      
-        >
-          <ScanBarcode size={30}/>
-        </GradientButton>
+            <GradientButton
+               onClick={() => setIsOpen(true)}
+               className="w-full sm:w-auto px-8"
+            >
+               Generate Invoice
+            </GradientButton>
+          </div>
 
-        
+        </div>
       </div>
     </div>
   );

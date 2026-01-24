@@ -34,7 +34,7 @@ export const FloatingFormCard: React.FC<FloatingFormCardProps> = ({
   return (
     // 1. Backdrop Overlay (Added p-4 to ensure card never touches screen edges on mobile)
     <div 
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 sm:p-6 transition-all animate-in fade-in duration-200"
+      className="fixed inset-0 z-[999] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 sm:p-6 transition-all animate-in fade-in duration-200"
       onClick={onClose} 
     >
       {/* 2. The Card Container */}

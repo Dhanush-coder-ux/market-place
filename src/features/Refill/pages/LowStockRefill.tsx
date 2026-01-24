@@ -95,7 +95,7 @@ const RefillPage = () => {
         </div>
 
         {/* Use your HeaderCard here */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-3xl">
           <HeaderCard
             title="Out of Stock" 
             value={stats.outOfStock} 
@@ -114,15 +114,7 @@ const RefillPage = () => {
             trend="+5 items"
             trendDirection="down"
           />
-           <HeaderCard 
-            title="Healthy Stock" 
-            value={products.length - (stats.outOfStock + stats.lowStock)} 
-            subtitle="Stocked adequately"
-            icon={CheckCircle2} 
-            theme="green"
-            trend="Stable"
-            trendDirection="neutral"
-          />
+
         </div>
       </div>
 

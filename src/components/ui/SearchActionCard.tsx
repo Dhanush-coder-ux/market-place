@@ -37,7 +37,7 @@ const SearchActionCard: React.FC<SearchActionCardProps> = ({
       <div className="flex flex-col sm:flex-row items-center justify-between gap-3 w-full">
         
       {/* left side */}
-        <div className="w-full sm:flex-1">
+        <div className="max-w-2xl sm:flex-1">
           <Input
             name="search"
             value={searchValue}
@@ -49,13 +49,7 @@ const SearchActionCard: React.FC<SearchActionCardProps> = ({
         </div>
   {/* right side */}
         <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
-          
-          <button 
-            className="text-sm font-medium text-blue-600 hover:text-blue-700 whitespace-nowrap px-1"
-            onClick={() => console.log("Clear all filters")}
-          >
-            Clear all
-          </button>
+
 
           <div className="relative">
            

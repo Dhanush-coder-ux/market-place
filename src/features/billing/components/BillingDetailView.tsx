@@ -1,7 +1,7 @@
 import { ReceiptText, User, CreditCard,  Download, Printer, CircleDot } from "lucide-react";
 import { useState } from "react";
 import { ReusableSelect } from "@/components/ui/ReusableSelect";
-import { options } from "./BillingHeader";
+
 import { GradientButton } from "@/components/ui/GradientButton";
 import { InfoCard } from "./InfoCard";
 
@@ -29,8 +29,7 @@ const BillingDetailView = () => {
 
   return (
     <div className="max-w-7xl mx-auto p-4 md:p-8 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-      
-      {/* --- HEADER --- */}
+
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white p-6 rounded-[24px] shadow-sm border border-gray-100">
         <div>
           <div className="flex items-center gap-2 mb-1">
@@ -46,12 +45,16 @@ const BillingDetailView = () => {
               <ReusableSelect
               
                 placeholder="Order Status"
-                options={options}
+                options={[
+                  { label: "COMPLETED", value: "COMPLETED" },
+                  { label: "PENDING", value: "PENDING" },
+                  { label: "CANCELLED", value: "CANCELLED" },
+                ]}
                 value={status}
                 onValueChange={setStatus}
                 />
         </div>
-        {/* Payment Type Toggle Buttons */}
+
         <div className="flex bg-gray-100 p-1.5 rounded-2xl w-fit">
           <button
             onClick={() => setPaymentType("Offline")}
@@ -89,8 +92,7 @@ const BillingDetailView = () => {
         </GradientButton>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-    
-    {/* 1. Bill Info Card */}
+
     <InfoCard
       title="Billing Info"
       icon={<ReceiptText size={20} />}
@@ -114,7 +116,7 @@ const BillingDetailView = () => {
       </div>
     </InfoCard>
 
-    {/* 2. Customer Card */}
+
     <InfoCard
       title="Customer"
       icon={<User size={20} />}
@@ -128,7 +130,7 @@ const BillingDetailView = () => {
       </div>
     </InfoCard>
 
-    {/* 3. Final Amount Card (Dark Variant) */}
+
     <InfoCard
       title="Amount Due"
       variant="default"

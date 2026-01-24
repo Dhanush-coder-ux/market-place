@@ -1,71 +1,73 @@
-import React, { useState } from "react"
-import { EmployeeHeaderProps } from "../types"
-import SearchActionCard from "@/components/ui/SearchActionCard"
-import HeaderCard from "@/components/common/HeaderCard"
-import {  PersonStanding, UserCircle2, UserX } from "lucide-react"
-import Title from "@/components/common/Title"
-import { GradientButton } from "@/components/ui/GradientButton"
-import { FloatingFormCard } from "@/components/common/FloatingFormCard"
-import EmployeeForm from "../pages/EmployeeForm"
+import React, { useState } from "react";
+import { EmployeeHeaderProps } from "../types";
+import SearchActionCard from "@/components/ui/SearchActionCard";
+import HeaderCard from "@/components/common/HeaderCard";
+import { PersonStanding, UserCircle2, UserX } from "lucide-react";
+import Title from "@/components/common/Title";
+import { GradientButton } from "@/components/ui/GradientButton";
+import { FloatingFormCard } from "@/components/common/FloatingFormCard";
+import EmployeeForm from "../pages/EmployeeForm";
 
-
-const EmployeeHeader:React.FC<EmployeeHeaderProps> = ({
-    accepted,
-    notAccepted,
-   
-    onSearchChange
+const EmployeeHeader: React.FC<EmployeeHeaderProps> = ({
+  accepted,
+  notAccepted,
+  onSearchChange,
 }) => {
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const [modelShow, SetIsModelShow ] = useState(false);
   return (
-    <div className="my-4">
-         <div className="flex justify-between mb-4"> 
-      <Title title="Employee" icon={<UserCircle2 size={30}/>}/>
-    
-      </div>
-      <div className="flex justify-end items-end mb-4">
+    <div className="flex flex-col gap-6 mb-6">
+
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <Title title="Employee" icon={<UserCircle2 size={30} />} />
+
+        <div className="self-end sm:self-auto">
           <GradientButton
-      type="button"
-      onClick={()=>SetIsModelShow(true)}
-      >
-        {"+ Add Employee"}
-      </GradientButton>
+            type="button"
+            onClick={() => setIsModalOpen(true)}
+          >
+            + Add Employee
+          </GradientButton>
+        </div>
       </div>
-    
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 mb-10">
-  
-      <HeaderCard
-      title="Total Employees"
-      subtitle="Accepted employees"
-      value={accepted}
-      theme="blue"
-      icon={PersonStanding}
-      />
-      <HeaderCard
-      title="Denied Persons"
-      subtitle="Not Accepted employees"
-      value={notAccepted}
-      theme="red"
-      icon={UserX}
-      />
-    
-  
-    </div>
+
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl">
+        <HeaderCard
+          title="Total Employees"
+          subtitle="Accepted employees"
+          value={accepted}
+          theme="blue"
+          icon={PersonStanding}
+        />
+        <HeaderCard
+          title="Denied Persons"
+          subtitle="Not Accepted employees"
+          value={notAccepted}
+          theme="red"
+          icon={UserX}
+        />
+      </div>
+
+      <div className="w-full">
         <SearchActionCard
-      searchValue={""}
-      onSearchChange={onSearchChange}
-      placeholder="Search Employees"
-      />
+          searchValue={""}
+          onSearchChange={onSearchChange}
+          placeholder="Search Employees..."
+        />
+      </div>
+
+
       <FloatingFormCard
-        isOpen={modelShow}
-        onClose={() => SetIsModelShow(false)}
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
         title="Add New Employee"
         maxWidth="max-w-4xl"
       >
-        <EmployeeForm/>
+        <EmployeeForm />
       </FloatingFormCard>
-     </div>
-  )
-}
+    </div>
+  );
+};
 
-export default EmployeeHeader
+export default EmployeeHeader;

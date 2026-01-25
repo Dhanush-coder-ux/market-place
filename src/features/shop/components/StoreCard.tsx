@@ -1,5 +1,5 @@
 import { GradientButton } from "@/components/ui/GradientButton";
-import { Clock, DoorOpen, Dot, MapPin, Store } from "lucide-react";
+import { Clock, DoorOpen, MapPin, Store } from "lucide-react";
 import React from "react";
 export type StoreCardProps = {
   shopName:string;

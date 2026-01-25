@@ -5,7 +5,6 @@ import {
   IndianRupee, 
   Wifi, 
   Store, 
-  Receipt, 
   ShoppingCart
 } from "lucide-react";
 import { ReusableSelect } from "@/components/ui/ReusableSelect";

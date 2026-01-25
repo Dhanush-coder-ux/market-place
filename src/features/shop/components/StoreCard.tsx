@@ -81,10 +81,10 @@ const StoreCard :React.FC<StoreCardProps>= ({shopName,shopDescription,shopHours,
                   className="drop-shadow-md h-30 mt-3"
                 />
                 
-                <span className="bg-green-200 rounded-full flex items-center">
+                {/* <span className="bg-green-200 rounded-full flex items-center">
                     <Dot size={40} className="text-green-400 animate-pulse"/>
                   <p className="text-green-500 font-bold mb-1">Current</p>    
-                </span>
+                </span> */}
 
                 </div>
                 {/* door */}

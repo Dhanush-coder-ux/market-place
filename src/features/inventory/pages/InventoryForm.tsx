@@ -252,7 +252,7 @@ const InventoryForm = () => {
                 name="sellingPrice"
                 onChange={handleInputChange}
                 value={formData.sellingPrice}
-                leftIcon={<BiRupee size={18} className="text-blue-200" />}
+                leftIcon={<BiRupee size={18} />}
                 type="number"
                 placeholder="0.00"
                 className="w-full bg-transparent font-bold text-gray-700 outline-none border-none p-0 focus:ring-0"
@@ -269,7 +269,7 @@ const InventoryForm = () => {
           onChange={setCustomFields}
         /> */}
 
-        <div className="flex justify-end gap-4 mt-8">
+        <div className="flex justify-end gap-4 ">
           <GradientButton >Save & Add More</GradientButton>
           <GradientButton >Save</GradientButton>
           <GradientButton variant="danger">Cancel</GradientButton>

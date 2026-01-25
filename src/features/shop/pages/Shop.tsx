@@ -17,9 +17,9 @@ const Shop = () => {
           </div>
 
           <h1 className="text-4xl md:text-5xl text-slate-900 font-extrabold tracking-tight mb-4">
-            Choose your
+            Choose your Existing
             <span className="relative inline-block text-blue-600 ml-3">
-              Existing Store
+               Digital Store
               <svg
                 className="absolute -bottom-4 left-0 w-full h-4 text-blue-500"
                 viewBox="0 0 100 10"
@@ -49,9 +49,9 @@ const Shop = () => {
               <CircleFadingPlus className="text-blue-600" size={32} strokeWidth={1.5} />
             </div>
 
-            <h3 className="text-xl font-bold text-slate-800 tracking-tight">Register New Shop</h3>
+            <h3 className="text-xl font-bold text-slate-800 tracking-tight">Register New Digital Store</h3>
             <p className="text-sm text-slate-500 mt-3 text-center leading-relaxed">
-              Add a new branch or location to your <br /> business ecosystem in seconds.
+              Create a new digital store <br />for your business 
             </p>
 
             <div className="mt-6 flex items-center text-blue-600 font-semibold text-sm opacity-0 group-hover:opacity-100 transition-opacity">

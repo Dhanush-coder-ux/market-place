@@ -12,7 +12,7 @@ const Sidebar = () => {
       <motion.div
         animate={{ width: isOpen ? 200 : 60 }}
         transition={{ duration: 0.3, ease: "easeInOut" }}
-        className="relative flex flex-col h-screen bg-gradient-to-r from-blue-600 to-blue-500 text-white z-[100] flex-shrink-0 overflow-hidden shadow-xl"
+        className="relative flex flex-col h-screen bg-gradient-to-r from-blue-600 to-blue-500 text-white z-0 flex-shrink-0 overflow-hidden shadow-xl"
       >
         <div className="flex items-center justify-between p-3 h-14 border-b border-blue-400/30">
           <AnimatePresence>

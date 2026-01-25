@@ -7,12 +7,12 @@ interface OrderDateFilterProps {
   onChange: (date?: Date) => void;
 }
 
-const OrderDateFilter: React.FC<OrderDateFilterProps> = ({
- 
-}) => {
-  const [dateRange, setDateRange] = React.useState<DateRange | undefined>(
-   { from: new Date(), to: new Date()}
-  );
+const OrderDateFilter: React.FC<OrderDateFilterProps> = ({}) => {
+  const [dateRange, setDateRange] = React.useState<DateRange | undefined>({
+    from: new Date(),
+    to: new Date(),
+  });
+
   return (
     <div className="rounded-xl border bg-white p-3 shadow-sm">
       <Calendar
@@ -21,9 +21,10 @@ const OrderDateFilter: React.FC<OrderDateFilterProps> = ({
         onSelect={setDateRange}
         defaultMonth={dateRange?.from}
         numberOfMonths={2}
-          className="rounded-lg border [--cell-size:--spacing(11)] md:[--cell-size:--spacing(12)]"
+        className="rounded-lg border [--cell-size:--spacing(11)] md:[--cell-size:--spacing(12)]"
+        // ✅ ADDED: This disables all dates after today
+        disabled={{ after: new Date() }}
       />
-
     </div>
   );
 };

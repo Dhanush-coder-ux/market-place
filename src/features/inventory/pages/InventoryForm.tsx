@@ -6,9 +6,6 @@ import { ReusableCombobox } from "@/components/ui/ReusableCombobox";
 import { ReusableSelect } from "@/components/ui/ReusableSelect";
 import ImageUpload from "@/components/common/ImageUpload";
 import { GradientButton } from "@/components/ui/GradientButton";
-
-import { DynamicKeyValueSettings, KeyValueField } from "@/components/ui/DynamicKeyValueSettings";
-import { arrayToRecord } from "@/utils/form-helpers";
 import { Required } from "@/components/ui/Require";
 
 
@@ -27,7 +24,7 @@ const InventoryForm = () => {
   });
 
   // 3. Dynamic Fields State (For Attributes like Color, Size)
-  const [customFields, setCustomFields] = useState<KeyValueField[]>([]);
+  // const [customFields, setCustomFields] = useState<KeyValueField[]>([]);
 
   // 4. Error Tracking State
   const [errors, setErrors] = useState({
@@ -54,54 +51,54 @@ const InventoryForm = () => {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // const handleSubmit = async (e: React.FormEvent) => {
+  //   e.preventDefault();
 
-    const newErrors = {
-      barcode: !formData.barcode,
-      name: !formData.name,
-      category: !formData.category,
-      currentStock: !formData.currentStock,
-      currentPrice: !formData.currentPrice,
-      sellingPrice: !formData.sellingPrice,
-    };
+  //   const newErrors = {
+  //     barcode: !formData.barcode,
+  //     name: !formData.name,
+  //     category: !formData.category,
+  //     currentStock: !formData.currentStock,
+  //     currentPrice: !formData.currentPrice,
+  //     sellingPrice: !formData.sellingPrice,
+  //   };
 
-    setErrors(newErrors);
+  //   setErrors(newErrors);
 
-    // Stop if any error exists
-    if (Object.values(newErrors).some(Boolean)) {
-      // Optional: Scroll to top or show toast
-      alert("Please fill in all required fields marked with *");
-      return;
-    }
+  //   // Stop if any error exists
+  //   if (Object.values(newErrors).some(Boolean)) {
+  //     // Optional: Scroll to top or show toast
+  //     alert("Please fill in all required fields marked with *");
+  //     return;
+  //   }
 
-    // 6. Merge Static Data with Dynamic Settings
-    const additionalAttributes = arrayToRecord(customFields);
+  //   // 6. Merge Static Data with Dynamic Settings
+  //   const additionalAttributes = arrayToRecord(customFields);
 
-    const payload = {
-      ...formData,
-      attributes: additionalAttributes,
-    };
+  //   const payload = {
+  //     ...formData,
+  //     attributes: additionalAttributes,
+  //   };
 
-    console.log("Form Submitted Successfully:", payload);
+  //   console.log("Form Submitted Successfully:", payload);
 
-    // Reset Form
-    setFormData({
-      barcode: "",
-      name: "",
-      description: "",
-      currentStock: "",
-      category: "",
-      currentPrice: "",
-      sellingPrice: "",
-      image: null,
-    });
-    setCustomFields([]); 
-  };
+  //   // Reset Form
+  //   setFormData({
+  //     barcode: "",
+  //     name: "",
+  //     description: "",
+  //     currentStock: "",
+  //     category: "",
+  //     currentPrice: "",
+  //     sellingPrice: "",
+  //     image: null,
+  //   });
+  //   setCustomFields([]); 
+  // };
 
   return (
     <div>
-      <form onSubmit={handleSubmit}>
+      <form >
         <div className="flex flex-col lg:flex-row gap-10">
           <div className="flex-1 space-y-6">
             <div className="flex items-center gap-3">
@@ -266,15 +263,15 @@ const InventoryForm = () => {
 
         <hr className="border-gray-200 dark:border-gray-700 my-6" />
 
-        <DynamicKeyValueSettings 
+        {/* <DynamicKeyValueSettings 
           label="Product Attributes (e.g. Color, Size)"
           fields={customFields}
           onChange={setCustomFields}
-        />
+        /> */}
 
         <div className="flex justify-end gap-4 mt-8">
-          <GradientButton onClick={handleSubmit}>Save & Add More</GradientButton>
-          <GradientButton onClick={handleSubmit}>Save</GradientButton>
+          <GradientButton >Save & Add More</GradientButton>
+          <GradientButton >Save</GradientButton>
           <GradientButton variant="danger">Cancel</GradientButton>
         </div>
       </form>

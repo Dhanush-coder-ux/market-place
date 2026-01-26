@@ -85,7 +85,7 @@ const HeaderCard: React.FC<LowStockCardProps> = ({
         group relative w-full overflow-hidden rounded-xl border ${t.border} ${t.bg}
         p-3 transition-all duration-300 ease-in-out
         hover:-translate-y-1 hover:shadow-lg hover:shadow-${theme}-500/10 cursor-pointer
-        active:scale-[0.98] active:shadow-sm
+        active:scale-[0.98] active:shadow-sm z-0
       `}
     >
       {/* Decorative Background Pattern */}

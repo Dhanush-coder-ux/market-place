@@ -39,7 +39,7 @@ const Navbar = () => {
           <DropdownMenuTrigger asChild>
             <div 
          
-              className="flex items-center gap-2 h-auto py-2 px-3 hover:bg-gray-100 rounded-lg group"
+              className="flex items-center gap-2 h-auto py-2 px-3 bg-gray-100 rounded-lg group"
             >
               {/* Store Icon */}
               <div className="p-1.5 bg-blue-50 rounded-md text-blue-600 group-hover:bg-blue-100 transition-colors">

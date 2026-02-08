@@ -40,6 +40,12 @@ const RefillPage = () => {
   const [products, setProducts] = useState<Product[]>(MOCK_INVENTORY);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterType, setFilterType] = useState<"all" | "low" | "out">("all");
+  const [expandedRefill, setExpandedRefill] = useState<string | null>(null);
+
+const [refillDetails, setRefillDetails] = useState<
+  Record<string, { qty: string; buyingPrice: string; sellingPrice: string }>
+>({});
+
   
   // Track inputs for each row: { "1": "10", "2": "5" }
   const [refillInputs, setRefillInputs] = useState<Record<string, string>>({});
@@ -64,25 +70,51 @@ const RefillPage = () => {
   });
 
   // --- Handlers ---
-  const handleRefillChange = (id: string, value: string) => {
-    setRefillInputs(prev => ({ ...prev, [id]: value }));
-  };
+const handleRefillDetailChange = (
+  id: string,
+  field: "qty" | "buyingPrice" | "sellingPrice",
+  value: string
+) => {
+  setRefillDetails((prev) => ({
+    ...prev,
+    [id]: {
+      qty: prev[id]?.qty || "",
+      buyingPrice: prev[id]?.buyingPrice || "",
+      sellingPrice: prev[id]?.sellingPrice || "",
+      [field]: value,
+    },
+  }));
+};
+const executeRefill = (id: string) => {
+  const data = refillDetails[id];
+  if (!data || !data.qty) return;
 
-  const executeRefill = (id: string) => {
-    const amount = parseInt(refillInputs[id] || "0");
-    if (amount <= 0) return;
+  const qty = parseInt(data.qty);
+  if (qty <= 0) return;
 
-    // Update Product State
-    setProducts(prev => prev.map(p => 
-      p.id === id ? { ...p, currentStock: p.currentStock + amount } : p
-    ));
+  setProducts((prev) =>
+    prev.map((p) =>
+      p.id === id
+        ? {
+            ...p,
+            currentStock: p.currentStock + qty,
+            lastRestocked: new Date().toISOString().split("T")[0],
+          }
+        : p
+    )
+  );
 
-    // Clear Input
-    setRefillInputs(prev => ({ ...prev, [id]: "" }));
-    
-    // Optional: Add Toast Notification here
-    console.log(`Refilled item ${id} by ${amount}`);
-  };
+  console.log("Refill Payload:", {
+    productId: id,
+    quantity: qty,
+    buyingPrice: data.buyingPrice,
+    sellingPrice: data.sellingPrice,
+  });
+
+  setRefillDetails((prev) => ({ ...prev, [id]: { qty: "", buyingPrice: "", sellingPrice: "" } }));
+  setExpandedRefill(null);
+};
+
 
   return (
     <div className="p-6 space-y-8">
@@ -211,24 +243,74 @@ const RefillPage = () => {
                 </div>
 
                 {/* Action: Refill Input */}
-                <div className="flex items-center gap-2 w-full md:w-auto border-t md:border-t-0 border-gray-200/50 pt-4 md:pt-0 mt-2 md:mt-0">
-                  <div className="w-32">
-                    <Input 
-                      type="number" 
-                      placeholder="+ Qty" 
-                      value={refillInputs[product.id] || ""}
-                      onChange={(e) => handleRefillChange(product.id, e.target.value)}
-                      className="bg-white/80 border-gray-200"
-                    />
-                  </div>
-                  <button 
-                    onClick={() => executeRefill(product.id)}
-                    disabled={!refillInputs[product.id]}
-                    className="h-10 w-10 flex items-center justify-center rounded-xl bg-blue-600 text-white shadow-lg shadow-blue-500/30 hover:bg-blue-700 hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:shadow-none disabled:hover:scale-100"
-                  >
-                    <Plus size={20} strokeWidth={3} />
-                  </button>
-                </div>
+            {/* Refill Section */}
+<div className="w-full lg:w-[450px] border-t md:border-t-0 pt-4 md:pt-0">
+  <div className="flex items-center gap-3">
+    {/* Quantity Input with Label */}
+    <div className="flex-1">
+      <p className="text-[10px] font-bold text-gray-400 uppercase mb-1 ml-1">Restock Qty</p>
+      <Input
+        type="number"
+        placeholder="0"
+        value={refillDetails[product.id]?.qty || ""}
+        onChange={(e) => handleRefillDetailChange(product.id, "qty", e.target.value)}
+        className="h-11 bg-white border-gray-200 focus:border-blue-500 shadow-sm"
+      />
+    </div>
+
+    {/* Toggle Link - Stylized as a subtle button */}
+    <div className="mt-5">
+      <button
+        onClick={() => setExpandedRefill(expandedRefill === product.id ? null : product.id)}
+        className={`flex items-center gap-1 text-[11px] font-bold px-3 py-2 rounded-lg transition-colors ${
+          expandedRefill === product.id 
+            ? "bg-blue-50 text-blue-600" 
+            : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+        }`}
+      >
+        {expandedRefill === product.id ? "Hide Prices" : "Update Prices"}
+      </button>
+    </div>
+
+    {/* Execute Button */}
+    <div className="mt-5">
+      <button
+        onClick={() => executeRefill(product.id)}
+        disabled={!refillDetails[product.id]?.qty}
+        className="h-11 px-4 flex items-center gap-2 rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-blue-200 active:scale-95"
+      >
+        <Plus size={18} strokeWidth={3} />
+        <span className="font-bold text-sm">Refill</span>
+      </button>
+    </div>
+  </div>
+
+  {/* Expanded Price Inputs - Now styled as a sub-form */}
+  {expandedRefill === product.id && (
+    <div className="mt-3 grid grid-cols-2 gap-3 bg-blue-50/50 p-3 rounded-2xl border border-blue-100 animate-in fade-in slide-in-from-top-2 duration-200">
+      <div>
+        <p className="text-[10px] font-bold text-blue-600 uppercase mb-1 ml-1">New Buying Price (₹)</p>
+        <Input
+          type="number"
+          placeholder="0.00"
+          value={refillDetails[product.id]?.buyingPrice || ""}
+          onChange={(e) => handleRefillDetailChange(product.id, "buyingPrice", e.target.value)}
+          className="bg-white border-blue-200"
+        />
+      </div>
+      <div>
+        <p className="text-[10px] font-bold text-blue-600 uppercase mb-1 ml-1">New Selling Price (₹)</p>
+        <Input
+          type="number"
+          placeholder="0.00"
+          value={refillDetails[product.id]?.sellingPrice || ""}
+          onChange={(e) => handleRefillDetailChange(product.id, "sellingPrice", e.target.value)}
+          className="bg-white border-blue-200"
+        />
+      </div>
+    </div>
+  )}
+</div>
               </div>
             );
           })

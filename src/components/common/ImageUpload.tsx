@@ -2,37 +2,29 @@ import { Upload } from "lucide-react";
 import React, { useRef, useState, useEffect } from "react";
 import { ImageUploadProps } from "../types";
 
-
-
 const ImageUpload: React.FC<ImageUploadProps> = ({
   label = "Image",
   value,
   onChange,
-  maxSizeMB = 10,
+  maxSizeMB = 5,
   accept = "image/png, image/jpeg",
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [preview, setPreview] = useState<string | null>(null);
 
- 
   useEffect(() => {
-    if (!value) {
-      setImagePreview(null);
-      return;
-    }
-
+    if (!value) return setPreview(null);
     const url = URL.createObjectURL(value);
-    setImagePreview(url);
-
+    setPreview(url);
     return () => URL.revokeObjectURL(url);
   }, [value]);
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     if (file.size > maxSizeMB * 1024 * 1024) {
-      alert(`Image must be under ${maxSizeMB}MB`);
+      alert(`Max ${maxSizeMB}MB allowed`);
       return;
     }
 
@@ -40,52 +32,46 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
   };
 
   return (
-    <div className="lg:w-1/3 flex flex-col items-center justify-start">
-      <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest mb-4">
+    <div className="flex flex-col items-center gap-2 w-[160px]">
+      <label className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest">
         {label}
       </label>
 
       <div
-        className="relative w-full aspect-square max-w-[240px] group"
         onClick={() => fileInputRef.current?.click()}
+        className="relative w-full aspect-square rounded-2xl border-2 border-dashed border-gray-300 bg-gray-50 hover:border-blue-400 hover:bg-blue-50 transition cursor-pointer overflow-hidden group"
       >
-        <div className="absolute inset-0 bg-blue-500/5 rounded-[30px] border-2 border-dashed border-blue-200 group-hover:border-blue-400 group-hover:bg-blue-500/10 transition-all flex items-center justify-center cursor-pointer overflow-hidden">
-
-          {imagePreview ? (
-            <>
-              <img
-                src={imagePreview}
-                alt="Preview"
-                className="w-full h-full object-cover rounded-[28px]"
-              />
-              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex flex-col items-center justify-center text-white">
-                <span className="text-sm font-bold">Change Image</span>
-                <span className="text-[10px] opacity-80 truncate px-4">
-                  {value?.name}
-                </span>
-              </div>
-            </>
-          ) : (
-            <div className="flex flex-col items-center">
-              <div className="p-4 bg-white rounded-2xl shadow-sm mb-3 group-hover:scale-110 transition-transform">
-                <Upload className="text-blue-600" size={28} />
-              </div>
-              <span className="text-sm font-bold text-blue-600">Upload Image</span>
-              <span className="text-[10px] text-gray-400 mt-1 uppercase tracking-tighter">
-                PNG, JPG up to {maxSizeMB}MB
-              </span>
+        {preview ? (
+          <>
+            <img
+              src={preview}
+              alt="Preview"
+              className="w-full h-full object-cover"
+            />
+            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex flex-col items-center justify-center text-white">
+              <span className="text-xs font-semibold">Change</span>
             </div>
-          )}
-        </div>
-
-        <input
-          type="file"
-          ref={fileInputRef}
-          onChange={handleImageChange}
-          accept={accept}
-          className="hidden"
-        />
+          </>
+        ) : (
+          <div className="flex flex-col items-center justify-center h-full text-center">
+            <Upload className="text-blue-600" size={22} />
+            <span className="text-[11px] font-semibold text-blue-600 mt-1">
+              Upload
+            </span>
+            <span className="text-[9px] text-gray-400">
+              PNG / JPG
+            </span>
+          </div>
+        )}
       </div>
+
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept={accept}
+        onChange={handleChange}
+        className="hidden"
+      />
     </div>
   );
 };

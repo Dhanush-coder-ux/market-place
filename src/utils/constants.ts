@@ -49,3 +49,13 @@ export const ordersByMonth: OrdersByMonthType = {
   nov: { online_orders: { last: 58, cur: 92 }, offline_orders: { last: 148, cur: 215 } },
   dec: { online_orders: { last: 32, cur: 28 }, offline_orders: { last: 360, cur: 1000 } },
 };
+
+export const FIELD_DESCRIPTIONS = {
+    barcode: "Scan the product barcode or enter a unique SKU identifier.",
+    name: "The public-facing name of the product as it will appear on invoices.",
+    description: "Detailed information about the product's specs or materials.",
+    category: "Organize products into groups for better reporting.",
+    stock: "The current physical quantity available in your warehouse.",
+    buyingPrice: "The cost price you paid to the supplier per unit.",
+    sellingPrice: "The price at which you intend to sell this product to customers."
+  };

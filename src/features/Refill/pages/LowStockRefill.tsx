@@ -47,8 +47,7 @@ const [refillDetails, setRefillDetails] = useState<
 >({});
 
   
-  // Track inputs for each row: { "1": "10", "2": "5" }
-  const [refillInputs, setRefillInputs] = useState<Record<string, string>>({});
+
 
   // --- Derived Data (Stats) ---
   const stats = useMemo(() => {

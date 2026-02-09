@@ -1,13 +1,8 @@
 import React, { useState, useCallback } from 'react';
 import { 
   Upload, 
-  X, 
   Search, 
-   ImageIcon, 
-  Store, 
-  Smartphone, 
   AlertCircle,
-  CheckCircle2,
   Trash2
 } from 'lucide-react';
 

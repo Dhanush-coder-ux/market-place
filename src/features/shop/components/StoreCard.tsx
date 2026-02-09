@@ -1,6 +1,7 @@
 import { GradientButton } from "@/components/ui/GradientButton";
 import { Clock, DoorOpen, MapPin, Store } from "lucide-react";
 import React from "react";
+import { Link } from "react-router-dom";
 export type StoreCardProps = {
   shopName:string;
   shopDescription:string;
@@ -168,9 +169,11 @@ const StoreCard :React.FC<StoreCardProps>= ({shopName,shopDescription,shopHours,
 
             </div>
             <div className="relative flex justify-center top-6">
+              <Link to={'/create-store'}>
               <GradientButton type="button" title="Open Store" icon={<DoorOpen size={20} />}>
-                Open Store
+                Create Store
               </GradientButton>
+              </Link>
             </div>
           </div>
 

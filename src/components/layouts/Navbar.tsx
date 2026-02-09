@@ -86,10 +86,10 @@ const Navbar = () => {
 
             <DropdownMenuSeparator />
             
-            <DropdownMenuItem className="cursor-pointer text-blue-600 focus:text-blue-700">
+            <Link to="/profile/add"><DropdownMenuItem  className="cursor-pointer text-blue-600 focus:text-blue-700">
               <PlusCircle className="w-4 h-4 mr-2" />
               Create New Store
-            </DropdownMenuItem>
+            </DropdownMenuItem></Link>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

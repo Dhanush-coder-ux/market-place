@@ -1,4 +1,4 @@
-import { CircleFadingPlus, Store, ArrowRight } from "lucide-react";
+import {  Store } from "lucide-react";
 import StoreCard from "../components/StoreCard";
 
 
@@ -43,24 +43,10 @@ const Shop = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
 
-          {/* Create New Shop Card */}
-          <button className="group relative flex flex-col items-center p-8 bg-white/60 backdrop-blur-md border border-dashed border-slate-300 rounded-3xl transition-all duration-300 hover:border-blue-400 hover:bg-blue-50/50 hover:shadow-xl hover:shadow-blue-500/5">
-            <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 mb-6 transition-transform duration-300 group-hover:scale-110 group-hover:shadow-md">
-              <CircleFadingPlus className="text-blue-600" size={32} strokeWidth={1.5} />
-            </div>
-
-            <h3 className="text-xl font-bold text-slate-800 tracking-tight">Register New Digital Store</h3>
-            <p className="text-sm text-slate-500 mt-3 text-center leading-relaxed">
-              Create a new digital store <br />for your business 
-            </p>
-
-            <div className="mt-6 flex items-center text-blue-600 font-semibold text-sm opacity-0 group-hover:opacity-100 transition-opacity">
-              Get Started <ArrowRight size={16} className="ml-1" />
-            </div>
-          </button>
 
           {/* existing Shop Card  */}
           <StoreCard
+          
             shopName="Zenitsu"
             shopDescription="Thunder breething 7th form"
             shopHours="10AM-7PM"

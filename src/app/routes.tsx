@@ -1,4 +1,9 @@
 import Loader from "@/components/common/Loader";
+import Main from "@/features/digitalstore/components/Main";
+import DeliveryPreferences from "@/features/digitalstore/pages/Deliveryinfo";
+import StoreSetupForm from "@/features/digitalstore/pages/DigitalStoreForm";
+import ProductManagement from "@/features/digitalstore/pages/ProductManagement";
+import StorePublishFlow from "@/features/digitalstore/pages/PublishStore";
 import RefillPage from "@/features/Refill/pages/LowStockRefill";
 import React, { Suspense } from "react";
 import { createBrowserRouter } from "react-router-dom";
@@ -36,7 +41,13 @@ export const router = createBrowserRouter([
             { path:'/profile', element:<Profile/> },
             { path:'/profile/add', element:<ProfileForm/> },
             { path:'/shop', element:<Shop/>},
-            {path:'/re-fill',element:<RefillPage/>}
+            {path:'/re-fill',element:<RefillPage/>},
+            {path:'/digital-store', element: <StoreSetupForm/>},
+            {path:'/delivery-info', element: <DeliveryPreferences/>},
+            {path:'/product-management', element: <ProductManagement/>},
+            {path:'/publish-store',element:<StorePublishFlow/>},
+            {path:'/create-store', element: <Main/>}
+              
         ]
     },
     {

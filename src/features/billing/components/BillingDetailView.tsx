@@ -1,4 +1,4 @@
-import { ReceiptText, User, CreditCard,  Download, Printer, CircleDot } from "lucide-react";
+import { ReceiptText, User, CreditCard, Download, Printer, CircleDot } from "lucide-react";
 import { useState } from "react";
 import { ReusableSelect } from "@/components/ui/ReusableSelect";
 
@@ -6,7 +6,7 @@ import { GradientButton } from "@/components/ui/GradientButton";
 import { InfoCard } from "./InfoCard";
 
 const BillingDetailView = () => {
-  const [paymentType, setPaymentType] = useState<"Online" | "Offline">("Online"); 
+  const [paymentType, setPaymentType] = useState<"Online" | "Offline">("Online");
   const [status, setStatus] = useState("COMPLETED");
 
   const billingInfo = {
@@ -22,7 +22,7 @@ const BillingDetailView = () => {
       { code: "PRD003", name: "Formal Shoes", qty: 1, price: 1999, tprice: 1999 },
     ],
   };
-  
+
   const subTotal = billingInfo.items.reduce((sum, i) => sum + i.tprice, 0);
   const gstAmt = (subTotal * billingInfo.gstPercent) / 100;
   const totalAmt = subTotal + gstAmt;
@@ -42,38 +42,36 @@ const BillingDetailView = () => {
         </div>
 
         <div>
-              <ReusableSelect
-              
-                placeholder="Order Status"
-                options={[
-                  { label: "COMPLETED", value: "COMPLETED" },
-                  { label: "PENDING", value: "PENDING" },
-                  { label: "CANCELLED", value: "CANCELLED" },
-                ]}
-                value={status}
-                onValueChange={setStatus}
-                />
+          <ReusableSelect
+
+            placeholder="Order Status"
+            options={[
+              { label: "COMPLETED", value: "COMPLETED" },
+              { label: "PENDING", value: "PENDING" },
+              { label: "CANCELLED", value: "CANCELLED" },
+            ]}
+            value={status}
+            onValueChange={setStatus}
+          />
         </div>
 
         <div className="flex bg-gray-100 p-1.5 rounded-2xl w-fit">
           <button
             onClick={() => setPaymentType("Offline")}
-            className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${
-              paymentType === "Offline" 
-                ? "bg-white text-gray-900 shadow-md" 
+            className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${paymentType === "Offline"
+                ? "bg-white text-gray-900 shadow-md"
                 : "text-gray-500 hover:text-gray-700"
-            }`}
+              }`}
           >
             <CircleDot size={16} className={paymentType === "Offline" ? "text-orange-500" : "text-transparent"} />
             Offline
           </button>
           <button
             onClick={() => setPaymentType("Online")}
-            className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${
-              paymentType === "Online" 
-                ? "bg-white text-gray-900 shadow-md" 
+            className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${paymentType === "Online"
+                ? "bg-white text-gray-900 shadow-md"
                 : "text-gray-500 hover:text-gray-700"
-            }`}
+              }`}
           >
             <CircleDot size={16} className={paymentType === "Online" ? "text-green-500" : "text-transparent"} />
             Online
@@ -81,71 +79,70 @@ const BillingDetailView = () => {
         </div>
       </div>
 
-       <div className="flex items-center justify-center gap-4">
-        <GradientButton variant="outline" icon={ <Printer size={18} />}>
-         
+      <div className="flex items-center justify-center gap-4">
+        <GradientButton variant="outline" icon={<Printer size={18} />}>
+
           Generate Invoice
         </GradientButton>
-        <GradientButton icon={ <Download size={18} />}>
-         
+        <GradientButton icon={<Download size={18} />}>
+
           Generate Bill
         </GradientButton>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
 
-    <InfoCard
-      title="Billing Info"
-      icon={<ReceiptText size={20} />}
-      iconClassName="bg-blue-50 text-blue-500"
-    >
-      <div className="flex justify-between items-center text-sm">
-        <span className="text-gray-500">Bill Number</span>
-        <span className="font-bold text-gray-800">{billingInfo.billNo}</span>
-      </div>
-      <div className="flex justify-between items-center text-sm">
-        <span className="text-gray-500">Status</span>
-        <span
-          className={`px-3 py-1 rounded-full text-[10px] font-black uppercase ${
-            status === "COMPLETED" ? "bg-green-50 text-green-600" : 
-            status === "PENDING" ? "bg-orange-50 text-orange-500" : 
-            status === "CANCELLED" ? "bg-red-50 text-red-600" : ""
-          }`}
+        <InfoCard
+          title="Billing Info"
+          icon={<ReceiptText size={20} />}
+          iconClassName="bg-blue-50 text-blue-500"
         >
-          {status}
-        </span>
+          <div className="flex justify-between items-center text-sm">
+            <span className="text-gray-500">Bill Number</span>
+            <span className="font-bold text-gray-800">{billingInfo.billNo}</span>
+          </div>
+          <div className="flex justify-between items-center text-sm">
+            <span className="text-gray-500">Status</span>
+            <span
+              className={`px-3 py-1 rounded-full text-[10px] font-black uppercase ${status === "COMPLETED" ? "bg-green-50 text-green-600" :
+                  status === "PENDING" ? "bg-orange-50 text-orange-500" :
+                    status === "CANCELLED" ? "bg-red-50 text-red-600" : ""
+                }`}
+            >
+              {status}
+            </span>
+          </div>
+        </InfoCard>
+
+
+        <InfoCard
+          title="Customer"
+          icon={<User size={20} />}
+          iconClassName="bg-purple-50 text-purple-500"
+        >
+          <div className="flex flex-col gap-1">
+            <div className="text-sm font-bold text-gray-800">
+              {billingInfo.customerName}
+            </div>
+            <div className="text-xs text-gray-500">{billingInfo.phone}</div>
+          </div>
+        </InfoCard>
+
+
+        <InfoCard
+          title="Amount Due"
+          variant="default"
+          icon={<CreditCard size={20} />}
+        >
+          <div className="space-y-1">
+            <div className="text-3xl font-black italic">
+              ₹{totalAmt.toLocaleString()}
+            </div>
+            <div className="text-[10px] text-black tracking-tight">
+              Includes ₹{gstAmt.toFixed(2)} GST ({billingInfo.gstPercent}%)
+            </div>
+          </div>
+        </InfoCard>
       </div>
-    </InfoCard>
-
-
-    <InfoCard
-      title="Customer"
-      icon={<User size={20} />}
-      iconClassName="bg-purple-50 text-purple-500"
-    >
-      <div className="flex flex-col gap-1">
-        <div className="text-sm font-bold text-gray-800">
-          {billingInfo.customerName}
-        </div>
-        <div className="text-xs text-gray-500">{billingInfo.phone}</div>
-      </div>
-    </InfoCard>
-
-
-    <InfoCard
-      title="Amount Due"
-      variant="default"
-      icon={<CreditCard size={20} />}
-    >
-      <div className="space-y-1">
-        <div className="text-3xl font-black italic">
-            ₹{totalAmt.toLocaleString()}
-        </div>
-        <div className="text-[10px] text-black tracking-tight">
-            Includes ₹{gstAmt.toFixed(2)} GST ({billingInfo.gstPercent}%)
-        </div>
-      </div>
-    </InfoCard>
-    </div>
 
 
       <div className="bg-white rounded-[24px] shadow-sm border border-gray-100 overflow-hidden">
@@ -183,29 +180,29 @@ const BillingDetailView = () => {
           </table>
         </div>
 
-      
+
         <div className="bg-gray-50 p-6 flex flex-col items-end gap-2 border-t border-gray-100">
-           <div className="flex justify-between w-full max-w-[240px] text-sm text-gray-500">
-             <span>Subtotal</span>
-             <span className="font-bold text-gray-800">₹{subTotal.toFixed(2)}</span>
-           </div>
-           <div className="flex justify-between w-full max-w-[240px] text-sm text-gray-500">
-             <span>GST ({billingInfo.gstPercent}%)</span>
-             <span className="font-bold text-gray-800">₹{gstAmt.toFixed(2)}</span>
-           </div>
-           <div className="h-[1px] w-full max-w-[240px] bg-gray-200 my-1" />
-           <div className="flex justify-between w-full max-w-[240px] text-lg font-black text-blue-600">
-             <span>Grand Total</span>
-             <span>₹{totalAmt.toFixed(2)}</span>
-           </div>
+          <div className="flex justify-between w-full max-w-[240px] text-sm text-gray-500">
+            <span>Subtotal</span>
+            <span className="font-bold text-gray-800">₹{subTotal.toFixed(2)}</span>
+          </div>
+          <div className="flex justify-between w-full max-w-[240px] text-sm text-gray-500">
+            <span>GST ({billingInfo.gstPercent}%)</span>
+            <span className="font-bold text-gray-800">₹{gstAmt.toFixed(2)}</span>
+          </div>
+          <div className="h-[1px] w-full max-w-[240px] bg-gray-200 my-1" />
+          <div className="flex justify-between w-full max-w-[240px] text-lg font-black text-blue-600">
+            <span>Grand Total</span>
+            <span>₹{totalAmt.toFixed(2)}</span>
+          </div>
         </div>
       </div>
 
-   
-     
+
+
 
     </div>
-    
+
   );
 };
 

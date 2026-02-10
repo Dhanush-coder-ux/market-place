@@ -41,7 +41,7 @@ const StorePublishFlow = () => {
  ;
 
   return (
-    <div className="min-h-screen bg-white flex items-center justify-center p-4 font-sans">
+    <div className=" bg-white flex items-center justify-center ">
       
       {/* 1. ADMIN DRAFT VIEW */}
       {status === 'draft' && (

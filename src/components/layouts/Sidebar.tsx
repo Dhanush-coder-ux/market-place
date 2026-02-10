@@ -54,18 +54,17 @@ const Sidebar = () => {
                 // 6. Reduced padding (p-3 -> p-2), gap (gap-4 -> gap-3), and font size (text-sm)
                 className={({ isActive }) =>
                   `flex items-center gap-3 p-2 rounded-md transition-all duration-200 group
-                  ${
-                    isActive
-                      ? "bg-white/20 text-white font-medium"
-                      : "text-blue-100 hover:bg-white/10"
+                  ${isActive
+                    ? "bg-white/20 text-white font-medium"
+                    : "text-blue-100 hover:bg-white/10"
                   }`
                 }
               >
                 {/* 7. Reduced Nav icon size (24 -> 20) */}
                 <div className="min-w-[20px]">
-                   <Icon size={20} />
+                  <Icon size={20} />
                 </div>
-                
+
                 <AnimatePresence>
                   {isOpen && (
                     <motion.span

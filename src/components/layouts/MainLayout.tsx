@@ -4,21 +4,24 @@ import Navbar from "./Navbar";
 
 const MainLayout = () => {
   return (
-    <div className="h-screen w-full flex flex-col overflow-hidden">
-      
-       <Navbar/>
-      <div className="flex flex-1 overflow-hidden">
+    <div className="h-screen w-full flex flex-col overflow-hidden bg-slate-50">
+
+      <div className="shrink-0 z-20 bg-white border-b border-slate-200">
+        <Navbar />
+      </div>
+
+      <div className="flex flex-1 overflow-hidden relative">
+
         <Sidebar />
-    
-      
-    
-      <main className="flex-1 h-full overflow-y-auto custom-scrollbar">
-      
-        <div className="mx-2 p-3 lg:p-3">
+
+        <main className="flex-1 h-full overflow-y-auto overflow-x-hidden custom-scrollbar relative">
+
+          <div className="w-full min-h-full p-4 md:p-6">
             <Outlet />
           </div>
-      </main>
-        </div>
+
+        </main>
+      </div>
     </div>
   );
 };

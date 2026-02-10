@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Upload, Search, AlertCircle, Trash2, Tag } from 'lucide-react';
+import { Upload, Search, AlertCircle, Trash2 } from 'lucide-react';
 
 interface Product {
   id: string;

@@ -9,7 +9,7 @@ import StorePublishFlow from "../pages/PublishStore";
 import { Link } from 'react-router-dom';
 
 
-const Main = ({ onClose }: { onClose: () => void }) => {
+const Main = ({ onClose }: { onClose?: () => void }) => {
   const [currentStep, setCurrentStep] = useState(1);
 
   const steps = [

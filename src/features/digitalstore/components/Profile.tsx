@@ -1,6 +1,7 @@
 import { MapPin, Share2, ShieldCheck, Star, Megaphone, Grid,ChevronLeft, QrCode } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
-export const Profile = ({ status }: { status: string }) => {
+export const DigitalStoreProfile = ({ status }: { status: string }) => {
   interface Product {
     id: string;
     name: string;
@@ -38,12 +39,13 @@ export const Profile = ({ status }: { status: string }) => {
   ];
 
   if (status !== 'live') return null;
+  const navigate = useNavigate();
 
   return (
     <div className="w-full min-h-screen bg-white text-black font-sans">
       {/* --- Top Navigation Bar --- */}
       <nav className="sticky top-0 z-50 bg-white border-b border-gray-100 px-4 py-3 flex justify-between items-center">
-        <ChevronLeft size={24} />
+        <ChevronLeft className="cursor-pointer" onClick={()=>navigate(-1)} size={24} />
         <div className="flex items-center gap-1 font-bold text-sm">
           {MOCK_PROFILE.username}
           <ShieldCheck size={14} className="text-blue-500 fill-blue-500" />
@@ -67,15 +69,18 @@ export const Profile = ({ status }: { status: string }) => {
             </div>
 
             {/* Stats */}
-            <div className="flex gap-6 md:gap-10 pr-4">
+            <div className="flex gap-6 md:gap-10 ">
         <QrCode size={48} className="text-gray-600" />
-           <Share2 size={18} />
+           {/* <Share2 size={18} /> */}
             </div>
           </div>
 
           {/* Bio Section */}
           <div className="space-y-0.5">
+            <div className="flex gap-5">
             <h1 className="font-bold text-sm">{MOCK_PROFILE.name}</h1>
+            <Share2 size={18} className="cursor-pointer" /> 
+            </div>
             <p className="text-gray-500 text-sm flex items-center gap-1">
               <MapPin size={12} /> {MOCK_PROFILE.location}
             </p>

@@ -6,7 +6,8 @@ import {
   ArrowRight,
   AlertCircle
 } from 'lucide-react';
-import { Profile } from '../components/Profile';
+import { DigitalStoreProfile } from '../components/Profile';
+
 
 // --- Types ---
 
@@ -116,7 +117,7 @@ const StorePublishFlow = () => {
           <p className="text-sm opacity-80">Redirecting to store...</p>
         </div>
       )}
-     <Profile status={status} />
+     <DigitalStoreProfile status={status} />
      
     </div>
   );

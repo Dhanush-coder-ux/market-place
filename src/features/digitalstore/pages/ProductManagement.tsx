@@ -116,14 +116,14 @@ const ProductManagement = () => {
                   className="w-full pl-5 pr-2 py-1 border rounded bg-gray-50 text-xs font-mono"
                 />
               </div>
-              <button 
+              {/* <button 
                 onClick={() => updateProduct(product.id, 'stockStatus', product.stockStatus === 'In Stock' ? 'Out of Stock' : 'In Stock')}
                 className={`text-[10px] px-2 py-1 rounded-full border whitespace-nowrap font-bold ${
                   product.stockStatus === 'In Stock' ? 'bg-green-50 text-green-700 border-green-100' : 'bg-red-50 text-red-700 border-red-100'
                 }`}
               >
                 {product.stockStatus}
-              </button>
+              </button> */}
             </div>
 
             {/* Latest Arrival Logic */}

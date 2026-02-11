@@ -1,5 +1,6 @@
 import Loader from "@/components/common/Loader";
 import Main from "@/features/digitalstore/components/Main";
+import { DigitalStoreProfile } from "@/features/digitalstore/components/Profile";
 import DeliveryPreferences from "@/features/digitalstore/pages/Deliveryinfo";
 import StoreSetupForm from "@/features/digitalstore/pages/DigitalStoreForm";
 import ProductManagement from "@/features/digitalstore/pages/ProductManagement";
@@ -46,8 +47,8 @@ export const router = createBrowserRouter([
             {path:'/delivery-info', element: <DeliveryPreferences/>},
             {path:'/product-management', element: <ProductManagement/>},
             {path:'/publish-store',element:<StorePublishFlow/>},
-            {path:'/create-store', element: <Main/>}
-              
+            {path:'/create-store', element: <Main/>},
+              {path:'profile-info',element:<DigitalStoreProfile  status="live"/>}
         ]
     },
     {

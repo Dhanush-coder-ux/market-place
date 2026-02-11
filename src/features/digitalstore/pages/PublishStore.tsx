@@ -1,4 +1,4 @@
-import  { useState,  } from 'react';
+import  { useEffect, useState,  } from 'react';
 import { 
   Store, 
   CheckCircle2, 
@@ -6,7 +6,8 @@ import {
   ArrowRight,
   AlertCircle
 } from 'lucide-react';
-import { DigitalStoreProfile } from '../components/Profile';
+import { useNavigate } from 'react-router-dom';
+
 
 
 // --- Types ---
@@ -17,8 +18,14 @@ const StorePublishFlow = () => {
   // States: 'draft' | 'validating' | 'success' | 'live'
   const [status, setStatus] = useState<'draft' | 'validating' | 'success' | 'live'>('draft');
   const [validationStep, setValidationStep] = useState(0);
+  const navigate = useNavigate();
   
   // Handlers
+  useEffect(() => {
+  if (status === "live") {
+    navigate("/profile-info");
+  }
+}, [status, navigate]);
   const handlePublish = () => {
     setStatus('validating');
     
@@ -39,7 +46,7 @@ const StorePublishFlow = () => {
     });
   };
 
- ;
+ 
 
   return (
     <div className=" bg-white flex items-center justify-center ">
@@ -106,6 +113,7 @@ const StorePublishFlow = () => {
 
       {/* 3. SUCCESS ANIMATION VIEW */}
       {status === 'success' && (
+       
         <div className="bg-green-500 w-full max-w-md rounded-2xl shadow-xl p-12 text-center text-white space-y-6 animate-in fade-in zoom-in duration-300">
           <div className="w-24 h-24 bg-white rounded-full mx-auto flex items-center justify-center shadow-lg">
             <CheckCircle2 size={48} className="text-green-500 animate-bounce" />
@@ -117,7 +125,7 @@ const StorePublishFlow = () => {
           <p className="text-sm opacity-80">Redirecting to store...</p>
         </div>
       )}
-     <DigitalStoreProfile status={status} />
+   
      
     </div>
   );

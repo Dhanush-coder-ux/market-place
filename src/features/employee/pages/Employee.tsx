@@ -10,6 +10,7 @@ const Employee = () => {
   const [ Isopen, setIsOpen ] = useState(false);
   const [ selectedItem, setSelectedItem ] = useState<any>(null);
     const [selectedRows, setSelectedRows] = useState<any[]>([]); // Stores Barcodes
+    
    const columns = [
     {key:"employeeId",label:"Employee Id"},
    {key:"Role",label:'Role'}, 

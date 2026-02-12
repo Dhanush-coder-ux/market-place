@@ -35,7 +35,7 @@ const BillingDetailView = () => {
           <div className="flex items-center gap-2 mb-1">
             <span className="px-3 py-1 bg-blue-50 text-blue-600 text-[10px] font-bold uppercase tracking-wider rounded-full">Invoice Detail</span>
           </div>
-          <h2 className="text-3xl font-black text-gray-900 tracking-tight">
+          <h2 className="text-2xl font-black text-gray-900 tracking-tight">
             {billingInfo.billNo}
           </h2>
           <p className="text-gray-500 text-sm">Issued on {billingInfo.date}</p>

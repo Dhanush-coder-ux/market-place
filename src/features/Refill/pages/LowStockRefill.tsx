@@ -225,21 +225,50 @@ const executeRefill = (id: string) => {
                 </div>
 
                 {/* Stock Level Visuals */}
-                <div className="flex-1 w-full md:w-auto flex flex-col gap-1">
-                  <div className="flex justify-between text-xs font-semibold mb-1">
-                    <span className={textColor}>Current: {product.currentStock}</span>
-                  </div>
-                  {/* Progress Bar */}
-                  <div className="h-2 w-full bg-white/50 rounded-full overflow-hidden border border-black/5">
-                    <div 
-                      className={`h-full rounded-full transition-all duration-500 ${isOut ? 'bg-red-500' : isLow ? 'bg-amber-500' : 'bg-emerald-500'}`} 
-                      style={{ width: `${Math.min((product.currentStock / (product.minThreshold * 2)) * 100, 100)}%` }}
-                    />
-                  </div>
-                  <p className="text-[10px] text-gray-400 mt-1">
-                    Min Threshold: <span className="font-bold text-gray-500">{product.minThreshold}</span>
-                  </p>
-                </div>
+                {/* Stock Level Visuals */}
+<div className="flex-1 w-full md:w-auto flex flex-col gap-2">
+  <div className="flex justify-between text-xs font-semibold">
+    <span className={textColor}>
+      Current Stock: {product.currentStock}
+    </span>
+  </div>
+
+  {/* Progress Bar */}
+  <div className="h-2 w-full bg-white/50 rounded-full overflow-hidden border border-black/5">
+    <div
+      className={`h-full rounded-full transition-all duration-500 ${
+        isOut ? "bg-red-500" : isLow ? "bg-amber-500" : "bg-emerald-500"
+      }`}
+      style={{
+        width: `${Math.min(
+          (product.currentStock / (product.minThreshold * 2)) * 100,
+          100
+        )}%`,
+      }}
+    />
+  </div>
+
+  {/* Min Threshold Input */}
+  <div className="mt-2 max-w-[180px]">
+    <p className="text-[10px] font-bold text-gray-400 uppercase mb-1 ml-1">
+      Minimum Threshold
+    </p>
+    <Input
+      type="number"
+      placeholder={product.minThreshold.toString()}
+      value={refillDetails[product.id]?.minThreshold || ""}
+      onChange={(e) =>
+        handleRefillDetailChange(
+          product.id,
+          "minThreshold",
+          e.target.value
+        )
+      }
+      className="h-9 bg-white border-gray-200 focus:border-blue-500"
+    />
+  </div>
+</div>
+
 
                 {/* Action: Refill Input */}
             {/* Refill Section */}

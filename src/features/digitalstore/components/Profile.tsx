@@ -1,10 +1,9 @@
-import { MapPin, Share2, ShieldCheck, Star, Megaphone, Grid,ChevronLeft, QrCode } from "lucide-react";
-import { useState } from "react";
+import { MapPin, Share2, ShieldCheck, Star, Grid,ChevronLeft, QrCode } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import GeminiInput from "./GeminiInput";
 
 export const DigitalStoreProfile = ({ status }: { status: string }) => {
-  const [announcement, setAnnouncement] =useState("");
-  interface Product {
+ interface Product {
     id: string;
     name: string;
     price: number;
@@ -101,45 +100,10 @@ export const DigitalStoreProfile = ({ status }: { status: string }) => {
           </div>
         </div>
         {/* Vendor Announcement Form */}
-<div className="mx-5 my-4 rounded-xl border border-gray-200 bg-white p-4 space-y-3">
-  
-  {/* Header */}
-  <div className="flex items-center gap-2">
-    <Megaphone size={16} className="text-indigo-600" />
-    <h3 className="text-sm font-semibold">Update Announcement</h3>
-  </div>
+<GeminiInput/>
 
-  {/* Textarea */}
-  <textarea
-    placeholder="Write an offer, update, or important info for customers..."
-    rows={3}
-    maxLength={120}
-    onChange={(e)=>setAnnouncement(e.target.value)}
-    className="w-full resize-none rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-  />
-
-  {/* Footer */}
-  <div className="flex items-center justify-between text-xs text-gray-400">
-    <span>Max 120 characters</span>
-   <div className="flex gap-4">
-    <button className="text-red-500 text-xs">Clear</button>
-    <button className="text-blue-600 px-4 py-1.5 text-sm">
-      Save
-    </button>
-   </div>
     
-  </div>
-</div>
-
-        {/* --- Announcement Bar --- */}
-        {announcement && (
-          <div className="bg-gray-50 border-y border-gray-100 px-5 py-2 flex items-center gap-3 my-2">
-            <div className="bg-white p-1.5 rounded-full shadow-sm">
-                <Megaphone size={14} className="text-indigo-600" />
-            </div>
-            <p className="text-xs font-medium text-gray-700">{announcement}</p>
-          </div>
-        )}
+       
 
         {/* --- Grid Tabs --- */}
         <div className="flex border-t border-gray-100 mt-4">

@@ -1,7 +1,5 @@
 import { FC, useRef, ChangeEvent, useState } from "react";
 import {
-  Upload,
-  Download,
   FileSpreadsheet,
   FileText,
   X,

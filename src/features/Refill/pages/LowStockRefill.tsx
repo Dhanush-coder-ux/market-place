@@ -14,6 +14,13 @@ import Input from "@/components/ui/Input";
 import HeaderCard from "@/components/common/HeaderCard";
 import Title from "@/components/common/Title";
 
+interface RefillDetails {
+  qty: string;
+  buyingPrice: string;
+  sellingPrice: string;
+  minThreshold: string;
+}
+
 // --- Types ---
 interface Product {
   id: string;
@@ -43,7 +50,7 @@ const RefillPage = () => {
   const [expandedRefill, setExpandedRefill] = useState<string | null>(null);
 
 const [refillDetails, setRefillDetails] = useState<
-  Record<string, { qty: string; buyingPrice: string; sellingPrice: string }>
+  Record<string, RefillDetails>
 >({});
 
   
@@ -71,7 +78,7 @@ const [refillDetails, setRefillDetails] = useState<
   // --- Handlers ---
 const handleRefillDetailChange = (
   id: string,
-  field: "qty" | "buyingPrice" | "sellingPrice",
+  field: "qty" | "buyingPrice" | "sellingPrice" | "minThreshold",
   value: string
 ) => {
   setRefillDetails((prev) => ({
@@ -80,15 +87,17 @@ const handleRefillDetailChange = (
       qty: prev[id]?.qty || "",
       buyingPrice: prev[id]?.buyingPrice || "",
       sellingPrice: prev[id]?.sellingPrice || "",
+      minThreshold: prev[id]?.minThreshold || "",
       [field]: value,
     },
   }));
 };
+
 const executeRefill = (id: string) => {
   const data = refillDetails[id];
   if (!data || !data.qty) return;
 
-  const qty = parseInt(data.qty);
+  const qty = parseInt(data.qty, 10);
   if (qty <= 0) return;
 
   setProducts((prev) =>
@@ -97,6 +106,9 @@ const executeRefill = (id: string) => {
         ? {
             ...p,
             currentStock: p.currentStock + qty,
+            minThreshold: data.minThreshold
+              ? Number(data.minThreshold)
+              : p.minThreshold,
             lastRestocked: new Date().toISOString().split("T")[0],
           }
         : p
@@ -108,11 +120,23 @@ const executeRefill = (id: string) => {
     quantity: qty,
     buyingPrice: data.buyingPrice,
     sellingPrice: data.sellingPrice,
+    minThreshold: data.minThreshold,
   });
 
-  setRefillDetails((prev) => ({ ...prev, [id]: { qty: "", buyingPrice: "", sellingPrice: "" } }));
+  // ✅ Reset correctly
+  setRefillDetails((prev) => ({
+    ...prev,
+    [id]: {
+      qty: "",
+      buyingPrice: "",
+      sellingPrice: "",
+      minThreshold: "",
+    },
+  }));
+
   setExpandedRefill(null);
 };
+
 
 
   return (
@@ -254,18 +278,18 @@ const executeRefill = (id: string) => {
       Minimum Threshold
     </p>
     <Input
-      type="number"
-      placeholder={product.minThreshold.toString()}
-      value={refillDetails[product.id]?.minThreshold || ""}
-      onChange={(e) =>
-        handleRefillDetailChange(
-          product.id,
-          "minThreshold",
-          e.target.value
-        )
-      }
-      className="h-9 bg-white border-gray-200 focus:border-blue-500"
-    />
+  type="number"
+  placeholder={product.minThreshold.toString()}
+  value={refillDetails[product.id]?.minThreshold || ""}
+  onChange={(e) =>
+    handleRefillDetailChange(
+      product.id,
+      "minThreshold",
+      e.target.value
+    )
+  }
+/>
+
   </div>
 </div>
 

@@ -16,7 +16,7 @@ const Billing = () => {
 
   return (
 
-    <div className="flex flex-col h-[calc(100vh-80px)] overflow-hidden gap-4">
+    <div className="flex flex-col min-h-screen gap-4">
 
 
       <div className="shrink-0">
@@ -28,7 +28,7 @@ const Billing = () => {
         <div className="flex-1 overflow-y-auto  rounded-xl">
           <BillingTable />
         </div>
-        <div className="w-[360px] lg:w-[400px] shrink-0 h-full">
+        <div className="w-[360px] lg:w-[400px] shrink-0  h-full rounded-xl">
           <BillingHeader items={items} setIsOpen={setIsOpen} />
         </div>
 

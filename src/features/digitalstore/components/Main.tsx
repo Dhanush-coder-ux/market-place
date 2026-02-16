@@ -1,15 +1,13 @@
 import { useState } from 'react';
-import { Store, Package, Truck, Rocket, Check, ChevronRight, ChevronLeft, X } from 'lucide-react';
+import { Store, Package, Truck, Rocket, Check, ChevronRight, ChevronLeft } from 'lucide-react';
 
 // Your existing page imports
 import DeliveryPreferences from "../pages/Deliveryinfo";
 import StoreSetupForm from "../pages/DigitalStoreForm";
 import ProductManagement from "../pages/ProductManagement";
 import StorePublishFlow from "../pages/PublishStore";
-import { Link } from 'react-router-dom';
 
-
-const Main = ({ onClose }: { onClose?: () => void }) => {
+const Main = () => {
   const [currentStep, setCurrentStep] = useState(1);
 
   const steps = [
@@ -33,116 +31,121 @@ const Main = ({ onClose }: { onClose?: () => void }) => {
   };
 
   return (
-    // FIXED FULL SCREEN OVERLAY
-    <div className="fixed inset-0 w-screen h-screen bg-slate-100 flex items-center justify-center p-0 md:p-4 z-[9999] overflow-hidden">
+    <div className="flex h-full w-full bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
       
-      {/* FLOATABLE CARD CONTAINER */}
-      <div className="flex w-full h-full md:max-w-[1440px] md:h-[90vh] bg-white rounded-none md:rounded-2xl shadow-2xl overflow-hidden border border-slate-200">
-     <Link to={"/shop"} 
-          onClick={onClose}
-          className="absolute top-6 right-6 p-2 bg-slate-100 hover:bg-red-50 text-slate-500 hover:text-red-600 rounded-full z-[60] transition-all border border-slate-200 shadow-sm group"
-        >
-          <X size={15} className="group-hover:scale-110 transition-transform" />
-        </Link >
-        {/* --- LEFT SIDEBAR (Fixed & Non-Scrollable) --- */}
-        <div className="w-72 bg-slate-900 text-white flex flex-col shrink-0 z-20">
-          <div className="p-8">
-            <div className="flex items-center gap-3 mb-6 text-blue-400">
-               <Rocket size={24} />
-               <span className="font-bold text-lg tracking-tight text-white uppercase">Launchpad</span>
-            </div>
-            <h1 className="text-md font-semibold text-slate-100">Setup Your Store</h1>
-            <p className="text-slate-400 text-[11px] leading-relaxed mt-1">Complete these steps to go live.</p>
+      {/* --- WIZARD SIDEBAR (Internal) --- */}
+      <div className="w-64 bg-slate-50 border-r border-slate-100 flex flex-col shrink-0 hidden md:flex">
+        <div className="p-8">
+          <div className="flex items-center gap-2 mb-2 text-blue-600">
+             <Rocket size={18} />
+             <span className="font-bold text-xs tracking-widest text-slate-900 uppercase">Step Guide</span>
           </div>
-          
-          <nav className="flex-1 px-6 space-y-4">
-            {steps.map((step) => {
-              const isCompleted = currentStep > step.id;
-              const isActive = currentStep === step.id;
-
-              return (
-                <div key={step.id} className="flex items-center gap-4 group">
-                  <div className={`
-                    w-8 h-8 rounded-full flex items-center justify-center border-2 transition-all shrink-0
-                    ${isCompleted ? 'bg-green-500 border-green-500 text-white' : ''}
-                    ${isActive ? 'bg-blue-600 border-blue-600 text-white shadow-lg' : 'bg-slate-800 border-slate-700 text-slate-500'}
-                  `}>
-                    {isCompleted ? <Check size={14} strokeWidth={3} /> : <step.icon size={14} />}
-                  </div>
-                  <div className={isActive ? 'opacity-100' : 'opacity-40'}>
-                    <p className="text-xs font-bold leading-none">{step.title}</p>
-                    <p className="text-[10px] text-slate-400 mt-1 uppercase tracking-tighter">{step.subtitle}</p>
-                  </div>
-                </div>
-              );
-            })}
-          </nav>
-
-          <div className="p-6 text-[10px] text-slate-600 border-t border-slate-800">
-            &copy; 2026 DigitalStore Inc.
-          </div>
+          <h1 className="text-lg font-bold text-slate-800 leading-tight">Setup Store</h1>
         </div>
+        
+        <nav className="flex-1 px-4 space-y-2">
+          {steps.map((step) => {
+            const isCompleted = currentStep > step.id;
+            const isActive = currentStep === step.id;
 
-        {/* --- RIGHT MAIN CONTENT (Self-Contained) --- */}
-        <div className="flex-1 flex flex-col min-w-0 bg-white">
-          
-          {/* Header Area */}
-          <div className="px-8 pt-8 pb-4 shrink-0">
-            <div className="flex justify-between items-end">
-              <div>
-                <span className="text-[10px] font-bold text-blue-600 uppercase tracking-[0.2em]">Step 0{currentStep}</span>
-                <h2 className="text-2xl font-black text-slate-900 leading-tight">{steps[currentStep-1].title}</h2>
-              </div>
-              <div className="text-xs text-slate-400 font-medium bg-slate-50 px-3 py-1 rounded-full border border-slate-100">
-                {currentStep} / 4
-              </div>
-            </div>
-          </div>
-
-          {/* DYNAMIC CONTENT ZONE - No Scrollbar on main page, only here if needed */}
-          <div className="flex-1 overflow-hidden px-8 py-2">
-            <div className="h-full w-full rounded-xl overflow-y-auto pr-2 custom-scrollbar">
-               {renderStepContent()}
-            </div>
-          </div>
-
-          {/* ACTION FOOTER */}
-          <div className="h-20 border-t border-slate-100 flex items-center justify-between px-8 bg-white shrink-0">
-            <button
-              onClick={handlePrev}
-              disabled={currentStep === 1}
-              className={`flex items-center gap-2 text-sm font-bold transition-all ${
-                currentStep === 1 ? 'opacity-20 cursor-not-allowed' : 'text-slate-500 hover:text-slate-900'
-              }`}
-            >
-              <ChevronLeft size={18} /> Back
-            </button>
-
-            <div className="flex gap-1.5">
-               {steps.map(s => (
-                  <div key={s.id} className={`h-1.5 w-6 rounded-full transition-all duration-500 ${s.id <= currentStep ? 'bg-blue-600 w-10' : 'bg-slate-100'}`} />
-               ))}
-            </div>
-
-            {currentStep < 4 ? (
-              <button
-                onClick={handleNext}
-                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-8 py-2.5 rounded-full text-sm font-bold transition-all shadow-lg shadow-blue-100"
+            return (
+              <div 
+                key={step.id} 
+                className={`flex items-center gap-3 p-3 rounded-xl transition-all ${isActive ? 'bg-white shadow-sm border border-slate-100' : ''}`}
               >
-                Continue <ChevronRight size={18} />
-              </button>
-            ) : (
-              <button className="flex items-center gap-2 bg-green-600 text-white px-8 py-2.5 rounded-full text-sm font-bold shadow-lg shadow-green-100">
-                <Check size={18} /> Launch Store
-              </button>
-            )}
+                <div className={`
+                  w-8 h-8 rounded-lg flex items-center justify-center border-2 transition-all shrink-0
+                  ${isCompleted ? 'bg-blue-600 border-blue-600 text-black' : ''}
+                  ${isActive ? 'bg-blue-50 border-blue-600 text-blue-600' : 'bg-transparent border-slate-200 text-slate-300'}
+                `}>
+                  {isCompleted ? <Check size={14} strokeWidth={3} /> : <step.icon size={14} />}
+                </div>
+                <div className="flex flex-col overflow-hidden">
+                  <p className={`text-xs font-bold truncate ${isActive ? 'text-blue-600' : 'text-slate-500'}`}>
+                    {step.title}
+                  </p>
+                  <p className="text-[10px] text-slate-400 truncate uppercase tracking-tighter">
+                    {step.subtitle}
+                  </p>
+                </div>
+              </div>
+            );
+          })}
+        </nav>
+
+        <div className="p-6">
+          <div className="bg-blue-600 rounded-xl p-4 text-white">
+            <p className="text-[10px] font-bold opacity-80 uppercase">Progress</p>
+            <p className="text-xl font-black">{Math.round((currentStep / 4) * 100)}%</p>
+            <div className="w-full bg-blue-400/30 h-1.5 rounded-full mt-2">
+              <div 
+                className="bg-white h-full rounded-full transition-all duration-500" 
+                style={{ width: `${(currentStep / 4) * 100}%` }}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* --- CONTENT AREA --- */}
+      <div className="flex-1 flex flex-col min-w-0 bg-white">
+        
+        {/* Step Header */}
+        <div className="px-8 pt-8 pb-4 border-b border-slate-50 shrink-0">
+          <div className="flex justify-between items-end">
+            <div>
+              <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded uppercase tracking-widest">
+                Current Phase
+              </span>
+              <h2 className="text-2xl font-black text-slate-900 mt-2">{steps[currentStep-1].title}</h2>
+            </div>
+            <div className="text-xs font-bold text-slate-400">
+              {currentStep} / 4
+            </div>
           </div>
         </div>
 
+        {/* Scrollable Form Zone */}
+        <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+          <div className="max-w-3xl mx-auto">
+            {renderStepContent()}
+          </div>
+        </div>
+
+        {/* Action Footer */}
+        <div className="h-20 border-t border-slate-100 flex items-center justify-between px-8 bg-white shrink-0">
+          <button
+            onClick={handlePrev}
+            disabled={currentStep === 1}
+            className={`flex items-center gap-1 text-sm font-bold transition-all ${
+              currentStep === 1 ? 'opacity-0 pointer-events-none' : 'text-slate-400 hover:text-blue-600'
+            }`}
+          >
+            <ChevronLeft size={18} /> Back
+          </button>
+
+          <div className="flex gap-1.5">
+             {steps.map(s => (
+                <div key={s.id} className={`h-1.5 rounded-full transition-all duration-500 ${s.id <= currentStep ? 'bg-blue-600 w-8' : 'bg-slate-100 w-2'}`} />
+             ))}
+          </div>
+
+          <button
+            onClick={currentStep < 4 ? handleNext : undefined}
+            className={`flex items-center gap-2 px-8 py-2.5 rounded-xl text-sm font-bold transition-all shadow-lg active:scale-95 ${
+              currentStep < 4 
+              ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-blue-100' 
+              : 'bg-green-600 text-white hover:bg-green-700 shadow-green-100'
+            }`}
+          >
+            {currentStep < 4 ? (
+              <>Next <ChevronRight size={18} /></>
+            ) : (
+              <><Check size={18} /> Finish Setup</>
+            )}
+          </button>
+        </div>
       </div>
-      
-      {/* Background Dimmer/Blur */}
-      <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm -z-10" />
     </div>
   );
 };

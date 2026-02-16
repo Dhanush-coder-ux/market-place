@@ -75,7 +75,7 @@ const BillingTable: React.FC = () => {
       payload: item,
     }));
 
-  const codeOptions = useMemo(() => toOptions("code"), []);
+  // const codeOptions = useMemo(() => toOptions("code"), []);
   const nameOptions = useMemo(() => toOptions("name"), []);
 
 

@@ -142,6 +142,7 @@ const RefillPage = () => {
     
     // Collapse rows
     setExpandedRows({});
+    setSuppliers([])
   };
 
   // Filter Logic

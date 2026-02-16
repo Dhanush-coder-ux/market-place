@@ -1,5 +1,5 @@
 import { Info } from "lucide-react";
-import { Tooltip } from "../components/Tootlip";
+import { Tooltip } from "../../../components/common/Tootlip";
 import { Required } from "@/components/ui/Require";
 
 const FieldLabel = ({

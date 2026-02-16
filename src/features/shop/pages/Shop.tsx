@@ -54,13 +54,6 @@ const Shop = () => {
             shopLocation="Japan ,shicanshina"
           />
 
-          <StoreCard
-            shopName="tanjiro"
-            shopDescription="unokamikagura breething 7th form"
-            shopHours="10AM-7PM"
-            shopType="DemonSlayer"
-            shopLocation="Japan ,shicanshina"
-          />
 
         </div>
 

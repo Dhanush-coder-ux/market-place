@@ -86,7 +86,7 @@ const BillingTable: React.FC = () => {
         <table className="min-w-full text-left border-collapse">
           <thead className="table-head">
             <tr>
-              <th className="p-4 font-bold border-b">Product Code</th>
+              {/* <th className="p-4 font-bold border-b">Product Code</th> */}
               <th className="p-4 font-bold border-b">Product Name</th>
               <th className="p-4 font-bold border-b w-24">Quantity</th>
               <th className="p-4 font-bold border-b">Price</th>
@@ -100,7 +100,7 @@ const BillingTable: React.FC = () => {
               <tr key={item.id} className="hover:bg-gray-50 border-b ">
 
                 {/* PRODUCT CODE DROPDOWN */}
-                <td className="p-2 border-r min-w-[200px]">
+                {/* <td className="p-2 border-r min-w-[200px]">
                   <ReusableCombobox
                     options={codeOptions}
                     value={item.code}
@@ -119,7 +119,7 @@ const BillingTable: React.FC = () => {
                     }}
                   />
 
-                </td>
+                </td> */}
 
 
                 {/* PRODUCT NAME DROPDOWN */}

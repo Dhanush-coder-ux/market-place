@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Truck, Zap, Globe, Clock } from "lucide-react";
+import { Truck, Zap, Globe, Clock, Copy, CheckCircle2 } from "lucide-react";
 import { SettingsCard } from "../components/SettingCard";
 
 /* -------------------------------- TYPES -------------------------------- */
@@ -37,9 +37,10 @@ type DeliveryConfig = {
   partners: boolean;
 };
 
-/* ----------------------------- CARD WRAPPER ----------------------------- */
-
-
+interface DeliveryFieldsProps {
+  data: DeliveryConfig;
+  setData: (data: DeliveryConfig) => void;
+}
 
 /* --------------------------- MAIN COMPONENT ----------------------------- */
 
@@ -75,23 +76,32 @@ export default function DeliveryPreferences() {
     }, {} as Record<Day, DayHours>)
   );
 
-  const applyPreset = (days: Day[], open: string, close: string) => {
+  const [globalOpen, setGlobalOpen] = useState("09:00");
+  const [globalClose, setGlobalClose] = useState("18:00");
+
+  // Apply the top times to ALL active days
+  const applyToAll = () => {
     const updated = { ...storeHours };
     DAYS.forEach((day) => {
-      updated[day] = {
-        open,
-        close,
-        closed: !days.includes(day),
-      };
+      if (!updated[day].closed) {
+        updated[day].open = globalOpen;
+        updated[day].close = globalClose;
+      }
     });
     setStoreHours(updated);
+  };
+
+  const toggleDay = (day: Day) => {
+    setStoreHours((prev) => ({
+      ...prev,
+      [day]: { ...prev[day], closed: !prev[day].closed },
+    }));
   };
 
   /* -------------------------------- UI -------------------------------- */
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto pb-24">
-
+    <div className="space-y-8 max-w-5xl mx-auto pb-24">
       {/* ----------------------- INSTANT DELIVERY ----------------------- */}
       <SettingsCard
         title="Instant Delivery"
@@ -129,192 +139,199 @@ export default function DeliveryPreferences() {
       </SettingsCard>
 
       {/* ---------------------- OPERATING HOURS -------------------------- */}
-      <section className="rounded-xl border bg-white shadow-sm">
-        <div className="flex items-center gap-3 px-6 py-4 border-b bg-indigo-50">
-          <Clock className="text-indigo-600" size={20} />
-          <h3 className="font-semibold text-slate-800">Store Operating Hours</h3>
+      {/* Fixed: Removed max-w-2xl so it matches the full width of other cards */}
+      <section className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden w-full">
+        {/* --- HEADER: The "Master Control" --- */}
+        <div className="bg-slate-50 p-6 border-b border-slate-100">
+          <div className="flex items-center gap-2 mb-4 text-slate-800">
+            <Clock className="text-blue-600" size={20} />
+            <h3 className="font-bold">Set Standard Hours</h3>
+          </div>
+
+          <div className="flex flex-wrap items-end gap-4">
+            <div>
+              <label className="text-xs font-bold text-slate-500 uppercase">
+                Opens
+              </label>
+              <input
+                type="time"
+                value={globalOpen}
+                onChange={(e) => setGlobalOpen(e.target.value)}
+                className="block mt-1 p-2 bg-white border border-slate-300 rounded-lg text-lg font-medium focus:ring-2 focus:ring-blue-500 outline-none shadow-sm cursor-pointer"
+              />
+            </div>
+            <span className="mb-3 text-slate-400 font-bold hidden sm:block">
+              -
+            </span>
+            <div>
+              <label className="text-xs font-bold text-slate-500 uppercase">
+                Closes
+              </label>
+              <input
+                type="time"
+                value={globalClose}
+                onChange={(e) => setGlobalClose(e.target.value)}
+                className="block mt-1 p-2 bg-white border border-slate-300 rounded-lg text-lg font-medium focus:ring-2 focus:ring-blue-500 outline-none shadow-sm cursor-pointer"
+              />
+            </div>
+
+            <button
+              onClick={applyToAll}
+              className="mb-0.5 ml-auto sm:ml-0 flex items-center gap-2 bg-blue-600 text-white px-4 py-3 rounded-lg font-bold text-sm hover:bg-blue-700 active:scale-95 transition-all shadow-md shadow-blue-200"
+            >
+              <Copy size={16} /> Apply to All Days
+            </button>
+          </div>
         </div>
 
-        <div className="p-6 space-y-5">
-          {/* Day Pills */}
-          <div className="flex flex-wrap gap-2">
-            {DAYS.map((day) => (
-              <button
-                key={day}
-                onClick={() =>
-                  setStoreHours({
-                    ...storeHours,
-                    [day]: {
-                      ...storeHours[day],
-                      closed: !storeHours[day].closed,
-                    },
-                  })
-                }
-                className={`px-3 py-1 rounded-lg text-sm border transition ${
-                  storeHours[day].closed
-                    ? "bg-white text-slate-400"
-                    : "bg-indigo-50 border-indigo-400 text-indigo-700"
-                }`}
-              >
-                {day.slice(0, 3)}
-              </button>
-            ))}
-          </div>
+        {/* --- BODY: The Days Grid --- */}
+        <div className="p-6">
+          <p className="text-xs font-bold text-slate-400 uppercase mb-4">
+            Click days to toggle Open/Closed
+          </p>
 
-          {/* Time Rows */}
-          <div className="space-y-3">
-            {DAYS.map((day) => (
-              <div
-                key={day}
-                className="flex items-center justify-between gap-3 border rounded-lg p-3"
-              >
-                <span className="w-24 text-sm font-medium">{day}</span>
-
-                {storeHours[day].closed ? (
-                  <span className="text-xs text-slate-400 italic">Closed</span>
-                ) : (
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="time"
-                      value={storeHours[day].open}
-                      onChange={(e) =>
-                        setStoreHours({
-                          ...storeHours,
-                          [day]: {
-                            ...storeHours[day],
-                            open: e.target.value,
-                          },
-                        })
-                      }
-                      className="border rounded-md px-2 py-1 text-sm"
-                    />
-                    <span className="text-xs text-slate-400">to</span>
-                    <input
-                      type="time"
-                      value={storeHours[day].close}
-                      onChange={(e) =>
-                        setStoreHours({
-                          ...storeHours,
-                          [day]: {
-                            ...storeHours[day],
-                            close: e.target.value,
-                          },
-                        })
-                      }
-                      className="border rounded-md px-2 py-1 text-sm"
-                    />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {DAYS.map((day) => {
+              const isOpen = !storeHours[day].closed;
+              return (
+                <div
+                  key={day}
+                  onClick={() => toggleDay(day)}
+                  className={`
+                    cursor-pointer flex items-center justify-between p-3 rounded-xl border-2 transition-all duration-200 select-none
+                    ${
+                      isOpen
+                        ? "border-blue-100 bg-blue-50/50"
+                        : "border-slate-100 bg-slate-50 opacity-60 grayscale"
+                    }
+                  `}
+                >
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`w-5 h-5 rounded-full flex items-center justify-center transition-colors ${
+                        isOpen
+                          ? "bg-blue-500 text-white"
+                          : "bg-slate-300 text-slate-50"
+                      }`}
+                    >
+                      {isOpen && <CheckCircle2 size={12} />}
+                    </div>
+                    <span
+                      className={`font-semibold ${
+                        isOpen ? "text-slate-800" : "text-slate-400"
+                      }`}
+                    >
+                      {day}
+                    </span>
                   </div>
-                )}
-              </div>
-            ))}
-          </div>
 
-          {/* Presets */}
-          <div className="flex gap-2 pt-3">
-            <button
-              onClick={() =>
-                applyPreset(
-                  ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
-                  "09:00",
-                  "18:00"
-                )
-              }
-              className="px-3 py-1.5 rounded-lg border text-xs hover:bg-indigo-50"
-            >
-              Weekdays 9–6
-            </button>
-
-            <button
-              onClick={() =>
-                applyPreset(DAYS, "09:00", "21:00")
-              }
-              className="px-3 py-1.5 rounded-lg border text-xs hover:bg-indigo-50"
-            >
-              7 Days 9–9
-            </button>
-
-            <button
-              onClick={() =>
-                applyPreset(DAYS, "00:00", "23:59")
-              }
-              className="px-3 py-1.5 rounded-lg border text-xs hover:bg-indigo-50"
-            >
-              24/7
-            </button>
+                  <div className="text-sm font-medium text-slate-600">
+                    {isOpen ? (
+                      <span>
+                        {storeHours[day].open} - {storeHours[day].close}
+                      </span>
+                    ) : (
+                      <span className="text-slate-400 italic">Closed</span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       </section>
-
     </div>
   );
 }
 
 /* --------------------- DELIVERY FIELDS COMPONENT ------------------------ */
 
-function DeliveryFields({ data, setData }: any) {
+function DeliveryFields({ data, setData }: DeliveryFieldsProps) {
   return (
-    <>
-      <div>
-        <label className="text-sm font-semibold">Delivery Speed</label>
-        <select
-          value={data.speed}
-          onChange={(e) => setData({ ...data, speed: e.target.value })}
-          className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
+    <div className="space-y-4 pt-2">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label className="text-sm font-semibold text-slate-700">
+            Delivery Speed
+          </label>
+          <select
+            value={data.speed}
+            onChange={(e) => setData({ ...data, speed: e.target.value })}
+            className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option>Within 12 hours</option>
+            <option>1–2 Business Days</option>
+            <option>5–7 Business Days</option>
+          </select>
+        </div>
+
+        <div>
+          <label className="text-sm font-semibold text-slate-700">
+            Free Delivery Above
+          </label>
+          <div className="relative mt-1">
+            <span className="absolute left-3 top-2 text-slate-400">$</span>
+            <input
+              type="number"
+              value={data.freeThreshold}
+              onChange={(e) =>
+                setData({ ...data, freeThreshold: Number(e.target.value) })
+              }
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 pl-7 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
+        <label
+          className={`flex items-start gap-3 border rounded-lg p-3 cursor-pointer transition-colors ${
+            data.manageStore
+              ? "border-blue-200 bg-blue-50/30"
+              : "border-slate-200 hover:border-slate-300"
+          }`}
         >
-          <option>Within 12 hours</option>
-          <option>1–2 Business Days</option>
-          <option>5–7 Business Days</option>
-        </select>
-      </div>
-
-      <div>
-        <label className="text-sm font-semibold">Free Delivery Threshold</label>
-        <input
-          type="number"
-          value={data.freeThreshold}
-          onChange={(e) =>
-            setData({ ...data, freeThreshold: Number(e.target.value) })
-          }
-          className="mt-1 w-full max-w-xs rounded-lg border px-3 py-2 text-sm"
-        />
-        <p className="text-xs text-slate-400 mt-1">
-          Orders above this amount get free delivery
-        </p>
-      </div>
-
-      <div className="space-y-3">
-        <label className="flex items-center gap-3 border rounded-lg p-4 cursor-pointer">
           <input
             type="checkbox"
             checked={data.manageStore}
             onChange={(e) =>
               setData({ ...data, manageStore: e.target.checked })
             }
+            className="mt-1 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
           />
           <div>
-            <p className="text-sm font-medium">Manage by Your Store</p>
-            <p className="text-xs text-slate-500">
-              Your team handles delivery directly
+            <p className="text-sm font-bold text-slate-700">
+              Manage by Your Store
+            </p>
+            <p className="text-xs text-slate-500 leading-tight">
+              Your own team handles the delivery logistics.
             </p>
           </div>
         </label>
 
-        <label className="flex items-center gap-3 border rounded-lg p-4 cursor-pointer">
+        <label
+          className={`flex items-start gap-3 border rounded-lg p-3 cursor-pointer transition-colors ${
+            data.partners
+              ? "border-blue-200 bg-blue-50/30"
+              : "border-slate-200 hover:border-slate-300"
+          }`}
+        >
           <input
             type="checkbox"
             checked={data.partners}
-            onChange={(e) =>
-              setData({ ...data, partners: e.target.checked })
-            }
+            onChange={(e) => setData({ ...data, partners: e.target.checked })}
+            className="mt-1 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
           />
           <div>
-            <p className="text-sm font-medium">Use Delivery Partners</p>
-            <p className="text-xs text-slate-500">
-              Integrate third-party services
+            <p className="text-sm font-bold text-slate-700">
+              Use Delivery Partners
+            </p>
+            <p className="text-xs text-slate-500 leading-tight">
+              Automatically assign to 3rd party couriers.
             </p>
           </div>
         </label>
       </div>
-    </>
+    </div>
   );
 }

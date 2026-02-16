@@ -1,6 +1,7 @@
 import { Outlet } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import Navbar from "./Navbar";
+import Breadcrumb from "../common/BreadCrums";
 
 const MainLayout = () => {
   return (
@@ -20,6 +21,7 @@ const MainLayout = () => {
              The 'custom-scrollbar' class styles the scrollbar blue.
           */}
           <div className="flex-1 overflow-y-auto p-4 lg:p-6 custom-scrollbar">
+            <Breadcrumb />
              <Outlet />
           </div>
           

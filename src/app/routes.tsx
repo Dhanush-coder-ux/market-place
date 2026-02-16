@@ -42,7 +42,7 @@ export const router = createBrowserRouter([
             { path:'/profile', element:<Profile/> },
             { path:'/profile/add', element:<ProfileForm/> },
             { path:'/shop', element:<Shop/>},
-            {path:'/re-fill',element:<RefillPage/>},
+            {path:'/inventory/re-fill',element:<RefillPage/>},
             {path:'/digital-store', element: <StoreSetupForm/>},
             {path:'/delivery-info', element: <DeliveryPreferences/>},
             {path:'/product-management', element: <ProductManagement/>},

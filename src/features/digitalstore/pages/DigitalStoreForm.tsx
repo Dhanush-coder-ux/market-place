@@ -1,14 +1,29 @@
-import { useEffect, useState, ChangeEvent } from "react";
-import type { StoreFormData, StoreSetupProps } from "@/features/digitalstore/type";
-import { MapPin, Upload } from "lucide-react";
+import { useEffect, useState, ChangeEvent, useRef } from "react";
+import type { StoreFormData, StoreSetupProps } from "@/features/digitalstore/type"; 
+import { MapPin, Upload, X, Image as ImageIcon, Store, Info } from "lucide-react";
+import { Tooltip } from "@/components/common/Tootlip";
+
+
+
 
 const INITIAL_STATE: StoreFormData = {
-  name: "", tagline: "", address: "", description: "", contact: "", logo: null, logoPreview: "",
+  name: "",
+  tagline: "",
+  address: "",
+  description: "",
+  contact: "",
+  logo: null,
+  logoPreview: "",
+  banner: null,
+  bannerPreview: "",
 };
 
 export default function StoreSetupForm({ existingData }: StoreSetupProps) {
   const [form, setForm] = useState<StoreFormData>(INITIAL_STATE);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  
+  const bannerInputRef = useRef<HTMLInputElement>(null);
+  const logoInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (existingData) setForm((prev) => ({ ...prev, ...existingData }));
@@ -21,77 +36,241 @@ export default function StoreSetupForm({ existingData }: StoreSetupProps) {
 
   const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setForm(prev => ({ ...prev, [name]: value }));
-    if (name === "name") setErrors(prev => ({ ...prev, name: value ? "" : "Required" }));
+    setForm((prev) => ({ ...prev, [name]: value }));
+    if (name === "name") setErrors((prev) => ({ ...prev, name: value ? "" : "Store name is required" }));
   };
 
-  const handleLogoChange = (e: ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = (e: ChangeEvent<HTMLInputElement>, field: 'logo' | 'banner') => {
     const file = e.target.files?.[0];
-    if (file) setForm(prev => ({ ...prev, logo: file, logoPreview: URL.createObjectURL(file) }));
+    if (file) {
+      setForm((prev) => ({
+        ...prev,
+        [field]: file,
+        [`${field}Preview`]: URL.createObjectURL(file),
+      }));
+    }
   };
 
-  const isFormValid = Boolean(form.name);
+  const removeImage = (field: 'logo' | 'banner') => {
+    setForm((prev) => ({
+      ...prev,
+      [field]: null,
+      [`${field}Preview`]: "",
+    }));
+    if (field === 'banner' && bannerInputRef.current) bannerInputRef.current.value = "";
+    if (field === 'logo' && logoInputRef.current) logoInputRef.current.value = "";
+  };
+
+  const isFormValid = Boolean(form.name && form.name.length > 2);
 
   return (
-    <div className="max-w-4xl mx-auto p-4 bg-white rounded-xl shadow-sm border">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-lg font-bold">Store Details</h2>
-        <span className="text-xs text-gray-500">* Required fields</span>
+    <div className="max-w-4xl mx-auto bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+      
+      {/* --- HEADER / BANNER SECTION --- */}
+      <div className="relative w-full h-48 bg-slate-50 border-b border-slate-100 group">
+        {form.bannerPreview ? (
+          <>
+            <img 
+              src={form.bannerPreview} 
+              alt="Store Banner" 
+              className="w-full h-full object-cover" 
+            />
+            <button 
+              onClick={() => removeImage('banner')}
+              className="absolute top-3 right-3 p-1.5 bg-white/80 hover:bg-white text-slate-600 rounded-full shadow-sm transition-all backdrop-blur-sm"
+            >
+              <X size={16} />
+            </button>
+          </>
+        ) : (
+          <div 
+            onClick={() => bannerInputRef.current?.click()}
+            className="w-full h-full flex flex-col items-center justify-center text-slate-400 cursor-pointer hover:bg-slate-100 transition-colors"
+          >
+            {/* Added Tooltip for Banner */}
+            
+               <div className="flex flex-col items-center">
+                  <ImageIcon size={48} className="opacity-20 mb-2" />
+                  <span className="text-xs font-bold uppercase tracking-wider opacity-60">Upload Store Banner</span>
+                  <span className="text-[10px] opacity-40 mt-1">Click to browse files</span>
+               </div>
+           
+          </div>
+        )}
+        <input 
+          type="file" 
+          ref={bannerInputRef}
+          className="hidden" 
+          accept="image/*" 
+          onChange={(e) => handleFileChange(e, 'banner')} 
+        />
       </div>
 
-      <div className="grid grid-cols-2 gap-x-6 gap-y-3">
-        {/* Left Column */}
-        <div className="space-y-3">
-          <div>
-            <label className="text-xs font-semibold uppercase text-gray-600">Store Name *</label>
-            <input name="name" value={form.name} onChange={handleChange} className={`w-full mt-1 px-3 py-1.5 border rounded-md text-sm ${errors.name ? "border-red-500" : "border-gray-300"}`} />
+      <div className="px-8 pb-8">
+        {/* --- LOGO UPLOAD --- */}
+        <div className="relative -mt-12 mb-6 flex items-end justify-between">
+          <div className="relative group">
+           
+               <div 
+                 onClick={() => logoInputRef.current?.click()}
+                 className={`
+                   h-24 w-24 rounded-2xl border-4 border-white shadow-lg flex items-center justify-center overflow-hidden cursor-pointer transition-all
+                   ${form.logoPreview ? 'bg-white' : 'bg-slate-100 hover:bg-slate-200'}
+                 `}
+               >
+                 {form.logoPreview ? (
+                   <img src={form.logoPreview} className="w-full h-full object-cover" alt="Logo" />
+                 ) : (
+                   <Store size={32} className="text-slate-300" />
+                 )}
+                 
+                 <div className="absolute inset-0 bg-black/10 hidden group-hover:flex items-center justify-center">
+                   <Upload size={18} className="text-white drop-shadow-md" />
+                 </div>
+               </div>
+           
+             {form.logoPreview && (
+                <button 
+                  onClick={(e) => { e.stopPropagation(); removeImage('logo'); }}
+                  className="absolute -top-2 -right-2 bg-white text-red-500 rounded-full p-1 shadow border hover:bg-red-50"
+                >
+                  <X size={12} />
+                </button>
+             )}
+
+             <input 
+               type="file" 
+               ref={logoInputRef}
+               className="hidden" 
+               accept="image/*" 
+               onChange={(e) => handleFileChange(e, 'logo')} 
+             />
+          </div>
+          
+       
+        </div>
+
+        {/* --- FORM FIELDS --- */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-5">
+          
+          {/* Left Column */}
+          <div className="space-y-5">
+            <div>
+              <div className="flex items-center gap-2 mb-1.5">
+                <label className="text-xs font-bold uppercase text-slate-500">Store Name <span className="text-red-500">*</span></label>
+                {/* Tooltip for Store Name */}
+                <Tooltip message="This will appear on your storefront and invoices. Keep it unique!">
+                  <Info size={12} className="text-slate-400 cursor-help" />
+                </Tooltip>
+              </div>
+              <input 
+                name="name" 
+                value={form.name} 
+                onChange={handleChange} 
+                placeholder="e.g. Modern Digital Shop"
+                className={`input-field ${errors.name ? "border-red-500 ring-red-100" : "border-slate-300 focus:border-blue-500 focus:ring-blue-100"}`} 
+              />
+              {errors.name && <p className="text-[10px] text-red-500 mt-1 font-medium">{errors.name}</p>}
+            </div>
+
+            <div>
+              <div className="flex items-center gap-2 mb-1.5">
+                <label className="text-xs font-bold uppercase text-slate-500">Tagline</label>
+                {/* Tooltip for Tagline */}
+                <Tooltip message="A short, catchy phrase that appears below your logo (e.g. 'Quality you can trust').">
+                  <Info size={12} className="text-slate-400 cursor-help" />
+                </Tooltip>
+              </div>
+              <input 
+                name="tagline" 
+                value={form.tagline} 
+                onChange={handleChange} 
+                placeholder="Your store's catchy slogan" 
+                className="input-field border-slate-300 focus:border-blue-500 focus:ring-blue-100" 
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold uppercase text-slate-500 mb-1.5">Description</label>
+              <textarea 
+                name="description" 
+                value={form.description} 
+                onChange={handleChange} 
+                rows={3} 
+                placeholder="Tell customers what you sell..."
+                className="w-full px-4 py-3 rounded-lg border border-slate-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none text-sm transition-all resize-none" 
+              />
+            </div>
           </div>
 
-          <div>
-            <label className="text-xs font-semibold uppercase text-gray-600">Tagline</label>
-            <input name="tagline" value={form.tagline} onChange={handleChange} placeholder="One-liner" className="w-full mt-1 px-3 py-1.5 border border-gray-300 rounded-md text-sm" />
-          </div>
+          {/* Right Column */}
+          <div className="space-y-5">
+            <div>
+              <label className="block text-xs font-bold uppercase text-slate-500 mb-1.5">Business Address</label>
+              <div className="relative">
+                <input 
+                  name="address" 
+                  value={form.address} 
+                  onChange={handleChange} 
+                  placeholder="Street, City, Zip Code"
+                  className="input-field border-slate-300 focus:border-blue-500 focus:ring-blue-100 pr-9" 
+                />
+                <MapPin className="absolute right-3 top-3.5 text-blue-500 opacity-60 pointer-events-none" size={18} />
+              </div>
+            </div>
 
-          <div>
-            <label className="text-xs font-semibold uppercase text-gray-600">Address</label>
-            <div className="relative">
-              <input name="address" value={form.address} onChange={handleChange} className="w-full mt-1 px-3 py-1.5 border border-gray-300 rounded-md text-sm pr-8" />
-              <MapPin className="absolute right-2 top-3 text-blue-500 cursor-pointer" size={16} />
+            <div>
+              <div className="flex items-center gap-2 mb-1.5">
+                <label className="text-xs font-bold uppercase text-slate-500">Contact Email / Phone</label>
+                 {/* Tooltip for Contact */}
+                 <Tooltip message="Used for order notifications and customer support inquiries.">
+                  <Info size={12} className="text-slate-400 cursor-help" />
+                </Tooltip>
+              </div>
+              <input 
+                name="contact" 
+                value={form.contact} 
+                onChange={handleChange} 
+                placeholder="support@mystore.com"
+                className="input-field border-slate-300 focus:border-blue-500 focus:ring-blue-100" 
+              />
+            </div>
+
+            <div className="bg-blue-50 rounded-lg p-4 mt-2 border border-blue-100">
+               <h4 className="text-blue-800 text-xs font-bold mb-1">Quick Tip</h4>
+               <p className="text-blue-600/80 text-[11px] leading-relaxed">
+                 A high-quality banner and logo increase customer trust by 40%. Ensure your images are clear and represent your brand well.
+               </p>
             </div>
           </div>
         </div>
 
-        {/* Right Column */}
-        <div className="space-y-3">
-          <div className="flex items-center gap-4">
-            <div className="flex-1">
-              <label className="text-xs font-semibold uppercase text-gray-600">Store Logo</label>
-              <label className="mt-1 flex items-center justify-center border-2 border-dashed border-gray-300 rounded-md p-2 cursor-pointer hover:bg-gray-50">
-                <Upload size={14} className="mr-2" /> <span className="text-xs">Upload</span>
-                <input type="file" className="hidden" accept="image/*" onChange={handleLogoChange} />
-              </label>
-            </div>
-            {form.logoPreview && <img src={form.logoPreview} className="h-14 w-14 object-cover rounded border mt-4" alt="Preview" />}
-          </div>
-
-          <div>
-            <label className="text-xs font-semibold uppercase text-gray-600">Contact Info</label>
-            <input name="contact" value={form.contact} onChange={handleChange} className="w-full mt-1 px-3 py-1.5 border border-gray-300 rounded-md text-sm" />
-          </div>
-
-          <div>
-            <label className="text-xs font-semibold uppercase text-gray-600">Description</label>
-            <textarea name="description" value={form.description} onChange={handleChange} rows={2} className="w-full mt-1 px-3 py-1.5 border border-gray-300 rounded-md text-sm resize-none" />
-          </div>
+        <div className="mt-8 pt-6 border-t border-slate-100 flex justify-end">
+          <button
+            disabled={!isFormValid}
+            className={`
+              px-8 py-3 rounded-xl font-bold text-sm transition-all shadow-lg
+              ${isFormValid 
+                ? "bg-blue-600 text-white hover:bg-blue-700 shadow-blue-200 hover:-translate-y-0.5" 
+                : "bg-slate-100 text-slate-400 cursor-not-allowed shadow-none"}
+            `}
+          >
+             Save Store Details
+          </button>
         </div>
       </div>
 
-      <button
-        disabled={!isFormValid}
-        className={`w-full mt-6 py-2.5 rounded-lg font-bold text-sm transition-colors ${isFormValid ? "bg-blue-600 text-white hover:bg-blue-700" : "bg-gray-200 text-gray-500 cursor-not-allowed"}`}
-      >
-        Save & Continue
-      </button>
+      <style>{`
+        .input-field {
+          width: 100%;
+          padding: 0.75rem 1rem;
+          border-radius: 0.5rem;
+          border-width: 1px;
+          outline: none;
+          font-size: 0.875rem;
+          transition: all 0.2s;
+        }
+      `}</style>
     </div>
   );
 }

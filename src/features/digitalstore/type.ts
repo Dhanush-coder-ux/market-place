@@ -6,6 +6,8 @@ export interface StoreFormData {
   contact?: string;
   logo?: File | null;
   logoPreview?: string;
+  banner?: File | null;
+  bannerPreview?: string;
 }
 
 export interface StoreSetupProps {

@@ -31,7 +31,7 @@ const Main = () => {
   };
 
   return (
-    <div className="flex h-full w-full bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+    <div className="flex h-full w-full bg-white overflow-hidden">
       
       {/* --- WIZARD SIDEBAR (Internal) --- */}
       <div className="w-64 bg-slate-50 border-r border-slate-100 flex flex-col shrink-0 hidden md:flex">

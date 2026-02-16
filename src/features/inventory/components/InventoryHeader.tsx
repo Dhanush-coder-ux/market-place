@@ -27,7 +27,7 @@ const InventoryHeader: React.FC<InventoryHeaderProps> = ({
 
         <div className="flex items-center gap-3 self-end sm:self-auto">
           <GradientButton
-            onClick={() => navigator("/re-fill")}
+            onClick={() => navigator("/inventory/re-fill")}
             variant="outline"
             icon={<RefreshCcw size={16} />}
             title="Refill Stock"

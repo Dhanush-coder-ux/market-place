@@ -105,14 +105,16 @@ const Navbar = () => {
 
             <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
           </button>
-          <Link to={'/profile'} className="text-gray-500 hover:text-blue-600 transition-transform hover:rotate-90 duration-300">
+          <div  className="text-gray-500 hover:text-blue-600 transition-transform hover:rotate-90 duration-300">
             <Settings className="w-5 h-5" />
-          </Link>
+          </div>
         </div>
 
         <div className="h-6 w-px bg-gray-200"></div>
 
-        <div className="w-9 h-9 bg-gradient-to-tr from-blue-500 to-purple-500 rounded-full cursor-pointer hover:ring-2 hover:ring-offset-2 hover:ring-blue-300 transition-all" />
+        <Link to="/profile" className="w-9 h-9 bg-gradient-to-tr from-blue-500 to-purple-500 rounded-full cursor-pointer hover:ring-2 hover:ring-offset-2 hover:ring-blue-300 transition-all" >
+
+        </Link>
       </div>
 
     </div>

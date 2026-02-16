@@ -107,7 +107,7 @@ const Main = () => {
 
         {/* Scrollable Form Zone */}
         <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
-          <div className="max-w-3xl mx-auto">
+          <div className="mx-auto">
             {renderStepContent()}
           </div>
         </div>

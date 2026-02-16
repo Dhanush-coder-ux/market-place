@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Truck, Zap, Globe, Clock, Copy, CheckCircle2 } from "lucide-react";
+import { Truck, Zap, Globe, Clock, Copy, CheckCircle2, Info, MapPin } from "lucide-react";
 import { SettingsCard } from "../components/SettingCard";
 
 /* -------------------------------- TYPES -------------------------------- */
@@ -45,6 +45,8 @@ interface DeliveryFieldsProps {
 /* --------------------------- MAIN COMPONENT ----------------------------- */
 
 export default function DeliveryPreferences() {
+
+
   const [instant, setInstant] = useState<DeliveryConfig>({
     enabled: true,
     speed: "Within 12 hours",
@@ -101,7 +103,36 @@ export default function DeliveryPreferences() {
   /* -------------------------------- UI -------------------------------- */
 
   return (
-    <div className="space-y-8 max-w-5xl mx-auto pb-24">
+    <div className="space-y-8 ">
+      <div className="flex gap-5 p-4 bg-[#FFFBF0] border border-yellow-300 rounded-2xl shadow-sm ">
+      {/* Left Icon Circle */}
+      <div className="shrink-0">
+        <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center text-white shadow-sm">
+          <MapPin size={18} strokeWidth={2.5} />
+        </div>
+      </div>
+
+      {/* Content Area */}
+      <div className="flex-1 space-y-4">
+        <div>
+          <h3 className="text-[#854D0E] font-medium text-lg">Pickup Only Mode</h3>
+          <p className="text-[#854D0E] text-sm mt-1">
+            No delivery options are currently enabled. Your store is set to <span className="font-bold">Pickup Only</span> mode.
+          </p>
+        </div>
+
+        {/* Inner Info Box */}
+        <div className="flex gap-3 p-4 bg-white border border-orange-200 rounded-xl">
+          <Info className="text-[#EA580C] shrink-0 mt-0.5" size={20} />
+          <div>
+            <h4 className="text-sm font-bold text-[#9A3412]">Default Discovery Radius: 5 KM</h4>
+            <p className="text-sm text-[#9A3412]/80 mt-1 leading-relaxed">
+              Customers within a 5-kilometer radius can discover your store and place orders for in-store pickup.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
       {/* ----------------------- INSTANT DELIVERY ----------------------- */}
       <SettingsCard
         title="Instant Delivery"

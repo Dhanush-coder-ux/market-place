@@ -102,7 +102,7 @@ const BillingDetailView = () => {
           <ReusableSelect
             placeholder="Status"
             value={status}
-            onValueChange={(value) => setStatus(value)}
+            onValueChange={(value: string) => setStatus(value as any)}
             options={[
               { label: "COMPLETED", value: "COMPLETED" },
               { label: "PENDING", value: "PENDING" },

@@ -21,7 +21,8 @@ import { cn } from "@/lib/utils";
 const GeminiInput = () => {
   const [announcement, setAnnouncement] = useState("");
   const [type, setType] = useState("Announcement");
-  const [date, setDate] = useState(new Date());
+ const [date, setDate] = useState<Date | undefined>(new Date());
+
 
   // Mock data for previous announcements
   const previousAnnouncements = [
@@ -71,12 +72,13 @@ const GeminiInput = () => {
               </button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="start">
-              <Calendar
-                mode="single"
-                selected={date}
-                onSelect={setDate}
-                initialFocus
-              />
+           <Calendar
+              mode="single"
+              selected={date}
+              onSelect={setDate}
+              initialFocus
+            />
+
             </PopoverContent>
           </Popover>
         </div>

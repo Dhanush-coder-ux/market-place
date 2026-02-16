@@ -1,10 +1,8 @@
 import { useState, useMemo } from "react";
 import {
   Search,
-  Filter,
   AlertTriangle,
   PackageX,
-  Plus,
   RefreshCcw,
   Truck,
   CheckCircle2,
@@ -103,10 +101,6 @@ const RefillPage = () => {
     }));
   };
 
-  const handleRefillOne = (id: string) => {
-    // Just wrap the single ID logic in a bulk call
-    executeBulkRefill([id]);
-  };
 
   const executeBulkRefill = (idsToRefill: string[] = []) => {
     // If no specific IDs passed, use all selected
@@ -302,7 +296,7 @@ const RefillPage = () => {
                                  value={stagedData.newSupplierName || ""} 
                                  onChange={(e) => handleDetailChange(product.id, "newSupplierName", e.target.value)} 
                                  className="h-9 text-sm border-blue-200 bg-blue-50/20"
-                                 autoFocus
+                               
                                />
                              </div>
                           </div>

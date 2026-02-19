@@ -1,4 +1,4 @@
-import { ReceiptIcon } from "lucide-react";
+import { IndianRupee, ReceiptIcon } from "lucide-react";
 import Title from "../../../components/common/Title";
 import BillingTable from "../components/BillingTable";
 import BillingHeader from "../components/BillingHeader";
@@ -20,7 +20,7 @@ const Billing = () => {
 
 
       <div className="shrink-0">
-        <Title icon={<ReceiptIcon size={30} />} title="Billing" />
+        <Title icon={<IndianRupee size={30} />} title="Billing" />
       </div>
 
       <div className="flex flex-1 overflow-hidden gap-6 pb-4">

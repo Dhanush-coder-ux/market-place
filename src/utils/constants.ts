@@ -1,5 +1,6 @@
 import { DashboardsType, OrdersByMonthType } from "@/features/dashboard/types";
 import {
+  Database,
   LayoutDashboard,
   Package,
   Printer,
@@ -10,7 +11,8 @@ import {
 
 export const sidebarLinks = [
   { name: "Dashboard", icon: LayoutDashboard, path: "/" },
-  { name: "Inventory", icon: Package, path: "/inventory" },
+  { name: "Products", icon: Package, path: "/product" },
+  { name: "Inventory", icon: Database, path: "/inventory" },
   { name: "Billing", icon: Printer, path: "/billing" },
   { name: "Orders", icon: ShoppingCart, path: "/orders" },
   { name: "Employees", icon: Users, path: "/employee" },

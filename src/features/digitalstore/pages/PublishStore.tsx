@@ -10,10 +10,7 @@ import { useNavigate } from 'react-router-dom';
 
 
 
-// --- Types ---
 
-
-// --- Main Component ---
 const StorePublishFlow = () => {
   // States: 'draft' | 'validating' | 'success' | 'live'
   const [status, setStatus] = useState<'draft' | 'validating' | 'success' | 'live'>('draft');

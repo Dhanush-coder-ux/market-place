@@ -3,6 +3,7 @@ import type { StatsCardProp } from '../types'
 import { calculateTrendPercentage } from '@/utils/dashboard'
 
 const StatsCard: React.FC<StatsCardProp> = ({
+  
   headerTitle,
   total,
   currentMonth,

@@ -7,6 +7,7 @@ import Title from "@/components/common/Title";
 import { GradientButton } from "@/components/ui/GradientButton";
 import { FloatingFormCard } from "@/components/common/FloatingFormCard";
 import EmployeeForm from "../pages/EmployeeForm";
+import StatsCard from "@/components/common/StatsCard";
 
 const EmployeeHeader: React.FC<EmployeeHeaderProps> = ({
   accepted,
@@ -47,6 +48,20 @@ const EmployeeHeader: React.FC<EmployeeHeaderProps> = ({
           theme="red"
           icon={UserX}
         />
+        {/* <StatsCard
+          label="Onboarding Progress"
+          value="75%"
+          icon={PersonStanding}
+          color="green"
+          description="75% of employees have completed onboarding"
+        />
+        <StatsCard
+          label="Active Employees"
+          value={accepted}
+          icon={PersonStanding}
+          color="blue"
+          description="Currently active employees"
+        /> */}
       </div>
 
       <div className="w-full">

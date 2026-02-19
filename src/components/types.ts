@@ -26,7 +26,10 @@ export interface InputProps {
   type?: string;
   disabled?: boolean;
   className?: string;
-  leftIcon?: React.ReactNode;  
+  leftIcon?: React.ReactNode;
+  label?: string;
+  required?: boolean;
+    
 }
 
 

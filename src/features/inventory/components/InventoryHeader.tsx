@@ -9,6 +9,7 @@ import Title from "@/components/common/Title";
 import { FloatingFormCard } from "@/components/common/FloatingFormCard";
 import InventoryForm from "../pages/InventoryForm";
 import type { InventoryHeaderProps } from "../types";
+import StatsCard from "@/components/common/StatsCard";
 
 const InventoryHeader: React.FC<InventoryHeaderProps> = ({
   totalCount,
@@ -20,7 +21,7 @@ const InventoryHeader: React.FC<InventoryHeaderProps> = ({
 
   return (
     <div className="flex flex-col gap-6 mb-6">
-      
+
 
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <Title title="Inventory" icon={<Package2 size={30} />} />
@@ -35,8 +36,8 @@ const InventoryHeader: React.FC<InventoryHeaderProps> = ({
             Refill Stock
           </GradientButton>
 
-          <GradientButton 
-            type="button" 
+          <GradientButton
+            type="button"
             onClick={() => setIsModalOpen(true)}
           >
             + Add Inventory
@@ -45,30 +46,30 @@ const InventoryHeader: React.FC<InventoryHeaderProps> = ({
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 max-w-3xl">
-        <HeaderCard
+
+        <StatsCard
+          label="Total Stock"
           value={totalCount}
-          title="Total Stock"
-          subtitle="Total items on hand"
           icon={Package}
-          theme="blue" 
+          color="blue"
+          description="Total items in inventory"
         />
-
-        <HeaderCard
+        <StatsCard
+          label="Low Stock Items"
           value={lowestStockValue}
-          title="Low Stock"
-          subtitle="Items below threshold"
           icon={AlertTriangleIcon}
-          theme="yellow" 
+          color="yellow"
+          description="Items below threshold"
         />
-
-        <HeaderCard
-          value={0} 
-          title="Out of Stock"
-          subtitle="Urgent replenishment needed"
+        <StatsCard
+          label="Out of Stock Items"
+          value={0}
           icon={PackageX}
-          theme="red"
+          color="red"
+          description="Currently out of stock"
         />
       </div>
+
 
 
       <div className="w-full">

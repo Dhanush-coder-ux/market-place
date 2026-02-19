@@ -5,6 +5,8 @@ import DeliveryPreferences from "@/features/digitalstore/pages/Deliveryinfo";
 import StoreSetupForm from "@/features/digitalstore/pages/DigitalStoreForm";
 import ProductManagement from "@/features/digitalstore/pages/ProductManagement";
 import StorePublishFlow from "@/features/digitalstore/pages/PublishStore";
+import Product from "@/features/product/pages/Product";
+import ProductDetail from "@/features/product/pages/ProductDetail";
 import RefillPage from "@/features/Refill/pages/LowStockRefill";
 import React, { Suspense } from "react";
 import { createBrowserRouter } from "react-router-dom";
@@ -33,6 +35,8 @@ export const router = createBrowserRouter([
         ),
         children:[
             { index:true, element:<DashBoard/> },
+            {path : 'product', element:<Product/>},
+            { path:'/product/detail', element:<ProductDetail/>},
             { path:'/employee', element:<Employee/> },
             { path:'/employee/add', element:<EmployeeForm/> },
             { path:'/inventory',element:<Inventory/> },

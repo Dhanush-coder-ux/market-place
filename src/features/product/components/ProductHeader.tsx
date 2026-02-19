@@ -1,7 +1,7 @@
 import StatsCard from '@/components/common/StatsCard'
 import Title from '@/components/common/Title'
 import { GradientButton } from '@/components/ui/GradientButton'
-import { AlertTriangle, BadgeDollarSign, IndianRupee, Layers, Package } from 'lucide-react'
+import { AlertTriangle,  IndianRupee, Layers, Package } from 'lucide-react'
 import { MOCK_PRODUCTS } from '../pages/Product'
 import SearchActionCard from '@/components/ui/SearchActionCard'
 import ProductForm from '../pages/ProductForm'

@@ -1,5 +1,5 @@
-import React from "react";
-import { ArrowUpRight, ArrowDownLeft, Eye } from "lucide-react";
+
+import {  Eye } from "lucide-react";
 
 // Mock Data based on your screenshot
 const movementData = [

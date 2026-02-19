@@ -1,8 +1,7 @@
-import React, { useState } from "react";
+import  { useState } from "react";
 import { 
-  ArrowLeft, Edit3, MoreHorizontal, Package, 
-  TrendingUp, AlertCircle, IndianRupee, History, 
-  Truck, Info, ShieldCheck, Search, Filter, ChevronLeft, ChevronRight 
+   Edit3,  Package, 
+
 } from "lucide-react";
 import PurchaseHistory from "../components/PurchaseHistory";
 import GeneralInfoTab from "../components/GeneralInfo";
@@ -84,14 +83,6 @@ const ProductDetail = () => {
     </div>
   );
 };
-const InfoItem = ({ label, value, icon: Icon }: any) => (
-  <div className="flex items-start gap-4">
-    {Icon && <div className="p-2 bg-slate-50 rounded-lg text-slate-400"><Icon size={18} /></div>}
-    <div>
-      <p className="text-xs font-bold text-slate-400 uppercase tracking-tighter">{label}</p>
-      <p className="text-slate-900 font-semibold">{value || "—"}</p>
-    </div>
-  </div>
-);
+
 
 export default ProductDetail;

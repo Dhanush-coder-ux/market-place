@@ -7,7 +7,7 @@ import Title from "@/components/common/Title";
 import { GradientButton } from "@/components/ui/GradientButton";
 import { FloatingFormCard } from "@/components/common/FloatingFormCard";
 import EmployeeForm from "../pages/EmployeeForm";
-import StatsCard from "@/components/common/StatsCard";
+
 
 const EmployeeHeader: React.FC<EmployeeHeaderProps> = ({
   accepted,

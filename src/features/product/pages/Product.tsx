@@ -2,7 +2,7 @@ import Table from "@/components/common/Table";
 import type { ProductData } from "../type";
 import ProductHeader from "../components/ProductHeader";
 import type { ReactNode } from "react";
-import ProductDetail from "./ProductDetail";
+
 
 /* ================= MOCK DATA ================= */
 

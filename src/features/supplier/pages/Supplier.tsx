@@ -1,7 +1,7 @@
 import  { useState } from "react";
 import Table from "@/components/common/Table";
 import Title from "@/components/common/Title";
-import { Search, Plus, Phone, CreditCard, ShoppingBag } from "lucide-react";
+import { Search,  Phone, CreditCard, ShoppingBag } from "lucide-react";
 import { GradientButton } from "@/components/ui/GradientButton";
 import Input from "@/components/ui/Input";
 import { useNavigate } from "react-router-dom";

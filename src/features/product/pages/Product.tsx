@@ -2,6 +2,7 @@ import Table from "@/components/common/Table";
 import type { ProductData } from "../type";
 import ProductHeader from "../components/ProductHeader";
 import type { ReactNode } from "react";
+import { useNavigate } from "react-router-dom";
 
 
 /* ================= MOCK DATA ================= */
@@ -143,6 +144,13 @@ const PRODUCT_COLUMNS: Column[] = [
 
 
 const Product = () => {
+
+    const navigate  = useNavigate();
+  const handleRowClick = () => {
+        navigate('/product/detail')
+    // navigate(`/purchases/${row.id}`);
+
+  };
   return (
     <div className="space-y-6">
   
@@ -153,6 +161,8 @@ const Product = () => {
           columns={PRODUCT_COLUMNS}
           data={MOCK_PRODUCTS}
           rowKey="id"
+
+          onRowClick={handleRowClick}
         />
       </div>
     </div>

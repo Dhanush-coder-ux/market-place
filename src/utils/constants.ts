@@ -1,4 +1,6 @@
 import { DashboardsType, OrdersByMonthType } from "@/features/dashboard/types";
+import { Wallet } from "lucide-react";
+import { Truck } from "lucide-react";
 import {
   Database,
   LayoutDashboard,
@@ -9,9 +11,12 @@ import {
   Users
 } from "lucide-react";
 
+
 export const sidebarLinks = [
   { name: "Dashboard", icon: LayoutDashboard, path: "/" },
   { name: "Products", icon: Package, path: "/product" },
+  { name: "Purchase",icon:Wallet,path:'/purchase'},
+  { name: "Supplier",icon:Truck,path:'/supplier'},
   { name: "Inventory", icon: Database, path: "/inventory" },
   { name: "Billing", icon: Printer, path: "/billing" },
   { name: "Orders", icon: ShoppingCart, path: "/orders" },

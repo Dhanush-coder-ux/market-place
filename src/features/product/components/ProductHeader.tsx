@@ -17,7 +17,7 @@ const ProductHeader = () => {
         <Title title="Product Inventory" subtitle="Manage and track your warehouse stock" />
         </div>
         <GradientButton onClick={() => setIsModalOpen(true)}>
-          Add New Product
+           + Add Product
         </GradientButton>
       </div>
 

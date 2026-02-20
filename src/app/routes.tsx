@@ -7,7 +7,11 @@ import ProductManagement from "@/features/digitalstore/pages/ProductManagement";
 import StorePublishFlow from "@/features/digitalstore/pages/PublishStore";
 import Product from "@/features/product/pages/Product";
 import ProductDetail from "@/features/product/pages/ProductDetail";
+import PurchaseHistoryTab from "@/features/purchase/pages/Purchase";
+import PurchaseDetail from "@/features/purchase/pages/PurchaseDetail";
 import RefillPage from "@/features/Refill/pages/LowStockRefill";
+import Supplier from "@/features/supplier/pages/Supplier";
+import SupplierDetail from "@/features/supplier/pages/SupplierDetail";
 import React, { Suspense } from "react";
 import { createBrowserRouter } from "react-router-dom";
 const MainLayout      =   React.lazy(() => import ("../components/layouts/MainLayout"));
@@ -37,6 +41,10 @@ export const router = createBrowserRouter([
             { index:true, element:<DashBoard/> },
             {path : 'product', element:<Product/>},
             { path:'/product/detail', element:<ProductDetail/>},
+            {path:'/purchase',element:<PurchaseHistoryTab/>},
+            { path:'/purchase/detail',element:<PurchaseDetail/>},
+            { path: 'supplier',element:<Supplier/>},
+            { path: 'supplier/detail',element:<SupplierDetail/>},
             { path:'/employee', element:<Employee/> },
             { path:'/employee/add', element:<EmployeeForm/> },
             { path:'/inventory',element:<Inventory/> },

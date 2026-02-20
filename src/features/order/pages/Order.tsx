@@ -12,7 +12,7 @@ const Order = () => {
   const [status, setStatus] = useState("COMPLETED");
   const [ isOpen, setIsOpen ] = useState(false);
   const [  calenderOpen, setIsCalenderOpen ] = useState(false);
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>();
+  // const [selectedDate, setSelectedDate] = useState<Date | undefined>();
 
 
 const orderTypeOptions = [
@@ -108,8 +108,8 @@ const orderDetailData = {
         />
         {calenderOpen && 
         <OrderDateFilter 
-        value={selectedDate}
-        onChange={setSelectedDate}
+ 
+      
         />
         }
       </Drawer>
@@ -120,8 +120,7 @@ const orderDetailData = {
       title="Filter Order By Date"
       >
          <OrderDateFilter 
-        value={selectedDate}
-        onChange={setSelectedDate}
+       
         />
       </Drawer>
       

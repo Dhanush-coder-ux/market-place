@@ -5,6 +5,7 @@ import DeliveryPreferences from "@/features/digitalstore/pages/Deliveryinfo";
 import StoreSetupForm from "@/features/digitalstore/pages/DigitalStoreForm";
 import ProductManagement from "@/features/digitalstore/pages/ProductManagement";
 import StorePublishFlow from "@/features/digitalstore/pages/PublishStore";
+import ProductDashboard from "@/features/digitalstore/pages/StoreProductManagement";
 import Product from "@/features/product/pages/Product";
 import ProductDetail from "@/features/product/pages/ProductDetail";
 import PurchaseHistoryTab from "@/features/purchase/pages/Purchase";
@@ -60,7 +61,11 @@ export const router = createBrowserRouter([
             {path:'/product-management', element: <ProductManagement/>},
             {path:'/publish-store',element:<StorePublishFlow/>},
             {path:'/create-store', element: <Main/>},
-              {path:'profile-info',element:<DigitalStoreProfile  status="live"/>}
+              {path:'profile-info',element:<DigitalStoreProfile  status="live"/>},
+            {path:'/profile-info/product-dashboard',element:<ProductDashboard/>},
+            { path:'profile-info/delivery-control',element:<DeliveryPreferences/>},
+
+            
         ]
     },
     {

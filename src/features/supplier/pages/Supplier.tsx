@@ -5,6 +5,8 @@ import { Search,  Phone, CreditCard, ShoppingBag } from "lucide-react";
 import { GradientButton } from "@/components/ui/GradientButton";
 import Input from "@/components/ui/Input";
 import { useNavigate } from "react-router-dom";
+import { FloatingFormCard } from "@/components/common/FloatingFormCard";
+import SupplierForm from "./SupplierForm";
 
 /* ================= MOCK DATA ================= */
 const MOCK_SUPPLIERS = [
@@ -17,6 +19,7 @@ const MOCK_SUPPLIERS = [
 const Supplier = () => {
   const [selectedIds, setSelectedIds] = useState<(string | number)[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [ modelOpen, setModelOpen ] = useState(false);
 
   /* ================= COLUMN DEFINITION ================= */
   const SUPPLIER_COLUMNS = [
@@ -83,7 +86,7 @@ const Supplier = () => {
       {/* 1. Header Section */}
       <div className="flex justify-between items-center">
         <Title title="Supplier Master" subtitle="Manage your permanent vendor relationships and accounts" />
-        <GradientButton onClick={() => console.log("Add Supplier")}>
+        <GradientButton onClick={() => setModelOpen(true)}>
           + Add Supplier
         </GradientButton>
       </div>
@@ -121,7 +124,13 @@ const Supplier = () => {
           />
         </div>
 
-       
+       <FloatingFormCard
+        isOpen={modelOpen}
+        onClose={() => setModelOpen(false)}
+        title="Record New Purchase"
+        maxWidth="max-w-4xl">
+          <SupplierForm/>
+       </FloatingFormCard>
       </div>
     </div>
   );

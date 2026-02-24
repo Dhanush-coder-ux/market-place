@@ -6,6 +6,7 @@ import { GradientButton } from '@/components/ui/GradientButton'
 import SearchActionCard from '@/components/ui/SearchActionCard'
 import { FloatingFormCard } from '@/components/common/FloatingFormCard'
 import { MOCK_PURCHASES } from '../pages/Purchase'
+import PurchaseForm from '../pages/PurchaseForm'
 
 const PurchaseHeader = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -71,10 +72,7 @@ const PurchaseHeader = () => {
         title="Record New Purchase"
         maxWidth="max-w-4xl"
       >
-        {/* Your Purchase Form Component would go here */}
-        <div className="p-4 text-center text-slate-400">
-          Purchase Entry Form Logic
-        </div>
+      <PurchaseForm  />
       </FloatingFormCard>
     </div>
   )

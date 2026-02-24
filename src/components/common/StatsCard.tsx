@@ -1,9 +1,10 @@
-import React from 'react';
-import { LucideIcon } from 'lucide-react';
+import React from "react";
+import { LucideIcon } from "lucide-react";
 
 interface StatsCardProps {
   label: string;
-  value: string | number;
+  value?: string | number;
+  onClick?: () => void;
   icon?: LucideIcon;
   trend?: {
     value: number;
@@ -21,16 +22,23 @@ const colorMap = {
   yellow: "bg-yellow-50 text-yellow-600",
 };
 
-const StatsCard: React.FC<StatsCardProps> = ({ 
-  label, 
-  value, 
-  icon: Icon, 
-  trend, 
-  description, 
-  color = "blue" 
+const StatsCard: React.FC<StatsCardProps> = ({
+  label,
+  value,
+  icon: Icon,
+  trend,
+  description,
+  color = "blue",
+  onClick,
 }) => {
   return (
-    <div className="bg-white p-3 sm:p-4 rounded-xl border border-gray-200 shadow-sm transition-all hover:border-blue-200">
+    <div
+      onClick={onClick}
+      className={`bg-white p-3 sm:p-4 rounded-xl border border-gray-200 shadow-sm 
+      transition-all duration-200 
+      hover:shadow-md hover:-translate-y-1 
+      ${onClick ? "cursor-pointer" : ""}`}
+    >
       <div className="flex items-start justify-between">
         <div className="space-y-1">
           <p className="text-xs font-semibold text-gray-500 uppercase tracking-tight">
@@ -40,9 +48,11 @@ const StatsCard: React.FC<StatsCardProps> = ({
             {value}
           </h3>
         </div>
-        
+
         {Icon && (
-          <div className={`p-2 sm:p-2.5 rounded-lg shrink-0 ${colorMap[color]}`}>
+          <div
+            className={`p-2 sm:p-2.5 rounded-lg shrink-0 ${colorMap[color]}`}
+          >
             <Icon className="w-5 h-5 sm:w-6 sm:h-6" />
           </div>
         )}
@@ -51,12 +61,18 @@ const StatsCard: React.FC<StatsCardProps> = ({
       {(trend || description) && (
         <div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs sm:text-sm">
           {trend && (
-            <span className={`font-bold ${trend.isPositive ? 'text-green-600' : 'text-red-600'}`}>
-              {trend.isPositive ? '↑' : '↓'}{trend.value}%
+            <span
+              className={`font-bold ${
+                trend.isPositive ? "text-green-600" : "text-red-600"
+              }`}
+            >
+              {trend.isPositive ? "↑" : "↓"} {trend.value}%
             </span>
           )}
           {description && (
-            <span className="text-gray-400 line-clamp-1">{description}</span>
+            <span className="text-gray-400 line-clamp-1">
+              {description}
+            </span>
           )}
         </div>
       )}

@@ -3,8 +3,7 @@ import {
   Store, 
   CheckCircle2, 
   Loader2, 
-  ArrowRight,
-  AlertCircle
+
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -46,7 +45,7 @@ const StorePublishFlow = () => {
  
 
   return (
-    <div className=" bg-white flex items-center justify-center ">
+    <div onClick={()=>handlePublish} className=" bg-white flex items-center justify-center ">
       
       {/* 1. ADMIN DRAFT VIEW */}
       {status === 'draft' && (
@@ -68,23 +67,10 @@ const StorePublishFlow = () => {
                 <CheckCircle2 size={18} />
                 <span className="text-sm font-medium">Store Profile Complete</span>
               </div>
-              <div className="flex items-center gap-3 text-gray-500 bg-gray-50 p-3 rounded-lg border border-dashed border-gray-300">
-                <AlertCircle size={18} />
-                <span className="text-sm">Payment Gateway (Test Mode)</span>
-              </div>
+         
             </div>
 
-            <div className="border-t border-gray-100 pt-6">
-              <p className="text-xs text-gray-500 mb-4 text-center">
-                By publishing, your store will be visible at <span className="text-blue-600">urbangadgets.store</span>
-              </p>
-              <button 
-                onClick={handlePublish}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-lg shadow-blue-200 transition-all active:scale-95 flex items-center justify-center gap-2"
-              >
-                Publish Now <ArrowRight size={20} />
-              </button>
-            </div>
+        
           </div>
         </div>
       )}
@@ -136,7 +122,7 @@ const ValidationItem = ({ label, status }: { label: string, status: 'waiting' | 
       {label}
     </span>
     {status === 'done' ? (
-      <CheckCircle2 size={18} className="text-green-500" />
+      <CheckCircle2 size={18}  className="text-green-500" />
     ) : (
       <Loader2 size={18} className="text-blue-400 animate-spin" />
     )}

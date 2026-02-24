@@ -35,7 +35,7 @@ const GeminiInput = () => {
   ];
 
   return (
-    <div className="mx-5 my-4 overflow-hidden rounded-3xl border border-gray-200 bg-[#f0f4f9] p-2 focus-within:bg-white focus-within:shadow-md transition-all duration-200">
+    <div className=" my-4 overflow-hidden rounded-3xl border border-gray-200 bg-[#f0f4f9] p-2 focus-within:bg-white focus-within:shadow-md transition-all duration-200">
       
       {/* Header: Type, Date, and History */}
       <div className="flex items-center justify-between px-3 pt-1">

@@ -103,7 +103,7 @@ export default function DeliveryPreferences() {
   /* -------------------------------- UI -------------------------------- */
 
   return (
-    <div className="space-y-8 ">
+    <div className="space-y-8 py-5">
       <div className="flex gap-5 p-4 bg-[#FFFBF0] border border-yellow-300 rounded-2xl shadow-sm ">
       {/* Left Icon Circle */}
       <div className="shrink-0">

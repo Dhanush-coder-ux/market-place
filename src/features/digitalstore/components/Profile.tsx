@@ -1,16 +1,18 @@
-import { MapPin, Share2, ShieldCheck, Star, Grid,ChevronLeft, QrCode } from "lucide-react";
+import { MapPin, Share2, ShieldCheck, Star, ChevronLeft, QrCode, Store } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import GeminiInput from "./GeminiInput";
+import StatsCard from "@/components/common/StatsCard";
+
 
 export const DigitalStoreProfile = ({ status }: { status: string }) => {
- interface Product {
-    id: string;
-    name: string;
-    price: number;
-    image: string;
-    isLatest: boolean;
-    category: string;
-  }
+//  interface Product {
+//     id: string;
+//     name: string;
+//     price: number;
+//     image: string;
+//     isLatest: boolean;
+//     category: string;
+//   }
 
   interface StoreProfile {
     name: string;
@@ -30,14 +32,14 @@ export const DigitalStoreProfile = ({ status }: { status: string }) => {
     announcement: "🎉 Grand Opening Sale: Use code HELLO20 for 20% off!"
   };
 
-  const MOCK_PRODUCTS: Product[] = [
-    { id: '1', name: 'Noise-Cancel Earbuds', price: 129.99, category: 'Audio', isLatest: true, image: 'https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=400&q=80' },
-    { id: '2', name: 'Minimalist Watch', price: 89.50, category: 'Wearables', isLatest: true, image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400&q=80' },
-    { id: '3', name: 'Leather Satchel', price: 245.00, category: 'Bags', isLatest: false, image: 'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=400&q=80' },
-    { id: '4', name: 'Mechanical Keyboard', price: 150.00, category: 'Tech', isLatest: true, image: 'https://images.unsplash.com/photo-1587829741301-dc798b91a603?w=400&q=80' },
-    { id: '5', name: 'Ceramic Mug', price: 25.00, category: 'Home', isLatest: false, image: 'https://images.unsplash.com/photo-1514228742587-6b1558fcca3d?w=400&q=80' },
-    { id: '6', name: 'Desk Mat', price: 45.00, category: 'Home', isLatest: false, image: 'https://images.unsplash.com/photo-1616410011236-7a42121dd981?w=400&q=80' },
-  ];
+  // const MOCK_PRODUCTS: Product[] = [
+  //   { id: '1', name: 'Noise-Cancel Earbuds', price: 129.99, category: 'Audio', isLatest: true, image: 'https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=400&q=80' },
+  //   { id: '2', name: 'Minimalist Watch', price: 89.50, category: 'Wearables', isLatest: true, image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400&q=80' },
+  //   { id: '3', name: 'Leather Satchel', price: 245.00, category: 'Bags', isLatest: false, image: 'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=400&q=80' },
+  //   { id: '4', name: 'Mechanical Keyboard', price: 150.00, category: 'Tech', isLatest: true, image: 'https://images.unsplash.com/photo-1587829741301-dc798b91a603?w=400&q=80' },
+  //   { id: '5', name: 'Ceramic Mug', price: 25.00, category: 'Home', isLatest: false, image: 'https://images.unsplash.com/photo-1514228742587-6b1558fcca3d?w=400&q=80' },
+  //   { id: '6', name: 'Desk Mat', price: 45.00, category: 'Home', isLatest: false, image: 'https://images.unsplash.com/photo-1616410011236-7a42121dd981?w=400&q=80' },
+  // ];
 
   if (status !== 'live') return null;
   const navigate = useNavigate();
@@ -56,7 +58,7 @@ export const DigitalStoreProfile = ({ status }: { status: string }) => {
 
       <div className=" mx-auto">
         {/* --- Profile Header Section --- */}
-        <div className="px-5 pt-6 pb-4">
+        <div className="px-5 pt-6 pb-4  border-b-2 border-blue-400">
           <div className="flex items-center justify-between mb-4">
             {/* Logo */}
             <div className="relative">
@@ -91,55 +93,33 @@ export const DigitalStoreProfile = ({ status }: { status: string }) => {
             </div>
           </div>
 
-          {/* Action Buttons */}
-          <div className="flex gap-2 mt-6">
-          
-            <button className="bg-gray-100 hover:bg-gray-200 p-1.5 rounded-lg transition">
-           
-            </button>
-          </div>
+         
         </div>
         {/* Vendor Announcement Form */}
-<GeminiInput/>
-
-    
-       
-
-        {/* --- Grid Tabs --- */}
-        <div className="flex border-t border-gray-100 mt-4">
-          <div className="flex-1 flex justify-center py-3 border-t border-black -mt-[1px]">
-            <Grid size={20} />
-          </div>
-      
-        </div>
+        <GeminiInput/>
 
         {/* --- Photo Grid --- */}
-      <div className="grid grid-cols-4 gap-[2px]">
-  {MOCK_PRODUCTS.map((product) => (
-    <div
-      key={product.id}
-      className=" relative group cursor-pointer overflow-hidden bg-gray-100 h-[110px] sm:h-[130px]"
-    >
-      <img
-        src={product.image}
-        alt={product.name}
-        className="w-full h-full object-cover"
-      />
-
-      {/* Hover Overlay */}
-      <div className="absolute inset-0 bg-black/25 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-        <p className="text-white text-[11px] font-semibold">
-          ₹{product.price}
-        </p>
-      </div>
-    </div>
-  ))}
-</div>
+      <div className="grid grid-cols-3 gap-[2px]">
+     
+        <StatsCard
+         onClick={()=>navigate("/profile-info/product-dashboard")}
+        label="Product Management"
+        icon={Store}
+        description="Add, edit, and manage your product listings"
+        />
+        <StatsCard
+        onClick={()=>navigate('/profile-info/delivery-control')}
+        label="Delivery & Logistics"
+        icon={Store}
+        description="Manage delivery options and logistics for your store"
+        />
+     
+        
+       </div>
+      
 
       </div>
 
-      {/* Footer padding for mobile nav if needed */}
-      <div className="h-20" />
     </div>
   );
 };

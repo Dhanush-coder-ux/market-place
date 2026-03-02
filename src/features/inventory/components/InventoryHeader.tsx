@@ -24,7 +24,8 @@ const InventoryHeader: React.FC<InventoryHeaderProps> = ({
 
 
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <Title title="Inventory" icon={<Package2 size={30} />} />
+        <Title title="Inventory" subtitle="Manage and track your product inventory" icon={<Package2 size={30} />} />
+        
 
         <div className="flex items-center gap-3 self-end sm:self-auto">
           <GradientButton
@@ -45,7 +46,7 @@ const InventoryHeader: React.FC<InventoryHeaderProps> = ({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 max-w-3xl">
+      <div className="flex flex-col sm:flex-row gap-4 w-full">
 
         <StatsCard
           label="Total Stock"

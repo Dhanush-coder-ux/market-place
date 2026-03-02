@@ -16,6 +16,7 @@ export type OrderCardType = {
 
 
 export type OrdersHeaderProps = {
+
   orderType: string;
   setOrderType: React.Dispatch<React.SetStateAction<string>>;
 
@@ -23,8 +24,5 @@ export type OrdersHeaderProps = {
 
   status: string;
   setStatus: React.Dispatch<React.SetStateAction<string>>;
-
-
-  setIsCalenderOpen:React.Dispatch<React.SetStateAction<boolean>>;
-  
+   setIsDateFilterOpen: React.Dispatch<React.SetStateAction<boolean>>;
 };

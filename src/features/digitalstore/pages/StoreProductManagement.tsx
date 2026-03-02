@@ -90,7 +90,7 @@ const ProductDashboard = () => {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      <div className="flex gap-4 mb-6">
         <StatsCard label="Total Products" value={rawProducts.length} icon={Box} />
         <StatsCard label="Low Stock Items" value={stats.lowStockCount} icon={AlertTriangle} />
         <StatsCard label="Inventory Value" value={`₹ ${stats.totalInventoryValue.toLocaleString()}`} icon={IndianRupee} />

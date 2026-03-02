@@ -1,11 +1,5 @@
 import Loader from "@/components/common/Loader";
-import Main from "@/features/digitalstore/components/Main";
-import { DigitalStoreProfile } from "@/features/digitalstore/components/Profile";
-import DeliveryPreferences from "@/features/digitalstore/pages/Deliveryinfo";
-import StoreSetupForm from "@/features/digitalstore/pages/DigitalStoreForm";
-import ProductManagement from "@/features/digitalstore/pages/ProductManagement";
-import StorePublishFlow from "@/features/digitalstore/pages/PublishStore";
-import ProductDashboard from "@/features/digitalstore/pages/StoreProductManagement";
+import DigitalMain from "@/features/digitalstore/components/DigitalMain";
 import Product from "@/features/product/pages/Product";
 import ProductDetail from "@/features/product/pages/ProductDetail";
 import PurchaseHistoryTab from "@/features/purchase/pages/Purchase";
@@ -54,17 +48,9 @@ export const router = createBrowserRouter([
             { path:'/orders', element:<Order/> },
             { path:'/profile', element:<Profile/> },
             { path:'/profile/add', element:<ProfileForm/> },
-            { path:'/shop', element:<Shop/>},
+            { path:'/digital-store', element:<Shop/>},
             {path:'/inventory/re-fill',element:<RefillPage/>},
-            {path:'/digital-store', element: <StoreSetupForm/>},
-            {path:'/delivery-info', element: <DeliveryPreferences/>},
-            {path:'/product-management', element: <ProductManagement/>},
-            {path:'/publish-store',element:<StorePublishFlow/>},
-            {path:'/create-store', element: <Main/>},
-              {path:'profile-info',element:<DigitalStoreProfile  status="live"/>},
-            {path:'/profile-info/product-dashboard',element:<ProductDashboard/>},
-            { path:'profile-info/delivery-control',element:<DeliveryPreferences/>},
-
+              {path:'/digital-store/profile',element:<DigitalMain/>},
             
         ]
     },

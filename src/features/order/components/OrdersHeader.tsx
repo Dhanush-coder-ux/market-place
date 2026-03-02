@@ -1,9 +1,9 @@
-import React from "react";
 import { OrdersHeaderProps } from "../types";
 import { Calendar, ListFilter } from "lucide-react";
 import ToggleSelect from "@/components/common/ToggleSelect";
 import { ReusableSelect } from "@/components/ui/ReusableSelect";
 import { GradientButton } from "@/components/ui/GradientButton";
+
 
 const OrdersHeader: React.FC<OrdersHeaderProps> = ({
   orderType,
@@ -11,8 +11,10 @@ const OrdersHeader: React.FC<OrdersHeaderProps> = ({
   orderTypeOptions,
   status,
   setStatus,
-  setIsCalenderOpen,
+   setIsDateFilterOpen 
 }) => {
+
+
   return (
     <div className="w-full mb-6 bg-white rounded-xl border border-gray-200 shadow-sm p-4">
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
@@ -58,17 +60,17 @@ const OrdersHeader: React.FC<OrdersHeaderProps> = ({
             />
           </div>
 
-          {/* 3. Calendar Filter Button */}
-          <div className="w-full sm:w-auto">
-            <GradientButton
-              onClick={() => setIsCalenderOpen(true)}
-              variant="outline"
-              className="w-full justify-center sm:w-auto"
-            >
-              <Calendar size={18} className="mr-2 text-gray-500" />
-            </GradientButton>
-          </div>
-          
+          {/* 3. Date Filter Button */}
+          <GradientButton 
+            variant="outline"
+            className="w-full sm:w-auto px-4 py-2.5"
+            onClick={() => setIsDateFilterOpen(true)}
+          >
+            <Calendar size={16} className="mr-2" />
+          </GradientButton>
+       
+    
+       
         </div>
       </div>
     </div>

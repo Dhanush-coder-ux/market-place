@@ -21,7 +21,7 @@ export const sidebarLinks = [
   { name: "Billing", icon: Printer, path: "/billing" },
   { name: "Orders", icon: ShoppingCart, path: "/orders" },
   { name: "Employees", icon: Users, path: "/employee" },
-  { name: "Shop", icon: Store, path: "/shop" }
+  { name: "Digital Store", icon: Store, path: "/digital-store" }
 ];
 
 export const Rupees = "₹"

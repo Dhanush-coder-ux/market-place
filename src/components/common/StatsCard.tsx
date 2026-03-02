@@ -1,5 +1,5 @@
 import React from "react";
-import { LucideIcon } from "lucide-react";
+import { LucideIcon, TrendingUp, TrendingDown } from "lucide-react";
 
 interface StatsCardProps {
   label: string;
@@ -15,11 +15,11 @@ interface StatsCardProps {
 }
 
 const colorMap = {
-  blue: "bg-blue-50 text-blue-600",
-  green: "bg-green-50 text-green-600",
-  red: "bg-red-50 text-red-600",
-  orange: "bg-orange-50 text-orange-600",
-  yellow: "bg-yellow-50 text-yellow-600",
+  blue:   { icon: "bg-indigo-600 shadow-indigo-200",   bar: "bg-indigo-500" },
+  green:  { icon: "bg-emerald-600 shadow-emerald-200", bar: "bg-emerald-500" },
+  red:    { icon: "bg-rose-600 shadow-rose-200",       bar: "bg-rose-500" },
+  orange: { icon: "bg-orange-500 shadow-orange-200",   bar: "bg-orange-400" },
+  yellow: { icon: "bg-amber-500 shadow-amber-200",     bar: "bg-amber-400" },
 };
 
 const StatsCard: React.FC<StatsCardProps> = ({
@@ -31,51 +31,65 @@ const StatsCard: React.FC<StatsCardProps> = ({
   color = "blue",
   onClick,
 }) => {
+  const c = colorMap[color];
+
   return (
     <div
       onClick={onClick}
-      className={`bg-white p-3 sm:p-4 rounded-xl border border-gray-200 shadow-sm 
-      transition-all duration-200 
-      hover:shadow-md hover:-translate-y-1 
-      ${onClick ? "cursor-pointer" : ""}`}
+      style={{ fontFamily: "'DM Sans', sans-serif" }}
+      className={`
+        relative bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden
+        transition-all duration-200 hover:shadow-md hover:-translate-y-0.5
+        w-64 flex-shrink-0
+        ${onClick ? "cursor-pointer" : ""}
+      `}
     >
-      <div className="flex items-start justify-between">
-        <div className="space-y-1">
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-tight">
+      {/* Thinner Left accent bar */}
+      <div className={`absolute left-0 top-0 h-full w-1 ${c.bar}`} />
+
+      <div className="pl-4 pr-3 py-3">
+        {/* Top row - Compact spacing */}
+        <div className="flex items-center justify-between mb-1.5">
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">
             {label}
           </p>
-          <h3 className="text-xl sm:text-2xl font-bold text-gray-900 tracking-tight">
-            {value}
-          </h3>
+          {Icon && (
+            <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 shadow-sm ${c.icon}`}>
+              <Icon size={14} strokeWidth={2.5} className="text-white" />
+            </div>
+          )}
         </div>
 
-        {Icon && (
-          <div
-            className={`p-2 sm:p-2.5 rounded-lg shrink-0 ${colorMap[color]}`}
-          >
-            <Icon className="w-5 h-5 sm:w-6 sm:h-6" />
+        {/* Scaled down Value */}
+        <p className="text-xl font-black text-slate-900 tracking-tight leading-none mb-2"
+           style={{ fontVariantNumeric: "tabular-nums" }}>
+          {value ?? "—"}
+        </p>
+
+        {/* Footer info - Single line constraint */}
+        {(trend || description) && (
+          <div className="flex items-center gap-1.5 whitespace-nowrap overflow-hidden">
+            {trend && (
+              <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md text-[10px] font-bold ${
+                trend.isPositive
+                  ? "bg-emerald-50 text-emerald-600"
+                  : "bg-rose-50 text-rose-600"
+              }`}>
+                {trend.isPositive
+                  ? <TrendingUp size={10} strokeWidth={3} />
+                  : <TrendingDown size={10} strokeWidth={3} />
+                }
+                {trend.value}%
+              </span>
+            )}
+            {description && (
+              <span className="text-[11px] text-slate-400 font-medium truncate">
+                {description}
+              </span>
+            )}
           </div>
         )}
       </div>
-
-      {(trend || description) && (
-        <div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs sm:text-sm">
-          {trend && (
-            <span
-              className={`font-bold ${
-                trend.isPositive ? "text-green-600" : "text-red-600"
-              }`}
-            >
-              {trend.isPositive ? "↑" : "↓"} {trend.value}%
-            </span>
-          )}
-          {description && (
-            <span className="text-gray-400 line-clamp-1">
-              {description}
-            </span>
-          )}
-        </div>
-      )}
     </div>
   );
 };

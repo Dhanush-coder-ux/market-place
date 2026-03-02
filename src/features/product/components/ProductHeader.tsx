@@ -22,7 +22,7 @@ const ProductHeader = () => {
       </div>
 
       {/* Stats Section */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="flex flex-col sm:flex-row gap-4 w-full my-5">
         <StatsCard
           label="Total Products" 
           value={MOCK_PRODUCTS.length} 

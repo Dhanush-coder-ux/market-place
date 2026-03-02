@@ -1,7 +1,8 @@
 import { MapPin, Share2, ShieldCheck, Star, ChevronLeft, QrCode, Store } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import GeminiInput from "./GeminiInput";
+import GeminiInput from "./Announcement";
 import StatsCard from "@/components/common/StatsCard";
+import DigitalMain from "./DigitalMain";
 
 
 export const DigitalStoreProfile = ({ status }: { status: string }) => {
@@ -117,7 +118,7 @@ export const DigitalStoreProfile = ({ status }: { status: string }) => {
         
        </div>
       
-
+<DigitalMain/>
       </div>
 
     </div>

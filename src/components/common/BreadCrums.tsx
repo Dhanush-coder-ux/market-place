@@ -3,7 +3,7 @@ import { Link, useLocation } from "react-router-dom";
 
 const Breadcrumb = () => {
   const location = useLocation();
-  const paths = location.pathname.split("/").filter(Boolean);
+  const paths = location.pathname.split("/").filter(Boolean)
 
   return (
     <nav className="flex items-center text-sm text-gray-500">

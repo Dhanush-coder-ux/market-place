@@ -19,6 +19,7 @@ import {
   Truck,
   RefreshCw,
   Plus,
+  ShoppingCart,
 } from "lucide-react";
 
 import {
@@ -44,6 +45,7 @@ const MY_STORES = [
 // -----------------------------
 const SEARCHABLE_ROUTES = [
   { name: "Dashboard", path: "/", icon: LayoutDashboard },
+  { name: "orders", path: "/orders", icon: ShoppingCart },
   { name: "Products", path: "/product", icon: Package },
   { name: "Add Employee", path: "/employee/add", icon: UserPlus },
   { name: "Inventory", path: "/inventory", icon: Boxes },

@@ -17,7 +17,7 @@ const ProductHeader = () => {
           <Title title="Product Inventory" subtitle="Manage and track your warehouse stock" />
         </div>
         
-
+      <div className='flex gap-3'>
         <StatsCard
           label="Total Products" 
           value={MOCK_PRODUCTS.length} 
@@ -46,6 +46,7 @@ const ProductHeader = () => {
           color="green" 
           description="Total asset value"
         /> 
+        </div>
         <div>
         <GradientButton onClick={() => setIsModalOpen(true)}>
            + Add Product

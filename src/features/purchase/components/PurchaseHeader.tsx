@@ -22,7 +22,7 @@ const PurchaseHeader = () => {
           subtitle="Monitor  supplier invoices, and payment statuses" 
         />
    
-
+      <div className="flex gap-3">
         <StatsCard
           label="Total Orders" 
           value={totalPurchases} 
@@ -51,6 +51,8 @@ const PurchaseHeader = () => {
           color="blue" 
           description="Cumulative procurement cost"
         />
+        </div>
+       
      
          <GradientButton onClick={() => setIsModalOpen(true)}>
           + Add New Purchase

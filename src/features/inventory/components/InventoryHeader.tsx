@@ -28,7 +28,7 @@ const InventoryHeader: React.FC<InventoryHeaderProps> = ({
         
       
     
-
+<div className="flex gap-3">
         <StatsCard
           label="Total Stock"
           value={totalCount}
@@ -50,6 +50,7 @@ const InventoryHeader: React.FC<InventoryHeaderProps> = ({
           color="red"
           description="Currently out of stock"
         />
+        </div>
         <div className="flex items-center gap-3 self-end sm:self-auto">
           <GradientButton
             onClick={() => navigator("/inventory/re-fill")}

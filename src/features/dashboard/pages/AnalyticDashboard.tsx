@@ -360,8 +360,8 @@ const AnalyticsDashboard = () => {
                   <XAxis dataKey="month" tick={{ fontSize: 10, fill: "#94a3b8" }} axisLine={false} tickLine={false} />
                   <YAxis tick={{ fontSize: 10, fill: "#94a3b8" }} axisLine={false} tickLine={false} />
                   <Tooltip contentStyle={{ fontSize: 11 }} />
-                  <Bar dataKey="online" name="Online" fill="#3b82f6" radius={[3, 3, 0, 0]} />
-                  <Bar dataKey="offline" name="Offline" fill="#e2e8f0" radius={[3, 3, 0, 0]} />
+                  <Bar dataKey="online" name="Online" fill="#0c8a2b" radius={[3, 3, 0, 0]} />
+                  <Bar dataKey="offline" name="Offline" fill="#f1c549" radius={[3, 3, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
               <div className="flex gap-3 mt-1 px-2">

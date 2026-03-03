@@ -1,4 +1,5 @@
 import Loader from "@/components/common/Loader";
+import AnalyticsDashboard from "@/features/dashboard/pages/AnalyticDashboard";
 import DigitalMain from "@/features/digitalstore/components/DigitalMain";
 import StoreSetupForm from "@/features/digitalstore/pages/DigitalStoreForm";
 import Product from "@/features/product/pages/Product";
@@ -11,7 +12,7 @@ import SupplierDetail from "@/features/supplier/pages/SupplierDetail";
 import React, { Suspense } from "react";
 import { createBrowserRouter } from "react-router-dom";
 const MainLayout      =   React.lazy(() => import ("../components/layouts/MainLayout"));
-const DashBoard       =   React.lazy(() => import ("../features/dashboard/pages/DashBoard"));
+// const DashBoard       =   React.lazy(() => import ("../features/dashboard/pages/DashBoard"));
 const Employee        =   React.lazy(()=> import ("../features/employee/pages/Employee"));
 const Inventory       =   React.lazy(()=>  import ("../features/inventory/pages/Inventory"));
 const Order           =   React.lazy(() =>  import ("../features/order/pages/Order"));
@@ -34,7 +35,7 @@ export const router = createBrowserRouter([
         </Suspense>
         ),
         children:[
-            { index:true, element:<DashBoard/> },
+            { index:true, element:<AnalyticsDashboard/> },
             {path : 'product', element:<Product/>},
             { path:'/product/detail', element:<ProductDetail/>},
             {path:'/purchase',element:<PurchaseHistoryTab/>},

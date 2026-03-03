@@ -40,14 +40,14 @@ const StatsCard: React.FC<StatsCardProps> = ({
       className={`
         relative bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden
         transition-all duration-200 hover:shadow-md hover:-translate-y-0.5
-        w-64 flex-shrink-0
+        w-40 flex-shrink-0 
         ${onClick ? "cursor-pointer" : ""}
       `}
     >
       {/* Thinner Left accent bar */}
       <div className={`absolute left-0 top-0 h-full w-1 ${c.bar}`} />
 
-      <div className="pl-4 pr-3 py-3">
+      <div className="pl-3 pr-3 py-3">
         {/* Top row - Compact spacing */}
         <div className="flex items-center justify-between mb-1.5">
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">
@@ -82,11 +82,7 @@ const StatsCard: React.FC<StatsCardProps> = ({
                 {trend.value}%
               </span>
             )}
-            {description && (
-              <span className="text-[11px] text-slate-400 font-medium truncate">
-                {description}
-              </span>
-            )}
+        
           </div>
         )}
       </div>

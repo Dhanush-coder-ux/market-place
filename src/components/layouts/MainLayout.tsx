@@ -7,7 +7,8 @@ import { Navbar } from "./Navbar";
 
 const MainLayout = () => {
   const location = useLocation()
-  const isStorePage = location.pathname==="/digital-store" || location.pathname.startsWith("/shop/")
+  const isStorePage = location.pathname==="/digital-store" || location.pathname==="/digital-store/profile";
+
   return (
     <div className="h-screen w-full flex flex-col overflow-hidden bg-slate-50">
    

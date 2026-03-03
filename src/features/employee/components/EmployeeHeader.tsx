@@ -20,21 +20,8 @@ const EmployeeHeader: React.FC<EmployeeHeaderProps> = ({
 
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <Title title="Employee" subtitle="Manage and track your workforce" icon={<UserCircle2 size={30} />} />
-     
-
-        <div className="self-end sm:self-auto">
-          <GradientButton
-            type="button"
-            onClick={() => setIsModalOpen(true)}
-          >
-            + Add Employee
-          </GradientButton>
-        </div>
-      </div>
-
-
-      <div className="flex flex-col sm:flex-row gap-4 w-full">
-    
+          
+       <div className="gap-3 flex">
         <StatsCard
           label="Onboarding Progress"
           value="75%"
@@ -49,7 +36,18 @@ const EmployeeHeader: React.FC<EmployeeHeaderProps> = ({
           color="blue"
           description="Currently active employees"
         />
+</div>
+          <GradientButton
+            type="button"
+            onClick={() => setIsModalOpen(true)}
+          >
+            + Add Employee
+          </GradientButton>
+       
       </div>
+
+
+   
 
       <div className="w-full">
         <SearchActionCard

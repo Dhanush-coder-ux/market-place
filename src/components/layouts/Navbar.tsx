@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
-  Users,
+
   Bell,
   Settings,
   Search,
@@ -18,6 +18,7 @@ import {
   History,
   Truck,
   RefreshCw,
+  Plus,
 } from "lucide-react";
 
 import {
@@ -51,6 +52,8 @@ const SEARCHABLE_ROUTES = [
   { name: "Suppliers", path: "/supplier", icon: Truck },
   { name: "Digital Store", path: "/digital-store", icon: Store },
   { name: "Refill Inventory", path: "/inventory/re-fill", icon: RefreshCw },
+  { name: "Create Digital Store", path: "/create-digital-store", icon: Plus },
+  { name: "Digital Store Profile", path: "/digital-store/profile", icon: Store },
 ];
 
 // -----------------------------
@@ -92,7 +95,7 @@ export const Navbar = () => {
   };
 
   return (
-    <div className="w-full flex items-center justify-between px-4 py-2 bg-white shadow-sm border-b border-gray-100">
+    <div className="w-full flex items-center justify-between px-4 py-2 md:p-1 bg-white shadow-sm border-b border-gray-100">
 
       {/* LEFT - Store Selector */}
       <DropdownMenu>
@@ -216,9 +219,10 @@ export const Navbar = () => {
 
       {/* RIGHT - Actions */}
       <div className="flex items-center gap-5">
-        <button className="text-gray-500 hover:text-blue-600 transition-colors">
-          <Users className="w-5 h-5" />
-        </button>
+        <Link to={'/create-digital-store'} className="text-sm text-gray-500 px-2 bg-gray-50 hover:bg-gray-100 rounded-lg flex hover:text-blue-600 transition-colors">
+          <Plus className="w-5 h-5" />
+          <span className="ml-1 text-sm hidden sm:inline">Create Digital Store</span>
+        </Link>
 
         <button className="text-gray-500 hover:text-blue-600 relative">
           <Bell className="w-5 h-5" />

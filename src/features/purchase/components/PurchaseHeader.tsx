@@ -19,15 +19,10 @@ const PurchaseHeader = () => {
       <div className="flex justify-between items-center">
         <Title 
           title="Purchase Management" 
-          subtitle="Monitor procurement costs, supplier invoices, and payment statuses" 
+          subtitle="Monitor  supplier invoices, and payment statuses" 
         />
-        <GradientButton onClick={() => setIsModalOpen(true)}>
-          + Add New Purchase
-        </GradientButton>
-      </div>
+   
 
-    
-      <div className="flex flex-col sm:flex-row gap-4 w-full">
         <StatsCard
           label="Total Orders" 
           value={totalPurchases} 
@@ -56,8 +51,11 @@ const PurchaseHeader = () => {
           color="blue" 
           description="Cumulative procurement cost"
         />
+     
+         <GradientButton onClick={() => setIsModalOpen(true)}>
+          + Add New Purchase
+        </GradientButton>
       </div>
-
       <div className="w-full my-4">
         <SearchActionCard
           searchValue={""}

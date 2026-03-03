@@ -94,14 +94,16 @@ const Order = () => {
       
     >
       {/* Max-width container */}
-      <div className="space-y-6">
+      <div className="space-y-4">
 
         {/* Page title */}
-        <Title icon={<ShoppingCartIcon size={22} />} title="Orders" subtitle= "Manage and track all your orders" />
+       
        
 
         {/* Stats row */}
-        <div className="flex flex-col sm:flex-row gap-4 w-full">
+      <div className="flex justify-between gap-4 w-full">
+           <Title icon={<ShoppingCartIcon size={22} />} title="Orders" subtitle= "Manage and track all your orders" />
+           <div className="gap-3 flex">
           <StatsCard
             label="Total Orders"
             value={totalOrders}
@@ -114,24 +116,24 @@ const Order = () => {
             value={completed}
             icon={TrendingUp}
             color="green"
-            trend={{ value: 8, isPositive: true }}
-            description="vs last week"
+          
           />
           <StatsCard
             label="Pending"
             value={pending}
             icon={Clock}
             color="orange"
-            description="Awaiting action"
+        
           />
           <StatsCard
             label="Cancelled"
             value={cancelled}
             icon={XCircle}
             color="red"
-            trend={{ value: 2, isPositive: false }}
+        
             description="vs last week"
           />
+          </div>
         </div>
 
         {/* Filter header */}

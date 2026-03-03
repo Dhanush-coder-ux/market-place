@@ -1,5 +1,5 @@
-import React, { useMemo, useCallback } from "react";
-import { Trash2, Plus, IndianRupee, Package } from "lucide-react";
+import React, { useMemo, useCallback, useEffect } from "react";
+import { Trash2,  IndianRupee, Package, Keyboard } from "lucide-react";
 import { v4 as uuidv4 } from "uuid";
 import { BillingItem, SelectOption } from "../types";
 import { ReusableCombobox } from "@/components/ui/ReusableCombobox";
@@ -22,8 +22,37 @@ const createEmptyRow = (): BillingItem => ({
 const BillingTable: React.FC = () => {
   const [items, setItems] = React.useState<BillingItem[]>([createEmptyRow()]);
 
-  const handleAddRow = () => setItems((prev) => [...prev, createEmptyRow()]);
+  // 1. Memoized Add Row
+  const handleAddRow = useCallback(() => {
+    setItems((prev) => [...prev, createEmptyRow()]);
+  }, []);
 
+  // 2. Memoized Delete Last Row (for the shortcut)
+  const handleDeleteLastRow = useCallback(() => {
+    setItems((prev) => (prev.length === 1 ? [createEmptyRow()] : prev.slice(0, -1)));
+  }, []);
+
+  // 3. Global Keyboard Shortcuts
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      // Add Row: Alt + A
+      if (e.altKey && e.key.toLowerCase() === "a") {
+        e.preventDefault();
+        handleAddRow();
+      }
+      
+      // Delete Last Row: Alt + Backspace OR Alt + Delete
+      if (e.altKey && (e.key === "Backspace" || e.key === "Delete")) {
+        e.preventDefault();
+        handleDeleteLastRow();
+      }
+    };
+
+    window.addEventListener("keydown", handleGlobalKeyDown);
+    return () => window.removeEventListener("keydown", handleGlobalKeyDown);
+  }, [handleAddRow, handleDeleteLastRow]);
+
+  // Specific row deletion (for the trash can button)
   const handleDeleteRow = (id: string) => {
     setItems((prev) => (prev.length === 1 ? [createEmptyRow()] : prev.filter((item) => item.id !== id)));
   };
@@ -68,13 +97,7 @@ const BillingTable: React.FC = () => {
               </p>
             </div>
           </div>
-          <button
-            onClick={handleAddRow}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-[12px] font-bold transition-all duration-150 shadow-sm shadow-indigo-200 hover:shadow-indigo-300"
-          >
-            <Plus size={13} strokeWidth={3} />
-            Add Item
-          </button>
+       
         </div>
 
         {/* Scrollable table */}
@@ -179,7 +202,6 @@ const BillingTable: React.FC = () => {
                         className="
                           w-8 h-8 rounded-xl flex items-center justify-center mx-auto
                           text-slate-300 hover:text-rose-500 hover:bg-rose-50
-                         
                         "
                       >
                         <Trash2 size={14} strokeWidth={2.5} />
@@ -192,19 +214,31 @@ const BillingTable: React.FC = () => {
           </table>
         </div>
 
-        {/* Footer totals */}
+        {/* Footer totals & Shortcuts */}
         <div className="border-t border-slate-100 px-5 py-4 bg-slate-50/40 flex items-center justify-between flex-wrap gap-3">
-          {/* Add row text link */}
-          <button
-            onClick={handleAddRow}
-            className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-slate-400 hover:text-indigo-600 transition-colors"
-          >
-            <Plus size={13} strokeWidth={3} />
-            Add another item
-          </button>
+          
+          {/* Keyboard Shortcuts Legend */}
+          <div className="flex items-center gap-4 text-[11px] font-medium text-slate-400">
+            <div className="flex items-center gap-1.5">
+              <Keyboard size={14} className="text-slate-300" />
+              <span>Shortcuts:</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <kbd className="px-1.5 py-0.5 rounded bg-white text-slate-500 border border-slate-200 shadow-sm">Alt</kbd>
+              <span>+</span>
+              <kbd className="px-1.5 py-0.5 rounded bg-white text-slate-500 border border-slate-200 shadow-sm">A</kbd>
+              <span className="ml-1">Add Row</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <kbd className="px-1.5 py-0.5 rounded bg-white text-slate-500 border border-slate-200 shadow-sm">Alt</kbd>
+              <span>+</span>
+              <kbd className="px-1.5 py-0.5 rounded bg-white text-slate-500 border border-slate-200 shadow-sm">⌫</kbd>
+              <span className="ml-1">Delete Last Row</span>
+            </div>
+          </div>
 
           {/* Grand total */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 ml-auto">
             <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Grand Total</span>
             <div className="flex items-center gap-1 px-4 py-2 rounded-xl bg-indigo-600 text-white shadow-sm shadow-indigo-200">
               <IndianRupee size={14} strokeWidth={2.5} />

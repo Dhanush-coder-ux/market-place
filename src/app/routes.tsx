@@ -1,5 +1,6 @@
 import Loader from "@/components/common/Loader";
 import DigitalMain from "@/features/digitalstore/components/DigitalMain";
+import StoreSetupForm from "@/features/digitalstore/pages/DigitalStoreForm";
 import Product from "@/features/product/pages/Product";
 import ProductDetail from "@/features/product/pages/ProductDetail";
 import PurchaseHistoryTab from "@/features/purchase/pages/Purchase";
@@ -50,6 +51,7 @@ export const router = createBrowserRouter([
             { path:'/profile/add', element:<ProfileForm/> },
             { path:'/digital-store', element:<Shop/>},
             {path:'/inventory/re-fill',element:<RefillPage/>},
+            { path : '/create-digital-store', element:<StoreSetupForm/>},
               {path:'/digital-store/profile',element:<DigitalMain/>},
             
         ]

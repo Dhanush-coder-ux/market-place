@@ -26,27 +26,8 @@ const InventoryHeader: React.FC<InventoryHeaderProps> = ({
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <Title title="Inventory" subtitle="Manage and track your product inventory" icon={<Package2 size={30} />} />
         
-
-        <div className="flex items-center gap-3 self-end sm:self-auto">
-          <GradientButton
-            onClick={() => navigator("/inventory/re-fill")}
-            variant="outline"
-            icon={<RefreshCcw size={16} />}
-            title="Refill Stock"
-          >
-            Refill Stock
-          </GradientButton>
-
-          <GradientButton
-            type="button"
-            onClick={() => setIsModalOpen(true)}
-          >
-            + Add Inventory
-          </GradientButton>
-        </div>
-      </div>
-
-      <div className="flex flex-col sm:flex-row gap-4 w-full">
+      
+    
 
         <StatsCard
           label="Total Stock"
@@ -69,7 +50,26 @@ const InventoryHeader: React.FC<InventoryHeaderProps> = ({
           color="red"
           description="Currently out of stock"
         />
+        <div className="flex items-center gap-3 self-end sm:self-auto">
+          <GradientButton
+            onClick={() => navigator("/inventory/re-fill")}
+            variant="outline"
+            icon={<RefreshCcw size={16} />}
+            title="Refill Stock"
+          >
+            Refill Stock
+          </GradientButton>
+
+          <GradientButton
+            type="button"
+            onClick={() => setIsModalOpen(true)}
+          >
+            + Add Inventory
+          </GradientButton>
+        </div>
       </div>
+
+     
 
 
 

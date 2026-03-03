@@ -12,17 +12,12 @@ const ProductHeader = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
   return (
     <div>
-        <div className="flex justify-between items-center">
+        <div className="flex justify-between items-center w-full">
         <div>
-        <Title title="Product Inventory" subtitle="Manage and track your warehouse stock" />
+          <Title title="Product Inventory" subtitle="Manage and track your warehouse stock" />
         </div>
-        <GradientButton onClick={() => setIsModalOpen(true)}>
-           + Add Product
-        </GradientButton>
-      </div>
+        
 
-      {/* Stats Section */}
-      <div className="flex flex-col sm:flex-row gap-4 w-full my-5">
         <StatsCard
           label="Total Products" 
           value={MOCK_PRODUCTS.length} 
@@ -50,7 +45,12 @@ const ProductHeader = () => {
           icon={IndianRupee} 
           color="green" 
           description="Total asset value"
-        />
+        /> 
+        <div>
+        <GradientButton onClick={() => setIsModalOpen(true)}>
+           + Add Product
+        </GradientButton>
+        </div>
 
         
       </div>

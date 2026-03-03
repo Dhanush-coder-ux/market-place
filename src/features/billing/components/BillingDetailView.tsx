@@ -38,7 +38,7 @@ const BillingDetailView = () => {
     <div className="max-w-7xl mx-auto  space-y-8">
 
       {/* ===== Invoice Header ===== */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600 p-8 text-white shadow-xl">
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-blue-600 to-blue-500 p-8 text-white shadow-xl">
         <div className="absolute inset-0 bg-black/10 backdrop-blur-xl" />
         <div className="relative z-10 flex flex-col md:flex-row justify-between gap-6">
           <div>

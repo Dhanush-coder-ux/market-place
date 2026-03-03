@@ -5,6 +5,7 @@ import {
   Percent,  Sparkles
 } from "lucide-react";
 import Input from "@/components/ui/Input";
+import { GradientButton } from "@/components/ui/GradientButton";
 
 interface BillingHeaderProps {
   items: { qty: number; tprice: number }[];
@@ -72,7 +73,7 @@ const BillingHeader: React.FC<BillingHeaderProps> = ({ items, setIsOpen }) => {
         </div>
 
         {/* Total payable hero */}
-        <div className="rounded-2xl z-0 bg-indigo-600 px-5 py-5 flex flex-col items-center relative overflow-hidden shadow-lg shadow-indigo-200">
+        <div className="rounded-2xl z-0 bg-blue-500 px-5 py-5 flex flex-col items-center relative overflow-hidden shadow-lg shadow-indigo-200">
           {/* Decorative circles */}
           <div className="absolute -top-6 -right-6 w-24 h-24 rounded-full bg-white/5" />
           <div className="absolute -bottom-8 -left-4 w-32 h-32 rounded-full bg-white/5" />
@@ -195,20 +196,14 @@ const BillingHeader: React.FC<BillingHeaderProps> = ({ items, setIsOpen }) => {
           Scan Product
         </button>
 
-        <button
+        
+        <GradientButton
           onClick={() => setIsOpen(true)}
-          className="
-            w-full flex items-center justify-center gap-2
-            px-4 py-3 rounded-xl
-            bg-indigo-600 hover:bg-indigo-700
-            text-white text-[14px] font-black tracking-wide
-            shadow-md shadow-indigo-200 hover:shadow-indigo-300
-            transition-all duration-150 hover:-translate-y-0.5
-          "
+          icon={<Sparkles size={15} strokeWidth={2.5} />}
         >
-          <Sparkles size={15} strokeWidth={2.5} />
+
           Generate Invoice
-        </button>
+        </GradientButton>
       </div>
     </div>
   );

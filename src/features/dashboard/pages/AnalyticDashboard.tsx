@@ -3,6 +3,9 @@ import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
 } from "recharts";
+import { StatCard } from "../components/StatCard";
+import { SectionCard } from "../components/SectionCard";
+import { CustomTooltip } from "../components/CustomTooltip";
 
 // ── DATA ────────────────────────────────────────────────────────────────────
 
@@ -65,56 +68,7 @@ const digitalStoreData = [
 
 type Range = "Today" | "7 Days" | "30 Days" | "Custom Range";
 
-// ── SUBCOMPONENTS ────────────────────────────────────────────────────────────
 
-const StatCard = ({
-  title, value, change, positive, subtitle, icon, accent,
-}: {
-  title: string; value: string; change: string; positive: boolean;
-  subtitle: string; icon: string; accent: string;
-}) => (
-  <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm hover:shadow-md transition-all duration-200 group">
-    <div className="flex items-start justify-between mb-3">
-      <p className="text-slate-500 text-sm font-medium">{title}</p>
-      <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-lg ${accent}`}>
-        {icon}
-      </div>
-    </div>
-    <div className="flex items-end gap-2 mb-1">
-      <span className="text-2xl font-bold text-slate-800 tracking-tight">{value}</span>
-      <span className={`text-xs font-semibold px-1.5 py-0.5 rounded-md mb-0.5 ${positive ? "text-emerald-600 bg-emerald-50" : "text-red-500 bg-red-50"}`}>
-        {positive ? "▲" : "▼"} {change}
-      </span>
-    </div>
-    <p className="text-xs text-slate-400">{subtitle}</p>
-  </div>
-);
-
-const SectionCard = ({ title, children, action }: { title: string; children: React.ReactNode; action?: React.ReactNode }) => (
-  <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-    <div className="flex items-center justify-between px-5 pt-5 pb-3">
-      <h3 className="font-bold text-slate-700 text-sm tracking-wide uppercase">{title}</h3>
-      {action}
-    </div>
-    {children}
-  </div>
-);
-
-const CustomTooltip = ({ active, payload, label }: any) => {
-  if (active && payload && payload.length) {
-    return (
-      <div className="bg-slate-900 text-white text-xs rounded-xl px-3 py-2 shadow-xl">
-        <p className="font-semibold mb-1">{label}</p>
-        {payload.map((p: any, i: number) => (
-          <p key={i} style={{ color: p.color }}>
-            {p.name}: ₹{p.value.toLocaleString()}
-          </p>
-        ))}
-      </div>
-    );
-  }
-  return null;
-};
 
 // ── MAIN COMPONENT ───────────────────────────────────────────────────────────
 
@@ -145,11 +99,11 @@ const AnalyticsDashboard = () => {
       `}</style>
 
       {/* ── TOP BAR ── */}
-      <div className="bg-white border-b border-slate-100 sticky top-0 z-20">
+      <div className="bg-white border-b border-slate-100 sticky top-0 z-20 mt-3">
         <div className="flex items-center justify-between px-6 py-4">
           <div>
             <h1 className="display-font text-xl font-bold text-slate-800">Overview</h1>
-            <p className="text-xs text-slate-400 mt-0.5">Home › Dashboard</p>
+          
           </div>
 
           {/* Range Selector */}
@@ -365,8 +319,8 @@ const AnalyticsDashboard = () => {
                 </BarChart>
               </ResponsiveContainer>
               <div className="flex gap-3 mt-1 px-2">
-                <div className="flex items-center gap-1.5 text-xs text-slate-500"><div className="w-2.5 h-2.5 rounded-sm bg-blue-500" />Online</div>
-                <div className="flex items-center gap-1.5 text-xs text-slate-500"><div className="w-2.5 h-2.5 rounded-sm bg-slate-200" />Offline</div>
+                <div className="flex items-center gap-1.5 text-xs text-slate-500"><div className="w-2.5 h-2.5 rounded-sm bg-green-500" />Online</div>
+                <div className="flex items-center gap-1.5 text-xs text-slate-500"><div className="w-2.5 h-2.5 rounded-sm bg-yellow-500" />Offline</div>
               </div>
             </div>
           </SectionCard>
@@ -435,7 +389,7 @@ const AnalyticsDashboard = () => {
                   ))}
                 </div>
 
-                {/* Bottom quick stats */}
+                Bottom quick stats
                 <div className="mt-4 pt-4 border-t border-slate-100 grid grid-cols-3 gap-3">
                   {[
                     { label: "Gross Margin", value: "28.5%", icon: "📈" },

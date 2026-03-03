@@ -240,7 +240,7 @@ const BillingTable: React.FC = () => {
           {/* Grand total */}
           <div className="flex items-center gap-3 ml-auto">
             <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Grand Total</span>
-            <div className="flex items-center gap-1 px-4 py-2 rounded-xl bg-indigo-600 text-white shadow-sm shadow-indigo-200">
+            <div className="flex items-center gap-1 px-4 py-2">
               <IndianRupee size={14} strokeWidth={2.5} />
               <span className="text-base font-black tracking-tight" style={{ fontVariantNumeric: "tabular-nums" }}>
                 {grandTotal.toLocaleString("en-IN", { minimumFractionDigits: 2 })}

@@ -45,7 +45,7 @@ export type SearchActionCardProps = {
   onSearchChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   placeholder?: string;
   FilterOption?: string;
-  maxWidth:string
+  maxWidth?:string
 
 };
 

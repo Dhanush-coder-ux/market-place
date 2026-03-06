@@ -1,7 +1,7 @@
 import  { useState } from "react";
 import { 
   Download, Printer, CheckCircle2, 
-  Clock, Truck, Calendar, FileText, User, ChevronLeft, 
+  Clock, Truck, Calendar, FileText, User,
   LucideIcon
 } from "lucide-react";
 import { GradientButton } from "@/components/ui/GradientButton";

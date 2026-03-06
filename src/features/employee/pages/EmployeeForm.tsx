@@ -1,5 +1,5 @@
 import React from "react";
-import { Users, Mail, ShieldCheck, PlusCircle, UserPlus } from "lucide-react";
+import { Users, Mail, ShieldCheck, UserPlus } from "lucide-react";
 import Input from "@/components/ui/Input";
 import { ReusableSelect } from "@/components/ui/ReusableSelect";
 import { GradientButton } from "@/components/ui/GradientButton";

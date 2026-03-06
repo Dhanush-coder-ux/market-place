@@ -57,7 +57,7 @@ const OrdersCard: React.FC<{
     >
       {/* Top dual-color accent bar */}
       <div className="flex items-stretch h-1">
-        <div className={`flex-1 ${isOnline ? "bg-indigo-500" : "bg-orange-400"}`} />
+        <div className={`flex-1 ${isOnline ? "bg-green-300" : "bg-orange-300"}`} />
         <div className={`w-14 ${status.bg}`} />
       </div>
 
@@ -65,7 +65,7 @@ const OrdersCard: React.FC<{
         {/* Header */}
         <div className="flex items-start justify-between mb-5">
           <div className="flex items-center gap-2">
-            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-semibold tracking-wide ${isOnline ? "bg-indigo-50 text-indigo-600 ring-1 ring-indigo-100" : "bg-orange-50 text-orange-600 ring-1 ring-orange-100"}`}>
+            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-semibold tracking-wide ${isOnline ? "bg-green-50 text-green-600 ring-1 ring-green-100" : "bg-orange-50 text-orange-600 ring-1 ring-orange-100"}`}>
               {isOnline ? <Wifi size={10} strokeWidth={2.5} /> : <Store size={10} strokeWidth={2.5} />}
               {order.orderType}
             </span>
@@ -137,7 +137,7 @@ const OrdersCard: React.FC<{
         {/* CTA */}
         <button
           onClick={() => setIsOpen(true)}
-          className={`w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-sm font-bold tracking-wide text-white transition-all duration-200 shadow-sm ${isOnline ? "bg-indigo-600 hover:bg-indigo-700 shadow-indigo-200 hover:shadow-indigo-300 hover:shadow-md" : "bg-orange-500 hover:bg-orange-600 shadow-orange-200 hover:shadow-orange-300 hover:shadow-md"}`}
+          className={`w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-sm font-semibold tracking-wide ${isOnline? 'text-green-500':'text-orange-500'} transition-all duration-200 shadow-sm ${isOnline ? "bg-green-100 border border-green-500  shadow-green-200 " : "bg-orange-100 border border-orange-500  "}`}
         >
           View Details
           <ArrowRight size={15} strokeWidth={2.5} className="transition-transform duration-200 group-hover:translate-x-0.5" />

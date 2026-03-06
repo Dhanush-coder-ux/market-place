@@ -6,7 +6,7 @@ const Breadcrumb = () => {
   const paths = location.pathname.split("/").filter(Boolean)
 
   return (
-    <nav className="flex items-center text-sm text-gray-500">
+    <nav className="flex items-center text-xs text-gray-500">
       <Link to="/" className="hover:text-gray-900 font-medium">
         Home
       </Link>

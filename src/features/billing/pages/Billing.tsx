@@ -20,7 +20,7 @@ const Billing = () => {
 
 
       <div className="shrink-0">
-        <Title icon={<IndianRupee size={30} />} title="Billing" subtitle="Manage and track your billing details" />
+        <Title title="Billing" subtitle="Manage and track your billing details" />
     
       </div>
 

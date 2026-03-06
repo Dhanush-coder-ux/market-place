@@ -1,6 +1,5 @@
 import { DashboardsType, OrdersByMonthType } from "@/features/dashboard/types";
 import { Wallet } from "lucide-react";
-import { Truck } from "lucide-react";
 import {
   Database,
   LayoutDashboard,
@@ -12,16 +11,46 @@ import {
 } from "lucide-react";
 
 
+
 export const sidebarLinks = [
   { name: "Dashboard", icon: LayoutDashboard, path: "/" },
-  { name: "Products", icon: Package, path: "/product" },
-  { name: "Purchase",icon:Wallet,path:'/purchase'},
-  { name: "Supplier",icon:Truck,path:'/supplier'},
-  { name: "Inventory", icon: Database, path: "/inventory" },
-  { name: "Billing", icon: Printer, path: "/billing" },
+  { 
+    name: "Products", 
+    icon: Package, 
+    subLinks: [
+      { name: "Catalog", path: "/product" },
+      { name: "Add Product", path: "/product/add" },
+    ]
+  },
+  { 
+    name: "Procurement", 
+    icon: Wallet, 
+    subLinks: [
+      { name: "Purchase History", path: "/purchase" },
+      { name: "Suppliers", path: "/supplier" },
+      { name:"Add Suppliers", path:"/supplier/add"}
+    ]
+  },
+  { 
+    name: "Inventory", 
+    icon: Database, 
+    subLinks: [
+      { name: "Stock Levels", path: "/inventory" },
+      { name: "Low Stock Refill", path: "/inventory/re-fill" },
+      { name: "Add Inventory",path: "/inventory/add"}
+    ]
+  },
   { name: "Orders", icon: ShoppingCart, path: "/orders" },
-  { name: "Employees", icon: Users, path: "/employee" },
-  { name: "Digital Store", icon: Store, path: "/digital-store" }
+  { name: "Billing", icon: Printer, path: "/billing" },
+  { 
+    name: "Staff", 
+    icon: Users, 
+    subLinks: [
+      { name: "Directory", path: "/employee" },
+      { name: "Add Employee", path: "/employee/add" },
+    ]
+  },
+  { name: "Digital Store", icon: Store, path: "/digital-store/profile" }
 ];
 
 export const Rupees = "₹"

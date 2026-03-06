@@ -36,8 +36,8 @@ const BillingHeader: React.FC<BillingHeaderProps> = ({ items, setIsOpen }) => {
       {/* ── Header ── */}
       <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-indigo-600 flex items-center justify-center shadow-sm shadow-indigo-200">
-            <Receipt size={15} strokeWidth={2.5} className="text-white" />
+          <div className="w-8 h-8 rounded-xl bg-white flex items-center justify-center shadow-sm shadow-indigo-200">
+            <Receipt size={15} strokeWidth={2.5} className="text-black" />
           </div>
           <div>
             <p className="text-sm font-black text-slate-800 tracking-tight leading-none">Invoice</p>
@@ -73,31 +73,31 @@ const BillingHeader: React.FC<BillingHeaderProps> = ({ items, setIsOpen }) => {
         </div>
 
         {/* Total payable hero */}
-        <div className="rounded-2xl z-0 bg-blue-500 px-5 py-5 flex flex-col items-center relative overflow-hidden shadow-lg shadow-indigo-200">
+        <div className="rounded-2xl z-0 bg-white px-5 py-5 flex flex-col items-center relative overflow-hidden border border-blue-300 shadow-lg shadow-indigo-200">
           {/* Decorative circles */}
           <div className="absolute -top-6 -right-6 w-24 h-24 rounded-full bg-white/5" />
           <div className="absolute -bottom-8 -left-4 w-32 h-32 rounded-full bg-white/5" />
 
-          <p className="text-[10px] font-bold text-indigo-300 uppercase tracking-widest mb-2 z-10">
+          <p className="text-[10px] font-bold text-black uppercase tracking-widest mb-2 z-10">
             Total Payable
           </p>
 
           <div className="flex items-start z-10">
-            <span className="text-xl font-bold text-indigo-300 mt-1.5 mr-0.5">₹</span>
+            <span className="text-xl font-bold text-black mt-1.5 mr-0.5">₹</span>
             <span
-              className="text-5xl font-black text-white tracking-tight"
+              className="text-3xl font-black text-black tracking-tight"
               style={{ fontVariantNumeric: "tabular-nums" }}
             >
               {Math.floor(finalAmount).toLocaleString("en-IN")}
             </span>
-            <span className="text-xl font-bold text-indigo-300 mt-auto mb-1 ml-0.5">
+            <span className="text-xl font-bold text-black mt-auto mb-1 ml-0.5">
               .{String(Math.round((finalAmount % 1) * 100)).padStart(2, "0")}
             </span>
           </div>
 
           {/* GST line */}
           {includeGst && (
-            <p className="text-[11px] font-semibold text-indigo-300 mt-1 z-10">
+            <p className="text-[11px] font-semibold text-black mt-1 z-10">
               Incl. GST ₹{gstAmount.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
             </p>
           )}
@@ -107,7 +107,7 @@ const BillingHeader: React.FC<BillingHeaderProps> = ({ items, setIsOpen }) => {
             <button
               onClick={() => setIncludeGst(!includeGst)}
               className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ${
-                includeGst ? "bg-white" : "bg-indigo-400/50"
+                includeGst ? "bg-indigo-200" : "bg-indigo-400/50"
               }`}
             >
               <span

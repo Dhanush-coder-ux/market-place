@@ -4,6 +4,7 @@ import InventoryHeader from "../components/InventoryHeader";
 import { useState } from "react";
 import Drawer from "../../../components/common/Drawer";
 import DetailView from "../../../components/common/DetaileView";
+import SearchActionCard from "@/components/ui/SearchActionCard";
 
 const Inventory = () => {
   const [selectedItem, setSelectedItem] = useState<any>(null);
@@ -37,7 +38,7 @@ const Inventory = () => {
   };
 
   return (
-    <div>
+    <div className="space-y-3">
       <InventoryHeader
         searchValue="hello"
         lowestStockValue={10}
@@ -64,9 +65,14 @@ const Inventory = () => {
           </div>
         </div>
       )}
-
+        <div className="w-full">
+        <SearchActionCard
+          searchValue={""}
+          onSearchChange={()=>{}}
+          placeholder="Search products..."
+        />
+      </div>
       <Table
-        className="mt-5"
         columns={columns}
         data={data}
         rowKey="barcode"

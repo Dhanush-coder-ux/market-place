@@ -3,16 +3,13 @@ import Input from "@/components/ui/Input";
 import { ProductData } from "../type";
 import { GradientButton } from "@/components/ui/GradientButton";
 
-
 interface ProductFormProps {
   initialData?: Partial<ProductData>;
-  onSubmit: (data: ProductData) => void;
   isLoading?: boolean;
 }
 
 const ProductForm: React.FC<ProductFormProps> = ({
   initialData = {},
-  onSubmit,
   isLoading = false,
 }) => {
   const [formData, setFormData] = useState<ProductData>({
@@ -28,120 +25,127 @@ const ProductForm: React.FC<ProductFormProps> = ({
     current_stock: initialData.current_stock || 0,
   });
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement>
-  ) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type } = e.target;
-
     setFormData((prev) => ({
       ...prev,
-      [name]:
-        type === "number" ? Number(value) : value,
+      [name]: type === "number" ? Number(value) : value,
     }));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(formData);
+    console.log("Submitting Data:", formData);
   };
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="p-4 space-y-6"
-    >
-      <h2 className="text-xl font-semibold text-gray-800">
-        Product Details
-      </h2>
-
-      {/* Grid Layout */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-
-        <Input
-          name="name"
-          label="Product name"
-          value={formData.name}
-          onChange={handleChange}
-          placeholder="Product Name"
-        />
-
-        <Input
-          name="sku"
-          label="SKU"
-          value={formData.sku}
-          onChange={handleChange}
-          placeholder="SKU"
-        />
-
-        <Input
-          name="category"
-          label="Category"
-          value={formData.category}
-          onChange={handleChange}
-          placeholder="Category"
-        />
-
-        <Input
-          name="unit"
-          value={formData.unit}
-          label="Unit"
-          onChange={handleChange}
-          placeholder="Unit (pcs, kg, etc.)"
-        />
-
-        <Input
-          name="selling_price"
-          label="Selling Price"
-          type="number"
-          value={formData.selling_price}
-          onChange={handleChange}
-          placeholder="Selling Price"
-        />
-
-        <Input
-          name="avg_buying_cost"
-          label="Average Buying Cost"
-          type="number"
-          value={formData.avg_buying_cost}
-          onChange={handleChange}
-          placeholder="Average Buying Cost"
-        />
-
-        <Input
-          name="min_threshold"
-          label="Minimum Stock Threshold"
-          type="number"
-          value={formData.min_threshold}
-          onChange={handleChange}
-          placeholder="Minimum Stock Threshold"
-        />
-
-        <Input
-          name="current_stock"
-          label="Current Stock"
-          type="number"
-          value={formData.current_stock}
-          onChange={handleChange}
-          placeholder="Current Stock"
-        />
-
-        <div className="md:col-span-2">
+    <form onSubmit={handleSubmit} className="max-w-6xl mx-auto p-6 space-y-10">
+      
+      {/* SECTION 1: BASIC INFORMATION */}
+      <section className="border-b border-gray-200 pb-8">
+        <div className="mb-6">
+          <h3 className="text-lg font-bold text-gray-900">General Information</h3>
+          <p className="text-sm text-gray-500">Essential details to identify your product.</p>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <Input
-            label="Default Supplier"
-            name="default_supplier"
-            value={formData.default_supplier}
+            name="name"
+            label="Product Name"
+            value={formData.name}
             onChange={handleChange}
-            placeholder="Default Supplier"
+            placeholder="e.g. Wireless Mouse"
+          />
+          <Input
+            name="sku"
+            label="SKU / Barcode"
+            value={formData.sku}
+            onChange={handleChange}
+            placeholder="Unique identifier"
+          />
+          <Input
+            name="category"
+            label="Category"
+            value={formData.category}
+            onChange={handleChange}
+            placeholder="e.g. Electronics"
+          />
+          <Input
+            name="unit"
+            label="Unit of Measure"
+            value={formData.unit}
+            onChange={handleChange}
+            placeholder="e.g. pcs, kg, box"
           />
         </div>
+      </section>
 
-      </div>
+      {/* SECTION 2: PRICING & SUPPLIER */}
+      <section className="border-b border-gray-200 pb-8">
+        <div className="mb-6">
+          <h3 className="text-lg font-bold text-gray-900">Pricing & Sourcing</h3>
+          <p className="text-sm text-gray-500">Manage your costs, margins, and primary vendor.</p>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <Input
+            name="selling_price"
+            label="Selling Price"
+            type="number"
+            value={formData.selling_price}
+            onChange={handleChange}
+          />
+          <Input
+            name="avg_buying_cost"
+            label="Cost Price"
+            type="number"
+            value={formData.avg_buying_cost}
+            onChange={handleChange}
+          />
+          <Input
+            name="default_supplier"
+            label="Primary Supplier"
+            value={formData.default_supplier}
+            onChange={handleChange}
+            placeholder="Supplier Name"
+          />
+        </div>
+      </section>
 
-      {/* Submit Button */}
-      <div className="flex justify-end">
+      {/* SECTION 3: INVENTORY CONTROL */}
+      <section>
+        <div className="mb-6">
+          <h3 className="text-lg font-bold text-gray-900">Inventory Management</h3>
+          <p className="text-sm text-gray-500">Track stock levels and set low-stock alerts.</p>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <Input
+            name="current_stock"
+            label="Opening Stock"
+            type="number"
+            value={formData.current_stock}
+            onChange={handleChange}
+          />
+          <Input
+            name="min_threshold"
+            label="Low Stock Threshold"
+            type="number"
+            value={formData.min_threshold}
+            onChange={handleChange}
+          />
+        </div>
+      </section>
+
+      {/* ACTION BAR */}
+      <div className="pt-6 flex items-center justify-end gap-4 border-t border-gray-200">
+        <button 
+          type="button" 
+          className="px-6 py-2 text-sm font-medium text-gray-600 hover:text-gray-800 transition-colors"
+        >
+          Discard Changes
+        </button>
         <GradientButton
           type="submit"
           disabled={isLoading}
+          className="px-10"
         >
           {isLoading ? "Saving..." : "Save Product"}
         </GradientButton>

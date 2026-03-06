@@ -1,9 +1,11 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'outline'| 'danger';
   children: React.ReactNode;
   icon?: React.ReactNode;
+  path?: string;
 }
 
 export const GradientButton: React.FC<ButtonProps> = ({ 
@@ -11,22 +13,25 @@ export const GradientButton: React.FC<ButtonProps> = ({
   children, 
   icon, 
   className, 
+  path,
   ...props 
 }) => {
 
-  const baseStyles = "flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-300 transform hover:scale-105 cursor-pointer active:scale-95";
+  const baseStyles = "flex items-center justify-center gap-2 px-4 py-1 rounded-lg  cursor-pointer";
   
   const variants = {
    
-    primary: "bg-gradient-to-r from-blue-600 to-blue-400 text-white shadow-lg hover:shadow-blue-500/30",
-    outline: "bg-transparent border border-blue-400 text-[#1b68cf] hover:bg-blue-50",
-    danger: "bg-transparent border border-red-400 text-red-500 hover:bg-red-50",
+    primary: "bg-gradient-to-r from-blue-600 to-blue-400 text-white ",
+    outline: "bg-transparent border border-blue-400 text-[#1b68cf] ",
+    danger: "bg-transparent border border-red-400 text-red-500 ",
   };
 
-  return (
+  const button = (
     <button className={`${baseStyles} ${variants[variant]} ${className || ''}`} {...props}>
       {icon && <span className="flex items-center">{icon}</span>}
       <span>{children}</span>
     </button>
   );
+
+  return path ? <Link to={path}>{button}</Link> : button;
 };

@@ -1,77 +1,67 @@
-import StatsCard from '@/components/common/StatsCard'
+
 import Title from '@/components/common/Title'
 import { GradientButton } from '@/components/ui/GradientButton'
-import { AlertTriangle,  IndianRupee, Layers, Package } from 'lucide-react'
+import { AlertTriangle, IndianRupee, Layers, Package} from 'lucide-react'
 import { MOCK_PRODUCTS } from '../pages/Product'
-import SearchActionCard from '@/components/ui/SearchActionCard'
-import ProductForm from '../pages/ProductForm'
-import { FloatingFormCard } from '@/components/common/FloatingFormCard'
-import { useState } from 'react'
+import { StatCard } from '@/components/common/StatsCard'
 
 const ProductHeader = () => {
-    const [isModalOpen, setIsModalOpen] = useState(false);
-  return (
-    <div>
-        <div className="flex justify-between items-center w-full">
-        <div>
-          <Title title="Product Inventory" subtitle="Manage and track your warehouse stock" />
-        </div>
-        
-      <div className='flex gap-3'>
-        <StatsCard
-          label="Total Products" 
-          value={MOCK_PRODUCTS.length} 
-          icon={Package} 
-          color="blue" 
-          description="Total SKUs active"
-        />
-        <StatsCard
-          label="Low Stock" 
-          value="2" 
-          icon={AlertTriangle} 
-          color="orange" 
-          description="Items below threshold"
-        />
-        <StatsCard
-        label="Out of Stock"
-        value="1"
-        icon={Layers}
-        color="red"
-        description="Items currently unavailable"
-      />
-        <StatsCard
-          label="Inventory Value" 
-          value="$12,450" 
-          icon={IndianRupee} 
-          color="green" 
-          description="Total asset value"
-        /> 
-        </div>
-        <div>
-        <GradientButton onClick={() => setIsModalOpen(true)}>
-           + Add Product
-        </GradientButton>
-        </div>
+   
 
-        
-      </div>
-          <div className="w-full my-5">
-        <SearchActionCard
-          searchValue={""}
-          onSearchChange={() => {}}
-          placeholder="Search products..."
+  return (
+    <div className="space-y-3">
+
+      {/* Top bar: Title + CTA */}
+      <div className="flex items-start justify-between gap-4">
+        <Title
+          title="Product Inventory"
+          subtitle="Manage and track your warehouse stock"
         />
+        <GradientButton  
+        path='/product/add' 
+        >
+          +   Add Product
+        </GradientButton>
       </div>
-       <FloatingFormCard
-              isOpen={isModalOpen}
-              onClose={() => setIsModalOpen(false)}
-              title="Add New Inventory Item"
-              maxWidth="max-w-4xl"
-            >
-                <ProductForm 
-                onSubmit={()=>{}}
-                />
-            </FloatingFormCard>
+
+      {/* Stats row */}
+      <div className='flex-none overflow-y-auto px-6 py-2.5 bg-accent'>
+      <div className="flex gap-2.5 ">
+          <StatCard
+     label="Total Products"
+          value={MOCK_PRODUCTS.length}
+          icon={Package}
+  iconBg="bg-blue-50"
+  iconColor="text-blue-600"
+/>
+          <StatCard
+    label="Low Stock"
+          value="2"
+          icon={AlertTriangle}
+  iconBg="bg-orange-50"
+  iconColor="text-orange-600"
+/>
+          <StatCard
+     label="Out of Stock"
+          value="1"
+          icon={Layers}
+  iconBg="bg-red-50"
+  iconColor="text-red-600"
+/>
+          <StatCard
+       label="Inventory Value"
+          value="$12,450"
+          icon={IndianRupee}
+  iconBg="bg-green-50"
+  iconColor="text-green-600"
+/>
+   
+
+      </div>
+      </div>
+   
+
+    
     </div>
   )
 }

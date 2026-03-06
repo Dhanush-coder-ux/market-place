@@ -18,7 +18,6 @@ interface SupplierFormProps {
 
 const SupplierForm: React.FC<SupplierFormProps> = ({
   initialData = {},
-
   isLoading = false,
 }) => {
   const [formData, setFormData] = useState<SupplierData>({
@@ -30,11 +29,8 @@ const SupplierForm: React.FC<SupplierFormProps> = ({
     outstanding_payment: initialData.outstanding_payment || 0,
   });
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement>
-  ) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type } = e.target;
-
     setFormData((prev) => ({
       ...prev,
       [name]: type === "number" ? Number(value) : value,
@@ -43,73 +39,91 @@ const SupplierForm: React.FC<SupplierFormProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-
+    console.log("Saving Supplier:", formData);
   };
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="p-4 space-y-6"
-    >
-      <h2 className="text-xl font-semibold text-gray-800">
-        Supplier Details
-      </h2>
+    <form onSubmit={handleSubmit} className="max-w-6xl mx-auto p-6 space-y-10 bg-white">
+      
+      {/* SECTION 1: IDENTITY & CONTACT */}
+      <section className="border-b border-gray-200 pb-8">
+        <div className="mb-6">
+          <h3 className="text-lg font-bold text-gray-900">Supplier Identity</h3>
+          <p className="text-sm text-gray-500">Primary contact and legal identification details.</p>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-1">
+            <Input
+              name="supplier_name"
+              label="Supplier Name"
+              value={formData.supplier_name}
+              onChange={handleChange}
+              placeholder="e.g. Acme Corp"
+            />
+          </div>
+          <Input
+            name="phone"
+            label="Phone Number"
+            type="tel"
+            value={formData.phone}
+            onChange={handleChange}
+            placeholder="+1 (555) 000-0000"
+          />
+          <Input
+            name="gst"
+            label="GST Number"
+            value={formData.gst}
+            onChange={handleChange}
+            placeholder="22AAAAA0000A1Z5"
+          />
+        </div>
+      </section>
 
-      {/* Grid Layout */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {/* SECTION 2: FINANCIAL SUMMARY */}
+      <section>
+        <div className="mb-6">
+          <h3 className="text-lg font-bold text-gray-900">Financial Overview</h3>
+          <p className="text-sm text-gray-500">Track purchase history and current liabilities.</p>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <Input
+            name="total_purchases"
+            label="Total Purchase Volume"
+            type="number"
+            value={formData.total_purchases}
+            onChange={handleChange}
+          />
+          <div className="relative">
+             <Input
+              name="outstanding_payment"
+              label="Outstanding Balance"
+              type="number"
+              value={formData.outstanding_payment}
+              onChange={handleChange}
+            />
+            {formData.outstanding_payment > 0 && (
+              <span className="text-[10px] font-bold text-red-500 absolute -bottom-5 right-0 uppercase tracking-wider">
+                Pending Liability
+              </span>
+            )}
+          </div>
+        </div>
+      </section>
 
-        <Input
-          name="supplier_name"
-          label="Supplier Name"
-          value={formData.supplier_name}
-          onChange={handleChange}
-          placeholder="Supplier Name"
-        />
-
-        <Input
-          name="phone"
-          label="Phone"
-          type="tel"
-          value={formData.phone}
-          onChange={handleChange}
-          placeholder="Phone Number"
-        />
-
-        <Input
-          name="gst"
-          label="GST Number"
-          value={formData.gst}
-          onChange={handleChange}
-          placeholder="GST Number"
-        />
-
-        <Input
-          name="total_purchases"
-          label="Total Purchases"
-          type="number"
-          value={formData.total_purchases}
-          onChange={handleChange}
-          placeholder="Total Purchases"
-        />
-
-        <Input
-          name="outstanding_payment"
-          label="Outstanding Payment"
-          type="number"
-          value={formData.outstanding_payment}
-          onChange={handleChange}
-          placeholder="Outstanding Payment"
-        />
-
-      </div>
-
-      {/* Submit Button */}
-      <div className="flex justify-end">
+      {/* FOOTER ACTIONS */}
+      <div className="pt-8 flex items-center justify-end gap-4 border-t border-gray-200">
+        <button 
+          type="button" 
+          className="text-sm font-semibold text-gray-500 hover:text-gray-700"
+        >
+          Cancel
+        </button>
         <GradientButton
           type="submit"
           disabled={isLoading}
+          className="min-w-[160px]"
         >
-          {isLoading ? "Saving..." : "Save Supplier"}
+          {isLoading ? "Processing..." : "Register Supplier"}
         </GradientButton>
       </div>
     </form>

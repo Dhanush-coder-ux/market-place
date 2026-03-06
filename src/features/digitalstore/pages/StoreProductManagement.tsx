@@ -1,8 +1,8 @@
-import  { useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Edit2, Trash2, Plus, Search, Box, AlertTriangle, IndianRupee } from "lucide-react";
-import StatsCard from "@/components/common/StatsCard";
 import Input from "@/components/ui/Input";
 import Table from "@/components/common/Table";
+import { StatCard } from "@/components/common/StatsCard";
 
 const ProductDashboard = () => {
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
@@ -91,9 +91,22 @@ const ProductDashboard = () => {
       </div>
 
       <div className="flex gap-4 mb-6">
-        <StatsCard label="Total Products" value={rawProducts.length} icon={Box} />
-        <StatsCard label="Low Stock Items" value={stats.lowStockCount} icon={AlertTriangle} />
-        <StatsCard label="Inventory Value" value={`₹ ${stats.totalInventoryValue.toLocaleString()}`} icon={IndianRupee} />
+        <StatCard
+          label="Total Products" value={rawProducts.length} icon={Box}
+          iconBg="bg-blue-50"
+          iconColor="text-blue-600"
+        />
+        <StatCard
+          label="Low Stock Items" value={stats.lowStockCount} icon={AlertTriangle}
+          iconBg="bg-yellow-50"
+          iconColor="text-yellow-600"
+        />
+        <StatCard
+          label="Inventory Value" value={`₹ ${stats.totalInventoryValue.toLocaleString()}`} icon={IndianRupee}
+          iconBg="bg-red-50"
+          iconColor="text-red-600"
+        />
+
       </div>
 
       <div className="flex justify-end mb-4">

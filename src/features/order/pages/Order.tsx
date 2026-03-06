@@ -6,7 +6,8 @@ import { useState } from "react"
 import Drawer from "@/components/common/Drawer"
 import OrderDetailView from "../components/OrdersDetailView"
 import { DateFilter } from "../components/DateFilter"
-import StatsCard from "@/components/common/StatsCard"
+import { StatCard } from "@/components/common/StatsCard"
+
 
 
 const Order = () => {
@@ -91,48 +92,49 @@ const Order = () => {
   return (
     <div
       className="min-h-screen bg-slate-50/60 "
-      
+
     >
       {/* Max-width container */}
-      <div className="space-y-4">
+      <div className="space-y-3">
 
         {/* Page title */}
-       
-       
+
+        <Title title="Orders" subtitle="Manage and track all your orders" />
 
         {/* Stats row */}
-      <div className="flex justify-between gap-4 w-full">
-           <Title icon={<ShoppingCartIcon size={22} />} title="Orders" subtitle= "Manage and track all your orders" />
-           <div className="gap-3 flex">
-          <StatsCard
-            label="Total Orders"
-            value={totalOrders}
-            icon={Package}
-            color="blue"
-            description="All time"
-          />
-          <StatsCard
-            label="Completed"
-            value={completed}
-            icon={TrendingUp}
-            color="green"
-          
-          />
-          <StatsCard
-            label="Pending"
-            value={pending}
-            icon={Clock}
-            color="orange"
-        
-          />
-          <StatsCard
-            label="Cancelled"
-            value={cancelled}
-            icon={XCircle}
-            color="red"
-        
-            description="vs last week"
-          />
+        <div className='flex-none overflow-y-auto px-6 py-2.5 bg-accent'>
+          <div className="flex gap-2.5 ">
+
+            <StatCard
+              label="Total Orders"
+              value={totalOrders}
+              icon={Package}
+              iconBg="bg-blue-50"
+              iconColor="text-blue-600"
+            />
+            <StatCard
+              label="Completed"
+              value={completed}
+              icon={TrendingUp}
+              iconBg="bg-green-50"
+              iconColor="text-green-600"
+            />
+            <StatCard
+              label="Pending"
+              value={pending}
+              icon={Clock}
+              iconBg="bg-orange-50"
+              iconColor="text-orange-600"
+            />
+            <StatCard
+              label="Cancelled"
+              value={cancelled}
+              icon={XCircle}
+              iconBg="bg-red-50"
+              iconColor="text-red-600"
+            />
+
+
           </div>
         </div>
 
@@ -143,7 +145,7 @@ const Order = () => {
           orderType={orderType}
           setOrderType={setOrderType}
           orderTypeOptions={orderTypeOptions}
-         
+
           setIsDateFilterOpen={setOpen}
         />
 
@@ -175,11 +177,10 @@ const Order = () => {
             {[1, 2, 3].map(p => (
               <button
                 key={p}
-                className={`w-8 h-8 rounded-lg text-[12px] font-bold transition-colors ${
-                  p === 1
+                className={`w-8 h-8 rounded-lg text-[12px] font-bold transition-colors ${p === 1
                     ? "bg-indigo-600 text-white shadow-sm shadow-indigo-200"
                     : "text-slate-400 hover:bg-slate-100"
-                }`}
+                  }`}
               >
                 {p}
               </button>

@@ -47,12 +47,14 @@ const SEARCHABLE_ROUTES = [
   { name: "Dashboard", path: "/", icon: LayoutDashboard },
   { name: "Orders", path: "/orders", icon: ShoppingCart },
   { name: "Products", path: "/product", icon: Package },
+  { name: "Add Products", path: "/product/add",icon:PlusCircle},
   { name: "Add Employee", path: "/employee/add", icon: UserPlus },
+  { name: "Add Inventory", path: "/inventory/add",icon:PlusCircle},
   { name: "Inventory", path: "/inventory", icon: Boxes },
   { name: "Billing & Invoices", path: "/billing", icon: Receipt },
   { name: "Purchase History", path: "/purchase", icon: History },
   { name: "Suppliers", path: "/supplier", icon: Truck },
-  { name: "Digital Store", path: "/digital-store", icon: Store },
+  { name: "Add Suppliers" , path: "/supplier/add",icon:PlusCircle},
   { name: "Refill Inventory", path: "/inventory/re-fill", icon: RefreshCw },
   { name: "Create Digital Store", path: "/create-digital-store", icon: Plus },
   { name: "Digital Store Profile", path: "/digital-store/profile", icon: Store },
@@ -110,7 +112,7 @@ export const Navbar = () => {
   };
 
   return (
-    <div className="sticky top-0 z-40 w-full flex items-center justify-between px-4 lg:px-6 h-16 bg-white/80 backdrop-blur-md border-b border-slate-200/60 shadow-sm">
+    <div className="sticky top-0 z-40 w-full flex items-center justify-between px-4 lg:px-6 bg-white/80 backdrop-blur-md border-b border-slate-200/60 shadow-sm">
       
       {/* LEFT - Store Selector */}
       <DropdownMenu>

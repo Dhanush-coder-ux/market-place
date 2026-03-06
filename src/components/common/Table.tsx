@@ -43,7 +43,7 @@ const Table: React.FC<TableProps> = ({
         <thead>
           <tr>
             {onSelectionChange && (
-              <th className="px-5 py-3.5 w-10 text-left  first:rounded-tl-2xl border-b border-slate-100 bg-blue-300">
+              <th className="px-5 py-3.5 w-10 text-left  first:rounded-tl-2xl border-b border-slate-100 bg-blue-100">
                 <input
                   type="checkbox"
                   ref={(el) => { if (el) el.indeterminate = isIndeterminate; }}
@@ -58,7 +58,7 @@ const Table: React.FC<TableProps> = ({
                 key={col.key}
                 className={`
                   px-5 py-3.5 text-left  border-b border-slate-100
-                  bg-blue-300
+                  bg-blue-100
                   text-[11px] font-semibold text-black uppercase tracking-widest
                   ${!onSelectionChange && i === 0 ? "rounded-tl-2xl" : ""}
                   ${i === columns.length - 1 ? "rounded-tr-2xl" : ""}

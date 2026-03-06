@@ -8,7 +8,7 @@ import { ReusableSelect } from "@/components/ui/ReusableSelect";
 import ImageUpload from "@/components/common/ImageUpload";
 import { GradientButton } from "@/components/ui/GradientButton";
 
-import FieldLabel from "./Fieldlable"; // Note: Check if filename is FieldLabel.tsx
+import FieldLabel from "./Fieldlable"; 
 import { FIELD_DESCRIPTIONS } from "../../../utils/constants";
 
 const InventoryForm = () => {
@@ -43,171 +43,175 @@ const InventoryForm = () => {
   ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
-
     if (value && errors[name as keyof typeof errors]) {
       setErrors((prev) => ({ ...prev, [name]: false }));
     }
   };
 
   return (
-    <form className="max-w-6xl mx-auto space-y-8 p-4">
-      {/* Header Section */}
-      <div className="flex items-center gap-3 border-b pb-4">
-        <div className="p-2 bg-blue-50 rounded-lg">
-          <Package className="text-blue-600" size={20} />
+    <form className="max-w-7xl mx-auto space-y-10 p-6 bg-white">
+      
+      {/* SECTION 1: PRIMARY IDENTIFICATION */}
+      <section>
+        <div className="flex items-center gap-3 border-b border-gray-100 pb-4 mb-8">
+          <div className="p-2 bg-indigo-50 rounded-lg">
+            <Package className="text-indigo-600" size={22} />
+          </div>
+          <div>
+            <h3 className="text-xl font-bold text-gray-900 tracking-tight">Product Identity</h3>
+            <p className="text-sm text-gray-500">Core details and visual representation.</p>
+          </div>
         </div>
-        <h3 className="text-xl font-bold text-gray-800 tracking-tight">
-          Product Details
-        </h3>
-      </div>
 
-      {/* Primary Details Section */}
-      <div className="flex flex-col lg:flex-row gap-8">
-        {/* Left Side: Inputs */}
-        <div className="flex-1 space-y-5">
-          <div className="space-y-1">
-            <FieldLabel
-              label="Barcode / SKU"
-              tooltip={FIELD_DESCRIPTIONS.barcode}
-              required
-            />
-            <ReusableCombobox
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
+          {/* Left: Essential Inputs */}
+          <div className="lg:col-span-8 space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-1.5">
+                <FieldLabel
+                  label="Barcode / SKU"
+                  tooltip={FIELD_DESCRIPTIONS.barcode}
+                  required
+                />
+                <ReusableCombobox
+                  options={CATEGORIES}
+                  value={formData.barcode}
+                  onChange={(val) => {
+                    setFormData((p) => ({ ...p, barcode: val }));
+                    if (val) setErrors((e) => ({ ...e, barcode: false }));
+                  }}
+                  placeholder="Search or scan barcode"
+                />
+                {errors.barcode && <span className="text-xs text-red-500">Required</span>}
+              </div>
+
+              <div className="space-y-1.5">
+                <FieldLabel
+                  label="Product Name"
+                  tooltip={FIELD_DESCRIPTIONS.name}
+                  required
+                />
+                <Input
+                  name="name"
+                  value={formData.name}
+                  onChange={handleInputChange}
+                  placeholder="e.g. Premium Cotton Tee"
+                  leftIcon={<Tag size={18} className="text-gray-400" />}
+                  className={errors.name ? "border-red-500" : ""}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <FieldLabel
+                label="Detailed Description"
+                tooltip={FIELD_DESCRIPTIONS.description}
+              />
+              <div className="relative group">
+                <FileText className="absolute left-3 top-3 text-gray-400 group-focus-within:text-indigo-500 transition-colors" size={18} />
+                <textarea
+                  name="description"
+                  value={formData.description}
+                  onChange={handleInputChange}
+                  rows={4}
+                  className="w-full pl-10 p-3 bg-gray-50 rounded-xl border border-gray-200 focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50/50 transition-all outline-none resize-none"
+                  placeholder="Describe material, dimensions, or key features..."
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Right: Large Image Upload Preview */}
+          <div className="lg:col-span-4">
+            <div className="sticky top-6">
+              <ImageUpload
+                label="Product Showcase"
+                value={formData.image}
+                onChange={(file) => setFormData((prev) => ({ ...prev, image: file }))}
+              />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* SECTION 2: INVENTORY & LOGISTICS */}
+      <section className="bg-gray-50/50 p-6 rounded-2xl border border-gray-100">
+        <div className="flex items-center gap-2 mb-6">
+          <Layers className="text-gray-400" size={18} />
+          <h4 className="font-bold text-gray-800 uppercase tracking-widest text-xs">Stock & Categorization</h4>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="space-y-1.5">
+            <FieldLabel label="Category" tooltip={FIELD_DESCRIPTIONS.category} required />
+            <ReusableSelect
+              value={formData.category}
               options={CATEGORIES}
-              value={formData.barcode}
-              onChange={(val) => {
-                setFormData((p) => ({ ...p, barcode: val }));
-                if (val) setErrors((e) => ({ ...e, barcode: false }));
-              }}
-              placeholder="Search or enter barcode"
+              onValueChange={(val) => setFormData((p) => ({ ...p, category: val }))}
             />
-            {errors.barcode && (
-              <span className="text-xs text-red-500 font-medium">Barcode is required</span>
-            )}
           </div>
 
-          <div className="space-y-1">
-            <FieldLabel
-              label="Product Name"
-              tooltip={FIELD_DESCRIPTIONS.name}
-              required
-            />
+          <div className="space-y-1.5">
+            <FieldLabel label="Initial Stock Level" tooltip={FIELD_DESCRIPTIONS.stock} required />
             <Input
-              name="name"
-              value={formData.name}
+              name="currentStock"
+              value={formData.currentStock}
               onChange={handleInputChange}
-              placeholder="Enter product name"
-              leftIcon={<Tag size={18} className="text-gray-400" />}
-              className={errors.name ? "border-red-500" : ""}
+              type="number"
+              leftIcon={<Layers size={18} className="text-gray-400" />}
+              placeholder="Quantity in hand"
             />
           </div>
         </div>
+      </section>
 
-        {/* Right Side: Image Upload */}
-        <div className="w-full lg:w-72">
-          <ImageUpload
-            label="Product Image"
-            value={formData.image}
-            onChange={(file) => setFormData((prev) => ({ ...prev, image: file }))}
-          />
-        </div>
-      </div>
-
-      {/* Description Section */}
-      <div className="space-y-1">
-        <FieldLabel
-          label="Description"
-          tooltip={FIELD_DESCRIPTIONS.description}
-        />
-        <div className="relative">
-          <FileText className="absolute left-3 top-3 text-gray-400" size={18} />
-          <textarea
-            name="description"
-            value={formData.description}
-            onChange={handleInputChange}
-            rows={4}
-            className="w-full pl-10 p-3 bg-gray-50 rounded-xl border border-transparent focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all outline-none"
-            placeholder="Detailed product features and specifications..."
-          />
-        </div>
-      </div>
-
-      {/* Grid: Stock & Pricing */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="space-y-1">
-          <FieldLabel
-            label="Category"
-            tooltip={FIELD_DESCRIPTIONS.category}
-            required
-          />
-          <ReusableSelect
-            value={formData.category}
-            options={CATEGORIES}
-            onValueChange={(val) =>
-              setFormData((p) => ({ ...p, category: val }))
-            }
-          />
+      {/* SECTION 3: PRICING STRATEGY */}
+      <section className="p-6">
+        <div className="flex items-center gap-2 mb-6">
+          <BiRupee className="text-gray-400" size={20} />
+          <h4 className="font-bold text-gray-800 uppercase tracking-widest text-xs">Financial Configuration</h4>
         </div>
 
-        <div className="space-y-1">
-          <FieldLabel
-            label="Current Stock"
-            tooltip={FIELD_DESCRIPTIONS.stock}
-            required
-          />
-          <Input
-            name="currentStock"
-            value={formData.currentStock}
-            onChange={handleInputChange}
-            type="number"
-            leftIcon={<Layers size={18} className="text-gray-400" />}
-            placeholder="0"
-          />
-        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="space-y-1.5">
+            <FieldLabel label="Purchase Cost (Per Unit)" tooltip={FIELD_DESCRIPTIONS.buyingPrice} required />
+            <Input
+              name="currentPrice"
+              value={formData.currentPrice}
+              onChange={handleInputChange}
+              type="number"
+              leftIcon={<BiRupee className="text-gray-400" />}
+              placeholder="0.00"
+            />
+          </div>
 
-        <div className="space-y-1">
-          <FieldLabel
-            label="Buying Price"
-            tooltip={FIELD_DESCRIPTIONS.buyingPrice}
-            required
-          />
-          <Input
-            name="currentPrice"
-            value={formData.currentPrice}
-            onChange={handleInputChange}
-            type="number"
-            leftIcon={<BiRupee className="text-gray-400" />}
-            placeholder="0.00"
-          />
+          <div className="space-y-1.5">
+            <FieldLabel label="Market Selling Price" tooltip={FIELD_DESCRIPTIONS.sellingPrice} required />
+            <Input
+              name="sellingPrice"
+              value={formData.sellingPrice}
+              onChange={handleInputChange}
+              type="number"
+              leftIcon={<BiRupee className="text-gray-400" />}
+              placeholder="0.00"
+            />
+          </div>
         </div>
+      </section>
 
-        <div className="space-y-1">
-          <FieldLabel
-            label="Selling Price"
-            tooltip={FIELD_DESCRIPTIONS.sellingPrice}
-            required
-          />
-          <Input
-            name="sellingPrice"
-            value={formData.sellingPrice}
-            onChange={handleInputChange}
-            type="number"
-            leftIcon={<BiRupee className="text-gray-400" />}
-            placeholder="0.00"
-          />
+      {/* STICKY FOOTER ACTIONS */}
+      <div className="flex flex-col sm:flex-row justify-end items-center gap-4 pt-8 border-t border-gray-100 bg-white">
+        <button type="button" className="text-sm font-medium text-gray-400 hover:text-gray-600 px-4">
+          Discard Draft
+        </button>
+        <div className="flex flex-wrap justify-center gap-3">
+          <GradientButton variant="outline" className="border-gray-200">
+            Save & Add New
+          </GradientButton>
+          <GradientButton className="shadow-lg shadow-indigo-200 min-w-[180px]">
+            Confirm & Save Product
+          </GradientButton>
         </div>
-      </div>
-
-      {/* Footer Actions */}
-      <div className="flex flex-col sm:flex-row justify-end gap-3 pt-6 border-t">
-        <GradientButton className="order-2 sm:order-1" variant="outline">
-          Cancel
-        </GradientButton>
-        <GradientButton className="order-1 sm:order-2">
-          Save & Add More
-        </GradientButton>
-        <GradientButton className="order-0 sm:order-3">
-          Save Product
-        </GradientButton>
       </div>
     </form>
   );

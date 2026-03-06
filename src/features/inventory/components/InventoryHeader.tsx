@@ -1,57 +1,24 @@
-import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { AlertTriangleIcon, Package, Package2, PackageX, RefreshCcw } from "lucide-react";
-
-import SearchActionCard from "../../../components/ui/SearchActionCard";
-
+import { AlertTriangleIcon, Package, PackageX, RefreshCcw } from "lucide-react";
 import { GradientButton } from "@/components/ui/GradientButton";
 import Title from "@/components/common/Title";
-import { FloatingFormCard } from "@/components/common/FloatingFormCard";
-import InventoryForm from "../pages/InventoryForm";
 import type { InventoryHeaderProps } from "../types";
-import StatsCard from "@/components/common/StatsCard";
+import { StatCard } from "@/components/common/StatsCard";
+
 
 const InventoryHeader: React.FC<InventoryHeaderProps> = ({
   totalCount,
   lowestStockValue,
-  onSearchChange,
 }) => {
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const navigator = useNavigate();
 
   return (
-    <div className="flex flex-col gap-6 mb-6">
+    <div className="flex flex-col space-y-3">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center ">
+        <Title title="Inventory" subtitle="Manage and track your product inventory" />
 
 
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <Title title="Inventory" subtitle="Manage and track your product inventory" icon={<Package2 size={30} />} />
-        
-      
-    
-<div className="flex gap-3">
-        <StatsCard
-          label="Total Stock"
-          value={totalCount}
-          icon={Package}
-          color="blue"
-          description="Total items in inventory"
-        />
-        <StatsCard
-          label="Low Stock Items"
-          value={lowestStockValue}
-          icon={AlertTriangleIcon}
-          color="yellow"
-          description="Items below threshold"
-        />
-        <StatsCard
-          label="Out of Stock Items"
-          value={0}
-          icon={PackageX}
-          color="red"
-          description="Currently out of stock"
-        />
-        </div>
-        <div className="flex items-center gap-3 self-end sm:self-auto">
+        <div className="flex items-center gap-2 self-end sm:self-auto">
           <GradientButton
             onClick={() => navigator("/inventory/re-fill")}
             variant="outline"
@@ -63,33 +30,45 @@ const InventoryHeader: React.FC<InventoryHeaderProps> = ({
 
           <GradientButton
             type="button"
-            onClick={() => setIsModalOpen(true)}
+            path="/inventory/add"
           >
             + Add Inventory
           </GradientButton>
         </div>
       </div>
 
-     
-
-
-
-      <div className="w-full">
-        <SearchActionCard
-          searchValue={""}
-          onSearchChange={onSearchChange}
-          placeholder="Search products..."
-        />
+      <div className='flex-none overflow-y-auto px-6 py-2.5 bg-accent'>
+        <div className="flex gap-2.5 ">
+          <StatCard
+            label="Total Stock"
+            value={totalCount}
+            icon={Package}
+            iconBg="bg-blue-50"
+            iconColor="text-blue-600"
+          />
+          <StatCard
+            label="Low Stock Items"
+            value={lowestStockValue}
+            icon={AlertTriangleIcon}
+            iconBg="bg-yellow-50"
+            iconColor="text-yellow-600"
+          />
+          <StatCard
+            label="Low Stock Items"
+            value={lowestStockValue}
+            icon={AlertTriangleIcon}
+            iconBg="bg-yellow-50"
+            iconColor="text-yellow-600"
+          />
+          <StatCard
+            label="Out of Stock Items"
+            value={0}
+            icon={PackageX}
+            iconBg="bg-red-50"
+            iconColor="text-red-600"
+          />
+        </div>
       </div>
-
-      <FloatingFormCard
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        title="Add New Inventory Item"
-        maxWidth="max-w-4xl"
-      >
-        <InventoryForm />
-      </FloatingFormCard>
     </div>
   );
 };

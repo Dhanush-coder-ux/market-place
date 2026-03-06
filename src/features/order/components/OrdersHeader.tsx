@@ -16,7 +16,7 @@ const OrdersHeader: React.FC<OrdersHeaderProps> = ({
 
 
   return (
-    <div className="w-full my-4 bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+    <div className="w-full  bg-white rounded-xl border border-gray-200 shadow-sm p-2">
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
         
         {/* --- Left: Title & Icon --- */}

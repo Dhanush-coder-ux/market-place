@@ -1,9 +1,9 @@
 import { useState } from "react";
-import { 
-  Phone, Globe, MapPin, Mail, 
-  ShoppingBag, CreditCard, History, Info, Package 
+import {
+  Phone, Globe, MapPin, Mail,
+  ShoppingBag, CreditCard, History, Info, Package
 } from "lucide-react";
-import StatsCard from "@/components/common/StatsCard";
+import  { StatCard } from "@/components/common/StatsCard";
 
 const SupplierDetail = () => {
   const [activeTab, setActiveTab] = useState("General Info");
@@ -12,11 +12,11 @@ const SupplierDetail = () => {
   return (
     <div className="min-h-screen bg-[#F8FAFC] p-4 md:p-8 animate-in fade-in duration-500">
       <div className="max-w-7xl mx-auto space-y-6">
-        
+
         {/* 1. Header & Quick Actions */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
-           
+
             <div>
               <div className="flex items-center gap-2 mb-1">
                 <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded uppercase tracking-wider border border-emerald-100">
@@ -33,33 +33,37 @@ const SupplierDetail = () => {
 
         {/* 2. Top Summary Stats */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatsCard 
-            label="Total Items Bought" 
-            value="120" 
-            icon={Package} 
-            color="blue" 
-            description="Across 5 orders"
+          <StatCard
+            label="Total Items Bought"
+            value="120"
+            icon={Package}
+            iconBg="bg-blue-50"
+            iconColor="text-blue-600"
           />
-          <StatsCard 
-            label="Pending Amount" 
-            value="₹50,000" 
-            icon={CreditCard} 
-            color="red" 
-            description="Due in 12 days"
+          <StatCard
+            label="Pending Amount"
+            value="₹50,000"
+            icon={CreditCard}
+            iconBg="bg-red-50"
+            iconColor="text-red-600"
           />
-          <StatsCard 
-            label="Total Purchases" 
-            value="₹2,45,000" 
-            icon={ShoppingBag} 
-            color="green" 
-            description="Lifetime volume"
+          <StatCard
+            label="Total Purchases"
+            value="₹2,45,000"
+            icon={ShoppingBag}
+            iconBg="bg-green-50"
+            iconColor="text-green-600"
           />
-          <StatsCard 
-            label="Last Order" 
-            value="14 Days Ago" 
-            icon={History} 
-            color="blue" 
+
+          <StatCard
+            label="Last Order"
+            value="14 Days Ago"
+            icon={History}
+            iconBg="bg-blue-50"
+            iconColor="text-blue-600"
           />
+
+
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
@@ -83,11 +87,10 @@ const SupplierDetail = () => {
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
-                  className={`px-6 py-2 rounded-xl text-sm font-bold transition-all ${
-                    activeTab === tab 
-                      ? "bg-white text-indigo-600 shadow-sm ring-1 ring-slate-200" 
+                  className={`px-6 py-2 rounded-xl text-sm font-bold transition-all ${activeTab === tab
+                      ? "bg-white text-blue-600 shadow-sm ring-1 ring-slate-200"
                       : "text-slate-500 hover:text-slate-900"
-                  }`}
+                    }`}
                 >
                   {tab}
                 </button>
@@ -101,7 +104,7 @@ const SupplierDetail = () => {
                     <Info size={20} className="text-indigo-500" />
                     <h2 className="text-xl font-bold text-slate-800">Business Profile</h2>
                   </div>
-                  
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <div className="space-y-4">
                       <p className="text-xs font-bold text-slate-400 uppercase">Payment Terms</p>
@@ -120,7 +123,7 @@ const SupplierDetail = () => {
               )}
               {activeTab !== "General Info" && (
                 <div className="p-20 text-center text-slate-400 font-medium">
-                  {activeTab} 
+                  {activeTab}
                 </div>
               )}
             </div>

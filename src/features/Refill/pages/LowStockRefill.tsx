@@ -10,9 +10,9 @@ import {
   X,
 } from "lucide-react";
 
-import Input from "@/components/ui/Input"; // Assuming you have this
-import HeaderCard from "@/components/common/HeaderCard"; // Assuming you have this
-import Title from "@/components/common/Title"; // Assuming you have this
+import Input from "@/components/ui/Input";
+import Title from "@/components/common/Title";
+import { StatCard } from "@/components/common/StatsCard";
 
 // --- Types ---
 interface Supplier {
@@ -160,10 +160,23 @@ const RefillPage = () => {
       
       {/* HEADER */}
       <div className="space-y-6">
-        <Title icon={<RefreshCcw size={30} />} title="Refill Inventory" subtitle="Manage stock levels and replenish inventory" />
+        <Title title="Refill Inventory" subtitle="Manage stock levels and replenish inventory" />
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-3xl">
-          <HeaderCard title="Out of Stock" value={stats.outOfStock} subtitle="Immediate action required" icon={PackageX} theme="red" trend="High Priority" trendDirection="up" />
-          <HeaderCard title="Low Stock" value={stats.lowStock} subtitle="Below minimum threshold" icon={AlertTriangle} theme="yellow" trend="+5 items" trendDirection="down" />
+          <StatCard
+          label="Out of Stock"
+          value={stats.outOfStock}
+          icon={PackageX}
+          iconBg="bg-red-50"
+          iconColor="text-red-700"
+          />
+          <StatCard
+          label="Low Stock"
+          value={stats.lowStock}
+          icon={AlertTriangle}
+          iconBg="bg-yellow-50"
+          iconColor="text-yellow-700"
+          />
+          
         </div>
       </div>
 

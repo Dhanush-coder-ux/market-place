@@ -6,7 +6,7 @@ import {
   MapPin, 
   BadgeCheck, 
   Edit3, 
-  ShoppingBag 
+
 } from "lucide-react";
 import DeliveryPreferences from "../pages/Deliveryinfo";
 import ProductDashboard from "../pages/StoreProductManagement";
@@ -16,7 +16,7 @@ type TabType = "Announcements" | "Delivery Preferences" | "Product Dashboard";
 
 // Mock profile data
 const storeProfile = {
-  name: "Nova Digital Studio",
+  name: "Grace Super Market",
   username: "@novadigital",
   location: "San Francisco, CA",
   tagline: "Premium design assets, templates & UI kits for modern creators.",
@@ -55,21 +55,15 @@ const DigitalMain = () => {
       className="min-h-screen p-4 md:p-8 bg-gradient-to-br from-[#f0f4ff] via-[#faf5ff] to-[#f0fdf4]"
       style={{ fontFamily: "'DM Sans', sans-serif" }}
     >
-   
-      {/* <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Syne:wght@600;700;800&display=swap');
-        .font-syne { font-family: 'Syne', sans-serif; }
-      `}</style> */}
-
-      <div className="space-y-6">
+      <div className="space-y-6 max-w-6xl mx-auto">
 
         {/* ── PROFILE CARD ── */}
         <div className="bg-white/80 backdrop-blur-xl border border-white shadow-[0_4px_24px_rgba(99,102,241,0.08)] rounded-3xl overflow-hidden">
           
-          {/* Cover Banner */}
-          <div className="h-50 bg-gradient-to-r from-indigo-500 via-purple-500 to-fuchsia-500 relative">
-            {/* Soft overlay pattern (optional) */}
+          {/* Cover Banner (Fixed h-50 to h-48) */}
+          <div className="h-48  relative">
             <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_center,_white_2px,_transparent_2px)] bg-[size:20px_20px]"></div>
+            <img src="/Shops_Assets/banner.png" alt="" className="w-full h-full object-cover " />
             
             {/* Edit Button */}
             <div className="absolute right-4 top-4">
@@ -84,10 +78,10 @@ const DigitalMain = () => {
           <div className="px-6 sm:px-8 pb-8">
             <div className="flex flex-col sm:flex-row sm:items-end gap-4 sm:gap-6 mb-6">
               
-              {/* Avatar (Overlapping cover) */}
+              {/* Avatar (Fixed w-34/h-34 to w-32/h-32) */}
               <div className="-mt-12 relative z-10 shrink-0">
-                <div className="w-34 h-34 rounded-full border-4 border-white shadow-lg bg-gradient-to-br from-indigo-500 to-fuchsia-500 flex items-center justify-center">
-                  <ShoppingBag size={36} className="text-white drop-shadow-md" />
+                <div className="w-32 h-32 rounded-full border-4 border-white shadow-lg bg-white flex items-center justify-center overflow-hidden">
+                  <img src="/Shops_Assets/logo.png" alt="Store Logo" className="w-full h-full object-cover" />
                 </div>
               </div>
 
@@ -166,7 +160,6 @@ const DigitalMain = () => {
 
           {/* Tab Content Area */}
           <div className="p-6 min-h-[400px]">
-            {/* Added standard Tailwind animate-in for smooth transitions */}
             <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
               {activeTab === "Announcements" && <Announcement />}
               {activeTab === "Delivery Preferences" && <DeliveryPreferences />}

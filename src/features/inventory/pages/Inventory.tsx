@@ -6,6 +6,7 @@ import Drawer from "../../../components/common/Drawer";
 import DetailView from "../../../components/common/DetaileView";
 import SearchActionCard from "@/components/ui/SearchActionCard";
 
+
 const Inventory = () => {
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [selectedRows, setSelectedRows] = useState<any[]>([]);
@@ -79,6 +80,7 @@ const Inventory = () => {
         onRowClick={(row) => handleRowClick(row)}
         selectedIds={selectedRows}
         onSelectionChange={setSelectedRows}
+        pagination={{pageSize:2}}
       />
 
       <Drawer

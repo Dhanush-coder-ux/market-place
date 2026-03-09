@@ -1,16 +1,16 @@
 import { useState } from "react";
 import {
-  Truck, Zap, Globe, Clock, Copy, 
+  Truck, Zap, Globe,  
   Info, MapPin, ChevronDown, IndianRupee, Timer,
-  Store, Users, Check, X
+  Store, Users, Check,
 } from "lucide-react";
 
 /* ───────────── Types ───────────── */
-type Day = "Monday"|"Tuesday"|"Wednesday"|"Thursday"|"Friday"|"Saturday"|"Sunday";
-const DAYS: Day[] = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
-const DAY_SHORT: Record<Day,string> = { Monday:"Mon",Tuesday:"Tue",Wednesday:"Wed",Thursday:"Thu",Friday:"Fri",Saturday:"Sat",Sunday:"Sun" };
+// type Day = "Monday"|"Tuesday"|"Wednesday"|"Thursday"|"Friday"|"Saturday"|"Sunday";
+// const DAYS: Day[] = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
+// const DAY_SHORT: Record<Day,string> = { Monday:"Mon",Tuesday:"Tue",Wednesday:"Wed",Thursday:"Thu",Friday:"Fri",Saturday:"Sat",Sunday:"Sun" };
 
-type DayHours  = { open: string; close: string; closed: boolean };
+// type DayHours  = { open: string; close: string; closed: boolean };
 type DeliveryConfig = { enabled:boolean; speed:string; freeThreshold:number; manageStore:boolean; partners:boolean };
 
 const COLOR_MAP = {
@@ -157,28 +157,28 @@ export default function DeliveryPreferences() {
   const [instant,  setInstant]  = useState<DeliveryConfig>({ enabled:true,  speed:"Within 12 hours",   freeThreshold:50,  manageStore:true,  partners:true  });
   const [standard, setStandard] = useState<DeliveryConfig>({ enabled:true,  speed:"1–2 Business Days", freeThreshold:30,  manageStore:false, partners:true  });
   const [nationwide,setNationwide]=useState<DeliveryConfig>({ enabled:true, speed:"5–7 Business Days",  freeThreshold:100, manageStore:false, partners:true  });
-  const [storeHours,setStoreHours]=useState<Record<Day,DayHours>>(
-    DAYS.reduce((a,d) => { a[d]={open:"09:00",close:"18:00",closed:false}; return a; }, {} as Record<Day,DayHours>)
-  );
-  const [globalOpen,  setGlobalOpen]  = useState("09:00");
-  const [globalClose, setGlobalClose] = useState("18:00");
-  const [applied, setApplied] = useState(false);
+  // const [storeHours,setStoreHours]=useState<Record<Day,DayHours>>(
+  //   DAYS.reduce((a,d) => { a[d]={open:"09:00",close:"18:00",closed:false}; return a; }, {} as Record<Day,DayHours>)
+  // );
+  // const [globalOpen,  setGlobalOpen]  = useState("09:00");
+  // const [globalClose, setGlobalClose] = useState("18:00");
+  // const [applied, setApplied] = useState(false);
 
-  const applyToAll = () => {
-    const u = { ...storeHours };
-    DAYS.forEach(d => { if(!u[d].closed) { u[d].open=globalOpen; u[d].close=globalClose; } });
-    setStoreHours(u);
-    setApplied(true);
-    setTimeout(() => setApplied(false), 1600);
-  };
+  // const applyToAll = () => {
+  //   const u = { ...storeHours };
+  //   DAYS.forEach(d => { if(!u[d].closed) { u[d].open=globalOpen; u[d].close=globalClose; } });
+  //   setStoreHours(u);
+  //   setApplied(true);
+  //   setTimeout(() => setApplied(false), 1600);
+  // };
 
-  const toggleDay = (day:Day) =>
-    setStoreHours(p => ({ ...p, [day]:{ ...p[day], closed:!p[day].closed } }));
+  // const toggleDay = (day:Day) =>
+  //   setStoreHours(p => ({ ...p, [day]:{ ...p[day], closed:!p[day].closed } }));
 
-  const updateTime = (day:Day, field:"open"|"close", val:string) =>
-    setStoreHours(p => ({ ...p, [day]:{ ...p[day], [field]:val } }));
+  // const updateTime = (day:Day, field:"open"|"close", val:string) =>
+  //   setStoreHours(p => ({ ...p, [day]:{ ...p[day], [field]:val } }));
 
-  const openCount = DAYS.filter(d => !storeHours[d].closed).length;
+  // const openCount = DAYS.filter(d => !storeHours[d].closed).length;
 
   return (
     <div className="space-y-5 py-5" style={{ fontFamily:"'DM Sans',sans-serif" }}>
@@ -221,9 +221,9 @@ export default function DeliveryPreferences() {
         <DeliveryFields data={nationwide} setData={setNationwide} />
       </SettingsCard>
 
-      {/* ── Operating Hours ── */}
+{/* 
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        {/* Header */}
+    
         <div className="h-1 w-full bg-indigo-600" />
         <div className="p-5 border-b border-slate-100">
           <div className="flex items-center gap-3 mb-5">
@@ -238,8 +238,7 @@ export default function DeliveryPreferences() {
             </div>
           </div>
 
-          {/* Global time setter */}
-          <div className="flex flex-wrap items-end gap-3 bg-slate-50 border border-slate-200 rounded-xl p-4">
+               <div className="flex flex-wrap items-end gap-3 bg-slate-50 border border-slate-200 rounded-xl p-4">
             <div>
               <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Opens</label>
               <input
@@ -272,7 +271,7 @@ export default function DeliveryPreferences() {
           </div>
         </div>
 
-        {/* Days grid */}
+   
         <div className="p-5">
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-1.5">
             <span className="w-3 h-px bg-slate-300 inline-block" />
@@ -289,7 +288,7 @@ export default function DeliveryPreferences() {
                     isOpen ? "border-indigo-200 bg-indigo-50/30" : "border-slate-100 bg-slate-50/50"
                   }`}
                 >
-                  {/* Day header — click to toggle */}
+           
                   <div
                     className="flex items-center justify-between px-3 py-2.5 cursor-pointer select-none"
                     onClick={() => toggleDay(day)}
@@ -311,7 +310,6 @@ export default function DeliveryPreferences() {
                     </span>
                   </div>
 
-                  {/* Time inputs — only when open */}
                   {isOpen && (
                     <div className="flex items-center gap-1.5 px-3 pb-3">
                       <input
@@ -336,7 +334,7 @@ export default function DeliveryPreferences() {
             })}
           </div>
         </div>
-      </div>
+      </div> */}
     </div>
   );
 }

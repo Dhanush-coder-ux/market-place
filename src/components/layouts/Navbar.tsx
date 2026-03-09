@@ -20,6 +20,7 @@ import {
   Plus,
   ShoppingCart,
   Command,
+  Settings2,
 } from "lucide-react";
 
 import {
@@ -58,6 +59,7 @@ const SEARCHABLE_ROUTES = [
   { name: "Refill Inventory", path: "/inventory/re-fill", icon: RefreshCw },
   { name: "Create Digital Store", path: "/create-digital-store", icon: Plus },
   { name: "Digital Store Profile", path: "/digital-store/profile", icon: Store },
+  { name: "Settings", path: "/profile", icon: Settings2}
 ];
 
 export const Navbar = () => {
@@ -253,10 +255,11 @@ export const Navbar = () => {
             <Bell className="w-5 h-5" />
             <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-rose-500 rounded-full border-2 border-white"></span>
           </button>
-          
+          <Link to={'/profile'}>
           <button className="p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700 rounded-full transition-colors group">
             <Settings className="w-5 h-5 group-hover:rotate-45 transition-transform duration-300" />
           </button>
+          </Link>
         </div>
 
         {/* Divider */}

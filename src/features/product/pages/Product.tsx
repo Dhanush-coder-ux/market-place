@@ -256,6 +256,7 @@ const Product = () => {
           data={MOCK_PRODUCTS}
           rowKey="id"
           onRowClick={handleRowClick}
+         pagination={{pageSize:1}}
         />
       </div>
     </div>

@@ -1,4 +1,5 @@
 import Loader from "@/components/common/Loader";
+import { ProfileSettingsPage } from "@/features/Setting/pages/ProfileSettingPage";
 import AnalyticsDashboard from "@/features/dashboard/pages/AnalyticDashboard";
 import DigitalMain from "@/features/digitalstore/components/DigitalMain";
 import StoreSetupForm from "@/features/digitalstore/pages/DigitalStoreForm";
@@ -18,7 +19,6 @@ const MainLayout      =   React.lazy(() => import ("../components/layouts/MainLa
 const Employee        =   React.lazy(()=> import ("../features/employee/pages/Employee"));
 const Inventory       =   React.lazy(()=>  import ("../features/inventory/pages/Inventory"));
 const Order           =   React.lazy(() =>  import ("../features/order/pages/Order"));
-const Profile         =   React.lazy(()=>  import ("../features/profile/pages/Profile"));
 const Login           =   React.lazy(()=>  import ("../features/auth/pages/Login"));
 const Billing         =   React.lazy(()=>  import ("../features/billing/pages/Billing"));
 const EmployeeForm    =   React.lazy(()=>  import ("../features/employee/pages/EmployeeForm"));
@@ -51,7 +51,7 @@ export const router = createBrowserRouter([
             { path:'/inventory/add',element:<InventoryForm/> },
             { path:'/billing', element:<Billing/>},
             { path:'/orders', element:<Order/> },
-            { path:'/profile', element:<Profile/> },
+            { path:'/profile', element:<ProfileSettingsPage/> },
             { path:'/profile/add', element:<ProfileForm/> },
             {path:'/inventory/re-fill',element:<RefillPage/>},
             { path : '/create-digital-store', element:<StoreSetupForm/>},

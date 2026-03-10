@@ -85,14 +85,14 @@ const BillingTable: React.FC = () => {
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
 
         {/* Table header strip */}
-        <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-100 bg-slate-50/60">
-          <div className="flex items-center gap-2.5">
+        <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-100 bg-blue-200">
+          <div className="flex items-center gap-2.5 ">
             <div className="w-8 h-8 rounded-xl bg-white flex items-center justify-center shadow-sm shadow-indigo-200">
               <Package size={15} strokeWidth={2.5} className="text-black" />
             </div>
             <div>
-              <p className="text-sm font-black text-slate-800 tracking-tight leading-none">Line Items</p>
-              <p className="text-[10px] text-slate-400 font-medium mt-0.5 leading-none">
+              <p className="text-sm text-black font-semibold">Line Items</p>
+              <p className="text-[10px] text-slate-400 font-semibold mt-0.5 ">
                 {filledRows} product{filledRows !== 1 ? "s" : ""} · {totalQty} unit{totalQty !== 1 ? "s" : ""}
               </p>
             </div>

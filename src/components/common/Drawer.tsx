@@ -1,38 +1,58 @@
-import React from "react";
-import {  CircleArrowRight } from "lucide-react";
+import React, { useEffect } from "react";
+import { CircleArrowRight } from "lucide-react";
 import type { DrawerProps } from "../types";
 
-
-
 const Drawer: React.FC<DrawerProps> = ({ isOpen, onClose, title, children }) => {
+  // Prevent body scroll when drawer is open
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => { document.body.style.overflow = 'unset'; };
+  }, [isOpen]);
+
   return (
     <>
+      {/* Backdrop */}
       <div
-        className={`fixed inset-0 bg-black/40 backdrop-blur-sm transition-opacity duration-300 
+        className={`fixed inset-0 z-40 bg-black/40 backdrop-blur-sm transition-opacity duration-300 
           ${isOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"}`}
         onClick={onClose}
       />
 
+      {/* Drawer Panel */}
       <div
         className={`
-          fixed top-0 right-0 h-full bg-white shadow-2xl rounded-lg
-          w-[90%] md:w-[50%] 
-          transition-transform duration-300
+          fixed top-0 right-0 h-full z-50 bg-white shadow-2xl
+          w-full sm:w-[500px] md:w-[600px] lg:w-[700px]
+          transition-transform duration-300 ease-in-out flex flex-col
           ${isOpen ? "translate-x-0" : "translate-x-full"}
         `}
       >
-       
-        <div className="flex items-center justify-baseline p-5 border-b">
-        
-          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full">
-            <CircleArrowRight size={30} color="blue"/>
+        {/* Header */}
+        <div className="flex items-center gap-4 p-6 border-b shrink-0">
+          <button 
+            onClick={onClose} 
+            className="group p-1 transition-transform hover:scale-110 active:scale-95"
+            aria-label="Close drawer"
+          >
+            <CircleArrowRight 
+              size={32} 
+              className="text-blue-600 transition-colors group-hover:text-blue-700"
+            />
           </button>
-          <h2 className="text-3xl py-2 font-semibold">{title}</h2>
+          <h2 className="text-2xl md:text-2xl font-bold text-gray-800 tracking-tight">
+            {title}
+          </h2>
         </div>
 
-    
-        <div className="p-5 overflow-y-auto h-[calc(100vh-80px)]">
-          {children}
+        {/* Content Area */}
+        <div className="flex-1 overflow-y-auto p-6 bg-gray-50/50">
+          <div className="max-w-3xl mx-auto">
+            {children}
+          </div>
         </div>
       </div>
     </>

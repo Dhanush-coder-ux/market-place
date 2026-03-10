@@ -49,7 +49,7 @@ const InventoryForm = () => {
   };
 
   return (
-    <form className="max-w-7xl mx-auto space-y-10 p-6 bg-white">
+    <form className="mx-auto space-y-10 p-6 bg-white">
       
       {/* SECTION 1: PRIMARY IDENTIFICATION */}
       <section>

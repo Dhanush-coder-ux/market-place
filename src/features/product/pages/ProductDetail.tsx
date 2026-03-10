@@ -54,8 +54,8 @@ const GeneralInfoTab = () => (
         ["Warehouse Location", generalInfo.location],
       ].map(([label, value]) => (
         <div key={label}>
-          <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">{label}</p>
-          <p className="text-sm font-semibold text-slate-800">{value}</p>
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 mb-1">{label}</p>
+          <p className="text-sm  text-slate-800">{value}</p>
         </div>
       ))}
     </div>
@@ -154,11 +154,9 @@ const ProductDetail = () => {
         {/* ── Header ── */}
         <div className="flex flex-col md:flex-row md:items-start justify-between mb-10 gap-6">
           <div>
-            <p className="text-[11px] font-bold tracking-[0.2em] uppercase text-slate-400 mb-2">
-              Inventory <span className="mx-1 text-slate-300">/</span> Electronics
-            </p>
+       
             <div className="flex items-center gap-4">
-              <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">
+              <h1 className="text-2xl  text-slate-900 tracking-tight">
                 Wireless Headphones
               </h1>
               <span className="text-[10px] font-bold tracking-widest uppercase bg-emerald-50 text-emerald-600 px-3 py-1 rounded-full border border-emerald-100 shadow-sm">
@@ -184,7 +182,7 @@ const ProductDetail = () => {
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
-                  className={`px-6 py-2 rounded-xl text-sm font-bold transition-all ${activeTab === tab
+                  className={`px-6 py-2 rounded-xl text-sm transition-all ${activeTab === tab
                       ? "bg-white text-blue-600 shadow-sm ring-1 ring-slate-200"
                       : "text-slate-500 hover:text-slate-900"
                     }`}

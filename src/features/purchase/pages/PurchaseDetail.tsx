@@ -59,9 +59,9 @@ const PurchaseDetail = () => {
           <div className="lg:col-span-2 space-y-6">
             <div className="overflow-hidden">
               <div className="p-8 border-b border-slate-50 flex justify-between items-center bg-white">
-                <h2 className="font-bold text-slate-800 flex items-center gap-2.5 text-lg">
+                <h2 className=" text-slate-800 flex items-center gap-2.5 text-lg">
                   <div className="p-2 bg-indigo-50 rounded-lg">
-                    <FileText size={20} className="text-indigo-500" />
+                    <FileText size={20} className="text-blue-500" />
                   </div>
                   Order Items
                 </h2>
@@ -72,16 +72,16 @@ const PurchaseDetail = () => {
                <table className="w-full text-left border border-slate-200 rounded-xl overflow-hidden">
   <thead>
     <tr className="bg-slate-50 border-b border-slate-200">
-      <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest border-r border-slate-200">
+      <th className="px-8 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-r border-slate-200">
         Item Details
       </th>
-      <th className="px-4 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest border-r border-slate-200">
+      <th className="px-4 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-r border-slate-200">
         Quantity
       </th>
-      <th className="px-4 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right border-r border-slate-200">
+      <th className="px-4 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest text-right border-r border-slate-200">
         Unit Price
       </th>
-      <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right">
+      <th className="px-8 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest text-right">
         Total
       </th>
     </tr>
@@ -94,7 +94,7 @@ const PurchaseDetail = () => {
         className="group hover:bg-slate-50 transition-colors"
       >
         <td className="px-8 py-5 border-r border-slate-200">
-          <p className="font-bold text-slate-800">{item.item}</p>
+          <p className=" text-slate-800">{item.item}</p>
           <p className="text-[10px] text-slate-400 font-mono">
             ID: {item.id}0029
           </p>
@@ -108,7 +108,7 @@ const PurchaseDetail = () => {
           ₹{item.unit_price.toLocaleString()}
         </td>
 
-        <td className="px-8 py-5 text-sm font-black text-slate-900 text-right">
+        <td className="px-8 py-5 text-sm font-semibold text-slate-900 text-right">
           ₹{item.total.toLocaleString()}
         </td>
       </tr>
@@ -129,8 +129,8 @@ const PurchaseDetail = () => {
                     <span className="text-slate-900 font-bold">₹0</span>
                   </div>
                   <div className="border-t border-slate-200 pt-4 flex justify-between items-center">
-                    <span className="text-base font-black text-slate-900">Total Amount</span>
-                    <span className="text-2xl font-black text-blue-400 tracking-tighter">₹1,360</span>
+                    <span className=" text-slate-900">Total Amount</span>
+                    <span className="text-xl font-semiblack text-blue-400">₹1,360</span>
                   </div>
                 </div>
               </div>

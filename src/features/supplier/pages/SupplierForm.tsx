@@ -1,12 +1,23 @@
 import React, { useState } from "react";
 import Input from "@/components/ui/Input";
 import { GradientButton } from "@/components/ui/GradientButton";
+import { 
+  Building2,  MapPin
+} from "lucide-react";
 
 export interface SupplierData {
   id: number;
   supplier_name: string;
+  contact_person: string; 
+  email: string;          
   phone: string;
   gst: string;
+  address: string;        
+  city: string;           
+  bank_name: string;      
+  account_number: string;
+  ifsc_code: string;   
+  credit_period: number;  
   total_purchases: number;
   outstanding_payment: number;
 }
@@ -23,8 +34,16 @@ const SupplierForm: React.FC<SupplierFormProps> = ({
   const [formData, setFormData] = useState<SupplierData>({
     id: initialData.id || 0,
     supplier_name: initialData.supplier_name || "",
+    contact_person: initialData.contact_person || "",
+    email: initialData.email || "",
     phone: initialData.phone || "",
     gst: initialData.gst || "",
+    address: initialData.address || "",
+    city: initialData.city || "",
+    bank_name: initialData.bank_name || "",
+    account_number: initialData.account_number || "",
+    ifsc_code: initialData.ifsc_code || "",
+    credit_period: initialData.credit_period || 0,
     total_purchases: initialData.total_purchases || 0,
     outstanding_payment: initialData.outstanding_payment || 0,
   });
@@ -43,86 +62,88 @@ const SupplierForm: React.FC<SupplierFormProps> = ({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="max-w-6xl mx-auto p-6 space-y-10 bg-white">
+    <form onSubmit={handleSubmit} className="mx-auto p-6 space-y-12 bg-white">
       
-      {/* SECTION 1: IDENTITY & CONTACT */}
-      <section className="border-b border-gray-200 pb-8">
-        <div className="mb-6">
-          <h3 className="text-lg font-bold text-gray-900">Supplier Identity</h3>
-          <p className="text-sm text-gray-500">Primary contact and legal identification details.</p>
+      {/* SECTION 1: IDENTITY & PRIMARY CONTACT */}
+      <section className="space-y-6">
+        <div className="border-b border-gray-100 pb-4">
+          <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+            <Building2 className="text-emerald-600" size={20} /> 
+            Supplier Identity
+          </h3>
+          <p className="text-sm text-gray-500">Legal name and primary contact person details.</p>
         </div>
+        
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-1">
-            <Input
-              name="supplier_name"
-              label="Supplier Name"
-              value={formData.supplier_name}
-              onChange={handleChange}
-              placeholder="e.g. Acme Corp"
-            />
-          </div>
+          <Input
+            name="supplier_name"
+            label="Business Name"
+            value={formData.supplier_name}
+            onChange={handleChange}
+            placeholder="e.g. Acme Corp"
+          />
+          <Input
+            name="contact_person"
+            label="Contact Person"
+            value={formData.contact_person}
+            onChange={handleChange}
+            placeholder="John Smith"
+          />
+          <Input
+            name="email"
+            label="Email Address"
+            type="email"
+            value={formData.email}
+            onChange={handleChange}
+            placeholder="orders@acme.com"
+          />
           <Input
             name="phone"
             label="Phone Number"
-            type="tel"
             value={formData.phone}
             onChange={handleChange}
             placeholder="+1 (555) 000-0000"
           />
-          <Input
-            name="gst"
-            label="GST Number"
-            value={formData.gst}
-            onChange={handleChange}
-            placeholder="22AAAAA0000A1Z5"
-          />
+   
         </div>
       </section>
 
-      {/* SECTION 2: FINANCIAL SUMMARY */}
-      <section>
-        <div className="mb-6">
-          <h3 className="text-lg font-bold text-gray-900">Financial Overview</h3>
-          <p className="text-sm text-gray-500">Track purchase history and current liabilities.</p>
+      {/* SECTION 2: ADDRESS DETAILS */}
+      <section className="space-y-6">
+        <div className="border-b border-gray-100 pb-4">
+          <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+            <MapPin className="text-blue-600" size={20} /> 
+            Location
+          </h3>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      
           <Input
-            name="total_purchases"
-            label="Total Purchase Volume"
-            type="number"
-            value={formData.total_purchases}
+            name="city"
+            label="City/State"
+            value={formData.city}
             onChange={handleChange}
+            placeholder="New York"
           />
-          <div className="relative">
-             <Input
-              name="outstanding_payment"
-              label="Outstanding Balance"
-              type="number"
-              value={formData.outstanding_payment}
+              <div className="md:col-span-2">
+            <Input
+              name="address"
+              label="Street Address"
+              value={formData.address}
               onChange={handleChange}
+              placeholder="123 Industrial Estate"
             />
-            {formData.outstanding_payment > 0 && (
-              <span className="text-[10px] font-bold text-red-500 absolute -bottom-5 right-0 uppercase tracking-wider">
-                Pending Liability
-              </span>
-            )}
           </div>
         </div>
       </section>
 
+
       {/* FOOTER ACTIONS */}
       <div className="pt-8 flex items-center justify-end gap-4 border-t border-gray-200">
-        <button 
-          type="button" 
-          className="text-sm font-semibold text-gray-500 hover:text-gray-700"
-        >
+        <button type="button" className="text-sm font-semibold text-gray-400 hover:text-red-500">
           Cancel
         </button>
-        <GradientButton
-          type="submit"
-          disabled={isLoading}
-          className="min-w-[160px]"
-        >
+        <GradientButton type="submit" disabled={isLoading} >
           {isLoading ? "Processing..." : "Register Supplier"}
         </GradientButton>
       </div>

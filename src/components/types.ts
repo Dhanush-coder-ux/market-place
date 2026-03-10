@@ -50,12 +50,12 @@ export type SearchActionCardProps = {
 };
 
 // for table type 
-export type TableColumn = {
+export interface TableColumn {
   key: string;
   label: string;
   className?: string;
-};
-
+  render?: (value: any, row: any) => ReactNode;
+}
 export type TableProps = {
   columns: TableColumn[];
   data: Record<string, any>[];

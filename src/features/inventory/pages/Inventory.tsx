@@ -5,6 +5,7 @@ import { useState } from "react";
 import Drawer from "../../../components/common/Drawer";
 import DetailView from "../../../components/common/DetaileView";
 import SearchActionCard from "@/components/ui/SearchActionCard";
+import { InventoryDetailContent } from "../components/InventoryDetailContent";
 
 
 const Inventory = () => {
@@ -88,45 +89,9 @@ const Inventory = () => {
         onClose={() => setIsopen(false)}
         title="Inventory Details"
       >
-        {selectedItem && (
-          <DetailView
-            title="Inventory Details"
-            sections={[
-              {
-                title: "Basic Information",
-                fields: [
-                  {
-                    icon: <Package size={20} />,
-                    label: "Product Name",
-                    value: selectedItem.name,
-                  },
-                  {
-                    icon: <Layers size={20} />,
-                    label: "Description",
-                    value: selectedItem.description,
-                  },
-                ],
-              },
-              {
-                title: "Stock Information",
-                fields: [
-                  {
-                    icon: <Boxes size={20} />,
-                    label: "Available Stock",
-                    value: selectedItem.stock,
-                  },
-                  {
-                    icon: <IndianRupee size={20} />,
-                    label: "Sell Price",
-                    value: `₹${selectedItem.sellprice}`,
-                  },
-                ],
-              },
-            ]}
-            onEdit={() => console.log("Edit clicked")}
-            onDelete={() => console.log("Delete clicked")}
-          />
-        )}
+        <InventoryDetailContent item={
+          selectedItem
+        }/>
       </Drawer>
     </div>
   );

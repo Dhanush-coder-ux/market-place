@@ -2,6 +2,10 @@ import React, { useState } from "react";
 import Input from "@/components/ui/Input";
 import { ProductData } from "../type";
 import { GradientButton } from "@/components/ui/GradientButton";
+import { ReusableSelect } from "@/components/ui/ReusableSelect";
+import { FileText } from "lucide-react";
+import FieldLabel from "@/features/inventory/pages/Fieldlable";
+import { FIELD_DESCRIPTIONS } from "@/utils/constants";
 
 interface ProductFormProps {
   initialData?: Partial<ProductData>;
@@ -16,6 +20,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
     id: initialData.id || 0,
     name: initialData.name || "",
     sku: initialData.sku || "",
+    describtion:initialData.describtion || "",
     category: initialData.category || "",
     selling_price: initialData.selling_price || 0,
     unit: initialData.unit || "",
@@ -39,12 +44,12 @@ const ProductForm: React.FC<ProductFormProps> = ({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="max-w-6xl mx-auto p-6 space-y-10">
+    <form onSubmit={handleSubmit} className=" mx-auto p-6 space-y-10">
       
       {/* SECTION 1: BASIC INFORMATION */}
       <section className="border-b border-gray-200 pb-8">
         <div className="mb-6">
-          <h3 className="text-lg font-bold text-gray-900">General Information</h3>
+          <h3 className="text-lg  text-gray-900">General Information</h3>
           <p className="text-sm text-gray-500">Essential details to identify your product.</p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -77,12 +82,27 @@ const ProductForm: React.FC<ProductFormProps> = ({
             placeholder="e.g. pcs, kg, box"
           />
         </div>
+           <div className="space-y-1.5 mt-3">
+           
+              <label htmlFor="description" className="text-s">Description</label>
+             <div className="relative group">
+                <FileText className="absolute left-3 top-3 text-gray-400 group-focus-within:text-indigo-500 transition-colors" size={18} />
+                <textarea
+                  name="description"
+                  value={formData.describtion}
+                  onChange={()=>{}}
+                  rows={4}
+                  className="w-full pl-10 p-3 bg-gray-50 rounded-xl border border-gray-200 focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50/50 transition-all outline-none resize-none"
+                  placeholder="Describe material, dimensions, or key features..."
+                />
+              </div>
+              </div>
       </section>
 
       {/* SECTION 2: PRICING & SUPPLIER */}
       <section className="border-b border-gray-200 pb-8">
         <div className="mb-6">
-          <h3 className="text-lg font-bold text-gray-900">Pricing & Sourcing</h3>
+          <h3 className="text-lg text-gray-900">Pricing & Sourcing</h3>
           <p className="text-sm text-gray-500">Manage your costs, margins, and primary vendor.</p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -100,39 +120,20 @@ const ProductForm: React.FC<ProductFormProps> = ({
             value={formData.avg_buying_cost}
             onChange={handleChange}
           />
-          <Input
-            name="default_supplier"
-            label="Primary Supplier"
-            value={formData.default_supplier}
-            onChange={handleChange}
-            placeholder="Supplier Name"
-          />
+       
+      <div className="space-y-1.5 mb-2">
+            <label className="text-sm font-medium text-gray-700">Primary Supplier</label>
+            <ReusableSelect
+              onValueChange={(val) => setFormData(prev => ({...prev, default_supplier: val}))}
+              options={[{label: "Global Tech", value: "gt"}, {label: "Mainstream Inc", value: "mi"}]}
+              value={formData.default_supplier}
+              placeholder="Select Supplier"
+            />
+          </div>
         </div>
       </section>
 
-      {/* SECTION 3: INVENTORY CONTROL */}
-      <section>
-        <div className="mb-6">
-          <h3 className="text-lg font-bold text-gray-900">Inventory Management</h3>
-          <p className="text-sm text-gray-500">Track stock levels and set low-stock alerts.</p>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Input
-            name="current_stock"
-            label="Opening Stock"
-            type="number"
-            value={formData.current_stock}
-            onChange={handleChange}
-          />
-          <Input
-            name="min_threshold"
-            label="Low Stock Threshold"
-            type="number"
-            value={formData.min_threshold}
-            onChange={handleChange}
-          />
-        </div>
-      </section>
+    
 
       {/* ACTION BAR */}
       <div className="pt-6 flex items-center justify-end gap-4 border-t border-gray-200">

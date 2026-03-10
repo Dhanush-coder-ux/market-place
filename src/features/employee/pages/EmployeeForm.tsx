@@ -1,10 +1,12 @@
 import React from "react";
-import { Users, Mail, ShieldCheck, UserPlus } from "lucide-react";
+import { 
+  Users, Mail, UserPlus, Phone, 
+  MapPin, Briefcase, Calendar, Hash 
+} from "lucide-react";
 import Input from "@/components/ui/Input";
 import { ReusableSelect } from "@/components/ui/ReusableSelect";
 import { GradientButton } from "@/components/ui/GradientButton";
-import { DynamicKeyValueSettings, KeyValueField } from "@/components/ui/DynamicKeyValueSettings";
-import { EmployeeFormData } from "../types";
+
 import { arrayToRecord } from "@/utils/form-helpers";
 import { Required } from "@/components/ui/Require";
 
@@ -14,11 +16,24 @@ const roleOptions = [
   { label: "Staff", value: "staff" },
 ];
 
+const departmentOptions = [
+  { label: "Engineering", value: "eng" },
+  { label: "Human Resources", value: "hr" },
+  { label: "Marketing", value: "mkt" },
+  { label: "Sales", value: "sales" },
+];
+
 const EmployeeForm: React.FC = () => {
-  const [role, setRole] = React.useState<string>("");
+  // --- State Management ---
   const [name, setName] = React.useState<string>("");
   const [email, setEmail] = React.useState<string>("");
-  const [customFields, setCustomFields] = React.useState<KeyValueField[]>([]);
+  const [role, setRole] = React.useState<string>("");
+  const [phone, setPhone] = React.useState<string>("");
+  const [address, setAddress] = React.useState<string>("");
+  const [department, setDepartment] = React.useState<string>("");
+  const [employeeId, setEmployeeId] = React.useState<string>("");
+  const [joinDate, setJoinDate] = React.useState<string>("");
+  
 
   const [errors, setErrors] = React.useState({ name: false, email: false, role: false });
 
@@ -31,20 +46,12 @@ const EmployeeForm: React.FC = () => {
 
     setErrors(hasErrors);
 
-    if (Object.values(hasErrors).some(Boolean)) {
-      return;
-    }
-
-    const additionalSettings = arrayToRecord(customFields);
-    const payload: EmployeeFormData = { name, email, role, additionalSettings };
-
-    console.log(`Action: ${action}`, payload);
   };
 
   return (
-    <div className="max-w-7xl mx-auto p-6 space-y-12 bg-white">
+    <div className="mx-auto p-6 space-y-12 bg-white">
       
-      {/* SECTION 1: ACCOUNT IDENTITY */}
+      {/* SECTION 1: PERSONNEL DETAILS */}
       <section>
         <div className="flex items-center gap-3 border-b border-gray-100 pb-4 mb-8">
           <div className="p-2 bg-emerald-50 rounded-lg text-emerald-600">
@@ -52,18 +59,16 @@ const EmployeeForm: React.FC = () => {
           </div>
           <div>
             <h3 className="text-xl font-bold text-gray-900">Personnel Details</h3>
-            <p className="text-sm text-gray-500">Configure basic account information and access levels.</p>
+            <p className="text-sm text-gray-500">Basic account information and system access.</p>
           </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {/* Name Field */}
           <div className="space-y-2">
             <label className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1">
               Employee Name <Required />
             </label>
             <Input
-              name="name"
               placeholder="e.g. John Doe"
               value={name}
               onChange={(e) => {
@@ -71,18 +76,15 @@ const EmployeeForm: React.FC = () => {
                 if (e.target.value) setErrors(prev => ({ ...prev, name: false }));
               }}
               leftIcon={<Users size={18} className="text-gray-400" />}
-              className={errors.name ? "border-red-500 focus:ring-red-100" : "bg-gray-50/50"} 
+              className={errors.name ? "border-red-500" : "bg-gray-50/50"} 
             />
-            {errors.name && <span className="text-[10px] text-red-500 font-medium italic">Identification is required</span>}
           </div>
 
-          {/* Email Field */}
           <div className="space-y-2">
             <label className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1">
               Email Address <Required />
             </label>
             <Input
-              name="email"
               type="email"
               placeholder="john@company.com"
               value={email}
@@ -93,13 +95,11 @@ const EmployeeForm: React.FC = () => {
               leftIcon={<Mail size={18} className="text-gray-400" />}
               className={errors.email ? "border-red-500" : "bg-gray-50/50"}
             />
-            {errors.email && <span className="text-[10px] text-red-500 font-medium italic">Valid email required</span>}
           </div>
 
-          {/* Role Field */}
           <div className="space-y-2">
              <label className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1">
-              System Role <Required />
+               System Role <Required />
             </label>
             <ReusableSelect
               options={roleOptions}
@@ -110,26 +110,91 @@ const EmployeeForm: React.FC = () => {
               }}
               placeholder="Assign Permissions"
             />
-            {errors.role && <span className="text-[10px] text-red-500 font-medium italic">Please select a role</span>}
           </div>
         </div>
       </section>
 
-      {/* SECTION 2: CUSTOM METADATA */}
-      <section className="bg-slate-50 p-8 rounded-2xl border border-dashed border-slate-200">
-        <div className="mb-6">
-          <div className="flex items-center gap-2 mb-1">
-            <ShieldCheck size={18} className="text-slate-400" />
-            <h4 className="font-bold text-slate-700 text-sm uppercase tracking-wider">Extended Metadata</h4>
+      {/* SECTION 2: CONTACT & ADDRESS */}
+      <section>
+        <div className="flex items-center gap-3 border-b border-gray-100 pb-4 mb-8">
+          <div className="p-2 bg-blue-50 rounded-lg text-blue-600">
+            <MapPin size={22} />
           </div>
-          <p className="text-xs text-slate-500">Add custom attributes like Department, Date of Joining, or Employee ID.</p>
+          <div>
+            <h3 className="text-xl font-bold text-gray-900">Contact Information</h3>
+            <p className="text-sm text-gray-500">Reach details and physical office location.</p>
+          </div>
         </div>
 
-        <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100">
-          <DynamicKeyValueSettings 
-            fields={customFields}
-            onChange={setCustomFields} 
-          />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="space-y-2">
+            <label className="text-xs font-bold text-gray-500 uppercase">Phone Number</label>
+            <Input
+              placeholder="+1 (555) 000-0000"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              leftIcon={<Phone size={18} className="text-gray-400" />}
+              className="bg-gray-50/50"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-xs font-bold text-gray-500 uppercase">Work Address</label>
+            <Input
+              placeholder="123 Business Ave, Suite 100"
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+              leftIcon={<MapPin size={18} className="text-gray-400" />}
+              className="bg-gray-50/50"
+            />
+          </div>
+        </div>
+      </section>
+
+      {/* SECTION 3: EMPLOYMENT DETAILS */}
+      <section>
+        <div className="flex items-center gap-3 border-b border-gray-100 pb-4 mb-8">
+          <div className="p-2 bg-purple-50 rounded-lg text-purple-600">
+            <Briefcase size={22} />
+          </div>
+          <div>
+            <h3 className="text-xl font-bold text-gray-900">Employment Details</h3>
+            <p className="text-sm text-gray-500">Internal IDs and departmental organization.</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="space-y-2">
+            <label className="text-xs font-bold text-gray-500 uppercase">Employee ID</label>
+            <Input
+              placeholder="EMP-1002"
+              value={employeeId}
+              onChange={(e) => setEmployeeId(e.target.value)}
+              leftIcon={<Hash size={18} className="text-gray-400" />}
+              className="bg-gray-50/50"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-xs font-bold text-gray-500 uppercase">Department</label>
+            <ReusableSelect
+              options={departmentOptions}
+              value={department}
+              onValueChange={setDepartment}
+              placeholder="Select Department"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-xs font-bold text-gray-500 uppercase">Joining Date</label>
+            <Input
+              type="date"
+              value={joinDate}
+              onChange={(e) => setJoinDate(e.target.value)}
+              leftIcon={<Calendar size={18} className="text-gray-400" />}
+              className="bg-gray-50/50"
+            />
+          </div>
         </div>
       </section>
 

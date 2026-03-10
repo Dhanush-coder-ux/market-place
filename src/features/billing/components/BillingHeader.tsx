@@ -40,7 +40,7 @@ const BillingHeader: React.FC<BillingHeaderProps> = ({ items, setIsOpen }) => {
             <Receipt size={15} strokeWidth={2.5} className="text-black" />
           </div>
           <div>
-            <p className="text-sm font-black text-slate-800 tracking-tight leading-none">Invoice</p>
+            <p className="text-sm text-black font-semibold">Invoice</p>
             <p className="text-[10px] text-slate-400 font-medium mt-0.5 leading-none">Summary</p>
           </div>
         </div>
@@ -73,7 +73,7 @@ const BillingHeader: React.FC<BillingHeaderProps> = ({ items, setIsOpen }) => {
         </div>
 
         {/* Total payable hero */}
-        <div className="rounded-2xl z-0 bg-white px-5 py-5 flex flex-col items-center relative overflow-hidden border border-blue-300 shadow-lg shadow-indigo-200">
+        <div className="rounded-2xl z-0 bg-white px-5 py-5 flex flex-col items-center relative overflow-hidden border border-blue-300 ">
           {/* Decorative circles */}
           <div className="absolute -top-6 -right-6 w-24 h-24 rounded-full bg-white/5" />
           <div className="absolute -bottom-8 -left-4 w-32 h-32 rounded-full bg-white/5" />

@@ -4,8 +4,6 @@ import { ProductData } from "../type";
 import { GradientButton } from "@/components/ui/GradientButton";
 import { ReusableSelect } from "@/components/ui/ReusableSelect";
 import { FileText } from "lucide-react";
-import FieldLabel from "@/features/inventory/pages/Fieldlable";
-import { FIELD_DESCRIPTIONS } from "@/utils/constants";
 
 interface ProductFormProps {
   initialData?: Partial<ProductData>;

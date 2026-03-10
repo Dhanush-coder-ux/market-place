@@ -6,8 +6,6 @@ import {
 import Input from "@/components/ui/Input";
 import { ReusableSelect } from "@/components/ui/ReusableSelect";
 import { GradientButton } from "@/components/ui/GradientButton";
-
-import { arrayToRecord } from "@/utils/form-helpers";
 import { Required } from "@/components/ui/Require";
 
 const roleOptions = [
@@ -43,13 +41,15 @@ const EmployeeForm: React.FC = () => {
       email: !email,
       role: !role,
     };
+    console.log(action);
+    
 
     setErrors(hasErrors);
 
   };
 
   return (
-    <div className="mx-auto p-6 space-y-12 bg-white">
+    <div className="max-w-7xl mx-auto p-6 space-y-12 bg-white">
       
       {/* SECTION 1: PERSONNEL DETAILS */}
       <section>

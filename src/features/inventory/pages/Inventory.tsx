@@ -1,9 +1,8 @@
-import { Boxes, Layers, Package, IndianRupee, Trash,} from "lucide-react"; // 1. Added RefreshCcw
+import {  Trash} from "lucide-react"; // 1. Added RefreshCcw
 import Table from "../../../components/common/Table";
 import InventoryHeader from "../components/InventoryHeader";
 import { useState } from "react";
 import Drawer from "../../../components/common/Drawer";
-import DetailView from "../../../components/common/DetaileView";
 import SearchActionCard from "@/components/ui/SearchActionCard";
 import { InventoryDetailContent } from "../components/InventoryDetailContent";
 

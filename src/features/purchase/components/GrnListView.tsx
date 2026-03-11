@@ -22,7 +22,6 @@ interface GRNRecord {
 const GRNListView = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [open, setOpen] = useState(false);
-  const [selectedRecord, setSelectedRecord] = useState<GRNRecord | null>(null);
 
   // NEW: Converted static array to State. 
   // Notice that grnNumber is initially empty for these incoming POs.
@@ -31,13 +30,6 @@ const GRNListView = () => {
     { id: "2", grnNumber: "", poReference: "PO-9925", supplier: "Mainstream Inc", date: "2024-03-11", itemsCount: 2, totalValue: 4200, status: "Pending", product_name: "Mechanical Keyboard", quantity: 5 },
     { id: "3", grnNumber: "", poReference: "PO-9928", supplier: "Apex Wholesale", date: "2024-03-12", itemsCount: 12, totalValue: 8900, status: "Pending", product_name: "USB-C Hub", quantity: 20 },
   ]);
-
-  // NEW: Function to handle the update from the form
-  const handleUpdateRecord = (updatedRecord: GRNRecord) => {
-    setTableData((prevData) =>
-      prevData.map((row) => (row.id === updatedRecord.id ? updatedRecord : row))
-    );
-  };
 
   const getStatusStyle = (status: GRNStatus) => {
     switch (status) {
@@ -48,12 +40,27 @@ const GRNListView = () => {
     }
   };
 
-  const handleOpenForm = (e: React.MouseEvent, record: GRNRecord) => {
-    e.stopPropagation(); 
-    setSelectedRecord(record);
-    setOpen(true);
-  };
 
+const [selectedId, setSelectedId] = useState<string | null>(null);
+
+const selectedRecord = tableData.find((r) => r.id === selectedId) ?? null;
+
+const handleUpdateRecord = (updatedRecord: GRNRecord) => {
+  console.log(updatedRecord);
+  
+  setTableData((prevData) =>
+    prevData.map((row) =>
+      row.id === updatedRecord.id ? { ...row, ...updatedRecord } : row
+    )
+  );
+ 
+};
+
+const handleOpenForm = (e: React.MouseEvent, record: GRNRecord) => {
+  e.stopPropagation();
+  setSelectedId(record.id); // Store only the ID
+  setOpen(true);
+};
   const GRN_COLUMNS = [
     {
       key: "grnNumber" as keyof GRNRecord,
@@ -121,11 +128,13 @@ const GRNListView = () => {
         title={selectedRecord?.grnNumber ? `Update GRN: ${selectedRecord.grnNumber}` : `Create GRN for ${selectedRecord?.poReference}`}
         maxWidth="max-w-xl"
       >
-        <GRNStatusUpdateForm 
-          grnData={selectedRecord} 
-          onClose={() => setOpen(false)}
-          onUpdate={handleUpdateRecord} // Pass the update function to the form
-        />
+{selectedRecord && (
+  <GRNStatusUpdateForm 
+    grnData={selectedRecord}
+    onClose={() => setOpen(false)}
+    onUpdate={handleUpdateRecord}
+  />
+)}
       </FloatingFormCard>
 
       {/* TOOLBAR */}
@@ -149,7 +158,7 @@ const GRNListView = () => {
       {/* TABLE */}
       <Table 
         columns={GRN_COLUMNS}
-        data={tableData} // Pass the STATE data, not the static array
+        data={tableData}
         rowKey="id"
       />
     </div>

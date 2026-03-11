@@ -19,7 +19,7 @@ interface ProductionRecord {
   status: ProductionStatus;
 }
 
-// --- 2. Floating Form Component for Production ---
+
 const ProductionStatusUpdateForm: React.FC<{ record: ProductionRecord | null, onClose: () => void }> = ({ record, onClose }) => {
   const [status, setStatus] = useState<string>(record?.status || "");
   const [actualYield, setActualYield] = useState<string>("");

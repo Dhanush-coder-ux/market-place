@@ -1,4 +1,4 @@
-import  { useState, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { Trash2, PlusCircle, FileText, ShoppingCart, Home } from "lucide-react";
 import Input from "@/components/ui/Input";
 import { ReusableSelect } from "@/components/ui/ReusableSelect";
@@ -14,19 +14,23 @@ interface LineItem {
   name: string;
   quantity: number;
   unitPrice: number;
-  batchNumber?: string; // Specific for GRN
+  batchNumber?: string;
 }
 
 const PurchaseManagement = () => {
-  const [activeTab, setActiveTab] = useState<PurchaseType>("homemade");
+  const [activeTab, setActiveTab] = useState<PurchaseType>("direct");
   const [grnComplete, setGrnComplete] = useState(false);
-const [grnNumber, setGrnNumber] = useState("");
+  const [grnNumber, setGrnNumber] = useState("");
   
-  // 1. Form Metadata (Changes based on Tab)
+  // 1. Form Metadata (Expanded for Home-made)
   const [metaData, setMetaData] = useState({
     invoiceNumber: "",
     refNumber: "",
     paymentMethod: "cash",
+    // New fields for Home-made (Manufacturing)
+    batchNumber: "",
+    startDate: new Date().toISOString().split("T")[0], // Defaults to today
+    productionStatus: "planned",
   });
 
   // 2. State for the "Current Selection" row
@@ -45,6 +49,13 @@ const [grnNumber, setGrnNumber] = useState("");
   const productOptions = [
     { label: "Raw Cotton (Grade A)", value: "p1", price: 12.50 },
     { label: "Silk Thread", value: "p2", price: 45.00 },
+    { label: "Premium Silk Shirt (Finished)", value: "p3", price: 120.00 }, // Added a finished good
+  ];
+
+  const SupplierOptions = [
+    { label: "XYZ Supplies", value: "XyZ" },
+    { label: "ABCD Manufacturing", value: "Abcd" },
+    { label: "In-House Production", value: "in_house" }, // Added for home-made
   ];
 
   // --- Handlers ---
@@ -56,17 +67,8 @@ const [grnNumber, setGrnNumber] = useState("");
       unitPrice: selected?.price || 0,
     }));
   };
-// 1. Updated Mock Data (Adding labels)
-  const SupplierOptions = [
-    { label: "XYZ Supplies", value: "XyZ" },
-    { label: "ABCD Manufacturing", value: "Abcd" },
-  ];
 
-  // 2. The Correct Handler
   const handleSupplierSelect = (val: string) => {
-    // Find the supplier object if you need to extract more data (like an ID)
-    // const selected = SupplierOptions.find((s) => s.value === val);
-    
     setSelection((prev) => ({
       ...prev,
       supplierName: val, 
@@ -87,7 +89,7 @@ const [grnNumber, setGrnNumber] = useState("");
     };
 
     setItems([...items, newItem]);
-    setSelection({ productId: "", supplierName: "", quantity: 0, unitPrice: 0, batchNumber: "" });
+    setSelection({ productId: "", supplierName: selection.supplierName, quantity: 0, unitPrice: 0, batchNumber: "" });
   };
 
   const removeItem = (id: string) => setItems(items.filter((i) => i.id !== id));
@@ -97,13 +99,12 @@ const [grnNumber, setGrnNumber] = useState("");
   }, [items]);
 
   return (
-    <div className="p-8 ">
+    <div className="p-8">
       <header className="mb-8">
         <Title
-        title="Purchase Management"
-        subtitle="Manage inventory intake via Direct, GRN, or Internal production."
+          title="Purchase & Production Management"
+          subtitle="Manage inventory intake via Direct, GRN, or Internal Production."
         />
-      
       </header>
 
       {/* --- TAB NAVIGATION --- */}
@@ -111,7 +112,7 @@ const [grnNumber, setGrnNumber] = useState("");
         {[
           { id: "direct", label: "Direct Purchase", icon: ShoppingCart },
           { id: "grn", label: "GRN Purchase", icon: FileText },
-          { id: "homemade", label: "Home-made Purchase", icon: Home },
+          { id: "homemade", label: "Home-made Production", icon: Home }, // Renamed slightly for clarity
         ].map((tab) => (
           <button
             key={tab.id}
@@ -127,7 +128,9 @@ const [grnNumber, setGrnNumber] = useState("");
       </div>
 
       {/* --- TOP META DATA (Changes by Tab) --- */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 bg-gray-50 p-4 rounded-lg border border-gray-100">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 bg-gray-50 p-4 rounded-lg border border-gray-100 items-end">
+        
+        {/* DIRECT TAB */}
         {activeTab === "direct" && (
           <>
             <Input label="Invoice Number" placeholder="INV-2024-001" value={metaData.invoiceNumber} onChange={(e) => setMetaData({...metaData, invoiceNumber: e.target.value})} />
@@ -139,81 +142,91 @@ const [grnNumber, setGrnNumber] = useState("");
                 onValueChange={(v) => setMetaData({...metaData, paymentMethod: v})} 
               />
             </div>
+            <div className="flex flex-col">
+              <label className="text-[10px] font-bold text-gray-500 uppercase mb-2">Supplier</label>
+              <ReusableSelect value={selection.supplierName} onValueChange={handleSupplierSelect} options={SupplierOptions} placeholder="Choose a supplier..." />
+            </div>
           </>
         )}
-     {activeTab === "grn" && (
-  <>
-    <Input
-      label="PO Reference Number"
-      placeholder="PO-88271"
-      value={metaData.refNumber}
-      onChange={(e) =>
-        setMetaData({ ...metaData, refNumber: e.target.value })
-      }
-    />
 
-    {/* GRN Complete Toggle */}
-    <div className="flex items-center justify-between p-3 border rounded-lg bg-white">
-      <div>
-        <p className="text-xs font-semibold text-gray-700">GRN Complete</p>
-        <p className="text-[10px] text-gray-400">
-          Toggle when goods are fully received
-        </p>
-      </div>
+        {/* GRN TAB */}
+        {activeTab === "grn" && (
+          <>
+            <Input label="PO Reference Number" placeholder="PO-88271" value={metaData.refNumber} onChange={(e) => setMetaData({ ...metaData, refNumber: e.target.value })} />
+            <div className="flex items-center justify-between p-3 border rounded-lg bg-white h-[42px]">
+              <div>
+                <p className="text-xs font-semibold text-gray-700">GRN Complete</p>
+              </div>
+              <Switch checked={grnComplete} onCheckedChange={(val) => setGrnComplete(val)} />
+            </div>
+            {grnComplete ? (
+              <Input label="GRN Number" placeholder="GRN-2026-001" value={grnNumber} onChange={(e) => setGrnNumber(e.target.value)} />
+            ) : (
+              <div className="flex flex-col">
+                <label className="text-[10px] font-bold text-gray-500 uppercase mb-2">Supplier / Warehouse</label>
+                <ReusableSelect value={selection.supplierName} onValueChange={handleSupplierSelect} options={SupplierOptions} placeholder="Choose a supplier..." />
+              </div>
+            )}
+          </>
+        )}
 
-      <Switch
-        checked={grnComplete}
-        onCheckedChange={(val) => setGrnComplete(val)}
-      />
-    </div>
-
-    {/* GRN Number Field */}
-    {grnComplete && (
-      <Input
-        label="GRN Number"
-        placeholder="GRN-2026-001"
-        value={grnNumber}
-        onChange={(e) => setGrnNumber(e.target.value)}
-      />
-    )}
-  </>
-)}
-<div className="flex flex-col">
-    <label className="text-[10px] font-bold text-gray-500 uppercase mb-2">
-      Supplier/Warehouse Name
-    </label>
-    <ReusableSelect 
-      value={selection.supplierName} 
-      onValueChange={handleSupplierSelect} 
-      options={SupplierOptions} 
-      placeholder="Choose a supplier..." 
-    />
-  </div>
+        {/* HOMEMADE TAB (New additions based on your image) */}
+        {activeTab === "homemade" && (
+          <>
+            <Input 
+              label="Production Batch Number" 
+              placeholder="MFG-2026-001" 
+              value={metaData.batchNumber} 
+              onChange={(e) => setMetaData({...metaData, batchNumber: e.target.value})} 
+            />
+            <Input 
+              label="Start Date" 
+              type="date" 
+              value={metaData.startDate} 
+              onChange={(e) => setMetaData({...metaData, startDate: e.target.value})} 
+            />
+            <div className="flex flex-col">
+              <label className="text-[10px] font-bold text-gray-500 uppercase mb-2">Production Status</label>
+              <ReusableSelect 
+                options={[
+                  { label: "Planned", value: "planned" },
+                  { label: "In Progress", value: "in_progress" },
+                  { label: "Completed", value: "completed" }
+                ]} 
+                value={metaData.productionStatus} 
+                onValueChange={(v) => setMetaData({...metaData, productionStatus: v})} 
+              />
+            </div>
+          </>
+        )}
       </div>
 
       {/* --- ITEM SELECTION ROW --- */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end bg-blue-50/30 p-4 rounded-lg mb-8 border border-blue-100">
         <div className="md:col-span-4">
-          <label className="text-[10px] font-bold text-blue-600 uppercase mb-2 block">Product Selection</label>
+          <label className="text-[10px] font-bold text-blue-600 uppercase mb-2 block">
+            {activeTab === "homemade" ? "Product to Manufacture" : "Product Selection"}
+          </label>
           <ReusableSelect value={selection.productId} onValueChange={handleProductSelect} options={productOptions} placeholder="Choose a product..." />
         </div>
-        
-     
 
-        <div className={activeTab === "grn" ? "md:col-span-2" : "md:col-span-3"}>
-          <label className="text-[10px] font-bold text-blue-600 uppercase mb-2 block">Quantity</label>
+        <div className="md:col-span-3">
+          <label className="text-[10px] font-bold text-blue-600 uppercase mb-2 block">
+            {activeTab === "homemade" ? "Target Quantity" : "Quantity"}
+          </label>
           <Input type="number" placeholder="0.00" value={selection.quantity} onChange={(e) => setSelection({...selection, quantity: Number(e.target.value)})} />
         </div>
 
-        <div className={activeTab === "grn" ? "md:col-span-2" : "md:col-span-3"}>
-          <label className="text-[10px] font-bold text-blue-600 uppercase mb-2 block">Unit Price ($)</label>
+        <div className="md:col-span-3">
+          <label className="text-[10px] font-bold text-blue-600 uppercase mb-2 block">
+            {activeTab === "homemade" ? "Est. Cost Per Unit ($)" : "Unit Price ($)"}
+          </label>
           <Input type="number" placeholder="0.00" value={selection.unitPrice} onChange={(e) => setSelection({...selection, unitPrice: Number(e.target.value)})} />
         </div>
 
-        <button onClick={addToList}  className="md:col-span-2 bg-blue-500 hover:bg-blue-600 text-white font-bold h-[42px] rounded-md flex items-center justify-center gap-2 transition-all active:scale-95">
-          <PlusCircle size={18} />  Add Item
+        <button onClick={addToList} className="md:col-span-2 bg-blue-500 hover:bg-blue-600 text-white font-bold h-[42px] rounded-md flex items-center justify-center gap-2 transition-all active:scale-95">
+          <PlusCircle size={18} /> Add Item
         </button>
-       
       </div>
 
       {/* --- TABLE --- */}
@@ -223,19 +236,18 @@ const [grnNumber, setGrnNumber] = useState("");
             <tr>
               <th className="px-6 py-4">Line Item</th>
               <th className="px-6 py-4">Qty</th>
-              <th className="px-6 py-4">Price</th>
+              <th className="px-6 py-4">{activeTab === "homemade" ? "Est. Cost" : "Price"}</th>
               <th className="px-6 py-4">Subtotal</th>
               <th className="px-6 py-4 text-right">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100 bg-white">
             {items.length === 0 ? (
-              <tr><td colSpan={6} className="py-10 text-center text-gray-400 italic">No items added to the list yet.</td></tr>
+              <tr><td colSpan={5} className="py-10 text-center text-gray-400 italic">No items added to the list yet.</td></tr>
             ) : (
               items.map((item) => (
                 <tr key={item.id} className="hover:bg-blue-50/20 transition-colors">
                   <td className="px-6 py-4 font-semibold text-gray-800">{item.name}</td>
-
                   <td className="px-6 py-4">{item.quantity.toFixed(2)}</td>
                   <td className="px-6 py-4">${item.unitPrice.toFixed(2)}</td>
                   <td className="px-6 py-4 font-bold text-gray-900">${(item.quantity * item.unitPrice).toLocaleString()}</td>
@@ -249,7 +261,9 @@ const [grnNumber, setGrnNumber] = useState("");
         </table>
         <div className="bg-gray-50 px-6 py-5 flex justify-end items-center gap-10 border-t">
           <div className="text-right">
-            <p className="text-[10px] font-bold text-gray-400 uppercase">Grand Total</p>
+            <p className="text-[10px] font-bold text-gray-400 uppercase">
+              {activeTab === "homemade" ? "Total Estimated Cost" : "Grand Total"}
+            </p>
             <p className="text-2xl font-black text-blue-600">${totalAmount.toLocaleString(undefined, {minimumFractionDigits: 2})}</p>
           </div>
         </div>
@@ -258,7 +272,9 @@ const [grnNumber, setGrnNumber] = useState("");
       {/* --- FOOTER --- */}
       <div className="mt-10 flex justify-end gap-4">
         <button className="px-8 py-2.5 text-gray-500 font-bold text-sm hover:text-gray-800 transition-colors">Cancel</button>
-        <GradientButton className="px-14 py-3 shadow-lg shadow-blue-100">Confirm {activeTab === "grn" ? "GRN" : "Purchase"}</GradientButton>
+        <GradientButton className="px-14 py-3 shadow-lg shadow-blue-100">
+          {activeTab === "homemade" ? "Start Production" : activeTab === "grn" ? "Confirm GRN" : "Confirm Purchase"}
+        </GradientButton>
       </div>
     </div>
   );

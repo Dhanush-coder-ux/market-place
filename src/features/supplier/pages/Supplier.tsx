@@ -27,7 +27,7 @@ const Supplier = () => {
       label: "Supplier Name", 
       render: (value: string) => (
         <div className="flex flex-col">
-          <span className="text-sm font-bold text-slate-800">{value}</span>
+          <span className="text-sm font-semibold text-slate-800">{value}</span>
           <span className="text-[10px] text-indigo-500 font-bold uppercase tracking-tighter">Verified Vendor</span>
         </div>
       )
@@ -36,7 +36,7 @@ const Supplier = () => {
       key: "phone", 
       label: "Phone", 
       render: (value: string) => (
-        <div className="flex items-center gap-2 text-slate-600 font-medium">
+        <div className="flex items-center gap-2 text-slate-600 ">
           <Phone size={14} className="text-slate-400" />
           <span className="text-sm">{value}</span>
         </div>
@@ -55,7 +55,7 @@ const Supplier = () => {
       key: "total_purchases", 
       label: "Total Purchases", 
       render: (value: number) => (
-        <div className="flex items-center gap-1.5 text-slate-700 font-bold">
+        <div className="flex items-center gap-1.5 text-slate-700 ">
           <ShoppingBag size={14} className="text-slate-400" />
           <span>₹{value.toLocaleString()}</span>
         </div>
@@ -65,7 +65,7 @@ const Supplier = () => {
       key: "outstanding", 
       label: "Outstanding Payment", 
       render: (value: number) => (
-        <div className="flex items-center gap-1.5 font-black">
+        <div className="flex items-center gap-1.5 font-semibold">
           <CreditCard size={14} className={value > 0 ? "text-orange-400" : "text-emerald-400"} />
           <span className={value > 0 ? "text-orange-600" : "text-emerald-600"}>
             ₹{value.toLocaleString()}

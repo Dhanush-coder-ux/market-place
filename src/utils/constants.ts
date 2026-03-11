@@ -26,7 +26,7 @@ export const sidebarLinks = [
     name: "Procurement", 
     icon: Wallet, 
     subLinks: [
-      { name: "Purchase History", path: "/purchase" },
+      { name: "Purchase Order", path: "/purchase" },
       { name: "Suppliers", path: "/supplier" },
       { name:"Add Suppliers", path:"/supplier/add"}
     ]

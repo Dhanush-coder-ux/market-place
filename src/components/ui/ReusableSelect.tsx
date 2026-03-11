@@ -7,6 +7,7 @@ import {
 } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
 import { ReusableSelectProps } from "../types"
+import { SelectPortal } from "@radix-ui/react-select"
 
 
 
@@ -38,7 +39,7 @@ export function ReusableSelect({
         >
           <SelectValue placeholder={placeholder} />
         </SelectTrigger>
-        
+        <SelectPortal>
         <SelectContent className="rounded-2xl shadow-2xl border-gray-100 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
           {options.map((option) => (
             <SelectItem 
@@ -57,6 +58,8 @@ export function ReusableSelect({
             </SelectItem>
           ))}
         </SelectContent>
+
+        </SelectPortal>
       </Select>
       
       {error && <p className="text-xs text-red-500 ml-1">{error}</p>}

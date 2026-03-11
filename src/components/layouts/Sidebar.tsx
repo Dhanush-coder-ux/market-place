@@ -14,11 +14,13 @@ interface SidebarLink {
   icon: LucideIcon | any;
   path?: string;
   subLinks?: SubLink[];
+  badge?: string | number;
 }
 
 interface SidebarItemProps {
   link: SidebarLink;
   sidebarOpen: boolean;
+  index: number;
 }
 
 // --- Main Component ---
@@ -27,25 +29,41 @@ const Sidebar: FC<{ links: SidebarLink[] }> = ({ links }) => {
 
   return (
     <motion.div
-      animate={{ width: isOpen ? 200 : 48 }}
-      transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
-      className="relative flex flex-col h-full bg-gradient-to-b from-blue-600 to-blue-700 text-white flex-shrink-0 overflow-hidden border-r border-white/[0.06]"
-      style={{ minHeight: "100vh" }}
+      animate={{ width: isOpen ? 220 : 56 }}
+      transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
+      className="relative flex flex-col h-full flex-shrink-0 overflow-hidden min-h-screen border-r border-white/10 bg-gradient-to-br from-blue-600 via-blue-700 to-blue-900"
     >
+      {/* Subtle inner texture overlay */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background:
+            "radial-gradient(ellipse at 30% 0%, rgba(255,255,255,0.07) 0%, transparent 60%), radial-gradient(ellipse at 80% 100%, rgba(0,0,0,0.15) 0%, transparent 60%)",
+        }}
+      />
+
       {/* Header */}
-      <div className="flex items-center justify-between px-3 h-14 border-b border-white/[0.06] flex-shrink-0">
+      <div className="relative flex items-center justify-between flex-shrink-0 h-14 px-3 border-b border-white/10">
         <AnimatePresence mode="wait">
           {isOpen && (
             <motion.div
               key="logo"
-              initial={{ opacity: 0, x: -8 }}
+              initial={{ opacity: 0, x: -10 }}
               animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -8 }}
-              transition={{ duration: 0.15 }}
+              exit={{ opacity: 0, x: -10 }}
+              transition={{ duration: 0.18 }}
               className="flex items-center gap-2.5 min-w-0"
             >
-
-              <span className="text-[13px] font-semibold tracking-tight text-white/90 truncate">
+              {/* Logo mark */}
+              <div className="w-[26px] h-[26px] rounded-md bg-white/15 border border-white/20 backdrop-blur-md flex items-center justify-center shrink-0">
+                <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+                  <rect x="0.5" y="0.5" width="5" height="5" rx="1.5" fill="white" fillOpacity="0.9" />
+                  <rect x="7.5" y="0.5" width="5" height="5" rx="1.5" fill="white" fillOpacity="0.5" />
+                  <rect x="0.5" y="7.5" width="5" height="5" rx="1.5" fill="white" fillOpacity="0.5" />
+                  <rect x="7.5" y="7.5" width="5" height="5" rx="1.5" fill="white" fillOpacity="0.9" />
+                </svg>
+              </div>
+              <span className="text-[13px] font-semibold tracking-tight text-white/95 truncate">
                 MarketPlace
               </span>
             </motion.div>
@@ -54,25 +72,50 @@ const Sidebar: FC<{ links: SidebarLink[] }> = ({ links }) => {
 
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className={`p-1.5 rounded-md hover:bg-white/[0.06] text-white/40 hover:text-white/70 transition-colors flex-shrink-0 ${!isOpen ? "mx-auto" : ""}`}
+          className={`p-1.5 rounded-md text-white/35 bg-transparent hover:bg-white/10 hover:text-white/70 transition-colors flex items-center justify-center shrink-0 ${
+            !isOpen ? "mx-auto" : ""
+          }`}
         >
-          <motion.div animate={{ rotate: isOpen ? 0 : 180 }} transition={{ duration: 0.25 }}>
-            <ChevronLeft size={15} strokeWidth={2} />
+          <motion.div animate={{ rotate: isOpen ? 0 : 180 }} transition={{ duration: 0.28 }}>
+            <ChevronLeft size={14} strokeWidth={2.5} />
           </motion.div>
         </button>
       </div>
 
-      {/* Nav */}
-      <nav className="flex-1 px-2 py-3 space-y-0.5 overflow-y-auto overflow-x-hidden scrollbar-hide">
-        {links.map((link) => (
-          <SidebarItem key={link.name} link={link} sidebarOpen={isOpen} />
+      {/* Section label */}
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            className="px-4 pt-4 pb-1.5 text-[9.5px] font-bold tracking-[0.09em] uppercase text-white/30"
+          >
+            Navigation
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Nav with Hiding Scrollbar utility classes */}
+      <nav className="flex-1 overflow-y-auto overflow-x-hidden flex flex-col gap-0.5 px-2 py-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+        {links.map((link, i) => (
+          <SidebarItem key={link.name} link={link} sidebarOpen={isOpen} index={i} />
         ))}
       </nav>
 
+      {/* Divider */}
+      <div className="h-px bg-white/5 mx-3" />
+
       {/* Footer */}
-      <div className="px-2 py-3 border-t border-white/[0.06] flex-shrink-0">
-        <div className={`flex items-center gap-2.5 px-2 py-2 rounded-md ${isOpen ? "" : "justify-center"}`}>
-          <div className="w-6 h-6 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex-shrink-0 text-[10px] font-bold flex items-center justify-center text-white">
+      <div className="p-2.5 px-2">
+        <div
+          className={`flex items-center gap-2.5 px-2.5 py-2 rounded-lg bg-white/5 border border-white/5 ${
+            isOpen ? "justify-start" : "justify-center"
+          }`}
+        >
+          {/* Avatar */}
+          <div className="w-7 h-7 rounded-md bg-gradient-to-br from-emerald-400 to-teal-600 shrink-0 flex items-center justify-center text-[11px] font-bold text-white shadow-md">
             A
           </div>
           <AnimatePresence mode="wait">
@@ -85,8 +128,12 @@ const Sidebar: FC<{ links: SidebarLink[] }> = ({ links }) => {
                 transition={{ duration: 0.15 }}
                 className="min-w-0"
               >
-                <p className="text-[11px] font-medium text-white/80 truncate leading-none mb-0.5">Admin User</p>
-                <p className="text-[10px] text-white/30 truncate leading-none">admin@marketplace.io</p>
+                <p className="text-[11.5px] font-semibold text-white/80 leading-none mb-1 truncate">
+                  Admin User
+                </p>
+                <p className="text-[10px] text-white/30 leading-none truncate">
+                  admin@marketplace.io
+                </p>
               </motion.div>
             )}
           </AnimatePresence>
@@ -97,7 +144,7 @@ const Sidebar: FC<{ links: SidebarLink[] }> = ({ links }) => {
 };
 
 // --- Item Component ---
-const SidebarItem: FC<SidebarItemProps> = ({ link, sidebarOpen }) => {
+const SidebarItem: FC<SidebarItemProps> = ({ link, sidebarOpen, index }) => {
   const { pathname } = useLocation();
   const Icon = link.icon;
   const hasSub = !!link.subLinks?.length;
@@ -108,24 +155,32 @@ const SidebarItem: FC<SidebarItemProps> = ({ link, sidebarOpen }) => {
     if (isChildActive) setIsDrop(true);
   }, [isChildActive]);
 
-  const baseItem = `
-    group relative flex items-center justify-between w-full px-2 py-2 rounded-md
-    transition-all duration-150 text-[12px] font-medium outline-none 
-  `;
+  // Base classes for both NavLink and Dropdown Button
+  const baseItemClasses =
+    "group relative flex items-center w-full px-2.5 h-9 rounded-[9px] text-[12.5px] font-medium transition-colors outline-none cursor-pointer tracking-tight";
 
-  const activeItem = "bg-white/[0.08] text-white";
-  const inactiveItem = "text-gray-300 hover:bg-white/[0.04] hover:text-white/75";
+  // Active vs Inactive class logic
+  const getActiveClass = (isActive: boolean) =>
+    isActive
+      ? "bg-white/15 text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.1)]"
+      : "bg-transparent text-white/55 hover:bg-white/10 hover:text-white/80";
 
   return (
-    <div className="flex flex-col ">
+    <motion.div
+      initial={{ opacity: 0, x: -6 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ duration: 0.2, delay: index * 0.04 }}
+      className="flex flex-col"
+    >
       {hasSub ? (
         <button
           onClick={() => sidebarOpen && setIsDrop(!isDrop)}
-          className={`${baseItem} ${isChildActive ? activeItem : inactiveItem}`}
-          title={!sidebarOpen ? link.name : undefined}
+          className={`${baseItemClasses} ${getActiveClass(isChildActive)} ${
+            sidebarOpen ? "justify-between" : "justify-center"
+          }`}
         >
           <div className="flex items-center gap-2.5 min-w-0">
-            <Icon size={15} strokeWidth={1.75} className="flex-shrink-0" />
+            <Icon size={15} strokeWidth={1.75} className="shrink-0" />
             <AnimatePresence mode="wait">
               {sidebarOpen && (
                 <motion.span
@@ -141,34 +196,56 @@ const SidebarItem: FC<SidebarItemProps> = ({ link, sidebarOpen }) => {
               )}
             </AnimatePresence>
           </div>
+
           {sidebarOpen && (
-            <motion.div
-              animate={{ rotate: isDrop ? 180 : 0 }}
-              transition={{ duration: 0.2 }}
-              className="flex-shrink-0 text-white/25"
-            >
-              <ChevronDown size={12} strokeWidth={2} />
-            </motion.div>
+            <div className="flex items-center gap-1.5 shrink-0">
+              {link.badge && (
+                <span className="text-[9px] font-bold bg-white/15 text-white/70 px-1.5 py-[1px] rounded-full tracking-[0.02em]">
+                  {link.badge}
+                </span>
+              )}
+              <motion.div
+                animate={{ rotate: isDrop ? 180 : 0 }}
+                transition={{ duration: 0.22 }}
+                className="text-white/20 flex"
+              >
+                <ChevronDown size={12} strokeWidth={2.5} />
+              </motion.div>
+            </div>
+          )}
+
+          {/* Collapsed Tooltip (replaces the <style> block injection) */}
+          {!sidebarOpen && (
+            <div className="absolute left-[66px] bg-slate-800 text-white/90 text-[11.5px] font-medium px-2.5 py-1.5 rounded-md whitespace-nowrap z-[9999] border border-white/10 shadow-lg tracking-tight opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity">
+              {link.name}
+            </div>
           )}
         </button>
       ) : (
         <NavLink
           to={link.path!}
-          title={!sidebarOpen ? link.name : undefined}
           className={({ isActive }) =>
-            `${baseItem} ${isActive ? activeItem : inactiveItem} ${!sidebarOpen ? "justify-center" : ""}`
+            `${baseItemClasses} ${getActiveClass(isActive)} ${
+              sidebarOpen ? "justify-between" : "justify-center"
+            }`
           }
         >
           {({ isActive }) => (
             <>
+              {/* Active pill indicator */}
               {isActive && (
                 <motion.div
                   layoutId="activeIndicator"
-                  className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-4 bg-violet-400 rounded-full"
+                  className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-[18px] bg-white/70 rounded-full"
                 />
               )}
+
               <div className="flex items-center gap-2.5 min-w-0">
-                <Icon size={15} strokeWidth={1.75} className="flex-shrink-0" />
+                <Icon
+                  size={15}
+                  strokeWidth={1.75}
+                  className={`shrink-0 ${isActive ? "opacity-100" : "opacity-75"}`}
+                />
                 <AnimatePresence mode="wait">
                   {sidebarOpen && (
                     <motion.span
@@ -184,29 +261,26 @@ const SidebarItem: FC<SidebarItemProps> = ({ link, sidebarOpen }) => {
                   )}
                 </AnimatePresence>
               </div>
+
+              {sidebarOpen && link.badge && (
+                <span
+                  className={`text-[9px] font-bold px-1.5 py-[2px] rounded-full tracking-[0.03em] shrink-0 ${
+                    isActive ? "bg-white/20 text-white" : "bg-white/10 text-white/55"
+                  }`}
+                >
+                  {link.badge}
+                </span>
+              )}
+
+              {/* Collapsed Tooltip */}
+              {!sidebarOpen && (
+                <div className="absolute left-[66px] bg-slate-800 text-white/90 text-[11.5px] font-medium px-2.5 py-1.5 rounded-md whitespace-nowrap z-[9999] border border-white/10 shadow-lg tracking-tight opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity">
+                  {link.name}
+                </div>
+              )}
             </>
           )}
         </NavLink>
-      )}
-
-      {/* CSS-only Tooltip for collapsed state */}
-      {!sidebarOpen && (
-        <style>{`
-          [title]:hover::after {
-            content: attr(title);
-            position: absolute;
-            left: 60px;
-            background: #1e2030;
-            color: rgba(255,255,255,0.85);
-            font-size: 11px;
-            padding: 4px 8px;
-            border-radius: 5px;
-            white-space: nowrap;
-            z-index: 99;
-            border: 1px solid rgba(255,255,255,0.08);
-            pointer-events: none;
-          }
-        `}</style>
       )}
 
       {/* Submenu */}
@@ -216,19 +290,19 @@ const SidebarItem: FC<SidebarItemProps> = ({ link, sidebarOpen }) => {
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2, ease: "easeInOut" }}
+            transition={{ duration: 0.22, ease: "easeInOut" }}
             className="overflow-hidden ml-3 mt-0.5"
           >
-            <div className="border-l border-white/[0.07] ml-[7px] py-1 space-y-0.5">
+            <div className="border-l border-white/10 ml-[7px] py-1 flex flex-col gap-0.5">
               {link.subLinks!.map((sub) => (
                 <NavLink
                   key={sub.name}
                   to={sub.path}
                   className={({ isActive }) =>
-                    `block pl-3.5 pr-2 py-1.5 text-[11px] rounded-r-md transition-colors leading-none ${
+                    `block pl-3.5 pr-2.5 py-1.5 text-[11.5px] rounded-r-[7px] no-underline tracking-tight leading-none transition-colors ${
                       isActive
-                        ? "text-white font-medium"
-                        : "text-gray-300 hover:text-white/65"
+                        ? "font-semibold text-white bg-white/5"
+                        : "font-normal text-white/80 bg-transparent hover:text-white/70"
                     }`
                   }
                 >
@@ -239,7 +313,7 @@ const SidebarItem: FC<SidebarItemProps> = ({ link, sidebarOpen }) => {
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
+    </motion.div>
   );
 };
 

@@ -18,7 +18,7 @@ interface LineItem {
 }
 
 const PurchaseManagement = () => {
-  const [activeTab, setActiveTab] = useState<PurchaseType>("direct");
+  const [activeTab, setActiveTab] = useState<PurchaseType>("homemade");
   const [grnComplete, setGrnComplete] = useState(false);
   const [grnNumber, setGrnNumber] = useState("");
   
@@ -159,16 +159,19 @@ const PurchaseManagement = () => {
               </div>
               <Switch checked={grnComplete} onCheckedChange={(val) => setGrnComplete(val)} />
             </div>
-            {grnComplete ? (
+            {grnComplete && (
               <Input label="GRN Number" placeholder="GRN-2026-001" value={grnNumber} onChange={(e) => setGrnNumber(e.target.value)} />
-            ) : (
-              <div className="flex flex-col">
+            ) }
+          </>
+        )}
+        {
+          activeTab == "grn" && (
+             <div className="flex flex-col">
                 <label className="text-[10px] font-bold text-gray-500 uppercase mb-2">Supplier / Warehouse</label>
                 <ReusableSelect value={selection.supplierName} onValueChange={handleSupplierSelect} options={SupplierOptions} placeholder="Choose a supplier..." />
               </div>
-            )}
-          </>
-        )}
+          )
+        }
 
         {/* HOMEMADE TAB (New additions based on your image) */}
         {activeTab === "homemade" && (

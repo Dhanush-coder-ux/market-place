@@ -19,10 +19,10 @@ export const GradientButton: React.FC<ButtonProps> = ({
   iconPosition = 'left',
   ...props
 }) => {
-  const baseStyles = "inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl font-medium transition-all duration-200 active:scale-95 disabled:opacity-50 disabled:pointer-events-none";
+  const baseStyles = "inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl  transition-all duration-200 active:scale-95 disabled:opacity-50 disabled:pointer-events-none";
 
   const variants = {
-    primary: "bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-md hover:shadow-blue-200/50 hover:-translate-y-0.5",
+    primary: "bg-gradient-to-r from-blue-600 to-blue-400 text-white shadow-md hover:shadow-blue-200/50 hover:-translate-y-0.5",
     outline: "bg-white border-2 border-blue-100 text-blue-600 hover:border-blue-400 hover:bg-blue-50",
     danger: "bg-red-50 text-red-600 border border-red-100 hover:bg-red-600 hover:text-white",
     ghost: "bg-transparent text-gray-600 hover:bg-gray-100",

@@ -6,7 +6,7 @@ import StoreSetupForm from "@/features/digitalstore/pages/DigitalStoreForm";
 import Product from "@/features/product/pages/Product";
 import ProductDetail from "@/features/product/pages/ProductDetail";
 import ProductForm from "@/features/product/pages/ProductForm";
-import PurchaseHistoryTab from "@/features/purchase/pages/Purchase";
+import PurchaseHistoryTab from "@/features/purchase/components/Purchase";
 import PurchaseDetail from "@/features/purchase/pages/PurchaseDetail";
 import RefillPage from "@/features/Refill/pages/LowStockRefill";
 import Supplier from "@/features/supplier/pages/Supplier";
@@ -14,6 +14,8 @@ import SupplierDetail from "@/features/supplier/pages/SupplierDetail";
 import SupplierForm from "@/features/supplier/pages/SupplierForm";
 import React, { Suspense } from "react";
 import { createBrowserRouter } from "react-router-dom";
+import PurchaseManagement from "@/features/purchase/pages/PurchaseForm";
+import PurchaseMain from "@/features/purchase/pages/PurchaseMain";
 const MainLayout      =   React.lazy(() => import ("../components/layouts/MainLayout"));
 // const DashBoard       =   React.lazy(() => import ("../features/dashboard/pages/DashBoard"));
 const Employee        =   React.lazy(()=> import ("../features/employee/pages/Employee"));
@@ -40,8 +42,9 @@ export const router = createBrowserRouter([
             {path : 'product', element:<Product/>},
             { path:'/product/detail', element:<ProductDetail/>},
             { path: "/product/add",element:<ProductForm/>},
-            {path:'/purchase',element:<PurchaseHistoryTab/>},
+            {path:'/purchase',element:<PurchaseMain/>},
             { path:'/purchase/detail',element:<PurchaseDetail/>},
+            { path:"/purchase/add",element:<PurchaseManagement/>},
             { path: 'supplier',element:<Supplier/>},
             { path: 'supplier/detail',element:<SupplierDetail/>},
             { path: '/supplier/add',element:<SupplierForm/>},

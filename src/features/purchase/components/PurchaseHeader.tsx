@@ -6,7 +6,7 @@ import { GradientButton } from '@/components/ui/GradientButton'
 
 const PurchaseHeader = () => {
   const totalPurchases = MOCK_PURCHASES.length;
-  const pendingPayments = MOCK_PURCHASES.filter(p => p.status === 'Due').length;
+  const pendingPayments = MOCK_PURCHASES.filter(p => p.status === 'Pending').length;
   const totalExpenditure = MOCK_PURCHASES.reduce((acc, curr) => acc + curr.total_cost, 0);
 
   return (

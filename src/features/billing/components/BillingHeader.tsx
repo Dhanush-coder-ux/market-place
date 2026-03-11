@@ -37,7 +37,7 @@ const BillingHeader: React.FC<BillingHeaderProps> = ({ items, setIsOpen }) => {
       <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-xl bg-white flex items-center justify-center shadow-sm shadow-indigo-200">
-            <Receipt size={15} strokeWidth={2.5} className="text-black" />
+            <Receipt size={15} strokeWidth={2.5} className="text-blue-400" />
           </div>
           <div>
             <p className="text-sm text-black font-semibold">Invoice</p>

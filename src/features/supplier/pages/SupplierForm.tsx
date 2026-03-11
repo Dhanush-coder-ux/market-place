@@ -67,7 +67,7 @@ const SupplierForm: React.FC<SupplierFormProps> = ({
       {/* SECTION 1: IDENTITY & PRIMARY CONTACT */}
       <section className="space-y-6">
         <div className="border-b border-gray-100 pb-4">
-          <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+          <h3 className="text-lg text-gray-900 flex items-center gap-2">
             <Building2 className="text-emerald-600" size={20} /> 
             Supplier Identity
           </h3>
@@ -111,7 +111,7 @@ const SupplierForm: React.FC<SupplierFormProps> = ({
       {/* SECTION 2: ADDRESS DETAILS */}
       <section className="space-y-6">
         <div className="border-b border-gray-100 pb-4">
-          <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+          <h3 className="text-lg  text-gray-900 flex items-center gap-2">
             <MapPin className="text-blue-600" size={20} /> 
             Location
           </h3>

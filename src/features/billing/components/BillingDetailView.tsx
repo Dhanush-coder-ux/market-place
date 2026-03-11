@@ -38,26 +38,26 @@ const BillingDetailView = () => {
     <div className="max-w-7xl mx-auto  space-y-8">
 
       {/* ===== Invoice Header ===== */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-blue-600 to-blue-500 p-8 text-white shadow-xl">
-        <div className="absolute inset-0 bg-black/10 backdrop-blur-xl" />
+      <div className="relative overflow-hidden rounded-3xl p-8 text-black shadow-xl">
+        <div className="absolute inset-0 " />
         <div className="relative z-10 flex flex-col md:flex-row justify-between gap-6">
           <div>
-            <p className="text-xs uppercase tracking-widest text-white/70">
+            <p className="text-xs uppercase tracking-widest text-blue-400/70">
               Invoice
             </p>
-            <h1 className="text-3xl font-black tracking-tight">
+            <h1 className="text-3xl  font-semibold">
               {billingInfo.billNo}
             </h1>
-            <p className="text-sm text-white/80 mt-1">
+            <p className="text-sm text-black/80 mt-1">
               Issued on {billingInfo.date}
             </p>
           </div>
 
           <span
-            className={`self-start px-4 py-2 rounded-full text-xs font-black tracking-wide
-            ${status === "COMPLETED" && "bg-green-400/20 text-green-200"}
-            ${status === "PENDING" && "bg-orange-400/20 text-orange-200"}
-            ${status === "CANCELLED" && "bg-red-400/20 text-red-200"}
+            className={`self-start px-4 py-2 rounded-full text-xs font-semibold
+            ${status === "COMPLETED" && "bg-green-100 text-green-700"}
+            ${status === "PENDING" && "bg-orange-100 text-orange-700"}
+            ${status === "CANCELLED" && "bg-red-100 text-red-700"}
           `}
           >
             ● {status}
@@ -71,7 +71,7 @@ const BillingDetailView = () => {
           <p className="text-xs uppercase tracking-widest text-gray-400">
             Total Payable
           </p>
-          <h2 className="text-4xl font-black text-gray-900">
+          <h2 className="text-3xl font-semibold text-gray-900">
             ₹{totalAmt.toLocaleString()}
           </h2>
           <p className="text-xs text-gray-500 mt-1">

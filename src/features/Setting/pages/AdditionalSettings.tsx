@@ -272,7 +272,7 @@ const dropdownOptions = selectedCategory
           <p className="text-[10px] text-slate-400 font-medium italic" />
           <Button
             onClick={() => onSave?.(settings)}
-            className="bg-indigo-600 hover:bg-indigo-700 gap-2 px-6 h-9 text-xs font-bold shadow-md shadow-indigo-100"
+            className="bg-blue-600 hover:bg-blue-700 gap-2 px-6 h-9 text-xs font-bold shadow-md shadow-blue-100"
           >
             <Save size={14} /> Save Configuration
           </Button>

@@ -92,7 +92,7 @@ const [builtOptions, setBuiltOptions] = useState([]);
               onClick={() => setActiveTab(item.id)}
               className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all duration-200 group ${
                 activeTab === item.id 
-                  ? "bg-white shadow-sm border border-slate-100 text-indigo-600" 
+                  ? "bg-white shadow-sm border border-slate-100 text-blue-400" 
                   : "text-slate-500 hover:bg-slate-100/50"
               }`}
             >

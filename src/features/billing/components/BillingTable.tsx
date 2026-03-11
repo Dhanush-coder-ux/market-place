@@ -88,7 +88,7 @@ const BillingTable: React.FC = () => {
         <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-100 bg-blue-200">
           <div className="flex items-center gap-2.5 ">
             <div className="w-8 h-8 rounded-xl bg-white flex items-center justify-center shadow-sm shadow-indigo-200">
-              <Package size={15} strokeWidth={2.5} className="text-black" />
+              <Package size={15} strokeWidth={2.5} className="text-blue-400" />
             </div>
             <div>
               <p className="text-sm text-black font-semibold">Line Items</p>

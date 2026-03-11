@@ -41,11 +41,11 @@ const OperatingHours = () => {
     <div>
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         {/* Header */}
-        <div className="h-1 w-full bg-indigo-600" />
+        <div className="h-1 w-full bg-blue-300" />
         <div className="p-5 border-b border-slate-100">
           <div className="flex items-center gap-3 mb-5">
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-indigo-50 ring-1 ring-indigo-200">
-              <Clock size={18} strokeWidth={2.5} className="text-indigo-600" />
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-blue-50 ring-1 ring-blue-200">
+              <Clock size={18} strokeWidth={2.5} className="text-blue-600" />
             </div>
             <div>
               <p className="text-[15px] font-black text-slate-800">Operating Hours</p>
@@ -63,7 +63,7 @@ const OperatingHours = () => {
                 type="time"
                 value={globalOpen}
                 onChange={(e) => setGlobalOpen(e.target.value)}
-                className="mt-1.5 block px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-[14px] font-bold text-slate-700 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none shadow-sm transition-all"
+                className="mt-1.5 block px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-[14px] font-bold text-slate-700 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none shadow-sm transition-all"
               />
             </div>
             <span className="text-slate-300 font-black text-lg mb-2.5">→</span>
@@ -73,15 +73,15 @@ const OperatingHours = () => {
                 type="time"
                 value={globalClose}
                 onChange={(e) => setGlobalClose(e.target.value)}
-                className="mt-1.5 block px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-[14px] font-bold text-slate-700 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none shadow-sm transition-all"
+                className="mt-1.5 block px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-[14px] font-bold text-slate-700 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none shadow-sm transition-all"
               />
             </div>
             <button
               onClick={applyToAll}
-              className={`ml-auto flex items-center gap-2 px-4 py-2.5 rounded-xl text-[13px] font-black transition-all duration-200 shadow-sm ${
+              className={`ml-auto flex items-center gap-2 px-4 py-2.5 rounded-xl text-[13px]  transition-all duration-200 shadow-sm ${
                 applied
                   ? "bg-emerald-500 text-white shadow-emerald-200"
-                  : "bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-200 hover:shadow-indigo-300"
+                  : "bg-blue-500 hover:bg-blue-500 text-white shadow-blue-200 hover:shadow-blue-300"
               }`}
             >
               {applied ? <><Check size={14} strokeWidth={3} />Applied!</> : <><Copy size={14} strokeWidth={2.5} />Apply to All</>}
@@ -103,7 +103,7 @@ const OperatingHours = () => {
                 <div
                   key={day}
                   className={`rounded-xl border-2 overflow-hidden transition-all duration-200 ${
-                    isOpen ? "border-indigo-200 bg-indigo-50/30" : "border-slate-100 bg-slate-50/50"
+                    isOpen ? "border-blue-200 bg-blue-50/30" : "border-slate-100 bg-slate-50/50"
                   }`}
                 >
                   {/* Day header — click to toggle */}
@@ -112,7 +112,7 @@ const OperatingHours = () => {
                     onClick={() => toggleDay(day)}
                   >
                     <div className="flex items-center gap-2">
-                      <div className={`w-5 h-5 rounded-full flex items-center justify-center transition-colors ${isOpen ? "bg-indigo-600":"bg-slate-200"}`}>
+                      <div className={`w-5 h-5 rounded-full flex items-center justify-center transition-colors ${isOpen ? "bg-blue-600":"bg-slate-200"}`}>
                         {isOpen
                           ? <Check size={11} strokeWidth={3} className="text-white" />
                           : <X size={10} strokeWidth={3} className="text-slate-400" />
@@ -136,7 +136,7 @@ const OperatingHours = () => {
                         value={storeHours[day].open}
                         onChange={(e) => updateTime(day,"open",e.target.value)}
                         onClick={(e) => e.stopPropagation()}
-                        className="flex-1 px-2 py-1.5 rounded-lg bg-white border border-indigo-100 text-[12px] font-bold text-slate-700 focus:ring-2 focus:ring-indigo-400 focus:border-transparent outline-none"
+                        className="flex-1 px-2 py-1.5 rounded-lg bg-white border border-blue-100 text-[12px] font-bold text-slate-700 focus:ring-2 focus:ring-blue-400 focus:border-transparent outline-none"
                       />
                       <span className="text-slate-300 font-bold text-xs">–</span>
                       <input
@@ -144,7 +144,7 @@ const OperatingHours = () => {
                         value={storeHours[day].close}
                         onChange={(e) => updateTime(day,"close",e.target.value)}
                         onClick={(e) => e.stopPropagation()}
-                        className="flex-1 px-2 py-1.5 rounded-lg bg-white border border-indigo-100 text-[12px] font-bold text-slate-700 focus:ring-2 focus:ring-indigo-400 focus:border-transparent outline-none"
+                        className="flex-1 px-2 py-1.5 rounded-lg bg-white border border-blue-100 text-[12px] font-bold text-slate-700 focus:ring-2 focus:ring-blue-400 focus:border-transparent outline-none"
                       />
                     </div>
                   )}

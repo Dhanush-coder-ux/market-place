@@ -3,7 +3,7 @@ import { NavLink, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { LucideIcon, ChevronLeft, ChevronDown } from "lucide-react";
 import { usePurchaseSettings } from "@/context/PurchaseContext";
-import { sidebarLinks } from "@/utils/constants";
+
 
 // --- Types ---
 interface SubLink {

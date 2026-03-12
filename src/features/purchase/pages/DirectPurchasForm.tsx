@@ -74,6 +74,7 @@ export const DirectPurchaseOrder: React.FC = () => {
   const updateItem = (id: string, field: keyof POItem, value: string | number) => {
     setItems(items.map(item => item.id === id ? { ...item, [field]: value } : item));
   };
+console.log(vendor);
 
   return (
     <div className="p-6">

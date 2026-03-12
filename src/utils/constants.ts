@@ -1,4 +1,4 @@
-import { Wallet } from "lucide-react";
+import { UserCircle, Wallet } from "lucide-react";
 import {
   Database,
   LayoutDashboard,
@@ -49,6 +49,15 @@ export const sidebarLinks = [
   },
   { name: "Orders", icon: ShoppingCart, path: "/orders" },
   { name: "Billing", icon: Printer, path: "/billing" },
+  {
+    name: "Customers",
+    icon: UserCircle,
+    subLinks: [
+      { name: "Customer Details", path: "/customers" },
+      { name: "Summary Balance", path: "/customers/summary" },
+ 
+    ]
+  },
   { 
     name: "Staff", 
     icon: Users, 
@@ -59,7 +68,6 @@ export const sidebarLinks = [
   },
   { name: "Digital Store", icon: Store, path: "/digital-store/profile" }
 ];
-
 export const Rupees = "₹"
 
 export const FIELD_DESCRIPTIONS = {

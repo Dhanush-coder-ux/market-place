@@ -11,9 +11,8 @@ import ProductionForm from "@/features/purchase/pages/ProductionForm";
 import PurchaseForm from "@/features/purchase/pages/PurchaseForm";
 import ProductForm from "@/features/product/pages/ProductForm";
 
-// ==========================================
-// LAZY LOADED COMPONENTS
-// ==========================================
+import CustomerManagement from "@/features/customer/pages/CustomerManagement";
+
 
 // Layout & Auth
 const MainLayout = React.lazy(() => import("../components/layouts/MainLayout"));
@@ -111,6 +110,10 @@ export const router = createBrowserRouter([
       
       { path: '/create-digital-store', element: <StoreSetupForm /> },
       { path: '/digital-store/profile', element: <DigitalMain /> },
+
+
+      {path: "/customers",element:<CustomerManagement/>},
+ 
     ]
   },
   {

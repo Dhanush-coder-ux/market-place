@@ -3,7 +3,8 @@ import {
    ListTree, LogOut, Bell,
   Settings, ChevronRight,
   Truck,
-  Timer, 
+  Timer,
+  ShoppingBag, 
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AdditionalSettings } from  "@/features/Setting/pages/AdditionalSettings"
@@ -11,6 +12,8 @@ import SelectBuilder from "@/features/Setting/pages/SelectBuilder";
 import DeliveryPreferences from "@/features/digitalstore/pages/Deliveryinfo";
 
 import OperatingHours from "../components/OperatingHours";
+import { usePurchaseSettings } from "@/context/PurchaseContext";
+import { Switch } from "@/components/ui/switch";
 // const productFields = [
 //   {
 //     name: "Color",
@@ -28,6 +31,7 @@ import OperatingHours from "../components/OperatingHours";
 export const ProfileSettingsPage = () => {
   const [activeTab, setActiveTab] = useState("dropdowns");
 const [builtOptions, setBuiltOptions] = useState([]);
+const { settings, toggleSetting } = usePurchaseSettings();
   
   const handleBuilderChange = (options:any) => {
     setBuiltOptions(options);
@@ -39,6 +43,7 @@ const [builtOptions, setBuiltOptions] = useState([]);
     {id : "operatinghours", label: "Operating Hours",icon:<Timer size={18}/>, description:"Set the Operating Hours"},
     { id: "dropdowns", label: "Dropdown Settings", icon: <ListTree size={18} />, description: "Industries & Sectors" },
     { id: "advanced", label: "Advanced Config", icon: <Settings size={18} />, description: "System-wide variables" },
+    { id: "purchasetypes", label: "Purchase Modules", icon: <ShoppingBag size={18} />, description: "Enable/Disable purchase types" },
   ];
 
   return (
@@ -132,7 +137,52 @@ const [builtOptions, setBuiltOptions] = useState([]);
     <div  className="animate-in fade-in slide-in-from-right-4 duration-300">
      <OperatingHours/>
     </div>
-  ):
+  ):activeTab === "purchasetypes" ? (
+          /* ── NEW PURCHASE TYPES SECTION ── */
+          <div className="animate-in fade-in slide-in-from-right-4 duration-300">
+            <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-8">
+              <h3 className="text-xl  text-blue-400 mb-6">Purchase Type Configurations</h3>
+              
+              <div className="space-y-6 max-w-md">
+                {/* Direct Purchase Switch */}
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <label className="text-base ">Direct Purchase</label>
+                    <p className="text-sm text-slate-500">Enable the direct purchase module.</p>
+                  </div>
+                  <Switch 
+                    checked={settings.directPurchase} 
+                    onCheckedChange={() => toggleSetting('directPurchase')} 
+                  />
+                </div>
+
+                {/* GRN Purchase Switch */}
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <label className="text-base ">PO-GRN</label>
+                    <p className="text-sm text-slate-500">Enable Goods Receipt Note processing.</p>
+                  </div>
+                  <Switch 
+                    checked={settings.poGrn} 
+                    onCheckedChange={() => toggleSetting('poGrn')} 
+                  />
+                </div>
+
+                {/* Production Entry Switch */}
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <label className="text-base ">Production Entry</label>
+                    <p className="text-sm text-slate-500">Enable internal production entry.</p>
+                  </div>
+                  <Switch
+                    checked={settings.productionEntry} 
+                    onCheckedChange={() => toggleSetting('productionEntry')} 
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        ):
   (
     <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-8 h-[500px] flex flex-col items-center justify-center text-center animate-in fade-in zoom-in-95 duration-300">
       <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-4">

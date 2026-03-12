@@ -5,6 +5,7 @@ import { Filter, Search } from "lucide-react";
 
 // Assuming your Table component is imported from here
 import Table from "@/components/common/Table";
+import PurchaseHeader from "@/features/purchase/components/PurchaseHeader"
 
 /* ================= TYPES ================= */
 // It's best practice to define the structure of a single product
@@ -115,34 +116,33 @@ const PURCHASE_COLUMNS: Column[] = [
       <span className="text-sm text-slate-900 font-bold">₹{value.toLocaleString()}</span>
     ),
   },
-  {
-    key: "status",
-    label: "Status",
-    render: (value) => {
-      const isPaid = value === "Paid";
-      return (
-        <span className={`px-3 py-1 rounded-lg text-[10px] font-bold uppercase border ${
-            isPaid ? "bg-emerald-50 text-emerald-600 border-emerald-100" : "bg-orange-50 text-orange-600 border-orange-100"
-          }`}>
-          {value}
-        </span>
-      );
-    },
-  },
+  // {
+  //   key: "status",
+  //   label: "Status",
+  //   render: (value) => {
+  //     const isPaid = value === "Paid";
+  //     return (
+  //       <span className={`px-3 py-1 rounded-lg text-[10px] font-bold uppercase border ${
+  //           isPaid ? "bg-emerald-50 text-emerald-600 border-emerald-100" : "bg-orange-50 text-orange-600 border-orange-100"
+  //         }`}>
+  //         {value}
+  //       </span>
+  //     );
+  //   },
+  // },
 ];
 
-/* ================= COMPONENT ================= */
 const PurchaseHistoryTab = () => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
 
   const handleRowClick = () => {
-    // Ideally, pass the ID to the detail page: navigate(`/purchase/detail/${id}`);
     navigate('/purchase/detail');
   };
 
   return (
     <div className="space-y-6">
+      <PurchaseHeader/>
       <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
         <div className="p-4 border-b border-slate-50 bg-slate-50/30">
           <h3 className="text-sm font-bold text-slate-700">Recent Invoices</h3>

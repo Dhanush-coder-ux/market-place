@@ -2,6 +2,8 @@ import { useState, useEffect, FC } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { LucideIcon, ChevronLeft, ChevronDown } from "lucide-react";
+import { usePurchaseSettings } from "@/context/PurchaseContext";
+import { sidebarLinks } from "@/utils/constants";
 
 // --- Types ---
 interface SubLink {
@@ -26,6 +28,21 @@ interface SidebarItemProps {
 // --- Main Component ---
 const Sidebar: FC<{ links: SidebarLink[] }> = ({ links }) => {
   const [isOpen, setIsOpen] = useState(true);
+  const { settings } = usePurchaseSettings();
+
+  const filteredSidebarLinks = links.map(link => {
+    // We only want to filter the subLinks inside the "Purchase" section
+    if (link.name === "Purchase" && link.subLinks) {
+      const activeSubLinks = link.subLinks.filter(sub => {
+        if (sub.name === "Direct") return settings.directPurchase;
+        if (sub.name === "PO-GRN") return settings.poGrn;
+        if (sub.name === "Production Entry") return settings.productionEntry;
+        return true; // Keep everything else (like "Purchase order") visible
+      });
+      return { ...link, subLinks: activeSubLinks };
+    }
+    return link;
+  });
 
   return (
     <motion.div
@@ -99,7 +116,7 @@ const Sidebar: FC<{ links: SidebarLink[] }> = ({ links }) => {
 
       {/* Nav with Hiding Scrollbar utility classes */}
       <nav className="flex-1 overflow-y-auto overflow-x-hidden flex flex-col gap-0.5 px-2 py-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-        {links.map((link, i) => (
+        {filteredSidebarLinks.map((link, i) => (
           <SidebarItem key={link.name} link={link} sidebarOpen={isOpen} index={i} />
         ))}
       </nav>

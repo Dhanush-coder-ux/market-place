@@ -1,6 +1,14 @@
 import React, { Suspense } from "react";
 import { createBrowserRouter } from "react-router-dom";
 import Loader from "@/components/common/Loader";
+import PurchaseHistoryTab from "@/features/purchase/pages/Purchase";
+import HomeMade from "@/features/purchase/pages/HomeMade";
+import DirectPurchaseTableView from "@/features/purchase/pages/DirecetPurchaseTable";
+import GRNListView from "@/features/purchase/pages/GrnListView";
+import { DirectPurchaseOrder } from "@/features/purchase/pages/DirectPurchasForm";
+import GRNForm from "@/features/purchase/pages/GrnForm";
+import ProductionForm from "@/features/purchase/pages/ProductionForm";
+import PurchaseForm from "@/features/purchase/pages/PurchaseForm";
 
 // ==========================================
 // LAZY LOADED COMPONENTS
@@ -23,10 +31,9 @@ const ProfileForm = React.lazy(() => import("../features/profile/pages/ProfileFo
 // Products
 const Product = React.lazy(() => import("@/features/product/pages/Product"));
 const ProductDetail = React.lazy(() => import("@/features/product/pages/ProductDetail"));
-const ProductForm = React.lazy(() => import("@/features/product/pages/ProductForm"));
+
 
 // Purchase
-const PurchaseMain = React.lazy(() => import("@/features/purchase/pages/PurchaseMain"));
 const PurchaseDetail = React.lazy(() => import("@/features/purchase/pages/PurchaseDetail"));
 const PurchaseManagement = React.lazy(() => import("@/features/purchase/pages/PurchaseForm"));
 
@@ -68,9 +75,18 @@ export const router = createBrowserRouter([
       { index: true, element: <AnalyticsDashboard /> },
       { path: 'product', element: <Product /> },
       { path: '/product/detail', element: <ProductDetail /> },
-      { path: '/product/add', element: <ProductForm /> },
+
       
-      { path: '/purchase', element: <PurchaseMain /> },
+      { path: "/purchase-order" , element: <PurchaseHistoryTab/>},
+      { path: "/purchase-order/add", element:<PurchaseForm/>},
+      { path: "/po-grn", element: <GRNListView/>},
+      { path: '/po-grn/add', element:<GRNForm/>},
+      { path: "/direct-purchase" , element: <DirectPurchaseTableView/>},
+      { path: "/direct-purchase/add", element:<DirectPurchaseOrder/>},
+      { path: "/production-entry",element:<HomeMade/>},
+      {path :"/production-entry/add",element:<ProductionForm/>},
+      
+    
       { path: '/purchase/detail', element: <PurchaseDetail /> },
       { path: '/purchase/add', element: <PurchaseManagement /> },
       

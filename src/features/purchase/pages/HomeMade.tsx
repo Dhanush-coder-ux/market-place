@@ -5,6 +5,7 @@ import { FloatingFormCard } from "@/components/common/FloatingFormCard";
 import Input from "@/components/ui/Input";
 import { ReusableSelect } from "@/components/ui/ReusableSelect";
 import { GradientButton } from "@/components/ui/GradientButton";
+import ProoductionHeader from "../components/ProductionHeader";
 
 // --- 1. Types ---
 type ProductionStatus = "Planned" | "In Progress" | "Completed" | "Cancelled";
@@ -88,7 +89,7 @@ const ProductionStatusUpdateForm: React.FC<{ record: ProductionRecord | null, on
 };
 
 // --- 3. Main Page Component ---
-const HomeMade = () => {
+export const HomeMade = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [open, setOpen] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<ProductionRecord | null>(null);
@@ -188,6 +189,8 @@ const HomeMade = () => {
   ];
 
   return (
+    <div className="space-y-3">
+      <ProoductionHeader/>
     <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
       
       {/* FLOATING CARD MODAL */}
@@ -222,6 +225,7 @@ const HomeMade = () => {
         data={productionData}
         rowKey="id"
       />
+    </div>
     </div>
   );
 };

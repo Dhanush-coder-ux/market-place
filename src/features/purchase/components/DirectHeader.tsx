@@ -4,7 +4,7 @@ import Title from '@/components/common/Title'
 import { MOCK_PURCHASES } from "@/features/purchase/pages/Purchase"
 import { GradientButton } from '@/components/ui/GradientButton'
 
-const PurchaseHeader = () => {
+const DirectHeader = () => {
   const totalPurchases = MOCK_PURCHASES.length;
   const pendingPayments = MOCK_PURCHASES.filter(p => p.status === 'Pending').length;
   const totalExpenditure = MOCK_PURCHASES.reduce((acc, curr) => acc + curr.total_cost, 0);
@@ -13,13 +13,13 @@ const PurchaseHeader = () => {
     <div className="space-y-3">
       <div className="flex justify-between items-center">
         <Title
-          title="Purchase Management"
+          title="Direct Purchase Management"
           subtitle="Monitor  supplier invoices, and payment statuses"
         />
         <GradientButton
-        path='/purchase-order/add'
+        path='/direct-purchase/add'
         >
-         + Add Purchase
+         + Add Direct Purchase
         </GradientButton>
       </div>
 
@@ -63,4 +63,4 @@ const PurchaseHeader = () => {
   )
 }
 
-export default PurchaseHeader
+export default DirectHeader

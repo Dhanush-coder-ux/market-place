@@ -1,213 +1,111 @@
-import { CircleDot, ShoppingCartIcon, Package, TrendingUp, Clock, XCircle } from "lucide-react"
-import Title from "../../../components/common/Title"
-import OrdersHeader from "../components/OrdersHeader"
-import OrdersCard from "../components/OrdersCard"
-import { useState } from "react"
-import Drawer from "@/components/common/Drawer"
-import OrderDetailView from "../components/OrdersDetailView"
-import { DateFilter } from "../components/DateFilter"
-import { StatCard } from "@/components/common/StatsCard"
-
-
+import { 
+  Package, LayoutGrid, List, Inbox, Truck, PackageCheck 
+} from "lucide-react";
+import Title from "../../../components/common/Title";
+import OrdersHeader from "../components/OrdersHeader";
+import OrdersCard from "../components/OrdersCard";
+import { SetStateAction, useState } from "react";
+import Drawer from "@/components/common/Drawer";
+import OrderDetailView from "../components/OrdersDetailView";
+import { DateFilter } from "../components/DateFilter";
+import { StatCard } from "@/components/common/StatsCard";
 
 const Order = () => {
-  const [orderType, setOrderType] = useState("Offline");
-  const [status, setStatus] = useState("COMPLETED");
+  const [status, setStatus] = useState("INCOMING"); // Default to showing new orders
   const [isOpen, setIsOpen] = useState(false);
   const [open, setOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 
-  const orderTypeOptions = [
-    {
-      label: "Offline",
-      value: "Offline",
-      icon: <CircleDot size={16} />,
-      activeColor: "text-orange-500",
-    },
-    {
-      label: "Online",
-      value: "Online",
-      icon: <CircleDot size={16} />,
-      activeColor: "text-green-500",
-    },
-  ];
-
+  // 1. Updated Mock Data with new statuses
   const ordersData = [
-    {
-      billNo: "BILL-1001",
-      customerName: "Siva",
-      phone: "9999999999",
-      totalAmount: 100,
-      orderType: "Offline",
-      status: "COMPLETED",
-    },
-    {
-      billNo: "BILL-1002",
-      customerName: "Kumar",
-      phone: "8888888888",
-      totalAmount: 2499,
-      orderType: "Online",
-      status: "PENDING",
-    },
-    {
-      billNo: "BILL-1003",
-      customerName: "Arun",
-      phone: "7777777777",
-      totalAmount: 560,
-      orderType: "Online",
-      status: "CANCELLED",
-    },
-    {
-      billNo: "BILL-1004",
-      customerName: "Priya",
-      phone: "6666666666",
-      totalAmount: 899,
-      orderType: "Offline",
-      status: "COMPLETED",
-    },
+    { billNo: "BILL-1001", customerName: "Siva", phone: "9999999999", totalAmount: 100, status: "INCOMING" },
+    { billNo: "BILL-1002", customerName: "pattani", phone: "8888888888", totalAmount: 2499, status: "ACCEPTED" },
+    { billNo: "BILL-1003", customerName: "Arun", phone: "7777777777", totalAmount: 560, status: "OUT_FOR_DELIVERY" },
+    { billNo: "BILL-1004", customerName: "vijay", phone: "6666666666", totalAmount: 899, status: "DELIVERED" },
+    { billNo: "BILL-1005", customerName: "dhaslima", phone: "5555555555", totalAmount: 1250, status: "REJECTED" },
   ];
 
   const orderDetailData = {
-    billNo: "BILL-1002",
-    customerName: "Kumar",
-    phone: "8888888888",
-    status: "PENDING",
-    orderType: "Online",
+    billNo: "BILL-1002", customerName: "Kumar", phone: "8888888888", status: "ACCEPTED", orderType: "Online",
     items: [
       { name: "Blue T-Shirt", qty: 2, price: 499, total: 998 },
       { name: "Formal Shoes", qty: 1, price: 1999, total: 1999 },
-      { name: "Jeans Pant", qty: 1, price: 899, total: 899 },
     ],
-    subtotal: 3896,
-    gstPercent: 18,
-    gstAmount: 3896 * 0.18,
-    grandTotal: 3896 + 3896 * 0.18,
+    subtotal: 2997, gstPercent: 18, gstAmount: 539.46, grandTotal: 3536.46,
   };
 
-  // Derived stats
+  // 2. Updated Derived Stats
   const totalOrders = ordersData.length;
-  const completed = ordersData.filter(o => o.status === "COMPLETED").length;
-  const pending = ordersData.filter(o => o.status === "PENDING").length;
-  const cancelled = ordersData.filter(o => o.status === "CANCELLED").length;
+  const incoming = ordersData.filter(o => o.status === "INCOMING").length;
+  const outForDelivery = ordersData.filter(o => o.status === "OUT_FOR_DELIVERY").length;
+  const delivered = ordersData.filter(o => o.status === "DELIVERED").length;
 
   return (
-    <div
-      className="min-h-screen bg-slate-50/60 "
+    <div className="min-h-screen bg-slate-50/60 font-sans">
+      <div className="space-y-4">
+        
+        <Title title="Orders" subtitle="Manage your online order pipeline" />
 
-    >
-      {/* Max-width container */}
-      <div className="space-y-3">
-
-        {/* Page title */}
-
-        <Title title="Orders" subtitle="Manage and track all your orders" />
-
-        {/* Stats row */}
-        <div className='flex-none overflow-y-auto px-6 py-2.5 bg-accent'>
-          <div className="flex gap-2.5 ">
-
-            <StatCard
-              label="Total Orders"
-              value={totalOrders}
-              icon={Package}
-              iconBg="bg-blue-50"
-              iconColor="text-blue-600"
-            />
-            <StatCard
-              label="Completed"
-              value={completed}
-              icon={TrendingUp}
-              iconBg="bg-green-50"
-              iconColor="text-green-600"
-            />
-            <StatCard
-              label="Pending"
-              value={pending}
-              icon={Clock}
-              iconBg="bg-orange-50"
-              iconColor="text-orange-600"
-            />
-            <StatCard
-              label="Cancelled"
-              value={cancelled}
-              icon={XCircle}
-              iconBg="bg-red-50"
-              iconColor="text-red-600"
-            />
-
-
+        {/* 3. Updated Stats Row to reflect the pipeline */}
+        <div className='flex-none overflow-x-auto pb-1'>
+          <div className="flex gap-4 min-w-max">
+            <StatCard label="Total Orders" value={totalOrders} icon={Package} iconBg="bg-slate-100" iconColor="text-slate-600" />
+            <StatCard label="Incoming" value={incoming} icon={Inbox} iconBg="bg-amber-50" iconColor="text-amber-600" />
+            <StatCard label="Out for Delivery" value={outForDelivery} icon={Truck} iconBg="bg-purple-50" iconColor="text-purple-600" />
+            <StatCard label="Delivered" value={delivered} icon={PackageCheck} iconBg="bg-emerald-50" iconColor="text-emerald-600" />
           </div>
         </div>
 
-        {/* Filter header */}
+        {/* Note: You will need to update OrdersHeader to pass the new statuses (Incoming, Accepted, etc) if it uses tabs */}
         <OrdersHeader
-          status={status}
-          setStatus={setStatus}
-          orderType={orderType}
-          setOrderType={setOrderType}
-          orderTypeOptions={orderTypeOptions}
+          status={status} setStatus={setStatus}
+          setIsDateFilterOpen={setOpen} orderType={""} setOrderType={function (): void {
+            throw new Error("Function not implemented.");
+          } } orderTypeOptions={[]}        />
 
-          setIsDateFilterOpen={setOpen}
-        />
+        <div className="flex items-center justify-between pt-2">
+          <p className="text-sm text-slate-500 font-medium">
+            Showing <span className="font-bold text-slate-800">{ordersData.length}</span> orders
+          </p>
+          
+          <div className="flex items-center bg-white border border-slate-200 rounded-lg p-1 shadow-sm">
+            <button
+              onClick={() => setViewMode("list")}
+              className={`p-1.5 rounded-md transition-all ${viewMode === "list" ? "bg-indigo-50 text-indigo-600 shadow-sm" : "text-slate-400 hover:text-slate-600 hover:bg-slate-50"}`}
+            >
+              <List size={16} strokeWidth={2.5} />
+            </button>
+            <button
+              onClick={() => setViewMode("grid")}
+              className={`p-1.5 rounded-md transition-all ${viewMode === "grid" ? "bg-indigo-50 text-indigo-600 shadow-sm" : "text-slate-400 hover:text-slate-600 hover:bg-slate-50"}`}
+            >
+              <LayoutGrid size={16} strokeWidth={2.5} />
+            </button>
+          </div>
+        </div>
 
-        {/* Orders grid */}
         {ordersData.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+          <div className={viewMode === "grid" ? "grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4" : "flex flex-col gap-3"}>
             {ordersData.map((order) => (
-              <OrdersCard key={order.billNo} order={order} setIsOpen={setIsOpen} />
+              <OrdersCard key={order.billNo} order={order} setIsOpen={setIsOpen} viewMode={viewMode} />
             ))}
           </div>
         ) : (
-          /* Empty state */
-          <div className="flex flex-col items-center justify-center bg-white rounded-2xl border border-slate-100 shadow-sm py-20 gap-3">
-            <div className="w-14 h-14 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-300">
-              <ShoppingCartIcon size={28} strokeWidth={1.5} />
+          <div className="flex flex-col items-center justify-center bg-white rounded-xl border border-slate-200 shadow-sm py-20 gap-3">
+            <div className="w-14 h-14 rounded-xl bg-slate-50 flex items-center justify-center text-slate-300">
+              <Inbox size={28} strokeWidth={2} />
             </div>
-            <p className="text-sm font-bold text-slate-500">No orders found</p>
-            <p className="text-xs text-slate-400 font-medium">Try adjusting your filters</p>
+            <p className="text-sm font-bold text-slate-600">No orders found</p>
           </div>
         )}
 
-        {/* Pagination hint */}
-        <div className="flex items-center justify-between pt-1 pb-2">
-          <p className="text-[12px] text-slate-400 font-medium">
-            Showing <span className="font-bold text-slate-600">{ordersData.length}</span> orders
-          </p>
-          {/* Placeholder for future pagination */}
-          <div className="flex items-center gap-1">
-            {[1, 2, 3].map(p => (
-              <button
-                key={p}
-                className={`w-8 h-8 rounded-lg text-[12px] font-bold transition-colors ${p === 1
-                    ? "bg-indigo-600 text-white shadow-sm shadow-indigo-200"
-                    : "text-slate-400 hover:bg-slate-100"
-                  }`}
-              >
-                {p}
-              </button>
-            ))}
-          </div>
-        </div>
-
       </div>
 
-      {/* Drawer */}
-      <Drawer
-        isOpen={isOpen}
-        onClose={() => setIsOpen(false)}
-        title="Customer's Order Info"
-      >
+      <Drawer isOpen={isOpen} onClose={() => setIsOpen(false)} title="Order Details">
         <OrderDetailView order={orderDetailData} />
       </Drawer>
 
-      {/* Date filter */}
-      <DateFilter
-        isOpen={open}
-        onClose={() => setOpen(false)}
-        onApply={(range) => {
-          console.log(range);
-          setOpen(false);
-        }}
-      />
+      <DateFilter isOpen={open} onClose={() => setOpen(false)} onApply={(range) => { console.log(range); setOpen(false); }} />
     </div>
   );
 };

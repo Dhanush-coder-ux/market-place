@@ -10,3 +10,4 @@ export interface PurchaseHistoryData {
   invoice_no: string;
   status: "Paid" | "Due";
 }
+

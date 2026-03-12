@@ -9,6 +9,7 @@ import { DirectPurchaseOrder } from "@/features/purchase/pages/DirectPurchasForm
 import GRNForm from "@/features/purchase/pages/GrnForm";
 import ProductionForm from "@/features/purchase/pages/ProductionForm";
 import PurchaseForm from "@/features/purchase/pages/PurchaseForm";
+import ProductForm from "@/features/product/pages/ProductForm";
 
 // ==========================================
 // LAZY LOADED COMPONENTS
@@ -75,6 +76,7 @@ export const router = createBrowserRouter([
       { index: true, element: <AnalyticsDashboard /> },
       { path: 'product', element: <Product /> },
       { path: '/product/detail', element: <ProductDetail /> },
+      { path: "/product/add",element:<ProductForm/>},
 
       
       { path: "/purchase-order" , element: <PurchaseHistoryTab/>},

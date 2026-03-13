@@ -54,7 +54,7 @@ export const sidebarLinks = [
     icon: UserCircle,
     subLinks: [
       { name: "Customer Details", path: "/customers" },
-      { name: "Summary Balance", path: "/customers/summary" },
+      { name: "Summary Balance", path: "/customers-Summary" },
  
     ]
   },

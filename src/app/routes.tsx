@@ -10,8 +10,8 @@ import GRNForm from "@/features/purchase/pages/GrnForm";
 import ProductionForm from "@/features/purchase/pages/ProductionForm";
 import PurchaseForm from "@/features/purchase/pages/PurchaseForm";
 import ProductForm from "@/features/product/pages/ProductForm";
-
-import CustomerManagement from "@/features/customer/pages/CustomerManagement";
+import CustomerBalanceSummary from "@/features/customer/pages/CustomerBalanceSummary";
+import CustomerProfile from "@/features/customer/pages/CustomerManagement";
 
 
 // Layout & Auth
@@ -112,7 +112,8 @@ export const router = createBrowserRouter([
       { path: '/digital-store/profile', element: <DigitalMain /> },
 
 
-      {path: "/customers",element:<CustomerManagement/>},
+      {path: "/customers",element:<CustomerProfile/>},
+      { path: "/customers-Summary",element:<CustomerBalanceSummary/>}
  
     ]
   },

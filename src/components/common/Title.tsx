@@ -7,7 +7,7 @@ const Title: React.FC<TitleProps> = ({
   icon,
 }) => {
   return (
-    <div className="flex items-start gap-2">
+    <div className="flex items-start gap-2 mb-4">
       
       {icon && (
         <div className="mt-0.5 text-indigo-600">

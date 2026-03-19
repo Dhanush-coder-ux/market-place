@@ -1,4 +1,4 @@
-import { History, icons, IndianRupee, Plus, UserCircle, Wallet } from "lucide-react";
+import { History, IndianRupee, Plus, UserCircle, Wallet } from "lucide-react";
 import {
   Database,
   LayoutDashboard,

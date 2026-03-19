@@ -14,12 +14,7 @@ const roleOptions = [
   { label: "Staff", value: "staff" },
 ];
 
-const departmentOptions = [
-  { label: "Engineering", value: "eng" },
-  { label: "Human Resources", value: "hr" },
-  { label: "Marketing", value: "mkt" },
-  { label: "Sales", value: "sales" },
-];
+
 
 const EmployeeForm: React.FC = () => {
   // --- State Management ---
@@ -28,7 +23,6 @@ const EmployeeForm: React.FC = () => {
   const [role, setRole] = React.useState<string>("");
   const [phone, setPhone] = React.useState<string>("");
   const [address, setAddress] = React.useState<string>("");
-  const [department, setDepartment] = React.useState<string>("");
   const [employeeId, setEmployeeId] = React.useState<string>("");
   const [joinDate, setJoinDate] = React.useState<string>("");
   

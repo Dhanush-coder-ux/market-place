@@ -394,7 +394,7 @@ const ViewToggle = ({
 
 /* ================= MAIN COMPONENT ================= */
 const PurchaseHistory = () => {
-  const navigate = useNavigate();
+
   const [searchTerm, setSearchTerm] = useState("");
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
   const [selectedPO, setSelectedPO] = useState<DirectPurchaseData | null>(null);

@@ -175,15 +175,7 @@ const EmployeeForm: React.FC = () => {
             />
           </div>
 
-          <div className="space-y-2">
-            <label className="text-xs font-bold text-gray-500 uppercase">Department</label>
-            <ReusableSelect
-              options={departmentOptions}
-              value={department}
-              onValueChange={setDepartment}
-              placeholder="Select Department"
-            />
-          </div>
+   
 
           <div className="space-y-2">
             <label className="text-xs font-bold text-gray-500 uppercase">Joining Date</label>

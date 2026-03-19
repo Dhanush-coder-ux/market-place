@@ -1,66 +1,72 @@
-import { ShoppingCart, Clock, CheckCircle2, IndianRupee } from 'lucide-react'
-import  { StatCard } from '@/components/common/StatsCard'
-import Title from '@/components/common/Title'
-import { MOCK_PURCHASES } from "@/features/purchase/pages/Purchase"
-import { GradientButton } from '@/components/ui/GradientButton'
+import { PackageOpen, Truck, AlertCircle, IndianRupee } from 'lucide-react';
+import { StatCard } from '@/components/common/StatsCard';
+import Title from '@/components/common/Title';
+// Assuming your mock data uses statuses like 'Completed', 'Pending', and 'Partial'
+import { MOCK_PURCHASES } from "@/features/purchase/pages/Purchase";
 
 const GrnHeader = () => {
-  const totalPurchases = MOCK_PURCHASES.length;
-  const pendingPayments = MOCK_PURCHASES.filter(p => p.status === 'Pending').length;
-  const totalExpenditure = MOCK_PURCHASES.reduce((acc, curr) => acc + curr.total_cost, 0);
+  // 1. Total Volume
+  const totalOrders = MOCK_PURCHASES.length;
+  
+  // 2. Pending Deliveries (Goods not yet received at all)
+  const pendingDeliveries = MOCK_PURCHASES.filter(p => p.status === 'Paid').length;
+  
+  // 3. Partial Deliveries (Some goods received, waiting on the rest)
+  const partialDeliveries = MOCK_PURCHASES.filter(p => p.status === 'Pending').length;
+  
+  // 4. Value of Received Goods (Only counting Completed and Partial orders)
+  const valueReceived = MOCK_PURCHASES
+    .filter(p => p.status === 'Paid' || p.status === 'Partial')
+    .reduce((acc, curr) => acc + curr.total_cost, 0);
 
   return (
-    <div className="space-y-3">
-      <div className="flex justify-between items-center">
+    <div className="space-y-4">
+      <div className="flex justify-between items-center px-2">
         <Title
-          title="Grn Purchase Management"
-          subtitle="Monitor  supplier invoices, and payment statuses"
+          title="GRN & Receiving Management"
+          subtitle="Monitor incoming shipments, partial deliveries, and receipt values"
         />
-        <GradientButton
-        path='/po-grn/add'
-        >
-         Update Grn Purchase
-        </GradientButton>
       </div>
 
-      <div className='flex-none overflow-y-auto px-6 py-2.5 bg-accent'>
-        <div className="flex gap-2.5 ">
+      <div className='flex-none overflow-x-auto pb-2'>
+        <div className="flex gap-4 min-w-max">
+          
           <StatCard
             label="Total Orders"
-            value={totalPurchases}
-            icon={ShoppingCart}
+            value={totalOrders}
+            icon={PackageOpen}
             iconBg="bg-blue-50"
             iconColor="text-blue-600"
           />
+          
           <StatCard
-            label="Pending Payments"
-            value={pendingPayments}
-            icon={Clock}
-            iconBg="bg-orange-50"
-            iconColor="text-orange-600"
+            label="Pending Deliveries"
+            value={pendingDeliveries}
+            icon={Truck}
+            iconBg="bg-amber-50"
+            iconColor="text-amber-600"
           />
 
           <StatCard
-            label="Completed"
-            value={totalPurchases - pendingPayments}
-            icon={CheckCircle2}
-            iconBg="bg-green-50"
-            iconColor="text-green-600"
+            label="Partially Received"
+            value={partialDeliveries}
+            icon={AlertCircle}
+            iconBg="bg-purple-50"
+            iconColor="text-purple-600"
           />
+          
           <StatCard
-            label="Total Spend"
-            value={`₹${totalExpenditure.toLocaleString()}`}
+            label="Received Value"
+            value={`₹${valueReceived.toLocaleString()}`}
             icon={IndianRupee}
-            iconBg="bg-blue-50"
-            iconColor="text-blue-600"
+            iconBg="bg-emerald-50"
+            iconColor="text-emerald-600"
           />
-
 
         </div>
       </div>
-
     </div>
-  )
-}
+  );
+};
 
-export default GrnHeader
+export default GrnHeader;

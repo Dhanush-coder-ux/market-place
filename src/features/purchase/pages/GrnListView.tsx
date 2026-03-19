@@ -1,8 +1,30 @@
-import { Eye, Filter, Search, MoreHorizontal } from "lucide-react";
-import Table from "@/components/common/Table";
+import { useState, useRef, useEffect } from "react";
+import {
+  Eye,
+  Search,
+  SlidersHorizontal,
+  MoreHorizontal,
+  ChevronDown,
+  Check,
+  Package,
+  Calendar,
+  Building2,
+  FileText,
+  LayoutGrid,
+  AlignJustify,
+  List,
+} from "lucide-react";
 import GrnHeader from "../components/GrnHeader";
+import { FloatingFormCard } from "@/components/common/FloatingFormCard"
 
+/* ================= TYPES ================= */
 type GRNStatus = "Completed" | "Pending" | "Partial";
+type ViewMode  = "grid" | "horizontal" | "vertical";
+
+export interface ProductItem {
+  name: string;
+  quantity: number;
+}
 
 interface GRNRecord {
   id: string;
@@ -12,107 +34,598 @@ interface GRNRecord {
   itemsCount: number;
   totalValue: number;
   status: GRNStatus;
-  product_name?: string; 
-  quantity?: number;     
+  products: ProductItem[];
 }
 
-// Static data array, no state needed
-const tableData: GRNRecord[] = [
-  { id: "1",  poReference: "PO-9921", supplier: "Global Tech", date: "2024-03-10", itemsCount: 5, totalValue: 12500, status: "Partial", product_name: "Wireless Headphones", quantity: 10 },
-  { id: "2",  poReference: "PO-9925", supplier: "Mainstream Inc", date: "2024-03-11", itemsCount: 2, totalValue: 4200, status: "Pending", product_name: "Mechanical Keyboard", quantity: 5 },
-  { id: "3", poReference: "PO-9928", supplier: "Apex Wholesale", date: "2024-03-12", itemsCount: 12, totalValue: 8900, status: "Pending", product_name: "USB-C Hub", quantity: 20 },
+/* ================= MOCK DATA ================= */
+const INITIAL_DATA: GRNRecord[] = [
+  {
+    id: "1", poReference: "PO-9921", supplier: "Global Tech", date: "2024-03-10",
+    itemsCount: 15, totalValue: 12500, status: "Partial",
+    products: [
+      { name: "Wireless Headphones", quantity: 10 },
+      { name: "Bluetooth Speaker",   quantity: 5  },
+    ],
+  },
+  {
+    id: "2", poReference: "PO-9925", supplier: "Mainstream Inc", date: "2024-03-11",
+    itemsCount: 15, totalValue: 4200, status: "Pending",
+    products: [
+      { name: "Mechanical Keyboard", quantity: 5 },
+      { name: "Ergonomic Mouse",     quantity: 5 },
+      { name: "Desk Mat (Large)",    quantity: 5 },
+    ],
+  },
+  {
+    id: "3", poReference: "PO-9928", supplier: "Apex Wholesale", date: "2024-03-12",
+    itemsCount: 42, totalValue: 8900, status: "Pending",
+    products: [
+      { name: "USB-C Hub",    quantity: 20 },
+      { name: "HDMI Cable 2m", quantity: 15 },
+      { name: "Webcam 1080p", quantity: 5  },
+      { name: "Monitor Arm",  quantity: 2  },
+    ],
+  },
 ];
 
-const getStatusStyle = (status: GRNStatus) => {
-  switch (status) {
-    case "Completed": return "bg-emerald-50 text-emerald-700 border-emerald-100";
-    case "Pending": return "bg-amber-50 text-amber-700 border-amber-100";
-    case "Partial": return "bg-blue-50 text-blue-700 border-blue-100";
-    default: return "bg-gray-50 text-gray-700";
-  }
+const ALL_STATUSES: GRNStatus[] = ["Completed", "Pending", "Partial"];
+
+/* ================= STATUS CONFIG ================= */
+const STATUS_CONFIG: Record<GRNStatus, { dot: string; badge: string; option: string }> = {
+  Completed: { dot: "bg-emerald-500", badge: "bg-emerald-50 text-emerald-700 border-emerald-100 hover:border-emerald-200", option: "text-emerald-700" },
+  Pending:   { dot: "bg-amber-400",   badge: "bg-amber-50 text-amber-700 border-amber-100 hover:border-amber-200",         option: "text-amber-700"   },
+  Partial:   { dot: "bg-blue-400",    badge: "bg-blue-50 text-blue-700 border-blue-100 hover:border-blue-200",             option: "text-blue-700"    },
 };
 
-const GRN_COLUMNS = [
+/* ================= SCOPED STYLES ================= */
+const STYLES = `
+  .grn-badge-btn { transition: box-shadow 0.15s ease, border-color 0.15s ease; }
+  .grn-badge-btn:hover { box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
 
-  {
-    key: "poReference" as keyof GRNRecord,
-    label: "PO Ref",
-    render: (value: string) => <span className="text-gray-600 font-medium">{value}</span>,
-  },
-  { key: "supplier" as keyof GRNRecord, label: "Supplier" },
-  {
-    key: "date" as keyof GRNRecord,
-    label: "Date",
-    render: (value: string) => <span className="text-gray-500">{value}</span>,
-  },
-  {
-    key: "totalValue" as keyof GRNRecord,
-    label: "Total Value",
-    render: (value: number) => <span className="font-semibold text-gray-900">${value.toLocaleString()}</span>,
-  },
-  {
-    key: "status" as keyof GRNRecord,
-    label: "Status",
-    render: (value: GRNStatus) => (
-      <div className="flex justify-start">
-        <span className={`px-3 py-1 rounded-full text-[11px] font-bold border ${getStatusStyle(value)}`}>
-          {value}
-        </span>
-      </div>
-    ),
-  },
-  {
-    key: "action" as any,
-    label: "Actions",
-    render: () => (
-      <div className="flex justify-end gap-2">
-        <button 
-          className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-all"
-          title="View GRN"
-        >
-          <Eye size={18} />
-        </button>
-        <button 
-          className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-md transition-all"
-        >
-          <MoreHorizontal size={18} />
-        </button>
-      </div>
-    ),
-  },
-];
+  .grn-dropdown {
+    animation: grnDropIn 0.12s ease forwards;
+    transform-origin: top right;
+  }
+  @keyframes grnDropIn {
+    from { opacity: 0; transform: scale(0.96) translateY(-4px); }
+    to   { opacity: 1; transform: scale(1)    translateY(0); }
+  }
 
-const GRNListView = () => {
+  /* thin scrollbar */
+  .grn-scroll::-webkit-scrollbar { width: 3px; height: 3px; }
+  .grn-scroll::-webkit-scrollbar-track { background: transparent; }
+  .grn-scroll::-webkit-scrollbar-thumb { background: #e4e4e7; border-radius: 4px; }
+  .grn-scroll:hover::-webkit-scrollbar-thumb { background: #d4d4d8; }
+
+  /* grid card */
+  .grn-grid-card {
+    transition: box-shadow 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
+  }
+  .grn-grid-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px -4px rgba(0,0,0,0.08);
+    border-color: #bfdbfe;
+  }
+
+  /* flat card (horiz / vert) */
+  .grn-flat-card {
+    transition: background-color 0.12s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+  .grn-flat-card:hover {
+    background-color: #fafbff;
+    border-color: #bfdbfe;
+    box-shadow: 0 2px 8px -2px rgba(0,0,0,0.06);
+  }
+
+  /* vert row */
+  .grn-vert-row { transition: background-color 0.1s ease; }
+  .grn-vert-row:hover { background-color: #fafbff; }
+  .grn-vert-row:hover .grn-row-actions { opacity: 1; }
+  .grn-row-actions { opacity: 0; transition: opacity 0.15s ease; }
+`;
+
+/* ================= SHARED: STATUS DROPDOWN ================= */
+const StatusDropdown = ({
+  value,
+  onChange,
+}: {
+  value: GRNStatus;
+  onChange: (s: GRNStatus) => void;
+}) => {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const cfg = STATUS_CONFIG[value];
+
+  useEffect(() => {
+    const h = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, []);
+
   return (
-    <div className="space-y-3">
-      <GrnHeader/>
-      <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
-        
-        {/* TOOLBAR */}
-        <div className="p-4 border-b border-gray-100 flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="p-4 border-b border-slate-100 flex flex-col md:flex-row items-center justify-between gap-4 w-full">
-            <div className="relative w-full md:w-96">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-              <input 
-                className="w-full pl-10 pr-4 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-                placeholder="Search Batch, Product..."
-              />
-            </div>
-            <button className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
-              <Filter size={16} /> Filter
-            </button>
-          </div>
-        </div>
+    <div ref={ref} className="relative inline-block">
+      <button
+        onClick={(e) => { e.stopPropagation(); setOpen((p) => !p); }}
+        className={`grn-badge-btn inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold border select-none cursor-pointer ${cfg.badge}`}
+      >
+        <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${cfg.dot}`} />
+        {value}
+        <ChevronDown size={10} className={`shrink-0 transition-transform duration-150 ${open ? "rotate-180" : ""}`} />
+      </button>
 
-        {/* TABLE */}
-        <Table 
-          columns={GRN_COLUMNS}
-          data={tableData}
-          rowKey="id"
-        />
-      </div>
+      {open && (
+        <div className="grn-dropdown absolute top-full right-0 mt-1.5 w-36 bg-white border border-zinc-200 rounded-lg shadow-lg z-30 py-1 overflow-hidden">
+          {ALL_STATUSES.map((s) => {
+            const c = STATUS_CONFIG[s];
+            return (
+              <button
+                key={s}
+                onClick={(e) => { e.stopPropagation(); onChange(s); setOpen(false); }}
+                className={`w-full flex items-center justify-between gap-2 px-3 py-2 text-xs font-medium transition-colors hover:bg-zinc-50 ${c.option}`}
+              >
+                <span className="flex items-center gap-2">
+                  <span className={`w-1.5 h-1.5 rounded-full ${c.dot}`} />
+                  {s}
+                </span>
+                {s === value && <Check size={11} className="shrink-0 opacity-60" />}
+              </button>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 };
 
-export default GRNListView;
+/* ================= SHARED: PRODUCT PILL ================= */
+const ProductPill = ({ name, qty }: { name: string; qty: number }) => (
+  <span className="inline-flex items-center gap-1.5 text-xs font-medium text-zinc-600 bg-zinc-50 border border-zinc-100 px-2.5 py-1 rounded-full whitespace-nowrap">
+    {name}
+    <span className="text-zinc-400 font-semibold tabular-nums">×{qty}</span>
+  </span>
+);
+
+/* ================= SHARED: ACTION BUTTONS ================= */
+const ActionBtns = ({ onClick, cls = "" }: { onClick?: () => void; cls?: string }) => (
+  <div className={`flex items-center gap-1 ${cls}`}>
+    <button 
+      onClick={(e) => {
+        e.stopPropagation();
+        if (onClick) onClick();
+      }}
+      title="View Details" 
+      className="w-8 h-8 flex items-center justify-center rounded-lg text-zinc-400 hover:text-blue-600 hover:bg-blue-50 border border-transparent hover:border-blue-100 transition-all"
+    >
+      <Eye size={15} />
+    </button>
+    <button 
+      onClick={(e) => e.stopPropagation()}
+      title="More Options" 
+      className="w-8 h-8 flex items-center justify-center rounded-lg text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 border border-transparent hover:border-zinc-200 transition-all"
+    >
+      <MoreHorizontal size={15} />
+    </button>
+  </div>
+);
+
+/* ================= VIEW TOGGLE ================= */
+const ViewToggle = ({ current, onChange }: { current: ViewMode; onChange: (v: ViewMode) => void }) => {
+  const opts = [
+    { mode: "grid"       as ViewMode, icon: <LayoutGrid size={13} />,   label: "Grid" },
+    { mode: "horizontal" as ViewMode, icon: <AlignJustify size={13} />, label: "Horizontal" },
+    { mode: "vertical"   as ViewMode, icon: <List size={13} />,         label: "Vertical" },
+  ];
+  return (
+    <div className="inline-flex items-center bg-zinc-100 rounded-lg p-0.5 gap-0.5">
+      {opts.map(({ mode, icon, label }) => (
+        <button
+          key={mode}
+          onClick={() => onChange(mode)}
+          title={`${label} view`}
+          className={`flex items-center justify-center w-8 h-8 rounded-md transition-all ${
+            current === mode
+              ? "bg-white shadow-sm text-blue-600 border border-zinc-200"
+              : "text-zinc-400 hover:text-zinc-600"
+          }`}
+        >
+          {icon}
+        </button>
+      ))}
+    </div>
+  );
+};
+
+/* ================= GRID CARD ================= */
+const GridCard = ({
+  row,
+  onStatusChange,
+  onClick
+}: {
+  row: GRNRecord;
+  onStatusChange: (id: string, s: GRNStatus) => void;
+  onClick: () => void;
+}) => (
+  <div 
+    onClick={onClick}
+    className="grn-grid-card bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden flex flex-col group cursor-pointer"
+  >
+    {/* Header */}
+    <div className="px-4 py-3.5 border-b border-zinc-100 bg-zinc-50/50 flex items-center justify-between gap-3">
+      <div className="flex items-center gap-2 min-w-0">
+        <div className="w-7 h-7 rounded-md bg-blue-50 flex items-center justify-center shrink-0">
+          <FileText size={13} className="text-blue-600" />
+        </div>
+        <span className="text-sm font-semibold text-zinc-800 tracking-tight truncate">{row.poReference}</span>
+      </div>
+      <StatusDropdown value={row.status} onChange={(s) => onStatusChange(row.id, s)} />
+    </div>
+
+    {/* Meta */}
+    <div className="px-4 py-3.5 grid grid-cols-2 gap-3 border-b border-zinc-100">
+      <div className="flex items-start gap-2">
+        <Building2 size={13} className="text-zinc-400 mt-0.5 shrink-0" />
+        <div className="min-w-0">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-400 mb-0.5">Supplier</p>
+          <p className="text-sm font-medium text-zinc-700 truncate">{row.supplier}</p>
+        </div>
+      </div>
+      <div className="flex items-start gap-2">
+        <Calendar size={13} className="text-zinc-400 mt-0.5 shrink-0" />
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-400 mb-0.5">Date</p>
+          <p className="text-sm font-medium text-zinc-700">{row.date}</p>
+        </div>
+      </div>
+    </div>
+
+    {/* Products */}
+    <div className="px-4 py-3.5 flex-1 bg-zinc-50/30">
+      <div className="flex items-center justify-between mb-2.5">
+        <div className="flex items-center gap-1.5">
+          <Package size={13} className="text-zinc-400" />
+          <span className="text-[10px] font-semibold uppercase tracking-widest text-zinc-400">Products</span>
+        </div>
+        <span className="text-[10px] font-semibold text-zinc-500 bg-zinc-100 px-2 py-0.5 rounded-full">
+          {row.products.length} types
+        </span>
+      </div>
+      <div className="grn-scroll max-h-[90px] overflow-y-auto pr-1 space-y-2">
+        {row.products.map((p, i) => (
+          <div key={i} className="flex items-center justify-between text-sm">
+            <span className="text-zinc-600 truncate pr-2">{p.name}</span>
+            <span className="shrink-0 text-xs font-semibold text-zinc-500 tabular-nums bg-white border border-zinc-100 px-2 py-0.5 rounded-md shadow-sm">
+              ×{p.quantity}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+
+    {/* Footer */}
+    <div className="px-4 py-3.5 border-t border-zinc-100 flex items-center justify-between bg-white mt-auto">
+      <div className="flex gap-5">
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-400 mb-0.5">Total Value</p>
+          <p className="text-base font-semibold text-zinc-900 tabular-nums">${row.totalValue.toLocaleString()}</p>
+        </div>
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-400 mb-0.5">Total Qty</p>
+          <p className="text-base font-semibold text-zinc-700 tabular-nums">{row.itemsCount}</p>
+        </div>
+      </div>
+      <ActionBtns onClick={onClick} />
+    </div>
+  </div>
+);
+
+/* ================= HORIZONTAL CARD ================= */
+const HorizontalCard = ({
+  row,
+  onStatusChange,
+  onClick
+}: {
+  row: GRNRecord;
+  onStatusChange: (id: string, s: GRNStatus) => void;
+  onClick: () => void;
+}) => (
+  <div 
+    onClick={onClick}
+    className="grn-flat-card bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden cursor-pointer group"
+  >
+    {/* Main row */}
+    <div className="flex items-center gap-4 px-5 py-4 border-b border-zinc-100">
+      {/* PO */}
+      <div className="flex items-center gap-2.5 w-40 shrink-0">
+        <div className="w-7 h-7 rounded-md bg-blue-50 flex items-center justify-center shrink-0">
+          <FileText size={13} className="text-blue-600" />
+        </div>
+        <span className="text-sm font-semibold text-zinc-800 truncate">{row.poReference}</span>
+      </div>
+
+      <div className="h-7 w-px bg-zinc-100 shrink-0" />
+
+      {/* Supplier */}
+      <div className="flex items-center gap-2 w-36 shrink-0">
+        <Building2 size={13} className="text-zinc-400 shrink-0" />
+        <span className="text-sm font-medium text-zinc-700 truncate">{row.supplier}</span>
+      </div>
+
+      <div className="h-7 w-px bg-zinc-100 shrink-0" />
+
+      {/* Date */}
+      <div className="flex items-center gap-2 w-32 shrink-0">
+        <Calendar size={13} className="text-zinc-400 shrink-0" />
+        <span className="text-sm text-zinc-600">{row.date}</span>
+      </div>
+
+      <div className="h-7 w-px bg-zinc-100 shrink-0 hidden sm:block" />
+
+      {/* Items */}
+      <div className="hidden sm:flex items-center gap-1.5 shrink-0">
+        <Package size={13} className="text-zinc-400" />
+        <span className="text-xs text-zinc-500">{row.products.length} types · {row.itemsCount} units</span>
+      </div>
+
+      {/* Spacer */}
+      <div className="flex-1" />
+
+      {/* Status */}
+      <StatusDropdown value={row.status} onChange={(s) => onStatusChange(row.id, s)} />
+
+      {/* Value */}
+      <div className="text-right shrink-0 ml-2">
+        <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-400 mb-0.5">Total</p>
+        <p className="text-sm font-semibold text-zinc-900 tabular-nums">${row.totalValue.toLocaleString()}</p>
+      </div>
+
+      <ActionBtns onClick={onClick} cls="ml-1" />
+    </div>
+
+    {/* Scrollable pill row */}
+    <div className="grn-scroll flex items-center gap-2 px-5 py-3 overflow-x-auto bg-zinc-50/40">
+      {row.products.map((p, i) => (
+        <ProductPill key={i} name={p.name} qty={p.quantity} />
+      ))}
+    </div>
+  </div>
+);
+
+/* ================= VERTICAL ROW ================= */
+const VerticalRow = ({
+  row,
+  onStatusChange,
+  onClick
+}: {
+  row: GRNRecord;
+  onStatusChange: (id: string, s: GRNStatus) => void;
+  onClick: () => void;
+}) => (
+  <div 
+    onClick={onClick}
+    className="grn-vert-row flex items-center gap-5 px-5 py-4 transition-colors cursor-pointer"
+  >
+    {/* Icon */}
+    <div className="w-8 h-8 rounded-md bg-blue-50 flex items-center justify-center shrink-0">
+      <FileText size={14} className="text-blue-600" />
+    </div>
+
+    {/* PO + supplier / date */}
+    <div className="flex-1 min-w-0">
+      <p className="text-sm font-semibold text-zinc-800 mb-0.5">{row.poReference}</p>
+      <div className="flex items-center gap-3 text-xs text-zinc-500">
+        <span className="flex items-center gap-1">
+          <Building2 size={11} className="text-zinc-400" /> {row.supplier}
+        </span>
+        <span className="text-zinc-300">·</span>
+        <span className="flex items-center gap-1">
+          <Calendar size={11} className="text-zinc-400" /> {row.date}
+        </span>
+      </div>
+    </div>
+
+    {/* Product pills (desktop) */}
+    <div className="hidden lg:flex flex-wrap gap-1.5 max-w-xs shrink-0">
+      {row.products.slice(0, 3).map((p, i) => (
+        <ProductPill key={i} name={p.name} qty={p.quantity} />
+      ))}
+      {row.products.length > 3 && (
+        <span className="text-xs font-medium text-zinc-400 bg-zinc-50 border border-zinc-100 px-2.5 py-1 rounded-full">
+          +{row.products.length - 3} more
+        </span>
+      )}
+    </div>
+
+    {/* Status */}
+    <StatusDropdown value={row.status} onChange={(s) => onStatusChange(row.id, s)} />
+
+    {/* Stats */}
+    <div className="shrink-0 flex items-center gap-5">
+      <div className="hidden sm:block text-right">
+        <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-400">Qty</p>
+        <p className="text-sm font-semibold text-zinc-700 tabular-nums">{row.itemsCount}</p>
+      </div>
+      <div className="text-right">
+        <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-400">Total</p>
+        <p className="text-sm font-semibold text-zinc-900 tabular-nums">${row.totalValue.toLocaleString()}</p>
+      </div>
+      <div className="grn-row-actions">
+        <ActionBtns onClick={onClick} />
+      </div>
+    </div>
+  </div>
+);
+
+/* ================= MAIN COMPONENT ================= */
+const GRNCardView = () => {
+  const [records,  setRecords]  = useState<GRNRecord[]>(INITIAL_DATA);
+  const [search,   setSearch]   = useState("");
+  const [viewMode, setViewMode] = useState<ViewMode>("grid");
+
+  // State to handle modal visibility and data
+  const [selectedGRN, setSelectedGRN] = useState<GRNRecord | null>(null);
+
+  const handleStatusChange = (id: string, status: GRNStatus) =>
+    setRecords((prev) => prev.map((r) => (r.id === id ? { ...r, status } : r)));
+
+  const handleCardClick = (record: GRNRecord) => {
+    setSelectedGRN(record);
+  };
+
+  const filtered = records.filter(
+    (r) =>
+      r.poReference.toLowerCase().includes(search.toLowerCase()) ||
+      r.supplier.toLowerCase().includes(search.toLowerCase()) ||
+      r.products.some((p) => p.name.toLowerCase().includes(search.toLowerCase()))
+  );
+
+  return (
+    <>
+      <style>{STYLES}</style>
+
+      <div className="space-y-5 pb-12">
+        <GrnHeader />
+
+        {/* ── Toolbar ── */}
+        <div className="bg-white px-4 py-3.5 rounded-xl border border-zinc-200 shadow-sm flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+          {/* Search */}
+          <div className="relative flex-1 max-w-sm">
+            <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" />
+            <input
+              className="w-full pl-9 pr-4 py-2.5 bg-zinc-50 border border-zinc-200 rounded-lg text-sm text-zinc-800 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 focus:bg-white transition-all"
+              placeholder="Search PO, supplier, product…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+
+          <button className="inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-zinc-600 bg-white border border-zinc-200 rounded-lg hover:bg-zinc-50 hover:border-zinc-300 transition-all shadow-sm whitespace-nowrap">
+            <SlidersHorizontal size={14} className="text-zinc-400" />
+            Filters
+          </button>
+
+          {search && (
+            <span className="self-center text-xs font-medium text-zinc-400 px-3 py-1 bg-zinc-100 rounded-full whitespace-nowrap">
+              {filtered.length} {filtered.length === 1 ? "result" : "results"}
+            </span>
+          )}
+
+          <div className="flex-1" />
+
+          {/* View toggle */}
+          <ViewToggle current={viewMode} onChange={setViewMode} />
+        </div>
+
+        {/* ── Empty state ── */}
+        {filtered.length === 0 ? (
+          <div className="py-20 text-center bg-white border border-dashed border-zinc-200 rounded-xl">
+            <Search size={28} className="mx-auto mb-3 text-zinc-300" />
+            <p className="text-sm font-medium text-zinc-600">No records found</p>
+            <p className="text-xs text-zinc-400 mt-1">Try adjusting your search or filters</p>
+          </div>
+        ) : viewMode === "grid" ? (
+
+          /* ── GRID ── */
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+            {filtered.map((row) => (
+              <GridCard key={row.id} row={row} onStatusChange={handleStatusChange} onClick={() => handleCardClick(row)} />
+            ))}
+          </div>
+
+        ) : viewMode === "horizontal" ? (
+
+          /* ── HORIZONTAL ── */
+          <div className="flex flex-col gap-3">
+            {filtered.map((row) => (
+              <HorizontalCard key={row.id} row={row} onStatusChange={handleStatusChange} onClick={() => handleCardClick(row)} />
+            ))}
+          </div>
+
+        ) : (
+
+          /* ── VERTICAL ── */
+          <div className="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden divide-y divide-zinc-100">
+            {filtered.map((row) => (
+              <VerticalRow key={row.id} row={row} onStatusChange={handleStatusChange} onClick={() => handleCardClick(row)} />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* ── MODAL COMPONENT ── */}
+      <FloatingFormCard
+        isOpen={!!selectedGRN}
+        onClose={() => setSelectedGRN(null)}
+        title={selectedGRN ? `GRN Details: ${selectedGRN.poReference}` : "Details"}
+        maxWidth="max-w-2xl"
+      >
+        {selectedGRN && (
+          <div className="space-y-6">
+            
+            {/* Meta Information Grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 bg-zinc-50 p-4 rounded-xl border border-zinc-100">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-1">Supplier</p>
+                <p className="text-sm font-semibold text-zinc-800">{selectedGRN.supplier}</p>
+              </div>
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-1">Date</p>
+                <p className="text-sm font-semibold text-zinc-800">{selectedGRN.date}</p>
+              </div>
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-1">Status</p>
+                {/* Visual badge representing the status */}
+                <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border whitespace-nowrap ${STATUS_CONFIG[selectedGRN.status].badge}`}>
+                   {selectedGRN.status}
+                </span>
+              </div>
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-1">Total Value</p>
+                <p className="text-lg font-bold text-blue-600">${selectedGRN.totalValue.toLocaleString()}</p>
+              </div>
+            </div>
+
+            {/* Products List */}
+            <div>
+              <div className="flex items-center gap-2 mb-3 border-b border-zinc-100 pb-2">
+                <Package size={16} className="text-zinc-400" />
+                <h3 className="text-sm font-bold text-zinc-800">Received Products</h3>
+                <span className="text-xs font-semibold text-zinc-500 bg-zinc-100 px-2 py-0.5 rounded-full ml-auto">
+                  {selectedGRN.itemsCount} Total Units
+                </span>
+              </div>
+              
+              <div className="space-y-2 max-h-[40vh] overflow-y-auto pr-2 grn-scroll">
+                {selectedGRN.products.map((product, idx) => (
+                  <div key={idx} className="flex items-center justify-between p-3 rounded-lg border border-zinc-100 hover:border-blue-100 hover:bg-blue-50/30 transition-colors">
+                    <span className="text-sm font-medium text-zinc-700">{product.name}</span>
+                    <span className="text-sm font-bold text-zinc-600 bg-white px-3 py-1 rounded-md border border-zinc-200 shadow-sm">
+                      x{product.quantity}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex justify-end gap-3 pt-4 border-t border-zinc-100">
+              <button 
+                onClick={() => setSelectedGRN(null)}
+                className="px-4 py-2 text-sm font-semibold text-zinc-600 bg-white border border-zinc-200 hover:bg-zinc-50 rounded-lg transition-colors"
+              >
+                Close
+              </button>
+              <button className="px-4 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 shadow-sm rounded-lg transition-colors">
+                Process GRN
+              </button>
+            </div>
+            
+          </div>
+        )}
+      </FloatingFormCard>
+    </>
+  );
+};
+
+export default GRNCardView;

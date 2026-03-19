@@ -7,8 +7,14 @@ import { Filter, Search } from "lucide-react";
 import Table from "@/components/common/Table";
 import PurchaseHeader from "@/features/purchase/components/PurchaseHeader"
 
-/* ================= TYPES ================= */
-// It's best practice to define the structure of a single product
+
+export interface Column {
+  key: keyof PurchaseHistoryData | "action";
+  label: string;
+  render?: (value: any, row: PurchaseHistoryData) => ReactNode;
+}
+
+/* ================= MOCK DATA ================= */
 export interface ProductItem {
   name: string;
   quantity: number;
@@ -19,19 +25,12 @@ export interface PurchaseHistoryData {
   date: string;
   time: string;
   supplier: string;
-  products: ProductItem[]; // Changed from a single string to an array of products
+  products: ProductItem[];
   total_cost: number;
   invoice_no: string;
-  status: "Paid" | "Pending";
+  status: "Paid" | "Pending" | "Overdue" | "Partial" | "Processing";
 }
 
-export interface Column {
-  key: keyof PurchaseHistoryData | "action";
-  label: string;
-  render?: (value: any, row: PurchaseHistoryData) => ReactNode;
-}
-
-/* ================= MOCK DATA ================= */
 export const MOCK_PURCHASES: PurchaseHistoryData[] = [
   {
     id: 1,
@@ -55,12 +54,53 @@ export const MOCK_PURCHASES: PurchaseHistoryData[] = [
       { name: "Ergonomic Mouse", quantity: 5 },
       { name: "27-inch Monitor", quantity: 2 },
       { name: "USB-C Hub", quantity: 10 },
-      // ... imagine 16 more products here
+      { name: "DisplayPort Cable", quantity: 15 },
+      { name: "Webcam 1080p", quantity: 4 }
     ],
     total_cost: 45000,
     invoice_no: "INV-005",
     status: "Pending",
   },
+  {
+    id: 3,
+    date: "April 22, 2024",
+    time: "09:30 AM",
+    supplier: "Apex Wholesale",
+    products: [
+      { name: "Office Chair Ergonomic", quantity: 12 },
+      { name: "Standing Desk Frame", quantity: 12 }
+    ],
+    total_cost: 8500,
+    invoice_no: "INV-006",
+    status: "Overdue",
+  },
+  {
+    id: 4,
+    date: "April 24, 2024",
+    time: "02:45 PM",
+    supplier: "Nexus Distribution",
+    products: [
+      { name: "Server Rack 42U", quantity: 1 },
+      { name: "Patch Panel 24-port", quantity: 5 },
+      { name: "Cat6 Ethernet Spool", quantity: 2 }
+    ],
+    total_cost: 3200,
+    invoice_no: "INV-007",
+    status: "Partial",
+  },
+  {
+    id: 5,
+    date: "April 25, 2024",
+    time: "11:20 AM",
+    supplier: "Mainstream Inc",
+    products: [
+      { name: "Laptop Battery Pack", quantity: 20 },
+      { name: "65W USB-C Charger", quantity: 30 }
+    ],
+    total_cost: 2100,
+    invoice_no: "INV-008",
+    status: "Processing",
+  }
 ];
 
 /* ================= COLUMNS ================= */

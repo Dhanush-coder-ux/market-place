@@ -3,7 +3,6 @@ import { createBrowserRouter } from "react-router-dom";
 import Loader from "@/components/common/Loader";
 import PurchaseHistoryTab from "@/features/purchase/pages/Purchase";
 import HomeMade from "@/features/purchase/pages/HomeMade";
-import DirectPurchaseTableView from "@/features/purchase/pages/DirecetPurchaseTable";
 import GRNListView from "@/features/purchase/pages/GrnListView";
 import { DirectPurchaseOrder } from "@/features/purchase/pages/DirectPurchasForm";
 import GRNForm from "@/features/purchase/pages/GrnForm";
@@ -12,6 +11,8 @@ import PurchaseForm from "@/features/purchase/pages/PurchaseForm";
 import ProductForm from "@/features/product/pages/ProductForm";
 import CustomerBalanceSummary from "@/features/customer/pages/CustomerBalanceSummary";
 import CustomerProfile from "@/features/customer/pages/CustomerManagement";
+import PurchaseHistory from "@/features/purchase/pages/PurchaseHistory";
+import SalesListPage from "@/features/sales/pages/SalesPage";
 
 
 // Layout & Auth
@@ -73,6 +74,9 @@ export const router = createBrowserRouter([
     ),
     children: [
       { index: true, element: <AnalyticsDashboard /> },
+      { path: "/sales",element:<SalesListPage/>}, 
+
+
       { path: 'product', element: <Product /> },
       { path: '/product/detail', element: <ProductDetail /> },
       { path: "/product/add",element:<ProductForm/>},
@@ -82,7 +86,7 @@ export const router = createBrowserRouter([
       { path: "/purchase-order/add", element:<PurchaseForm/>},
       { path: "/po-grn", element: <GRNListView/>},
       { path: '/po-grn/add', element:<GRNForm/>},
-      { path: "/direct-purchase" , element: <DirectPurchaseTableView/>},
+      { path: "/purchase-history" , element: <PurchaseHistory/>},
       { path: "/direct-purchase/add", element:<DirectPurchaseOrder/>},
       { path: "/production-entry",element:<HomeMade/>},
       {path :"/production-entry/add",element:<ProductionForm/>},

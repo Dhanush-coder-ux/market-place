@@ -213,7 +213,7 @@ export default function CustomerBalanceSummary() {
                         {/* Note: If using Next.js, replace <a> with <Link href={`/customers/${customer.id}`}> */}
                         {/* Note: If using React Router, replace <a> with <Link to={`/customers/${customer.id}`}> */}
                         <a 
-                          href={`/customers/${customer.id}`} 
+                         
                           className="font-semibold text-blue-600 hover:text-blue-800 hover:underline cursor-pointer transition text-base"
                         >
                           {customer.name}

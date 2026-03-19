@@ -1,4 +1,4 @@
-import { UserCircle, Wallet } from "lucide-react";
+import { History, icons, IndianRupee, Plus, UserCircle, Wallet } from "lucide-react";
 import {
   Database,
   LayoutDashboard,
@@ -12,16 +12,18 @@ import {
 
 export const sidebarLinks = [
   { name: "Dashboard", icon: LayoutDashboard, path: "/" },
+  { name: "Sales",icon:IndianRupee,path:"/sales"},
+     { name: "Create Purchase ",icon: Plus, path: "/purchase-order/add"},
   {
     name: "Purchase",
     icon: Wallet,
     subLinks: [
-      { name: "Purchase order", path: "purchase-order"},
-      { name : "Direct" , path: "/direct-purchase"},
+      { name : "Create Po",path:"po-grn/add"},
       { name: "PO-GRN",path: "po-grn"},
       { name: "Production Entry", path: "/production-entry"}
     ]
   },
+     { name : "Purchase History" , path: "/purchase-history",icon:History},
   { 
     name: "Products", 
     icon: Package, 
@@ -30,12 +32,14 @@ export const sidebarLinks = [
       { name: "Add Product", path: "/product/add" },
     ]
   },
+ 
   { 
     name: "Procurement", 
     icon: Wallet, 
     subLinks: [
       { name: "Suppliers", path: "/supplier" },
-      { name:"Add Suppliers", path:"/supplier/add"}
+      { name:"Add Suppliers", path:"/supplier/add"},
+    
     ]
   },
   { 

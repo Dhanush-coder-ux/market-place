@@ -8,14 +8,6 @@ import {
 } from "lucide-react";
 import { BillingItem, InvoicePayload } from "../types";
 
-// ─── Types ───────────────────────────────────────────────────────────────────
-
-interface CartItem {
-  id: string;
-  name: string;
-  qty: number;
-  tprice: number;
-}
 
 type PaymentMode = "cash" | "upi" | "credit";
 

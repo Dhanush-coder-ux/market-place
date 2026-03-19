@@ -11,6 +11,7 @@ import { GradientButton } from "@/components/ui/GradientButton";
 import { ReceiptIcon } from "lucide-react";
 
 
+
 const Billing = () => {
   // ── Shared state ────────────────────────────────────────────────────────────
   // Lifted from BillingTable so BillingHeader always reflects the live cart.

@@ -35,7 +35,7 @@ export interface InvoicePayload {
   customer:     CustomerData | null;
   customerName: string;
   phone:        string;
-  items:        BillingItem[];
+  items:        BillingItem[]; // keep this
   totalQty:     number;
   totalAmount:  number;
   gstAmount:    number;
@@ -45,12 +45,4 @@ export interface InvoicePayload {
   date:         string;
 }
 
-// In your types file
-export interface CartItem {
-  id: string;
-  name: string;
-  qty: number;
-  tprice: number;
-  code: string;   // add this
-  price: number;  // add this
-}
+export type CartItem = BillingItem;

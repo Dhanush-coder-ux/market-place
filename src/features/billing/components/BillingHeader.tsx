@@ -6,6 +6,7 @@ import {
   PlusCircle, Loader2, CheckCircle2, CreditCard,
   Banknote, Smartphone, X, ChevronRight
 } from "lucide-react";
+import { BillingItem, InvoicePayload } from "../types";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -27,23 +28,10 @@ interface CustomerData {
   totalSpent: number;
 }
 
-interface InvoicePayload {
-  customer: CustomerData | null;
-  customerName: string;
-  phone: string;
-  items: CartItem[];
-  totalQty: number;
-  totalAmount: number;
-  gstAmount: number;
-  finalAmount: number;
-  includeGst: boolean;
-  paymentMode: PaymentMode;
-  date: string;
-  
-}
+
 
 interface BillingHeaderProps {
-  items: CartItem[];
+  items:BillingItem[];
   setIsOpen: React.Dispatch<React.SetStateAction<boolean>>;
   onInvoiceReady?: (payload: InvoicePayload) => void;
 }

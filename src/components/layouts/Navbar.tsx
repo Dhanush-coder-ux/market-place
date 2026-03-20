@@ -119,8 +119,8 @@ export const Navbar = () => {
       {/* LEFT - Store Selector */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <button className="flex items-center gap-3 py-1.5 px-2 hover:bg-slate-100 rounded-xl transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500/20 group">
-            <div className="w-9 h-9 flex items-center justify-center bg-indigo-50 rounded-lg text-indigo-600 border border-indigo-100 group-hover:bg-indigo-100 transition-colors">
+          <button className="flex items-center gap-3 py-1.5 px-2 hover:bg-slate-100 rounded-xl transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500/20 group">
+            <div className="w-9 h-9 flex items-center justify-center bg-blue-50 rounded-lg text-blue-600 border border-blue-100 group-hover:bg-blue-100 transition-colors">
               <Store className="w-4 h-4" />
             </div>
             <div className="flex flex-col items-start text-left hidden sm:flex">
@@ -145,25 +145,25 @@ export const Navbar = () => {
               key={store.id}
               onClick={() => setSelectedStore(store)}
               className={`flex items-center justify-between cursor-pointer rounded-xl px-2.5 py-2 my-0.5 transition-colors ${
-                selectedStore.id === store.id ? "bg-indigo-50 text-indigo-700" : "hover:bg-slate-50 text-slate-700"
+                selectedStore.id === store.id ? "bg-blue-50 text-blue-700" : "hover:bg-slate-50 text-slate-700"
               }`}
             >
               <div className="flex items-center gap-3">
                 <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold border ${
-                  selectedStore.id === store.id ? "bg-white border-indigo-200 text-indigo-600" : "bg-slate-100 border-slate-200 text-slate-500"
+                  selectedStore.id === store.id ? "bg-white border-blue-200 text-blue-600" : "bg-slate-100 border-slate-200 text-slate-500"
                 }`}>
                   {store.name.charAt(0)}
                 </div>
                 <span className="font-semibold text-sm">{store.name}</span>
               </div>
-              {selectedStore.id === store.id && <Check className="w-4 h-4 text-indigo-600" />}
+              {selectedStore.id === store.id && <Check className="w-4 h-4 text-blue-600" />}
             </DropdownMenuItem>
           ))}
 
           <DropdownMenuSeparator className="bg-slate-100 my-1.5" />
 
           <Link to="/profile/add">
-            <DropdownMenuItem className="cursor-pointer text-indigo-600 rounded-xl px-2.5 py-2 hover:bg-indigo-50 font-medium">
+            <DropdownMenuItem className="cursor-pointer text-blue-600 rounded-xl px-2.5 py-2 hover:bg-blue-50 font-medium">
               <PlusCircle className="w-4 h-4 mr-2" />
               Create New Store
             </DropdownMenuItem>
@@ -174,7 +174,7 @@ export const Navbar = () => {
       {/* CENTER - Global Search (Command Palette Style) */}
       <div className="relative flex-1 max-w-lg mx-4 lg:mx-8 hidden md:block" ref={searchRef}>
         <div className="relative group">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
           <input
             ref={inputRef}
             type="text"

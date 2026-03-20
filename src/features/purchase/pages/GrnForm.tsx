@@ -114,7 +114,7 @@ const GRNForm: React.FC<GRNFormProps> = ({ onSubmit, onCancel }) => {
   };
 
   return (
-    <div className="p-6 max-w-5xl mx-auto">
+    <div className="p-6 mx-auto">
       <div className="mb-6">
         <h2 className="text-xl font-bold text-gray-900">Create New GRN</h2>
         <p className="text-sm text-gray-500">Enter the details for the Good Receipt Note below.</p>

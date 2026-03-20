@@ -4,7 +4,6 @@ import Loader from "@/components/common/Loader";
 import PurchaseHistoryTab from "@/features/purchase/pages/Purchase";
 import HomeMade from "@/features/purchase/pages/HomeMade";
 import GRNListView from "@/features/purchase/pages/GrnListView";
-import { DirectPurchaseOrder } from "@/features/purchase/pages/DirectPurchasForm";
 import GRNForm from "@/features/purchase/pages/GrnForm";
 import ProductionForm from "@/features/purchase/pages/ProductionForm";
 import PurchaseForm from "@/features/purchase/pages/PurchaseForm";
@@ -87,7 +86,6 @@ export const router = createBrowserRouter([
       { path: "/po-grn", element: <GRNListView/>},
       { path: '/po-grn/add', element:<GRNForm/>},
       { path: "/purchase-history" , element: <PurchaseHistory/>},
-      { path: "/direct-purchase/add", element:<DirectPurchaseOrder/>},
       { path: "/production-entry",element:<HomeMade/>},
       {path :"/production-entry/add",element:<ProductionForm/>},
       

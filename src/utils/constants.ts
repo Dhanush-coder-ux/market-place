@@ -47,6 +47,7 @@ export const sidebarLinks = [
     icon: Database, 
     subLinks: [
       { name: "Stock Levels", path: "/inventory" },
+      { name: "Stock Movements" ,path: "/stock-movement"},
       { name: "Low Stock Refill", path: "/inventory/re-fill" },
       { name: "Add Inventory",path: "/inventory/add"}
     ]

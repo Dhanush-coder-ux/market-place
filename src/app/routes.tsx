@@ -12,6 +12,7 @@ import CustomerBalanceSummary from "@/features/customer/pages/CustomerBalanceSum
 import CustomerProfile from "@/features/customer/pages/CustomerManagement";
 import PurchaseHistory from "@/features/purchase/pages/PurchaseHistory";
 import SalesListPage from "@/features/sales/pages/SalesPage";
+import StockMovementPage from "@/features/inventory/pages/StockMovement";
 
 
 // Layout & Auth
@@ -101,6 +102,7 @@ export const router = createBrowserRouter([
       { path: '/employee/add', element: <EmployeeForm /> },
       
       { path: '/inventory', element: <Inventory /> },
+      { path: "/stock-movement" ,element:<StockMovementPage/>},
       { path: '/inventory/add', element: <InventoryForm /> },
       { path: '/inventory/re-fill', element: <RefillPage /> },
       

@@ -1,7 +1,6 @@
 import React, { Suspense } from "react";
 import { createBrowserRouter } from "react-router-dom";
 import Loader from "@/components/common/Loader";
-import PurchaseHistoryTab from "@/features/purchase/pages/Purchase";
 import HomeMade from "@/features/purchase/pages/HomeMade";
 import GRNListView from "@/features/purchase/pages/GrnListView";
 import GRNForm from "@/features/purchase/pages/GrnForm";
@@ -49,8 +48,7 @@ const EmployeeForm = React.lazy(() => import("../features/employee/pages/Employe
 
 // Inventory
 const Inventory = React.lazy(() => import("../features/inventory/pages/Inventory"));
-const InventoryForm = React.lazy(() => import("../features/inventory/pages/InventoryForm"));
-const RefillPage = React.lazy(() => import("@/features/Refill/pages/LowStockRefill"));
+
 
 // Orders & Billing
 const Order = React.lazy(() => import("../features/order/pages/Order"));
@@ -82,7 +80,6 @@ export const router = createBrowserRouter([
       { path: "/product/add",element:<ProductForm/>},
 
       
-      { path: "/purchase-order" , element: <PurchaseHistoryTab/>},
       { path: "/purchase-order/add", element:<PurchaseForm/>},
       { path: "/po-grn", element: <GRNListView/>},
       { path: '/po-grn/add', element:<GRNForm/>},
@@ -103,8 +100,7 @@ export const router = createBrowserRouter([
       
       { path: '/inventory', element: <Inventory /> },
       { path: "/stock-movement" ,element:<StockMovementPage/>},
-      { path: '/inventory/add', element: <InventoryForm /> },
-      { path: '/inventory/re-fill', element: <RefillPage /> },
+ 
       
       { path: '/billing', element: <Billing /> },
       { path: '/orders', element: <Order /> },

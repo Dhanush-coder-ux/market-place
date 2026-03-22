@@ -22,7 +22,7 @@ export interface ProductItem {
   quantity: number;
 }
 
-export type PurchaseType = "Direct Purchase" | "PO Purchase" | "Production";
+export type PurchaseType = "Purchase" | "PO Purchase" | "Production";
 
 export interface DirectPurchaseData {
   id: string;
@@ -50,7 +50,7 @@ export const MOCK_DIRECT_PURCHASES: DirectPurchaseData[] = [
       { name: "USB-C Cables", quantity: 50 },
     ],
     total_cost: 1300,
-    purchaseType: "Direct Purchase",
+    purchaseType: "Purchase",
   },
   {
     id: "po-2",
@@ -138,7 +138,7 @@ const ArrowBtn = () => (
 const PurchaseTypeBadge = ({ type }: { type: PurchaseType }) => {
   let colors = "bg-zinc-100 text-zinc-600 border-zinc-200"; // Fallback
   
-  if (type === "Direct Purchase") colors = "bg-blue-50 text-blue-700 border-blue-100";
+  if (type === "Purchase") colors = "bg-blue-50 text-blue-700 border-blue-100";
   if (type === "PO Purchase") colors = "bg-purple-50 text-purple-700 border-purple-100";
   if (type === "Production") colors = "bg-amber-50 text-amber-700 border-amber-100";
 

@@ -13,17 +13,19 @@ import {
 export const sidebarLinks = [
   { name: "Dashboard", icon: LayoutDashboard, path: "/" },
   { name: "Sales",icon:IndianRupee,path:"/sales"},
-     { name: "Create Purchase ",icon: Plus, path: "/purchase-order/add"},
+
   {
     name: "Purchase",
     icon: Wallet,
     subLinks: [
+      { name: "Add Purchase ",icon: Plus, path: "/purchase-order/add"},
       { name : "Create Po",path:"po-grn/add"},
       { name: "PO-GRN",path: "po-grn"},
-      { name: "Production Entry", path: "/production-entry"}
+      { name: "Production Entry", path: "/production-entry"},
+      { name : "Purchase History" , path: "/purchase-history",icon:History},
     ]
   },
-     { name : "Purchase History" , path: "/purchase-history",icon:History},
+    
   { 
     name: "Products", 
     icon: Package, 

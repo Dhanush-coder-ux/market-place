@@ -1,5 +1,4 @@
-import { useNavigate } from "react-router-dom";
-import { AlertTriangleIcon, Package, PackageX, RefreshCcw } from "lucide-react";
+import { AlertTriangleIcon, Package, PackageX } from "lucide-react";
 import { GradientButton } from "@/components/ui/GradientButton";
 import Title from "@/components/common/Title";
 import type { InventoryHeaderProps } from "../types";
@@ -10,7 +9,6 @@ const InventoryHeader: React.FC<InventoryHeaderProps> = ({
   totalCount,
   lowestStockValue,
 }) => {
-  const navigator = useNavigate();
 
   return (
     <div className="flex flex-col space-y-3">
@@ -19,14 +17,7 @@ const InventoryHeader: React.FC<InventoryHeaderProps> = ({
 
 
         <div className="flex items-center gap-2 self-end sm:self-auto">
-          <GradientButton
-            onClick={() => navigator("/inventory/re-fill")}
-            variant="outline"
-            icon={<RefreshCcw size={16} />}
-            title="Refill Stock"
-          >
-            Refill Stock
-          </GradientButton>
+     
 
           <GradientButton
             type="button"

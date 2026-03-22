@@ -13,7 +13,7 @@ const DirectHeader = () => {
     <div className="space-y-3">
       <div className="flex justify-between items-center">
         <Title
-          title="Direct Purchase Management"
+          title="Purchase Management"
           subtitle="Monitor  supplier invoices, and payment statuses"
         />
         <GradientButton

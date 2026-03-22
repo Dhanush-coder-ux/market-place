@@ -3,7 +3,10 @@ import { Save, X, Plus, Trash2 } from "lucide-react";
 // Adjust imports to match your project structure
 import Input from "@/components/ui/Input"; 
 import { ReusableSelect } from "@/components/ui/ReusableSelect";
-import type { ProductItem } from "./Purchase";
+export interface ProductItem {
+  name: string;
+  quantity: number;
+}
 
 export type PurchaseStatus = "Paid" | "Pending";
 

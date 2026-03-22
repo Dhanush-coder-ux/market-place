@@ -271,10 +271,6 @@ const SalesListPage = () => {
             <h1 className="text-2xl font-semibold text-zinc-900 tracking-tight">Sales</h1>
             <p className="text-sm text-zinc-500 mt-0.5">All transactions — online, offline, walk-in</p>
           </div>
-          <button className="inline-flex items-center gap-2 px-4 py-2.5 bg-zinc-900 text-white text-sm font-medium rounded-lg hover:bg-zinc-800 transition-colors shadow-sm">
-            <Receipt size={14} />
-            New Sale
-          </button>
         </div>
 
         {/* ── Summary Cards ── */}

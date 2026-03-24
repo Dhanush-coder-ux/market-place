@@ -303,7 +303,7 @@ const PurchaseScreen = () => {
                   type="number" 
                   className="!text-lg !font-bold !text-blue-700"
                   value={payment.amountPaid as any}
-                  onChange={(e) => setPayment({...payment, amountPaid: e.target.value})}
+                  onChange={(e) => setPayment({...payment, amountPaid: e.target.value ? Number(e.target.value) : ""})}
                   placeholder={stats.grandTotal.toString()}
                 />
               </div>
@@ -350,7 +350,7 @@ const PurchaseScreen = () => {
                   placeholder="0.00" 
                   leftIcon={<span className="text-sm">₹</span>}
                   value={charges.transport as any}
-                  onChange={(e) => setCharges({...charges, transport: e.target.value})}
+                  onChange={(e) => setCharges({...charges, transport: e.target.value ? Number(e.target.value) : ""})}
                 />
                 
                 <Input 
@@ -359,7 +359,7 @@ const PurchaseScreen = () => {
                   placeholder="0.00" 
                   leftIcon={<span className="text-sm">₹</span>}
                   value={charges.other as any}
-                  onChange={(e) => setCharges({...charges, other: e.target.value})}
+                  onChange={(e) => setCharges({...charges, other: e.target.value ? Number(e.target.value) : ""})}
                 />
               </div>
 

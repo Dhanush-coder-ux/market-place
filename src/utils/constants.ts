@@ -21,7 +21,7 @@ export const sidebarLinks = [
       { name: "Add Purchase ",icon: Plus, path: "/purchase-order/add"},
       { name : "Create Po",path:"po-grn/add"},
       { name: "PO-GRN",path: "po-grn"},
-      { name: "Production Entry", path: "/production-entry"},
+   
       { name : "Purchase History" , path: "/purchase-history",icon:History},
     ]
   },
@@ -50,8 +50,6 @@ export const sidebarLinks = [
     subLinks: [
       { name: "Stock Levels", path: "/inventory" },
       { name: "Stock Movements" ,path: "/stock-movement"},
-      { name: "Low Stock Refill", path: "/inventory/re-fill" },
-      { name: "Add Inventory",path: "/inventory/add"}
     ]
   },
   { name: "Orders", icon: ShoppingCart, path: "/orders" },

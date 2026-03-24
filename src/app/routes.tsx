@@ -1,7 +1,6 @@
 import React, { Suspense } from "react";
 import { createBrowserRouter } from "react-router-dom";
 import Loader from "@/components/common/Loader";
-import HomeMade from "@/features/purchase/pages/HomeMade";
 import GRNListView from "@/features/purchase/pages/GrnListView";
 import GRNForm from "@/features/purchase/pages/GrnForm";
 import ProductionForm from "@/features/purchase/pages/ProductionForm";
@@ -84,7 +83,6 @@ export const router = createBrowserRouter([
       { path: "/po-grn", element: <GRNListView/>},
       { path: '/po-grn/add', element:<GRNForm/>},
       { path: "/purchase-history" , element: <PurchaseHistory/>},
-      { path: "/production-entry",element:<HomeMade/>},
       {path :"/production-entry/add",element:<ProductionForm/>},
       
     

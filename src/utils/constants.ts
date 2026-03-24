@@ -20,6 +20,7 @@ export const sidebarLinks = [
     subLinks: [
       { name: "Add Purchase ",icon: Plus, path: "/purchase-order/add"},
       { name : "Create Po",path:"po-grn/add"},
+      { name : "Update Po",path:"/po-grn/update"},
       { name: "PO-GRN",path: "po-grn"},
    
       { name : "Purchase History" , path: "/purchase-history",icon:History},
@@ -59,7 +60,7 @@ export const sidebarLinks = [
     icon: UserCircle,
     subLinks: [
       { name: "Customer Details", path: "/customers" },
-      { name: "Summary Balance", path: "/customers-Summary" },
+      { name: "Customers info", path: "/customers-Summary" },
  
     ]
   },

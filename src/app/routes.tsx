@@ -11,6 +11,7 @@ import CustomerProfile from "@/features/customer/pages/CustomerManagement";
 import PurchaseHistory from "@/features/purchase/pages/PurchaseHistory";
 import SalesListPage from "@/features/sales/pages/SalesPage";
 import StockMovementPage from "@/features/inventory/pages/StockMovement";
+import ReceiveGoodsPage from "@/features/purchase/pages/ReceiveGoodsForm";
 
 
 // Layout & Auth
@@ -82,6 +83,7 @@ export const router = createBrowserRouter([
       { path: "/purchase-order/add", element:<PurchaseForm/>},
       { path: "/po-grn", element: <GRNListView/>},
       { path: '/po-grn/add', element:<GRNForm/>},
+      { path: '/po-grn/update', element:<ReceiveGoodsPage/>},
       { path: "/purchase-history" , element: <PurchaseHistory/>},
       {path :"/production-entry/add",element:<ProductionForm/>},
       

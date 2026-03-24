@@ -115,7 +115,7 @@ export default function CustomerBalanceSummary() {
     <div className="mx-auto min-h-screen">
       <div className="flex items-start justify-between gap-4">
         <Title
-          title="Customer Balance Summary"
+          title="Customer Infos"
           subtitle="Track pending payments and customer accounts"
         />
       </div>

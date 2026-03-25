@@ -58,4 +58,4 @@ const ProductHeader = () => {
   )
 }
 
-export default ProductHeader
+export default ProductHeader;

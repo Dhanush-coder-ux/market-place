@@ -1,9 +1,7 @@
 
 import Title from '@/components/common/Title'
 import { GradientButton } from '@/components/ui/GradientButton'
-import { AlertTriangle, IndianRupee, Layers, Package} from 'lucide-react'
-import { MOCK_PRODUCTS } from '../pages/Product'
-import { StatCard } from '@/components/common/StatsCard'
+
 
 const ProductHeader = () => {
    
@@ -25,7 +23,7 @@ const ProductHeader = () => {
       </div>
 
       {/* Stats row */}
-      <div className='flex-none overflow-y-auto px-6 py-2.5 bg-accent'>
+      {/* <div className='flex-none overflow-y-auto px-6 py-2.5 bg-accent'>
       <div className="flex gap-2.5 ">
           <StatCard
      label="Total Products"
@@ -48,18 +46,12 @@ const ProductHeader = () => {
   iconBg="bg-red-50"
   iconColor="text-red-600"
 />
-          <StatCard
-       label="Inventory Value"
-          value="$12,450"
-          icon={IndianRupee}
-  iconBg="bg-green-50"
-  iconColor="text-green-600"
-/>
+  
    
 
       </div>
       </div>
-   
+    */}
 
     
     </div>

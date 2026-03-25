@@ -19,10 +19,11 @@ export const sidebarLinks = [
     icon: Wallet,
     subLinks: [
       { name: "Add Purchase ",icon: Plus, path: "/purchase-order/add"},
-      { name : "Create Po",path:"po-grn/add"},
-      { name : "Update Po",path:"/po-grn/update"},
-      { name: "PO-GRN",path: "po-grn"},
-   
+      { name : "Add Purchase Order",path:"po-grn/add"},
+      { name : "Update Purchase Order",path:"/po-grn/update"},
+      { name: "Purchase Order List",path: "po-grn"},
+      { name: "Production Entry",path: "/production-entry/add"},
+      
       { name : "Purchase History" , path: "/purchase-history",icon:History},
     ]
   },
@@ -51,6 +52,7 @@ export const sidebarLinks = [
     subLinks: [
       { name: "Stock Levels", path: "/inventory" },
       { name: "Stock Movements" ,path: "/stock-movement"},
+      { name: "Stock Adjustments" ,path: "/stock-adjustment"},
     ]
   },
   { name: "Orders", icon: ShoppingCart, path: "/orders" },

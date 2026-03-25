@@ -1,5 +1,5 @@
 import { AlertTriangleIcon, Package, PackageX } from "lucide-react";
-import { GradientButton } from "@/components/ui/GradientButton";
+
 import Title from "@/components/common/Title";
 import type { InventoryHeaderProps } from "../types";
 import { StatCard } from "@/components/common/StatsCard";
@@ -15,17 +15,6 @@ const InventoryHeader: React.FC<InventoryHeaderProps> = ({
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center ">
         <Title title="Inventory" subtitle="Manage and track your product inventory" />
 
-
-        <div className="flex items-center gap-2 self-end sm:self-auto">
-     
-
-          <GradientButton
-            type="button"
-            path="/inventory/add"
-          >
-            + Add Inventory
-          </GradientButton>
-        </div>
       </div>
 
       <div className='flex-none overflow-y-auto px-6 py-2.5 bg-accent'>

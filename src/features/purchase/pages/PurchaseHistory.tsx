@@ -237,53 +237,66 @@ const HorizontalCard = ({ po, onClick }: { po: DirectPurchaseData; onClick: () =
       className="po-card-flat group bg-white rounded-xl border border-zinc-200 shadow-sm cursor-pointer overflow-hidden"
     >
       <div className="flex flex-wrap md:flex-nowrap items-center gap-4 px-5 py-4 border-b border-zinc-100">
+        
         {/* PO icon + number + badge */}
-        <div className="flex items-center gap-3 w-full md:w-auto md:min-w-[14rem] shrink-0">
-          <div className="w-7 h-7 rounded-md bg-blue-50 flex items-center justify-center shrink-0">
-            <ReceiptText size={14} className="text-blue-600" />
-          </div>
-          <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 min-w-0">
-            <span className="text-sm font-semibold text-zinc-800 truncate">{po.poNumber}</span>
-            <PurchaseTypeBadge type={po.purchaseType} />
+        <div className="w-full md:w-auto md:min-w-[14rem] shrink-0">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-400 mb-1">PO Details</p>
+          <div className="flex items-center gap-3">
+            <div className="w-7 h-7 rounded-md bg-blue-50 flex items-center justify-center shrink-0">
+              <ReceiptText size={14} className="text-blue-600" />
+            </div>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 min-w-0">
+              <span className="text-sm font-semibold text-zinc-800 truncate">{po.poNumber}</span>
+              <PurchaseTypeBadge type={po.purchaseType} />
+            </div>
           </div>
         </div>
 
-        <div className="hidden md:block h-8 w-px bg-zinc-100 shrink-0" />
+        <div className="hidden md:block h-10 w-px bg-zinc-100 shrink-0" />
 
         {/* Vendor */}
-        <div className="flex items-center gap-2 w-36 shrink-0">
-          <Building2 size={13} className="text-zinc-400 shrink-0" />
-          <span className="text-sm font-medium text-zinc-700 truncate">{po.vendor}</span>
+        <div className="w-36 shrink-0">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-400 mb-1">Vendor</p>
+          <div className="flex items-center gap-2">
+            <Building2 size={13} className="text-zinc-400 shrink-0" />
+            <span className="text-sm font-medium text-zinc-700 truncate">{po.vendor}</span>
+          </div>
         </div>
 
-        <div className="hidden md:block h-8 w-px bg-zinc-100 shrink-0" />
+        <div className="hidden md:block h-10 w-px bg-zinc-100 shrink-0" />
 
         {/* Date */}
-        <div className="flex items-center gap-2 w-44 shrink-0">
-          <Calendar size={13} className="text-zinc-400 shrink-0" />
-          <div>
-            <span className="text-sm text-zinc-600">{po.date}</span>
-            <span className="text-xs text-zinc-400 ml-2">{po.time}</span>
+        <div className="w-44 shrink-0">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-400 mb-1">Date</p>
+          <div className="flex items-center gap-2">
+            <Calendar size={13} className="text-zinc-400 shrink-0" />
+            <div>
+              <span className="text-sm text-zinc-600">{po.date}</span>
+              <span className="text-xs text-zinc-400 ml-2">{po.time}</span>
+            </div>
           </div>
         </div>
 
-        <div className="hidden lg:block h-8 w-px bg-zinc-100 shrink-0" />
+        <div className="hidden lg:block h-10 w-px bg-zinc-100 shrink-0" />
 
         {/* Items + qty */}
-        <div className="hidden lg:flex items-center gap-3 shrink-0">
-          <div className="flex items-center gap-1.5">
-            <Package size={13} className="text-zinc-400" />
-            <span className="text-xs text-zinc-500">{po.products.length} types</span>
+        <div className="hidden lg:block shrink-0">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-400 mb-1">Items</p>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1.5">
+              <Package size={13} className="text-zinc-400" />
+              <span className="text-xs text-zinc-500">{po.products.length} types</span>
+            </div>
+            <span className="text-zinc-300">·</span>
+            <span className="text-xs text-zinc-500 tabular-nums">{totalQty} units</span>
           </div>
-          <span className="text-zinc-300">·</span>
-          <span className="text-xs text-zinc-500 tabular-nums">{totalQty} units</span>
         </div>
 
         <div className="flex-1" />
 
         {/* Total */}
         <div className="shrink-0 text-right mr-2 ml-auto md:ml-0">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-400 mb-0.5">Total</p>
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-400 mb-1">Total</p>
           <p className="text-base font-semibold text-zinc-900 tabular-nums tracking-tight">{fmt(po.total_cost)}</p>
         </div>
 
@@ -300,7 +313,7 @@ const HorizontalCard = ({ po, onClick }: { po: DirectPurchaseData; onClick: () =
   );
 };
 
-/* ================= VERTICAL ROW ================= */
+/* ================= VERTICAL CARD ================= */
 const VerticalCard = ({ po, onClick }: { po: DirectPurchaseData; onClick: () => void }) => {
   const totalQty = po.products.reduce((s, i) => s + i.quantity, 0);
   return (
@@ -308,48 +321,61 @@ const VerticalCard = ({ po, onClick }: { po: DirectPurchaseData; onClick: () => 
       onClick={onClick}
       className="po-row group flex items-center gap-5 px-5 py-4 cursor-pointer transition-colors"
     >
-      {/* Icon */}
-      <div className="w-8 h-8 rounded-md bg-blue-50 flex items-center justify-center shrink-0">
-        <ReceiptText size={14} className="text-blue-600" />
+      {/* PO + Type Badge */}
+      <div className="flex items-center gap-3 w-48 shrink-0">
+        <div className="w-8 h-8 rounded-md bg-blue-50 flex items-center justify-center shrink-0 mt-2">
+          <ReceiptText size={14} className="text-blue-600" />
+        </div>
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-400 mb-1">PO Details</p>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 min-w-0">
+            <span className="text-sm font-semibold text-zinc-800 truncate">{po.poNumber}</span>
+            <PurchaseTypeBadge type={po.purchaseType} />
+          </div>
+        </div>
       </div>
 
-      {/* PO + vendor + badge */}
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 mb-1">
-          <p className="text-sm font-semibold text-zinc-800">{po.poNumber}</p>
-          <PurchaseTypeBadge type={po.purchaseType} />
+      {/* Vendor */}
+      <div className="w-36 shrink-0">
+        <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-400 mb-1">Vendor</p>
+        <div className="flex items-center gap-1.5 text-sm font-medium text-zinc-700 truncate">
+          <Building2 size={13} className="text-zinc-400 shrink-0" /> {po.vendor}
         </div>
-        <div className="flex items-center gap-2.5 text-xs text-zinc-500">
-          <span className="flex items-center gap-1">
-            <Building2 size={11} className="text-zinc-400" /> {po.vendor}
-          </span>
-          <span className="text-zinc-300">·</span>
-          <span className="flex items-center gap-1">
-            <Calendar size={11} className="text-zinc-400" /> {po.date}
-          </span>
+      </div>
+
+      {/* Date */}
+      <div className="w-32 shrink-0">
+        <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-400 mb-1">Date</p>
+        <div className="flex items-center gap-1.5 text-sm text-zinc-600">
+          <Calendar size={13} className="text-zinc-400 shrink-0" /> {po.date}
         </div>
       </div>
 
       {/* Product pills (desktop) */}
-      <div className="hidden lg:flex flex-wrap gap-1.5 max-w-sm">
-        {po.products.slice(0, 3).map((p, idx) => (
-          <ProductPill key={idx} name={p.name} qty={p.quantity} />
-        ))}
-        {po.products.length > 3 && (
-          <span className="text-xs font-medium text-zinc-400 bg-zinc-50 border border-zinc-100 px-2.5 py-1 rounded-full">
-            +{po.products.length - 3} more
-          </span>
-        )}
+      <div className="hidden lg:block flex-1 min-w-0">
+        <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-400 mb-1">
+          Products ({po.products.length})
+        </p>
+        <div className="flex flex-wrap gap-1.5 max-w-sm">
+          {po.products.slice(0, 3).map((p, idx) => (
+            <ProductPill key={idx} name={p.name} qty={p.quantity} />
+          ))}
+          {po.products.length > 3 && (
+            <span className="text-xs font-medium text-zinc-400 bg-zinc-50 border border-zinc-100 px-2.5 py-1 rounded-full whitespace-nowrap">
+              +{po.products.length - 3} more
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Stats */}
       <div className="shrink-0 flex items-center gap-6">
-        <div className="hidden sm:block text-right">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-400">Qty</p>
+        <div className="hidden sm:block text-right w-16">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-400 mb-1">Qty</p>
           <p className="text-sm font-semibold text-zinc-700 tabular-nums">{totalQty}</p>
         </div>
-        <div className="text-right">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-400">Total</p>
+        <div className="text-right w-20">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-400 mb-1">Total</p>
           <p className="text-sm font-semibold text-zinc-900 tabular-nums">{fmt(po.total_cost)}</p>
         </div>
         <ArrowBtn />
@@ -357,7 +383,6 @@ const VerticalCard = ({ po, onClick }: { po: DirectPurchaseData; onClick: () => 
     </div>
   );
 };
-
 /* ================= VIEW TOGGLE ================= */
 const ViewToggle = ({
   current,

@@ -98,7 +98,24 @@ const AnalyticsDashboard = () => {
         .fade-up-6 { animation-delay: 0.3s; opacity: 0; }
       `}</style>
 
-      {/* ── TOP BAR ── */}
+   
+
+      <div className="p-6 space-y-5">
+
+        {/* ── STAT CARDS ── */}
+        <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
+          {[
+            { title: "Daily Revenue", value: "₹8,750", change: "12%", positive: true, subtitle: "Daily since yesterday", icon: "💰", accent: "bg-blue-50" },
+            { title: "Monthly Revenue", value: "₹2,40,500", change: "18%", positive: true, subtitle: "36 days since last month", icon: "📈", accent: "bg-violet-50" },
+            { title: "Today's Orders", value: "47", change: "7%", positive: false, subtitle: "3 sec. since yesterday", icon: "🛒", accent: "bg-amber-50" },
+            { title: "Avg. Order Value", value: "₹186", change: "12%", positive: true, subtitle: "112% since yesterday", icon: "⚡", accent: "bg-emerald-50" },
+          ].map((s, i) => (
+            <div key={s.title} className={`fade-up fade-up-${i + 1}`}>
+              <StatCard {...s} />
+            </div>
+          ))}
+        </div>
+             {/* ── TOP BAR ── */}
       <div className="bg-white border-b border-slate-100 ">
         <div className="flex items-center justify-between px-6 py-4">
           <div>
@@ -124,23 +141,6 @@ const AnalyticsDashboard = () => {
           </div>
         </div>
       </div>
-
-      <div className="p-6 space-y-5">
-
-        {/* ── STAT CARDS ── */}
-        <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
-          {[
-            { title: "Daily Revenue", value: "₹8,750", change: "12%", positive: true, subtitle: "Daily since yesterday", icon: "💰", accent: "bg-blue-50" },
-            { title: "Monthly Revenue", value: "₹2,40,500", change: "18%", positive: true, subtitle: "36 days since last month", icon: "📈", accent: "bg-violet-50" },
-            { title: "Today's Orders", value: "47", change: "7%", positive: false, subtitle: "3 sec. since yesterday", icon: "🛒", accent: "bg-amber-50" },
-            { title: "Avg. Order Value", value: "₹186", change: "12%", positive: true, subtitle: "112% since yesterday", icon: "⚡", accent: "bg-emerald-50" },
-          ].map((s, i) => (
-            <div key={s.title} className={`fade-up fade-up-${i + 1}`}>
-              <StatCard {...s} />
-            </div>
-          ))}
-        </div>
-
         {/* ── SALES PERFORMANCE LABEL ── */}
         <h2 className="display-font text-base font-bold text-slate-600 tracking-wide uppercase fade-up fade-up-2">
           Sales Performance

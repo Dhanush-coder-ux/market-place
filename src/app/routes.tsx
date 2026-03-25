@@ -3,7 +3,6 @@ import { createBrowserRouter } from "react-router-dom";
 import Loader from "@/components/common/Loader";
 import GRNListView from "@/features/purchase/pages/GrnListView";
 import GRNForm from "@/features/purchase/pages/GrnForm";
-import ProductionForm from "@/features/purchase/pages/ProductionForm";
 import PurchaseForm from "@/features/purchase/pages/PurchaseForm";
 import ProductForm from "@/features/product/pages/ProductForm";
 import CustomerBalanceSummary from "@/features/customer/pages/CustomerBalanceSummary";
@@ -12,6 +11,8 @@ import PurchaseHistory from "@/features/purchase/pages/PurchaseHistory";
 import SalesListPage from "@/features/sales/pages/SalesPage";
 import StockMovementPage from "@/features/inventory/pages/StockMovement";
 import ReceiveGoodsPage from "@/features/purchase/pages/ReceiveGoodsForm";
+import StockAdjustmentPage from "@/features/inventory/pages/StockAdjusstment";
+import ProductionEntryPage from "@/features/purchase/pages/ProductionForm";
 
 
 // Layout & Auth
@@ -85,7 +86,7 @@ export const router = createBrowserRouter([
       { path: '/po-grn/add', element:<GRNForm/>},
       { path: '/po-grn/update', element:<ReceiveGoodsPage/>},
       { path: "/purchase-history" , element: <PurchaseHistory/>},
-      {path :"/production-entry/add",element:<ProductionForm/>},
+      {path :"/production-entry/add",element:<ProductionEntryPage/>},
       
     
       { path: '/purchase/detail', element: <PurchaseDetail /> },
@@ -100,6 +101,7 @@ export const router = createBrowserRouter([
       
       { path: '/inventory', element: <Inventory /> },
       { path: "/stock-movement" ,element:<StockMovementPage/>},
+      { path: "/stock-adjustment" ,element:<StockAdjustmentPage/>},
  
       
       { path: '/billing', element: <Billing /> },

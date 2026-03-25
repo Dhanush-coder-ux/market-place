@@ -274,42 +274,42 @@ const PurchaseScreen = () => {
             </div>
           </div>
 
-          {/* 5. Payment Details */}
-          <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
-            <h2 className="text-sm font-bold uppercase tracking-wider text-slate-500 mb-4"> Payment Details</h2>
+         {/* 5. Payment Details */}
+          <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3"> Payment Details</h2>
             
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4">
               {[
-                { id: "Cash", icon: <Banknote size={24} strokeWidth={1.5} /> },
-                { id: "UPI", icon: <Smartphone size={24} strokeWidth={1.5} /> },
-                { id: "Card", icon: <CreditCard size={24} strokeWidth={1.5} /> },
-                { id: "Bank", icon: <Landmark size={24} strokeWidth={1.5} /> }
+                { id: "Cash", icon: <Banknote size={18} strokeWidth={1.5} /> },
+                { id: "UPI", icon: <Smartphone size={18} strokeWidth={1.5} /> },
+                { id: "Card", icon: <CreditCard size={18} strokeWidth={1.5} /> },
+                { id: "Bank", icon: <Landmark size={18} strokeWidth={1.5} /> }
               ].map((m) => (
                 <button 
                   key={m.id}
                   onClick={() => setPayment({...payment, method: m.id as PaymentMethod})}
-                  className={`flex flex-col items-center justify-center p-4 rounded-xl border-2 transition-all ${payment.method === m.id ? 'border-blue-500 bg-blue-50 text-blue-700 shadow-sm' : 'border-slate-100 bg-white text-slate-500 hover:border-slate-200 hover:bg-slate-50'}`}
+                  className={`flex flex-col items-center justify-center p-2.5 rounded-lg border transition-all ${payment.method === m.id ? 'border-blue-500 bg-blue-50 text-blue-700 shadow-sm' : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300 hover:bg-slate-50'}`}
                 >
-                  <div className="mb-2">{m.icon}</div>
-                  <span className="text-sm font-bold">{m.id}</span>
+                  <div className="mb-1">{m.icon}</div>
+                  <span className="text-xs font-bold">{m.id}</span>
                 </button>
               ))}
             </div>
 
-            <div className="flex flex-col md:flex-row gap-5 bg-slate-50 p-4 rounded-xl border border-slate-100">
-              <div className="flex-1">
+            <div className="flex flex-col md:flex-row gap-4 bg-slate-50 p-3 rounded-lg border border-slate-100 md:items-center">
+              <div className="flex-1 w-full">
                 <Input 
                   label="Amount Paid Now (₹)"
                   type="number" 
-                  className="!text-lg !font-bold !text-blue-700"
+                  className="!text-base !font-bold !text-blue-700"
                   value={payment.amountPaid as any}
                   onChange={(e) => setPayment({...payment, amountPaid: e.target.value ? Number(e.target.value) : ""})}
                   placeholder={stats.grandTotal.toString()}
                 />
               </div>
-              <div className="flex-1 flex flex-col justify-center">
-                <span className="text-xs font-semibold text-slate-500 mb-1">Outstanding Balance</span>
-                <span className={`text-2xl font-black ${stats.outstanding > 0 ? 'text-orange-500' : 'text-green-500'}`}>
+              <div className="flex-1 w-full flex flex-col justify-center">
+                <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-0.5">Outstanding Balance</span>
+                <span className={`text-xl font-black ${stats.outstanding > 0 ? 'text-orange-500' : 'text-green-500'}`}>
                   ₹{stats.outstanding.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                 </span>
               </div>

@@ -6,9 +6,7 @@ import {
   Settings,
   ScanLine,
   Search,
-  Clock,
-  CheckCircle,
-  PieChart,
+
   X
 } from "lucide-react";
 
@@ -289,34 +287,7 @@ const GRNForm: React.FC<GRNFormProps> = ({ onSubmit, onCancel }) => {
             </div>
           </div>
 
-          {/* 4. Visual Status Cards (Replaces Payment from PurchaseScreen) */}
-          <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
-            <h2 className="text-sm font-bold uppercase tracking-wider text-slate-500 mb-4">GRN Status</h2>
-            <div className="grid grid-cols-3 gap-4">
-              {[
-                { id: "Pending", icon: <Clock size={24} strokeWidth={1.5} />, colorClass: "text-orange-600 border-orange-500 bg-orange-50" },
-                { id: "Partial", icon: <PieChart size={24} strokeWidth={1.5} />, colorClass: "text-blue-600 border-blue-500 bg-blue-50" },
-                { id: "Completed", icon: <CheckCircle size={24} strokeWidth={1.5} />, colorClass: "text-green-600 border-green-500 bg-green-50" }
-              ].map((s) => {
-                const isSelected = grnDetails.status === s.id;
-                return (
-                  <button 
-                    key={s.id}
-                    type="button"
-                    onClick={() => setGrnDetails({...grnDetails, status: s.id as GRNStatus})}
-                    className={`flex flex-col items-center justify-center p-4 rounded-xl border-2 transition-all ${
-                      isSelected 
-                        ? `${s.colorClass} shadow-sm` 
-                        : 'border-slate-100 bg-white text-slate-500 hover:border-slate-200 hover:bg-slate-50'
-                    }`}
-                  >
-                    <div className="mb-2">{s.icon}</div>
-                    <span className="text-sm font-bold">{s.id}</span>
-                  </button>
-                )
-              })}
-            </div>
-          </div>
+      
 
         </div>
 

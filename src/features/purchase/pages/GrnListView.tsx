@@ -436,6 +436,7 @@ const GRNCardView = () => {
 
   const handleCardClick = (record: GRNRecord) => {
     setSelectedGRN(record);
+    setRecords([]);
   };
 
   const filtered = records.filter(

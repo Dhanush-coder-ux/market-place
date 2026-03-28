@@ -214,7 +214,7 @@ export default function CustomerDetail() {
   {/* Avatar */}
   <div className="relative shrink-0">
     <div className="w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-tr from-[#4A6CF7] to-[#8B5CF6] rounded-full flex items-center justify-center text-2xl sm:text-3xl font-bold text-white shadow-inner ring-4 ring-slate-50">
-      RK
+      Ak
     </div>
     {/* Optional: Online/Active indicator dot overlapping the avatar */}
     <div className="absolute bottom-1 right-1 w-5 h-5 bg-emerald-500 border-[3px] border-white rounded-full"></div>
@@ -228,7 +228,7 @@ export default function CustomerDetail() {
       <div>
         <div className="flex items-center gap-3 mb-1.5">
           <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-            Rajesh Kumar
+            Ajith Kumar
           </h1>
           {/* Modernized Premium Badge */}
           <span className="px-2 py-0.5 bg-gradient-to-r from-amber-50 to-amber-100/50 text-amber-700 border border-amber-200 rounded-md text-[11px] font-bold uppercase tracking-wider flex items-center gap-1 shadow-sm">

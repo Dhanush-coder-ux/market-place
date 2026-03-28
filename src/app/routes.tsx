@@ -6,7 +6,7 @@ import GRNForm from "@/features/purchase/pages/GrnForm";
 import PurchaseForm from "@/features/purchase/pages/PurchaseForm";
 import ProductForm from "@/features/product/pages/ProductForm";
 import CustomerBalanceSummary from "@/features/customer/pages/CustomerBalanceSummary";
-import CustomerProfile from "@/features/customer/pages/CustomerManagement";
+import CustomerProfile from "@/features/customer/pages/Customerdetail";
 import PurchaseHistory from "@/features/purchase/pages/PurchaseHistory";
 import SalesListPage from "@/features/sales/pages/SalesPage";
 import StockMovementPage from "@/features/inventory/pages/StockMovement";

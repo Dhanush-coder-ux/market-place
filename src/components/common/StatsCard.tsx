@@ -1,3 +1,4 @@
+import React from "react";
 import { LucideIcon } from "lucide-react";
 
 /* =========================
@@ -8,7 +9,7 @@ interface StatsCardProps {
   label: string;
   value?: string | number;
   prefix?: string;
-  icon?: LucideIcon;
+  icon?: LucideIcon | string;
   iconBg?: string;
   iconColor?: string;
   valueColor?: string;
@@ -38,7 +39,11 @@ export const StatCard: React.FC<StatsCardProps> = ({
         <div
           className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${iconBg}`}
         >
-          <Icon size={15} className={iconColor} />
+          {typeof Icon === "string" ? (
+            <span className="text-sm leading-none">{Icon}</span>
+          ) : (
+            <Icon size={15} className={iconColor} />
+          )}
         </div>
       )}
 

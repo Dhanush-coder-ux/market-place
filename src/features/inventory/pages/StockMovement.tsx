@@ -95,7 +95,7 @@ function SummaryCard({ label, value, sub, color, icon }: SummaryCardProps) {
       <div className={`p-3 rounded-xl ${colors.icon}`}>{icon}</div>
       <div>
         <p className="text-xs text-slate-500 font-semibold uppercase tracking-widest mb-0.5">{label}</p>
-        <p className={`text-2xl font-bold font-mono ${colors.val}`}>{value}</p>
+        <p className={`text-2xl font-semibold font-mono ${colors.val}`}>{value}</p>
         <p className="text-xs text-slate-500 mt-0.5">{sub}</p>
       </div>
     </div>
@@ -105,7 +105,7 @@ function SummaryCard({ label, value, sub, color, icon }: SummaryCardProps) {
 function TypeBadge({ type }: { type: MovementType }) {
   const s = TYPE_STYLES[type];
   return (
-    <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold ${s.bg}`}>
+    <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${s.bg}`}>
       <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
       {type}
     </span>
@@ -133,7 +133,7 @@ function DetailDrawer({ movement, onClose }: DetailDrawerProps) {
         <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100">
           <div>
             <p className="text-xs text-slate-500 font-semibold uppercase tracking-widest mb-1">Movement Details</p>
-            <h2 className="text-lg font-bold text-slate-900 font-mono">{movement.id}</h2>
+            <h2 className="text-lg font-semibold text-slate-900 font-mono">{movement.id}</h2>
           </div>
           <button onClick={onClose} className="p-2 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors">
             <X className="w-5 h-5" />
@@ -145,7 +145,7 @@ function DetailDrawer({ movement, onClose }: DetailDrawerProps) {
           {/* Product */}
           <div className={`rounded-xl border ${s.bg} p-4`}>
             <p className="text-xs text-slate-500 font-semibold uppercase tracking-widest mb-1">Product</p>
-            <p className="text-slate-900 font-bold">{movement.product}</p>
+            <p className="text-slate-900 font-semibold">{movement.product}</p>
             <p className="text-slate-500 text-sm font-mono">{movement.sku}</p>
           </div>
 
@@ -153,14 +153,14 @@ function DetailDrawer({ movement, onClose }: DetailDrawerProps) {
           <div className="grid grid-cols-2 gap-3">
             {[
               ["Type",        <TypeBadge key="type" type={movement.type} />],
-              ["Quantity",    <span key="qty" className={`font-bold font-mono text-base ${movement.qty > 0 ? "text-emerald-600" : movement.type === "TRANSFER" ? "text-blue-600" : "text-rose-600"}`}>{movement.qty > 0 ? `+${movement.qty}` : movement.qty}</span>],
+              ["Quantity",    <span key="qty" className={`font-semibold font-mono text-base ${movement.qty > 0 ? "text-emerald-600" : movement.type === "TRANSFER" ? "text-blue-600" : "text-rose-600"}`}>{movement.qty > 0 ? `+${movement.qty}` : movement.qty}</span>],
               ["Status",      <span key="status" className={`font-semibold text-sm ${STATUS_STYLES[movement.status]}`}>{movement.status}</span>],
               ["Reference",   <span key="ref" className="text-slate-700 font-mono text-sm">{movement.ref}</span>],
               ["Source",      <span key="src" className="text-slate-700 text-sm font-medium">{movement.source}</span>],
               ["Destination", <span key="dest" className="text-slate-700 text-sm font-medium">{movement.destination}</span>],
             ].map(([label, val]) => (
               <div key={label as string} className="bg-slate-50 rounded-xl p-3 border border-slate-100">
-                <p className="text-xs font-semibold text-slate-500 mb-1">{label as string}</p>
+                <p className="text-xs font-medium text-slate-500 mb-1">{label as string}</p>
                 {val as React.ReactNode}
               </div>
             ))}
@@ -198,7 +198,7 @@ function DetailDrawer({ movement, onClose }: DetailDrawerProps) {
                 <div key={i} className="flex items-start gap-3 mb-4 last:mb-0 relative">
                   <div className={`w-2.5 h-2.5 rounded-full mt-1 shrink-0 ${ev.color} ring-4 ring-white relative z-10`} style={{ marginLeft: "-5px" }} />
                   <div>
-                    <p className="text-slate-900 text-sm font-semibold">{ev.label}</p>
+                    <p className="text-slate-900 text-sm font-medium">{ev.label}</p>
                     <p className="text-slate-500 text-xs mt-0.5">{fmt(ev.time)}</p>
                   </div>
                 </div>
@@ -210,10 +210,10 @@ function DetailDrawer({ movement, onClose }: DetailDrawerProps) {
 
         {/* Footer actions */}
         <div className="px-6 py-4 border-t border-slate-100 flex gap-3 bg-slate-50">
-          <button className="flex-1 py-2.5 rounded-xl bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 text-sm font-semibold transition-colors flex items-center justify-center gap-2 shadow-sm">
+          <button className="flex-1 py-2.5 rounded-xl bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 text-sm font-medium transition-colors flex items-center justify-center gap-2 shadow-sm">
             <Pencil className="w-4 h-4" /> Edit
           </button>
-          <button className="flex-1 py-2.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 text-sm font-semibold transition-colors border border-rose-200 flex items-center justify-center gap-2 shadow-sm">
+          <button className="flex-1 py-2.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 text-sm font-medium transition-colors border border-rose-200 flex items-center justify-center gap-2 shadow-sm">
             <Trash2 className="w-4 h-4" /> Delete
           </button>
         </div>
@@ -228,7 +228,7 @@ function AddMovementModal({ onClose }: { onClose: () => void }) {
       <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" />
       <div className="relative bg-white border border-slate-200 rounded-2xl shadow-2xl w-full max-w-lg mx-4 p-6" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-bold text-slate-900">Add Stock Movement</h2>
+          <h2 className="text-xl font-semibold text-slate-900">Add Stock Movement</h2>
           <button onClick={onClose} className="p-2 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors">
             <X className="w-5 h-5" />
           </button>
@@ -258,8 +258,8 @@ function AddMovementModal({ onClose }: { onClose: () => void }) {
           ))}
         </div>
         <div className="flex gap-3 mt-8">
-          <button onClick={onClose} className="flex-1 py-2.5 rounded-xl bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-sm font-semibold transition-colors shadow-sm">Cancel</button>
-          <button onClick={onClose} className="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold transition-colors shadow-md shadow-blue-500/20">Save Movement</button>
+          <button onClick={onClose} className="flex-1 py-2.5 rounded-xl bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-sm font-medium transition-colors shadow-sm">Cancel</button>
+          <button onClick={onClose} className="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition-colors shadow-md shadow-blue-500/20">Save Movement</button>
         </div>
       </div>
     </div>
@@ -357,7 +357,7 @@ export default function StockMovementPage() {
         ::-webkit-scrollbar-thumb:hover { background:#94a3b8; }
       `}</style>
 
-      <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className=" mx-auto px-4 sm:px-4 lg:px-4 py-4">
 
   
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
@@ -408,24 +408,24 @@ export default function StockMovementPage() {
             <div className="flex gap-1 bg-slate-50 rounded-xl p-1 border border-slate-200">
               {MOVEMENT_TYPES.map(t => (
                 <button key={t} onClick={() => { setTypeFilter(t); setPage(1); }}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${typeFilter === t ? "bg-white text-blue-600 shadow-sm border border-slate-200" : "text-slate-500 hover:text-slate-700 border border-transparent"}`}>{t}</button>
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${typeFilter === t ? "bg-white text-blue-600 shadow-sm border border-slate-200" : "text-slate-500 hover:text-slate-700 border border-transparent"}`}>{t}</button>
               ))}
             </div>
             {/* Warehouse */}
             <select value={warehouseFilter} onChange={e => { setWH(e.target.value); setPage(1); }}
-              className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 focus:outline-none focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/20 transition-all cursor-pointer">
+              className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm font-medium text-slate-700 focus:outline-none focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/20 transition-all cursor-pointer">
               {WAREHOUSES.map(w => <option key={w}>{w}</option>)}
             </select>
             {/* Status */}
             <select value={statusFilter} onChange={e => { setStatus(e.target.value); setPage(1); }}
-              className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 focus:outline-none focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/20 transition-all cursor-pointer">
+              className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm font-medium text-slate-700 focus:outline-none focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/20 transition-all cursor-pointer">
               {STATUSES.map(s => <option key={s}>{s}</option>)}
             </select>
             {/* Date range */}
             <input type="date" value={dateFrom} onChange={e => { setDateFrom(e.target.value); setPage(1); }}
-              className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 focus:outline-none focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/20 transition-all" />
+              className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm font-medium text-slate-700 focus:outline-none focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/20 transition-all" />
             <input type="date" value={dateTo} onChange={e => { setDateTo(e.target.value); setPage(1); }}
-              className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 focus:outline-none focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/20 transition-all" />
+              className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm font-medium text-slate-700 focus:outline-none focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/20 transition-all" />
           </div>
         </div>
 
@@ -446,7 +446,7 @@ export default function StockMovementPage() {
                     ["Status", null],
                     ["Actions", null],
                   ].map(([col, field]) => (
-                    <th key={col as string} className="px-4 py-3.5 text-left text-xs font-bold text-slate-500 uppercase tracking-widest whitespace-nowrap">
+                    <th key={col as string} className="px-4 py-3.5 text-left text-xs font-medium text-slate-500 uppercase tracking-widest whitespace-nowrap">
                       {field ? <SortBtn field={field as "date" | "qty"} label={col as string} /> : col as string}
                     </th>
                   ))}
@@ -457,7 +457,7 @@ export default function StockMovementPage() {
                   <tr><td colSpan={9} className="text-center py-16 text-slate-500">
                     <div className="flex flex-col items-center gap-2">
                       <span className="text-3xl">📦</span>
-                      <span className="text-sm font-bold text-slate-700">No movements found</span>
+                      <span className="text-sm font-medium text-slate-700">No movements found</span>
                       <span className="text-xs">Try adjusting your search or filters</span>
                     </div>
                   </td></tr>
@@ -466,13 +466,13 @@ export default function StockMovementPage() {
                     className={`border-b border-slate-100 transition-colors hover:bg-blue-50/40 cursor-default ${m.type === "OUT" && Math.abs(m.qty) > 50 ? "bg-rose-50/40" : ""}`}
                     style={{ animationDelay: `${i * 30}ms` }}
                   >
-                    <td className="px-4 py-3.5 font-mono text-blue-600 text-xs font-bold whitespace-nowrap">{m.id}</td>
+                    <td className="px-4 py-3.5 font-mono text-blue-600 text-xs font-medium whitespace-nowrap">{m.id}</td>
                     <td className="px-4 py-3.5 whitespace-nowrap">
-                      <div className="text-slate-900 font-bold leading-tight">{m.product}</div>
+                      <div className="text-slate-900 font-semibold leading-tight">{m.product}</div>
                       <div className="text-slate-500 text-xs font-mono mt-0.5">{m.sku}</div>
                     </td>
                     <td className="px-4 py-3.5 whitespace-nowrap"><TypeBadge type={m.type} /></td>
-                    <td className="px-4 py-3.5 font-mono font-bold text-base whitespace-nowrap">
+                    <td className="px-4 py-3.5 font-mono font-semibold text-base whitespace-nowrap">
                       <span className={m.type === "IN" ? "text-emerald-600" : m.type === "TRANSFER" ? "text-blue-600" : "text-rose-600"}>
                         {m.qty > 0 ? `+${m.qty}` : m.qty}
                       </span>
@@ -489,7 +489,7 @@ export default function StockMovementPage() {
                     <td className="px-4 py-3.5 whitespace-nowrap">
                       <div className="flex items-center gap-1.5">
                         <span className={`w-1.5 h-1.5 rounded-full ${m.status === "Completed" ? "bg-emerald-500" : "bg-amber-500"}`} />
-                        <span className={`text-xs font-bold ${STATUS_STYLES[m.status]}`}>{m.status}</span>
+                        <span className={`text-xs font-medium ${STATUS_STYLES[m.status]}`}>{m.status}</span>
                       </div>
                     </td>
                     <td className="px-4 py-3.5 whitespace-nowrap">
@@ -515,7 +515,7 @@ export default function StockMovementPage() {
                 className="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 font-semibold text-xs disabled:opacity-50 hover:bg-slate-50 transition-colors shadow-sm">← Prev</button>
               {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
                 <button key={p} onClick={() => setPage(p)}
-                  className={`w-8 h-8 rounded-lg text-xs font-bold transition-all shadow-sm ${p === page ? "bg-blue-600 text-white border border-blue-600 shadow-blue-500/20" : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-900"}`}>{p}</button>
+                  className={`w-8 h-8 rounded-lg text-xs font-medium transition-all shadow-sm ${p === page ? "bg-blue-600 text-white border border-blue-600 shadow-blue-500/20" : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-900"}`}>{p}</button>
               ))}
               <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}
                 className="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 font-semibold text-xs disabled:opacity-50 hover:bg-slate-50 transition-colors shadow-sm">Next →</button>
@@ -525,7 +525,7 @@ export default function StockMovementPage() {
 
         {/* Footer */}
         <p className="text-center text-xs text-slate-500 font-medium mt-6">
-          Inventory Management System · Stock Movement Module · Role: <span className="text-slate-800 font-bold">Admin</span>
+          Inventory Management System · Stock Movement Module · Role: <span className="text-slate-800 font-semibold">Admin</span>
         </p>
       </div>
 

@@ -123,7 +123,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
       {/* Page Header */}
       <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Add New Product</h1>
+          <h1 className="text-2xl font-semibold text-slate-900">Add New Product</h1>
           <p className="text-sm text-slate-500 mt-1">Create a new product in your catalog</p>
         </div>
         <div className="flex items-center gap-3">
@@ -147,7 +147,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
             <div className="flex items-center gap-4 mb-6 pb-4 border-b border-slate-100">
               <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center"><Package size={24} /></div>
               <div>
-                <h2 className="text-lg font-bold text-slate-900">Basic Information</h2>
+                <h2 className="text-lg font-semibold text-slate-900">Basic Information</h2>
                 <p className="text-xs text-slate-500">Essential product details</p>
               </div>
             </div>
@@ -202,7 +202,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
             <div className="flex items-center gap-4 mb-6 pb-4 border-b border-slate-100">
               <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center"><DollarSign size={24} /></div>
               <div>
-                <h2 className="text-lg font-bold text-slate-900">Pricing & Sourcing</h2>
+                <h2 className="text-lg font-semibold text-slate-900">Pricing & Sourcing</h2>
                 <p className="text-xs text-slate-500">Manage costs, margins, and suppliers</p>
               </div>
             </div>
@@ -248,7 +248,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
             <div className="flex items-center gap-4 mb-6 pb-4 border-b border-slate-100">
               <div className="w-12 h-12 bg-purple-50 text-purple-600 rounded-xl flex items-center justify-center"><BarChart2 size={24} /></div>
               <div>
-                <h2 className="text-lg font-bold text-slate-900">Stock & Inventory</h2>
+                <h2 className="text-lg font-semibold text-slate-900">Stock & Inventory</h2>
                 <p className="text-xs text-slate-500">Manage stock levels and alerts</p>
               </div>
             </div>
@@ -278,7 +278,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
              <div className="flex items-center gap-4 mb-6 pb-4 border-b border-slate-100">
               <div className="w-12 h-12 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center"><Palette size={24} /></div>
               <div>
-                <h2 className="text-lg font-bold text-slate-900">Product Variants</h2>
+                <h2 className="text-lg font-semibold text-slate-900">Product Variants</h2>
                 <p className="text-xs text-slate-500">Colors, sizes, or other variations</p>
               </div>
             </div>
@@ -314,7 +314,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
                <div className="flex items-center gap-4">
                 <div className="w-12 h-12 bg-slate-100 text-slate-600 rounded-xl flex items-center justify-center"><Settings size={24} /></div>
                 <div className="text-left">
-                  <h2 className="text-lg font-bold text-slate-900">Advanced Settings</h2>
+                  <h2 className="text-lg font-semibold text-slate-900">Advanced Settings</h2>
                   <p className="text-xs text-slate-500">Batch, Expiry, Warranty & Dimensions</p>
                 </div>
               </div>
@@ -342,13 +342,13 @@ const ProductForm: React.FC<ProductFormProps> = ({
             
             {/* Image Upload Area */}
             <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
-              <h3 className="text-lg font-bold text-slate-900 mb-4 pb-3 border-b border-slate-100">Product Images</h3>
+              <h3 className="text-lg font-semibold text-slate-900 mb-4 pb-3 border-b border-slate-100">Product Images</h3>
               
               <div className="border-2 border-dashed border-slate-300 rounded-xl p-8 text-center bg-slate-50 hover:bg-blue-50 hover:border-blue-400 transition-all cursor-pointer group mb-4">
                 <div className="w-16 h-16 bg-white rounded-full shadow-sm border border-slate-200 flex items-center justify-center mx-auto mb-3 text-slate-400 group-hover:text-blue-500 transition-colors">
                   <UploadCloud size={28} />
                 </div>
-                <p className="text-sm font-bold text-slate-700 group-hover:text-blue-700">Upload Images</p>
+                <p className="text-sm font-semibold text-slate-700 group-hover:text-blue-700">Upload Images</p>
                 <p className="text-xs text-slate-500 mt-1">PNG, JPG up to 5MB each</p>
               </div>
 
@@ -366,7 +366,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
 
             {/* Real-time Summary Card */}
             <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
-              <h3 className="text-lg font-bold text-slate-900 mb-4 pb-3 border-b border-slate-100">Product Summary</h3>
+              <h3 className="text-lg font-semibold text-slate-900 mb-4 pb-3 border-b border-slate-100">Product Summary</h3>
               
               <div className="space-y-3 text-sm">
                 <div className="flex justify-between items-center py-1">

@@ -11,23 +11,23 @@ import {
   Search
 } from 'lucide-react';
 
-// Assuming these are your import paths based on your previous messages
+// Adjust these imports to match your project structure
 import { GradientButton } from '@/components/ui/GradientButton'; 
 import Input from '@/components/ui/Input';
 import { ReusableSelect } from "@/components/ui/ReusableSelect";
 
-// Type definitions
+// --- Type definitions ---
 interface AdjustmentItem {
   id: string;
   product: string;
   currentStock: number;
   type: 'increase' | 'decrease';
-  quantity: number | ''; // Allow empty string for clearing input
+  quantity: number | ''; 
   reason: string;
   notes: string;
 }
 
-// Mock Product Database (to simulate pulling current stock)
+// Mock Product Database
 const PRODUCT_DB: Record<string, number> = {
   'Wireless Headphones': 34,
   'Ergonomic Mouse': 28,
@@ -36,7 +36,7 @@ const PRODUCT_DB: Record<string, number> = {
   'Monitor Stand': 42,
 };
 
-// Dropdown Options formatted for your ReusableSelect
+// Dropdown Options
 const productOptions = Object.keys(PRODUCT_DB).map(key => ({ value: key, label: key }));
 
 const typeOptions = [
@@ -53,7 +53,6 @@ const reasonOptions = [
 ];
 
 export default function StockAdjustmentPage() {
-  // Initial dynamic state
   const [items, setItems] = useState<AdjustmentItem[]>([
     {
       id: 'item-1',
@@ -74,6 +73,7 @@ export default function StockAdjustmentPage() {
       notes: 'Found during audit',
     },
   ]);
+  
   const [searchProduct, setSearchProduct] = useState('');
 
   // --- Actions & Handlers ---
@@ -110,7 +110,7 @@ export default function StockAdjustmentPage() {
     }));
   };
 
-  // --- Derived Data for Summary (Updates Automatically) ---
+  // --- Derived Data for Summary ---
 
   const summary = useMemo(() => {
     let netChange = 0;
@@ -141,16 +141,16 @@ export default function StockAdjustmentPage() {
   }, [items]);
 
   return (
-    <div className="flex min-h-screen  font-sans text-slate-800 antialiased">
-      <main className="flex-1 p-2 lg:p-4 max-w-[1600px] mx-auto">
+    <div className="flex min-h-screen bg-slate-50 font-sans text-slate-800 antialiased">
+      <main className="flex-1 p-4 lg:p-6 max-w-[1600px] mx-auto">
         
         {/* Page Header */}
-        <div className="mb-6 flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-6 py-5">
+        <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white px-6 py-5 shadow-sm">
           <div>
-            <h1 className="mb-1 text-2xl font-bold text-slate-800">Stock Adjustment</h1>
+            <h1 className="mb-1 text-2xl font-semibold text-slate-900">Stock Adjustment</h1>
             <p className="text-sm text-slate-500">Manually adjust inventory for damaged, expired, lost, or miscounted items</p>
           </div>
-          <div className="flex gap-3">
+          <div className="flex gap-3 shrink-0">
             <GradientButton variant="outline">
               Cancel
             </GradientButton>
@@ -162,36 +162,36 @@ export default function StockAdjustmentPage() {
 
         {/* Main Grid */}
         <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-[1fr_380px]">
-          {/* Left Column */}
-          <div className="flex flex-col gap-5">
+          
+          {/* --- Left Column --- */}
+          <div className="flex flex-col gap-6">
             
             {/* Alert */}
-            <div className="flex items-start gap-3 rounded-xl border border-[#FDE68A] bg-[#FEF3C7] p-4 text-[13px] leading-relaxed text-[#92400E]">
-              <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-[#D97706]" />
+            <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-[13.5px] leading-relaxed text-amber-800 shadow-sm">
+              <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
               <div>
-                <strong>Important:</strong> Stock adjustments do not create purchase entries or affect cost history. Use this only for physical inventory corrections like damaged, expired, lost, or found items.
+                <strong className="font-semibold">Important:</strong> Stock adjustments do not create purchase entries or affect cost history. Use this only for physical inventory corrections like damaged, expired, lost, or found items.
               </div>
             </div>
 
             {/* Adjustment Details Card */}
             <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-              <div className="mb-5 flex items-center justify-between border-b border-slate-200 pb-4">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#E8EFFF] text-[#4F7CFF]">
-                    <ClipboardList className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <h2 className="text-lg font-bold text-slate-800">Adjustment Details</h2>
-                    <p className="mt-0.5 text-[13px] text-slate-500">Basic adjustment information</p>
-                  </div>
+              <div className="mb-6 flex items-center gap-3 border-b border-slate-100 pb-4">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+                  <ClipboardList className="h-5 w-5" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-semibold text-slate-900">Adjustment Details</h2>
+                  <p className="text-[13px] text-slate-500">Basic adjustment information</p>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-5">
+              {/* Fixed Grid Alignment for Inputs */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <Input 
                   label="Adjustment Date" 
                   type="date" 
-                  value="2025-03-14" // You'd typically link this to state
+                  value="2025-03-14" 
                   required 
                   onChange={() => {}} 
                 />
@@ -203,12 +203,12 @@ export default function StockAdjustmentPage() {
                   onChange={() => {}} 
                 />
                 
-                {/* Note: Kept native textarea as Input component doesn't handle multi-line yet */}
-                <div className="col-span-2 flex flex-col">
-                  <label className="text-xs font-semibold text-gray-700 ml-0.5 mb-1.5">Adjustment Notes</label>
+                {/* Standardized Textarea to match Input spacing */}
+                <div className="md:col-span-2 flex flex-col">
+                  <label className="mb-1.5 text-[13px] font-semibold text-slate-700">Adjustment Notes</label>
                   <textarea 
                     placeholder="Reason for this adjustment (e.g., Physical inventory count revealed discrepancies...)" 
-                    className="min-h-[80px] w-full resize-y rounded-lg border border-gray-300 px-4 py-3 text-sm text-gray-900 transition-all focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100" 
+                    className="min-h-[80px] w-full resize-y rounded-lg border border-slate-300 px-4 py-3 text-sm text-slate-900 transition-all focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 placeholder:text-slate-400" 
                   />
                 </div>
               </div>
@@ -216,7 +216,7 @@ export default function StockAdjustmentPage() {
 
             {/* Quick Add Product */}
             <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-              <div className="flex gap-3">
+              <div className="flex flex-col sm:flex-row gap-3">
                 <div className="flex-1">
                   <Input 
                     type="text" 
@@ -226,7 +226,7 @@ export default function StockAdjustmentPage() {
                     onChange={(e) => setSearchProduct(e.target.value)}
                   />
                 </div>
-                <GradientButton variant="primary" icon={<Barcode className="h-5 w-5" />}>
+                <GradientButton variant="primary" icon={<Barcode className="h-5 w-5" />} className="shrink-0">
                   Scan Barcode
                 </GradientButton>
               </div>
@@ -234,14 +234,14 @@ export default function StockAdjustmentPage() {
 
             {/* Adjustment Items List */}
             <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-              <div className="mb-5 flex items-center justify-between">
+              <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#FEF3C7] text-[#D97706]">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
                     <Package className="h-5 w-5" />
                   </div>
                   <div>
-                    <h2 className="text-lg font-bold text-slate-800">Products to Adjust</h2>
-                    <p className="mt-0.5 text-[13px] text-slate-500">Select items and adjustment reasons</p>
+                    <h2 className="text-lg font-semibold text-slate-900">Products to Adjust</h2>
+                    <p className="text-[13px] text-slate-500">Select items and adjustment reasons</p>
                   </div>
                 </div>
                 <GradientButton variant="outline" icon={<Plus className="h-4 w-4" />} onClick={handleAddItem}>
@@ -250,124 +250,141 @@ export default function StockAdjustmentPage() {
               </div>
 
               {/* Dynamic Items Array */}
-              {items.map((item, index) => {
-                // Calculate expected new stock based on selection
-                const qtyNum = Number(item.quantity) || 0;
-                const newStock = item.product 
-                  ? (item.type === 'increase' ? item.currentStock + qtyNum : Math.max(0, item.currentStock - qtyNum))
-                  : 0;
+              <div className="space-y-4">
+                {items.map((item, index) => {
+                  const qtyNum = Number(item.quantity) || 0;
+                  const newStock = item.product 
+                    ? (item.type === 'increase' ? item.currentStock + qtyNum : Math.max(0, item.currentStock - qtyNum))
+                    : 0;
 
-                return (
-                  <div key={item.id} className="mb-4 rounded-xl border border-slate-200 bg-white p-5 transition-all hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)]">
-                    <div className="mb-4 flex items-center justify-between">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#E8EFFF] font-bold text-[#4F7CFF]">{index + 1}</div>
-                      <GradientButton variant="danger" icon={<Trash2 className="h-4 w-4" />} onClick={() => handleRemoveItem(item.id)}>
-                        Remove
-                      </GradientButton>
-                    </div>
-
-                    <div className="grid grid-cols-[2fr_1fr_1fr_1.5fr_1.5fr] items-start gap-4">
+                  return (
+                    <div key={item.id} className="rounded-xl border border-slate-200 bg-slate-50/50 p-5 transition-all hover:bg-white hover:shadow-md">
                       
-                      {/* Product Field */}
-                      <div>
-                        <ReusableSelect 
-                          label="Product" 
-                          required 
-                          options={productOptions} 
-                          value={item.product}
-                          onValueChange={(val) => updateItem(item.id, 'product', val)}
-                          placeholder="Select Product"
-                        />
-                        {item.product && (
-                          <div className="mt-2 flex items-center gap-2">
-                            <span className="inline-flex items-center rounded-md bg-slate-100 px-2 py-1 text-[11px] font-semibold text-slate-600">
-                              Current: {item.currentStock}
-                            </span>
-                            <span className={`inline-flex items-center rounded-md px-2 py-1 text-[11px] font-semibold ${item.type === 'increase' ? 'bg-[#D1FAE5] text-[#10B981]' : 'bg-[#FEE2E2] text-[#EF4444]'}`}>
-                              New: {newStock}
-                            </span>
-                          </div>
-                        )}
+                      {/* Item Header */}
+                      <div className="mb-5 flex items-center justify-between border-b border-slate-100 pb-4">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100 font-semibold text-blue-600">
+                          {index + 1}
+                        </div>
+                        <GradientButton variant="danger" icon={<Trash2 className="h-4 w-4" />} onClick={() => handleRemoveItem(item.id)}>
+                          Remove
+                        </GradientButton>
                       </div>
 
-                      {/* Type Field */}
-                      <ReusableSelect 
-                        label="Type" 
-                        required 
-                        options={typeOptions} 
-                        value={item.type}
-                        onValueChange={(val) => updateItem(item.id, 'type', val)}
-                        className={item.type === 'increase' ? 'border-[#10B981]' : 'border-[#EF4444]'}
-                      />
+                      {/* PERFECT ALIGNMENT GRID
+                          Using standard 12-column spans guarantees the inputs 
+                          never squish horizontally and `items-start` keeps labels aligned 
+                      */}
+                      <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-12 xl:items-start">
+                        
+                        {/* Product Field */}
+                        <div className="xl:col-span-3">
+                          <ReusableSelect 
+                            label="Product" 
+                            required 
+                            options={productOptions} 
+                            value={item.product}
+                            onValueChange={(val) => updateItem(item.id, 'product', val)}
+                            placeholder="Select Product"
+                          />
+                          {item.product && (
+                            <div className="mt-2.5 flex items-center gap-2">
+                              <span className="inline-flex items-center rounded-md bg-slate-200/60 px-2 py-1 text-[11px] font-semibold text-slate-600">
+                                Current: {item.currentStock}
+                              </span>
+                              <span className={`inline-flex items-center rounded-md px-2 py-1 text-[11px] font-semibold ${item.type === 'increase' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
+                                New: {newStock}
+                              </span>
+                            </div>
+                          )}
+                        </div>
 
-                      {/* Quantity Field */}
-                      <Input 
-                        label="Quantity" 
-                        required 
-                        type="number" 
-                        value={item.quantity}
-                        onChange={(e) => updateItem(item.id, 'quantity', e.target.value)}
-                        className={item.type === 'increase' ? 'border-[#10B981]' : 'border-[#EF4444]'}
-                      />
+                        {/* Type Field */}
+                        <div className="xl:col-span-2">
+                          <ReusableSelect 
+                            label="Type" 
+                            required 
+                            options={typeOptions} 
+                            value={item.type}
+                            onValueChange={(val) => updateItem(item.id, 'type', val)}
+                            className={item.type === 'increase' ? 'border-emerald-500' : 'border-red-500'}
+                          />
+                        </div>
 
-                      {/* Reason Field */}
-                      <ReusableSelect 
-                        label="Reason" 
-                        required 
-                        options={reasonOptions} 
-                        value={item.reason}
-                        onValueChange={(val) => updateItem(item.id, 'reason', val)}
-                      />
+                        {/* Quantity Field */}
+                        <div className="xl:col-span-2">
+                          <Input 
+                            label="Quantity" 
+                            required 
+                            type="number" 
+                            value={item.quantity}
+                            onChange={(e) => updateItem(item.id, 'quantity', e.target.value)}
+                            className={item.type === 'increase' ? 'border-emerald-500' : 'border-red-500'}
+                          />
+                        </div>
 
-                      {/* Notes Field */}
-                      <Input 
-                        label="Notes" 
-                        type="text" 
-                        placeholder="Optional"
-                        value={item.notes}
-                        onChange={(e) => updateItem(item.id, 'notes', e.target.value)}
-                      />
-                      
+                        {/* Reason Field */}
+                        <div className="xl:col-span-3">
+                          <ReusableSelect 
+                            label="Reason" 
+                            required 
+                            options={reasonOptions} 
+                            value={item.reason}
+                            onValueChange={(val) => updateItem(item.id, 'reason', val)}
+                          />
+                        </div>
+
+                        {/* Notes Field */}
+                        <div className="xl:col-span-2">
+                          <Input 
+                            label="Notes" 
+                            type="text" 
+                            placeholder="Optional"
+                            value={item.notes}
+                            onChange={(e) => updateItem(item.id, 'notes', e.target.value)}
+                          />
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
               
               {items.length === 0 && (
-                <div className="text-center py-8 text-gray-400">
+                <div className="rounded-xl border border-dashed border-slate-300 py-12 text-center text-slate-500">
                   No products added yet. Click "Add Product" to begin.
                 </div>
               )}
             </div>
           </div>
 
-          {/* Right Column - Summary Sidebar */}
-          <div className="sticky top-6 flex flex-col gap-5">
+          {/* --- Right Column (Summary Sidebar) --- */}
+          <div className="sticky top-6 flex flex-col gap-6">
+            
             {/* Quick Stats */}
             <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-              <h3 className="mb-5 border-b border-slate-200 pb-4 text-lg font-bold text-slate-800">Adjustment Summary</h3>
+              <h3 className="mb-5 border-b border-slate-100 pb-4 text-lg font-semibold text-slate-900">Adjustment Summary</h3>
               
-              <div className="mb-5 grid grid-cols-2 gap-3">
-                <div className="rounded-xl bg-slate-50 p-4 text-center">
-                  <div className="mb-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-500">Products</div>
-                  <div className="tabular-nums text-2xl font-bold text-slate-800">{summary.validProductCount}</div>
+              <div className="mb-6 grid grid-cols-2 gap-3">
+                <div className="rounded-xl bg-slate-50 p-4 text-center border border-slate-100">
+                  <div className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Products</div>
+                  <div className="tabular-nums text-2xl font-semibold text-slate-900">{summary.validProductCount}</div>
                 </div>
-                <div className="rounded-xl bg-slate-50 p-4 text-center">
-                  <div className="mb-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-500">Net Change</div>
-                  <div className={`tabular-nums text-2xl font-bold ${summary.netChange > 0 ? 'text-[#10B981]' : summary.netChange < 0 ? 'text-red-500' : 'text-slate-800'}`}>
+                <div className="rounded-xl bg-slate-50 p-4 text-center border border-slate-100">
+                  <div className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Net Change</div>
+                  <div className={`tabular-nums text-2xl font-semibold ${summary.netChange > 0 ? 'text-emerald-500' : summary.netChange < 0 ? 'text-red-500' : 'text-slate-900'}`}>
                     {summary.netChange > 0 ? '+' : ''}{summary.netChange}
                   </div>
                 </div>
               </div>
 
-              <div className="mb-5 space-y-3">
+              <div className="space-y-3">
                 {summary.impactList.length === 0 ? (
-                  <p className="text-sm text-gray-400 text-center italic">Add items to see impact.</p>
+                  <p className="text-sm text-slate-400 text-center italic">Add items to see impact.</p>
                 ) : (
                   summary.impactList.map((stat, i) => (
                     <div key={i} className="flex items-center justify-between border-b border-slate-100 pb-3 last:border-0 last:pb-0">
-                      <span className="text-[13px] font-medium text-slate-800 truncate pr-4">{stat.name}</span>
-                      <span className={`tabular-nums text-sm font-bold shrink-0 ${stat.type === 'increase' ? 'text-[#10B981]' : 'text-[#EF4444]'}`}>
+                      <span className="text-[13.5px] font-medium text-slate-800 truncate pr-4">{stat.name}</span>
+                      <span className={`tabular-nums text-[13.5px] font-semibold shrink-0 ${stat.type === 'increase' ? 'text-emerald-500' : 'text-red-500'}`}>
                         {stat.change > 0 ? '+' : ''}{stat.change} units
                       </span>
                     </div>
@@ -378,15 +395,15 @@ export default function StockAdjustmentPage() {
 
             {/* Reason Breakdown */}
             <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-              <h3 className="mb-4 text-lg font-bold text-slate-800">Reason Breakdown</h3>
+              <h3 className="mb-5 border-b border-slate-100 pb-4 text-lg font-semibold text-slate-900">Reason Breakdown</h3>
               <div>
                 {Object.keys(summary.reasons).length === 0 ? (
-                   <p className="text-sm text-gray-400 text-center italic">No reasons recorded.</p>
+                   <p className="text-sm text-slate-400 text-center italic">No reasons recorded.</p>
                 ) : (
                   Object.entries(summary.reasons).map(([reason, count]) => (
-                    <div key={reason} className="flex items-center justify-between border-b border-slate-100 py-3 last:border-0 last:pb-0">
-                      <span className="text-[13px] font-medium text-slate-800">{reason}</span>
-                      <span className="tabular-nums text-sm font-bold text-slate-800">{count} item{count > 1 ? 's' : ''}</span>
+                    <div key={reason} className="flex items-center justify-between border-b border-slate-100 py-3 first:pt-0 last:border-0 last:pb-0">
+                      <span className="text-[13.5px] font-medium text-slate-800">{reason}</span>
+                      <span className="tabular-nums text-[13.5px] font-semibold text-slate-900">{count} item{count > 1 ? 's' : ''}</span>
                     </div>
                   ))
                 )}
@@ -394,26 +411,30 @@ export default function StockAdjustmentPage() {
             </div>
 
             {/* Info Alert */}
-            <div className="flex items-start gap-3 rounded-xl border border-[#93C5FD] bg-[#DBEAFE] p-4 text-[13px] leading-relaxed text-[#1E40AF]">
-              <Info className="mt-0.5 h-5 w-5 shrink-0 text-[#2563EB]" />
+            <div className="flex items-start gap-3 rounded-xl border border-blue-200 bg-blue-50 p-4 text-[13px] leading-relaxed text-blue-800 shadow-sm">
+              <Info className="mt-0.5 h-5 w-5 shrink-0 text-blue-600" />
               <div>
-                <strong>Note:</strong> This adjustment will update stock levels immediately but will NOT create purchase entries or affect product cost history.
+                <strong className="font-semibold">Note:</strong> This adjustment will update stock levels immediately but will NOT create purchase entries or affect product cost history.
               </div>
             </div>
 
             {/* Actions */}
             <div className="mt-2 flex flex-col gap-3">
-              <GradientButton variant="primary" icon={<Save className="h-5 w-5" />} className="h-[52px] w-full text-[15px]">
+              <GradientButton variant="primary" icon={<Save className="h-5 w-5" />} className="h-[52px] w-full text-[15px] shadow-sm">
                 Save Adjustment
               </GradientButton>
               <GradientButton variant="outline" className="h-[52px] w-full text-[15px]">
                 Save as Draft
               </GradientButton>
-              <GradientButton variant="ghost" onClick={() => setItems([])} className="h-[40px] w-full">
+              <button 
+                onClick={() => setItems([])} 
+                className="mt-2 h-[40px] w-full rounded-lg text-sm font-semibold text-slate-500 transition-colors hover:bg-slate-200 hover:text-slate-800"
+              >
                 Clear Form
-              </GradientButton>
+              </button>
             </div>
           </div>
+
         </div>
       </main>
     </div>

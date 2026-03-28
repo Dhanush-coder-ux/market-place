@@ -1,4 +1,5 @@
-import  { useState } from "react";
+import { useState } from "react";
+import { DollarSign, AlertCircle, Package, Star, CreditCard, FileText, Banknote, Search, BarChart3, Mail, Wallet, Pencil, Save } from "lucide-react";
 import {
     fmt,
     StatusBadge,
@@ -79,13 +80,13 @@ const INITIAL_PAYMENTS: PaymentEntry[] = [
 
 const INITIAL_ACTIVITIES: ActivityEntry[] = [
     {
-        icon: "📄",
+        icon: <FileText className="w-5 h-5 text-blue-600" />,
         iconBg: "bg-blue-100",
         text: "<strong>Invoice INV-2024-156</strong> created for ₹18,500",
         time: "April 18, 2024 • 10:30 AM",
     },
     {
-        icon: "💵",
+        icon: <Banknote className="w-5 h-5 text-emerald-600" />,
         iconBg: "bg-emerald-100",
         text: "<strong>Payment received</strong> of ₹18,500 via UPI",
         time: "April 20, 2024 • 2:30 PM",
@@ -173,7 +174,7 @@ export default function CustomerDetail() {
         ]);
         setActivities((a) => [
             {
-                icon: "💵",
+                icon: <Banknote className="w-5 h-5 text-emerald-600" />,
                 iconBg: "bg-emerald-100",
                 text: `<strong>Payment received</strong> of ₹${amt.toLocaleString()} via ${paymentMethod}`,
                 time: now,
@@ -213,7 +214,7 @@ export default function CustomerDetail() {
   
   {/* Avatar */}
   <div className="relative shrink-0">
-    <div className="w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-tr from-[#4A6CF7] to-[#8B5CF6] rounded-full flex items-center justify-center text-2xl sm:text-3xl font-bold text-white shadow-inner ring-4 ring-slate-50">
+    <div className="w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-tr from-indigo-400 to-purple-400 rounded-full flex items-center justify-center text-2xl sm:text-3xl font-semibold text-white shadow-inner ring-4 ring-slate-50">
       Ak
     </div>
     {/* Optional: Online/Active indicator dot overlapping the avatar */}
@@ -227,11 +228,11 @@ export default function CustomerDetail() {
       {/* Customer Details */}
       <div>
         <div className="flex items-center gap-3 mb-1.5">
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+          <h1 className="text-2xl sm:text-3xl font-semibold text-slate-700 tracking-tight">
             Ajith Kumar
           </h1>
           {/* Modernized Premium Badge */}
-          <span className="px-2 py-0.5 bg-gradient-to-r from-amber-50 to-amber-100/50 text-amber-700 border border-amber-200 rounded-md text-[11px] font-bold uppercase tracking-wider flex items-center gap-1 shadow-sm">
+          <span className="px-2 py-0.5 bg-gradient-to-r from-amber-50 to-amber-100/50 text-amber-700 border border-amber-200 rounded-md text-[11px] font-semibold uppercase tracking-wider flex items-center gap-1 shadow-sm">
             <svg className="w-3 h-3 text-amber-500" fill="currentColor" viewBox="0 0 20 20">
               <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
             </svg>
@@ -252,11 +253,11 @@ export default function CustomerDetail() {
       
       {/* Top-Level Quick Actions (Optional, but adds a professional touch) */}
       <div className="flex items-center gap-2 mt-2 md:mt-0">
-         <button className="px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg text-sm font-semibold hover:bg-slate-50 hover:text-slate-900 transition-colors shadow-sm flex items-center gap-2">
+         <button className="px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg text-sm font-semibold hover:bg-slate-50 hover:text-slate-700 transition-colors shadow-sm flex items-center gap-2">
             <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
             Message
          </button>
-         <button className="px-4 py-2 bg-slate-900 text-white rounded-lg text-sm font-semibold hover:bg-slate-800 transition-colors shadow-sm">
+         <button className="px-4 py-2 bg-slate-700 text-white rounded-lg text-sm font-semibold hover:bg-slate-800 transition-colors shadow-sm">
             Edit Profile
          </button>
       </div>
@@ -272,8 +273,8 @@ export default function CustomerDetail() {
                                 key={tab}
                                 onClick={() => setActiveTab(i)}
                                 className={`pb-3 text-[15px] font-semibold border-b-2 -mb-[2px] transition-colors ${activeTab === i
-                                        ? "text-[#4A6CF7] border-[#4A6CF7]"
-                                        : "text-slate-500 border-transparent hover:text-[#4A6CF7]"
+                                        ? "text-indigo-500 border-indigo-500"
+                                        : "text-slate-500 border-transparent hover:text-indigo-500"
                                     }`}
                             >
                                 {tab}
@@ -283,10 +284,10 @@ export default function CustomerDetail() {
 
                     {/* ── Stats Cards ── */}
                     <div className="grid grid-cols-4 gap-5 mb-6">
-                        <StatCard icon="💰" label="Total Purchases" value="₹2,45,680" iconBg="bg-blue-100" />
-                        <StatCard icon="⚠️" label="Outstanding Balance" value={fmt(outstanding)} iconBg="bg-red-100" />
-                        <StatCard icon="📦" label="Total Orders" value="48" iconBg="bg-emerald-100" />
-                        <StatCard icon="⭐" label="Lifetime Value" value="₹3,12,450" iconBg="bg-indigo-100" />
+                        <StatCard icon={DollarSign} label="Total Purchases" value="₹2,45,680" iconBg="bg-blue-100" />
+                        <StatCard icon={AlertCircle} label="Outstanding Balance" value={fmt(outstanding)} iconBg="bg-red-100" />
+                        <StatCard icon={Package} label="Total Orders" value="48" iconBg="bg-emerald-100" />
+                        <StatCard icon={Star} label="Lifetime Value" value="₹3,12,450" iconBg="bg-indigo-100" />
                     </div>
 
                     {/* ════════════════════════════════════════════════════════════════ */}
@@ -297,7 +298,7 @@ export default function CustomerDetail() {
                             {outstanding > 0 && (
                                 <div className="mb-6">
                                     <AlertBanner
-                                        icon="⚠️"
+                                        icon={AlertCircle}
                                         title="Outstanding Payment Due"
                                         message={`This customer has an outstanding balance of ${fmt(outstanding)} across 2 invoices.`}
                                         variant="danger"
@@ -306,17 +307,20 @@ export default function CustomerDetail() {
                             )}
 
                             {/* Credit info */}
-                            <div className="bg-amber-50 border border-amber-200 rounded-xl p-5 mb-8">
+                            <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-8">
                                 <div className="flex justify-between items-center mb-2">
-                                    <span className="font-bold text-amber-900">💳 Credit Limit</span>
-                                    <span className="text-2xl font-bold text-amber-600">₹50,000</span>
+                                    <div className="flex items-center gap-2">
+                                        <CreditCard className="w-5 h-5 text-amber-700" />
+                                        <span className="font-semibold text-amber-900">Credit Limit</span>
+                                    </div>
+                                    <span className="text-2xl font-semibold text-amber-600">₹50,000</span>
                                 </div>
                                 <div className="text-sm text-amber-800">
                                     Available Credit: ₹34,700 | Used: ₹15,300 (30.6%)
                                 </div>
                             </div>
 
-                            <h2 className="text-xl font-bold text-slate-900 mb-6">General Info</h2>
+                            <h2 className="text-xl font-semibold text-slate-700 mb-6">General Info</h2>
                             <div className="grid grid-cols-2 gap-8">
                                 <div className="space-y-6">
                                     <InfoRow label="Full Name" value="Rajesh Kumar" />
@@ -349,13 +353,13 @@ export default function CustomerDetail() {
                     {activeTab === 1 && (
                         <SectionCard>
                             <div className="flex justify-between items-center mb-6">
-                                <h2 className="text-xl font-bold text-slate-900">Purchase History</h2>
+                                <h2 className="text-xl font-semibold text-slate-700">Purchase History</h2>
                                 <div className="relative w-[300px]">
-                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">🔍</span>
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                                     <input
                                         type="text"
                                         placeholder="Search invoices..."
-                                        className="w-full h-10 pl-9 pr-4 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-[#4A6CF7]"
+                                        className="w-full h-10 pl-9 pr-4 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500"
                                     />
                                 </div>
                             </div>
@@ -368,7 +372,7 @@ export default function CustomerDetail() {
                                                 (h) => (
                                                     <th
                                                         key={h}
-                                                        className="text-left px-4 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider"
+                                                        className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider"
                                                     >
                                                         {h}
                                                     </th>
@@ -382,14 +386,14 @@ export default function CustomerDetail() {
                                                 key={inv.id}
                                                 className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors"
                                             >
-                                                <td className="px-4 py-4 font-bold text-[#4A6CF7]">{inv.id}</td>
+                                                <td className="px-4 py-4 font-semibold text-indigo-500">{inv.id}</td>
                                                 <td className="px-4 py-4 text-slate-700">{inv.date}</td>
                                                 <td className="px-4 py-4 text-slate-600">{inv.products}</td>
-                                                <td className="px-4 py-4 font-bold text-slate-900">{fmt(inv.amount)}</td>
+                                                <td className="px-4 py-4 font-semibold text-slate-700">{fmt(inv.amount)}</td>
                                                 <td className="px-4 py-4">
                                                     <StatusBadge status={inv.status} />
                                                 </td>
-                                                <td className={`px-4 py-4 font-bold ${inv.outstanding > 0 ? "text-red-600" : "text-slate-700"}`}>
+                                                <td className={`px-4 py-4 font-semibold ${inv.outstanding > 0 ? "text-red-600" : "text-slate-700"}`}>
                                                     {fmt(inv.outstanding)}
                                                 </td>
                                                 <td className="px-4 py-4">
@@ -410,17 +414,17 @@ export default function CustomerDetail() {
                     {/* ════════════════════════════════════════════════════════════════ */}
                     {activeTab === 2 && (
                         <SectionCard>
-                            <h2 className="text-xl font-bold text-slate-900 mb-6">Payment Details</h2>
+                            <h2 className="text-xl font-semibold text-slate-700 mb-6">Payment Details</h2>
 
                             <div className="grid grid-cols-2 gap-8 mb-8">
                                 <div className="space-y-6">
                                     <InfoRow
                                         label="Total Received"
-                                        value={<span className="text-2xl font-bold text-emerald-600">₹2,30,380</span>}
+                                        value={<span className="text-2xl font-semibold text-emerald-600">₹2,30,380</span>}
                                     />
                                     <InfoRow
                                         label="Total Outstanding"
-                                        value={<span className="text-2xl font-bold text-red-600">{fmt(outstanding)}</span>}
+                                        value={<span className="text-2xl font-semibold text-red-600">{fmt(outstanding)}</span>}
                                     />
                                 </div>
                                 <div className="space-y-6">
@@ -429,16 +433,16 @@ export default function CustomerDetail() {
                                 </div>
                             </div>
 
-                            <h3 className="text-lg font-bold text-slate-900 mb-5">Payment Timeline</h3>
+                            <h3 className="text-lg font-semibold text-slate-700 mb-5">Payment Timeline</h3>
                             <div className="relative pl-8">
                                 <div className="absolute left-2 top-0 bottom-0 w-0.5 bg-slate-200" />
                                 {payments.map((p, i) => (
                                     <div key={i} className="relative mb-6">
-                                        <div className="absolute -left-6 top-1 w-4 h-4 rounded-full bg-white border-[3px] border-[#4A6CF7]" />
+                                        <div className="absolute -left-6 top-1 w-4 h-4 rounded-full bg-white border-[3px] border-indigo-500" />
                                         <div className="bg-slate-50 rounded-lg p-4">
                                             <div className="flex justify-between mb-2">
-                                                <span className="font-bold text-slate-900">{p.title}</span>
-                                                <span className="font-bold text-emerald-600">+{fmt(p.amount)}</span>
+                                                <span className="font-semibold text-slate-700">{p.title}</span>
+                                                <span className="font-semibold text-emerald-600">+{fmt(p.amount)}</span>
                                             </div>
                                             <div className="text-xs text-slate-500 mb-1">{p.date}</div>
                                             <div className="text-sm text-slate-500">
@@ -456,7 +460,7 @@ export default function CustomerDetail() {
                     {/* ════════════════════════════════════════════════════════════════ */}
                     {activeTab === 3 && (
                         <SectionCard>
-                            <h2 className="text-xl font-bold text-slate-900 mb-6">Activity Log</h2>
+                            <h2 className="text-xl font-semibold text-slate-700 mb-6">Activity Log</h2>
                             {activities.map((a, i) => (
                                 <div key={i} className="flex gap-4 py-4 border-b border-slate-100 last:border-0">
                                     <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-lg shrink-0 ${a.iconBg}`}>
@@ -481,25 +485,25 @@ export default function CustomerDetail() {
                     actions={[
                         {
                             label: "View Statement",
-                            icon: "📊",
+                            icon: <BarChart3 className="w-4 h-4" />,
                             variant: "secondary",
                             onClick: () => notify("Statement generated successfully!"),
                         },
                         {
                             label: "Send Invoice",
-                            icon: "📧",
+                            icon: <Mail className="w-4 h-4" />,
                             variant: "secondary",
                             onClick: () => setShowInvoice(true),
                         },
                         {
                             label: "Record Payment",
-                            icon: "💰",
+                            icon: <Wallet className="w-4 h-4" />,
                             variant: "success",
                             onClick: () => setShowPayment(true),
                         },
                         {
                             label: "Edit Customer",
-                            icon: "✏️",
+                            icon: <Pencil className="w-4 h-4" />,
                             variant: "primary",
                             onClick: () => setShowEdit(true),
                         },
@@ -523,9 +527,9 @@ export default function CustomerDetail() {
                             </button>
                             <button
                                 onClick={handleSavePayment}
-                                className="px-5 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-sm font-semibold transition-colors"
+                                className="flex items-center gap-2 px-5 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-sm font-semibold transition-colors"
                             >
-                                💰 Save Payment
+                                <Wallet className="w-4 h-4" /> Save Payment
                             </button>
                         </>
                     }
@@ -546,10 +550,10 @@ export default function CustomerDetail() {
                                             onChange={() => toggleInvoiceSelection(inv.id)}
                                         />
                                         <div className="flex-1">
-                                            <div className="font-bold text-slate-900 text-sm">{inv.id}</div>
+                                            <div className="font-semibold text-slate-700 text-sm">{inv.id}</div>
                                             <div className="text-xs text-slate-500">{inv.date}</div>
                                         </div>
-                                        <div className="font-bold text-red-500 text-sm">{fmt(inv.amount)}</div>
+                                        <div className="font-semibold text-red-500 text-sm">{fmt(inv.amount)}</div>
                                     </label>
                                 ))}
                             </div>
@@ -613,9 +617,9 @@ export default function CustomerDetail() {
                                     setShowInvoice(false);
                                     notify("Invoice sent successfully to rajesh.kumar@email.com!");
                                 }}
-                                className="px-5 py-2.5 bg-[#4A6CF7] hover:bg-[#3651D4] text-white rounded-lg text-sm font-semibold transition-colors"
+                                className="flex items-center gap-2 px-5 py-2.5 bg-indigo-500 hover:bg-indigo-600 text-white rounded-lg text-sm font-semibold transition-colors"
                             >
-                                📧 Send Invoice
+                                <Mail className="w-4 h-4" /> Send Invoice
                             </button>
                         </>
                     }
@@ -658,9 +662,9 @@ export default function CustomerDetail() {
                                     setShowEdit(false);
                                     notify("Customer details updated successfully!");
                                 }}
-                                className="px-5 py-2.5 bg-[#4A6CF7] hover:bg-[#3651D4] text-white rounded-lg text-sm font-semibold transition-colors"
+                                className="flex items-center gap-2 px-5 py-2.5 bg-indigo-500 hover:bg-indigo-600 text-white rounded-lg text-sm font-semibold transition-colors"
                             >
-                                💾 Save Changes
+                                <Save className="w-4 h-4" /> Save Changes
                             </button>
                         </>
                     }

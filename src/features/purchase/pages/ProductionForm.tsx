@@ -110,7 +110,7 @@ export default function ProductionEntryPage() {
         {/* Header */}
         <div className="mb-6 flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-6 py-5">
           <div>
-            <h1 className="mb-1 text-2xl font-bold text-slate-800">Production Entry</h1>
+            <h1 className="mb-1 text-2xl font-semibold text-slate-800">Production Entry</h1>
             <p className="text-sm text-slate-500">Record self-produced items and update stock automatically</p>
           </div>
           <div className="flex gap-3">

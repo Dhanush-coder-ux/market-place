@@ -1,4 +1,5 @@
 import React from "react";
+import { LucideIcon } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 export interface Invoice {
@@ -19,7 +20,7 @@ export interface PaymentEntry {
 }
 
 export interface ActivityEntry {
-  icon: string;
+  icon: string | React.ReactNode;
   iconBg: string;
   text: string;
   time: string;
@@ -49,7 +50,7 @@ export function StatusBadge({ status }: { status: string }) {
   };
   return (
     <span
-      className={`inline-flex px-2.5 py-1 rounded-md text-[11px] font-bold uppercase tracking-wide ${
+      className={`inline-flex px-2.5 py-1 rounded-md text-[11px] font-semibold uppercase tracking-wide ${
         colorMap[status] ?? "bg-slate-100 text-slate-600"
       }`}
     >
@@ -83,7 +84,7 @@ export function StatCard({ icon, label, value, iconBg }: StatCardProps) {
       <div className="text-[13px] text-slate-500 uppercase font-semibold tracking-wider mb-2">
         {label}
       </div>
-      <div className="text-3xl font-bold text-slate-800">{value}</div>
+      <div className="text-3xl font-semibold text-slate-700">{value}</div>
     </div>
   );
 }
@@ -116,7 +117,7 @@ export function Modal({ show, onClose, title, children, footer }: ModalProps) {
       <div className="bg-white rounded-2xl w-[90%] max-w-xl max-h-[90vh] overflow-y-auto shadow-2xl animate-[slideUp_0.3s_ease]">
         {/* Header */}
         <div className="px-6 py-5 border-b border-slate-200 flex justify-between items-center">
-          <h2 className="text-xl font-bold text-slate-800">{title}</h2>
+          <h2 className="text-xl font-semibold text-slate-700">{title}</h2>
           <button
             onClick={onClose}
             className="w-8 h-8 flex items-center justify-center bg-slate-100 hover:bg-slate-200 rounded-md text-lg transition-colors"
@@ -173,15 +174,15 @@ export function Notification({ text, show, variant = "success" }: NotificationPr
     <div
       className={`fixed top-6 right-6 z-[2000] bg-white px-5 py-4 rounded-xl shadow-xl flex items-center gap-3 border-l-4 ${borderColor} animate-[slideIn_0.3s_ease]`}
     >
-      <span className={`text-2xl font-bold ${iconColor}`}>{icon}</span>
-      <span className="text-sm font-semibold text-slate-800">{text}</span>
+      <span className={`text-2xl font-semibold ${iconColor}`}>{icon}</span>
+      <span className="text-sm font-semibold text-slate-700">{text}</span>
     </div>
   );
 }
 
 // ─── Form primitives ──────────────────────────────────────────────────────────
 const inputBase =
-  "w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-[#4A6CF7] transition-colors";
+  "w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500 transition-colors";
 
 export interface FormInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label: string;
@@ -196,7 +197,7 @@ export interface FormInputProps extends React.InputHTMLAttributes<HTMLInputEleme
 export function FormInput({ label, ...props }: FormInputProps) {
   return (
     <div>
-      <label className="block text-sm font-semibold text-slate-800 mb-2">{label}</label>
+      <label className="block text-sm font-semibold text-slate-700 mb-2">{label}</label>
       <input className={inputBase} {...props} />
     </div>
   );
@@ -216,7 +217,7 @@ export interface FormSelectProps extends React.SelectHTMLAttributes<HTMLSelectEl
 export function FormSelect({ label, options, ...props }: FormSelectProps) {
   return (
     <div>
-      <label className="block text-sm font-semibold text-slate-800 mb-2">{label}</label>
+      <label className="block text-sm font-semibold text-slate-700 mb-2">{label}</label>
       <select className={`${inputBase} bg-white`} {...props}>
         {options.map((o) => (
           <option key={o}>{o}</option>
@@ -239,7 +240,7 @@ export interface FormTextareaProps extends React.TextareaHTMLAttributes<HTMLText
 export function FormTextarea({ label, ...props }: FormTextareaProps) {
   return (
     <div>
-      <label className="block text-sm font-semibold text-slate-800 mb-2">{label}</label>
+      <label className="block text-sm font-semibold text-slate-700 mb-2">{label}</label>
       <textarea className={`${inputBase} resize-y min-h-[90px]`} {...props} />
     </div>
   );
@@ -261,7 +262,7 @@ export function InfoRow({ label, value }: InfoRowProps) {
   return (
     <div>
       <div className="text-[13px] text-slate-500 font-medium mb-1">{label}</div>
-      <div className="text-[15px] font-semibold text-slate-900">{value}</div>
+      <div className="text-[15px] font-semibold text-slate-700">{value}</div>
     </div>
   );
 }
@@ -290,7 +291,7 @@ export function SectionCard({ children, className = "" }: SectionCardProps) {
 
 // ─── AlertBanner ──────────────────────────────────────────────────────────────
 export interface AlertBannerProps {
-  icon: string;
+  icon: string | LucideIcon;
   title: string;
   message: string;
   variant?: "danger" | "warning";
@@ -303,7 +304,7 @@ export interface AlertBannerProps {
  * <AlertBanner icon="⚠️" title="Outstanding Due" message="Balance of ₹15,300 pending." variant="danger" />
  */
 export function AlertBanner({
-  icon,
+  icon: Icon,
   title,
   message,
   variant = "danger",
@@ -315,10 +316,12 @@ export function AlertBanner({
   const titleColor = variant === "warning" ? "text-amber-900" : "text-red-800";
 
   return (
-    <div className={`border rounded-xl p-5 flex items-center gap-4 ${styles}`}>
-      <span className="text-3xl shrink-0">{icon}</span>
+    <div className={`border rounded-xl p-3 flex items-center gap-4 ${styles}`}>
+      <div className="text-3xl shrink-0 flex items-center justify-center">
+        {typeof Icon === "string" ? Icon : <Icon size={30} />}
+      </div>
       <div>
-        <div className={`font-bold text-base mb-1 ${titleColor}`}>{title}</div>
+        <div className={`font-semibold text-base mb-1 ${titleColor}`}>{title}</div>
         <div className="text-sm">{message}</div>
       </div>
     </div>
@@ -329,7 +332,7 @@ export function AlertBanner({
 // ─── BottomActionBar ──────────────────────────────────────────────────────────
 export interface ActionButton {
   label: string;
-  icon: string;
+  icon: string | React.ReactNode;
   onClick: () => void;
   variant?: "primary" | "success" | "secondary";
 }
@@ -342,7 +345,7 @@ export interface BottomActionBarProps {
 export function BottomActionBar({ customerName, actions }: BottomActionBarProps) {
   const variantClass: Record<string, string> = {
     primary:
-      "bg-[#4A6CF7] hover:bg-[#3651D4] text-white",
+      "bg-indigo-500 hover:bg-indigo-600 text-white",
     success:
       "bg-emerald-500 hover:bg-emerald-600 text-white",
     secondary:

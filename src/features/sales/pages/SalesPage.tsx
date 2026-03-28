@@ -12,6 +12,10 @@ import {
   X,
   Receipt,
   ArrowUpRight,
+  User,
+  Calendar,
+  CreditCard,
+  Package,
 } from "lucide-react";
 
 /* ═══════════════════════════════════════════════
@@ -234,6 +238,10 @@ const SalesListPage = () => {
   const [filterStatus,  setFilterStatus]  = useState<string>("");
   const [filterDate,    setFilterDate]    = useState<string>("");
 
+  /* ── SIDEBAR STATE ── */
+  const [selectedSale, setSelectedSale]   = useState<SaleRecord | null>(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
   /* ── Derived stats ── */
   const totalRevenue   = MOCK_SALES.filter(s => s.status === "Completed").reduce((a, b) => a + b.totalAmount, 0);
   const onlineSales    = MOCK_SALES.filter(s => s.salesType === "Online").length;
@@ -259,11 +267,20 @@ const SalesListPage = () => {
     setFilterType(""); setFilterPayment(""); setFilterStatus(""); setFilterDate(""); setSearch("");
   };
 
+  const openSidebar = (sale: SaleRecord) => {
+    setSelectedSale(sale);
+    setIsSidebarOpen(true);
+  };
+
+  const closeSidebar = () => {
+    setIsSidebarOpen(false);
+  };
+
   return (
     <>
       <style>{STYLES}</style>
 
-      <div className="sales-root min-h-screen bg-zinc-50/50 px-6 py-8 space-y-6">
+      <div className="sales-root min-h-screen bg-zinc-50/50 px-6 py-8 space-y-6 relative overflow-x-hidden">
 
         {/* ── Page Header ── */}
         <div className="flex items-start justify-between gap-4">
@@ -349,24 +366,9 @@ const SalesListPage = () => {
           </div>
 
           {/* Filter dropdowns */}
-          <FilterDropdown
-            label="Sales Type"
-            options={["Online", "Offline"]}
-            value={filterType}
-            onChange={setFilterType}
-          />
-          <FilterDropdown
-            label="Payment"
-            options={["Cash", "Card", "UPI"]}
-            value={filterPayment}
-            onChange={setFilterPayment}
-          />
-          <FilterDropdown
-            label="Status"
-            options={["Completed", "Pending", "Cancelled"]}
-            value={filterStatus}
-            onChange={setFilterStatus}
-          />
+          <FilterDropdown label="Sales Type" options={["Online", "Offline"]} value={filterType} onChange={setFilterType} />
+          <FilterDropdown label="Payment" options={["Cash", "Card", "UPI"]} value={filterPayment} onChange={setFilterPayment} />
+          <FilterDropdown label="Status" options={["Completed", "Pending", "Cancelled"]} value={filterStatus} onChange={setFilterStatus} />
 
           {/* Active filter indicator */}
           {activeFilters > 0 && (
@@ -505,7 +507,9 @@ const SalesListPage = () => {
                         {/* Actions */}
                         <td className="py-3.5 pl-4 pr-5">
                           <div className="sales-row-actions flex items-center justify-end gap-1">
+                            {/* ── TRIGGER SIDEBAR HERE ── */}
                             <button
+                              onClick={() => openSidebar(sale)}
                               title="View sale"
                               className="w-8 h-8 flex items-center justify-center rounded-md text-zinc-400 hover:text-blue-600 hover:bg-blue-50 transition-all"
                             >
@@ -564,6 +568,130 @@ const SalesListPage = () => {
             </div>
           )}
         </div>
+      </div>
+
+      {/* ═══════════════════════════════════════════════
+          SIDEBAR / DRAWER COMPONENT
+      ═══════════════════════════════════════════════ */}
+      {/* Backdrop overlay */}
+      {isSidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/20 backdrop-blur-sm z-[100] transition-opacity"
+          onClick={closeSidebar}
+        />
+      )}
+
+      {/* Sliding Panel */}
+      <div
+        className={`fixed top-0 right-0 h-full w-full max-w-md bg-white shadow-2xl z-[110] transform transition-transform duration-300 ease-in-out border-l border-zinc-200 flex flex-col ${
+          isSidebarOpen ? "translate-x-0" : "translate-x-full"
+        }`}
+      >
+        {selectedSale && (
+          <>
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-100">
+              <div>
+                <h2 className="text-lg font-semibold text-zinc-900 tracking-tight">Sale Details</h2>
+                <p className="text-xs text-zinc-500 sales-mono mt-0.5">{selectedSale.invoiceNumber}</p>
+              </div>
+              <button
+                onClick={closeSidebar}
+                className="w-8 h-8 flex items-center justify-center rounded-full text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700 transition-colors"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Scrollable Content */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+              
+              {/* Grand Total Area */}
+              <div className="bg-zinc-50 rounded-xl p-5 border border-zinc-100 flex flex-col items-center justify-center text-center">
+                <span className="text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1">Total Amount</span>
+                <span className="text-4xl font-semibold text-zinc-900 sales-mono tracking-tight">
+                  ₹{selectedSale.totalAmount.toLocaleString()}
+                </span>
+                <div className="mt-3">
+                  <Badge 
+                    cls={STATUS_CFG[selectedSale.status].cls} 
+                    dot={STATUS_CFG[selectedSale.status].dot} 
+                    label={selectedSale.status} 
+                  />
+                </div>
+              </div>
+
+              {/* Details Grid */}
+              <div className="grid grid-cols-2 gap-4">
+                {/* Customer */}
+                <div className="bg-white border border-zinc-100 rounded-xl p-4 shadow-sm">
+                  <div className="flex items-center gap-2 text-zinc-400 mb-2">
+                    <User size={14} />
+                    <span className="text-[11px] font-semibold uppercase tracking-widest">Customer</span>
+                  </div>
+                  <p className="text-sm font-medium text-zinc-900">{selectedSale.customerName}</p>
+                </div>
+
+                {/* Date */}
+                <div className="bg-white border border-zinc-100 rounded-xl p-4 shadow-sm">
+                  <div className="flex items-center gap-2 text-zinc-400 mb-2">
+                    <Calendar size={14} />
+                    <span className="text-[11px] font-semibold uppercase tracking-widest">Date</span>
+                  </div>
+                  <p className="text-sm font-medium text-zinc-900 tabular-nums">{selectedSale.date}</p>
+                </div>
+
+                {/* Payment Method */}
+                <div className="bg-white border border-zinc-100 rounded-xl p-4 shadow-sm">
+                  <div className="flex items-center gap-2 text-zinc-400 mb-2">
+                    <CreditCard size={14} />
+                    <span className="text-[11px] font-semibold uppercase tracking-widest">Payment</span>
+                  </div>
+                  <p className="text-sm font-medium text-zinc-900">{selectedSale.paymentMethod}</p>
+                </div>
+
+                {/* Sales Type */}
+                <div className="bg-white border border-zinc-100 rounded-xl p-4 shadow-sm">
+                  <div className="flex items-center gap-2 text-zinc-400 mb-2">
+                    {selectedSale.salesType === "Online" ? <Wifi size={14} /> : <WifiOff size={14} />}
+                    <span className="text-[11px] font-semibold uppercase tracking-widest">Type</span>
+                  </div>
+                  <p className="text-sm font-medium text-zinc-900">{selectedSale.salesType}</p>
+                </div>
+              </div>
+
+              {/* Items Summary Placeholder */}
+              <div>
+                <h3 className="text-xs font-semibold uppercase tracking-widest text-zinc-400 mb-3">Order Summary</h3>
+                <div className="border border-zinc-100 rounded-xl divide-y divide-zinc-100">
+                  <div className="flex items-center justify-between p-4 bg-white rounded-t-xl">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 bg-zinc-50 rounded-lg flex items-center justify-center text-zinc-400">
+                        <Package size={16} />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-zinc-800">Total Items Purchased</p>
+                        <p className="text-xs text-zinc-500">Various products</p>
+                      </div>
+                    </div>
+                    <span className="text-sm font-semibold text-zinc-900 tabular-nums">{selectedSale.itemsCount}x</span>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+            {/* Footer Actions */}
+            <div className="p-4 border-t border-zinc-100 bg-zinc-50 flex gap-3">
+              <button className="flex-1 py-2.5 bg-white border border-zinc-200 text-zinc-700 rounded-lg text-sm font-semibold hover:bg-zinc-50 transition-colors shadow-sm">
+                Download PDF
+              </button>
+              <button className="flex-1 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm">
+                Print Receipt
+              </button>
+            </div>
+          </>
+        )}
       </div>
     </>
   );

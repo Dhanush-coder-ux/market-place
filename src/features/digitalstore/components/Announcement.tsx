@@ -1,4 +1,5 @@
 import  { useState, useRef} from "react";
+import { Megaphone, RefreshCw, Gift, Smile, Sparkles, PenTool, History, Inbox } from "lucide-react";
 
 // ─── Types & Interfaces ──────────────────────────────────────────────────────
 
@@ -28,7 +29,7 @@ interface TypeConfigDetails {
   text: string;
   border: string;
   dot: string;
-  emoji: string;
+  emoji: React.ReactNode;
   gradientFrom: string;
   gradientTo: string;
 }
@@ -46,7 +47,7 @@ const TYPE_CONFIG: Record<AnnouncementType, TypeConfigDetails> = {
     text: "text-indigo-700",
     border: "border-indigo-200",
     dot: "bg-indigo-500",
-    emoji: "📢",
+    emoji: <Megaphone size={14} strokeWidth={2.5} />,
     gradientFrom: "from-indigo-500/10",
     gradientTo: "to-indigo-500/5",
   },
@@ -57,7 +58,7 @@ const TYPE_CONFIG: Record<AnnouncementType, TypeConfigDetails> = {
     text: "text-sky-700",
     border: "border-sky-200",
     dot: "bg-sky-500",
-    emoji: "🔄",
+    emoji: <RefreshCw size={14} strokeWidth={2.5} />,
     gradientFrom: "from-sky-500/10",
     gradientTo: "to-sky-500/5",
   },
@@ -68,7 +69,7 @@ const TYPE_CONFIG: Record<AnnouncementType, TypeConfigDetails> = {
     text: "text-emerald-800",
     border: "border-emerald-200",
     dot: "bg-emerald-500",
-    emoji: "🎁",
+    emoji: <Gift size={14} strokeWidth={2.5} />,
     gradientFrom: "from-emerald-500/10",
     gradientTo: "to-emerald-500/5",
   },
@@ -138,7 +139,7 @@ function TypeBadge({ type }: { type: AnnouncementType }) {
   const cfg = TYPE_CONFIG[type];
   return (
     <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${cfg.bg} ${cfg.text}`}>
-      <span className="text-[10px]">{cfg.emoji}</span>
+      <span className="flex items-center justify-center">{cfg.emoji}</span>
       {type}
     </span>
   );
@@ -168,7 +169,7 @@ function PreviewBanner({ announcement, type, cta }: { announcement: string; type
   const cfg = TYPE_CONFIG[type];
   return (
     <div className={`w-full rounded-xl bg-gradient-to-br ${cfg.gradientFrom} ${cfg.gradientTo} border-[1.5px] ${cfg.border} p-3 px-4 flex items-center gap-3 animate-[fadeIn_0.2s_ease]`}>
-      <span className="text-lg">{cfg.emoji}</span>
+      <span className="flex items-center justify-center text-current">{cfg.emoji}</span>
       <p className="flex-1 text-[13px] font-medium text-slate-800 m-0">
         {announcement || "Your announcement will appear here…"}
       </p>
@@ -186,7 +187,7 @@ function PreviewToast({ announcement, type }: { announcement: string; type: Anno
   return (
     <div className="inline-flex items-start gap-2.5 bg-slate-800 rounded-xl p-3.5 px-4 shadow-[0_12px_32px_rgba(0,0,0,0.25)] max-w-[340px] animate-[slideUp_0.25s_ease]">
       <div className={`w-8 h-8 rounded-lg ${cfg.color} flex items-center justify-center shrink-0`}>
-        <span className="text-sm">{cfg.emoji}</span>
+        <span className="flex items-center justify-center text-white">{cfg.emoji}</span>
       </div>
       <div>
         <p className={`m-0 mb-0.5 text-[11px] font-bold ${cfg.text.replace('700','400')} tracking-[0.06em] uppercase text-${cfg.color.split('-')[1]}-400`}>
@@ -314,8 +315,8 @@ export default function AnnouncementsPage() {
             <div className="flex items-end justify-between mb-5">
               <div>
                 <div className="flex items-center gap-2.5 mb-1.5">
-                  <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-blue-400 flex items-center justify-center text-[17px]">
-                    📢
+                  <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-blue-400 flex items-center justify-center text-white">
+                    <Megaphone size={18} strokeWidth={2.5} />
                   </div>
                   <h1 className="m-0 text-[22px] font-extrabold text-slate-900 tracking-tight">Announcements</h1>
                 </div>
@@ -343,14 +344,14 @@ export default function AnnouncementsPage() {
             </div>
 
             {/* Tabs */}
-            <div className="flex gap-1 bg-slate-100 rounded-xl p-1 w-fit">
+            <div className="flex gap-2 bg-slate-100 rounded-xl p-1 w-fit">
               {(["editor", "history"] as const).map(tab => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
-                  className={`capitalize py-2 px-4 rounded-lg text-[13.5px] font-semibold transition-all duration-150 ${activeTab === tab ? "bg-white text-slate-800 shadow-[0_1px_4px_rgba(0,0,0,0.08)]" : "bg-transparent text-slate-500 hover:bg-slate-200/50 hover:text-slate-700"}`}
+                  className={`capitalize py-2 px-4 rounded-lg text-[13.5px] font-semibold transition-all duration-150 flex items-center gap-2 ${activeTab === tab ? "bg-white text-slate-800 shadow-[0_1px_4px_rgba(0,0,0,0.08)]" : "bg-transparent text-slate-500 hover:bg-slate-200/50 hover:text-slate-700"}`}
                 >
-                  {tab === "editor" ? "✏️ Editor" : `📋 History (${history.length})`}
+                  {tab === "editor" ? <><PenTool size={16} strokeWidth={2.5}/> Editor</> : <><History size={16} strokeWidth={2.5}/> History ({history.length})</>}
                 </button>
               ))}
             </div>
@@ -384,7 +385,7 @@ export default function AnnouncementsPage() {
                       className={`appearance-none rounded-xl py-1.5 pl-2.5 pr-7 text-[12.5px] font-semibold cursor-pointer outline-none bg-no-repeat bg-[right_8px_center] border-[1.5px] transition-colors focus:ring-4 focus:ring-blue-500/10 ${cfg.bg} ${cfg.text} ${cfg.border}`}
                     >
                       {(Object.keys(TYPE_CONFIG) as AnnouncementType[]).map(t => (
-                        <option key={t} value={t}>{TYPE_CONFIG[t].emoji} {t}</option>
+                        <option key={t} value={t}>{t}</option>
                       ))}
                     </select>
 
@@ -414,9 +415,9 @@ export default function AnnouncementsPage() {
                     <div className="relative">
                       <button
                         onClick={() => setShowEmoji(p => !p)}
-                        className="p-1.5 px-2.5 rounded-xl border-[1.5px] border-slate-200 bg-transparent text-slate-600 hover:bg-slate-50 hover:border-slate-300 transition-colors"
+                        className="p-1.5 px-2.5 rounded-xl border-[1.5px] border-slate-200 bg-transparent text-slate-600 hover:bg-slate-50 hover:border-slate-300 transition-colors flex items-center justify-center"
                       >
-                        <span className="text-sm">😊</span>
+                        <Smile size={18} strokeWidth={2.5} />
                       </button>
                       {showEmoji && (
                         <div className="absolute right-0 top-[calc(100%+6px)] z-50 bg-white border-[1.5px] border-slate-200 rounded-2xl p-2.5 grid grid-cols-6 gap-1 shadow-[0_10px_30px_rgba(0,0,0,0.1)] animate-[slideUp_0.15s_ease]">
@@ -466,8 +467,8 @@ export default function AnnouncementsPage() {
                   {/* AI Suggestions (when empty) */}
                   {!text && focused && (
                     <div className="px-4 pb-3.5 animate-[fadeIn_0.15s_ease]">
-                      <p className="m-0 mb-2 text-[10.5px] font-bold text-slate-400 tracking-[0.08em] uppercase">
-                        ✨ Quick templates
+                      <p className="m-0 mb-2 text-[10.5px] font-bold text-slate-400 tracking-[0.08em] uppercase flex items-center gap-1.5">
+                        <Sparkles size={12} strokeWidth={2.5} className="text-purple-400" /> Quick templates
                       </p>
                       <div className="flex flex-wrap gap-1.5">
                         {AI_SUGGESTIONS.map((s, i) => (
@@ -669,7 +670,7 @@ export default function AnnouncementsPage() {
                   className="appearance-none bg-slate-50 border-[1.5px] border-slate-200 rounded-xl py-1.5 pl-2.5 pr-7 text-[12.5px] font-semibold text-slate-700 cursor-pointer outline-none bg-no-repeat bg-[right_8px_center] transition-colors focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
                 >
                   <option value="All">All Types</option>
-                  {(Object.keys(TYPE_CONFIG) as AnnouncementType[]).map(t => <option key={t} value={t}>{TYPE_CONFIG[t].emoji} {t}</option>)}
+                  {(Object.keys(TYPE_CONFIG) as AnnouncementType[]).map(t => <option key={t} value={t}>{t}</option>)}
                 </select>
 
                 <select
@@ -697,8 +698,8 @@ export default function AnnouncementsPage() {
 
               {/* Rows */}
               {filteredHistory.length === 0 ? (
-                <div className="py-12 px-5 text-center">
-                  <span className="text-[36px]">📭</span>
+                <div className="py-12 px-5 text-center flex flex-col items-center justify-center mt-6">
+                  <Inbox size={48} className="text-slate-300 mb-2" strokeWidth={1.5} />
                   <p className="m-0 mt-3 mb-1 text-[14px] font-bold text-slate-700">No announcements found</p>
                   <p className="m-0 text-[13px] text-slate-400">Try adjusting your filters or create a new one</p>
                 </div>

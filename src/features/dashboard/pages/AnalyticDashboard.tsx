@@ -1,4 +1,9 @@
 import { useState } from "react";
+import { 
+  Headphones, Cable, Link2, Armchair, Coffee, 
+  IndianRupee, TrendingUp, ShoppingCart, Zap, 
+  BarChart2, Globe, Star 
+} from "lucide-react";
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
@@ -46,11 +51,11 @@ const productData = [
 ];
 
 const topProducts = [
-  { name: "Wireless Headphones", price: "₹12,750", change: "+15", icon: "🎧" },
-  { name: "Phone Charger 20W", price: "₹10,450", change: "+8", icon: "🔌" },
-  { name: "USB-C Cable", price: "₹8,500", change: "+22", icon: "🔗" },
-  { name: "Ergonomic Chair", price: "₹7,250", change: "+15", icon: "🪑" },
-  { name: "Electric Kettle", price: "₹5,920", change: "+40", icon: "☕" },
+  { name: "Wireless Headphones", price: "₹12,750", change: "+15", icon: <Headphones className="w-4 h-4 text-slate-500" /> },
+  { name: "Phone Charger 20W", price: "₹10,450", change: "+8", icon: <Cable className="w-4 h-4 text-slate-500" /> },
+  { name: "USB-C Cable", price: "₹8,500", change: "+22", icon: <Link2 className="w-4 h-4 text-slate-500" /> },
+  { name: "Ergonomic Chair", price: "₹7,250", change: "+15", icon: <Armchair className="w-4 h-4 text-slate-500" /> },
+  { name: "Electric Kettle", price: "₹5,920", change: "+40", icon: <Coffee className="w-4 h-4 text-slate-500" /> },
 ];
 
 const digitalStoreData = [
@@ -105,10 +110,10 @@ const AnalyticsDashboard = () => {
         {/* ── STAT CARDS ── */}
         <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
           {[
-            { title: "Daily Revenue", value: "₹8,750", change: "12%", positive: true, subtitle: "Daily since yesterday", icon: "💰", accent: "bg-blue-50" },
-            { title: "Monthly Revenue", value: "₹2,40,500", change: "18%", positive: true, subtitle: "36 days since last month", icon: "📈", accent: "bg-violet-50" },
-            { title: "Today's Orders", value: "47", change: "7%", positive: false, subtitle: "3 sec. since yesterday", icon: "🛒", accent: "bg-amber-50" },
-            { title: "Avg. Order Value", value: "₹186", change: "12%", positive: true, subtitle: "112% since yesterday", icon: "⚡", accent: "bg-emerald-50" },
+            { title: "Daily Revenue", value: "₹8,750", change: "12%", positive: true, subtitle: "Daily since yesterday", icon: <IndianRupee className="w-5 h-5 text-blue-600" />, accent: "bg-blue-50" },
+            { title: "Monthly Revenue", value: "₹2,40,500", change: "18%", positive: true, subtitle: "36 days since last month", icon: <TrendingUp className="w-5 h-5 text-violet-600" />, accent: "bg-violet-50" },
+            { title: "Today's Orders", value: "47", change: "7%", positive: false, subtitle: "3 sec. since yesterday", icon: <ShoppingCart className="w-5 h-5 text-amber-600" />, accent: "bg-amber-50" },
+            { title: "Avg. Order Value", value: "₹186", change: "12%", positive: true, subtitle: "112% since yesterday", icon: <Zap className="w-5 h-5 text-emerald-600" />, accent: "bg-emerald-50" },
           ].map((s, i) => (
             <div key={s.title} className={`fade-up fade-up-${i + 1}`}>
               <StatCard {...s} />
@@ -218,8 +223,8 @@ const AnalyticsDashboard = () => {
 
             <SectionCard title="Growth">
               <div className="px-5 pb-5 flex items-center gap-4">
-                <div className="w-12 h-12 bg-emerald-50 rounded-xl flex items-center justify-center text-2xl">
-                  📊
+                <div className="w-12 h-12 bg-emerald-50 rounded-xl flex items-center justify-center">
+                  <BarChart2 className="w-6 h-6 text-emerald-600" />
                 </div>
                 <div>
                   <p className="display-font text-2xl font-bold text-emerald-500">28.5%</p>
@@ -334,7 +339,9 @@ const AnalyticsDashboard = () => {
             <div className="px-5 pb-5 space-y-4">
               <div className="flex items-center justify-between p-3 bg-blue-50 rounded-xl">
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center text-white text-sm">🌐</div>
+                  <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center text-white">
+                    <Globe className="w-4 h-4" />
+                  </div>
                   <div>
                     <p className="text-xs text-slate-500">Online</p>
                     <p className="font-bold text-slate-700">₹920</p>
@@ -392,12 +399,12 @@ const AnalyticsDashboard = () => {
                 Bottom quick stats
                 <div className="mt-4 pt-4 border-t border-slate-100 grid grid-cols-3 gap-3">
                   {[
-                    { label: "Gross Margin", value: "28.5%", icon: "📈" },
-                    { label: "Online Share", value: "2.5%", icon: "🌐" },
-                    { label: "Avg Rating", value: "4.9 ★", icon: "⭐" },
+                    { label: "Gross Margin", value: "28.5%", icon: <TrendingUp className="w-5 h-5 mx-auto text-slate-500" /> },
+                    { label: "Online Share", value: "2.5%", icon: <Globe className="w-5 h-5 mx-auto text-slate-500" /> },
+                    { label: "Avg Rating", value: "4.9 ★", icon: <Star className="w-5 h-5 mx-auto text-amber-500" /> },
                   ].map((s) => (
                     <div key={s.label} className="text-center p-2.5 bg-slate-50 rounded-xl">
-                      <p className="text-lg mb-0.5">{s.icon}</p>
+                      <div className="mb-1.5 flex justify-center">{s.icon}</div>
                       <p className="display-font text-sm font-bold text-slate-700">{s.value}</p>
                       <p className="text-xs text-slate-400">{s.label}</p>
                     </div>

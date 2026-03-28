@@ -19,23 +19,36 @@ export const GradientButton: React.FC<ButtonProps> = ({
   iconPosition = 'left',
   ...props
 }) => {
-  const baseStyles = "inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl  transition-all duration-200 active:scale-95 disabled:opacity-50 disabled:pointer-events-none";
+  // Enhanced base styles with focus outlines and smooth scaling
+  const baseStyles = "group inline-flex items-center justify-center gap-2.5 px-5 py-2.5 rounded-xl font-semibold text-[14px] transition-all duration-300 ease-out active:scale-[0.97] disabled:opacity-50 disabled:pointer-events-none focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2";
 
+  // Ultra-premium modern variants with micro-interactions
   const variants = {
-    primary: "bg-gradient-to-r from-blue-600 to-blue-400 text-white shadow-md hover:shadow-blue-200/50 hover:-translate-y-0.5",
-    outline: "bg-white border-2 border-blue-100 text-blue-600 hover:border-blue-400 hover:bg-blue-50",
-    danger: "bg-red-50 text-red-600 border border-red-100 hover:bg-red-600 hover:text-white",
-    ghost: "bg-transparent text-gray-600 hover:bg-gray-100",
+    primary: "bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-500 bg-[length:200%_auto] text-white shadow-[0_4px_12px_rgba(99,102,241,0.35)] hover:shadow-[0_6px_20px_rgba(99,102,241,0.45)] hover:-translate-y-0.5 hover:bg-[position:right_center] focus-visible:ring-indigo-500",
+    
+    outline: "bg-white border border-slate-200 text-slate-700 shadow-[0_1px_2px_rgba(0,0,0,0.05)] hover:border-slate-300 hover:text-slate-900 hover:bg-slate-50 hover:shadow-md hover:-translate-y-0.5 focus-visible:ring-slate-300",
+    
+    danger: "bg-gradient-to-r from-rose-50 to-red-50 text-red-600 border border-red-200 hover:from-rose-500 hover:to-red-600 hover:text-white hover:border-transparent hover:shadow-[0_6px_16px_rgba(225,29,72,0.3)] hover:-translate-y-0.5 focus-visible:ring-red-500",
+    
+    ghost: "bg-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900 focus-visible:ring-slate-300",
   };
 
   const combinedClasses = `${baseStyles} ${variants[variant]} ${className}`;
 
-  // Content structure (to avoid repetition)
+  // Reusable content structure with animated icon support
   const content = (
     <>
-      {icon && iconPosition === 'left' && <span className="shrink-0">{icon}</span>}
+      {icon && iconPosition === 'left' && (
+        <span className="shrink-0 transition-transform duration-300 group-hover:scale-110">
+          {icon}
+        </span>
+      )}
       <span className="truncate">{children}</span>
-      {icon && iconPosition === 'right' && <span className="shrink-0">{icon}</span>}
+      {icon && iconPosition === 'right' && (
+        <span className="shrink-0 transition-transform duration-300 group-hover:scale-110">
+          {icon}
+        </span>
+      )}
     </>
   );
 

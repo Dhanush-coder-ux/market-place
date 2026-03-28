@@ -1,8 +1,10 @@
+import React from 'react';
+
 export const StatCard = ({
   title, value, change, positive, subtitle, icon, accent,
 }: {
   title: string; value: string; change: string; positive: boolean;
-  subtitle: string; icon: string; accent: string;
+  subtitle: string; icon: React.ReactNode; accent: string;
 }) => (
   <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm hover:shadow-md transition-all duration-200 group">
     <div className="flex items-start justify-between mb-3">

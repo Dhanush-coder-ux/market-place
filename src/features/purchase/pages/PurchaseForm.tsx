@@ -124,7 +124,7 @@ const PurchaseScreen = () => {
           <button className="px-4 py-2 text-sm font-semibold text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition">
             Cancel
           </button>
-          <button className="flex items-center gap-2 px-6 py-2 text-sm font-bold text-white bg-blue-600 rounded-lg hover:bg-blue-700 shadow-sm transition">
+          <button className="flex items-center gap-2 px-6 py-2 text-sm font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 shadow-sm transition">
             <Save size={16} /> Save & Add to Stock
           </button>
         </div>
@@ -137,7 +137,7 @@ const PurchaseScreen = () => {
           
           {/* 1. Purchase Details */}
           <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
-            <h2 className="text-sm font-bold uppercase tracking-wider text-slate-500 mb-4"> Purchase Details</h2>
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-500 mb-4"> Purchase Details</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
               <ReusableSelect
                 label="Supplier"
@@ -184,15 +184,15 @@ const PurchaseScreen = () => {
           {/* 3. Product Entry */}
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
             <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-              <h2 className="text-sm font-bold uppercase tracking-wider text-slate-500">Products</h2>
-              <button onClick={addProduct} className="text-xs font-bold text-blue-600 bg-blue-50 px-3 py-1.5 rounded-md hover:bg-blue-100 flex items-center gap-1">
+              <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-500">Products</h2>
+              <button onClick={addProduct} className="text-xs font-semibold text-blue-600 bg-blue-50 px-3 py-1.5 rounded-md hover:bg-blue-100 flex items-center gap-1">
                 <Plus size={14} /> Add Row
               </button>
             </div>
             
             <div className="p-0">
               {/* Header Row */}
-              <div className="grid grid-cols-12 gap-3 p-4 bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-500">
+              <div className="grid grid-cols-12 gap-3 p-4 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-500">
                 <div className="col-span-4">Product</div>
                 <div className="col-span-2">Quantity</div>
                 <div className="col-span-2">Cost Price (₹)</div>
@@ -276,7 +276,7 @@ const PurchaseScreen = () => {
 
          {/* 5. Payment Details */}
           <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3"> Payment Details</h2>
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-3"> Payment Details</h2>
             
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4">
               {[
@@ -291,7 +291,7 @@ const PurchaseScreen = () => {
                   className={`flex flex-col items-center justify-center p-2.5 rounded-lg border transition-all ${payment.method === m.id ? 'border-blue-500 bg-blue-50 text-blue-700 shadow-sm' : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300 hover:bg-slate-50'}`}
                 >
                   <div className="mb-1">{m.icon}</div>
-                  <span className="text-xs font-bold">{m.id}</span>
+                  <span className="text-xs font-semibold">{m.id}</span>
                 </button>
               ))}
             </div>
@@ -301,7 +301,7 @@ const PurchaseScreen = () => {
                 <Input 
                   label="Amount Paid Now (₹)"
                   type="number" 
-                  className="!text-base !font-bold !text-blue-700"
+                  className="!text-base !font-semibold !text-blue-700"
                   value={payment.amountPaid as any}
                   onChange={(e) => setPayment({...payment, amountPaid: e.target.value ? Number(e.target.value) : ""})}
                   placeholder={stats.grandTotal.toString()}
@@ -309,7 +309,7 @@ const PurchaseScreen = () => {
               </div>
               <div className="flex-1 w-full flex flex-col justify-center">
                 <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-0.5">Outstanding Balance</span>
-                <span className={`text-xl font-black ${stats.outstanding > 0 ? 'text-orange-500' : 'text-green-500'}`}>
+                <span className={`text-xl font-semibold ${stats.outstanding > 0 ? 'text-orange-500' : 'text-green-500'}`}>
                   ₹{stats.outstanding.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                 </span>
               </div>
@@ -323,24 +323,24 @@ const PurchaseScreen = () => {
           
           <div className="grid grid-cols-2 gap-4">
             <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 text-center">
-              <div className="text-3xl font-black text-slate-700">{products.length}</div>
-              <div className="text-xs font-bold text-slate-400 uppercase tracking-wide mt-1">Products</div>
+              <div className="text-3xl font-semibold text-slate-700">{products.length}</div>
+              <div className="text-xs font-semibold text-slate-400 uppercase tracking-wide mt-1">Products</div>
             </div>
             <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 text-center">
-              <div className="text-3xl font-black text-slate-700">{stats.totalQty}</div>
-              <div className="text-xs font-bold text-slate-400 uppercase tracking-wide mt-1">Total Units</div>
+              <div className="text-3xl font-semibold text-slate-700">{stats.totalQty}</div>
+              <div className="text-xs font-semibold text-slate-400 uppercase tracking-wide mt-1">Total Units</div>
             </div>
           </div>
 
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden sticky top-6">
             <div className="p-5 border-b border-slate-100 bg-slate-50">
-              <h2 className="text-sm font-bold uppercase tracking-wider text-slate-800">Order Summary</h2>
+              <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-800">Order Summary</h2>
             </div>
             
             <div className="p-5 space-y-4">
               <div className="flex justify-between items-center text-slate-600">
                 <span className="text-sm font-semibold">Subtotal (Product Cost)</span>
-                <span className="font-bold">₹{stats.subtotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                <span className="font-semibold">₹{stats.subtotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
               </div>
 
               <div className="pt-4 border-t border-slate-100 space-y-4">
@@ -365,15 +365,15 @@ const PurchaseScreen = () => {
 
               <div className="pt-4 border-t border-slate-100 flex justify-between items-center text-slate-600">
                 <span className="text-sm font-semibold">GST @ 18%</span>
-                <span className="font-bold">₹{stats.gstAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                <span className="font-semibold">₹{stats.gstAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
               </div>
             </div>
 
             <div className="p-5  text-black">
               <div className="flex justify-between items-end">
                 <div>
-                  <span className="block text-slate-300 text-xs font-bold uppercase tracking-wider mb-1">Total Purchase Cost</span>
-                  <span className="text-3xl font-black">₹{stats.grandTotal.toLocaleString()}</span>
+                  <span className="block text-slate-300 text-xs font-semibold uppercase tracking-wider mb-1">Total Purchase Cost</span>
+                  <span className="text-3xl font-semibold">₹{stats.grandTotal.toLocaleString()}</span>
                 </div>
               </div>
             </div>

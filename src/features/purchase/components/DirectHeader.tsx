@@ -2,7 +2,7 @@ import { ShoppingCart, Clock, CheckCircle2, IndianRupee } from 'lucide-react'
 import  { StatCard } from '@/components/common/StatsCard'
 import Title from '@/components/common/Title'
 import { MOCK_PURCHASES } from "@/features/purchase/pages/Purchase"
-import { GradientButton } from '@/components/ui/GradientButton'
+
 
 const DirectHeader = () => {
   const totalPurchases = MOCK_PURCHASES.length;
@@ -16,11 +16,7 @@ const DirectHeader = () => {
           title="Purchase Management"
           subtitle="Monitor  supplier invoices, and payment statuses"
         />
-        <GradientButton
-        path='/direct-purchase/add'
-        >
-         + Add Direct Purchase
-        </GradientButton>
+   
       </div>
 
       <div className='flex-none overflow-y-auto px-6 py-2.5 bg-accent'>

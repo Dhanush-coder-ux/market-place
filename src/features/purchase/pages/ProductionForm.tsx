@@ -104,21 +104,14 @@ export default function ProductionEntryPage() {
   const unitOptions = [{ value: 'Piece', label: 'Piece' }, { value: 'Box', label: 'Box' }, { value: 'Kg', label: 'Kg' }];
 
   return (
-    <div className="flex min-h-screen bg-[#F5F6FA] font-sans text-slate-800 antialiased">
-      <main className="flex-1 p-6 lg:p-8 max-w-[1600px] mx-auto">
+    <div className="flex min-h-screen  font-sans text-slate-800 antialiased">
+      <main className="flex-1 p-4 lg:p-6 mx-auto">
         
         {/* Header */}
         <div className="mb-6 flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-6 py-5">
           <div>
             <h1 className="mb-1 text-2xl font-semibold text-slate-800">Production Entry</h1>
             <p className="text-sm text-slate-500">Record self-produced items and update stock automatically</p>
-          </div>
-          <div className="flex gap-3">
-            <GradientButton variant="outline">Cancel</GradientButton>
-            <GradientButton variant="outline">Save as Draft</GradientButton>
-            <GradientButton variant="primary" icon={<Save size={16} />}>
-              Save & Add to Stock
-            </GradientButton>
           </div>
         </div>
 

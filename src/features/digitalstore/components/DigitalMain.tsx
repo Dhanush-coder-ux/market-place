@@ -5,8 +5,7 @@ import {
   Package, 
   MapPin, 
   BadgeCheck, 
-  Edit3, 
-
+  Edit3,
 } from "lucide-react";
 import DeliveryPreferences from "../pages/Deliveryinfo";
 import ProductDashboard from "../pages/StoreProductManagement";
@@ -22,8 +21,7 @@ const storeProfile = {
   tagline: "Premium design assets, templates & UI kits for modern creators.",
   description:
     "We craft high-quality digital products that help designers and developers build faster. Trusted by 12,000+ creators worldwide.",
-  avatar: "https://api.dicebear.com/7.x/shapes/svg?seed=nova&backgroundColor=6366f1",
-  coverGradient: "from-indigo-600 via-violet-600 to-purple-700",
+  avatar: "https://api.dicebear.com/7.x/shapes/svg?seed=nova&backgroundColor=e2e8f0",
   stats: [
     { label: "Products", value: "48" },
     { label: "Sales", value: "3.2k" },
@@ -51,58 +49,62 @@ const DigitalMain = () => {
   };
 
   return (
-    <div 
-      className="min-h-screen p-4 md:p-8 bg-gradient-to-br from-[#f0f4ff] via-[#faf5ff] to-[#f0fdf4]"
-      style={{ fontFamily: "'DM Sans', sans-serif" }}
-    >
-      <div className="space-y-6 max-w-6xl mx-auto">
+    <div className="min-h-screen bg-slate-50 p-4 md:p-3 antialiased">
+      <div className="mx-auto space-y-6">
 
-        {/* ── PROFILE CARD ── */}
-        <div className="bg-white/80 backdrop-blur-xl border border-white shadow-[0_4px_24px_rgba(99,102,241,0.08)] rounded-3xl overflow-hidden">
+        {/* ── PROFILE HEADER CARD ── */}
+        <div className="bg-white border border-slate-200 shadow-sm rounded-2xl overflow-hidden">
           
-          {/* Cover Banner (Fixed h-50 to h-48) */}
-          <div className="h-48  relative">
-            <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_center,_white_2px,_transparent_2px)] bg-[size:20px_20px]"></div>
-            <img src="/Shops_Assets/banner.png" alt="" className="w-full h-full object-cover " />
+          {/* Cover Banner */}
+          <div className="h-40 relative bg-gradient-to-b from-slate-100 to-slate-200/50">
+            {/* Optional subtle image overlay */}
+            <img 
+              src="/Shops_Assets/banner.png" 
+              alt="" 
+              className="w-full h-full object-cover mix-blend-multiply opacity-40" 
+              onError={(e) => e.currentTarget.style.display = 'none'} 
+            />
             
             {/* Edit Button */}
             <div className="absolute right-4 top-4">
-              <button className="flex items-center gap-2 bg-white/20 hover:bg-white/30 backdrop-blur-md border border-white/40 text-white text-sm font-semibold px-4 py-2 rounded-xl transition-all">
+              <button className="flex items-center gap-2 bg-white/80 hover:bg-white backdrop-blur-sm border border-slate-200 text-slate-700 text-[13px] font-medium px-3 py-1.5 rounded-lg transition-all shadow-sm">
                 <Edit3 size={14} />
-                <span className="hidden sm:inline">Edit Store</span>
+                <span className="hidden sm:inline">Edit Profile</span>
               </button>
             </div>
           </div>
 
           {/* Profile Body */}
           <div className="px-6 sm:px-8 pb-8">
-            <div className="flex flex-col sm:flex-row sm:items-end gap-4 sm:gap-6 mb-6">
+            <div className="flex flex-col sm:flex-row sm:items-end gap-5 mb-6">
               
-              {/* Avatar (Fixed w-34/h-34 to w-32/h-32) */}
-              <div className="-mt-12 relative z-10 shrink-0">
-                <div className="w-32 h-32 rounded-full border-4 border-white shadow-lg bg-white flex items-center justify-center overflow-hidden">
-                  <img src="/Shops_Assets/logo.png" alt="Store Logo" className="w-full h-full object-cover" />
+              {/* Avatar */}
+              <div className="-mt-14 relative z-10 shrink-0">
+                <div className="w-28 h-28 rounded-full border-4 border-white shadow-sm bg-slate-50 flex items-center justify-center overflow-hidden">
+                  <img src={storeProfile.avatar} alt="Store Logo" className="w-full h-full object-cover" />
                 </div>
               </div>
 
               {/* Name & Badges */}
               <div className="flex-1 pb-1">
-                <div className="flex items-center gap-3 flex-wrap">
-                  <h1 className="font-syne font-bold text-2xl text-slate-800 tracking-tight">
+                <div className="flex items-center gap-2.5 flex-wrap">
+                  <h1 className="font-semibold text-xl text-slate-900 tracking-tight">
                     {storeProfile.name}
                   </h1>
                   {storeProfile.verified && (
-                    <span className="flex items-center gap-1 bg-gradient-to-r from-indigo-500 to-violet-500 text-white text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider shadow-sm">
-                      <BadgeCheck size={12} /> Verified
+                    <span className="flex items-center gap-1 bg-blue-50 text-blue-600 border border-blue-100 text-[11px] font-medium px-2 py-0.5 rounded-full">
+                      <BadgeCheck size={14} className="text-blue-500" />
+                      Verified
                     </span>
                   )}
                 </div>
                 
-                <div className="flex items-center gap-4 mt-1.5 flex-wrap">
-                  <span className="text-indigo-600 text-sm font-bold">
+                <div className="flex items-center gap-3 mt-1.5 flex-wrap">
+                  <span className="text-slate-900 text-[14px] font-medium">
                     {storeProfile.username}
                   </span>
-                  <span className="flex items-center gap-1.5 text-slate-400 text-sm font-medium">
+                  <span className="text-slate-300">•</span>
+                  <span className="flex items-center gap-1.5 text-slate-500 text-[14px]">
                     <MapPin size={14} />
                     {storeProfile.location}
                   </span>
@@ -111,42 +113,44 @@ const DigitalMain = () => {
             </div>
 
             {/* Tagline & Description */}
-            <h2 className="font-syne font-bold text-[15px] text-indigo-600 tracking-tight mb-2">
-              "{storeProfile.tagline}"
-            </h2>
-            <p className="text-slate-500 text-sm leading-relaxed max-w-2xl mb-6">
-              {storeProfile.description}
-            </p>
+            <div className="max-w-2xl mb-8">
+              <h2 className="font-medium text-[15px] text-slate-900 mb-1">
+                {storeProfile.tagline}
+              </h2>
+              <p className="text-slate-500 text-[14px] leading-relaxed">
+                {storeProfile.description}
+              </p>
+            </div>
 
             {/* Stats Grid */}
-            <div className="flex flex-wrap gap-3">
+            <div className="flex flex-wrap gap-4">
               {storeProfile.stats.map((s) => (
                 <div 
                   key={s.label} 
-                  className="bg-indigo-50/50 border border-indigo-100/50 rounded-2xl px-5 py-2.5 text-center hover:bg-indigo-50 hover:-translate-y-0.5 transition-all duration-200"
+                  className="bg-white border border-slate-200 rounded-xl px-5 py-3 min-w-[110px] hover:border-slate-300 transition-colors duration-200"
                 >
-                  <div className="font-syne font-bold text-lg text-slate-800">{s.value}</div>
-                  <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{s.label}</div>
+                  <div className="font-semibold text-lg text-slate-900">{s.value}</div>
+                  <div className="text-[12px] text-slate-500 font-medium mt-0.5">{s.label}</div>
                 </div>
               ))}
             </div>
           </div>
         </div>
 
-        {/* ── TABS + CONTENT ── */}
-        <div className="bg-white/80 backdrop-blur-xl border border-white shadow-[0_4px_24px_rgba(99,102,241,0.08)] rounded-3xl p-1.5">
+        {/* ── TABS + CONTENT CONTAINER ── */}
+        <div className="bg-white border border-slate-200 shadow-sm rounded-2xl overflow-hidden">
           
-          {/* Tab Bar */}
-          <div className="p-3">
-            <div className="flex flex-wrap gap-1 bg-slate-50/50 border border-slate-100 p-1.5 rounded-2xl w-fit">
+          {/* Segmented Tab Navigation */}
+          <div className="p-4 border-b border-slate-100 bg-slate-50/50">
+            <div className="inline-flex flex-wrap gap-1 bg-slate-100/80 p-1 rounded-xl">
               {tabs.map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
-                  className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-[13.5px] font-semibold transition-all duration-200 ${
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-medium transition-all duration-200 ease-in-out ${
                     activeTab === tab 
-                      ? "bg-white text-indigo-600 shadow-sm border border-slate-100/50" 
-                      : "text-slate-400 hover:text-slate-600 hover:bg-white/50"
+                      ? "bg-white text-slate-900 shadow-sm border border-slate-200/50" 
+                      : "text-slate-500 hover:text-slate-700 hover:bg-slate-200/50"
                   }`}
                 >
                   {renderTabIcon(tab)}
@@ -156,11 +160,9 @@ const DigitalMain = () => {
             </div>
           </div>
 
-          <div className="h-px bg-slate-100 mx-4" />
-
-          {/* Tab Content Area */}
-          <div className="p-6 min-h-[400px]">
-            <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+          {/* Dynamic Content Area */}
+          <div className="p-6 md:p-4 min-h-[400px]">
+            <div className="animate-in fade-in slide-in-from-bottom-2 duration-300 ease-out">
               {activeTab === "Announcements" && <Announcement />}
               {activeTab === "Delivery Preferences" && <DeliveryPreferences />}
               {activeTab === "Product Dashboard" && <ProductDashboard />}

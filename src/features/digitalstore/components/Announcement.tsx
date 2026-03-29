@@ -311,7 +311,7 @@ export default function AnnouncementsPage() {
 
         {/* ── Page Header ──────────────────────────────────────────── */}
         <div className="bg-white border-b border-slate-100 pt-6 px-8">
-          <div className="max-w-5xl mx-auto">
+          <div className="mx-auto">
             <div className="flex items-end justify-between mb-5">
               <div>
                 <div className="flex items-center gap-2.5 mb-1.5">
@@ -359,7 +359,7 @@ export default function AnnouncementsPage() {
         </div>
 
         {/* ── Content ──────────────────────────────────────────────── */}
-        <div className="max-w-5xl mx-auto pt-7 px-8">
+        <div className=" mx-auto pt-5 px-4">
 
           {/* ═══ EDITOR TAB ═══════════════════════════════════════ */}
           {activeTab === "editor" && (

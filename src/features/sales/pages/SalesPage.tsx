@@ -22,6 +22,7 @@ import { StatCard } from "../../../components/common/StatsCard";
 /* ═══════════════════════════════════════════════
    TYPES
 ═══════════════════════════════════════════════ */
+type OriginType    = "Sales" | "Sales Return";
 type SalesType     = "Online" | "Offline";
 type PaymentMethod = "Cash" | "Card" | "UPI";
 type SaleStatus    = "Completed" | "Pending" | "Cancelled";
@@ -30,6 +31,7 @@ interface SaleRecord {
   id: string;
   invoiceNumber: string;
   customerName: string;
+  origin: OriginType;
   salesType: SalesType;
   paymentMethod: PaymentMethod;
   totalAmount: number;
@@ -42,18 +44,18 @@ interface SaleRecord {
    MOCK DATA
 ═══════════════════════════════════════════════ */
 const MOCK_SALES: SaleRecord[] = [
-  { id: "1",  invoiceNumber: "INV-2024-0041", customerName: "Arjun Mehta",       salesType: "Online",  paymentMethod: "UPI",  totalAmount: 4850,  itemsCount: 3, date: "2024-04-22", status: "Completed"  },
-  { id: "2",  invoiceNumber: "INV-2024-0042", customerName: "Walk-in Customer",  salesType: "Offline", paymentMethod: "Cash", totalAmount: 1200,  itemsCount: 1, date: "2024-04-22", status: "Completed"  },
-  { id: "3",  invoiceNumber: "INV-2024-0043", customerName: "Priya Nair",        salesType: "Online",  paymentMethod: "Card", totalAmount: 9300,  itemsCount: 5, date: "2024-04-21", status: "Pending"    },
-  { id: "4",  invoiceNumber: "INV-2024-0044", customerName: "Walk-in Customer",  salesType: "Offline", paymentMethod: "Cash", totalAmount: 650,   itemsCount: 2, date: "2024-04-21", status: "Completed"  },
-  { id: "5",  invoiceNumber: "INV-2024-0045", customerName: "Rohan Sharma",      salesType: "Online",  paymentMethod: "UPI",  totalAmount: 2200,  itemsCount: 2, date: "2024-04-20", status: "Cancelled"  },
-  { id: "6",  invoiceNumber: "INV-2024-0046", customerName: "Sneha Pillai",      salesType: "Online",  paymentMethod: "Card", totalAmount: 15400, itemsCount: 8, date: "2024-04-20", status: "Completed"  },
-  { id: "7",  invoiceNumber: "INV-2024-0047", customerName: "Walk-in Customer",  salesType: "Offline", paymentMethod: "Cash", totalAmount: 480,   itemsCount: 1, date: "2024-04-20", status: "Completed"  },
-  { id: "8",  invoiceNumber: "INV-2024-0048", customerName: "Vikram Iyer",       salesType: "Online",  paymentMethod: "UPI",  totalAmount: 7700,  itemsCount: 4, date: "2024-04-19", status: "Pending"    },
-  { id: "9",  invoiceNumber: "INV-2024-0049", customerName: "Meera Joshi",       salesType: "Offline", paymentMethod: "Card", totalAmount: 3100,  itemsCount: 3, date: "2024-04-19", status: "Completed"  },
-  { id: "10", invoiceNumber: "INV-2024-0050", customerName: "Rahul Gupta",       salesType: "Online",  paymentMethod: "Card", totalAmount: 6200,  itemsCount: 4, date: "2024-04-18", status: "Cancelled"  },
-  { id: "11", invoiceNumber: "INV-2024-0051", customerName: "Walk-in Customer",  salesType: "Offline", paymentMethod: "Cash", totalAmount: 950,   itemsCount: 2, date: "2024-04-18", status: "Completed"  },
-  { id: "12", invoiceNumber: "INV-2024-0052", customerName: "Divya Krishnan",    salesType: "Online",  paymentMethod: "UPI",  totalAmount: 11200, itemsCount: 6, date: "2024-04-17", status: "Completed"  },
+  { id: "1",  invoiceNumber: "INV-2024-0041", customerName: "Arjun Mehta",       origin: "Sales",        salesType: "Online",  paymentMethod: "UPI",  totalAmount: 4850,  itemsCount: 3, date: "2024-04-22", status: "Completed"  },
+  { id: "2",  invoiceNumber: "INV-2024-0042", customerName: "Walk-in Customer",  origin: "Sales",        salesType: "Offline", paymentMethod: "Cash", totalAmount: 1200,  itemsCount: 1, date: "2024-04-22", status: "Completed"  },
+  { id: "3",  invoiceNumber: "INV-2024-0043", customerName: "Priya Nair",        origin: "Sales Return", salesType: "Online",  paymentMethod: "Card", totalAmount: 9300,  itemsCount: 5, date: "2024-04-21", status: "Pending"    },
+  { id: "4",  invoiceNumber: "INV-2024-0044", customerName: "Walk-in Customer",  origin: "Sales",        salesType: "Offline", paymentMethod: "Cash", totalAmount: 650,   itemsCount: 2, date: "2024-04-21", status: "Completed"  },
+  { id: "5",  invoiceNumber: "INV-2024-0045", customerName: "Rohan Sharma",      origin: "Sales Return", salesType: "Online",  paymentMethod: "UPI",  totalAmount: 2200,  itemsCount: 2, date: "2024-04-20", status: "Cancelled"  },
+  { id: "6",  invoiceNumber: "INV-2024-0046", customerName: "Sneha Pillai",      origin: "Sales",        salesType: "Online",  paymentMethod: "Card", totalAmount: 15400, itemsCount: 8, date: "2024-04-20", status: "Completed"  },
+  { id: "7",  invoiceNumber: "INV-2024-0047", customerName: "Walk-in Customer",  origin: "Sales",        salesType: "Offline", paymentMethod: "Cash", totalAmount: 480,   itemsCount: 1, date: "2024-04-20", status: "Completed"  },
+  { id: "8",  invoiceNumber: "INV-2024-0048", customerName: "Vikram Iyer",       origin: "Sales Return", salesType: "Online",  paymentMethod: "UPI",  totalAmount: 7700,  itemsCount: 4, date: "2024-04-19", status: "Pending"    },
+  { id: "9",  invoiceNumber: "INV-2024-0049", customerName: "Meera Joshi",       origin: "Sales",        salesType: "Offline", paymentMethod: "Card", totalAmount: 3100,  itemsCount: 3, date: "2024-04-19", status: "Completed"  },
+  { id: "10", invoiceNumber: "INV-2024-0050", customerName: "Rahul Gupta",       origin: "Sales Return", salesType: "Online",  paymentMethod: "Card", totalAmount: 6200,  itemsCount: 4, date: "2024-04-18", status: "Cancelled"  },
+  { id: "11", invoiceNumber: "INV-2024-0051", customerName: "Walk-in Customer",  origin: "Sales",        salesType: "Offline", paymentMethod: "Cash", totalAmount: 950,   itemsCount: 2, date: "2024-04-18", status: "Completed"  },
+  { id: "12", invoiceNumber: "INV-2024-0052", customerName: "Divya Krishnan",    origin: "Sales",        salesType: "Online",  paymentMethod: "UPI",  totalAmount: 11200, itemsCount: 6, date: "2024-04-17", status: "Completed"  },
 ];
 
 const TODAY = "2024-04-22";
@@ -61,6 +63,11 @@ const TODAY = "2024-04-22";
 /* ═══════════════════════════════════════════════
    BADGE CONFIGS
 ═══════════════════════════════════════════════ */
+const ORIGIN_CFG: Record<OriginType, { cls: string; dot: string; icon: React.ReactNode }> = {
+  "Sales":        { cls: "bg-blue-50 text-blue-700 border-blue-100",     dot: "bg-blue-400",   icon: <ShoppingCart size={10} /> },
+  "Sales Return": { cls: "bg-orange-50 text-orange-700 border-orange-100", dot: "bg-orange-400", icon: <RotateCcw size={10} /> },
+};
+
 const SALES_TYPE_CFG: Record<SalesType, { cls: string; dot: string; icon: React.ReactNode }> = {
   Online:  { cls: "bg-blue-50 text-blue-700 border-blue-100",   dot: "bg-blue-400",   icon: <Wifi size={10} />    },
   Offline: { cls: "bg-slate-100 text-slate-600 border-slate-200", dot: "bg-slate-400", icon: <WifiOff size={10} /> },
@@ -193,7 +200,8 @@ const FilterDropdown = ({
 ═══════════════════════════════════════════════ */
 const SalesListPage = () => {
   const [search,        setSearch]        = useState("");
-  const [filterType,    setFilterType]    = useState<string>("");
+  const [filterOrigin,    setFilterOrigin]    = useState<string>("");
+  const [filterType,      setFilterType]      = useState<string>("");
   const [filterPayment, setFilterPayment] = useState<string>("");
   const [filterStatus,  setFilterStatus]  = useState<string>("");
   const [filterDate,    setFilterDate]    = useState<string>("");
@@ -204,8 +212,10 @@ const SalesListPage = () => {
 
   /* ── Derived stats ── */
   const totalRevenue   = MOCK_SALES.filter(s => s.status === "Completed").reduce((a, b) => a + b.totalAmount, 0);
-  const onlineSales    = MOCK_SALES.filter(s => s.salesType === "Online").length;
-  const offlineSales   = MOCK_SALES.filter(s => s.salesType === "Offline").length;
+  const salesCount         = MOCK_SALES.filter(s => s.origin === "Sales").length;
+  const salesReturnCount   = MOCK_SALES.filter(s => s.origin === "Sales Return").length;
+  const onlineSales        = MOCK_SALES.filter(s => s.salesType === "Online").length;
+  const offlineSales       = MOCK_SALES.filter(s => s.salesType === "Offline").length;
   const todayRevenue   = MOCK_SALES.filter(s => s.date === TODAY && s.status === "Completed").reduce((a, b) => a + b.totalAmount, 0);
 
   /* ── Filtering ── */
@@ -213,18 +223,19 @@ const SalesListPage = () => {
     return MOCK_SALES.filter((s) => {
       const q = search.toLowerCase();
       const matchSearch  = !q || s.invoiceNumber.toLowerCase().includes(q) || s.customerName.toLowerCase().includes(q);
+      const matchOrigin  = !filterOrigin  || s.origin         === filterOrigin;
       const matchType    = !filterType    || s.salesType      === filterType;
       const matchPayment = !filterPayment || s.paymentMethod  === filterPayment;
       const matchStatus  = !filterStatus  || s.status         === filterStatus;
       const matchDate    = !filterDate    || s.date            === filterDate;
-      return matchSearch && matchType && matchPayment && matchStatus && matchDate;
+      return matchSearch && matchOrigin && matchType && matchPayment && matchStatus && matchDate;
     });
-  }, [search, filterType, filterPayment, filterStatus, filterDate]);
+  }, [search, filterOrigin, filterType, filterPayment, filterStatus, filterDate]);
 
-  const activeFilters = [filterType, filterPayment, filterStatus, filterDate].filter(Boolean).length;
+  const activeFilters = [filterOrigin, filterType, filterPayment, filterStatus, filterDate].filter(Boolean).length;
 
   const clearAll = () => {
-    setFilterType(""); setFilterPayment(""); setFilterStatus(""); setFilterDate(""); setSearch("");
+    setFilterOrigin(""); setFilterType(""); setFilterPayment(""); setFilterStatus(""); setFilterDate(""); setSearch("");
   };
 
   const openSidebar = (sale: SaleRecord) => {
@@ -267,6 +278,20 @@ const SalesListPage = () => {
               icon={ShoppingCart}
               iconBg="bg-zinc-100"
               iconColor="text-zinc-600"
+            />
+            <StatCard
+              label="Total Sales"
+              value={salesCount}
+              icon={ShoppingCart}
+              iconBg="bg-sky-50"
+              iconColor="text-sky-600"
+            />
+            <StatCard
+              label="Sales Returns"
+              value={salesReturnCount}
+              icon={RotateCcw}
+              iconBg="bg-orange-50"
+              iconColor="text-orange-600"
             />
             <StatCard
               label="Online Sales"
@@ -321,7 +346,8 @@ const SalesListPage = () => {
           </div>
 
           {/* Filter dropdowns */}
-          <FilterDropdown label="Sales Type" options={["Online", "Offline"]} value={filterType} onChange={setFilterType} />
+          <FilterDropdown label="Origin" options={["Sales", "Sales Return"]} value={filterOrigin} onChange={setFilterOrigin} />
+          <FilterDropdown label="Type" options={["Online", "Offline"]} value={filterType} onChange={setFilterType} />
           <FilterDropdown label="Payment" options={["Cash", "Card", "UPI"]} value={filterPayment} onChange={setFilterPayment} />
           <FilterDropdown label="Status" options={["Completed", "Pending", "Cancelled"]} value={filterStatus} onChange={setFilterStatus} />
 
@@ -360,7 +386,8 @@ const SalesListPage = () => {
                   {[
                     { label: "Invoice",        cls: "pl-5 text-left"  },
                     { label: "Customer",       cls: "text-left"       },
-                    { label: "Type",           cls: "text-left"       },
+                    { label: "Type",         cls: "text-left"       },
+                    { label: "Origin",           cls: "text-left"       },
                     { label: "Payment",        cls: "text-left"       },
                     { label: "Date",           cls: "text-left"       },
                     { label: "Items",          cls: "text-center"     },
@@ -400,6 +427,7 @@ const SalesListPage = () => {
                   </tr>
                 ) : (
                   filtered.map((sale) => {
+                    const oCfg = ORIGIN_CFG[sale.origin];
                     const tCfg = SALES_TYPE_CFG[sale.salesType];
                     const pCfg = PAYMENT_CFG[sale.paymentMethod];
                     const sCfg = STATUS_CFG[sale.status];
@@ -423,6 +451,11 @@ const SalesListPage = () => {
                               <p className="text-[10px] text-zinc-400 mt-0.5">No account</p>
                             )}
                           </div>
+                        </td>
+
+                        {/* Origin */}
+                        <td className="py-3.5 px-4">
+                          <Badge cls={oCfg.cls} dot={oCfg.dot} label={sale.origin} />
                         </td>
 
                         {/* Sales Type */}
@@ -609,6 +642,15 @@ const SalesListPage = () => {
                     <span className="text-[11px] font-semibold uppercase tracking-widest">Payment</span>
                   </div>
                   <p className="text-sm font-medium text-zinc-900">{selectedSale.paymentMethod}</p>
+                </div>
+
+                {/* Origin */}
+                <div className="bg-white border border-zinc-100 rounded-xl p-4 shadow-sm">
+                  <div className="flex items-center gap-2 text-zinc-400 mb-2">
+                    {selectedSale.origin === "Sales" ? <ShoppingCart size={14} /> : <RotateCcw size={14} />}
+                    <span className="text-[11px] font-semibold uppercase tracking-widest">Origin</span>
+                  </div>
+                  <p className="text-sm font-medium text-zinc-900">{selectedSale.origin}</p>
                 </div>
 
                 {/* Sales Type */}

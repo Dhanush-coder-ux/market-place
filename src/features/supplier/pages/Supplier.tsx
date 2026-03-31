@@ -27,8 +27,8 @@ const Supplier = () => {
       label: "Supplier Name", 
       render: (value: string) => (
         <div className="flex flex-col">
-          <span className="text-sm font-semibold text-slate-800">{value}</span>
-          <span className="text-[10px] text-indigo-500 font-bold uppercase tracking-tighter">Verified Vendor</span>
+          <span className="text-sm font-semibold text-blue-900">{value}</span>
+          <span className="text-[10px] text-blue-500 font-bold uppercase tracking-tighter">Verified Vendor</span>
         </div>
       )
     },
@@ -36,8 +36,8 @@ const Supplier = () => {
       key: "phone", 
       label: "Phone", 
       render: (value: string) => (
-        <div className="flex items-center gap-2 text-slate-600 ">
-          <Phone size={14} className="text-slate-400" />
+        <div className="flex items-center gap-2 text-blue-700 ">
+          <Phone size={14} className="text-blue-400" />
           <span className="text-sm">{value}</span>
         </div>
       )
@@ -46,7 +46,7 @@ const Supplier = () => {
       key: "gst", 
       label: "GST Number", 
       render: (value: string) => (
-        <span className="text-xs font-mono bg-slate-100 px-2 py-1 rounded border border-slate-200 text-slate-500 uppercase tracking-wider">
+        <span className="text-xs font-mono bg-blue-50 px-2 py-1 rounded border border-blue-100 text-blue-600 uppercase tracking-wider">
           {value}
         </span>
       )
@@ -55,8 +55,8 @@ const Supplier = () => {
       key: "total_purchases", 
       label: "Total Purchases", 
       render: (value: number) => (
-        <div className="flex items-center gap-1.5 text-slate-700 ">
-          <ShoppingBag size={14} className="text-slate-400" />
+        <div className="flex items-center gap-1.5 text-blue-800 ">
+          <ShoppingBag size={14} className="text-blue-400" />
           <span>₹{value.toLocaleString()}</span>
         </div>
       )
@@ -66,8 +66,8 @@ const Supplier = () => {
       label: "Outstanding Payment", 
       render: (value: number) => (
         <div className="flex items-center gap-1.5 font-semibold">
-          <CreditCard size={14} className={value > 0 ? "text-orange-400" : "text-emerald-400"} />
-          <span className={value > 0 ? "text-orange-600" : "text-emerald-600"}>
+          <CreditCard size={14} className={value > 0 ? "text-blue-500" : "text-blue-300"} />
+          <span className={value > 0 ? "text-blue-700" : "text-blue-500"}>
             ₹{value.toLocaleString()}
           </span>
         </div>
@@ -91,13 +91,13 @@ const Supplier = () => {
       </div>
 
       {/* 2. Main Content Card */}
-      <div className="bg-white rounded-3xl border border-slate-200/60 shadow-xl overflow-hidden flex flex-col">
+      <div className="bg-white rounded-3xl border border-blue-100 shadow-xl overflow-hidden flex flex-col">
         
         {/* Search Bar Container */}
-        <div className="p-6 flex flex-col md:flex-row gap-4 justify-between items-center border-b border-slate-100 bg-white">
+        <div className="p-6 flex flex-col md:flex-row gap-4 justify-between items-center border-b border-blue-50 bg-white">
           <div className="w-full max-w-md">
             <Input
-              leftIcon={<Search size={18} className="text-slate-400" />}
+              leftIcon={<Search size={18} className="text-blue-400" />}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Search by vendor name or GST..."
@@ -105,7 +105,7 @@ const Supplier = () => {
           </div>
           
           {selectedIds.length > 0 && (
-            <button className="px-6 py-2.5 bg-red-50 text-red-600 rounded-xl text-xs font-bold border border-red-100 transition-all active:scale-95 animate-in zoom-in duration-200">
+            <button className="px-6 py-2.5 bg-blue-50 text-blue-700 rounded-xl text-xs font-bold border border-blue-200 transition-all active:scale-95 animate-in zoom-in duration-200 hover:bg-blue-100">
               Delete Selected ({selectedIds.length})
             </button>
           )}

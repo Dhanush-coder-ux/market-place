@@ -148,7 +148,7 @@ const GRNForm: React.FC<GRNFormProps> = ({ onSubmit, onCancel }) => {
             Cancel
           </GradientButton>
          
-          <GradientButton icon={<Save size={16} />}>
+          <GradientButton icon={<Save size={16} />} onClick={handleSubmit}>
             Save Record
           </GradientButton>
         </div>

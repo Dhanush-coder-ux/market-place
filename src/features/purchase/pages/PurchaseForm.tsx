@@ -420,32 +420,26 @@ const PurchaseScreen = () => {
                     const finalCost = baseCost + allocated;
 
                     // Calculate Margins and Selling Price live
-                    let displayMarginPercent: number | "" = "";
                     let displayMarginAmount: number | "" = "";
                     let displaySellingPrice: number | "" = "";
 
                     if (product.marginType === "percent") {
-                      displayMarginPercent = product.marginPercent;
                       const mPct = Number(product.marginPercent) || 0;
                       displayMarginAmount = finalCost * (mPct / 100);
                       displaySellingPrice = finalCost + displayMarginAmount;
                     } else if (product.marginType === "amount") {
                       displayMarginAmount = product.marginAmount;
                       const mAmt = Number(product.marginAmount) || 0;
-                      displayMarginPercent = finalCost > 0 ? (mAmt / finalCost) * 100 : 0;
                       displaySellingPrice = finalCost + mAmt;
                     } else if (product.marginType === "sellingPrice") {
                       displaySellingPrice = product.sellingPrice;
                       const sp = Number(product.sellingPrice) || 0;
                       displayMarginAmount = sp - finalCost;
-                      displayMarginPercent = finalCost > 0 ? (displayMarginAmount / finalCost) * 100 : 0;
                     }
 
-                    // const isPercentActive = product.marginType === "percent";
                     const isAmountActive = product.marginType === "amount";
                     const isSPActive = product.marginType === "sellingPrice";
 
-                    // const valMarginPercent = isPercentActive ? product.marginPercent : (displayMarginPercent !== "" ? Number(displayMarginPercent).toFixed(2) : "");
                     const valMarginAmount = isAmountActive ? product.marginAmount : (displayMarginAmount !== "" ? Number(displayMarginAmount).toFixed(2) : "");
                     const valSellingPrice = isSPActive ? product.sellingPrice : (displaySellingPrice !== "" ? Number(displaySellingPrice).toFixed(2) : "");
 

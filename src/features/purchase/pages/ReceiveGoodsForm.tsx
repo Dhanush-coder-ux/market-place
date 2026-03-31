@@ -1,8 +1,14 @@
 import React, { useState, useMemo } from 'react';
-import { Search, Package, AlertCircle, Save, Building2, Calendar, FileText } from 'lucide-react';
-// import toast from 'react-hot-toast'; // Assuming you use react-hot-toast for notifications
+import { 
+  Search, Package, AlertCircle, Save, Building2, Calendar, FileText, 
+  Banknote, Smartphone, CreditCard, Landmark 
+} from 'lucide-react';
+import { GradientButton } from '@/components/ui/GradientButton';
+// import toast from 'react-hot-toast'; 
 
-// Type Definitions
+// --- Type Definitions ---
+type PaymentMethod = "Cash" | "UPI" | "Card" | "Bank";
+
 type PurchaseOrder = {
   id: string;
   supplier: string;
@@ -14,6 +20,7 @@ type PurchaseOrder = {
     name: string;
     ordered: number;
     received: number;
+    unit_price: number; // Added to calculate the subtotal
   }>;
 };
 
@@ -33,13 +40,30 @@ type GRNPayload = {
 const WAREHOUSES = ["Main Hub (WH-01)", "East Wing (WH-02)", "Cold Storage (WH-03)"];
 const REASONS = ["Damaged", "Missing", "Supplier Delay", "Other"];
 
+// --- Sub-Component: Input ---
+const Input = ({ label, type = "text", placeholder, leftIcon, value, onChange, className = "" }: any) => (
+  <div>
+    {label && <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">{label}</label>}
+    <div className="relative">
+      {leftIcon && <div className="absolute left-3 top-1/2 -translate-y-1/2">{leftIcon}</div>}
+      <input
+        type={type}
+        placeholder={placeholder}
+        value={value}
+        onChange={onChange}
+        className={`w-full ${leftIcon ? 'pl-8' : 'px-3'} py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all ${className}`}
+      />
+    </div>
+  </div>
+);
+
 // --- Sub-Component: PO Fetcher ---
 const POFetcher = ({ onFetch, isLoading }: { onFetch: (id: string) => void, isLoading: boolean }) => {
   const [inputId, setInputId] = useState("");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (inputId.trim()) onFetch(inputId.trim());
+    if (inputId.trim() && !isLoading) onFetch(inputId.trim());
   };
 
   return (
@@ -53,18 +77,17 @@ const POFetcher = ({ onFetch, isLoading }: { onFetch: (id: string) => void, isLo
             value={inputId}
             onChange={(e) => setInputId(e.target.value)}
             placeholder="e.g. PO-2026-001"
-            className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+            className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             required
+            disabled={isLoading}
           />
         </div>
       </div>
-      <button 
-        type="submit" 
-        disabled={isLoading || !inputId.trim()}
-        className="px-6 py-2.5 bg-slate-900 hover:bg-slate-800 disabled:bg-slate-300 text-white text-sm font-semibold rounded-lg transition-colors flex items-center gap-2"
-      >
-        {isLoading ? "Fetching..." : "Fetch PO"}
-      </button>
+      <div className="transition-opacity" style={{ opacity: isLoading ? 0.7 : 1, pointerEvents: isLoading ? 'none' : 'auto' }}>
+        <GradientButton icon={<Search size={16} />}>
+          {isLoading ? 'Fetching...' : 'Fetch PO'}
+        </GradientButton>
+      </div>
     </form>
   );
 };
@@ -74,16 +97,21 @@ const GRNForm = ({ poData, onSubmit }: { poData: PurchaseOrder, onSubmit: (paylo
   // Global Fields State
   const [globalData, setGlobalData] = useState({
     received_date: new Date().toISOString().split("T")[0],
-    received_by: "Current Admin", // Mock auth user
+    received_by: "Current Admin",
     warehouse: "",
     notes: ""
   });
+
+  // Financial & Payment State
+  const [charges, setCharges] = useState<{ transport: number | string, other: number | string }>({ transport: "", other: "" });
+  const [payment, setPayment] = useState<{ method: PaymentMethod, amountPaid: number | string }>({ method: "Cash", amountPaid: "" });
+  const [costMethod, setCostMethod] = useState<string>("By Unit");
 
   // Table Items State
   const [items, setItems] = useState(() => poData.items.map(item => ({
     ...item,
     remaining: item.ordered - item.received,
-    receiveNow: "", // empty string allows placeholder to show
+    receiveNow: "",
     reason: "",
     customReason: ""
   })));
@@ -106,6 +134,7 @@ const GRNForm = ({ poData, onSubmit }: { poData: PurchaseOrder, onSubmit: (paylo
     let totalOrdered = 0;
     let totalReceivedNow = 0;
     let totalRemainingAfter = 0;
+    let subtotal = 0;
     let isTableValid = true;
 
     items.forEach(item => {
@@ -113,6 +142,7 @@ const GRNForm = ({ poData, onSubmit }: { poData: PurchaseOrder, onSubmit: (paylo
       const recNow = Number(item.receiveNow) || 0;
       totalReceivedNow += recNow;
       totalRemainingAfter += (item.remaining - recNow);
+      subtotal += recNow * item.unit_price;
 
       // Validate quantity bounds
       if (item.receiveNow === "" || recNow < 0 || recNow > item.remaining) {
@@ -126,10 +156,27 @@ const GRNForm = ({ poData, onSubmit }: { poData: PurchaseOrder, onSubmit: (paylo
       }
     });
 
+    // Financial Math
+    const transportCost = Number(charges.transport) || 0;
+    const otherCost = Number(charges.other) || 0;
+    const gstAmount = subtotal * 0.18; // Assuming 18% GST
+    const grandTotal = subtotal + transportCost + otherCost + gstAmount;
+    const outstanding = grandTotal - (Number(payment.amountPaid) || 0);
+
     const isGlobalValid = !!globalData.warehouse && !!globalData.received_date && !!globalData.received_by;
 
-    return { totalOrdered, totalReceivedNow, totalRemainingAfter, isValid: isTableValid && isGlobalValid };
-  }, [items, globalData]);
+    return { 
+      totalOrdered, 
+      totalReceivedNow, 
+      totalRemainingAfter, 
+      isValid: isTableValid && isGlobalValid,
+      subtotal,
+      gstAmount,
+      grandTotal,
+      outstanding,
+      totalQty: totalReceivedNow
+    };
+  }, [items, globalData, charges, payment]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -139,7 +186,7 @@ const GRNForm = ({ poData, onSubmit }: { poData: PurchaseOrder, onSubmit: (paylo
       po_id: poData.id,
       ...globalData,
       received_items: items
-        .filter(item => Number(item.receiveNow) > 0) // Only send items actually received
+        .filter(item => Number(item.receiveNow) > 0)
         .map(item => ({
           product_id: item.product_id,
           received_qty: Number(item.receiveNow),
@@ -185,27 +232,194 @@ const GRNForm = ({ poData, onSubmit }: { poData: PurchaseOrder, onSubmit: (paylo
         </div>
       </div>
 
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+        {/* LEFT SIDE: Order Summary */}
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200/70 overflow-hidden flex flex-col h-full">
+          <div className="p-5 border-b border-slate-100 bg-slate-50/50 flex items-center gap-2">
+            <div className="h-5 w-1 bg-indigo-500 rounded-full"></div>
+            <h2 className="text-sm font-bold uppercase tracking-wider text-slate-700">Order Summary</h2>
+          </div>
+
+          <div className="p-6 space-y-5 flex-1">
+            <div className="flex justify-between items-center text-slate-600">
+              <span className="text-sm font-medium">Subtotal (Product Cost)</span>
+              <span className="font-semibold text-slate-800">
+                ₹{stats.subtotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+              </span>
+            </div>
+
+            <div className="pt-4 border-t border-slate-100 space-y-4">
+              <Input
+                label="Transport Charges"
+                type="number"
+                placeholder="0.00"
+                leftIcon={<span className="text-slate-400 text-sm font-medium">₹</span>}
+                value={charges.transport as any}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCharges({ ...charges, transport: e.target.value ? Number(e.target.value) : "" })}
+              />
+
+              <Input
+                label="Other Charges (Loading etc.)"
+                type="number"
+                placeholder="0.00"
+                leftIcon={<span className="text-slate-400 text-sm font-medium">₹</span>}
+                value={charges.other as any}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCharges({ ...charges, other: e.target.value ? Number(e.target.value) : "" })}
+              />
+            </div>
+
+            <div className="pt-4 border-t border-slate-100 flex justify-between items-center text-slate-600">
+              <span className="text-sm font-medium">GST @ 18%</span>
+              <span className="font-semibold text-slate-800">
+                ₹{stats.gstAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+              </span>
+            </div>
+          </div>
+
+          <div className="p-6 bg-white text-black mt-auto">
+            <span className="block text-black-400 text-xs font-bold uppercase tracking-widest mb-1">Total Purchase Cost</span>
+            <span className="text-4xl font-bold tracking-tight">
+              ₹{stats.grandTotal.toLocaleString()}
+            </span>
+          </div>
+        </div>
+
+        {/* RIGHT SIDE: Payment Details & Distributor */}
+        <div className="space-y-6 h-full flex flex-col">
+          <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200/70 overflow-hidden flex-1">
+            <div className="flex items-center gap-2 mb-5">
+              <div className="h-5 w-1 bg-emerald-500 rounded-full"></div>
+              <h2 className="text-sm font-bold uppercase tracking-wider text-slate-700">Payment Details</h2>
+            </div>
+
+            <div className="grid grid-cols-4 gap-3 mb-6">
+              {[
+                { id: "Cash", icon: <Banknote size={20} strokeWidth={1.5} /> },
+                { id: "UPI", icon: <Smartphone size={20} strokeWidth={1.5} /> },
+                { id: "Card", icon: <CreditCard size={20} strokeWidth={1.5} /> },
+                { id: "Bank", icon: <Landmark size={20} strokeWidth={1.5} /> }
+              ].map((m) => (
+                <button
+                  key={m.id}
+                  type="button"
+                  onClick={() => setPayment({ ...payment, method: m.id as PaymentMethod })}
+                  className={`flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all duration-200 ${
+                    payment.method === m.id
+                      ? "border-blue-500 bg-blue-50 text-blue-700 shadow-sm"
+                      : "border-slate-100 bg-white text-slate-500 hover:border-slate-300 hover:bg-slate-50"
+                  }`}
+                >
+                  <div className="mb-1.5">{m.icon}</div>
+                  <span className="text-xs font-bold">{m.id}</span>
+                </button>
+              ))}
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-4 bg-slate-50/80 p-5 rounded-xl border border-slate-100 items-center">
+              <div className="flex-1 w-full">
+                <Input
+                  label="Amount Paid Now (₹)"
+                  type="number"
+                  className="!text-lg !font-bold !text-blue-700 placeholder:!text-blue-300"
+                  value={payment.amountPaid as any}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPayment({ ...payment, amountPaid: e.target.value ? Number(e.target.value) : "" })}
+                  placeholder={stats.grandTotal.toString()}
+                />
+              </div>
+              <div className="w-px h-12 bg-slate-200 hidden sm:block"></div>
+              <div className="flex-1 w-full flex flex-col justify-center sm:items-end sm:text-right">
+                <span className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">
+                  Outstanding
+                </span>
+                <span className={`text-2xl font-bold ${stats.outstanding > 0 ? "text-orange-500" : "text-emerald-500"}`}>
+                  ₹{stats.outstanding.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Distributor Cost Card */}
+          <div className="bg-white p-6 rounded-2xl shadow-md flex flex-col gap-4 text-black">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+              <span className="text-xs font-bold uppercase tracking-widest text-slate-400">
+                Distributor Cost Split
+              </span>
+              
+              <div className="flex items-center gap-3 self-start sm:self-auto">
+                <div className="flex items-center bg-white p-1 rounded-lg border border-slate-700">
+                  {["By Unit", "By Value"].map((method) => (
+                    <button
+                      key={method}
+                      type="button"
+                      onClick={() => setCostMethod(method)}
+                      className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all duration-200 ${
+                        costMethod === method 
+                          ? "bg-blue-500 text-white shadow-sm" 
+                          : "text-slate-400 hover:text-black hover:bg-white"
+                      }`}
+                    >
+                      {method}
+                    </button>
+                  ))}
+                </div>
+
+                <button type="button" className="px-5 py-2 text-xs font-bold text-slate-900 bg-white border border-transparent rounded-lg shadow-sm hover:bg-slate-100 active:bg-slate-200 transition-all duration-200 flex items-center gap-2">
+                  Distributor Cost
+                </button>
+              </div>
+            </div>
+
+            <div className="flex items-baseline mt-2">
+              <span className="text-3xl font-bold tracking-tight">
+                ₹{stats.grandTotal.toLocaleString()}
+              </span>
+              {costMethod === "By Unit" && (
+                <span className="ml-3 text-sm font-medium text-blue-300 bg-blue-500/20 px-2.5 py-1 rounded-md border border-blue-500/30">
+                  ~₹{stats.totalQty > 0 ? (stats.grandTotal / stats.totalQty).toLocaleString(undefined, { maximumFractionDigits: 2 }) : 0} <span className="text-blue-400/70 text-xs">/ unit</span>
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* 2. Products Table */}
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+          <table className="w-full text-left border-collapse min-w-[1100px]">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-500 uppercase tracking-wider">
-                <th className="p-4 sticky top-0 bg-slate-50 z-10 w-1/3">Product</th>
+                <th className="p-4 sticky top-0 bg-slate-50 z-10 w-1/4">Product</th>
                 <th className="p-4 sticky top-0 bg-slate-50 z-10">Ordered</th>
                 <th className="p-4 sticky top-0 bg-slate-50 z-10">Rcvd Prev.</th>
                 <th className="p-4 sticky top-0 bg-slate-50 z-10 text-blue-600">Remaining</th>
-                <th className="p-4 sticky top-0 bg-slate-50 z-10 w-48">Receive Now *</th>
-                <th className="p-4 sticky top-0 bg-slate-50 z-10 w-64">Reason (If Partial)</th>
+                <th className="p-4 sticky top-0 bg-slate-50 z-10 w-32">Receive Now *</th>
+                <th className="p-4 sticky top-0 bg-slate-50 z-10">Base Cost</th>
+                <th className="p-4 sticky top-0 bg-slate-50 z-10 w-40">Allocated</th>
+                <th className="p-4 sticky top-0 bg-slate-50 z-10 w-48">Reason (If Partial)</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {items.map((item, idx) => {
-                if (item.remaining === 0) return null; // Hide already completed rows
+                if (item.remaining === 0) return null;
 
                 const recNow = Number(item.receiveNow) || 0;
                 const isPartial = item.receiveNow !== "" && recNow < item.remaining;
                 const isError = recNow > item.remaining || (item.receiveNow !== "" && recNow < 0);
+
+                // Calculate allocations for this row
+                const baseCost = Number(item.unit_price) || 0;
+                const transportCost = Number(charges.transport) || 0;
+                const otherCost = Number(charges.other) || 0;
+                const totalCharges = transportCost + otherCost;
+                
+                let allocated = 0;
+                if (costMethod === "By Unit" && stats.totalQty > 0) {
+                  allocated = totalCharges / stats.totalQty;
+                } else if (costMethod === "By Value" && stats.subtotal > 0) {
+                  allocated = (baseCost / stats.subtotal) * totalCharges;
+                }
+                const finalCost = baseCost + allocated;
 
                 return (
                   <tr key={item.product_id} className={`transition-colors ${isPartial ? 'bg-orange-50/40' : 'hover:bg-slate-50/50'}`}>
@@ -226,6 +440,25 @@ const GRNForm = ({ poData, onSubmit }: { poData: PurchaseOrder, onSubmit: (paylo
                         className={`w-full px-3 py-2 border rounded-md text-sm font-semibold outline-none transition-all ${isError ? 'border-red-400 focus:ring-red-500 ring-1 ring-red-400' : 'border-slate-200 focus:ring-blue-500 focus:border-blue-500'}`}
                       />
                       {isError && <span className="text-[10px] text-red-500 font-bold mt-1 block">Max {item.remaining}</span>}
+                    </td>
+                    <td className="p-4 text-sm font-medium text-slate-600">
+                      ₹{baseCost.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    </td>
+                    <td className="p-4 text-sm font-medium text-slate-600">
+                      {recNow > 0 ? (
+                        <div className="flex flex-col justify-center text-xs text-slate-500 bg-white/80 px-2.5 py-2 rounded-lg border border-slate-200 shadow-sm w-full">
+                          <div className="flex justify-between items-center gap-2">
+                            <span className="text-[10px] uppercase tracking-wider text-slate-400">Alloc</span> 
+                            <span className="font-medium">₹{allocated.toFixed(2)}</span>
+                          </div>
+                          <div className="flex justify-between items-center mt-1.5 pt-1.5 border-t border-slate-100 gap-2">
+                            <span className="text-[10px] uppercase tracking-wider text-slate-400">Final</span> 
+                            <span className="font-bold text-blue-600">₹{finalCost.toFixed(2)}</span>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-center text-slate-300 font-medium">-</div>
+                      )}
                     </td>
                     <td className="p-4">
                       {isPartial && (
@@ -261,7 +494,6 @@ const GRNForm = ({ poData, onSubmit }: { poData: PurchaseOrder, onSubmit: (paylo
       {/* 3. Global Fields & Summary */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
-        {/* Global Details */}
         <div className="lg:col-span-2 bg-white p-6 rounded-xl border border-slate-200 shadow-sm grid grid-cols-1 sm:grid-cols-2 gap-5">
            <div>
             <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Receiving Date *</label>
@@ -284,7 +516,6 @@ const GRNForm = ({ poData, onSubmit }: { poData: PurchaseOrder, onSubmit: (paylo
           </div>
         </div>
 
-        {/* Summary Card */}
         <div className="bg-slate-50 p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
           <div>
             <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider mb-4 border-b border-slate-200 pb-2">Receiving Summary</h3>
@@ -294,7 +525,6 @@ const GRNForm = ({ poData, onSubmit }: { poData: PurchaseOrder, onSubmit: (paylo
               <div className="flex justify-between text-slate-600"><span>Remaining After:</span> <span className="font-semibold">{stats.totalRemainingAfter}</span></div>
             </div>
             
-            {/* Progress Bar */}
             <div className="mt-5 h-2 w-full bg-slate-200 rounded-full overflow-hidden flex">
                <div className="h-full bg-slate-400 transition-all" style={{ width: `${((stats.totalOrdered - stats.totalRemainingAfter - stats.totalReceivedNow) / stats.totalOrdered) * 100}%` }} title="Previously Received"/>
                <div className="h-full bg-blue-500 transition-all relative overflow-hidden" style={{ width: `${(stats.totalReceivedNow / stats.totalOrdered) * 100}%` }}>
@@ -323,39 +553,36 @@ export default function ReceiveGoodsPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
-const fetchPO = async (id: string) => {
+  const fetchPO = async (id: string) => {
     setIsLoading(true);
     setError("");
     try {
-      // 1. Simulate a realistic network loading delay
       await new Promise(r => setTimeout(r, 600)); 
       
-      // 2. Our dummy database
       const mockDatabase: Record<string, PurchaseOrder> = {
         "PO-2026-001": {
           id: "PO-2026-001", supplier: "Apex Industrial Supplies", po_date: "2026-03-15", expected_delivery: "2026-03-25", status: "Partial",
           items: [
-            { product_id: "PROD-101", name: "Heavy Duty Racking", ordered: 50, received: 20 },
-            { product_id: "PROD-102", name: "Pallet Jack (Manual)", ordered: 5, received: 5 }, // Fully received
-            { product_id: "PROD-103", name: "Safety Helmets (Yellow)", ordered: 100, received: 0 }
+            { product_id: "PROD-101", name: "Heavy Duty Racking", ordered: 50, received: 20, unit_price: 2500 },
+            { product_id: "PROD-102", name: "Pallet Jack (Manual)", ordered: 5, received: 5, unit_price: 15000 }, 
+            { product_id: "PROD-103", name: "Safety Helmets (Yellow)", ordered: 100, received: 0, unit_price: 350 }
           ]
         },
         "PO-2026-002": {
           id: "PO-2026-002", supplier: "TechDistro Global", po_date: "2026-03-20", expected_delivery: "2026-03-28", status: "Pending",
           items: [
-            { product_id: "TECH-001", name: "Barcode Scanners", ordered: 25, received: 0 },
-            { product_id: "TECH-002", name: "Thermal Label Printers", ordered: 10, received: 0 }
+            { product_id: "TECH-001", name: "Barcode Scanners", ordered: 25, received: 0, unit_price: 4500 },
+            { product_id: "TECH-002", name: "Thermal Label Printers", ordered: 10, received: 0, unit_price: 12000 }
           ]
         },
         "PO-2026-003": {
           id: "PO-2026-003", supplier: "Office Essentials Co.", po_date: "2026-03-01", expected_delivery: "2026-03-10", status: "Partial",
           items: [
-            { product_id: "OFF-99", name: "Ergonomic Chairs", ordered: 12, received: 10 },
+            { product_id: "OFF-99", name: "Ergonomic Chairs", ordered: 12, received: 10, unit_price: 8500 },
           ]
         }
       };
 
-      // 3. Search the dummy database
       const searchId = id.toUpperCase().trim();
       const foundPO = mockDatabase[searchId];
 
@@ -374,24 +601,12 @@ const fetchPO = async (id: string) => {
 
   const submitGRN = async (payload: GRNPayload) => {
     console.log("Submitting to FastAPI:", payload);
-    // try {
-    //   const response = await fetch('http://localhost:8000/grn/receive', {
-    //     method: 'POST',
-    //     headers: { 'Content-Type': 'application/json' },
-    //     body: JSON.stringify(payload)
-    //   });
-    //   if (!response.ok) throw new Error("Submission failed");
-    //   toast.success("Goods Received Successfully!");
-    //   setPoData(null); // Reset page
-    // } catch (err) {
-    //   toast.error("Failed to submit GRN");
-    // }
     alert("GRN Payload logged to console! Success.");
     setPoData(null);
   };
 
   return (
-    <div className="max-w-7xl mx-auto p-4 md:p-8 font-sans text-slate-800 bg-slate-50/50 min-h-screen">
+    <div className="max-w-7xl mx-auto font-sans text-slate-800 bg-slate-50/50 min-h-screen p-6">
       <div className="mb-8">
         <h1 className="text-2xl font-semibold text-slate-900 flex items-center gap-3">
           <Package className="text-blue-600" /> Goods Receipt Note (GRN)

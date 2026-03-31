@@ -105,7 +105,7 @@ export default function ProductionEntryPage() {
 
   return (
     <div className="flex min-h-screen  font-sans text-slate-800 antialiased">
-      <main className="flex-1 p-4 lg:p-6 mx-auto">
+      <main className="flex-1  mx-auto">
         
         {/* Header */}
         <div className="mb-6 flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-6 py-5">

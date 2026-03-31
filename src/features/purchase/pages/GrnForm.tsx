@@ -13,6 +13,7 @@ import {
 // Adjust these imports to match your folder structure
 import Input from "@/components/ui/Input";
 import { ReusableSelect } from "@/components/ui/ReusableSelect";
+import { GradientButton } from "@/components/ui/GradientButton";
 
 // --- Types ---
 type GRNStatus = "Completed" | "Pending" | "Partial";
@@ -132,7 +133,7 @@ const GRNForm: React.FC<GRNFormProps> = ({ onSubmit, onCancel }) => {
   };
 
   return (
-    <div className="min-h-screen p-2 md:p-4 font-sans text-slate-800">
+    <div className="min-h-screen  font-sans text-slate-800">
       
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
@@ -143,20 +144,13 @@ const GRNForm: React.FC<GRNFormProps> = ({ onSubmit, onCancel }) => {
           </p>
         </div>
         <div className="flex gap-3">
-          <button 
-            type="button"
-            onClick={onCancel}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition"
-          >
-            <X size={16} /> Cancel
-          </button>
-          <button 
-            type="button"
-            onClick={handleSubmit}
-            className="flex items-center gap-2 px-6 py-2 text-sm font-bold text-white bg-blue-600 rounded-lg hover:bg-blue-700 shadow-sm transition"
-          >
-            <Save size={16} /> Save Record
-          </button>
+          <GradientButton icon={<X size={16} />} variant="outline" onClick={onCancel}>
+            Cancel
+          </GradientButton>
+         
+          <GradientButton icon={<Save size={16} />}>
+            Save Record
+          </GradientButton>
         </div>
       </div>
 

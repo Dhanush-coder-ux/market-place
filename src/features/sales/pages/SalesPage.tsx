@@ -10,13 +10,14 @@ import {
   WifiOff,
   ChevronDown,
   X,
-  Receipt,
-  ArrowUpRight,
   User,
   Calendar,
   CreditCard,
   Package,
+  RotateCcw,
+  Receipt,
 } from "lucide-react";
+import { StatCard } from "../../../components/common/StatsCard";
 
 /* ═══════════════════════════════════════════════
    TYPES
@@ -188,47 +189,6 @@ const FilterDropdown = ({
 };
 
 /* ═══════════════════════════════════════════════
-   SUMMARY STAT CARD
-═══════════════════════════════════════════════ */
-const StatCard = ({
-  label,
-  value,
-  sub,
-  icon,
-  iconBg,
-  iconColor,
-  trend,
-}: {
-  label: string;
-  value: string;
-  sub?: string;
-  icon: React.ReactNode;
-  iconBg: string;
-  iconColor: string;
-  trend?: string;
-}) => (
-  <div className="sales-stat bg-white rounded-xl border border-zinc-200 shadow-sm px-5 py-4 flex items-center gap-4 flex-1 min-w-[180px]">
-    <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${iconBg}`}>
-      <span className={iconColor}>{icon}</span>
-    </div>
-    <div className="min-w-0 flex-1">
-      <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-400 mb-0.5 whitespace-nowrap">{label}</p>
-      <p className="text-xl font-semibold text-zinc-900 tracking-tight tabular-nums leading-none">{value}</p>
-      {(sub || trend) && (
-        <div className="flex items-center gap-2 mt-1">
-          {trend && (
-            <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-emerald-600">
-              <ArrowUpRight size={10} /> {trend}
-            </span>
-          )}
-          {sub && <span className="text-[10px] text-zinc-400">{sub}</span>}
-        </div>
-      )}
-    </div>
-  </div>
-);
-
-/* ═══════════════════════════════════════════════
    MAIN PAGE
 ═══════════════════════════════════════════════ */
 const SalesListPage = () => {
@@ -280,7 +240,7 @@ const SalesListPage = () => {
     <>
       <style>{STYLES}</style>
 
-      <div className="sales-root min-h-screen bg-zinc-50/50 px-6 py-8 space-y-6 relative overflow-x-hidden">
+      <div className="sales-root min-h-screen bg-zinc-50/50 space-y-6 relative overflow-x-hidden">
 
         {/* ── Page Header ── */}
         <div className="flex items-start justify-between gap-4">
@@ -295,43 +255,38 @@ const SalesListPage = () => {
           <div className="flex gap-3 min-w-max">
             <StatCard
               label="Total Revenue"
-              value={`₹${totalRevenue.toLocaleString()}`}
-              sub={`${MOCK_SALES.filter(s => s.status === "Completed").length} completed`}
-              trend="+12.4%"
-              icon={<TrendingUp size={18} />}
+              value={totalRevenue}
+              prefix="₹"
+              icon={TrendingUp}
               iconBg="bg-blue-50"
               iconColor="text-blue-600"
             />
             <StatCard
               label="Total Orders"
-              value={String(MOCK_SALES.length)}
-              sub="All time"
-              icon={<ShoppingCart size={18} />}
+              value={MOCK_SALES.length}
+              icon={ShoppingCart}
               iconBg="bg-zinc-100"
               iconColor="text-zinc-600"
             />
             <StatCard
               label="Online Sales"
-              value={String(onlineSales)}
-              sub={`${Math.round((onlineSales / MOCK_SALES.length) * 100)}% of total`}
-              icon={<Wifi size={18} />}
+              value={onlineSales}
+              icon={Wifi}
               iconBg="bg-sky-50"
               iconColor="text-sky-600"
             />
             <StatCard
               label="Offline Sales"
-              value={String(offlineSales)}
-              sub={`${Math.round((offlineSales / MOCK_SALES.length) * 100)}% of total`}
-              icon={<WifiOff size={18} />}
+              value={offlineSales}
+              icon={WifiOff}
               iconBg="bg-slate-100"
               iconColor="text-slate-600"
             />
             <StatCard
               label="Revenue Today"
-              value={`₹${todayRevenue.toLocaleString()}`}
-              sub={TODAY}
-              trend="+5.1%"
-              icon={<TrendingUp size={18} />}
+              value={todayRevenue}
+              prefix="₹"
+              icon={TrendingUp}
               iconBg="bg-emerald-50"
               iconColor="text-emerald-600"
             />
@@ -516,6 +471,12 @@ const SalesListPage = () => {
                               <Eye size={15} />
                             </button>
                             <button
+                              title="Return Order"
+                              className="w-8 h-8 flex items-center justify-center rounded-md text-zinc-400 hover:text-red-500 hover:bg-red-50 transition-all"
+                            >
+                              <RotateCcw size={15} />
+                            </button>
+                            <button
                               title="More options"
                               className="w-8 h-8 flex items-center justify-center rounded-md text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 transition-all"
                             >
@@ -660,22 +621,26 @@ const SalesListPage = () => {
                 </div>
               </div>
 
-              {/* Items Summary Placeholder */}
+              {/* Items Summary */}
               <div>
                 <h3 className="text-xs font-semibold uppercase tracking-widest text-zinc-400 mb-3">Order Summary</h3>
-                <div className="border border-zinc-100 rounded-xl divide-y divide-zinc-100">
-                  <div className="flex items-center justify-between p-4 bg-white rounded-t-xl">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 bg-zinc-50 rounded-lg flex items-center justify-center text-zinc-400">
-                        <Package size={16} />
+                <div className="border border-zinc-100 rounded-xl divide-y divide-zinc-100 overflow-hidden">
+                  {Array.from({ length: selectedSale.itemsCount }).map((_, i) => (
+                    <div key={i} className="flex items-center justify-between p-4 bg-white">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 bg-zinc-50 rounded-lg flex items-center justify-center text-zinc-400">
+                          <Package size={16} />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-zinc-800">Sample Product {i + 1}</p>
+                          <p className="text-xs text-zinc-500">Qty: 1</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-sm font-medium text-zinc-800">Total Items Purchased</p>
-                        <p className="text-xs text-zinc-500">Various products</p>
-                      </div>
+                      <span className="text-sm font-semibold text-zinc-900 tabular-nums">
+                        ₹{Math.round(selectedSale.totalAmount / selectedSale.itemsCount).toLocaleString()}
+                      </span>
                     </div>
-                    <span className="text-sm font-semibold text-zinc-900 tabular-nums">{selectedSale.itemsCount}x</span>
-                  </div>
+                  ))}
                 </div>
               </div>
 
@@ -683,11 +648,14 @@ const SalesListPage = () => {
 
             {/* Footer Actions */}
             <div className="p-4 border-t border-zinc-100 bg-zinc-50 flex gap-3">
-              <button className="flex-1 py-2.5 bg-white border border-zinc-200 text-zinc-700 rounded-lg text-sm font-semibold hover:bg-zinc-50 transition-colors shadow-sm">
+              <button className="flex-1 py-2.5 bg-white border border-zinc-200 text-zinc-700 rounded-lg text-xs font-semibold hover:bg-zinc-50 transition-colors shadow-sm">
                 Download PDF
               </button>
-              <button className="flex-1 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm">
+              <button className="flex-1 py-2.5 bg-blue-600 text-white rounded-lg text-xs font-semibold hover:bg-blue-700 transition-colors shadow-sm">
                 Print Receipt
+              </button>
+              <button className="flex-1 py-2.5 bg-red-50 border border-red-100 text-red-600 rounded-lg text-xs font-semibold hover:bg-red-100 transition-colors shadow-sm">
+                Return
               </button>
             </div>
           </>

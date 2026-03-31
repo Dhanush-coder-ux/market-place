@@ -19,7 +19,7 @@ const Breadcrumb = () => {
           <div key={href} className="flex items-center">
             <ChevronRight size={16} className="mx-2" />
             {isLast ? (
-              <span className="text-blue-700 font-semibold capitalize">
+              <span className="text-blue-500 font-semibold capitalize">
                 {path.replace("-", " ")}
               </span>
             ) : (

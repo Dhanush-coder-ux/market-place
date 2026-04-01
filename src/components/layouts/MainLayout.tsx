@@ -123,6 +123,10 @@ const getPageHeaderInfo = (pathname: string) => {
       title: "Customer Balances",
       subtitle: "Track outstanding payments and customer ledgers.",
     },
+    "/customers/add": {
+      title: "Add Customer",
+      subtitle: "Register a new customer in the system.",
+    },
   };
 
   return routes[pathname] || { 

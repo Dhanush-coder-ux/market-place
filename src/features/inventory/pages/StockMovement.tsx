@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { 
-  Search, Download, Eye, Pencil, Trash2, 
+  Search, Download, Eye,  
   X, RotateCcw, AlertTriangle, ArrowUp, ArrowDown, 
   User, FileText, ArrowRight, TrendingUp, TrendingDown, Activity, Plus 
 } from "lucide-react";

@@ -13,6 +13,7 @@ import StockMovementPage from "@/features/inventory/pages/StockMovement";
 import ReceiveGoodsPage from "@/features/purchase/pages/ReceiveGoodsForm";
 import StockAdjustmentPage from "@/features/inventory/pages/StockAdjusstment";
 import ProductionEntryPage from "@/features/purchase/pages/ProductionForm";
+import CustomerFormPage from "@/features/customer/pages/CustomerFormPage";
 
 
 // Layout & Auth
@@ -115,7 +116,8 @@ export const router = createBrowserRouter([
 
 
       {path: "/customers",element:<CustomerProfile/>},
-      { path: "/customers-Summary",element:<CustomerBalanceSummary/>}
+      { path: "/customers-Summary",element:<CustomerBalanceSummary/>},
+      { path: "/customers/add",element:<CustomerFormPage/>}
  
     ]
   },

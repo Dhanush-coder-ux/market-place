@@ -1,8 +1,7 @@
 import { useState, useMemo } from "react";
 import {
   Save, Plus, Trash2, Settings, ScanLine, Search,
-  Banknote, Smartphone, CreditCard, Landmark, ChevronUp, Package,
-  ShoppingCart
+  Banknote, Smartphone, CreditCard, Landmark, ChevronUp,
 } from "lucide-react";
 import Input from "@/components/ui/Input";
 import { ReusableSelect } from "@/components/ui/ReusableSelect";
@@ -144,27 +143,7 @@ const PurchaseScreen = () => {
           
           <div className="flex-1 space-y-6 w-full pb-10">
             
-            {/* Stats Row - Enhanced with icons and gradient backgrounds */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/70 flex items-center justify-between hover:border-blue-200 transition-colors">
-                <div>
-                  <div className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-1">Unique Products</div>
-                  <div className="text-3xl font-bold text-slate-800">{products.length}</div>
-                </div>
-                <div className="h-12 w-12 bg-blue-50 rounded-full flex items-center justify-center text-blue-500">
-                  <Package size={24} />
-                </div>
-              </div>
-              <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/70 flex items-center justify-between hover:border-indigo-200 transition-colors">
-                <div>
-                  <div className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-1">Total Units</div>
-                  <div className="text-3xl font-bold text-slate-800">{stats.totalQty}</div>
-                </div>
-                <div className="h-12 w-12 bg-indigo-50 rounded-full flex items-center justify-center text-indigo-500">
-                  <ShoppingCart size={24} />
-                </div>
-              </div>
-            </div>
+      
 
             {/* 1. Purchase Details - Refined section header and inputs */}
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200/70">

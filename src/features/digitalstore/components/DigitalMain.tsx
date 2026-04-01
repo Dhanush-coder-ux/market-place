@@ -6,12 +6,14 @@ import {
   MapPin, 
   BadgeCheck, 
   Edit3,
+  Timer,
 } from "lucide-react";
 import DeliveryPreferences from "../pages/Deliveryinfo";
 import ProductDashboard from "../pages/StoreProductManagement";
-import Announcement from "./Announcement";
+import Announcement from "../pages/Announcement";
+import OperatingHours from "../pages/OperatingHours";
 
-type TabType = "Announcements" | "Delivery Preferences" | "Product Dashboard";
+type TabType = "Announcements" | "Delivery Preferences" | "Product Dashboard" | "Operating Hours";
 
 // Mock profile data
 const storeProfile = {
@@ -36,6 +38,7 @@ const DigitalMain = () => {
     "Announcements",
     "Delivery Preferences",
     "Product Dashboard",
+    "Operating Hours"
   ];
 
   const [activeTab, setActiveTab] = useState<TabType>("Announcements");
@@ -45,6 +48,7 @@ const DigitalMain = () => {
       case "Announcements": return <Megaphone size={16} />;
       case "Delivery Preferences": return <Truck size={16} />;
       case "Product Dashboard": return <Package size={16} />;
+      case "Operating Hours": return <Timer size={16} />;
     }
   };
 
@@ -166,6 +170,7 @@ const DigitalMain = () => {
               {activeTab === "Announcements" && <Announcement />}
               {activeTab === "Delivery Preferences" && <DeliveryPreferences />}
               {activeTab === "Product Dashboard" && <ProductDashboard />}
+              {activeTab === "Operating Hours" && <OperatingHours/>}
             </div>
           </div>
 

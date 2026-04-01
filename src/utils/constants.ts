@@ -128,6 +128,7 @@ export const sidebarLinks: SidebarLink[] = [
     subLinks: [
       { name: "Customer Details", path: "/customers" },
       { name: "Customers Info", path: "/customers-Summary" },
+      { name: "Add Customer", path: "/customers/add" },
     ],
   },
 

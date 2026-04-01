@@ -1,7 +1,8 @@
 import React, { useState, useMemo } from "react";
 import { 
   FileText, Package, DollarSign, BarChart2, 
-  Palette, Settings, UploadCloud, X, Plus, Trash2, CheckCircle2, Info
+  Palette, Settings, UploadCloud, X, Plus, Trash2, CheckCircle2, Info,
+  Save
 } from "lucide-react";
 
 import Input from "@/components/ui/Input";
@@ -119,19 +120,6 @@ const ProductForm: React.FC<ProductFormProps> = ({
 
   return (
     <div className="max-w-[1400px] mx-auto pb-10">
-      
-      {/* Page Header */}
-      <div className="mb-8 flex flex-col md:flex-row md:items-center justify-end gap-4">
-        
-        <div className="flex items-center gap-3">
-          <button type="button" className="px-5 py-2.5 text-sm font-bold text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors shadow-sm">
-            Save as Draft
-          </button>
-          <GradientButton onClick={handleSubmit} disabled={isLoading} className="px-6 py-2.5">
-            {isLoading ? "Saving..." : "Save Product"}
-          </GradientButton>
-        </div>
-      </div>
 
       {/* Notice the items-start here is CRITICAL for the sticky sidebar to work */}
       <form onSubmit={handleSubmit} className="flex flex-col xl:flex-row gap-6 items-start">
@@ -399,8 +387,8 @@ const ProductForm: React.FC<ProductFormProps> = ({
               </div>
 
               <div className="mt-6 pt-5 border-t border-slate-100 flex flex-col gap-3">
-                <GradientButton type="submit" onClick={handleSubmit} disabled={isLoading} className="w-full py-3">
-                  {isLoading ? "Saving..." : "💾 Save Product"}
+                <GradientButton type="submit" icon={<Save className="h-4 w-4" />} onClick={handleSubmit} disabled={isLoading} className="w-full py-3">
+                  {isLoading ? "Saving..." : " Save Product"}
                 </GradientButton>
                 <button type="button" className="w-full py-3 text-sm font-bold text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors shadow-sm">
                   Save as Draft

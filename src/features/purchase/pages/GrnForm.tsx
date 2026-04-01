@@ -157,13 +157,7 @@ const GRNForm: React.FC<GRNFormProps> = ({ onSubmit, onCancel }) => {
           <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
             <h2 className="text-sm font-bold uppercase tracking-wider text-slate-500 mb-4">General Information</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-              <Input 
-                label="PO Reference"
-                required
-                placeholder="e.g. PO-9921"
-                value={grnDetails.poReference}
-                onChange={(e) => setGrnDetails({...grnDetails, poReference: e.target.value})}
-              />
+     
               <ReusableSelect
                 label="Supplier"
                 required={true as any}

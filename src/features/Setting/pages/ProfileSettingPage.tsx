@@ -2,8 +2,6 @@ import { useState } from "react";
 import { 
   ListTree, LogOut, Bell,
   Settings, ChevronRight,
-  Truck,
-  Timer,
   ShoppingBag, 
 } from "lucide-react";
 
@@ -14,14 +12,10 @@ import { Switch } from "@/components/ui/switch";
 // Features (Ensure these paths match your project)
 import { AdditionalSettings } from "@/features/Setting/pages/AdditionalSettings";
 import SelectBuilder from "@/features/Setting/pages/SelectBuilder";
-import DeliveryPreferences from "@/features/digitalstore/pages/Deliveryinfo";
-import OperatingHours from "../components/OperatingHours";
 import { usePurchaseSettings } from "@/context/PurchaseContext";
 
 // --- Configuration ---
 const MENU_ITEMS = [
-  { id: "delivery", label: "Delivery Preference", icon: <Truck size={18}/>, description: "Choose the delivery preference" },
-  { id: "operatinghours", label: "Operating Hours", icon: <Timer size={18}/>, description: "Set the Operating Hours" },
   { id: "dropdowns", label: "Dropdown Settings", icon: <ListTree size={18} />, description: "Industries & Sectors" },
   { id: "advanced", label: "Advanced Config", icon: <Settings size={18} />, description: "System-wide variables" },
   { id: "purchasetypes", label: "Purchase Modules", icon: <ShoppingBag size={18} />, description: "Enable/Disable purchase types" },
@@ -55,20 +49,6 @@ export const ProfileSettingsPage = () => {
         return (
           <div className="animate-in fade-in slide-in-from-right-4 duration-300">
             <SelectBuilder onSettingsChange={handleBuilderChange} />
-          </div>
-        );
-
-      case "delivery":
-        return (
-          <div className="animate-in fade-in slide-in-from-right-4 duration-300">
-            <DeliveryPreferences />
-          </div>
-        );
-
-      case "operatinghours":
-        return (
-          <div className="animate-in fade-in slide-in-from-right-4 duration-300">
-            <OperatingHours />
           </div>
         );
 

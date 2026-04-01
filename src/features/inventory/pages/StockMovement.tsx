@@ -116,10 +116,6 @@ function DetailDrawer({ movement, onClose }: DetailDrawerProps) {
       >
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100">
-          <div>
-            <p className="text-xs text-slate-500 font-semibold uppercase tracking-widest mb-1">Movement Details</p>
-            <h2 className="text-lg font-semibold text-slate-900 font-mono">{movement.id}</h2>
-          </div>
           <button onClick={onClose} className="p-2 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors">
             <X className="w-5 h-5" />
           </button>
@@ -194,14 +190,7 @@ function DetailDrawer({ movement, onClose }: DetailDrawerProps) {
         </div>
 
         {/* Footer actions */}
-        <div className="px-6 py-4 border-t border-slate-100 flex gap-3 bg-slate-50">
-          <button className="flex-1 py-2.5 rounded-xl bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 text-sm font-medium transition-colors flex items-center justify-center gap-2 shadow-sm">
-            <Pencil className="w-4 h-4" /> Edit
-          </button>
-          <button className="flex-1 py-2.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 text-sm font-medium transition-colors border border-rose-200 flex items-center justify-center gap-2 shadow-sm">
-            <Trash2 className="w-4 h-4" /> Delete
-          </button>
-        </div>
+       
       </div>
     </div>
   );
@@ -336,7 +325,7 @@ export default function StockMovementPage() {
   );
 
   return (
-    <div className="min-h-screen bg-[#f4f7fb] text-slate-900" style={{ fontFamily: "'DM Sans', 'Segoe UI', sans-serif" }}>
+    <div className="min-h-screen text-slate-900" style={{ fontFamily: "'DM Sans', 'Segoe UI', sans-serif" }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500;600&display=swap');
         .font-mono { font-family: 'DM Mono', monospace !important; }
@@ -348,10 +337,10 @@ export default function StockMovementPage() {
       `}</style>
 
       {/* Added a container class here to provide padding and max-width */}
-      <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
+      <div className=" mx-auto">
   
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Stock Movements</h1>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-end gap-4 mb-8">
+
           
           <div className="flex gap-2.5 flex-wrap">
             <GradientButton
@@ -433,14 +422,12 @@ export default function StockMovementPage() {
               <thead>
                 <tr className="border-b border-slate-200 bg-slate-50/50">
                   {[
-                    ["Movement ID", null],
                     ["Product", null],
                     ["Type", null],
                     ["Quantity", "qty"],
                     ["Source → Destination", null],
                     ["Reference", null],
                     ["Date & Time", "date"],
-                    ["Status", null],
                     ["Actions", null],
                   ].map(([col, field]) => (
                     <th key={col as string} className="px-4 py-3.5 text-left text-xs font-medium text-slate-500 uppercase tracking-widest whitespace-nowrap">
@@ -463,7 +450,6 @@ export default function StockMovementPage() {
                     className={`border-b border-slate-100 transition-colors hover:bg-blue-50/40 cursor-default ${m.qty < 0 && Math.abs(m.qty) > 50 ? "bg-rose-50/40" : ""}`}
                     style={{ animationDelay: `${i * 30}ms` }}
                   >
-                    <td className="px-4 py-3.5 font-mono text-blue-600 text-xs font-medium whitespace-nowrap">{m.id}</td>
                     <td className="px-4 py-3.5 whitespace-nowrap">
                       <div className="text-slate-900 font-semibold leading-tight">{m.product}</div>
                       <div className="text-slate-500 text-xs font-mono mt-0.5">{m.sku}</div>
@@ -485,16 +471,9 @@ export default function StockMovementPage() {
                     <td className="px-4 py-3.5 font-mono text-xs text-slate-500 font-medium whitespace-nowrap">{m.ref}</td>
                     <td className="px-4 py-3.5 text-slate-600 text-xs font-medium whitespace-nowrap">{fmt(m.date)}</td>
                     <td className="px-4 py-3.5 whitespace-nowrap">
-                      <div className="flex items-center gap-1.5">
-                        <span className={`w-1.5 h-1.5 rounded-full ${m.status === "Completed" ? "bg-emerald-500" : "bg-amber-500"}`} />
-                        <span className={`text-xs font-medium ${STATUS_STYLES[m.status]}`}>{m.status}</span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3.5 whitespace-nowrap">
                       <div className="flex items-center gap-1">
                         <button onClick={() => setSelected(m)} className="p-1.5 rounded-lg hover:bg-blue-100 text-slate-400 hover:text-blue-600 transition-colors" title="View"><Eye className="w-4 h-4" /></button>
-                        <button className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors" title="Edit"><Pencil className="w-4 h-4" /></button>
-                        <button className="p-1.5 rounded-lg hover:bg-rose-100 text-slate-400 hover:text-rose-600 transition-colors" title="Delete"><Trash2 className="w-4 h-4" /></button>
+                        
                       </div>
                     </td>
                   </tr>

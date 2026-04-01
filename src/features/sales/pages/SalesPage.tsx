@@ -1075,14 +1075,11 @@ const SalesListPage: React.FC = () => {
                       </td>
                       <td className="py-3.5 px-4"><Badge cls={sCfg.cls} dot={sCfg.dot} label={sale.status} /></td>
                       <td className="py-3.5 pl-4 pr-5">
-                        <div className="sales-row-actions flex items-center justify-end gap-1">
+                        <div className=" flex items-center justify-end gap-1">
                           <button
                             onClick={() => { setSelectedSale(sale); setIsSidebarOpen(true); }}
                             className="w-8 h-8 flex items-center justify-center rounded-md text-zinc-400 hover:text-blue-600 hover:bg-blue-50 transition-all">
                             <Eye size={15} />
-                          </button>
-                          <button className="w-8 h-8 flex items-center justify-center rounded-md text-zinc-400 hover:text-red-500 hover:bg-red-50 transition-all">
-                            <RotateCcw size={15} />
                           </button>
                           <button className="w-8 h-8 flex items-center justify-center rounded-md text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 transition-all">
                             <MoreHorizontal size={15} />

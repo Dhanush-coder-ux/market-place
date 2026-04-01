@@ -1,23 +1,16 @@
 import { useState, useEffect, FC } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { LucideIcon, ChevronLeft, ChevronDown } from "lucide-react";
+import { ChevronLeft, ChevronDown } from "lucide-react";
 import { usePurchaseSettings } from "@/context/PurchaseContext";
+import type { SidebarLink, SubItem, SubGroup, SubLink } from "@/utils/constants";
 
+// ─── Type Guards ─────────────────────────────────────────────────────────────
 
-// --- Types ---
-interface SubLink {
-  name: string;
-  path: string;
-}
+const isSubGroup = (item: SubItem): item is SubGroup =>
+  (item as SubGroup).type === "group";
 
-interface SidebarLink {
-  name: string;
-  icon: LucideIcon | any;
-  path?: string;
-  subLinks?: SubLink[];
-  badge?: string | number;
-}
+// ─── Props ───────────────────────────────────────────────────────────────────
 
 interface SidebarItemProps {
   link: SidebarLink;
@@ -25,21 +18,30 @@ interface SidebarItemProps {
   index: number;
 }
 
-// --- Main Component ---
+interface SubGroupItemProps {
+  group: SubGroup;
+  sidebarOpen: boolean;
+}
+
+// ─── Sidebar Root ─────────────────────────────────────────────────────────────
+
 const Sidebar: FC<{ links: SidebarLink[] }> = ({ links }) => {
   const [isOpen, setIsOpen] = useState(true);
   const { settings } = usePurchaseSettings();
 
-  const filteredSidebarLinks = links.map(link => {
-    // We only want to filter the subLinks inside the "Purchase" section
+  /**
+   * Filter logic lives here — outside JSX, scalable, type-safe.
+   * For "Purchase", we filter each SubItem based on its settingsKey.
+   * All other top-level links pass through untouched.
+   */
+  const filteredLinks: SidebarLink[] = links.map((link) => {
     if (link.name === "Purchase" && link.subLinks) {
-      const activeSubLinks = link.subLinks.filter(sub => {
-        if (sub.name === "Direct") return settings.directPurchase;
-        if (sub.name === "PO-GRN") return settings.poGrn;
-        if (sub.name === "Production Entry") return settings.productionEntry;
-        return true; // Keep everything else (like "Purchase order") visible
+      const visibleSubItems = link.subLinks.filter((item) => {
+        if (!isSubGroup(item)) return true; // plain SubLinks always visible
+        if (!item.settingsKey) return true; // no gate = always visible
+        return settings[item.settingsKey] === true;
       });
-      return { ...link, subLinks: activeSubLinks };
+      return { ...link, subLinks: visibleSubItems };
     }
     return link;
   });
@@ -71,7 +73,6 @@ const Sidebar: FC<{ links: SidebarLink[] }> = ({ links }) => {
               transition={{ duration: 0.18 }}
               className="flex items-center gap-2.5 min-w-0"
             >
-              {/* Logo mark */}
               <div className="w-[26px] h-[26px] rounded-md bg-white/15 border border-white/20 backdrop-blur-md flex items-center justify-center shrink-0">
                 <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
                   <rect x="0.5" y="0.5" width="5" height="5" rx="1.5" fill="white" fillOpacity="0.9" />
@@ -114,9 +115,9 @@ const Sidebar: FC<{ links: SidebarLink[] }> = ({ links }) => {
         )}
       </AnimatePresence>
 
-      {/* Nav with Hiding Scrollbar utility classes */}
+      {/* Nav */}
       <nav className="flex-1 overflow-y-auto overflow-x-hidden flex flex-col gap-0.5 px-2 py-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-        {filteredSidebarLinks.map((link, i) => (
+        {filteredLinks.map((link, i) => (
           <SidebarItem key={link.name} link={link} sidebarOpen={isOpen} index={i} />
         ))}
       </nav>
@@ -131,7 +132,6 @@ const Sidebar: FC<{ links: SidebarLink[] }> = ({ links }) => {
             isOpen ? "justify-start" : "justify-center"
           }`}
         >
-          {/* Avatar */}
           <div className="w-7 h-7 rounded-md bg-gradient-to-br from-emerald-400 to-teal-600 shrink-0 flex items-center justify-center text-[11px] font-bold text-white shadow-md">
             A
           </div>
@@ -160,23 +160,30 @@ const Sidebar: FC<{ links: SidebarLink[] }> = ({ links }) => {
   );
 };
 
-// --- Item Component ---
+// ─── Top-level Sidebar Item ───────────────────────────────────────────────────
+
 const SidebarItem: FC<SidebarItemProps> = ({ link, sidebarOpen, index }) => {
   const { pathname } = useLocation();
   const Icon = link.icon;
   const hasSub = !!link.subLinks?.length;
-  const isChildActive = hasSub && link.subLinks!.some((s) => pathname === s.path);
+
+  // A top-level item is "active" if any of its descendants match the path
+  const isDescendantActive = (items: SubItem[]): boolean =>
+    items.some((item) => {
+      if (isSubGroup(item)) return item.children.some((c) => pathname === c.path);
+      return pathname === (item as SubLink).path;
+    });
+
+  const isChildActive = hasSub && isDescendantActive(link.subLinks!);
   const [isDrop, setIsDrop] = useState(isChildActive);
 
   useEffect(() => {
     if (isChildActive) setIsDrop(true);
   }, [isChildActive]);
 
-  // Base classes for both NavLink and Dropdown Button
   const baseItemClasses =
     "group relative flex items-center w-full px-2.5 h-9 rounded-[9px] text-[12.5px] font-medium transition-colors outline-none cursor-pointer tracking-tight";
 
-  // Active vs Inactive class logic
   const getActiveClass = (isActive: boolean) =>
     isActive
       ? "bg-white/15 text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.1)]"
@@ -190,6 +197,7 @@ const SidebarItem: FC<SidebarItemProps> = ({ link, sidebarOpen, index }) => {
       className="flex flex-col"
     >
       {hasSub ? (
+        /* ── Dropdown trigger ── */
         <button
           onClick={() => sidebarOpen && setIsDrop(!isDrop)}
           className={`${baseItemClasses} ${getActiveClass(isChildActive)} ${
@@ -215,30 +223,22 @@ const SidebarItem: FC<SidebarItemProps> = ({ link, sidebarOpen, index }) => {
           </div>
 
           {sidebarOpen && (
-            <div className="flex items-center gap-1.5 shrink-0">
-              {link.badge && (
-                <span className="text-[9px] font-bold bg-white/15 text-white/70 px-1.5 py-[1px] rounded-full tracking-[0.02em]">
-                  {link.badge}
-                </span>
-              )}
-              <motion.div
-                animate={{ rotate: isDrop ? 180 : 0 }}
-                transition={{ duration: 0.22 }}
-                className="text-white/20 flex"
-              >
-                <ChevronDown size={12} strokeWidth={2.5} />
-              </motion.div>
-            </div>
+            <motion.div
+              animate={{ rotate: isDrop ? 180 : 0 }}
+              transition={{ duration: 0.22 }}
+              className="text-white/20 flex shrink-0"
+            >
+              <ChevronDown size={12} strokeWidth={2.5} />
+            </motion.div>
           )}
 
-          {/* Collapsed Tooltip (replaces the <style> block injection) */}
+          {/* Collapsed tooltip */}
           {!sidebarOpen && (
-            <div className="absolute left-[66px] bg-slate-800 text-white/90 text-[11.5px] font-medium px-2.5 py-1.5 rounded-md whitespace-nowrap z-[9999] border border-white/10 shadow-lg tracking-tight opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity">
-              {link.name}
-            </div>
+            <Tooltip label={link.name} />
           )}
         </button>
       ) : (
+        /* ── Plain NavLink ── */
         <NavLink
           to={link.path!}
           className={({ isActive }) =>
@@ -249,14 +249,12 @@ const SidebarItem: FC<SidebarItemProps> = ({ link, sidebarOpen, index }) => {
         >
           {({ isActive }) => (
             <>
-              {/* Active pill indicator */}
               {isActive && (
                 <motion.div
                   layoutId="activeIndicator"
                   className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-[18px] bg-white/70 rounded-full"
                 />
               )}
-
               <div className="flex items-center gap-2.5 min-w-0">
                 <Icon
                   size={15}
@@ -278,29 +276,13 @@ const SidebarItem: FC<SidebarItemProps> = ({ link, sidebarOpen, index }) => {
                   )}
                 </AnimatePresence>
               </div>
-
-              {sidebarOpen && link.badge && (
-                <span
-                  className={`text-[9px] font-bold px-1.5 py-[2px] rounded-full tracking-[0.03em] shrink-0 ${
-                    isActive ? "bg-white/20 text-white" : "bg-white/10 text-white/55"
-                  }`}
-                >
-                  {link.badge}
-                </span>
-              )}
-
-              {/* Collapsed Tooltip */}
-              {!sidebarOpen && (
-                <div className="absolute left-[66px] bg-slate-800 text-white/90 text-[11.5px] font-medium px-2.5 py-1.5 rounded-md whitespace-nowrap z-[9999] border border-white/10 shadow-lg tracking-tight opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity">
-                  {link.name}
-                </div>
-              )}
+              {!sidebarOpen && <Tooltip label={link.name} />}
             </>
           )}
         </NavLink>
       )}
 
-      {/* Submenu */}
+      {/* ── Submenu panel ── */}
       <AnimatePresence>
         {hasSub && isDrop && sidebarOpen && (
           <motion.div
@@ -311,21 +293,15 @@ const SidebarItem: FC<SidebarItemProps> = ({ link, sidebarOpen, index }) => {
             className="overflow-hidden ml-3 mt-0.5"
           >
             <div className="border-l border-white/10 ml-[7px] py-1 flex flex-col gap-0.5">
-              {link.subLinks!.map((sub) => (
-                <NavLink
-                  key={sub.name}
-                  to={sub.path}
-                  className={({ isActive }) =>
-                    `block pl-3.5 pr-2.5 py-1.5 text-[11.5px] rounded-r-[7px] no-underline tracking-tight leading-none transition-colors ${
-                      isActive
-                        ? "font-semibold text-white bg-white/5"
-                        : "font-normal text-white/80 bg-transparent hover:text-white/70"
-                    }`
-                  }
-                >
-                  {sub.name}
-                </NavLink>
-              ))}
+              {link.subLinks!.map((item) =>
+                isSubGroup(item) ? (
+                  // ── Level 2: SubGroup (folder) ──
+                  <SubGroupItem key={item.name} group={item} sidebarOpen={sidebarOpen} />
+                ) : (
+                  // ── Level 2: Flat SubLink ──
+                  <FlatSubLink key={(item as SubLink).path} sub={item as SubLink} />
+                )
+              )}
             </div>
           </motion.div>
         )}
@@ -333,5 +309,96 @@ const SidebarItem: FC<SidebarItemProps> = ({ link, sidebarOpen, index }) => {
     </motion.div>
   );
 };
+
+// ─── SubGroup (folder) Item — Level 2 ────────────────────────────────────────
+
+const SubGroupItem: FC<SubGroupItemProps> = ({ group }) => {
+  const { pathname } = useLocation();
+  const isChildActive = group.children.some((c) => pathname === c.path);
+  const [isOpen, setIsOpen] = useState(isChildActive);
+  const Icon = group.icon;
+
+  useEffect(() => {
+    if (isChildActive) setIsOpen(true);
+  }, [isChildActive]);
+
+  return (
+    <div className="flex flex-col">
+      {/* Group header button */}
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className={`group flex items-center justify-between pl-3.5 pr-2.5 py-1.5 rounded-r-[7px] text-[11.5px] font-semibold tracking-tight transition-colors w-full text-left ${
+          isChildActive
+            ? "text-white/90 bg-white/5"
+            : "text-white/50 hover:text-white/70 hover:bg-white/5"
+        }`}
+      >
+        <div className="flex items-center gap-2 min-w-0">
+          {Icon && (
+            <Icon
+              size={12}
+              strokeWidth={2}
+              className={`shrink-0 ${isChildActive ? "opacity-90" : "opacity-50"}`}
+            />
+          )}
+          <span className="truncate">{group.name}</span>
+        </div>
+        <motion.div
+          animate={{ rotate: isOpen ? 180 : 0 }}
+          transition={{ duration: 0.2 }}
+          className={`shrink-0 ${isChildActive ? "text-white/40" : "text-white/20"}`}
+        >
+          <ChevronDown size={10} strokeWidth={2.5} />
+        </motion.div>
+      </button>
+
+      {/* Level 3: children */}
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.18, ease: "easeInOut" }}
+            className="overflow-hidden"
+          >
+            <div className="ml-3 border-l border-white/[0.07] py-0.5 flex flex-col gap-0.5">
+              {group.children.map((child) => (
+                <FlatSubLink key={child.path} sub={child} indent />
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
+
+// ─── Flat SubLink — reusable leaf node ───────────────────────────────────────
+
+const FlatSubLink: FC<{ sub: SubLink; indent?: boolean }> = ({ sub, indent = false }) => (
+  <NavLink
+    to={sub.path}
+    className={({ isActive }) =>
+      `block pr-2.5 py-1.5 text-[11.5px] rounded-r-[7px] no-underline tracking-tight leading-none transition-colors ${
+        indent ? "pl-3" : "pl-3.5"
+      } ${
+        isActive
+          ? "font-semibold text-white bg-white/5"
+          : "font-normal text-white/60 hover:text-white/80"
+      }`
+    }
+  >
+    {sub.name}
+  </NavLink>
+);
+
+// ─── Tooltip (collapsed state) ────────────────────────────────────────────────
+
+const Tooltip: FC<{ label: string }> = ({ label }) => (
+  <div className="absolute left-[66px] bg-slate-800 text-white/90 text-[11.5px] font-medium px-2.5 py-1.5 rounded-md whitespace-nowrap z-[9999] border border-white/10 shadow-lg tracking-tight opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity">
+    {label}
+  </div>
+);
 
 export default Sidebar;

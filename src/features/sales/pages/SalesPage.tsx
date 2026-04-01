@@ -253,13 +253,6 @@ const SalesListPage = () => {
 
       <div className="sales-root min-h-screen bg-zinc-50/50 space-y-6 relative overflow-x-hidden">
 
-        {/* ── Page Header ── */}
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-semibold text-zinc-900 tracking-tight">Sales</h1>
-            <p className="text-sm text-zinc-500 mt-0.5">All transactions — online, offline, walk-in</p>
-          </div>
-        </div>
 
         {/* ── Summary Cards ── */}
         <div className="overflow-x-auto pb-1 -mx-1 px-1">

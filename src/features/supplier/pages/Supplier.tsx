@@ -1,6 +1,5 @@
 import  { useState } from "react";
 import Table from "@/components/common/Table";
-import Title from "@/components/common/Title";
 import { Search,  Phone, CreditCard, ShoppingBag } from "lucide-react";
 import { GradientButton } from "@/components/ui/GradientButton";
 import Input from "@/components/ui/Input";
@@ -83,8 +82,8 @@ const Supplier = () => {
   return (
     <div className="space-y-6">
       {/* 1. Header Section */}
-      <div className="flex justify-between items-center">
-        <Title title="Supplier Master" subtitle="Manage your permanent vendor relationships and accounts" />
+      <div className="flex justify-end items-center">
+
         <GradientButton path="/supplier/add">
           + Add Supplier
         </GradientButton>

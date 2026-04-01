@@ -6,84 +6,151 @@ import {
   Printer,
   ShoppingCart,
   Store,
-  Users
+  Users,
+  ClipboardList,
+  Factory,
 } from "lucide-react";
 
+// ─── Types ──────────────────────────────────────────────────────────────────
 
-export const sidebarLinks = [
+export interface SubLink {
+  name: string;
+  path: string;
+  icon?: any;
+}
+
+export interface SubGroup {
+  type: "group";
+  name: string;
+  icon?: any;
+  /** The settings key that gates this group. If undefined, always visible. */
+  settingsKey?: "directPurchase" | "poGrn" | "productionEntry";
+  children: SubLink[];
+}
+
+export type SubItem = SubLink | SubGroup;
+
+export interface SidebarLink {
+  name: string;
+  icon: any;
+  path?: string;
+  badge?: string | number;
+  /** Top-level subLinks: can be flat SubLinks OR SubGroups */
+  subLinks?: SubItem[];
+}
+
+// ─── Data ────────────────────────────────────────────────────────────────────
+
+export const sidebarLinks: SidebarLink[] = [
   { name: "Dashboard", icon: LayoutDashboard, path: "/" },
-  { name: "Sales",icon:IndianRupee,path:"/sales"},
+  { name: "Sales", icon: IndianRupee, path: "/sales" },
 
   {
     name: "Purchase",
     icon: Wallet,
     subLinks: [
-      { name: "Add Purchase ",icon: Plus, path: "/purchase-order/add"},
-      { name : "Add Purchase Order",path:"po-grn/add"},
-      { name : "Update Purchase Order",path:"/po-grn/update"},
-      { name: "Purchase Order List",path: "po-grn"},
-      { name: "Production Entry",path: "/production-entry/add"},
       
-      { name : "Purchase History" , path: "/purchase-history",icon:History},
-    ]
+      // Direct Purchase — gated by settings.directPurchase
+      {
+        type: "group",
+        name: "Direct Purchase",
+        icon: Plus,
+        settingsKey: "directPurchase",
+        children: [
+          { name: "Add Purchase", path: "/purchase-order/add" },
+
+        ],
+      },
+
+      // Purchase Orders group — gated by settings.poGrn
+      {
+        type: "group",
+        name: "Purchase Orders",
+        icon: ClipboardList,
+        settingsKey: "poGrn",
+        children: [
+          { name: "Add Purchase Order", path: "/po-grn/add" },
+          { name: "Update Purchase Order", path: "/po-grn/update" },
+          { name: "Purchase Order List", path: "/po-grn" },
+        ],
+      },
+
+      // Production group — gated by settings.productionEntry
+      {
+        type: "group",
+        name: "Production",
+        icon: Factory,
+        settingsKey: "productionEntry",
+        children: [
+          { name: "Production Entry", path: "/production-entry/add" },
+        ],
+      },
+      { name: "Purchase History", path: "/purchase-history", icon: History },
+    ],
   },
-    
-  { 
-    name: "Products", 
-    icon: Package, 
+
+  {
+    name: "Products",
+    icon: Package,
     subLinks: [
       { name: "Catalog", path: "/product" },
       { name: "Add Product", path: "/product/add" },
-    ]
+      { name: "Product Details", path:"/product/detail"}
+    ],
   },
- 
-  { 
-    name: "Procurement", 
-    icon: Wallet, 
+
+  {
+    name: "Procurement",
+    icon: Wallet,
     subLinks: [
       { name: "Suppliers", path: "/supplier" },
-      { name:"Add Suppliers", path:"/supplier/add"},
-    
-    ]
+      { name: "Add Suppliers", path: "/supplier/add" },
+      { name: "Supplier Details", path: "/supplier/detail"},
+    ],
   },
-  { 
-    name: "Inventory", 
-    icon: Database, 
+
+  {
+    name: "Inventory",
+    icon: Database,
     subLinks: [
       { name: "Stock Levels", path: "/inventory" },
-      { name: "Stock Movements" ,path: "/stock-movement"},
-      { name: "Stock Adjustments" ,path: "/stock-adjustment"},
-    ]
+      { name: "Stock Movements", path: "/stock-movement" },
+      { name: "Stock Adjustments", path: "/stock-adjustment" },
+    ],
   },
+
   { name: "Orders", icon: ShoppingCart, path: "/orders" },
   { name: "Billing", icon: Printer, path: "/billing" },
+
   {
     name: "Customers",
     icon: UserCircle,
     subLinks: [
       { name: "Customer Details", path: "/customers" },
-      { name: "Customers info", path: "/customers-Summary" },
- 
-    ]
+      { name: "Customers Info", path: "/customers-Summary" },
+    ],
   },
-  { 
-    name: "Staff", 
-    icon: Users, 
+
+  {
+    name: "Staff",
+    icon: Users,
     subLinks: [
       { name: "Directory", path: "/employee" },
       { name: "Add Employee", path: "/employee/add" },
-    ]
+    ],
   },
-  { name: "Digital Store", icon: Store, path: "/digital-store/profile" }
+
+  { name: "Digital Store", icon: Store, path: "/digital-store/profile" },
 ];
-export const Rupees = "₹"
+
+export const Rupees = "₹";
 
 export const FIELD_DESCRIPTIONS = {
-    barcode: "Scan the product barcode or enter a unique SKU identifier.",
-    name: "The public-facing name of the product as it will appear on invoices.",
-    description: "Detailed information about the product's specs or materials.",
-    category: "Organize products into groups for better reporting.",
-    stock: "The current physical quantity available in your warehouse.",
-    buyingPrice: "The cost price you paid to the supplier per unit.",
-    sellingPrice: "The price at which you intend to sell this product to customers."
-  };
+  barcode: "Scan the product barcode or enter a unique SKU identifier.",
+  name: "The public-facing name of the product as it will appear on invoices.",
+  description: "Detailed information about the product's specs or materials.",
+  category: "Organize products into groups for better reporting.",
+  stock: "The current physical quantity available in your warehouse.",
+  buyingPrice: "The cost price you paid to the supplier per unit.",
+  sellingPrice: "The price at which you intend to sell this product to customers.",
+};

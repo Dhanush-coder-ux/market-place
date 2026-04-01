@@ -136,13 +136,7 @@ const GRNForm: React.FC<GRNFormProps> = ({ onSubmit, onCancel }) => {
     <div className="min-h-screen  font-sans text-slate-800">
       
       {/* Header */}
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-2xl font-semibold text-slate-900">Create New GRN</h1>
-          <p className="text-sm text-slate-500">
-            Receipt Note for PO: <span className="font-semibold text-slate-700">{grnDetails.poReference || "Unassigned"}</span>
-          </p>
-        </div>
+      <div className="flex justify-end items-center mb-6 p-5">
         <div className="flex gap-3">
           <GradientButton icon={<X size={16} />} variant="outline" onClick={onCancel}>
             Cancel

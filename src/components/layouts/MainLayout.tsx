@@ -2,11 +2,144 @@ import { Outlet, useLocation } from "react-router-dom";
 import Breadcrumb from "../common/BreadCrums";
 import { Navbar } from "./Navbar";
 import Sidebar from "./Sidebar";
+import Title from "../common/Title"
 import { sidebarLinks } from "@/utils/constants";
+
+const getPageHeaderInfo = (pathname: string) => {
+  const routes: Record<string, { title: string; subtitle?: string; icon?: any }> = {
+    "/": {
+      title: "Analytics Dashboard",
+      subtitle: "Overview of your key business metrics and performance.",
+    },
+    "/sales": {
+      title: "Sales Management",
+      subtitle: "Manage and track your sales invoices.",
+    },
+    "/product": {
+      title: "Product Inventory",
+      subtitle: "Manage and track your warehouse stock.",
+    },
+    "/product/detail": {
+      title: "Product Details",
+      subtitle: "View complete product information and history.",
+    },
+    "/product/add": {
+      title: "Create Product",
+      subtitle: "Add a new product to your inventory.",
+    },
+    "/purchase-order/add": {
+      title: "Create Purchase Order",
+      subtitle: "Generate a new purchase order for suppliers.",
+    },
+    "/po-grn": {
+      title: "Goods Receipt Notes",
+      subtitle: "Manage and review all received goods.",
+    },
+    "/po-grn/add": {
+      title: "Create GRN",
+      subtitle: "Record new goods receipt against purchase orders.",
+    },
+    "/po-grn/update": {
+      title: "Update GRN",
+      subtitle: "Update existing goods receipt notes.",
+    },
+    "/purchase-history": {
+      title: "Purchase History",
+      subtitle: "View all past purchase transactions.",
+    },
+    "/production-entry/add": {
+      title: "Production Entry",
+      subtitle: "Record completed manufacturing batches.",
+    },
+    "/purchase/detail": {
+      title: "Purchase Details",
+      subtitle: "View complete purchase order information.",
+    },
+    "/purchase/add": {
+      title: "Direct Purchase",
+      subtitle: "Record direct purchase without PO.",
+    },
+    "/supplier": {
+      title: "Supplier Master",
+      subtitle: "Manage your permanent vendor relationships and accounts.",
+    },
+    "/supplier/detail": {
+      title: "Supplier Details",
+      subtitle: "View complete supplier information and ledger.",
+    },
+    "/supplier/add": {
+      title: "Add Supplier",
+      subtitle: "Register a new vendor in the system.",
+    },
+    "/employee": {
+      title: "Employee Management",
+      subtitle: "Manage your staff, roles, and payroll.",
+    },
+    "/employee/add": {
+      title: "Add Employee",
+      subtitle: "Register a new employee in the system.",
+    },
+    "/inventory": {
+      title: "Inventory Master",
+      subtitle: "Overall view of your current stock levels.",
+    },
+    "/stock-movement": {
+      title: "Stock Movement History",
+      subtitle: "Track all inward and outward material flow.",
+    },
+    "/stock-adjustment": {
+      title: "Stock Adjustment",
+      subtitle: "Adjust inventory quantities and values manually.",
+    },
+    "/billing": {
+      title: "Point of Sale (POS)",
+      subtitle: "Quick retail billing and invoicing.",
+    },
+    "/orders": {
+      title: "Order Management",
+      subtitle: "Track and fulfill customer orders.",
+    },
+    "/profile": {
+      title: "Profile Settings",
+      subtitle: "Manage your personal and business profile.",
+    },
+    "/profile/add": {
+      title: "Edit Profile",
+      subtitle: "Update your profile details.",
+    },
+    "/create-digital-store": {
+      title: "Digital Store Setup",
+      subtitle: "Configure your online storefront.",
+    },
+    "/digital-store/profile": {
+      title: "Digital Store",
+      subtitle: "Your online storefront overview.",
+    },
+    "/customers": {
+      title: "Customer Directory",
+      subtitle: "Manage your clients and their details.",
+    },
+    "/customers-Summary": {
+      title: "Customer Balances",
+      subtitle: "Track outstanding payments and customer ledgers.",
+    },
+  };
+
+  return routes[pathname] || { 
+    title: pathname.split("/").pop()?.replace("-", " ").toUpperCase() || "Home", 
+    subtitle: "" 
+  };
+};
 
 const MainLayout = () => {
   const location = useLocation();
-  const isStorePage = location.pathname === "/digital-store" || location.pathname === "/digital-store/profile" || location.pathname === "/";
+  const isStorePage = 
+    location.pathname === "/digital-store" || 
+    location.pathname === "/digital-store/profile" || 
+    location.pathname === "/";
+
+  // 3. Extract the current title info based on the URL
+  const { title, subtitle, icon } = getPageHeaderInfo(location.pathname);
 
   return (
     <div className="h-screen w-full flex flex-col overflow-hidden bg-slate-50">
@@ -16,9 +149,18 @@ const MainLayout = () => {
         <Sidebar links={sidebarLinks} />
         
         <main className="flex-1 flex flex-col min-w-0">
-  
           <div className={`flex-1 overflow-y-auto custom-scrollbar relative ${isStorePage ? "p-0" : "p-1 md:p-2 lg:p-4"}`}>
-            {!isStorePage && <div className="mb-4"><Breadcrumb /></div>}
+            
+            {!isStorePage && (
+              <div className="mb-4">
+                <Breadcrumb />
+               
+                <div className="mt-4">
+                  <Title title={title} subtitle={subtitle} icon={icon} />
+                </div>
+              </div>
+            )}
+            
             <Outlet />
           </div>
         </main>

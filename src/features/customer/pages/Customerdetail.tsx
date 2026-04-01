@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { DollarSign, AlertCircle, Package, Star, CreditCard, FileText, Banknote, Search, BarChart3, Mail, Wallet, Pencil, Save } from "lucide-react";
+import { DollarSign, AlertCircle, Package, Star, CreditCard, FileText, Banknote, Search, Mail, Wallet, Pencil, Save, MailIcon } from "lucide-react";
 import {
     fmt,
     StatusBadge,
@@ -19,6 +19,8 @@ import {
     PendingInvoice,
 } from "./CustomerDetailComponents";
 import { StatCard } from "@/components/common/StatsCard";
+import { GradientButton } from "@/components/ui/GradientButton";
+import { BiSolidUserAccount } from "react-icons/bi";
 
 // ─── Static data ──────────────────────────────────────────────────────────────
 const INVOICES: Invoice[] = [
@@ -214,7 +216,7 @@ export default function CustomerDetail() {
   
   {/* Avatar */}
   <div className="relative shrink-0">
-    <div className="w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-tr from-indigo-400 to-purple-400 rounded-full flex items-center justify-center text-2xl sm:text-3xl font-semibold text-white shadow-inner ring-4 ring-slate-50">
+    <div className="w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-tr from-blue-400 to-purple-400 rounded-full flex items-center justify-center text-2xl sm:text-3xl font-semibold text-white shadow-inner ring-4 ring-slate-50">
       Ak
     </div>
     {/* Optional: Online/Active indicator dot overlapping the avatar */}
@@ -253,13 +255,12 @@ export default function CustomerDetail() {
       
       {/* Top-Level Quick Actions (Optional, but adds a professional touch) */}
       <div className="flex items-center gap-2 mt-2 md:mt-0">
-         <button className="px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg text-sm font-semibold hover:bg-slate-50 hover:text-slate-700 transition-colors shadow-sm flex items-center gap-2">
-            <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
-            Message
-         </button>
-         <button className="px-4 py-2 bg-slate-700 text-white rounded-lg text-sm font-semibold hover:bg-slate-800 transition-colors shadow-sm">
-            Edit Profile
-         </button>
+        <GradientButton icon={<MailIcon className="h-4 w-4"/>} variant="outline">
+                    Message
+        </GradientButton>
+         <GradientButton icon={<BiSolidUserAccount className="h-4 w-4"/>} variant="outline">
+                    Edit Profile
+        </GradientButton>
       </div>
 
     </div>
@@ -273,8 +274,8 @@ export default function CustomerDetail() {
                                 key={tab}
                                 onClick={() => setActiveTab(i)}
                                 className={`pb-3 text-[15px] font-semibold border-b-2 -mb-[2px] transition-colors ${activeTab === i
-                                        ? "text-indigo-500 border-indigo-500"
-                                        : "text-slate-500 border-transparent hover:text-indigo-500"
+                                        ? "text-blue-500 border-blue-500"
+                                        : "text-slate-500 border-transparent hover:text-blue-500"
                                     }`}
                             >
                                 {tab}
@@ -287,7 +288,7 @@ export default function CustomerDetail() {
                         <StatCard icon={DollarSign} label="Total Purchases" value="₹2,45,680" iconBg="bg-blue-100" />
                         <StatCard icon={AlertCircle} label="Outstanding Balance" value={fmt(outstanding)} iconBg="bg-red-100" />
                         <StatCard icon={Package} label="Total Orders" value="48" iconBg="bg-emerald-100" />
-                        <StatCard icon={Star} label="Lifetime Value" value="₹3,12,450" iconBg="bg-indigo-100" />
+                        <StatCard icon={Star} label="Lifetime Value" value="₹3,12,450" iconBg="bg-blue-100" />
                     </div>
 
                     {/* ════════════════════════════════════════════════════════════════ */}
@@ -359,7 +360,7 @@ export default function CustomerDetail() {
                                     <input
                                         type="text"
                                         placeholder="Search invoices..."
-                                        className="w-full h-10 pl-9 pr-4 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500"
+                                        className="w-full h-10 pl-9 pr-4 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-blue-500"
                                     />
                                 </div>
                             </div>
@@ -386,7 +387,7 @@ export default function CustomerDetail() {
                                                 key={inv.id}
                                                 className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors"
                                             >
-                                                <td className="px-4 py-4 font-semibold text-indigo-500">{inv.id}</td>
+                                                <td className="px-4 py-4 font-semibold text-blue-500">{inv.id}</td>
                                                 <td className="px-4 py-4 text-slate-700">{inv.date}</td>
                                                 <td className="px-4 py-4 text-slate-600">{inv.products}</td>
                                                 <td className="px-4 py-4 font-semibold text-slate-700">{fmt(inv.amount)}</td>
@@ -438,7 +439,7 @@ export default function CustomerDetail() {
                                 <div className="absolute left-2 top-0 bottom-0 w-0.5 bg-slate-200" />
                                 {payments.map((p, i) => (
                                     <div key={i} className="relative mb-6">
-                                        <div className="absolute -left-6 top-1 w-4 h-4 rounded-full bg-white border-[3px] border-indigo-500" />
+                                        <div className="absolute -left-6 top-1 w-4 h-4 rounded-full bg-white border-[3px] border-blue-500" />
                                         <div className="bg-slate-50 rounded-lg p-4">
                                             <div className="flex justify-between mb-2">
                                                 <span className="font-semibold text-slate-700">{p.title}</span>
@@ -483,12 +484,12 @@ export default function CustomerDetail() {
                 <BottomActionBar
                     customerName="Rajesh Kumar"
                     actions={[
-                        {
-                            label: "View Statement",
-                            icon: <BarChart3 className="w-4 h-4" />,
-                            variant: "secondary",
-                            onClick: () => notify("Statement generated successfully!"),
-                        },
+                        // {
+                        //     label: "View Statement",
+                        //     icon: <BarChart3 className="w-4 h-4" />,
+                        //     variant: "secondary",
+                        //     onClick: () => notify("Statement generated successfully!"),
+                        // },
                         {
                             label: "Send Invoice",
                             icon: <Mail className="w-4 h-4" />,
@@ -617,7 +618,7 @@ export default function CustomerDetail() {
                                     setShowInvoice(false);
                                     notify("Invoice sent successfully to rajesh.kumar@email.com!");
                                 }}
-                                className="flex items-center gap-2 px-5 py-2.5 bg-indigo-500 hover:bg-indigo-600 text-white rounded-lg text-sm font-semibold transition-colors"
+                                className="flex items-center gap-2 px-5 py-2.5 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm font-semibold transition-colors"
                             >
                                 <Mail className="w-4 h-4" /> Send Invoice
                             </button>
@@ -662,7 +663,7 @@ export default function CustomerDetail() {
                                     setShowEdit(false);
                                     notify("Customer details updated successfully!");
                                 }}
-                                className="flex items-center gap-2 px-5 py-2.5 bg-indigo-500 hover:bg-indigo-600 text-white rounded-lg text-sm font-semibold transition-colors"
+                                className="flex items-center gap-2 px-5 py-2.5 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm font-semibold transition-colors"
                             >
                                 <Save className="w-4 h-4" /> Save Changes
                             </button>

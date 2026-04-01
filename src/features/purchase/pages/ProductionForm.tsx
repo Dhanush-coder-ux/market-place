@@ -142,13 +142,6 @@ export default function ProductionEntryPage() {
     <div className="flex min-h-screen font-sans text-slate-800 antialiased">
       <main className="flex-1 mx-auto">
         
-        {/* Header */}
-        <div className="mb-6 flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-6 py-5">
-          <div>
-            <h1 className="mb-1 text-2xl font-semibold text-slate-800">Production Entry</h1>
-            <p className="text-sm text-slate-500">Record self-produced items and update stock automatically</p>
-          </div>
-        </div>
 
         {/* Main Grid */}
         <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-[1fr_400px]">

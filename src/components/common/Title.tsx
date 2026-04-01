@@ -16,7 +16,7 @@ const Title: React.FC<TitleProps> = ({
       )}
 
       <div>
-        <h1 className="text-[15px] font-semibold  text-blue-400">
+        <h1 className="text-2xl font-semibold  text-black">
           {title}
         </h1>
 

@@ -13,11 +13,11 @@ import {
 // Define the pipeline stages with corresponding icons
 const pipelineTabs = [
   { label: "All Orders", value: "ALL", icon: ListFilter },
-  { label: "Incoming", value: "INCOMING", icon: Inbox },
-  { label: "Accepted", value: "ACCEPTED", icon: CheckCircle },
+  { label: "New Orders", value: "NEW_ORDER", icon: Inbox },
+  { label: "Confirmed", value: "CONFIRMED", icon: CheckCircle },
   { label: "Out for Delivery", value: "OUT_FOR_DELIVERY", icon: Truck },
   { label: "Delivered", value: "DELIVERED", icon: PackageCheck },
-  { label: "Rejected", value: "REJECTED", icon: XCircle },
+  { label: "Cancelled", value: "CANCELLED", icon: XCircle },
 ];
 
 const OrdersHeader: React.FC<OrdersHeaderProps> = ({
@@ -44,7 +44,7 @@ const OrdersHeader: React.FC<OrdersHeaderProps> = ({
                 onClick={() => setStatus(tab.value === "ALL" ? "" : tab.value)}
                 className={`flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-medium transition-all duration-200 ${
                   isActive
-                    ? "bg-white text-indigo-600 shadow-sm border border-slate-200/50"
+                    ? "bg-white text-blue-600 shadow-sm border border-slate-200/50"
                     : "text-slate-500 hover:text-slate-700 hover:bg-slate-200/50 border border-transparent"
                 }`}
               >
@@ -59,7 +59,7 @@ const OrdersHeader: React.FC<OrdersHeaderProps> = ({
       {/* --- Right: Date Filter Button --- */}
       <button
         onClick={() => setIsDateFilterOpen(true)}
-        className="w-full xl:w-auto flex items-center justify-center gap-2 px-4 py-2.5 bg-white border border-slate-200 rounded-xl shadow-sm hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-600 text-slate-600 transition-all text-[13px] font-medium shrink-0"
+        className="w-full xl:w-auto flex items-center justify-center gap-2 px-4 py-2.5 bg-white border border-slate-200 rounded-xl shadow-sm hover:border-blue-300 hover:bg-blue-50 hover:text-blue-600 text-slate-600 transition-all text-[13px] font-medium shrink-0"
       >
         <Calendar size={16} strokeWidth={2} />
         <span>Filter by Date</span>

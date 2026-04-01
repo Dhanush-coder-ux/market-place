@@ -1,7 +1,7 @@
 import { 
   Package, LayoutGrid, List, Inbox, Truck, PackageCheck 
 } from "lucide-react";
-import Title from "../../../components/common/Title";
+
 import OrdersHeader from "../components/OrdersHeader";
 import OrdersCard from "../components/OrdersCard";
 import {  useState } from "react";
@@ -44,7 +44,7 @@ const Order = () => {
     <div className="min-h-screen bg-slate-50/60 font-sans">
       <div className="space-y-4">
         
-        <Title title="Orders" subtitle="Manage your online order pipeline" />
+        
 
         {/* 3. Updated Stats Row to reflect the pipeline */}
         <div className='flex-none overflow-x-auto pb-1'>
@@ -71,13 +71,13 @@ const Order = () => {
           <div className="flex items-center bg-white border border-slate-200 rounded-lg p-1 shadow-sm">
             <button
               onClick={() => setViewMode("list")}
-              className={`p-1.5 rounded-md transition-all ${viewMode === "list" ? "bg-indigo-50 text-indigo-600 shadow-sm" : "text-slate-400 hover:text-slate-600 hover:bg-slate-50"}`}
+              className={`p-1.5 rounded-md transition-all ${viewMode === "list" ? "bg-blue-50 text-blue-600 shadow-sm" : "text-slate-400 hover:text-slate-600 hover:bg-slate-50"}`}
             >
               <List size={16} strokeWidth={2.5} />
             </button>
             <button
               onClick={() => setViewMode("grid")}
-              className={`p-1.5 rounded-md transition-all ${viewMode === "grid" ? "bg-indigo-50 text-indigo-600 shadow-sm" : "text-slate-400 hover:text-slate-600 hover:bg-slate-50"}`}
+              className={`p-1.5 rounded-md transition-all ${viewMode === "grid" ? "bg-blue-50 text-blue-600 shadow-sm" : "text-slate-400 hover:text-slate-600 hover:bg-slate-50"}`}
             >
               <LayoutGrid size={16} strokeWidth={2.5} />
             </button>

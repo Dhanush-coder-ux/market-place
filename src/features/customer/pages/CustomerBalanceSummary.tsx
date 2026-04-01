@@ -2,7 +2,6 @@ import React, { useState, useMemo } from 'react';
 import { Search, Filter, ChevronDown, ChevronUp, CreditCard, IndianRupee, Users, AlertCircle } from 'lucide-react';
 import { BiLogoWhatsapp } from 'react-icons/bi';
 import { StatCard } from '@/components/common/StatsCard';
-import Title from '@/components/common/Title';
 import { ReusableSelect } from '@/components/ui/ReusableSelect';
 import Input from '@/components/ui/Input';
 
@@ -113,12 +112,7 @@ export default function CustomerBalanceSummary() {
 
   return (
     <div className="mx-auto min-h-screen">
-      <div className="flex items-start justify-between gap-4">
-        <Title
-          title="Customer Infos"
-          subtitle="Track pending payments and customer accounts"
-        />
-      </div>
+    
 
       {/* Stats row */}
       <div className='flex-none overflow-x-auto px-6 py-2.5 bg-accent rounded-xl mt-4'>
@@ -253,9 +247,7 @@ export default function CustomerBalanceSummary() {
                         <div className="flex justify-end gap-2">
                           {customer.outstanding > 0 && (
                             <>
-                              <button className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition shadow-sm">
-                                <CreditCard size={14} /> Pay
-                              </button>
+                           
                               <button className="flex items-center gap-1.5 px-3 py-1.5 bg-[#25D366] text-white text-sm rounded-md hover:bg-[#20bd5a] transition shadow-sm">
                                 <BiLogoWhatsapp size={14} /> WhatsApp
                               </button>

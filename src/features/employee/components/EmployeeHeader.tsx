@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import { EmployeeHeaderProps } from "../types";
 import SearchActionCard from "@/components/ui/SearchActionCard";
 import { PersonStanding } from "lucide-react";
-import Title from "@/components/common/Title";
 import { GradientButton } from "@/components/ui/GradientButton";
 import { FloatingFormCard } from "@/components/common/FloatingFormCard";
 import EmployeeForm from "../pages/EmployeeForm";
@@ -19,8 +18,8 @@ const EmployeeHeader: React.FC<EmployeeHeaderProps> = ({
   return (
     <div className="flex flex-col space-y-3">
 
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <Title title="Employee" subtitle="Manage and track your workforce" />
+      <div className="flex flex-col sm:flex-row justify-end items-start sm:items-center gap-4">
+      
 
 
         <GradientButton

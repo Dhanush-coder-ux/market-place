@@ -1,5 +1,4 @@
 
-import Title from '@/components/common/Title'
 import { GradientButton } from '@/components/ui/GradientButton'
 
 
@@ -10,11 +9,8 @@ const ProductHeader = () => {
     <div className="space-y-3">
 
       {/* Top bar: Title + CTA */}
-      <div className="flex items-start justify-between gap-4">
-        <Title
-          title="Product Inventory"
-          subtitle="Manage and track your warehouse stock"
-        />
+      <div className="flex items-start justify-end gap-4">
+   
         <GradientButton  
         path='/product/add' 
         >

@@ -141,15 +141,12 @@ export default function StockAdjustmentPage() {
   }, [items]);
 
   return (
-    <div className="flex min-h-screen bg-slate-50 font-sans text-slate-800 antialiased">
+    <div className="flex min-h-screen  font-sans text-slate-800 antialiased">
       <main className="flex-1 p-4 lg:p-6 max-w-[1600px] mx-auto">
         
         {/* Page Header */}
-        <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white px-6 py-5 shadow-sm">
-          <div>
-            <h1 className="mb-1 text-2xl font-semibold text-slate-900">Stock Adjustment</h1>
-            <p className="text-sm text-slate-500">Manually adjust inventory for damaged, expired, lost, or miscounted items</p>
-          </div>
+        <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-end gap-4 ">
+          
           <div className="flex gap-3 shrink-0">
             <GradientButton variant="outline">
               Cancel

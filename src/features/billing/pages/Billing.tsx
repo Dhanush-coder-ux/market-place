@@ -4,7 +4,6 @@ import {
   CheckCircle2, AlertCircle, PlusCircle, Wallet 
 } from "lucide-react";
 
-import Title from "../../../components/common/Title";
 import BillingTable, { createEmptyRow } from "../components/BillingTable";
 import BillingHeader from "../components/BillingHeader";
 import BillingDetailView from "../components/BillingDetailView";
@@ -113,11 +112,7 @@ const Billing = () => {
 
   return (
     <div className="flex flex-col h-[calc(100vh-2rem)] gap-4">
-      {/* 1. Page Header */}
-      <div className="shrink-0 flex justify-between">
-        <Title title="Billing" subtitle="Manage and track your billing details" />
     
-      </div>
 
       {/* 2. Customer Details Section (Top) */}
       <div className="shrink-0 bg-white rounded-2xl border border-slate-200 p-5 shadow-sm flex flex-col md:flex-row gap-6">

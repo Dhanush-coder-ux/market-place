@@ -121,11 +121,8 @@ const ProductForm: React.FC<ProductFormProps> = ({
     <div className="max-w-[1400px] mx-auto pb-10">
       
       {/* Page Header */}
-      <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold text-slate-900">Add New Product</h1>
-          <p className="text-sm text-slate-500 mt-1">Create a new product in your catalog</p>
-        </div>
+      <div className="mb-8 flex flex-col md:flex-row md:items-center justify-end gap-4">
+        
         <div className="flex items-center gap-3">
           <button type="button" className="px-5 py-2.5 text-sm font-bold text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors shadow-sm">
             Save as Draft

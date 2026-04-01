@@ -31,7 +31,7 @@ const OrdersCard: React.FC<OrdersCardProps> = ({ order, setIsOpen, viewMode = "g
         {/* Left Section */}
         <div className="flex items-center gap-6 min-w-[240px]">
           <div>
-            <span className="inline-flex items-center gap-1.5 px-2 py-1 mb-1.5 rounded-md text-[10px] font-medium tracking-wide bg-indigo-50 text-indigo-600 ring-1 ring-indigo-100/50">
+            <span className="inline-flex items-center gap-1.5 px-2 py-1 mb-1.5 rounded-md text-[10px] font-medium tracking-wide bg-blue-50 text-blue-600 ring-1 ring-blue-100/50">
               <Wifi size={10} strokeWidth={2} />
               Online
             </span>
@@ -90,7 +90,7 @@ const OrdersCard: React.FC<OrdersCardProps> = ({ order, setIsOpen, viewMode = "g
 
           <button
             onClick={() => setIsOpen(true)}
-            className="flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-sm font-medium text-slate-600 bg-slate-50 border border-slate-200 hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-200 transition-all duration-200 whitespace-nowrap"
+            className="flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-sm font-medium text-slate-600 bg-slate-50 border border-slate-200 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 transition-all duration-200 whitespace-nowrap"
           >
             Details
             <ArrowRight size={14} strokeWidth={2} className="transition-transform duration-200 group-hover:translate-x-1" />
@@ -107,7 +107,7 @@ const OrdersCard: React.FC<OrdersCardProps> = ({ order, setIsOpen, viewMode = "g
       <div className="p-5">
         <div className="flex items-start justify-between mb-5">
           <div className="flex items-center gap-2.5">
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium tracking-wide bg-indigo-50 text-indigo-600 ring-1 ring-indigo-100/50">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium tracking-wide bg-blue-50 text-blue-600 ring-1 ring-blue-100/50">
               <Wifi size={12} strokeWidth={2} />
               Online
             </span>
@@ -163,7 +163,7 @@ const OrdersCard: React.FC<OrdersCardProps> = ({ order, setIsOpen, viewMode = "g
 
           <button
             onClick={() => setIsOpen(true)}
-            className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-medium text-slate-600 bg-slate-50 border border-slate-200 hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-200 transition-all duration-200"
+            className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-medium text-slate-600 bg-slate-50 border border-slate-200 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 transition-all duration-200"
           >
             View Details
             <ArrowRight size={16} strokeWidth={2} className="transition-transform duration-200 group-hover:translate-x-1" />

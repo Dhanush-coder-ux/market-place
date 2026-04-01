@@ -345,9 +345,9 @@ export interface BottomActionBarProps {
 export function BottomActionBar({ customerName, actions }: BottomActionBarProps) {
   const variantClass: Record<string, string> = {
     primary:
-      "bg-indigo-500 hover:bg-indigo-600 text-white",
+      "bg-blue-500 hover:bg-blue-600 text-white",
     success:
-      "bg-emerald-500 hover:bg-emerald-600 text-white",
+      "bg-blue-500 hover:bg-blue-600 text-white",
     secondary:
       "border border-slate-200 bg-white hover:bg-slate-50 text-slate-700",
   };

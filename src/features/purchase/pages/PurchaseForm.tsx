@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import {
   Save, Plus, Trash2, Settings, ScanLine, Search,
-  Banknote, Smartphone, CreditCard, Landmark, ChevronUp, Package, Hash,
+  Banknote, Smartphone, CreditCard, Landmark, ChevronUp, Package,
   ShoppingCart
 } from "lucide-react";
 import Input from "@/components/ui/Input";
@@ -127,16 +127,8 @@ const PurchaseScreen = () => {
     <div className="h-full font-sans text-slate-800 bg-slate-50/50 min-h-screen">
       
       {/* Header - Added sticky top, blur, and subtle bottom border */}
-      <div className=" flex justify-between items-center p-5">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Add Purchase</h1>
-          <div className="flex items-center gap-2 mt-1">
-            <span className="flex items-center gap-1 text-sm text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200/60">
-              <Hash size={14} className="text-slate-400" />
-              Ref: <span className="font-semibold text-slate-700">{purchaseDetails.referenceNo}</span>
-            </span>
-          </div>
-        </div>
+      <div className=" flex justify-end items-center p-5">
+     
         <div className="flex gap-3">
           <GradientButton variant="outline" className="hover:bg-slate-50 transition-colors">
             Cancel

@@ -2,7 +2,7 @@ import { useEffect, useState, ChangeEvent, useRef } from "react";
 import type { StoreFormData, StoreSetupProps } from "@/features/digitalstore/type"; 
 import { MapPin, Upload, X, Image as ImageIcon, Store, Info } from "lucide-react";
 import { Tooltip } from "@/components/common/Tootlip";
-import Title from "@/components/common/Title";
+
 import { Link } from "react-router-dom";
 
 
@@ -67,12 +67,6 @@ export default function StoreSetupForm({ existingData }: StoreSetupProps) {
 
   return (
     <div className="w-full  mt-4 overflow-hidden space-y-6 ">
-      <Title
-       icon={<Store size={22} />} 
-      title="Set Up Your Digital Store"
-       subtitle="Create a unique storefront to sell your digital products"
-       
-        />
       
       {/* --- HEADER / BANNER SECTION --- */}
       <div className="relative w-full h-48 bg-slate-50 border-b border-slate-100 group">

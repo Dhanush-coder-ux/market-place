@@ -2,14 +2,15 @@ import React, { useState, useMemo } from "react";
 import { 
   Search, Download, Eye, Pencil, Trash2, 
   X, RotateCcw, AlertTriangle, ArrowUp, ArrowDown, 
-  User, FileText, ArrowRight, TrendingUp, TrendingDown, Activity 
+  User, FileText, ArrowRight, TrendingUp, TrendingDown, Activity, Plus 
 } from "lucide-react";
-import Title from "@/components/common/Title";
+
 import { GradientButton } from "@/components/ui/GradientButton";
+import { StatCard } from "@/components/common/StatsCard";
 
 // ─── Types & Interfaces ──────────────────────────────────────────────────────
 
-export type MovementType = "IN" | "OUT" | "TRANSFER";
+export type MovementType = "OPENING" | "PURCHASE" | "SALES" | "TRANSFER" | "STOCK_ADJUSTMENT" | "PO_PURCHASE" | "PRODUCTION" | "SALE_RETURN";
 export type StatusType = "Completed" | "Pending";
 
 export interface Movement {
@@ -30,22 +31,22 @@ export interface Movement {
 // ─── Mock Data ───────────────────────────────────────────────────────────────
 
 const WAREHOUSES = ["All Locations", "Warehouse A", "Warehouse B", "Store Front", "Cold Storage", "Returns Depot"];
-const MOVEMENT_TYPES = ["All", "IN", "OUT", "TRANSFER"];
+const MOVEMENT_TYPES = ["All", "PURCHASE", "PO_PURCHASE", "SALES", "TRANSFER", "SALE_RETURN", "STOCK_ADJUSTMENT"];
 const STATUSES = ["All", "Completed", "Pending"];
 
 const mockMovements: Movement[] = [
-  { id: "MVT-0081", product: "Wireless Headphones Pro", sku: "WHP-2024-BLK", type: "IN", qty: 150, source: "Supplier", destination: "Warehouse A", ref: "PO-4421", date: "2025-03-20T09:14:00", status: "Completed", user: "Aisha Menon", notes: "Bulk order Q1 restock." },
-  { id: "MVT-0082", product: "USB-C Hub 7-Port", sku: "UCH-7P-SLV", type: "OUT", qty: -32, source: "Warehouse A", destination: "Store Front", ref: "INV-8813", date: "2025-03-20T10:30:00", status: "Completed", user: "Ravi Sharma", notes: "Store replenishment." },
+  { id: "MVT-0081", product: "Wireless Headphones Pro", sku: "WHP-2024-BLK", type: "PO_PURCHASE", qty: 150, source: "Supplier", destination: "Warehouse A", ref: "PO-4421", date: "2025-03-20T09:14:00", status: "Completed", user: "Aisha Menon", notes: "Bulk order Q1 restock." },
+  { id: "MVT-0082", product: "USB-C Hub 7-Port", sku: "UCH-7P-SLV", type: "SALES", qty: -32, source: "Warehouse A", destination: "Store Front", ref: "INV-8813", date: "2025-03-20T10:30:00", status: "Completed", user: "Ravi Sharma", notes: "Store replenishment." },
   { id: "MVT-0083", product: "Mechanical Keyboard TKL", sku: "MKB-TKL-WHT", type: "TRANSFER", qty: 25, source: "Warehouse B", destination: "Warehouse A", ref: "TRF-209", date: "2025-03-20T11:00:00", status: "Pending", user: "Priya Nair", notes: "Balancing stock levels." },
-  { id: "MVT-0084", product: "4K Webcam Ultra", sku: "WCM-4K-BLK", type: "OUT", qty: -5, source: "Warehouse A", destination: "Damages", ref: "DAM-0041", date: "2025-03-20T11:45:00", status: "Completed", user: "Aisha Menon", notes: "Damaged during handling." },
-  { id: "MVT-0085", product: "Noise Cancelling Earbuds", sku: "NCE-X3-WHT", type: "IN", qty: 200, source: "Supplier", destination: "Warehouse B", ref: "PO-4422", date: "2025-03-20T12:20:00", status: "Completed", user: "Ravi Sharma", notes: "New product launch stock." },
-  { id: "MVT-0086", product: "Ergonomic Mouse M500", sku: "MSE-ERG-GRY", type: "OUT", qty: -80, source: "Warehouse A", destination: "Store Front", ref: "INV-8814", date: "2025-03-20T13:05:00", status: "Pending", user: "Karan Patel", notes: "" },
-  { id: "MVT-0087", product: "Laptop Stand Foldable", sku: "LST-FLD-ALU", type: "IN", qty: 60, source: "Returns Depot", destination: "Warehouse A", ref: "RET-0318", date: "2025-03-20T13:55:00", status: "Completed", user: "Priya Nair", notes: "Customer returns processed." },
+  { id: "MVT-0084", product: "4K Webcam Ultra", sku: "WCM-4K-BLK", type: "SALE_RETURN", qty: -5, source: "Warehouse A", destination: "Damages", ref: "DAM-0041", date: "2025-03-20T11:45:00", status: "Completed", user: "Aisha Menon", notes: "Damaged during handling." },
+  { id: "MVT-0085", product: "Noise Cancelling Earbuds", sku: "NCE-X3-WHT", type: "PURCHASE", qty: 200, source: "Supplier", destination: "Warehouse B", ref: "PO-4422", date: "2025-03-20T12:20:00", status: "Completed", user: "Ravi Sharma", notes: "New product launch stock." },
+  { id: "MVT-0086", product: "Ergonomic Mouse M500", sku: "MSE-ERG-GRY", type: "SALES", qty: -80, source: "Warehouse A", destination: "Store Front", ref: "INV-8814", date: "2025-03-20T13:05:00", status: "Pending", user: "Karan Patel", notes: "" },
+  { id: "MVT-0087", product: "Laptop Stand Foldable", sku: "LST-FLD-ALU", type: "PURCHASE", qty: 60, source: "Returns Depot", destination: "Warehouse A", ref: "RET-0318", date: "2025-03-20T13:55:00", status: "Completed", user: "Priya Nair", notes: "Customer returns processed." },
   { id: "MVT-0088", product: "Wireless Charger Pad 15W", sku: "WCP-15W-BLK", type: "TRANSFER", qty: 40, source: "Cold Storage", destination: "Warehouse B", ref: "TRF-210", date: "2025-03-20T14:30:00", status: "Completed", user: "Aisha Menon", notes: "" },
-  { id: "MVT-0089", product: "Smart LED Desk Lamp", sku: "DLP-SMT-WHT", type: "OUT", qty: -15, source: "Warehouse B", destination: "Store Front", ref: "INV-8815", date: "2025-03-20T15:10:00", status: "Completed", user: "Karan Patel", notes: "" },
-  { id: "MVT-0090", product: "Portable SSD 1TB", sku: "SSD-1TB-SLV", type: "IN", qty: 75, source: "Supplier", destination: "Warehouse A", ref: "PO-4423", date: "2025-03-19T08:00:00", status: "Completed", user: "Ravi Sharma", notes: "" },
-  { id: "MVT-0091", product: "Gaming Controller BT", sku: "GCT-BT-BLK", type: "OUT", qty: -22, source: "Warehouse A", destination: "Store Front", ref: "INV-8816", date: "2025-03-19T09:15:00", status: "Completed", user: "Aisha Menon", notes: "" },
-  { id: "MVT-0092", product: "Mechanical Keyboard TKL", sku: "MKB-TKL-WHT", type: "IN", qty: 50, source: "Supplier", destination: "Warehouse B", ref: "PO-4424", date: "2025-03-18T10:00:00", status: "Pending", user: "Priya Nair", notes: "Awaiting quality check." },
+  { id: "MVT-0089", product: "Smart LED Desk Lamp", sku: "DLP-SMT-WHT", type: "SALES", qty: -15, source: "Warehouse B", destination: "Store Front", ref: "INV-8815", date: "2025-03-20T15:10:00", status: "Completed", user: "Karan Patel", notes: "" },
+  { id: "MVT-0090", product: "Portable SSD 1TB", sku: "SSD-1TB-SLV", type: "PURCHASE", qty: 75, source: "Supplier", destination: "Warehouse A", ref: "PO-4423", date: "2025-03-19T08:00:00", status: "Completed", user: "Ravi Sharma", notes: "" },
+  { id: "MVT-0091", product: "Gaming Controller BT", sku: "GCT-BT-BLK", type: "SALES", qty: -22, source: "Warehouse A", destination: "Store Front", ref: "INV-8816", date: "2025-03-19T09:15:00", status: "Completed", user: "Aisha Menon", notes: "" },
+  { id: "MVT-0092", product: "Mechanical Keyboard TKL", sku: "MKB-TKL-WHT", type: "PURCHASE", qty: 50, source: "Supplier", destination: "Warehouse B", ref: "PO-4424", date: "2025-03-18T10:00:00", status: "Pending", user: "Priya Nair", notes: "Awaiting quality check." },
 ];
 
 const lowStockAlerts = 3;
@@ -61,53 +62,37 @@ function fmtDate(dateStr: string) {
   return dateStr.slice(0, 10);
 }
 
-const TYPE_STYLES: Record<MovementType, { bg: string; dot: string }> = {
-  IN:       { bg: "bg-emerald-50 text-emerald-700 border border-emerald-200", dot: "bg-emerald-500" },
-  OUT:      { bg: "bg-rose-50 text-rose-700 border border-rose-200",          dot: "bg-rose-500" },
-  TRANSFER: { bg: "bg-blue-50 text-blue-700 border border-blue-200",          dot: "bg-blue-500" },
-};
+// Fixed styling helper to accommodate all MovementTypes
+function getTypeStyle(type: MovementType) {
+  const positive = ["PURCHASE", "PO_PURCHASE", "OPENING"];
+  const negative = ["SALES", "SALE_RETURN", "PRODUCTION"];
+  
+  if (positive.includes(type)) {
+    return { bg: "bg-emerald-50 text-emerald-700 border-emerald-200", dot: "bg-emerald-500" };
+  }
+  if (negative.includes(type)) {
+    return { bg: "bg-rose-50 text-rose-700 border-rose-200", dot: "bg-rose-500" };
+  }
+  if (type === "STOCK_ADJUSTMENT") {
+    return { bg: "bg-amber-50 text-amber-700 border-amber-200", dot: "bg-amber-500" };
+  }
+  // Default for TRANSFER or anything else
+  return { bg: "bg-blue-50 text-blue-700 border-blue-200", dot: "bg-blue-500" };
+}
 
 const STATUS_STYLES: Record<StatusType, string> = {
   Completed: "text-emerald-600",
   Pending:   "text-amber-600",
 };
 
-// ─── Components ───────────────────────────────────────────────────────────────
-
-interface SummaryCardProps {
-  label: string;
-  value: string | number;
-  sub: string;
-  color: "green" | "red" | "blue" | "amber";
-  icon: React.ReactNode;
-}
-
-function SummaryCard({ label, value, sub, color, icon }: SummaryCardProps) {
-  const colors = {
-    green: { border: "border-emerald-100", glow: "shadow-emerald-900/5", icon: "text-emerald-600 bg-emerald-100", val: "text-emerald-700" },
-    red:   { border: "border-rose-100",    glow: "shadow-rose-900/5",    icon: "text-rose-600 bg-rose-100",       val: "text-rose-700" },
-    blue:  { border: "border-blue-100",    glow: "shadow-blue-900/5",    icon: "text-blue-600 bg-blue-100",       val: "text-blue-700" },
-    amber: { border: "border-amber-100",   glow: "shadow-amber-900/5",   icon: "text-amber-600 bg-amber-100",     val: "text-amber-700" },
-  }[color];
+function TypeBadge({ type }: { type: MovementType }) {
+  const s = getTypeStyle(type);
+  const formattedType = type.replace('_', ' ');
   
   return (
-    <div className={`rounded-2xl border ${colors.border} bg-white shadow-sm ${colors.glow} p-5 flex items-center gap-4 transition-shadow hover:shadow-md`}>
-      <div className={`p-3 rounded-xl ${colors.icon}`}>{icon}</div>
-      <div>
-        <p className="text-xs text-slate-500 font-semibold uppercase tracking-widest mb-0.5">{label}</p>
-        <p className={`text-2xl font-semibold font-mono ${colors.val}`}>{value}</p>
-        <p className="text-xs text-slate-500 mt-0.5">{sub}</p>
-      </div>
-    </div>
-  );
-}
-
-function TypeBadge({ type }: { type: MovementType }) {
-  const s = TYPE_STYLES[type];
-  return (
-    <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${s.bg}`}>
+    <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium border ${s.bg}`}>
       <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
-      {type}
+      {formattedType}
     </span>
   );
 }
@@ -119,7 +104,7 @@ interface DetailDrawerProps {
 
 function DetailDrawer({ movement, onClose }: DetailDrawerProps) {
   if (!movement) return null;
-  const s = TYPE_STYLES[movement.type];
+  const s = getTypeStyle(movement.type);
   
   return (
     <div className="fixed inset-0 z-50 flex justify-end" onClick={onClose}>
@@ -153,7 +138,7 @@ function DetailDrawer({ movement, onClose }: DetailDrawerProps) {
           <div className="grid grid-cols-2 gap-3">
             {[
               ["Type",        <TypeBadge key="type" type={movement.type} />],
-              ["Quantity",    <span key="qty" className={`font-semibold font-mono text-base ${movement.qty > 0 ? "text-emerald-600" : movement.type === "TRANSFER" ? "text-blue-600" : "text-rose-600"}`}>{movement.qty > 0 ? `+${movement.qty}` : movement.qty}</span>],
+              ["Quantity",    <span key="qty" className={`font-semibold font-mono text-base ${movement.qty > 0 ? "text-emerald-600" : movement.qty < 0 ? "text-rose-600" : "text-blue-600"}`}>{movement.qty > 0 ? `+${movement.qty}` : movement.qty}</span>],
               ["Status",      <span key="status" className={`font-semibold text-sm ${STATUS_STYLES[movement.status]}`}>{movement.status}</span>],
               ["Reference",   <span key="ref" className="text-slate-700 font-mono text-sm">{movement.ref}</span>],
               ["Source",      <span key="src" className="text-slate-700 text-sm font-medium">{movement.source}</span>],
@@ -223,6 +208,9 @@ function DetailDrawer({ movement, onClose }: DetailDrawerProps) {
 }
 
 function AddMovementModal({ onClose }: { onClose: () => void }) {
+  // Use real types for the form dropdown
+  const formTypes = ["PURCHASE", "PO_PURCHASE", "SALES", "TRANSFER", "STOCK_ADJUSTMENT", "SALE_RETURN"];
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={onClose}>
       <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" />
@@ -236,7 +224,7 @@ function AddMovementModal({ onClose }: { onClose: () => void }) {
         <div className="space-y-4">
           {[
             ["Product Name / SKU","text","e.g. Wireless Headphones"],
-            ["Movement Type","select",["IN","OUT","TRANSFER"]],
+            ["Movement Type","select", formTypes],
             ["Quantity","number","e.g. 50"],
             ["Source Location","select",WAREHOUSES.slice(1)],
             ["Destination","select",WAREHOUSES.slice(1)],
@@ -247,7 +235,7 @@ function AddMovementModal({ onClose }: { onClose: () => void }) {
               <label className="block text-xs text-slate-500 font-semibold uppercase tracking-widest mb-1.5">{label as string}</label>
               {type === "select" ? (
                 <select className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2.5 text-slate-900 text-sm font-medium focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 shadow-sm transition-all">
-                  {(placeholder as string[]).map(o => <option key={o}>{o}</option>)}
+                  {(placeholder as string[]).map(o => <option value={o} key={o}>{o.replace('_', ' ')}</option>)}
                 </select>
               ) : type === "textarea" ? (
                 <textarea rows={2} className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2.5 text-slate-900 text-sm font-medium placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 resize-none shadow-sm transition-all" placeholder={placeholder as string} />
@@ -310,8 +298,10 @@ export default function StockMovementPage() {
 
   const today = new Date().toISOString().slice(0, 10);
   const todayMvts = mockMovements.filter(m => fmtDate(m.date) === today);
-  const totalIn  = todayMvts.filter(m => m.type === "IN").reduce((s, m) => s + m.qty, 0);
-  const totalOut = todayMvts.filter(m => m.type === "OUT").reduce((s, m) => s + Math.abs(m.qty), 0);
+  
+  // Ensure we capture all relevant type variants
+  const totalIn  = todayMvts.filter(m => ["PURCHASE", "PO_PURCHASE"].includes(m.type)).reduce((s, m) => s + m.qty, 0);
+  const totalOut = todayMvts.filter(m => m.type === "SALES").reduce((s, m) => s + Math.abs(m.qty), 0);
   const netMov   = totalIn - totalOut;
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
@@ -357,32 +347,37 @@ export default function StockMovementPage() {
         ::-webkit-scrollbar-thumb:hover { background:#94a3b8; }
       `}</style>
 
-      <div className=" mx-auto px-4 sm:px-4 lg:px-4 py-4">
-
+      {/* Added a container class here to provide padding and max-width */}
+      <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
   
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
-         <Title
-         title="Stock Movement"
-         subtitle="Track all inventory movements across locations"
-         />
+          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Stock Movements</h1>
+          
           <div className="flex gap-2.5 flex-wrap">
-        
             <GradientButton
-            variant="outline"
-            onClick={exportCSV}
-            icon={<Download  className="w-4 h-4" />}
-             >
-           Export CSV
+              variant="outline"
+              onClick={exportCSV}
+              icon={<Download className="w-4 h-4" />}
+            >
+              Export CSV
+            </GradientButton>
+
+            {/* Added the missing trigger button for your Add Movement Modal */}
+            <GradientButton
+              onClick={() => setShowAdd(true)}
+              icon={<Plus className="w-4 h-4" />}
+            >
+              New Movement
             </GradientButton>
           </div>
         </div>
 
         {/* ── Summary Cards ── */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-7">
-          <SummaryCard label="Total Stock In"  value={`+${totalIn}`}  sub="Units added today"    color="green" icon={<TrendingUp className="w-5 h-5" />} />
-          <SummaryCard label="Total Stock Out" value={`-${totalOut}`} sub="Units removed today"  color="red"   icon={<TrendingDown className="w-5 h-5" />} />
-          <SummaryCard label="Net Movement"    value={netMov >= 0 ? `+${netMov}` : `${netMov}`} sub="Net change today" color={netMov >= 0 ? "blue" : "red"} icon={<Activity className="w-5 h-5" />} />
-          <SummaryCard label="Low Stock Alerts" value={lowStockAlerts} sub="Items need attention" color="amber" icon={<AlertTriangle className="w-5 h-5" />} />
+          <StatCard  label="Total Stock In"  value={`+${totalIn}`}     icon={TrendingUp} iconBg="bg-green-50" iconColor="text-green-600" />
+          <StatCard  label="Total Stock Out" value={`-${totalOut}`}   icon={TrendingDown} iconBg="bg-red-50" iconColor="text-red-600" />
+          <StatCard  label="Net Movement"    value={netMov >= 0 ? `+${netMov}` : `${netMov}`}  icon={Activity} iconBg="bg-blue-50" iconColor="text-blue-600" />
+          <StatCard  label="Low Stock Alerts" value={lowStockAlerts} icon={AlertTriangle} iconBg="bg-amber-50" iconColor="text-amber-600" />
         </div>
 
         {/* ── Filters ── */}
@@ -408,7 +403,9 @@ export default function StockMovementPage() {
             <div className="flex gap-1 bg-slate-50 rounded-xl p-1 border border-slate-200">
               {MOVEMENT_TYPES.map(t => (
                 <button key={t} onClick={() => { setTypeFilter(t); setPage(1); }}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${typeFilter === t ? "bg-white text-blue-600 shadow-sm border border-slate-200" : "text-slate-500 hover:text-slate-700 border border-transparent"}`}>{t}</button>
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${typeFilter === t ? "bg-white text-blue-600 shadow-sm border border-slate-200" : "text-slate-500 hover:text-slate-700 border border-transparent"}`}>
+                  {t.replace('_', ' ')}
+                </button>
               ))}
             </div>
             {/* Warehouse */}
@@ -463,7 +460,7 @@ export default function StockMovementPage() {
                   </td></tr>
                 ) : pageData.map((m, i) => (
                   <tr key={m.id}
-                    className={`border-b border-slate-100 transition-colors hover:bg-blue-50/40 cursor-default ${m.type === "OUT" && Math.abs(m.qty) > 50 ? "bg-rose-50/40" : ""}`}
+                    className={`border-b border-slate-100 transition-colors hover:bg-blue-50/40 cursor-default ${m.qty < 0 && Math.abs(m.qty) > 50 ? "bg-rose-50/40" : ""}`}
                     style={{ animationDelay: `${i * 30}ms` }}
                   >
                     <td className="px-4 py-3.5 font-mono text-blue-600 text-xs font-medium whitespace-nowrap">{m.id}</td>
@@ -473,7 +470,8 @@ export default function StockMovementPage() {
                     </td>
                     <td className="px-4 py-3.5 whitespace-nowrap"><TypeBadge type={m.type} /></td>
                     <td className="px-4 py-3.5 font-mono font-semibold text-base whitespace-nowrap">
-                      <span className={m.type === "IN" ? "text-emerald-600" : m.type === "TRANSFER" ? "text-blue-600" : "text-rose-600"}>
+                      {/* Fixed classname evaluation to rely on actual m.qty rather than just checking if type === "IN" */}
+                      <span className={m.qty > 0 ? "text-emerald-600" : m.qty < 0 ? "text-rose-600" : "text-blue-600"}>
                         {m.qty > 0 ? `+${m.qty}` : m.qty}
                       </span>
                     </td>

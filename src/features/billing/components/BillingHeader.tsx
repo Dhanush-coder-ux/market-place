@@ -4,7 +4,7 @@ import {
   Wallet, Banknote, Smartphone, ScanBarcode
 } from "lucide-react";
 import { BillingItem, InvoicePayload } from "../types";
-import { CustomerData } from "../pages/Billing"; // Import the type from Billing.tsx
+import { CustomerData } from "../pages/Billing"; 
 
 type PaymentMode = "cash" | "upi" | "credit";
 

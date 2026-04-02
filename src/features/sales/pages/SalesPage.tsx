@@ -1,10 +1,11 @@
 import { useState, useMemo, useCallback } from "react";
 import {
-  Search, Eye, MoreHorizontal, 
+  Search, Eye, 
   ShoppingCart, Wifi, WifiOff, ChevronDown, X, User, Calendar,
   CreditCard, Package, RotateCcw, Receipt, AlertCircle, CheckCircle2,
   ArrowLeft, ChevronRight, Minus, Plus, Info,
 } from "lucide-react";
+import { StatsCard} from "@/components/common/StatsCard";
 
 /* ═══════════════════════════════════════════════
    TYPES
@@ -969,29 +970,36 @@ const SalesListPage: React.FC = () => {
     setFilterStatus(""); setFilterDate(""); setSearch("");
   };
 
-  const statCards = [
-    { label: "Total Revenue", val: `₹${totalRevenue.toLocaleString()}`,   sub: "completed orders" },
-    { label: "Total Orders",  val: String(MOCK_SALES.length),              sub: "all time"         },
-    { label: "Sales",         val: String(salesCount),                     sub: "original sales"   },
-    { label: "Returns",       val: String(salesReturnCount),               sub: "returned orders"  },
-    { label: "Today Revenue", val: `₹${todayRevenue.toLocaleString()}`,    sub: "today"            },
-  ];
+
 
   return (
     <>
       <style>{STYLES}</style>
       <div className="sales-root min-h-screen bg-zinc-50/50 space-y-6 p-6">
 
-        {/* Stat cards */}
+        
         <div className="flex gap-3 flex-wrap">
-          {statCards.map(c => (
-            <div key={c.label}
-              className="bg-white border border-zinc-200 rounded-xl px-5 py-4 min-w-[140px] shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all">
-              <p className="text-[10px] text-zinc-400 uppercase tracking-widest mb-1">{c.label}</p>
-              <p className="text-2xl font-semibold text-zinc-900 sales-mono">{c.val}</p>
-              <p className="text-[10px] text-zinc-400 mt-0.5">{c.sub}</p>
-            </div>
-          ))}
+          <StatsCard 
+          label="Total Revenue"
+          value={totalRevenue}
+          icon={ShoppingCart}
+          />
+          <StatsCard 
+          label="Total Sales"
+          value={salesCount}
+          icon={ShoppingCart}
+          />
+          <StatsCard 
+          label="Total Sales Return"
+          value={salesReturnCount}
+          icon={ShoppingCart}
+          />
+          <StatsCard 
+          label="Today's Revenue"
+          value={todayRevenue}
+          icon={ShoppingCart}
+          />
+          
         </div>
 
         {/* Toolbar */}
@@ -1081,8 +1089,8 @@ const SalesListPage: React.FC = () => {
                             className="w-8 h-8 flex items-center justify-center rounded-md text-zinc-400 hover:text-blue-600 hover:bg-blue-50 transition-all">
                             <Eye size={15} />
                           </button>
-                          <button className="w-8 h-8 flex items-center justify-center rounded-md text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 transition-all">
-                            <MoreHorizontal size={15} />
+                          <button  onClick={() => { setSelectedSale(sale); setIsSidebarOpen(true); }} className="w-8 h-8 flex items-center justify-center rounded-md text-zinc-400 hover:text-red-600 hover:bg-red-100 transition-all">
+                            <RotateCcw size={15} />
                           </button>
                         </div>
                       </td>

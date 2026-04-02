@@ -1,8 +1,9 @@
-import React, { useMemo, useCallback, useEffect } from "react";
-import { Trash2, IndianRupee, Package, Keyboard } from "lucide-react";
+import React, { useState, useMemo, useCallback, useEffect } from "react";
+import { Trash2, IndianRupee, Package, Keyboard, Barcode } from "lucide-react";
 import { v4 as uuidv4 } from "uuid";
-import { BillingItem, SelectOption } from "../types";
+import { BillingItem, InventoryItem, ProductVariant, SelectOption } from "../types";
 import { ReusableCombobox } from "@/components/ui/ReusableCombobox";
+import ProductSelectionModal from "../components/ProductSelectionModel";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -11,12 +12,23 @@ interface BillingTableProps {
   onItemsChange: (items: BillingItem[]) => void;
 }
 
-// ─── Constants ────────────────────────────────────────────────────────────────
+// ─── Mock Inventory Data ──────────────────────────────────────────────────────
 
-const inventoryItems = [
-  { product_barcode: "PRD001", product_name: "Blue T-Shirt",   product_price: 499  },
-  { product_barcode: "PRD002", product_name: "Jeans Pant",     product_price: 999  },
-  { product_barcode: "PRD003", product_name: "Formal Shoes",   product_price: 1999 },
+const inventoryItems: InventoryItem[] = [
+  { 
+    product_barcode: "PRD001", product_name: "iPhone 15", category: "Electronics", requireSerial: true,
+    variants: [
+      { id: "v1", name: "Blue 128GB", price: 79900, stock: 5 },
+      { id: "v2", name: "Black 256GB", price: 89900, stock: 2 }
+    ] 
+  },
+  { 
+    product_barcode: "PRD002", product_name: "Basic T-Shirt", category: "Clothing", requireSerial: false,
+    variants: [
+      { id: "v3", name: "Medium / Navy", price: 499, stock: 20 },
+      { id: "v4", name: "Large / Navy", price: 499, stock: 0 } // Out of stock example
+    ] 
+  },
 ];
 
 const toOptions = (type: "code" | "name"): SelectOption[] =>
@@ -42,6 +54,11 @@ export const createEmptyRow = (): BillingItem => ({
 const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => {
   const nameOptions = useMemo(() => toOptions("name"), []);
 
+  // ── Modal State ───────────────────────────────────────────────────────────
+  const [modalOpen, setModalOpen] = useState(false);
+  const [pendingProduct, setPendingProduct] = useState<InventoryItem | null>(null);
+  const [activeRowId, setActiveRowId] = useState<string | null>(null);
+
   // ── Row mutations (all go through onItemsChange) ──────────────────────────
 
   const handleAddRow = useCallback(() => {
@@ -65,6 +82,45 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
       })
     );
   }, [items, onItemsChange]);
+
+  // ── Modal Handlers ────────────────────────────────────────────────────────
+
+  const handleProductSelectClick = (selectedLabel: string, rowId: string) => {
+    const opt = nameOptions.find((o) => o.value === selectedLabel);
+    if (!opt) return;
+    
+    setPendingProduct(opt.payload);
+    setActiveRowId(rowId);
+    setModalOpen(true);
+  };
+
+  const handleModalSuccess = (variant: ProductVariant, serial?: string) => {
+    if (!activeRowId || !pendingProduct) return;
+
+    // Check for duplicate serials in the table
+    if (serial && items.some(item => item.serialNumber === serial)) {
+       alert("This serial number has already been added to the bill.");
+       return;
+    }
+
+    updateItem(activeRowId, {
+      code: pendingProduct.product_barcode,
+      name: `${pendingProduct.product_name} - ${variant.name}`,
+      price: variant.price,
+      qty: 1, // Default to 1, especially for serial items
+      serialNumber: serial,
+      variantId: variant.id
+    });
+
+    setModalOpen(false);
+    setPendingProduct(null);
+    setActiveRowId(null);
+    
+    // Auto-add new row if we just filled the last one
+    if (activeRowId === items[items.length - 1].id) {
+        handleAddRow();
+    }
+  };
 
   // ── Keyboard shortcuts ────────────────────────────────────────────────────
 
@@ -92,7 +148,7 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
   // ─── Render ───────────────────────────────────────────────────────────────
 
   return (
-    <div className="w-full" >
+    <div className="w-full">
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
 
         {/* Header strip */}
@@ -108,7 +164,6 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
               </p>
             </div>
           </div>
-       
         </div>
 
         {/* Scrollable table */}
@@ -131,6 +186,7 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
               {items.map((item, index) => {
                 const isLast   = index === items.length - 1;
                 const isFilled = !!item.name;
+                const hasSerial = !!item.serialNumber;
 
                 return (
                   <tr
@@ -148,20 +204,16 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
                     <td className={`px-3 py-2.5 min-w-[220px] ${!isLast ? "border-b border-slate-100" : ""}`}>
                       <ReusableCombobox
                         options={nameOptions}
-                        value={item.name}
-                        placeholder="Select product…"
-                        onChange={(selected) => {
-                          const opt  = nameOptions.find((o) => o.value === selected);
-                          if (!opt) return;
-                          const prod = opt.payload;
-                          updateItem(item.id, {
-                            code:  prod.product_barcode,
-                            name:  prod.product_name,
-                            price: prod.product_price,
-                            qty:   item.qty === 0 ? 1 : item.qty,
-                          });
-                        }}
+                        value={item.name.split(' - ')[0]} // Show just base name in combobox visually if desired, or leave full
+                        placeholder="Select product or scan..."
+                        onChange={(selected) => handleProductSelectClick(selected, item.id)}
                       />
+                      {/* Display Serial Number below Combobox if it exists */}
+                      {hasSerial && (
+                        <p className="text-[10px] text-slate-400 mt-1 ml-1 font-medium flex items-center gap-1">
+                           <Barcode size={10} /> SN: {item.serialNumber}
+                        </p>
+                      )}
                     </td>
 
                     {/* Quantity */}
@@ -171,9 +223,12 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
                         min="0"
                         value={item.qty || ""}
                         placeholder="0"
+                        disabled={hasSerial} // Lock quantity to 1 if it has a serial number
                         onChange={(e) => updateItem(item.id, { qty: Number(e.target.value) })}
                         onKeyDown={(e) => { if (e.key === "Enter") handleAddRow(); }}
-                        className="w-20 px-3 py-2 rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-800 text-center focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent hover:border-indigo-300 transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        className={`w-20 px-3 py-2 rounded-xl border text-sm font-semibold text-center focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
+                            hasSerial ? "bg-slate-50 text-slate-400 border-slate-100 cursor-not-allowed" : "bg-white border-slate-200 text-slate-800 hover:border-blue-300"
+                        }`}
                       />
                     </td>
 
@@ -182,7 +237,7 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
                       <div className="flex items-center gap-1 px-3 py-2 rounded-xl bg-slate-50 border border-slate-100 w-fit">
                         <IndianRupee size={12} strokeWidth={2.5} className="text-slate-400" />
                         <span className="text-sm font-semibold text-slate-500 min-w-[48px]">
-                          {item.price > 0 ? item.tprice.toLocaleString("en-IN") : "—"}
+                          {item.price > 0 ? item.price.toLocaleString("en-IN") : "—"}
                         </span>
                       </div>
                     </td>
@@ -249,6 +304,14 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
 
         </div>
       </div>
+
+      {/* Product Selection Modal */}
+      <ProductSelectionModal 
+         isOpen={modalOpen} 
+         product={pendingProduct} 
+         onClose={() => setModalOpen(false)}
+         onSuccess={handleModalSuccess}
+      />
     </div>
   );
 };

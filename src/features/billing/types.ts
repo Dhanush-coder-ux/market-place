@@ -1,24 +1,4 @@
-
-// ─── Billing module shared types ─────────────────────────────────────────────
-
-export interface BillingItem {
-  id:     string;
-  code:   string;
-  name:   string;
-  qty:    number;
-  price:  number;
-  tprice: number;
-}
-
-export interface SelectOption {
-  value:   string;
-  label:   string;
-  payload: {
-    product_barcode: string;
-    product_name:    string;
-    product_price:   number;
-  };
-}
+// types.ts
 
 export type PaymentMode = "cash" | "upi" | "credit";
 
@@ -31,11 +11,46 @@ export interface CustomerData {
   totalSpent:  number;
 }
 
+export interface ProductVariant {
+  id:    string;
+  name:  string;
+  price: number;
+  stock: number;
+}
+
+export interface InventoryItem {
+  product_barcode: string;
+  product_name:    string;
+  category:        "Electronics" | "Clothing" | "Other";
+  variants:        ProductVariant[];
+  requireSerial:   boolean;
+}
+
+export interface BillingItem {
+  id:            string;
+  code:          string;
+  name:          string;
+  qty:           number;
+  price:         number;
+  tprice:        number;
+  serialNumber?: string; // For tracking specific items (e.g., Electronics)
+  variantId?:    string; // For tracking selected variant
+}
+
+// Alias for convenience if used in shopping cart contexts
+export type CartItem = BillingItem;
+
+export type SelectOption = {
+  value:   string;
+  label:   string;
+  payload: InventoryItem;
+};
+
 export interface InvoicePayload {
   customer:     CustomerData | null;
   customerName: string;
   phone:        string;
-  items:        BillingItem[]; // keep this
+  items:        BillingItem[];
   totalQty:     number;
   totalAmount:  number;
   gstAmount:    number;
@@ -44,5 +59,3 @@ export interface InvoicePayload {
   paymentMode:  PaymentMode;
   date:         string;
 }
-
-export type CartItem = BillingItem;

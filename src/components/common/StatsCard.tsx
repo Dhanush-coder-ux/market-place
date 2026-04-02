@@ -62,3 +62,6 @@ export const StatCard: React.FC<StatsCardProps> = ({
     </div>
   );
 };
+
+// Export alias to support both singular and plural component names
+export const StatsCard = StatCard;

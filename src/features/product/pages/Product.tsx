@@ -252,15 +252,13 @@ const Product = () => {
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-        <Table
-          columns={PRODUCT_COLUMNS}
-          data={MOCK_PRODUCTS}
-          rowKey="id"
-          onRowClick={handleRowClick}
-         pagination={{pageSize:1}}
-        />
-      </div>
+      <Table
+        columns={PRODUCT_COLUMNS}
+        data={MOCK_PRODUCTS}
+        rowKey="id"
+        onRowClick={handleRowClick}
+        pagination={{ pageSize: 1 }}
+      />
     </div>
   );
 };

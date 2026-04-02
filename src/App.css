@@ -1,4 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800&family=Outfit:wght@600;700;800&display=swap');
 @import "tailwindcss";
 @import "tw-animate-css";
 
@@ -6,7 +7,7 @@
 
 /* --- COMPONENT CLASSES --- */
 .input {
-  @apply w-full px-4 py-3 rounded-lg shadow-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:bg-gray-100 disabled:cursor-not-allowed;
+  @apply w-full px-4 py-3 rounded-lg shadow-md border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:bg-slate-100 disabled:cursor-not-allowed;
 }
 
 .btn-gradient-blue {
@@ -18,7 +19,7 @@
 }
 
 .table-head {
-  @apply bg-blue-200 text-gray-700 font-semibold text-sm uppercase tracking-wide;
+  @apply bg-slate-50 text-slate-500 font-semibold text-sm uppercase tracking-wide;
 }
 
 .table-data {
@@ -207,3 +208,18 @@
     scrollbar-width: none;  /* Firefox */
   }
 }
+
+/* --- DASHBOARD FONTS & ANIMATIONS --- */
+.display-font { font-family: 'Outfit', sans-serif; }
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.fade-up   { animation: fadeUp 0.4s ease forwards; }
+.fade-up-1 { animation-delay: 0.05s; opacity: 0; }
+.fade-up-2 { animation-delay: 0.1s;  opacity: 0; }
+.fade-up-3 { animation-delay: 0.15s; opacity: 0; }
+.fade-up-4 { animation-delay: 0.2s;  opacity: 0; }
+.fade-up-5 { animation-delay: 0.25s; opacity: 0; }
+.fade-up-6 { animation-delay: 0.3s;  opacity: 0; }

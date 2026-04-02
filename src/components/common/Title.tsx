@@ -10,13 +10,13 @@ const Title: React.FC<TitleProps> = ({
     <div className="flex items-start gap-2 mb-4">
       
       {icon && (
-        <div className="mt-0.5 text-indigo-600">
+        <div className="mt-0.5 text-blue-600">
           {icon}
         </div>
       )}
 
       <div>
-        <h1 className="text-2xl font-semibold  text-black">
+        <h1 className="text-2xl font-semibold text-slate-900">
           {title}
         </h1>
 

@@ -179,7 +179,7 @@ export const Navbar = () => {
             ref={inputRef}
             type="text"
             placeholder="Search pages, orders, products..."
-            className="w-full pl-10 pr-12 py-2 bg-slate-100/70 border border-slate-200/60 rounded-full text-sm font-medium text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 focus:bg-white transition-all shadow-sm"
+            className="w-full pl-10 pr-12 py-2 bg-slate-100/70 border border-slate-200/60 rounded-full text-sm font-medium text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white transition-all shadow-sm"
             value={searchQuery}
             onChange={(e) => {
               setSearchQuery(e.target.value);
@@ -209,17 +209,17 @@ export const Navbar = () => {
                     <button
                       key={route.path}
                       onClick={() => handleNavigate(route.path)}
-                      className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-indigo-50 text-sm group transition-colors"
+                      className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-blue-50 text-sm group transition-colors"
                     >
                       <div className="flex items-center gap-3">
-                        <div className="p-1.5 rounded-md bg-slate-100 group-hover:bg-white group-hover:text-indigo-600 group-hover:shadow-sm transition-all">
-                          <Icon className="w-4 h-4 text-slate-500 group-hover:text-indigo-600" />
+                        <div className="p-1.5 rounded-md bg-slate-100 group-hover:bg-white group-hover:text-blue-600 group-hover:shadow-sm transition-all">
+                          <Icon className="w-4 h-4 text-slate-500 group-hover:text-blue-600" />
                         </div>
-                        <span className="text-slate-700 group-hover:text-indigo-700 font-semibold">
+                        <span className="text-slate-700 group-hover:text-blue-700 font-semibold">
                           {route.name}
                         </span>
                       </div>
-                      <ArrowRight className="w-4 h-4 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 text-indigo-600 transition-all duration-200" />
+                      <ArrowRight className="w-4 h-4 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 text-blue-600 transition-all duration-200" />
                     </button>
                   );
                 })}
@@ -243,7 +243,7 @@ export const Navbar = () => {
         {/* Create Store Button (Hidden on very small screens) */}
         <Link 
           to={'/create-digital-store'} 
-          className="hidden sm:flex items-center gap-1.5 text-sm font-semibold text-slate-600 px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 hover:text-indigo-600 hover:border-indigo-200 transition-all shadow-sm"
+          className="hidden sm:flex items-center gap-1.5 text-sm font-semibold text-slate-600 px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 hover:text-blue-600 hover:border-blue-200 transition-all shadow-sm"
         >
           <Plus className="w-4 h-4" />
           <span>Digital Store</span>

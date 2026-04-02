@@ -47,19 +47,19 @@ const EmployeeForm: React.FC = () => {
       
       {/* SECTION 1: PERSONNEL DETAILS */}
       <section>
-        <div className="flex items-center gap-3 border-b border-gray-100 pb-4 mb-8">
+        <div className="flex items-center gap-3 border-b border-slate-100 pb-4 mb-8">
           <div className="p-2 bg-emerald-50 rounded-lg text-emerald-600">
             <UserPlus size={22} />
           </div>
           <div>
-            <h3 className="text-xl font-bold text-gray-900">Personnel Details</h3>
+            <h3 className="text-base font-semibold text-slate-900">Personnel Details</h3>
             <p className="text-sm text-gray-500">Basic account information and system access.</p>
           </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           <div className="space-y-2">
-            <label className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1">
+            <label className="text-xs font-semibold text-slate-500 uppercase flex items-center gap-1">
               Employee Name <Required />
             </label>
             <Input
@@ -69,13 +69,13 @@ const EmployeeForm: React.FC = () => {
                 setName(e.target.value);
                 if (e.target.value) setErrors(prev => ({ ...prev, name: false }));
               }}
-              leftIcon={<Users size={18} className="text-gray-400" />}
-              className={errors.name ? "border-red-500" : "bg-gray-50/50"} 
+              leftIcon={<Users size={18} className="text-slate-400" />}
+              className={errors.name ? "border-red-500" : "bg-slate-50/50"} 
             />
           </div>
 
           <div className="space-y-2">
-            <label className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1">
+            <label className="text-xs font-semibold text-slate-500 uppercase flex items-center gap-1">
               Email Address <Required />
             </label>
             <Input
@@ -86,13 +86,13 @@ const EmployeeForm: React.FC = () => {
                 setEmail(e.target.value);
                 if (e.target.value) setErrors(prev => ({ ...prev, email: false }));
               }}
-              leftIcon={<Mail size={18} className="text-gray-400" />}
-              className={errors.email ? "border-red-500" : "bg-gray-50/50"}
+              leftIcon={<Mail size={18} className="text-slate-400" />}
+              className={errors.email ? "border-red-500" : "bg-slate-50/50"}
             />
           </div>
 
           <div className="space-y-2">
-             <label className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1">
+             <label className="text-xs font-semibold text-slate-500 uppercase flex items-center gap-1">
                System Role <Required />
             </label>
             <ReusableSelect
@@ -110,36 +110,36 @@ const EmployeeForm: React.FC = () => {
 
       {/* SECTION 2: CONTACT & ADDRESS */}
       <section>
-        <div className="flex items-center gap-3 border-b border-gray-100 pb-4 mb-8">
+        <div className="flex items-center gap-3 border-b border-slate-100 pb-4 mb-8">
           <div className="p-2 bg-blue-50 rounded-lg text-blue-600">
             <MapPin size={22} />
           </div>
           <div>
-            <h3 className="text-xl font-bold text-gray-900">Contact Information</h3>
+            <h3 className="text-base font-semibold text-slate-900">Contact Information</h3>
             <p className="text-sm text-gray-500">Reach details and physical office location.</p>
           </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           <div className="space-y-2">
-            <label className="text-xs font-bold text-gray-500 uppercase">Phone Number</label>
+            <label className="text-xs font-semibold text-slate-500 uppercase">Phone Number</label>
             <Input
               placeholder="+1 (555) 000-0000"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
-              leftIcon={<Phone size={18} className="text-gray-400" />}
-              className="bg-gray-50/50"
+              leftIcon={<Phone size={18} className="text-slate-400" />}
+              className="bg-slate-50/50"
             />
           </div>
 
           <div className="space-y-2">
-            <label className="text-xs font-bold text-gray-500 uppercase">Work Address</label>
+            <label className="text-xs font-semibold text-slate-500 uppercase">Work Address</label>
             <Input
               placeholder="123 Business Ave, Suite 100"
               value={address}
               onChange={(e) => setAddress(e.target.value)}
-              leftIcon={<MapPin size={18} className="text-gray-400" />}
-              className="bg-gray-50/50"
+              leftIcon={<MapPin size={18} className="text-slate-400" />}
+              className="bg-slate-50/50"
             />
           </div>
         </div>
@@ -147,48 +147,48 @@ const EmployeeForm: React.FC = () => {
 
       {/* SECTION 3: EMPLOYMENT DETAILS */}
       <section>
-        <div className="flex items-center gap-3 border-b border-gray-100 pb-4 mb-8">
+        <div className="flex items-center gap-3 border-b border-slate-100 pb-4 mb-8">
           <div className="p-2 bg-purple-50 rounded-lg text-purple-600">
             <Briefcase size={22} />
           </div>
           <div>
-            <h3 className="text-xl font-bold text-gray-900">Employment Details</h3>
+            <h3 className="text-base font-semibold text-slate-900">Employment Details</h3>
             <p className="text-sm text-gray-500">Internal IDs and departmental organization.</p>
           </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <div className="space-y-2">
-            <label className="text-xs font-bold text-gray-500 uppercase">Employee ID</label>
+            <label className="text-xs font-semibold text-slate-500 uppercase">Employee ID</label>
             <Input
               placeholder="EMP-1002"
               value={employeeId}
               onChange={(e) => setEmployeeId(e.target.value)}
-              leftIcon={<Hash size={18} className="text-gray-400" />}
-              className="bg-gray-50/50"
+              leftIcon={<Hash size={18} className="text-slate-400" />}
+              className="bg-slate-50/50"
             />
           </div>
 
    
 
           <div className="space-y-2">
-            <label className="text-xs font-bold text-gray-500 uppercase">Joining Date</label>
+            <label className="text-xs font-semibold text-slate-500 uppercase">Joining Date</label>
             <Input
               type="date"
               value={joinDate}
               onChange={(e) => setJoinDate(e.target.value)}
-              leftIcon={<Calendar size={18} className="text-gray-400" />}
-              className="bg-gray-50/50"
+              leftIcon={<Calendar size={18} className="text-slate-400" />}
+              className="bg-slate-50/50"
             />
           </div>
         </div>
       </section>
 
       {/* ACTION BAR */}
-      <div className="flex flex-col sm:flex-row justify-between items-center pt-8 border-t border-gray-100">
+      <div className="flex flex-col sm:flex-row justify-between items-center pt-8 border-t border-slate-100">
         <button 
           onClick={() => console.log('Cancel')}
-          className="text-sm font-semibold text-gray-400 hover:text-red-500 transition-colors px-4 py-2"
+          className="text-sm font-semibold text-slate-400 hover:text-red-500 transition-colors px-4 py-2"
         >
           Discard Changes
         </button>
@@ -197,7 +197,7 @@ const EmployeeForm: React.FC = () => {
           <GradientButton 
             variant="outline" 
             onClick={() => handleSubmit("add_more")}
-            className="border-gray-200"
+            className="border-slate-200"
           >
             Save & Add Another
           </GradientButton>

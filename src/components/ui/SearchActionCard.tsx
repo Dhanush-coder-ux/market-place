@@ -25,7 +25,7 @@ const SearchActionCard: React.FC<SearchActionCardProps> = ({
             className="text-slate-400"
           />
         }
-        className="w-full bg-white rounded-xl border-slate-200 h-10 text-sm focus:border-indigo-400 focus:ring-indigo-100"
+        className="w-full bg-white rounded-xl border-slate-200 h-10 text-sm focus:border-blue-400 focus:ring-blue-100"
       />
     </div>
   );

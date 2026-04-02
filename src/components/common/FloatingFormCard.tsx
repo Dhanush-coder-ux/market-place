@@ -48,13 +48,13 @@ export const FloatingFormCard: React.FC<FloatingFormCardProps> = ({
       >
         
         {/* Header Section (Fixed height, never scrolls) */}
-        <div className="flex items-center justify-between px-4 py-3 sm:px-6 sm:py-5 border-b border-gray-100 flex-shrink-0">
-          <h2 className="text-lg sm:text-xl font-bold text-gray-800 tracking-tight line-clamp-1">
+        <div className="flex items-center justify-between px-4 py-3 sm:px-6 sm:py-5 border-b border-slate-100 flex-shrink-0">
+          <h2 className="text-lg sm:text-xl font-bold text-slate-800 tracking-tight line-clamp-1">
             {title || "Form Action"}
           </h2>
-          <button 
+          <button
             onClick={onClose}
-            className="p-2 bg-gray-50 hover:bg-gray-100 rounded-full text-gray-400 hover:text-red-500 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-200"
+            className="p-2 bg-slate-50 hover:bg-slate-100 rounded-full text-slate-400 hover:text-red-500 transition-colors focus:outline-none focus:ring-2 focus:ring-slate-200"
           >
             <X size={20} />
           </button>

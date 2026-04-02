@@ -84,24 +84,7 @@ const AnalyticsDashboard = () => {
   const ranges: Range[] = ["Today", "7 Days", "30 Days", "Custom Range"];
 
   return (
-    <div className="min-h-screen bg-slate-50" style={{ fontFamily: "'DM Sans', sans-serif" }}>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800&family=Outfit:wght@600;700;800&display=swap');
-        .display-font { font-family: 'Outfit', sans-serif; }
-        .scrollbar-hide::-webkit-scrollbar { display: none; }
-        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
-        @keyframes fadeUp {
-          from { opacity: 0; transform: translateY(12px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        .fade-up { animation: fadeUp 0.4s ease forwards; }
-        .fade-up-1 { animation-delay: 0.05s; opacity: 0; }
-        .fade-up-2 { animation-delay: 0.1s; opacity: 0; }
-        .fade-up-3 { animation-delay: 0.15s; opacity: 0; }
-        .fade-up-4 { animation-delay: 0.2s; opacity: 0; }
-        .fade-up-5 { animation-delay: 0.25s; opacity: 0; }
-        .fade-up-6 { animation-delay: 0.3s; opacity: 0; }
-      `}</style>
+    <div className="min-h-screen bg-slate-50">
 
    
 
@@ -396,7 +379,7 @@ const AnalyticsDashboard = () => {
                   ))}
                 </div>
 
-                Bottom quick stats
+                {/* Bottom quick stats */}
                 <div className="mt-4 pt-4 border-t border-slate-100 grid grid-cols-3 gap-3">
                   {[
                     { label: "Gross Margin", value: "28.5%", icon: <TrendingUp className="w-5 h-5 mx-auto text-slate-500" /> },

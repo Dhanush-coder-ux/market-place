@@ -84,7 +84,7 @@ const Table: React.FC<TableProps> = ({
           <thead>
             <tr>
               {onSelectionChange && (
-                <th className="px-5 py-3.5 w-10 text-left border-b border-slate-100 bg-blue-100 first:rounded-tl-2xl">
+                <th className="px-5 py-3.5 w-10 text-left border-b border-slate-100 bg-slate-50 first:rounded-tl-2xl">
                   <input
                     type="checkbox"
                     ref={(el) => {
@@ -92,7 +92,7 @@ const Table: React.FC<TableProps> = ({
                     }}
                     checked={isAllSelected}
                     onChange={handleSelectAll}
-                    className="w-4 h-4 rounded-md border-slate-300 accent-indigo-600 cursor-pointer"
+                    className="w-4 h-4 rounded-md border-slate-300 accent-blue-600 cursor-pointer"
                   />
                 </th>
               )}
@@ -101,8 +101,8 @@ const Table: React.FC<TableProps> = ({
                 <th
                   key={col.key}
                   className={`
-                    px-5 py-3.5 text-left border-b border-slate-100 bg-blue-100
-                    text-[11px] font-semibold text-black uppercase tracking-widest
+                    px-5 py-3.5 text-left border-b border-slate-100 bg-slate-50
+                    text-[11px] font-semibold text-slate-500 uppercase tracking-widest
                     ${!onSelectionChange && i === 0 ? "rounded-tl-2xl" : ""}
                     ${i === columns.length - 1 ? "rounded-tr-2xl" : ""}
                     ${col.className ?? ""}
@@ -128,7 +128,7 @@ const Table: React.FC<TableProps> = ({
                   onClick={() => onRowClick?.(row)}
                   className={`
                     group transition-colors duration-150
-                    ${isSelected ? "bg-indigo-50/60" : "hover:bg-slate-50/80"}
+                    ${isSelected ? "bg-blue-50/60" : "hover:bg-slate-50/80"}
                     ${onRowClick ? "cursor-pointer" : ""}
                   `}
                 >
@@ -144,7 +144,7 @@ const Table: React.FC<TableProps> = ({
                         onChange={(e) => handleRowCheckboxChange(e, id)}
                         onClick={(e) => e.stopPropagation()}
                         className={`
-                          w-4 h-4 rounded-md border-slate-300 text-indigo-600
+                          w-4 h-4 rounded-md border-slate-300 text-blue-600
                           transition-opacity duration-150
                           ${isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100"}
                         `}
@@ -197,13 +197,13 @@ const Table: React.FC<TableProps> = ({
 
         <div className="flex items-center gap-3">
           {onSelectionChange && selectedIds.length > 0 && (
-            <div className="flex items-center gap-2 bg-indigo-50 px-3 py-1.5 rounded-full border border-indigo-100">
-              <span className="text-[11px] font-bold text-indigo-700 uppercase tracking-tight">
+            <div className="flex items-center gap-2 bg-blue-50 px-3 py-1.5 rounded-full border border-blue-100">
+              <span className="text-[11px] font-bold text-blue-700 uppercase tracking-tight">
                 {selectedIds.length} Selected
               </span>
               <button
                 onClick={() => onSelectionChange([])}
-                className="text-indigo-400 hover:text-rose-500 text-[10px] font-bold"
+                className="text-blue-400 hover:text-rose-500 text-[10px] font-bold"
               >
                 CLEAR
               </button>

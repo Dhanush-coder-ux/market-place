@@ -3,7 +3,6 @@ import {
   Eye,
   Search,
   SlidersHorizontal,
-  MoreHorizontal,
   Package,
   Calendar,
   Building2,

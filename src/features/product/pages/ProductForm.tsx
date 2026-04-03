@@ -3,9 +3,9 @@ import React, {
 } from "react";
 import {
   Package, DollarSign, BarChart2, Settings, UploadCloud, X, Plus,
-  Trash2, CheckCircle2, Info, Save, ChevronDown, Hash,
+  Trash2, Info, Save, ChevronDown, Hash,
   Cpu, AlertCircle, RefreshCw,  ScanLine, Copy,
-  Layers, ChevronRight, Zap,
+  Layers,  Zap,
 } from "lucide-react";
 import { GradientButton } from "@/components/ui/GradientButton";
 
@@ -993,31 +993,6 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData = {}, isLoading =
       <style>{STYLES}</style>
       <div className="pf-root min-h-screen bg-slate-50/60 p-5 lg:p-8">
 
-        {/* Page heading */}
-        <div className="max-w-[1400px] mx-auto mb-6">
-          <div className="flex items-center gap-2 text-[11px] text-slate-400 mb-1.5">
-            <span>Inventory</span>
-            <ChevronRight size={11} />
-            <span>Products</span>
-            <ChevronRight size={11} />
-            <span className="text-slate-600 font-medium">New Product</span>
-          </div>
-          <div className="flex items-end justify-between">
-            <div>
-              <h1 className="text-2xl text-slate-900">
-                {form.name || "New Product"}
-              </h1>
-              <p className="text-xs text-slate-400 mt-1">
-                {form.category || "No category"} · {form.sku || "No SKU"}
-              </p>
-            </div>
-            {savedNotice && (
-              <div className="flex items-center gap-2 px-4 py-2 bg-emerald-50 border border-emerald-100 rounded-xl text-emerald-700 text-xs font-medium pf-section-enter">
-                <CheckCircle2 size={14} /> Product saved successfully
-              </div>
-            )}
-          </div>
-        </div>
 
         <form onSubmit={handleSubmit} className="max-w-[1400px] mx-auto flex flex-col xl:flex-row gap-6 items-start">
 

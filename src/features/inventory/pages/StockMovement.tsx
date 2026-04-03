@@ -38,7 +38,7 @@ const mockMovements: Movement[] = [
   { id: "MVT-0081", product: "Wireless Headphones Pro", sku: "WHP-2024-BLK", type: "PO_PURCHASE", qty: 150, source: "Supplier", destination: "Warehouse A", ref: "PO-4421", date: "2025-03-20T09:14:00", status: "Completed", user: "Aisha Menon", notes: "Bulk order Q1 restock." },
   { id: "MVT-0082", product: "USB-C Hub 7-Port", sku: "UCH-7P-SLV", type: "SALES", qty: -32, source: "Warehouse A", destination: "Store Front", ref: "INV-8813", date: "2025-03-20T10:30:00", status: "Completed", user: "Ravi Sharma", notes: "Store replenishment." },
   { id: "MVT-0083", product: "Mechanical Keyboard TKL", sku: "MKB-TKL-WHT", type: "TRANSFER", qty: 25, source: "Warehouse B", destination: "Warehouse A", ref: "TRF-209", date: "2025-03-20T11:00:00", status: "Pending", user: "Priya Nair", notes: "Balancing stock levels." },
-  { id: "MVT-0084", product: "4K Webcam Ultra", sku: "WCM-4K-BLK", type: "SALE_RETURN", qty: -5, source: "Warehouse A", destination: "Damages", ref: "DAM-0041", date: "2025-03-20T11:45:00", status: "Completed", user: "Aisha Menon", notes: "Damaged during handling." },
+  { id: "MVT-0084", product: "4K Webcam Ultra", sku: "WCM-4K-BLK", type: "SALE_RETURN", qty: +5, source: "Warehouse A", destination: "Damages", ref: "DAM-0041", date: "2025-03-20T11:45:00", status: "Completed", user: "Aisha Menon", notes: "Damaged during handling." },
   { id: "MVT-0085", product: "Noise Cancelling Earbuds", sku: "NCE-X3-WHT", type: "PURCHASE", qty: 200, source: "Supplier", destination: "Warehouse B", ref: "PO-4422", date: "2025-03-20T12:20:00", status: "Completed", user: "Ravi Sharma", notes: "New product launch stock." },
   { id: "MVT-0086", product: "Ergonomic Mouse M500", sku: "MSE-ERG-GRY", type: "SALES", qty: -80, source: "Warehouse A", destination: "Store Front", ref: "INV-8814", date: "2025-03-20T13:05:00", status: "Pending", user: "Karan Patel", notes: "" },
   { id: "MVT-0087", product: "Laptop Stand Foldable", sku: "LST-FLD-ALU", type: "PURCHASE", qty: 60, source: "Returns Depot", destination: "Warehouse A", ref: "RET-0318", date: "2025-03-20T13:55:00", status: "Completed", user: "Priya Nair", notes: "Customer returns processed." },
@@ -65,13 +65,17 @@ function fmtDate(dateStr: string) {
 // Fixed styling helper to accommodate all MovementTypes
 function getTypeStyle(type: MovementType) {
   const positive = ["PURCHASE", "PO_PURCHASE", "OPENING"];
-  const negative = ["SALES", "SALE_RETURN", "PRODUCTION"];
+  const negative = ["SALES", "PRODUCTION"];
+  const salesReturn = "SALE_RETURN"
   
   if (positive.includes(type)) {
     return { bg: "bg-emerald-50 text-emerald-700 border-emerald-200", dot: "bg-emerald-500" };
   }
   if (negative.includes(type)) {
-    return { bg: "bg-rose-50 text-rose-700 border-rose-200", dot: "bg-rose-500" };
+    return { bg: "bg-yellow-50 text-yellow-700 border-yellow-200", dot: "bg-yellow-500" };
+  }
+  if (type === salesReturn) {
+    return { bg: "bg-red-50 text-red-700 border-red-200", dot: "bg-red-500" };
   }
   if (type === "STOCK_ADJUSTMENT") {
     return { bg: "bg-amber-50 text-amber-700 border-amber-200", dot: "bg-amber-500" };
@@ -461,13 +465,19 @@ export default function StockMovementPage() {
                         {m.qty > 0 ? `+${m.qty}` : m.qty}
                       </span>
                     </td>
-                    <td className="px-4 py-3.5 whitespace-nowrap">
+                    {m.type === "TRANSFER" ?<td className="px-4 py-3.5 whitespace-nowrap">
                       <div className="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
                         <span className="text-slate-700">{m.source}</span>
                         <ArrowRight className="w-3.5 h-3.5 text-slate-400" />
                         <span className="text-slate-700">{m.destination}</span>
                       </div>
-                    </td>
+                    </td> : <td className="px-4 py-3.5 whitespace-nowrap">
+                      <div className="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
+                        <span className="text-slate-700">-</span>
+                        <ArrowRight className="w-3.5 h-3.5 text-slate-400" />
+                        <span className="text-slate-700">-</span>
+                      </div>
+                    </td>}
                     <td className="px-4 py-3.5 font-mono text-xs text-slate-500 font-medium whitespace-nowrap">{m.ref}</td>
                     <td className="px-4 py-3.5 text-slate-600 text-xs font-medium whitespace-nowrap">{fmt(m.date)}</td>
                     <td className="px-4 py-3.5 whitespace-nowrap">

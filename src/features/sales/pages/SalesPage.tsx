@@ -8,9 +8,6 @@ import {
   BarChart2,
   Smartphone,
 } from "lucide-react";
-import { StatsCard } from "@/components/common/StatsCard";
-
-
 
 /* ═══════════════════════════════════════════════════════════════
    TYPES
@@ -135,6 +132,21 @@ const generateItems = (sale: SaleRecord): SaleItem[] =>
   }));
 
 const fmt = (n: number) => `₹${n.toLocaleString("en-IN")}`;
+
+/* ═══════════════════════════════════════════════════════════════
+   STATS CARD (INLINE COMPONENT)
+═══════════════════════════════════════════════════════════════ */
+const StatsCard: React.FC<{ iconColor: string, iconBg: string, label: string, icon: any, value: string | number }> = ({ iconColor, iconBg, label, icon: Icon, value }) => (
+  <div className="flex-1 min-w-[200px] bg-white border border-slate-200 rounded-xl p-4 flex items-center gap-4">
+    <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${iconBg}`}>
+      <Icon size={24} className={iconColor} />
+    </div>
+    <div>
+      <p className="text-xs font-medium text-slate-500 mb-1">{label}</p>
+      <p className="text-xl font-bold text-slate-800">{value}</p>
+    </div>
+  </div>
+);
 
 /* ═══════════════════════════════════════════════════════════════
    BADGE CONFIGS
@@ -648,8 +660,9 @@ const ReturnModal: React.FC<ReturnModalProps> = ({ sale, onClose }) => {
   const { state, saleItems, selectedItems, totals } = m;
   const scrollRef = useRef<HTMLDivElement>(null);
   
-  // State for the exchange products search bar
+  // State for the exchange products search bar and the active tab
   const [exchSearch, setExchSearch] = useState("");
+  const [activeReplaceId, setActiveReplaceId] = useState<string | null>(null);
 
   const filteredExchProducts = useMemo(() => {
     if (!exchSearch) return EXCHANGE_PRODUCTS;
@@ -658,6 +671,13 @@ const ReturnModal: React.FC<ReturnModalProps> = ({ sale, onClose }) => {
       ep.name.toLowerCase().includes(lowerQ) || ep.sku.toLowerCase().includes(lowerQ)
     );
   }, [exchSearch]);
+
+  // Keep the active replacement tab synced with selected items
+  useEffect(() => {
+    if (selectedItems.length > 0 && (!activeReplaceId || !selectedItems.some(i => i.id === activeReplaceId))) {
+      setActiveReplaceId(selectedItems[0].id);
+    }
+  }, [selectedItems, activeReplaceId]);
 
   // Reset scroll on step change
   useEffect(() => {
@@ -803,34 +823,64 @@ const ReturnModal: React.FC<ReturnModalProps> = ({ sale, onClose }) => {
                       </div>
                     )}
 
-                    {/* Exchange product picker with Search Bar */}
+                    {/* Exchange product picker with Tabs and Search Bar */}
                     {state.mode === "exchange" && selectedItems.length > 0 && (
-                      <div className="pt-2 border-t border-slate-100">
-                        <div className="flex items-center justify-between mb-3 mt-2">
-                          <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">
-                            Select Replacement Items
-                          </p>
+                      <div className="pt-4 border-t border-slate-100 mt-4">
+                        <p className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-3">
+                          Select Replacement Items
+                        </p>
+
+                        {/* Interactive Tabs for each returned item */}
+                        <div className="flex flex-wrap gap-2 mb-4">
+                          {selectedItems.map(selItem => {
+                            const hasReplacement = !!state.exchangeMap[selItem.id];
+                            const isActive = activeReplaceId === selItem.id;
+                            
+                            return (
+                              <button
+                                key={selItem.id}
+                                onClick={() => setActiveReplaceId(selItem.id)}
+                                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium border transition-all ${
+                                  isActive
+                                    ? "border-blue-500 bg-blue-50 text-blue-700 shadow-sm"
+                                    : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                                }`}
+                              >
+                                {selItem.name}
+                                {hasReplacement && <CheckCircle2 size={12} className={isActive ? "text-blue-500" : "text-emerald-500"} />}
+                              </button>
+                            );
+                          })}
                         </div>
                         
                         {/* Search Bar for Exchange Products */}
-                        <div className="relative mb-5">
+                        <div className="relative mb-4">
                           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                           <input
                             type="text"
-                            placeholder="Search exchange products by name or SKU..."
+                            placeholder="Search replacement catalog..."
                             value={exchSearch}
                             onChange={(e) => setExchSearch(e.target.value)}
                             className="w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 focus:bg-white transition-all placeholder-slate-400"
                           />
                         </div>
 
-                        {selectedItems.map(selItem => (
-                          <div key={selItem.id} className="mb-6">
-                            <p className="text-[11px] font-medium text-slate-500 mb-2.5 flex items-center gap-1.5">
-                              <ArrowRight size={10} className="text-slate-400" />
-                              Replacing: <span className="text-slate-800 font-semibold">{selItem.name}</span>
-                              <span className="text-slate-400 sr-mono ml-auto">Value: {fmt(selItem.unitPrice * selItem.returnQty)}</span>
-                            </p>
+                        {/* Rendering the catalog for the single ACTIVE tab */}
+                        {activeReplaceId && (
+                          <div className="mb-2">
+                            {(() => {
+                              // Get context details for the currently active item
+                              const activeItem = selectedItems.find(i => i.id === activeReplaceId);
+                              if (!activeItem) return null;
+                              
+                              return (
+                                <p className="text-[11px] font-medium text-slate-500 mb-2.5 flex items-center gap-1.5">
+                                  <ArrowRight size={10} className="text-slate-400" />
+                                  Replacing: <span className="text-slate-800 font-semibold">{activeItem.name}</span>
+                                  <span className="text-slate-400 sr-mono ml-auto">Value: {fmt(activeItem.unitPrice * activeItem.returnQty)}</span>
+                                </p>
+                              );
+                            })()}
                             
                             {filteredExchProducts.length === 0 ? (
                               <div className="text-center py-4 bg-slate-50 rounded-xl border border-slate-100">
@@ -839,10 +889,10 @@ const ReturnModal: React.FC<ReturnModalProps> = ({ sale, onClose }) => {
                             ) : (
                               <div className="grid grid-cols-2 gap-2">
                                 {filteredExchProducts.map(ep => {
-                                  const selected = state.exchangeMap[selItem.id] === ep.id;
+                                  const selected = state.exchangeMap[activeReplaceId] === ep.id;
                                   return (
                                     <div key={ep.id}
-                                      onClick={() => ep.inStock && m.setExchangeProduct(selItem.id, ep.id)}
+                                      onClick={() => ep.inStock && m.setExchangeProduct(activeReplaceId, ep.id)}
                                       className={`sr-exch-card border rounded-xl p-3 ${selected ? "selected" : ""} ${!ep.inStock ? "disabled" : ""}`}
                                     >
                                       <div className="flex items-center gap-2 mb-1.5">
@@ -866,7 +916,7 @@ const ReturnModal: React.FC<ReturnModalProps> = ({ sale, onClose }) => {
                               </div>
                             )}
                           </div>
-                        ))}
+                        )}
                       </div>
                     )}
                   </div>

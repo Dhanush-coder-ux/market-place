@@ -144,18 +144,6 @@ export default function StockAdjustmentPage() {
     <div className="flex min-h-screen  font-sans text-slate-800 antialiased">
       <main className="flex-1 p-4 lg:p-6 max-w-[1600px] mx-auto">
         
-        {/* Page Header */}
-        <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-end gap-4 ">
-          
-          <div className="flex gap-3 shrink-0">
-            <GradientButton variant="outline">
-              Cancel
-            </GradientButton>
-            <GradientButton variant="primary" icon={<Save className="h-4 w-4" />}>
-              Save Adjustment
-            </GradientButton>
-          </div>
-        </div>
 
         {/* Main Grid */}
         <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-[1fr_380px]">

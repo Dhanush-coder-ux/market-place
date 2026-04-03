@@ -9,21 +9,9 @@ import {
   Smartphone,
   Landmark,
 } from "lucide-react";
+import { StatsCard } from "@/components/common/StatsCard";
 
-/* ═══════════════════════════════════════════════════════════════
-   MOCK STATS CARD COMPONENT (added to make standalone code work)
-═══════════════════════════════════════════════════════════════ */
-const StatsCard: React.FC<{ label: string; icon: any; iconBg: string; value: string | number }> = ({ label, icon: Icon, iconBg, value }) => (
-  <div className="bg-white border border-slate-200 rounded-xl p-4 flex-1 min-w-[200px] shadow-sm sr-stat">
-    <div className="flex items-center gap-3 mb-2">
-      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${iconBg}`}>
-        <Icon size={16} className="opacity-80" />
-      </div>
-      <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">{label}</p>
-    </div>
-    <p className="text-2xl font-light sr-mono text-slate-800">{value}</p>
-  </div>
-);
+
 
 /* ═══════════════════════════════════════════════════════════════
    TYPES
@@ -1354,10 +1342,10 @@ const SalesListPage: React.FC = () => {
 
         {/* Stats */}
         <div className="flex gap-3 flex-wrap">
-          <StatsCard label="Total Revenue" icon={DollarSign} iconBg="bg-green-50"      value={fmt(totalRevenue)} />
-          <StatsCard label="Total Sales" icon={BarChart2} iconBg="bg-blue-50"        value={salesCount} />
-          <StatsCard label="Sales Returns" icon={RefreshCw} iconBg="bg-red-50"      value={salesReturnCount} />
-          <StatsCard label="Today's Revenue" icon={DollarSign} iconBg="bg-yellow-50"    value={fmt(todayRevenue)} />
+          <StatsCard iconColor="text-green-500" iconBg="bg-green-50" label="Total Revenue" icon={DollarSign}  value={fmt(totalRevenue)} />
+          <StatsCard iconColor="text-blue-500" iconBg="bg-blue-50" label="Total Sales" icon={BarChart2}        value={salesCount} />
+          <StatsCard iconColor="text-red-500" iconBg="bg-red-50" label="Sales Returns" icon={RefreshCw}      value={salesReturnCount} />
+          <StatsCard iconColor="text-yellow-500" iconBg="bg-yellow-50" label="Today's Revenue" icon={DollarSign}    value={fmt(todayRevenue)} />
         </div>
 
         {/* Toolbar */}

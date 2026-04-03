@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import {
   Search,
@@ -32,7 +31,7 @@ export interface DirectPurchaseData {
   vendor: string;
   products: ProductItem[];
   total_cost: number;
-  purchaseType: PurchaseType; // Added new field
+  purchaseType: PurchaseType;
 }
 
 type ViewMode = "grid" | "horizontal" | "vertical";
@@ -131,7 +130,7 @@ const ProductPill = ({ name, qty }: { name: string; qty: number }) => (
 
 const ArrowBtn = () => (
   <div className="w-7 h-7 rounded-full border border-zinc-200 bg-white flex items-center justify-center group-hover:border-blue-200 group-hover:bg-blue-50 transition-all shadow-sm shrink-0">
-    <ChevronRight size={14} className="po-arrow text-zinc-400" />
+    <ChevronRight size={14} className="po-arrow text-zinc-400 group-hover:text-blue-600" />
   </div>
 );
 
@@ -228,161 +227,108 @@ const GridCard = ({ po, onClick }: { po: DirectPurchaseData; onClick: () => void
   );
 };
 
-/* ================= HORIZONTAL CARD ================= */
-const HorizontalCard = ({ po, onClick }: { po: DirectPurchaseData; onClick: () => void }) => {
-  const totalQty = po.products.reduce((s, i) => s + i.quantity, 0);
+
+/* ================= VERTICAL TABLE VIEW ================= */
+const VerticalTable = ({ data, onClick }: { data: DirectPurchaseData[]; onClick: (po: DirectPurchaseData) => void }) => {
   return (
-    <div
-      onClick={onClick}
-      className="po-card-flat group bg-white rounded-xl border border-zinc-200 shadow-sm cursor-pointer overflow-hidden"
-    >
-      <div className="flex flex-wrap md:flex-nowrap items-center gap-4 px-5 py-4 border-b border-zinc-100">
-        
-        {/* PO icon + number + badge */}
-        <div className="w-full md:w-auto md:min-w-[14rem] shrink-0">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-400 mb-1">PO Details</p>
-          <div className="flex items-center gap-3">
-            <div className="w-7 h-7 rounded-md bg-blue-50 flex items-center justify-center shrink-0">
-              <ReceiptText size={14} className="text-blue-600" />
-            </div>
-            <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 min-w-0">
-              <span className="text-sm font-semibold text-zinc-800 truncate">{po.poNumber}</span>
-              <PurchaseTypeBadge type={po.purchaseType} />
-            </div>
-          </div>
-        </div>
+    <div className="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden">
+      <div className="overflow-x-auto">
+        <table className="w-full text-left border-collapse whitespace-nowrap">
+          <thead>
+            <tr className="bg-zinc-50/80 border-b border-zinc-200">
+              <th className="px-5 py-4 text-[10px] font-bold uppercase tracking-widest text-zinc-500">PO Details</th>
+              <th className="px-5 py-4 text-[10px] font-bold uppercase tracking-widest text-zinc-500">Vendor</th>
+              <th className="px-5 py-4 text-[10px] font-bold uppercase tracking-widest text-zinc-500">Date</th>
+              <th className="px-5 py-4 text-[10px] font-bold uppercase tracking-widest text-zinc-500 hidden md:table-cell">Products</th>
+              <th className="px-5 py-4 text-[10px] font-bold uppercase tracking-widest text-zinc-500 text-right">Qty</th>
+              <th className="px-5 py-4 text-[10px] font-bold uppercase tracking-widest text-zinc-500 text-right">Total</th>
+              <th className="px-5 py-4 text-[10px] font-bold uppercase tracking-widest text-zinc-500 w-14"></th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-zinc-100">
+            {data.map((po) => {
+              const totalQty = po.products.reduce((s, i) => s + i.quantity, 0);
+              return (
+                <tr
+                  key={po.id}
+                  onClick={() => onClick(po)}
+                  className="po-row group cursor-pointer transition-colors hover:bg-zinc-50/60"
+                >
+                  {/* PO Details */}
+                  <td className="px-5 py-4 align-middle">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-md bg-blue-50 flex items-center justify-center shrink-0">
+                        <ReceiptText size={14} className="text-blue-600" />
+                      </div>
+                      <div className="flex flex-col gap-1.5">
+                        <span className="text-sm font-semibold text-zinc-800">{po.poNumber}</span>
+                        <div className="w-fit"><PurchaseTypeBadge type={po.purchaseType} /></div>
+                      </div>
+                    </div>
+                  </td>
 
-        <div className="hidden md:block h-10 w-px bg-zinc-100 shrink-0" />
+                  {/* Vendor */}
+                  <td className="px-5 py-4 align-middle">
+                    <div className="flex items-center gap-2 text-sm font-medium text-zinc-700">
+                      <Building2 size={14} className="text-zinc-400 shrink-0" />
+                      {po.vendor}
+                    </div>
+                  </td>
 
-        {/* Vendor */}
-        <div className="w-36 shrink-0">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-400 mb-1">Vendor</p>
-          <div className="flex items-center gap-2">
-            <Building2 size={13} className="text-zinc-400 shrink-0" />
-            <span className="text-sm font-medium text-zinc-700 truncate">{po.vendor}</span>
-          </div>
-        </div>
+                  {/* Date */}
+                  <td className="px-5 py-4 align-middle">
+                    <div className="flex flex-col gap-0.5">
+                      <div className="flex items-center gap-2 text-sm font-medium text-zinc-700">
+                        <Calendar size={14} className="text-zinc-400 shrink-0" />
+                        {po.date}
+                      </div>
+                      <span className="text-xs text-zinc-400 pl-6">{po.time}</span>
+                    </div>
+                  </td>
 
-        <div className="hidden md:block h-10 w-px bg-zinc-100 shrink-0" />
+                  {/* Products */}
+                  <td className="px-5 py-4 align-middle hidden md:table-cell max-w-[280px]">
+                    <div className="flex flex-wrap gap-1.5">
+                      {po.products.slice(0, 2).map((p, idx) => (
+                        <ProductPill key={idx} name={p.name} qty={p.quantity} />
+                      ))}
+                      {po.products.length > 2 && (
+                        <span className="inline-flex items-center text-xs font-medium text-zinc-500 bg-zinc-100/80 px-2.5 py-1 rounded-full whitespace-nowrap">
+                          +{po.products.length - 2} more
+                        </span>
+                      )}
+                    </div>
+                  </td>
 
-        {/* Date */}
-        <div className="w-44 shrink-0">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-400 mb-1">Date</p>
-          <div className="flex items-center gap-2">
-            <Calendar size={13} className="text-zinc-400 shrink-0" />
-            <div>
-              <span className="text-sm text-zinc-600">{po.date}</span>
-              <span className="text-xs text-zinc-400 ml-2">{po.time}</span>
-            </div>
-          </div>
-        </div>
+                  {/* Quantity */}
+                  <td className="px-5 py-4 align-middle text-right">
+                    <span className="text-sm font-semibold text-zinc-700 tabular-nums">
+                      {totalQty}
+                    </span>
+                  </td>
 
-        <div className="hidden lg:block h-10 w-px bg-zinc-100 shrink-0" />
+                  {/* Total */}
+                  <td className="px-5 py-4 align-middle text-right">
+                    <span className="text-sm font-bold text-zinc-900 tabular-nums tracking-tight">
+                      {fmt(po.total_cost)}
+                    </span>
+                  </td>
 
-        {/* Items + qty */}
-        <div className="hidden lg:block shrink-0">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-400 mb-1">Items</p>
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1.5">
-              <Package size={13} className="text-zinc-400" />
-              <span className="text-xs text-zinc-500">{po.products.length} types</span>
-            </div>
-            <span className="text-zinc-300">·</span>
-            <span className="text-xs text-zinc-500 tabular-nums">{totalQty} units</span>
-          </div>
-        </div>
-
-        <div className="flex-1" />
-
-        {/* Total */}
-        <div className="shrink-0 text-right mr-2 ml-auto md:ml-0">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-400 mb-1">Total</p>
-          <p className="text-base font-semibold text-zinc-900 tabular-nums tracking-tight">{fmt(po.total_cost)}</p>
-        </div>
-
-        <ArrowBtn />
-      </div>
-
-      {/* Scrollable product pills */}
-      <div className="po-scrollbar-h flex items-center gap-2 px-5 py-3 overflow-x-auto bg-zinc-50/40">
-        {po.products.map((p, idx) => (
-          <ProductPill key={idx} name={p.name} qty={p.quantity} />
-        ))}
+                  {/* Action */}
+                  <td className="px-5 py-4 align-middle text-right">
+                    <ArrowBtn />
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
     </div>
   );
 };
 
-/* ================= VERTICAL CARD ================= */
-const VerticalCard = ({ po, onClick }: { po: DirectPurchaseData; onClick: () => void }) => {
-  const totalQty = po.products.reduce((s, i) => s + i.quantity, 0);
-  return (
-    <div
-      onClick={onClick}
-      className="po-row group flex items-center gap-5 px-5 py-4 cursor-pointer transition-colors"
-    >
-      {/* PO + Type Badge */}
-      <div className="flex items-center gap-3 w-48 shrink-0">
-        <div className="w-8 h-8 rounded-md bg-blue-50 flex items-center justify-center shrink-0 mt-2">
-          <ReceiptText size={14} className="text-blue-600" />
-        </div>
-        <div>
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-400 mb-1">PO Details</p>
-          <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 min-w-0">
-            <span className="text-sm font-semibold text-zinc-800 truncate">{po.poNumber}</span>
-            <PurchaseTypeBadge type={po.purchaseType} />
-          </div>
-        </div>
-      </div>
 
-      {/* Vendor */}
-      <div className="w-36 shrink-0">
-        <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-400 mb-1">Vendor</p>
-        <div className="flex items-center gap-1.5 text-sm font-medium text-zinc-700 truncate">
-          <Building2 size={13} className="text-zinc-400 shrink-0" /> {po.vendor}
-        </div>
-      </div>
-
-      {/* Date */}
-      <div className="w-32 shrink-0">
-        <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-400 mb-1">Date</p>
-        <div className="flex items-center gap-1.5 text-sm text-zinc-600">
-          <Calendar size={13} className="text-zinc-400 shrink-0" /> {po.date}
-        </div>
-      </div>
-
-      {/* Product pills (desktop) */}
-      <div className="hidden lg:block flex-1 min-w-0">
-        <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-400 mb-1">
-          Products ({po.products.length})
-        </p>
-        <div className="flex flex-wrap gap-1.5 max-w-sm">
-          {po.products.slice(0, 3).map((p, idx) => (
-            <ProductPill key={idx} name={p.name} qty={p.quantity} />
-          ))}
-          {po.products.length > 3 && (
-            <span className="text-xs font-medium text-zinc-400 bg-zinc-50 border border-zinc-100 px-2.5 py-1 rounded-full whitespace-nowrap">
-              +{po.products.length - 3} more
-            </span>
-          )}
-        </div>
-      </div>
-
-      {/* Stats */}
-      <div className="shrink-0 flex items-center gap-6">
-        <div className="hidden sm:block text-right w-16">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-400 mb-1">Qty</p>
-          <p className="text-sm font-semibold text-zinc-700 tabular-nums">{totalQty}</p>
-        </div>
-        <div className="text-right w-20">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-400 mb-1">Total</p>
-          <p className="text-sm font-semibold text-zinc-900 tabular-nums">{fmt(po.total_cost)}</p>
-        </div>
-        <ArrowBtn />
-      </div>
-    </div>
-  );
-};
 /* ================= VIEW TOGGLE ================= */
 const ViewToggle = ({
   current,
@@ -393,7 +339,6 @@ const ViewToggle = ({
 }) => {
   const options: { mode: ViewMode; icon: React.ReactNode; label: string }[] = [
     { mode: "grid",       icon: <LayoutGrid size={14} />,   label: "Grid view" },
-    { mode: "horizontal", icon: <AlignJustify size={14} />, label: "Horizontal view" },
     { mode: "vertical",   icon: <List size={14} />,         label: "Vertical view" },
   ];
 
@@ -485,23 +430,13 @@ const handleCardClick = (po: DirectPurchaseData) => {
               <GridCard key={po.id} po={po} onClick={() => handleCardClick(po)} />
             ))}
           </div>
-        ) : viewMode === "horizontal" ? (
-          <div className="flex flex-col gap-3">
-            {filtered.map((po) => (
-              <HorizontalCard key={po.id} po={po} onClick={() => handleCardClick(po)} />
-            ))}
-          </div>
         ) : (
-          <div className="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden divide-y divide-zinc-100">
-            {filtered.map((po) => (
-              <VerticalCard key={po.id} po={po} onClick={() => handleCardClick(po)} />
-            ))}
-          </div>
+          <VerticalTable data={filtered} onClick={handleCardClick} />
         )}
       </div>
       <FloatingFormCard
-        isOpen={!!selectedPO} // Opens if selectedPO is not null
-        onClose={() => setSelectedPO(null)} // Closes and clears state
+        isOpen={!!selectedPO} 
+        onClose={() => setSelectedPO(null)} 
         title={selectedPO ? `Purchase Details: ${selectedPO.poNumber}` : "Details"}
         maxWidth="max-w-2xl"
       >
@@ -521,7 +456,6 @@ const handleCardClick = (po: DirectPurchaseData) => {
               </div>
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-1">Type</p>
-                {/* Reusing your beautiful badge here! */}
                 <PurchaseTypeBadge type={selectedPO.purchaseType} /> 
               </div>
               <div>

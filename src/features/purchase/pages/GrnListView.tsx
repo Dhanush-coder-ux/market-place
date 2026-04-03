@@ -260,172 +260,106 @@ const GridCard = ({
   </div>
 );
 
-/* ================= HORIZONTAL CARD ================= */
-const HorizontalCard = ({
-  row,
-  onClick
-}: {
-  row: GRNRecord;
-  onClick: () => void;
-}) => (
-  <div 
-    onClick={onClick}
-    className="grn-flat-card bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden cursor-pointer group"
-  >
-    {/* Main row */}
-    <div className="flex items-center gap-4 px-5 py-4 border-b border-zinc-100">
-      
-      {/* PO */}
-      <div className="w-40 shrink-0">
-        <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-400 mb-1">PO Ref</p>
-        <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-md bg-blue-50 flex items-center justify-center shrink-0">
-            <FileText size={13} className="text-blue-600" />
-          </div>
-          <span className="text-sm font-semibold text-zinc-800 truncate">{row.poReference}</span>
-        </div>
-      </div>
 
-      <div className="h-10 w-px bg-zinc-100 shrink-0" />
 
-      {/* Supplier */}
-      <div className="w-36 shrink-0">
-        <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-400 mb-1">Supplier</p>
-        <div className="flex items-center gap-2">
-          <Building2 size={13} className="text-zinc-400 shrink-0" />
-          <span className="text-sm font-medium text-zinc-700 truncate">{row.supplier}</span>
-        </div>
-      </div>
+/* ================= VERTICAL TABLE VIEW ================= */
+const VerticalTable = ({ data, onClick }: { data: GRNRecord[]; onClick: (row: GRNRecord) => void }) => {
+  return (
+    <div className="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden">
+      <div className="overflow-x-auto">
+        <table className="w-full text-left border-collapse whitespace-nowrap">
+          <thead>
+            <tr className="bg-zinc-50/80 border-b border-zinc-200">
+              <th className="px-5 py-4 text-[10px] font-bold uppercase tracking-widest text-zinc-500">PO Ref</th>
+              <th className="px-5 py-4 text-[10px] font-bold uppercase tracking-widest text-zinc-500">Supplier</th>
+              <th className="px-5 py-4 text-[10px] font-bold uppercase tracking-widest text-zinc-500">Date</th>
+              <th className="px-5 py-4 text-[10px] font-bold uppercase tracking-widest text-zinc-500 hidden md:table-cell">Products</th>
+              <th className="px-5 py-4 text-[10px] font-bold uppercase tracking-widest text-zinc-500">Status</th>
+              <th className="px-5 py-4 text-[10px] font-bold uppercase tracking-widest text-zinc-500 text-right">Total Qty</th>
+              <th className="px-5 py-4 text-[10px] font-bold uppercase tracking-widest text-zinc-500 text-right">Total Value</th>
+              <th className="px-5 py-4 text-[10px] font-bold uppercase tracking-widest text-zinc-500 w-16 text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-zinc-100">
+            {data.map((row) => (
+              <tr
+                key={row.id}
+                onClick={() => onClick(row)}
+                className="grn-vert-row group cursor-pointer transition-colors hover:bg-zinc-50/60"
+              >
+                {/* PO Ref */}
+                <td className="px-5 py-4 align-middle">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-md bg-blue-50 flex items-center justify-center shrink-0">
+                      <FileText size={14} className="text-blue-600" />
+                    </div>
+                    <span className="text-sm font-semibold text-zinc-800">{row.poReference}</span>
+                  </div>
+                </td>
 
-      <div className="h-10 w-px bg-zinc-100 shrink-0" />
+                {/* Supplier */}
+                <td className="px-5 py-4 align-middle">
+                  <div className="flex items-center gap-2 text-sm font-medium text-zinc-700">
+                    <Building2 size={14} className="text-zinc-400 shrink-0" />
+                    {row.supplier}
+                  </div>
+                </td>
 
-      {/* Date */}
-      <div className="w-28 shrink-0">
-        <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-400 mb-1">Date</p>
-        <div className="flex items-center gap-2">
-          <Calendar size={13} className="text-zinc-400 shrink-0" />
-          <span className="text-sm text-zinc-600">{row.date}</span>
-        </div>
-      </div>
+                {/* Date */}
+                <td className="px-5 py-4 align-middle">
+                  <div className="flex items-center gap-2 text-sm text-zinc-600">
+                    <Calendar size={14} className="text-zinc-400 shrink-0" />
+                    {row.date}
+                  </div>
+                </td>
 
-      <div className="h-10 w-px bg-zinc-100 shrink-0 hidden sm:block" />
+                {/* Products */}
+                <td className="px-5 py-4 align-middle hidden md:table-cell max-w-[280px]">
+                  <div className="flex flex-wrap gap-1.5">
+                    {row.products.slice(0, 2).map((p, idx) => (
+                      <ProductPill key={idx} name={p.name} qty={p.quantity} />
+                    ))}
+                    {row.products.length > 2 && (
+                      <span className="inline-flex items-center text-xs font-medium text-zinc-500 bg-zinc-100/80 px-2.5 py-1 rounded-full whitespace-nowrap">
+                        +{row.products.length - 2} more
+                      </span>
+                    )}
+                  </div>
+                </td>
 
-      {/* Items */}
-      <div className="hidden sm:block shrink-0">
-        <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-400 mb-1">Items</p>
-        <div className="flex items-center gap-1.5">
-          <Package size={13} className="text-zinc-400" />
-          <span className="text-xs text-zinc-500">{row.products.length} types · {row.itemsCount} units</span>
-        </div>
-      </div>
+                {/* Status */}
+                <td className="px-5 py-4 align-middle">
+                  <StatusBadge value={row.status} />
+                </td>
 
-      {/* Spacer */}
-      <div className="flex-1" />
+                {/* Quantity */}
+                <td className="px-5 py-4 align-middle text-right">
+                  <span className="text-sm font-semibold text-zinc-700 tabular-nums">
+                    {row.itemsCount}
+                  </span>
+                </td>
 
-      {/* Status */}
-      <div className="shrink-0 text-right">
-        <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-400 mb-1">Status</p>
-        <StatusBadge value={row.status} />
-      </div>
+                {/* Total */}
+                <td className="px-5 py-4 align-middle text-right">
+                  <span className="text-sm font-bold text-zinc-900 tabular-nums tracking-tight">
+                    ${row.totalValue.toLocaleString()}
+                  </span>
+                </td>
 
-      {/* Value */}
-      <div className="text-right shrink-0 ml-2">
-        <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-400 mb-1">Total</p>
-        <p className="text-sm font-semibold text-zinc-900 tabular-nums">${row.totalValue.toLocaleString()}</p>
-      </div>
-
-      {/* Actions */}
-      <div className="ml-1 flex items-center">
-        <ActionBtns onClick={onClick} />
-      </div>
-    </div>
-
-    {/* Scrollable pill row */}
-    <div className="grn-scroll flex items-center gap-2 px-5 py-3 overflow-x-auto bg-zinc-50/40">
-      {row.products.map((p, i) => (
-        <ProductPill key={i} name={p.name} qty={p.quantity} />
-      ))}
-    </div>
-  </div>
-);
-/* ================= VERTICAL ROW ================= */
-const VerticalRow = ({
-  row,
-  onClick
-}: {
-  row: GRNRecord;
-  onClick: () => void;
-}) => (
-  <div 
-    onClick={onClick}
-    className="grn-vert-row flex items-center gap-5 px-5 py-4 transition-colors cursor-pointer"
-  >
-    {/* PO Ref */}
-    <div className="flex items-center gap-3 w-40 shrink-0">
-      <div className="w-8 h-8 rounded-md bg-blue-50 flex items-center justify-center shrink-0">
-        <FileText size={14} className="text-blue-600" />
-      </div>
-      <div>
-        <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-400 mb-0.5">PO Ref</p>
-        <p className="text-sm font-semibold text-zinc-800">{row.poReference}</p>
+                {/* Action */}
+                <td className="px-5 py-4 align-middle text-right">
+                  <div className=" flex justify-end">
+                    <ActionBtns onClick={() => onClick(row)} />
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
-
-    {/* Supplier */}
-    <div className="w-36 shrink-0">
-      <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-400 mb-0.5">Supplier</p>
-      <div className="flex items-center gap-1.5 text-sm font-medium text-zinc-700 truncate">
-        <Building2 size={13} className="text-zinc-400 shrink-0" /> {row.supplier}
-      </div>
-    </div>
-
-    {/* Date */}
-    <div className="w-28 shrink-0">
-      <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-400 mb-0.5">Date</p>
-      <div className="flex items-center gap-1.5 text-sm text-zinc-600">
-        <Calendar size={13} className="text-zinc-400 shrink-0" /> {row.date}
-      </div>
-    </div>
-
-    {/* Products (Desktop) */}
-    <div className="hidden lg:block flex-1 min-w-0">
-      <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-400 mb-1">
-        Products ({row.products.length})
-      </p>
-      <div className="flex flex-wrap gap-1.5">
-        {row.products.slice(0, 2).map((p, i) => (
-          <ProductPill key={i} name={p.name} qty={p.quantity} />
-        ))}
-        {row.products.length > 2 && (
-          <span className="text-xs font-medium text-zinc-400 bg-zinc-50 border border-zinc-100 px-2.5 py-1 rounded-full whitespace-nowrap">
-            +{row.products.length - 2} more
-          </span>
-        )}
-      </div>
-    </div>
-
-    {/* Status */}
-    <div className="w-24 shrink-0">
-      <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-400 mb-1">Status</p>
-      <StatusBadge value={row.status} />
-    </div>
-
-    {/* Stats */}
-    <div className="shrink-0 flex items-center gap-5">
-      <div className="hidden sm:block text-right w-16">
-        <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-400 mb-0.5">Total Qty</p>
-        <p className="text-sm font-semibold text-zinc-700 tabular-nums">{row.itemsCount}</p>
-      </div>
-      <div className="text-right w-20">
-        <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-400 mb-0.5">Total Value</p>
-        <p className="text-sm font-semibold text-zinc-900 tabular-nums">${row.totalValue.toLocaleString()}</p>
-      </div>
-      <div className="grn-row-actions w-16 flex justify-end">
-        <ActionBtns onClick={onClick} />
-      </div>
-    </div>
-  </div>
-);
+  );
+};
 
 /* ================= MAIN COMPONENT ================= */
 const GRNCardView = () => {
@@ -438,7 +372,7 @@ const GRNCardView = () => {
 
   const handleCardClick = (record: GRNRecord) => {
     setSelectedGRN(record);
-    setRecords([])
+    // Removed setRecords([]) from here as it was deleting all table data upon click
   };
 
   const filtered = records.filter(
@@ -500,23 +434,11 @@ const GRNCardView = () => {
             ))}
           </div>
 
-        ) : viewMode === "horizontal" ? (
-
-          /* ── HORIZONTAL ── */
-          <div className="flex flex-col gap-3">
-            {filtered.map((row) => (
-              <HorizontalCard key={row.id} row={row} onClick={() => handleCardClick(row)} />
-            ))}
-          </div>
-
         ) : (
 
-          /* ── VERTICAL ── */
-          <div className="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden divide-y divide-zinc-100">
-            {filtered.map((row) => (
-              <VerticalRow key={row.id} row={row} onClick={() => handleCardClick(row)} />
-            ))}
-          </div>
+          /* ── VERTICAL (TABLE) ── */
+          <VerticalTable data={filtered} onClick={handleCardClick} />
+          
         )}
       </div>
 

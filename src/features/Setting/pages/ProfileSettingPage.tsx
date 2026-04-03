@@ -65,20 +65,6 @@ export const ProfileSettingsPage = () => {
               {/* Card Body with Toggle Rows */}
               <div className="p-6 space-y-4 max-w-2xl">
                 
-                {/* Direct Purchase */}
-                <div className="flex items-center justify-between p-4 rounded-xl border border-slate-100 bg-white hover:border-slate-200 hover:shadow-[0_2px_8px_rgba(0,0,0,0.02)] transition-all">
-                  <div className="space-y-0.5 pr-4">
-                    <label className="text-[14.5px] font-semibold text-slate-800 cursor-pointer" onClick={() => toggleSetting('directPurchase')}>
-                      Direct Purchase
-                    </label>
-                    <p className="text-[13px] text-slate-500">Allow users to bypass the PO process for immediate direct purchases.</p>
-                  </div>
-                  <Switch 
-                    checked={settings.directPurchase} 
-                    onCheckedChange={() => toggleSetting('directPurchase')} 
-                  />
-                </div>
-
                 {/* PO-GRN */}
                 <div className="flex items-center justify-between p-4 rounded-xl border border-slate-100 bg-white hover:border-slate-200 hover:shadow-[0_2px_8px_rgba(0,0,0,0.02)] transition-all">
                   <div className="space-y-0.5 pr-4">

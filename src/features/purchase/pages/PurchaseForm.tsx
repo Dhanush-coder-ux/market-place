@@ -46,7 +46,7 @@ const productVariantDB: Record<string, { id: string; name: string; sku: string; 
   ]
 };
 
-const LOW_STOCK_THRESHOLD = 5; // Cards will disable if stock is <= this number
+const LOW_STOCK_THRESHOLD = 5;
 
 const PurchaseForm = () => {
   // --- State Management ---
@@ -118,9 +118,8 @@ const PurchaseForm = () => {
   // --- Handlers ---
   const handleProductChange = (index: number, field: keyof ProductItem, value: any) => {
     if (field === "name") {
-      // Intercept the product selection to open the variants modal
       setVariantModal({ isOpen: true, baseProduct: value, targetRowIndex: index });
-      setSelectedVariants(new Set()); // Reset previous selections
+      setSelectedVariants(new Set()); 
       return;
     }
 
@@ -174,7 +173,6 @@ const PurchaseForm = () => {
     const variantsToAdd = productVariantDB[variantModal.baseProduct].filter(v => selectedVariants.has(v.id));
     const updatedProducts = [...products];
 
-    // 1. Update the row that triggered the modal with the first selected variant
     const firstVariant = variantsToAdd[0];
     updatedProducts[variantModal.targetRowIndex] = {
       ...updatedProducts[variantModal.targetRowIndex],
@@ -183,7 +181,6 @@ const PurchaseForm = () => {
       sku: firstVariant.sku
     };
 
-    // 2. Add entirely new rows for any additional selected variants
     for (let i = 1; i < variantsToAdd.length; i++) {
       const v = variantsToAdd[i];
       updatedProducts.push({
@@ -208,7 +205,6 @@ const PurchaseForm = () => {
       {variantModal.isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col border border-slate-200 animate-in fade-in zoom-in-95 duration-200">
-            {/* Header */}
             <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-blue-100 text-blue-600 rounded-lg">
@@ -224,7 +220,6 @@ const PurchaseForm = () => {
               </button>
             </div>
 
-            {/* Body */}
             <div className="p-6 max-h-[60vh] overflow-y-auto">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {productVariantDB[variantModal.baseProduct]?.map((variant) => {
@@ -244,7 +239,6 @@ const PurchaseForm = () => {
                         }
                       `}
                     >
-                      {/* Selection Checkmark */}
                       {!isLowStock && (
                         <div className={`absolute top-4 right-4 h-5 w-5 rounded-full border flex items-center justify-center transition-colors ${isSelected ? 'bg-blue-500 border-blue-500 text-white' : 'border-slate-300'}`}>
                           {isSelected && <Check size={12} strokeWidth={3} />}
@@ -269,7 +263,6 @@ const PurchaseForm = () => {
               </div>
             </div>
 
-            {/* Footer */}
             <div className="p-4 border-t border-slate-100 bg-slate-50 flex justify-between items-center">
               <span className="text-sm font-medium text-slate-500">
                 {selectedVariants.size} variant(s) selected
@@ -326,13 +319,18 @@ const PurchaseForm = () => {
             </div>
 
             {/* Middle Section: Summary & Payment */}
+            <div className="bg-white shadow-xs p-3 rounded-2xl ">
+              <div className="flex items-center gap-2 mb-5">
+                <div className="h-6 w-1 bg-blue-500 rounded-full"></div>
+                <h2 className="text-base font-bold text-slate-800">Order Summary</h2>
+              </div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
               
               {/* LEFT SIDE: Order Summary */}
               <div className="bg-white rounded-2xl shadow-sm border border-slate-200/70 overflow-hidden flex flex-col h-full">
                 <div className="p-5 border-b border-slate-100 bg-slate-50/50 flex items-center gap-2">
                   <div className="h-5 w-1 bg-indigo-500 rounded-full"></div>
-                  <h2 className="text-sm font-bold uppercase tracking-wider text-slate-700">Order Summary</h2>
+                  <h2 className="text-sm font-bold uppercase tracking-wider text-slate-700">Other Charges</h2>
                 </div>
 
                 <div className="p-6 space-y-5 flex-1">
@@ -363,23 +361,18 @@ const PurchaseForm = () => {
                     />
                   </div>
 
-                  <div className="pt-4 border-t border-slate-100 flex justify-between items-center text-slate-600">
-                    <span className="text-sm font-medium">GST @ 18%</span>
-                    <span className="font-semibold text-slate-800">
-                      ₹{stats.gstAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                    </span>
-                  </div>
+                  
                 </div>
 
-                <div className="p-6 bg-white text-black mt-auto">
-                  <span className="block text-black-400 text-xs font-bold uppercase tracking-widest mb-1">Total Purchase Cost</span>
-                  <span className="text-4xl font-bold tracking-tight">
+                <div className="p-6 bg-slate-50 border-t border-slate-100 text-black mt-auto">
+                  <span className="block text-slate-500 text-xs font-bold uppercase tracking-widest mb-1">Total Purchase Cost</span>
+                  <span className="text-4xl font-bold tracking-tight text-slate-900">
                     ₹{stats.grandTotal.toLocaleString()}
                   </span>
                 </div>
               </div>
 
-              {/* RIGHT SIDE: Payment Details & Distributor */}
+              {/* RIGHT SIDE: Payment Details */}
               <div className="space-y-6 h-full flex flex-col">
                 <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200/70 overflow-hidden flex-1">
                   <div className="flex items-center gap-2 mb-5">
@@ -431,50 +424,9 @@ const PurchaseForm = () => {
                     </div>
                   </div>
                 </div>
-
-                {/* Distributor Cost Card */}
-                <div className="bg-white p-6 rounded-2xl shadow-md flex flex-col gap-4 text-black">
-                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-                    <span className="text-xs font-bold uppercase tracking-widest text-slate-400">
-                      Distributor Cost Split
-                    </span>
-                    
-                    <div className="flex items-center gap-3 self-start sm:self-auto">
-                      <div className="flex items-center bg-white p-1 rounded-lg border border-slate-700">
-                        {["By Unit", "By Value"].map((method) => (
-                          <button
-                            key={method}
-                            onClick={() => setCostMethod(method)}
-                            className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all duration-200 ${
-                              costMethod === method 
-                                ? "bg-blue-500 text-white shadow-sm" 
-                                : "text-slate-400 hover:text-black hover:bg-white"
-                            }`}
-                          >
-                            {method}
-                          </button>
-                        ))}
-                      </div>
-
-                      <button className="px-5 py-2 text-xs font-bold text-slate-900 bg-white border border-transparent rounded-lg shadow-sm hover:bg-slate-100 active:bg-slate-200 transition-all duration-200 flex items-center gap-2">
-                        Distributor Cost
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="flex items-baseline mt-2">
-                    <span className="text-3xl font-bold tracking-tight">
-                      ₹{stats.grandTotal.toLocaleString()}
-                    </span>
-                    {costMethod === "By Unit" && (
-                      <span className="ml-3 text-sm font-medium text-blue-300 bg-blue-500/20 px-2.5 py-1 rounded-md border border-blue-500/30">
-                        ~₹{stats.totalQty > 0 ? (stats.grandTotal / stats.totalQty).toLocaleString(undefined, { maximumFractionDigits: 2 }) : 0} <span className="text-blue-400/70 text-xs">/ unit</span>
-                      </span>
-                    )}
-                  </div>
-                </div>
               </div>
 
+            </div>
             </div>
 
             {/* 2. Quick Add Bar */}
@@ -507,9 +459,46 @@ const PurchaseForm = () => {
                 </button>
               </div>
               
+              {/* --- NEW: ATTACHED DISTRIBUTOR COST SPLIT SECTION --- */}
+              <div className="px-6 py-4 bg-slate-50 border-b border-slate-200 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+                <div className="flex items-center gap-4">
+                  <span className="text-xs font-bold uppercase tracking-widest text-slate-500">
+                    Distributor Cost Split
+                  </span>
+                  <div className="flex items-center bg-white p-1 rounded-lg border border-slate-200 shadow-sm">
+                    {["By Unit", "By Value"].map((method) => (
+                      <button
+                        key={method}
+                        onClick={() => setCostMethod(method)}
+                        className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all duration-200 ${
+                          costMethod === method 
+                            ? "bg-blue-500 text-white shadow-sm" 
+                            : "text-slate-400 hover:text-slate-700 hover:bg-slate-50"
+                        }`}
+                      >
+                        {method}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex items-baseline gap-3">
+                  <span className="text-sm font-semibold text-slate-500 uppercase tracking-wide">Total Cost:</span>
+                  <span className="text-xl font-bold tracking-tight text-slate-800">
+                    ₹{stats.grandTotal.toLocaleString()}
+                  </span>
+                  {costMethod === "By Unit" && (
+                    <span className="text-xs font-medium text-blue-700 bg-blue-100/50 px-2.5 py-1 rounded-md border border-blue-200">
+                      ~₹{stats.totalQty > 0 ? (stats.grandTotal / stats.totalQty).toLocaleString(undefined, { maximumFractionDigits: 2 }) : 0} <span className="opacity-70">/ unit</span>
+                    </span>
+                  )}
+                </div>
+              </div>
+              {/* --- END ATTACHED SECTION --- */}
+
               <div className="p-0">
                 {/* Header Row */}
-                <div className="grid grid-cols-12 gap-4 px-6 py-4 bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-500 uppercase tracking-widest">
+                <div className="grid grid-cols-12 gap-4 px-6 py-4 bg-white border-b border-slate-200 text-xs font-bold text-slate-500 uppercase tracking-widest">
                   <div className="col-span-3">Product Details</div>
                   <div className="col-span-1">QTY</div>
                   <div className="col-span-1">Base Cost</div>
@@ -520,7 +509,7 @@ const PurchaseForm = () => {
                 </div>
 
                 {/* Product Rows */}
-                <div className="divide-y divide-slate-100">
+                <div className="divide-y divide-slate-100 bg-white">
                   {products.map((product, index) => {
                     const q = Number(product.quantity) || 0;
                     const baseCost = Number(product.costPrice) || 0;
@@ -571,7 +560,6 @@ const PurchaseForm = () => {
                               placeholder="Select product..."
                               className="!bg-white" 
                             />
-                            {/* NEW: Visual indicator if variant is selected */}
                             {product.variant && (
                                <div className="mt-1 text-[10px] font-bold text-slate-500 flex gap-2">
                                  <span className="bg-slate-200 px-1.5 py-0.5 rounded text-slate-700">{product.variant}</span>

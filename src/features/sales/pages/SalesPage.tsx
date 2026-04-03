@@ -1,6 +1,6 @@
-import { useState, useMemo, useCallback, useEffect, useRef } from "react";
+import React, { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import {
-  Search, Eye,  Wifi, WifiOff, ChevronDown, X, User, Calendar,
+  Search, Eye, Wifi, WifiOff, ChevronDown, X, User, Calendar,
   CreditCard, Package, RotateCcw, Receipt, AlertCircle, CheckCircle2,
   ChevronRight, Minus, Plus, Info, ArrowRight, RefreshCw, Banknote,
   Gift, ArrowLeft, Check, Loader2,
@@ -9,7 +9,21 @@ import {
   Smartphone,
   Landmark,
 } from "lucide-react";
-import { StatsCard } from "@/components/common/StatsCard";
+
+/* ═══════════════════════════════════════════════════════════════
+   MOCK STATS CARD COMPONENT (added to make standalone code work)
+═══════════════════════════════════════════════════════════════ */
+const StatsCard: React.FC<{ label: string; icon: any; iconBg: string; value: string | number }> = ({ label, icon: Icon, iconBg, value }) => (
+  <div className="bg-white border border-slate-200 rounded-xl p-4 flex-1 min-w-[200px] shadow-sm sr-stat">
+    <div className="flex items-center gap-3 mb-2">
+      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${iconBg}`}>
+        <Icon size={16} className="opacity-80" />
+      </div>
+      <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">{label}</p>
+    </div>
+    <p className="text-2xl font-light sr-mono text-slate-800">{value}</p>
+  </div>
+);
 
 /* ═══════════════════════════════════════════════════════════════
    TYPES
@@ -21,7 +35,7 @@ type SaleStatus      = "Completed" | "Pending" | "Cancelled";
 type ReturnMode      = "refund" | "exchange";
 type ReturnType      = "Full" | "Partial";
 type ReturnReason    = "Damaged" | "Wrong Item" | "Customer Request" | "Size Issue" | "Other" | "";
-type RefundMethod    = "original" | "store_credit";
+type SettlementMethod = "Cash" | "UPI" | "Card" | "Bank" | "Store Credit" | "";
 
 interface SaleRecord {
   id: string;
@@ -63,6 +77,7 @@ interface ExchangeProduct {
 interface ReturnErrors {
   reason?: string;
   items?: string;
+  settlement?: string;
 }
 
 // 6-step flow
@@ -76,7 +91,7 @@ interface ReturnState {
   exchangeMap: Record<string, string>;       // itemId → exchangeProductId
   reason: ReturnReason;
   notes: string;
-  refundMethod: RefundMethod;
+  settlementMethod: SettlementMethod;
   errors: ReturnErrors;
   isSubmitting: boolean;
 }
@@ -140,11 +155,11 @@ const fmt = (n: number) => `₹${n.toLocaleString("en-IN")}`;
 type BadgeConfig = { cls: string; dot: string };
 
 const ORIGIN_CFG: Record<OriginType, BadgeConfig> = {
-  "Sales":        { cls: "bg-blue-50 text-blue-700 border-blue-100",       dot: "bg-blue-400"   },
+  "Sales":        { cls: "bg-blue-50 text-blue-700 border-blue-100",        dot: "bg-blue-400"   },
   "Sales Return": { cls: "bg-orange-50 text-orange-700 border-orange-100", dot: "bg-orange-400" },
 };
 const SALES_TYPE_CFG: Record<SalesType, BadgeConfig> = {
-  Online:  { cls: "bg-blue-50 text-blue-700 border-blue-100",     dot: "bg-blue-400"  },
+  Online:  { cls: "bg-blue-50 text-blue-700 border-blue-100",      dot: "bg-blue-400"  },
   Offline: { cls: "bg-slate-100 text-slate-600 border-slate-200", dot: "bg-slate-400" },
 };
 const PAYMENT_CFG: Record<PaymentMethod, BadgeConfig> = {
@@ -343,7 +358,7 @@ const StepHeader: React.FC<StepHeaderProps> = ({ step, mode, invoice }) => {
             {step === 1 ? "Choose Return Mode"
              : step === 2 ? "Return Type"
              : step === 3 ? (mode === "refund" ? "Select Items for Refund" : "Select Items to Exchange")
-             : step === 4 ? "Reason & Notes"
+             : step === 4 ? "Reason & Payment"
              : step === 5 ? "Review Summary"
              : "Return Processed"}
           </p>
@@ -381,34 +396,23 @@ const StepHeader: React.FC<StepHeaderProps> = ({ step, mode, invoice }) => {
 interface RefundSummaryProps {
   mode: ReturnMode;
   selectedItems: SelectedReturnItem[];
-  refundMethod: RefundMethod;
+  totals: { returnValue: number; exchangeValue: number; diff: number };
+  settlementMethod: SettlementMethod;
   originalPayment: PaymentMethod;
-  exchangeProducts: ExchangeProduct[];
 }
 const RefundSummary: React.FC<RefundSummaryProps> = ({
-  mode, selectedItems, refundMethod, originalPayment, exchangeProducts,
+  mode, selectedItems, totals, settlementMethod, originalPayment,
 }) => {
-  const returnValue  = selectedItems.reduce((s, i) => s + i.unitPrice * i.returnQty, 0);
-  const exchangeValue = mode === "exchange"
-    ? selectedItems.reduce((s, i) => {
-        if (!i.exchangeItemId) return s;
-        const ep = exchangeProducts.find(e => e.id === i.exchangeItemId);
-        return s + (ep?.price ?? 0);
-      }, 0)
-    : 0;
+  const { returnValue, exchangeValue, diff } = totals;
+  const isStoreCredit = settlementMethod === "Store Credit";
 
-  const diff     = exchangeValue - returnValue;
-  const payable  = diff > 0 ? diff : 0;
-  const refund   = diff < 0 ? Math.abs(diff) : 0;
-  console.log(payable);
-  console.log(refund);
   if (mode === "refund") {
     return (
       <div className="bg-gradient-to-br from-blue-50 to-slate-50 border border-blue-100 rounded-xl p-4">
         <div className="flex items-center justify-between">
           <div>
             <p className="text-[10px] font-semibold uppercase tracking-widest text-blue-400 mb-0.5">
-              {refundMethod === "store_credit" ? "Store Credit" : "Refund Amount"}
+              {isStoreCredit ? "Store Credit" : "Refund Amount"}
             </p>
             <p className="text-2xl font-light sr-mono text-blue-700">{fmt(returnValue)}</p>
           </div>
@@ -417,8 +421,8 @@ const RefundSummary: React.FC<RefundSummaryProps> = ({
               {selectedItems.reduce((s, i) => s + i.returnQty, 0)} item(s)
             </span>
             <span className="text-[10px] font-medium text-slate-500 flex items-center gap-1">
-              {refundMethod === "store_credit" ? <Gift size={10} /> : <Banknote size={10} />}
-              {refundMethod === "store_credit" ? "Store Credit" : `Via ${originalPayment}`}
+              {isStoreCredit ? <Gift size={10} /> : <Banknote size={10} />}
+              {isStoreCredit ? "Store Credit" : `Via ${settlementMethod || originalPayment}`}
             </span>
           </div>
         </div>
@@ -439,7 +443,7 @@ const RefundSummary: React.FC<RefundSummaryProps> = ({
         </div>
         <div>
           <p className="text-[10px] font-semibold uppercase tracking-wide mb-0.5 text-[10px]" style={{color: diff > 0 ? '#92400e' : diff < 0 ? '#065f46' : '#64748b'}}>
-            {diff > 0 ? "Customer Pays" : diff < 0 ? "Refund" : "Settled"}
+            {diff > 0 ? "Customer Pays" : diff < 0 ? "Shop Refunds" : "Settled"}
           </p>
           <p className={`text-sm font-semibold sr-mono ${diff > 0 ? "text-amber-700" : diff < 0 ? "text-emerald-700" : "text-slate-500"}`}>
             {diff === 0 ? "–" : fmt(Math.abs(diff))}
@@ -522,7 +526,7 @@ const initialState = (): ReturnState => ({
   exchangeMap: {},
   reason: "",
   notes: "",
-  refundMethod: "original",
+  settlementMethod: "Cash",
   errors: {},
   isSubmitting: false,
 });
@@ -532,18 +536,17 @@ const useReturnModal = (sale: SaleRecord | null) => {
 
   const saleItems = useMemo<SaleItem[]>(
     () => (sale ? generateItems(sale) : []),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [sale?.id],
   );
 
   const reset = useCallback(() => setState(initialState()), []);
 
   const setStep    = (step: ReturnStep) => setState(s => ({ ...s, step }));
-  const setMode    = (mode: ReturnMode) => setState(s => ({ ...s, mode }));
+  const setMode    = (mode: ReturnMode) => setState(s => ({ ...s, mode, settlementMethod: mode === "refund" ? "Cash" : "" }));
   const setReturnType = (returnType: ReturnType) => setState(s => ({ ...s, returnType, returnItems: {} }));
   const setReason  = (reason: ReturnReason) => setState(s => ({ ...s, reason, errors: { ...s.errors, reason: undefined } }));
   const setNotes   = (notes: string) => setState(s => ({ ...s, notes }));
-  const setRefundMethod = (refundMethod: RefundMethod) => setState(s => ({ ...s, refundMethod }));
+  const setSettlementMethod = (settlementMethod: SettlementMethod) => setState(s => ({ ...s, settlementMethod, errors: { ...s.errors, settlement: undefined } }));
 
   const toggleItem = useCallback((itemId: string) => {
     setState(s => {
@@ -581,14 +584,39 @@ const useReturnModal = (sale: SaleRecord | null) => {
       .map(i => ({ ...i, returnQty: state.returnItems[i.id], exchangeItemId: state.exchangeMap[i.id] }));
   }, [state.returnType, saleItems, state.returnItems, state.exchangeMap]);
 
+  // Calculate values for exchanges and refunds
+  const totals = useMemo(() => {
+    const returnValue = selectedItems.reduce((s, i) => s + i.unitPrice * i.returnQty, 0);
+    const exchangeValue = state.mode === "exchange"
+      ? selectedItems.reduce((s, i) => {
+          if (!i.exchangeItemId) return s;
+          const ep = EXCHANGE_PRODUCTS.find(e => e.id === i.exchangeItemId);
+          return s + (ep?.price ?? 0);
+        }, 0)
+      : 0;
+    return {
+      returnValue,
+      exchangeValue,
+      diff: exchangeValue - returnValue // Positive means customer pays extra. Negative means shop owes refund.
+    };
+  }, [selectedItems, state.mode]);
+
   const validate = useCallback((): boolean => {
     const errs: ReturnErrors = {};
     if (!state.reason) errs.reason = "Please select a reason.";
-    if (state.returnType === "Partial" && selectedItems.length === 0)
+    if (state.returnType === "Partial" && selectedItems.length === 0) {
       errs.items = "Select at least one item.";
+    }
+    
+    // Settlement Method is required if it's a direct refund or an exchange with a price difference
+    const requiresSettlement = state.mode === "refund" || totals.diff !== 0;
+    if (requiresSettlement && !state.settlementMethod) {
+      errs.settlement = "Please select a payment/refund method.";
+    }
+
     setState(s => ({ ...s, errors: errs }));
     return Object.keys(errs).length === 0;
-  }, [state.reason, state.returnType, selectedItems]);
+  }, [state.reason, state.returnType, state.mode, state.settlementMethod, selectedItems, totals]);
 
   const goNext = useCallback(() => {
     if (state.step === 4 && !validate()) return;
@@ -613,8 +641,8 @@ const useReturnModal = (sale: SaleRecord | null) => {
   }, [state.step, state.returnType, selectedItems.length]);
 
   return {
-    state, saleItems, selectedItems,
-    reset, setMode, setReturnType, setReason, setNotes, setRefundMethod,
+    state, saleItems, selectedItems, totals,
+    reset, setMode, setReturnType, setReason, setNotes, setSettlementMethod,
     toggleItem, updateQty, setExchangeProduct,
     goNext, goBack, confirm, canProceed,
   };
@@ -630,8 +658,19 @@ interface ReturnModalProps {
 
 const ReturnModal: React.FC<ReturnModalProps> = ({ sale, onClose }) => {
   const m = useReturnModal(sale);
-  const { state, saleItems, selectedItems } = m;
+  const { state, saleItems, selectedItems, totals } = m;
   const scrollRef = useRef<HTMLDivElement>(null);
+  
+  // State for the exchange products search bar
+  const [exchSearch, setExchSearch] = useState("");
+
+  const filteredExchProducts = useMemo(() => {
+    if (!exchSearch) return EXCHANGE_PRODUCTS;
+    const lowerQ = exchSearch.toLowerCase();
+    return EXCHANGE_PRODUCTS.filter(ep => 
+      ep.name.toLowerCase().includes(lowerQ) || ep.sku.toLowerCase().includes(lowerQ)
+    );
+  }, [exchSearch]);
 
   // Reset scroll on step change
   useEffect(() => {
@@ -724,7 +763,7 @@ const ReturnModal: React.FC<ReturnModalProps> = ({ sale, onClose }) => {
                     <div className="grid grid-cols-2 gap-3">
                       {([
                         { id: "Full" as ReturnType,    label: "Full Return",    desc: `All ${sale.itemsCount} items`, icon: <RotateCcw size={16} /> },
-                        { id: "Partial" as ReturnType, label: "Partial Return", desc: "Select specific items",          icon: <Package size={16} /> },
+                        { id: "Partial" as ReturnType, label: "Partial Return", desc: "Select specific items",         icon: <Package size={16} /> },
                       ]).map(opt => (
                         <button key={opt.id}
                           onClick={() => m.setReturnType(opt.id)}
@@ -777,45 +816,68 @@ const ReturnModal: React.FC<ReturnModalProps> = ({ sale, onClose }) => {
                       </div>
                     )}
 
-                    {/* Exchange product picker */}
+                    {/* Exchange product picker with Search Bar */}
                     {state.mode === "exchange" && selectedItems.length > 0 && (
-                      <div className="pt-2">
-                        <p className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-3">
-                          Select Replacement Items
-                        </p>
+                      <div className="pt-2 border-t border-slate-100">
+                        <div className="flex items-center justify-between mb-3 mt-2">
+                          <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">
+                            Select Replacement Items
+                          </p>
+                        </div>
+                        
+                        {/* Search Bar for Exchange Products */}
+                        <div className="relative mb-5">
+                          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                          <input
+                            type="text"
+                            placeholder="Search exchange products by name or SKU..."
+                            value={exchSearch}
+                            onChange={(e) => setExchSearch(e.target.value)}
+                            className="w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 focus:bg-white transition-all placeholder-slate-400"
+                          />
+                        </div>
+
                         {selectedItems.map(selItem => (
-                          <div key={selItem.id} className="mb-5">
-                            <p className="text-[11px] font-medium text-slate-500 mb-2 flex items-center gap-1.5">
+                          <div key={selItem.id} className="mb-6">
+                            <p className="text-[11px] font-medium text-slate-500 mb-2.5 flex items-center gap-1.5">
                               <ArrowRight size={10} className="text-slate-400" />
-                              Replacing: <span className="text-slate-700">{selItem.name}</span>
+                              Replacing: <span className="text-slate-800 font-semibold">{selItem.name}</span>
+                              <span className="text-slate-400 sr-mono ml-auto">Value: {fmt(selItem.unitPrice * selItem.returnQty)}</span>
                             </p>
-                            <div className="grid grid-cols-2 gap-2">
-                              {EXCHANGE_PRODUCTS.map(ep => {
-                                const selected = state.exchangeMap[selItem.id] === ep.id;
-                                return (
-                                  <div key={ep.id}
-                                    onClick={() => ep.inStock && m.setExchangeProduct(selItem.id, ep.id)}
-                                    className={`sr-exch-card border rounded-xl p-3 ${selected ? "selected" : ""} ${!ep.inStock ? "disabled" : ""}`}
-                                  >
-                                    <div className="flex items-center gap-2 mb-1.5">
-                                      <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0" style={{ background: ep.imageColor }}>
-                                        <Package size={12} className="text-slate-400 opacity-60" />
-                                      </div>
-                                      {selected && (
-                                        <div className="ml-auto w-4 h-4 rounded-full bg-blue-500 flex items-center justify-center">
-                                          <Check size={9} className="text-white" />
+                            
+                            {filteredExchProducts.length === 0 ? (
+                              <div className="text-center py-4 bg-slate-50 rounded-xl border border-slate-100">
+                                <p className="text-xs text-slate-400">No products found matching "{exchSearch}"</p>
+                              </div>
+                            ) : (
+                              <div className="grid grid-cols-2 gap-2">
+                                {filteredExchProducts.map(ep => {
+                                  const selected = state.exchangeMap[selItem.id] === ep.id;
+                                  return (
+                                    <div key={ep.id}
+                                      onClick={() => ep.inStock && m.setExchangeProduct(selItem.id, ep.id)}
+                                      className={`sr-exch-card border rounded-xl p-3 ${selected ? "selected" : ""} ${!ep.inStock ? "disabled" : ""}`}
+                                    >
+                                      <div className="flex items-center gap-2 mb-1.5">
+                                        <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0" style={{ background: ep.imageColor }}>
+                                          <Package size={12} className="text-slate-400 opacity-60" />
                                         </div>
-                                      )}
+                                        {selected && (
+                                          <div className="ml-auto w-4 h-4 rounded-full bg-blue-500 flex items-center justify-center">
+                                            <Check size={9} className="text-white" />
+                                          </div>
+                                        )}
+                                      </div>
+                                      <p className="text-[11px] font-medium text-slate-800 leading-snug">{ep.name}</p>
+                                      <div className="flex items-center justify-between mt-1">
+                                        <p className="text-[10px] sr-mono font-semibold text-slate-600">{fmt(ep.price)}</p>
+                                        {!ep.inStock && <span className="text-[9px] text-red-400 font-medium">Out of stock</span>}
+                                      </div>
                                     </div>
-                                    <p className="text-[11px] font-medium text-slate-800 leading-snug">{ep.name}</p>
-                                    <div className="flex items-center justify-between mt-1">
-                                      <p className="text-[10px] sr-mono font-semibold text-slate-600">{fmt(ep.price)}</p>
-                                      {!ep.inStock && <span className="text-[9px] text-red-400 font-medium">Out of stock</span>}
-                                    </div>
-                                  </div>
-                                );
-                              })}
-                            </div>
+                                  );
+                                })}
+                              </div>
+                            )}
                           </div>
                         ))}
                       </div>
@@ -823,9 +885,9 @@ const ReturnModal: React.FC<ReturnModalProps> = ({ sale, onClose }) => {
                   </div>
                 )}
 
-                {/* STEP 4: Reason */}
+                {/* STEP 4: Reason & Payment/Refund Selection */}
                 {state.step === 4 && (
-                  <div className="space-y-4">
+                  <div className="space-y-5">
                     <div>
                       <label className="block text-[11px] font-semibold uppercase tracking-widest text-slate-400 mb-2">
                         Return Reason <span className="text-red-400">*</span>
@@ -849,27 +911,44 @@ const ReturnModal: React.FC<ReturnModalProps> = ({ sale, onClose }) => {
                       )}
                     </div>
 
-                    {state.mode === "refund" && (
+                    {/* Dynamic Settlement Selection: Show if refund OR if exchange requires settling a balance */}
+                    {(state.mode === "refund" || totals.diff !== 0) && (
                       <div>
-                        <label className="block text-[11px] font-semibold uppercase tracking-widest text-slate-400 mb-2">
-                          Refund Via
-                        </label>
+                        <div className="flex items-center justify-between mb-2">
+                          <label className="block text-[11px] font-semibold uppercase tracking-widest text-slate-400">
+                            {state.mode === "refund" || totals.diff < 0 ? "Refund Via" : "Collect Balance Via"} <span className="text-red-400">*</span>
+                          </label>
+                          {totals.diff !== 0 && state.mode === "exchange" && (
+                            <span className={`text-[10px] font-semibold px-2 py-0.5 rounded border ${
+                                totals.diff > 0 ? "bg-amber-50 text-amber-600 border-amber-200" : "bg-emerald-50 text-emerald-600 border-emerald-200"
+                              }`}>
+                              Balance: {fmt(Math.abs(totals.diff))}
+                            </span>
+                          )}
+                        </div>
+
                         <div className="grid grid-cols-2 gap-2">
                           {[
-                      { id: "Cash", icon: <Banknote size={20} strokeWidth={1.5} /> },
-                      { id: "UPI", icon: <Smartphone size={20} strokeWidth={1.5} /> },
-                      { id: "Card", icon: <CreditCard size={20} strokeWidth={1.5} /> },
-                      { id: "Bank", icon: <Landmark size={20} strokeWidth={1.5} /> }
-                    ].map(opt => (
+                            { id: "Cash", icon: <Banknote size={20} strokeWidth={1.5} /> },
+                            { id: "UPI", icon: <Smartphone size={20} strokeWidth={1.5} /> },
+                            { id: "Card", icon: <CreditCard size={20} strokeWidth={1.5} /> },
+                            // Only allow Store Credit for refunds, not for collecting payments
+                            ...(state.mode === "refund" || totals.diff < 0 ? [{ id: "Store Credit", icon: <Gift size={20} strokeWidth={1.5} /> }] : []),
+                          ].map(opt => (
                             <div key={opt.id}
-                              onClick={() => m.setRefundMethod(opt.id as RefundMethod)}
-                              className={`sr-rfm-pill border-2 rounded-xl p-3 ${state.refundMethod === opt.id ? "active" : "border-slate-100"}`}
+                              onClick={() => m.setSettlementMethod(opt.id as SettlementMethod)}
+                              className={`sr-rfm-pill border-2 rounded-xl p-3 ${state.settlementMethod === opt.id ? "active" : "border-slate-100"}`}
                             >
-                              <div className={`mb-1.5 ${state.refundMethod === opt.id ? "text-blue-500" : "text-slate-400"}`}>{opt.icon}</div>
+                              <div className={`mb-1.5 ${state.settlementMethod === opt.id ? "text-blue-500" : "text-slate-400"}`}>{opt.icon}</div>
                               <p className="text-xs font-semibold text-slate-800">{opt.id}</p>
                             </div>
                           ))}
                         </div>
+                        {state.errors.settlement && (
+                          <p className="mt-1.5 flex items-center gap-1 text-[11px] text-red-500">
+                            <AlertCircle size={11} /> {state.errors.settlement}
+                          </p>
+                        )}
                       </div>
                     )}
 
@@ -894,9 +973,9 @@ const ReturnModal: React.FC<ReturnModalProps> = ({ sale, onClose }) => {
                     <RefundSummary
                       mode={state.mode}
                       selectedItems={selectedItems}
-                      refundMethod={state.refundMethod}
+                      totals={totals}
+                      settlementMethod={state.settlementMethod}
                       originalPayment={sale.paymentMethod}
-                      exchangeProducts={EXCHANGE_PRODUCTS}
                     />
 
                     <div>
@@ -930,7 +1009,9 @@ const ReturnModal: React.FC<ReturnModalProps> = ({ sale, onClose }) => {
                         { label: "Mode",   value: state.mode === "refund" ? "Refund" : "Exchange" },
                         { label: "Type",   value: `${state.returnType} Return` },
                         { label: "Reason", value: state.reason },
-                        ...(state.mode === "refund" ? [{ label: "Refund Via", value: state.refundMethod === "store_credit" ? "Store Credit" : sale.paymentMethod }] : []),
+                        ...((state.mode === "refund" || totals.diff !== 0) && state.settlementMethod 
+                             ? [{ label: totals.diff > 0 ? "Payment Via" : "Refund Via", value: state.settlementMethod }] 
+                             : []),
                       ].map(row => (
                         <div key={row.label} className="bg-slate-50 border border-slate-100 rounded-xl p-3">
                           <p className="text-[10px] text-slate-400 uppercase tracking-wide mb-0.5">{row.label}</p>
@@ -969,8 +1050,12 @@ const ReturnModal: React.FC<ReturnModalProps> = ({ sale, onClose }) => {
                       </p>
                       <p className="text-xs text-slate-500 leading-relaxed max-w-xs mx-auto">
                         {state.mode === "refund"
-                          ? `A refund of ${fmt(selectedItems.reduce((s, i) => s + i.unitPrice * i.returnQty, 0))} has been initiated for ${selectedItems.reduce((s, i) => s + i.returnQty, 0)} item(s).`
-                          : `Exchange order has been created. Replacement items will be dispatched shortly.`}
+                          ? `A refund of ${fmt(totals.returnValue)} has been processed to ${state.settlementMethod}.`
+                          : (totals.diff > 0 
+                              ? `Exchange order created. Balance of ${fmt(totals.diff)} collected via ${state.settlementMethod}.` 
+                              : totals.diff < 0 
+                                ? `Exchange order created. Balance of ${fmt(Math.abs(totals.diff))} refunded to ${state.settlementMethod}.` 
+                                : `Exchange order has been created. Replacement items will be dispatched shortly.`)}
                       </p>
                     </div>
                     <div className="w-full bg-slate-50 border border-slate-100 rounded-xl overflow-hidden">
@@ -979,8 +1064,11 @@ const ReturnModal: React.FC<ReturnModalProps> = ({ sale, onClose }) => {
                         { label: "Mode",    value: state.mode === "refund" ? "Refund" : "Exchange" },
                         { label: "Reason",  value: state.reason },
                         ...(state.mode === "refund" ? [{
-                          label: "Refund",
-                          value: fmt(selectedItems.reduce((s, i) => s + i.unitPrice * i.returnQty, 0)),
+                          label: "Refunded",
+                          value: fmt(totals.returnValue),
+                        }] : totals.diff !== 0 ? [{
+                          label: totals.diff > 0 ? "Balance Paid" : "Balance Refunded",
+                          value: fmt(Math.abs(totals.diff))
                         }] : []),
                       ].map((row, idx) => (
                         <div key={row.label} className={`flex justify-between px-4 py-3 ${idx > 0 ? "border-t border-slate-100" : ""}`}>
@@ -1092,12 +1180,12 @@ const SaleDetailSidebar: React.FC<SidebarProps> = ({ sale, isOpen, onClose, onRe
               {/* Meta */}
               <div className="grid grid-cols-2 gap-2.5">
                 {[
-                  { icon: <User size={13} />,       label: "Customer",  value: sale.customerName },
-                  { icon: <Calendar size={13} />,   label: "Date",      value: sale.date },
-                  { icon: <CreditCard size={13} />, label: "Payment",   value: sale.paymentMethod },
-                  { icon: <RotateCcw size={13} />,  label: "Origin",    value: sale.origin },
+                  { icon: <User size={13} />,        label: "Customer",  value: sale.customerName },
+                  { icon: <Calendar size={13} />,    label: "Date",      value: sale.date },
+                  { icon: <CreditCard size={13} />,  label: "Payment",   value: sale.paymentMethod },
+                  { icon: <RotateCcw size={13} />,   label: "Origin",    value: sale.origin },
                   { icon: sale.salesType === "Online" ? <Wifi size={13} /> : <WifiOff size={13} />, label: "Channel", value: sale.salesType },
-                  { icon: <Package size={13} />,    label: "Items",     value: `${sale.itemsCount} item${sale.itemsCount !== 1 ? "s" : ""}` },
+                  { icon: <Package size={13} />,     label: "Items",     value: `${sale.itemsCount} item${sale.itemsCount !== 1 ? "s" : ""}` },
                 ].map(({ icon, label, value }) => (
                   <div key={label} className="bg-white border border-slate-100 rounded-xl p-3">
                     <div className="flex items-center gap-1.5 text-slate-400 mb-1.5">

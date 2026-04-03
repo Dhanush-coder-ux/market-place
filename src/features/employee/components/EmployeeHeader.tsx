@@ -1,11 +1,9 @@
-import React, { useState } from "react";
 import { EmployeeHeaderProps } from "../types";
 import SearchActionCard from "@/components/ui/SearchActionCard";
 import { PersonStanding } from "lucide-react";
 import { GradientButton } from "@/components/ui/GradientButton";
-import { FloatingFormCard } from "@/components/common/FloatingFormCard";
-import EmployeeForm from "../pages/EmployeeForm";
 import { StatCard } from "@/components/common/StatsCard";
+import { useNavigate } from "react-router-dom";
 
 
 
@@ -13,7 +11,7 @@ const EmployeeHeader: React.FC<EmployeeHeaderProps> = ({
   accepted,
   onSearchChange,
 }) => {
-  const [isModalOpen, setIsModalOpen] = useState(false);
+const navigate = useNavigate();
 
   return (
     <div className="flex flex-col space-y-3">
@@ -24,7 +22,7 @@ const EmployeeHeader: React.FC<EmployeeHeaderProps> = ({
 
         <GradientButton
           type="button"
-          onClick={() => setIsModalOpen(true)}
+          onClick={() => navigate("/employee/add")}
         >
           + Add Employee
         </GradientButton>
@@ -59,14 +57,6 @@ const EmployeeHeader: React.FC<EmployeeHeaderProps> = ({
       </div>
 
 
-      <FloatingFormCard
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        title="Add New Employee"
-        maxWidth="max-w-4xl"
-      >
-        <EmployeeForm />
-      </FloatingFormCard>
     </div>
   );
 };

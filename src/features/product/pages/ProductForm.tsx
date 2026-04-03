@@ -939,6 +939,8 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData = {}, isLoading =
   const [combinations, setCombinations] = useState<VariantCombination[]>([]);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [savedNotice, setSavedNotice] = useState(false);
+  console.log(savedNotice);
+  
 
   const categoryConfig = CATEGORY_CONFIGS[form.category] ?? {
     suggestedVariantTypes: [],

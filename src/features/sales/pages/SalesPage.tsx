@@ -7,7 +7,6 @@ import {
   DollarSign,
   BarChart2,
   Smartphone,
-  Landmark,
 } from "lucide-react";
 import { StatsCard } from "@/components/common/StatsCard";
 

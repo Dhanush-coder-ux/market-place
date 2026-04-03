@@ -372,7 +372,7 @@ const GRNCardView = () => {
 
   const handleCardClick = (record: GRNRecord) => {
     setSelectedGRN(record);
-    // Removed setRecords([]) from here as it was deleting all table data upon click
+    setRecords([]);
   };
 
   const filtered = records.filter(

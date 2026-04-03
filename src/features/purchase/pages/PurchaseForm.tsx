@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import {
   Save, Plus, Trash2, Settings, ScanLine, Search,
-  Banknote, Smartphone, CreditCard, Landmark, ChevronUp,
+  Banknote, Smartphone, CreditCard, Landmark, ChevronUp, X, PackageOpen, Check
 } from "lucide-react";
 import Input from "@/components/ui/Input";
 import { ReusableSelect } from "@/components/ui/ReusableSelect";
@@ -29,7 +29,26 @@ export interface ProductItem {
   size: string;
 }
 
-const PurchaseScreen = () => {
+// --- Mock Variant Database ---
+const productVariantDB: Record<string, { id: string; name: string; sku: string; stock: number }[]> = {
+  "Headphones": [
+    { id: "hp-1", name: "Black Edition", sku: "HP-BLK-01", stock: 45 },
+    { id: "hp-2", name: "White Edition", sku: "HP-WHT-01", stock: 2 }, // Low stock
+    { id: "hp-3", name: "Crimson Red", sku: "HP-RED-01", stock: 12 },
+  ],
+  "Mouse": [
+    { id: "ms-1", name: "Wireless Pro", sku: "MS-WL-PRO", stock: 8 },
+    { id: "ms-2", name: "Wired Basic", sku: "MS-WR-BSC", stock: 0 }, // Out of stock
+  ],
+  "USB Cable": [
+    { id: "usb-1", name: "Type-C 1m", sku: "USB-C-1M", stock: 150 },
+    { id: "usb-2", name: "Type-C 2m", sku: "USB-C-2M", stock: 5 }, // Low stock
+  ]
+};
+
+const LOW_STOCK_THRESHOLD = 5; // Cards will disable if stock is <= this number
+
+const PurchaseForm = () => {
   // --- State Management ---
   const [purchaseDetails, setPurchaseDetails] = useState({
     supplier: "",
@@ -51,6 +70,12 @@ const PurchaseScreen = () => {
   const [payment, setPayment] = useState({ method: "Cash" as PaymentMethod, amountPaid: "" as number | "" });
   const [costMethod, setCostMethod] = useState("By Value");
   const [expandedProductIndex, setExpandedProductIndex] = useState<number | null>(null);
+
+  // --- Modal State ---
+  const [variantModal, setVariantModal] = useState<{ isOpen: boolean; baseProduct: string; targetRowIndex: number }>({
+    isOpen: false, baseProduct: "", targetRowIndex: -1
+  });
+  const [selectedVariants, setSelectedVariants] = useState<Set<string>>(new Set());
 
   // --- Mock Options for Dropdowns ---
   const supplierOptions = [
@@ -92,6 +117,13 @@ const PurchaseScreen = () => {
 
   // --- Handlers ---
   const handleProductChange = (index: number, field: keyof ProductItem, value: any) => {
+    if (field === "name") {
+      // Intercept the product selection to open the variants modal
+      setVariantModal({ isOpen: true, baseProduct: value, targetRowIndex: index });
+      setSelectedVariants(new Set()); // Reset previous selections
+      return;
+    }
+
     const updated = [...products];
     updated[index] = { ...updated[index], [field]: value };
     setProducts(updated);
@@ -122,30 +154,146 @@ const PurchaseScreen = () => {
     setExpandedProductIndex(expandedProductIndex === index ? null : index);
   };
 
+  // --- Modal Handlers ---
+  const toggleVariantSelection = (variantId: string) => {
+    const newSelection = new Set(selectedVariants);
+    if (newSelection.has(variantId)) {
+      newSelection.delete(variantId);
+    } else {
+      newSelection.add(variantId);
+    }
+    setSelectedVariants(newSelection);
+  };
+
+  const confirmVariants = () => {
+    if (selectedVariants.size === 0) {
+      setVariantModal({ isOpen: false, baseProduct: "", targetRowIndex: -1 });
+      return;
+    }
+
+    const variantsToAdd = productVariantDB[variantModal.baseProduct].filter(v => selectedVariants.has(v.id));
+    const updatedProducts = [...products];
+
+    // 1. Update the row that triggered the modal with the first selected variant
+    const firstVariant = variantsToAdd[0];
+    updatedProducts[variantModal.targetRowIndex] = {
+      ...updatedProducts[variantModal.targetRowIndex],
+      name: variantModal.baseProduct,
+      variant: firstVariant.name,
+      sku: firstVariant.sku
+    };
+
+    // 2. Add entirely new rows for any additional selected variants
+    for (let i = 1; i < variantsToAdd.length; i++) {
+      const v = variantsToAdd[i];
+      updatedProducts.push({
+        id: Math.random().toString(),
+        name: variantModal.baseProduct,
+        quantity: "", costPrice: "", sellingPrice: "", 
+        marginPercent: "", marginAmount: "", marginType: "percent",
+        unit: "Piece", taxGst: 18, storageLoc: "", reorderPoint: "", expiryDate: "", batchNum: "", 
+        sku: v.sku, variant: v.name, size: ""
+      });
+    }
+
+    setProducts(updatedProducts);
+    setVariantModal({ isOpen: false, baseProduct: "", targetRowIndex: -1 });
+    setSelectedVariants(new Set());
+  };
+
   return (
-    <div className="h-full font-sans text-slate-800 bg-slate-50/50 min-h-screen">
+    <div className="h-full font-sans text-slate-800 bg-slate-50/50 min-h-screen relative">
       
-      {/* Header - Added sticky top, blur, and subtle bottom border */}
-      <div className=" flex justify-end items-center p-5">
-     
-        <div className="flex gap-3">
-          <GradientButton variant="outline" className="hover:bg-slate-50 transition-colors">
-            Cancel
-          </GradientButton>
-          <GradientButton variant="primary" icon={<Save size={16} />} iconPosition="left" className="shadow-md hover:shadow-lg transition-all">
-            Save & Add to Stock
-          </GradientButton>
+      {/* --- VARIANT SELECTION MODAL --- */}
+      {variantModal.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col border border-slate-200 animate-in fade-in zoom-in-95 duration-200">
+            {/* Header */}
+            <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-100 text-blue-600 rounded-lg">
+                  <PackageOpen size={20} />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-800 text-lg">Select Variants</h3>
+                  <p className="text-xs text-slate-500 font-medium">Choose available variants for <span className="font-bold text-slate-700">{variantModal.baseProduct}</span></p>
+                </div>
+              </div>
+              <button onClick={() => setVariantModal({ isOpen: false, baseProduct: "", targetRowIndex: -1 })} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors">
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="p-6 max-h-[60vh] overflow-y-auto">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {productVariantDB[variantModal.baseProduct]?.map((variant) => {
+                  const isLowStock = variant.stock <= LOW_STOCK_THRESHOLD;
+                  const isSelected = selectedVariants.has(variant.id);
+
+                  return (
+                    <div
+                      key={variant.id}
+                      onClick={() => !isLowStock && toggleVariantSelection(variant.id)}
+                      className={`relative p-4 rounded-xl border-2 transition-all duration-200 flex flex-col gap-2
+                        ${isLowStock 
+                          ? 'border-slate-100 bg-slate-50 opacity-60 cursor-not-allowed' 
+                          : isSelected 
+                            ? 'border-blue-500 bg-blue-50/50 cursor-pointer shadow-sm' 
+                            : 'border-slate-200 hover:border-blue-300 hover:shadow-sm cursor-pointer bg-white'
+                        }
+                      `}
+                    >
+                      {/* Selection Checkmark */}
+                      {!isLowStock && (
+                        <div className={`absolute top-4 right-4 h-5 w-5 rounded-full border flex items-center justify-center transition-colors ${isSelected ? 'bg-blue-500 border-blue-500 text-white' : 'border-slate-300'}`}>
+                          {isSelected && <Check size={12} strokeWidth={3} />}
+                        </div>
+                      )}
+
+                      <div>
+                        <h4 className="font-bold text-slate-800 pr-6">{variant.name}</h4>
+                        <p className="text-xs font-medium text-slate-500 mt-0.5">SKU: {variant.sku}</p>
+                      </div>
+                      
+                      <div className="mt-auto pt-2">
+                        <span className={`inline-flex px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider ${
+                          isLowStock ? 'bg-red-100 text-red-600' : 'bg-emerald-100 text-emerald-700'
+                        }`}>
+                          {isLowStock ? `Low Stock (${variant.stock})` : `In Stock (${variant.stock})`}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="p-4 border-t border-slate-100 bg-slate-50 flex justify-between items-center">
+              <span className="text-sm font-medium text-slate-500">
+                {selectedVariants.size} variant(s) selected
+              </span>
+              <div className="flex gap-3">
+                <GradientButton variant="outline" onClick={() => setVariantModal({ isOpen: false, baseProduct: "", targetRowIndex: -1 })}>
+                  Cancel
+                </GradientButton>
+                <GradientButton variant="primary" onClick={confirmVariants} disabled={selectedVariants.size === 0}>
+                  Add Selected to Order
+                </GradientButton>
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
+      )}
+      {/* --- END MODAL --- */}
 
       <div className="p-5 max-w-[1600px] mx-auto">
         <div className="flex flex-col xl:flex-row gap-6 items-start relative">
           
           <div className="flex-1 space-y-6 w-full pb-10">
             
-      
-
-            {/* 1. Purchase Details - Refined section header and inputs */}
+            {/* 1. Purchase Details */}
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200/70">
               <div className="flex items-center gap-2 mb-5">
                 <div className="h-6 w-1 bg-blue-500 rounded-full"></div>
@@ -284,37 +432,35 @@ const PurchaseScreen = () => {
                   </div>
                 </div>
 
-           {/* Distributor Cost Card */}
-<div className="bg-white p-6 rounded-2xl shadow-md flex flex-col gap-4 text-black">
-  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-    <span className="text-xs font-bold uppercase tracking-widest text-slate-400">
-      Distributor Cost Split
-    </span>
-    
-    <div className="flex items-center gap-3 self-start sm:self-auto">
-      {/* 1. The Toggle */}
-      <div className="flex items-center bg-white p-1 rounded-lg border border-slate-700">
-        {["By Unit", "By Value"].map((method) => (
-          <button
-            key={method}
-            onClick={() => setCostMethod(method)}
-            className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all duration-200 ${
-              costMethod === method 
-                ? "bg-blue-500 text-white shadow-sm" 
-                : "text-slate-400 hover:text-black hover:bg-white"
-            }`}
-          >
-            {method}
-          </button>
-        ))}
-      </div>
+                {/* Distributor Cost Card */}
+                <div className="bg-white p-6 rounded-2xl shadow-md flex flex-col gap-4 text-black">
+                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+                    <span className="text-xs font-bold uppercase tracking-widest text-slate-400">
+                      Distributor Cost Split
+                    </span>
+                    
+                    <div className="flex items-center gap-3 self-start sm:self-auto">
+                      <div className="flex items-center bg-white p-1 rounded-lg border border-slate-700">
+                        {["By Unit", "By Value"].map((method) => (
+                          <button
+                            key={method}
+                            onClick={() => setCostMethod(method)}
+                            className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all duration-200 ${
+                              costMethod === method 
+                                ? "bg-blue-500 text-white shadow-sm" 
+                                : "text-slate-400 hover:text-black hover:bg-white"
+                            }`}
+                          >
+                            {method}
+                          </button>
+                        ))}
+                      </div>
 
-      {/* 2. Your Missing Button (Styled for the dark theme!) */}
-      <button className="px-5 py-2 text-xs font-bold text-slate-900 bg-white border border-transparent rounded-lg shadow-sm hover:bg-slate-100 active:bg-slate-200 transition-all duration-200 flex items-center gap-2">
-        Distributor Cost
-      </button>
-    </div>
-  </div>
+                      <button className="px-5 py-2 text-xs font-bold text-slate-900 bg-white border border-transparent rounded-lg shadow-sm hover:bg-slate-100 active:bg-slate-200 transition-all duration-200 flex items-center gap-2">
+                        Distributor Cost
+                      </button>
+                    </div>
+                  </div>
 
                   <div className="flex items-baseline mt-2">
                     <span className="text-3xl font-bold tracking-tight">
@@ -331,7 +477,7 @@ const PurchaseScreen = () => {
 
             </div>
 
-            {/* 2. Quick Add Bar - Styled like a floating action bar */}
+            {/* 2. Quick Add Bar */}
             <div className="bg-white p-3 rounded-2xl border border-blue-100 shadow-sm flex items-center gap-3 relative overflow-hidden">
               <div className="absolute inset-0 bg-gradient-to-r from-blue-50/50 to-indigo-50/50 pointer-events-none"></div>
               <button className="relative z-10 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-md transition-all duration-200 flex items-center gap-2 font-semibold whitespace-nowrap">
@@ -425,6 +571,13 @@ const PurchaseScreen = () => {
                               placeholder="Select product..."
                               className="!bg-white" 
                             />
+                            {/* NEW: Visual indicator if variant is selected */}
+                            {product.variant && (
+                               <div className="mt-1 text-[10px] font-bold text-slate-500 flex gap-2">
+                                 <span className="bg-slate-200 px-1.5 py-0.5 rounded text-slate-700">{product.variant}</span>
+                                 <span className="text-slate-400 mt-0.5">SKU: {product.sku}</span>
+                               </div>
+                            )}
                           </div>
                           <div className="col-span-1 flex gap-1 items-center">
                             <Input 
@@ -460,7 +613,6 @@ const PurchaseScreen = () => {
                             )}
                           </div>
                           <div className="col-span-2 flex gap-1 items-start">
-                          
                              <div className="w-1/2">
                                <Input 
                                  type="number"
@@ -524,8 +676,19 @@ const PurchaseScreen = () => {
           </div>
         </div>
       </div>
+      
+      <div className=" flex justify-end items-center p-5">
+        <div className="flex gap-3">
+          <GradientButton variant="outline" className="hover:bg-slate-50 transition-colors">
+            Cancel
+          </GradientButton>
+          <GradientButton variant="primary" icon={<Save size={16} />} iconPosition="left" className="shadow-md hover:shadow-lg transition-all">
+            Save & Add to Stock
+          </GradientButton>
+        </div>
+      </div>
     </div>
   );
 };
 
-export default PurchaseScreen;
+export default PurchaseForm;

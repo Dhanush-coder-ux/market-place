@@ -6,8 +6,9 @@ import {
   Settings,
   ScanLine,
   Search,
-
-  X
+  X,
+  PackageOpen,
+  Check
 } from "lucide-react";
 
 // Adjust these imports to match your folder structure
@@ -27,6 +28,9 @@ export interface ProductItem {
   storageLoc: string;
   batchNum: string;
   remarks: string;
+  // Variant additions
+  variant?: string;
+  sku?: string;
 }
 
 interface GRNFormData {
@@ -40,6 +44,24 @@ interface GRNFormProps {
   onSubmit?: (data: any) => void;
   onCancel?: () => void;
 }
+
+// --- Mock Variant Database ---
+const productVariantDB: Record<string, { id: string; name: string; sku: string; stock: number }[]> = {
+  "Wireless Headphones": [
+    { id: "wh-1", name: "Matte Black", sku: "WH-BLK-01", stock: 45 },
+    { id: "wh-2", name: "Pearl White", sku: "WH-WHT-01", stock: 2 }, // Low stock
+  ],
+  "Mechanical Keyboard": [
+    { id: "mk-1", name: "Tactile Blue Switch", sku: "MK-BLU-01", stock: 8 },
+    { id: "mk-2", name: "Linear Red Switch", sku: "MK-RED-01", stock: 0 }, // Out of stock
+  ],
+  "USB-C Hub": [
+    { id: "hub-1", name: "4-Port Basic", sku: "HUB-4-BSC", stock: 150 },
+    { id: "hub-2", name: "8-Port Pro", sku: "HUB-8-PRO", stock: 5 }, // Low stock
+  ]
+};
+
+const LOW_STOCK_THRESHOLD = 5;
 
 const supplierOptions = [
   { value: "sup-1", label: "Global Tech" },
@@ -70,11 +92,19 @@ const GRNForm: React.FC<GRNFormProps> = ({ onSubmit, onCancel }) => {
       sellingPrice: "",
       storageLoc: "",
       batchNum: "",
-      remarks: ""
+      remarks: "",
+      variant: "",
+      sku: ""
     }
   ]);
 
   const [expandedProductIndex, setExpandedProductIndex] = useState<number | null>(null);
+
+  // --- Modal State ---
+  const [variantModal, setVariantModal] = useState<{ isOpen: boolean; baseProduct: string; targetRowIndex: number }>({
+    isOpen: false, baseProduct: "", targetRowIndex: -1
+  });
+  const [selectedVariants, setSelectedVariants] = useState<Set<string>>(new Set());
 
   // --- Calculations ---
   const stats = useMemo(() => {
@@ -93,6 +123,13 @@ const GRNForm: React.FC<GRNFormProps> = ({ onSubmit, onCancel }) => {
 
   // --- Handlers ---
   const handleProductChange = (index: number, field: keyof ProductItem, value: any) => {
+    if (field === "name") {
+      // Intercept product selection to show variants
+      setVariantModal({ isOpen: true, baseProduct: value, targetRowIndex: index });
+      setSelectedVariants(new Set());
+      return;
+    }
+
     const updated = [...products];
     updated[index] = { ...updated[index], [field]: value };
     setProducts(updated);
@@ -106,7 +143,9 @@ const GRNForm: React.FC<GRNFormProps> = ({ onSubmit, onCancel }) => {
       sellingPrice: "",
       storageLoc: "",
       batchNum: "",
-      remarks: ""
+      remarks: "",
+      variant: "",
+      sku: ""
     }]);
   };
 
@@ -118,6 +157,56 @@ const GRNForm: React.FC<GRNFormProps> = ({ onSubmit, onCancel }) => {
 
   const toggleAdvanced = (index: number) => {
     setExpandedProductIndex(expandedProductIndex === index ? null : index);
+  };
+
+  // --- Modal Handlers ---
+  const toggleVariantSelection = (variantId: string) => {
+    const newSelection = new Set(selectedVariants);
+    if (newSelection.has(variantId)) {
+      newSelection.delete(variantId);
+    } else {
+      newSelection.add(variantId);
+    }
+    setSelectedVariants(newSelection);
+  };
+
+  const confirmVariants = () => {
+    if (selectedVariants.size === 0) {
+      setVariantModal({ isOpen: false, baseProduct: "", targetRowIndex: -1 });
+      return;
+    }
+
+    const variantsToAdd = productVariantDB[variantModal.baseProduct].filter(v => selectedVariants.has(v.id));
+    const updatedProducts = [...products];
+
+    // Update origin row
+    const firstVariant = variantsToAdd[0];
+    updatedProducts[variantModal.targetRowIndex] = {
+      ...updatedProducts[variantModal.targetRowIndex],
+      name: variantModal.baseProduct,
+      variant: firstVariant.name,
+      sku: firstVariant.sku
+    };
+
+    // Append new rows for multiple selections
+    for (let i = 1; i < variantsToAdd.length; i++) {
+      const v = variantsToAdd[i];
+      updatedProducts.push({
+        id: Math.random().toString(),
+        name: variantModal.baseProduct,
+        quantity: "",
+        sellingPrice: "",
+        storageLoc: "",
+        batchNum: "",
+        remarks: "",
+        sku: v.sku,
+        variant: v.name
+      });
+    }
+
+    setProducts(updatedProducts);
+    setVariantModal({ isOpen: false, baseProduct: "", targetRowIndex: -1 });
+    setSelectedVariants(new Set());
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -133,20 +222,87 @@ const GRNForm: React.FC<GRNFormProps> = ({ onSubmit, onCancel }) => {
   };
 
   return (
-    <div className="min-h-screen  font-sans text-slate-800">
+    <div className="min-h-screen font-sans text-slate-800 relative">
       
-      {/* Header */}
-      <div className="flex justify-end items-center mb-6 p-5">
-        <div className="flex gap-3">
-          <GradientButton icon={<X size={16} />} variant="outline" onClick={onCancel}>
-            Cancel
-          </GradientButton>
-         
-          <GradientButton icon={<Save size={16} />} onClick={handleSubmit}>
-            Save Record
-          </GradientButton>
+      {/* --- VARIANT SELECTION MODAL --- */}
+      {variantModal.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col border border-slate-200 animate-in fade-in zoom-in-95 duration-200">
+            <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-100 text-blue-600 rounded-lg">
+                  <PackageOpen size={20} />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-800 text-lg">Select Variants</h3>
+                  <p className="text-xs text-slate-500 font-medium">Choose variants for <span className="font-bold text-slate-700">{variantModal.baseProduct}</span></p>
+                </div>
+              </div>
+              <button onClick={() => setVariantModal({ isOpen: false, baseProduct: "", targetRowIndex: -1 })} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors">
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="p-6 max-h-[60vh] overflow-y-auto">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {productVariantDB[variantModal.baseProduct]?.map((variant) => {
+                  const isLowStock = variant.stock <= LOW_STOCK_THRESHOLD;
+                  const isSelected = selectedVariants.has(variant.id);
+
+                  return (
+                    <div
+                      key={variant.id}
+                      onClick={() => !isLowStock && toggleVariantSelection(variant.id)}
+                      className={`relative p-4 rounded-xl border-2 transition-all duration-200 flex flex-col gap-2
+                        ${isLowStock 
+                          ? 'border-slate-100 bg-slate-50 opacity-60 cursor-not-allowed' 
+                          : isSelected 
+                            ? 'border-blue-500 bg-blue-50/50 cursor-pointer shadow-sm' 
+                            : 'border-slate-200 hover:border-blue-300 hover:shadow-sm cursor-pointer bg-white'
+                        }
+                      `}
+                    >
+                      {!isLowStock && (
+                        <div className={`absolute top-4 right-4 h-5 w-5 rounded-full border flex items-center justify-center transition-colors ${isSelected ? 'bg-blue-500 border-blue-500 text-white' : 'border-slate-300'}`}>
+                          {isSelected && <Check size={12} strokeWidth={3} />}
+                        </div>
+                      )}
+
+                      <div>
+                        <h4 className="font-bold text-slate-800 pr-6">{variant.name}</h4>
+                        <p className="text-xs font-medium text-slate-500 mt-0.5">SKU: {variant.sku}</p>
+                      </div>
+                      
+                      <div className="mt-auto pt-2">
+                        <span className={`inline-flex px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider ${
+                          isLowStock ? 'bg-red-100 text-red-600' : 'bg-emerald-100 text-emerald-700'
+                        }`}>
+                          {isLowStock ? `Low Stock (${variant.stock})` : `In Stock (${variant.stock})`}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="p-4 border-t border-slate-100 bg-slate-50 flex justify-between items-center">
+              <span className="text-sm font-medium text-slate-500">
+                {selectedVariants.size} variant(s) selected
+              </span>
+              <div className="flex gap-3">
+                <GradientButton variant="outline" onClick={() => setVariantModal({ isOpen: false, baseProduct: "", targetRowIndex: -1 })}>
+                  Cancel
+                </GradientButton>
+                <GradientButton variant="primary" onClick={confirmVariants} disabled={selectedVariants.size === 0}>
+                  Add Selected to GRN
+                </GradientButton>
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
+      )}
+      {/* --- END MODAL --- */}
 
       <div className="flex flex-col xl:flex-row gap-6">
         
@@ -157,7 +313,6 @@ const GRNForm: React.FC<GRNFormProps> = ({ onSubmit, onCancel }) => {
           <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
             <h2 className="text-sm font-bold uppercase tracking-wider text-slate-500 mb-4">General Information</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-     
               <ReusableSelect
                 label="Supplier"
                 required={true as any}
@@ -227,6 +382,13 @@ const GRNForm: React.FC<GRNFormProps> = ({ onSubmit, onCancel }) => {
                           placeholder="Select Product..."
                           className="!h-[42px] !py-2"
                         />
+                        {/* Variant Details Display */}
+                        {product.variant && (
+                          <div className="mt-1 text-[10px] font-bold text-slate-500 flex gap-2">
+                            <span className="bg-slate-200 px-1.5 py-0.5 rounded text-slate-700">{product.variant}</span>
+                            <span className="text-slate-400 mt-0.5">SKU: {product.sku}</span>
+                          </div>
+                        )}
                       </div>
                       <div className="col-span-2">
                         <Input 
@@ -269,8 +431,6 @@ const GRNForm: React.FC<GRNFormProps> = ({ onSubmit, onCancel }) => {
             </div>
           </div>
 
-      
-
         </div>
 
         {/* ================= RIGHT COLUMN (SIDEBAR) ================= */}
@@ -308,6 +468,18 @@ const GRNForm: React.FC<GRNFormProps> = ({ onSubmit, onCancel }) => {
             </div>
           </div>
           
+        </div>
+      </div>
+      
+      <div className="flex justify-end items-center mb-6 p-5">
+        <div className="flex gap-3">
+          <GradientButton icon={<X size={16} />} variant="outline" onClick={onCancel}>
+            Cancel
+          </GradientButton>
+          
+          <GradientButton icon={<Save size={16} />} onClick={handleSubmit}>
+            Save Record
+          </GradientButton>
         </div>
       </div>
     </div>

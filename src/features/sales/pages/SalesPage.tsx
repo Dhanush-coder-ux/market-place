@@ -1,26 +1,32 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import {
-  Search, Eye, 
-  ShoppingCart, Wifi, WifiOff, ChevronDown, X, User, Calendar,
+  Search, Eye,  Wifi, WifiOff, ChevronDown, X, User, Calendar,
   CreditCard, Package, RotateCcw, Receipt, AlertCircle, CheckCircle2,
-  ArrowLeft, ChevronRight, Minus, Plus, Info,
+  ChevronRight, Minus, Plus, Info, ArrowRight, RefreshCw, Banknote,
+  Gift, ArrowLeft, Check, Loader2,
+  DollarSign,
+  BarChart2,
+  Smartphone,
+  Landmark,
 } from "lucide-react";
-import { StatsCard} from "@/components/common/StatsCard";
+import { StatsCard } from "@/components/common/StatsCard";
 
-/* ═══════════════════════════════════════════════
+/* ═══════════════════════════════════════════════════════════════
    TYPES
-═══════════════════════════════════════════════ */
-type OriginType    = "Sales" | "Sales Return";
-type SalesType     = "Online" | "Offline";
-type PaymentMethod = "Cash" | "Card" | "UPI";
-type SaleStatus    = "Completed" | "Pending" | "Cancelled";
-type ReturnType    = "Full" | "Partial";
-type ReturnReason  = "Damaged" | "Wrong Item" | "Customer Request" | "Other" | "";
+═══════════════════════════════════════════════════════════════ */
+type OriginType      = "Sales" | "Sales Return";
+type SalesType       = "Online" | "Offline";
+type PaymentMethod   = "Cash" | "Card" | "UPI";
+type SaleStatus      = "Completed" | "Pending" | "Cancelled";
+type ReturnMode      = "refund" | "exchange";
+type ReturnType      = "Full" | "Partial";
+type ReturnReason    = "Damaged" | "Wrong Item" | "Customer Request" | "Size Issue" | "Other" | "";
+type RefundMethod    = "original" | "store_credit";
 
 interface SaleRecord {
   id: string;
   invoiceNumber: string;
-  customerName: string; 
+  customerName: string;
   origin: OriginType;
   salesType: SalesType;
   paymentMethod: PaymentMethod;
@@ -34,12 +40,24 @@ interface SaleItem {
   id: string;
   name: string;
   sku: string;
+  category: string;
   quantity: number;
   unitPrice: number;
+  imageColor: string;
 }
 
-interface SelectedItem extends SaleItem {
+interface SelectedReturnItem extends SaleItem {
   returnQty: number;
+  exchangeItemId?: string;
+}
+
+interface ExchangeProduct {
+  id: string;
+  name: string;
+  sku: string;
+  price: number;
+  imageColor: string;
+  inStock: boolean;
 }
 
 interface ReturnErrors {
@@ -47,55 +65,35 @@ interface ReturnErrors {
   items?: string;
 }
 
-interface ReturnPayload {
-  sale_id: string;
-  return_items: { product_id: string; name: string; quantity: number; unit_price: number }[];
+// 6-step flow
+type ReturnStep = 1 | 2 | 3 | 4 | 5 | 6;
+
+interface ReturnState {
+  step: ReturnStep;
+  mode: ReturnMode;
+  returnType: ReturnType;
+  returnItems: Record<string, number>;       // itemId → returnQty
+  exchangeMap: Record<string, string>;       // itemId → exchangeProductId
   reason: ReturnReason;
   notes: string;
-  refund_amount: number;
-  return_type: ReturnType;
-}
-
-interface UseReturnOrderReturn {
-  isOpen: boolean;
-  open: () => void;
-  close: () => void;
-  back: () => void;
-  step: number;
-  returnType: ReturnType;
-  setReturnType: (t: ReturnType) => void;
-  returnItems: Record<string, number>;
-  toggleItem: (itemId: string) => void;
-  updateQty: (itemId: string, delta: number) => void;
-  returnReason: ReturnReason;
-  setReturnReason: (r: ReturnReason) => void;
-  notes: string;
-  setNotes: (n: string) => void;
+  refundMethod: RefundMethod;
   errors: ReturnErrors;
-  saleItems: SaleItem[];
-  selectedItems: SelectedItem[];
-  refundAmount: number;
-  review: () => void;
-  confirm: () => void;
+  isSubmitting: boolean;
 }
 
-interface BadgeConfig {
-  cls: string;
-  dot: string;
-}
-
-/* ═══════════════════════════════════════════════
-   CONSTANTS
-═══════════════════════════════════════════════ */
-const RETURN_REASONS: Exclude<ReturnReason, "">[] = [
-  "Damaged", "Wrong Item", "Customer Request", "Other",
-];
-
+/* ═══════════════════════════════════════════════════════════════
+   CONSTANTS & MOCK DATA
+═══════════════════════════════════════════════════════════════ */
 const TODAY = "2024-04-22";
 
-/* ═══════════════════════════════════════════════
-   MOCK DATA
-═══════════════════════════════════════════════ */
+const RETURN_REASONS: Exclude<ReturnReason, "">[] = [
+  "Damaged", "Wrong Item", "Customer Request", "Size Issue", "Other",
+];
+
+const ITEM_COLORS = ["#dbeafe", "#dcfce7", "#fef3c7", "#fce7f3", "#ede9fe", "#ffedd5", "#f0fdf4", "#ecfeff"];
+const ITEM_NAMES  = ["Classic White Tee", "Denim Jacket", "Canvas Sneakers", "Running Shorts", "Wool Sweater", "Cargo Pants", "Leather Belt", "Cotton Socks"];
+const ITEM_CATS   = ["Tops", "Outerwear", "Footwear", "Bottoms", "Knitwear", "Bottoms", "Accessories", "Accessories"];
+
 const MOCK_SALES: SaleRecord[] = [
   { id: "1",  invoiceNumber: "INV-2024-0041", customerName: "Arjun Mehta",      origin: "Sales",        salesType: "Online",  paymentMethod: "UPI",  totalAmount: 4850,  itemsCount: 3, date: "2024-04-22", status: "Completed" },
   { id: "2",  invoiceNumber: "INV-2024-0042", customerName: "Walk-in Customer", origin: "Sales",        salesType: "Offline", paymentMethod: "Cash", totalAmount: 1200,  itemsCount: 1, date: "2024-04-22", status: "Completed" },
@@ -111,256 +109,180 @@ const MOCK_SALES: SaleRecord[] = [
   { id: "12", invoiceNumber: "INV-2024-0052", customerName: "Divya Krishnan",   origin: "Sales",        salesType: "Online",  paymentMethod: "UPI",  totalAmount: 11200, itemsCount: 6, date: "2024-04-17", status: "Completed" },
 ];
 
-/* ═══════════════════════════════════════════════
+const EXCHANGE_PRODUCTS: ExchangeProduct[] = [
+  { id: "ep-1", name: "Striped Linen Tee",    sku: "SKU-2201", price: 850,  imageColor: "#dbeafe", inStock: true  },
+  { id: "ep-2", name: "Slim Chino Pants",     sku: "SKU-2202", price: 1400, imageColor: "#dcfce7", inStock: true  },
+  { id: "ep-3", name: "Leather Sneakers",     sku: "SKU-2203", price: 2200, imageColor: "#fce7f3", inStock: false },
+  { id: "ep-4", name: "Oversized Hoodie",     sku: "SKU-2204", price: 1800, imageColor: "#ede9fe", inStock: true  },
+  { id: "ep-5", name: "Merino Crewneck",      sku: "SKU-2205", price: 2600, imageColor: "#fef3c7", inStock: true  },
+  { id: "ep-6", name: "Cargo Shorts",         sku: "SKU-2206", price: 1100, imageColor: "#ffedd5", inStock: true  },
+];
+
+/* ═══════════════════════════════════════════════════════════════
+   UTILS
+═══════════════════════════════════════════════════════════════ */
+const generateItems = (sale: SaleRecord): SaleItem[] =>
+  Array.from({ length: sale.itemsCount }, (_, i) => ({
+    id: `item-${sale.id}-${i}`,
+    name: ITEM_NAMES[i % ITEM_NAMES.length],
+    sku: `SKU-${String(1000 + i * 13 + parseInt(sale.id, 10) * 7).slice(-4)}`,
+    category: ITEM_CATS[i % ITEM_CATS.length],
+    quantity: 1 + (i % 2),
+    unitPrice: Math.round(sale.totalAmount / sale.itemsCount / (1 + (i % 2))),
+    imageColor: ITEM_COLORS[i % ITEM_COLORS.length],
+  }));
+
+const fmt = (n: number) => `₹${n.toLocaleString("en-IN")}`;
+
+/* ═══════════════════════════════════════════════════════════════
    BADGE CONFIGS
-═══════════════════════════════════════════════ */
+═══════════════════════════════════════════════════════════════ */
+type BadgeConfig = { cls: string; dot: string };
+
 const ORIGIN_CFG: Record<OriginType, BadgeConfig> = {
   "Sales":        { cls: "bg-blue-50 text-blue-700 border-blue-100",       dot: "bg-blue-400"   },
   "Sales Return": { cls: "bg-orange-50 text-orange-700 border-orange-100", dot: "bg-orange-400" },
 };
-
 const SALES_TYPE_CFG: Record<SalesType, BadgeConfig> = {
   Online:  { cls: "bg-blue-50 text-blue-700 border-blue-100",     dot: "bg-blue-400"  },
   Offline: { cls: "bg-slate-100 text-slate-600 border-slate-200", dot: "bg-slate-400" },
 };
-
 const PAYMENT_CFG: Record<PaymentMethod, BadgeConfig> = {
   Cash: { cls: "bg-emerald-50 text-emerald-700 border-emerald-100", dot: "bg-emerald-400" },
   Card: { cls: "bg-purple-50 text-purple-700 border-purple-100",    dot: "bg-purple-400"  },
   UPI:  { cls: "bg-indigo-50 text-indigo-700 border-indigo-100",    dot: "bg-indigo-400"  },
 };
-
 const STATUS_CFG: Record<SaleStatus, BadgeConfig> = {
   Completed: { cls: "bg-emerald-50 text-emerald-700 border-emerald-100", dot: "bg-emerald-500" },
   Pending:   { cls: "bg-amber-50 text-amber-700 border-amber-100",       dot: "bg-amber-400"   },
   Cancelled: { cls: "bg-red-50 text-red-600 border-red-100",             dot: "bg-red-400"     },
 };
 
-/* ═══════════════════════════════════════════════
-   UTILS
-═══════════════════════════════════════════════ */
-const ITEM_NAMES = [
-  "Classic White Tee", "Denim Jacket", "Canvas Sneakers", "Running Shorts",
-  "Wool Sweater", "Cargo Pants", "Leather Belt", "Cotton Socks",
-];
-
-const generateItems = (sale: SaleRecord): SaleItem[] =>
-  Array.from({ length: sale.itemsCount }, (_, i) => ({
-    id: `item-${sale.id}-${i}`,
-    name: ITEM_NAMES[i % ITEM_NAMES.length],
-    sku: `SKU-${String(1000 + i * 13 + parseInt(sale.id, 10) * 7).slice(-4)}`,
-    quantity: 1 + (i % 2),
-    unitPrice: Math.round(sale.totalAmount / sale.itemsCount / (1 + (i % 2))),
-  }));
-
-const totalUnits = (items: SelectedItem[]): number =>
-  items.reduce((s, i) => s + i.returnQty, 0);
-
-/* ═══════════════════════════════════════════════
-   SCOPED STYLES
-═══════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════════════
+   GLOBAL STYLES
+═══════════════════════════════════════════════════════════════ */
 const STYLES = `
-  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=DM+Mono:wght@400;500&display=swap');
 
-  .sales-root { font-family: 'DM Sans', sans-serif; }
-  .sales-mono { font-family: 'DM Mono', monospace; }
+  *, *::before, *::after { box-sizing: border-box; }
 
-  .sales-row { transition: background-color 0.1s ease; }
-  .sales-row:hover { background-color: #f8fafc; }
-  .sales-row:hover .sales-row-actions { opacity: 1; }
-  .sales-row-actions { opacity: 0; transition: opacity 0.15s ease; }
+  .sr-root { font-family: 'DM Sans', sans-serif; }
+  .sr-mono { font-family: 'DM Mono', monospace; }
 
-  .sales-filter-btn { transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease; }
+  /* Table row hover */
+  .sr-row { transition: background 0.1s; }
+  .sr-row:hover { background: #f8fafc; }
+  .sr-row:hover .sr-row-actions { opacity: 1; }
+  .sr-row-actions { opacity: 0; transition: opacity 0.15s; }
 
-  .sales-dropdown {
-    animation: salesDrop 0.12s ease forwards;
-    transform-origin: top left;
-  }
-  @keyframes salesDrop {
+  /* Dropdown */
+  .sr-drop-btn { transition: all 0.12s; }
+  .sr-dropdown { animation: srDrop 0.12s ease forwards; transform-origin: top left; }
+  @keyframes srDrop {
     from { opacity: 0; transform: scale(0.96) translateY(-4px); }
     to   { opacity: 1; transform: scale(1) translateY(0); }
   }
 
-  .return-modal-enter {
-    animation: returnSlideUp 0.22s cubic-bezier(0.34, 1.2, 0.64, 1) forwards;
-  }
-  @keyframes returnSlideUp {
-    from { opacity: 0; transform: translateY(12px) scale(0.98); }
-    to   { opacity: 1; transform: translateY(0) scale(1); }
+  /* Modal backdrop */
+  .sr-backdrop-enter { animation: srFadeIn 0.18s ease forwards; }
+  @keyframes srFadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+  /* Modal panel */
+  .sr-modal-enter { animation: srModalIn 0.22s cubic-bezier(0.34, 1.15, 0.64, 1) forwards; }
+  @keyframes srModalIn {
+    from { opacity: 0; transform: scale(0.96) translateY(8px); }
+    to   { opacity: 1; transform: scale(1) translateY(0); }
   }
 
-  .return-step-fade {
-    animation: stepFade 0.18s ease forwards;
-  }
-  @keyframes stepFade {
-    from { opacity: 0; transform: translateX(6px); }
+  /* Step content */
+  .sr-step-enter { animation: srStepIn 0.2s ease forwards; }
+  @keyframes srStepIn {
+    from { opacity: 0; transform: translateX(10px); }
     to   { opacity: 1; transform: translateX(0); }
   }
 
-  .return-done-pop {
-    animation: donePop 0.3s cubic-bezier(0.34, 1.4, 0.64, 1) forwards;
-  }
-  @keyframes donePop {
-    from { opacity: 0; transform: scale(0.8); }
+  /* Confirm done */
+  .sr-done-pop { animation: srDonePop 0.35s cubic-bezier(0.34, 1.5, 0.64, 1) forwards; }
+  @keyframes srDonePop {
+    from { opacity: 0; transform: scale(0.7); }
     to   { opacity: 1; transform: scale(1); }
   }
 
-  .return-item-row { transition: background-color 0.12s ease, border-color 0.12s ease; }
-  .return-item-row.selected { background-color: #eff6ff; border-color: #bfdbfe; }
-  .return-item-row:not(.selected):hover { background-color: #f8fafc; }
-
-  .return-checkbox {
-    appearance: none;
-    width: 16px; height: 16px;
-    border: 1.5px solid #d1d5db;
-    border-radius: 4px;
-    background: white;
-    cursor: pointer;
-    transition: all 0.12s ease;
-    position: relative;
-    flex-shrink: 0;
+  /* Checkbox */
+  .sr-cb {
+    appearance: none; width: 16px; height: 16px;
+    border: 1.5px solid #d1d5db; border-radius: 4px;
+    background: white; cursor: pointer;
+    transition: all 0.12s; position: relative; flex-shrink: 0;
   }
-  .return-checkbox:checked { background: #2563eb; border-color: #2563eb; }
-  .return-checkbox:checked::after {
-    content: '';
-    position: absolute;
-    left: 4px; top: 1.5px;
-    width: 5px; height: 8px;
-    border: 1.5px solid white;
-    border-top: none; border-left: none;
+  .sr-cb:checked { background: #2563eb; border-color: #2563eb; }
+  .sr-cb:checked::after {
+    content: ''; position: absolute;
+    left: 4px; top: 1.5px; width: 5px; height: 8px;
+    border: 1.5px solid white; border-top: none; border-left: none;
     transform: rotate(42deg);
   }
 
-  .step-dot { transition: all 0.2s ease; }
+  /* Item rows */
+  .sr-item-row { transition: background 0.12s, border-color 0.12s; cursor: pointer; }
+  .sr-item-row.sel { background: #eff6ff; border-color: #bfdbfe; }
+  .sr-item-row:not(.sel):hover { background: #f8fafc; }
 
-  .type-pill { transition: all 0.15s ease; }
-  .type-pill.active { background: #eff6ff; border-color: #93c5fd; color: #1d4ed8; }
+  /* Exchange product cards */
+  .sr-exch-card { transition: all 0.15s; cursor: pointer; }
+  .sr-exch-card:hover:not(.disabled) { border-color: #93c5fd; background: #f0f7ff; }
+  .sr-exch-card.selected { border-color: #3b82f6; background: #eff6ff; }
+  .sr-exch-card.disabled { opacity: 0.45; cursor: not-allowed; }
 
-  select.return-select {
+  /* Qty btn */
+  .sr-qty-btn { transition: background 0.1s; }
+  .sr-qty-btn:hover:not(:disabled) { background: #e0e7ff; }
+  .sr-qty-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+  /* Mode pills */
+  .sr-mode-pill { transition: all 0.15s; }
+  .sr-mode-pill.active { background: white; border-color: #93c5fd; color: #1d4ed8; box-shadow: 0 1px 3px rgba(59,130,246,0.15); }
+
+  /* Refund method pill */
+  .sr-rfm-pill { transition: all 0.15s; cursor: pointer; }
+  .sr-rfm-pill.active { border-color: #3b82f6; background: #eff6ff; }
+  .sr-rfm-pill:not(.active):hover { border-color: #93c5fd; }
+
+  /* Progress bar */
+  .sr-progress { transition: width 0.3s ease; }
+
+  /* Select */
+  select.sr-select {
     appearance: none;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
     background-position: right 12px center;
   }
 
-  .qty-btn { transition: background-color 0.1s ease; }
-  .qty-btn:hover:not(:disabled) { background-color: #e0e7ff; }
-  .qty-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+  /* Sidebar */
+  .sr-sidebar { transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1); }
+
+  /* Scrollbar */
+  .sr-scroll::-webkit-scrollbar { width: 4px; }
+  .sr-scroll::-webkit-scrollbar-track { background: transparent; }
+  .sr-scroll::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 4px; }
+
+  /* Stats card */
+  .sr-stat { transition: box-shadow 0.15s, transform 0.15s; }
+  .sr-stat:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.06); transform: translateY(-1px); }
+
+  /* Btn */
+  .sr-btn-primary { transition: all 0.15s; }
+  .sr-btn-primary:hover:not(:disabled) { filter: brightness(1.05); box-shadow: 0 4px 12px rgba(37,99,235,0.25); }
+  .sr-btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
+
+  .sr-btn-ghost { transition: all 0.15s; }
+  .sr-btn-ghost:hover { background: #f1f5f9; }
 `;
 
-/* ═══════════════════════════════════════════════
-   USE RETURN HOOK
-═══════════════════════════════════════════════ */
-const useReturnOrder = (sale: SaleRecord | null): UseReturnOrderReturn => {
-  const [isOpen,       setIsOpen]       = useState(false);
-  const [step,         setStep]         = useState(1);
-  const [returnType,   setReturnType]   = useState<ReturnType>("Partial");
-  const [returnItems,  setReturnItems]  = useState<Record<string, number>>({});
-  const [returnReason, setReturnReason] = useState<ReturnReason>("");
-  const [notes,        setNotes]        = useState("");
-  const [errors,       setErrors]       = useState<ReturnErrors>({});
-
-  const saleItems = useMemo<SaleItem[]>(
-    () => (sale ? generateItems(sale) : []),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [sale?.id],
-  );
-
-  const open = useCallback(() => {
-    setIsOpen(true);
-    setStep(1);
-    setReturnType("Partial");
-    setReturnItems({});
-    setReturnReason("");
-    setNotes("");
-    setErrors({});
-  }, []);
-
-  const close = useCallback(() => setIsOpen(false), []);
-  const back  = useCallback(() => setStep(s => s - 1), []);
-
-  const toggleItem = useCallback((itemId: string) => {
-    setReturnItems(prev => {
-      const next = { ...prev };
-      if (next[itemId] !== undefined) {
-        delete next[itemId];
-      } else {
-        const item = saleItems.find(i => i.id === itemId);
-        next[itemId] = item?.quantity ?? 1;
-      }
-      return next;
-    });
-    setErrors(e => ({ ...e, items: undefined }));
-  }, [saleItems]);
-
-  const updateQty = useCallback((itemId: string, delta: number) => {
-    const item = saleItems.find(i => i.id === itemId);
-    if (!item) return;
-    setReturnItems(prev => {
-      const current = prev[itemId] ?? 1;
-      const next = Math.min(Math.max(1, current + delta), item.quantity);
-      return { ...prev, [itemId]: next };
-    });
-  }, [saleItems]);
-
-  const selectedItems = useMemo<SelectedItem[]>(() => {
-    if (returnType === "Full") return saleItems.map(i => ({ ...i, returnQty: i.quantity }));
-    return saleItems
-      .filter(i => returnItems[i.id] !== undefined)
-      .map(i => ({ ...i, returnQty: returnItems[i.id] }));
-  }, [returnType, saleItems, returnItems]);
-
-  const refundAmount = useMemo(
-    () => selectedItems.reduce((sum, i) => sum + i.unitPrice * i.returnQty, 0),
-    [selectedItems],
-  );
-
-  const validate = useCallback((): boolean => {
-    const errs: ReturnErrors = {};
-    if (!returnReason) errs.reason = "Please select a return reason.";
-    if (returnType === "Partial" && selectedItems.length === 0)
-      errs.items = "Select at least one item to return.";
-    setErrors(errs);
-    return Object.keys(errs).length === 0;
-  }, [returnReason, returnType, selectedItems]);
-
-  const review = useCallback(() => {
-    if (validate()) setStep(2);
-  }, [validate]);
-
-  const confirm = useCallback(() => {
-    const payload: ReturnPayload = {
-      sale_id: sale?.id ?? "",
-      return_items: selectedItems.map(i => ({
-        product_id: i.id,
-        name: i.name,
-        quantity: i.returnQty,
-        unit_price: i.unitPrice,
-      })),
-      reason: returnReason,
-      notes,
-      refund_amount: refundAmount,
-      return_type: returnType,
-    };
-    console.log("Return payload:", payload);
-    setStep(3);
-  }, [sale, selectedItems, returnReason, notes, refundAmount, returnType]);
-
-  return {
-    isOpen, open, close, back,
-    step, returnType, setReturnType,
-    returnItems, toggleItem, updateQty,
-    returnReason, setReturnReason,
-    notes, setNotes,
-    errors,
-    saleItems, selectedItems,
-    refundAmount, review, confirm,
-  };
-};
-
-/* ═══════════════════════════════════════════════
-   SMALL SHARED COMPONENTS
-═══════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════════════
+   SHARED SMALL COMPONENTS
+═══════════════════════════════════════════════════════════════ */
 const Badge: React.FC<{ cls: string; dot: string; label: string }> = ({ cls, dot, label }) => (
   <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${cls}`}>
     <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${dot}`} />
@@ -368,56 +290,915 @@ const Badge: React.FC<{ cls: string; dot: string; label: string }> = ({ cls, dot
   </span>
 );
 
-const StepDots: React.FC<{ step: number }> = ({ step }) => (
-  <div className="flex items-center gap-2 justify-center">
-    {[1, 2].map(n => (
-      <div key={n} className={`step-dot rounded-full ${
-        n === step      ? "w-5 h-1.5 bg-blue-500"
-        : n < step      ? "w-2 h-1.5 bg-blue-300"
-        :                 "w-2 h-1.5 bg-zinc-200"
-      }`} />
-    ))}
+interface QuantityStepperProps {
+  value: number;
+  min?: number;
+  max: number;
+  onChange: (v: number) => void;
+  onClick?: (e: React.MouseEvent) => void;
+}
+const QuantityStepper: React.FC<QuantityStepperProps> = ({ value, min = 1, max, onChange, onClick }) => (
+  <div className="inline-flex items-center gap-0 border border-slate-200 rounded-lg overflow-hidden bg-white" onClick={onClick}>
+    <button className="sr-qty-btn w-7 h-7 flex items-center justify-center text-slate-400 hover:text-blue-500"
+      disabled={value <= min} onClick={e => { e.stopPropagation(); onChange(Math.max(min, value - 1)); }}>
+      <Minus size={10} />
+    </button>
+    <span className="w-8 text-center text-xs font-semibold text-slate-800 sr-mono tabular-nums">{value}</span>
+    <button className="sr-qty-btn w-7 h-7 flex items-center justify-center text-slate-400 hover:text-blue-500"
+      disabled={value >= max} onClick={e => { e.stopPropagation(); onChange(Math.min(max, value + 1)); }}>
+      <Plus size={10} />
+    </button>
   </div>
 );
 
-/* ═══════════════════════════════════════════════
+/* ═══════════════════════════════════════════════════════════════
+   STEP HEADER (progress indicator)
+═══════════════════════════════════════════════════════════════ */
+const STEP_LABELS: Record<ReturnStep, string> = {
+  1: "Mode",
+  2: "Type",
+  3: "Items",
+  4: "Reason",
+  5: "Review",
+  6: "Done",
+};
+
+interface StepHeaderProps {
+  step: ReturnStep;
+  mode: ReturnMode;
+  invoice: string;
+}
+const StepHeader: React.FC<StepHeaderProps> = ({ step, mode, invoice }) => {
+  const totalSteps = 6;
+  const progress   = ((step - 1) / (totalSteps - 1)) * 100;
+
+  return (
+    <div className="px-6 pt-5 pb-4 border-b border-slate-100">
+      <div className="flex items-center justify-between mb-3">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-0.5">
+            {step < 6 ? `Step ${step} of 5` : "Complete"}
+          </p>
+          <p className="text-sm font-semibold text-slate-800">
+            {step === 1 ? "Choose Return Mode"
+             : step === 2 ? "Return Type"
+             : step === 3 ? (mode === "refund" ? "Select Items for Refund" : "Select Items to Exchange")
+             : step === 4 ? "Reason & Notes"
+             : step === 5 ? "Review Summary"
+             : "Return Processed"}
+          </p>
+        </div>
+        <span className="sr-mono text-[10px] text-slate-400 bg-slate-50 border border-slate-100 px-2 py-1 rounded-md">
+          {invoice}
+        </span>
+      </div>
+      {step < 6 && (
+        <div className="relative">
+          <div className="h-1 bg-slate-100 rounded-full overflow-hidden">
+            <div className="sr-progress h-full bg-blue-500 rounded-full" style={{ width: `${progress}%` }} />
+          </div>
+          <div className="flex justify-between mt-2">
+            {([1, 2, 3, 4, 5] as ReturnStep[]).map(s => (
+              <div key={s} className="flex flex-col items-center gap-1">
+                <div className={`w-1.5 h-1.5 rounded-full transition-colors duration-300 ${
+                  s < step ? "bg-blue-500" : s === step ? "bg-blue-500" : "bg-slate-200"
+                }`} />
+                <span className={`text-[9px] font-medium tracking-wide transition-colors duration-300 ${
+                  s <= step ? "text-blue-500" : "text-slate-300"
+                }`}>{STEP_LABELS[s]}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+/* ═══════════════════════════════════════════════════════════════
+   REFUND SUMMARY COMPONENT
+═══════════════════════════════════════════════════════════════ */
+interface RefundSummaryProps {
+  mode: ReturnMode;
+  selectedItems: SelectedReturnItem[];
+  refundMethod: RefundMethod;
+  originalPayment: PaymentMethod;
+  exchangeProducts: ExchangeProduct[];
+}
+const RefundSummary: React.FC<RefundSummaryProps> = ({
+  mode, selectedItems, refundMethod, originalPayment, exchangeProducts,
+}) => {
+  const returnValue  = selectedItems.reduce((s, i) => s + i.unitPrice * i.returnQty, 0);
+  const exchangeValue = mode === "exchange"
+    ? selectedItems.reduce((s, i) => {
+        if (!i.exchangeItemId) return s;
+        const ep = exchangeProducts.find(e => e.id === i.exchangeItemId);
+        return s + (ep?.price ?? 0);
+      }, 0)
+    : 0;
+
+  const diff     = exchangeValue - returnValue;
+  const payable  = diff > 0 ? diff : 0;
+  const refund   = diff < 0 ? Math.abs(diff) : 0;
+  console.log(payable);
+  console.log(refund);
+  if (mode === "refund") {
+    return (
+      <div className="bg-gradient-to-br from-blue-50 to-slate-50 border border-blue-100 rounded-xl p-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-blue-400 mb-0.5">
+              {refundMethod === "store_credit" ? "Store Credit" : "Refund Amount"}
+            </p>
+            <p className="text-2xl font-light sr-mono text-blue-700">{fmt(returnValue)}</p>
+          </div>
+          <div className="flex flex-col items-end gap-1">
+            <span className="text-[10px] text-slate-400">
+              {selectedItems.reduce((s, i) => s + i.returnQty, 0)} item(s)
+            </span>
+            <span className="text-[10px] font-medium text-slate-500 flex items-center gap-1">
+              {refundMethod === "store_credit" ? <Gift size={10} /> : <Banknote size={10} />}
+              {refundMethod === "store_credit" ? "Store Credit" : `Via ${originalPayment}`}
+            </span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className={`border rounded-xl p-4 ${diff > 0 ? "bg-amber-50 border-amber-100" : diff < 0 ? "bg-emerald-50 border-emerald-100" : "bg-slate-50 border-slate-100"}`}>
+      <div className="grid grid-cols-3 gap-3 text-center">
+        <div>
+          <p className="text-[10px] text-slate-400 mb-0.5">Return Value</p>
+          <p className="text-sm font-semibold sr-mono text-slate-700">{fmt(returnValue)}</p>
+        </div>
+        <div>
+          <p className="text-[10px] text-slate-400 mb-0.5">Exchange Value</p>
+          <p className="text-sm font-semibold sr-mono text-slate-700">{fmt(exchangeValue)}</p>
+        </div>
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-wide mb-0.5 text-[10px]" style={{color: diff > 0 ? '#92400e' : diff < 0 ? '#065f46' : '#64748b'}}>
+            {diff > 0 ? "Customer Pays" : diff < 0 ? "Refund" : "Settled"}
+          </p>
+          <p className={`text-sm font-semibold sr-mono ${diff > 0 ? "text-amber-700" : diff < 0 ? "text-emerald-700" : "text-slate-500"}`}>
+            {diff === 0 ? "–" : fmt(Math.abs(diff))}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/* ═══════════════════════════════════════════════════════════════
+   ITEM SELECTOR
+═══════════════════════════════════════════════════════════════ */
+interface ItemSelectorProps {
+  items: SaleItem[];
+  returnItems: Record<string, number>;
+  onToggle: (id: string) => void;
+  onQtyChange: (id: string, v: number) => void;
+  error?: string;
+}
+const ItemSelector: React.FC<ItemSelectorProps> = ({ items, returnItems, onToggle, onQtyChange, error }) => (
+  <div>
+    <div className="space-y-2">
+      {items.map(item => {
+        const checked = returnItems[item.id] !== undefined;
+        const qty     = returnItems[item.id] ?? 1;
+        return (
+          <div key={item.id}
+            className={`sr-item-row border rounded-xl p-3.5 ${checked ? "sel" : ""}`}
+            onClick={() => onToggle(item.id)}
+          >
+            <div className="flex items-center gap-3">
+              <input type="checkbox" className="sr-cb" checked={checked} readOnly onClick={e => e.stopPropagation()} />
+              <div
+                className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
+                style={{ background: item.imageColor }}
+              >
+                <Package size={14} className="text-slate-500 opacity-60" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <p className="text-xs font-medium text-slate-800">{item.name}</p>
+                    <p className="text-[10px] text-slate-400 sr-mono mt-0.5">{item.sku} · {item.category}</p>
+                  </div>
+                  <p className="text-xs font-semibold text-slate-700 sr-mono shrink-0">{fmt(item.unitPrice)}</p>
+                </div>
+                {checked && (
+                  <div className="mt-2 flex items-center gap-2.5" onClick={e => e.stopPropagation()}>
+                    <span className="text-[10px] text-slate-400">Return qty</span>
+                    <QuantityStepper value={qty} max={item.quantity} onChange={v => onQtyChange(item.id, v)} />
+                    <span className="text-[10px] text-slate-400">of {item.quantity}</span>
+                    <span className="ml-auto text-[10px] font-semibold text-blue-600 sr-mono">
+                      {fmt(item.unitPrice * qty)}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+    {error && (
+      <p className="mt-2 flex items-center gap-1.5 text-[11px] text-red-500">
+        <AlertCircle size={11} /> {error}
+      </p>
+    )}
+  </div>
+);
+
+/* ═══════════════════════════════════════════════════════════════
+   USE RETURN ORDER HOOK
+═══════════════════════════════════════════════════════════════ */
+const initialState = (): ReturnState => ({
+  step: 1,
+  mode: "refund",
+  returnType: "Partial",
+  returnItems: {},
+  exchangeMap: {},
+  reason: "",
+  notes: "",
+  refundMethod: "original",
+  errors: {},
+  isSubmitting: false,
+});
+
+const useReturnModal = (sale: SaleRecord | null) => {
+  const [state, setState] = useState<ReturnState>(initialState());
+
+  const saleItems = useMemo<SaleItem[]>(
+    () => (sale ? generateItems(sale) : []),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [sale?.id],
+  );
+
+  const reset = useCallback(() => setState(initialState()), []);
+
+  const setStep    = (step: ReturnStep) => setState(s => ({ ...s, step }));
+  const setMode    = (mode: ReturnMode) => setState(s => ({ ...s, mode }));
+  const setReturnType = (returnType: ReturnType) => setState(s => ({ ...s, returnType, returnItems: {} }));
+  const setReason  = (reason: ReturnReason) => setState(s => ({ ...s, reason, errors: { ...s.errors, reason: undefined } }));
+  const setNotes   = (notes: string) => setState(s => ({ ...s, notes }));
+  const setRefundMethod = (refundMethod: RefundMethod) => setState(s => ({ ...s, refundMethod }));
+
+  const toggleItem = useCallback((itemId: string) => {
+    setState(s => {
+      const next = { ...s.returnItems };
+      const nextEx = { ...s.exchangeMap };
+      if (next[itemId] !== undefined) {
+        delete next[itemId];
+        delete nextEx[itemId];
+      } else {
+        const item = saleItems.find(i => i.id === itemId);
+        next[itemId] = item?.quantity ?? 1;
+      }
+      return { ...s, returnItems: next, exchangeMap: nextEx, errors: { ...s.errors, items: undefined } };
+    });
+  }, [saleItems]);
+
+  const updateQty = useCallback((itemId: string, v: number) => {
+    const item = saleItems.find(i => i.id === itemId);
+    if (!item) return;
+    setState(s => ({ ...s, returnItems: { ...s.returnItems, [itemId]: Math.min(Math.max(1, v), item.quantity) } }));
+  }, [saleItems]);
+
+  const setExchangeProduct = useCallback((itemId: string, productId: string) => {
+    setState(s => ({ ...s, exchangeMap: { ...s.exchangeMap, [itemId]: productId } }));
+  }, []);
+
+  const selectedItems = useMemo<SelectedReturnItem[]>(() => {
+    if (state.returnType === "Full") {
+      return saleItems.map(i => ({
+        ...i, returnQty: i.quantity, exchangeItemId: state.exchangeMap[i.id],
+      }));
+    }
+    return saleItems
+      .filter(i => state.returnItems[i.id] !== undefined)
+      .map(i => ({ ...i, returnQty: state.returnItems[i.id], exchangeItemId: state.exchangeMap[i.id] }));
+  }, [state.returnType, saleItems, state.returnItems, state.exchangeMap]);
+
+  const validate = useCallback((): boolean => {
+    const errs: ReturnErrors = {};
+    if (!state.reason) errs.reason = "Please select a reason.";
+    if (state.returnType === "Partial" && selectedItems.length === 0)
+      errs.items = "Select at least one item.";
+    setState(s => ({ ...s, errors: errs }));
+    return Object.keys(errs).length === 0;
+  }, [state.reason, state.returnType, selectedItems]);
+
+  const goNext = useCallback(() => {
+    if (state.step === 4 && !validate()) return;
+    setStep((state.step + 1) as ReturnStep);
+  }, [state.step, validate]);
+
+  const goBack = useCallback(() => {
+    if (state.step > 1) setStep((state.step - 1) as ReturnStep);
+  }, [state.step]);
+
+  const confirm = useCallback(async () => {
+    setState(s => ({ ...s, isSubmitting: true }));
+    await new Promise(r => setTimeout(r, 1400));
+    setState(s => ({ ...s, isSubmitting: false, step: 6 }));
+  }, []);
+
+  const canProceed = useMemo(() => {
+    if (state.step === 3) {
+      return state.returnType === "Full" || selectedItems.length > 0;
+    }
+    return true;
+  }, [state.step, state.returnType, selectedItems.length]);
+
+  return {
+    state, saleItems, selectedItems,
+    reset, setMode, setReturnType, setReason, setNotes, setRefundMethod,
+    toggleItem, updateQty, setExchangeProduct,
+    goNext, goBack, confirm, canProceed,
+  };
+};
+
+/* ═══════════════════════════════════════════════════════════════
+   RETURN MODAL
+═══════════════════════════════════════════════════════════════ */
+interface ReturnModalProps {
+  sale: SaleRecord;
+  onClose: () => void;
+}
+
+const ReturnModal: React.FC<ReturnModalProps> = ({ sale, onClose }) => {
+  const m = useReturnModal(sale);
+  const { state, saleItems, selectedItems } = m;
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Reset scroll on step change
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+  }, [state.step]);
+
+  const canReturn = sale.status === "Completed" && sale.origin !== "Sales Return";
+
+  // Close on Escape
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [onClose]);
+
+  return (
+    <div className="sr-backdrop-enter fixed inset-0 z-[200] flex items-center justify-center p-4"
+      style={{ background: "rgba(15,23,42,0.4)", backdropFilter: "blur(4px)" }}
+    >
+      <div className="sr-modal-enter relative bg-white rounded-2xl shadow-2xl w-full max-w-lg flex flex-col overflow-hidden"
+        style={{ maxHeight: "calc(100vh - 48px)" }}
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Close btn */}
+        <button onClick={onClose}
+          className="absolute top-4 right-4 z-10 w-7 h-7 flex items-center justify-center rounded-full bg-slate-100 text-slate-400 hover:bg-slate-200 hover:text-slate-600 transition-all">
+          <X size={14} />
+        </button>
+
+        {/* Step Header */}
+        <StepHeader step={state.step} mode={state.mode} invoice={sale.invoiceNumber} />
+
+        {/* Content */}
+        {!canReturn ? (
+          <div className="flex-1 flex flex-col items-center justify-center gap-4 p-8 text-center">
+            <div className="w-12 h-12 rounded-full bg-slate-50 border border-slate-100 flex items-center justify-center">
+              <AlertCircle size={20} className="text-orange-400" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-slate-800 mb-1">
+                {sale.origin === "Sales Return" ? "Already Returned" : "Not Eligible"}
+              </p>
+              <p className="text-xs text-slate-500 leading-relaxed">
+                {sale.origin === "Sales Return"
+                  ? "This order is already a Sales Return and cannot be returned again."
+                  : `Only Completed orders can be returned. This order is ${sale.status}.`}
+              </p>
+            </div>
+            <button onClick={onClose}
+              className="px-4 py-2 text-xs font-medium text-slate-600 bg-slate-50 border border-slate-200 rounded-lg hover:bg-slate-100 transition-colors">
+              Close
+            </button>
+          </div>
+        ) : (
+          <>
+            <div ref={scrollRef} className="sr-scroll flex-1 overflow-y-auto p-5">
+              <div key={state.step} className="sr-step-enter space-y-5">
+
+                {/* STEP 1: Mode */}
+                {state.step === 1 && (
+                  <div className="space-y-3">
+                    <p className="text-xs text-slate-500">
+                      How would you like to handle this return for{" "}
+                      <span className="font-medium text-slate-700">{sale.customerName}</span>?
+                    </p>
+                    <div className="grid grid-cols-2 gap-3">
+                      {([
+                        { id: "refund" as ReturnMode, icon: <Banknote size={18} />, label: "Refund", desc: "Return money to customer via original payment or store credit" },
+                        { id: "exchange" as ReturnMode, icon: <RefreshCw size={18} />, label: "Exchange", desc: "Swap returned items for other products in your catalog" },
+                      ]).map(opt => (
+                        <button key={opt.id}
+                          onClick={() => m.setMode(opt.id)}
+                          className={`sr-mode-pill text-left p-4 border-2 rounded-xl transition-all ${state.mode === opt.id ? "active" : "border-slate-100 text-slate-500 hover:border-slate-200"}`}
+                        >
+                          <div className={`mb-2 ${state.mode === opt.id ? "text-blue-500" : "text-slate-400"}`}>{opt.icon}</div>
+                          <p className="text-sm font-semibold text-slate-800 mb-1">{opt.label}</p>
+                          <p className="text-[11px] text-slate-400 leading-relaxed">{opt.desc}</p>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* STEP 2: Return Type */}
+                {state.step === 2 && (
+                  <div className="space-y-3">
+                    <p className="text-xs text-slate-500">
+                      Choose whether all items or specific items from this order are being returned.
+                    </p>
+                    <div className="grid grid-cols-2 gap-3">
+                      {([
+                        { id: "Full" as ReturnType,    label: "Full Return",    desc: `All ${sale.itemsCount} items`, icon: <RotateCcw size={16} /> },
+                        { id: "Partial" as ReturnType, label: "Partial Return", desc: "Select specific items",          icon: <Package size={16} /> },
+                      ]).map(opt => (
+                        <button key={opt.id}
+                          onClick={() => m.setReturnType(opt.id)}
+                          className={`sr-mode-pill text-left p-4 border-2 rounded-xl transition-all ${state.returnType === opt.id ? "active" : "border-slate-100 text-slate-500 hover:border-slate-200"}`}
+                        >
+                          <div className={`mb-2 ${state.returnType === opt.id ? "text-blue-500" : "text-slate-400"}`}>{opt.icon}</div>
+                          <p className="text-sm font-semibold text-slate-800 mb-0.5">{opt.label}</p>
+                          <p className="text-[11px] text-slate-400">{opt.desc}</p>
+                        </button>
+                      ))}
+                    </div>
+                    {state.returnType === "Full" && (
+                      <div className="flex items-center gap-2 px-3 py-2.5 bg-blue-50 border border-blue-100 rounded-lg">
+                        <Info size={12} className="text-blue-400 shrink-0" />
+                        <p className="text-[11px] text-blue-600">All {sale.itemsCount} items from this order will be returned.</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* STEP 3: Items */}
+                {state.step === 3 && (
+                  <div className="space-y-4">
+                    {state.returnType === "Partial" ? (
+                      <ItemSelector
+                        items={saleItems}
+                        returnItems={state.returnItems}
+                        onToggle={m.toggleItem}
+                        onQtyChange={m.updateQty}
+                        error={state.errors.items}
+                      />
+                    ) : (
+                      <div className="space-y-2">
+                        <p className="text-xs text-slate-500 mb-1">All items will be returned:</p>
+                        {saleItems.map(item => (
+                          <div key={item.id} className="flex items-center gap-3 border border-slate-100 rounded-xl p-3 bg-slate-50/50">
+                            <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: item.imageColor }}>
+                              <Package size={13} className="text-slate-400 opacity-60" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-medium text-slate-700">{item.name}</p>
+                              <p className="text-[10px] text-slate-400 sr-mono">{item.sku}</p>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-xs font-semibold sr-mono text-slate-700">{fmt(item.unitPrice * item.quantity)}</p>
+                              <p className="text-[10px] text-slate-400">qty {item.quantity}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Exchange product picker */}
+                    {state.mode === "exchange" && selectedItems.length > 0 && (
+                      <div className="pt-2">
+                        <p className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-3">
+                          Select Replacement Items
+                        </p>
+                        {selectedItems.map(selItem => (
+                          <div key={selItem.id} className="mb-5">
+                            <p className="text-[11px] font-medium text-slate-500 mb-2 flex items-center gap-1.5">
+                              <ArrowRight size={10} className="text-slate-400" />
+                              Replacing: <span className="text-slate-700">{selItem.name}</span>
+                            </p>
+                            <div className="grid grid-cols-2 gap-2">
+                              {EXCHANGE_PRODUCTS.map(ep => {
+                                const selected = state.exchangeMap[selItem.id] === ep.id;
+                                return (
+                                  <div key={ep.id}
+                                    onClick={() => ep.inStock && m.setExchangeProduct(selItem.id, ep.id)}
+                                    className={`sr-exch-card border rounded-xl p-3 ${selected ? "selected" : ""} ${!ep.inStock ? "disabled" : ""}`}
+                                  >
+                                    <div className="flex items-center gap-2 mb-1.5">
+                                      <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0" style={{ background: ep.imageColor }}>
+                                        <Package size={12} className="text-slate-400 opacity-60" />
+                                      </div>
+                                      {selected && (
+                                        <div className="ml-auto w-4 h-4 rounded-full bg-blue-500 flex items-center justify-center">
+                                          <Check size={9} className="text-white" />
+                                        </div>
+                                      )}
+                                    </div>
+                                    <p className="text-[11px] font-medium text-slate-800 leading-snug">{ep.name}</p>
+                                    <div className="flex items-center justify-between mt-1">
+                                      <p className="text-[10px] sr-mono font-semibold text-slate-600">{fmt(ep.price)}</p>
+                                      {!ep.inStock && <span className="text-[9px] text-red-400 font-medium">Out of stock</span>}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* STEP 4: Reason */}
+                {state.step === 4 && (
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-[11px] font-semibold uppercase tracking-widest text-slate-400 mb-2">
+                        Return Reason <span className="text-red-400">*</span>
+                      </label>
+                      <select
+                        value={state.reason}
+                        onChange={e => m.setReason(e.target.value as ReturnReason)}
+                        className={`sr-select w-full px-3.5 py-2.5 text-xs border rounded-xl bg-white text-slate-700 outline-none transition-all pr-9 ${
+                          state.errors.reason
+                            ? "border-red-200 bg-red-50/30"
+                            : "border-slate-200 focus:border-blue-300 focus:ring-2 focus:ring-blue-500/10"
+                        }`}
+                      >
+                        <option value="">Select a reason…</option>
+                        {RETURN_REASONS.map(r => <option key={r} value={r}>{r}</option>)}
+                      </select>
+                      {state.errors.reason && (
+                        <p className="mt-1.5 flex items-center gap-1 text-[11px] text-red-500">
+                          <AlertCircle size={11} /> {state.errors.reason}
+                        </p>
+                      )}
+                    </div>
+
+                    {state.mode === "refund" && (
+                      <div>
+                        <label className="block text-[11px] font-semibold uppercase tracking-widest text-slate-400 mb-2">
+                          Refund Via
+                        </label>
+                        <div className="grid grid-cols-2 gap-2">
+                          {[
+                      { id: "Cash", icon: <Banknote size={20} strokeWidth={1.5} /> },
+                      { id: "UPI", icon: <Smartphone size={20} strokeWidth={1.5} /> },
+                      { id: "Card", icon: <CreditCard size={20} strokeWidth={1.5} /> },
+                      { id: "Bank", icon: <Landmark size={20} strokeWidth={1.5} /> }
+                    ].map(opt => (
+                            <div key={opt.id}
+                              onClick={() => m.setRefundMethod(opt.id as RefundMethod)}
+                              className={`sr-rfm-pill border-2 rounded-xl p-3 ${state.refundMethod === opt.id ? "active" : "border-slate-100"}`}
+                            >
+                              <div className={`mb-1.5 ${state.refundMethod === opt.id ? "text-blue-500" : "text-slate-400"}`}>{opt.icon}</div>
+                              <p className="text-xs font-semibold text-slate-800">{opt.id}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    <div>
+                      <label className="block text-[11px] font-semibold uppercase tracking-widest text-slate-400 mb-2">
+                        Notes <span className="text-slate-300 normal-case font-normal">(optional)</span>
+                      </label>
+                      <textarea
+                        value={state.notes}
+                        onChange={e => m.setNotes(e.target.value)}
+                        rows={3}
+                        placeholder="Any additional context…"
+                        className="w-full px-3.5 py-2.5 text-xs border border-slate-200 rounded-xl bg-white text-slate-700 outline-none resize-none focus:border-blue-300 focus:ring-2 focus:ring-blue-500/10 transition-all placeholder-slate-300"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* STEP 5: Review */}
+                {state.step === 5 && (
+                  <div className="space-y-4">
+                    <RefundSummary
+                      mode={state.mode}
+                      selectedItems={selectedItems}
+                      refundMethod={state.refundMethod}
+                      originalPayment={sale.paymentMethod}
+                      exchangeProducts={EXCHANGE_PRODUCTS}
+                    />
+
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 mb-2">
+                        Items
+                      </p>
+                      <div className="border border-slate-100 rounded-xl divide-y divide-slate-100 overflow-hidden">
+                        {selectedItems.map(item => {
+                          const exchProd = item.exchangeItemId ? EXCHANGE_PRODUCTS.find(e => e.id === item.exchangeItemId) : null;
+                          return (
+                            <div key={item.id} className="flex items-center gap-3 px-4 py-3 bg-white">
+                              <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0" style={{ background: item.imageColor }}>
+                                <Package size={12} className="text-slate-400 opacity-60" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-xs font-medium text-slate-800">{item.name}</p>
+                                <p className="text-[10px] text-slate-400 sr-mono">
+                                  {item.sku} · qty {item.returnQty}
+                                  {exchProd && <span className="text-blue-500"> → {exchProd.name}</span>}
+                                </p>
+                              </div>
+                              <span className="text-xs font-semibold sr-mono text-slate-700">{fmt(item.unitPrice * item.returnQty)}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2.5">
+                      {[
+                        { label: "Mode",   value: state.mode === "refund" ? "Refund" : "Exchange" },
+                        { label: "Type",   value: `${state.returnType} Return` },
+                        { label: "Reason", value: state.reason },
+                        ...(state.mode === "refund" ? [{ label: "Refund Via", value: state.refundMethod === "store_credit" ? "Store Credit" : sale.paymentMethod }] : []),
+                      ].map(row => (
+                        <div key={row.label} className="bg-slate-50 border border-slate-100 rounded-xl p-3">
+                          <p className="text-[10px] text-slate-400 uppercase tracking-wide mb-0.5">{row.label}</p>
+                          <p className="text-xs font-medium text-slate-700">{row.value}</p>
+                        </div>
+                      ))}
+                    </div>
+
+                    {state.notes && (
+                      <div className="bg-slate-50 border border-slate-100 rounded-xl p-3">
+                        <p className="text-[10px] text-slate-400 uppercase tracking-wide mb-0.5">Notes</p>
+                        <p className="text-xs text-slate-600 leading-relaxed">{state.notes}</p>
+                      </div>
+                    )}
+
+                    <div className="flex items-start gap-2.5 bg-amber-50 border border-amber-100 rounded-xl px-3.5 py-3">
+                      <AlertCircle size={12} className="text-amber-400 mt-0.5 shrink-0" />
+                      <p className="text-[11px] text-amber-700 leading-relaxed">
+                        Confirming this will mark the order as a return and{" "}
+                        {state.mode === "refund" ? "initiate a refund" : "process the exchange"}.
+                        This action cannot be undone.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* STEP 6: Done */}
+                {state.step === 6 && (
+                  <div className="flex flex-col items-center text-center gap-5 py-6">
+                    <div className="sr-done-pop w-16 h-16 rounded-full bg-emerald-50 border-2 border-emerald-100 flex items-center justify-center">
+                      <CheckCircle2 size={28} className="text-emerald-500" />
+                    </div>
+                    <div>
+                      <p className="text-base font-semibold text-slate-800 mb-1.5">
+                        {state.mode === "refund" ? "Refund Processed" : "Exchange Initiated"}
+                      </p>
+                      <p className="text-xs text-slate-500 leading-relaxed max-w-xs mx-auto">
+                        {state.mode === "refund"
+                          ? `A refund of ${fmt(selectedItems.reduce((s, i) => s + i.unitPrice * i.returnQty, 0))} has been initiated for ${selectedItems.reduce((s, i) => s + i.returnQty, 0)} item(s).`
+                          : `Exchange order has been created. Replacement items will be dispatched shortly.`}
+                      </p>
+                    </div>
+                    <div className="w-full bg-slate-50 border border-slate-100 rounded-xl overflow-hidden">
+                      {[
+                        { label: "Invoice", value: sale.invoiceNumber },
+                        { label: "Mode",    value: state.mode === "refund" ? "Refund" : "Exchange" },
+                        { label: "Reason",  value: state.reason },
+                        ...(state.mode === "refund" ? [{
+                          label: "Refund",
+                          value: fmt(selectedItems.reduce((s, i) => s + i.unitPrice * i.returnQty, 0)),
+                        }] : []),
+                      ].map((row, idx) => (
+                        <div key={row.label} className={`flex justify-between px-4 py-3 ${idx > 0 ? "border-t border-slate-100" : ""}`}>
+                          <span className="text-[11px] text-slate-400">{row.label}</span>
+                          <span className="text-[11px] font-semibold text-slate-700 sr-mono">{row.value}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <button onClick={onClose}
+                      className="sr-btn-primary w-full py-3 bg-slate-900 text-white rounded-xl text-xs font-semibold">
+                      Close
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Footer */}
+            {state.step < 6 && (
+              <div className="shrink-0 px-5 py-4 border-t border-slate-100 bg-white flex items-center gap-2.5">
+                {state.step > 1 && (
+                  <button onClick={m.goBack}
+                    className="sr-btn-ghost flex items-center gap-1.5 px-4 py-2.5 text-xs font-medium text-slate-600 border border-slate-200 rounded-xl">
+                    <ArrowLeft size={13} />
+                    Back
+                  </button>
+                )}
+                {state.step < 5 ? (
+                  <button onClick={m.goNext}
+                    disabled={!m.canProceed}
+                    className="sr-btn-primary flex-1 py-2.5 bg-blue-600 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-2">
+                    Continue
+                    <ChevronRight size={14} />
+                  </button>
+                ) : (
+                  <button onClick={m.confirm}
+                    disabled={state.isSubmitting}
+                    className="sr-btn-primary flex-1 py-2.5 bg-blue-600 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-2">
+                    {state.isSubmitting ? (
+                      <><Loader2 size={14} className="animate-spin" /> Processing…</>
+                    ) : (
+                      <>{state.mode === "refund" ? "Confirm Refund" : "Confirm Exchange"} <ChevronRight size={14} /></>
+                    )}
+                  </button>
+                )}
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+};
+
+/* ═══════════════════════════════════════════════════════════════
+   SALE DETAIL SIDEBAR (read-only)
+═══════════════════════════════════════════════════════════════ */
+interface SidebarProps {
+  sale: SaleRecord | null;
+  isOpen: boolean;
+  onClose: () => void;
+  onReturn: (sale: SaleRecord) => void;
+}
+
+const SaleDetailSidebar: React.FC<SidebarProps> = ({ sale, isOpen, onClose, onReturn }) => {
+  const canReturn  = sale?.status === "Completed" && sale?.origin !== "Sales Return";
+  const alreadyRet = sale?.origin === "Sales Return";
+
+  return (
+    <>
+      {isOpen && (
+        <div className="sr-backdrop-enter fixed inset-0 bg-black/10 z-[100]" onClick={onClose} />
+      )}
+      <div className={`sr-sidebar fixed top-0 right-0 h-full w-full max-w-[400px] bg-white shadow-2xl z-[110] border-l border-slate-200 flex flex-col ${
+        isOpen ? "translate-x-0" : "translate-x-full"
+      }`}>
+        {sale && (
+          <>
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 shrink-0">
+              <div>
+                <h2 className="text-sm font-semibold text-slate-800">Sale Details</h2>
+                <p className="text-[11px] text-slate-400 sr-mono mt-0.5">{sale.invoiceNumber}</p>
+              </div>
+              <div className="flex items-center gap-2">
+                {alreadyRet && (
+                  <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[9px] font-semibold bg-orange-50 text-orange-600 border border-orange-100">
+                    <RotateCcw size={8} /> Returned
+                  </span>
+                )}
+                <button onClick={onClose}
+                  className="w-7 h-7 flex items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 transition-colors">
+                  <X size={16} />
+                </button>
+              </div>
+            </div>
+
+            {/* Body */}
+            <div className="sr-scroll flex-1 overflow-y-auto p-5 space-y-5">
+              {/* Amount */}
+              <div className="bg-slate-50 border border-slate-100 rounded-xl p-4 text-center">
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 mb-1">Total Amount</p>
+                <p className="text-3xl font-light sr-mono text-slate-900">{fmt(sale.totalAmount)}</p>
+                <div className="mt-2.5">
+                  <Badge cls={STATUS_CFG[sale.status].cls} dot={STATUS_CFG[sale.status].dot} label={sale.status} />
+                </div>
+              </div>
+
+              {/* Meta */}
+              <div className="grid grid-cols-2 gap-2.5">
+                {[
+                  { icon: <User size={13} />,       label: "Customer",  value: sale.customerName },
+                  { icon: <Calendar size={13} />,   label: "Date",      value: sale.date },
+                  { icon: <CreditCard size={13} />, label: "Payment",   value: sale.paymentMethod },
+                  { icon: <RotateCcw size={13} />,  label: "Origin",    value: sale.origin },
+                  { icon: sale.salesType === "Online" ? <Wifi size={13} /> : <WifiOff size={13} />, label: "Channel", value: sale.salesType },
+                  { icon: <Package size={13} />,    label: "Items",     value: `${sale.itemsCount} item${sale.itemsCount !== 1 ? "s" : ""}` },
+                ].map(({ icon, label, value }) => (
+                  <div key={label} className="bg-white border border-slate-100 rounded-xl p-3">
+                    <div className="flex items-center gap-1.5 text-slate-400 mb-1.5">
+                      {icon}
+                      <span className="text-[9px] font-semibold uppercase tracking-widest">{label}</span>
+                    </div>
+                    <p className="text-xs font-medium text-slate-800 truncate">{value}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Items */}
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 mb-2">Order Items</p>
+                <div className="border border-slate-100 rounded-xl divide-y divide-slate-100 overflow-hidden">
+                  {generateItems(sale).map((item, i) => (
+                    <div key={i} className="flex items-center gap-3 p-3.5 bg-white">
+                      <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: item.imageColor }}>
+                        <Package size={14} className="text-slate-400 opacity-60" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium text-slate-800">{item.name}</p>
+                        <p className="text-[10px] text-slate-400">qty {item.quantity} · <span className="sr-mono">{item.sku}</span></p>
+                      </div>
+                      <span className="text-xs font-semibold sr-mono text-slate-900">{fmt(item.unitPrice * item.quantity)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="shrink-0 p-4 border-t border-slate-100 bg-slate-50/50 grid grid-cols-3 gap-2">
+              <button className="sr-btn-ghost py-2.5 bg-white border border-slate-200 text-slate-600 rounded-lg text-[11px] font-semibold shadow-sm">
+                Download
+              </button>
+              <button className="sr-btn-ghost py-2.5 bg-white border border-slate-200 text-slate-600 rounded-lg text-[11px] font-semibold shadow-sm">
+                Print
+              </button>
+              <button
+                onClick={() => canReturn && onReturn(sale)}
+                disabled={!canReturn}
+                title={alreadyRet ? "Already returned" : !canReturn ? `Cannot return: ${sale.status}` : "Process return"}
+                className={`py-2.5 rounded-lg text-[11px] font-semibold transition-colors border ${
+                  canReturn
+                    ? "bg-red-50 border-red-100 text-red-600 hover:bg-red-100"
+                    : "bg-slate-50 border-slate-100 text-slate-300 cursor-not-allowed"
+                }`}
+              >
+                Return
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    </>
+  );
+};
+
+/* ═══════════════════════════════════════════════════════════════
    FILTER DROPDOWN
-═══════════════════════════════════════════════ */
+═══════════════════════════════════════════════════════════════ */
 interface FilterDropdownProps {
   label: string;
   options: string[];
   value: string;
   onChange: (v: string) => void;
 }
-
 const FilterDropdown: React.FC<FilterDropdownProps> = ({ label, options, value, onChange }) => {
   const [open, setOpen] = useState(false);
   const active = value !== "";
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => { if (!ref.current?.contains(e.target as Node)) setOpen(false); };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
 
   return (
-    <div className="relative">
+    <div className="relative" ref={ref}>
       <button
         onClick={() => setOpen(p => !p)}
-        className={`sales-filter-btn inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium border rounded-lg transition-all ${
-          active ? "bg-blue-50 border-blue-200 text-blue-700" : "bg-white border-zinc-200 text-zinc-600 hover:bg-zinc-50"
+        className={`sr-drop-btn inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium border rounded-lg transition-all ${
+          active ? "bg-blue-50 border-blue-200 text-blue-700" : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
         }`}
       >
         {active ? value : label}
         {active ? (
-          <X size={11} className="text-blue-500"
-            onClick={e => { e.stopPropagation(); onChange(""); setOpen(false); }} />
+          <X size={11} className="text-blue-400" onClick={e => { e.stopPropagation(); onChange(""); setOpen(false); }} />
         ) : (
           <ChevronDown size={11} className={`transition-transform ${open ? "rotate-180" : ""}`} />
         )}
       </button>
-
       {open && (
-        <div className="sales-dropdown absolute top-full left-0 mt-1.5 min-w-[130px] bg-white border border-zinc-200 rounded-lg shadow-lg z-20 py-1 overflow-hidden">
+        <div className="sr-dropdown absolute top-full left-0 mt-1.5 min-w-[130px] bg-white border border-slate-200 rounded-xl shadow-lg z-20 py-1.5 overflow-hidden">
           {options.map(opt => (
             <button key={opt}
               onClick={() => { onChange(opt === value ? "" : opt); setOpen(false); }}
-              className={`w-full text-left px-3 py-2 text-xs font-medium transition-colors hover:bg-zinc-50 ${
-                opt === value ? "text-blue-600 bg-blue-50" : "text-zinc-700"
+              className={`w-full text-left px-3.5 py-2 text-xs font-medium transition-colors hover:bg-slate-50 ${
+                opt === value ? "text-blue-600 bg-blue-50/60" : "text-slate-700"
               }`}
             >
               {opt}
@@ -429,514 +1210,9 @@ const FilterDropdown: React.FC<FilterDropdownProps> = ({ label, options, value, 
   );
 };
 
-/* ═══════════════════════════════════════════════
-   RETURN ORDER MODAL
-═══════════════════════════════════════════════ */
-interface ReturnOrderModalProps {
-  sale: SaleRecord;
-  r: UseReturnOrderReturn;
-  onClose: () => void;
-}
-
-const ReturnOrderModal: React.FC<ReturnOrderModalProps> = ({ sale, r, onClose }) => {
-  const canReturn  = sale.status === "Completed" && sale.origin !== "Sales Return";
-  const alreadyRet = sale.origin === "Sales Return";
-
-  /* ── Ineligible state ── */
-  if (!canReturn) {
-    return (
-      <div className="return-modal-enter absolute inset-0 bg-white z-10 flex flex-col">
-        <div className="flex items-center gap-3 px-6 py-4 border-b border-zinc-100">
-          <button onClick={onClose}
-            className="w-8 h-8 flex items-center justify-center rounded-full text-zinc-400 hover:bg-zinc-100 transition-colors">
-            <ArrowLeft size={16} />
-          </button>
-          <span className="text-sm font-medium text-zinc-700">Return Order</span>
-        </div>
-        <div className="flex-1 flex flex-col items-center justify-center gap-4 px-8 text-center">
-          <div className="w-14 h-14 rounded-full bg-zinc-50 border border-zinc-100 flex items-center justify-center">
-            <AlertCircle size={22} className={alreadyRet ? "text-orange-400" : "text-red-400"} />
-          </div>
-          <div>
-            <p className="text-sm font-medium text-zinc-800 mb-1">
-              {alreadyRet ? "Already Returned" : "Return Unavailable"}
-            </p>
-            <p className="text-xs text-zinc-500 leading-relaxed">
-              {alreadyRet
-                ? "This order was already processed as a return and cannot be returned again."
-                : `Orders with status "${sale.status}" cannot be returned. Only Completed orders are eligible.`}
-            </p>
-          </div>
-          <button onClick={onClose}
-            className="mt-2 px-4 py-2 text-xs font-medium text-zinc-600 bg-zinc-50 border border-zinc-200 rounded-lg hover:bg-zinc-100 transition-colors">
-            Go back
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  const units = totalUnits(r.selectedItems);
-
-  return (
-    <div className="return-modal-enter absolute inset-0 bg-white z-10 flex flex-col overflow-hidden">
-
-      {/* Header */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-100 shrink-0">
-        <div className="flex items-center gap-3">
-          <button onClick={r.step > 1 ? r.back : onClose}
-            className="w-8 h-8 flex items-center justify-center rounded-full text-zinc-400 hover:bg-zinc-100 transition-colors">
-            <ArrowLeft size={16} />
-          </button>
-          <div>
-            <p className="text-sm font-medium text-zinc-800">
-              {r.step === 1 ? "Return Details" : r.step === 2 ? "Review Return" : "Return Confirmed"}
-            </p>
-            <p className="text-[11px] text-zinc-400 sales-mono mt-0.5">{sale.invoiceNumber}</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-3">
-          {r.step < 3 && <StepDots step={r.step} />}
-          <button onClick={onClose}
-            className="w-7 h-7 flex items-center justify-center rounded-full text-zinc-400 hover:bg-zinc-100 transition-colors">
-            <X size={15} />
-          </button>
-        </div>
-      </div>
-
-      {/* ── STEP 1: Form ── */}
-      {r.step === 1 && (
-        <div className="return-step-fade flex-1 overflow-y-auto p-5 space-y-5">
-
-          {/* Return Type */}
-          <div>
-            <label className="block text-[11px] font-semibold uppercase tracking-widest text-zinc-400 mb-2.5">
-              Return Type
-            </label>
-            <div className="flex gap-2">
-              {(["Full", "Partial"] as ReturnType[]).map(t => (
-                <button key={t} onClick={() => r.setReturnType(t)}
-                  className={`type-pill flex-1 py-2.5 text-xs font-medium border rounded-lg ${
-                    r.returnType === t ? "active" : "bg-white border-zinc-200 text-zinc-500 hover:bg-zinc-50"
-                  }`}>
-                  {t === "Full" ? "Full Return" : "Partial Return"}
-                </button>
-              ))}
-            </div>
-            {r.returnType === "Full" && (
-              <p className="mt-2 flex items-center gap-1.5 text-[11px] text-blue-500">
-                <Info size={11} />
-                All {sale.itemsCount} item{sale.itemsCount > 1 ? "s" : ""} will be returned
-              </p>
-            )}
-          </div>
-
-          {/* Item Selection */}
-          {r.returnType === "Partial" && (
-            <div>
-              <label className="block text-[11px] font-semibold uppercase tracking-widest text-zinc-400 mb-2.5">
-                Select Items
-              </label>
-              <div className="space-y-2">
-                {r.saleItems.map(item => {
-                  const checked = r.returnItems[item.id] !== undefined;
-                  const retQty  = r.returnItems[item.id] ?? 1;
-                  return (
-                    <div key={item.id}
-                      className={`return-item-row border rounded-xl p-3.5 cursor-pointer ${checked ? "selected" : ""}`}
-                      onClick={() => r.toggleItem(item.id)}
-                    >
-                      <div className="flex items-start gap-3">
-                        <input type="checkbox" className="return-checkbox mt-0.5" checked={checked} readOnly />
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-start justify-between gap-2">
-                            <div>
-                              <p className="text-xs font-medium text-zinc-800 leading-snug">{item.name}</p>
-                              <p className="text-[10px] text-zinc-400 sales-mono mt-0.5">{item.sku}</p>
-                            </div>
-                            <p className="text-xs font-semibold text-zinc-700 sales-mono shrink-0">
-                              ₹{item.unitPrice.toLocaleString()}
-                            </p>
-                          </div>
-                          {checked && (
-                            <div className="mt-2.5 flex items-center gap-3"
-                              onClick={e => e.stopPropagation()}>
-                              <span className="text-[11px] text-zinc-500">Return qty:</span>
-                              <div className="flex items-center gap-1 bg-white border border-indigo-100 rounded-lg overflow-hidden">
-                                <button className="qty-btn w-7 h-7 flex items-center justify-center text-indigo-400"
-                                  disabled={retQty <= 1}
-                                  onClick={() => r.updateQty(item.id, -1)}>
-                                  <Minus size={11} />
-                                </button>
-                                <span className="w-6 text-center text-xs font-semibold text-zinc-800 tabular-nums sales-mono">
-                                  {retQty}
-                                </span>
-                                <button className="qty-btn w-7 h-7 flex items-center justify-center text-indigo-400"
-                                  disabled={retQty >= item.quantity}
-                                  onClick={() => r.updateQty(item.id, 1)}>
-                                  <Plus size={11} />
-                                </button>
-                              </div>
-                              <span className="text-[11px] text-zinc-400">of {item.quantity}</span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-              {r.errors.items && (
-                <p className="mt-2 flex items-center gap-1.5 text-[11px] text-red-500">
-                  <AlertCircle size={11} /> {r.errors.items}
-                </p>
-              )}
-            </div>
-          )}
-
-          {/* Return Reason */}
-          <div>
-            <label className="block text-[11px] font-semibold uppercase tracking-widest text-zinc-400 mb-2.5">
-              Return Reason <span className="text-red-400 normal-case">*</span>
-            </label>
-            <select
-              value={r.returnReason}
-              onChange={e => r.setReturnReason(e.target.value as ReturnReason)}
-              className={`return-select w-full px-3.5 py-2.5 text-xs border rounded-xl bg-white text-zinc-700 outline-none transition-all pr-9 ${
-                r.errors.reason
-                  ? "border-red-200 bg-red-50/30"
-                  : "border-zinc-200 focus:border-blue-300 focus:ring-2 focus:ring-blue-500/10"
-              }`}
-            >
-              <option value="">Select a reason…</option>
-              {RETURN_REASONS.map(reason => (
-                <option key={reason} value={reason}>{reason}</option>
-              ))}
-            </select>
-            {r.errors.reason && (
-              <p className="mt-1.5 flex items-center gap-1.5 text-[11px] text-red-500">
-                <AlertCircle size={11} /> {r.errors.reason}
-              </p>
-            )}
-          </div>
-
-          {/* Notes */}
-          <div>
-            <label className="block text-[11px] font-semibold uppercase tracking-widest text-zinc-400 mb-2.5">
-              Notes <span className="text-zinc-300 normal-case font-normal">(optional)</span>
-            </label>
-            <textarea
-              value={r.notes}
-              onChange={e => r.setNotes(e.target.value)}
-              rows={2}
-              placeholder="Add any additional context…"
-              className="w-full px-3.5 py-2.5 text-xs border border-zinc-200 rounded-xl bg-white text-zinc-700 outline-none resize-none focus:border-blue-300 focus:ring-2 focus:ring-blue-500/10 transition-all placeholder-zinc-300"
-            />
-          </div>
-
-          {/* Live refund preview */}
-          {r.selectedItems.length > 0 && (
-            <div className="bg-blue-50/60 border border-blue-100 rounded-xl p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-[11px] text-blue-500 font-medium uppercase tracking-wide mb-0.5">Estimated Refund</p>
-                  <p className="text-xl font-semibold text-blue-700 sales-mono">
-                    ₹{r.refundAmount.toLocaleString()}
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="text-[11px] text-zinc-400 mb-0.5">Items selected</p>
-                  <p className="text-sm font-semibold text-zinc-600">
-                    {units} unit{units !== 1 ? "s" : ""}
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* ── STEP 2: Review ── */}
-      {r.step === 2 && (
-        <div className="return-step-fade flex-1 overflow-y-auto p-5 space-y-4">
-          <div className="bg-gradient-to-br from-blue-50 to-indigo-50/50 border border-blue-100 rounded-2xl p-5 text-center">
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-blue-400 mb-1">Refund Amount</p>
-            <p className="text-4xl font-light text-blue-700 sales-mono">₹{r.refundAmount.toLocaleString()}</p>
-            <div className="mt-3 flex items-center justify-center gap-4 text-xs text-zinc-500">
-              <span className="flex items-center gap-1">
-                <Package size={11} className="text-zinc-400" />
-                {units} item{units !== 1 ? "s" : ""} returned
-              </span>
-              <span className="text-zinc-200">|</span>
-              <span>
-                Updated total:{" "}
-                <span className="font-semibold text-zinc-700 sales-mono">
-                  ₹{(sale.totalAmount - r.refundAmount).toLocaleString()}
-                </span>
-              </span>
-            </div>
-          </div>
-
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-zinc-400 mb-2.5">
-              Items Being Returned
-            </p>
-            <div className="border border-zinc-100 rounded-xl divide-y divide-zinc-100 overflow-hidden">
-              {r.selectedItems.map(item => (
-                <div key={item.id} className="flex items-center gap-3 px-4 py-3 bg-white">
-                  <div className="w-7 h-7 bg-zinc-50 rounded-lg flex items-center justify-center shrink-0">
-                    <Package size={13} className="text-zinc-400" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium text-zinc-800">{item.name}</p>
-                    <p className="text-[10px] text-zinc-400 sales-mono">{item.sku} · qty {item.returnQty}</p>
-                  </div>
-                  <span className="text-xs font-semibold text-zinc-700 sales-mono">
-                    ₹{(item.unitPrice * item.returnQty).toLocaleString()}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div className="bg-white border border-zinc-100 rounded-xl p-3.5">
-              <p className="text-[10px] text-zinc-400 uppercase tracking-wide mb-1">Reason</p>
-              <p className="text-xs font-medium text-zinc-700">{r.returnReason}</p>
-            </div>
-            <div className="bg-white border border-zinc-100 rounded-xl p-3.5">
-              <p className="text-[10px] text-zinc-400 uppercase tracking-wide mb-1">Type</p>
-              <p className="text-xs font-medium text-zinc-700">{r.returnType} Return</p>
-            </div>
-          </div>
-
-          {r.notes && (
-            <div className="bg-white border border-zinc-100 rounded-xl p-3.5">
-              <p className="text-[10px] text-zinc-400 uppercase tracking-wide mb-1">Notes</p>
-              <p className="text-xs text-zinc-600 leading-relaxed">{r.notes}</p>
-            </div>
-          )}
-
-          <div className="flex items-start gap-2.5 bg-amber-50 border border-amber-100 rounded-xl px-4 py-3">
-            <AlertCircle size={13} className="text-amber-400 mt-0.5 shrink-0" />
-            <p className="text-[11px] text-amber-700 leading-relaxed">
-              This action will mark the order as a Sales Return and initiate a refund of{" "}
-              <span className="font-semibold">₹{r.refundAmount.toLocaleString()}</span>. This cannot be undone.
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* ── STEP 3: Done ── */}
-      {r.step === 3 && (
-        <div className="return-step-fade flex-1 flex flex-col items-center justify-center px-8 text-center gap-5">
-          <div className="return-done-pop w-16 h-16 rounded-full bg-emerald-50 border border-emerald-100 flex items-center justify-center">
-            <CheckCircle2 size={28} className="text-emerald-500" />
-          </div>
-          <div>
-            <p className="text-base font-semibold text-zinc-800 mb-1.5">Return Processed</p>
-            <p className="text-xs text-zinc-500 leading-relaxed">
-              A refund of{" "}
-              <span className="font-semibold text-zinc-700 sales-mono">₹{r.refundAmount.toLocaleString()}</span>{" "}
-              has been initiated for {units} item{units !== 1 ? "s" : ""}.
-            </p>
-          </div>
-          <div className="w-full bg-zinc-50 border border-zinc-100 rounded-xl divide-y divide-zinc-100 text-left overflow-hidden">
-            {[
-              { label: "Invoice", value: sale.invoiceNumber, cls: "sales-mono text-zinc-700" },
-              { label: "Refund",  value: `₹${r.refundAmount.toLocaleString()}`, cls: "sales-mono text-emerald-600 font-semibold" },
-              { label: "Reason",  value: r.returnReason,    cls: "text-zinc-700" },
-            ].map(row => (
-              <div key={row.label} className="px-4 py-3 flex justify-between">
-                <span className="text-[11px] text-zinc-400">{row.label}</span>
-                <span className={`text-[11px] ${row.cls}`}>{row.value}</span>
-              </div>
-            ))}
-          </div>
-          <button onClick={onClose}
-            className="w-full py-2.5 bg-zinc-900 text-white rounded-xl text-xs font-semibold hover:bg-zinc-800 transition-colors">
-            Done
-          </button>
-        </div>
-      )}
-
-      {/* Footer actions */}
-      {r.step < 3 && (
-        <div className="shrink-0 px-5 py-4 border-t border-zinc-100 bg-white">
-          {r.step === 1 && (
-            <button onClick={r.review}
-              className="w-full py-3 bg-blue-600 text-white rounded-xl text-xs font-semibold hover:bg-blue-700 active:bg-blue-800 transition-colors flex items-center justify-center gap-2 shadow-sm shadow-blue-200">
-              Review Return
-              <ChevronRight size={14} />
-            </button>
-          )}
-          {r.step === 2 && (
-            <div className="flex gap-2.5">
-              <button onClick={r.back}
-                className="flex-1 py-3 bg-white border border-zinc-200 text-zinc-600 rounded-xl text-xs font-semibold hover:bg-zinc-50 transition-colors">
-                Edit
-              </button>
-              <button onClick={r.confirm}
-                className="flex-[2] py-3 bg-blue-600 text-white rounded-xl text-xs font-semibold hover:bg-blue-700 transition-colors shadow-sm shadow-blue-200">
-                Confirm Return
-              </button>
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-};
-
-/* ═══════════════════════════════════════════════
-   SIDEBAR
-═══════════════════════════════════════════════ */
-interface SidebarProps {
-  sale: SaleRecord | null;
-  isOpen: boolean;
-  onClose: () => void;
-}
-
-const SaleDetailSidebar: React.FC<SidebarProps> = ({ sale, isOpen, onClose }) => {
-  const r = useReturnOrder(sale);
-  const [showReturn, setShowReturn] = useState(false);
-
-  const canReturn  = sale?.status === "Completed" && sale?.origin !== "Sales Return";
-  const alreadyRet = sale?.origin === "Sales Return";
-
-  const openReturn  = () => { r.open(); setShowReturn(true); };
-  const closeReturn = () => setShowReturn(false);
-
-  return (
-    <>
-      {isOpen && (
-        <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-[100]" onClick={onClose} />
-      )}
-      <div className={`fixed top-0 right-0 h-full w-full max-w-md bg-white shadow-2xl z-[110] transform transition-transform duration-300 ease-in-out border-l border-zinc-200 flex flex-col ${
-        isOpen ? "translate-x-0" : "translate-x-full"
-      }`}>
-        {sale && (
-          <div className="relative flex-1 overflow-hidden flex flex-col">
-
-            {showReturn && <ReturnOrderModal sale={sale} r={r} onClose={closeReturn} />}
-
-            {/* Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-100 shrink-0">
-              <div>
-                <h2 className="text-lg font-semibold text-zinc-900 tracking-tight">Sale Details</h2>
-                <p className="text-xs text-zinc-500 sales-mono mt-0.5">{sale.invoiceNumber}</p>
-              </div>
-              <div className="flex items-center gap-2">
-                {alreadyRet && (
-                  <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-[10px] font-semibold bg-orange-50 text-orange-600 border border-orange-100">
-                    <RotateCcw size={9} /> Already Returned
-                  </span>
-                )}
-                <button onClick={onClose}
-                  className="w-8 h-8 flex items-center justify-center rounded-full text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700 transition-colors">
-                  <X size={18} />
-                </button>
-              </div>
-            </div>
-
-            {/* Body */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-6">
-              <div className="bg-zinc-50 rounded-xl p-5 border border-zinc-100 flex flex-col items-center text-center">
-                <span className="text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1">Total Amount</span>
-                <span className="text-4xl font-semibold text-zinc-900 sales-mono tracking-tight">
-                  ₹{sale.totalAmount.toLocaleString()}
-                </span>
-                <div className="mt-3">
-                  <Badge cls={STATUS_CFG[sale.status].cls} dot={STATUS_CFG[sale.status].dot} label={sale.status} />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                {([
-                  { icon: <User size={14} />,      label: "Customer", value: sale.customerName },
-                  { icon: <Calendar size={14} />,  label: "Date",     value: sale.date },
-                  { icon: <CreditCard size={14} />,label: "Payment",  value: sale.paymentMethod },
-                  {
-                    icon: sale.origin === "Sales" ? <ShoppingCart size={14} /> : <RotateCcw size={14} />,
-                    label: "Origin", value: sale.origin,
-                  },
-                  {
-                    icon: sale.salesType === "Online" ? <Wifi size={14} /> : <WifiOff size={14} />,
-                    label: "Type", value: sale.salesType,
-                  },
-                ] as { icon: React.ReactNode; label: string; value: string }[]).map(({ icon, label, value }) => (
-                  <div key={label} className="bg-white border border-zinc-100 rounded-xl p-4 shadow-sm">
-                    <div className="flex items-center gap-2 text-zinc-400 mb-2">
-                      {icon}
-                      <span className="text-[11px] font-semibold uppercase tracking-widest">{label}</span>
-                    </div>
-                    <p className="text-sm font-medium text-zinc-900 truncate">{value}</p>
-                  </div>
-                ))}
-              </div>
-
-              <div>
-                <h3 className="text-xs font-semibold uppercase tracking-widest text-zinc-400 mb-3">
-                  Order Summary
-                </h3>
-                <div className="border border-zinc-100 rounded-xl divide-y divide-zinc-100 overflow-hidden">
-                  {generateItems(sale).map((item, i) => (
-                    <div key={i} className="flex items-center justify-between p-4 bg-white">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-zinc-50 rounded-lg flex items-center justify-center text-zinc-400">
-                          <Package size={16} />
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-zinc-800">{item.name}</p>
-                          <p className="text-xs text-zinc-500">
-                            Qty: {item.quantity} · <span className="sales-mono">{item.sku}</span>
-                          </p>
-                        </div>
-                      </div>
-                      <span className="text-sm font-semibold text-zinc-900 tabular-nums sales-mono">
-                        ₹{(item.unitPrice * item.quantity).toLocaleString()}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Footer */}
-            <div className="p-4 border-t border-zinc-100 bg-zinc-50 flex gap-3 shrink-0">
-              <button className="flex-1 py-2.5 bg-white border border-zinc-200 text-zinc-700 rounded-lg text-xs font-semibold hover:bg-zinc-50 transition-colors shadow-sm">
-                Download PDF
-              </button>
-              <button className="flex-1 py-2.5 bg-blue-600 text-white rounded-lg text-xs font-semibold hover:bg-blue-700 transition-colors shadow-sm">
-                Print Receipt
-              </button>
-              <button
-                onClick={openReturn}
-                disabled={!canReturn}
-                title={
-                  alreadyRet ? "Already returned"
-                  : !canReturn ? `Cannot return: ${sale.status}`
-                  : "Return items"
-                }
-                className={`flex-1 py-2.5 rounded-lg text-xs font-semibold transition-colors shadow-sm border ${
-                  canReturn
-                    ? "bg-red-50 border-red-100 text-red-600 hover:bg-red-100"
-                    : "bg-zinc-50 border-zinc-100 text-zinc-300 cursor-not-allowed"
-                }`}
-              >
-                Return
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-    </>
-  );
-};
-
-/* ═══════════════════════════════════════════════
+/* ═══════════════════════════════════════════════════════════════
    MAIN PAGE
-═══════════════════════════════════════════════ */
+═══════════════════════════════════════════════════════════════ */
 const SalesListPage: React.FC = () => {
   const [search,        setSearch]        = useState("");
   const [filterOrigin,  setFilterOrigin]  = useState("");
@@ -944,9 +1220,22 @@ const SalesListPage: React.FC = () => {
   const [filterPayment, setFilterPayment] = useState("");
   const [filterStatus,  setFilterStatus]  = useState("");
   const [filterDate,    setFilterDate]    = useState("");
+
   const [selectedSale,  setSelectedSale]  = useState<SaleRecord | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [returnSale,    setReturnSale]    = useState<SaleRecord | null>(null);
 
+  const openSidebar = (sale: SaleRecord) => { setSelectedSale(sale); setIsSidebarOpen(true); };
+  const closeSidebar = () => setIsSidebarOpen(false);
+
+  const openReturn = (sale: SaleRecord) => {
+    setIsSidebarOpen(false);
+    setTimeout(() => setReturnSale(sale), 50);
+  };
+
+  const closeReturn = () => setReturnSale(null);
+
+  // Stats
   const totalRevenue     = MOCK_SALES.filter(s => s.status === "Completed").reduce((a, b) => a + b.totalAmount, 0);
   const salesCount       = MOCK_SALES.filter(s => s.origin === "Sales").length;
   const salesReturnCount = MOCK_SALES.filter(s => s.origin === "Sales Return").length;
@@ -970,52 +1259,33 @@ const SalesListPage: React.FC = () => {
     setFilterStatus(""); setFilterDate(""); setSearch("");
   };
 
-
-
   return (
     <>
       <style>{STYLES}</style>
-      <div className="sales-root min-h-screen bg-zinc-50/50 space-y-6 p-6">
+      <div className="sr-root min-h-screen bg-slate-50/50 p-6 space-y-5">
 
-        
+        {/* Stats */}
         <div className="flex gap-3 flex-wrap">
-          <StatsCard 
-          label="Total Revenue"
-          value={totalRevenue}
-          icon={ShoppingCart}
-          />
-          <StatsCard 
-          label="Total Sales"
-          value={salesCount}
-          icon={ShoppingCart}
-          />
-          <StatsCard 
-          label="Total Sales Return"
-          value={salesReturnCount}
-          icon={ShoppingCart}
-          />
-          <StatsCard 
-          label="Today's Revenue"
-          value={todayRevenue}
-          icon={ShoppingCart}
-          />
-          
+          <StatsCard label="Total Revenue" icon={DollarSign} iconBg="bg-green-50"      value={fmt(totalRevenue)} />
+          <StatsCard label="Total Sales" icon={BarChart2} iconBg="bg-blue-50"        value={salesCount} />
+          <StatsCard label="Sales Returns" icon={RefreshCw} iconBg="bg-red-50"      value={salesReturnCount} />
+          <StatsCard label="Today's Revenue" icon={DollarSign} iconBg="bg-yellow-50"    value={fmt(todayRevenue)} />
         </div>
 
         {/* Toolbar */}
-        <div className="bg-white rounded-xl border border-zinc-200 shadow-sm px-4 py-3.5 flex flex-wrap items-center gap-3">
-          <div className="relative flex-1 min-w-[200px] max-w-sm">
-            <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" />
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm px-4 py-3 flex flex-wrap items-center gap-2.5">
+          <div className="relative flex-1 min-w-[180px] max-w-sm">
+            <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
             <input
-              className="w-full pl-9 pr-4 py-2 bg-zinc-50 border border-zinc-200 rounded-lg text-sm text-zinc-800 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 focus:bg-white transition-all"
+              className="w-full pl-8 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 focus:bg-white transition-all"
               placeholder="Search invoice or customer…"
               value={search}
               onChange={e => setSearch(e.target.value)}
             />
           </div>
           <input type="date" value={filterDate} onChange={e => setFilterDate(e.target.value)}
-            className={`sales-filter-btn px-3 py-2 text-xs font-medium border rounded-lg outline-none cursor-pointer transition-all ${
-              filterDate ? "bg-blue-50 border-blue-200 text-blue-700" : "bg-white border-zinc-200 text-zinc-600 hover:bg-zinc-50"
+            className={`sr-drop-btn px-3 py-2 text-xs font-medium border rounded-lg outline-none cursor-pointer transition-all ${
+              filterDate ? "bg-blue-50 border-blue-200 text-blue-700" : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
             }`} />
           <FilterDropdown label="Origin"  options={["Sales", "Sales Return"]}             value={filterOrigin}  onChange={setFilterOrigin}  />
           <FilterDropdown label="Type"    options={["Online", "Offline"]}                 value={filterType}    onChange={setFilterType}    />
@@ -1028,31 +1298,30 @@ const SalesListPage: React.FC = () => {
             </button>
           )}
           <div className="flex-1" />
-          <span className="text-xs font-medium text-zinc-400">{filtered.length} of {MOCK_SALES.length}</span>
+          <span className="text-xs font-medium text-slate-400 tabular-nums">{filtered.length} / {MOCK_SALES.length}</span>
         </div>
 
         {/* Table */}
-        <div className="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden">
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm border-collapse">
               <thead>
-                <tr className="bg-zinc-50 border-b border-zinc-100">
-                  {["Invoice", "Customer", "Origin", "Type", "Payment", "Date", "Items", "Amount", "Status", ""].map((label, i) => (
-                    <th key={i}
-                      className="py-3 px-4 first:pl-5 last:pr-5 text-[10px] font-semibold uppercase tracking-widest text-zinc-400 whitespace-nowrap text-left last:text-right">
-                      {label}
+                <tr className="bg-slate-50 border-b border-slate-100">
+                  {["Invoice", "Customer", "Type", "Origin", "Payment", "Date", "Items", "Amount", "Status", "Actions"].map((h, i) => (
+                    <th key={i} className="py-3 px-4 first:pl-5 last:pr-5 text-[10px] font-semibold uppercase tracking-widest text-slate-400 whitespace-nowrap text-left last:text-right">
+                      {h}
                     </th>
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-zinc-100">
+              <tbody className="divide-y divide-slate-100">
                 {filtered.length === 0 ? (
                   <tr>
                     <td colSpan={10} className="py-20 text-center">
-                      <div className="flex flex-col items-center gap-2 text-zinc-400">
-                        <Receipt size={28} className="opacity-25 mb-1" />
-                        <p className="text-sm font-medium text-zinc-600">No sales found</p>
-                        <p className="text-xs">Try adjusting filters</p>
+                      <div className="flex flex-col items-center gap-2 text-slate-400">
+                        <Receipt size={26} className="opacity-20 mb-1" />
+                        <p className="text-sm font-medium text-slate-500">No sales found</p>
+                        <p className="text-xs">Try adjusting your filters</p>
                       </div>
                     </td>
                   </tr>
@@ -1061,36 +1330,41 @@ const SalesListPage: React.FC = () => {
                   const tCfg = SALES_TYPE_CFG[sale.salesType];
                   const pCfg = PAYMENT_CFG[sale.paymentMethod];
                   const sCfg = STATUS_CFG[sale.status];
+                  const returnable = sale.status === "Completed" && sale.origin !== "Sales Return";
                   return (
-                    <tr key={sale.id} className="sales-row">
+                    <tr key={sale.id} className="sr-row">
                       <td className="py-3.5 pl-5 pr-4">
-                        <span className="sales-mono text-xs font-medium text-zinc-700">{sale.invoiceNumber}</span>
+                        <span className="sr-mono text-xs font-medium text-slate-700">{sale.invoiceNumber}</span>
                       </td>
                       <td className="py-3.5 px-4">
-                        <p className="text-sm font-medium text-zinc-800 whitespace-nowrap">{sale.customerName}</p>
+                        <p className="text-xs font-medium text-slate-800 whitespace-nowrap">{sale.customerName}</p>
                       </td>
                       <td className="py-3.5 px-4"><Badge cls={oCfg.cls} dot={oCfg.dot} label={sale.origin} /></td>
                       <td className="py-3.5 px-4"><Badge cls={tCfg.cls} dot={tCfg.dot} label={sale.salesType} /></td>
                       <td className="py-3.5 px-4"><Badge cls={pCfg.cls} dot={pCfg.dot} label={sale.paymentMethod} /></td>
-                      <td className="py-3.5 px-4 text-sm text-zinc-500 whitespace-nowrap tabular-nums">{sale.date}</td>
-                      <td className="py-3.5 px-4 text-center text-sm font-medium text-zinc-600 tabular-nums">
-                        {sale.itemsCount}
-                      </td>
+                      <td className="py-3.5 px-4 text-xs text-slate-500 whitespace-nowrap tabular-nums">{sale.date}</td>
+                      <td className="py-3.5 px-4 text-center text-xs font-medium text-slate-600 tabular-nums">{sale.itemsCount}</td>
                       <td className="py-3.5 px-4 text-right">
-                        <span className="sales-mono text-sm font-semibold text-zinc-900 tabular-nums">
-                          ₹{sale.totalAmount.toLocaleString()}
-                        </span>
+                        <span className="sr-mono text-xs font-semibold text-slate-900">{fmt(sale.totalAmount)}</span>
                       </td>
                       <td className="py-3.5 px-4"><Badge cls={sCfg.cls} dot={sCfg.dot} label={sale.status} /></td>
                       <td className="py-3.5 pl-4 pr-5">
                         <div className=" flex items-center justify-end gap-1">
-                          <button
-                            onClick={() => { setSelectedSale(sale); setIsSidebarOpen(true); }}
-                            className="w-8 h-8 flex items-center justify-center rounded-md text-zinc-400 hover:text-blue-600 hover:bg-blue-50 transition-all">
-                            <Eye size={15} />
+                          <button onClick={() => openSidebar(sale)}
+                            className="w-7 h-7 flex items-center justify-center rounded-md text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-all">
+                            <Eye size={14} />
                           </button>
-                          <button  onClick={() => { setSelectedSale(sale); setIsSidebarOpen(true); }} className="w-8 h-8 flex items-center justify-center rounded-md text-zinc-400 hover:text-red-600 hover:bg-red-100 transition-all">
-                            <RotateCcw size={15} />
+                          <button
+                            onClick={() => returnable && openReturn(sale)}
+                            disabled={!returnable}
+                            title={!returnable ? (sale.origin === "Sales Return" ? "Already returned" : `Status: ${sale.status}`) : "Process return"}
+                            className={`w-7 h-7 flex items-center justify-center rounded-md transition-all ${
+                              returnable
+                                ? "text-slate-400 hover:text-red-600 hover:bg-red-50"
+                                : "text-slate-200 cursor-not-allowed"
+                            }`}
+                          >
+                            <RotateCcw size={14} />
                           </button>
                         </div>
                       </td>
@@ -1100,17 +1374,16 @@ const SalesListPage: React.FC = () => {
               </tbody>
             </table>
           </div>
-
           {filtered.length > 0 && (
-            <div className="px-5 py-3 border-t border-zinc-100 bg-zinc-50/50 flex items-center justify-between">
-              <p className="text-xs text-zinc-400">
-                Showing <span className="font-medium text-zinc-600">{filtered.length}</span> of{" "}
-                <span className="font-medium text-zinc-600">{MOCK_SALES.length}</span> records
+            <div className="px-5 py-3 border-t border-slate-100 bg-slate-50/40 flex items-center justify-between">
+              <p className="text-xs text-slate-400">
+                <span className="font-medium text-slate-600">{filtered.length}</span> of{" "}
+                <span className="font-medium text-slate-600">{MOCK_SALES.length}</span> records
               </p>
-              <span className="text-xs text-zinc-500">
+              <span className="text-xs text-slate-500">
                 Filtered revenue:{" "}
-                <span className="font-semibold text-zinc-800 sales-mono">
-                  ₹{filtered.filter(s => s.status === "Completed").reduce((a, b) => a + b.totalAmount, 0).toLocaleString()}
+                <span className="font-semibold text-slate-700 sr-mono">
+                  {fmt(filtered.filter(s => s.status === "Completed").reduce((a, b) => a + b.totalAmount, 0))}
                 </span>
               </span>
             </div>
@@ -1118,11 +1391,16 @@ const SalesListPage: React.FC = () => {
         </div>
       </div>
 
+      {/* Read-only sidebar */}
       <SaleDetailSidebar
         sale={selectedSale}
         isOpen={isSidebarOpen}
-        onClose={() => setIsSidebarOpen(false)}
+        onClose={closeSidebar}
+        onReturn={openReturn}
       />
+
+      {/* Global Return Modal */}
+      {returnSale && <ReturnModal sale={returnSale} onClose={closeReturn} />}
     </>
   );
 };

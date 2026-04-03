@@ -12,6 +12,7 @@ import {
 // IMPORTANT: Adjust these import paths to match your project structure
 import Input from "@/components/ui/Input"; 
 import { ReusableSelect } from "@/components/ui/ReusableSelect"; 
+import { GradientButton } from "@/components/ui/GradientButton";
 
 const CustomerFormPage = () => {
   // Form State
@@ -57,22 +58,7 @@ const CustomerFormPage = () => {
       <div className="space-y-6">
         
         {/* ── HEADER ── */}
-        <div className="flex items-center justify-end">
-         
-          
-          <div className="flex items-center gap-3">
-            <button className="px-4 py-2 text-sm font-medium text-zinc-600 bg-white border border-zinc-200 rounded-lg hover:bg-zinc-50 transition-all shadow-sm">
-              Cancel
-            </button>
-            <button 
-              onClick={handleSubmit}
-              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-lg hover:bg-blue-700 transition-all shadow-sm"
-            >
-              <Save size={16} />
-              Save Customer
-            </button>
-          </div>
-        </div>
+        
 
         {/* ── FORM ── */}
         <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -229,6 +215,17 @@ const CustomerFormPage = () => {
 
           </div>
         </form>
+        <div className="flex items-center justify-end">
+  
+          <div className="flex items-center gap-3">
+                   <GradientButton variant="outline" color="danger" >
+          Cancel
+         </GradientButton>
+          <GradientButton icon={<Save size={16} />} onClick={handleSubmit}>
+            Save Customer
+          </GradientButton>
+          </div>
+        </div>
       </div>
     </div>
   );

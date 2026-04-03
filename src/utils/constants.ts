@@ -50,18 +50,7 @@ export const sidebarLinks: SidebarLink[] = [
     icon: Wallet,
     subLinks: [
       
-      // Direct Purchase — gated by settings.directPurchase
-      {
-        type: "group",
-        name: "Direct Purchase",
-        icon: Plus,
-        settingsKey: "directPurchase",
-        children: [
-          { name: "Add Purchase", path: "/purchase-order/add" },
-
-        ],
-      },
-
+  { name: "+ Add Purchase", path: "/purchase-order/add" },
       // Purchase Orders group — gated by settings.poGrn
       {
         type: "group",

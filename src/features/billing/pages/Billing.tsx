@@ -110,6 +110,21 @@ const Billing = () => {
     console.log("[Billing] Invoice payload ready:", payload);
   }, []);
 
+  const handleHoldBill = useCallback(() => {
+    // TODO: persist held bill (e.g. push to a held-bills list)
+    console.log("[Billing] Bill held:", items);
+    setItems([createEmptyRow()]);
+    setPhone("");
+    setCustomerName("");
+    setCustomerData(null);
+    setCustomerNotFound(false);
+    setWasAutofilled(false);
+  }, [items]);
+
+  const handleClearBill = useCallback(() => {
+    setItems([createEmptyRow()]);
+  }, []);
+
   return (
     <div className="flex flex-col h-[calc(100vh-2rem)] gap-4">
     
@@ -239,6 +254,8 @@ const Billing = () => {
             phone={phone}
             onInvoiceReady={handleInvoiceReady}
             setIsOpen={setIsOpen}
+            onHoldBill={handleHoldBill}
+            onClearBill={handleClearBill}
           />
         </div>
       </div>

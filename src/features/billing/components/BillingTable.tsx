@@ -108,6 +108,7 @@ const ShortcutKbd = ({ keys, label }: { keys: string[], label: string }) => (
 
 const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => {
   const nameOptions = useMemo(() => toOptions("name"), []);
+  const codeOptions = useMemo(() => toOptions("code"), []);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [pendingProduct, setPendingProduct] = useState<InventoryItem | null>(null);
@@ -145,10 +146,15 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
 
   // ── Modal Handlers ────────────────────────────────────────────────────────
 
-  const handleProductSelectClick = (selectedLabel: string, rowId: string) => {
-    // Strip out the category if appended in label formatting
-    const rawLabel = selectedLabel.split(' • ')[0];
-    const opt = nameOptions.find((o) => o.value === rawLabel);
+  const handleProductSelectClick = (selectedValue: string, rowId: string, searchBy: 'name' | 'code' = 'name') => {
+    let opt;
+    if (searchBy === 'name') {
+      // Strip out the category if appended in label formatting
+      const rawLabel = selectedValue.split(' • ')[0];
+      opt = nameOptions.find((o) => o.value === rawLabel);
+    } else {
+      opt = codeOptions.find((o) => o.value === selectedValue);
+    }
     if (!opt) return;
     
     setPendingProduct(opt.payload);
@@ -164,25 +170,32 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
        return;
     }
 
-    updateItem(activeRowId, {
-      code: pendingProduct.product_barcode,
-      name: `${pendingProduct.product_name} - ${variant.name}`,
-      price: variant.price,
-      qty: 1, 
-      serialNumber: serial,
-      variantId: variant.id,
-      batchTracking: pendingProduct.batchTracking,
-      manufacturingDate: pendingProduct.manufacturingDate,
-      expiryDate: pendingProduct.expiryDate,
+    const updatedItems = items.map((item) => {
+      if (item.id !== activeRowId) return item;
+      const merged = { 
+        ...item, 
+        code: pendingProduct.product_barcode,
+        name: `${pendingProduct.product_name} - ${variant.name}`,
+        price: variant.price,
+        qty: 1, 
+        serialNumber: serial,
+        variantId: variant.id,
+        batchTracking: pendingProduct.batchTracking,
+        manufacturingDate: pendingProduct.manufacturingDate,
+        expiryDate: pendingProduct.expiryDate,
+      };
+      return { ...merged, tprice: (merged.qty || 0) * (merged.price || 0) };
     });
+
+    if (activeRowId === items[items.length - 1].id) {
+        updatedItems.push(createEmptyRow());
+    }
+
+    onItemsChange(updatedItems);
 
     setModalOpen(false);
     setPendingProduct(null);
     setActiveRowId(null);
-    
-    if (activeRowId === items[items.length - 1].id) {
-        handleAddRow();
-    }
   };
 
   // ── Keyboard shortcuts ────────────────────────────────────────────────────
@@ -288,13 +301,25 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
 
                     {/* Product Cell */}
                     <td className={`px-3 py-4 min-w-[300px] align-top ${!isLast ? "border-b border-slate-100" : ""}`}>
-                      <div className="w-full max-w-sm">
-                        <ReusableCombobox
-                          options={nameOptions}
-                          value={baseName} 
-                          placeholder="Select product or scan..."
-                          onChange={(selected) => handleProductSelectClick(selected, item.id)}
-                        />
+                      <div className="w-full max-w-lg">
+                        <div className="flex gap-2">
+                          <div className="w-2/5">
+                            <ReusableCombobox
+                              options={codeOptions}
+                              value={item.code || ""} 
+                              placeholder="Barcode search..."
+                              onChange={(selected) => handleProductSelectClick(selected, item.id, 'code')}
+                            />
+                          </div>
+                          <div className="w-3/5">
+                            <ReusableCombobox
+                              options={nameOptions}
+                              value={baseName} 
+                              placeholder="Select product..."
+                              onChange={(selected) => handleProductSelectClick(selected, item.id, 'name')}
+                            />
+                          </div>
+                        </div>
                         
                         {/* Variant & Serial Tags */}
                         {isFilled && (variantName || hasSerial) && (

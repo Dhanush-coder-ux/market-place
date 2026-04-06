@@ -84,7 +84,7 @@ const isOutOfStock = (stock: number) => stock === 0;
 // --- Sub Components ---
 
 const BatchRow = ({ batch, isLast, indentLevel = 1, isHidden = false }: { batch: Batch; isLast: boolean; indentLevel?: number; isHidden?: boolean }) => {
-  const { progressPct, label, color, statusBg, Icon } = getBatchStatus(batch.mfgDate, batch.expDate);
+  const { label,statusBg, Icon } = getBatchStatus(batch.mfgDate, batch.expDate);
   const paddingLeft = indentLevel === 2 ? 'pl-16' : 'pl-4'; 
 
   if (isHidden) return null;

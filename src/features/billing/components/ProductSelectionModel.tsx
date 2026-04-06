@@ -153,6 +153,13 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({ isOpen, p
                     </span>
                   </div>
                 </div>
+                {/* Lifecycle bar */}
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 h-1.5 bg-slate-200/60 rounded-full overflow-hidden">
+                    <div className={`h-full rounded-full transition-all duration-500 ${barColor}`} style={{ width: `${pct}%` }} />
+                  </div>
+                  <span className="text-[10px] font-bold text-slate-400 tabular-nums">{pct.toFixed(0)}% elapsed</span>
+                </div>
               </div>
             );
           })()}

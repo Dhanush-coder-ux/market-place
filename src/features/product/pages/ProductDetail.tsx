@@ -218,15 +218,6 @@ const ProductDetail = () => {
     <div className="min-h-screen bg-slate-50 font-sans pb-20">
       <div className="space-y-4">
         
-        {/* ── Breadcrumb ── */}
-        <div className="flex items-center gap-2 text-xs text-slate-400 font-medium">
-          <a href="#" className="text-slate-500 hover:text-slate-700 transition-colors">Home</a>
-          <span>›</span>
-          <a href="#" className="text-slate-500 hover:text-slate-700 transition-colors">Product</a>
-          <span>›</span>
-          <span className="text-slate-700">Detail</span>
-        </div>
-
         {/* ── Product Header Card ── */}
         <div className="bg-white rounded-xl border border-slate-100 p-5 flex flex-col md:flex-row gap-5 shadow-sm">
           {/* Icon Container - Scaled down and muted */}

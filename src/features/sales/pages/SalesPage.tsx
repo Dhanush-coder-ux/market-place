@@ -8,17 +8,18 @@ import {
   BarChart2,
   Smartphone,
 } from "lucide-react";
+import { StatsCard } from "@/components/common/StatsCard";
 
 /* ═══════════════════════════════════════════════════════════════
    TYPES
 ═══════════════════════════════════════════════════════════════ */
-type OriginType      = "Sales" | "Sales Return";
-type SalesType       = "Online" | "Offline";
-type PaymentMethod   = "Cash" | "Card" | "UPI";
-type SaleStatus      = "Completed" | "Pending" | "Cancelled";
-type ReturnMode      = "refund" | "exchange";
-type ReturnType      = "Full" | "Partial";
-type ReturnReason    = "Damaged" | "Wrong Item" | "Customer Request" | "Size Issue" | "Other" | "";
+type OriginType = "Sales" | "Sales Return";
+type SalesType = "Online" | "Offline";
+type PaymentMethod = "Cash" | "Card" | "UPI";
+type SaleStatus = "Completed" | "Pending" | "Cancelled";
+type ReturnMode = "refund" | "exchange";
+type ReturnType = "Full" | "Partial";
+type ReturnReason = "Damaged" | "Wrong Item" | "Customer Request" | "Size Issue" | "Other" | "";
 type SettlementMethod = "Cash" | "UPI" | "Card" | "Bank" | "Store Credit" | "";
 
 interface SaleRecord {
@@ -90,31 +91,31 @@ const RETURN_REASONS: Exclude<ReturnReason, "">[] = [
 ];
 
 const ITEM_COLORS = ["#dbeafe", "#dcfce7", "#fef3c7", "#fce7f3", "#ede9fe", "#ffedd5", "#f0fdf4", "#ecfeff"];
-const ITEM_NAMES  = ["Classic White Tee", "Denim Jacket", "Canvas Sneakers", "Running Shorts", "Wool Sweater", "Cargo Pants", "Leather Belt", "Cotton Socks"];
-const ITEM_CATS   = ["Tops", "Outerwear", "Footwear", "Bottoms", "Knitwear", "Bottoms", "Accessories", "Accessories"];
+const ITEM_NAMES = ["Classic White Tee", "Denim Jacket", "Canvas Sneakers", "Running Shorts", "Wool Sweater", "Cargo Pants", "Leather Belt", "Cotton Socks"];
+const ITEM_CATS = ["Tops", "Outerwear", "Footwear", "Bottoms", "Knitwear", "Bottoms", "Accessories", "Accessories"];
 
 const MOCK_SALES: SaleRecord[] = [
-  { id: "1",  invoiceNumber: "INV-2024-0041", customerName: "Arjun Mehta",      origin: "Sales",        salesType: "Online",  paymentMethod: "UPI",  totalAmount: 4850,  itemsCount: 3, date: "2024-04-22", status: "Completed" },
-  { id: "2",  invoiceNumber: "INV-2024-0042", customerName: "Walk-in Customer", origin: "Sales",        salesType: "Offline", paymentMethod: "Cash", totalAmount: 1200,  itemsCount: 1, date: "2024-04-22", status: "Completed" },
-  { id: "3",  invoiceNumber: "INV-2024-0043", customerName: "Priya Nair",       origin: "Sales Return", salesType: "Online",  paymentMethod: "Card", totalAmount: 9300,  itemsCount: 5, date: "2024-04-21", status: "Pending"   },
-  { id: "4",  invoiceNumber: "INV-2024-0044", customerName: "Walk-in Customer", origin: "Sales",        salesType: "Offline", paymentMethod: "Cash", totalAmount: 650,   itemsCount: 2, date: "2024-04-21", status: "Completed" },
-  { id: "5",  invoiceNumber: "INV-2024-0045", customerName: "Rohan Sharma",     origin: "Sales Return", salesType: "Online",  paymentMethod: "UPI",  totalAmount: 2200,  itemsCount: 2, date: "2024-04-20", status: "Cancelled" },
-  { id: "6",  invoiceNumber: "INV-2024-0046", customerName: "Sneha Pillai",     origin: "Sales",        salesType: "Online",  paymentMethod: "Card", totalAmount: 15400, itemsCount: 8, date: "2024-04-20", status: "Completed" },
-  { id: "7",  invoiceNumber: "INV-2024-0047", customerName: "Walk-in Customer", origin: "Sales",        salesType: "Offline", paymentMethod: "Cash", totalAmount: 480,   itemsCount: 1, date: "2024-04-20", status: "Completed" },
-  { id: "8",  invoiceNumber: "INV-2024-0048", customerName: "Vikram Iyer",      origin: "Sales Return", salesType: "Online",  paymentMethod: "UPI",  totalAmount: 7700,  itemsCount: 4, date: "2024-04-19", status: "Pending"   },
-  { id: "9",  invoiceNumber: "INV-2024-0049", customerName: "Meera Joshi",      origin: "Sales",        salesType: "Offline", paymentMethod: "Card", totalAmount: 3100,  itemsCount: 3, date: "2024-04-19", status: "Completed" },
-  { id: "10", invoiceNumber: "INV-2024-0050", customerName: "Rahul Gupta",      origin: "Sales Return", salesType: "Online",  paymentMethod: "Card", totalAmount: 6200,  itemsCount: 4, date: "2024-04-18", status: "Cancelled" },
-  { id: "11", invoiceNumber: "INV-2024-0051", customerName: "Walk-in Customer", origin: "Sales",        salesType: "Offline", paymentMethod: "Cash", totalAmount: 950,   itemsCount: 2, date: "2024-04-18", status: "Completed" },
-  { id: "12", invoiceNumber: "INV-2024-0052", customerName: "Divya Krishnan",   origin: "Sales",        salesType: "Online",  paymentMethod: "UPI",  totalAmount: 11200, itemsCount: 6, date: "2024-04-17", status: "Completed" },
+  { id: "1", invoiceNumber: "INV-2024-0041", customerName: "Arjun Mehta", origin: "Sales", salesType: "Online", paymentMethod: "UPI", totalAmount: 4850, itemsCount: 3, date: "2024-04-22", status: "Completed" },
+  { id: "2", invoiceNumber: "INV-2024-0042", customerName: "Walk-in Customer", origin: "Sales", salesType: "Offline", paymentMethod: "Cash", totalAmount: 1200, itemsCount: 1, date: "2024-04-22", status: "Completed" },
+  { id: "3", invoiceNumber: "INV-2024-0043", customerName: "Priya Nair", origin: "Sales Return", salesType: "Online", paymentMethod: "Card", totalAmount: 9300, itemsCount: 5, date: "2024-04-21", status: "Pending" },
+  { id: "4", invoiceNumber: "INV-2024-0044", customerName: "Walk-in Customer", origin: "Sales", salesType: "Offline", paymentMethod: "Cash", totalAmount: 650, itemsCount: 2, date: "2024-04-21", status: "Completed" },
+  { id: "5", invoiceNumber: "INV-2024-0045", customerName: "Rohan Sharma", origin: "Sales Return", salesType: "Online", paymentMethod: "UPI", totalAmount: 2200, itemsCount: 2, date: "2024-04-20", status: "Cancelled" },
+  { id: "6", invoiceNumber: "INV-2024-0046", customerName: "Sneha Pillai", origin: "Sales", salesType: "Online", paymentMethod: "Card", totalAmount: 15400, itemsCount: 8, date: "2024-04-20", status: "Completed" },
+  { id: "7", invoiceNumber: "INV-2024-0047", customerName: "Walk-in Customer", origin: "Sales", salesType: "Offline", paymentMethod: "Cash", totalAmount: 480, itemsCount: 1, date: "2024-04-20", status: "Completed" },
+  { id: "8", invoiceNumber: "INV-2024-0048", customerName: "Vikram Iyer", origin: "Sales Return", salesType: "Online", paymentMethod: "UPI", totalAmount: 7700, itemsCount: 4, date: "2024-04-19", status: "Pending" },
+  { id: "9", invoiceNumber: "INV-2024-0049", customerName: "Meera Joshi", origin: "Sales", salesType: "Offline", paymentMethod: "Card", totalAmount: 3100, itemsCount: 3, date: "2024-04-19", status: "Completed" },
+  { id: "10", invoiceNumber: "INV-2024-0050", customerName: "Rahul Gupta", origin: "Sales Return", salesType: "Online", paymentMethod: "Card", totalAmount: 6200, itemsCount: 4, date: "2024-04-18", status: "Cancelled" },
+  { id: "11", invoiceNumber: "INV-2024-0051", customerName: "Walk-in Customer", origin: "Sales", salesType: "Offline", paymentMethod: "Cash", totalAmount: 950, itemsCount: 2, date: "2024-04-18", status: "Completed" },
+  { id: "12", invoiceNumber: "INV-2024-0052", customerName: "Divya Krishnan", origin: "Sales", salesType: "Online", paymentMethod: "UPI", totalAmount: 11200, itemsCount: 6, date: "2024-04-17", status: "Completed" },
 ];
 
 const EXCHANGE_PRODUCTS: ExchangeProduct[] = [
-  { id: "ep-1", name: "Striped Linen Tee",    sku: "SKU-2201", price: 850,  imageColor: "#dbeafe", inStock: true  },
-  { id: "ep-2", name: "Slim Chino Pants",     sku: "SKU-2202", price: 1400, imageColor: "#dcfce7", inStock: true  },
-  { id: "ep-3", name: "Leather Sneakers",     sku: "SKU-2203", price: 2200, imageColor: "#fce7f3", inStock: false },
-  { id: "ep-4", name: "Oversized Hoodie",     sku: "SKU-2204", price: 1800, imageColor: "#ede9fe", inStock: true  },
-  { id: "ep-5", name: "Merino Crewneck",      sku: "SKU-2205", price: 2600, imageColor: "#fef3c7", inStock: true  },
-  { id: "ep-6", name: "Cargo Shorts",         sku: "SKU-2206", price: 1100, imageColor: "#ffedd5", inStock: true  },
+  { id: "ep-1", name: "Striped Linen Tee", sku: "SKU-2201", price: 850, imageColor: "#dbeafe", inStock: true },
+  { id: "ep-2", name: "Slim Chino Pants", sku: "SKU-2202", price: 1400, imageColor: "#dcfce7", inStock: true },
+  { id: "ep-3", name: "Leather Sneakers", sku: "SKU-2203", price: 2200, imageColor: "#fce7f3", inStock: false },
+  { id: "ep-4", name: "Oversized Hoodie", sku: "SKU-2204", price: 1800, imageColor: "#ede9fe", inStock: true },
+  { id: "ep-5", name: "Merino Crewneck", sku: "SKU-2205", price: 2600, imageColor: "#fef3c7", inStock: true },
+  { id: "ep-6", name: "Cargo Shorts", sku: "SKU-2206", price: 1100, imageColor: "#ffedd5", inStock: true },
 ];
 
 /* ═══════════════════════════════════════════════════════════════
@@ -133,20 +134,7 @@ const generateItems = (sale: SaleRecord): SaleItem[] =>
 
 const fmt = (n: number) => `₹${n.toLocaleString("en-IN")}`;
 
-/* ═══════════════════════════════════════════════════════════════
-   STATS CARD (INLINE COMPONENT)
-═══════════════════════════════════════════════════════════════ */
-const StatsCard: React.FC<{ iconColor: string, iconBg: string, label: string, icon: any, value: string | number }> = ({ iconColor, iconBg, label, icon: Icon, value }) => (
-  <div className="flex-1 min-w-[200px] bg-white border border-slate-200 rounded-xl p-4 flex items-center gap-4">
-    <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${iconBg}`}>
-      <Icon size={24} className={iconColor} />
-    </div>
-    <div>
-      <p className="text-xs font-medium text-slate-500 mb-1">{label}</p>
-      <p className="text-xl font-bold text-slate-800">{value}</p>
-    </div>
-  </div>
-);
+
 
 /* ═══════════════════════════════════════════════════════════════
    BADGE CONFIGS
@@ -154,22 +142,22 @@ const StatsCard: React.FC<{ iconColor: string, iconBg: string, label: string, ic
 type BadgeConfig = { cls: string; dot: string };
 
 const ORIGIN_CFG: Record<OriginType, BadgeConfig> = {
-  "Sales":        { cls: "bg-blue-50 text-blue-700 border-blue-100",        dot: "bg-blue-400"   },
+  "Sales": { cls: "bg-blue-50 text-blue-700 border-blue-100", dot: "bg-blue-400" },
   "Sales Return": { cls: "bg-orange-50 text-orange-700 border-orange-100", dot: "bg-orange-400" },
 };
 const SALES_TYPE_CFG: Record<SalesType, BadgeConfig> = {
-  Online:  { cls: "bg-blue-50 text-blue-700 border-blue-100",      dot: "bg-blue-400"  },
+  Online: { cls: "bg-blue-50 text-blue-700 border-blue-100", dot: "bg-blue-400" },
   Offline: { cls: "bg-slate-100 text-slate-600 border-slate-200", dot: "bg-slate-400" },
 };
 const PAYMENT_CFG: Record<PaymentMethod, BadgeConfig> = {
   Cash: { cls: "bg-emerald-50 text-emerald-700 border-emerald-100", dot: "bg-emerald-400" },
-  Card: { cls: "bg-purple-50 text-purple-700 border-purple-100",    dot: "bg-purple-400"  },
-  UPI:  { cls: "bg-indigo-50 text-indigo-700 border-indigo-100",    dot: "bg-indigo-400"  },
+  Card: { cls: "bg-purple-50 text-purple-700 border-purple-100", dot: "bg-purple-400" },
+  UPI: { cls: "bg-indigo-50 text-indigo-700 border-indigo-100", dot: "bg-indigo-400" },
 };
 const STATUS_CFG: Record<SaleStatus, BadgeConfig> = {
   Completed: { cls: "bg-emerald-50 text-emerald-700 border-emerald-100", dot: "bg-emerald-500" },
-  Pending:   { cls: "bg-amber-50 text-amber-700 border-amber-100",       dot: "bg-amber-400"   },
-  Cancelled: { cls: "bg-red-50 text-red-600 border-red-100",             dot: "bg-red-400"     },
+  Pending: { cls: "bg-amber-50 text-amber-700 border-amber-100", dot: "bg-amber-400" },
+  Cancelled: { cls: "bg-red-50 text-red-600 border-red-100", dot: "bg-red-400" },
 };
 
 /* ═══════════════════════════════════════════════════════════════
@@ -344,7 +332,7 @@ interface StepHeaderProps {
 }
 const StepHeader: React.FC<StepHeaderProps> = ({ step, mode, invoice }) => {
   const totalSteps = 6;
-  const progress   = ((step - 1) / (totalSteps - 1)) * 100;
+  const progress = ((step - 1) / (totalSteps - 1)) * 100;
 
   return (
     <div className="px-6 pt-5 pb-4 border-b border-slate-100">
@@ -355,11 +343,11 @@ const StepHeader: React.FC<StepHeaderProps> = ({ step, mode, invoice }) => {
           </p>
           <p className="text-sm font-semibold text-slate-800">
             {step === 1 ? "Choose Return Mode"
-             : step === 2 ? "Return Type"
-             : step === 3 ? (mode === "refund" ? "Select Items for Refund" : "Select Items to Exchange")
-             : step === 4 ? "Reason & Payment"
-             : step === 5 ? "Review Summary"
-             : "Return Processed"}
+              : step === 2 ? "Return Type"
+                : step === 3 ? (mode === "refund" ? "Select Items for Refund" : "Select Items to Exchange")
+                  : step === 4 ? "Reason & Payment"
+                    : step === 5 ? "Review Summary"
+                      : "Return Processed"}
           </p>
         </div>
         <span className="sr-mono text-[10px] text-slate-400 bg-slate-50 border border-slate-100 px-2 py-1 rounded-md">
@@ -374,12 +362,10 @@ const StepHeader: React.FC<StepHeaderProps> = ({ step, mode, invoice }) => {
           <div className="flex justify-between mt-2">
             {([1, 2, 3, 4, 5] as ReturnStep[]).map(s => (
               <div key={s} className="flex flex-col items-center gap-1">
-                <div className={`w-1.5 h-1.5 rounded-full transition-colors duration-300 ${
-                  s < step ? "bg-blue-500" : s === step ? "bg-blue-500" : "bg-slate-200"
-                }`} />
-                <span className={`text-[9px] font-medium tracking-wide transition-colors duration-300 ${
-                  s <= step ? "text-blue-500" : "text-slate-300"
-                }`}>{STEP_LABELS[s]}</span>
+                <div className={`w-1.5 h-1.5 rounded-full transition-colors duration-300 ${s < step ? "bg-blue-500" : s === step ? "bg-blue-500" : "bg-slate-200"
+                  }`} />
+                <span className={`text-[9px] font-medium tracking-wide transition-colors duration-300 ${s <= step ? "text-blue-500" : "text-slate-300"
+                  }`}>{STEP_LABELS[s]}</span>
               </div>
             ))}
           </div>
@@ -441,7 +427,7 @@ const RefundSummary: React.FC<RefundSummaryProps> = ({
           <p className="text-sm font-semibold sr-mono text-slate-700">{fmt(exchangeValue)}</p>
         </div>
         <div>
-          <p className="text-[10px] font-semibold uppercase tracking-wide mb-0.5 text-[10px]" style={{color: diff > 0 ? '#92400e' : diff < 0 ? '#065f46' : '#64748b'}}>
+          <p className="text-[10px] font-semibold uppercase tracking-wide mb-0.5 text-[10px]" style={{ color: diff > 0 ? '#92400e' : diff < 0 ? '#065f46' : '#64748b' }}>
             {diff > 0 ? "Customer Pays" : diff < 0 ? "Shop Refunds" : "Settled"}
           </p>
           <p className={`text-sm font-semibold sr-mono ${diff > 0 ? "text-amber-700" : diff < 0 ? "text-emerald-700" : "text-slate-500"}`}>
@@ -468,7 +454,7 @@ const ItemSelector: React.FC<ItemSelectorProps> = ({ items, returnItems, onToggl
     <div className="space-y-2">
       {items.map(item => {
         const checked = returnItems[item.id] !== undefined;
-        const qty     = returnItems[item.id] ?? 1;
+        const qty = returnItems[item.id] ?? 1;
         return (
           <div key={item.id}
             className={`sr-item-row border rounded-xl p-3.5 ${checked ? "sel" : ""}`}
@@ -540,11 +526,11 @@ const useReturnModal = (sale: SaleRecord | null) => {
 
   const reset = useCallback(() => setState(initialState()), []);
 
-  const setStep    = (step: ReturnStep) => setState(s => ({ ...s, step }));
-  const setMode    = (mode: ReturnMode) => setState(s => ({ ...s, mode, settlementMethod: mode === "refund" ? "Cash" : "" }));
+  const setStep = (step: ReturnStep) => setState(s => ({ ...s, step }));
+  const setMode = (mode: ReturnMode) => setState(s => ({ ...s, mode, settlementMethod: mode === "refund" ? "Cash" : "" }));
   const setReturnType = (returnType: ReturnType) => setState(s => ({ ...s, returnType, returnItems: {} }));
-  const setReason  = (reason: ReturnReason) => setState(s => ({ ...s, reason, errors: { ...s.errors, reason: undefined } }));
-  const setNotes   = (notes: string) => setState(s => ({ ...s, notes }));
+  const setReason = (reason: ReturnReason) => setState(s => ({ ...s, reason, errors: { ...s.errors, reason: undefined } }));
+  const setNotes = (notes: string) => setState(s => ({ ...s, notes }));
   const setSettlementMethod = (settlementMethod: SettlementMethod) => setState(s => ({ ...s, settlementMethod, errors: { ...s.errors, settlement: undefined } }));
 
   const toggleItem = useCallback((itemId: string) => {
@@ -588,10 +574,10 @@ const useReturnModal = (sale: SaleRecord | null) => {
     const returnValue = selectedItems.reduce((s, i) => s + i.unitPrice * i.returnQty, 0);
     const exchangeValue = state.mode === "exchange"
       ? selectedItems.reduce((s, i) => {
-          if (!i.exchangeItemId) return s;
-          const ep = EXCHANGE_PRODUCTS.find(e => e.id === i.exchangeItemId);
-          return s + (ep?.price ?? 0);
-        }, 0)
+        if (!i.exchangeItemId) return s;
+        const ep = EXCHANGE_PRODUCTS.find(e => e.id === i.exchangeItemId);
+        return s + (ep?.price ?? 0);
+      }, 0)
       : 0;
     return {
       returnValue,
@@ -606,7 +592,7 @@ const useReturnModal = (sale: SaleRecord | null) => {
     if (state.returnType === "Partial" && selectedItems.length === 0) {
       errs.items = "Select at least one item.";
     }
-    
+
     // Settlement Method is required if it's a direct refund or an exchange with a price difference
     const requiresSettlement = state.mode === "refund" || totals.diff !== 0;
     if (requiresSettlement && !state.settlementMethod) {
@@ -659,7 +645,7 @@ const ReturnModal: React.FC<ReturnModalProps> = ({ sale, onClose }) => {
   const m = useReturnModal(sale);
   const { state, saleItems, selectedItems, totals } = m;
   const scrollRef = useRef<HTMLDivElement>(null);
-  
+
   // State for the exchange products search bar and the active tab
   const [exchSearch, setExchSearch] = useState("");
   const [activeReplaceId, setActiveReplaceId] = useState<string | null>(null);
@@ -667,7 +653,7 @@ const ReturnModal: React.FC<ReturnModalProps> = ({ sale, onClose }) => {
   const filteredExchProducts = useMemo(() => {
     if (!exchSearch) return EXCHANGE_PRODUCTS;
     const lowerQ = exchSearch.toLowerCase();
-    return EXCHANGE_PRODUCTS.filter(ep => 
+    return EXCHANGE_PRODUCTS.filter(ep =>
       ep.name.toLowerCase().includes(lowerQ) || ep.sku.toLowerCase().includes(lowerQ)
     );
   }, [exchSearch]);
@@ -769,8 +755,8 @@ const ReturnModal: React.FC<ReturnModalProps> = ({ sale, onClose }) => {
                     </p>
                     <div className="grid grid-cols-2 gap-3">
                       {([
-                        { id: "Full" as ReturnType,    label: "Full Return",    desc: `All ${sale.itemsCount} items`, icon: <RotateCcw size={16} /> },
-                        { id: "Partial" as ReturnType, label: "Partial Return", desc: "Select specific items",         icon: <Package size={16} /> },
+                        { id: "Full" as ReturnType, label: "Full Return", desc: `All ${sale.itemsCount} items`, icon: <RotateCcw size={16} /> },
+                        { id: "Partial" as ReturnType, label: "Partial Return", desc: "Select specific items", icon: <Package size={16} /> },
                       ]).map(opt => (
                         <button key={opt.id}
                           onClick={() => m.setReturnType(opt.id)}
@@ -835,16 +821,15 @@ const ReturnModal: React.FC<ReturnModalProps> = ({ sale, onClose }) => {
                           {selectedItems.map(selItem => {
                             const hasReplacement = !!state.exchangeMap[selItem.id];
                             const isActive = activeReplaceId === selItem.id;
-                            
+
                             return (
                               <button
                                 key={selItem.id}
                                 onClick={() => setActiveReplaceId(selItem.id)}
-                                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium border transition-all ${
-                                  isActive
+                                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium border transition-all ${isActive
                                     ? "border-blue-500 bg-blue-50 text-blue-700 shadow-sm"
                                     : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
-                                }`}
+                                  }`}
                               >
                                 {selItem.name}
                                 {hasReplacement && <CheckCircle2 size={12} className={isActive ? "text-blue-500" : "text-emerald-500"} />}
@@ -852,7 +837,7 @@ const ReturnModal: React.FC<ReturnModalProps> = ({ sale, onClose }) => {
                             );
                           })}
                         </div>
-                        
+
                         {/* Search Bar for Exchange Products */}
                         <div className="relative mb-4">
                           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -872,7 +857,7 @@ const ReturnModal: React.FC<ReturnModalProps> = ({ sale, onClose }) => {
                               // Get context details for the currently active item
                               const activeItem = selectedItems.find(i => i.id === activeReplaceId);
                               if (!activeItem) return null;
-                              
+
                               return (
                                 <p className="text-[11px] font-medium text-slate-500 mb-2.5 flex items-center gap-1.5">
                                   <ArrowRight size={10} className="text-slate-400" />
@@ -881,7 +866,7 @@ const ReturnModal: React.FC<ReturnModalProps> = ({ sale, onClose }) => {
                                 </p>
                               );
                             })()}
-                            
+
                             {filteredExchProducts.length === 0 ? (
                               <div className="text-center py-4 bg-slate-50 rounded-xl border border-slate-100">
                                 <p className="text-xs text-slate-400">No products found matching "{exchSearch}"</p>
@@ -932,11 +917,10 @@ const ReturnModal: React.FC<ReturnModalProps> = ({ sale, onClose }) => {
                       <select
                         value={state.reason}
                         onChange={e => m.setReason(e.target.value as ReturnReason)}
-                        className={`sr-select w-full px-3.5 py-2.5 text-xs border rounded-xl bg-white text-slate-700 outline-none transition-all pr-9 ${
-                          state.errors.reason
+                        className={`sr-select w-full px-3.5 py-2.5 text-xs border rounded-xl bg-white text-slate-700 outline-none transition-all pr-9 ${state.errors.reason
                             ? "border-red-200 bg-red-50/30"
                             : "border-slate-200 focus:border-blue-300 focus:ring-2 focus:ring-blue-500/10"
-                        }`}
+                          }`}
                       >
                         <option value="">Select a reason…</option>
                         {RETURN_REASONS.map(r => <option key={r} value={r}>{r}</option>)}
@@ -956,8 +940,7 @@ const ReturnModal: React.FC<ReturnModalProps> = ({ sale, onClose }) => {
                             {state.mode === "refund" || totals.diff < 0 ? "Refund Via" : "Collect Balance Via"} <span className="text-red-400">*</span>
                           </label>
                           {totals.diff !== 0 && state.mode === "exchange" && (
-                            <span className={`text-[10px] font-semibold px-2 py-0.5 rounded border ${
-                                totals.diff > 0 ? "bg-amber-50 text-amber-600 border-amber-200" : "bg-emerald-50 text-emerald-600 border-emerald-200"
+                            <span className={`text-[10px] font-semibold px-2 py-0.5 rounded border ${totals.diff > 0 ? "bg-amber-50 text-amber-600 border-amber-200" : "bg-emerald-50 text-emerald-600 border-emerald-200"
                               }`}>
                               Balance: {fmt(Math.abs(totals.diff))}
                             </span>
@@ -1043,12 +1026,12 @@ const ReturnModal: React.FC<ReturnModalProps> = ({ sale, onClose }) => {
 
                     <div className="grid grid-cols-2 gap-2.5">
                       {[
-                        { label: "Mode",   value: state.mode === "refund" ? "Refund" : "Exchange" },
-                        { label: "Type",   value: `${state.returnType} Return` },
+                        { label: "Mode", value: state.mode === "refund" ? "Refund" : "Exchange" },
+                        { label: "Type", value: `${state.returnType} Return` },
                         { label: "Reason", value: state.reason },
-                        ...((state.mode === "refund" || totals.diff !== 0) && state.settlementMethod 
-                             ? [{ label: totals.diff > 0 ? "Payment Via" : "Refund Via", value: state.settlementMethod }] 
-                             : []),
+                        ...((state.mode === "refund" || totals.diff !== 0) && state.settlementMethod
+                          ? [{ label: totals.diff > 0 ? "Payment Via" : "Refund Via", value: state.settlementMethod }]
+                          : []),
                       ].map(row => (
                         <div key={row.label} className="bg-slate-50 border border-slate-100 rounded-xl p-3">
                           <p className="text-[10px] text-slate-400 uppercase tracking-wide mb-0.5">{row.label}</p>
@@ -1088,18 +1071,18 @@ const ReturnModal: React.FC<ReturnModalProps> = ({ sale, onClose }) => {
                       <p className="text-xs text-slate-500 leading-relaxed max-w-xs mx-auto">
                         {state.mode === "refund"
                           ? `A refund of ${fmt(totals.returnValue)} has been processed to ${state.settlementMethod}.`
-                          : (totals.diff > 0 
-                              ? `Exchange order created. Balance of ${fmt(totals.diff)} collected via ${state.settlementMethod}.` 
-                              : totals.diff < 0 
-                                ? `Exchange order created. Balance of ${fmt(Math.abs(totals.diff))} refunded to ${state.settlementMethod}.` 
-                                : `Exchange order has been created. Replacement items will be dispatched shortly.`)}
+                          : (totals.diff > 0
+                            ? `Exchange order created. Balance of ${fmt(totals.diff)} collected via ${state.settlementMethod}.`
+                            : totals.diff < 0
+                              ? `Exchange order created. Balance of ${fmt(Math.abs(totals.diff))} refunded to ${state.settlementMethod}.`
+                              : `Exchange order has been created. Replacement items will be dispatched shortly.`)}
                       </p>
                     </div>
                     <div className="w-full bg-slate-50 border border-slate-100 rounded-xl overflow-hidden">
                       {[
                         { label: "Invoice", value: sale.invoiceNumber },
-                        { label: "Mode",    value: state.mode === "refund" ? "Refund" : "Exchange" },
-                        { label: "Reason",  value: state.reason },
+                        { label: "Mode", value: state.mode === "refund" ? "Refund" : "Exchange" },
+                        { label: "Reason", value: state.reason },
                         ...(state.mode === "refund" ? [{
                           label: "Refunded",
                           value: fmt(totals.returnValue),
@@ -1171,7 +1154,7 @@ interface SidebarProps {
 }
 
 const SaleDetailSidebar: React.FC<SidebarProps> = ({ sale, isOpen, onClose, onReturn }) => {
-  const canReturn  = sale?.status === "Completed" && sale?.origin !== "Sales Return";
+  const canReturn = sale?.status === "Completed" && sale?.origin !== "Sales Return";
   const alreadyRet = sale?.origin === "Sales Return";
 
   return (
@@ -1179,9 +1162,8 @@ const SaleDetailSidebar: React.FC<SidebarProps> = ({ sale, isOpen, onClose, onRe
       {isOpen && (
         <div className="sr-backdrop-enter fixed inset-0 bg-black/10 z-[100]" onClick={onClose} />
       )}
-      <div className={`sr-sidebar fixed top-0 right-0 h-full w-full max-w-[400px] bg-white shadow-2xl z-[110] border-l border-slate-200 flex flex-col ${
-        isOpen ? "translate-x-0" : "translate-x-full"
-      }`}>
+      <div className={`sr-sidebar fixed top-0 right-0 h-full w-full max-w-[400px] bg-white shadow-2xl z-[110] border-l border-slate-200 flex flex-col ${isOpen ? "translate-x-0" : "translate-x-full"
+        }`}>
         {sale && (
           <>
             {/* Header */}
@@ -1217,12 +1199,12 @@ const SaleDetailSidebar: React.FC<SidebarProps> = ({ sale, isOpen, onClose, onRe
               {/* Meta */}
               <div className="grid grid-cols-2 gap-2.5">
                 {[
-                  { icon: <User size={13} />,        label: "Customer",  value: sale.customerName },
-                  { icon: <Calendar size={13} />,    label: "Date",      value: sale.date },
-                  { icon: <CreditCard size={13} />,  label: "Payment",   value: sale.paymentMethod },
-                  { icon: <RotateCcw size={13} />,   label: "Origin",    value: sale.origin },
+                  { icon: <User size={13} />, label: "Customer", value: sale.customerName },
+                  { icon: <Calendar size={13} />, label: "Date", value: sale.date },
+                  { icon: <CreditCard size={13} />, label: "Payment", value: sale.paymentMethod },
+                  { icon: <RotateCcw size={13} />, label: "Origin", value: sale.origin },
                   { icon: sale.salesType === "Online" ? <Wifi size={13} /> : <WifiOff size={13} />, label: "Channel", value: sale.salesType },
-                  { icon: <Package size={13} />,     label: "Items",     value: `${sale.itemsCount} item${sale.itemsCount !== 1 ? "s" : ""}` },
+                  { icon: <Package size={13} />, label: "Items", value: `${sale.itemsCount} item${sale.itemsCount !== 1 ? "s" : ""}` },
                 ].map(({ icon, label, value }) => (
                   <div key={label} className="bg-white border border-slate-100 rounded-xl p-3">
                     <div className="flex items-center gap-1.5 text-slate-400 mb-1.5">
@@ -1266,11 +1248,10 @@ const SaleDetailSidebar: React.FC<SidebarProps> = ({ sale, isOpen, onClose, onRe
                 onClick={() => canReturn && onReturn(sale)}
                 disabled={!canReturn}
                 title={alreadyRet ? "Already returned" : !canReturn ? `Cannot return: ${sale.status}` : "Process return"}
-                className={`py-2.5 rounded-lg text-[11px] font-semibold transition-colors border ${
-                  canReturn
+                className={`py-2.5 rounded-lg text-[11px] font-semibold transition-colors border ${canReturn
                     ? "bg-red-50 border-red-100 text-red-600 hover:bg-red-100"
                     : "bg-slate-50 border-slate-100 text-slate-300 cursor-not-allowed"
-                }`}
+                  }`}
               >
                 Return
               </button>
@@ -1306,9 +1287,8 @@ const FilterDropdown: React.FC<FilterDropdownProps> = ({ label, options, value, 
     <div className="relative" ref={ref}>
       <button
         onClick={() => setOpen(p => !p)}
-        className={`sr-drop-btn inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium border rounded-lg transition-all ${
-          active ? "bg-blue-50 border-blue-200 text-blue-700" : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
-        }`}
+        className={`sr-drop-btn inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium border rounded-lg transition-all ${active ? "bg-blue-50 border-blue-200 text-blue-700" : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
+          }`}
       >
         {active ? value : label}
         {active ? (
@@ -1322,9 +1302,8 @@ const FilterDropdown: React.FC<FilterDropdownProps> = ({ label, options, value, 
           {options.map(opt => (
             <button key={opt}
               onClick={() => { onChange(opt === value ? "" : opt); setOpen(false); }}
-              className={`w-full text-left px-3.5 py-2 text-xs font-medium transition-colors hover:bg-slate-50 ${
-                opt === value ? "text-blue-600 bg-blue-50/60" : "text-slate-700"
-              }`}
+              className={`w-full text-left px-3.5 py-2 text-xs font-medium transition-colors hover:bg-slate-50 ${opt === value ? "text-blue-600 bg-blue-50/60" : "text-slate-700"
+                }`}
             >
               {opt}
             </button>
@@ -1339,16 +1318,16 @@ const FilterDropdown: React.FC<FilterDropdownProps> = ({ label, options, value, 
    MAIN PAGE
 ═══════════════════════════════════════════════════════════════ */
 const SalesListPage: React.FC = () => {
-  const [search,        setSearch]        = useState("");
-  const [filterOrigin,  setFilterOrigin]  = useState("");
-  const [filterType,    setFilterType]    = useState("");
+  const [search, setSearch] = useState("");
+  const [filterOrigin, setFilterOrigin] = useState("");
+  const [filterType, setFilterType] = useState("");
   const [filterPayment, setFilterPayment] = useState("");
-  const [filterStatus,  setFilterStatus]  = useState("");
-  const [filterDate,    setFilterDate]    = useState("");
+  const [filterStatus, setFilterStatus] = useState("");
+  const [filterDate, setFilterDate] = useState("");
 
-  const [selectedSale,  setSelectedSale]  = useState<SaleRecord | null>(null);
+  const [selectedSale, setSelectedSale] = useState<SaleRecord | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [returnSale,    setReturnSale]    = useState<SaleRecord | null>(null);
+  const [returnSale, setReturnSale] = useState<SaleRecord | null>(null);
 
   const openSidebar = (sale: SaleRecord) => { setSelectedSale(sale); setIsSidebarOpen(true); };
   const closeSidebar = () => setIsSidebarOpen(false);
@@ -1361,20 +1340,20 @@ const SalesListPage: React.FC = () => {
   const closeReturn = () => setReturnSale(null);
 
   // Stats
-  const totalRevenue     = MOCK_SALES.filter(s => s.status === "Completed").reduce((a, b) => a + b.totalAmount, 0);
-  const salesCount       = MOCK_SALES.filter(s => s.origin === "Sales").length;
+  const totalRevenue = MOCK_SALES.filter(s => s.status === "Completed").reduce((a, b) => a + b.totalAmount, 0);
+  const salesCount = MOCK_SALES.filter(s => s.origin === "Sales").length;
   const salesReturnCount = MOCK_SALES.filter(s => s.origin === "Sales Return").length;
-  const todayRevenue     = MOCK_SALES.filter(s => s.date === TODAY && s.status === "Completed").reduce((a, b) => a + b.totalAmount, 0);
+  const todayRevenue = MOCK_SALES.filter(s => s.date === TODAY && s.status === "Completed").reduce((a, b) => a + b.totalAmount, 0);
 
   const filtered = useMemo(() => MOCK_SALES.filter(s => {
     const q = search.toLowerCase();
     return (
-      (!q            || s.invoiceNumber.toLowerCase().includes(q) || s.customerName.toLowerCase().includes(q)) &&
-      (!filterOrigin  || s.origin        === filterOrigin)  &&
-      (!filterType    || s.salesType     === filterType)    &&
+      (!q || s.invoiceNumber.toLowerCase().includes(q) || s.customerName.toLowerCase().includes(q)) &&
+      (!filterOrigin || s.origin === filterOrigin) &&
+      (!filterType || s.salesType === filterType) &&
       (!filterPayment || s.paymentMethod === filterPayment) &&
-      (!filterStatus  || s.status        === filterStatus)  &&
-      (!filterDate    || s.date          === filterDate)
+      (!filterStatus || s.status === filterStatus) &&
+      (!filterDate || s.date === filterDate)
     );
   }), [search, filterOrigin, filterType, filterPayment, filterStatus, filterDate]);
 
@@ -1391,10 +1370,10 @@ const SalesListPage: React.FC = () => {
 
         {/* Stats */}
         <div className="flex gap-3 flex-wrap">
-          <StatsCard iconColor="text-green-500" iconBg="bg-green-50" label="Total Revenue" icon={DollarSign}  value={fmt(totalRevenue)} />
-          <StatsCard iconColor="text-blue-500" iconBg="bg-blue-50" label="Total Sales" icon={BarChart2}        value={salesCount} />
-          <StatsCard iconColor="text-red-500" iconBg="bg-red-50" label="Sales Returns" icon={RefreshCw}      value={salesReturnCount} />
-          <StatsCard iconColor="text-yellow-500" iconBg="bg-yellow-50" label="Today's Revenue" icon={DollarSign}    value={fmt(todayRevenue)} />
+          <StatsCard iconColor="text-green-500" iconBg="bg-green-50" label="Total Revenue" icon={DollarSign} value={fmt(totalRevenue)} />
+          <StatsCard iconColor="text-blue-500" iconBg="bg-blue-50" label="Total Sales" icon={BarChart2} value={salesCount} />
+          <StatsCard iconColor="text-red-500" iconBg="bg-red-50" label="Sales Returns" icon={RefreshCw} value={salesReturnCount} />
+          <StatsCard iconColor="text-yellow-500" iconBg="bg-yellow-50" label="Today's Revenue" icon={DollarSign} value={fmt(todayRevenue)} />
         </div>
 
         {/* Toolbar */}
@@ -1409,13 +1388,12 @@ const SalesListPage: React.FC = () => {
             />
           </div>
           <input type="date" value={filterDate} onChange={e => setFilterDate(e.target.value)}
-            className={`sr-drop-btn px-3 py-2 text-xs font-medium border rounded-lg outline-none cursor-pointer transition-all ${
-              filterDate ? "bg-blue-50 border-blue-200 text-blue-700" : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
-            }`} />
-          <FilterDropdown label="Origin"  options={["Sales", "Sales Return"]}             value={filterOrigin}  onChange={setFilterOrigin}  />
-          <FilterDropdown label="Type"    options={["Online", "Offline"]}                 value={filterType}    onChange={setFilterType}    />
-          <FilterDropdown label="Payment" options={["Cash", "Card", "UPI"]}               value={filterPayment} onChange={setFilterPayment} />
-          <FilterDropdown label="Status"  options={["Completed", "Pending", "Cancelled"]} value={filterStatus}  onChange={setFilterStatus}  />
+            className={`sr-drop-btn px-3 py-2 text-xs font-medium border rounded-lg outline-none cursor-pointer transition-all ${filterDate ? "bg-blue-50 border-blue-200 text-blue-700" : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
+              }`} />
+          <FilterDropdown label="Origin" options={["Sales", "Sales Return"]} value={filterOrigin} onChange={setFilterOrigin} />
+          <FilterDropdown label="Type" options={["Online", "Offline"]} value={filterType} onChange={setFilterType} />
+          <FilterDropdown label="Payment" options={["Cash", "Card", "UPI"]} value={filterPayment} onChange={setFilterPayment} />
+          <FilterDropdown label="Status" options={["Completed", "Pending", "Cancelled"]} value={filterStatus} onChange={setFilterStatus} />
           {activeFilters > 0 && (
             <button onClick={clearAll}
               className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-red-600 bg-red-50 border border-red-100 rounded-lg hover:bg-red-100 transition-colors">
@@ -1483,11 +1461,10 @@ const SalesListPage: React.FC = () => {
                             onClick={() => returnable && openReturn(sale)}
                             disabled={!returnable}
                             title={!returnable ? (sale.origin === "Sales Return" ? "Already returned" : `Status: ${sale.status}`) : "Process return"}
-                            className={`w-7 h-7 flex items-center justify-center rounded-md transition-all ${
-                              returnable
+                            className={`w-7 h-7 flex items-center justify-center rounded-md transition-all ${returnable
                                 ? "text-slate-400 hover:text-red-600 hover:bg-red-50"
                                 : "text-slate-200 cursor-not-allowed"
-                            }`}
+                              }`}
                           >
                             <RotateCcw size={14} />
                           </button>

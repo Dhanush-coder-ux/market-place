@@ -62,7 +62,7 @@ const PurchaseForm = () => {
 
   const [products, setProducts] = useState<ProductItem[]>([
     {
-      id: "1", name: "", quantity: "", costPrice: "", sellingPrice: "", 
+      id: "1", name: "", quantity: "", costPrice: "", sellingPrice: "",
       marginPercent: "", marginAmount: "", marginType: "percent",
       unit: "Piece",
       taxGst: 18, storageLoc: "", reorderPoint: "", expiryDate: "", manufacturingDate: "", batchTracking: false, batchNum: "", sku: "", variant: "", size: ""
@@ -107,10 +107,10 @@ const PurchaseForm = () => {
     const transportCost = Number(charges.transport) || 0;
     const otherCost = Number(charges.other) || 0;
     const totalCharges = transportCost + otherCost;
-    
+
     const baseAmountForGst = subtotal + totalCharges;
-    const gstAmount = baseAmountForGst * 0.18; 
-    
+    const gstAmount = baseAmountForGst * 0.18;
+
     const grandTotal = Math.round(baseAmountForGst + gstAmount);
     const paid = Number(payment.amountPaid) || 0;
     const outstanding = grandTotal - paid;
@@ -122,7 +122,7 @@ const PurchaseForm = () => {
   const handleProductChange = (index: number, field: keyof ProductItem, value: any) => {
     if (field === "name") {
       setVariantModal({ isOpen: true, baseProduct: value, targetRowIndex: index });
-      setSelectedVariants(new Set()); 
+      setSelectedVariants(new Set());
       return;
     }
 
@@ -139,7 +139,7 @@ const PurchaseForm = () => {
 
   const addProduct = () => {
     setProducts([...products, {
-      id: Math.random().toString(), name: "", quantity: "", costPrice: "", sellingPrice: "", 
+      id: Math.random().toString(), name: "", quantity: "", costPrice: "", sellingPrice: "",
       marginPercent: "", marginAmount: "", marginType: "percent",
       unit: "Piece",
       taxGst: 18, storageLoc: "", reorderPoint: "", expiryDate: "", manufacturingDate: "", batchTracking: false, batchNum: "", sku: "", variant: "", size: ""
@@ -189,9 +189,9 @@ const PurchaseForm = () => {
       updatedProducts.push({
         id: Math.random().toString(),
         name: variantModal.baseProduct,
-        quantity: "", costPrice: "", sellingPrice: "", 
+        quantity: "", costPrice: "", sellingPrice: "",
         marginPercent: "", marginAmount: "", marginType: "percent",
-        unit: "Piece", taxGst: 18, storageLoc: "", reorderPoint: "", expiryDate: "", manufacturingDate: "", batchTracking: false, batchNum: "", 
+        unit: "Piece", taxGst: 18, storageLoc: "", reorderPoint: "", expiryDate: "", manufacturingDate: "", batchTracking: false, batchNum: "",
         sku: v.sku, variant: v.name, size: ""
       });
     }
@@ -203,7 +203,7 @@ const PurchaseForm = () => {
 
   return (
     <div className="h-full font-sans text-slate-800 bg-slate-50/50 min-h-screen relative">
-      
+
       {/* --- VARIANT SELECTION MODAL --- */}
       {variantModal.isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
@@ -234,10 +234,10 @@ const PurchaseForm = () => {
                       key={variant.id}
                       onClick={() => !isLowStock && toggleVariantSelection(variant.id)}
                       className={`relative p-4 rounded-xl border-2 transition-all duration-200 flex flex-col gap-2
-                        ${isLowStock 
-                          ? 'border-slate-100 bg-slate-50 opacity-60 cursor-not-allowed' 
-                          : isSelected 
-                            ? 'border-blue-500 bg-blue-50/50 cursor-pointer shadow-sm' 
+                        ${isLowStock
+                          ? 'border-slate-100 bg-slate-50 opacity-60 cursor-not-allowed'
+                          : isSelected
+                            ? 'border-blue-500 bg-blue-50/50 cursor-pointer shadow-sm'
                             : 'border-slate-200 hover:border-blue-300 hover:shadow-sm cursor-pointer bg-white'
                         }
                       `}
@@ -252,11 +252,10 @@ const PurchaseForm = () => {
                         <h4 className="font-bold text-slate-800 pr-6">{variant.name}</h4>
                         <p className="text-xs font-medium text-slate-500 mt-0.5">SKU: {variant.sku}</p>
                       </div>
-                      
+
                       <div className="mt-auto pt-2">
-                        <span className={`inline-flex px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider ${
-                          isLowStock ? 'bg-red-100 text-red-600' : 'bg-emerald-100 text-emerald-700'
-                        }`}>
+                        <span className={`inline-flex px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider ${isLowStock ? 'bg-red-100 text-red-600' : 'bg-emerald-100 text-emerald-700'
+                          }`}>
                           {isLowStock ? `Low Stock (${variant.stock})` : `In Stock (${variant.stock})`}
                         </span>
                       </div>
@@ -286,37 +285,37 @@ const PurchaseForm = () => {
 
       <div className="p-5 max-w-[1600px] mx-auto">
         <div className="flex flex-col xl:flex-row gap-6 items-start relative">
-          
+
           <div className="flex-1 space-y-6 w-full pb-10">
-            
+
             {/* 1. Purchase Details */}
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200/70">
               <div className="flex items-center gap-2 mb-5">
                 <div className="h-6 w-1 bg-blue-500 rounded-full"></div>
                 <h2 className="text-base font-bold text-slate-800">Purchase Details</h2>
               </div>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <ReusableSelect
                   label="Supplier"
                   required={true as any}
                   options={supplierOptions}
                   value={purchaseDetails.supplier}
-                  onValueChange={(val) => setPurchaseDetails({...purchaseDetails, supplier: val})}
+                  onValueChange={(val) => setPurchaseDetails({ ...purchaseDetails, supplier: val })}
                   placeholder="Select Supplier..."
                 />
-                <Input 
+                <Input
                   label="Supplier Invoice #"
                   placeholder="e.g. INV-2025-456"
                   value={purchaseDetails.invoiceNo}
-                  onChange={(e) => setPurchaseDetails({...purchaseDetails, invoiceNo: e.target.value})}
+                  onChange={(e) => setPurchaseDetails({ ...purchaseDetails, invoiceNo: e.target.value })}
                 />
-                <Input 
+                <Input
                   label="Purchase Date"
                   required
                   type="date"
                   value={purchaseDetails.date}
-                  onChange={(e) => setPurchaseDetails({...purchaseDetails, date: e.target.value})}
+                  onChange={(e) => setPurchaseDetails({ ...purchaseDetails, date: e.target.value })}
                 />
               </div>
             </div>
@@ -327,109 +326,108 @@ const PurchaseForm = () => {
                 <div className="h-6 w-1 bg-blue-500 rounded-full"></div>
                 <h2 className="text-base font-bold text-slate-800">Order Summary</h2>
               </div>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-              
-              {/* LEFT SIDE: Order Summary */}
-              <div className="bg-white rounded-2xl shadow-sm border border-slate-200/70 overflow-hidden flex flex-col h-full">
-                <div className="p-5 border-b border-slate-100 bg-slate-50/50 flex items-center gap-2">
-                  <div className="h-5 w-1 bg-indigo-500 rounded-full"></div>
-                  <h2 className="text-sm font-bold uppercase tracking-wider text-slate-700">Other Charges</h2>
-                </div>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
 
-                <div className="p-6 space-y-5 flex-1">
-                  <div className="flex justify-between items-center text-slate-600">
-                    <span className="text-sm font-medium">Subtotal (Product Cost)</span>
-                    <span className="font-semibold text-slate-800">
-                      ₹{stats.subtotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                    </span>
+                {/* LEFT SIDE: Order Summary */}
+                <div className="bg-white rounded-2xl shadow-sm border border-slate-200/70 overflow-hidden flex flex-col h-full">
+                  <div className="p-5 border-b border-slate-100 bg-slate-50/50 flex items-center gap-2">
+                    <div className="h-5 w-1 bg-indigo-500 rounded-full"></div>
+                    <h2 className="text-sm font-bold uppercase tracking-wider text-slate-700">Other Charges</h2>
                   </div>
 
-                  <div className="pt-4 border-t border-slate-100 space-y-4">
-                    <Input
-                      label="Transport Charges"
-                      type="number"
-                      placeholder="0.00"
-                      leftIcon={<span className="text-slate-400 text-sm font-medium">₹</span>}
-                      value={charges.transport as any}
-                      onChange={(e) => setCharges({ ...charges, transport: e.target.value ? Number(e.target.value) : "" })}
-                    />
+                  <div className="p-6 space-y-5 flex-1">
+                    <div className="flex justify-between items-center text-slate-600">
+                      <span className="text-sm font-medium">Subtotal (Product Cost)</span>
+                      <span className="font-semibold text-slate-800">
+                        ₹{stats.subtotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      </span>
+                    </div>
 
-                    <Input
-                      label="Other Charges (Loading etc.)"
-                      type="number"
-                      placeholder="0.00"
-                      leftIcon={<span className="text-slate-400 text-sm font-medium">₹</span>}
-                      value={charges.other as any}
-                      onChange={(e) => setCharges({ ...charges, other: e.target.value ? Number(e.target.value) : "" })}
-                    />
-                  </div>
-
-                  
-                </div>
-
-                <div className="p-6 bg-slate-50 border-t border-slate-100 text-black mt-auto">
-                  <span className="block text-slate-500 text-xs font-bold uppercase tracking-widest mb-1">Total Purchase Cost</span>
-                  <span className="text-4xl font-bold tracking-tight text-slate-900">
-                    ₹{stats.grandTotal.toLocaleString()}
-                  </span>
-                </div>
-              </div>
-
-              {/* RIGHT SIDE: Payment Details */}
-              <div className="space-y-6 h-full flex flex-col">
-                <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200/70 overflow-hidden flex-1">
-                  <div className="flex items-center gap-2 mb-5">
-                    <div className="h-5 w-1 bg-emerald-500 rounded-full"></div>
-                    <h2 className="text-sm font-bold uppercase tracking-wider text-slate-700">Payment Details</h2>
-                  </div>
-
-                  <div className="grid grid-cols-4 gap-3 mb-6">
-                    {[
-                      { id: "Cash", icon: <Banknote size={20} strokeWidth={1.5} /> },
-                      { id: "UPI", icon: <Smartphone size={20} strokeWidth={1.5} /> },
-                      { id: "Card", icon: <CreditCard size={20} strokeWidth={1.5} /> },
-                      { id: "Bank", icon: <Landmark size={20} strokeWidth={1.5} /> }
-                    ].map((m) => (
-                      <button
-                        key={m.id}
-                        onClick={() => setPayment({ ...payment, method: m.id as PaymentMethod })}
-                        className={`flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all duration-200 ${
-                          payment.method === m.id
-                            ? "border-blue-500 bg-blue-50 text-blue-700 shadow-sm"
-                            : "border-slate-100 bg-white text-slate-500 hover:border-slate-300 hover:bg-slate-50"
-                        }`}
-                      >
-                        <div className="mb-1.5">{m.icon}</div>
-                        <span className="text-xs font-bold">{m.id}</span>
-                      </button>
-                    ))}
-                  </div>
-
-                  <div className="flex flex-col sm:flex-row gap-4 bg-slate-50/80 p-5 rounded-xl border border-slate-100 items-center">
-                    <div className="flex-1 w-full">
+                    <div className="pt-4 border-t border-slate-100 space-y-4">
                       <Input
-                        label="Amount Paid Now (₹)"
+                        label="Transport Charges"
                         type="number"
-                        className="!text-lg !font-bold !text-blue-700 placeholder:!text-blue-300"
-                        value={payment.amountPaid as any}
-                        onChange={(e) => setPayment({ ...payment, amountPaid: e.target.value ? Number(e.target.value) : "" })}
-                        placeholder={stats.grandTotal.toString()}
+                        placeholder="0.00"
+                        leftIcon={<span className="text-slate-400 text-sm font-medium">₹</span>}
+                        value={charges.transport as any}
+                        onChange={(e) => setCharges({ ...charges, transport: e.target.value ? Number(e.target.value) : "" })}
+                      />
+
+                      <Input
+                        label="Other Charges (Loading etc.)"
+                        type="number"
+                        placeholder="0.00"
+                        leftIcon={<span className="text-slate-400 text-sm font-medium">₹</span>}
+                        value={charges.other as any}
+                        onChange={(e) => setCharges({ ...charges, other: e.target.value ? Number(e.target.value) : "" })}
                       />
                     </div>
-                    <div className="w-px h-12 bg-slate-200 hidden sm:block"></div>
-                    <div className="flex-1 w-full flex flex-col justify-center sm:items-end sm:text-right">
-                      <span className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">
-                        Outstanding
-                      </span>
-                      <span className={`text-2xl font-bold ${stats.outstanding > 0 ? "text-orange-500" : "text-emerald-500"}`}>
-                        ₹{stats.outstanding.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                      </span>
+
+
+                  </div>
+
+                  <div className="p-6 bg-slate-50 border-t border-slate-100 text-black mt-auto">
+                    <span className="block text-slate-500 text-xs font-bold uppercase tracking-widest mb-1">Total Purchase Cost</span>
+                    <span className="text-4xl font-bold tracking-tight text-slate-900">
+                      ₹{stats.grandTotal.toLocaleString()}
+                    </span>
+                  </div>
+                </div>
+
+                {/* RIGHT SIDE: Payment Details */}
+                <div className="space-y-6 h-full flex flex-col">
+                  <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200/70 overflow-hidden flex-1">
+                    <div className="flex items-center gap-2 mb-5">
+                      <div className="h-5 w-1 bg-emerald-500 rounded-full"></div>
+                      <h2 className="text-sm font-bold uppercase tracking-wider text-slate-700">Payment Details</h2>
+                    </div>
+
+                    <div className="grid grid-cols-4 gap-3 mb-6">
+                      {[
+                        { id: "Cash", icon: <Banknote size={20} strokeWidth={1.5} /> },
+                        { id: "UPI", icon: <Smartphone size={20} strokeWidth={1.5} /> },
+                        { id: "Card", icon: <CreditCard size={20} strokeWidth={1.5} /> },
+                        { id: "Bank", icon: <Landmark size={20} strokeWidth={1.5} /> }
+                      ].map((m) => (
+                        <button
+                          key={m.id}
+                          onClick={() => setPayment({ ...payment, method: m.id as PaymentMethod })}
+                          className={`flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all duration-200 ${payment.method === m.id
+                              ? "border-blue-500 bg-blue-50 text-blue-700 shadow-sm"
+                              : "border-slate-100 bg-white text-slate-500 hover:border-slate-300 hover:bg-slate-50"
+                            }`}
+                        >
+                          <div className="mb-1.5">{m.icon}</div>
+                          <span className="text-xs font-bold">{m.id}</span>
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row gap-4 bg-slate-50/80 p-5 rounded-xl border border-slate-100 items-center">
+                      <div className="flex-1 w-full">
+                        <Input
+                          label="Amount Paid Now (₹)"
+                          type="number"
+                          className="!text-lg !font-bold !text-blue-700 placeholder:!text-blue-300"
+                          value={payment.amountPaid as any}
+                          onChange={(e) => setPayment({ ...payment, amountPaid: e.target.value ? Number(e.target.value) : "" })}
+                          placeholder={stats.grandTotal.toString()}
+                        />
+                      </div>
+                      <div className="w-px h-12 bg-slate-200 hidden sm:block"></div>
+                      <div className="flex-1 w-full flex flex-col justify-center sm:items-end sm:text-right">
+                        <span className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">
+                          Outstanding
+                        </span>
+                        <span className={`text-2xl font-bold ${stats.outstanding > 0 ? "text-orange-500" : "text-emerald-500"}`}>
+                          ₹{stats.outstanding.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
 
-            </div>
+              </div>
             </div>
 
             {/* 2. Quick Add Bar */}
@@ -439,11 +437,11 @@ const PurchaseForm = () => {
                 <ScanLine size={18} /> <span className="hidden sm:inline">Scan Barcode</span>
               </button>
               <div className="flex-1 relative z-10">
-                <Input 
-                  onChange={()=>{}}
+                <Input
+                  onChange={() => { }}
                   value={""}
-                  type="text" 
-                  placeholder="Type product name or scan to add quickly..." 
+                  type="text"
+                  placeholder="Type product name or scan to add quickly..."
                   leftIcon={<Search size={18} className="text-blue-400" />}
                   className="!bg-white/80 backdrop-blur-sm !border-slate-200 focus:!border-blue-400 focus:!ring-blue-100 text-slate-800 placeholder:text-slate-400 !shadow-inner"
                 />
@@ -461,7 +459,7 @@ const PurchaseForm = () => {
                   <Plus size={16} strokeWidth={2.5} /> Add Row
                 </button>
               </div>
-              
+
               {/* --- NEW: ATTACHED DISTRIBUTOR COST SPLIT SECTION --- */}
               <div className="px-6 py-4 bg-slate-50 border-b border-slate-200 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
                 <div className="flex items-center gap-4">
@@ -473,11 +471,10 @@ const PurchaseForm = () => {
                       <button
                         key={method}
                         onClick={() => setCostMethod(method)}
-                        className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all duration-200 ${
-                          costMethod === method 
-                            ? "bg-blue-500 text-white shadow-sm" 
+                        className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all duration-200 ${costMethod === method
+                            ? "bg-blue-500 text-white shadow-sm"
                             : "text-slate-400 hover:text-slate-700 hover:bg-slate-50"
-                        }`}
+                          }`}
                       >
                         {method}
                       </button>
@@ -554,90 +551,107 @@ const PurchaseForm = () => {
 
                     return (
                       <div key={product.id} className="group transition-colors">
-                        <div className="grid grid-cols-12 gap-4 px-6 py-4 items-center group-hover:bg-slate-50/50">
+                                 <div className="grid grid-cols-12 gap-4 px-6 py-4 items-center">
+                          
                           <div className="col-span-3">
                             <ReusableSelect
                               value={product.name}
                               onValueChange={(val) => handleProductChange(index, "name", val)}
                               options={productOptions}
                               placeholder="Select product..."
-                              className="!bg-white" 
+                              className="!bg-white !shadow-sm !border-slate-200"
                             />
                             {product.variant && (
-                               <div className="mt-1 text-[10px] font-bold text-slate-500 flex gap-2">
-                                 <span className="bg-slate-200 px-1.5 py-0.5 rounded text-slate-700">{product.variant}</span>
-                                 <span className="text-slate-400 mt-0.5">SKU: {product.sku}</span>
-                               </div>
+                              <div className="mt-1.5 text-[10px] font-bold text-slate-500 flex gap-2 items-center">
+                                <span className="bg-slate-100 border border-slate-200 px-2 py-0.5 rounded text-slate-700">{product.variant}</span>
+                                <span className="text-slate-400">SKU: {product.sku}</span>
+                              </div>
                             )}
                           </div>
-                          <div className="col-span-1 flex gap-1 items-center">
-                            <Input 
-                              type="number" 
-                              placeholder="0" 
-                              className="!text-center !px-1"
-                              value={product.quantity as any} 
-                              onChange={(e) => handleProductChange(index, "quantity", e.target.value)} 
+
+                          <div className="col-span-1">
+                            <Input
+                              type="number"
+                              placeholder="0"
+                              className="!text-center !px-1 !bg-transparent hover:!bg-white focus:!bg-white !border-transparent hover:!border-slate-200 transition-colors"
+                              value={product.quantity as any}
+                              onChange={(e) => handleProductChange(index, "quantity", e.target.value)}
                             />
                           </div>
-                          <div className="col-span-1 flex flex-col justify-center">
-                            <Input 
-                              type="number" 
-                              placeholder="0.00" 
-                              value={product.costPrice as any} 
-                              onChange={(e) => handleProductChange(index, "costPrice", e.target.value)} 
+
+                          <div className="col-span-1">
+                            <ReusableSelect 
+                              placeholder="Unit" 
+                              className="!text-center !px-1 !bg-transparent hover:!bg-white focus:!bg-white !border-transparent hover:!border-slate-200 transition-colors"
+                              options={[
+                                { value: "pc", label: "pc" },
+                                { value: "kg", label: "kg" },
+                                { value: "ltr", label: "ltr" },
+                                { value: "m", label: "m" },
+                              ]}
+                              value={product.unit}
+                              onValueChange={(val) => handleProductChange(index, "unit", val)} 
+                            />
+                          </div>  
+
+                          <div className="col-span-1">
+                            <Input
+                              type="number"
+                              placeholder="0.00"
+                              className="!text-right !px-2 !bg-transparent hover:!bg-white focus:!bg-white !border-transparent hover:!border-slate-200 transition-colors"
+                              value={product.costPrice as any}
+                              onChange={(e) => handleProductChange(index, "costPrice", e.target.value)}
                             />
                           </div>
-                          <div className="col-span-1 flex flex-col justify-center text-xs text-slate-500 bg-slate-50/80 px-2 py-1.5 rounded-lg border border-slate-100">
+
+                          <div className="col-span-1 flex flex-col justify-center items-end text-xs text-slate-500 pr-2">
                             {finalCost > 0 ? (
-                              <>
-                                <div className="flex justify-between items-center">
-                                  <span className="text-[10px] uppercase tracking-wider text-slate-400">Alloc</span> 
-                                  <span className="font-medium">₹{allocated.toFixed(2)}</span>
-                                </div>
-                                <div className="flex justify-between items-center mt-1 pt-1 border-t border-slate-200/80">
-                                  <span className="text-[10px] uppercase tracking-wider text-slate-400">Final</span> 
-                                  <span className="font-bold text-blue-600">₹{finalCost.toFixed(2)}</span>
-                                </div>
-                              </>
+                              <div className="text-right flex flex-col gap-0.5">
+                                <span className="text-[10px] text-slate-400">+{allocated.toFixed(2)}</span>
+                                <span className="font-semibold text-indigo-600">₹{finalCost.toFixed(2)}</span>
+                              </div>
                             ) : (
-                              <div className="text-center text-slate-300 font-medium">-</div>
+                              <span className="text-slate-300 font-medium">-</span>
                             )}
                           </div>
-                          <div className="col-span-2 flex gap-1 items-start">
-                             <div className="w-1/2">
-                               <Input 
-                                 type="number"
-                                 placeholder="₹" 
-                                 className="!text-center !px-1"
-                                 value={valMarginAmount as any}
-                                 onChange={(e) => updateProductFields(index, { marginType: "amount", marginAmount: e.target.value ? Number(e.target.value) : "" })}
-                               />
-                             </div>
-                          </div>
-                          <div className="col-span-2">
-                            <Input 
-                              type="number" 
-                              placeholder="0.00" 
-                              className="!text-emerald-700 !bg-emerald-50/50 !border-emerald-200/60 font-semibold focus:!ring-emerald-100 focus:!border-emerald-400"
-                              value={valSellingPrice as any} 
-                              onChange={(e) => updateProductFields(index, { marginType: "sellingPrice", sellingPrice: e.target.value ? Number(e.target.value) : "" })} 
+
+                          <div className="col-span-2 flex items-center justify-center gap-1 px-2">
+                            <Input
+                              type="number"
+                              placeholder="₹"
+                              className="!text-center !px-1 !bg-slate-50 !border-slate-200 focus:!bg-white"
+                              value={valMarginAmount as any}
+                              onChange={(e) => updateProductFields(index, { marginType: "amount", marginAmount: e.target.value ? Number(e.target.value) : "" })}
                             />
                           </div>
+
+                          <div className="col-span-1">
+                            <Input
+                              type="number"
+                              placeholder="0.00"
+                              className="!text-right !font-bold !text-emerald-700 !bg-emerald-50/50 !border-emerald-200/60 focus:!bg-white focus:!ring-emerald-100 focus:!border-emerald-400"
+                              value={valSellingPrice as any}
+                              onChange={(e) => updateProductFields(index, { marginType: "sellingPrice", sellingPrice: e.target.value ? Number(e.target.value) : "" })}
+                            />
+                          </div>
+
                           <div className="col-span-2 flex items-center justify-end gap-3">
-                            <span className="font-bold text-slate-800 text-sm w-24 text-right">₹{rowTotal.toLocaleString()}</span>
+                            <div className="flex flex-col items-end w-20">
+                               <span className="font-bold text-slate-800 text-sm">₹{rowTotal.toLocaleString()}</span>
+                            </div>
                             <div className="flex items-center gap-1 border-l border-slate-200 pl-3">
-                              <button 
-                                onClick={() => toggleAdvanced(index)} 
+                              <button
+                                onClick={() => toggleAdvanced(index)}
                                 title="Advanced Options"
                                 className={`p-1.5 rounded-lg transition-all duration-200 ${isExpanded ? 'bg-indigo-100 text-indigo-700 shadow-inner' : 'text-slate-400 hover:bg-slate-100 hover:text-slate-600'}`}
                               >
-                                {isExpanded ? <ChevronUp size={16} strokeWidth={2.5}/> : <Settings size={16} />}
+                                {isExpanded ? <ChevronUp size={16} strokeWidth={2.5} /> : <Settings size={16} />}
                               </button>
-                              <button 
-                                onClick={() => removeProduct(index)} 
-                                disabled={products.length === 1} 
+                              <button
+                                onClick={() => removeProduct(index)}
+                                disabled={products.length === 1}
                                 title="Remove Row"
-                                className="p-1.5 text-slate-300 hover:bg-red-50 hover:text-red-500 rounded-lg disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
+                                className="p-1.5 text-slate-300 hover:bg-red-50 hover:text-red-500 rounded-lg"
                               >
                                 <Trash2 size={16} />
                               </button>
@@ -649,33 +663,29 @@ const PurchaseForm = () => {
                         <div className="px-6 py-3 border-t border-slate-100/80 bg-white flex items-center gap-4 flex-wrap">
                           <button
                             onClick={() => updateProductFields(index, { batchTracking: !product.batchTracking })}
-                            className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all duration-300 border-2 ${
-                              product.batchTracking
+                            className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all duration-300 border-2 ${product.batchTracking
                                 ? 'bg-gradient-to-r from-blue-500 to-blue-500 text-white border-transparent shadow-md shadow-blue-200'
                                 : 'bg-white text-slate-500 border-slate-200 hover:border-blue-300 hover:text-blue-600 hover:bg-blue-50'
-                            }`}
+                              }`}
                           >
                             <CalendarDays size={14} />
                             Batch Tracking
                             {/* Toggle indicator */}
-                            <span className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors duration-300 ${
-                              product.batchTracking ? 'bg-white/30' : 'bg-slate-200'
-                            }`}>
-                              <span className={`inline-block h-3.5 w-3.5 rounded-full transition-all duration-300 ${
-                                product.batchTracking
+                            <span className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors duration-300 ${product.batchTracking ? 'bg-white/30' : 'bg-slate-200'
+                              }`}>
+                              <span className={`inline-block h-3.5 w-3.5 rounded-full transition-all duration-300 ${product.batchTracking
                                   ? 'translate-x-[18px] bg-white shadow-sm'
                                   : 'translate-x-[3px] bg-slate-400'
-                              }`} />
+                                }`} />
                             </span>
                           </button>
 
                           {/* Manufacturing & Expiry Date Fields */}
                           <div
-                            className={`flex items-center gap-4 overflow-hidden transition-all duration-400 ease-in-out ${
-                              product.batchTracking
+                            className={`flex items-center gap-4 overflow-hidden transition-all duration-400 ease-in-out ${product.batchTracking
                                 ? 'max-w-[600px] opacity-100 translate-x-0'
                                 : 'max-w-0 opacity-0 -translate-x-4 pointer-events-none'
-                            }`}
+                              }`}
                           >
                             <div className="flex items-center gap-2 min-w-[200px]">
 
@@ -721,7 +731,7 @@ const PurchaseForm = () => {
           </div>
         </div>
       </div>
-      
+
       <div className=" flex justify-end items-center p-5">
         <div className="flex gap-3">
           <GradientButton variant="outline" className="hover:bg-slate-50 transition-colors">

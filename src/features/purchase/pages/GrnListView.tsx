@@ -156,7 +156,7 @@ const ActionBtns = ({ onClick, cls = "" }: { onClick?: () => void; cls?: string 
 const ViewToggle = ({ current, onChange }: { current: ViewMode; onChange: (v: ViewMode) => void }) => {
   const opts = [
     { mode: "grid"       as ViewMode, icon: <LayoutGrid size={13} />,   label: "Grid" },
-    { mode: "horizontal" as ViewMode, icon: <AlignJustify size={13} />, label: "Horizontal" },
+ 
     { mode: "vertical"   as ViewMode, icon: <List size={13} />,         label: "Vertical" },
   ];
   return (

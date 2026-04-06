@@ -2,7 +2,8 @@ import { useState, useMemo } from 'react';
 import { 
   Factory, Package, Banknote, 
   Save, Settings, Trash2, Plus, 
-  CheckCircle2, Smartphone, CreditCard, Landmark
+  CheckCircle2, Smartphone, CreditCard, Landmark,
+  CalendarDays
 } from 'lucide-react';
 
 // Adjust these imports to match your project structure
@@ -27,6 +28,9 @@ interface FinishedProduct {
   marginPercent: number | "";
   marginAmount: number | "";
   marginType: "percent" | "amount" | "sellingPrice";
+  manufacturingDate: string;
+  expiryDate: string;
+  batchTracking: boolean;
 }
 
 type PaymentMethod = "Cash" | "UPI" | "Card" | "Bank";
@@ -63,6 +67,9 @@ export default function ProductionEntryPage() {
       reorder: 20,
       unit: 'Piece',
       variant: 'Lavender',
+      manufacturingDate: "",
+      expiryDate: "",
+      batchTracking: false,
     }
   ]);
 
@@ -83,13 +90,18 @@ export default function ProductionEntryPage() {
   // --- Handlers ---
   const handleDetailChange = (field: string, value: any) => setDetails(prev => ({ ...prev, [field]: value }));
   const handleCostChange = (field: string, value: string) => setCosts(prev => ({ ...prev, [field]: Number(value) || 0 }));
-
+  const handleProductChange = (index: number, field: keyof FinishedProduct, value: any) => {
+    setProducts(products.map((p, i) => i === index ? { ...p, [field]: value } : p));
+  };
   // Product Handlers
   const addProduct = () => {
     setProducts([...products, {
       id: `prod-${Date.now()}`, product: '', qty: 1, unitCost: 0, sellingPrice: 0, showAdvanced: true,
       expiry: '', storage: '', grade: '', reorder: 0, unit: 'Piece', variant: '',
-      marginPercent: "", marginAmount: "", marginType: "percent"
+      marginPercent: "", marginAmount: "", marginType: "percent",
+      manufacturingDate: "",
+      expiryDate: "",
+      batchTracking: false,
     }]);
   };
   const updateProduct = (id: string, field: keyof FinishedProduct, value: any) => {
@@ -495,6 +507,59 @@ export default function ProductionEntryPage() {
                       />
                     </div>
                   </div>
+
+                   <div className="px-6 py-3 border-t border-slate-100/80 bg-white flex items-center gap-4 flex-wrap">
+                          <button
+                            onClick={() => updateProductFields(product.id, { batchTracking: !product.batchTracking })}
+                            className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all duration-300 border-2 ${
+                              product.batchTracking
+                                ? 'bg-gradient-to-r from-blue-500 to-blue-500 text-white border-transparent shadow-md shadow-blue-200'
+                                : 'bg-white text-slate-500 border-slate-200 hover:border-blue-300 hover:text-blue-600 hover:bg-blue-50'
+                            }`}
+                          >
+                            <CalendarDays size={14} />
+                            Batch Tracking
+                            {/* Toggle indicator */}
+                            <span className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors duration-300 ${
+                              product.batchTracking ? 'bg-white/30' : 'bg-slate-200'
+                            }`}>
+                              <span className={`inline-block h-3.5 w-3.5 rounded-full transition-all duration-300 ${
+                                product.batchTracking
+                                  ? 'translate-x-[18px] bg-white shadow-sm'
+                                  : 'translate-x-[3px] bg-slate-400'
+                              }`} />
+                            </span>
+                          </button>
+
+                          {/* Manufacturing & Expiry Date Fields */}
+                          <div
+                            className={`flex items-center gap-4 overflow-hidden transition-all duration-400 ease-in-out ${
+                              product.batchTracking
+                                ? 'max-w-[600px] opacity-100 translate-x-0'
+                                : 'max-w-0 opacity-0 -translate-x-4 pointer-events-none'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2 min-w-[200px]">
+
+                              <Input
+                                label="Manufacturing Date"
+                                type="date"
+                                value={product.manufacturingDate}
+                                onChange={(e) => handleProductChange(index, "manufacturingDate", e.target.value)}
+                                className="!bg-violet-50/50 !border-violet-200/60 focus:!ring-violet-100 focus:!border-violet-400"
+                              />
+                            </div>
+                            <div className="flex items-center gap-2 min-w-[200px]">
+                              <Input
+                                label="Expiry Date"
+                                type="date"
+                                value={product.expiryDate}
+                                onChange={(e) => handleProductChange(index, "expiryDate", e.target.value)}
+                                className="!bg-amber-50/50 !border-amber-200/60 focus:!ring-amber-100 focus:!border-amber-400"
+                              />
+                            </div>
+                          </div>
+                        </div>
 
                   {product.showAdvanced && (
                     <div className="mt-4 pt-4 border-t border-slate-100 animate-in slide-in-from-top-2">

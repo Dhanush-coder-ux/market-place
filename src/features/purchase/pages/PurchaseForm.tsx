@@ -1,8 +1,9 @@
 import { useState, useMemo } from "react";
 import {
   Save, Plus, Trash2, Settings, ScanLine, Search,
-  Banknote, Smartphone, CreditCard, Landmark, ChevronUp, X, PackageOpen, Check
+  Banknote, Smartphone, CreditCard, Landmark, ChevronUp, X, PackageOpen, Check, CalendarDays
 } from "lucide-react";
+
 import Input from "@/components/ui/Input";
 import { ReusableSelect } from "@/components/ui/ReusableSelect";
 import { GradientButton } from "@/components/ui/GradientButton";
@@ -23,6 +24,8 @@ export interface ProductItem {
   storageLoc: string;
   reorderPoint: number | "";
   expiryDate: string;
+  manufacturingDate: string;
+  batchTracking: boolean;
   batchNum: string;
   sku: string;
   variant: string;
@@ -62,7 +65,7 @@ const PurchaseForm = () => {
       id: "1", name: "", quantity: "", costPrice: "", sellingPrice: "", 
       marginPercent: "", marginAmount: "", marginType: "percent",
       unit: "Piece",
-      taxGst: 18, storageLoc: "", reorderPoint: "", expiryDate: "", batchNum: "", sku: "", variant: "", size: ""
+      taxGst: 18, storageLoc: "", reorderPoint: "", expiryDate: "", manufacturingDate: "", batchTracking: false, batchNum: "", sku: "", variant: "", size: ""
     }
   ]);
 
@@ -139,7 +142,7 @@ const PurchaseForm = () => {
       id: Math.random().toString(), name: "", quantity: "", costPrice: "", sellingPrice: "", 
       marginPercent: "", marginAmount: "", marginType: "percent",
       unit: "Piece",
-      taxGst: 18, storageLoc: "", reorderPoint: "", expiryDate: "", batchNum: "", sku: "", variant: "", size: ""
+      taxGst: 18, storageLoc: "", reorderPoint: "", expiryDate: "", manufacturingDate: "", batchTracking: false, batchNum: "", sku: "", variant: "", size: ""
     }]);
   };
 
@@ -188,7 +191,7 @@ const PurchaseForm = () => {
         name: variantModal.baseProduct,
         quantity: "", costPrice: "", sellingPrice: "", 
         marginPercent: "", marginAmount: "", marginType: "percent",
-        unit: "Piece", taxGst: 18, storageLoc: "", reorderPoint: "", expiryDate: "", batchNum: "", 
+        unit: "Piece", taxGst: 18, storageLoc: "", reorderPoint: "", expiryDate: "", manufacturingDate: "", batchTracking: false, batchNum: "", 
         sku: v.sku, variant: v.name, size: ""
       });
     }
@@ -638,6 +641,60 @@ const PurchaseForm = () => {
                               >
                                 <Trash2 size={16} />
                               </button>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Batch Tracking Toggle & Date Fields */}
+                        <div className="px-6 py-3 border-t border-slate-100/80 bg-white flex items-center gap-4 flex-wrap">
+                          <button
+                            onClick={() => updateProductFields(index, { batchTracking: !product.batchTracking })}
+                            className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all duration-300 border-2 ${
+                              product.batchTracking
+                                ? 'bg-gradient-to-r from-blue-500 to-blue-500 text-white border-transparent shadow-md shadow-blue-200'
+                                : 'bg-white text-slate-500 border-slate-200 hover:border-blue-300 hover:text-blue-600 hover:bg-blue-50'
+                            }`}
+                          >
+                            <CalendarDays size={14} />
+                            Batch Tracking
+                            {/* Toggle indicator */}
+                            <span className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors duration-300 ${
+                              product.batchTracking ? 'bg-white/30' : 'bg-slate-200'
+                            }`}>
+                              <span className={`inline-block h-3.5 w-3.5 rounded-full transition-all duration-300 ${
+                                product.batchTracking
+                                  ? 'translate-x-[18px] bg-white shadow-sm'
+                                  : 'translate-x-[3px] bg-slate-400'
+                              }`} />
+                            </span>
+                          </button>
+
+                          {/* Manufacturing & Expiry Date Fields */}
+                          <div
+                            className={`flex items-center gap-4 overflow-hidden transition-all duration-400 ease-in-out ${
+                              product.batchTracking
+                                ? 'max-w-[600px] opacity-100 translate-x-0'
+                                : 'max-w-0 opacity-0 -translate-x-4 pointer-events-none'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2 min-w-[200px]">
+
+                              <Input
+                                label="Manufacturing Date"
+                                type="date"
+                                value={product.manufacturingDate}
+                                onChange={(e) => handleProductChange(index, "manufacturingDate", e.target.value)}
+                                className="!bg-violet-50/50 !border-violet-200/60 focus:!ring-violet-100 focus:!border-violet-400"
+                              />
+                            </div>
+                            <div className="flex items-center gap-2 min-w-[200px]">
+                              <Input
+                                label="Expiry Date"
+                                type="date"
+                                value={product.expiryDate}
+                                onChange={(e) => handleProductChange(index, "expiryDate", e.target.value)}
+                                className="!bg-amber-50/50 !border-amber-200/60 focus:!ring-amber-100 focus:!border-amber-400"
+                              />
                             </div>
                           </div>
                         </div>

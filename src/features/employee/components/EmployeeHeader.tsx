@@ -17,8 +17,6 @@ const navigate = useNavigate();
     <div className="flex flex-col space-y-3">
 
       <div className="flex flex-col sm:flex-row justify-end items-start sm:items-center gap-4">
-      
-
 
         <GradientButton
           type="button"

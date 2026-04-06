@@ -24,6 +24,9 @@ export interface InventoryItem {
   category:        "Electronics" | "Clothing" | "Other";
   variants:        ProductVariant[];
   requireSerial:   boolean;
+  batchTracking?:      boolean;
+  manufacturingDate?:  string;
+  expiryDate?:         string;
 }
 
 export interface BillingItem {
@@ -35,6 +38,9 @@ export interface BillingItem {
   tprice:        number;
   serialNumber?: string; // For tracking specific items (e.g., Electronics)
   variantId?:    string; // For tracking selected variant
+  batchTracking?:      boolean;
+  manufacturingDate?:  string;
+  expiryDate?:         string;
 }
 
 // Alias for convenience if used in shopping cart contexts

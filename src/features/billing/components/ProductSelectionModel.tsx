@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { X, CheckCircle2, AlertCircle, Loader2, Barcode } from "lucide-react";
+import { X, CheckCircle2, AlertCircle, Loader2, Barcode, CalendarDays } from "lucide-react";
 import { InventoryItem, ProductVariant } from "../types";
 
 interface ProductSelectionModalProps {
@@ -100,6 +100,62 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({ isOpen, p
               })}
             </div>
           </div>
+
+          {/* Batch Tracking Info */}
+          {product.batchTracking && product.manufacturingDate && product.expiryDate && (() => {
+            const now = new Date();
+            const mfg = new Date(product.manufacturingDate!);
+            const exp = new Date(product.expiryDate!);
+            const diffMs = exp.getTime() - now.getTime();
+            const daysLeft = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+            const totalSpan = exp.getTime() - mfg.getTime();
+            const elapsed = now.getTime() - mfg.getTime();
+            const pct = totalSpan > 0 ? Math.min(Math.max((elapsed / totalSpan) * 100, 0), 100) : 0;
+
+            const isExpired = daysLeft < 0;
+            const isCritical = daysLeft >= 0 && daysLeft <= 30;
+            const isWarning = daysLeft > 30 && daysLeft <= 90;
+
+            const statusLabel = isExpired ? 'Expired' : isCritical ? 'Expiring Soon' : isWarning ? 'Nearing Expiry' : 'Active';
+            const statusColor = isExpired || isCritical ? 'text-red-600 bg-red-50 border-red-100' 
+              : isWarning ? 'text-amber-600 bg-amber-50 border-amber-100' 
+              : 'text-emerald-600 bg-emerald-50 border-emerald-100';
+            const barColor = isExpired || isCritical ? 'bg-red-400' : isWarning ? 'bg-amber-400' : 'bg-emerald-400';
+
+            const fmtDate = (d: string) => new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+
+            return (
+              <div className="bg-slate-50/80 rounded-xl border border-slate-100 p-4">
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-1.5">
+                  <CalendarDays size={12} className="text-indigo-400" /> Batch Information
+                </p>
+                <div className="flex items-center gap-4 mb-3">
+                  <div className="flex-1">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Manufactured</span>
+                    <span className="text-xs font-semibold text-slate-700 bg-white px-2.5 py-1 rounded-md border border-slate-100 inline-block">
+                      {fmtDate(product.manufacturingDate!)}
+                    </span>
+                  </div>
+                  <div className="flex-1">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Expires</span>
+                    <span className={`text-xs font-semibold px-2.5 py-1 rounded-md border inline-block ${
+                      isExpired || isCritical ? 'text-red-700 bg-red-50 border-red-100' :
+                      isWarning ? 'text-amber-700 bg-amber-50 border-amber-100' :
+                      'text-slate-700 bg-white border-slate-100'
+                    }`}>
+                      {fmtDate(product.expiryDate!)}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Status</span>
+                    <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-md border ${statusColor}`}>
+                      {statusLabel}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
 
           {/* Conditional Serial Input */}
           {isElectronics && (

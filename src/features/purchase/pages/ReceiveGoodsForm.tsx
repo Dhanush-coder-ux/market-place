@@ -268,12 +268,6 @@ const GRNForm = ({ poData, onSubmit }: { poData: PurchaseOrder, onSubmit: (paylo
               />
             </div>
 
-            <div className="pt-4 border-t border-slate-100 flex justify-between items-center text-slate-600">
-              <span className="text-sm font-medium">GST @ 18%</span>
-              <span className="font-semibold text-slate-800">
-                ₹{stats.gstAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-              </span>
-            </div>
           </div>
 
           <div className="p-6 bg-white text-black mt-auto">

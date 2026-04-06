@@ -130,15 +130,12 @@ export default function ProductionEntryPage() {
     const transportAmount = Number(charges.transport) || 0;
     const otherAmount = Number(charges.other) || 0;
     
-    // Taxable amount includes product cost + additional charges
-    const taxableAmount = subtotal + transportAmount + otherAmount;
-    const gstAmount = taxableAmount * 0.18; // 18% GST
-    const grandTotal = taxableAmount + gstAmount;
+    const grandTotal = subtotal + transportAmount + otherAmount;
     
     const paid = Number(payment.amountPaid) || 0;
     const outstanding = grandTotal - paid;
 
-    return { subtotal, gstAmount, grandTotal, outstanding, totalQty };
+    return { subtotal, grandTotal, outstanding, totalQty };
   }, [products, charges, payment]);
 
   // --- Options ---
@@ -253,12 +250,7 @@ export default function ProductionEntryPage() {
                     />
                   </div>
 
-                  <div className="pt-4 border-t border-slate-100 flex justify-between items-center text-slate-600">
-                    <span className="text-sm font-medium">GST @ 18%</span>
-                    <span className="font-semibold text-slate-800">
-                      ₹{stats.gstAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                    </span>
-                  </div>
+
                 </div>
 
                 <div className="p-6 bg-white text-black mt-auto">
@@ -321,53 +313,8 @@ export default function ProductionEntryPage() {
                     </div>
                   </div>
                 </div>
-
-                {/* Distributor Cost Card */}
-                <div className="bg-white p-6 rounded-2xl shadow-md flex flex-col gap-4 text-black border border-slate-200/70">
-                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-                    <span className="text-xs font-bold uppercase tracking-widest text-slate-400">
-                      Distributor Cost Split
-                    </span>
-                    
-                    <div className="flex items-center gap-3 self-start sm:self-auto">
-                      {/* 1. The Toggle */}
-                      <div className="flex items-center bg-white p-1 rounded-lg border border-slate-200">
-                        {["By Unit", "By Value"].map((method) => (
-                          <button
-                            key={method}
-                            onClick={() => setCostMethod(method)}
-                            className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all duration-200 ${
-                              costMethod === method 
-                                ? "bg-blue-500 text-white shadow-sm" 
-                                : "text-slate-400 hover:text-slate-700 hover:bg-slate-50"
-                            }`}
-                          >
-                            {method}
-                          </button>
-                        ))}
-                      </div>
-
-                      {/* 2. Your Missing Button */}
-                      <button className="px-5 py-2 text-xs font-bold text-slate-700 bg-white border border-slate-200 rounded-lg shadow-sm hover:bg-slate-50 active:bg-slate-100 transition-all duration-200 flex items-center gap-2">
-                        Distributor Cost
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="flex items-baseline mt-2">
-                    <span className="text-3xl font-bold tracking-tight">
-                      ₹{stats.grandTotal.toLocaleString()}
-                    </span>
-                    {costMethod === "By Unit" && (
-                      <span className="ml-3 text-sm font-medium text-blue-700 bg-blue-50 px-2.5 py-1 rounded-md border border-blue-200">
-                        ~₹{stats.totalQty > 0 ? (stats.grandTotal / stats.totalQty).toLocaleString(undefined, { maximumFractionDigits: 2 }) : 0} <span className="text-blue-500 text-xs">/ unit</span>
-                      </span>
-                    )}
-                  </div>
-                </div>
               </div>
             </div>
-            {/* End of New Section */}
 
                        {/* 2. Finished Products */}
             <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -382,6 +329,42 @@ export default function ProductionEntryPage() {
                   </div>
                 </div>
                 <GradientButton variant="outline" icon={<Plus size={16} />} onClick={addProduct}>Add Product</GradientButton>
+              </div>
+
+              {/* Distributor Cost Split Bar */}
+              <div className="px-6 py-4 bg-slate-50 border-b border-slate-200 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+                <div className="flex items-center gap-4">
+                  <span className="text-xs font-bold uppercase tracking-widest text-slate-500">
+                    Distributor Cost Split
+                  </span>
+                  <div className="flex items-center bg-white p-1 rounded-lg border border-slate-200 shadow-sm">
+                    {["By Unit", "By Value"].map((method) => (
+                      <button
+                        key={method}
+                        onClick={() => setCostMethod(method)}
+                        className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all duration-200 ${
+                          costMethod === method 
+                            ? "bg-blue-500 text-white shadow-sm" 
+                            : "text-slate-400 hover:text-slate-700 hover:bg-slate-50"
+                        }`}
+                      >
+                        {method}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex items-baseline gap-3">
+                  <span className="text-sm font-semibold text-slate-500 uppercase tracking-wide">Total Cost:</span>
+                  <span className="text-xl font-bold tracking-tight text-slate-800">
+                    ₹{stats.grandTotal.toLocaleString()}
+                  </span>
+                  {costMethod === "By Unit" && (
+                    <span className="text-xs font-medium text-blue-700 bg-blue-100/50 px-2.5 py-1 rounded-md border border-blue-200">
+                      ~₹{stats.totalQty > 0 ? (stats.grandTotal / stats.totalQty).toLocaleString(undefined, { maximumFractionDigits: 2 }) : 0} <span className="opacity-70">/ unit</span>
+                    </span>
+                  )}
+                </div>
               </div>
 
               {products.map((product, index) => {

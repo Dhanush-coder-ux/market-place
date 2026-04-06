@@ -8,7 +8,6 @@ import {
   Building2,
   FileText,
   LayoutGrid,
-  AlignJustify,
   List,
   ArrowRight,
 } from "lucide-react";

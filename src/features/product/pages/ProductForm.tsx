@@ -8,6 +8,7 @@ import {
   Layers,  Zap,
 } from "lucide-react";
 import { GradientButton } from "@/components/ui/GradientButton";
+import Input from "@/components/ui/Input";
 
 /* ═══════════════════════════════════════════════════════
    TYPES
@@ -45,6 +46,7 @@ interface CategoryConfig {
 
 type FormData = {
   name: string;
+  serialNumber: string;
   sku: string;
   brand: string;
   category: string;
@@ -916,6 +918,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData = {}, isLoading =
   // Core form
   const [form, setForm] = useState<FormData>({
     name: (initialData.name as string) || "",
+    serialNumber: (initialData.serialNumber as string) || "",
     sku: (initialData.sku as string) || "",
     brand: (initialData.brand as string) || "",
     category: (initialData.category as string) || "",
@@ -1051,6 +1054,17 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData = {}, isLoading =
                     placeholder="Key features, materials, dimensions…"
                   />
                 </div>
+                <div className="md:col-span-2">
+                  <Label text="Serial Number" hint="optional" />
+                  <Input
+                    name="serialNumber"
+                    value={form.serialNumber}
+                    onChange={handleChange}
+                    className="pf-input w-full px-3 py-2.5 text-sm border border-slate-200 rounded-xl bg-white text-slate-800 resize-none placeholder-slate-300"
+                    placeholder="Key features, materials, dimensions…"
+                  />
+                </div>
+                
               </div>
               <div className="mt-4 pt-4 border-t border-slate-100">
                 <Toggle

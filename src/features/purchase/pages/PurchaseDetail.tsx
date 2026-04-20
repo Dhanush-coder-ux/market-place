@@ -31,7 +31,7 @@ const PurchaseDetail = () => {
                 Purchase Order · INV-004
               </span>
             </div>
-            <h1 className="text-3xl font-medium text-slate-900">
+            <h1 className="heading-page text-slate-900">
               XYZ Wholesalers
             </h1>
             <p className="text-xs text-slate-400 mt-1 font-mono">Ref: PU03TO-348821</p>
@@ -59,7 +59,7 @@ const PurchaseDetail = () => {
           <div className="lg:col-span-2 space-y-6">
             <div className="overflow-hidden">
               <div className="p-8 border-b border-slate-50 flex justify-between items-center bg-white">
-                <h2 className=" text-slate-800 flex items-center gap-2.5 text-lg">
+                <h2 className="heading-section text-slate-800 flex items-center gap-2.5">
                   <div className="p-2 bg-indigo-50 rounded-lg">
                     <FileText size={20} className="text-blue-500" />
                   </div>
@@ -163,7 +163,7 @@ const PurchaseDetail = () => {
 
             {/* Supplier Information */}
             <div className="bg-white p-6 space-y-6">
-              <h3 className="font-bold text-slate-800 text-sm flex items-center gap-2.5 uppercase tracking-wider">
+              <h3 className="heading-label text-slate-800 flex items-center gap-2.5 uppercase tracking-wider">
                 <User size={18} className="text-indigo-500" /> Supplier Details
               </h3>
               <div className="space-y-5">

@@ -96,7 +96,7 @@ const SupplierDetail = () => {
               <CheckCircle2 size={13} strokeWidth={2} />
               <span className="text-[11px] font-medium tracking-wide uppercase">Verified Supplier</span>
             </div>
-            <h1 className="text-2xl md:text-3xl font-semibold text-gray-900 tracking-tight">
+            <h1 className="heading-page text-gray-900 tracking-tight">
               ABC Traders
             </h1>
           </div>
@@ -119,7 +119,7 @@ const SupplierDetail = () => {
           {/* 3. Sidebar: Contact & Identity */}
           <div className="lg:col-span-1">
             <div className="bg-white p-5 md:p-6 rounded-2xl border border-gray-100 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.02)] space-y-6">
-              <h3 className="text-sm font-semibold text-gray-900 pb-4 border-b border-gray-100">
+              <h3 className="heading-label text-gray-900 pb-4 border-b border-gray-100">
                 Identity & Contact
               </h3>
               <div className="space-y-5">
@@ -161,7 +161,7 @@ const SupplierDetail = () => {
                 <div className="p-6 md:p-8 space-y-8 animate-in fade-in duration-300">
                   <div className="flex items-center gap-2.5 pb-4 border-b border-gray-50">
                     <Info size={18} className="text-blue-500" strokeWidth={2} />
-                    <h2 className="text-base font-semibold text-gray-900">Business Profile</h2>
+                    <h2 className="heading-section text-gray-900">Business Profile</h2>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">

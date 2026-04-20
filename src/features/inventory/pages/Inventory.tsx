@@ -12,8 +12,10 @@ import {
   ShieldCheck,
   AlertTriangle,
   XCircle,
-
+  Box,
+  Eye
 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
 // --- Assuming these are your existing imports ---
 import InventoryHeader from "../components/InventoryHeader";
@@ -38,7 +40,7 @@ export interface Variant {
   sellPrice: number;
   stock: number;
   batchTracking?: boolean; 
-  batches?: Batch[];       
+  batches?: Batch[];        
 }
 
 export interface Product {
@@ -56,21 +58,17 @@ export interface Product {
 }
 
 // --- Helpers ---
-const getBatchStatus = (mfgDate: string, expDate: string) => {
+const getBatchStatus = (_mfgDate: string, expDate: string) => {
   const now = new Date().getTime();
-  const mfg = new Date(mfgDate).getTime();
   const exp = new Date(expDate).getTime();
   
   const diffMs = exp - now;
   const daysLeft = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-  const totalSpan = exp - mfg;
-  const elapsed = now - mfg;
-  const progressPct = totalSpan > 0 ? Math.min(Math.max((elapsed / totalSpan) * 100, 0), 100) : 0;
 
-  if (daysLeft < 0) return { status: 'expired', daysLeft, progressPct: 100, label: `Expired`, color: 'bg-red-500', statusBg: 'bg-red-50 border-red-200 text-red-700', Icon: XCircle };
-  if (daysLeft <= 30) return { status: 'critical', daysLeft, progressPct, label: `${daysLeft}d left`, color: 'bg-red-400', statusBg: 'bg-red-50 border-red-200 text-red-600', Icon: AlertTriangle };
-  if (daysLeft <= 90) return { status: 'warning', daysLeft, progressPct, label: `${daysLeft}d left`, color: 'bg-amber-400', statusBg: 'bg-amber-50 border-amber-200 text-amber-700', Icon: Clock };
-  return { status: 'active', daysLeft, progressPct, label: `${daysLeft}d left`, color: 'bg-emerald-400', statusBg: 'bg-emerald-50 border-emerald-200 text-emerald-700', Icon: ShieldCheck };
+  if (daysLeft < 0) return { status: 'expired', daysLeft, label: `Expired`, statusBg: 'bg-red-50 border-red-200 text-red-700', Icon: XCircle };
+  if (daysLeft <= 30) return { status: 'critical', daysLeft, label: `${daysLeft}d left`, statusBg: 'bg-red-50 border-red-200 text-red-600', Icon: AlertTriangle };
+  if (daysLeft <= 90) return { status: 'warning', daysLeft, label: `${daysLeft}d left`, statusBg: 'bg-amber-50 border-amber-200 text-amber-700', Icon: Clock };
+  return { status: 'active', daysLeft, label: `${daysLeft}d left`, statusBg: 'bg-emerald-50 border-emerald-200 text-emerald-700', Icon: ShieldCheck };
 };
 
 const formatDate = (dateStr: string) => {
@@ -83,143 +81,135 @@ const isOutOfStock = (stock: number) => stock === 0;
 
 // --- Sub Components ---
 
-const BatchRow = ({ batch, isLast, indentLevel = 1, isHidden = false }: { batch: Batch; isLast: boolean; indentLevel?: number; isHidden?: boolean }) => {
-  const { label,statusBg, Icon } = getBatchStatus(batch.mfgDate, batch.expDate);
-  const paddingLeft = indentLevel === 2 ? 'pl-16' : 'pl-4'; 
-
-  if (isHidden) return null;
+const BatchCard = ({ batch }: { batch: Batch }) => {
+  const { label, statusBg, Icon } = getBatchStatus(batch.mfgDate, batch.expDate);
+  const isOut = isOutOfStock(batch.stock);
 
   return (
-    <tr className="bg-slate-50/60 hover:bg-slate-100/60 transition-colors group animate-in fade-in duration-200">
-      <td></td>
-      <td></td>
-      <td colSpan={4} className={`py-3 pr-4 ${paddingLeft} relative`}>
-        {/* Tree structural lines */}
-        <div className={`absolute top-0 w-px bg-slate-300 h-full ${indentLevel === 2 ? 'left-10' : '-left-[0.5px]'}`}></div>
-        <div className={`absolute top-1/2 w-4 h-px bg-slate-300 ${indentLevel === 2 ? 'left-10' : 'hidden'} ${isLast ? 'hidden' : ''}`}></div>
-        {isLast && <div className={`absolute top-0 w-px bg-slate-300 h-1/2 ${indentLevel === 2 ? 'left-10' : '-left-[0.5px]'}`}></div>}
-        {isLast && <div className={`absolute top-1/2 w-4 h-px bg-slate-300 ${indentLevel === 2 ? 'left-10' : '-left-[0.5px]'}`}></div>}
-
-        <div className="flex flex-col gap-2.5 max-w-2xl">
-          <div className="flex items-center gap-4">
-            <span className="flex items-center gap-1.5 font-mono text-[13px] font-semibold text-slate-700 bg-white px-2 py-0.5 rounded border border-slate-200 shadow-sm">
-              <CalendarDays size={14} className="text-blue-500" />
-              {batch.batchNo}
-            </span>
-            <div className="flex items-center gap-2 text-[13px]">
-              <span className="text-slate-400 font-medium uppercase text-[10px] tracking-wider">MFG</span>
-              <span className="font-medium text-slate-700">{formatDate(batch.mfgDate)}</span>
-              <span className="text-slate-300 mx-1">|</span>
-              <span className="text-slate-400 font-medium uppercase text-[10px] tracking-wider">EXP</span>
-              <span className="font-medium text-slate-700">{formatDate(batch.expDate)}</span>
-            </div>
-            <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded border text-[11px] font-bold tracking-wide ${statusBg}`}>
-              <Icon size={12} />
-              {label}
-            </div>
-          </div>
-   
+    <motion.div 
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className={`relative bg-white rounded-xl border ${isOut ? 'border-slate-200 bg-slate-50/50' : 'border-slate-200'} p-5 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 group flex flex-col h-full`}
+    >
+      {/* Header */}
+      <div className="flex justify-between items-start mb-6">
+        <div className="flex flex-col gap-1">
+          <span className="flex items-center gap-1.5 font-mono text-sm font-semibold text-slate-800">
+            <Box size={14} className="text-slate-400" />
+            {batch.batchNo}
+          </span>
+          {isOut && <span className="text-[11px] font-medium text-slate-400">Out of Stock</span>}
         </div>
-      </td>
-      <td className="p-4 text-right">
-        <span className={`inline-flex items-center justify-end gap-1.5 text-sm font-semibold ${
-          batch.stock === 0 ? 'text-red-600' : batch.stock <= 15 ? 'text-amber-600' : 'text-slate-700'
-        }`}>
-          {batch.stock === 0 && <AlertCircle size={14} />}
-          {batch.stock}
-        </span>
-      </td>
-      <td className="p-4 text-center">
-        <button className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-200 rounded-md opacity-0 group-hover:opacity-100 transition-all">
-          <MoreVertical size={16} />
-        </button>
-      </td>
-    </tr>
+        <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-xs font-semibold tracking-wide ${isOut ? 'bg-slate-100 border-slate-200 text-slate-500' : statusBg}`}>
+          <Icon size={12} strokeWidth={2.5} />
+          {isOut ? 'Depleted' : label}
+        </div>
+      </div>
+
+      {/* Body: Metrics Grid */}
+      <div className="grid grid-cols-2 gap-y-4 gap-x-2 text-sm mt-auto">
+        <div>
+          <p className="text-slate-400 text-[11px] font-medium uppercase tracking-wider mb-1">MFG Date</p>
+          <p className="font-medium text-slate-700">{formatDate(batch.mfgDate)}</p>
+        </div>
+        <div>
+          <p className="text-slate-400 text-[11px] font-medium uppercase tracking-wider mb-1">EXP Date</p>
+          <p className="font-medium text-slate-700">{formatDate(batch.expDate)}</p>
+        </div>
+        <div className="col-span-2 pt-3 border-t border-slate-100 flex items-center justify-between">
+           <div>
+            <p className="text-slate-400 text-[11px] font-medium uppercase tracking-wider mb-0.5">Available Qty</p>
+            <p className={`text-lg font-bold ${isOut ? 'text-red-500' : 'text-slate-800'}`}>{batch.stock}</p>
+           </div>
+           <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+              <button className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors">
+                <Eye size={16} />
+              </button>
+              <button className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-md transition-colors">
+                <MoreVertical size={16} />
+              </button>
+           </div>
+        </div>
+      </div>
+    </motion.div>
   );
 };
 
-const VariantRow = ({ variant, isExpanded, toggleExpand, isLast, expandedBatches, toggleAllBatches }: any) => {
+const VariantCard = ({ variant, isExpanded, toggleExpand, expandedBatches, toggleAllBatches }: any) => {
   const hasBatches = variant.batchTracking && variant.batches && variant.batches.length > 0;
   const showAllBatches = expandedBatches.has(variant.id);
+  const displayedBatches = showAllBatches ? variant.batches : variant.batches?.slice(0, 3);
+  const outOfStock = isOutOfStock(variant.stock);
 
   return (
-    <Fragment>
-      <tr className={`hover:bg-slate-50 cursor-pointer group transition-colors ${isExpanded ? 'bg-slate-50/80' : 'bg-slate-50/30'}`} onClick={(e) => hasBatches && toggleExpand(e, variant.id)}>
-        <td></td>
-        <td className="p-3 text-center relative">
-          {/* Variant Tree Connection */}
-          <div className="absolute top-0 left-1/2 w-px bg-slate-300 h-full -ml-[0.5px]"></div>
-          {isLast && !isExpanded && <div className="absolute top-1/2 left-1/2 w-px bg-white h-1/2 -ml-[0.5px] z-10"></div>}
-          <div className="absolute top-1/2 left-1/2 w-4 h-px bg-slate-300"></div>
-          
-          {hasBatches && (
-            <button className={`relative z-20 p-0.5 rounded-sm bg-white border transition-colors ${isExpanded ? 'border-blue-300 text-blue-600' : 'border-slate-200 text-slate-400'}`}>
-              {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-            </button>
-          )}
-        </td>
-        <td className="p-3 pl-0">
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-slate-700">{variant.name}</span>
-            {hasBatches && (
-              <span className="text-[10px] text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-100 font-semibold tracking-wide uppercase">
+    <div className={`bg-white border rounded-xl overflow-hidden transition-all duration-200 mb-3 last:mb-0 ${isExpanded ? 'border-blue-200 shadow-md shadow-blue-50/50' : 'border-slate-200 shadow-sm hover:border-slate-300'}`}>
+      {/* Variant Header Row */}
+      <div 
+        onClick={(e) => hasBatches && toggleExpand(e, variant.id)}
+        className={`flex items-center gap-4 p-4 cursor-pointer ${isExpanded ? 'bg-slate-50/50' : 'bg-white hover:bg-slate-50/50'}`}
+      >
+        <div className="flex-shrink-0">
+          <button className={`p-1 rounded-md transition-all ${!hasBatches ? 'invisible' : isExpanded ? 'bg-blue-100 text-blue-600' : 'text-slate-400 hover:bg-slate-100'}`}>
+            {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+          </button>
+        </div>
+        
+        <div className="flex-grow grid grid-cols-12 gap-4 items-center">
+          <div className="col-span-4 flex flex-col gap-0.5">
+            <span className="text-sm font-semibold text-slate-800">{variant.name}</span>
+            <span className="text-xs font-mono text-slate-500">{variant.sku}</span>
+          </div>
+          <div className="col-span-2 text-right text-sm text-slate-500">${variant.buyPrice.toFixed(2)}</div>
+          <div className="col-span-2 text-right text-sm font-medium text-slate-700">${variant.sellPrice.toFixed(2)}</div>
+          <div className="col-span-2 text-right">
+            <span className={`inline-flex px-2 py-0.5 rounded-md text-xs font-semibold ${outOfStock ? 'bg-red-50 text-red-600' : isLowStock(variant.stock) ? 'bg-amber-50 text-amber-600' : 'bg-emerald-50 text-emerald-600'}`}>
+              {variant.stock} {outOfStock ? 'Out' : 'In Stock'}
+            </span>
+          </div>
+          <div className="col-span-2 text-right flex justify-end items-center gap-3">
+             {hasBatches && (
+              <span className="text-[10px] text-slate-500 bg-slate-100 px-2 py-1 rounded-md font-semibold tracking-wide uppercase">
                 {variant.batches?.length} Batches
               </span>
             )}
-          </div>
-        </td>
-        <td className="p-3 text-slate-500 font-mono text-[13px]">{variant.sku}</td>
-        <td className="p-3 text-sm text-right text-slate-500">${variant.buyPrice.toFixed(2)}</td>
-        <td className="p-3 text-sm text-right font-medium text-slate-700">${variant.sellPrice.toFixed(2)}</td>
-        <td className="p-3 text-right">
-          <span className={`inline-flex px-2 py-0.5 rounded-md text-[13px] font-medium ${isOutOfStock(variant.stock) ? 'bg-red-50 text-red-600' : isLowStock(variant.stock) ? 'bg-amber-50 text-amber-600' : 'bg-emerald-50 text-emerald-600'}`}>
-            {variant.stock} {variant.stock === 0 ? 'Out' : ''}
-          </span>
-        </td>
-        <td className="p-3 text-center">
-          <button onClick={(e) => e.stopPropagation()} className="p-1 text-slate-300 hover:text-slate-600 hover:bg-slate-200 rounded-md opacity-0 group-hover:opacity-100 transition-all">
-            <MoreVertical size={16} />
-          </button>
-        </td>
-      </tr>
-
-      {/* Nested Batches belonging to this Variant */}
-      {isExpanded && hasBatches && variant.batches?.map((batch: Batch, idx: number) => {
-        const isHidden = !showAllBatches && idx >= 3;
-        const isLastBatch = idx === variant.batches!.length - 1;
-        const isLastVisible = !showAllBatches && idx === 2;
-        
-        return (
-          <BatchRow 
-            key={batch.id} 
-            batch={batch} 
-            isLast={isLastBatch || isLastVisible} 
-            indentLevel={2} 
-            isHidden={isHidden}
-          />
-        );
-      })}
-
-      {/* View All Toggle for Variant Batches */}
-      {isExpanded && hasBatches && variant.batches!.length > 3 && (
-        <tr className="bg-slate-50/60 group animate-in fade-in duration-200">
-          <td></td>
-          <td className="relative">
-            <div className="absolute top-0 left-1/2 w-px bg-slate-300 h-full -ml-[0.5px]"></div>
-          </td>
-          <td colSpan={6} className="py-2 pl-10 pr-4 relative">
-             <div className="absolute top-0 left-10 w-px bg-slate-300 h-1/2"></div>
-             <div className="absolute top-1/2 left-10 w-4 h-px bg-slate-300"></div>
-            <button 
-              onClick={(e) => toggleAllBatches(e, variant.id)}
-              className="text-xs font-semibold text-blue-600 hover:text-blue-700 bg-blue-50/50 hover:bg-blue-50 px-3 py-1.5 rounded-md transition-colors ml-6"
-            >
-              {showAllBatches ? 'Show fewer batches' : `View all ${variant.batches!.length} batches`}
+            <button onClick={(e) => e.stopPropagation()} className="p-1 text-slate-300 hover:text-slate-600 hover:bg-slate-200 rounded-md transition-colors">
+              <MoreVertical size={16} />
             </button>
-          </td>
-        </tr>
-      )}
-    </Fragment>
+          </div>
+        </div>
+      </div>
+
+      {/* Expandable Batch Grid for Variant */}
+      <AnimatePresence>
+        {isExpanded && hasBatches && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden border-t border-slate-100 bg-slate-50/50"
+          >
+            <div className="p-5">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                {displayedBatches.map((batch: Batch) => (
+                  <BatchCard key={batch.id} batch={batch} />
+                ))}
+              </div>
+              
+              {variant.batches!.length > 3 && (
+                <div className="mt-5 text-center">
+                  <button 
+                    onClick={(e) => toggleAllBatches(e, variant.id)}
+                    className="inline-flex items-center gap-2 text-sm font-semibold text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 px-4 py-2 rounded-lg transition-colors"
+                  >
+                    {showAllBatches ? 'Show Less' : `View All ${variant.batches!.length} Batches`}
+                  </button>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 };
 
@@ -335,7 +325,7 @@ const Inventory = () => {
   };
 
   return (
-    <div className="space-y-6 text-slate-800 max-w-[1400px] mx-auto">
+    <div className="space-y-6 text-slate-800 max-w-[1400px] mx-auto p-4 sm:p-6 lg:p-8">
       
       {/* Header Area */}
       <div className="flex flex-col gap-4">
@@ -353,31 +343,37 @@ const Inventory = () => {
       </div>
 
       {/* Bulk Action Bar */}
-      {selectedRows.size > 0 && (
-        <div className="px-4 py-3 flex justify-between items-center bg-blue-50/80 text-blue-800 rounded-xl border border-blue-100 shadow-sm animate-in fade-in slide-in-from-top-2 duration-200">
-          <p className="font-semibold text-sm">
-            <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-md mr-2">{selectedRows.size}</span> 
-            {selectedRows.size === 1 ? 'item' : 'items'} selected
-          </p>
-          <div className="flex items-center gap-3">
-            <div className="h-5 w-px bg-blue-200"></div>
-            <button className="flex items-center gap-1.5 text-red-600 hover:text-red-700 hover:bg-red-50 py-1.5 px-3 rounded-lg transition-colors font-medium text-sm">
-              <Trash size={15} /> Delete
-            </button>
-          </div>
-        </div>
-      )}
+      <AnimatePresence>
+        {selectedRows.size > 0 && (
+          <motion.div 
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="px-5 py-3.5 flex justify-between items-center bg-slate-800 text-white rounded-xl shadow-lg"
+          >
+            <p className="font-semibold text-sm flex items-center gap-3">
+              <span className="bg-slate-700 text-white px-2.5 py-0.5 rounded-md">{selectedRows.size}</span> 
+              {selectedRows.size === 1 ? 'item' : 'items'} selected
+            </p>
+            <div className="flex items-center gap-4">
+              <button className="flex items-center gap-1.5 text-slate-300 hover:text-white transition-colors font-medium text-sm">
+                <Trash size={16} /> Delete Selected
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      {/* Inventory Table */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200/60 overflow-hidden">
+      {/* Inventory Table Container */}
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             
             {/* Table Header */}
-            <thead>
-              <tr className="bg-slate-50/80 border-b border-slate-200/80 text-xs uppercase tracking-wider text-slate-500 font-semibold">
+            <thead className="bg-slate-50/80 border-b border-slate-200 text-xs uppercase tracking-wider text-slate-500 font-semibold">
+              <tr>
                 <th className="p-4 w-14 text-center">
-                  <input type="checkbox" className="rounded-sm border-slate-300 text-blue-600 focus:ring-blue-500" />
+                  <input type="checkbox" className="rounded-md border-slate-300 text-blue-600 focus:ring-blue-500 transition-all cursor-pointer h-4 w-4" />
                 </th>
                 <th className="p-4 w-12"></th>
                 <th className="p-4 font-semibold">Product Details</th>
@@ -396,130 +392,158 @@ const Inventory = () => {
                 const isSelected = selectedRows.has(product.id);
                 const showAllBatches = expandedBatches.has(product.id);
                 const hasExpandableContent = product.hasVariants || (product.batchTracking && product.batches?.length);
+                const displayedBatches = showAllBatches ? product.batches : product.batches?.slice(0, 3);
 
                 return (
                   <Fragment key={product.id}>
                     {/* MAIN PRODUCT ROW */}
                     <tr 
                       onClick={() => handleRowClick(product)}
-                      className={`group hover:bg-slate-50/50 cursor-pointer transition-colors ${isSelected ? 'bg-blue-50/30 hover:bg-blue-50/40' : ''}`}
+                      className={`group hover:bg-slate-50/60 cursor-pointer transition-colors ${isSelected ? 'bg-blue-50/40 hover:bg-blue-50/60' : ''}`}
                     >
                       <td className="p-4 text-center" onClick={(e) => e.stopPropagation()}>
                         <input 
                           type="checkbox" 
                           checked={isSelected}
                           onChange={(e) => toggleSelection(e, product.id)}
-                          className="rounded-sm border-slate-300 text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer transition-all" 
+                          className="rounded-md border-slate-300 text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer transition-all" 
                         />
                       </td>
                       
-                      <td className="p-4 text-center">
+                      <td className="p-4 text-center" onClick={(e) => e.stopPropagation()}>
                         {hasExpandableContent ? (
                           <button 
                             onClick={(e) => toggleExpand(e, product.id)}
-                            className={`p-1.5 rounded-md transition-all duration-200 ${isExpanded ? 'bg-blue-50 text-blue-600' : 'text-slate-400 hover:bg-slate-100 hover:text-slate-700'}`}
+                            className={`p-1.5 rounded-lg transition-all duration-200 ${isExpanded ? 'bg-slate-200 text-slate-800' : 'text-slate-400 hover:bg-slate-100 hover:text-slate-700'}`}
                           >
-                            {isExpanded ? <ChevronDown size={16} strokeWidth={2.5} /> : <ChevronRight size={16} strokeWidth={2.5} />}
+                            <ChevronRight size={18} className={`transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`} />
                           </button>
                         ) : (
-                          <div className="w-7 h-7 flex justify-center items-center text-slate-300">
-                            <Package size={16} />
+                          <div className="w-8 h-8 flex justify-center items-center text-slate-300">
+                            <Package size={18} />
                           </div>
                         )}
                       </td>
 
                       <td className="p-4">
-                        <div className="flex flex-col gap-1">
+                        <div className="flex flex-col gap-1.5">
                           <div className="font-semibold text-slate-800 text-sm flex items-center gap-2 flex-wrap">
                             {product.name}
                             
                             {product.hasVariants && (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-blue-600 bg-blue-50 border border-blue-100/50 text-[10px] font-bold tracking-wide uppercase">
-                                <Layers size={10} />
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-blue-700 bg-blue-50 border border-blue-200/60 text-[10px] font-bold tracking-wide uppercase">
+                                <Layers size={12} />
                                 {product.variants?.length} Variants
                               </span>
                             )}
                             
                             {!product.hasVariants && product.batchTracking && (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-emerald-600 bg-emerald-50 border border-emerald-100/50 text-[10px] font-bold tracking-wide uppercase">
-                                <CalendarDays size={10} />
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-emerald-700 bg-emerald-50 border border-emerald-200/60 text-[10px] font-bold tracking-wide uppercase">
+                                <CalendarDays size={12} />
                                 {product.batches?.length || 0} Batches
                               </span>
                             )}
                           </div>
-                          <div className="text-xs text-slate-500 truncate max-w-xs">{product.description}</div>
+                          <div className="text-sm text-slate-500 truncate max-w-sm">{product.description}</div>
                         </div>
                       </td>
 
-                      <td className="p-4 text-sm text-slate-600 font-mono text-[13px]">{product.sku}</td>
+                      <td className="p-4 text-sm text-slate-600 font-mono">{product.sku}</td>
                       <td className="p-4 text-sm text-right text-slate-500">${product.buyPrice.toFixed(2)}</td>
                       <td className="p-4 text-sm text-right font-medium text-slate-800">${product.sellPrice.toFixed(2)}</td>
                       <td className="p-4 text-right">
                         <span className={`inline-flex items-center justify-end gap-1.5 text-sm font-semibold ${
-                          isOutOfStock(product.stock) ? 'text-red-600' : isLowStock(product.stock) ? 'text-amber-600' : 'text-emerald-600'
+                          isOutOfStock(product.stock) ? 'text-red-600 bg-red-50 px-2.5 py-1 rounded-md' : 
+                          isLowStock(product.stock) ? 'text-amber-600 bg-amber-50 px-2.5 py-1 rounded-md' : 'text-slate-800'
                         }`}>
                           {isOutOfStock(product.stock) && <AlertCircle size={14} />}
                           {product.stock}
                         </span>
                       </td>
-                      <td className="p-4"></td>
+                      <td className="p-4 text-center">
+                        <button onClick={(e) => e.stopPropagation()} className="p-1.5 text-slate-400 hover:text-slate-800 hover:bg-slate-100 rounded-md opacity-0 group-hover:opacity-100 transition-all">
+                          <MoreVertical size={18} />
+                        </button>
+                      </td>
                     </tr>
 
-                    {/* NESTED: PRODUCT HAS ONLY BATCHES (No Variants) */}
-                    {isExpanded && !product.hasVariants && product.batchTracking && product.batches && product.batches.length > 0 && (
-                      <>
-                        {product.batches.map((batch, index) => {
-                          const isHidden = !showAllBatches && index >= 3;
-                          const isLastBatch = index === product.batches!.length - 1;
-                          const isLastVisible = !showAllBatches && index === 2;
-                          
-                          return (
-                            <BatchRow 
-                              key={batch.id} 
-                              batch={batch} 
-                              isLast={isLastBatch || isLastVisible} 
-                              isHidden={isHidden} 
-                              indentLevel={1}
-                            />
-                          );
-                        })}
+                    {/* EXPANDED CONTENT AREA */}
+                    <AnimatePresence>
+                      {isExpanded && hasExpandableContent && (
+                        <tr>
+                          <td colSpan={8} className="p-0 border-b-0">
+                            <motion.div
+                              initial={{ height: 0, opacity: 0 }}
+                              animate={{ height: "auto", opacity: 1 }}
+                              exit={{ height: 0, opacity: 0 }}
+                              className="overflow-hidden bg-slate-50/50 shadow-inner"
+                            >
+                              <div className="px-6 py-6 border-b border-slate-200">
+                                
+                                {/* SCENARIO A: Only Batches (No Variants) */}
+                                {!product.hasVariants && product.batches && (
+                                  <div className="space-y-5">
+                                    <h4 className="heading-label text-slate-800 flex items-center gap-2">
+                                      <CalendarDays size={16} className="text-slate-400" /> 
+                                      Active Batches
+                                    </h4>
+                                    
+                                    {product.batches.length === 0 ? (
+                                      <div className="p-8 text-center bg-white rounded-xl border border-dashed border-slate-300">
+                                        <p className="text-slate-500 text-sm">No batches found for this product.</p>
+                                      </div>
+                                    ) : (
+                                      <>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                                          {displayedBatches?.map(batch => (
+                                            <BatchCard key={batch.id} batch={batch} />
+                                          ))}
+                                        </div>
+                                        
+                                        {product.batches.length > 3 && (
+                                          <div className="pt-2 text-center">
+                                            <button 
+                                              onClick={(e) => toggleAllBatches(e, product.id)}
+                                              className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-slate-900 bg-white border border-slate-200 shadow-sm hover:shadow px-4 py-2 rounded-lg transition-all"
+                                            >
+                                              {showAllBatches ? 'Collapse Batches' : `View All ${product.batches.length} Batches`}
+                                            </button>
+                                          </div>
+                                        )}
+                                      </>
+                                    )}
+                                  </div>
+                                )}
 
-                        {/* View All Toggle Row */}
-                        {product.batches.length > 3 && (
-                          <tr className="bg-slate-50/60 group animate-in fade-in duration-200">
-                            <td></td>
-                            <td className="relative">
-                              <div className={`absolute top-0 left-1/2 w-px bg-slate-300 h-full -ml-[0.5px] ${!showAllBatches ? 'h-1/2' : ''}`}></div>
-                              {!showAllBatches && <div className="absolute top-1/2 left-1/2 w-5 h-px bg-slate-300"></div>}
-                            </td>
-                            <td colSpan={6} className="py-2 px-4">
-                              <button 
-                                onClick={(e) => toggleAllBatches(e, product.id)}
-                                className="text-xs font-semibold text-blue-600 hover:text-blue-700 bg-blue-50/50 hover:bg-blue-50 px-3 py-1.5 rounded-md transition-colors"
-                              >
-                                {showAllBatches ? 'Show fewer batches' : `View all ${product.batches.length} batches`}
-                              </button>
-                            </td>
-                          </tr>
-                        )}
-                      </>
-                    )}
+                                {/* SCENARIO B: Product has Variants */}
+                                {product.hasVariants && product.variants && (
+                                  <div className="space-y-4">
+                                    <h4 className="heading-label text-slate-800 flex items-center gap-2 mb-2">
+                                      <Layers size={16} className="text-slate-400" /> 
+                                      Product Variants
+                                    </h4>
+                                    
+                                    <div className="flex flex-col">
+                                      {product.variants.map((variant) => (
+                                        <VariantCard 
+                                          key={variant.id}
+                                          variant={variant}
+                                          isExpanded={expandedRows.has(variant.id)}
+                                          toggleExpand={toggleExpand}
+                                          expandedBatches={expandedBatches}
+                                          toggleAllBatches={toggleAllBatches}
+                                        />
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
 
-                    {/* NESTED: PRODUCT HAS VARIANTS (Variants own the batches) */}
-                    {isExpanded && product.hasVariants && product.variants?.map((variant, index) => {
-                      const isLast = index === product.variants!.length - 1;
-                      return (
-                        <VariantRow 
-                          key={variant.id} 
-                          variant={variant} 
-                          isExpanded={expandedRows.has(variant.id)} 
-                          toggleExpand={toggleExpand}
-                          isLast={isLast}
-                          expandedBatches={expandedBatches}
-                          toggleAllBatches={toggleAllBatches}
-                        />
-                      );
-                    })}
+                              </div>
+                            </motion.div>
+                          </td>
+                        </tr>
+                      )}
+                    </AnimatePresence>
                   </Fragment>
                 );
               })}
@@ -527,15 +551,15 @@ const Inventory = () => {
           </table>
         </div>
         
-        {/* Footer */}
-        <div className="px-5 py-4 border-t border-slate-200/80 bg-slate-50/50 flex items-center justify-between text-sm text-slate-600">
+        {/* Table Footer / Pagination */}
+        {/* <div className="px-6 py-4 border-t border-slate-200 bg-white flex items-center justify-between text-sm text-slate-600">
           <span className="font-medium">Showing 1 to 3 of 1,450 entries</span>
-          <div className="flex gap-1.5">
-            <button className="px-3 py-1.5 border border-slate-200 rounded-lg hover:bg-white transition-colors disabled:opacity-50 font-medium">Prev</button>
-            <button className="px-3 py-1.5 bg-blue-600 text-white font-medium shadow-sm rounded-lg">1</button>
-            <button className="px-3 py-1.5 border border-slate-200 rounded-lg hover:bg-white transition-colors font-medium">Next</button>
+          <div className="flex gap-2">
+            <button className="px-3.5 py-2 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors disabled:opacity-50 font-semibold text-slate-700 shadow-sm">Previous</button>
+            <button className="px-4 py-2 bg-slate-800 text-white font-semibold shadow-sm rounded-lg hover:bg-slate-700 transition-colors">1</button>
+            <button className="px-3.5 py-2 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors font-semibold text-slate-700 shadow-sm">Next</button>
           </div>
-        </div>
+        </div> */}
       </div>
 
       {/* Drawer */}

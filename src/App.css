@@ -209,6 +209,21 @@
   }
 }
 
+/* ─── TYPOGRAPHY SYSTEM ─────────────────────────────────────────────────────
+   Single source of truth for heading hierarchy across the entire app.
+   Usage:
+     .heading-page    → Page-level H1 titles
+     .heading-section → Section / card header H2
+     .heading-sub     → Sub-section H3
+     .heading-label   → Small label / compact card header H4
+   ─────────────────────────────────────────────────────────────────────────── */
+@layer utilities {
+  .heading-page    { @apply text-3xl font-bold; }
+  .heading-section { @apply text-xl font-semibold; }
+  .heading-sub     { @apply text-lg font-medium; }
+  .heading-label   { @apply text-sm font-medium; }
+}
+
 /* --- DASHBOARD FONTS & ANIMATIONS --- */
 .display-font { font-family: 'Outfit', sans-serif; }
 

@@ -48,12 +48,12 @@ const GeneralInfoTab = () => (
     <div className="flex items-start gap-2 bg-amber-50/50 border border-amber-100 p-3 rounded-lg mb-5">
       <AlertTriangle className="text-amber-500 shrink-0 mt-0.5" size={16} strokeWidth={1.5} />
       <div>
-        <h4 className="font-semibold text-slate-700 text-xs">Low Stock Alert</h4>
+        <h4 className="heading-label text-slate-700">Low Stock Alert</h4>
         <p className="text-xs text-slate-500 mt-0.5">Current stock (20 units) is at the reorder level. Consider restocking soon.</p>
       </div>
     </div>
 
-    <h2 className="text-sm font-semibold text-slate-700 mb-4">Product Information</h2>
+    <h2 className="heading-section text-slate-700 mb-4">Product Information</h2>
     
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
       {/* Col 1 */}
@@ -106,7 +106,7 @@ const GeneralInfoTab = () => (
 
 const PurchaseHistoryTab = () => (
   <div className="p-5 overflow-x-auto animate-in fade-in duration-300">
-    <h2 className="text-sm font-semibold text-slate-700 mb-4">Purchase History</h2>
+    <h2 className="heading-section text-slate-700 mb-4">Purchase History</h2>
     <table className="w-full text-xs text-left">
       <thead className="bg-slate-50/50">
         <tr>
@@ -140,7 +140,7 @@ const PurchaseHistoryTab = () => (
 
 const StockMovementTab = () => (
   <div className="p-5 overflow-x-auto animate-in fade-in duration-300">
-    <h2 className="text-sm font-semibold text-slate-700 mb-4">Stock Movement</h2>
+    <h2 className="heading-section text-slate-700 mb-4">Stock Movement</h2>
     <table className="w-full text-xs text-left">
       <thead className="bg-slate-50/50">
         <tr>
@@ -182,7 +182,7 @@ const StockMovementTab = () => (
 
 const SuppliersTab = () => (
   <div className="p-5 overflow-x-auto animate-in fade-in duration-300">
-    <h2 className="text-sm font-semibold text-slate-700 mb-4">Suppliers</h2>
+    <h2 className="heading-section text-slate-700 mb-4">Suppliers</h2>
     <table className="w-full text-xs text-left">
       <thead className="bg-slate-50/50">
         <tr>
@@ -229,7 +229,7 @@ const ProductDetail = () => {
           <div className="flex-1">
             <div className="flex flex-col md:flex-row md:items-start justify-between gap-3 mb-2">
               <div className="flex items-center gap-3">
-                <h1 className="text-xl font-bold text-slate-700">Wireless Headphones</h1>
+                <h1 className="heading-page text-slate-700">Wireless Headphones</h1>
                 <span className="bg-emerald-50 border border-emerald-100 text-emerald-600 px-2 py-0.5 rounded text-[10px] font-medium tracking-wider uppercase">
                   Active
                 </span>

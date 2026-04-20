@@ -185,7 +185,7 @@ const PurchaseHistoryTab = () => {
       <PurchaseHeader/>
       <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
         <div className="p-4 border-b border-slate-50 bg-slate-50/30">
-          <h3 className="text-sm font-bold text-slate-700">Recent Invoices</h3>
+          <h3 className="heading-label text-slate-700">Recent Invoices</h3>
         </div>
         
         <div className="p-4 border-b border-gray-100 flex flex-col md:flex-row items-center justify-between gap-4">

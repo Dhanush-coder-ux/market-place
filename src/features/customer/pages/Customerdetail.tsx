@@ -230,7 +230,7 @@ export default function CustomerDetail() {
       {/* Customer Details */}
       <div>
         <div className="flex items-center gap-3 mb-1.5">
-          <h1 className="text-2xl sm:text-3xl font-semibold text-slate-700 tracking-tight">
+          <h1 className="heading-page text-slate-700 tracking-tight">
             Ajith Kumar
           </h1>
           {/* Modernized Premium Badge */}
@@ -434,7 +434,7 @@ export default function CustomerDetail() {
                                 </div>
                             </div>
 
-                            <h3 className="text-lg font-semibold text-slate-700 mb-5">Payment Timeline</h3>
+                            <h3 className="heading-sub text-slate-700 mb-5">Payment Timeline</h3>
                             <div className="relative pl-8">
                                 <div className="absolute left-2 top-0 bottom-0 w-0.5 bg-slate-200" />
                                 {payments.map((p, i) => (

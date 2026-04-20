@@ -205,7 +205,7 @@ const dropdownOptions = selectedCategory
               <Settings2 size={20} />
             </div>
             <div>
-              <h2 className="text-base font-bold text-slate-800">{title}</h2>
+              <h2 className="heading-section text-slate-800">{title}</h2>
               <p className="text-xs text-slate-500">{description}</p>
             </div>
           </div>

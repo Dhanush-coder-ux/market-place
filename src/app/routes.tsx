@@ -2,8 +2,8 @@ import React, { Suspense } from "react";
 import { createBrowserRouter } from "react-router-dom";
 import Loader from "@/components/common/Loader";
 import GRNListView from "@/features/purchase/pages/GrnListView";
-import GRNForm from "@/features/purchase/pages/GrnForm";
-import PurchaseForm from "@/features/purchase/pages/PurchaseForm";
+import {GRNForm} from "@/features/purchase/pages/GrnForm";
+import {PurchaseForm }from "@/features/purchase/pages/PurchaseForm";
 import ProductForm from "@/features/product/pages/ProductForm";
 import CustomerBalanceSummary from "@/features/customer/pages/CustomerBalanceSummary";
 import CustomerProfile from "@/features/customer/pages/Customerdetail";
@@ -11,9 +11,10 @@ import PurchaseHistory from "@/features/purchase/pages/PurchaseHistory";
 import SalesListPage from "@/features/sales/pages/SalesPage";
 import StockMovementPage from "@/features/inventory/pages/StockMovement";
 import ReceiveGoodsPage from "@/features/purchase/pages/ReceiveGoodsForm";
-import StockAdjustmentPage from "@/features/inventory/pages/StockAdjusstment";
-import ProductionEntryPage from "@/features/purchase/pages/ProductionForm";
-import CustomerFormPage from "@/features/customer/pages/CustomerFormPage";
+import{ StockAdjustmentForm }from "@/features/inventory/pages/StockAdjusstment";
+import {ProductionForm} from "@/features/purchase/pages/ProductionForm";
+import{ CustomerFormPage }from "@/features/customer/pages/CustomerFormPage";
+import { SupplierForm } from "@/features/supplier/pages/SupplierForm";
 
 
 // Layout & Auth
@@ -37,12 +38,12 @@ const ProductDetail = React.lazy(() => import("@/features/product/pages/ProductD
 
 // Purchase
 const PurchaseDetail = React.lazy(() => import("@/features/purchase/pages/PurchaseDetail"));
-const PurchaseManagement = React.lazy(() => import("@/features/purchase/pages/PurchaseForm"));
+
 
 // Supplier
 const Supplier = React.lazy(() => import("@/features/supplier/pages/Supplier"));
 const SupplierDetail = React.lazy(() => import("@/features/supplier/pages/SupplierDetail"));
-const SupplierForm = React.lazy(() => import("@/features/supplier/pages/SupplierForm"));
+
 
 // Employee
 const Employee = React.lazy(() => import("../features/employee/pages/Employee"));
@@ -87,11 +88,11 @@ export const router = createBrowserRouter([
       { path: '/po-grn/add', element:<GRNForm/>},
       { path: '/po-grn/update', element:<ReceiveGoodsPage/>},
       { path: "/purchase-history" , element: <PurchaseHistory/>},
-      {path :"/production-entry/add",element:<ProductionEntryPage/>},
+      {path :"/production-entry/add",element:<ProductionForm/>},
       
     
       { path: '/purchase/detail', element: <PurchaseDetail /> },
-      { path: '/purchase/add', element: <PurchaseManagement /> },
+      { path: '/purchase/add', element: <PurchaseForm /> },
       
       { path: 'supplier', element: <Supplier /> },
       { path: 'supplier/detail', element: <SupplierDetail /> },
@@ -102,7 +103,7 @@ export const router = createBrowserRouter([
       
       { path: '/inventory', element: <Inventory /> },
       { path: "/stock-movement" ,element:<StockMovementPage/>},
-      { path: "/stock-adjustment" ,element:<StockAdjustmentPage/>},
+      { path: "/stock-adjustment" ,element:<StockAdjustmentForm/>},
  
       
       { path: '/billing', element: <Billing /> },

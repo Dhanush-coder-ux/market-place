@@ -272,7 +272,7 @@ export default function CustomerBalanceSummary() {
                       <tr className="bg-gray-50 border-b border-gray-200">
                         <td colSpan={5} className="px-6 py-6">
                           <div className="max-w-4xl mx-auto bg-white border border-gray-200 rounded-lg shadow-sm p-4">
-                            <h4 className="text-sm font-semibold text-gray-700 mb-3 border-b pb-2">Recent Ledger (Last 30 Days)</h4>
+                            <h4 className="heading-label text-gray-700 mb-3 border-b pb-2">Recent Ledger (Last 30 Days)</h4>
                             <div className="space-y-3">
                               {customer.ledger.map((tx) => (
                                 <div key={tx.id} className="flex justify-between items-center text-sm px-2 py-1 rounded hover:bg-gray-50">

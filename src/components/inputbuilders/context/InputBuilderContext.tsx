@@ -3,8 +3,30 @@ import axios from "axios";
 
 // --- Types & Interfaces ---
 
+export interface SearchConfig {
+  /** Key in each option object to use as the display label */
+  labelKey: string;
+  /** Key in each option object to use as the form value */
+  valueKey: string;
+  /** Allow selecting multiple values */
+  multiple?: boolean;
+  /** If provided, SearchSelect will call this URL for async search (GET ?q=...) */
+  fetch_url?: string;
+}
+
 export interface FieldDefinition {
-  type: "TEXT" | "DECIMAL" | "DROP-DOWN" | "DATE" | "NUMBER" | "TEXTAREA" | "LIST-DICT" | "EMAIL" | "BOOLEAN" | "DICT";
+  type:
+    | "TEXT"
+    | "DECIMAL"
+    | "DROP-DOWN"
+    | "DATE"
+    | "NUMBER"
+    | "TEXTAREA"
+    | "LIST-DICT"
+    | "EMAIL"
+    | "BOOLEAN"
+    | "DICT"
+    | "SEARCH-SELECT"; // ← NEW
   conn_id: string;
   category: string;
   required: boolean;
@@ -15,7 +37,17 @@ export interface FieldDefinition {
   placeholder: string;
   field_description: string;
   category_description: string;
-  values?: string[] | Record<string, FieldDefinition>;
+  /**
+   * For DROP-DOWN / SEARCH-SELECT (static): string[]
+   * For SEARCH-SELECT (static objects): Record<string, unknown>[]
+   * For LIST-DICT: Record<string, FieldDefinition>
+   */
+  values?: string[] | Record<string, unknown>[] | Record<string, FieldDefinition>;
+  /**
+   * Only relevant when type === "SEARCH-SELECT".
+   * Controls how the SearchSelect component maps option objects.
+   */
+  search_config?: SearchConfig;
 }
 
 export interface ServiceSchema {
@@ -30,7 +62,8 @@ export interface FetchFieldsResponse {
     status_code: number;
     success: boolean;
   };
-  data: ServiceSchema[]; // Updated to reflect the array from your backend
+  /** Backend may return a single schema object OR an array of them */
+  data: ServiceSchema | ServiceSchema[];
 }
 
 interface InputBuilderContextType {
@@ -44,8 +77,9 @@ interface InputBuilderContextType {
   fetchGrnFields: () => Promise<void>;
   fetchProductionFields: () => Promise<void>;
   fetchCustomerFields: () => Promise<void>;
-  fetchFieldsByServiceName: (serviceName: string) => Promise<void>; // Added generic fetcher
   fetchEmployeeFields: () => Promise<void>;
+  /** Generic fetcher — resolves by service_name */
+  fetchFieldsByServiceName: (serviceName: string) => Promise<void>;
 }
 
 // --- Context Definition ---
@@ -53,97 +87,72 @@ const VITE_BASE_URL = import.meta.env.VITE_BASE_URL;
 export const InputBuilderContext = createContext<InputBuilderContextType | null>(null);
 
 // --- Provider Component ---
-
 export const InputBuilderProvider = ({ children }: { children: ReactNode }) => {
   const [fields, setFields] = useState<Record<string, FieldDefinition> | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  /**
-   * Core generic fetcher: 
-   * Fetches the array from the backend and filters by the requested service_name
-   */
-  // --- Updated Types ---
+  const fetchFieldsByServiceName = async (serviceName: string) => {
+    setIsLoading(true);
+    setError(null);
 
-interface FetchFieldsResponse {
-  detail: {
-    msg: string;
-    status_code: number;
-    success: boolean;
-  };
-  // Handle both a single schema (object) or multiple (array)
-  data: ServiceSchema | ServiceSchema[]; 
-}
+    try {
+      const result = await axios.get<FetchFieldsResponse>(
+        `${VITE_BASE_URL}/fields/base/by/s-name/${serviceName}`
+      );
 
-// --- Updated Provider Component Logic ---
+      if (result.data.detail.success) {
+        const responseData = result.data.data;
 
-const fetchFieldsByServiceName = async (serviceName: string) => {
-  setIsLoading(true);
-  setError(null);
-
-  try {
-    const result = await axios.get<FetchFieldsResponse>(
-      `${VITE_BASE_URL}/fields/base/by/s-name/${serviceName}`
-    );
-
-    if (result.data.detail.success) {
-      const responseData = result.data.data;
-
-      // Logic to handle if data is an array or a single object
-      if (Array.isArray(responseData)) {
-        const targetService = responseData.find(
-          (service) => service.service_name === serviceName
-        );
-
-        if (targetService) {
-          setFields(targetService.fields);
+        if (Array.isArray(responseData)) {
+          const target = responseData.find((s) => s.service_name === serviceName);
+          if (target) {
+            setFields(target.fields);
+          } else {
+            setError(`Service "${serviceName}" not found in response.`);
+            setFields(null);
+          }
         } else {
-          // Fallback logic if array is returned but name doesn't match
-          const fallback = responseData.find((s) => s.service_name === "PRODUCT");
-          setFields(fallback ? fallback.fields : null);
-          setError(`Service "${serviceName}" not found in list.`);
+          // Single object returned directly
+          setFields(responseData.fields);
         }
       } else {
-        // If the backend returns exactly what you requested as a single object
-        setFields(responseData.fields);
+        setError(result.data.detail.msg || "Failed to fetch fields.");
+        setFields(null);
       }
-    } else {
-      setError(result.data.detail.msg || "Failed to fetch fields.");
+    } catch (err: any) {
+      setError(err.message || "An error occurred while fetching fields.");
       setFields(null);
+    } finally {
+      setIsLoading(false);
     }
-  } catch (err: any) {
-    setError(err.message || "An error occurred while fetching fields.");
-    setFields(null);
-  } finally {
-    setIsLoading(false);
-  }
-};
+  };
 
-  // --- Specific Fetchers (Kept for backward compatibility with your components) ---
-  const fetchProductFields = () => fetchFieldsByServiceName("PRODUCT");
+  // --- Named convenience wrappers ---
+  const fetchProductFields         = () => fetchFieldsByServiceName("PRODUCT");
   const fetchStockAdjustmentFields = () => fetchFieldsByServiceName("STOCK-ADJUSTMENT");
-  const fetchSupplierFields = () => fetchFieldsByServiceName("SUPPLIER");
-  const fetchPurchaseFields = () => fetchFieldsByServiceName("PURCHASE-DIRECT");
-  const fetchGrnFields = () => fetchFieldsByServiceName("PURCHASE-GRN");
-  const fetchProductionFields = () => fetchFieldsByServiceName("PURCHASE-PRODUCTION");
-  const fetchCustomerFields = () => fetchFieldsByServiceName("CUSTOMER");
-  const fetchEmployeeFields = () => fetchFieldsByServiceName("EMPLOYEE");
+  const fetchSupplierFields        = () => fetchFieldsByServiceName("SUPPLIER");
+  const fetchPurchaseFields        = () => fetchFieldsByServiceName("PURCHASE-DIRECT");
+  const fetchGrnFields             = () => fetchFieldsByServiceName("PURCHASE-GRN");
+  const fetchProductionFields      = () => fetchFieldsByServiceName("PURCHASE-PRODUCTION");
+  const fetchCustomerFields        = () => fetchFieldsByServiceName("CUSTOMER");
+  const fetchEmployeeFields        = () => fetchFieldsByServiceName("EMPLOYEE");
 
   return (
-    <InputBuilderContext.Provider 
-      value={{ 
-        fields, 
-        isLoading, 
-        error, 
-        fetchProductFields, 
+    <InputBuilderContext.Provider
+      value={{
+        fields,
+        isLoading,
+        error,
+        fetchProductFields,
         fetchStockAdjustmentFields,
         fetchSupplierFields,
         fetchPurchaseFields,
         fetchGrnFields,
         fetchProductionFields,
         fetchCustomerFields,
-        fetchFieldsByServiceName,
         fetchEmployeeFields,
+        fetchFieldsByServiceName,
       }}
     >
       {children}
@@ -152,11 +161,10 @@ const fetchFieldsByServiceName = async (serviceName: string) => {
 };
 
 // --- Custom Hook ---
-
 export const useInputBuilderContext = () => {
   const context = useContext(InputBuilderContext);
   if (!context) {
-    throw new Error("useInputBuilderContext must be used within the InputBuilderProvider");
+    throw new Error("useInputBuilderContext must be used within InputBuilderProvider");
   }
   return context;
 };

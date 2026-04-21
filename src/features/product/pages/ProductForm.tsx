@@ -3,6 +3,11 @@ import { Save, AlertCircle } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useInputBuilderContext } from "@/components/inputbuilders/context/InputBuilderContext";
 import { AutoFormRenderer } from "@/components/inputbuilders/AutoFormRender";
+import {
+  ProductVariantsSection,
+  VariantType,
+  VariantCombination,
+} from "@/components/inputbuilders/ProductVaireintSection"
 import { useApi } from "@/context/ApiContext";
 import { ENDPOINTS } from "@/services/endpoints";
 import "@/components/FormRender.css";
@@ -48,6 +53,11 @@ export const ProductForm: React.FC = () => {
   const [values, setValues] = useState<Record<string, any>>({});
   const [dataLoading, setDataLoading] = useState(isEditMode);
 
+  // ── Variant state ──────────────────────────────────────────
+  const [variantTypes, setVariantTypes] = useState<VariantType[]>([]);
+  const [combinations, setCombinations] = useState<VariantCombination[]>([]);
+  // ──────────────────────────────────────────────────────────
+
   useEffect(() => { fetchProductFields(); }, []);
 
   useEffect(() => {
@@ -56,20 +66,32 @@ export const ProductForm: React.FC = () => {
     getData(`${ENDPOINTS.PRODUCTS}/by/${id}`).then((res) => {
       if (res) {
         const record = Array.isArray(res.data) ? res.data[0] : res.data;
-        setValues(record?.datas ?? {});
+        const datas = record?.datas ?? {};
+        setValues(datas);
+        // Restore saved variant state if it exists
+        if (datas.variantTypes)  setVariantTypes(datas.variantTypes);
+        if (datas.combinations)  setCombinations(datas.combinations);
       }
       setDataLoading(false);
     });
   }, [id]);
 
-  const onChange = (name: string, value: string) => {
+  const onChange = (name: string, value: any) => {
     setValues((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const barcode = (values.barcode as string) || "";
-    const body = { id,barcode, datas: values };
+    const body = {
+      id,
+      barcode,
+      datas: {
+        ...values,
+        variantTypes,   // ← included in payload
+        combinations,   // ← included in payload
+      },
+    };
     const res = isEditMode
       ? await putData(`${ENDPOINTS.PRODUCTS}`, body)
       : await postData(ENDPOINTS.PRODUCTS, body);
@@ -90,19 +112,35 @@ export const ProductForm: React.FC = () => {
             {isEditMode ? "Edit Product" : "Add Product"}
           </h2>
 
+          {/* Main sections — variants override goes here */}
           <AutoFormRenderer
             fields={fields}
             values={values}
             onChange={onChange}
             excludeCategories={["Advanced Settings"]}
+            customSections={{
+              "Product Variants": (
+                <ProductVariantsSection
+                  hasVariants={!!values.hasVariants}
+                  onHasVariantsChange={(v) => onChange("hasVariants", v)}
+                  variantTypes={variantTypes}
+                  onVariantTypesChange={setVariantTypes}
+                  combinations={combinations}
+                  onCombinationsChange={setCombinations}
+                  category={values.category}
+                  basePriceStr={values.sellingPrice}
+                />
+              ),
+            }}
           />
 
+          {/* Advanced Settings (collapsible) */}
           <div className="mt-4 pt-4 border-t border-slate-100">
             <AutoFormRenderer
               fields={fields}
               values={values}
               onChange={onChange}
-              excludeCategories={["Basic Information", "Pricing & Sourcing", "Stock & Inventory"]}
+              excludeCategories={["Basic Information", "Pricing & Sourcing", "Stock & Inventory", "Product Variants"]}
               sectionConfigs={{
                 "Advanced Settings": {
                   collapsible: true,

@@ -1,6 +1,8 @@
-import { useState, ReactNode, CSSProperties } from "react";
+import { useState, ReactNode, CSSProperties, useEffect } from "react";
 import { Clock, MapPin, Star, Store, Sun } from "lucide-react";
 import App from "../components/StoreCard";
+import { useApi } from "@/context/ApiContext";
+import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 export interface CloudProps {
   className?: string;
   style?: CSSProperties;
@@ -96,13 +98,29 @@ function SkyLayout({ children }: SkyLayoutProps) {
 ───────────────────────────────────────────── */
 export default function Shop() {
   const [showInfo, setShowInfo] = useState(false);
-  const shopInfo = {
-    shopName: "Selvam Digital Store",
-    shopDescription: "Your one-stop destination for premium digital assets and modern web solutions.",
-    location: "Chennai, India",
-    operatingHours: "9:00 AM - 9:00 PM",
-    rating: 4.8,
-  };
+  const { getData } = useApi();
+  const [shopInfo, setShopInfo] = useState<ShopInfo>({
+    shopName: "Loading…",
+    shopDescription: "",
+    location: "",
+    operatingHours: "",
+    rating: 0,
+  });
+
+  useEffect(() => {
+    getData(ENDPOINTS.SHOPS + "/by/" + SHOP_ID).then(res => {
+      if (!res) return;
+      const d = Array.isArray(res.data) ? res.data[0] : res.data;
+      if (!d) return;
+      setShopInfo({
+        shopName: String(d.datas?.shop_name ?? d.datas?.name ?? "My Shop"),
+        shopDescription: String(d.datas?.description ?? d.datas?.about ?? ""),
+        location: String(d.datas?.location ?? d.datas?.address ?? ""),
+        operatingHours: String(d.datas?.operating_hours ?? d.datas?.timings ?? ""),
+        rating: Number(d.datas?.rating ?? 0),
+      });
+    });
+  }, []);
 
   return (
     <SkyLayout>

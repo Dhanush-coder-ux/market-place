@@ -43,7 +43,7 @@ export interface AutoFormRendererProps {
   /** Current form values */
   values: Record<string, any>;
   /** onChange — receives field_name + new value */
-  onChange: (name: string, value: string) => void;
+  onChange: (name: string, value: any) => void;
   /**
    * LIST-DICT row state map: fieldName → { rows, setRows }
    * Supply this if you want to handle list fields.
@@ -164,6 +164,27 @@ const CATEGORY_DEFAULTS: Record<string, SectionConfig> = {
     icon: <ShoppingCart size={18} />, iconColor: "bg-violet-50 text-violet-500",
     title: "Order Summary", subtitle: "Charges and totals",
     order: 3,
+  },
+  // Stock Adjustment categories
+  "Summary": {
+    icon: <BarChart2 size={18} />, iconColor: "bg-indigo-50 text-indigo-500",
+    title: "Summary", subtitle: "Auto-calculated stock impact",
+    order: 10, collapsible: true, defaultCollapsed: true,
+  },
+  "Product Catlog": {
+    icon: <Package size={18} />, iconColor: "bg-blue-50 text-blue-500",
+    title: "Product Catalog", subtitle: "Products being adjusted",
+    order: 2,
+  },
+  "Basic Info": {
+    icon: <FileText size={18} />, iconColor: "bg-slate-100 text-slate-500",
+    title: "Basic Info", subtitle: "Item identity",
+    order: 0,
+  },
+  "Product Variants": {
+    icon: <Layers size={18} />, iconColor: "bg-purple-50 text-purple-500",
+    title: "Product Variants", subtitle: "Variant configuration",
+    order: 5, collapsible: true, defaultCollapsed: true,
   },
 };
 

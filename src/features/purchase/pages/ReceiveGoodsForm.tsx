@@ -1,10 +1,11 @@
 import React, { useState, useMemo } from 'react';
-import { 
-  Search, Package, AlertCircle, Save, Building2, Calendar, FileText, 
-  Banknote, Smartphone, CreditCard, Landmark 
+import {
+  Search, Package, AlertCircle, Save, Building2, Calendar, FileText,
+  Banknote, Smartphone, CreditCard, Landmark
 } from 'lucide-react';
 import { GradientButton } from '@/components/ui/GradientButton';
-// import toast from 'react-hot-toast'; 
+import { useApi } from '@/context/ApiContext';
+import { ENDPOINTS, SHOP_ID } from '@/services/endpoints';
 
 // --- Type Definitions ---
 type PaymentMethod = "Cash" | "UPI" | "Card" | "Bank";
@@ -543,6 +544,7 @@ const GRNForm = ({ poData, onSubmit }: { poData: PurchaseOrder, onSubmit: (paylo
 
 // --- Main Page Component ---
 export default function ReceiveGoodsPage() {
+  const { getData, postData } = useApi();
   const [poData, setPoData] = useState<PurchaseOrder | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
@@ -551,40 +553,32 @@ export default function ReceiveGoodsPage() {
     setIsLoading(true);
     setError("");
     try {
-      await new Promise(r => setTimeout(r, 600)); 
-      
-      const mockDatabase: Record<string, PurchaseOrder> = {
-        "PO-2026-001": {
-          id: "PO-2026-001", supplier: "Apex Industrial Supplies", po_date: "2026-03-15", expected_delivery: "2026-03-25", status: "Partial",
-          items: [
-            { product_id: "PROD-101", name: "Heavy Duty Racking", ordered: 50, received: 20, unit_price: 2500 },
-            { product_id: "PROD-102", name: "Pallet Jack (Manual)", ordered: 5, received: 5, unit_price: 15000 }, 
-            { product_id: "PROD-103", name: "Safety Helmets (Yellow)", ordered: 100, received: 0, unit_price: 350 }
-          ]
-        },
-        "PO-2026-002": {
-          id: "PO-2026-002", supplier: "TechDistro Global", po_date: "2026-03-20", expected_delivery: "2026-03-28", status: "Pending",
-          items: [
-            { product_id: "TECH-001", name: "Barcode Scanners", ordered: 25, received: 0, unit_price: 4500 },
-            { product_id: "TECH-002", name: "Thermal Label Printers", ordered: 10, received: 0, unit_price: 12000 }
-          ]
-        },
-        "PO-2026-003": {
-          id: "PO-2026-003", supplier: "Office Essentials Co.", po_date: "2026-03-01", expected_delivery: "2026-03-10", status: "Partial",
-          items: [
-            { product_id: "OFF-99", name: "Ergonomic Chairs", ordered: 12, received: 10, unit_price: 8500 },
-          ]
-        }
-      };
-
-      const searchId = id.toUpperCase().trim();
-      const foundPO = mockDatabase[searchId];
-
-      if (!foundPO) {
-        throw new Error("PO not found. Try 'PO-2026-001', 'PO-2026-002', or 'PO-2026-003'.");
-      }
-      
-      setPoData(foundPO);
+      const res = await getData(ENDPOINTS.PURCHASES, {
+        type: "PO CREATE",
+        shop_id: SHOP_ID,
+        q: id,
+        limit: "10",
+        offset: "1",
+      });
+      if (!res) throw new Error("Failed to fetch PO");
+      const records: any[] = Array.isArray(res.data) ? res.data : [res.data];
+      const match = records.find(r => r.id.startsWith(id) || r.id.slice(0, 8).toUpperCase() === id.toUpperCase());
+      if (!match) throw new Error(`No GRN purchase found for "${id}". Enter a valid PO ID prefix.`);
+      const products: any[] = match.datas?.grn_products ?? match.datas?.purchase_products ?? [];
+      setPoData({
+        id: match.id.slice(0, 8).toUpperCase(),
+        supplier: String(match.datas?.supplier ?? "—"),
+        po_date: String(match.datas?.receipt_date ?? match.datas?.purchase_date ?? "—"),
+        expected_delivery: String(match.datas?.expected_delivery ?? "—"),
+        status: String(match.datas?.status ?? "Pending"),
+        items: products.map((p: any, i: number) => ({
+          product_id: String(p.barcode ?? p.product_id ?? `ITEM-${i + 1}`),
+          name: String(p.product_name ?? p.name ?? "Item"),
+          ordered: Number(p.quantity ?? p.qty ?? 0),
+          received: 0,
+          unit_price: Number(p.unit_price ?? p.price ?? 0),
+        })),
+      });
     } catch (err: any) {
       setError(err.message || "Failed to fetch PO");
       setPoData(null);
@@ -594,9 +588,15 @@ export default function ReceiveGoodsPage() {
   };
 
   const submitGRN = async (payload: GRNPayload) => {
-    console.log("Submitting to FastAPI:", payload);
-    alert("GRN Payload logged to console! Success.");
-    setPoData(null);
+    const res = await postData(ENDPOINTS.PURCHASES, {
+      shop_id: SHOP_ID,
+      type: "PO_UPDATE",
+      datas: payload,
+    });
+    if (res) {
+      setPoData(null);
+      setError("");
+    }
   };
 
   return (

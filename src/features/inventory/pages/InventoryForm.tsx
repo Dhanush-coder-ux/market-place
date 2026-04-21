@@ -1,17 +1,28 @@
 import React, { useState } from "react";
 import { FileText, Layers, Package, Tag } from "lucide-react";
 import { BiRupee } from "react-icons/bi";
+import { useNavigate } from "react-router-dom";
 
 import Input from "../../../components/ui/Input";
 import { ReusableCombobox } from "@/components/ui/ReusableCombobox";
 import { ReusableSelect } from "@/components/ui/ReusableSelect";
 import ImageUpload from "@/components/common/ImageUpload";
 import { GradientButton } from "@/components/ui/GradientButton";
-
-import FieldLabel from "./Fieldlable"; 
+import FieldLabel from "./Fieldlable";
 import { FIELD_DESCRIPTIONS } from "../../../utils/constants";
+import { useApi } from "@/context/ApiContext";
+import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
+
+const CATEGORIES = [
+  { value: "electronics", label: "Electronics" },
+  { value: "grocery", label: "Grocery" },
+  { value: "clothing", label: "Clothing" },
+];
 
 const InventoryForm = () => {
+  const navigate = useNavigate();
+  const { postData, loading: submitting, error } = useApi();
+
   const [formData, setFormData] = useState({
     barcode: "",
     name: "",
@@ -32,15 +43,7 @@ const InventoryForm = () => {
     sellingPrice: false,
   });
 
-  const CATEGORIES = [
-    { value: "electronics", label: "Electronics" },
-    { value: "grocery", label: "Grocery" },
-    { value: "clothing", label: "Clothing" },
-  ];
-
-  const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
     if (value && errors[name as keyof typeof errors]) {
@@ -48,9 +51,44 @@ const InventoryForm = () => {
     }
   };
 
+  const validate = (): boolean => {
+    const newErrors = {
+      barcode: !formData.barcode,
+      name: !formData.name,
+      category: !formData.category,
+      currentStock: !formData.currentStock,
+      currentPrice: !formData.currentPrice,
+      sellingPrice: !formData.sellingPrice,
+    };
+    setErrors(newErrors);
+    return !Object.values(newErrors).some(Boolean);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validate()) return;
+    const res = await postData(ENDPOINTS.INVENTORIES, {
+      shop_id: SHOP_ID,
+      barcode: formData.barcode,
+      stocks: Number(formData.currentStock),
+      buy_price: Number(formData.currentPrice),
+      sell_price: Number(formData.sellingPrice),
+      datas: {
+        name: formData.name,
+        description: formData.description,
+        category: formData.category,
+      },
+    });
+    if (res) navigate("/inventory");
+  };
+
   return (
-    <form className="mx-auto space-y-10 p-6 bg-white">
-      
+    <form className="mx-auto space-y-10 p-6 bg-white" onSubmit={handleSubmit}>
+
+      {error && (
+        <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm">{error}</div>
+      )}
+
       {/* SECTION 1: PRIMARY IDENTIFICATION */}
       <section>
         <div className="flex items-center gap-3 border-b border-gray-100 pb-4 mb-8">
@@ -64,15 +102,10 @@ const InventoryForm = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
-          {/* Left: Essential Inputs */}
           <div className="lg:col-span-8 space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-1.5">
-                <FieldLabel
-                  label="Barcode / SKU"
-                  tooltip={FIELD_DESCRIPTIONS.barcode}
-                  required
-                />
+                <FieldLabel label="Barcode / SKU" tooltip={FIELD_DESCRIPTIONS.barcode} required />
                 <ReusableCombobox
                   options={CATEGORIES}
                   value={formData.barcode}
@@ -86,11 +119,7 @@ const InventoryForm = () => {
               </div>
 
               <div className="space-y-1.5">
-                <FieldLabel
-                  label="Product Name"
-                  tooltip={FIELD_DESCRIPTIONS.name}
-                  required
-                />
+                <FieldLabel label="Product Name" tooltip={FIELD_DESCRIPTIONS.name} required />
                 <Input
                   name="name"
                   value={formData.name}
@@ -103,10 +132,7 @@ const InventoryForm = () => {
             </div>
 
             <div className="space-y-1.5">
-              <FieldLabel
-                label="Detailed Description"
-                tooltip={FIELD_DESCRIPTIONS.description}
-              />
+              <FieldLabel label="Detailed Description" tooltip={FIELD_DESCRIPTIONS.description} />
               <div className="relative group">
                 <FileText className="absolute left-3 top-3 text-gray-400 group-focus-within:text-indigo-500 transition-colors" size={18} />
                 <textarea
@@ -121,7 +147,6 @@ const InventoryForm = () => {
             </div>
           </div>
 
-          {/* Right: Large Image Upload Preview */}
           <div className="lg:col-span-4">
             <div className="sticky top-6">
               <ImageUpload
@@ -140,7 +165,7 @@ const InventoryForm = () => {
           <Layers className="text-gray-400" size={18} />
           <h4 className="font-bold text-gray-800 uppercase tracking-widest text-xs">Stock & Categorization</h4>
         </div>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           <div className="space-y-1.5">
             <FieldLabel label="Category" tooltip={FIELD_DESCRIPTIONS.category} required />
@@ -149,6 +174,7 @@ const InventoryForm = () => {
               options={CATEGORIES}
               onValueChange={(val) => setFormData((p) => ({ ...p, category: val }))}
             />
+            {errors.category && <span className="text-xs text-red-500">Required</span>}
           </div>
 
           <div className="space-y-1.5">
@@ -160,6 +186,7 @@ const InventoryForm = () => {
               type="number"
               leftIcon={<Layers size={18} className="text-gray-400" />}
               placeholder="Quantity in hand"
+              className={errors.currentStock ? "border-red-500" : ""}
             />
           </div>
         </div>
@@ -182,6 +209,7 @@ const InventoryForm = () => {
               type="number"
               leftIcon={<BiRupee className="text-gray-400" />}
               placeholder="0.00"
+              className={errors.currentPrice ? "border-red-500" : ""}
             />
           </div>
 
@@ -194,6 +222,7 @@ const InventoryForm = () => {
               type="number"
               leftIcon={<BiRupee className="text-gray-400" />}
               placeholder="0.00"
+              className={errors.sellingPrice ? "border-red-500" : ""}
             />
           </div>
         </div>
@@ -201,15 +230,16 @@ const InventoryForm = () => {
 
       {/* STICKY FOOTER ACTIONS */}
       <div className="flex flex-col sm:flex-row justify-end items-center gap-4 pt-8 border-t border-gray-100 bg-white">
-        <button type="button" className="text-sm font-medium text-gray-400 hover:text-gray-600 px-4">
+        <button
+          type="button"
+          onClick={() => navigate("/inventory")}
+          className="text-sm font-medium text-gray-400 hover:text-gray-600 px-4"
+        >
           Discard Draft
         </button>
         <div className="flex flex-wrap justify-center gap-3">
-          <GradientButton variant="outline" className="border-gray-200">
-            Save & Add New
-          </GradientButton>
-          <GradientButton className="shadow-lg shadow-indigo-200 min-w-[180px]">
-            Confirm & Save Product
+          <GradientButton className="shadow-lg shadow-indigo-200 min-w-[180px]" disabled={submitting}>
+            {submitting ? "Saving…" : "Confirm & Save Product"}
           </GradientButton>
         </div>
       </div>

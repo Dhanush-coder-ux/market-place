@@ -4,7 +4,7 @@ import axios from "axios";
 // --- Types & Interfaces ---
 
 export interface FieldDefinition {
-  type: "TEXT" | "DECIMAL" | "DROP-DOWN" | "DATE" | "NUMBER" | "TEXTAREA" | "LIST-DICT" | "EMAIL";
+  type: "TEXT" | "DECIMAL" | "DROP-DOWN" | "DATE" | "NUMBER" | "TEXTAREA" | "LIST-DICT" | "EMAIL" | "BOOLEAN" | "DICT";
   conn_id: string;
   category: string;
   required: boolean;
@@ -63,41 +63,49 @@ export const InputBuilderProvider = ({ children }: { children: ReactNode }) => {
    * Core generic fetcher: 
    * Fetches the array from the backend and filters by the requested service_name
    */
-  const fetchFieldsByServiceName = async (serviceName: string) => {
+  // --- Updated Types ---
+
+interface FetchFieldsResponse {
+  detail: {
+    msg: string;
+    status_code: number;
+    success: boolean;
+  };
+  // Handle both a single schema (object) or multiple (array)
+  data: ServiceSchema | ServiceSchema[]; 
+}
+
+// --- Updated Provider Component Logic ---
+
+const fetchFieldsByServiceName = async (serviceName: string) => {
   setIsLoading(true);
   setError(null);
 
   try {
     const result = await axios.get<FetchFieldsResponse>(
-      `${VITE_BASE_URL}/fields/base`
+      `${VITE_BASE_URL}/fields/base/by/s-name/${serviceName}`
     );
 
     if (result.data.detail.success) {
-      const services = result.data.data;
+      const responseData = result.data.data;
 
-      console.log(
-        "Available services:",
-        services.map((s) => s.service_name)
-      );
+      // Logic to handle if data is an array or a single object
+      if (Array.isArray(responseData)) {
+        const targetService = responseData.find(
+          (service) => service.service_name === serviceName
+        );
 
-      const targetService = services.find(
-        (service) => service.service_name === serviceName
-      );
-
-      if (targetService) {
-        setFields(targetService.fields);
-          
-      } else {
-        console.warn(`Service ${serviceName} not found. Using PRODUCT as fallback.`);
-        const fallback = services.find((s) => s.service_name === "PRODUCT");
-
-        if (fallback) {
-          setFields(fallback.fields);
-          setError(`Service "${serviceName}" not found. Showing PRODUCT instead.`);
+        if (targetService) {
+          setFields(targetService.fields);
         } else {
-          setFields(null);
-          setError("No valid service found from backend.");
+          // Fallback logic if array is returned but name doesn't match
+          const fallback = responseData.find((s) => s.service_name === "PRODUCT");
+          setFields(fallback ? fallback.fields : null);
+          setError(`Service "${serviceName}" not found in list.`);
         }
+      } else {
+        // If the backend returns exactly what you requested as a single object
+        setFields(responseData.fields);
       }
     } else {
       setError(result.data.detail.msg || "Failed to fetch fields.");
@@ -113,11 +121,11 @@ export const InputBuilderProvider = ({ children }: { children: ReactNode }) => {
 
   // --- Specific Fetchers (Kept for backward compatibility with your components) ---
   const fetchProductFields = () => fetchFieldsByServiceName("PRODUCT");
-  const fetchStockAdjustmentFields = () => fetchFieldsByServiceName("STOCK_ADJUSTMENT");
+  const fetchStockAdjustmentFields = () => fetchFieldsByServiceName("STOCK-ADJUSTMENT");
   const fetchSupplierFields = () => fetchFieldsByServiceName("SUPPLIER");
-  const fetchPurchaseFields = () => fetchFieldsByServiceName("PURCHASE");
-  const fetchGrnFields = () => fetchFieldsByServiceName("GRN");
-  const fetchProductionFields = () => fetchFieldsByServiceName("PRODUCTION");
+  const fetchPurchaseFields = () => fetchFieldsByServiceName("PURCHASE-DIRECT");
+  const fetchGrnFields = () => fetchFieldsByServiceName("PURCHASE-GRN");
+  const fetchProductionFields = () => fetchFieldsByServiceName("PURCHASE-PRODUCTION");
   const fetchCustomerFields = () => fetchFieldsByServiceName("CUSTOMER");
   const fetchEmployeeFields = () => fetchFieldsByServiceName("EMPLOYEE");
 

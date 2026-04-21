@@ -1,199 +1,122 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
-import { Filter, Search } from "lucide-react";
+import { Filter, Search, X } from "lucide-react";
 
-// Assuming your Table component is imported from here
 import Table from "@/components/common/Table";
-import PurchaseHeader from "@/features/purchase/components/PurchaseHeader"
+import PurchaseHeader from "@/features/purchase/components/PurchaseHeader";
+import Loader from "@/components/common/Loader";
+import { useApi } from "@/context/ApiContext";
+import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
+import type { PurchaseRecord } from "@/types/api";
 
-
-export interface Column {
-  key: keyof PurchaseHistoryData | "action";
+interface Column {
+  key: string;
   label: string;
-  render?: (value: any, row: PurchaseHistoryData) => ReactNode;
+  render?: (value: any, row: PurchaseRecord) => ReactNode;
 }
 
-/* ================= MOCK DATA ================= */
-export interface ProductItem {
-  name: string;
-  quantity: number;
-}
-
-export interface PurchaseHistoryData {
-  id: number;
-  date: string;
-  time: string;
-  supplier: string;
-  products: ProductItem[];
-  total_cost: number;
-  invoice_no: string;
-  status: "Paid" | "Pending" | "Overdue" | "Partial" | "Processing";
-}
-
-export const MOCK_PURCHASES: PurchaseHistoryData[] = [
-  {
-    id: 1,
-    date: "April 20, 2024",
-    time: "4:20 PM",
-    supplier: "XYZ Wholesalers",
-    products: [
-      { name: "Wireless Headphones", quantity: 10 }
-    ],
-    total_cost: 1300,
-    invoice_no: "INV-004",
-    status: "Paid",
-  },
-  {
-    id: 2,
-    date: "April 21, 2024",
-    time: "10:15 AM",
-    supplier: "Global Tech Supplies",
-    products: [
-      { name: "Mechanical Keyboard", quantity: 5 },
-      { name: "Ergonomic Mouse", quantity: 5 },
-      { name: "27-inch Monitor", quantity: 2 },
-      { name: "USB-C Hub", quantity: 10 },
-      { name: "DisplayPort Cable", quantity: 15 },
-      { name: "Webcam 1080p", quantity: 4 }
-    ],
-    total_cost: 45000,
-    invoice_no: "INV-005",
-    status: "Pending",
-  },
-  {
-    id: 3,
-    date: "April 22, 2024",
-    time: "09:30 AM",
-    supplier: "Apex Wholesale",
-    products: [
-      { name: "Office Chair Ergonomic", quantity: 12 },
-      { name: "Standing Desk Frame", quantity: 12 }
-    ],
-    total_cost: 8500,
-    invoice_no: "INV-006",
-    status: "Overdue",
-  },
-  {
-    id: 4,
-    date: "April 24, 2024",
-    time: "02:45 PM",
-    supplier: "Nexus Distribution",
-    products: [
-      { name: "Server Rack 42U", quantity: 1 },
-      { name: "Patch Panel 24-port", quantity: 5 },
-      { name: "Cat6 Ethernet Spool", quantity: 2 }
-    ],
-    total_cost: 3200,
-    invoice_no: "INV-007",
-    status: "Partial",
-  },
-  {
-    id: 5,
-    date: "April 25, 2024",
-    time: "11:20 AM",
-    supplier: "Mainstream Inc",
-    products: [
-      { name: "Laptop Battery Pack", quantity: 20 },
-      { name: "65W USB-C Charger", quantity: 30 }
-    ],
-    total_cost: 2100,
-    invoice_no: "INV-008",
-    status: "Processing",
-  }
-];
-
-/* ================= COLUMNS ================= */
 const PURCHASE_COLUMNS: Column[] = [
   {
     key: "date",
     label: "Purchase Date",
     render: (_, row) => (
       <div className="flex flex-col">
-        <span className="text-sm font-semibold text-slate-700">{row.date}</span>
-        <span className="text-[10px] text-slate-400 font-medium">{row.time}</span>
+        <span className="text-sm font-semibold text-slate-700">
+          {String(row.datas?.purchase_date ?? row.date ?? "—")}
+        </span>
+        <span className="text-[10px] text-slate-400 font-medium">{row.type}</span>
       </div>
     ),
   },
   {
     key: "supplier",
     label: "Supplier",
-    render: (value) => <span className="text-sm text-slate-600">{value}</span>,
+    render: (_, row) => (
+      <span className="text-sm text-slate-600">{String(row.datas?.supplier ?? row.datas?.supplier_name ?? "—")}</span>
+    ),
   },
   {
-    key: "products", // Changed key to match the new array property
+    key: "products",
     label: "Products",
     render: (_, row) => {
-      const productList = row.products || [];
-      const firstProduct = productList[0]?.name || "Unknown Product";
-      const extraCount = productList.length - 1;
-
+      const products = row.datas?.purchase_products as any[] | undefined;
+      const first = products?.[0];
+      const extra = (products?.length ?? 0) - 1;
       return (
         <div className="flex flex-col items-start">
-          <span className="text-sm text-slate-700 font-medium">{firstProduct}</span>
-          {extraCount > 0 && (
+          <span className="text-sm text-slate-700 font-medium">
+            {first ? String(first.product_name ?? first.name ?? "Item") : "—"}
+          </span>
+          {extra > 0 && (
             <span className="mt-1 px-1.5 py-0.5 text-[10px] font-bold text-blue-600 bg-blue-50 border border-blue-100 rounded-md">
-              +{extraCount} more items
+              +{extra} more items
             </span>
           )}
         </div>
       );
     },
   },
-  { 
-    key: "products", // Using the products array to calculate total quantity
-    label: "Total Qty",
-    render: (_, row) => {
-      // Sum up the quantities of all products in this order
-      const totalQty = row.products.reduce((sum, item) => sum + item.quantity, 0);
-      return <span className="text-sm text-slate-600">{totalQty}</span>;
-    }
-  },
   {
     key: "total_cost",
     label: "Total Cost",
-    render: (value) => (
-      <span className="text-sm text-slate-900 font-bold">₹{value.toLocaleString()}</span>
+    render: (_, row) => (
+      <span className="text-sm text-slate-900 font-bold">
+        ₹{Number(row.datas?.total_cost ?? row.datas?.grand_total ?? 0).toLocaleString()}
+      </span>
     ),
   },
-  // {
-  //   key: "status",
-  //   label: "Status",
-  //   render: (value) => {
-  //     const isPaid = value === "Paid";
-  //     return (
-  //       <span className={`px-3 py-1 rounded-lg text-[10px] font-bold uppercase border ${
-  //           isPaid ? "bg-emerald-50 text-emerald-600 border-emerald-100" : "bg-orange-50 text-orange-600 border-orange-100"
-  //         }`}>
-  //         {value}
-  //       </span>
-  //     );
-  //   },
-  // },
+  {
+    key: "id",
+    label: "Reference",
+    render: (_, row) => (
+      <span className="text-xs font-mono text-slate-500">{row.id.slice(0, 8)}…</span>
+    ),
+  },
 ];
 
 const PurchaseHistoryTab = () => {
   const navigate = useNavigate();
+  const { getData, loading, error, clearError } = useApi();
+  const [purchases, setPurchases] = useState<PurchaseRecord[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [refreshKey] = useState(0);
 
-  const handleRowClick = () => {
-    navigate('/purchase/detail');
-  };
+  useEffect(() => {
+    const params: Record<string, string> = {
+      type: "DIRECT",
+      shop_id: SHOP_ID,
+      limit: "50",
+      offset: "1",
+    };
+    if (searchTerm) params.q = searchTerm;
+    getData(ENDPOINTS.PURCHASES, params).then((res) => {
+      if (res) setPurchases(Array.isArray(res.data) ? res.data : [res.data]);
+    });
+  }, [refreshKey, searchTerm]);
 
   return (
     <div className="space-y-6">
-      <PurchaseHeader/>
+      <PurchaseHeader />
+
+      {error && (
+        <div className="flex items-center justify-between gap-2 p-3 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm">
+          <span>{error}</span>
+          <button onClick={clearError}><X size={14} /></button>
+        </div>
+      )}
+
       <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
         <div className="p-4 border-b border-slate-50 bg-slate-50/30">
-          <h3 className="heading-label text-slate-700">Recent Invoices</h3>
+          <h3 className="heading-label text-slate-700">Direct Purchase Orders</h3>
         </div>
-        
+
         <div className="p-4 border-b border-gray-100 flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="relative w-full md:w-96">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-            <input 
+            <input
               className="w-full pl-10 pr-4 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-              placeholder="Search GRN, PO, or Supplier..."
+              placeholder="Search by supplier or reference..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -203,12 +126,20 @@ const PurchaseHistoryTab = () => {
           </button>
         </div>
 
-        <Table 
-          columns={PURCHASE_COLUMNS} 
-          data={MOCK_PURCHASES} 
-          rowKey="id" 
-          onRowClick={handleRowClick}
-        />
+        {loading ? (
+          <div className="p-8"><Loader /></div>
+        ) : (
+          <Table
+            columns={PURCHASE_COLUMNS}
+            data={purchases}
+            rowKey="id"
+            onRowClick={() => navigate("/purchase/detail")}
+          />
+        )}
+
+        {!loading && purchases.length === 0 && !error && (
+          <div className="text-center py-12 text-slate-500 text-sm">No direct purchases found.</div>
+        )}
       </div>
     </div>
   );

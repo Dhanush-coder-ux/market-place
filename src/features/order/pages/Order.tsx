@@ -1,53 +1,58 @@
-import { 
-  Package, LayoutGrid, List, Inbox, Truck, PackageCheck 
+import { useState, useEffect } from "react";
+import {
+  Package, LayoutGrid, List, Inbox, Truck, PackageCheck, X,
 } from "lucide-react";
 
 import OrdersHeader from "../components/OrdersHeader";
 import OrdersCard from "../components/OrdersCard";
-import {  useState } from "react";
 import Drawer from "@/components/common/Drawer";
 import OrderDetailView from "../components/OrdersDetailView";
 import { DateFilter } from "../components/DateFilter";
 import { StatCard } from "@/components/common/StatsCard";
+import Loader from "@/components/common/Loader";
+import { useApi } from "@/context/ApiContext";
+import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
+import type { OrderRecord } from "@/types/api";
+
+const toCardShape = (o: OrderRecord) => ({
+  billNo: o.id,
+  customerName: o.customer_name ?? String(o.datas?.customer_name ?? "Unknown"),
+  phone: o.customer_number ?? String(o.datas?.phone ?? "—"),
+  totalAmount: Number(o.datas?.total_amount ?? 0),
+  status: o.status ?? "INCOMING",
+});
 
 const Order = () => {
-  const [status, setStatus] = useState("INCOMING"); // Default to showing new orders
+  const { getData, loading, error, clearError } = useApi();
+
+  const [orders, setOrders] = useState<OrderRecord[]>([]);
+  const [status, setStatus] = useState("INCOMING");
   const [isOpen, setIsOpen] = useState(false);
   const [open, setOpen] = useState(false);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [selectedOrder, setSelectedOrder] = useState<any>(null);
+  const [refreshKey] = useState(0);
 
-  // 1. Updated Mock Data with new statuses
-  const ordersData = [
-    { billNo: "BILL-1001", customerName: "Siva", phone: "9999999999", totalAmount: 100, status: "INCOMING" },
-    { billNo: "BILL-1002", customerName: "pattani", phone: "8888888888", totalAmount: 2499, status: "ACCEPTED" },
-    { billNo: "BILL-1003", customerName: "Arun", phone: "7777777777", totalAmount: 560, status: "OUT_FOR_DELIVERY" },
-    { billNo: "BILL-1004", customerName: "vijay", phone: "6666666666", totalAmount: 899, status: "DELIVERED" },
-    { billNo: "BILL-1005", customerName: "dhaslima", phone: "5555555555", totalAmount: 1250, status: "REJECTED" },
-  ];
+  useEffect(() => {
+    getData(`${ENDPOINTS.ORDERS}/${SHOP_ID}`, { limit: "50", offset: "1" }).then((res) => {
+      if (res) setOrders(Array.isArray(res.data) ? res.data : [res.data]);
+    });
+  }, [refreshKey]);
 
-  const orderDetailData = {
-    billNo: "BILL-1002", customerName: "Kumar", phone: "8888888888", status: "ACCEPTED", orderType: "Online",
-    items: [
-      { name: "Blue T-Shirt", qty: 2, price: 499, total: 998 },
-      { name: "Formal Shoes", qty: 1, price: 1999, total: 1999 },
-    ],
-    subtotal: 2997, gstPercent: 18, gstAmount: 539.46, grandTotal: 3536.46,
-  };
+  const filteredOrders = status === "ALL"
+    ? orders
+    : orders.filter((o) => o.status === status);
 
-  // 2. Updated Derived Stats
-  const totalOrders = ordersData.length;
-  const incoming = ordersData.filter(o => o.status === "INCOMING").length;
-  const outForDelivery = ordersData.filter(o => o.status === "OUT_FOR_DELIVERY").length;
-  const delivered = ordersData.filter(o => o.status === "DELIVERED").length;
+  const totalOrders = orders.length;
+  const incoming = orders.filter((o) => o.status === "INCOMING").length;
+  const outForDelivery = orders.filter((o) => o.status === "OUT_FOR_DELIVERY").length;
+  const delivered = orders.filter((o) => o.status === "DELIVERED").length;
 
   return (
     <div className="min-h-screen bg-slate-50/60 font-sans">
       <div className="space-y-4">
-        
-        
 
-        {/* 3. Updated Stats Row to reflect the pipeline */}
-        <div className='flex-none overflow-x-auto pb-1'>
+        <div className="flex-none overflow-x-auto pb-1">
           <div className="flex gap-4 min-w-max">
             <StatCard label="Total Orders" value={totalOrders} icon={Package} iconBg="bg-slate-100" iconColor="text-slate-600" />
             <StatCard label="Incoming" value={incoming} icon={Inbox} iconBg="bg-amber-50" iconColor="text-amber-600" />
@@ -56,18 +61,27 @@ const Order = () => {
           </div>
         </div>
 
-        {/* Note: You will need to update OrdersHeader to pass the new statuses (Incoming, Accepted, etc) if it uses tabs */}
+        {error && (
+          <div className="flex items-center justify-between gap-2 p-3 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm">
+            <span>{error}</span>
+            <button onClick={clearError} className="shrink-0 text-red-400 hover:text-red-600"><X size={14} /></button>
+          </div>
+        )}
+
         <OrdersHeader
-          status={status} setStatus={setStatus}
-          setIsDateFilterOpen={setOpen} orderType={""} setOrderType={function (): void {
-            throw new Error("Function not implemented.");
-          } } orderTypeOptions={[]}        />
+          status={status}
+          setStatus={setStatus}
+          setIsDateFilterOpen={setOpen}
+          orderType=""
+          setOrderType={() => {}}
+          orderTypeOptions={[]}
+        />
 
         <div className="flex items-center justify-between pt-2">
           <p className="text-sm text-slate-500 font-medium">
-            Showing <span className="font-bold text-slate-800">{ordersData.length}</span> orders
+            Showing <span className="font-bold text-slate-800">{filteredOrders.length}</span> orders
           </p>
-          
+
           <div className="flex items-center bg-white border border-slate-200 rounded-lg p-1 shadow-sm">
             <button
               onClick={() => setViewMode("list")}
@@ -84,10 +98,17 @@ const Order = () => {
           </div>
         </div>
 
-        {ordersData.length > 0 ? (
+        {loading ? (
+          <div className="py-8"><Loader /></div>
+        ) : filteredOrders.length > 0 ? (
           <div className={viewMode === "grid" ? "grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4" : "flex flex-col gap-3"}>
-            {ordersData.map((order) => (
-              <OrdersCard key={order.billNo} order={order} setIsOpen={setIsOpen} viewMode={viewMode} />
+            {filteredOrders.map((order) => (
+              <OrdersCard
+                key={order.id}
+                order={toCardShape(order)}
+                setIsOpen={() => { setSelectedOrder(toCardShape(order)); setIsOpen(true); }}
+                viewMode={viewMode}
+              />
             ))}
           </div>
         ) : (
@@ -98,11 +119,18 @@ const Order = () => {
             <p className="text-sm font-bold text-slate-600">No orders found</p>
           </div>
         )}
-
       </div>
 
       <Drawer isOpen={isOpen} onClose={() => setIsOpen(false)} title="Order Details">
-        <OrderDetailView order={orderDetailData} />
+        {selectedOrder && <OrderDetailView order={{
+          ...selectedOrder,
+          orderType: "Online",
+          items: [],
+          subtotal: selectedOrder.totalAmount,
+          gstPercent: 0,
+          gstAmount: 0,
+          grandTotal: selectedOrder.totalAmount,
+        }} />}
       </Drawer>
 
       <DateFilter isOpen={open} onClose={() => setOpen(false)} onApply={(range) => { console.log(range); setOpen(false); }} />

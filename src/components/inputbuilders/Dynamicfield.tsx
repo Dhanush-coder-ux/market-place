@@ -4,7 +4,7 @@ import { FieldDefinition } from "./context/InputBuilderContext";
 export interface DynamicFieldProps {
   field: FieldDefinition;
   value: any;
-  onChange: (name: string, value: string) => void;
+  onChange: (name: string, value: any) => void;
   className?: string;
   disabled?: boolean;
   hideLabel?: boolean; // Crucial for table layouts
@@ -81,7 +81,10 @@ const NumberField: React.FC<DynamicFieldProps> = ({ field, value, onChange, disa
           required={field.required}
           disabled={disabled ?? !field.can_update}
           className={`${baseInput} ${isPrice ? "pl-7" : ""}`}
-          onChange={(e) => onChange(field.field_name, e.target.value)}
+          onChange={(e) => {
+            const v = e.target.value;
+            onChange(field.field_name, v === "" ? "" : Number(v));
+          }}
         />
       </div>
     </div>
@@ -142,18 +145,58 @@ const TextareaField: React.FC<DynamicFieldProps> = ({ field, value, onChange, di
   </div>
 );
 
+const BooleanField: React.FC<DynamicFieldProps> = ({ field, value, onChange, disabled, hideLabel }) => {
+  const checked = value === true || value === "true" || value === 1;
+  return (
+    <div className={`w-full ${hideLabel ? '' : 'mb-4'}`}>
+      {!hideLabel && <Label text={field.label_name} required={field.required} hint={field.field_description} />}
+      <div className="flex items-center gap-3 py-1">
+        <button
+          type="button"
+          role="switch"
+          aria-checked={checked}
+          disabled={disabled ?? !field.can_update}
+          onClick={() => onChange(field.field_name, !checked)}
+          className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 disabled:opacity-50 disabled:cursor-not-allowed ${
+            checked ? "bg-blue-600" : "bg-slate-300"
+          }`}
+        >
+          <span
+            className={`inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition-transform duration-200 ${
+              checked ? "translate-x-4" : "translate-x-0"
+            }`}
+          />
+        </button>
+        <span className={`text-sm font-medium ${ checked ? "text-blue-600" : "text-slate-500" }`}>
+          {checked ? "Yes" : "No"}
+        </span>
+      </div>
+    </div>
+  );
+};
+
 export const DynamicField: React.FC<DynamicFieldProps> = (props) => {
   const { field } = props;
   if (field.type === "LIST-DICT" || field.view_mode === "HIDE") return null;
 
   switch (field.type) {
+    case "BOOLEAN":  return <BooleanField  {...props} />;
     case "DROP-DOWN": return <DropdownField {...props} />;
     case "TEXTAREA": return <TextareaField {...props} />;
-    case "NUMBER":
+    case "NUMBER": return <NumberField {...props} />;
     case "DECIMAL": return <NumberField {...props} />;
     case "DATE": return <DateField {...props} />;
     case "TEXT": return <TextField {...props} />;
-    case "EMAIL":
+    case "EMAIL": return <TextField {...props} />;
+    case "DICT": return (
+      // DICT fields are auto-calculated/read-only — show as informational placeholder
+      <div className={`w-full ${props.hideLabel ? '' : 'mb-4'}`}>
+        {!props.hideLabel && <Label text={field.label_name} hint={field.field_description} />}
+        <div className="block w-full rounded-md border-0 py-2 px-3 text-slate-400 shadow-sm ring-1 ring-inset ring-slate-200 bg-slate-50 sm:text-sm italic">
+          {field.placeholder || "Auto-calculated"}
+        </div>
+      </div>
+    );
     default: return <TextField {...props} />;
   }
 };

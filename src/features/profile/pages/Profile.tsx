@@ -1,15 +1,27 @@
 import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
 import Title from "../../../components/common/Title";
-import { 
-  Store, XCircle, FileText, MapPin, 
-  Edit3,  ShieldCheck, Phone, Mail, Globe, FileTextIcon, 
-  UserCheck2,
-  LogOut
+import {
+  Store, XCircle, FileText, MapPin,
+  Edit3, ShieldCheck, Phone, Mail, Globe, FileTextIcon,
+  UserCheck2, LogOut
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
-
+import { useApi } from "@/context/ApiContext";
+import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 
 const Profile = () => {
+  const { getData } = useApi();
+  const [shop, setShop] = useState<Record<string, any>>({});
+
+  useEffect(() => {
+    getData(ENDPOINTS.SHOPS + "/by/" + SHOP_ID).then(res => {
+      if (!res) return;
+      const d = Array.isArray(res.data) ? res.data[0] : res.data;
+      if (d) setShop(d.datas ?? {});
+    });
+  }, []);
+
   return (
     <div>
       <Title icon={<UserCheck2 size={30} />} title="Profile Info" />
@@ -42,7 +54,7 @@ const Profile = () => {
               <div>
                 <div className="flex items-center gap-2 mb-1">
                   <h1 className="text-lg md:text-xl font-semibold text-gray-900 truncate max-w-[200px] md:max-w-xs">
-                    Shop Name
+                    {String(shop.shop_name ?? shop.name ?? "My Shop")}
                   </h1>
 
                   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
@@ -54,7 +66,7 @@ const Profile = () => {
                 <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
                   <MapPin size={14} className="text-gray-400" />
                   <span className="truncate max-w-[180px] md:max-w-sm">
-                    Address not available
+                    {String(shop.address ?? shop.location ?? "Address not available")}
                   </span>
                 </div>
 
@@ -104,7 +116,7 @@ const Profile = () => {
                   About Store
                 </h3>
                 <p className="text-sm text-gray-600 leading-relaxed line-clamp-3">
-                  No description added for this shop.
+                  {String(shop.description ?? shop.about ?? "No description added for this shop.")}
                 </p>
               </div>
 
@@ -117,7 +129,7 @@ const Profile = () => {
                     </div>
                     <span className="text-xs font-medium text-gray-500">GST Number</span>
                   </div>
-                  <p className="font-medium text-gray-900 text-sm">N/A</p>
+                  <p className="font-medium text-gray-900 text-sm">{String(shop.gst_number ?? shop.gst ?? "N/A")}</p>
                 </div>
 
                 <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
@@ -127,7 +139,7 @@ const Profile = () => {
                     </div>
                     <span className="text-xs font-medium text-gray-500">Business Type</span>
                   </div>
-                  <p className="font-medium text-gray-900 text-sm">N/A</p>
+                  <p className="font-medium text-gray-900 text-sm">{String(shop.business_type ?? shop.type ?? "N/A")}</p>
                 </div>
               </div>
             </div>
@@ -146,7 +158,7 @@ const Profile = () => {
                   </div>
                   <div>
                     <p className="text-xs text-gray-500">Phone</p>
-                    <p className="font-medium text-gray-900 text-sm">N/A</p>
+                    <p className="font-medium text-gray-900 text-sm">{String(shop.phone ?? shop.mobile ?? "N/A")}</p>
                   </div>
                 </div>
 
@@ -156,7 +168,7 @@ const Profile = () => {
                   </div>
                   <div>
                     <p className="text-xs text-gray-500">Landmark</p>
-                    <p className="font-medium text-gray-900 text-sm">N/A</p>
+                    <p className="font-medium text-gray-900 text-sm">{String(shop.landmark ?? "N/A")}</p>
                   </div>
                 </div>
 
@@ -166,7 +178,7 @@ const Profile = () => {
                   </div>
                   <div>
                     <p className="text-xs text-gray-500">Zipcode</p>
-                    <p className="font-medium text-gray-900 text-sm">N/A</p>
+                    <p className="font-medium text-gray-900 text-sm">{String(shop.zipcode ?? shop.pincode ?? "N/A")}</p>
                   </div>
                 </div>
 
@@ -179,12 +191,12 @@ const Profile = () => {
           <div className="flex flex-wrap gap-3">
             <div className="flex items-center gap-2 text-sm text-gray-600">
               <Mail size={14} className="text-gray-400" />
-              <span>No Email</span>
+              <span>{String(shop.email ?? "No Email")}</span>
             </div>
 
             <div className="flex items-center gap-2 text-sm text-gray-600">
               <Globe size={14} className="text-gray-400" />
-              <span className="text-blue-600">No Website</span>
+              <span className="text-blue-600">{String(shop.website ?? "No Website")}</span>
             </div>
           </div>
         </div>

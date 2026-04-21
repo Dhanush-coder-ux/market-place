@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Search,
   Calendar,
@@ -9,10 +9,12 @@ import {
   SlidersHorizontal,
   LayoutGrid,
   List,
-
 } from "lucide-react";
 import DirectHeader from "../components/DirectHeader";
-import { FloatingFormCard } from "@/components/common/FloatingFormCard"
+import { FloatingFormCard } from "@/components/common/FloatingFormCard";
+import { useApi } from "@/context/ApiContext";
+import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
+import type { PurchaseRecord } from "@/types/api";
 
 
 /* ================= TYPES ================= */
@@ -36,50 +38,29 @@ export interface DirectPurchaseData {
 
 type ViewMode = "grid" | "horizontal" | "vertical";
 
-/* ================= MOCK DATA ================= */
-export const MOCK_DIRECT_PURCHASES: DirectPurchaseData[] = [
-  {
-    id: "po-1",
-    poNumber: "PO-2024-001",
-    date: "April 20, 2024",
-    time: "4:20 PM",
-    vendor: "Global Tech",
-    products: [
-      { name: "Wireless Headphones", quantity: 10 },
-      { name: "USB-C Cables", quantity: 50 },
-    ],
-    total_cost: 1300,
-    purchaseType: "Purchase",
-  },
-  {
-    id: "po-2",
-    poNumber: "PO-2024-002",
-    date: "April 21, 2024",
-    time: "10:15 AM",
-    vendor: "Mainstream Inc",
-    products: [
-      { name: "Mechanical Keyboard", quantity: 5 },
-      { name: "Ergonomic Mouse", quantity: 5 },
-      { name: "27-inch Monitor", quantity: 2 },
-      { name: "Docking Station", quantity: 10 },
-      { name: "Laptop Stand", quantity: 5 },
-      { name: "Webcam 1080p", quantity: 8 },
-      { name: "Noise Cancelling Mic", quantity: 3 },
-    ],
-    total_cost: 45000,
-    purchaseType: "PO Purchase",
-  },
-  {
-    id: "po-3",
-    poNumber: "PO-2024-003",
-    date: "April 22, 2024",
-    time: "09:00 AM",
-    vendor: "Apex Wholesale",
-    products: [{ name: "Ergonomic Chairs", quantity: 12 }],
-    total_cost: 3200,
-    purchaseType: "Production",
-  },
-];
+function toDisplayData(p: PurchaseRecord): DirectPurchaseData {
+  const products = (p.datas?.purchase_products ?? p.datas?.grn_products ?? p.datas?.finished_products) as any[] | undefined;
+  const dateRaw = String(p.datas?.purchase_date ?? p.datas?.production_date ?? p.datas?.receipt_date ?? new Date().toISOString());
+  const d = new Date(dateRaw.includes("T") ? dateRaw : dateRaw + "T00:00:00");
+  const typeMap: Record<string, PurchaseType> = {
+    DIRECT: "Purchase",
+    "PO CREATE": "PO Purchase",
+    PRODUCTION: "Production",
+  };
+  return {
+    id: p.id,
+    poNumber: p.id.slice(0, 8).toUpperCase(),
+    date: d.toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" }),
+    time: d.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }),
+    vendor: String(p.datas?.supplier ?? p.datas?.supplier_name ?? "—"),
+    products: (products ?? []).map((pr: any) => ({
+      name: String(pr.product_name ?? pr.name ?? "Item"),
+      quantity: Number(pr.quantity ?? pr.qty ?? 1),
+    })),
+    total_cost: Number(p.datas?.total_cost ?? p.datas?.grand_total ?? 0),
+    purchaseType: typeMap[p.type] ?? "Purchase",
+  };
+}
 
 /* ================= SCOPED STYLES ================= */
 const STYLES = `
@@ -364,16 +345,31 @@ const ViewToggle = ({
 
 /* ================= MAIN COMPONENT ================= */
 const PurchaseHistory = () => {
-
+  const { getData } = useApi();
+  const [allPurchases, setAllPurchases] = useState<DirectPurchaseData[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
   const [selectedPO, setSelectedPO] = useState<DirectPurchaseData | null>(null);
 
-const handleCardClick = (po: DirectPurchaseData) => {
+  useEffect(() => {
+    const load = async () => {
+      const [direct, grn, prod] = await Promise.all([
+        getData(ENDPOINTS.PURCHASES, { type: "DIRECT", shop_id: SHOP_ID, limit: "50", offset: "1" }),
+        getData(ENDPOINTS.PURCHASES, { type: "PO_CREATE", shop_id: SHOP_ID, limit: "50", offset: "1" }),
+        getData(ENDPOINTS.PURCHASES, { type: "PRODUCTION", shop_id: SHOP_ID, limit: "50", offset: "1" }),
+      ]);
+      const toList = (res: any): PurchaseRecord[] =>
+        res ? (Array.isArray(res.data) ? res.data : [res.data]) : [];
+      setAllPurchases([...toList(direct), ...toList(grn), ...toList(prod)].map(toDisplayData));
+    };
+    load();
+  }, []);
+
+  const handleCardClick = (po: DirectPurchaseData) => {
     setSelectedPO(po);
   };
 
-  const filtered = MOCK_DIRECT_PURCHASES.filter(
+  const filtered = allPurchases.filter(
     (po) =>
       po.poNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
       po.vendor.toLowerCase().includes(searchTerm.toLowerCase())

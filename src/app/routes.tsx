@@ -6,7 +6,8 @@ import {GRNForm} from "@/features/purchase/pages/GrnForm";
 import {PurchaseForm }from "@/features/purchase/pages/PurchaseForm";
 import ProductForm from "@/features/product/pages/ProductForm";
 import CustomerBalanceSummary from "@/features/customer/pages/CustomerBalanceSummary";
-import CustomerProfile from "@/features/customer/pages/Customerdetail";
+import CustomerDetail from "@/features/customer/pages/Customerdetail";
+import CustomerList from "@/features/customer/pages/CustomerList";
 import PurchaseHistory from "@/features/purchase/pages/PurchaseHistory";
 import SalesListPage from "@/features/sales/pages/SalesPage";
 import StockMovementPage from "@/features/inventory/pages/StockMovement";
@@ -25,8 +26,7 @@ const Login = React.lazy(() => import("../features/auth/pages/Login"));
 const AnalyticsDashboard = React.lazy(() => import("@/features/dashboard/pages/AnalyticDashboard"));
 
 // Profile & Settings
-// Note: ProfileSettingsPage is a named export, so we map it to 'default' for React.lazy
-const ProfileSettingsPage = React.lazy(() => 
+const ProfileSettingsPage = React.lazy(() =>
   import("@/features/Setting/pages/ProfileSettingPage").then(module => ({ default: module.ProfileSettingsPage }))
 );
 const ProfileForm = React.lazy(() => import("../features/profile/pages/ProfileForm"));
@@ -35,15 +35,12 @@ const ProfileForm = React.lazy(() => import("../features/profile/pages/ProfileFo
 const Product = React.lazy(() => import("@/features/product/pages/Product"));
 const ProductDetail = React.lazy(() => import("@/features/product/pages/ProductDetail"));
 
-
 // Purchase
 const PurchaseDetail = React.lazy(() => import("@/features/purchase/pages/PurchaseDetail"));
-
 
 // Supplier
 const Supplier = React.lazy(() => import("@/features/supplier/pages/Supplier"));
 const SupplierDetail = React.lazy(() => import("@/features/supplier/pages/SupplierDetail"));
-
 
 // Employee
 const Employee = React.lazy(() => import("../features/employee/pages/Employee"));
@@ -51,7 +48,6 @@ const EmployeeForm = React.lazy(() => import("../features/employee/pages/Employe
 
 // Inventory
 const Inventory = React.lazy(() => import("../features/inventory/pages/Inventory"));
-
 
 // Orders & Billing
 const Order = React.lazy(() => import("../features/order/pages/Order"));
@@ -66,60 +62,66 @@ const DigitalMain = React.lazy(() => import("@/features/digitalstore/components/
 // ROUTER CONFIGURATION
 // ==========================================
 export const router = createBrowserRouter([
-  { 
-    path: '/', 
+  {
+    path: '/',
     element: (
-      <Suspense fallback={<Loader />}>    
+      <Suspense fallback={<Loader />}>
         <MainLayout />
       </Suspense>
     ),
     children: [
       { index: true, element: <AnalyticsDashboard /> },
-      { path: "/sales",element:<SalesListPage/>}, 
+      { path: "/sales", element: <SalesListPage /> },
 
-
+      // Products — static "add" before dynamic ":id"
       { path: 'product', element: <Product /> },
-      { path: '/product/detail', element: <ProductDetail /> },
-      { path: "/product/add",element:<ProductForm/>},
+      { path: '/product/add', element: <ProductForm /> },
+      { path: '/product/:id/edit', element: <ProductForm /> },
+      { path: '/product/:id', element: <ProductDetail /> },
 
-      
-      { path: "/purchase-order/add", element:<PurchaseForm/>},
-      { path: "/po-grn", element: <GRNListView/>},
-      { path: '/po-grn/add', element:<GRNForm/>},
-      { path: '/po-grn/update', element:<ReceiveGoodsPage/>},
-      { path: "/purchase-history" , element: <PurchaseHistory/>},
-      {path :"/production-entry/add",element:<ProductionForm/>},
-      
-    
+      // Purchase
+      { path: "/purchase-order/add", element: <PurchaseForm /> },
+      { path: "/po-grn", element: <GRNListView /> },
+      { path: '/po-grn/add', element: <GRNForm /> },
+      { path: '/po-grn/update', element: <ReceiveGoodsPage /> },
+      { path: "/purchase-history", element: <PurchaseHistory /> },
+      { path: "/production-entry/add", element: <ProductionForm /> },
       { path: '/purchase/detail', element: <PurchaseDetail /> },
       { path: '/purchase/add', element: <PurchaseForm /> },
-      
+
+      // Suppliers — static "add" before dynamic ":id"
       { path: 'supplier', element: <Supplier /> },
-      { path: 'supplier/detail', element: <SupplierDetail /> },
       { path: '/supplier/add', element: <SupplierForm /> },
-      
+      { path: '/supplier/:id/edit', element: <SupplierForm /> },
+      { path: '/supplier/:id', element: <SupplierDetail /> },
+
+      // Employees
       { path: '/employee', element: <Employee /> },
       { path: '/employee/add', element: <EmployeeForm /> },
-      
+
+      // Inventory
       { path: '/inventory', element: <Inventory /> },
-      { path: "/stock-movement" ,element:<StockMovementPage/>},
-      { path: "/stock-adjustment" ,element:<StockAdjustmentForm/>},
- 
-      
+      { path: "/stock-movement", element: <StockMovementPage /> },
+      { path: "/stock-adjustment", element: <StockAdjustmentForm /> },
+
+      // Orders & Billing
       { path: '/billing', element: <Billing /> },
       { path: '/orders', element: <Order /> },
-      
+
+      // Profile
       { path: '/profile', element: <ProfileSettingsPage /> },
       { path: '/profile/add', element: <ProfileForm /> },
-      
+
+      // Digital Store
       { path: '/create-digital-store', element: <StoreSetupForm /> },
       { path: '/digital-store/profile', element: <DigitalMain /> },
 
-
-      {path: "/customers",element:<CustomerProfile/>},
-      { path: "/customers-Summary",element:<CustomerBalanceSummary/>},
-      { path: "/customers/add",element:<CustomerFormPage/>}
- 
+      // Customers — static "add" before dynamic ":id"
+      { path: "/customers", element: <CustomerList /> },
+      { path: "/customers-Summary", element: <CustomerBalanceSummary /> },
+      { path: "/customers/add", element: <CustomerFormPage /> },
+      { path: "/customers/:id/edit", element: <CustomerFormPage /> },
+      { path: "/customers/:id", element: <CustomerDetail /> },
     ]
   },
   {
@@ -133,5 +135,5 @@ export const router = createBrowserRouter([
   {
     path: "*",
     element: <div>Page Not Found</div>,
-  } 
+  }
 ]);

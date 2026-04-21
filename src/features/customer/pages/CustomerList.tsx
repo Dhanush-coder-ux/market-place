@@ -8,39 +8,37 @@ import Loader from "@/components/common/Loader";
 import { useApi } from "@/context/ApiContext";
 import { useInputBuilderContext } from "@/components/inputbuilders/context/InputBuilderContext";
 import { ENDPOINTS } from "@/services/endpoints";
-import type { SupplierRecord } from "@/types/api";
+import type { CustomerRecord } from "@/types/api";
 
-const Supplier = () => {
+const CustomerList = () => {
   const navigate = useNavigate();
   const { getData, deleteData, loading, error, clearError } = useApi();
-  const { fields, fetchSupplierFields } = useInputBuilderContext();
+  const { fields, fetchCustomerFields } = useInputBuilderContext();
 
-  const [suppliers, setSuppliers] = useState<SupplierRecord[]>([]);
+  const [customers, setCustomers] = useState<CustomerRecord[]>([]);
   const [selectedIds, setSelectedIds] = useState<(string | number)[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [refreshKey, setRefreshKey] = useState(0);
 
-  useEffect(() => {
-    fetchSupplierFields();
-  }, []);
+  useEffect(() => { fetchCustomerFields(); }, []);
 
   useEffect(() => {
     const params: Record<string, string> = { limit: "50", offset: "1" };
     if (searchTerm) params.q = searchTerm;
-    getData(ENDPOINTS.SUPPLIERS, params).then((res) => {
-      if (res) setSuppliers(Array.isArray(res.data) ? res.data : [res.data]);
+    getData(ENDPOINTS.CUSTOMERS, params).then((res) => {
+      if (res) setCustomers(Array.isArray(res.data) ? res.data : [res.data]);
     });
   }, [refreshKey, searchTerm]);
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Delete this supplier?")) return;
-    await deleteData(`${ENDPOINTS.SUPPLIERS}/${id}`);
+    if (!confirm("Delete this customer?")) return;
+    await deleteData(`${ENDPOINTS.CUSTOMERS}/${id}`);
     setRefreshKey((k) => k + 1);
   };
 
   const handleDeleteSelected = async () => {
-    if (!confirm(`Delete ${selectedIds.length} supplier(s)?`)) return;
-    await Promise.all(selectedIds.map((id) => deleteData(`${ENDPOINTS.SUPPLIERS}/${id}`)));
+    if (!confirm(`Delete ${selectedIds.length} customer(s)?`)) return;
+    await Promise.all(selectedIds.map((id) => deleteData(`${ENDPOINTS.CUSTOMERS}/${id}`)));
     setSelectedIds([]);
     setRefreshKey((k) => k + 1);
   };
@@ -51,16 +49,16 @@ const Supplier = () => {
         .map(([fieldName, def]) => ({
           key: fieldName,
           label: def.label_name,
-          render: (_: any, row: SupplierRecord) => String(row.datas?.[fieldName] ?? "—"),
+          render: (_: any, row: CustomerRecord) => String(row.datas?.[fieldName] ?? "—"),
         }))
-    : [{ key: "id", label: "ID", render: (_: any, row: SupplierRecord) => row.id }];
+    : [{ key: "id", label: "ID", render: (_: any, row: CustomerRecord) => row.id }];
 
   const columns = [
     ...dynamicColumns,
     {
       key: "_actions",
       label: "",
-      render: (_: any, row: SupplierRecord) => (
+      render: (_: any, row: CustomerRecord) => (
         <button
           onClick={(e) => { e.stopPropagation(); handleDelete(row.id); }}
           className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-md transition-colors"
@@ -75,7 +73,7 @@ const Supplier = () => {
   return (
     <div className="space-y-6">
       <div className="flex justify-end items-center">
-        <GradientButton path="/supplier/add">+ Add Supplier</GradientButton>
+        <GradientButton path="/customers/add">+ Add Customer</GradientButton>
       </div>
 
       {error && (
@@ -92,10 +90,9 @@ const Supplier = () => {
               leftIcon={<Search size={18} className="text-blue-400" />}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search by vendor name..."
+              placeholder="Search by customer name..."
             />
           </div>
-
           {selectedIds.length > 0 && (
             <button
               onClick={handleDeleteSelected}
@@ -112,15 +109,15 @@ const Supplier = () => {
           ) : (
             <Table
               columns={columns}
-              data={suppliers}
+              data={customers}
               rowKey="id"
               selectedIds={selectedIds}
               onSelectionChange={(ids) => setSelectedIds(ids)}
-              onRowClick={(row) => navigate(`/supplier/${row.id}`)}
+              onRowClick={(row) => navigate(`/customers/${row.id}`)}
             />
           )}
-          {!loading && suppliers.length === 0 && !error && (
-            <div className="text-center py-12 text-slate-500 text-sm">No suppliers found.</div>
+          {!loading && customers.length === 0 && !error && (
+            <div className="text-center py-12 text-slate-500 text-sm">No customers found.</div>
           )}
         </div>
       </div>
@@ -128,4 +125,4 @@ const Supplier = () => {
   );
 };
 
-export default Supplier;
+export default CustomerList;

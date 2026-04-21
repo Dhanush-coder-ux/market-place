@@ -2,18 +2,21 @@ import { createRoot } from 'react-dom/client'
 import App from './App'
 import { StrictMode } from 'react';
 import { PurchaseSettingsProvider } from '@/context/PurchaseContext';
+import { ApiProvider } from '@/context/ApiContext';
 
-// Add these to your main entry file
-import "primereact/resources/themes/lara-light-cyan/theme.css"; // Choose your preferred theme
-import "primereact/resources/primereact.min.css";               // Core CSS
-import "primeicons/primeicons.css";                             // Icons
+import "primereact/resources/themes/lara-light-cyan/theme.css";
+import "primereact/resources/primereact.min.css";
+import "primeicons/primeicons.css";
 import { InputBuilderProvider } from '@/components/inputbuilders/context/InputBuilderContext';
+
 createRoot(document.getElementById('root')!).render(
-    <StrictMode>
+  <StrictMode>
+    <ApiProvider>
       <PurchaseSettingsProvider>
         <InputBuilderProvider>
-      <App/>
+          <App />
         </InputBuilderProvider>
       </PurchaseSettingsProvider>
-    </StrictMode> 
+    </ApiProvider>
+  </StrictMode>
 )

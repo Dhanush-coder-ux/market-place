@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { 
   Search, Download, Eye,  
   X, RotateCcw, AlertTriangle, ArrowUp, ArrowDown, 
@@ -7,6 +7,9 @@ import {
 
 import { GradientButton } from "@/components/ui/GradientButton";
 import { StatCard } from "@/components/common/StatsCard";
+import { useApi } from "@/context/ApiContext";
+import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
+import type { PurchaseRecord } from "@/types/api";
 
 // ─── Types & Interfaces ──────────────────────────────────────────────────────
 
@@ -34,22 +37,27 @@ const WAREHOUSES = ["All Locations", "Warehouse A", "Warehouse B", "Store Front"
 const MOVEMENT_TYPES = ["All", "PURCHASE", "PO_PURCHASE", "SALES", "TRANSFER", "SALE_RETURN", "STOCK_ADJUSTMENT"];
 const STATUSES = ["All", "Completed", "Pending"];
 
-const mockMovements: Movement[] = [
-  { id: "MVT-0081", product: "Wireless Headphones Pro", sku: "WHP-2024-BLK", type: "PO_PURCHASE", qty: 150, source: "Supplier", destination: "Warehouse A", ref: "PO-4421", date: "2025-03-20T09:14:00", status: "Completed", user: "Aisha Menon", notes: "Bulk order Q1 restock." },
-  { id: "MVT-0082", product: "USB-C Hub 7-Port", sku: "UCH-7P-SLV", type: "SALES", qty: -32, source: "Warehouse A", destination: "Store Front", ref: "INV-8813", date: "2025-03-20T10:30:00", status: "Completed", user: "Ravi Sharma", notes: "Store replenishment." },
-  { id: "MVT-0083", product: "Mechanical Keyboard TKL", sku: "MKB-TKL-WHT", type: "TRANSFER", qty: 25, source: "Warehouse B", destination: "Warehouse A", ref: "TRF-209", date: "2025-03-20T11:00:00", status: "Pending", user: "Priya Nair", notes: "Balancing stock levels." },
-  { id: "MVT-0084", product: "4K Webcam Ultra", sku: "WCM-4K-BLK", type: "SALE_RETURN", qty: +5, source: "Warehouse A", destination: "Damages", ref: "DAM-0041", date: "2025-03-20T11:45:00", status: "Completed", user: "Aisha Menon", notes: "Damaged during handling." },
-  { id: "MVT-0085", product: "Noise Cancelling Earbuds", sku: "NCE-X3-WHT", type: "PURCHASE", qty: 200, source: "Supplier", destination: "Warehouse B", ref: "PO-4422", date: "2025-03-20T12:20:00", status: "Completed", user: "Ravi Sharma", notes: "New product launch stock." },
-  { id: "MVT-0086", product: "Ergonomic Mouse M500", sku: "MSE-ERG-GRY", type: "SALES", qty: -80, source: "Warehouse A", destination: "Store Front", ref: "INV-8814", date: "2025-03-20T13:05:00", status: "Pending", user: "Karan Patel", notes: "" },
-  { id: "MVT-0087", product: "Laptop Stand Foldable", sku: "LST-FLD-ALU", type: "PURCHASE", qty: 60, source: "Returns Depot", destination: "Warehouse A", ref: "RET-0318", date: "2025-03-20T13:55:00", status: "Completed", user: "Priya Nair", notes: "Customer returns processed." },
-  { id: "MVT-0088", product: "Wireless Charger Pad 15W", sku: "WCP-15W-BLK", type: "TRANSFER", qty: 40, source: "Cold Storage", destination: "Warehouse B", ref: "TRF-210", date: "2025-03-20T14:30:00", status: "Completed", user: "Aisha Menon", notes: "" },
-  { id: "MVT-0089", product: "Smart LED Desk Lamp", sku: "DLP-SMT-WHT", type: "SALES", qty: -15, source: "Warehouse B", destination: "Store Front", ref: "INV-8815", date: "2025-03-20T15:10:00", status: "Completed", user: "Karan Patel", notes: "" },
-  { id: "MVT-0090", product: "Portable SSD 1TB", sku: "SSD-1TB-SLV", type: "PURCHASE", qty: 75, source: "Supplier", destination: "Warehouse A", ref: "PO-4423", date: "2025-03-19T08:00:00", status: "Completed", user: "Ravi Sharma", notes: "" },
-  { id: "MVT-0091", product: "Gaming Controller BT", sku: "GCT-BT-BLK", type: "SALES", qty: -22, source: "Warehouse A", destination: "Store Front", ref: "INV-8816", date: "2025-03-19T09:15:00", status: "Completed", user: "Aisha Menon", notes: "" },
-  { id: "MVT-0092", product: "Mechanical Keyboard TKL", sku: "MKB-TKL-WHT", type: "PURCHASE", qty: 50, source: "Supplier", destination: "Warehouse B", ref: "PO-4424", date: "2025-03-18T10:00:00", status: "Pending", user: "Priya Nair", notes: "Awaiting quality check." },
-];
-
-const lowStockAlerts = 3;
+function purchaseToMovements(records: PurchaseRecord[], movType: MovementType): Movement[] {
+  return records.map(p => {
+    const products = (p.datas?.purchase_products ?? p.datas?.grn_products ?? p.datas?.finished_products) as any[] | undefined;
+    const first = products?.[0];
+    const dateStr = String(p.datas?.purchase_date ?? p.datas?.production_date ?? p.datas?.receipt_date ?? new Date().toISOString());
+    return {
+      id: p.id.slice(0, 8).toUpperCase(),
+      product: String(first?.product_name ?? first?.name ?? "—"),
+      sku: String(first?.barcode ?? p.id.slice(0, 8)),
+      type: movType,
+      qty: Number(first?.quantity ?? first?.qty ?? 1),
+      source: "Supplier",
+      destination: "Warehouse",
+      ref: p.id.slice(0, 8).toUpperCase(),
+      date: dateStr.includes("T") ? dateStr : dateStr + "T00:00:00",
+      status: "Completed" as StatusType,
+      user: "Admin",
+      notes: "",
+    };
+  });
+}
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -261,10 +269,56 @@ export default function StockMovementPage() {
   const [sortField, setSort]        = useState<"date" | "qty">("date");
   const [sortDir, setSortDir]       = useState<"asc" | "desc">("desc");
   const [page, setPage]             = useState(1);
+  const [movements, setMovements]   = useState<Movement[]>([]);
   const PAGE_SIZE = 8;
 
+  const { getData } = useApi();
+
+  useEffect(() => {
+    const load = async () => {
+      const fetchType = async (type: string, movType: MovementType) => {
+        const res = await getData(ENDPOINTS.PURCHASES, { type, shop_id: SHOP_ID, limit: "50", offset: "1" });
+        if (!res) return [];
+        const records: PurchaseRecord[] = Array.isArray(res.data) ? res.data : [res.data];
+        return purchaseToMovements(records, movType);
+      };
+
+      const [direct, grn, production] = await Promise.all([
+        fetchType("DIRECT", "PURCHASE"),
+        fetchType("PO_CREATE", "PO_PURCHASE"),
+        fetchType("PRODUCTION", "PRODUCTION"),
+      ]);
+
+      const adjRes = await getData(ENDPOINTS.S_ADJUSTMENTS, { shop_id: SHOP_ID, limit: "50", offset: "1" });
+      const adjMovements: Movement[] = adjRes
+        ? (Array.isArray(adjRes.data) ? adjRes.data : [adjRes.data]).map((a: any) => {
+            const products = (a.datas?.products ?? a.datas?.adjustment_products) as any[] | undefined;
+            const first = products?.[0];
+            const dateStr = String(a.datas?.adjustment_date ?? new Date().toISOString());
+            return {
+              id: a.id.slice(0, 8).toUpperCase(),
+              product: String(first?.product_name ?? first?.name ?? "—"),
+              sku: String(first?.barcode ?? a.id.slice(0, 8)),
+              type: "STOCK_ADJUSTMENT" as MovementType,
+              qty: Number(first?.quantity ?? 0),
+              source: "Stock",
+              destination: "Adjusted",
+              ref: a.id.slice(0, 8).toUpperCase(),
+              date: dateStr.includes("T") ? dateStr : dateStr + "T00:00:00",
+              status: "Completed" as StatusType,
+              user: "Admin",
+              notes: "",
+            };
+          })
+        : [];
+
+      setMovements([...direct, ...grn, ...production, ...adjMovements]);
+    };
+    load();
+  }, []);
+
   const filtered = useMemo(() => {
-    let data = [...mockMovements];
+    let data = [...movements];
     
     if (search) {
       const q = search.toLowerCase();
@@ -290,12 +344,11 @@ export default function StockMovementPage() {
   }, [search, typeFilter, statusFilter, warehouseFilter, dateFrom, dateTo, sortField, sortDir]);
 
   const today = new Date().toISOString().slice(0, 10);
-  const todayMvts = mockMovements.filter(m => fmtDate(m.date) === today);
-  
-  // Ensure we capture all relevant type variants
+  const todayMvts = movements.filter(m => fmtDate(m.date) === today);
   const totalIn  = todayMvts.filter(m => ["PURCHASE", "PO_PURCHASE"].includes(m.type)).reduce((s, m) => s + m.qty, 0);
   const totalOut = todayMvts.filter(m => m.type === "SALES").reduce((s, m) => s + Math.abs(m.qty), 0);
   const netMov   = totalIn - totalOut;
+  const lowStockAlerts = 0;
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const pageData   = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -356,12 +409,12 @@ export default function StockMovementPage() {
             </GradientButton>
 
             {/* Added the missing trigger button for your Add Movement Modal */}
-            <GradientButton
+            {/* <GradientButton
               onClick={() => setShowAdd(true)}
               icon={<Plus className="w-4 h-4" />}
             >
               New Movement
-            </GradientButton>
+            </GradientButton> */}
           </div>
         </div>
 

@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from "react";
-import { 
-   Phone, User, Loader2, 
-  CheckCircle2, AlertCircle, PlusCircle, Wallet 
+import {
+  Phone, User, Loader2,
+  CheckCircle2, AlertCircle, PlusCircle, Wallet,
 } from "lucide-react";
 
 import BillingTable, { createEmptyRow } from "../components/BillingTable";
@@ -10,8 +10,10 @@ import BillingDetailView from "../components/BillingDetailView";
 import Drawer from "@/components/common/Drawer";
 
 import { BillingItem, InvoicePayload } from "../types";
+import { useApi } from "@/context/ApiContext";
+import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 
-// ─── Types & Mock API ────────────────────────────────────────────────────────
+// ─── Types ───────────────────────────────────────────────────────────────────
 export interface CustomerData {
   id: string;
   name: string;
@@ -24,6 +26,7 @@ export interface CustomerData {
 const formatINR = (amount: number, decimals = 2) =>
   amount.toLocaleString("en-IN", { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
 
+// Mock customer lookup (replace with real API when customer-search endpoint is ready)
 const fetchCustomerByPhone = async (phone: string): Promise<CustomerData | null> => {
   return new Promise((resolve) => {
     setTimeout(() => {
@@ -37,10 +40,14 @@ const fetchCustomerByPhone = async (phone: string): Promise<CustomerData | null>
   });
 };
 
+// ─── Billing Page ─────────────────────────────────────────────────────────────
 const Billing = () => {
+  const { postData, loading: isSubmitting } = useApi();
+
   // ── Table State
   const [items, setItems] = useState<BillingItem[]>([createEmptyRow()]);
   const [isOpen, setIsOpen] = useState(false);
+  const [pendingInvoice, setPendingInvoice] = useState<InvoicePayload | null>(null);
 
   // ── Customer State
   const [phone, setPhone] = useState("");
@@ -54,7 +61,7 @@ const Billing = () => {
 
   // ── Derived Credit Info
   const isCreditExceeded = customerData ? customerData.outstanding >= customerData.creditLimit : false;
-  const creditRemaining = customerData ? Math.max(0, customerData.creditLimit - customerData.outstanding) : 0;
+  const creditRemaining  = customerData ? Math.max(0, customerData.creditLimit - customerData.outstanding) : 0;
 
   // ── Handlers
   const handleItemsChange = useCallback((next: BillingItem[]) => setItems(next), []);
@@ -106,12 +113,53 @@ const Billing = () => {
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   }, []);
 
+  // ── Invoice ready → open drawer with payload (don't POST yet)
   const handleInvoiceReady = useCallback((payload: InvoicePayload) => {
-    console.log("[Billing] Invoice payload ready:", payload);
+    setPendingInvoice(payload);
+    setIsOpen(true);
   }, []);
 
+  // ── Confirm Order → POST to Orders API
+  const handleConfirmOrder = useCallback(async () => {
+    if (!pendingInvoice) return;
+
+    const filledItems = pendingInvoice.items.filter(i => !!i.name);
+
+    const payload = {
+      shop_id:         SHOP_ID,
+      orders:          filledItems.map(i => i.code || i.name),
+      customer_number: pendingInvoice.phone  || "",
+      customer_name:   pendingInvoice.customerName || "Walk-in",
+      status:          "COMPLETED",
+      origin:          "IN_STORE",
+      datas: {
+        items:         filledItems,
+        total_qty:     pendingInvoice.totalQty,
+        total_amount:  pendingInvoice.totalAmount,
+        gst_amount:    pendingInvoice.gstAmount,
+        final_amount:  pendingInvoice.finalAmount,
+        include_gst:   pendingInvoice.includeGst,
+        payment_mode:  pendingInvoice.paymentMode,
+        customer_id:   pendingInvoice.customer?.id ?? null,
+        date:          pendingInvoice.date,
+      },
+    };
+
+    const res = await postData(ENDPOINTS.ORDERS, payload);
+    if (res) {
+      // Success — reset billing state
+      setIsOpen(false);
+      setPendingInvoice(null);
+      setItems([createEmptyRow()]);
+      setPhone("");
+      setCustomerName("");
+      setCustomerData(null);
+      setCustomerNotFound(false);
+      setWasAutofilled(false);
+    }
+  }, [pendingInvoice, postData]);
+
   const handleHoldBill = useCallback(() => {
-    // TODO: persist held bill (e.g. push to a held-bills list)
     console.log("[Billing] Bill held:", items);
     setItems([createEmptyRow()]);
     setPhone("");
@@ -127,11 +175,10 @@ const Billing = () => {
 
   return (
     <div className="flex flex-col h-[calc(100vh-2rem)] gap-4">
-    
 
-      {/* 2. Customer Details Section (Top) */}
+      {/* Customer Details Section */}
       <div className="shrink-0 bg-white rounded-2xl border border-slate-200 p-5 shadow-sm flex flex-col md:flex-row gap-6">
-        
+
         {/* Left: Inputs */}
         <div className="flex-1 flex flex-col gap-4 justify-center">
           <div className="flex items-center justify-between">
@@ -237,9 +284,9 @@ const Billing = () => {
         </div>
       </div>
 
-      {/* 3. Main Split Content Area */}
+      {/* Main Split Content Area */}
       <div className="flex flex-col lg:flex-row flex-1 overflow-hidden gap-6 pb-4">
-        
+
         {/* Left: Line-item table */}
         <div className="flex-1 overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-sm">
           <BillingTable items={items} onItemsChange={handleItemsChange} />
@@ -260,8 +307,13 @@ const Billing = () => {
         </div>
       </div>
 
-      <Drawer isOpen={isOpen} title="Billing Details" onClose={() => setIsOpen(false)}>
-        <BillingDetailView />
+      {/* Invoice Review Drawer */}
+      <Drawer isOpen={isOpen} title="Review & Confirm Order" onClose={() => setIsOpen(false)}>
+        <BillingDetailView
+          invoice={pendingInvoice}
+          isSubmitting={isSubmitting}
+          onConfirm={handleConfirmOrder}
+        />
       </Drawer>
     </div>
   );

@@ -34,31 +34,48 @@ export interface DirectPurchaseData {
   products: ProductItem[];
   total_cost: number;
   purchaseType: PurchaseType;
+  paymentMethod?: string;
+  charges?: {
+    other: number;
+    transport: number;
+  };
 }
 
 type ViewMode = "grid" | "horizontal" | "vertical";
 
 function toDisplayData(p: PurchaseRecord): DirectPurchaseData {
-  const products = (p.datas?.purchase_products ?? p.datas?.grn_products ?? p.datas?.finished_products) as any[] | undefined;
-  const dateRaw = String(p.datas?.purchase_date ?? p.datas?.production_date ?? p.datas?.receipt_date ?? new Date().toISOString());
+  const products = (p.datas?.products ?? p.datas?.purchase_products ?? p.datas?.grn_products ?? p.datas?.finished_products) as any[] | undefined;
+  const dateRaw = String(p.datas?.purchaseDetails?.date ?? p.datas?.purchase_date ?? p.datas?.production_date ?? p.datas?.receipt_date ?? p.date ?? new Date().toISOString());
   const d = new Date(dateRaw.includes("T") ? dateRaw : dateRaw + "T00:00:00");
   const typeMap: Record<string, PurchaseType> = {
     DIRECT: "Purchase",
     "PO CREATE": "PO Purchase",
     PRODUCTION: "Production",
   };
+  
+  // Try to find the vendor name from various possible fields
+  const vendorName = p.datas?.supplier_name ?? p.datas?.supplier ?? p.datas?.purchaseDetails?.supplier_name ?? "—";
+  
+  // Try to find the total cost from payment info or direct fields
+  const totalCost = Number(p.datas?.payment?.amountPaid ?? p.datas?.total_cost ?? p.datas?.grand_total ?? 0);
+
   return {
     id: p.id,
-    poNumber: p.id.slice(0, 8).toUpperCase(),
+    poNumber: p.datas?.purchaseDetails?.invoiceNo ?? p.id.slice(0, 8).toUpperCase(),
     date: d.toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" }),
     time: d.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }),
-    vendor: String(p.datas?.supplier ?? p.datas?.supplier_name ?? "—"),
+    vendor: String(vendorName),
     products: (products ?? []).map((pr: any) => ({
-      name: String(pr.product_name ?? pr.name ?? "Item"),
+      name: String(pr.name ?? pr.product_name ?? "Item"),
       quantity: Number(pr.quantity ?? pr.qty ?? 1),
     })),
-    total_cost: Number(p.datas?.total_cost ?? p.datas?.grand_total ?? 0),
+    total_cost: totalCost,
     purchaseType: typeMap[p.type] ?? "Purchase",
+    paymentMethod: String(p.datas?.payment?.method ?? p.datas?.payment_method ?? "—"),
+    charges: {
+      other: Number(p.datas?.charges?.other ?? 0),
+      transport: Number(p.datas?.charges?.transport ?? 0),
+    },
   };
 }
 
@@ -451,13 +468,25 @@ const PurchaseHistory = () => {
                 <p className="text-[10px] text-zinc-500">{selectedPO.time}</p>
               </div>
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-1">Type</p>
-                <PurchaseTypeBadge type={selectedPO.purchaseType} /> 
+                <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-1">Payment</p>
+                <p className="text-sm font-semibold text-zinc-800">{selectedPO.paymentMethod}</p>
               </div>
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-1">Total Cost</p>
                 <p className="text-lg font-bold text-blue-600">${selectedPO.total_cost.toLocaleString()}</p>
               </div>
+            </div>
+
+            {/* Charges Breakdown */}
+            <div className="grid grid-cols-2 gap-4">
+               <div className="p-3 bg-zinc-50 rounded-lg border border-zinc-100">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-1">Transport Charges</p>
+                  <p className="text-sm font-semibold text-zinc-800">${selectedPO.charges?.transport.toLocaleString()}</p>
+               </div>
+               <div className="p-3 bg-zinc-50 rounded-lg border border-zinc-100">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-1">Other Charges</p>
+                  <p className="text-sm font-semibold text-zinc-800">${selectedPO.charges?.other.toLocaleString()}</p>
+               </div>
             </div>
 
             {/* Products List */}

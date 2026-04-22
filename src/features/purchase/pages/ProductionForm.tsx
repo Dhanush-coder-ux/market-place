@@ -8,10 +8,11 @@ import {
 
 // Adjust these imports to match your project structure
 import Input from '@/components/ui/Input'; 
-import { ReusableSelect } from '@/components/ui/ReusableSelect';
 import { GradientButton } from '@/components/ui/GradientButton';
 import { useApi } from '@/context/ApiContext';
 import { ENDPOINTS, SHOP_ID } from '@/services/endpoints';
+import { SearchSelect } from "@/components/inputbuilders/SearchSelect";
+import { inventoryApi } from "@/services/api/inventory";
 
 // --- Types ---
 interface FinishedProduct {
@@ -176,10 +177,10 @@ export default function ProductionEntryPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <Input label="Production Date" required type="date" value={details.date} onChange={(e) => handleDetailChange('date', e.target.value)} />
                 <Input label="Reference Number" value={details.reference} disabled onChange={() => {}} />
-                <ReusableSelect label="Location" required options={locationOptions} value={details.location} onValueChange={(val) => handleDetailChange('location', val)} />
-                <ReusableSelect label="Supervisor" options={supervisorOptions} value={details.supervisor} onValueChange={(val) => handleDetailChange('supervisor', val)} />
+                <SearchSelect label="Location" options={locationOptions} value={details.location} onChange={(val) => handleDetailChange('location', String(val))} />
+                <SearchSelect label="Supervisor" options={supervisorOptions} value={details.supervisor} onChange={(val) => handleDetailChange('supervisor', String(val))} />
                 <Input label="Batch Number" required value={details.batch} onChange={(e) => handleDetailChange('batch', e.target.value)} />
-                <ReusableSelect label="Production Status" options={statusOptions} value={details.status} onValueChange={(val) => handleDetailChange('status', val)} />
+                <SearchSelect label="Production Status" options={statusOptions} value={details.status} onChange={(val) => handleDetailChange('status', String(val))} />
                 <div className="md:col-span-2">
                   <label className="mb-1.5 block text-[11px] font-bold uppercase tracking-widest text-slate-500 ml-1">Production Notes</label>
                   <textarea 
@@ -428,9 +429,29 @@ export default function ProductionEntryPage() {
                   </div>
 
                   <div className="grid grid-cols-2 lg:grid-cols-6 gap-4 items-start">
-                    <div className="lg:col-span-2">
-                      <ReusableSelect label="Product *" options={productOptions} value={product.product} onValueChange={(val) => updateProduct(product.id, 'product', val)} />
-                    </div>
+                      <div className="lg:col-span-2">
+                        <SearchSelect
+                          labelKey="name"
+                          valueKey="id"
+                          fetchOptions={async (q) => await inventoryApi.searchInventories(q)}
+                          value={product.product}
+                          onChange={(val, opt: any) => {
+                            if (!opt) {
+                              updateProduct(product.id, 'product', String(val));
+                            } else {
+                              const fields: Partial<FinishedProduct> = {
+                                product: opt.name || opt.label || String(val),
+                                unitCost: opt.buy_price ?? opt.costPrice ?? 0,
+                                sellingPrice: opt.sell_price ?? opt.sellingPrice ?? 0,
+                                unit: opt.unit ?? "Piece",
+                              };
+                              updateProductFields(product.id, fields);
+                            }
+                          }}
+                          placeholder="Select Product..."
+                          className="w-full !bg-white !shadow-sm !border-slate-200"
+                        />
+                      </div>
                     
                     <Input label="Quantity *" type="number" value={product.qty as any} onChange={(e) => updateProduct(product.id, 'qty', e.target.value ? Number(e.target.value) : "")} />
                     
@@ -552,10 +573,15 @@ export default function ProductionEntryPage() {
                       <h4 className="text-xs font-bold text-slate-800 mb-3 flex items-center gap-2"><Settings size={14}/> Advanced Settings</h4>
                       <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                         <Input label="Expiry Date" type="date" value={product.expiry} onChange={(e) => updateProduct(product.id, 'expiry', e.target.value)} />
-                        <ReusableSelect label="Storage Location" options={storageOptions} value={product.storage} onValueChange={(val) => updateProduct(product.id, 'storage', val)} />
-                        <ReusableSelect label="Quality Grade" options={gradeOptions} value={product.grade} onValueChange={(val) => updateProduct(product.id, 'grade', val)} />
+                        <SearchSelect label="Storage Location" options={storageOptions} value={product.storage} onChange={(val) => updateProduct(product.id, 'storage', String(val))} />
+                        <SearchSelect label="Quality Grade" options={gradeOptions} value={product.grade} onChange={(val) => updateProduct(product.id, 'grade', String(val))} />
                         <Input label="Reorder Point" type="number" value={product.reorder} onChange={(e) => updateProduct(product.id, 'reorder', e.target.value)} />
-                        <ReusableSelect label="Unit" options={unitOptions} value={product.unit} onValueChange={(val) => updateProduct(product.id, 'unit', val)} />
+                        <SearchSelect 
+                          label="Unit" 
+                          options={unitOptions} 
+                          value={product.unit} 
+                          onChange={(val) => updateProduct(product.id, 'unit', String(val))} 
+                        />
                         <Input label="Color/Variant" placeholder="e.g. Lavender" value={product.variant} onChange={(e) => updateProduct(product.id, 'variant', e.target.value)} />
                       </div>
                     </div>

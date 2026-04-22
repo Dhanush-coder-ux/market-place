@@ -14,70 +14,44 @@ import { StatCard } from "@/components/common/StatsCard";
 import { GradientButton } from "@/components/ui/GradientButton";
 import { BiSolidUserAccount } from "react-icons/bi";
 import { useApi } from "@/context/ApiContext";
-import { useInputBuilderContext } from "@/components/inputbuilders/context/InputBuilderContext";
 import { ENDPOINTS } from "@/services/endpoints";
 import Loader from "@/components/common/Loader";
 import type { CustomerRecord } from "@/types/api";
+import { SearchSelect } from "@/components/inputbuilders/SearchSelect";
 
 // ── Search bar ──────────────────────────────────────────────────────────────
 const CustomerSearch = () => {
   const navigate = useNavigate();
   const { getData } = useApi();
-  const [query, setQuery] = useState("");
-  const [results, setResults] = useState<CustomerRecord[]>([]);
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (!query.trim()) { setResults([]); return; }
-    const t = setTimeout(() => {
-      getData(ENDPOINTS.CUSTOMERS, { limit: "8", offset: "1", q: query }).then((res) => {
-        if (res) setResults(Array.isArray(res.data) ? res.data : [res.data]);
-      });
-    }, 300);
-    return () => clearTimeout(t);
-  }, [query]);
-
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
+  const fetchCustomers = async (q: string) => {
+    if (!q) return [];
+    try {
+      const res = await getData(ENDPOINTS.CUSTOMERS, { limit: "8", offset: "1", q });
+      const data = res?.data ? (Array.isArray(res.data) ? res.data : [res.data]) : [];
+      return data.map((c: any) => ({
+        ...c,
+        displayName: String(c.datas?.name ?? c.datas?.full_name ?? c.datas?.customer_name ?? c.id)
+      }));
+    } catch (error) {
+      return [];
+    }
+  };
 
   return (
-    <div ref={ref} className="relative w-full max-w-xs">
-      <div className="flex items-center gap-2 px-3 py-2 border border-slate-200 rounded-xl bg-white shadow-sm">
-        <Search size={14} className="text-slate-400 shrink-0" />
-        <input
-          value={query}
-          onChange={(e) => { setQuery(e.target.value); setOpen(true); }}
-          placeholder="Search customer by name / ID…"
-          className="flex-1 text-sm outline-none bg-transparent text-slate-700 placeholder-slate-400 min-w-0"
-        />
-        {query && (
-          <button onClick={() => { setQuery(""); setResults([]); }} className="text-slate-400 hover:text-slate-600">
-            <X size={13} />
-          </button>
-        )}
-      </div>
-      {open && results.length > 0 && (
-        <div className="absolute top-full mt-1 w-full bg-white border border-slate-200 rounded-xl shadow-xl z-50 overflow-hidden">
-          {results.map((c) => (
-            <button
-              key={c.id}
-              onClick={() => { navigate(`/customers/${c.id}`); setQuery(""); setOpen(false); }}
-              className="w-full px-4 py-3 text-left hover:bg-blue-50 border-b last:border-0 border-slate-100 transition-colors"
-            >
-              <p className="text-sm font-medium text-slate-800 truncate">
-                {String(c.datas?.name ?? c.datas?.full_name ?? c.datas?.customer_name ?? "—")}
-              </p>
-              <p className="text-[11px] text-slate-400 font-mono mt-0.5 truncate">{c.id}</p>
-            </button>
-          ))}
-        </div>
-      )}
+    <div className="w-full max-w-xs relative z-50">
+      <SearchSelect
+        labelKey="displayName"
+        valueKey="id"
+        fetchOptions={fetchCustomers}
+        placeholder="Search customer by name / ID…"
+        className="w-[280px]"
+        onChange={(val) => {
+          if (val) {
+            navigate(`/customers/${val}`);
+          }
+        }}
+      />
     </div>
   );
 };
@@ -93,7 +67,6 @@ export default function CustomerDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { getData } = useApi();
-  const { fields, fetchCustomerFields } = useInputBuilderContext();
 
   const [customer, setCustomer] = useState<CustomerRecord | null>(null);
   const [recordLoading, setRecordLoading] = useState(true);
@@ -118,8 +91,6 @@ export default function CustomerDetail() {
   const [outstanding, setOutstanding] = useState(0);
   const [payments, setPayments] = useState<PaymentEntry[]>(INITIAL_PAYMENTS);
   const [activities, setActivities] = useState<ActivityEntry[]>(INITIAL_ACTIVITIES);
-
-  useEffect(() => { fetchCustomerFields(); }, []);
 
   useEffect(() => {
     if (!id) return;
@@ -165,15 +136,23 @@ export default function CustomerDetail() {
   }
 
   const datas = customer.datas ?? {};
-  const name = String(datas.name ?? datas.full_name ?? datas.customer_name ?? "Unknown Customer");
+  const name = (datas.first_name || datas.last_name) ? `${datas.first_name || ""} ${datas.last_name || ""}`.trim() : "Unknown Customer";
   const initials = name.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2);
 
-  // Build labeled field list
-  const infoFields = fields
-    ? Object.entries(fields)
-        .filter(([, def]) => def.view_mode === "SHOW")
-        .map(([key, def]) => ({ label: def.label_name, value: String(datas[key] ?? "—") }))
-    : Object.entries(datas).map(([k, v]) => ({ label: k, value: String(v ?? "—") }));
+  // Build static labeled field list
+  const infoFields = [
+    { label: "First Name", value: String(datas.first_name ?? "—") },
+    { label: "Last Name", value: String(datas.last_name ?? "—") },
+    { label: "Company", value: String(datas.company ?? "—") },
+    { label: "Email", value: String(datas.email ?? "—") },
+    { label: "Phone", value: String(datas.phone ?? "—") },
+    { label: "Customer Type", value: String(datas.customer_type ?? "—") },
+    { label: "Street Address", value: String(datas.street_address ?? "—") },
+    { label: "City", value: String(datas.city ?? "—") },
+    { label: "State", value: String(datas.state ?? "—") },
+    { label: "ZIP Code", value: String(datas.zip_code ?? "—") },
+    { label: "Notes", value: String(datas.notes ?? "—") },
+  ];
 
   return (
     <>

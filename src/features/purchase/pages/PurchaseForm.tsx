@@ -32,6 +32,7 @@ export interface ProductItem {
   sku: string;
   variant: string;
   size: string;
+  category?: string;
 }
 
 // --- Mock Variant Database ---
@@ -269,7 +270,7 @@ const PurchaseForm = () => {
     const payload = {
       datas: {
         shop_id: SHOP_ID,
-        type: "PURCHASE CREATE",
+        type: "DIRECT",
         supplier_id: supplierDetails?.id || "SUP_" + purchaseDetails.supplier.substring(0, 3).toUpperCase(),
         supplier_name: supplierDetails?.name || purchaseDetails.supplier,
         purchaseDetails: { ...purchaseDetails },
@@ -602,13 +603,14 @@ const PurchaseForm = () => {
 
               <div className="p-0">
                 {/* Header Row */}
-                <div className="grid grid-cols-12 gap-4 px-6 py-4 bg-white border-b border-slate-200 text-xs font-bold text-slate-500 uppercase tracking-widest">
-                  <div className="col-span-3">Product Details</div>
-                  <div className="col-span-1">QTY</div>
-                  <div className="col-span-1">Base Cost</div>
-                  <div className="col-span-1">Allocated</div>
-                  <div className="col-span-2">Margin (% & ₹)</div>
-                  <div className="col-span-2">Selling Price (₹)</div>
+                <div className="grid grid-cols-12 gap-4 px-6 py-4 bg-slate-50 border-b border-slate-200 text-[10px] font-bold text-slate-400 uppercase tracking-widest items-center">
+                  <div className="col-span-3">Product / Item</div>
+                  <div className="col-span-1 text-center">Qty</div>
+                  <div className="col-span-1 text-center">Unit</div>
+                  <div className="col-span-1 text-right">Buy Price</div>
+                  <div className="col-span-1 text-center">Net Cost</div>
+                  <div className="col-span-2 text-center">Margin (% & ₹)</div>
+                  <div className="col-span-1 text-right">Sell Price</div>
                   <div className="col-span-2 text-right">Row Total</div>
                 </div>
 
@@ -664,7 +666,7 @@ const PurchaseForm = () => {
                               valueKey="id"
                               fetchOptions={async (q) => await inventoryApi.searchInventories(q)}
                               value={product.name}
-                              onChange={(val: string, opt: any) => {
+                              onChange={(val, opt: any) => {
                                 if (!opt) {
                                   handleProductChange(index, "name", String(val));
                                 } else {
@@ -760,25 +762,27 @@ const PurchaseForm = () => {
                             />
                           </div>
 
-                          <div className="col-span-2 flex items-center justify-end gap-3">
-                            <div className="flex flex-col items-end w-20">
-                               <span className="font-bold text-slate-800 text-sm">₹{rowTotal.toLocaleString()}</span>
+                          <div className="col-span-2 flex items-center justify-end gap-3 h-[42px]">
+                            <div className="flex flex-col items-end pr-1">
+                               <span className="font-bold text-slate-700 text-sm">₹{rowTotal.toLocaleString()}</span>
                             </div>
-                            <div className="flex items-center gap-1 border-l border-slate-200 pl-3">
+                            <div className="flex items-center gap-1">
                               <button
+                                type="button"
                                 onClick={() => toggleAdvanced(index)}
                                 title="Advanced Options"
                                 className={`p-1.5 rounded-lg transition-all duration-200 ${isExpanded ? 'bg-indigo-100 text-indigo-700 shadow-inner' : 'text-slate-400 hover:bg-slate-100 hover:text-slate-600'}`}
                               >
-                                {isExpanded ? <ChevronUp size={16} strokeWidth={2.5} /> : <Settings size={16} />}
+                                {isExpanded ? <ChevronUp size={14} strokeWidth={2.5} /> : <Settings size={14} />}
                               </button>
                               <button
+                                type="button"
                                 onClick={() => removeProduct(index)}
                                 disabled={products.length === 1}
                                 title="Remove Row"
-                                className="p-1.5 text-slate-300 hover:bg-red-50 hover:text-red-500 rounded-lg"
+                                className="p-1.5 text-red-400 hover:bg-red-50 hover:text-red-600 rounded-lg disabled:opacity-30"
                               >
-                                <Trash2 size={16} />
+                                <Trash2 size={14} />
                               </button>
                             </div>
                           </div>

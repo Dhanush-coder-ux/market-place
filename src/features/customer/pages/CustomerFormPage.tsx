@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import { 
   Save, 
   User, 
@@ -17,7 +18,9 @@ import { useApi } from "@/context/ApiContext";
 import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 
 const CustomerFormPage = () => {
-  const { postData, loading } = useApi();
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const { postData, putData, getData, loading } = useApi();
   // Form State
   const [formData, setFormData] = useState({
     first_name: "",
@@ -32,6 +35,32 @@ const CustomerFormPage = () => {
     zip_code: "",
     notes: "",
   });
+
+  useEffect(() => {
+    if (id) {
+      const fetchCustomer = async () => {
+        const res = await getData(`${ENDPOINTS.CUSTOMERS}/${id}`);
+        if (res && res.data) {
+          const cust = res.data;
+          const datas = cust.datas || {};
+          setFormData({
+            first_name: cust.first_name || datas.first_name || "",
+            last_name: cust.last_name || datas.last_name || "",
+            company: cust.company || datas.company || "",
+            email: cust.email || datas.email || "",
+            phone: cust.phone || datas.phone || "",
+            customer_type: cust.customer_type || datas.customer_type || "Normal",
+            street_address: datas.street_address || "",
+            city: datas.city || "",
+            state: datas.state || "",
+            zip_code: datas.zip_code || "",
+            notes: datas.notes || "",
+          });
+        }
+      };
+      fetchCustomer();
+    }
+  }, [id]);
 
   // Options for the ReusableSelect
   const customer_typeOptions = [
@@ -53,11 +82,22 @@ const CustomerFormPage = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const payload = {
-      datas: {...formData,shop_id: SHOP_ID,type: "CUSTOMER CREATE",},
+      datas: {
+        ...formData,
+        shop_id: SHOP_ID,
+        type: id ? "CUSTOMER UPDATE" : "CUSTOMER CREATE",
+      },
     };
-    const res = await postData(ENDPOINTS.CUSTOMERS, payload);
+    
+    let res;
+    if (id) {
+      res = await putData(`${ENDPOINTS.CUSTOMERS}/${id}`, payload);
+    } else {
+      res = await postData(ENDPOINTS.CUSTOMERS, payload);
+    }
+
     if (res) {
-      alert("Customer saved successfully!");
+      navigate("/customers");
     }
   };
 
@@ -230,8 +270,8 @@ const CustomerFormPage = () => {
           Cancel
          </GradientButton>
           <GradientButton icon={<Save size={16} />} onClick={handleSubmit} disabled={loading}>
-            {loading ? "Saving..." : "Save Customer"}
-          </GradientButton>
+              {loading ? (id ? "Updating..." : "Saving...") : (id ? "Update Customer" : "Save Customer")}
+            </GradientButton>
           </div>
         </div>
       </div>

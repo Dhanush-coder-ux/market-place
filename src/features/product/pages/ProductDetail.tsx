@@ -6,8 +6,7 @@ import {
   Search, X,
 } from "lucide-react";
 import { useApi } from "@/context/ApiContext";
-import { useInputBuilderContext } from "@/components/inputbuilders/context/InputBuilderContext";
-import { ENDPOINTS } from "@/services/endpoints";
+import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 import Loader from "@/components/common/Loader";
 import type { ProductRecord } from "@/types/api";
 
@@ -23,7 +22,7 @@ const ProductSearch = () => {
   useEffect(() => {
     if (!query.trim()) { setResults([]); return; }
     const t = setTimeout(() => {
-      getData(ENDPOINTS.PRODUCTS, { limit: "8", offset: "1", q: query }).then((res) => {
+      getData(ENDPOINTS.INVENTORIES, { q: query }).then((res) => {
         if (res) setResults(Array.isArray(res.data) ? res.data : [res.data]);
       });
     }, 300);
@@ -79,19 +78,15 @@ const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { getData } = useApi();
-  const { fields, fetchProductFields } = useInputBuilderContext();
 
   const [product, setProduct] = useState<ProductRecord | null>(null);
   const [recordLoading, setRecordLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("General Info");
-  const tabs = ["General Info"];
-
-  useEffect(() => { fetchProductFields(); }, []);
 
   useEffect(() => {
     if (!id) return;
     setRecordLoading(true);
-    getData(`${ENDPOINTS.PRODUCTS}/by/${id}`).then((res) => {
+    getData(`${ENDPOINTS.INVENTORIES}/by/${id}/${SHOP_ID}`).then((res) => {
       if (res) setProduct(Array.isArray(res.data) ? res.data[0] : res.data);
       setRecordLoading(false);
     });
@@ -110,22 +105,41 @@ const ProductDetail = () => {
     );
   }
 
-  const datas = product.datas ?? {};
+  const datas = (product as any).datas ?? {};
   const name = String(datas.name ?? datas.product_name ?? product.barcode ?? "Unknown Product");
   const sku = String(datas.sku ?? datas.code ?? product.barcode ?? "—");
   const category = String(datas.category ?? "—");
   const description = String(datas.description ?? "No description available.");
-  const sellingPrice = datas.selling_price ?? datas.sell_price ?? datas.price ?? "—";
-  const buyingPrice = datas.buying_price ?? datas.buy_price ?? datas.cost ?? "—";
-  const currentStock = datas.stock ?? datas.current_stock ?? datas.quantity ?? "—";
+
+  // Prioritize root fields from Inventory Record over nested datas
+  const sellingPrice = (product as any).sell_price ?? datas.sell_price ?? datas.selling_price ?? "—";
+  const buyingPrice = (product as any).buy_price ?? datas.buy_price ?? datas.buying_price ?? "—";
+  const currentStock = (product as any).stocks ?? datas.stocks ?? datas.stock ?? "—";
   const unit = String(datas.unit ?? "—");
 
-  // Build labeled general info fields
-  const infoFields = fields
-    ? Object.entries(fields)
-        .filter(([, def]) => def.view_mode === "SHOW")
-        .map(([key, def]) => ({ label: def.label_name, value: String(datas[key] ?? "—") }))
-    : Object.entries(datas).map(([k, v]) => ({ label: k, value: String(v ?? "—") }));
+  // Build static general info fields from backend schema
+  const infoFields = [
+    { label: "Product Name", value: String(datas.name ?? "—") },
+    { label: "Category", value: String(datas.category ?? "—") },
+    { label: "Brand", value: String(datas.brand ?? "—") },
+    { label: "Unit", value: String(datas.unit ?? "—") },
+    { label: "Supplier", value: String(datas.supplier ?? "—") },
+    { label: "Barcode", value: String(product.barcode ?? datas.barcode ?? "—") },
+    { label: "Serial Number", value: String(datas.serial_number ?? "—") },
+    { label: "Buying Price", value: `₹${buyingPrice}` },
+    { label: "Selling Price", value: `₹${sellingPrice}` },
+    { label: "MRP", value: String(datas.mrp ? `₹${datas.mrp}` : "—") },
+    { label: "GST", value: String(datas.gst ?? "—") },
+    { label: "HSN", value: String(datas.hsn ?? "—") },
+    { label: "Reorder Point", value: String(datas.reorder_point ?? "—") },
+  ];
+
+  const combinations = (datas.combinations as any[]) ?? [];
+  const variantTypes = (datas.variantTypes as any[]) ?? [];
+  const hasVariants = datas.has_variants === true || combinations.length > 0;
+
+  const tabs = ["General Info"];
+  if (hasVariants) tabs.push("Variants");
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans pb-20">
@@ -209,11 +223,10 @@ const ProductDetail = () => {
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`py-3 px-5 text-xs font-medium text-center transition-colors whitespace-nowrap border-b-2 -mb-[1px] ${
-                  activeTab === tab
+                className={`py-3 px-5 text-xs font-medium text-center transition-colors whitespace-nowrap border-b-2 -mb-[1px] ${activeTab === tab
                     ? "border-blue-500 text-blue-600 bg-white"
                     : "border-transparent text-slate-500 hover:text-slate-700 hover:bg-white"
-                }`}
+                  }`}
               >
                 {tab}
               </button>
@@ -238,11 +251,65 @@ const ProductDetail = () => {
                 )}
               </div>
             )}
+
+            {activeTab === "Variants" && (
+              <div className="p-5 animate-in fade-in duration-300">
+                <div className="mb-6">
+                  <h2 className="heading-section text-slate-700 mb-2">Variant Types</h2>
+                  <div className="flex flex-wrap gap-2">
+                    {variantTypes.map(vt => (
+                      <div key={vt.id} className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-2">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">{vt.name}</p>
+                        <p className="text-sm font-semibold text-slate-700">{(vt.values as string[]).join(", ")}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <h2 className="heading-section text-slate-700 mb-4">Available Combinations</h2>
+                <div className="overflow-x-auto rounded-xl border border-slate-100 shadow-sm">
+                  <table className="w-full text-left border-collapse">
+                    <thead className="bg-slate-50 border-b border-slate-100">
+                      <tr>
+                        <th className="px-4 py-3 text-[11px] font-bold text-slate-400 uppercase tracking-widest">Attributes</th>
+                        <th className="px-4 py-3 text-[11px] font-bold text-slate-400 uppercase tracking-widest">Barcode</th>
+                        <th className="px-4 py-3 text-[11px] font-bold text-slate-400 uppercase tracking-widest">Stock</th>
+                        <th className="px-4 py-3 text-[11px] font-bold text-slate-400 uppercase tracking-widest">Price</th>
+                        <th className="px-4 py-3 text-[11px] font-bold text-slate-400 uppercase tracking-widest">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-50">
+                      {combinations.map(c => (
+                        <tr key={c.id} className="hover:bg-slate-50 transition-colors">
+                          <td className="px-4 py-3">
+                            <div className="flex flex-wrap gap-1.5">
+                              {Object.entries(c.attributes ?? {}).map(([k, v]) => (
+                                <span key={k} className="px-2 py-0.5 bg-blue-50 text-blue-600 rounded text-[11px] font-medium">
+                                  {k}: {String(v)}
+                                </span>
+                              ))}
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-sm font-mono text-slate-600">{c.barcode || "—"}</td>
+                          <td className="px-4 py-3 text-sm font-bold text-slate-700">{c.stock || "—"}</td>
+                          <td className="px-4 py-3 text-sm font-bold text-slate-700">{c.price ? `₹${c.price}` : "—"}</td>
+                          <td className="px-4 py-3">
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${c.active !== false ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-red-50 text-red-600 border border-red-100'}`}>
+                              {c.active !== false ? 'Active' : 'Inactive'}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
         {/* Sticky Bottom Action Bar */}
-        <div className="sticky -bottom-4 md:-bottom-6 lg:-bottom-8 -mx-4 md:-mx-6 lg:-mx-8 -mb-4 md:-mb-6 lg:-mb-8 mt-auto bg-white border-t-2 border-slate-200 px-8 py-4 flex justify-between items-center shadow-[0_-4px_12px_rgba(0,0,0,0.08)] z-[100]">
+        {/* <div className="sticky -bottom-4 md:-bottom-6 lg:-bottom-8 -mx-4 md:-mx-6 lg:-mx-8 -mb-4 md:-mb-6 lg:-mb-8 mt-auto bg-white border-t-2 border-slate-200 px-8 py-4 flex justify-between items-center shadow-[0_-4px_12px_rgba(0,0,0,0.08)] z-[100]">
           <div className="text-xs font-medium text-slate-500 hidden md:block px-2">Quick actions</div>
           <div className="flex flex-wrap items-center justify-center gap-2 w-full md:w-auto">
             <button className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 rounded-lg font-medium text-xs transition-all shadow-sm">
@@ -261,7 +328,7 @@ const ProductDetail = () => {
               <ShoppingCart size={14} strokeWidth={1.5} /> Sale
             </button>
           </div>
-        </div>
+        </div> */}
 
       </div>
     </div>

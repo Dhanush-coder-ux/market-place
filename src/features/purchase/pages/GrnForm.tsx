@@ -14,10 +14,12 @@ import {
 
 // Adjust these imports to match your folder structure
 import Input from "@/components/ui/Input";
-import { ReusableSelect } from "@/components/ui/ReusableSelect";
 import { GradientButton } from "@/components/ui/GradientButton";
 import { useApi } from "@/context/ApiContext";
 import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
+import { SearchSelect } from "@/components/inputbuilders/SearchSelect";
+import { supplierApi } from "@/services/api/supplier";
+import { inventoryApi } from "@/services/api/inventory";
 
 // --- Types ---
 type GRNStatus = "Completed" | "Pending" | "Partial";
@@ -26,6 +28,7 @@ export interface ProductItem {
   id: string;
   name: string;
   quantity: number | "";
+  costPrice: number | "";
   sellingPrice: number | "";
   // Advanced GRN fields (hidden behind settings toggle)
   storageLoc: string;
@@ -97,6 +100,7 @@ const GRNForm: React.FC<GRNFormProps> = ({ onSubmit, onCancel }) => {
       id: Date.now().toString(),
       name: "",
       quantity: "",
+      costPrice: "",
       sellingPrice: "",
       storageLoc: "",
       batchNum: "",
@@ -124,9 +128,11 @@ const GRNForm: React.FC<GRNFormProps> = ({ onSubmit, onCancel }) => {
 
     products.forEach(p => {
       const q = Number(p.quantity) || 0;
+      const cp = Number(p.costPrice) || 0;
       const sp = Number(p.sellingPrice) || 0;
       totalQty += q;
-      totalValue += (q * sp);
+      totalValue += (q * cp); // Using cost price for total value of GRN usually? Or user wants sell price? User said "sell price buy price on product section".
+      // Let's keep it as is or show both. I'll use cp for total value if it's a GRN.
     });
 
     return { totalQty, totalValue, itemsCount: products.length };
@@ -157,6 +163,7 @@ const GRNForm: React.FC<GRNFormProps> = ({ onSubmit, onCancel }) => {
       id: Math.random().toString(),
       name: "",
       quantity: "",
+      costPrice: "",
       sellingPrice: "",
       storageLoc: "",
       batchNum: "",
@@ -341,14 +348,17 @@ const GRNForm: React.FC<GRNFormProps> = ({ onSubmit, onCancel }) => {
           <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
             <h2 className="text-sm font-bold uppercase tracking-wider text-slate-500 mb-4">General Information</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-              <ReusableSelect
-                label="Supplier"
-                required={true as any}
-                options={supplierOptions}
-                value={grnDetails.supplier}
-                onValueChange={(val) => setGrnDetails({...grnDetails, supplier: val})}
-                placeholder="Select Supplier..."
-              />
+              <div className="flex flex-col gap-1.5">
+                <label className="text-sm font-semibold text-slate-700">Supplier *</label>
+                <SearchSelect
+                  labelKey="name"
+                  valueKey="id"
+                  fetchOptions={async (q) => await supplierApi.searchSuppliers(q)}
+                  value={grnDetails.supplier}
+                  onChange={(val) => setGrnDetails({...grnDetails, supplier: String(val)})}
+                  placeholder="Select Supplier..."
+                />
+              </div>
               <Input 
                 label="Receipt Date"
                 required
@@ -387,11 +397,12 @@ const GRNForm: React.FC<GRNFormProps> = ({ onSubmit, onCancel }) => {
             
             <div className="p-0">
               {/* Header Row */}
-              <div className="grid grid-cols-12 gap-3 p-4 bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-500">
-                <div className="col-span-5">Product Name</div>
-                <div className="col-span-2">Quantity</div>
-                <div className="col-span-3">Selling Price ($)</div>
-                <div className="col-span-2 text-right">Total ($)</div>
+              <div className="grid grid-cols-12 gap-3 p-4 bg-slate-50 border-b border-slate-200 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                <div className="col-span-4">Product Name</div>
+                <div className="col-span-2 text-center">Quantity</div>
+                <div className="col-span-2 text-right">Buy Price</div>
+                <div className="col-span-2 text-right">Sell Price</div>
+                <div className="col-span-2 text-right">Total</div>
               </div>
 
               {/* Product Rows */}
@@ -402,13 +413,27 @@ const GRNForm: React.FC<GRNFormProps> = ({ onSubmit, onCancel }) => {
                 return (
                   <div key={product.id} className="border-b border-slate-100 last:border-0">
                     <div className="grid grid-cols-12 gap-3 p-4 items-center hover:bg-slate-50/50 transition-colors">
-                      <div className="col-span-5">
-                        <ReusableSelect
+                      <div className="col-span-4">
+                        <SearchSelect
+                          labelKey="name"
+                          valueKey="id"
+                          fetchOptions={async (q) => await inventoryApi.searchInventories(q)}
                           value={product.name}
-                          onValueChange={(val) => handleProductChange(index, "name", val)}
-                          options={productOptions}
+                          onChange={(val, opt: any) => {
+                            if (!opt) {
+                              handleProductChange(index, "name", String(val));
+                            } else {
+                              const updated = [...products];
+                              updated[index].name = opt.name || opt.label || String(val);
+                              updated[index].costPrice = opt.buy_price ?? opt.costPrice ?? "";
+                              updated[index].sellingPrice = opt.sell_price ?? opt.sellingPrice ?? "";
+                              updated[index].sku = opt.barcode ?? opt.sku ?? "";
+                              updated[index].variant = opt.variant ?? "";
+                              setProducts(updated);
+                            }
+                          }}
                           placeholder="Select Product..."
-                          className="!h-[42px] !py-2"
+                          className="w-full !bg-white !shadow-sm !border-slate-200"
                         />
                         {/* Variant Details Display */}
                         {product.variant && (
@@ -422,26 +447,39 @@ const GRNForm: React.FC<GRNFormProps> = ({ onSubmit, onCancel }) => {
                         <Input 
                           type="number" 
                           placeholder="0" 
+                          className="!text-center !px-1"
                           value={product.quantity as any} 
                           onChange={(e) => handleProductChange(index, "quantity", e.target.value)} 
                         />
                       </div>
-                      <div className="col-span-3">
+                      <div className="col-span-2">
                         <Input 
                           type="number" 
                           placeholder="0.00" 
+                          className="!text-right !px-1"
+                          value={product.costPrice as any} 
+                          onChange={(e) => handleProductChange(index, "costPrice", e.target.value)} 
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        <Input 
+                          type="number" 
+                          placeholder="0.00" 
+                          className="!text-right !px-1 font-semibold text-emerald-600"
                           value={product.sellingPrice as any} 
                           onChange={(e) => handleProductChange(index, "sellingPrice", e.target.value)} 
                         />
                       </div>
                       <div className="col-span-2 flex items-center justify-end gap-3 h-[42px]">
-                        <span className="font-semibold text-slate-700 text-sm">${rowTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                        <button type="button" onClick={() => toggleAdvanced(index)} className={`p-1.5 rounded-md transition-colors ${isExpanded ? 'bg-blue-100 text-blue-600' : 'text-slate-400 hover:bg-slate-100'}`}>
-                          <Settings size={16} />
-                        </button>
-                        <button type="button" onClick={() => removeProduct(index)} disabled={products.length === 1} className="p-1.5 text-red-400 hover:bg-red-50 hover:text-red-600 rounded-md disabled:opacity-30">
-                          <Trash2 size={16} />
-                        </button>
+                        <span className="font-bold text-slate-700 text-sm">₹{rowTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                        <div className="flex items-center gap-1">
+                          <button type="button" onClick={() => toggleAdvanced(index)} className={`p-1.5 rounded-md transition-colors ${isExpanded ? 'bg-blue-100 text-blue-600' : 'text-slate-400 hover:bg-slate-100'}`}>
+                            <Settings size={14} />
+                          </button>
+                          <button type="button" onClick={() => removeProduct(index)} disabled={products.length === 1} className="p-1.5 text-red-400 hover:bg-red-50 hover:text-red-600 rounded-md disabled:opacity-30">
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
                       </div>
                     </div>
 
@@ -538,7 +576,7 @@ const GRNForm: React.FC<GRNFormProps> = ({ onSubmit, onCancel }) => {
               <div className="flex justify-between items-end">
                 <div>
                   <span className="block text-slate-400 text-xs font-semibold uppercase mb-1">Total GRN Value</span>
-                  <span className="font-semibold text-3xl">${stats.totalValue.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                  <span className="font-bold text-3xl text-slate-900">₹{stats.totalValue.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                 </div>
               </div>
             </div>

@@ -33,6 +33,7 @@ const ProfileForm = React.lazy(() => import("../features/profile/pages/ProfileFo
 
 // Products
 const Product = React.lazy(() => import("@/features/product/pages/Product"));
+const ProductSearch = React.lazy(() => import("@/features/product/pages/ProductSearch"));
 const ProductDetail = React.lazy(() => import("@/features/product/pages/ProductDetail"));
 
 // Purchase
@@ -40,10 +41,12 @@ const PurchaseDetail = React.lazy(() => import("@/features/purchase/pages/Purcha
 
 // Supplier
 const Supplier = React.lazy(() => import("@/features/supplier/pages/Supplier"));
+const SupplierSearch = React.lazy(() => import("@/features/supplier/pages/SupplierSearch"));
 const SupplierDetail = React.lazy(() => import("@/features/supplier/pages/SupplierDetail"));
 
 // Employee
 const Employee = React.lazy(() => import("../features/employee/pages/Employee"));
+const EmployeeSearch = React.lazy(() => import("../features/employee/pages/EmployeeSearch"));
 const EmployeeForm = React.lazy(() => import("../features/employee/pages/EmployeeForm"));
 
 // Inventory
@@ -74,7 +77,8 @@ export const router = createBrowserRouter([
       { path: "/sales", element: <SalesListPage /> },
 
       // Products — static "add" before dynamic ":id"
-      { path: 'product', element: <Product /> },
+      { path: 'product', element: <ProductSearch /> },
+      { path: '/product/all', element: <Product /> },
       { path: '/product/add', element: <ProductForm /> },
       { path: '/product/:id/edit', element: <ProductForm /> },
       { path: '/product/:id', element: <ProductDetail /> },
@@ -90,14 +94,17 @@ export const router = createBrowserRouter([
       { path: '/purchase/add', element: <PurchaseForm /> },
 
       // Suppliers — static "add" before dynamic ":id"
-      { path: 'supplier', element: <Supplier /> },
+      { path: 'supplier', element: <SupplierSearch /> },
+      { path: '/supplier/all', element: <Supplier /> },
       { path: '/supplier/add', element: <SupplierForm /> },
       { path: '/supplier/:id/edit', element: <SupplierForm /> },
       { path: '/supplier/:id', element: <SupplierDetail /> },
 
       // Employees
-      { path: '/employee', element: <Employee /> },
+      { path: '/employee', element: <EmployeeSearch /> },
+      { path: '/employee/all', element: <Employee /> },
       { path: '/employee/add', element: <EmployeeForm /> },
+      { path: '/employee/:id/edit', element: <EmployeeForm /> },
 
       // Inventory
       { path: '/inventory', element: <Inventory /> },

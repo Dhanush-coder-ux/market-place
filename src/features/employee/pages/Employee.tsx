@@ -1,5 +1,6 @@
+import { Trash, X, UserCheck, UserX, Edit } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
-import { Trash, X, UserCheck, UserX } from "lucide-react";
 import EmployeeHeader from "../components/EmployeeHeader";
 import Table from "@/components/common/Table";
 import Drawer from "@/components/common/Drawer";
@@ -16,7 +17,7 @@ interface Column {
   render?: (value: any, row: EmployeeRecord) => ReactNode;
 }
 
-const EMPLOYEE_COLUMNS: Column[] = [
+const EMPLOYEE_COLUMNS = (navigate: (path: string) => void): Column[] => [
   { key: "name", label: "Name" },
   { key: "email", label: "Email" },
   { key: "mobile_number", label: "Mobile" },
@@ -31,9 +32,25 @@ const EMPLOYEE_COLUMNS: Column[] = [
       {v ? "Accepted" : "Pending"}
     </span>
   )},
+  {
+    key: "_actions",
+    label: "",
+    render: (_: any, row: EmployeeRecord) => (
+      <div className="flex items-center gap-1">
+        <button
+          onClick={(e) => { e.stopPropagation(); navigate(`/employee/${row.id}/edit`); }}
+          className="p-1.5 text-slate-400 hover:text-blue-500 hover:bg-blue-50 rounded-md transition-colors"
+          title="Edit"
+        >
+          <Edit size={15} />
+        </button>
+      </div>
+    ),
+  },
 ];
 
 const Employee = () => {
+  const navigate = useNavigate();
   const { getData, deleteData, loading, error, clearError } = useApi();
 
   const [employees, setEmployees] = useState<EmployeeRecord[]>([]);
@@ -113,7 +130,7 @@ const Employee = () => {
       ) : (
         <Table
           className="mt-5"
-          columns={EMPLOYEE_COLUMNS}
+          columns={EMPLOYEE_COLUMNS(navigate)}
           data={employees}
           onRowClick={(row) => handleRowClick(row)}
           selectedIds={selectedRows}
@@ -131,7 +148,7 @@ const Employee = () => {
           <DetailView
             title="Employee Details"
             sections={detailSections}
-            onEdit={() => console.log("Edit")}
+            onEdit={() => navigate(`/employee/${selectedItem.id}/edit`)}
             onDelete={async () => {
               if (!confirm("Delete this employee?")) return;
               await deleteData(`${ENDPOINTS.EMPLOYEES}/${selectedItem.shop_id}/${selectedItem.employee_id}`);

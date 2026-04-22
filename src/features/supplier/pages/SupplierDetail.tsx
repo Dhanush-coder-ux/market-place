@@ -6,7 +6,6 @@ import {
 } from "lucide-react";
 import { StatsCard } from "@/components/common/StatsCard";
 import { useApi } from "@/context/ApiContext";
-import { useInputBuilderContext } from "@/components/inputbuilders/context/InputBuilderContext";
 import { ENDPOINTS } from "@/services/endpoints";
 import Loader from "@/components/common/Loader";
 import type { SupplierRecord } from "@/types/api";
@@ -96,14 +95,11 @@ const SupplierDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { getData } = useApi();
-  const { fields, fetchSupplierFields } = useInputBuilderContext();
 
   const [supplier, setSupplier] = useState<SupplierRecord | null>(null);
   const [recordLoading, setRecordLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("General Info");
   const tabs = ["General Info"];
-
-  useEffect(() => { fetchSupplierFields(); }, []);
 
   useEffect(() => {
     if (!id) return;
@@ -134,12 +130,15 @@ const SupplierDetail = () => {
   const gstin = String(datas.gst ?? datas.gstin ?? datas.gst_number ?? "—");
   const address = String(datas.address ?? datas.location ?? datas.billing_address ?? "—");
 
-  // Build labeled field list from InputBuilder (visible fields only)
-  const infoFields = fields
-    ? Object.entries(fields)
-        .filter(([, def]) => def.view_mode === "SHOW")
-        .map(([key, def]) => ({ label: def.label_name, value: String(datas[key] ?? "—") }))
-    : Object.entries(datas).map(([k, v]) => ({ label: k, value: String(v ?? "—") }));
+  // Build static field list mapping to backend schema
+  const infoFields = [
+    { label: "Supplier Name", value: String(datas.supplier_name ?? "—") },
+    { label: "Contact Person", value: String(datas.contact_person ?? "—") },
+    { label: "Email", value: String(datas.email ?? "—") },
+    { label: "Phone", value: String(datas.phone ?? "—") },
+    { label: "City", value: String(datas.city ?? "—") },
+    { label: "Address", value: String(datas.address ?? "—") },
+  ];
 
   return (
     <div className="min-h-screen bg-gray-50/50 p-4 md:p-8 md:pt-10 font-sans selection:bg-blue-100">

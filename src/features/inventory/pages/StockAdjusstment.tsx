@@ -17,11 +17,14 @@ import Input from '@/components/ui/Input';
 import { ReusableSelect } from "@/components/ui/ReusableSelect";
 import { SearchSelect } from "@/components/inputbuilders/SearchSelect";
 import { inventoryApi } from "@/services/api/inventory";
+import { SHOP_ID } from "@/services/endpoints";
+import Loader from "@/components/common/Loader";
 
 // --- Type definitions ---
 interface AdjustmentItem {
   id: string;
   product: string;
+  barcode: string;
   currentStock: number;
   type: 'increase' | 'decrease';
   quantity: number | ''; 
@@ -49,6 +52,7 @@ export default function StockAdjustmentPage() {
     {
       id: 'item-1',
       product: 'Wireless Headphones',
+      barcode: '',
       currentStock: 34,
       type: 'decrease',
       quantity: 3,
@@ -58,6 +62,7 @@ export default function StockAdjustmentPage() {
     {
       id: 'item-2',
       product: 'Ergonomic Mouse',
+      barcode: '',
       currentStock: 28,
       type: 'increase',
       quantity: 5,
@@ -67,6 +72,11 @@ export default function StockAdjustmentPage() {
   ]);
   
   const [searchProduct, setSearchProduct] = useState('');
+  const [adjustmentDate, setAdjustmentDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [referenceNumber] = useState(`ADJ-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 10000)).padStart(4, '0')}`);
+  const [notes, setNotes] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   // --- Actions & Handlers ---
 
@@ -74,6 +84,7 @@ export default function StockAdjustmentPage() {
     const newItem: AdjustmentItem = {
       id: `item-${Date.now()}`,
       product: '',
+      barcode: '',
       currentStock: 0,
       type: 'decrease',
       quantity: 1,
@@ -100,7 +111,47 @@ export default function StockAdjustmentPage() {
     ));
   };
 
-  // --- Derived Data for Summary ---
+  const handleSubmit = async () => {
+    try {
+      setIsSubmitting(true);
+      setSubmitError(null);
+
+      // Map the products array to fit the backend expectation
+      const products = items.map(item => ({
+        id: item.id, // Or whichever ID corresponds to the actual product ID
+        name: item.product,
+        barcode: item.barcode,
+        currentStock: item.currentStock,
+        type: item.type === 'increase' ? 'INCREMENT' : 'DECREMENT',
+        quantity: item.quantity,
+        reason: item.reason,
+        notes: item.notes
+      }));
+
+      const payload = {
+        shop_id: SHOP_ID,
+        type: "STOCK_ADJUSTMENT",
+        date: adjustmentDate,
+        referenceNumber,
+        notes,
+        products
+      };
+
+      await inventoryApi.createStockAdjustment(payload);
+      
+      // Clear form on success
+      setItems([]);
+      setNotes('');
+      alert("Stock Adjustment saved successfully!");
+    } catch (err: any) {
+      console.error(err);
+      setSubmitError(err.message || "Failed to save adjustment.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // --- Derived State (Summary) ---
 
   const summary = useMemo(() => {
     let netChange = 0;
@@ -166,14 +217,14 @@ export default function StockAdjustmentPage() {
                 <Input 
                   label="Adjustment Date" 
                   type="date" 
-                  value="2025-03-14" 
+                  value={adjustmentDate} 
                   required 
-                  onChange={() => {}} 
+                  onChange={(e) => setAdjustmentDate(e.target.value)} 
                 />
                 <Input 
                   label="Reference Number" 
                   type="text" 
-                  value="ADJ-2025-0045" 
+                  value={referenceNumber} 
                   disabled 
                   onChange={() => {}} 
                 />
@@ -182,12 +233,20 @@ export default function StockAdjustmentPage() {
                 <div className="md:col-span-2 flex flex-col">
                   <label className="mb-1.5 text-[13px] font-semibold text-slate-700">Adjustment Notes</label>
                   <textarea 
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
                     placeholder="Reason for this adjustment (e.g., Physical inventory count revealed discrepancies...)" 
                     className="min-h-[80px] w-full resize-y rounded-lg border border-slate-300 px-4 py-3 text-sm text-slate-900 transition-all focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 placeholder:text-slate-400" 
                   />
                 </div>
               </div>
             </div>
+
+            {submitError && (
+              <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-600 shadow-sm">
+                <strong>Error:</strong> {submitError}
+              </div>
+            )}
 
             {/* Quick Add Product */}
             <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -264,7 +323,8 @@ export default function StockAdjustmentPage() {
                                  if (opt) {
                                     updateMultiple(item.id, { 
                                       product: opt.name || opt.label || String(val),
-                                      currentStock: opt.stocks ?? opt.stock ?? opt.currentStock ?? 0 
+                                      barcode: opt.barcode || '',
+                                      currentStock: opt.stocks || opt.stock || 0 
                                     });
                                  } else {
                                     updateItem(item.id, 'product', String(val));
@@ -408,8 +468,14 @@ export default function StockAdjustmentPage() {
 
             {/* Actions */}
             <div className="mt-2 flex flex-col gap-3">
-              <GradientButton variant="primary" icon={<Save className="h-5 w-5" />} className="h-[52px] w-full text-[15px] shadow-sm">
-                Save Adjustment
+              <GradientButton 
+                variant="primary" 
+                icon={isSubmitting ? <Loader className="h-5 w-5" /> : <Save className="h-5 w-5" />} 
+                className="h-[52px] w-full text-[15px] shadow-sm"
+                onClick={handleSubmit}
+                disabled={isSubmitting || items.length === 0}
+              >
+                {isSubmitting ? "Saving..." : "Save Adjustment"}
               </GradientButton>
               <GradientButton variant="outline" className="h-[52px] w-full text-[15px]">
                 Save as Draft

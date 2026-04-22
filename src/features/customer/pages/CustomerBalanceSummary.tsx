@@ -7,21 +7,17 @@ import Input from '@/components/ui/Input';
 import Loader from '@/components/common/Loader';
 import { GradientButton } from '@/components/ui/GradientButton';
 import { useApi } from '@/context/ApiContext';
-import { useInputBuilderContext } from '@/components/inputbuilders/context/InputBuilderContext';
 import { ENDPOINTS, SHOP_ID } from '@/services/endpoints';
 import type { CustomerRecord } from '@/types/api';
 
 export default function CustomerBalanceSummary() {
   const { getData, deleteData, loading, error, clearError } = useApi();
-  const { fields, fetchCustomerFields } = useInputBuilderContext();
 
   const [customers, setCustomers] = useState<CustomerRecord[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('All');
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
-
-  useEffect(() => { fetchCustomerFields(); }, []);
 
   useEffect(() => {
     const params: Record<string, string> = { limit: "50", offset: "1" };
@@ -42,13 +38,12 @@ export default function CustomerBalanceSummary() {
     return customers;
   }, [customers, statusFilter]);
 
-  // Derive visible field keys from InputBuilderContext for rendering datas
-  const visibleFields = useMemo(() => {
-    if (!fields) return [];
-    return Object.entries(fields)
-      .filter(([, def]) => def.view_mode === 'SHOW')
-      .slice(0, 4);
-  }, [fields]);
+  // Use static fields for rendering table columns
+  const visibleFields = [
+    { key: "company", label: "Company" },
+    { key: "email", label: "Email" },
+    { key: "city", label: "City" },
+  ];
 
   return (
     <div className="mx-auto min-h-screen">
@@ -103,8 +98,8 @@ export default function CustomerBalanceSummary() {
               <thead>
                 <tr className="bg-blue-50 text-gray-700 text-sm border-b border-gray-200">
                   <th className="px-6 py-4 font-semibold">Customer</th>
-                  {visibleFields.map(([fieldName, def]) => (
-                    <th key={fieldName} className="px-6 py-4 font-semibold">{def.label_name}</th>
+                  {visibleFields.map((def) => (
+                    <th key={def.key} className="px-6 py-4 font-semibold">{def.label}</th>
                   ))}
                   <th className="px-6 py-4 font-semibold text-right">Actions</th>
                 </tr>
@@ -122,14 +117,16 @@ export default function CustomerBalanceSummary() {
                       <tr className={`hover:bg-gray-50 transition ${expandedId === customer.id ? 'bg-gray-50' : ''}`}>
                         <td className="px-6 py-4">
                           <span className="font-semibold text-blue-600 text-base">
-                            {String(customer.datas?.name ?? customer.id)}
+                            {(customer.datas?.first_name || customer.datas?.last_name) 
+                              ? `${customer.datas?.first_name || ""} ${customer.datas?.last_name || ""}`.trim() 
+                              : customer.id}
                           </span>
                           <div className="text-sm text-gray-500 mt-0.5">{String(customer.datas?.phone ?? "—")}</div>
                           <div className="text-xs text-gray-400 mt-1">Shop: {customer.shop_id}</div>
                         </td>
-                        {visibleFields.map(([fieldName]) => (
-                          <td key={fieldName} className="px-6 py-4 text-gray-600">
-                            {String(customer.datas?.[fieldName] ?? "—")}
+                        {visibleFields.map((def) => (
+                          <td key={def.key} className="px-6 py-4 text-gray-600">
+                            {String(customer.datas?.[def.key] ?? "—")}
                           </td>
                         ))}
                         <td className="px-6 py-4 text-right">

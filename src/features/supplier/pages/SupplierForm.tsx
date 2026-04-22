@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { useApi } from "@/context/ApiContext";
 import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
+import { useParams, useNavigate } from "react-router-dom";
 
 export interface SupplierData {
   id: number;
@@ -23,21 +24,44 @@ interface SupplierFormProps {
 }
 
 const SupplierForm: React.FC<SupplierFormProps> = ({
-  initialData = {},
+  initialData: propInitialData = {},
   isLoading: externalLoading = false,
 }) => {
-  const { postData, loading } = useApi();
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const { postData, putData, getData, loading } = useApi();
   const isLoading = externalLoading || loading;
 
   const [formData, setFormData] = useState<SupplierData>({
-    id: initialData.id || 0,
-    supplier_name: initialData.supplier_name || "",
-    contact_person: initialData.contact_person || "",
-    email: initialData.email || "",
-    phone: initialData.phone || "",
-    address: initialData.address || "",
-    city: initialData.city || ""
+    id: Number(id) || propInitialData.id || 0,
+    supplier_name: propInitialData.supplier_name || "",
+    contact_person: propInitialData.contact_person || "",
+    email: propInitialData.email || "",
+    phone: propInitialData.phone || "",
+    address: propInitialData.address || "",
+    city: propInitialData.city || ""
   });
+
+  React.useEffect(() => {
+    if (id) {
+      const fetchSupplier = async () => {
+        const res = await getData(`${ENDPOINTS.SUPPLIERS}/${id}`);
+        if (res && res.data) {
+          const sup = res.data;
+          setFormData({
+            id: Number(id),
+            supplier_name: sup.supplier_name || sup.datas?.supplier_name || "",
+            contact_person: sup.contact_person || sup.datas?.contact_person || "",
+            email: sup.email || sup.datas?.email || "",
+            phone: sup.phone || sup.datas?.phone || "",
+            address: sup.address || sup.datas?.address || "",
+            city: sup.city || sup.datas?.city || ""
+          });
+        }
+      };
+      fetchSupplier();
+    }
+  }, [id]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type } = e.target;
@@ -50,10 +74,23 @@ const SupplierForm: React.FC<SupplierFormProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const payload = {
-      datas: {...formData,shop_id: SHOP_ID,
-      type: "SUPPLIER CREATE"},
+      datas: {
+        ...formData,
+        shop_id: SHOP_ID,
+        type: id ? "SUPPLIER UPDATE" : "SUPPLIER CREATE"
+      },
     };
-    await postData(ENDPOINTS.SUPPLIERS, payload);
+    
+    let res;
+    if (id) {
+      res = await putData(`${ENDPOINTS.SUPPLIERS}/${id}`, payload);
+    } else {
+      res = await postData(ENDPOINTS.SUPPLIERS, payload);
+    }
+
+    if (res) {
+      navigate("/supplier");
+    }
   };
 
   return (
@@ -139,7 +176,7 @@ const SupplierForm: React.FC<SupplierFormProps> = ({
           Cancel
         </button>
         <GradientButton type="submit" disabled={isLoading} >
-          {isLoading ? "Processing..." : "Register Supplier"}
+          {isLoading ? "Processing..." : (id ? "Update Supplier" : "Register Supplier")}
         </GradientButton>
       </div>
     </form>

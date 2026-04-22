@@ -11,6 +11,7 @@ import { GradientButton } from "@/components/ui/GradientButton";
 import Input from "@/components/ui/Input";
 import { useApi } from "@/context/ApiContext";
 import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
+import { useParams, useNavigate } from "react-router-dom";
 
 /* ═══════════════════════════════════════════════════════
    TYPES
@@ -917,32 +918,71 @@ interface ProductFormProps {
   isLoading?: boolean;
 }
 
-const ProductForm: React.FC<ProductFormProps> = ({ initialData = {}, isLoading: externalLoading = false }) => {
-  const { postData, loading } = useApi();
+const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData = {}, isLoading: externalLoading = false }) => {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const { postData, putData, getData, loading } = useApi();
   const isLoading = externalLoading || loading;
   // Core form
   const [form, setForm] = useState<FormData>({
-    name: (initialData.name as string) || "",
-    stocks: (initialData.stocks as number) || 0,
-    serial_number: (initialData.serial_number as string) || "",
-    barcode: (initialData.barcode as string) || "",
-    brand: (initialData.brand as string) || "",
-    category: (initialData.category as string) || "",
-    unit: (initialData.unit as string) || "Piece (pcs)",
-    description: (initialData.description as string) || "",
-    is_active: (initialData.is_active as boolean) ?? true,
-    buy_price: (initialData.cost_price as string) || "",
-    sell_price: (initialData.selling_price as string) || "",
-    mrp: (initialData.mrp as string) || "",
-    gst: (initialData.gst as string) || "18%",
-    hsn: (initialData.hsn as string) || "",
-    supplier: (initialData.supplier as string) || "",
-    opening_stock: (initialData.opening_stock as string) || "",
-    reorder_point: (initialData.reorder_point as string) || "5",
-    max_stock: (initialData.max_stock as string) || "",
-    location: (initialData.location as string) || "",
+    name: (propInitialData.name as string) || "",
+    stocks: (propInitialData.stocks as number) || 0,
+    serial_number: (propInitialData.serial_number as string) || "",
+    barcode: (propInitialData.barcode as string) || "",
+    brand: (propInitialData.brand as string) || "",
+    category: (propInitialData.category as string) || "",
+    unit: (propInitialData.unit as string) || "Piece (pcs)",
+    description: (propInitialData.description as string) || "",
+    is_active: (propInitialData.is_active as boolean) ?? true,
+    buy_price: (propInitialData.cost_price as string) || "",
+    sell_price: (propInitialData.selling_price as string) || "",
+    mrp: (propInitialData.mrp as string) || "",
+    gst: (propInitialData.gst as string) || "18%",
+    hsn: (propInitialData.hsn as string) || "",
+    supplier: (propInitialData.supplier as string) || "",
+    opening_stock: (propInitialData.opening_stock as string) || "",
+    reorder_point: (propInitialData.reorder_point as string) || "5",
+    max_stock: (propInitialData.max_stock as string) || "",
+    location: (propInitialData.location as string) || "",
     has_variants: false,
   });
+
+  useEffect(() => {
+    if (id) {
+      const fetchProduct = async () => {
+        const res = await getData(`${ENDPOINTS.INVENTORIES}/${id}`);
+        if (res && res.data) {
+          const prod = res.data;
+          const datas = prod.datas || {};
+          setForm({
+            name: prod.name || datas.name || "",
+            stocks: prod.stocks || datas.stocks || 0,
+            serial_number: prod.serial_number || datas.serial_number || "",
+            barcode: prod.barcode || datas.barcode || "",
+            brand: prod.brand || datas.brand || "",
+            category: prod.category || datas.category || "",
+            unit: prod.unit || datas.unit || "Piece (pcs)",
+            description: prod.description || datas.description || "",
+            is_active: prod.is_active ?? datas.is_active ?? true,
+            buy_price: String(prod.buy_price || datas.buy_price || ""),
+            sell_price: String(prod.sell_price || datas.sell_price || ""),
+            mrp: String(datas.mrp || ""),
+            gst: String(datas.gst || "18%"),
+            hsn: String(datas.hsn || ""),
+            supplier: datas.supplier || "",
+            opening_stock: String(datas.opening_stock || ""),
+            reorder_point: String(datas.reorder_point || "5"),
+            max_stock: String(datas.max_stock || ""),
+            location: datas.location || "",
+            has_variants: !!datas.has_variants,
+          });
+          if (datas.variantTypes) setVariantTypes(datas.variantTypes);
+          if (datas.combinations) setCombinations(datas.combinations);
+        }
+      };
+      fetchProduct();
+    }
+  }, [id]);
 
   const [variantTypes, setVariantTypes] = useState<VariantType[]>([]);
   const [combinations, setCombinations] = useState<VariantCombination[]>([]);
@@ -994,20 +1034,28 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData = {}, isLoading: 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const payload = {
-      
       datas: { 
         ...form, 
         variantTypes, 
         combinations,
         shop_id: SHOP_ID,
-        type: "PRODUCT CREATE" 
+        type: id ? "PRODUCT UPDATE" : "PRODUCT CREATE" 
       },
     };
-    console.log("PAYLOAD",payload);
-    const res = await postData(ENDPOINTS.INVENTORIES, payload);
+    
+    let res;
+    if (id) {
+      res = await putData(`${ENDPOINTS.INVENTORIES}/${id}`, payload);
+    } else {
+      res = await postData(ENDPOINTS.INVENTORIES, payload);
+    }
+
     if (res) {
       setSavedNotice(true);
-      setTimeout(() => setSavedNotice(false), 2500);
+      setTimeout(() => {
+        setSavedNotice(false);
+        navigate("/product");
+      }, 1500);
     }
   };
 
@@ -1108,28 +1156,42 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData = {}, isLoading: 
                 title="Pricing & Sourcing"
                 subtitle="Cost structure, tax, and supplier"
               />
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                <InputField
-                  label="Cost Price" name="buy_price" required
-                  type="number" leftEl="₹"
-                  value={form.buy_price} onChange={handleChange}
-                  placeholder="0.00"
-                />
-                <InputField
-                  label="Selling Price" name="sell_price" required
-                  type="number" leftEl="₹"
-                  value={form.sell_price} onChange={handleChange}
-                  placeholder="0.00"
-                />
-                <div>
-                  <Label text="Profit Margin" />
-                  <div className="flex items-center justify-between px-3 py-2.5 border border-slate-200 rounded-lg bg-slate-50 text-sm">
-                    <span className="font-medium text-slate-700">₹{marginStats.profit.toLocaleString()}</span>
-                    <span className={`px-2 py-0.5 rounded text-xs font-semibold ${marginStats.profit >= 0 ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-600"}`}>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="space-y-1.5">
+                  <InputField
+                    label="Cost Price (Buy)" name="buy_price" required
+                    type="number" leftEl="₹"
+                    className="!bg-slate-50/50"
+                    value={form.buy_price} onChange={handleChange}
+                    placeholder="0.00"
+                  />
+                  <p className="text-[10px] text-slate-400 ml-1">Purchase cost per unit</p>
+                </div>
+                
+                <div className="space-y-1.5">
+                  <InputField
+                    label="Selling Price" name="sell_price" required
+                    type="number" leftEl="₹"
+                    className="!font-bold !text-emerald-700 !bg-emerald-50/30 !border-emerald-100 focus:!border-emerald-400 focus:!ring-emerald-100"
+                    value={form.sell_price} onChange={handleChange}
+                    placeholder="0.00"
+                  />
+                  <p className="text-[10px] text-emerald-600/70 ml-1 font-medium">Final price for customers</p>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label text="Estimated Margin" />
+                  <div className="flex items-center justify-between px-4 py-2.5 border border-slate-200 rounded-xl bg-slate-50/80 shadow-inner h-[42px]">
+                    <span className="font-bold text-slate-700">₹{marginStats.profit.toLocaleString()}</span>
+                    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${marginStats.profit >= 0 ? "bg-emerald-500 text-white shadow-sm" : "bg-red-500 text-white shadow-sm"}`}>
                       {marginStats.pct}%
                     </span>
                   </div>
+                  <p className="text-[10px] text-slate-400 ml-1">Profit share per unit</p>
                 </div>
+              </div>
+
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-6 mt-6">
                 <InputField
                   label="MRP" name="mrp" type="number" leftEl="₹"
                   value={form.mrp} onChange={handleChange}
@@ -1366,7 +1428,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData = {}, isLoading: 
                   <div className="space-y-2">
                   <GradientButton icon={<Save size={15} />} className="w-full">
                   
-                    {isLoading ? "Saving…" : "Save Product"}
+                    {isLoading ? (id ? "Updating..." : "Registering...") : (id ? "Update Product" : "Register Product")}
                   </GradientButton>
                   <GradientButton variant="outline" icon={<Save size={15} />} className="w-full">
                     Save as Draft

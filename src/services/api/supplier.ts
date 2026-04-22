@@ -19,7 +19,12 @@ export const supplierApi = {
   searchSuppliers: async (query: string): Promise<any[]> => {
     try {
       const response = await apiClient.get(`${ENDPOINTS.SUPPLIERS}/search`, { q: query, limit: "10" });
-      return response.datas || [];
+      const suppliers = response.data || [];
+      return suppliers.map((s: any) => ({
+        ...s.datas,
+        id: s.id,
+        name: s.datas?.supplier_name || s.datas?.name || "Unknown Supplier"
+      }));
     } catch {
       return [];
     }

@@ -3,16 +3,17 @@ import { GradientButton } from "@/components/ui/GradientButton";
 import { SearchSelect } from "@/components/inputbuilders/SearchSelect";
 import { useNavigate } from "react-router-dom";
 import { useApi } from "@/context/ApiContext";
-import { ENDPOINTS } from "@/services/endpoints";
+import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 
-const CustomerList = () => {
+const EmployeeSearch = () => {
   const navigate = useNavigate();
   const { getData, error, clearError } = useApi();
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-end items-center">
-        <GradientButton path="/customers/add">+ Add Customer</GradientButton>
+      <div className="flex justify-end items-center gap-3">
+        <GradientButton path="/employee/all" variant="outline">View All Employees</GradientButton>
+        <GradientButton path="/employee/add">+ Add Employee</GradientButton>
       </div>
 
       {error && (
@@ -24,19 +25,19 @@ const CustomerList = () => {
 
       <div className="bg-white rounded-3xl border border-blue-100 shadow-xl overflow-hidden flex flex-col p-12">
         <div className="w-full max-w-xl mx-auto flex flex-col items-center space-y-4">
-          <h2 className="text-xl font-bold text-slate-700">Find a Customer</h2>
-          <p className="text-slate-500 text-sm text-center mb-4">Search by name or ID to view their profile, history, and payment details.</p>
+          <h2 className="text-xl font-bold text-slate-700">Find an Employee</h2>
+          <p className="text-slate-500 text-sm text-center mb-4">Search by name or email to view employee profiles, roles, and status.</p>
           <SearchSelect
             labelKey="displayName"
             valueKey="id"
             fetchOptions={async (q) => {
               if (!q) return [];
               try {
-                const res = await getData(ENDPOINTS.CUSTOMERS, { limit: "8", offset: "1", q });
+                const res = await getData(ENDPOINTS.EMPLOYEES, { limit: "8", offset: "1", q, shop_id: SHOP_ID });
                 const data = res?.data ? (Array.isArray(res.data) ? res.data : [res.data]) : [];
-                return data.map((c: any) => ({
-                  ...c,
-                  displayName: String(c.datas?.name ?? c.datas?.full_name ?? c.datas?.customer_name ?? c.id)
+                return data.map((e: any) => ({
+                  ...e,
+                  displayName: String(e.datas?.name ?? e.name ?? e.email ?? e.id)
                 }));
               } catch {
                 return [];
@@ -44,10 +45,14 @@ const CustomerList = () => {
             }}
             onChange={(val) => {
               if (val) {
-                navigate(`/customers/${val}`);
+                // For employees, we might open the drawer in the list page, but since this is a search page,
+                // we should probably navigate to a detail page if it exists, or the list page with the ID.
+                // Currently /employee is the list. Let's navigate to the list with the ID as a param if needed,
+                // or just navigate to the employee page.
+                navigate(`/employee?id=${val}`);
               }
             }}
-            placeholder="Search and select a customer..."
+            placeholder="Search and select an employee..."
             className="w-full h-12"
           />
         </div>
@@ -56,4 +61,4 @@ const CustomerList = () => {
   );
 };
 
-export default CustomerList;
+export default EmployeeSearch;

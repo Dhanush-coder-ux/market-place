@@ -5,14 +5,15 @@ import { useNavigate } from "react-router-dom";
 import { useApi } from "@/context/ApiContext";
 import { ENDPOINTS } from "@/services/endpoints";
 
-const CustomerList = () => {
+const SupplierSearch = () => {
   const navigate = useNavigate();
   const { getData, error, clearError } = useApi();
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-end items-center">
-        <GradientButton path="/customers/add">+ Add Customer</GradientButton>
+      <div className="flex justify-end items-center gap-3">
+        <GradientButton path="/supplier/all" variant="outline">View All Suppliers</GradientButton>
+        <GradientButton path="/supplier/add">+ Add Supplier</GradientButton>
       </div>
 
       {error && (
@@ -24,19 +25,19 @@ const CustomerList = () => {
 
       <div className="bg-white rounded-3xl border border-blue-100 shadow-xl overflow-hidden flex flex-col p-12">
         <div className="w-full max-w-xl mx-auto flex flex-col items-center space-y-4">
-          <h2 className="text-xl font-bold text-slate-700">Find a Customer</h2>
-          <p className="text-slate-500 text-sm text-center mb-4">Search by name or ID to view their profile, history, and payment details.</p>
+          <h2 className="text-xl font-bold text-slate-700">Find a Supplier</h2>
+          <p className="text-slate-500 text-sm text-center mb-4">Search by supplier name or contact person to view profiles, outstanding balances, and purchase history.</p>
           <SearchSelect
             labelKey="displayName"
             valueKey="id"
             fetchOptions={async (q) => {
               if (!q) return [];
               try {
-                const res = await getData(ENDPOINTS.CUSTOMERS, { limit: "8", offset: "1", q });
+                const res = await getData(ENDPOINTS.SUPPLIERS, { limit: "8", offset: "1", q });
                 const data = res?.data ? (Array.isArray(res.data) ? res.data : [res.data]) : [];
-                return data.map((c: any) => ({
-                  ...c,
-                  displayName: String(c.datas?.name ?? c.datas?.full_name ?? c.datas?.customer_name ?? c.id)
+                return data.map((s: any) => ({
+                  ...s,
+                  displayName: String(s.datas?.supplier_name ?? s.supplier_name ?? s.id)
                 }));
               } catch {
                 return [];
@@ -44,10 +45,10 @@ const CustomerList = () => {
             }}
             onChange={(val) => {
               if (val) {
-                navigate(`/customers/${val}`);
+                navigate(`/supplier/${val}`);
               }
             }}
-            placeholder="Search and select a customer..."
+            placeholder="Search and select a supplier..."
             className="w-full h-12"
           />
         </div>
@@ -56,4 +57,4 @@ const CustomerList = () => {
   );
 };
 
-export default CustomerList;
+export default SupplierSearch;

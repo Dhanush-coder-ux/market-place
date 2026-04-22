@@ -9,6 +9,7 @@ import {
   ChevronDown,
   SlidersHorizontal,
   Trash2,
+  Edit,
 } from "lucide-react";
 
 import Table from "@/components/common/Table";
@@ -17,7 +18,6 @@ import ImportExportFloatingCard from "@/components/common/ImportExportCard";
 import SearchActionCard from "@/components/ui/SearchActionCard";
 import Loader from "@/components/common/Loader";
 import { useApi } from "@/context/ApiContext";
-import { useInputBuilderContext } from "@/components/inputbuilders/context/InputBuilderContext";
 import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 import type { ProductRecord } from "@/types/api";
 import type { ReactNode } from "react";
@@ -37,7 +37,6 @@ const STOCK_FILTERS = [
 const Product = () => {
   const navigate = useNavigate();
   const { getData, deleteData, loading, error, clearError } = useApi();
-  const { fields, fetchProductFields } = useInputBuilderContext();
 
   const [products, setProducts] = useState<ProductRecord[]>([]);
   const [open, setOpen] = useState(false);
@@ -47,10 +46,6 @@ const Product = () => {
   const [refreshKey, setRefreshKey] = useState(0);
 
   const filterRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    fetchProductFields();
-  }, []);
 
   useEffect(() => {
     const params: Record<string, string> = { limit: "50", offset: "0" };
@@ -76,32 +71,33 @@ const Product = () => {
     setRefreshKey((k) => k + 1);
   };
 
-  const dynamicColumns: Column[] = fields
-    ? Object.entries(fields)
-        .filter(([, def]) => def.view_mode === "SHOW")
-        .map(([fieldName, def]) => ({
-          key: fieldName,
-          label: def.label_name,
-          render: (_: any, row: ProductRecord) => String(row.datas?.[fieldName] ?? "—"),
-        }))
-    : [
-        { key: "barcode", label: "Barcode", render: (_: any, row: ProductRecord) => row.barcode },
-        { key: "id", label: "ID", render: (_: any, row: ProductRecord) => row.id },
-      ];
-
   const columns: Column[] = [
-    ...dynamicColumns,
+    { key: "name", label: "Name", render: (_: any, row: ProductRecord) => String(row.datas?.name ?? "—") },
+    { key: "category", label: "Category", render: (_: any, row: ProductRecord) => String(row.datas?.category ?? "—") },
+    { key: "brand", label: "Brand", render: (_: any, row: ProductRecord) => String(row.datas?.brand ?? "—") },
+    { key: "buy_price", label: "Buy Price", render: (_: any, row: ProductRecord) => String(row.datas?.buy_price ?? "—") },
+    { key: "sell_price", label: "Sell Price", render: (_: any, row: ProductRecord) => String(row.datas?.sell_price ?? "—") },
+    { key: "stocks", label: "Stock", render: (_: any, row: ProductRecord) => String(row.datas?.stocks ?? "—") },
     {
       key: "_actions",
       label: "",
       render: (_: any, row: ProductRecord) => (
-        <button
-          onClick={(e) => { e.stopPropagation(); handleDelete(row.id); }}
-          className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-md transition-colors"
-          title="Delete"
-        >
-          <Trash2 size={15} />
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={(e) => { e.stopPropagation(); navigate(`/product/${row.id}/edit`); }}
+            className="p-1.5 text-slate-400 hover:text-blue-500 hover:bg-blue-50 rounded-md transition-colors"
+            title="Edit"
+          >
+            <Edit size={15} />
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); handleDelete(row.id); }}
+            className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-md transition-colors"
+            title="Delete"
+          >
+            <Trash2 size={15} />
+          </button>
+        </div>
       ),
     },
   ];

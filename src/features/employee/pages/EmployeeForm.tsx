@@ -9,6 +9,7 @@ import { GradientButton } from "@/components/ui/GradientButton";
 import { Required } from "@/components/ui/Require";
 import { useApi } from "@/context/ApiContext";
 import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
+import { useParams, useNavigate } from "react-router-dom";
 
 const roleOptions = [
   { label: "Admin", value: "admin" },
@@ -19,7 +20,9 @@ const roleOptions = [
 
 
 const EmployeeForm: React.FC = () => {
-  const { postData, loading } = useApi();
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const { postData, putData, getData, loading } = useApi();
   // --- State Management ---
   const [name, setName] = React.useState<string>("");
   const [email, setEmail] = React.useState<string>("");
@@ -28,6 +31,23 @@ const EmployeeForm: React.FC = () => {
   const [address, setAddress] = React.useState<string>("");
   const [joinDate, setJoinDate] = React.useState<string>("");
   
+  React.useEffect(() => {
+    if (id) {
+      const fetchEmployee = async () => {
+        const res = await getData(`${ENDPOINTS.EMPLOYEES}/${id}`);
+        if (res && res.data) {
+          const emp = res.data;
+          setName(emp.name || emp.datas?.name || "");
+          setEmail(emp.email || emp.datas?.email || "");
+          setRole(emp.role || emp.datas?.role || "");
+          setPhone(emp.mobile_number || emp.datas?.mobile_number || "");
+          setAddress(emp.address || emp.datas?.address || "");
+          setJoinDate(emp.joinDate || emp.datas?.joinDate || "");
+        }
+      };
+      fetchEmployee();
+    }
+  }, [id]);
 
   const [errors, setErrors] = React.useState({ name: false, email: false, role: false });
 
@@ -45,11 +65,30 @@ const EmployeeForm: React.FC = () => {
     }
 
     const payload = {
-      
-      datas: { name, email, role, mobile_number:phone, address, joinDate,shop_id: SHOP_ID,
-      type: "EMPLOYEE CREATE" }
+      datas: { 
+        name, 
+        email, 
+        role, 
+        mobile_number: phone, 
+        address, 
+        joinDate, 
+        shop_id: SHOP_ID,
+        type: id ? "EMPLOYEE UPDATE" : "EMPLOYEE CREATE" 
+      }
     };
-    await postData(ENDPOINTS.EMPLOYEES, payload);
+
+    let res;
+    if (id) {
+      res = await putData(`${ENDPOINTS.EMPLOYEES}/${id}`, payload);
+    } else {
+      res = await postData(ENDPOINTS.EMPLOYEES, payload);
+    }
+
+    if (res && action === "save") {
+      navigate("/employee");
+    } else if (res && action === "add_more") {
+      setName(""); setEmail(""); setRole(""); setPhone(""); setAddress(""); setJoinDate("");
+    }
   };
 
   return (
@@ -217,7 +256,7 @@ const EmployeeForm: React.FC = () => {
             className="min-w-[140px] shadow-lg shadow-emerald-100"
             disabled={loading}
           >
-            {loading ? "Creating..." : "Create Employee"}
+            {loading ? (id ? "Updating..." : "Creating...") : (id ? "Update Employee" : "Create Employee")}
           </GradientButton>
         </div>
       </div>

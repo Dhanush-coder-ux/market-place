@@ -1,28 +1,22 @@
 import { useState, useEffect } from "react";
 import Table from "@/components/common/Table";
-import { Search, Trash2, X } from "lucide-react";
+import { Search, Trash2, X, Edit } from "lucide-react";
 import { GradientButton } from "@/components/ui/GradientButton";
 import Input from "@/components/ui/Input";
 import { useNavigate } from "react-router-dom";
 import Loader from "@/components/common/Loader";
 import { useApi } from "@/context/ApiContext";
-import { useInputBuilderContext } from "@/components/inputbuilders/context/InputBuilderContext";
 import { ENDPOINTS } from "@/services/endpoints";
 import type { SupplierRecord } from "@/types/api";
 
 const Supplier = () => {
   const navigate = useNavigate();
   const { getData, deleteData, loading, error, clearError } = useApi();
-  const { fields, fetchSupplierFields } = useInputBuilderContext();
 
   const [suppliers, setSuppliers] = useState<SupplierRecord[]>([]);
   const [selectedIds, setSelectedIds] = useState<(string | number)[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [refreshKey, setRefreshKey] = useState(0);
-
-  useEffect(() => {
-    fetchSupplierFields();
-  }, []);
 
   useEffect(() => {
     const params: Record<string, string> = { limit: "50", offset: "1" };
@@ -45,29 +39,32 @@ const Supplier = () => {
     setRefreshKey((k) => k + 1);
   };
 
-  const dynamicColumns = fields
-    ? Object.entries(fields)
-        .filter(([, def]) => def.view_mode === "SHOW")
-        .map(([fieldName, def]) => ({
-          key: fieldName,
-          label: def.label_name,
-          render: (_: any, row: SupplierRecord) => String(row.datas?.[fieldName] ?? "—"),
-        }))
-    : [{ key: "id", label: "ID", render: (_: any, row: SupplierRecord) => row.id }];
-
   const columns = [
-    ...dynamicColumns,
+    { key: "supplier_name", label: "Supplier Name", render: (_: any, row: SupplierRecord) => String(row.datas?.supplier_name ?? "—") },
+    { key: "contact_person", label: "Contact Person", render: (_: any, row: SupplierRecord) => String(row.datas?.contact_person ?? "—") },
+    { key: "email", label: "Email", render: (_: any, row: SupplierRecord) => String(row.datas?.email ?? "—") },
+    { key: "phone", label: "Phone", render: (_: any, row: SupplierRecord) => String(row.datas?.phone ?? "—") },
+    { key: "city", label: "City", render: (_: any, row: SupplierRecord) => String(row.datas?.city ?? "—") },
     {
       key: "_actions",
       label: "",
       render: (_: any, row: SupplierRecord) => (
-        <button
-          onClick={(e) => { e.stopPropagation(); handleDelete(row.id); }}
-          className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-md transition-colors"
-          title="Delete"
-        >
-          <Trash2 size={15} />
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={(e) => { e.stopPropagation(); navigate(`/supplier/${row.id}/edit`); }}
+            className="p-1.5 text-slate-400 hover:text-blue-500 hover:bg-blue-50 rounded-md transition-colors"
+            title="Edit"
+          >
+            <Edit size={15} />
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); handleDelete(row.id); }}
+            className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-md transition-colors"
+            title="Delete"
+          >
+            <Trash2 size={15} />
+          </button>
+        </div>
       ),
     },
   ];

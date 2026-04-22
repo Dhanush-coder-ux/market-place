@@ -38,24 +38,27 @@ const MOVEMENT_TYPES = ["All", "PURCHASE", "PO_PURCHASE", "SALES", "TRANSFER", "
 const STATUSES = ["All", "Completed", "Pending"];
 
 function purchaseToMovements(records: PurchaseRecord[], movType: MovementType): Movement[] {
-  return records.map(p => {
-    const products = (p.datas?.purchase_products ?? p.datas?.grn_products ?? p.datas?.finished_products) as any[] | undefined;
-    const first = products?.[0];
-    const dateStr = String(p.datas?.purchase_date ?? p.datas?.production_date ?? p.datas?.receipt_date ?? new Date().toISOString());
-    return {
-      id: p.id.slice(0, 8).toUpperCase(),
-      product: String(first?.product_name ?? first?.name ?? "—"),
-      sku: String(first?.barcode ?? p.id.slice(0, 8)),
-      type: movType,
-      qty: Number(first?.quantity ?? first?.qty ?? 1),
-      source: "Supplier",
-      destination: "Warehouse",
-      ref: p.id.slice(0, 8).toUpperCase(),
-      date: dateStr.includes("T") ? dateStr : dateStr + "T00:00:00",
-      status: "Completed" as StatusType,
-      user: "Admin",
-      notes: "",
-    };
+  return records.flatMap(p => {
+    const products = (p.datas?.purchase_products ?? p.datas?.grn_products ?? p.datas?.finished_products ?? p.datas?.products) as any[] | undefined;
+    if (!products || products.length === 0) return [];
+    
+    return products.map(prod => {
+      const dateStr = String(p.datas?.purchaseDetails?.date ?? p.datas?.purchase_date ?? p.datas?.production_date ?? p.datas?.receipt_date ?? p.date ?? new Date().toISOString());
+      return {
+        id: p.id.slice(0, 8).toUpperCase(),
+        product: String(prod?.product_name ?? prod?.name ?? "—"),
+        sku: String(prod?.barcode ?? p.id.slice(0, 8)),
+        type: movType,
+        qty: Number(prod?.quantity ?? prod?.qty ?? 1),
+        source: "Supplier",
+        destination: "Warehouse",
+        ref: String(p.datas?.purchaseDetails?.referenceNo ?? p.datas?.purchaseDetails?.invoiceNo ?? p.id.slice(0, 8).toUpperCase()),
+        date: dateStr.includes("T") ? dateStr : dateStr + "T00:00:00",
+        status: "Completed" as StatusType,
+        user: String(p.added_by || "Admin"),
+        notes: p.datas?.purchaseDetails?.invoiceNo ? `Invoice: ${p.datas.purchaseDetails.invoiceNo}` : "",
+      };
+    });
   });
 }
 
@@ -291,24 +294,29 @@ export default function StockMovementPage() {
 
       const adjRes = await getData(ENDPOINTS.S_ADJUSTMENTS, { shop_id: SHOP_ID, limit: "50", offset: "1" });
       const adjMovements: Movement[] = adjRes
-        ? (Array.isArray(adjRes.data) ? adjRes.data : [adjRes.data]).map((a: any) => {
+        ? (Array.isArray(adjRes.data) ? adjRes.data : [adjRes.data]).flatMap((a: any) => {
             const products = (a.datas?.products ?? a.datas?.adjustment_products) as any[] | undefined;
-            const first = products?.[0];
-            const dateStr = String(a.datas?.adjustment_date ?? new Date().toISOString());
-            return {
-              id: a.id.slice(0, 8).toUpperCase(),
-              product: String(first?.product_name ?? first?.name ?? "—"),
-              sku: String(first?.barcode ?? a.id.slice(0, 8)),
-              type: "STOCK_ADJUSTMENT" as MovementType,
-              qty: Number(first?.quantity ?? 0),
-              source: "Stock",
-              destination: "Adjusted",
-              ref: a.id.slice(0, 8).toUpperCase(),
-              date: dateStr.includes("T") ? dateStr : dateStr + "T00:00:00",
-              status: "Completed" as StatusType,
-              user: "Admin",
-              notes: "",
-            };
+            if (!products || products.length === 0) return [];
+            
+            return products.map(prod => {
+              const dateStr = String(a.datas?.date ?? a.date ?? new Date().toISOString());
+              const isDecrement = prod.type === 'DECREMENT' || prod.type === 'decrease';
+              const qty = Number(prod?.quantity ?? 0);
+              return {
+                id: a.id.slice(0, 8).toUpperCase(),
+                product: String(prod?.product_name ?? prod?.name ?? "—"),
+                sku: String(prod?.barcode ?? a.id.slice(0, 8)),
+                type: "STOCK_ADJUSTMENT" as MovementType,
+                qty: isDecrement ? -qty : qty,
+                source: "Stock",
+                destination: "Adjusted",
+                ref: String(a.datas?.referenceNumber ?? a.id.slice(0, 8).toUpperCase()),
+                date: dateStr.includes("T") ? dateStr : dateStr + "T00:00:00",
+                status: "Completed" as StatusType,
+                user: String(a.added_by || "Admin"),
+                notes: prod.reason ? `Reason: ${prod.reason}` : "",
+              };
+            });
           })
         : [];
 

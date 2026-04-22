@@ -9,7 +9,7 @@ import {
   VariantCombination,
 } from "@/components/inputbuilders/ProductVaireintSection"
 import { useApi } from "@/context/ApiContext";
-import { ENDPOINTS } from "@/services/endpoints";
+import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 import "@/components/FormRender.css";
 
 const LoadingSpinner = () => (
@@ -86,6 +86,10 @@ export const ProductForm: React.FC = () => {
     const body = {
       id,
       barcode,
+      stocks:values.stocks,
+      shop_id:SHOP_ID,
+      sell_price:values.sell_price,
+      buy_price:values.buy_price,
       datas: {
         ...values,
         variantTypes,   // ← included in payload
@@ -93,8 +97,8 @@ export const ProductForm: React.FC = () => {
       },
     };
     const res = isEditMode
-      ? await putData(`${ENDPOINTS.PRODUCTS}`, body)
-      : await postData(ENDPOINTS.PRODUCTS, body);
+      ? await postData(ENDPOINTS.INVENTORIES, body)
+      : await postData(ENDPOINTS.INVENTORIES, body);
     if (res) navigate(isEditMode ? `/product/${id}` : "/product");
   };
 

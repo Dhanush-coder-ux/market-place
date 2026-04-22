@@ -41,6 +41,35 @@ export interface CustomerRecord {
   datas: Record<string, unknown>;
 }
 
+export interface InventoryDatas {
+  name?: string;
+  description?: string;
+  variants?: Array<{
+    id: string;
+    name: string;
+    sku: string;
+    buyPrice: number;
+    sellPrice: number;
+    stock: number;
+    batchTracking?: boolean;
+    batches?: Array<{
+      id: string;
+      batchNo: string;
+      mfgDate: string;
+      expDate: string;
+      stock: number;
+    }>;
+  }>;
+  batches?: Array<{
+    id: string;
+    batchNo: string;
+    mfgDate: string;
+    expDate: string;
+    stock: number;
+  }>;
+  [key: string]: unknown; // allow any extra fields from the API
+}
+
 export interface InventoryRecord {
   id: string;
   shop_id: string;
@@ -48,7 +77,7 @@ export interface InventoryRecord {
   stocks: number;
   buy_price: number;
   sell_price: number;
-  datas?: Record<string, unknown>;
+  datas?: InventoryDatas;
 }
 
 export interface OrderRecord {

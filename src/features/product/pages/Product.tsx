@@ -18,7 +18,7 @@ import SearchActionCard from "@/components/ui/SearchActionCard";
 import Loader from "@/components/common/Loader";
 import { useApi } from "@/context/ApiContext";
 import { useInputBuilderContext } from "@/components/inputbuilders/context/InputBuilderContext";
-import { ENDPOINTS } from "@/services/endpoints";
+import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 import type { ProductRecord } from "@/types/api";
 import type { ReactNode } from "react";
 
@@ -53,9 +53,9 @@ const Product = () => {
   }, []);
 
   useEffect(() => {
-    const params: Record<string, string> = { limit: "50", offset: "1" };
+    const params: Record<string, string> = { limit: "50", offset: "0" };
     if (searchQuery) params.q = searchQuery;
-    getData(ENDPOINTS.PRODUCTS, params).then((res) => {
+    getData(`${ENDPOINTS.INVENTORIES}?shop_id=${SHOP_ID}`).then((res) => {
       if (res) setProducts(Array.isArray(res.data) ? res.data : [res.data]);
     });
   }, [refreshKey, searchQuery]);
@@ -72,7 +72,7 @@ const Product = () => {
 
   const handleDelete = async (id: string) => {
     if (!confirm("Delete this product?")) return;
-    await deleteData(`${ENDPOINTS.PRODUCTS}/${id}`);
+    await deleteData(`${ENDPOINTS.INVENTORIES}/${id}`);
     setRefreshKey((k) => k + 1);
   };
 

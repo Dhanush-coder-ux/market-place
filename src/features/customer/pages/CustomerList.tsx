@@ -36,7 +36,7 @@ const CustomerList = () => {
                 const data = res?.data ? (Array.isArray(res.data) ? res.data : [res.data]) : [];
                 return data.map((c: any) => ({
                   ...c,
-                  displayName: String(c.datas?.name ?? c.datas?.full_name ?? c.datas?.customer_name ?? c.id)
+                  displayName: String(c.datas?.first_name ? `${c.datas.first_name} ${c.datas.last_name || ''}`.trim() : (c.first_name ? `${c.first_name} ${c.last_name || ''}`.trim() : (c.company || c.datas?.company || c.id)))
                 }));
               } catch {
                 return [];

@@ -1,37 +1,47 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
-  Phone, Globe, MapPin, Mail, ShoppingBag, CreditCard,
-  History, Info, Package, CheckCircle2, Search, Edit2, X,
+  Phone, MapPin, Mail, History, CheckCircle2,
+  Search, Edit2, X, User, Briefcase, Shield, LucideIcon
 } from "lucide-react";
 import { StatsCard } from "@/components/common/StatsCard";
 import { useApi } from "@/context/ApiContext";
-import { ENDPOINTS } from "@/services/endpoints";
+import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 import Loader from "@/components/common/Loader";
-import type { SupplierRecord } from "@/types/api";
+import type { EmployeeRecord } from "@/types/api";
 
 // ── Quick-search bar ────────────────────────────────────────────────────────
-const SupplierSearch = () => {
+const EmployeeSearch = () => {
   const navigate = useNavigate();
   const { getData } = useApi();
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState<SupplierRecord[]>([]);
+  const [results, setResults] = useState<EmployeeRecord[]>([]);
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!query.trim()) { setResults([]); return; }
+    if (!query.trim()) {
+      setResults([]);
+      return;
+    }
     const t = setTimeout(() => {
-      getData(ENDPOINTS.SUPPLIERS, { limit: "8", offset: "1", q: query }).then((res) => {
-        if (res) setResults(Array.isArray(res.data) ? res.data : [res.data]);
-      });
+      getData(ENDPOINTS.EMPLOYEES, { limit: "8", offset: "1", q: query, shop_id: SHOP_ID })
+        .then((res) => {
+          if (res?.data) {
+            setResults(Array.isArray(res.data) ? res.data : [res.data]);
+          }
+        })
+        .catch(console.error);
     }, 300);
+
     return () => clearTimeout(t);
-  }, [query]);
+  }, [query, getData]);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
@@ -39,32 +49,49 @@ const SupplierSearch = () => {
 
   return (
     <div ref={ref} className="relative w-full max-w-xs">
-      <div className="flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-xl bg-white shadow-sm">
+      <div className="flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-xl bg-white shadow-sm focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500 transition-all">
         <Search size={14} className="text-gray-400 shrink-0" />
         <input
           value={query}
-          onChange={(e) => { setQuery(e.target.value); setOpen(true); }}
-          placeholder="Search supplier by name / ID…"
+          onChange={(e) => {
+            setQuery(e.target.value);
+            setOpen(true);
+          }}
+          placeholder="Search employee by name / ID…"
           className="flex-1 text-sm outline-none bg-transparent text-gray-700 placeholder-gray-400 min-w-0"
         />
         {query && (
-          <button onClick={() => { setQuery(""); setResults([]); }} className="text-gray-400 hover:text-gray-600">
+          <button
+            onClick={() => {
+              setQuery("");
+              setResults([]);
+            }}
+            className="text-gray-400 hover:text-gray-600 transition-colors"
+            aria-label="Clear search"
+          >
             <X size={13} />
           </button>
         )}
       </div>
+
       {open && results.length > 0 && (
-        <div className="absolute top-full mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-xl z-50 overflow-hidden">
-          {results.map((s) => (
+        <div className="absolute top-full mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-xl z-[9999] overflow-hidden">
+          {results.map((e) => (
             <button
-              key={s.id}
-              onClick={() => { navigate(`/supplier/${s.id}`); setQuery(""); setOpen(false); }}
+              key={e.employee_id}
+              onClick={() => {
+                navigate(`/employee/${e.employee_id}`);
+                setQuery("");
+                setOpen(false);
+              }}
               className="w-full px-4 py-3 text-left hover:bg-blue-50 border-b last:border-0 border-gray-100 transition-colors"
             >
               <p className="text-sm font-medium text-gray-900 truncate">
-                {String(s.datas?.name ?? s.datas?.vendor_name ?? "—")}
+                {e.name || (e as any).datas?.name || e.email || "—"}
               </p>
-              <p className="text-[11px] text-gray-400 font-mono mt-0.5 truncate">{s.id}</p>
+              <p className="text-[11px] text-gray-400 font-mono mt-0.5 truncate">
+                {e.employee_id}
+              </p>
             </button>
           ))}
         </div>
@@ -74,9 +101,14 @@ const SupplierSearch = () => {
 };
 
 // ── Sidebar item ────────────────────────────────────────────────────────────
-const SidebarItem = ({
-  icon: Icon, label, value, isMono = false,
-}: { icon: any; label: string; value: string; isMono?: boolean }) => (
+interface SidebarItemProps {
+  icon: LucideIcon;
+  label: string;
+  value: string;
+  isMono?: boolean;
+}
+
+const SidebarItem = ({ icon: Icon, label, value, isMono = false }: SidebarItemProps) => (
   <div className="flex gap-4 items-start group">
     <div className="p-2 bg-gray-50/80 rounded-xl text-gray-400 shrink-0 mt-0.5 transition-colors group-hover:bg-blue-50 group-hover:text-blue-500">
       <Icon size={16} strokeWidth={1.5} />
@@ -91,63 +123,83 @@ const SidebarItem = ({
 );
 
 // ── Main page ───────────────────────────────────────────────────────────────
-const SupplierDetail = () => {
+const EmployeeDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { getData } = useApi();
 
-  const [supplier, setSupplier] = useState<SupplierRecord | null>(null);
+  const [employee, setEmployee] = useState<EmployeeRecord | null>(null);
   const [recordLoading, setRecordLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("General Info");
+  
   const tabs = ["General Info"];
 
   useEffect(() => {
     if (!id) return;
+    
     setRecordLoading(true);
-    getData(`${ENDPOINTS.SUPPLIERS}/by/${id}`).then((res) => {
-      if (res) setSupplier(Array.isArray(res.data) ? res.data[0] : res.data);
-      setRecordLoading(false);
-    });
-  }, [id]);
+    getData(`${ENDPOINTS.EMPLOYEES}/by/${id}`)
+      .then((res) => {
+        if (res?.data) {
+          setEmployee(Array.isArray(res.data) ? res.data[0] : res.data);
+        } else {
+          setEmployee(null);
+        }
+      })
+      .catch((error) => {
+        console.error("Failed to fetch employee:", error);
+        setEmployee(null);
+      })
+      .finally(() => {
+        setRecordLoading(false);
+      });
+  }, [id, getData]);
 
   if (recordLoading) {
-    return <div className="p-12 flex justify-center"><Loader /></div>;
-  }
-
-  if (!supplier) {
     return (
-      <div className="text-center py-20 space-y-4">
-        <p className="text-gray-500">Supplier not found.</p>
-        <SupplierSearch />
+      <div className="p-12 flex justify-center items-center min-h-[50vh]">
+        <Loader />
       </div>
     );
   }
 
-  const datas = (supplier.datas as any) ?? {};
+  if (!employee) {
+    return (
+      <div className="text-center py-20 space-y-4">
+        <p className="text-gray-500 font-medium">Employee not found.</p>
+        <div className="flex justify-center">
+          <EmployeeSearch />
+        </div>
+      </div>
+    );
+  }
+
+  const datas = (employee as any).datas || {};
   
-  // Broaden data extraction to handle root fields AND datas fields
   const getVal = (keys: string[], fallback = "—") => {
     for (const key of keys) {
-      if ((supplier as any)[key]) return String((supplier as any)[key]);
-      if (datas[key]) return String(datas[key]);
+      const val = (employee as any)[key] ?? datas[key];
+      if (val !== undefined && val !== null && val !== "") return String(val);
     }
     return fallback;
   };
 
-  const name = getVal(["name", "vendor_name", "supplier_name", "business_name"], "Unknown Supplier");
-  const phone = getVal(["phone", "mobile", "contact_number", "mobile_number"]);
+  const name = getVal(["name", "full_name"], "Unknown Employee");
+  const phone = getVal(["mobile_number", "phone", "mobile"]);
   const email = getVal(["email", "email_address"]);
-  const gstin = getVal(["gst", "gstin", "gst_number"], "—");
-  const address = getVal(["address", "location", "billing_address", "street_address"]);
+  const address = getVal(["address", "location", "home_address"]);
 
-  // Build static field list mapping to backend schema
   const infoFields = [
-    { label: "Supplier Name", value: name },
-    { label: "Contact Person", value: getVal(["contact_person", "person_name"]) },
+    { label: "Full Name", value: name },
     { label: "Email", value: email },
-    { label: "Phone", value: phone },
-    { label: "City", value: getVal(["city", "state", "town"]) },
-    { label: "Address", value: address },
+    { label: "Mobile Number", value: phone },
+    { label: "Role", value: getVal(["role", "access_role"]) },
+    { label: "Employee ID", value: getVal(["employee_id", "emp_id"]) },
+    { label: "Added By", value: getVal(["added_by"]) },
+    { label: "Account ID", value: getVal(["account_id"]) },
+    { label: "Shop ID", value: getVal(["shop_id"]) },
+    { label: "Join Date", value: getVal(["joinDate", "joining_date"]) },
+    { label: "System ID", value: employee.employee_id || "—" },
   ];
 
   return (
@@ -157,16 +209,21 @@ const SupplierDetail = () => {
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
           <div className="space-y-2.5 flex-1 min-w-0">
-            <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-blue-50/50 border border-blue-100/50 text-blue-600">
+            <div className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md border ${(employee as any).is_accepted ? "bg-emerald-50/50 border-emerald-100/50 text-emerald-600" : "bg-amber-50/50 border-amber-100/50 text-amber-600"}`}>
               <CheckCircle2 size={13} strokeWidth={2} />
-              <span className="text-[11px] font-medium tracking-wide uppercase">Verified Supplier</span>
+              <span className="text-[11px] font-medium tracking-wide uppercase">
+                {(employee as any).is_accepted ? "Active Employee" : "Pending Employee"}
+              </span>
             </div>
-            <h1 className="heading-page text-gray-900 tracking-tight truncate">{name}</h1>
+            <h1 className="text-2xl md:text-3xl font-semibold text-gray-900 tracking-tight truncate">
+              {name}
+            </h1>
           </div>
+          
           <div className="flex items-center gap-3 shrink-0">
-            <SupplierSearch />
+            <EmployeeSearch />
             <button
-              onClick={() => navigate(`/supplier/${id}/edit`)}
+              onClick={() => navigate(`/employee/${id}/edit`)}
               className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-xl font-medium text-sm hover:bg-gray-50 hover:border-gray-300 transition-all shadow-sm whitespace-nowrap"
             >
               <Edit2 size={14} /> Edit
@@ -176,22 +233,23 @@ const SupplierDetail = () => {
 
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-          <StatsCard iconBg="bg-blue-50" iconColor="text-blue-600" label="Total Items Bought" value={String(datas.total_items_bought || "0")} icon={Package} />
-          <StatsCard iconBg="bg-red-50" iconColor="text-red-600" label="Pending Amount" value={datas.pending_amount ? `₹${datas.pending_amount}` : "₹0"} icon={CreditCard} />
-          <StatsCard iconBg="bg-green-50" iconColor="text-green-600" label="Total Purchases" value={String(datas.total_purchases || "0")} icon={ShoppingBag} />
-          <StatsCard iconBg="bg-yellow-50" iconColor="text-yellow-600" label="Last Order" value={String(datas.last_order_date || "N/A")} icon={History} />
+          <StatsCard iconBg="bg-blue-50" iconColor="text-blue-600" label="Performance Score" value={getVal(["performance_score", "score"], "N/A")} icon={Briefcase} />
+          <StatsCard iconBg="bg-amber-50" iconColor="text-amber-600" label="Current Task" value={getVal(["current_task", "active_task"], "0")} icon={History} />
+          <StatsCard iconBg="bg-purple-50" iconColor="text-purple-600" label="Tasks Completed" value={getVal(["tasks_completed", "completed"], "0")} icon={CheckCircle2} />
+          <StatsCard iconBg="bg-emerald-50" iconColor="text-emerald-600" label="Attendance Rate" value={getVal(["attendance_rate", "attendance"], "100") + "%"} icon={CheckCircle2} />
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 md:gap-8">
-
           {/* Sidebar */}
           <div className="lg:col-span-1">
             <div className="bg-white p-5 md:p-6 rounded-2xl border border-gray-100 shadow-sm space-y-6">
-              <h3 className="heading-label text-gray-900 pb-4 border-b border-gray-100">Identity & Contact</h3>
+              <h3 className="text-base font-semibold text-gray-900 pb-4 border-b border-gray-100">
+                Identity & Contact
+              </h3>
               <div className="space-y-5">
-                <SidebarItem icon={Phone} label="Phone" value={phone} />
+                <SidebarItem icon={Phone} label="Mobile" value={phone} />
                 <SidebarItem icon={Mail} label="Email" value={email} />
-                <SidebarItem icon={Globe} label="GSTIN" value={gstin} isMono />
+                <SidebarItem icon={Shield} label="Access Role" value={employee.role || datas.role || "UNKNOWN"} />
                 <SidebarItem icon={MapPin} label="Address" value={address} />
               </div>
             </div>
@@ -200,7 +258,7 @@ const SupplierDetail = () => {
           {/* Main content */}
           <div className="lg:col-span-3 space-y-6">
             <div className="border-b border-gray-200/80">
-              <nav className="flex gap-6">
+              <nav className="flex gap-6 overflow-x-auto hide-scrollbar">
                 {tabs.map((tab) => (
                   <button
                     key={tab}
@@ -221,8 +279,8 @@ const SupplierDetail = () => {
               {activeTab === "General Info" && (
                 <div className="p-6 md:p-8 space-y-6 animate-in fade-in duration-300">
                   <div className="flex items-center gap-2.5 pb-4 border-b border-gray-50">
-                    <Info size={18} className="text-blue-500" strokeWidth={2} />
-                    <h2 className="heading-section text-gray-900">Business Profile</h2>
+                    <User size={18} className="text-blue-500" strokeWidth={2} />
+                    <h2 className="text-lg font-semibold text-gray-900">Professional Profile</h2>
                   </div>
                   {infoFields.length === 0 ? (
                     <p className="text-sm text-gray-500">No profile data available.</p>
@@ -230,8 +288,10 @@ const SupplierDetail = () => {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                       {infoFields.map((f) => (
                         <div key={f.label}>
-                          <p className="text-[13px] font-medium text-gray-500 uppercase tracking-wide mb-1.5">{f.label}</p>
-                          <div className="bg-gray-50/50 px-4 py-3 rounded-xl border border-gray-100/60 text-sm text-gray-700 hover:border-gray-200 transition-colors">
+                          <p className="text-[13px] font-medium text-gray-500 uppercase tracking-wide mb-1.5">
+                            {f.label}
+                          </p>
+                          <div className="bg-gray-50/50 px-4 py-3 rounded-xl border border-gray-100/60 text-sm text-gray-700 hover:border-gray-200 transition-colors truncate">
                             {f.value}
                           </div>
                         </div>
@@ -248,4 +308,4 @@ const SupplierDetail = () => {
   );
 };
 
-export default SupplierDetail;
+export default EmployeeDetail;

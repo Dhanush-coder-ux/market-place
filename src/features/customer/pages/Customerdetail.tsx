@@ -216,10 +216,10 @@ export default function CustomerDetail() {
 
           {/* Stats */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-5 mb-6">
-            <StatCard icon={DollarSign} label="Total Purchases" value="—" iconBg="bg-blue-100" />
-            <StatCard icon={AlertCircle} label="Outstanding Balance" value={fmt(outstanding)} iconBg="bg-red-100" />
-            <StatCard icon={Package} label="Total Orders" value="—" iconBg="bg-emerald-100" />
-            <StatCard icon={Star} label="Lifetime Value" value="—" iconBg="bg-blue-100" />
+            <StatCard icon={DollarSign} label="Total Purchases" value={datas.total_purchases ? `₹${datas.total_purchases}` : "₹0"} iconBg="bg-blue-100" />
+            <StatCard icon={AlertCircle} label="Outstanding Balance" value={fmt(Number(datas.outstanding_balance) || outstanding || 0)} iconBg="bg-red-100" />
+            <StatCard icon={Package} label="Total Orders" value={String(datas.total_orders || "0")} iconBg="bg-emerald-100" />
+            <StatCard icon={Star} label="Lifetime Value" value={datas.lifetime_value ? `₹${datas.lifetime_value}` : "₹0"} iconBg="bg-blue-100" />
           </div>
 
           {/* TAB 0 — General Info */}
@@ -313,14 +313,14 @@ export default function CustomerDetail() {
         </div>
 
         {/* Bottom Action Bar */}
-        <BottomActionBar
+        {/* <BottomActionBar
           customerName={name}
           actions={[
             { label: "Send Invoice", icon: <Mail className="w-4 h-4" />, variant: "secondary", onClick: () => setShowInvoice(true) },
             { label: "Record Payment", icon: <Wallet className="w-4 h-4" />, variant: "success", onClick: () => setShowPayment(true) },
             { label: "Edit Customer", icon: <Pencil className="w-4 h-4" />, variant: "primary", onClick: () => navigate(`/customers/${id}/edit`) },
           ]}
-        />
+        /> */}
 
         {/* MODAL — Record Payment */}
         <Modal show={showPayment} onClose={() => setShowPayment(false)} title="Record Payment"

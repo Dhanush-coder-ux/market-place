@@ -29,7 +29,7 @@ const EmployeeSearch = () => {
           <p className="text-slate-500 text-sm text-center mb-4">Search by name or email to view employee profiles, roles, and status.</p>
           <SearchSelect
             labelKey="displayName"
-            valueKey="id"
+            valueKey="employee_id"
             fetchOptions={async (q) => {
               if (!q) return [];
               try {
@@ -37,7 +37,7 @@ const EmployeeSearch = () => {
                 const data = res?.data ? (Array.isArray(res.data) ? res.data : [res.data]) : [];
                 return data.map((e: any) => ({
                   ...e,
-                  displayName: String(e.datas?.name ?? e.name ?? e.email ?? e.id)
+                  displayName: String(e.name || e.datas?.name || e.email || e.employee_id)
                 }));
               } catch {
                 return [];
@@ -45,11 +45,7 @@ const EmployeeSearch = () => {
             }}
             onChange={(val) => {
               if (val) {
-                // For employees, we might open the drawer in the list page, but since this is a search page,
-                // we should probably navigate to a detail page if it exists, or the list page with the ID.
-                // Currently /employee is the list. Let's navigate to the list with the ID as a param if needed,
-                // or just navigate to the employee page.
-                navigate(`/employee?id=${val}`);
+                navigate(`/employee/${val}`);
               }
             }}
             placeholder="Search and select an employee..."

@@ -39,7 +39,7 @@ const CustomerFormPage = () => {
   useEffect(() => {
     if (id) {
       const fetchCustomer = async () => {
-        const res = await getData(`${ENDPOINTS.CUSTOMERS}/${id}`);
+        const res = await getData(`${ENDPOINTS.CUSTOMERS}/by/${id}`);
         if (res && res.data) {
           const cust = res.data;
           const datas = cust.datas || {};
@@ -84,6 +84,7 @@ const CustomerFormPage = () => {
     const payload = {
       datas: {
         ...formData,
+        id,
         shop_id: SHOP_ID,
         type: id ? "CUSTOMER UPDATE" : "CUSTOMER CREATE",
       },
@@ -91,7 +92,7 @@ const CustomerFormPage = () => {
     
     let res;
     if (id) {
-      res = await putData(`${ENDPOINTS.CUSTOMERS}/${id}`, payload);
+      res = await putData(`${ENDPOINTS.CUSTOMERS}`, payload);
     } else {
       res = await postData(ENDPOINTS.CUSTOMERS, payload);
     }

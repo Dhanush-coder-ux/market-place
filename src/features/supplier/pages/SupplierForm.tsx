@@ -45,7 +45,7 @@ const SupplierForm: React.FC<SupplierFormProps> = ({
   React.useEffect(() => {
     if (id) {
       const fetchSupplier = async () => {
-        const res = await getData(`${ENDPOINTS.SUPPLIERS}/${id}`);
+        const res = await getData(`${ENDPOINTS.SUPPLIERS}/by/${id}`);
         if (res && res.data) {
           const sup = res.data;
           setFormData({

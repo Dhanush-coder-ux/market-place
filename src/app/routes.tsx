@@ -48,6 +48,7 @@ const SupplierDetail = React.lazy(() => import("@/features/supplier/pages/Suppli
 const Employee = React.lazy(() => import("../features/employee/pages/Employee"));
 const EmployeeSearch = React.lazy(() => import("../features/employee/pages/EmployeeSearch"));
 const EmployeeForm = React.lazy(() => import("../features/employee/pages/EmployeeForm"));
+const EmployeeDetail = React.lazy(() => import("../features/employee/pages/EmployeeDetail"));
 
 // Inventory
 const Inventory = React.lazy(() => import("../features/inventory/pages/Inventory"));
@@ -105,6 +106,7 @@ export const router = createBrowserRouter([
       { path: '/employee/all', element: <Employee /> },
       { path: '/employee/add', element: <EmployeeForm /> },
       { path: '/employee/:id/edit', element: <EmployeeForm /> },
+      { path: '/employee/:id', element: <EmployeeDetail /> },
 
       // Inventory
       { path: '/inventory', element: <Inventory /> },

@@ -82,9 +82,9 @@ export const sidebarLinks: SidebarLink[] = [
     name: "Products",
     icon: Package,
     subLinks: [
-      { name: "Catalog", path: "/product" },
+      { name: "Catalog", path: "/product/all" },
       { name: "Add Product", path: "/product/add" },
-      { name: "Product Details", path:"/product/detail"}
+      { name: "Product Details", path: "/product" }
     ],
   },
 
@@ -92,9 +92,9 @@ export const sidebarLinks: SidebarLink[] = [
     name: "Procurement",
     icon: Wallet,
     subLinks: [
-      { name: "Suppliers", path: "/supplier" },
+      { name: "Suppliers", path: "/supplier/all" },
       { name: "Add Suppliers", path: "/supplier/add" },
-      { name: "Supplier Details", path: "/supplier/detail"},
+      { name: "Supplier Details", path: "/supplier" },
     ],
   },
 
@@ -125,8 +125,9 @@ export const sidebarLinks: SidebarLink[] = [
     name: "Staff",
     icon: Users,
     subLinks: [
-      { name: "Directory", path: "/employee" },
+      { name: "Directory", path: "/employee/all" },
       { name: "Add Employee", path: "/employee/add" },
+      { name: "Employee Details", path: "/employee" },
     ],
   },
 

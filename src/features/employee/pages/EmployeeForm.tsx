@@ -34,7 +34,7 @@ const EmployeeForm: React.FC = () => {
   React.useEffect(() => {
     if (id) {
       const fetchEmployee = async () => {
-        const res = await getData(`${ENDPOINTS.EMPLOYEES}/${id}`);
+        const res = await getData(`${ENDPOINTS.EMPLOYEES}/by/${id}`);
         if (res && res.data) {
           const emp = res.data;
           setName(emp.name || emp.datas?.name || "");
@@ -73,13 +73,14 @@ const EmployeeForm: React.FC = () => {
         address, 
         joinDate, 
         shop_id: SHOP_ID,
+        id,
         type: id ? "EMPLOYEE UPDATE" : "EMPLOYEE CREATE" 
       }
     };
 
     let res;
     if (id) {
-      res = await putData(`${ENDPOINTS.EMPLOYEES}/${id}`, payload);
+      res = await putData(`${ENDPOINTS.EMPLOYEES}`, payload);
     } else {
       res = await postData(ENDPOINTS.EMPLOYEES, payload);
     }

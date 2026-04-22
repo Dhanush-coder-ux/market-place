@@ -950,7 +950,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
   useEffect(() => {
     if (id) {
       const fetchProduct = async () => {
-        const res = await getData(`${ENDPOINTS.INVENTORIES}/${id}`);
+        const res = await getData(`${ENDPOINTS.INVENTORIES}/by/${id}/${SHOP_ID}`);
         if (res && res.data) {
           const prod = res.data;
           const datas = prod.datas || {};
@@ -1039,13 +1039,14 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
         variantTypes, 
         combinations,
         shop_id: SHOP_ID,
-        type: id ? "PRODUCT UPDATE" : "PRODUCT CREATE" 
+        id,
+        type: id ? "PO_UPDATE" : "PO_CREATE"
       },
     };
     
     let res;
     if (id) {
-      res = await putData(`${ENDPOINTS.INVENTORIES}/${id}`, payload);
+      res = await putData(`${ENDPOINTS.INVENTORIES}`, payload);
     } else {
       res = await postData(ENDPOINTS.INVENTORIES, payload);
     }

@@ -9,6 +9,8 @@ import {
 } from "lucide-react";
 import { GradientButton } from "@/components/ui/GradientButton";
 import Input from "@/components/ui/Input";
+import { useApi } from "@/context/ApiContext";
+import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 
 /* ═══════════════════════════════════════════════════════
    TYPES
@@ -914,7 +916,9 @@ interface ProductFormProps {
   isLoading?: boolean;
 }
 
-const ProductForm: React.FC<ProductFormProps> = ({ initialData = {}, isLoading = false }) => {
+const ProductForm: React.FC<ProductFormProps> = ({ initialData = {}, isLoading: externalLoading = false }) => {
+  const { postData, loading } = useApi();
+  const isLoading = externalLoading || loading;
   // Core form
   const [form, setForm] = useState<FormData>({
     name: (initialData.name as string) || "",
@@ -985,12 +989,19 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData = {}, isLoading =
     setForm(p => ({ ...p, [name]: value }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const payload = { ...form, variantTypes, combinations };
-    console.log("Product payload:", payload);
-    setSavedNotice(true);
-    setTimeout(() => setSavedNotice(false), 2500);
+    const payload = {
+      shop_id: SHOP_ID,
+      type: "PRODUCT CREATE",
+      datas: { ...form, variantTypes, combinations },
+    };
+    console.log("PAYLOAD",payload);
+    const res = await postData(ENDPOINTS.PRODUCTS, payload);
+    if (res) {
+      setSavedNotice(true);
+      setTimeout(() => setSavedNotice(false), 2500);
+    }
   };
 
   return (

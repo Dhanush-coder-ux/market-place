@@ -10,6 +10,8 @@ import {
 import Input from '@/components/ui/Input'; 
 import { ReusableSelect } from '@/components/ui/ReusableSelect';
 import { GradientButton } from '@/components/ui/GradientButton';
+import { useApi } from '@/context/ApiContext';
+import { ENDPOINTS, SHOP_ID } from '@/services/endpoints';
 
 // --- Types ---
 interface FinishedProduct {
@@ -36,6 +38,7 @@ interface FinishedProduct {
 type PaymentMethod = "Cash" | "UPI" | "Card" | "Bank";
 
 export default function ProductionEntryPage() {
+  const { postData, loading } = useApi();
   // --- State Management ---
   
   // 1. Production Details
@@ -645,8 +648,21 @@ export default function ProductionEntryPage() {
 
             {/* Action Buttons */}
             <div className="flex flex-col gap-3">
-              <GradientButton variant="primary" icon={<Save className="h-5 w-5" />} className="h-[52px] w-full text-[15px]">
-                Save & Add to Stock
+              <GradientButton
+                variant="primary"
+                icon={<Save className="h-5 w-5" />}
+                className="h-[52px] w-full text-[15px]"
+                disabled={loading}
+                onClick={async () => {
+                  const payload = {
+                    shop_id: SHOP_ID,
+                    type: "PRODUCTION CREATE",
+                    datas: { details, products, costs, charges, payment },
+                  };
+                  await postData(ENDPOINTS.PURCHASES, payload);
+                }}
+              >
+                {loading ? "Saving..." : "Save & Add to Stock"}
               </GradientButton>
               <GradientButton variant="outline" className="h-[52px] w-full text-[15px]">
                 Save as Draft

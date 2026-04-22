@@ -16,6 +16,8 @@ import {
 import Input from "@/components/ui/Input";
 import { ReusableSelect } from "@/components/ui/ReusableSelect";
 import { GradientButton } from "@/components/ui/GradientButton";
+import { useApi } from "@/context/ApiContext";
+import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 
 // --- Types ---
 type GRNStatus = "Completed" | "Pending" | "Partial";
@@ -81,6 +83,7 @@ const productOptions = [
 ];
 
 const GRNForm: React.FC<GRNFormProps> = ({ onSubmit, onCancel }) => {
+  const { postData, loading } = useApi();
   // --- State Management ---
   const [grnDetails, setGrnDetails] = useState<GRNFormData>({
     poReference: "",
@@ -229,7 +232,7 @@ const GRNForm: React.FC<GRNFormProps> = ({ onSubmit, onCancel }) => {
     setSelectedVariants(new Set());
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const finalData = {
       ...grnDetails,
@@ -237,8 +240,13 @@ const GRNForm: React.FC<GRNFormProps> = ({ onSubmit, onCancel }) => {
       totalValue: stats.totalValue,
       products
     };
-    if (onSubmit) onSubmit(finalData);
-    console.log("GRN Submitted:", finalData);
+    const payload = {
+      shop_id: SHOP_ID,
+      type: "GRN CREATE",
+      datas: finalData,
+    };
+    const res = await postData(ENDPOINTS.PURCHASES, payload);
+    if (res && onSubmit) onSubmit(finalData);
   };
 
   return (
@@ -551,8 +559,8 @@ const GRNForm: React.FC<GRNFormProps> = ({ onSubmit, onCancel }) => {
             Cancel
           </GradientButton>
           
-          <GradientButton icon={<Save size={16} />} onClick={handleSubmit}>
-            Save Record
+          <GradientButton icon={<Save size={16} />} onClick={handleSubmit} disabled={loading}>
+            {loading ? "Saving..." : "Save Record"}
           </GradientButton>
         </div>
       </div>

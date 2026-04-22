@@ -4,6 +4,8 @@ import { GradientButton } from "@/components/ui/GradientButton";
 import { 
   Building2,  MapPin
 } from "lucide-react";
+import { useApi } from "@/context/ApiContext";
+import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 
 export interface SupplierData {
   id: number;
@@ -29,8 +31,11 @@ interface SupplierFormProps {
 
 const SupplierForm: React.FC<SupplierFormProps> = ({
   initialData = {},
-  isLoading = false,
+  isLoading: externalLoading = false,
 }) => {
+  const { postData, loading } = useApi();
+  const isLoading = externalLoading || loading;
+
   const [formData, setFormData] = useState<SupplierData>({
     id: initialData.id || 0,
     supplier_name: initialData.supplier_name || "",
@@ -56,9 +61,14 @@ const SupplierForm: React.FC<SupplierFormProps> = ({
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Saving Supplier:", formData);
+    const payload = {
+      shop_id: SHOP_ID,
+      type: "SUPPLIER CREATE",
+      datas: formData,
+    };
+    await postData(ENDPOINTS.SUPPLIERS, payload);
   };
 
   return (

@@ -7,6 +7,8 @@ import Input from "@/components/ui/Input";
 import { ReusableSelect } from "@/components/ui/ReusableSelect";
 import { GradientButton } from "@/components/ui/GradientButton";
 import { Required } from "@/components/ui/Require";
+import { useApi } from "@/context/ApiContext";
+import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 
 const roleOptions = [
   { label: "Admin", value: "admin" },
@@ -17,6 +19,7 @@ const roleOptions = [
 
 
 const EmployeeForm: React.FC = () => {
+  const { postData, loading } = useApi();
   // --- State Management ---
   const [name, setName] = React.useState<string>("");
   const [email, setEmail] = React.useState<string>("");
@@ -29,17 +32,25 @@ const EmployeeForm: React.FC = () => {
 
   const [errors, setErrors] = React.useState({ name: false, email: false, role: false });
 
-  const handleSubmit = (action: "save" | "add_more") => {
+  const handleSubmit = async (action: "save" | "add_more") => {
     const hasErrors = {
       name: !name,
       email: !email,
       role: !role,
     };
-    console.log(action);
     
-
     setErrors(hasErrors);
+    
+    if (hasErrors.name || hasErrors.email || hasErrors.role) {
+      return;
+    }
 
+    const payload = {
+      shop_id: SHOP_ID,
+      type: "EMPLOYEE CREATE",
+      datas: { name, email, role, phone, address, employeeId, joinDate }
+    };
+    await postData(ENDPOINTS.EMPLOYEES, payload);
   };
 
   return (
@@ -198,14 +209,16 @@ const EmployeeForm: React.FC = () => {
             variant="outline" 
             onClick={() => handleSubmit("add_more")}
             className="border-slate-200"
+            disabled={loading}
           >
             Save & Add Another
           </GradientButton>
           <GradientButton 
             onClick={() => handleSubmit("save")}
             className="min-w-[140px] shadow-lg shadow-emerald-100"
+            disabled={loading}
           >
-            Create Employee
+            {loading ? "Creating..." : "Create Employee"}
           </GradientButton>
         </div>
       </div>

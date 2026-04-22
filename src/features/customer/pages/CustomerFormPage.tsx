@@ -13,8 +13,11 @@ import {
 import Input from "@/components/ui/Input"; 
 import { ReusableSelect } from "@/components/ui/ReusableSelect"; 
 import { GradientButton } from "@/components/ui/GradientButton";
+import { useApi } from "@/context/ApiContext";
+import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 
 const CustomerFormPage = () => {
+  const { postData, loading } = useApi();
   // Form State
   const [formData, setFormData] = useState({
     firstName: "",
@@ -47,10 +50,17 @@ const CustomerFormPage = () => {
     setFormData((prev) => ({ ...prev, customerType: value }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Customer Data Submitted:", formData);
-    alert("Customer saved successfully!");
+    const payload = {
+      shop_id: SHOP_ID,
+      type: "CUSTOMER CREATE",
+      datas: formData,
+    };
+    const res = await postData(ENDPOINTS.CUSTOMERS, payload);
+    if (res) {
+      alert("Customer saved successfully!");
+    }
   };
 
   return (
@@ -221,8 +231,8 @@ const CustomerFormPage = () => {
                    <GradientButton variant="outline" color="danger" >
           Cancel
          </GradientButton>
-          <GradientButton icon={<Save size={16} />} onClick={handleSubmit}>
-            Save Customer
+          <GradientButton icon={<Save size={16} />} onClick={handleSubmit} disabled={loading}>
+            {loading ? "Saving..." : "Save Customer"}
           </GradientButton>
           </div>
         </div>

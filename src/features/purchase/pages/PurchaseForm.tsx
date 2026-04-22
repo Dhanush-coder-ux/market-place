@@ -7,6 +7,8 @@ import {
 import Input from "@/components/ui/Input";
 import { ReusableSelect } from "@/components/ui/ReusableSelect";
 import { GradientButton } from "@/components/ui/GradientButton";
+import { useApi } from "@/context/ApiContext";
+import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 
 type PaymentMethod = "Cash" | "UPI" | "Card" | "Bank";
 
@@ -52,6 +54,7 @@ const productVariantDB: Record<string, { id: string; name: string; sku: string; 
 const LOW_STOCK_THRESHOLD = 5;
 
 const PurchaseForm = () => {
+  const { postData, loading } = useApi();
   // --- State Management ---
   const [purchaseDetails, setPurchaseDetails] = useState({
     supplier: "",
@@ -737,8 +740,22 @@ const PurchaseForm = () => {
           <GradientButton variant="outline" className="hover:bg-slate-50 transition-colors">
             Cancel
           </GradientButton>
-          <GradientButton variant="primary" icon={<Save size={16} />} iconPosition="left" className="shadow-md hover:shadow-lg transition-all">
-            Save & Add to Stock
+          <GradientButton
+            variant="primary"
+            icon={<Save size={16} />}
+            iconPosition="left"
+            className="shadow-md hover:shadow-lg transition-all"
+            disabled={loading}
+            onClick={async () => {
+              const payload = {
+                shop_id: SHOP_ID,
+                type: "PURCHASE CREATE",
+                datas: { purchaseDetails, products, charges, payment },
+              };
+              await postData(ENDPOINTS.PURCHASES, payload);
+            }}
+          >
+            {loading ? "Saving..." : "Save & Add to Stock"}
           </GradientButton>
         </div>
       </div>

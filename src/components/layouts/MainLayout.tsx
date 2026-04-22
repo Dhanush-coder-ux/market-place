@@ -4,6 +4,7 @@ import { Navbar } from "./Navbar";
 import Sidebar from "./Sidebar";
 import Title from "../common/Title"
 import { sidebarLinks } from "@/utils/constants";
+import { useHeader } from "@/context/HeaderContext";
 
 const getPageHeaderInfo = (pathname: string) => {
   const routes: Record<string, { title: string; subtitle?: string; icon?: any }> = {
@@ -127,7 +128,43 @@ const getPageHeaderInfo = (pathname: string) => {
       title: "Add Customer",
       subtitle: "Register a new customer in the system.",
     },
+    "/customers/drafts": {
+      title: "Customer Drafts",
+      subtitle: "Manage your locally saved progress.",
+    },
   };
+
+  // Dynamic match for Customer Profile
+  if (pathname.match(/^\/customers\/[^/]+$/)) {
+    return {
+      title: "Customer Profile",
+      subtitle: "View complete customer information and history.",
+    };
+  }
+
+  // Dynamic match for Edit Customer
+  if (pathname.match(/^\/customers\/[^/]+\/edit$/)) {
+    return {
+      title: "Update Customer",
+      subtitle: "Modify existing customer details.",
+    };
+  }
+
+  // Dynamic match for Employee Profile
+  if (pathname.match(/^\/employee\/[^/]+$/)) {
+    return {
+      title: "Employee Profile",
+      subtitle: "View complete staff information and status.",
+    };
+  }
+
+  // Dynamic match for Edit Employee
+  if (pathname.match(/^\/employee\/[^/]+\/edit$/)) {
+    return {
+      title: "Update Employee",
+      subtitle: "Modify existing staff details.",
+    };
+  }
 
   return routes[pathname] || { 
     title: pathname.split("/").pop()?.replace("-", " ").toUpperCase() || "Home", 
@@ -137,6 +174,7 @@ const getPageHeaderInfo = (pathname: string) => {
 
 const MainLayout = () => {
   const location = useLocation();
+  const { actions } = useHeader();
   const isStorePage = 
     location.pathname === "/digital-store" || 
     location.pathname === "/digital-store/profile" || 
@@ -160,7 +198,7 @@ const MainLayout = () => {
                 <Breadcrumb />
                
                 <div className="mt-4">
-                  <Title title={title} subtitle={subtitle} icon={icon} />
+                  <Title title={title} subtitle={subtitle} icon={icon} actions={actions} />
                 </div>
               </div>
             )}

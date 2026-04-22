@@ -44,14 +44,14 @@ export const fmt = (n: number) => "₹" + n.toLocaleString("en-IN");
  */
 export function StatusBadge({ status }: { status: string }) {
   const colorMap: Record<string, string> = {
-    Paid: "bg-emerald-100 text-emerald-700",
-    Partial: "bg-blue-100 text-blue-700",
-    Pending: "bg-amber-100 text-amber-700",
+    Paid: "bg-emerald-50 text-emerald-600 border-emerald-100",
+    Partial: "bg-blue-50 text-blue-600 border-blue-100",
+    Pending: "bg-amber-50 text-amber-600 border-amber-100",
   };
   return (
     <span
-      className={`inline-flex px-2.5 py-1 rounded-md text-[11px] font-semibold uppercase tracking-wide ${
-        colorMap[status] ?? "bg-slate-100 text-slate-600"
+      className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
+        colorMap[status] ?? "bg-slate-50 text-slate-500 border-slate-100"
       }`}
     >
       {status}
@@ -61,30 +61,24 @@ export function StatusBadge({ status }: { status: string }) {
 
 // ─── StatCard ─────────────────────────────────────────────────────────────────
 export interface StatCardProps {
-  icon: string;
+  icon: any; // Allow Lucide components
   label: string;
   value: string;
-  iconBg: string; // e.g. "bg-blue-100"
+  iconBg: string;
 }
 
-/**
- * A single metric card showing an icon, label, and value.
- *
- * @example
- * <StatCard icon="💰" label="Total Purchases" value="₹2,45,680" iconBg="bg-blue-100" />
- */
-export function StatCard({ icon, label, value, iconBg }: StatCardProps) {
+export function StatCard({ icon: Icon, label, value, iconBg }: StatCardProps) {
   return (
-    <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-100">
-      <div
-        className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl mb-4 ${iconBg}`}
-      >
-        {icon}
+    <div className="bg-white rounded-[1.5rem] p-5 shadow-sm border border-slate-100 flex items-center gap-4 group hover:shadow-md transition-all">
+      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${iconBg} group-hover:scale-110 transition-transform`}>
+        {typeof Icon === 'function' ? <Icon size={22} className="text-current" /> : Icon}
       </div>
-      <div className="text-[13px] text-slate-500 uppercase font-semibold tracking-wider mb-2">
-        {label}
+      <div>
+        <div className="text-[10px] text-slate-400 uppercase font-bold tracking-widest mb-0.5">
+          {label}
+        </div>
+        <div className="text-xl font-bold text-slate-800 tracking-tight">{value}</div>
       </div>
-      <div className="text-3xl font-semibold text-slate-700">{value}</div>
     </div>
   );
 }
@@ -95,7 +89,8 @@ export interface ModalProps {
   onClose: () => void;
   title: string;
   children: React.ReactNode;
-  footer: React.ReactNode;
+  footer?: React.ReactNode;
+  className?: string;
 }
 
 /**
@@ -107,14 +102,14 @@ export interface ModalProps {
  *   <p>Modal body content</p>
  * </Modal>
  */
-export function Modal({ show, onClose, title, children, footer }: ModalProps) {
+export function Modal({ show, onClose, title, children, footer, className }: ModalProps) {
   if (!show) return null;
   return (
     <div
       className="fixed inset-0 bg-black/50 z-[1000] flex items-center justify-center"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="bg-white rounded-2xl w-[90%] max-w-xl max-h-[90vh] overflow-y-auto shadow-2xl animate-[slideUp_0.3s_ease]">
+      <div className={`bg-white rounded-2xl w-[90%] max-h-[90vh] overflow-y-auto shadow-2xl animate-[slideUp_0.3s_ease] ${className || "max-w-xl"}`}>
         {/* Header */}
         <div className="px-6 py-5 border-b border-slate-200 flex justify-between items-center">
           <h2 className="text-xl font-semibold text-slate-700">{title}</h2>
@@ -130,9 +125,11 @@ export function Modal({ show, onClose, title, children, footer }: ModalProps) {
         <div className="p-6">{children}</div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-slate-200 flex justify-end gap-3 bg-slate-50 rounded-b-2xl">
-          {footer}
-        </div>
+        {footer && (
+          <div className="px-6 py-4 border-t border-slate-200 flex justify-end gap-3 bg-slate-50 rounded-b-2xl">
+            {footer}
+          </div>
+        )}
       </div>
     </div>
   );

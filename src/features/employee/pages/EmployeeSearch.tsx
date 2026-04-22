@@ -1,4 +1,4 @@
-import { X } from "lucide-react";
+import { X, Bookmark } from "lucide-react";
 import { GradientButton } from "@/components/ui/GradientButton";
 import { SearchSelect } from "@/components/inputbuilders/SearchSelect";
 import { useNavigate } from "react-router-dom";
@@ -12,7 +12,13 @@ const EmployeeSearch = () => {
   return (
     <div className="space-y-6">
       <div className="flex justify-end items-center gap-3">
-        <GradientButton path="/employee/all" variant="outline">View All Employees</GradientButton>
+        <button 
+          onClick={() => navigate("/employee/drafts")}
+          className="px-4 h-10 rounded-xl border border-blue-100 text-blue-600 font-bold text-[13px] bg-blue-50/50 hover:bg-blue-100 transition-all flex items-center gap-2"
+        >
+          <Bookmark size={16} />
+          Saved Drafts
+        </button>
         <GradientButton path="/employee/add">+ Add Employee</GradientButton>
       </div>
 

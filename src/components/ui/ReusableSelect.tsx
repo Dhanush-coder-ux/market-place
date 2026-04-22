@@ -21,6 +21,7 @@ export function ReusableSelect({
   error,
   required
 }: ReusableSelectProps) {
+  console.log(`ReusableSelect [${label}]: value =`, value);
   return (
     <div className="space-y-2 w-full">
       {label && (

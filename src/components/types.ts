@@ -6,6 +6,7 @@ export interface TitleProps {
   title: string;
   subtitle?: string; 
   icon?: ReactNode;   
+  actions?: ReactNode;
 }
 
 export type GradientButtonProps = {

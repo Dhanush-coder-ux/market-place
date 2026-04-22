@@ -1,67 +1,53 @@
 import React from "react";
 import { LucideIcon } from "lucide-react";
 
-/* =========================
-   Types
-========================= */
-
 interface StatsCardProps {
   label: string;
   value?: string | number;
   prefix?: string;
-  icon?: LucideIcon | string;
+  icon?: any; 
   iconBg?: string;
   iconColor?: string;
   valueColor?: string;
+  className?: string;
   onClick?: () => void;
 }
-
-/* =========================
-   Stat Card Component
-========================= */
 
 export const StatCard: React.FC<StatsCardProps> = ({
   label,
   value,
   prefix = "",
   icon: Icon,
-  iconBg = "bg-slate-100",
-  iconColor = "text-slate-600",
+  iconBg = "bg-blue-50",
+  iconColor = "text-blue-600",
   valueColor = "text-slate-800",
+  className = "",
   onClick,
 }) => {
   return (
     <div
       onClick={onClick}
-      className="flex items-center gap-3 bg-white border border-slate-200 rounded-xl px-4 py-3 min-w-[150px] flex-shrink-0 shadow-sm cursor-pointer hover:shadow-md transition"
+      className={`bg-white rounded-[1.5rem] p-5 shadow-sm border border-slate-100 flex items-center gap-4 group hover:shadow-md transition-all cursor-pointer ${className}`}
     >
       {Icon && (
-        <div
-          className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${iconBg}`}
-        >
-          {typeof Icon === "string" ? (
-            <span className="text-sm leading-none">{Icon}</span>
-          ) : (
-            <Icon size={15} className={iconColor} />
+        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${iconBg} group-hover:scale-110 transition-transform ${iconColor}`}>
+          {React.isValidElement(Icon) ? Icon : (
+            typeof Icon === 'string' ? Icon : (
+              Icon && <Icon size={22} className="text-current" />
+            )
           )}
         </div>
       )}
-
       <div className="min-w-0">
-        <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider truncate leading-none">
+        <div className="text-[10px] text-slate-400 uppercase font-bold tracking-widest mb-0.5 truncate">
           {label}
-        </p>
-
-        <p className={`text-sm font-bold mt-1 truncate ${valueColor}`}>
-          {prefix}
-          {typeof value === "number"
-            ? value.toLocaleString("en-IN")
-            : value ?? 0}
-        </p>
+        </div>
+        <div className={`text-xl font-bold tracking-tight truncate ${valueColor}`}>
+          {prefix}{value ?? 0}
+        </div>
       </div>
     </div>
   );
 };
 
-// Export alias to support both singular and plural component names
 export const StatsCard = StatCard;

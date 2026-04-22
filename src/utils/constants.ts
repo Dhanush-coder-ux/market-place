@@ -1,4 +1,4 @@
-import { History, IndianRupee, Plus, UserCircle, Wallet } from "lucide-react";
+import { History, IndianRupee, Plus, UserCircle, Wallet, Bookmark } from "lucide-react";
 import {
   Database,
   LayoutDashboard,
@@ -9,6 +9,8 @@ import {
   Users,
   ClipboardList,
   Factory,
+  UserPlus,
+  FileText,
 } from "lucide-react";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -115,19 +117,21 @@ export const sidebarLinks: SidebarLink[] = [
     name: "Customers",
     icon: UserCircle,
     subLinks: [
-      { name: "Customer Details", path: "/customers" },
-      { name: "Customers Info", path: "/customers-Summary" },
-      { name: "Add Customer", path: "/customers/add" },
+      { name: "Add Customer", path: "/customers/add", icon: UserPlus },
+      { name: "Saved Drafts", path: "/customers/drafts", icon: Bookmark },
+      { name: "Customers Infos", path: "/customers-Summary", icon: ClipboardList },
+      { name: "Customer Details", path: "/customers", icon: FileText },
     ],
   },
 
   {
-    name: "Staff",
+    name: "Employees",
     icon: Users,
     subLinks: [
-      { name: "Directory", path: "/employee/all" },
-      { name: "Add Employee", path: "/employee/add" },
-      { name: "Employee Details", path: "/employee" },
+      { name: "Add Employee", path: "/employee/add", icon: UserPlus },
+      { name: "Saved Drafts", path: "/employee/drafts", icon: Bookmark },
+      { name: "Employee Infos", path: "/employee/all", icon: ClipboardList },
+      { name: "Employee Details", path: "/employee", icon: FileText },
     ],
   },
 

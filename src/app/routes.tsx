@@ -15,6 +15,7 @@ import ReceiveGoodsPage from "@/features/purchase/pages/ReceiveGoodsForm";
 import StockAdjustmentForm from "@/features/inventory/pages/StockAdjusstment";
 import ProductionForm from "@/features/purchase/pages/ProductionForm";
 import CustomerFormPage from "@/features/customer/pages/CustomerFormPage";
+import CustomerDraftsPage from "@/features/customer/pages/CustomerDraftsPage";
 import SupplierForm from "@/features/supplier/pages/SupplierForm";
 
 
@@ -49,6 +50,7 @@ const Employee = React.lazy(() => import("../features/employee/pages/Employee"))
 const EmployeeSearch = React.lazy(() => import("../features/employee/pages/EmployeeSearch"));
 const EmployeeForm = React.lazy(() => import("../features/employee/pages/EmployeeForm"));
 const EmployeeDetail = React.lazy(() => import("../features/employee/pages/EmployeeDetail"));
+const EmployeeDraftsPage = React.lazy(() => import("../features/employee/pages/EmployeeDraftsPage"));
 
 // Inventory
 const Inventory = React.lazy(() => import("../features/inventory/pages/Inventory"));
@@ -105,6 +107,7 @@ export const router = createBrowserRouter([
       { path: '/employee', element: <EmployeeSearch /> },
       { path: '/employee/all', element: <Employee /> },
       { path: '/employee/add', element: <EmployeeForm /> },
+      { path: '/employee/drafts', element: <EmployeeDraftsPage /> },
       { path: '/employee/:id/edit', element: <EmployeeForm /> },
       { path: '/employee/:id', element: <EmployeeDetail /> },
 
@@ -129,6 +132,7 @@ export const router = createBrowserRouter([
       { path: "/customers", element: <CustomerList /> },
       { path: "/customers-Summary", element: <CustomerBalanceSummary /> },
       { path: "/customers/add", element: <CustomerFormPage /> },
+      { path: "/customers/drafts", element: <CustomerDraftsPage /> },
       { path: "/customers/:id/edit", element: <CustomerFormPage /> },
       { path: "/customers/:id", element: <CustomerDetail /> },
     ]

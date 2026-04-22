@@ -1,15 +1,30 @@
-import React from "react";
+import { useState, useEffect } from "react";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { 
-  Users, Mail, UserPlus, Phone, 
-  MapPin, Briefcase, Calendar, Hash 
+  Save, 
+  User, 
+  Mail, 
+  Phone, 
+  MapPin, 
+  Briefcase, 
+  Shield,
+  Calendar,
+  ChevronLeft,
+  Bookmark,
+  UserPlus,
+  Building2,
+  FileText,
+  Tag
 } from "lucide-react";
-import Input from "@/components/ui/Input";
-import { ReusableSelect } from "@/components/ui/ReusableSelect";
+
+import { Switch } from "@/components/ui/switch";
+import Input from "@/components/ui/Input"; 
+import { ReusableSelect } from "@/components/ui/ReusableSelect"; 
 import { GradientButton } from "@/components/ui/GradientButton";
-import { Required } from "@/components/ui/Require";
 import { useApi } from "@/context/ApiContext";
 import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
-import { useParams, useNavigate } from "react-router-dom";
+import { useHeader } from "@/context/HeaderContext";
+import { useToast } from "@/context/ToastContext";
 
 const roleOptions = [
   { label: "Admin", value: "admin" },
@@ -17,249 +32,358 @@ const roleOptions = [
   { label: "Staff", value: "staff" },
 ];
 
-
-
-const EmployeeForm: React.FC = () => {
+const EmployeeForm = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { postData, putData, getData, loading } = useApi();
-  // --- State Management ---
-  const [name, setName] = React.useState<string>("");
-  const [email, setEmail] = React.useState<string>("");
-  const [role, setRole] = React.useState<string>("");
-  const [phone, setPhone] = React.useState<string>("");
-  const [address, setAddress] = React.useState<string>("");
-  const [joinDate, setJoinDate] = React.useState<string>("");
+  const { setActions } = useHeader();
+  const { showToast } = useToast();
+  const [submitting, setSubmitting] = useState(false);
   
-  React.useEffect(() => {
-    if (id) {
-      const fetchEmployee = async () => {
-        const res = await getData(`${ENDPOINTS.EMPLOYEES}/by/${id}`);
-        if (res && res.data) {
-          const emp = res.data;
-          setName(emp.name || emp.datas?.name || "");
-          setEmail(emp.email || emp.datas?.email || "");
-          setRole(emp.role || emp.datas?.role || "");
-          setPhone(emp.mobile_number || emp.datas?.mobile_number || "");
-          setAddress(emp.address || emp.datas?.address || "");
-          setJoinDate(emp.joinDate || emp.datas?.joinDate || "");
-        }
-      };
-      fetchEmployee();
-    }
-  }, [id]);
+  const initialFormData = {
+    name: "",
+    email: "",
+    role: "staff",
+    mobile_number: "",
+    address: "",
+    joinDate: new Date().toISOString().split('T')[0],
+    is_accepted: true,
+    employee_id_custom: "",
+    department: "",
+    salary_range: "",
+  };
 
-  const [errors, setErrors] = React.useState({ name: false, email: false, role: false });
+  const [formData, setFormData] = useState(initialFormData);
 
-  const handleSubmit = async (action: "save" | "add_more") => {
-    const hasErrors = {
-      name: !name,
-      email: !email,
-      role: !role,
+  // Header Actions
+  useEffect(() => {
+    const handleActionSubmit = (e: any) => {
+      e.preventDefault();
+      handleSubmit(e);
     };
-    
-    setErrors(hasErrors);
-    
-    if (hasErrors.name || hasErrors.email || hasErrors.role) {
-      return;
-    }
 
-    const payload = {
-      datas: { 
-        name, 
-        email, 
-        role, 
-        mobile_number: phone, 
-        address, 
-        joinDate, 
-        shop_id: SHOP_ID,
-        id,
-        type: id ? "EMPLOYEE UPDATE" : "EMPLOYEE CREATE" 
+    setActions(
+      <div className="flex items-center gap-4 animate-in fade-in slide-in-from-right-4 duration-300">
+        <div className="flex items-center gap-3 bg-white px-4 h-11 rounded-2xl border border-slate-200 shadow-sm scale-90 md:scale-100">
+          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Active</span>
+          <Switch 
+            checked={formData.is_accepted} 
+            onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_accepted: checked }))}
+          />
+        </div>
+        <div className="hidden md:flex items-center gap-2">
+          {!id && (
+            <button 
+              type="button"
+              onClick={handleSaveDraft}
+              className="px-4 h-11 rounded-xl border border-blue-100 text-blue-600 font-bold text-xs bg-blue-50/50 hover:bg-blue-100 transition-all flex items-center gap-2"
+            >
+              <Bookmark size={14} />
+              Save Draft
+            </button>
+          )}
+          <GradientButton 
+            icon={<Save size={16} />} 
+            onClick={handleActionSubmit} 
+            disabled={submitting}
+            className="rounded-xl shadow-md text-xs px-6 h-11 flex items-center py-3"
+          >
+            {submitting ? "..." : (id ? "Save" : "Create")}
+          </GradientButton>
+        </div>
+      </div>
+    );
+    return () => setActions(null);
+  }, [setActions, formData.is_accepted, submitting, id, navigate, formData]);
+
+  // Load Existing or Draft
+  useEffect(() => {
+    const draftId = searchParams.get('draftId');
+    if (draftId) {
+      const drafts = JSON.parse(localStorage.getItem('employee_drafts') || '[]');
+      const draft = drafts.find((d: any) => d.id === draftId);
+      if (draft) {
+        setFormData(draft);
+        showToast("Draft loaded successfully", "success");
       }
+    } else if (id) {
+      getData(`${ENDPOINTS.EMPLOYEES}/by/${id}`).then(res => {
+        if (res?.data) {
+          const emp = Array.isArray(res.data) ? res.data[0] : res.data;
+          setFormData({
+            ...initialFormData,
+            ...emp,
+            is_accepted: emp.is_accepted ?? true,
+          });
+        }
+      });
+    }
+  }, [id, searchParams]);
+
+  const handleSaveDraft = () => {
+    const drafts = JSON.parse(localStorage.getItem('employee_drafts') || '[]');
+    const draftId = searchParams.get('draftId') || Date.now().toString();
+    
+    const newDraft = { 
+      ...formData, 
+      id: draftId,
+      updatedAt: new Date().toISOString() 
     };
 
-    let res;
-    if (id) {
-      res = await putData(`${ENDPOINTS.EMPLOYEES}`, payload);
+    const existingIndex = drafts.findIndex((d: any) => d.id === draftId);
+    if (existingIndex > -1) {
+      drafts[existingIndex] = newDraft;
     } else {
-      res = await postData(ENDPOINTS.EMPLOYEES, payload);
+      drafts.unshift(newDraft);
     }
 
-    if (res && action === "save") {
-      navigate("/employee");
-    } else if (res && action === "add_more") {
-      setName(""); setEmail(""); setRole(""); setPhone(""); setAddress(""); setJoinDate("");
+    localStorage.setItem('employee_drafts', JSON.stringify(drafts));
+    showToast("Employee details saved as draft", "info");
+    
+    // Update URL if it's a new draft
+    if (!searchParams.get('draftId')) {
+      navigate(`/employee/add?draftId=${draftId}`, { replace: true });
     }
   };
 
+  const handleSubmit = async (e: any) => {
+    if (e) e.preventDefault();
+    if (!formData.name || !formData.email) {
+      showToast("Please fill in name and email", "error");
+      return;
+    }
+
+    setSubmitting(true);
+    const payload = {
+      datas: {
+        ...formData,
+        id,
+        shop_id: SHOP_ID,
+        type: id ? "EMPLOYEE UPDATE" : "EMPLOYEE CREATE"
+      }
+    };
+
+    try {
+      const res = id 
+        ? await putData(ENDPOINTS.EMPLOYEES, payload)
+        : await postData(ENDPOINTS.EMPLOYEES, payload);
+
+      if (res) {
+        showToast(`Employee ${id ? 'updated' : 'created'} successfully`, "success");
+        // Clear draft if it was one
+        const draftIndex = searchParams.get('draft');
+        if (draftIndex !== null) {
+          const drafts = JSON.parse(localStorage.getItem('employee_drafts') || '[]');
+          drafts.splice(parseInt(draftIndex), 1);
+          localStorage.setItem('employee_drafts', JSON.stringify(drafts));
+        }
+        navigate("/employee/all");
+      }
+    } catch (err) {
+      showToast("Failed to save employee", "error");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleSelectChange = (name: string, value: string) => {
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
   return (
-    <div className="max-w-7xl mx-auto p-6 space-y-12 bg-white">
-      
-      {/* SECTION 1: PERSONNEL DETAILS */}
-      <section>
-        <div className="flex items-center gap-3 border-b border-slate-100 pb-4 mb-8">
-          <div className="p-2 bg-emerald-50 rounded-lg text-emerald-600">
-            <UserPlus size={22} />
-          </div>
-          <div>
-            <h3 className="text-base font-semibold text-slate-900">Personnel Details</h3>
-            <p className="text-sm text-gray-500">Basic account information and system access.</p>
-          </div>
-        </div>
+    <div className="min-h-screen bg-slate-50/50 p-2 md:p-4 lg:p-6 font-[Inter,sans-serif]">
+      <div className="max-w-7xl mx-auto space-y-4 relative">
+        
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          <div className="space-y-2">
-            <label className="text-xs font-semibold text-slate-500 uppercase flex items-center gap-1">
-              Employee Name <Required />
-            </label>
-            <Input
-              placeholder="e.g. John Doe"
-              value={name}
-              onChange={(e) => {
-                setName(e.target.value);
-                if (e.target.value) setErrors(prev => ({ ...prev, name: false }));
-              }}
-              leftIcon={<Users size={18} className="text-slate-400" />}
-              className={errors.name ? "border-red-500" : "bg-slate-50/50"} 
-            />
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-xs font-semibold text-slate-500 uppercase flex items-center gap-1">
-              Email Address <Required />
-            </label>
-            <Input
-              type="email"
-              placeholder="john@company.com"
-              value={email}
-              onChange={(e) => {
-                setEmail(e.target.value);
-                if (e.target.value) setErrors(prev => ({ ...prev, email: false }));
-              }}
-              leftIcon={<Mail size={18} className="text-slate-400" />}
-              className={errors.email ? "border-red-500" : "bg-slate-50/50"}
-            />
-          </div>
-
-          <div className="space-y-2">
-             <label className="text-xs font-semibold text-slate-500 uppercase flex items-center gap-1">
-               System Role <Required />
-            </label>
-            <ReusableSelect
-              options={roleOptions}
-              value={role}
-              onValueChange={(val) => {
-                 setRole(val);
-                 if (val) setErrors(prev => ({ ...prev, role: false }));
-              }}
-              placeholder="Assign Permissions"
-            />
-          </div>
-        </div>
-      </section>
-
-      {/* SECTION 2: CONTACT & ADDRESS */}
-      <section>
-        <div className="flex items-center gap-3 border-b border-slate-100 pb-4 mb-8">
-          <div className="p-2 bg-blue-50 rounded-lg text-blue-600">
-            <MapPin size={22} />
-          </div>
-          <div>
-            <h3 className="text-base font-semibold text-slate-900">Contact Information</h3>
-            <p className="text-sm text-gray-500">Reach details and physical office location.</p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <div className="space-y-2">
-            <label className="text-xs font-semibold text-slate-500 uppercase">Phone Number</label>
-            <Input
-              placeholder="+1 (555) 000-0000"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              leftIcon={<Phone size={18} className="text-slate-400" />}
-              className="bg-slate-50/50"
-            />
+        {/* ── FORM ── */}
+        <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-6 gap-6 items-start">
+          
+          {/* BOX 1: IDENTITY (Spans 4 cols) */}
+          <div className="lg:col-span-4 bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden transition-all hover:shadow-md h-full">
+            <div className="px-6 py-4 bg-gradient-to-r from-blue-50/50 to-transparent border-b border-slate-100 flex items-center gap-3">
+              <div className="w-8 h-8 rounded-xl bg-blue-100 flex items-center justify-center text-blue-600">
+                <User size={18} />
+              </div>
+              <h2 className="text-xs font-bold text-slate-800 uppercase tracking-widest">Personal Identity</h2>
+            </div>
+            <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Input
+                label="Full Name"
+                required
+                name="name"
+                value={formData.name}
+                onChange={handleChange}
+                placeholder="Johnathan Doe"
+                leftIcon={<User size={16} className="text-slate-300" />}
+              />
+              <Input
+                label="Email Address"
+                required
+                type="email"
+                name="email"
+                value={formData.email}
+                onChange={handleChange}
+                placeholder="john@example.com"
+                leftIcon={<Mail size={16} className="text-slate-300" />}
+              />
+              <Input
+                label="Phone Number"
+                type="tel"
+                name="mobile_number"
+                value={formData.mobile_number}
+                onChange={handleChange}
+                placeholder="+91 00000 00000"
+                leftIcon={<Phone size={16} className="text-slate-300" />}
+              />
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-bold text-slate-500 ml-1 uppercase tracking-wider">System Role</label>
+                <ReusableSelect 
+                  options={roleOptions}
+                  value={formData.role}
+                  onValueChange={(val) => handleSelectChange("role", val)}
+                  placeholder="Select Permissions"
+                />
+              </div>
+            </div>
           </div>
 
-          <div className="space-y-2">
-            <label className="text-xs font-semibold text-slate-500 uppercase">Work Address</label>
-            <Input
-              placeholder="123 Business Ave, Suite 100"
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
-              leftIcon={<MapPin size={18} className="text-slate-400" />}
-              className="bg-slate-50/50"
-            />
+          {/* BOX 2: CLASSIFICATION (Spans 2 cols) */}
+          <div className="lg:col-span-2 bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden transition-all hover:shadow-md h-full">
+            <div className="px-6 py-4 bg-gradient-to-r from-amber-50/50 to-transparent border-b border-slate-100 flex items-center gap-3">
+              <div className="w-8 h-8 rounded-xl bg-amber-100 flex items-center justify-center text-amber-600">
+                <Shield size={18} />
+              </div>
+              <h2 className="text-xs font-bold text-slate-800 uppercase tracking-widest">Classification</h2>
+            </div>
+            <div className="p-8 space-y-6">
+              <div className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Member Active</span>
+                <Switch 
+                  checked={formData.is_accepted} 
+                  onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_accepted: checked }))}
+                />
+              </div>
+              <Input
+                label="Department"
+                name="department"
+                value={formData.department}
+                onChange={handleChange}
+                placeholder="e.g. Sales, Ops"
+                leftIcon={<Building2 size={16} className="text-slate-300" />}
+              />
+            </div>
           </div>
-        </div>
-      </section>
 
-      {/* SECTION 3: EMPLOYMENT DETAILS */}
-      <section>
-        <div className="flex items-center gap-3 border-b border-slate-100 pb-4 mb-8">
-          <div className="p-2 bg-purple-50 rounded-lg text-purple-600">
-            <Briefcase size={22} />
+          {/* BOX 3: EMPLOYMENT (Spans 2 cols) */}
+          <div className="lg:col-span-2 bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden transition-all hover:shadow-md">
+            <div className="px-6 py-4 bg-gradient-to-r from-purple-50/50 to-transparent border-b border-slate-100 flex items-center gap-3">
+              <div className="w-8 h-8 rounded-xl bg-purple-100 flex items-center justify-center text-purple-600">
+                <Briefcase size={18} />
+              </div>
+              <h2 className="text-xs font-bold text-slate-800 uppercase tracking-widest">Employment</h2>
+            </div>
+            <div className="p-8">
+              <Input
+                label="Employee ID (Custom)"
+                name="employee_id_custom"
+                value={formData.employee_id_custom}
+                onChange={handleChange}
+                placeholder="EMP-102"
+                leftIcon={<Tag size={16} className="text-slate-300" />}
+              />
+            </div>
           </div>
-          <div>
-            <h3 className="text-base font-semibold text-slate-900">Employment Details</h3>
-            <p className="text-sm text-gray-500">Internal IDs and departmental organization.</p>
+
+          {/* BOX 4: FINANCIALS (Spans 2 cols) */}
+          <div className="lg:col-span-2 bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden transition-all hover:shadow-md">
+            <div className="px-6 py-4 bg-gradient-to-r from-emerald-50/50 to-transparent border-b border-slate-100 flex items-center gap-3">
+              <div className="w-8 h-8 rounded-xl bg-emerald-100 flex items-center justify-center text-emerald-600">
+                <FileText size={18} />
+              </div>
+              <h2 className="text-xs font-bold text-slate-800 uppercase tracking-widest">Financial Context</h2>
+            </div>
+            <div className="p-8">
+              <Input
+                label="Salary Range / CTC"
+                name="salary_range"
+                value={formData.salary_range}
+                onChange={handleChange}
+                placeholder="e.g. 5L - 7L"
+                leftIcon={<Tag size={16} className="text-slate-300" />}
+              />
+            </div>
           </div>
-        </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {/* <div className="space-y-2">
-            <label className="text-xs font-semibold text-slate-500 uppercase">Employee ID</label>
-            <Input
-              placeholder="EMP-1002"
-              value={employeeId}
-              onChange={(e) => setEmployeeId(e.target.value)}
-              leftIcon={<Hash size={18} className="text-slate-400" />}
-              className="bg-slate-50/50"
-            />
-          </div> */}
-
-   
-
-          <div className="space-y-2">
-            <label className="text-xs font-semibold text-slate-500 uppercase">Joining Date</label>
-            <Input
-              type="date"
-              value={joinDate}
-              onChange={(e) => setJoinDate(e.target.value)}
-              leftIcon={<Calendar size={18} className="text-slate-400" />}
-              className="bg-slate-50/50"
-            />
+          {/* BOX 5: DATE (Spans 2 cols) */}
+          <div className="lg:col-span-2 bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden transition-all hover:shadow-md">
+            <div className="px-6 py-4 bg-gradient-to-r from-rose-50/50 to-transparent border-b border-slate-100 flex items-center gap-3">
+              <div className="w-8 h-8 rounded-xl bg-rose-100 flex items-center justify-center text-rose-600">
+                <Calendar size={18} />
+              </div>
+              <h2 className="text-xs font-bold text-slate-800 uppercase tracking-widest">Lifecycle</h2>
+            </div>
+            <div className="p-8">
+              <Input
+                label="Joining Date"
+                type="date"
+                name="joinDate"
+                value={formData.joinDate}
+                onChange={handleChange}
+                leftIcon={<Calendar size={16} className="text-slate-300" />}
+              />
+            </div>
           </div>
-        </div>
-      </section>
 
-      {/* ACTION BAR */}
-      <div className="flex flex-col sm:flex-row justify-between items-center pt-8 border-t border-slate-100">
-        <button 
-          onClick={() => console.log('Cancel')}
-          className="text-sm font-semibold text-slate-400 hover:text-red-500 transition-colors px-4 py-2"
-        >
-          Discard Changes
-        </button>
+          {/* BOX 6: ADDRESS (Spans 6 cols) */}
+          <div className="lg:col-span-6 bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden transition-all hover:shadow-md">
+            <div className="px-6 py-4 bg-gradient-to-r from-blue-50/50 to-transparent border-b border-slate-100 flex items-center gap-3">
+              <div className="w-8 h-8 rounded-xl bg-blue-100 flex items-center justify-center text-blue-600">
+                <MapPin size={18} />
+              </div>
+              <h2 className="text-xs font-bold text-slate-800 uppercase tracking-widest">Residance & Work Location</h2>
+            </div>
+            <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Input
+                label="Physical Address"
+                name="address"
+                value={formData.address}
+                onChange={handleChange}
+                placeholder="Full address of residence or assigned office..."
+                className="md:col-span-2"
+                leftIcon={<MapPin size={16} className="text-slate-300" />}
+              />
+            </div>
+          </div>
+        </form>
 
-        <div className="flex flex-wrap gap-3 mt-4 sm:mt-0">
+        {/* Mobile Submit Button */}
+        <div className="md:hidden flex flex-col gap-3 pb-8">
+          {!id && (
+            <button 
+              type="button"
+              onClick={handleSaveDraft}
+              className="w-full h-12 rounded-2xl border border-blue-100 text-blue-600 font-bold text-sm bg-blue-50/50 hover:bg-blue-100 transition-all flex items-center justify-center gap-2"
+            >
+              <Bookmark size={18} />
+              Save Draft
+            </button>
+          )}
           <GradientButton 
-            variant="outline" 
-            onClick={() => handleSubmit("add_more")}
-            className="border-slate-200"
-            disabled={loading}
+            icon={<Save size={18} />} 
+            onClick={handleSubmit} 
+            disabled={submitting}
+            className="w-full rounded-2xl h-12"
           >
-            Save & Add Another
-          </GradientButton>
-          <GradientButton 
-            onClick={() => handleSubmit("save")}
-            className="min-w-[140px] shadow-lg shadow-emerald-100"
-            disabled={loading}
-          >
-            {loading ? (id ? "Updating..." : "Creating...") : (id ? "Update Employee" : "Create Employee")}
+            {submitting ? "Processing..." : (id ? "Save Changes" : "Create Member")}
           </GradientButton>
         </div>
+
       </div>
     </div>
   );

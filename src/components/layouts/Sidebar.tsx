@@ -376,22 +376,36 @@ const SubGroupItem: FC<SubGroupItemProps> = ({ group }) => {
 
 // ─── Flat SubLink — reusable leaf node ───────────────────────────────────────
 
-const FlatSubLink: FC<{ sub: SubLink; indent?: boolean }> = ({ sub, indent = false }) => (
-  <NavLink
-    to={sub.path}
-    className={({ isActive }) =>
-      `block pr-2.5 py-1.5 text-[11.5px] rounded-r-[7px] no-underline tracking-tight leading-none transition-colors ${
-        indent ? "pl-3" : "pl-3.5"
-      } ${
-        isActive
-          ? "font-semibold text-white bg-white/5"
-          : "font-normal text-white/60 hover:text-white/80"
-      }`
-    }
-  >
-    {sub.name}
-  </NavLink>
-);
+const FlatSubLink: FC<{ sub: SubLink; indent?: boolean }> = ({ sub, indent = false }) => {
+  const Icon = sub.icon;
+  return (
+    <NavLink
+      to={sub.path}
+      className={({ isActive }) =>
+        `flex items-center gap-2 pr-2.5 py-1.5 text-[11.5px] rounded-r-[7px] no-underline tracking-tight leading-none transition-colors ${
+          indent ? "pl-3" : "pl-3.5"
+        } ${
+          isActive
+            ? "font-semibold text-white bg-white/5"
+            : "font-normal text-white/60 hover:text-white/80"
+        }`
+      }
+    >
+      {({ isActive }) => (
+        <>
+          {Icon && (
+            <Icon 
+              size={12} 
+              strokeWidth={2} 
+              className={`shrink-0 ${isActive ? "opacity-100" : "opacity-50"}`} 
+            />
+          )}
+          <span className="truncate">{sub.name}</span>
+        </>
+      )}
+    </NavLink>
+  );
+};
 
 // ─── Tooltip (collapsed state) ────────────────────────────────────────────────
 

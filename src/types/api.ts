@@ -33,6 +33,8 @@ export interface EmployeeRecord {
   is_accepted: boolean;
   added_by: string;
   role: string;
+  id?: string;
+  [key: string]: unknown;
 }
 
 export interface CustomerRecord {

@@ -1,165 +1,280 @@
-import { Trash, X, UserCheck, UserX, Edit } from "lucide-react";
-import { useNavigate } from "react-router-dom";
-import { useState, useEffect } from "react";
-import EmployeeHeader from "../components/EmployeeHeader";
-import Table from "@/components/common/Table";
-import Drawer from "@/components/common/Drawer";
-import DetailView from "@/components/common/DetaileView";
-import Loader from "@/components/common/Loader";
-import { useApi } from "@/context/ApiContext";
-import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
-import type { EmployeeRecord } from "@/types/api";
-import type { ReactNode } from "react";
+import { Search, Filter, Users, UserCheck, UserX, Trash2, Bookmark, Eye, Edit3, X, AlertCircle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { StatCard } from '@/components/common/StatsCard';
+import { ReusableSelect } from '@/components/ui/ReusableSelect';
+import Input from '@/components/ui/Input';
+import Loader from '@/components/common/Loader';
+import { GradientButton } from '@/components/ui/GradientButton';
+import { useApi } from '@/context/ApiContext';
+import { ENDPOINTS, SHOP_ID } from '@/services/endpoints';
+import type { EmployeeRecord } from '@/types/api';
+import { useHeader } from '@/context/HeaderContext';
+import { useToast } from '@/context/ToastContext';
+import { ConfirmDialog } from '@/components/common/ConfirmDialog';
+import { ColumnPicker } from '@/components/common/ColumnPicker';
+import React, { useEffect, useMemo, useState } from 'react';
 
-interface Column {
-  key: string;
-  label: string;
-  render?: (value: any, row: EmployeeRecord) => ReactNode;
-}
-
-const EMPLOYEE_COLUMNS = (navigate: (path: string) => void): Column[] => [
-  { key: "name", label: "Name" },
-  { key: "email", label: "Email" },
-  { key: "mobile_number", label: "Mobile" },
-  { key: "role", label: "Role", render: (v) => (
-    <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-100">{v}</span>
-  )},
-  { key: "is_accepted", label: "Status", render: (v) => (
-    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold border ${
-      v ? "bg-emerald-50 text-emerald-700 border-emerald-100" : "bg-amber-50 text-amber-700 border-amber-100"
-    }`}>
-      {v ? <UserCheck size={11} /> : <UserX size={11} />}
-      {v ? "Accepted" : "Pending"}
-    </span>
-  )},
-  {
-    key: "_actions",
-    label: "",
-    render: (_: any, row: EmployeeRecord) => (
-      <div className="flex items-center gap-1">
-        <button
-          onClick={(e) => { e.stopPropagation(); navigate(`/employee/${row.id}/edit`); }}
-          className="p-1.5 text-slate-400 hover:text-blue-500 hover:bg-blue-50 rounded-md transition-colors"
-          title="Edit"
-        >
-          <Edit size={15} />
-        </button>
-      </div>
-    ),
-  },
-];
-
-const Employee = () => {
-  const navigate = useNavigate();
+export default function Employee() {
   const { getData, deleteData, loading, error, clearError } = useApi();
+  const { showToast } = useToast();
+  const navigate = useNavigate();
+  const { setActions } = useHeader();
 
   const [employees, setEmployees] = useState<EmployeeRecord[]>([]);
-  const [isOpen, setIsOpen] = useState(false);
-  const [selectedItem, setSelectedItem] = useState<EmployeeRecord | null>(null);
-  const [selectedRows, setSelectedRows] = useState<any[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [roleFilter, setRoleFilter] = useState<string>('All');
   const [refreshKey, setRefreshKey] = useState(0);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [employeeToDelete, setEmployeeToDelete] = useState<EmployeeRecord | null>(null);
+
+  // Dynamic Column State
+  const [availableKeys, setAvailableKeys] = useState<string[]>([]);
+  const [selectedKeys, setSelectedKeys] = useState<string[]>(() => {
+    const saved = localStorage.getItem('employee_table_columns');
+    return saved ? JSON.parse(saved) : ["email", "mobile_number", "role"];
+  });
 
   useEffect(() => {
-    getData(ENDPOINTS.EMPLOYEES, { limit: "50", offset: "1" }).then((res) => {
-      if (res) setEmployees(Array.isArray(res.data) ? res.data : [res.data]);
-    });
-  }, [refreshKey]);
-
-  const handleDeleteSelected = async () => {
-    if (!confirm(`Delete ${selectedRows.length} employee(s)?`)) return;
-    await Promise.all(
-      selectedRows.map((id) => deleteData(`${ENDPOINTS.EMPLOYEES}/${SHOP_ID}/${id}`))
+    setActions(
+      <div className="flex items-center gap-2">
+        <button 
+          onClick={() => navigate("/employee/drafts")}
+          className="px-4 h-10 rounded-xl border border-blue-100 text-blue-600 font-bold text-[13px] bg-blue-50/50 hover:bg-blue-100 transition-all flex items-center gap-2"
+        >
+          <Bookmark size={16} />
+          Saved Drafts
+        </button>
+        <GradientButton path="/employee/add" className="h-10 flex items-center px-4 text-[13px]">+ Add Employee</GradientButton>
+      </div>
     );
-    setSelectedRows([]);
-    setRefreshKey((k) => k + 1);
+    return () => setActions(null);
+  }, [setActions, navigate]);
+
+  useEffect(() => {
+    const params: Record<string, string> = { limit: "50", offset: "1" };
+    if (searchTerm) params.q = searchTerm;
+    
+    getData(ENDPOINTS.EMPLOYEES, params).then((res) => {
+      if (res) {
+        const data: EmployeeRecord[] = Array.isArray(res.data) ? res.data : [res.data];
+        setEmployees(data);
+        
+        // Detect unique keys from the flat record
+        const keys = new Set<string>();
+        data.forEach((e: EmployeeRecord) => {
+          Object.keys(e).forEach(k => {
+            // Ignore system internal IDs and the primary name field
+            if (!["id", "shop_id", "account_id", "name"].includes(k)) {
+              keys.add(k);
+            }
+          });
+        });
+        const sortedKeys = Array.from(keys).sort();
+        setAvailableKeys(sortedKeys);
+      }
+    });
+  }, [refreshKey, searchTerm]);
+
+  const handleDelete = async () => {
+    if (!employeeToDelete) return;
+    try {
+      await deleteData(`${ENDPOINTS.EMPLOYEES}/${SHOP_ID}/${employeeToDelete.employee_id}`);
+      showToast("Employee deleted successfully", "success");
+      setRefreshKey(prev => prev + 1);
+    } catch (err) {
+      showToast("Failed to delete employee", "error");
+    } finally {
+      setIsDeleteDialogOpen(false);
+      setEmployeeToDelete(null);
+    }
   };
 
-  const handleRowClick = (row: EmployeeRecord) => {
-    setSelectedItem(row);
-    setIsOpen(true);
-  };
+  const filteredEmployees = useMemo(() => {
+    return employees.filter(emp => {
+      const matchesRole = roleFilter === 'All' || emp.role === roleFilter;
+      const matchesSearch = emp.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                           emp.email?.toLowerCase().includes(searchTerm.toLowerCase());
+      return matchesRole && matchesSearch;
+    });
+  }, [employees, roleFilter, searchTerm]);
 
-  const detailSections = selectedItem ? [
-    {
-      title: "Personal Info",
-      fields: [
-        { label: "Full Name", value: selectedItem.name },
-        { label: "Email", value: selectedItem.email },
-        { label: "Mobile", value: selectedItem.mobile_number },
-        { label: "Role", value: selectedItem.role },
-      ].map(f => ({ icon: null as any, label: f.label, value: f.value })),
-    },
-    {
-      title: "System Info",
-      fields: [
-        { label: "Employee ID", value: selectedItem.employee_id },
-        { label: "Status", value: selectedItem.is_accepted ? "Accepted" : "Pending" },
-        { label: "Added By", value: selectedItem.added_by },
-        { label: "Account ID", value: selectedItem.account_id },
-      ].map(f => ({ icon: null as any, label: f.label, value: f.value })),
-    },
-  ] : [];
+  const roles = useMemo(() => {
+    const r = new Set(employees.map(e => e.role));
+    const uniqueRoles = Array.from(r);
+    return [
+      { label: 'All Roles', value: 'All' },
+      ...uniqueRoles.map(role => ({ label: role.charAt(0).toUpperCase() + role.slice(1), value: role }))
+    ];
+  }, [employees]);
 
   return (
-    <div>
-      <EmployeeHeader
-        accepted={employees.filter(e => e.is_accepted).length}
-        notAccepted={employees.filter(e => !e.is_accepted).length}
-        searchValue=""
-        onSearchChange={() => ""}
-      />
+    <div className="space-y-6">
+      {/* Stats Section */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <StatCard 
+          icon={Users} 
+          label="Total Employees" 
+          value={employees.length.toString()} 
+        />
+        <StatCard 
+          icon={UserCheck} 
+          label="Accepted" 
+          value={employees.filter(e => e.is_accepted).length.toString()} 
+          iconBg="bg-emerald-50" iconColor="text-emerald-600"
+        />
+        <StatCard 
+          icon={UserX} 
+          label="Pending" 
+          value={employees.filter(e => !e.is_accepted).length.toString()} 
+          iconBg="bg-amber-50" iconColor="text-amber-600"
+        />
+      </div>
 
-      {error && (
-        <div className="flex items-center justify-between gap-2 p-3 mt-3 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm">
-          <span>{error}</span>
-          <button onClick={clearError} className="shrink-0 text-red-400 hover:text-red-600"><X size={14} /></button>
+      {/* Filter Section */}
+      <div className="bg-white p-4 rounded-[1.5rem] border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="relative w-full sm:w-80">
+            <Input
+              leftIcon={<Search size={14} className='text-gray-400'/>}
+              type="text"
+              placeholder="Search employees..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="h-10 text-sm"
+            />
+          </div>
+          <ColumnPicker 
+            availableKeys={availableKeys}
+            selectedKeys={selectedKeys}
+            onApply={setSelectedKeys}
+            storageKey="employee_table_columns"
+          />
         </div>
-      )}
 
-      {selectedRows.length > 0 && (
-        <div className="p-3 my-5 flex justify-between items-center bg-blue-50 text-blue-800 rounded-lg border border-blue-200 shadow-sm">
-          <p>{selectedRows.length} items selected for action</p>
-          <button onClick={handleDeleteSelected}>
-            <Trash size={18} className="text-red-400 hover:text-red-600" />
+        <div className="flex items-center gap-3">
+          <button className="p-2.5 rounded-xl bg-slate-50 text-slate-400 border border-slate-100 hover:bg-slate-100 transition-all shadow-sm">
+            <Filter size={18} />
+          </button>
+          <ReusableSelect
+            options={roles}
+            value={roleFilter}
+            onValueChange={setRoleFilter}
+            placeholder="Filter by Role"
+            className="w-48 h-11"
+          />
+        </div>
+      </div>
+
+      {/* Error State */}
+      {error && (
+        <div className="p-4 bg-rose-50 border border-rose-100 rounded-2xl flex items-center justify-between animate-in fade-in slide-in-from-top-2">
+          <div className="flex items-center gap-3 text-rose-600">
+            <AlertCircle size={20} />
+            <p className="text-sm font-bold">{error}</p>
+          </div>
+          <button onClick={clearError} className="p-1 hover:bg-rose-100 rounded-lg transition-colors text-rose-400">
+            <X size={18} />
           </button>
         </div>
       )}
 
-      {loading ? (
-        <div className="mt-5"><Loader /></div>
-      ) : (
-        <Table
-          className="mt-5"
-          columns={EMPLOYEE_COLUMNS(navigate)}
-          data={employees}
-          onRowClick={(row) => handleRowClick(row)}
-          selectedIds={selectedRows}
-          onSelectionChange={setSelectedRows}
-          rowKey="employee_id"
-        />
-      )}
+      {/* Table Section */}
+      <div className="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-slate-50/50 text-slate-400 text-[10px] font-black uppercase tracking-[0.15em] border-b border-slate-100">
+                <th className="px-6 py-5 whitespace-nowrap min-w-[200px]">Employee Name</th>
+                <th className="px-6 py-5 whitespace-nowrap">Status</th>
+                {selectedKeys.map(key => (
+                  <th key={key} className="px-6 py-5 capitalize whitespace-nowrap">{key.replace(/_/g, ' ')}</th>
+                ))}
+                <th className="px-6 py-5 text-right whitespace-nowrap">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-50">
+              {loading ? (
+                <tr>
+                  <td colSpan={selectedKeys.length + 4} className="py-20"><Loader /></td>
+                </tr>
+              ) : filteredEmployees.length === 0 ? (
+                <tr>
+                  <td colSpan={selectedKeys.length + 4} className="py-20 text-center text-slate-400 font-medium italic">No employees matching your filters.</td>
+                </tr>
+              ) : (
+                filteredEmployees.map((emp) => (
+                  <tr 
+                    key={emp.employee_id} 
+                    className="group hover:bg-blue-50/30 transition-all cursor-pointer"
+                    onClick={() => navigate(`/employee/${emp.employee_id || emp.id}`)}
+                  >
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-blue-400 flex items-center justify-center text-white text-sm font-black shadow-lg shadow-blue-100">
+                          {emp.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-slate-700 tracking-tight">{emp.name}</p>
+                          <p className="text-[11px] font-bold text-slate-400 font-mono">ID: {emp.employee_id}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border shadow-sm ${
+                        emp.is_accepted 
+                          ? "bg-emerald-50 text-emerald-600 border-emerald-100" 
+                          : "bg-amber-50 text-amber-600 border-amber-100"
+                      }`}>
+                        <div className={`w-1.5 h-1.5 rounded-full ${emp.is_accepted ? "bg-emerald-500" : "bg-amber-500"} ${!emp.is_accepted ? "animate-pulse" : ""}`} />
+                        {emp.is_accepted ? "Accepted" : "Pending"}
+                      </span>
+                    </td>
+                    {selectedKeys.map(key => (
+                      <td key={key} className="px-6 py-4 whitespace-nowrap">
+                        <p className={`text-[12px] font-bold tracking-tight ${key === 'role' ? 'text-blue-600 bg-blue-50 w-fit px-2 py-0.5 rounded-md' : 'text-slate-600'}`}>
+                          {String(emp[key] ?? "—")}
+                        </p>
+                      </td>
+                    ))}
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); navigate(`/employee/${emp.employee_id || emp.id}`); }}
+                          className="p-2 text-slate-400 hover:text-blue-600 hover:bg-white rounded-xl transition-all shadow-sm active:scale-95"
+                        >
+                          <Eye size={16} />
+                        </button>
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); navigate(`/employee/${emp.employee_id || emp.id}/edit`); }}
+                          className="p-2 text-slate-400 hover:text-blue-600 hover:bg-white rounded-xl transition-all shadow-sm active:scale-95"
+                        >
+                          <Edit3 size={16} />
+                        </button>
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); setEmployeeToDelete(emp); setIsDeleteDialogOpen(true); }}
+                          className="p-2 text-slate-400 hover:text-rose-600 hover:bg-white rounded-xl transition-all shadow-sm active:scale-95"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
 
-      {!loading && employees.length === 0 && !error && (
-        <div className="text-center py-12 text-slate-500 text-sm">No employees found.</div>
-      )}
-
-      <Drawer isOpen={isOpen} onClose={() => setIsOpen(false)} title="Employee Details">
-        {selectedItem && (
-          <DetailView
-            title="Employee Details"
-            sections={detailSections}
-            onEdit={() => navigate(`/employee/${selectedItem.id}/edit`)}
-            onDelete={async () => {
-              if (!confirm("Delete this employee?")) return;
-              await deleteData(`${ENDPOINTS.EMPLOYEES}/${selectedItem.shop_id}/${selectedItem.employee_id}`);
-              setIsOpen(false);
-              setRefreshKey((k) => k + 1);
-            }}
-          />
-        )}
-      </Drawer>
+      <ConfirmDialog
+        isOpen={isDeleteDialogOpen}
+        onClose={() => setIsDeleteDialogOpen(false)}
+        onConfirm={handleDelete}
+        title="Remove Employee"
+        description={`Are you sure you want to remove ${employeeToDelete?.name}? This action cannot be undone.`}
+        confirmText="Remove Member"
+        type="danger"
+      />
     </div>
   );
-};
-
-export default Employee;
+}

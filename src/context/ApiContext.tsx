@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, ReactNode } from "react";
+import { createContext, useContext, useState, ReactNode, useCallback } from "react";
 
 const BASE_URL = import.meta.env.VITE_GATEWAY_URL as string;
 
@@ -28,7 +28,7 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const request = async (
+  const request = useCallback(async (
     method: string,
     endpoint: string,
     body?: unknown,
@@ -58,24 +58,24 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const getData = (endpoint: string, params?: Record<string, string>) =>
-    request("GET", endpoint, undefined, params);
+  const getData = useCallback((endpoint: string, params?: Record<string, string>) =>
+    request("GET", endpoint, undefined, params), [request]);
 
-  const postData = (endpoint: string, body: unknown) =>
-    request("POST", endpoint, body);
+  const postData = useCallback((endpoint: string, body: unknown) =>
+    request("POST", endpoint, body), [request]);
 
-  const putData = (endpoint: string, body: unknown) =>
-    request("PUT", endpoint, body);
+  const putData = useCallback((endpoint: string, body: unknown) =>
+    request("PUT", endpoint, body), [request]);
 
-  const deleteData = (endpoint: string) =>
-    request("DELETE", endpoint);
+  const deleteData = useCallback((endpoint: string) =>
+    request("DELETE", endpoint), [request]);
 
-  const patchData = (endpoint: string, body: unknown) =>
-    request("PATCH", endpoint, body);
+  const patchData = useCallback((endpoint: string, body: unknown) =>
+    request("PATCH", endpoint, body), [request]);
 
-  const clearError = () => setError(null);
+  const clearError = useCallback(() => setError(null), []);
 
   return (
     <ApiContext.Provider

@@ -2,8 +2,8 @@ import React, { Suspense } from "react";
 import { createBrowserRouter } from "react-router-dom";
 import Loader from "@/components/common/Loader";
 import GRNListView from "@/features/purchase/pages/GrnListView";
-import {GRNForm} from "@/features/purchase/pages/GrnForm";
-import {PurchaseForm }from "@/features/purchase/pages/PurchaseForm";
+import GRNForm from "@/features/purchase/pages/GrnForm";
+import PurchaseForm from "@/features/purchase/pages/PurchaseForm";
 import ProductForm from "@/features/product/pages/ProductForm";
 import CustomerBalanceSummary from "@/features/customer/pages/CustomerBalanceSummary";
 import CustomerDetail from "@/features/customer/pages/Customerdetail";
@@ -12,10 +12,10 @@ import PurchaseHistory from "@/features/purchase/pages/PurchaseHistory";
 import SalesListPage from "@/features/sales/pages/SalesPage";
 import StockMovementPage from "@/features/inventory/pages/StockMovement";
 import ReceiveGoodsPage from "@/features/purchase/pages/ReceiveGoodsForm";
-import{ StockAdjustmentForm }from "@/features/inventory/pages/StockAdjusstment";
-import {ProductionForm} from "@/features/purchase/pages/ProductionForm";
-import{ CustomerFormPage }from "@/features/customer/pages/CustomerFormPage";
-import { SupplierForm } from "@/features/supplier/pages/SupplierForm";
+import StockAdjustmentForm from "@/features/inventory/pages/StockAdjusstment";
+import ProductionForm from "@/features/purchase/pages/ProductionForm";
+import CustomerFormPage from "@/features/customer/pages/CustomerFormPage";
+import SupplierForm from "@/features/supplier/pages/SupplierForm";
 
 
 // Layout & Auth

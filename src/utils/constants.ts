@@ -84,9 +84,10 @@ export const sidebarLinks: SidebarLink[] = [
     name: "Products",
     icon: Package,
     subLinks: [
-      { name: "Catalog", path: "/product/all" },
-      { name: "Add Product", path: "/product/add" },
-      { name: "Product Details", path: "/product" }
+      { name: "Add Product", path: "/product/add", icon: UserPlus },
+      { name: "Saved Drafts", path: "/product/drafts", icon: Bookmark },
+      { name: "Product Infos", path: "/product/all", icon: ClipboardList },
+      { name: "Product Detail", path: "/product", icon: FileText },
     ],
   },
 

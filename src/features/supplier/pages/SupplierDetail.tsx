@@ -91,35 +91,6 @@ export default function SupplierDetail() {
     }
   }
 
-  // Header Actions
-  useEffect(() => {
-    if (!supplier) {
-      setActions(null);
-      return;
-    }
-    setActions(
-      <div className="flex items-center gap-3 animate-in fade-in slide-in-from-right-4 duration-300">
-        <div className="flex items-center gap-1.5">
-          <button
-            onClick={() => navigate(`/supplier/${id}/edit`)}
-            className="w-10 h-10 flex items-center justify-center bg-white border border-slate-200 text-slate-600 rounded-xl hover:text-blue-600 hover:border-blue-100 transition-all shadow-sm active:scale-95"
-            title="Edit Supplier"
-          >
-            <Pencil size={18} />
-          </button>
-          <button
-            onClick={() => setShowDeleteModal(true)}
-            className="w-10 h-10 flex items-center justify-center bg-white border border-slate-200 text-slate-300 rounded-xl hover:text-rose-600 hover:border-rose-100 transition-all shadow-sm active:scale-95"
-            title="Delete Supplier"
-          >
-            <Trash2 size={18} />
-          </button>
-        </div>
-      </div>
-    );
-    return () => setActions(null);
-  }, [setActions, id, navigate, supplier]);
-
   if (recordLoading) return <div className="p-12 flex justify-center"><Loader /></div>;
   if (!supplier) return (
     <div className="text-center py-20 space-y-4">
@@ -134,7 +105,7 @@ export default function SupplierDetail() {
 
   return (
     <div className="min-h-screen bg-slate-50/50 font-[Inter,sans-serif] animate-in fade-in duration-500">
-      <div className="max-w-7xl mx-auto px-4 md:px-8 py-4 space-y-6">
+      <div className="mx-auto py-3 space-y-4">
 
         {/* Profile Header Card */}
         <ProfileHeaderCard
@@ -153,6 +124,24 @@ export default function SupplierDetail() {
             { icon: Mail, text: String(datas.email || "No email") },
             { icon: Phone, text: String(datas.phone || "No phone") }
           ]}
+          actions={
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => navigate(`/supplier/${id}/edit`)}
+                className="w-10 h-10 flex items-center justify-center bg-white border border-slate-200 text-slate-400 hover:text-blue-600 rounded-xl transition-all shadow-sm active:scale-95"
+                title="Edit Supplier"
+              >
+                <Pencil size={18} />
+              </button>
+              <button
+                onClick={() => setShowDeleteModal(true)}
+                className="w-10 h-10 flex items-center justify-center bg-white border border-slate-200 text-slate-300 rounded-xl hover:text-rose-600 transition-all shadow-sm active:scale-95"
+                title="Delete Supplier"
+              >
+                <Trash2 size={18} />
+              </button>
+            </div>
+          }
         />
 
         {/* Tabs Navigation */}
@@ -170,20 +159,20 @@ export default function SupplierDetail() {
         </div>
 
         {/* Quick Stats Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard icon={ShoppingBag} label="Total Purchases" value={datas.total_purchases ? `₹${datas.total_purchases}` : "₹0"} iconBg="bg-blue-50 text-blue-600" />
-          <StatCard icon={AlertCircle} label="Outstanding" value={fmt(Number(datas.pending_amount) || 0)} iconBg="bg-rose-50 text-rose-600" />
-          <StatCard icon={Package} label="Total Items" value={String(datas.total_items_bought || "0")} iconBg="bg-blue-50 text-blue-600" />
-          <StatCard icon={History} label="Last Order" value={String(datas.last_order_date || "N/A")} iconBg="bg-amber-50 text-amber-600" />
+        <div className="flex flex-wrap gap-2">
+          <StatCard icon={ShoppingBag} label="Total Purchases" value={datas.total_purchases ? `₹${datas.total_purchases}` : "₹0"} iconBg="bg-blue-50 text-blue-600" className="flex-1 min-w-[140px]" />
+          <StatCard icon={AlertCircle} label="Outstanding" value={fmt(Number(datas.pending_amount) || 0)} iconBg="bg-rose-50 text-rose-600" className="flex-1 min-w-[140px]" />
+          <StatCard icon={Package} label="Total Items" value={String(datas.total_items_bought || "0")} iconBg="bg-blue-50 text-blue-600" className="flex-1 min-w-[140px]" />
+          <StatCard icon={History} label="Last Order" value={String(datas.last_order_date || "N/A")} iconBg="bg-amber-50 text-amber-600" className="flex-1 min-w-[140px]" />
         </div>
 
         {/* Tab Panels */}
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
           {activeTab === 0 && (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-              <div className="lg:col-span-2 space-y-5">
-                <SectionCard title="Supplier Profile Information">
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-y-8 gap-x-10">
+            <div className="grid grid-cols-1 xl:grid-cols-4 gap-4">
+              <div className="xl:col-span-3 space-y-4">
+                <SectionCard title="Supplier Profile Information" className="p-5">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-y-6 gap-x-8">
                     <DetailItem
                       icon={Store} label="Business Name" value={name}
                       onClick={() => setViewValue({ label: "Business Name", value: name })}

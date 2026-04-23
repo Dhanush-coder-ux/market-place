@@ -236,10 +236,10 @@ export function ProfileHeaderCard({
   className = ""
 }: ProfileHeaderCardProps) {
   return (
-    <div className={`bg-white rounded-[1.5rem] p-5 border border-slate-200 shadow-sm relative overflow-hidden group ${className}`}>
+    <div className={`bg-white rounded-[1.5rem] p-4 border border-slate-200 shadow-sm relative overflow-hidden group ${className}`}>
       <div className="absolute top-0 right-0 w-48 h-48 bg-blue-500/5 rounded-full -mr-24 -mt-24 blur-3xl" />
 
-      <div className="relative flex flex-col md:flex-row items-start md:items-center gap-6">
+      <div className="relative flex flex-col md:flex-row items-start md:items-center gap-4">
         <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-600 to-blue-400 flex items-center justify-center text-xl font-bold text-white shadow-lg shadow-blue-200 ring-2 ring-white">
           {initials}
         </div>

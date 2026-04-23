@@ -8,7 +8,10 @@ import {
   Plus, 
   Trash2, 
   Info,
-  Search
+  Search,
+  X,
+  PackageOpen,
+  Check
 } from 'lucide-react';
 
 // Adjust these imports to match your project structure
@@ -30,9 +33,9 @@ interface AdjustmentItem {
   quantity: number | ''; 
   reason: string;
   notes: string;
+  variant?: string;
+  sku?: string;
 }
-
-
 
 const typeOptions = [
   { value: 'increase', label: 'Increase (+)' },
@@ -47,28 +50,22 @@ const reasonOptions = [
   { value: 'Returned (Defective)', label: 'Returned (Defective)' },
 ];
 
+const LOW_STOCK_THRESHOLD = 5;
+
 export default function StockAdjustmentPage() {
   const [items, setItems] = useState<AdjustmentItem[]>([
     {
       id: 'item-1',
       product: 'Wireless Headphones',
-      barcode: '',
+      barcode: 'WH-BLK-01',
+      sku: 'WH-BLK-01',
       currentStock: 34,
       type: 'decrease',
       quantity: 3,
       reason: 'Stock Correction',
       notes: '',
-    },
-    {
-      id: 'item-2',
-      product: 'Ergonomic Mouse',
-      barcode: '',
-      currentStock: 28,
-      type: 'increase',
-      quantity: 5,
-      reason: 'Stock Correction',
-      notes: 'Found during audit',
-    },
+      variant: 'Matte Black'
+    }
   ]);
   
   const [searchProduct, setSearchProduct] = useState('');
@@ -77,6 +74,18 @@ export default function StockAdjustmentPage() {
   const [notes, setNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+
+  // --- Dynamic Modal State ---
+  const [variantModal, setVariantModal] = useState<{ 
+    isOpen: boolean; 
+    baseProduct: string; 
+    targetRowIndex: number;
+    variants: any[];
+    baseData: any;
+  }>({
+    isOpen: false, baseProduct: "", targetRowIndex: -1, variants: [], baseData: null
+  });
+  const [selectedVariants, setSelectedVariants] = useState<Set<string>>(new Set());
 
   // --- Actions & Handlers ---
 
@@ -90,6 +99,8 @@ export default function StockAdjustmentPage() {
       quantity: 1,
       reason: 'Stock Correction',
       notes: '',
+      variant: '',
+      sku: ''
     };
     setItems([...items, newItem]);
   };
@@ -111,6 +122,60 @@ export default function StockAdjustmentPage() {
     ));
   };
 
+  // --- Modal Handlers ---
+  const toggleVariantSelection = (variantId: string) => {
+    const newSelection = new Set(selectedVariants);
+    if (newSelection.has(variantId)) {
+      newSelection.delete(variantId);
+    } else {
+      newSelection.add(variantId);
+    }
+    setSelectedVariants(newSelection);
+  };
+
+  const confirmVariants = () => {
+    if (selectedVariants.size === 0) {
+      setVariantModal({ isOpen: false, baseProduct: "", targetRowIndex: -1, variants: [], baseData: null });
+      return;
+    }
+
+    const variantsToAdd = variantModal.variants.filter(v => selectedVariants.has(v.id));
+    const updatedItems = [...items];
+    const baseOpt = variantModal.baseData;
+
+    // Update origin row
+    const firstVariant = variantsToAdd[0];
+    updatedItems[variantModal.targetRowIndex] = {
+      ...updatedItems[variantModal.targetRowIndex],
+      product: variantModal.baseProduct,
+      barcode: firstVariant.sku || baseOpt.barcode || '',
+      currentStock: firstVariant.stock || baseOpt.stocks || baseOpt.stock || 0,
+      variant: firstVariant.name,
+      sku: firstVariant.sku || firstVariant.barcode
+    };
+
+    // Append new rows for multiple selections
+    for (let i = 1; i < variantsToAdd.length; i++) {
+      const v = variantsToAdd[i];
+      updatedItems.push({
+        id: `item-${Date.now()}-${i}`,
+        product: variantModal.baseProduct,
+        barcode: v.sku || baseOpt.barcode || '',
+        currentStock: v.stock || baseOpt.stocks || baseOpt.stock || 0,
+        type: 'decrease',
+        quantity: 1,
+        reason: 'Stock Correction',
+        notes: '',
+        variant: v.name,
+        sku: v.sku || v.barcode
+      });
+    }
+
+    setItems(updatedItems);
+    setVariantModal({ isOpen: false, baseProduct: "", targetRowIndex: -1, variants: [], baseData: null });
+    setSelectedVariants(new Set());
+  };
+
   const handleSubmit = async () => {
     try {
       setIsSubmitting(true);
@@ -118,14 +183,16 @@ export default function StockAdjustmentPage() {
 
       // Map the products array to fit the backend expectation
       const products = items.map(item => ({
-        id: item.id, // Or whichever ID corresponds to the actual product ID
+        id: item.id, 
         name: item.product,
         barcode: item.barcode,
         currentStock: item.currentStock,
         type: item.type === 'increase' ? 'INCREMENT' : 'DECREMENT',
         quantity: item.quantity,
         reason: item.reason,
-        notes: item.notes
+        notes: item.notes,
+        variant: item.variant,
+        sku: item.sku
       }));
 
       const payload = {
@@ -167,8 +234,11 @@ export default function StockAdjustmentPage() {
       const changeAmt = item.type === 'increase' ? qty : -qty;
       netChange += changeAmt;
       
+      // Use variant name if exists for impact list accuracy
+      const displayName = item.variant ? `${item.product} (${item.variant})` : item.product;
+
       impactList.push({
-        name: item.product,
+        name: displayName,
         change: changeAmt,
         type: item.type
       });
@@ -182,8 +252,88 @@ export default function StockAdjustmentPage() {
   }, [items]);
 
   return (
-    <div className="flex min-h-screen  font-sans text-slate-800 antialiased">
-      <main className="flex-1 p-4 lg:p-6 max-w-[1600px] mx-auto">
+    <div className="flex min-h-screen bg-[#FAFAFC] font-sans text-slate-800 antialiased">
+      
+      {/* --- DYNAMIC VARIANT SELECTION MODAL --- */}
+      {variantModal.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col border border-slate-200/60 animate-in fade-in zoom-in-95 duration-200">
+            <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center bg-white">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-amber-50 border border-amber-100 text-amber-600 rounded-lg shadow-sm">
+                  <PackageOpen size={18} />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-slate-800 text-lg">Select Variants to Adjust</h3>
+                  <p className="text-sm text-slate-500">Available variations for <span className="font-medium text-slate-700">{variantModal.baseProduct}</span></p>
+                </div>
+              </div>
+              <button onClick={() => setVariantModal({ isOpen: false, baseProduct: "", targetRowIndex: -1, variants: [], baseData: null })} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-lg transition-colors">
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="p-6 max-h-[60vh] overflow-y-auto bg-slate-50/50">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {variantModal.variants.map((variant) => {
+                  const stockNum = Number(variant.stock) || 0;
+                  const isLowStock = stockNum <= LOW_STOCK_THRESHOLD && stockNum > 0;
+                  const isSelected = selectedVariants.has(variant.id);
+
+                  return (
+                    <div
+                      key={variant.id}
+                      onClick={() => toggleVariantSelection(variant.id)}
+                      className={`relative p-4 rounded-xl border transition-all duration-200 flex flex-col gap-2
+                        ${isSelected
+                            ? 'border-blue-500 bg-blue-50/30 cursor-pointer shadow-[0_2px_8px_rgba(59,130,246,0.12)]'
+                            : 'border-slate-200 hover:border-slate-300 hover:shadow-sm cursor-pointer bg-white'
+                        }
+                      `}
+                    >
+                      <div className={`absolute top-4 right-4 h-5 w-5 rounded-full border flex items-center justify-center transition-colors ${isSelected ? 'bg-blue-500 border-blue-500 text-white' : 'border-slate-300'}`}>
+                        {isSelected && <Check size={12} strokeWidth={3} />}
+                      </div>
+
+                      <div>
+                        <h4 className="font-semibold text-slate-800 pr-6">{variant.name}</h4>
+                        <p className="text-xs text-slate-500 mt-1 font-mono">SKU: {variant.sku}</p>
+                      </div>
+                      
+                      <div className="mt-auto pt-3">
+                        <span className={`inline-flex px-2 py-1 rounded-md text-[11px] font-medium tracking-wide ${
+                            stockNum <= 0 ? 'bg-slate-200 text-slate-600' : 
+                            isLowStock ? 'bg-orange-100 text-orange-700' : 
+                            'bg-emerald-50 text-emerald-700 border border-emerald-100'
+                          }`}>
+                          Current Stock: {stockNum}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="p-4 border-t border-slate-100 bg-white flex justify-between items-center">
+              <span className="text-sm text-slate-500">
+                <span className="font-semibold text-slate-700">{selectedVariants.size}</span> variant(s) selected
+              </span>
+              <div className="flex gap-3">
+                <GradientButton variant="outline" onClick={() => setVariantModal({ isOpen: false, baseProduct: "", targetRowIndex: -1, variants: [], baseData: null })}>
+                  Cancel
+                </GradientButton>
+                <GradientButton variant="primary" onClick={confirmVariants} disabled={selectedVariants.size === 0}>
+                  Add to Adjustment List
+                </GradientButton>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* --- END MODAL --- */}
+
+      <main className="flex-1 p-4 lg:p-6 max-w-[1600px] mx-auto w-full">
         
 
         {/* Main Grid */}
@@ -201,7 +351,7 @@ export default function StockAdjustmentPage() {
             </div>
 
             {/* Adjustment Details Card */}
-            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <div className="rounded-2xl border border-slate-200/60 bg-white p-6 shadow-sm">
               <div className="mb-6 flex items-center gap-3 border-b border-slate-100 pb-4">
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
                   <ClipboardList className="h-5 w-5" />
@@ -249,7 +399,7 @@ export default function StockAdjustmentPage() {
             )}
 
             {/* Quick Add Product */}
-            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="rounded-2xl border border-slate-200/60 bg-white p-4 shadow-sm">
               <div className="flex flex-col sm:flex-row gap-3">
                 <div className="flex-1">
                   <Input 
@@ -267,8 +417,8 @@ export default function StockAdjustmentPage() {
             </div>
 
             {/* Adjustment Items List */}
-            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-              <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="rounded-2xl border border-slate-200/60 bg-white p-6 shadow-sm">
+              <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
                 <div className="flex items-center gap-3">
                   <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
                     <Package className="h-5 w-5" />
@@ -304,10 +454,7 @@ export default function StockAdjustmentPage() {
                         </GradientButton>
                       </div>
 
-                      {/* PERFECT ALIGNMENT GRID
-                          Using standard 12-column spans guarantees the inputs 
-                          never squish horizontally and `items-start` keeps labels aligned 
-                      */}
+                      {/* PERFECT ALIGNMENT GRID */}
                       <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-12 xl:items-start">
                         
                         {/* Product Field */}
@@ -321,11 +468,37 @@ export default function StockAdjustmentPage() {
                               valueKey="id"
                               onChange={(val, opt: any) => {
                                  if (opt) {
-                                    updateMultiple(item.id, { 
-                                      product: opt.name || opt.label || String(val),
-                                      barcode: opt.barcode || '',
-                                      currentStock: opt.stocks || opt.stock || 0 
-                                    });
+                                   const hasVariants = opt.has_variants || (opt.datas && opt.datas.has_variants);
+                                   const combinations = opt.combinations || (opt.datas && opt.datas.combinations) || [];
+                                   
+                                   if (hasVariants && combinations.length > 0) {
+                                     // Has Variants -> Open Modal
+                                     const mappedVariants = combinations.map((c: any) => ({
+                                       id: c.id,
+                                       name: Object.values(c.attributes || {}).join(" - "),
+                                       sku: c.barcode || opt.barcode,
+                                       stock: c.stock || opt.stocks || 0,
+                                     }));
+                                     
+                                     setVariantModal({
+                                       isOpen: true,
+                                       baseProduct: opt.name || opt.label || String(val),
+                                       targetRowIndex: index,
+                                       variants: mappedVariants,
+                                       baseData: opt.datas || opt
+                                     });
+                                     setSelectedVariants(new Set());
+                                   } else {
+                                     // No Variants -> Direct Update
+                                     const dataNode = opt.datas || opt;
+                                     updateMultiple(item.id, { 
+                                       product: dataNode.name || opt.label || String(val),
+                                       barcode: dataNode.barcode || '',
+                                       currentStock: dataNode.stocks || dataNode.stock || 0,
+                                       variant: dataNode.variant || '',
+                                       sku: dataNode.barcode || dataNode.sku || ''
+                                     });
+                                   }
                                  } else {
                                     updateItem(item.id, 'product', String(val));
                                  }
@@ -334,14 +507,26 @@ export default function StockAdjustmentPage() {
                               className="w-full"
                             />
                           </div>
+
+                          {/* Dynamic Variant & Current Stock Display */}
                           {item.product && (
-                            <div className="mt-2.5 flex items-center gap-2">
-                              <span className="inline-flex items-center rounded-md bg-slate-200/60 px-2 py-1 text-[11px] font-semibold text-slate-600">
-                                Current: {item.currentStock}
-                              </span>
-                              <span className={`inline-flex items-center rounded-md px-2 py-1 text-[11px] font-semibold ${item.type === 'increase' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
-                                New: {newStock}
-                              </span>
+                            <div className="mt-3 flex flex-col gap-2">
+                              {item.variant && (
+                                <div className="flex items-center gap-2">
+                                  <span className="inline-flex items-center rounded-md bg-white px-2 py-0.5 text-[11px] font-semibold text-slate-700 border border-slate-200 shadow-sm">
+                                    {item.variant}
+                                  </span>
+                                  <span className="text-[11px] font-medium text-slate-500">SKU: {item.sku || item.barcode}</span>
+                                </div>
+                              )}
+                              <div className="flex items-center gap-2">
+                                <span className="inline-flex items-center rounded-md bg-slate-200/60 px-2 py-1 text-[11px] font-semibold text-slate-600">
+                                  Current: {item.currentStock}
+                                </span>
+                                <span className={`inline-flex items-center rounded-md px-2 py-1 text-[11px] font-semibold ${item.type === 'increase' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
+                                  New: {newStock}
+                                </span>
+                              </div>
                             </div>
                           )}
                         </div>
@@ -354,7 +539,7 @@ export default function StockAdjustmentPage() {
                             options={typeOptions} 
                             value={item.type}
                             onValueChange={(val) => updateItem(item.id, 'type', val)}
-                            className={item.type === 'increase' ? 'border-emerald-500' : 'border-red-500'}
+                            className={item.type === 'increase' ? 'border-emerald-500 bg-emerald-50/30' : 'border-red-500 bg-red-50/30'}
                           />
                         </div>
 
@@ -366,7 +551,7 @@ export default function StockAdjustmentPage() {
                             type="number" 
                             value={item.quantity}
                             onChange={(e) => updateItem(item.id, 'quantity', e.target.value)}
-                            className={item.type === 'increase' ? 'border-emerald-500' : 'border-red-500'}
+                            className={item.type === 'increase' ? 'border-emerald-500 bg-emerald-50/30 font-semibold text-emerald-700' : 'border-red-500 bg-red-50/30 font-semibold text-red-700'}
                           />
                         </div>
 
@@ -398,8 +583,9 @@ export default function StockAdjustmentPage() {
               </div>
               
               {items.length === 0 && (
-                <div className="rounded-xl border border-dashed border-slate-300 py-12 text-center text-slate-500">
-                  No products added yet. Click "Add Product" to begin.
+                <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 py-12 text-center text-slate-500">
+                  <Package className="mx-auto h-8 w-8 text-slate-400 mb-3" />
+                  <p>No products added yet. Click "Add Product" to begin.</p>
                 </div>
               )}
             </div>
@@ -409,7 +595,7 @@ export default function StockAdjustmentPage() {
           <div className="sticky top-6 flex flex-col gap-6">
             
             {/* Quick Stats */}
-            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <div className="rounded-2xl border border-slate-200/60 bg-white p-6 shadow-sm">
               <h3 className="mb-5 border-b border-slate-100 pb-4 text-lg font-semibold text-slate-900">Adjustment Summary</h3>
               
               <div className="mb-6 grid grid-cols-2 gap-3">
@@ -442,7 +628,7 @@ export default function StockAdjustmentPage() {
             </div>
 
             {/* Reason Breakdown */}
-            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <div className="rounded-2xl border border-slate-200/60 bg-white p-6 shadow-sm">
               <h3 className="mb-5 border-b border-slate-100 pb-4 text-lg font-semibold text-slate-900">Reason Breakdown</h3>
               <div>
                 {Object.keys(summary.reasons).length === 0 ? (
@@ -470,14 +656,14 @@ export default function StockAdjustmentPage() {
             <div className="mt-2 flex flex-col gap-3">
               <GradientButton 
                 variant="primary" 
-                icon={isSubmitting ? <Loader className="h-5 w-5" /> : <Save className="h-5 w-5" />} 
+                icon={isSubmitting ? <Loader className="h-5 w-5 text-white" /> : <Save className="h-5 w-5" />} 
                 className="h-[52px] w-full text-[15px] shadow-sm"
                 onClick={handleSubmit}
                 disabled={isSubmitting || items.length === 0}
               >
                 {isSubmitting ? "Saving..." : "Save Adjustment"}
               </GradientButton>
-              <GradientButton variant="outline" className="h-[52px] w-full text-[15px]">
+              <GradientButton variant="outline" className="h-[52px] w-full text-[15px] bg-white">
                 Save as Draft
               </GradientButton>
               <button 

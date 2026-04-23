@@ -119,23 +119,26 @@ export default function Employee() {
   return (
     <div className="space-y-6">
       {/* Stats Section */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="flex gap-2">
         <StatCard 
           icon={Users} 
           label="Total Employees" 
           value={employees.length.toString()} 
+          className='flex-1'
         />
         <StatCard 
           icon={UserCheck} 
           label="Accepted" 
           value={employees.filter(e => e.is_accepted).length.toString()} 
           iconBg="bg-emerald-50" iconColor="text-emerald-600"
+          className='flex-1'
         />
         <StatCard 
           icon={UserX} 
           label="Pending" 
           value={employees.filter(e => !e.is_accepted).length.toString()} 
           iconBg="bg-amber-50" iconColor="text-amber-600"
+          className='flex-1'
         />
       </div>
 

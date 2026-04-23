@@ -196,7 +196,7 @@ export default function CustomerDetail() {
       `}</style>
 
       <div className="min-h-screen bg-slate-50/50 font-[Inter,sans-serif]">
-        <div className="max-w-7xl mx-auto px-4 md:px-8 py-4 space-y-6">
+        <div className="max-w-full mx-auto px-4 md:px-10 py-3 space-y-4">
 
           {/* Profile Header Card */}
           <ProfileHeaderCard
@@ -258,30 +258,34 @@ export default function CustomerDetail() {
           </div>
 
           {/* Quick Stats Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="flex flex-wrap gap-2">
             <StatCard
               icon={DollarSign}
               label="Total Revenue"
               value={datas.total_purchases ? `₹${datas.total_purchases}` : "₹0"}
               iconBg="bg-blue-50 text-blue-600"
+              className="flex-1 min-w-[140px]"
             />
             <StatCard
               icon={AlertCircle}
               label="Outstanding"
               value={fmt(Number(datas.outstanding_balance) || outstanding || 0)}
               iconBg="bg-rose-50 text-rose-600"
+              className="flex-1 min-w-[140px]"
             />
             <StatCard
               icon={Package}
               label="Total Orders"
               value={String(datas.total_orders || "0")}
               iconBg="bg-blue-50 text-blue-600"
+              className="flex-1 min-w-[140px]"
             />
             <StatCard
               icon={Star}
               label="LTV Score"
               value={datas.lifetime_value ? `₹${datas.lifetime_value}` : "₹0"}
               iconBg="bg-amber-50 text-amber-600"
+              className="flex-1 min-w-[140px]"
             />
           </div>
 
@@ -289,21 +293,20 @@ export default function CustomerDetail() {
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
             {/* TAB 0 — General Info */}
             {activeTab === 0 && (
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+              <div className="grid grid-cols-1 xl:grid-cols-4 gap-4">
                 {/* Main Content Column */}
-                <div className="lg:col-span-2 space-y-5">
+                <div className="xl:col-span-3 space-y-4">
                   {/* Primary & Dynamic Fields */}
-                  <SectionCard className="rounded-[1.5rem] border-slate-200 shadow-sm p-6 overflow-hidden relative">
+                  <SectionCard className="rounded-[1.5rem] border-slate-200 shadow-sm p-4 overflow-hidden relative">
                     <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50/50 rounded-full -mr-16 -mt-16 blur-3xl -z-0" />
                     <div className="relative z-10">
-                      <div className="flex items-center gap-2.5 mb-6">
+                      <div className="flex items-center gap-2 mb-4">
                         <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-100">
                           <User size={16} />
                         </div>
-                        <h2 className="text-[10px] font-black text-slate-800 uppercase tracking-[0.15em]">Detailed Profile Information</h2>
+                        <h2 className="text-[10px] font-black text-slate-800 uppercase tracking-[0.15em]">Primary & Dynamic Fields</h2>
                       </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-y-8 gap-x-10">
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-y-6 gap-x-8">
                         {/* Always show key fields first */}
                         <DetailItem
                           icon={User} label="Full Name" value={name}

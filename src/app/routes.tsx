@@ -34,9 +34,10 @@ const ProfileSettingsPage = React.lazy(() =>
 const ProfileForm = React.lazy(() => import("../features/profile/pages/ProfileForm"));
 
 // Products
-const Product = React.lazy(() => import("@/features/product/pages/Product"));
+const ProductInfos = React.lazy(() => import("@/features/product/pages/ProductInfos"));
 const ProductSearch = React.lazy(() => import("@/features/product/pages/ProductSearch"));
 const ProductDetail = React.lazy(() => import("@/features/product/pages/ProductDetail"));
+const ProductForm = React.lazy(() => import("@/features/product/pages/ProductForm"));
 
 // Purchase
 const PurchaseDetail = React.lazy(() => import("@/features/purchase/pages/PurchaseDetail"));
@@ -55,6 +56,7 @@ const EmployeeDraftsPage = React.lazy(() => import("../features/employee/pages/E
 
 // Inventory
 const Inventory = React.lazy(() => import("../features/inventory/pages/Inventory"));
+const ProductDraftsPage = React.lazy(() => import("../features/product/pages/ProductDraftsPage"));
 
 // Orders & Billing
 const Order = React.lazy(() => import("../features/order/pages/Order"));
@@ -82,8 +84,9 @@ export const router = createBrowserRouter([
 
       // Products — static "add" before dynamic ":id"
       { path: 'product', element: <ProductSearch /> },
-      { path: '/product/all', element: <Product /> },
+      { path: '/product/all', element: <ProductInfos /> },
       { path: '/product/add', element: <ProductForm /> },
+      { path: '/product/drafts', element: <ProductDraftsPage /> },
       { path: '/product/:id/edit', element: <ProductForm /> },
       { path: '/product/:id', element: <ProductDetail /> },
 

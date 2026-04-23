@@ -28,6 +28,14 @@ const getPageHeaderInfo = (pathname: string) => {
       title: "Create Product",
       subtitle: "Add a new product to your inventory.",
     },
+    "/product/all": {
+      title: "Product Inventory",
+      subtitle: "Full catalog of your products, variants and stock levels.",
+    },
+    "/product/drafts": {
+      title: "Product Drafts",
+      subtitle: "Manage your locally saved progress.",
+    },
     "/purchase-order/add": {
       title: "Create Purchase Order",
       subtitle: "Generate a new purchase order for suppliers.",
@@ -179,6 +187,22 @@ const getPageHeaderInfo = (pathname: string) => {
     return {
       title: "Update Supplier",
       subtitle: "Modify existing supplier details.",
+    };
+  }
+
+  // Dynamic match for Product Profile
+  if (pathname.match(/^\/product\/[^/]+$/)) {
+    return {
+      title: "Product Profile",
+      subtitle: "View complete product information, variants and history.",
+    };
+  }
+
+  // Dynamic match for Edit Product
+  if (pathname.match(/^\/product\/[^/]+\/edit$/)) {
+    return {
+      title: "Update Product",
+      subtitle: "Modify existing product details.",
     };
   }
 

@@ -111,11 +111,11 @@ export default function CustomerBalanceSummary() {
   return (
     <div className="space-y-6">
       {/* Stats Section */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <StatCard label="Total Customers" value={customers.length} icon={Users} />
-        <StatCard label="Shop" value={SHOP_ID.slice(0, 8) + "…"} icon={IndianRupee} iconBg="bg-green-50" iconColor="text-green-600" />
-        <StatCard label="API Source" value="Live" icon={AlertCircle} iconBg="bg-rose-50" iconColor="text-rose-600" />
-        <StatCard label="Showing" value={filteredCustomers.length} icon={CreditCard} iconBg="bg-amber-50" iconColor="text-amber-600" />
+      <div className="flex gap-x-2">
+        <StatCard label="Total Customers" value={customers.length} icon={Users} className="flex-1"/>
+        <StatCard label="Shop" value={SHOP_ID.slice(0, 8) + "…"} icon={IndianRupee} iconBg="bg-green-50" iconColor="text-green-600" className="flex-1"/>
+        <StatCard label="API Source" value="Live" icon={AlertCircle} iconBg="bg-rose-50" iconColor="text-rose-600" className="flex-1"/>
+        <StatCard label="Showing" value={filteredCustomers.length} icon={CreditCard} iconBg="bg-amber-50" iconColor="text-amber-600" className="flex-1"/>
       </div>
 
       <div className="bg-white p-3 rounded-t-xl border-b border-gray-200 flex flex-col sm:flex-row gap-3 justify-between items-center mt-6">

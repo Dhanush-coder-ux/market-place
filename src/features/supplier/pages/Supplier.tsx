@@ -100,24 +100,27 @@ const Supplier = () => {
     <div className="space-y-6 animate-in fade-in duration-500">
       
       {/* Stats Section */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="flex gap-x-2">
         <StatCard 
           icon={Building2} 
           label="Total Suppliers" 
           value={suppliers.length.toString()} 
           iconBg="bg-blue-50 text-blue-600"
+          className="flex-1"
         />
         <StatCard 
           icon={Users} 
           label="Active Partners" 
           value={suppliers.length.toString()} 
           iconBg="bg-emerald-50 text-emerald-600"
+          className="flex-1"
         />
         <StatCard 
           icon={Phone} 
           label="Support Contacts" 
           value={suppliers.filter(s => s.datas?.phone).length.toString()} 
           iconBg="bg-amber-50 text-amber-600"
+          className="flex-1"
         />
       </div>
 

@@ -1,7 +1,7 @@
 import { useState, useEffect, FC } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, ChevronDown } from "lucide-react";
+import { ChevronLeft, ChevronDown, ListMinus } from "lucide-react";
 import { usePurchaseSettings } from "@/context/PurchaseContext";
 import type { SidebarLink, SubItem, SubGroup, SubLink } from "@/utils/constants";
 
@@ -16,17 +16,20 @@ interface SidebarItemProps {
   link: SidebarLink;
   sidebarOpen: boolean;
   index: number;
+  collapseTrigger: number;
 }
 
 interface SubGroupItemProps {
   group: SubGroup;
   sidebarOpen: boolean;
+  collapseTrigger: number;
 }
 
 // ─── Sidebar Root ─────────────────────────────────────────────────────────────
 
 const Sidebar: FC<{ links: SidebarLink[] }> = ({ links }) => {
   const [isOpen, setIsOpen] = useState(true);
+  const [collapseTrigger, setCollapseTrigger] = useState(0);
   const { settings } = usePurchaseSettings();
 
   /**
@@ -108,9 +111,18 @@ const Sidebar: FC<{ links: SidebarLink[] }> = ({ links }) => {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.15 }}
-            className="px-4 pt-4 pb-1.5 text-[9.5px] font-bold tracking-[0.09em] uppercase text-white/30"
+            className="px-4 pt-4 pb-1.5 flex items-center justify-between"
           >
-            Navigation
+            <span className="text-[9.5px] font-bold tracking-[0.09em] uppercase text-white/30">
+              Navigation
+            </span>
+            <button
+              onClick={() => setCollapseTrigger(prev => prev + 1)}
+              className="w-6 h-6 rounded-md flex items-center justify-center text-white bg-white/5 backdrop-blur-sm border border-white/30 hover:bg-white/15 hover:text-white/80 transition-all group/collapse shadow-inner cursor-pointer"
+              title="Collapse All"
+            >
+              <ListMinus size={12} className="group-hover/collapse:scale-110 transition-transform" />
+            </button>
           </motion.div>
         )}
       </AnimatePresence>
@@ -118,7 +130,13 @@ const Sidebar: FC<{ links: SidebarLink[] }> = ({ links }) => {
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto overflow-x-hidden flex flex-col gap-0.5 px-2 py-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
         {filteredLinks.map((link, i) => (
-          <SidebarItem key={link.name} link={link} sidebarOpen={isOpen} index={i} />
+          <SidebarItem 
+            key={link.name} 
+            link={link} 
+            sidebarOpen={isOpen} 
+            index={i} 
+            collapseTrigger={collapseTrigger}
+          />
         ))}
       </nav>
 
@@ -162,7 +180,7 @@ const Sidebar: FC<{ links: SidebarLink[] }> = ({ links }) => {
 
 // ─── Top-level Sidebar Item ───────────────────────────────────────────────────
 
-const SidebarItem: FC<SidebarItemProps> = ({ link, sidebarOpen, index }) => {
+const SidebarItem: FC<SidebarItemProps> = ({ link, sidebarOpen, index, collapseTrigger }) => {
   const { pathname } = useLocation();
   const Icon = link.icon;
   const hasSub = !!link.subLinks?.length;
@@ -180,6 +198,13 @@ const SidebarItem: FC<SidebarItemProps> = ({ link, sidebarOpen, index }) => {
   useEffect(() => {
     if (isChildActive) setIsDrop(true);
   }, [isChildActive]);
+
+  // Collapse All Trigger
+  useEffect(() => {
+    if (collapseTrigger > 0) {
+      setIsDrop(false);
+    }
+  }, [collapseTrigger]);
 
   const baseItemClasses =
     "group relative flex items-center w-full px-2.5 h-9 rounded-[9px] text-[12.5px] font-medium transition-colors outline-none cursor-pointer tracking-tight";
@@ -296,7 +321,12 @@ const SidebarItem: FC<SidebarItemProps> = ({ link, sidebarOpen, index }) => {
               {link.subLinks!.map((item) =>
                 isSubGroup(item) ? (
                   // ── Level 2: SubGroup (folder) ──
-                  <SubGroupItem key={item.name} group={item} sidebarOpen={sidebarOpen} />
+                  <SubGroupItem 
+                    key={item.name} 
+                    group={item} 
+                    sidebarOpen={sidebarOpen} 
+                    collapseTrigger={collapseTrigger}
+                  />
                 ) : (
                   // ── Level 2: Flat SubLink ──
                   <FlatSubLink key={(item as SubLink).path} sub={item as SubLink} />
@@ -312,7 +342,7 @@ const SidebarItem: FC<SidebarItemProps> = ({ link, sidebarOpen, index }) => {
 
 // ─── SubGroup (folder) Item — Level 2 ────────────────────────────────────────
 
-const SubGroupItem: FC<SubGroupItemProps> = ({ group }) => {
+const SubGroupItem: FC<SubGroupItemProps> = ({ group, collapseTrigger }) => {
   const { pathname } = useLocation();
   const isChildActive = group.children.some((c) => pathname === c.path);
   const [isOpen, setIsOpen] = useState(isChildActive);
@@ -321,6 +351,13 @@ const SubGroupItem: FC<SubGroupItemProps> = ({ group }) => {
   useEffect(() => {
     if (isChildActive) setIsOpen(true);
   }, [isChildActive]);
+
+  // Collapse All Trigger
+  useEffect(() => {
+    if (collapseTrigger > 0) {
+      setIsOpen(false);
+    }
+  }, [collapseTrigger]);
 
   return (
     <div className="flex flex-col">

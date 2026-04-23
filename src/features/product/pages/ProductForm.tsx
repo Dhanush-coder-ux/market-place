@@ -1,4 +1,4 @@
-import React, {
+﻿import React, {
   useState, useMemo, useEffect,
 } from "react";
 import {
@@ -6,16 +6,20 @@ import {
   Trash2, Info, Save, ChevronDown, Hash,
   Cpu, AlertCircle, RefreshCw,  ScanLine, Copy,
   Layers,  Zap,
+  Bookmark,
 } from "lucide-react";
 import { GradientButton } from "@/components/ui/GradientButton";
 import Input from "@/components/ui/Input";
 import { useApi } from "@/context/ApiContext";
 import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
+import { useHeader } from "@/context/HeaderContext";
+import { useToast } from "@/context/ToastContext";
+import { Switch } from "@/components/ui/switch";
 
-/* ═══════════════════════════════════════════════════════
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    TYPES
-═══════════════════════════════════════════════════════ */
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 
 interface VariantType {
   id: string;
@@ -70,9 +74,9 @@ type FormData = {
   has_variants: boolean;
 };
 
-/* ═══════════════════════════════════════════════════════
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    CONSTANTS
-═══════════════════════════════════════════════════════ */
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 
 const CATEGORY_CONFIGS: Record<string, CategoryConfig> = {
   "Mobile Phones": {
@@ -131,9 +135,9 @@ const LOCATIONS = ["Shelf 1 - Main", "Warehouse A", "Warehouse B", "Store Room"]
 let _uid = 0;
 const uid = () => `id_${++_uid}_${Math.random().toString(36).slice(2, 6)}`;
 
-/* ═══════════════════════════════════════════════════════
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    STYLES
-═══════════════════════════════════════════════════════ */
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 
 const STYLES = `
   @import url('https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap');
@@ -212,9 +216,9 @@ const STYLES = `
   @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity: 0.5; } }
 `;
 
-/* ═══════════════════════════════════════════════════════
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    SMALL REUSABLE UI
-═══════════════════════════════════════════════════════ */
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 
 interface LabelProps { text: string; required?: boolean; hint?: string; }
 const Label: React.FC<LabelProps> = ({ text, required, hint }) => (
@@ -257,7 +261,7 @@ const SelectField: React.FC<SelectFieldProps> = ({ label, required, options, cla
       {...rest}
       className={`pf-select pf-input w-full px-3 py-2.5 pr-8 text-sm border border-slate-200 rounded-lg bg-white text-slate-800 ${className}`}
     >
-      <option value="">Select…</option>
+      <option value="">Selectâ€¦</option>
       {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
     </select>
   </div>
@@ -277,9 +281,9 @@ const Toggle: React.FC<ToggleProps> = ({ active, onChange, label, hint }) => (
   </div>
 );
 
-/* ═══════════════════════════════════════════════════════
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    SECTION HEADER
-═══════════════════════════════════════════════════════ */
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 interface SectionHeaderProps {
   icon: React.ReactNode;
   iconColor: string;
@@ -296,9 +300,9 @@ const SectionHeader: React.FC<SectionHeaderProps> = ({ icon, iconColor, title, s
   </div>
 );
 
-/* ═══════════════════════════════════════════════════════
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    TAG / CHIP
-═══════════════════════════════════════════════════════ */
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 interface TagChipProps { label: string; onRemove: () => void; color?: string; }
 const TagChip: React.FC<TagChipProps> = ({ label, onRemove, color = "bg-blue-50 text-blue-700 border-blue-100" }) => (
   <span className={`pf-tag inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium border ${color}`}>
@@ -309,9 +313,9 @@ const TagChip: React.FC<TagChipProps> = ({ label, onRemove, color = "bg-blue-50 
   </span>
 );
 
-/* ═══════════════════════════════════════════════════════
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    VARIANT BUILDER
-═══════════════════════════════════════════════════════ */
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 interface VariantBuilderProps {
   variantTypes: VariantType[];
   onChange: (types: VariantType[]) => void;
@@ -413,7 +417,7 @@ const VariantBuilder: React.FC<VariantBuilderProps> = ({ variantTypes, onChange,
             <div className="flex gap-2">
               <input
                 className="pf-input flex-1 px-3 py-2 text-xs border border-slate-200 rounded-lg bg-white text-slate-800 placeholder-slate-300"
-                placeholder={`Add ${vt.name} value…`}
+                placeholder={`Add ${vt.name} valueâ€¦`}
                 value={inputVal}
                 onChange={e => setValueInputs(p => ({ ...p, [vt.id]: e.target.value }))}
                 onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addValue(vt.id, inputVal); } }}
@@ -451,7 +455,7 @@ const VariantBuilder: React.FC<VariantBuilderProps> = ({ variantTypes, onChange,
       <div className="flex gap-2">
         <input
           className="pf-input flex-1 px-3 py-2.5 text-sm border border-dashed border-slate-300 rounded-xl bg-white text-slate-800 placeholder-slate-400"
-          placeholder="New variant type (e.g. Storage, Color)…"
+          placeholder="New variant type (e.g. Storage, Color)â€¦"
           value={newTypeName}
           onChange={e => setNewTypeName(e.target.value)}
           onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addType(newTypeName); } }}
@@ -466,9 +470,9 @@ const VariantBuilder: React.FC<VariantBuilderProps> = ({ variantTypes, onChange,
   );
 };
 
-/* ═══════════════════════════════════════════════════════
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    SERIAL NUMBER MANAGER (MODAL)
-═══════════════════════════════════════════════════════ */
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 interface SerialManagerProps {
   combo: VariantCombination;
   serialLabel: string;
@@ -557,7 +561,7 @@ const SerialManager: React.FC<SerialManagerProps> = ({ combo, serialLabel, onClo
             </div>
             <div>
               <p className="text-sm font-semibold text-slate-900">Manage {serialLabel}s</p>
-              <p className="text-[11px] text-slate-400 pf-mono mt-0.5">{comboLabel} · {combo.barcode}</p>
+              <p className="text-[11px] text-slate-400 pf-mono mt-0.5">{comboLabel} Â· {combo.barcode}</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -685,9 +689,9 @@ const SerialManager: React.FC<SerialManagerProps> = ({ combo, serialLabel, onClo
   );
 };
 
-/* ═══════════════════════════════════════════════════════
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    VARIANT MATRIX TABLE
-═══════════════════════════════════════════════════════ */
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 interface VariantMatrixTableProps {
   combinations: VariantCombination[];
   variantTypes: VariantType[];
@@ -741,7 +745,7 @@ const VariantMatrixTable: React.FC<VariantMatrixTableProps> = ({
           <div className="flex items-center gap-1.5">
             <input
               className="pf-input px-2.5 py-1.5 text-xs border border-slate-200 rounded-lg w-28 pf-mono"
-              placeholder="barcode base…"
+              placeholder="barcode baseâ€¦"
               value={barcodeBase}
               onChange={e => setbarcodeBase(e.target.value)}
             />
@@ -774,7 +778,7 @@ const VariantMatrixTable: React.FC<VariantMatrixTableProps> = ({
                   </th>
                 ))}
                 <th className="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-widest text-slate-400 whitespace-nowrap">barcode</th>
-                <th className="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-widest text-slate-400 whitespace-nowrap">Price (₹)</th>
+                <th className="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-widest text-slate-400 whitespace-nowrap">Price (â‚¹)</th>
                 <th className="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-widest text-slate-400 whitespace-nowrap">Stock</th>
                 {supportsSerials && (
                   <th className="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-widest text-slate-400 whitespace-nowrap">{serialLabel}s</th>
@@ -803,7 +807,7 @@ const VariantMatrixTable: React.FC<VariantMatrixTableProps> = ({
                   </td>
                   <td className="px-4 py-3">
                     <div className="relative w-24">
-                      <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs">₹</span>
+                      <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs">â‚¹</span>
                       <input
                         className="pf-input w-full pl-6 pr-2 py-1.5 text-xs border border-slate-200 rounded-lg"
                         placeholder={basePriceStr || "0"}
@@ -865,9 +869,9 @@ const VariantMatrixTable: React.FC<VariantMatrixTableProps> = ({
   );
 };
 
-/* ═══════════════════════════════════════════════════════
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    COMBINATION GENERATOR (useMemo hook logic)
-═══════════════════════════════════════════════════════ */
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 const generateCombinations = (
   variantTypes: VariantType[],
   existing: VariantCombination[],
@@ -910,9 +914,9 @@ const generateCombinations = (
   });
 };
 
-/* ═══════════════════════════════════════════════════════
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    MAIN PRODUCT FORM
-═══════════════════════════════════════════════════════ */
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 interface ProductFormProps {
   initialData?: Record<string, unknown>;
   isLoading?: boolean;
@@ -921,7 +925,10 @@ interface ProductFormProps {
 const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData = {}, isLoading: externalLoading = false }) => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { postData, putData, getData, loading } = useApi();
+  const { setActions } = useHeader();
+  const { showToast } = useToast();
   const isLoading = externalLoading || loading;
   // Core form
   const [form, setForm] = useState<FormData>({
@@ -946,6 +953,50 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
     location: (propInitialData.location as string) || "",
     has_variants: false,
   });
+
+  const [variantTypes, setVariantTypes] = useState<VariantType[]>([]);
+  const [combinations, setCombinations] = useState<VariantCombination[]>([]);
+
+  // Header Actions
+  useEffect(() => {
+    const handleActionSubmit = (e: any) => {
+      e.preventDefault();
+      handleSubmit(e);
+    };
+
+    setActions(
+      <div className="flex items-center gap-4 animate-in fade-in slide-in-from-right-4 duration-300">
+        <div className="flex items-center gap-3 bg-white px-4 h-11 rounded-2xl border border-slate-200 shadow-sm scale-90 md:scale-100">
+          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Active</span>
+          <Switch 
+            checked={form.is_active} 
+            onCheckedChange={(checked) => setForm(prev => ({ ...prev, is_active: checked }))}
+          />
+        </div>
+        <div className="hidden md:flex items-center gap-2">
+          {!id && (
+            <button 
+              type="button"
+              onClick={handleSaveDraft}
+              className="px-4 h-11 rounded-xl border border-blue-100 text-blue-600 font-bold text-xs bg-blue-50/50 hover:bg-blue-100 transition-all flex items-center gap-2"
+            >
+              <Bookmark size={14} />
+              Save Draft
+            </button>
+          )}
+          <GradientButton 
+            icon={<Save size={16} />} 
+            onClick={handleActionSubmit} 
+            disabled={isLoading}
+            className="rounded-xl shadow-md text-xs px-6 h-11 h-auto flex items-center py-3"
+          >
+            {isLoading ? "..." : (id ? "Save" : "Create")}
+          </GradientButton>
+        </div>
+      </div>
+    );
+    return () => setActions(null);
+  }, [setActions, form.is_active, isLoading, id, navigate, form, variantTypes, combinations]);
 
   useEffect(() => {
     if (id) {
@@ -981,15 +1032,24 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
         }
       };
       fetchProduct();
+    } else {
+      // Check for draft
+      const draftId = searchParams.get("draftId");
+      if (draftId) {
+        const drafts = JSON.parse(localStorage.getItem("product_drafts") || "[]");
+        const draft = drafts.find((d: any) => d.id === draftId);
+        if (draft) {
+          setForm(prev => ({ ...prev, ...draft.data.form }));
+          if (draft.data.variantTypes) setVariantTypes(draft.data.variantTypes);
+          if (draft.data.combinations) setCombinations(draft.data.combinations);
+        }
+      }
     }
-  }, [id]);
+  }, [id, getData, searchParams]);
 
-  const [variantTypes, setVariantTypes] = useState<VariantType[]>([]);
-  const [combinations, setCombinations] = useState<VariantCombination[]>([]);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [savedNotice, setSavedNotice] = useState(false);
-  console.log(savedNotice);
-  
+  void savedNotice;
 
   const categoryConfig = CATEGORY_CONFIGS[form.category] ?? {
     suggestedVariantTypes: [],
@@ -1003,6 +1063,28 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
     // Reset variant types when category changes
     setVariantTypes([]);
     setCombinations([]);
+  };
+
+  const handleSaveDraft = () => {
+    const drafts = JSON.parse(localStorage.getItem("product_drafts") || "[]");
+    const draftId = searchParams.get("draftId") || Date.now().toString();
+    
+    const newDraft = {
+      id: draftId,
+      data: { form, variantTypes, combinations },
+      timestamp: new Date().toISOString(),
+      displayName: form.name || "Untitled Product Draft"
+    };
+
+    const existingIndex = drafts.findIndex((d: any) => d.id === draftId);
+    if (existingIndex > -1) {
+      drafts[existingIndex] = newDraft;
+    } else {
+      drafts.push(newDraft);
+    }
+
+    localStorage.setItem("product_drafts", JSON.stringify(drafts));
+    showToast("Progress saved as draft", "info");
   };
 
   // Regenerate combinations whenever variant types change
@@ -1052,403 +1134,335 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
     }
 
     if (res) {
-      setSavedNotice(true);
+      showToast(id ? "Product updated successfully" : "Product created successfully", "success");
+      
+      // Clear draft if it exists
+      const draftId = searchParams.get("draftId");
+      if (draftId) {
+        const drafts = JSON.parse(localStorage.getItem("product_drafts") || "[]");
+        const filtered = drafts.filter((d: any) => d.id !== draftId);
+        localStorage.setItem("product_drafts", JSON.stringify(filtered));
+      }
+      
       setTimeout(() => {
-        setSavedNotice(false);
-        navigate("/product");
-      }, 1500);
+        navigate("/product/all");
+      }, 1000);
+    } else {
+      showToast("Failed to save product", "error");
     }
   };
 
   return (
     <>
       <style>{STYLES}</style>
-      <div className="pf-root min-h-screen bg-slate-50/60 p-5 lg:p-8">
+      <div className="pf-root min-h-screen bg-slate-50/50 font-[Inter,sans-serif]">
+        <form onSubmit={handleSubmit} className="max-w-7xl mx-auto space-y-5">
 
+          {/* ROW 1: Product Identity (4 cols) + Classification & Summary (2 cols) */}
+          <div className="grid grid-cols-1 lg:grid-cols-6 gap-5 items-start">
 
-        <form onSubmit={handleSubmit} className="max-w-[1400px] mx-auto flex flex-col xl:flex-row gap-6 items-start">
-
-          {/* ── LEFT COLUMN ── */}
-          <div className="flex-1 w-full space-y-5">
-
-            {/* 1. Basic Information */}
-            <div className="pf-card bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
-              <SectionHeader
-                icon={<Package size={18} />}
-                iconColor="bg-blue-50 text-blue-500"
-                title="Basic Information"
-                subtitle="Core product identity and classification"
-              />
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* BOX 1: Identity */}
+            <div className="lg:col-span-4 bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden hover:shadow-md transition-all h-full">
+              <div className="px-6 py-4 bg-gradient-to-r from-blue-50/50 to-transparent border-b border-slate-100 flex items-center gap-3">
+                <div className="w-8 h-8 rounded-xl bg-blue-100 flex items-center justify-center text-blue-600">
+                  <Package size={16} />
+                </div>
+                <h2 className="text-xs font-bold text-slate-800 uppercase tracking-widest">Product Identity</h2>
+              </div>
+              <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div className="md:col-span-2">
-                  <InputField
-                    label="Product Name" name="name" required
+                  <InputField label="Product Name" name="name" required
                     value={form.name} onChange={handleChange}
                     placeholder="e.g. Apple iPhone 15 Pro Max"
                   />
                 </div>
-                <InputField
-                  label="barcode / Barcode" name="barcode" required
+                <InputField label="Barcode / SKU" name="barcode" required
                   value={form.barcode} onChange={handleChange}
                   placeholder="Unique identifier"
                 />
-                <InputField
-                  label="Brand" name="brand"
+                <InputField label="Brand" name="brand"
                   value={form.brand} onChange={handleChange}
                   placeholder="e.g. Apple"
                 />
-                <InputField
-                  label="Stocks" name="stocks"
-                  value={form.stocks} onChange={handleChange}
-                  placeholder="e.g. 100"
-                />
-
-
-                <SelectField
-                  label="Category" required
+                <SelectField label="Category" required
                   value={form.category}
                   onChange={e => handleCategoryChange(e.target.value)}
                   options={CATEGORIES.map(c => ({ value: c, label: c }))}
                 />
-                <SelectField
-                  label="Unit of Measure" name="unit" required
+                <SelectField label="Unit of Measure" name="unit" required
                   value={form.unit} onChange={handleChange}
                   options={UNITS.map(u => ({ value: u, label: u }))}
                 />
-
                 <div className="md:col-span-2">
                   <Label text="Description" hint="optional" />
                   <textarea
                     name="description"
                     value={form.description}
                     onChange={handleChange}
-                    rows={3}
+                    rows={2}
                     className="pf-input w-full px-3 py-2.5 text-sm border border-slate-200 rounded-xl bg-white text-slate-800 resize-none placeholder-slate-300"
-                    placeholder="Key features, materials, dimensions…"
+                    placeholder="Key features, materials, dimensionsâ€¦"
                   />
                 </div>
-                <div className="md:col-span-2">
-                  <Label text="Serial Number" hint="optional" />
-                  <Input
-                    name="serial_number"
-                    value={form.serial_number}
-                    onChange={handleChange}
-                    className="pf-input w-full px-3 py-2.5 text-sm border border-slate-200 rounded-xl bg-white text-slate-800 resize-none placeholder-slate-300"
-                    placeholder="Key features, materials, dimensions…"
-                  />
-                </div>
-                
-              </div>
-              <div className="mt-4 pt-4 border-t border-slate-100">
-                <Toggle
-                  active={form.is_active}
-                  onChange={() => setForm(p => ({ ...p, is_active: !p.is_active }))}
-                  label="Active Product"
-                  hint="Available for sale across all channels"
-                />
               </div>
             </div>
 
-            {/* 2. Pricing */}
-            <div className="pf-card bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
-              <SectionHeader
-                icon={<DollarSign size={18} />}
-                iconColor="bg-emerald-50 text-emerald-500"
-                title="Pricing & Sourcing"
-                subtitle="Cost structure, tax, and supplier"
-              />
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="space-y-1.5">
-                  <InputField
-                    label="Cost Price (Buy)" name="buy_price" required
-                    type="number" leftEl="₹"
-                    className="!bg-slate-50/50"
-                    value={form.buy_price} onChange={handleChange}
-                    placeholder="0.00"
-                  />
-                  <p className="text-[10px] text-slate-400 ml-1">Purchase cost per unit</p>
-                </div>
-                
-                <div className="space-y-1.5">
-                  <InputField
-                    label="Selling Price" name="sell_price" required
-                    type="number" leftEl="₹"
-                    className="!font-bold !text-emerald-700 !bg-emerald-50/30 !border-emerald-100 focus:!border-emerald-400 focus:!ring-emerald-100"
-                    value={form.sell_price} onChange={handleChange}
-                    placeholder="0.00"
-                  />
-                  <p className="text-[10px] text-emerald-600/70 ml-1 font-medium">Final price for customers</p>
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label text="Estimated Margin" />
-                  <div className="flex items-center justify-between px-4 py-2.5 border border-slate-200 rounded-xl bg-slate-50/80 shadow-inner h-[42px]">
-                    <span className="font-bold text-slate-700">₹{marginStats.profit.toLocaleString()}</span>
-                    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${marginStats.profit >= 0 ? "bg-emerald-500 text-white shadow-sm" : "bg-red-500 text-white shadow-sm"}`}>
-                      {marginStats.pct}%
-                    </span>
+            {/* BOX 2: Classification + Live Summary */}
+            <div className="lg:col-span-2 space-y-5">
+              <div className="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden hover:shadow-md transition-all">
+                <div className="px-6 py-4 bg-gradient-to-r from-amber-50/50 to-transparent border-b border-slate-100 flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-xl bg-amber-100 flex items-center justify-center text-amber-600">
+                    <Hash size={16} />
                   </div>
-                  <p className="text-[10px] text-slate-400 ml-1">Profit share per unit</p>
+                  <h2 className="text-xs font-bold text-slate-800 uppercase tracking-widest">Classification</h2>
                 </div>
-              </div>
-
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-6 mt-6">
-                <InputField
-                  label="MRP" name="mrp" type="number" leftEl="₹"
-                  value={form.mrp} onChange={handleChange}
-                  placeholder="0.00"
-                />
-                <SelectField
-                  label="GST Rate" name="gst" required
-                  value={form.gst} onChange={handleChange}
-                  options={GST_RATES.map(r => ({ value: r, label: r }))}
-                />
-                <InputField
-                  label="HSN Code" name="hsn"
-                  value={form.hsn} onChange={handleChange}
-                  placeholder="e.g. 8517"
-                />
-                <div className="col-span-2 md:col-span-3">
-                  <SelectField
-                    label="Primary Supplier" name="supplier"
+                <div className="p-6 space-y-5">
+                  <InputField label="Primary Supplier" name="supplier"
                     value={form.supplier} onChange={handleChange}
-                    options={SUPPLIERS.map(s => ({ value: s, label: s }))}
+                    placeholder="e.g. TechDistro"
                   />
-                </div>
-              </div>
-            </div>
-
-            {/* 3. Variants Section */}
-            <div className="pf-card bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
-              <SectionHeader
-                icon={<Layers size={18} />}
-                iconColor="bg-violet-50 text-violet-500"
-                title="Product Variants"
-                subtitle="Colors, storage, sizes and other variations"
-              />
-
-              {/* Has variants toggle */}
-              <div className="mb-5">
-                <Toggle
-                  active={form.has_variants}
-                  onChange={() => {
-                    setForm(p => ({ ...p, has_variants: !p.has_variants }));
-                    if (!form.has_variants) setCombinations([]);
-                  }}
-                  label="This product has variants"
-                  hint="Enable to manage multiple barcodes per product (e.g. iPhone 15 in 128GB/Black)"
-                />
-              </div>
-
-              {form.has_variants && (
-                <div className="pf-section-enter space-y-6">
-                  {/* Variant builder */}
-                  <div className="border border-slate-100 rounded-xl p-4 bg-slate-50/40">
-                    <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 mb-4">
-                      Define Variant Types
-                    </p>
-                    <VariantBuilder
-                      variantTypes={variantTypes}
-                      onChange={setVariantTypes}
-                      suggestedTypes={categoryConfig.suggestedVariantTypes}
-                    />
-                  </div>
-
-                  {/* Matrix table */}
-                  {combinations.length > 0 && (
+                  <div className="flex items-center justify-between p-3.5 rounded-2xl bg-slate-50 border border-slate-100">
                     <div>
-                      <div className="flex items-center gap-2 mb-3">
-                        <Cpu size={13} className="text-slate-400" />
-                        <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400">
-                          Variant Matrix
-                        </p>
-                      </div>
-                      <VariantMatrixTable
-                        combinations={combinations}
-                        variantTypes={variantTypes}
-                        basePriceStr={form.sell_price}
-                        supportsSerials={categoryConfig.supportsSerials}
-                        serialLabel={categoryConfig.serialLabel}
-                        onChange={setCombinations}
-                      />
+                      <span className="text-xs font-bold text-slate-600 uppercase tracking-widest block">Active Product</span>
+                      <span className="text-[10px] text-slate-400">Available for sale</span>
                     </div>
-                  )}
-
-                  {/* Empty state */}
-                  {variantTypes.length > 0 && combinations.length === 0 && (
-                    <div className="text-center py-8 text-slate-400 border-2 border-dashed border-slate-200 rounded-xl">
-                      <Layers size={24} className="mx-auto mb-2 opacity-30" />
-                      <p className="text-sm">Add values to your variant types to generate combinations</p>
-                    </div>
-                  )}
-
-                  {variantTypes.length === 0 && (
-                    <div className="text-center py-8 text-slate-400 border-2 border-dashed border-slate-200 rounded-xl">
-                      <Plus size={24} className="mx-auto mb-2 opacity-30" />
-                      <p className="text-sm">Add your first variant type above to begin</p>
-                      {categoryConfig.suggestedVariantTypes.length > 0 && (
-                        <p className="text-xs mt-1 text-slate-300">
-                          Suggestions available for {form.category}
-                        </p>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* 4. Inventory (non-variant) */}
-            {!form.has_variants && (
-              <div className="pf-card bg-white border border-slate-200 rounded-2xl p-6 shadow-sm pf-section-enter">
-                <SectionHeader
-                  icon={<BarChart2 size={18} />}
-                  iconColor="bg-amber-50 text-amber-500"
-                  title="Stock & Inventory"
-                  subtitle="Stock levels, location, and reorder alerts"
-                />
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4">
-                  <InputField
-                    label="Opening Stock" name="opening_stock"
-                    type="number" value={form.opening_stock} onChange={handleChange}
-                    placeholder="0"
-                  />
-                  <InputField
-                    label="Reorder Point" name="reorder_point" required
-                    type="number" value={form.reorder_point} onChange={handleChange}
-                    placeholder="5"
-                  />
-                  <InputField
-                    label="Max Stock" name="max_stock"
-                    type="number" value={form.max_stock} onChange={handleChange}
-                    placeholder="0"
-                  />
-                  <div className="col-span-2">
-                    <SelectField
-                      label="Storage Location" name="location" required
-                      value={form.location} onChange={handleChange}
-                      options={LOCATIONS.map(l => ({ value: l, label: l }))}
+                    <Switch
+                      checked={form.is_active}
+                      onCheckedChange={(checked) => setForm(p => ({ ...p, is_active: checked }))}
                     />
                   </div>
-                  <InputField
-                    label="Rack / Bin" name="rack"
-                    value={""}
-                    onChange={handleChange}
-                    placeholder="e.g. A-12-3"
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* 5. Advanced Settings */}
-            <div className="pf-card bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
-              <button type="button" onClick={() => setShowAdvanced(p => !p)}
-                className="w-full p-5 flex items-center justify-between hover:bg-slate-50/80 transition-colors">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 bg-slate-100 text-slate-500 rounded-xl flex items-center justify-center">
-                    <Settings size={16} />
-                  </div>
-                  <div className="text-left">
-                    <p className="text-sm font-semibold text-slate-800">Advanced Settings</p>
-                    <p className="text-[11px] text-slate-400">Batch tracking, expiry, warranty & weight</p>
-                  </div>
-                </div>
-                <ChevronDown size={15} className={`text-slate-400 transition-transform duration-300 ${showAdvanced ? "rotate-180" : ""}`} />
-              </button>
-
-              {showAdvanced && (
-                <div className="px-5 pb-5 border-t border-slate-100 pf-section-enter">
-                  <div className="grid grid-cols-2 gap-4 mt-5">
-                    <InputField label="Batch Number" name="batch" placeholder="BATCH-001" value="" onChange={handleChange} />
-                    <InputField label="Expiry Date" name="expiry" type="date" value="" onChange={handleChange} />
-                    <InputField label="Warranty Period" name="warranty" placeholder="e.g. 12 Months" value="" onChange={handleChange} />
-                    <InputField label="Weight (kg)" name="weight" type="number" placeholder="0.00" value="" onChange={handleChange} />
-                  </div>
-                </div>
-              )}
-            </div>
-
-          </div>
-
-          {/* ── RIGHT SIDEBAR ── */}
-          <div className="w-full xl:w-[320px] shrink-0">
-            <div className="xl:sticky xl:top-4 space-y-5">
-
-              {/* Image upload */}
-              <div className="pf-card bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
-                <p className="text-xs font-semibold uppercase tracking-widest text-slate-500 mb-4">Product Images</p>
-                <div className="border-2 border-dashed border-slate-200 rounded-xl p-7 text-center hover:border-blue-300 hover:bg-blue-50/30 transition-all cursor-pointer group mb-3">
-                  <UploadCloud size={24} className="mx-auto mb-2 text-slate-300 group-hover:text-blue-400 transition-colors" />
-                  <p className="text-xs font-medium text-slate-500 group-hover:text-blue-600">Click to upload</p>
-                  <p className="text-[10px] text-slate-400 mt-0.5">PNG, JPG up to 5MB</p>
-                </div>
-                <div className="grid grid-cols-3 gap-2">
-                  <div className="aspect-square rounded-lg border border-slate-200 bg-slate-50 flex items-center justify-center text-[10px] text-slate-300 font-medium">
-                    Preview
-                  </div>
-                  <div className="aspect-square rounded-lg border border-dashed border-slate-200 flex items-center justify-center cursor-pointer hover:bg-blue-50 hover:border-blue-200 transition-all">
-                    <Plus size={18} className="text-slate-300" />
-                  </div>
-                  <div className="aspect-square rounded-lg border border-dashed border-slate-200 flex items-center justify-center cursor-pointer hover:bg-blue-50 hover:border-blue-200 transition-all">
-                    <Plus size={18} className="text-slate-300" />
-                  </div>
                 </div>
               </div>
 
-              {/* Summary card */}
-              <div className="pf-card bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
-                <p className="text-xs font-semibold uppercase tracking-widest text-slate-500 mb-4">Live Summary</p>
-
-                <div className="space-y-0 text-sm divide-y divide-slate-100">
+              {/* Live Summary card */}
+              <div className="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden">
+                <div className="px-6 py-4 border-b border-slate-100">
+                  <h2 className="text-xs font-bold text-slate-800 uppercase tracking-widest">Live Summary</h2>
+                </div>
+                <div className="divide-y divide-slate-50 px-6">
                   {[
-                    { label: "barcode",      value: form.barcode || "—", mono: true },
-                    { label: "Category", value: form.category || "—" },
-                    { label: "Cost",     value: form.buy_price ? `₹${Number(form.buy_price).toLocaleString()}` : "—", mono: true },
-                    { label: "Price",    value: form.sell_price ? `₹${Number(form.sell_price).toLocaleString()}` : "—", mono: true },
-                    { label: "Margin",   value: `₹${marginStats.profit.toLocaleString()} (${marginStats.pct}%)`,
-                      color: marginStats.profit > 0 ? "text-emerald-600" : "text-slate-500", mono: true },
-                    { label: "GST",      value: form.gst || "—" },
+                    { label: "SKU",      value: form.barcode || "â€”" },
+                    { label: "Cost",     value: form.buy_price ? `â‚¹${Number(form.buy_price).toLocaleString()}` : "â€”" },
+                    { label: "Price",    value: form.sell_price ? `â‚¹${Number(form.sell_price).toLocaleString()}` : "â€”" },
+                    { label: "Margin",   value: `${marginStats.pct}%`, color: marginStats.profit >= 0 ? "text-emerald-600" : "text-rose-600" },
                     { label: "Variants", value: form.has_variants ? `${combinations.length} combos` : "None" },
-                    { label: "Stock",    value: totalStock > 0 ? `${totalStock} units` : "—", mono: true },
+                    { label: "Stock",    value: totalStock > 0 ? `${totalStock}` : "â€”" },
                   ].map(row => (
                     <div key={row.label} className="flex items-center justify-between py-2.5">
                       <span className="text-[11px] text-slate-400 font-medium">{row.label}</span>
-                      <span className={`text-[11px] font-semibold ${row.color ?? "text-slate-800"} ${row.mono ? "pf-mono" : ""}`}>
-                        {row.value}
-                      </span>
+                      <span className={`text-[11px] font-bold font-mono ${(row as any).color ?? "text-slate-800"}`}>{row.value}</span>
                     </div>
                   ))}
                 </div>
+                <div className="px-6 pb-5 pt-2">
+                  <span className={`text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-lg ${
+                    form.is_active ? "bg-emerald-50 text-emerald-700 border border-emerald-100" : "bg-slate-100 text-slate-500"
+                  }`}>
+                    {form.is_active ? "Active" : "Draft"}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
 
-                <div className="mt-3 pt-3 border-t border-slate-100">
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-[11px] text-slate-400">Status</span>
-                    <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded ${form.is_active ? "pf-status-active" : "pf-status-draft"}`}>
-                      {form.is_active ? "Active" : "Draft"}
-                    </span>
-                  </div>
-                  <div className="space-y-2">
-                  <GradientButton icon={<Save size={15} />} className="w-full">
-                  
-                    {isLoading ? (id ? "Updating..." : "Registering...") : (id ? "Update Product" : "Register Product")}
-                  </GradientButton>
-                  <GradientButton variant="outline" icon={<Save size={15} />} className="w-full">
-                    Save as Draft
-                  </GradientButton>
-                  
+          {/* ROW 2: Pricing (3 cols) + Tax & Stock (3 cols) */}
+          <div className="grid grid-cols-1 lg:grid-cols-6 gap-5">
+
+            {/* BOX 3: Pricing */}
+            <div className="lg:col-span-3 bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden hover:shadow-md transition-all">
+              <div className="px-6 py-4 bg-gradient-to-r from-emerald-50/50 to-transparent border-b border-slate-100 flex items-center gap-3">
+                <div className="w-8 h-8 rounded-xl bg-emerald-100 flex items-center justify-center text-emerald-600">
+                  <DollarSign size={16} />
+                </div>
+                <h2 className="text-xs font-bold text-slate-800 uppercase tracking-widest">Pricing & Margin</h2>
+              </div>
+              <div className="p-6 space-y-5">
+                <div className="grid grid-cols-2 gap-5">
+                  <InputField label="Cost Price" name="buy_price" required
+                    type="number" leftEl="â‚¹"
+                    value={form.buy_price} onChange={handleChange}
+                    placeholder="0.00"
+                  />
+                  <InputField label="Selling Price" name="sell_price" required
+                    type="number" leftEl="â‚¹"
+                    value={form.sell_price} onChange={handleChange}
+                    placeholder="0.00"
+                  />
+                </div>
+                <div className="flex items-center justify-between px-4 py-3 bg-slate-50 rounded-2xl border border-slate-100">
+                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Est. Margin</span>
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-slate-800 text-sm">â‚¹{marginStats.profit.toLocaleString()}</span>
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${
+                      marginStats.profit >= 0 ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"
+                    }`}>{marginStats.pct}%</span>
                   </div>
                 </div>
+                <InputField label="MRP" name="mrp" type="number" leftEl="â‚¹"
+                  value={form.mrp} onChange={handleChange}
+                  placeholder="0.00"
+                />
+              </div>
+            </div>
 
-                <div className="mt-4 flex items-start gap-2.5 bg-blue-50/70 border border-blue-100 rounded-xl px-3.5 py-3">
-                  <Info size={13} className="text-blue-400 mt-0.5 shrink-0" />
-                  <p className="text-[11px] text-blue-700 leading-relaxed">
-                    Fields marked <span className="text-red-500 font-bold">*</span> are required.
-                    {form.has_variants && " Each variant must have a barcode."}
-                  </p>
+            {/* BOX 4: Tax + Stock */}
+            <div className="lg:col-span-3 space-y-5">
+              <div className="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden hover:shadow-md transition-all">
+                <div className="px-6 py-4 bg-gradient-to-r from-slate-50 to-transparent border-b border-slate-100 flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-xl bg-slate-100 flex items-center justify-center text-slate-600">
+                    <Info size={16} />
+                  </div>
+                  <h2 className="text-xs font-bold text-slate-800 uppercase tracking-widest">Tax & Compliance</h2>
+                </div>
+                <div className="p-6 grid grid-cols-2 gap-5">
+                  <SelectField label="GST Rate" name="gst" required
+                    value={form.gst} onChange={handleChange}
+                    options={GST_RATES.map(r => ({ value: r, label: r }))}
+                  />
+                  <InputField label="HSN Code" name="hsn"
+                    value={form.hsn} onChange={handleChange}
+                    placeholder="e.g. 8517"
+                  />
                 </div>
               </div>
 
+              {!form.has_variants && (
+                <div className="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden hover:shadow-md transition-all pf-section-enter">
+                  <div className="px-6 py-4 bg-gradient-to-r from-amber-50/50 to-transparent border-b border-slate-100 flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-xl bg-amber-100 flex items-center justify-center text-amber-600">
+                      <BarChart2 size={16} />
+                    </div>
+                    <h2 className="text-xs font-bold text-slate-800 uppercase tracking-widest">Stock & Inventory</h2>
+                  </div>
+                  <div className="p-6 grid grid-cols-3 gap-5">
+                    <InputField label="Opening Stock" name="opening_stock"
+                      type="number" value={form.opening_stock} onChange={handleChange}
+                      placeholder="0"
+                    />
+                    <InputField label="Reorder Point" name="reorder_point" required
+                      type="number" value={form.reorder_point} onChange={handleChange}
+                      placeholder="5"
+                    />
+                    <InputField label="Max Stock" name="max_stock"
+                      type="number" value={form.max_stock} onChange={handleChange}
+                      placeholder="0"
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           </div>
+
+          {/* ROW 3: Variants (full width) */}
+          <div className="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden hover:shadow-md transition-all">
+            <div className="px-6 py-4 bg-gradient-to-r from-violet-50/50 to-transparent border-b border-slate-100 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-xl bg-violet-100 flex items-center justify-center text-violet-600">
+                  <Layers size={16} />
+                </div>
+                <div>
+                  <h2 className="text-xs font-bold text-slate-800 uppercase tracking-widest">Product Variants</h2>
+                  <p className="text-[10px] text-slate-400 mt-0.5">Colors, sizes, storage and other variations</p>
+                </div>
+              </div>
+              <Switch
+                checked={form.has_variants}
+                onCheckedChange={(checked) => {
+                  setForm(p => ({ ...p, has_variants: checked }));
+                  if (!checked) setCombinations([]);
+                }}
+              />
+            </div>
+
+            {form.has_variants ? (
+              <div className="p-6 space-y-5 pf-section-enter">
+                <div className="border border-slate-100 rounded-2xl p-5 bg-slate-50/40">
+                  <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 mb-4">Define Variant Types</p>
+                  <VariantBuilder
+                    variantTypes={variantTypes}
+                    onChange={setVariantTypes}
+                    suggestedTypes={categoryConfig.suggestedVariantTypes}
+                  />
+                </div>
+                {combinations.length > 0 && (
+                  <div>
+                    <div className="flex items-center gap-2 mb-3">
+                      <Cpu size={13} className="text-slate-400" />
+                      <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400">
+                        Variant Matrix ({combinations.length} combinations)
+                      </p>
+                    </div>
+                    <VariantMatrixTable
+                      combinations={combinations}
+                      variantTypes={variantTypes}
+                      basePriceStr={form.sell_price}
+                      supportsSerials={categoryConfig.supportsSerials}
+                      serialLabel={categoryConfig.serialLabel}
+                      onChange={setCombinations}
+                    />
+                  </div>
+                )}
+                {variantTypes.length === 0 && (
+                  <div className="text-center py-10 text-slate-400 border-2 border-dashed border-slate-200 rounded-2xl">
+                    <Plus size={24} className="mx-auto mb-2 opacity-30" />
+                    <p className="text-sm">Add your first variant type above to begin</p>
+                  </div>
+                )}
+                {variantTypes.length > 0 && combinations.length === 0 && (
+                  <div className="text-center py-10 text-slate-400 border-2 border-dashed border-slate-200 rounded-2xl">
+                    <Layers size={24} className="mx-auto mb-2 opacity-30" />
+                    <p className="text-sm">Add values to your variant types to generate combinations</p>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="px-6 py-5 text-slate-400 text-sm flex items-center gap-3">
+                <Zap size={16} className="text-violet-300" />
+                Enable variants to manage multiple SKUs per product (e.g. iPhone 15 â€” 128GB / Black)
+              </div>
+            )}
+          </div>
+
+          {/* ROW 4: Advanced (collapsible) */}
+          <div className="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden">
+            <button type="button" onClick={() => setShowAdvanced(p => !p)}
+              className="w-full px-6 py-4 flex items-center justify-between hover:bg-slate-50/60 transition-colors">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-xl bg-slate-100 flex items-center justify-center text-slate-500">
+                  <Settings size={16} />
+                </div>
+                <div className="text-left">
+                  <p className="text-xs font-bold text-slate-800 uppercase tracking-widest">Advanced Settings</p>
+                  <p className="text-[10px] text-slate-400 mt-0.5">Batch tracking, expiry, warranty & weight</p>
+                </div>
+              </div>
+              <ChevronDown size={15} className={`text-slate-400 transition-transform duration-300 ${showAdvanced ? "rotate-180" : ""}`} />
+            </button>
+            {showAdvanced && (
+              <div className="px-6 pb-6 border-t border-slate-100 pf-section-enter">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-5 mt-5">
+                  <InputField label="Batch Number" name="batch" placeholder="BATCH-001" value="" onChange={handleChange} />
+                  <InputField label="Expiry Date" name="expiry" type="date" value="" onChange={handleChange} />
+                  <InputField label="Warranty Period" name="warranty" placeholder="e.g. 12 Months" value="" onChange={handleChange} />
+                  <InputField label="Weight (kg)" name="weight" type="number" placeholder="0.00" value="" onChange={handleChange} />
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Mobile Submit */}
+          <div className="md:hidden flex flex-col gap-3 pb-8">
+            {!id && (
+              <button type="button" onClick={handleSaveDraft}
+                className="w-full h-12 rounded-2xl border border-blue-100 text-blue-600 font-bold text-sm bg-blue-50/50 hover:bg-blue-100 transition-all flex items-center justify-center gap-2">
+                <Bookmark size={18} /> Save Draft
+              </button>
+            )}
+            <GradientButton icon={<Save size={18} />} onClick={handleSubmit} disabled={isLoading} className="w-full rounded-2xl h-12">
+              {isLoading ? "Processing..." : (id ? "Save Changes" : "Create Product")}
+            </GradientButton>
+          </div>
+
         </form>
       </div>
     </>

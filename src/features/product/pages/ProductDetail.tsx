@@ -1,87 +1,66 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
-  Package, Edit3, Download, Upload, DollarSign,
-  Tag, BarChart2, ShoppingCart, Target, ArrowRightLeft,
-  Search, X,
+  Package, Edit3, Trash2, DollarSign, Download, Upload,
+  Tag, Layers, Search, X, Mail, Phone, Info, BarChart2,
+  Calendar, Hash, ShoppingCart, Bookmark, MapPin, FileText,
 } from "lucide-react";
 import { useApi } from "@/context/ApiContext";
+import { useToast } from "@/context/ToastContext";
 import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 import Loader from "@/components/common/Loader";
+import { StatCard } from "@/components/common/StatsCard";
+import { Modal, ProfileHeaderCard, SectionCard, DetailItem } from "@/components/common/SuperUI";
+import { ConfirmDialog } from "@/components/common/ConfirmDialog";
+import { SearchSelect } from "@/components/inputbuilders/SearchSelect";
 import type { ProductRecord } from "@/types/api";
 
-// ── Search bar ──────────────────────────────────────────────────────────────
-const ProductSearch = () => {
+// ── Search bar ───────────────────────────────────────────────────────────────
+const ProductSearchSelect = () => {
   const navigate = useNavigate();
   const { getData } = useApi();
-  const [query, setQuery] = useState("");
-  const [results, setResults] = useState<ProductRecord[]>([]);
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (!query.trim()) { setResults([]); return; }
-    const t = setTimeout(() => {
-      getData(ENDPOINTS.INVENTORIES, { q: query }).then((res) => {
-        if (res) setResults(Array.isArray(res.data) ? res.data : [res.data]);
-      });
-    }, 300);
-    return () => clearTimeout(t);
-  }, [query]);
-
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
+  const fetchProducts = async (q: string) => {
+    if (!q) return [];
+    try {
+      const res = await getData(ENDPOINTS.INVENTORIES, { q, limit: "8", shop_id: SHOP_ID });
+      const data = res?.data ? (Array.isArray(res.data) ? res.data : [res.data]) : [];
+      return data.map((p: any) => ({
+        ...p,
+        displayName: String(p.datas?.name ?? p.barcode ?? p.id),
+      }));
+    } catch {
+      return [];
+    }
+  };
 
   return (
-    <div ref={ref} className="relative w-full max-w-xs">
-      <div className="flex items-center gap-2 px-3 py-2 border border-slate-200 rounded-xl bg-white shadow-sm">
-        <Search size={14} className="text-slate-400 shrink-0" />
-        <input
-          value={query}
-          onChange={(e) => { setQuery(e.target.value); setOpen(true); }}
-          placeholder="Search product by name / ID…"
-          className="flex-1 text-sm outline-none bg-transparent text-slate-700 placeholder-slate-400 min-w-0"
-        />
-        {query && (
-          <button onClick={() => { setQuery(""); setResults([]); }} className="text-slate-400 hover:text-slate-600">
-            <X size={13} />
-          </button>
-        )}
-      </div>
-      {open && results.length > 0 && (
-        <div className="absolute top-full mt-1 w-full bg-white border border-slate-200 rounded-xl shadow-xl z-50 overflow-hidden">
-          {results.map((p) => (
-            <button
-              key={p.id}
-              onClick={() => { navigate(`/product/${p.id}`); setQuery(""); setOpen(false); }}
-              className="w-full px-4 py-3 text-left hover:bg-blue-50 border-b last:border-0 border-slate-100 transition-colors"
-            >
-              <p className="text-sm font-medium text-slate-800 truncate">
-                {String(p.datas?.name ?? p.barcode ?? "—")}
-              </p>
-              <p className="text-[11px] text-slate-400 font-mono mt-0.5 truncate">{p.barcode}</p>
-            </button>
-          ))}
-        </div>
-      )}
+    <div className="w-full max-w-xs relative z-50">
+      <SearchSelect
+        labelKey="displayName"
+        valueKey="id"
+        fetchOptions={fetchProducts}
+        placeholder="Search product by name…"
+        className="w-full"
+        onChange={(val) => val && navigate(`/product/${val}`)}
+      />
     </div>
   );
 };
 
-// ── Main page ───────────────────────────────────────────────────────────────
+// ── Main page ────────────────────────────────────────────────────────────────
 const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { getData } = useApi();
+  const { getData, deleteData } = useApi();
+  const { showToast } = useToast();
 
   const [product, setProduct] = useState<ProductRecord | null>(null);
   const [recordLoading, setRecordLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("General Info");
+  const [activeTab, setActiveTab] = useState(0);
+  const [viewValue, setViewValue] = useState<{ label: string; value: string } | null>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -92,245 +71,334 @@ const ProductDetail = () => {
     });
   }, [id]);
 
-  if (recordLoading) {
-    return <div className="p-12 flex justify-center"><Loader /></div>;
-  }
+  const handleDelete = async () => {
+    if (!id) return;
+    setDeleting(true);
+    try {
+      await deleteData(`${ENDPOINTS.INVENTORIES}/${id}`);
+      showToast("Product deleted successfully", "success");
+      navigate("/product/all");
+    } catch {
+      showToast("Failed to delete product", "error");
+    } finally {
+      setDeleting(false);
+      setShowDeleteModal(false);
+    }
+  };
+
+  if (recordLoading) return <div className="p-12 flex justify-center"><Loader /></div>;
 
   if (!product) {
     return (
       <div className="text-center py-20 space-y-4">
         <p className="text-slate-500">Product not found.</p>
-        <ProductSearch />
+        <ProductSearchSelect />
       </div>
     );
   }
 
   const datas = (product as any).datas ?? {};
   const name = String(datas.name ?? datas.product_name ?? product.barcode ?? "Unknown Product");
-  const sku = String(datas.sku ?? datas.code ?? product.barcode ?? "—");
+  const initials = name.slice(0, 2).toUpperCase();
+  const sku = String(product.barcode ?? datas.barcode ?? "—");
   const category = String(datas.category ?? "—");
-  const description = String(datas.description ?? "No description available.");
-
-  // Prioritize root fields from Inventory Record over nested datas
+  const description = String(datas.description ?? "—");
   const sellingPrice = (product as any).sell_price ?? datas.sell_price ?? datas.selling_price ?? "—";
   const buyingPrice = (product as any).buy_price ?? datas.buy_price ?? datas.buying_price ?? "—";
   const currentStock = (product as any).stocks ?? datas.stocks ?? datas.stock ?? "—";
   const unit = String(datas.unit ?? "—");
-
-  // Build static general info fields from backend schema
-  const infoFields = [
-    { label: "Product Name", value: String(datas.name ?? "—") },
-    { label: "Category", value: String(datas.category ?? "—") },
-    { label: "Brand", value: String(datas.brand ?? "—") },
-    { label: "Unit", value: String(datas.unit ?? "—") },
-    { label: "Supplier", value: String(datas.supplier ?? "—") },
-    { label: "Barcode", value: String(product.barcode ?? datas.barcode ?? "—") },
-    { label: "Serial Number", value: String(datas.serial_number ?? "—") },
-    { label: "Buying Price", value: `₹${buyingPrice}` },
-    { label: "Selling Price", value: `₹${sellingPrice}` },
-    { label: "MRP", value: String(datas.mrp ? `₹${datas.mrp}` : "—") },
-    { label: "GST", value: String(datas.gst ?? "—") },
-    { label: "HSN", value: String(datas.hsn ?? "—") },
-    { label: "Reorder Point", value: String(datas.reorder_point ?? "—") },
-  ];
-
-  const combinations = (datas.combinations as any[]) ?? [];
-  const variantTypes = (datas.variantTypes as any[]) ?? [];
+  const combinations: any[] = datas.combinations ?? [];
+  const variantTypes: any[] = datas.variantTypes ?? [];
   const hasVariants = datas.has_variants === true || combinations.length > 0;
+  const isActive = datas.is_active !== false;
 
-  const tabs = ["General Info"];
-  if (hasVariants) tabs.push("Variants");
+  const TABS = ["General Info", ...(hasVariants ? ["Variants"] : [])];
+
+  // Clickable field definition
+  const click = (label: string, value: string) => () => setViewValue({ label, value });
 
   return (
-    <div className="min-h-screen bg-slate-50 font-sans pb-20">
-      <div className="space-y-4">
+    <div className="space-y-4 animate-in fade-in duration-500">
 
-        {/* Product Header Card */}
-        <div className="bg-white rounded-xl border border-slate-100 p-5 flex flex-col md:flex-row gap-5 shadow-sm">
-          <div className="w-24 h-24 shrink-0 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center">
-            <Package size={36} className="text-slate-400" strokeWidth={1.5} />
-          </div>
-
-          <div className="flex-1">
-            <div className="flex flex-col md:flex-row md:items-start justify-between gap-3 mb-2">
-              <div>
-                <div className="flex items-center gap-3">
-                  <h1 className="heading-page text-slate-700">{name}</h1>
-                  <span className="bg-emerald-50 border border-emerald-100 text-emerald-600 px-2 py-0.5 rounded text-[10px] font-medium tracking-wider uppercase">
-                    Active
-                  </span>
-                </div>
-                <p className="text-xs text-slate-400 mt-1">SKU: {sku}</p>
-              </div>
-              <div className="flex items-center gap-2 shrink-0">
-                <ProductSearch />
-                <button
-                  onClick={() => navigate(`/product/${id}/edit`)}
-                  className="flex items-center gap-1.5 px-4 py-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-600 rounded-lg font-medium text-xs transition-all"
-                >
-                  <Edit3 size={14} strokeWidth={1.5} /> Edit
-                </button>
-              </div>
-            </div>
-
-            <p className="text-xs text-slate-500 leading-relaxed mb-4 max-w-2xl">{description}</p>
-
-            <div className="flex flex-wrap gap-6 pt-1 border-t border-slate-50 mt-3">
-              <div className="flex flex-col mt-2">
-                <span className="text-[10px] font-medium text-slate-400 uppercase tracking-wider mb-1">Category</span>
-                <span className="text-sm font-semibold text-slate-600">{category}</span>
-              </div>
-              <div className="flex flex-col mt-2">
-                <span className="text-[10px] font-medium text-slate-400 uppercase tracking-wider mb-1">Unit</span>
-                <span className="text-sm font-semibold text-slate-600">{unit}</span>
-              </div>
-              <div className="flex flex-col mt-2">
-                <span className="text-[10px] font-medium text-slate-400 uppercase tracking-wider mb-1">Selling Price</span>
-                <span className="text-sm font-semibold text-slate-600">₹{sellingPrice}</span>
-              </div>
-              <div className="flex flex-col mt-2">
-                <span className="text-[10px] font-medium text-slate-400 uppercase tracking-wider mb-1">Barcode</span>
-                <span className="text-sm font-semibold text-slate-600 font-mono">{product.barcode ?? "—"}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Stats */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          {[
-            { label: "Current Stock", value: String(currentStock), icon: Package, bg: "bg-blue-50", color: "text-blue-500" },
-            { label: "Buying Price", value: `₹${buyingPrice}`, icon: Download, bg: "bg-emerald-50", color: "text-emerald-500" },
-            { label: "Selling Price", value: `₹${sellingPrice}`, icon: Upload, bg: "bg-rose-50", color: "text-rose-500" },
-            { label: "Stock Value", value: currentStock !== "—" && buyingPrice !== "—" ? `₹${(Number(currentStock) * Number(buyingPrice)).toFixed(0)}` : "—", icon: DollarSign, bg: "bg-indigo-50", color: "text-indigo-500" },
-          ].map(({ label, value, icon: Icon, bg, color }) => (
-            <div key={label} className="bg-white rounded-xl border border-slate-100 p-4 shadow-sm flex items-center gap-4">
-              <div className={`w-10 h-10 rounded-lg ${bg} flex items-center justify-center ${color} shrink-0`}>
-                <Icon size={18} strokeWidth={1.5} />
-              </div>
-              <div>
-                <p className="text-[11px] font-medium text-slate-400 uppercase tracking-wider mb-0.5">{label}</p>
-                <p className="text-lg font-bold text-slate-700">{value}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Tabs */}
-        <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
-          <div className="flex border-b border-slate-100 bg-slate-50/30 overflow-x-auto">
-            {tabs.map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`py-3 px-5 text-xs font-medium text-center transition-colors whitespace-nowrap border-b-2 -mb-[1px] ${activeTab === tab
-                    ? "border-blue-500 text-blue-600 bg-white"
-                    : "border-transparent text-slate-500 hover:text-slate-700 hover:bg-white"
-                  }`}
-              >
-                {tab}
-              </button>
-            ))}
-          </div>
-
-          <div className="min-h-[250px]">
-            {activeTab === "General Info" && (
-              <div className="p-5 animate-in fade-in duration-300">
-                <h2 className="heading-section text-slate-700 mb-4">Product Information</h2>
-                {infoFields.length === 0 ? (
-                  <p className="text-sm text-slate-500">No product data available.</p>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                    {infoFields.map((f) => (
-                      <div key={f.label}>
-                        <p className="text-[11px] font-medium text-slate-400 uppercase tracking-wider mb-1">{f.label}</p>
-                        <p className="text-sm font-medium text-slate-700">{f.value}</p>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {activeTab === "Variants" && (
-              <div className="p-5 animate-in fade-in duration-300">
-                <div className="mb-6">
-                  <h2 className="heading-section text-slate-700 mb-2">Variant Types</h2>
-                  <div className="flex flex-wrap gap-2">
-                    {variantTypes.map(vt => (
-                      <div key={vt.id} className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-2">
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">{vt.name}</p>
-                        <p className="text-sm font-semibold text-slate-700">{(vt.values as string[]).join(", ")}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <h2 className="heading-section text-slate-700 mb-4">Available Combinations</h2>
-                <div className="overflow-x-auto rounded-xl border border-slate-100 shadow-sm">
-                  <table className="w-full text-left border-collapse">
-                    <thead className="bg-slate-50 border-b border-slate-100">
-                      <tr>
-                        <th className="px-4 py-3 text-[11px] font-bold text-slate-400 uppercase tracking-widest">Attributes</th>
-                        <th className="px-4 py-3 text-[11px] font-bold text-slate-400 uppercase tracking-widest">Barcode</th>
-                        <th className="px-4 py-3 text-[11px] font-bold text-slate-400 uppercase tracking-widest">Stock</th>
-                        <th className="px-4 py-3 text-[11px] font-bold text-slate-400 uppercase tracking-widest">Price</th>
-                        <th className="px-4 py-3 text-[11px] font-bold text-slate-400 uppercase tracking-widest">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-50">
-                      {combinations.map(c => (
-                        <tr key={c.id} className="hover:bg-slate-50 transition-colors">
-                          <td className="px-4 py-3">
-                            <div className="flex flex-wrap gap-1.5">
-                              {Object.entries(c.attributes ?? {}).map(([k, v]) => (
-                                <span key={k} className="px-2 py-0.5 bg-blue-50 text-blue-600 rounded text-[11px] font-medium">
-                                  {k}: {String(v)}
-                                </span>
-                              ))}
-                            </div>
-                          </td>
-                          <td className="px-4 py-3 text-sm font-mono text-slate-600">{c.barcode || "—"}</td>
-                          <td className="px-4 py-3 text-sm font-bold text-slate-700">{c.stock || "—"}</td>
-                          <td className="px-4 py-3 text-sm font-bold text-slate-700">{c.price ? `₹${c.price}` : "—"}</td>
-                          <td className="px-4 py-3">
-                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${c.active !== false ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-red-50 text-red-600 border border-red-100'}`}>
-                              {c.active !== false ? 'Active' : 'Inactive'}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Sticky Bottom Action Bar */}
-        {/* <div className="sticky -bottom-4 md:-bottom-6 lg:-bottom-8 -mx-4 md:-mx-6 lg:-mx-8 -mb-4 md:-mb-6 lg:-mb-8 mt-auto bg-white border-t-2 border-slate-200 px-8 py-4 flex justify-between items-center shadow-[0_-4px_12px_rgba(0,0,0,0.08)] z-[100]">
-          <div className="text-xs font-medium text-slate-500 hidden md:block px-2">Quick actions</div>
-          <div className="flex flex-wrap items-center justify-center gap-2 w-full md:w-auto">
-            <button className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 rounded-lg font-medium text-xs transition-all shadow-sm">
-              <Tag size={14} strokeWidth={1.5} /> Label
+      {/* ── Profile Header Card ──────────────────────────────── */}
+      <ProfileHeaderCard
+        name={name}
+        initials={initials}
+        subText={`SKU: ${sku}`}
+        badges={[
+          { text: category, variant: "primary" },
+          { text: isActive ? "Active" : "Inactive", variant: isActive ? "success" : "danger", showPulse: true },
+        ]}
+        infoItems={[
+          { icon: Tag, text: `Unit: ${unit}` },
+          { icon: ShoppingCart, text: `Stock: ${currentStock}` },
+        ]}
+        actions={
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => navigate(`/product/${id}/edit`)}
+              className="w-8 h-8 flex items-center justify-center bg-white border border-slate-200 text-slate-600 rounded-lg hover:text-blue-600 hover:border-blue-100 transition-all shadow-sm active:scale-95"
+              title="Edit Product"
+            >
+              <Edit3 size={14} />
             </button>
-            <button className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 rounded-lg font-medium text-xs transition-all shadow-sm">
-              <BarChart2 size={14} strokeWidth={1.5} /> Report
-            </button>
-            <button className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 border border-slate-200 text-slate-600 hover:bg-slate-100 rounded-lg font-medium text-xs transition-all shadow-sm">
-              <ArrowRightLeft size={14} strokeWidth={1.5} /> Adjust
-            </button>
-            <button className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 border border-slate-200 text-slate-600 hover:bg-slate-100 rounded-lg font-medium text-xs transition-all shadow-sm">
-              <Target size={14} strokeWidth={1.5} /> PO
-            </button>
-            <button className="flex items-center gap-1.5 px-4 py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium text-xs transition-all shadow-sm active:scale-95">
-              <ShoppingCart size={14} strokeWidth={1.5} /> Sale
+            <button
+              onClick={() => setShowDeleteModal(true)}
+              className="w-8 h-8 flex items-center justify-center bg-white border border-slate-200 text-slate-300 rounded-lg hover:text-rose-600 hover:border-rose-100 transition-all shadow-sm active:scale-95"
+              title="Delete Product"
+            >
+              <Trash2 size={14} />
             </button>
           </div>
-        </div> */}
+        }
+      />
 
+      {/* ── Tabs + Stats ─────────────────────────────────────── */}
+      <div className="flex gap-0.5 bg-white p-1 rounded-xl border border-slate-200 w-fit">
+        {TABS.map((tab, i) => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(i)}
+            className={`px-4 py-1.5 text-[11px] font-bold rounded-lg transition-all ${
+              activeTab === i
+                ? "bg-blue-600 text-white shadow-md shadow-blue-100"
+                : "text-slate-500 hover:bg-slate-50 hover:text-slate-700"
+            }`}
+          >
+            {tab}
+          </button>
+        ))}
       </div>
+
+      <div className="flex flex-wrap gap-2">
+        <StatCard icon={Package} label="Current Stock" value={String(currentStock)}
+          iconBg="bg-blue-50" iconColor="text-blue-600" className="flex-1 min-w-[140px]" />
+        <StatCard icon={Download} label="Buying Price" value={`₹${buyingPrice}`}
+          iconBg="bg-emerald-50" iconColor="text-emerald-600" className="flex-1 min-w-[140px]" />
+        <StatCard icon={Upload} label="Selling Price" value={`₹${sellingPrice}`}
+          iconBg="bg-rose-50" iconColor="text-rose-600" className="flex-1 min-w-[140px]" />
+        <StatCard
+          icon={DollarSign}
+          label="Stock Value"
+          value={
+            currentStock !== "—" && buyingPrice !== "—"
+              ? `₹${(Number(currentStock) * Number(buyingPrice)).toLocaleString()}`
+              : "—"
+          }
+          iconBg="bg-indigo-50" iconColor="text-indigo-600"
+          className="flex-1 min-w-[140px]"
+        />
+      </div>
+
+      {/* ── Tab Panels ───────────────────────────────────────── */}
+      <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+
+        {/* TAB 0 — General Info */}
+        {activeTab === 0 && (
+          <div className="grid grid-cols-1 xl:grid-cols-4 gap-4">
+            {/* Main 3-col area */}
+            <div className="xl:col-span-3 space-y-4">
+
+              {/* Primary Fields */}
+              <SectionCard className="rounded-[1.5rem] border-slate-200 shadow-sm p-4 overflow-hidden relative">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50/50 rounded-full -mr-16 -mt-16 blur-3xl -z-0" />
+                <div className="relative z-10">
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-100">
+                      <Package size={16} />
+                    </div>
+                    <h2 className="text-[10px] font-black text-slate-800 uppercase tracking-[0.15em]">Product Information</h2>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-y-6 gap-x-8">
+                    <DetailItem icon={Package} label="Product Name" value={name} onClick={click("Product Name", name)} />
+                    <DetailItem icon={Tag} label="Category" value={category} onClick={click("Category", category)} />
+                    <DetailItem icon={Hash} label="Brand" value={String(datas.brand || "—")} onClick={click("Brand", String(datas.brand || "—"))} />
+                    <DetailItem icon={Info} label="Unit" value={unit} onClick={click("Unit", unit)} />
+                    <DetailItem icon={Hash} label="Barcode / SKU" value={sku} onClick={click("Barcode / SKU", sku)} />
+                    <DetailItem icon={FileText} label="Serial Number" value={String(datas.serial_number || "—")} onClick={click("Serial Number", String(datas.serial_number || "—"))} />
+                    <DetailItem icon={ShoppingCart} label="Supplier" value={String(datas.supplier || "—")} onClick={click("Supplier", String(datas.supplier || "—"))} />
+                    <DetailItem icon={Info} label="Description" value={description} onClick={click("Description", description)} />
+                  </div>
+                </div>
+              </SectionCard>
+
+              {/* Pricing Section */}
+              <SectionCard className="rounded-[1.5rem] border-slate-200 shadow-sm p-4">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-8 h-8 rounded-lg bg-emerald-600 flex items-center justify-center text-white shadow-lg shadow-emerald-100">
+                    <DollarSign size={16} />
+                  </div>
+                  <h2 className="text-[10px] font-black text-slate-800 uppercase tracking-[0.15em]">Pricing & Compliance</h2>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-y-6 gap-x-8">
+                  <DetailItem icon={Download} label="Buying Price" value={buyingPrice !== "—" ? `₹${buyingPrice}` : "—"} onClick={click("Buying Price", `₹${buyingPrice}`)} />
+                  <DetailItem icon={Upload} label="Selling Price" value={sellingPrice !== "—" ? `₹${sellingPrice}` : "—"} onClick={click("Selling Price", `₹${sellingPrice}`)} />
+                  <DetailItem icon={Tag} label="MRP" value={datas.mrp ? `₹${datas.mrp}` : "—"} onClick={click("MRP", datas.mrp ? `₹${datas.mrp}` : "—")} />
+                  <DetailItem icon={BarChart2} label="GST Rate" value={String(datas.gst || "—")} onClick={click("GST Rate", String(datas.gst || "—"))} />
+                  <DetailItem icon={Hash} label="HSN Code" value={String(datas.hsn || "—")} onClick={click("HSN Code", String(datas.hsn || "—"))} />
+                  <DetailItem icon={Info} label="Reorder Point" value={String(datas.reorder_point || "—")} onClick={click("Reorder Point", String(datas.reorder_point || "—"))} />
+                  <DetailItem icon={Package} label="Max Stock" value={String(datas.max_stock || "—")} onClick={click("Max Stock", String(datas.max_stock || "—"))} />
+                  <DetailItem icon={MapPin} label="Location" value={String(datas.location || "—")} onClick={click("Location", String(datas.location || "—"))} />
+                </div>
+              </SectionCard>
+            </div>
+
+            {/* Sidebar — 1 col */}
+            <div className="xl:col-span-1 space-y-4">
+              <SectionCard className="rounded-[1.5rem] border-slate-200 shadow-sm p-4">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-8 h-8 rounded-lg bg-amber-500 flex items-center justify-center text-white shadow-lg shadow-amber-100">
+                    <Tag size={16} />
+                  </div>
+                  <h2 className="text-[10px] font-black text-slate-800 uppercase tracking-[0.15em]">Classification</h2>
+                </div>
+                <div className="divide-y divide-slate-50 space-y-0">
+                  {[
+                    { label: "TYPE", value: datas.customer_type || "Product" },
+                    { label: "GSTN", value: datas.gst_number || datas.gst || "—" },
+                    { label: "STATUS", value: isActive ? "Active" : "Inactive", isStatus: true },
+                    { label: "VARIANTS", value: hasVariants ? `${combinations.length} combos` : "None" },
+                  ].map(row => (
+                    <div key={row.label} className="flex items-center justify-between py-2.5">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{row.label}</span>
+                      {row.isStatus ? (
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${isActive ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-600"}`}>
+                          {row.value}
+                        </span>
+                      ) : (
+                        <span className="text-[11px] font-bold text-slate-700">{row.value}</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </SectionCard>
+
+              {description && description !== "—" && (
+                <SectionCard className="rounded-[1.5rem] border-slate-200 shadow-sm p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="w-8 h-8 rounded-lg bg-slate-700 flex items-center justify-center text-white">
+                      <FileText size={16} />
+                    </div>
+                    <h2 className="text-[10px] font-black text-slate-800 uppercase tracking-[0.15em]">Description</h2>
+                  </div>
+                  <p className="text-[12px] text-slate-600 leading-relaxed">{description}</p>
+                </SectionCard>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* TAB 1 — Variants */}
+        {activeTab === 1 && hasVariants && (
+          <div className="space-y-4">
+            {/* Variant types chips */}
+            {variantTypes.length > 0 && (
+              <SectionCard className="rounded-[1.5rem] p-4">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-8 h-8 rounded-lg bg-violet-600 flex items-center justify-center text-white shadow-lg shadow-violet-100">
+                    <Layers size={16} />
+                  </div>
+                  <h2 className="text-[10px] font-black text-slate-800 uppercase tracking-[0.15em]">Variant Types</h2>
+                </div>
+                <div className="flex flex-wrap gap-3">
+                  {variantTypes.map(vt => (
+                    <div key={vt.id} className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3">
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">{vt.name}</p>
+                      <p className="text-sm font-bold text-slate-700">{(vt.values as string[]).join(", ")}</p>
+                    </div>
+                  ))}
+                </div>
+              </SectionCard>
+            )}
+
+            {/* Combinations table */}
+            <SectionCard className="rounded-[1.5rem] p-4">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-100">
+                  <Tag size={16} />
+                </div>
+                <h2 className="text-[10px] font-black text-slate-800 uppercase tracking-[0.15em]">
+                  Combinations ({combinations.length})
+                </h2>
+              </div>
+              <div className="overflow-x-auto rounded-xl border border-slate-100">
+                <table className="w-full text-left border-collapse">
+                  <thead className="bg-slate-50 border-b border-slate-100">
+                    <tr>
+                      {["Attributes", "Barcode", "Price", "Stock", "Status"].map(h => (
+                        <th key={h} className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-50">
+                    {combinations.map(c => (
+                      <tr key={c.id} className="hover:bg-blue-50/30 transition-colors">
+                        <td className="px-4 py-3">
+                          <div className="flex flex-wrap gap-1.5">
+                            {Object.entries(c.attributes ?? {}).map(([k, v]) => (
+                              <span key={k} className="px-2 py-0.5 bg-blue-50 text-blue-600 rounded text-[11px] font-bold">
+                                {k}: {String(v)}
+                              </span>
+                            ))}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-xs font-mono font-bold text-slate-500">{c.barcode || "—"}</td>
+                        <td className="px-4 py-3 text-sm font-bold text-slate-700">{c.price ? `₹${c.price}` : "—"}</td>
+                        <td className="px-4 py-3">
+                          <span className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border ${
+                            Number(c.stock) <= 0 ? "text-rose-600 bg-rose-50 border-rose-100"
+                              : Number(c.stock) <= 15 ? "text-amber-600 bg-amber-50 border-amber-100"
+                              : "text-emerald-600 bg-emerald-50 border-emerald-100"
+                          }`}>
+                            {c.stock || 0}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                            c.active !== false ? "bg-emerald-50 text-emerald-600 border border-emerald-100" : "bg-rose-50 text-rose-600 border border-rose-100"
+                          }`}>
+                            {c.active !== false ? "Active" : "Inactive"}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </SectionCard>
+          </div>
+        )}
+      </div>
+
+      {/* ── Field Value Modal (global SuperUI Modal) ──────────── */}
+      <Modal
+        show={!!viewValue}
+        onClose={() => setViewValue(null)}
+        title={viewValue?.label || "Field Detail"}
+        className="max-w-md"
+      >
+        <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+          <p className="text-sm font-bold text-slate-700 break-words leading-relaxed select-all">
+            {viewValue?.value}
+          </p>
+        </div>
+        <p className="mt-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">
+          Double click the text to select and copy
+        </p>
+      </Modal>
+
+      {/* ── Delete Confirm (global ConfirmDialog) ─────────────── */}
+      <ConfirmDialog
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={handleDelete}
+        title="Delete Product"
+        description={`This action cannot be undone. This will permanently delete "${name}" and all associated data.`}
+        confirmText="Delete Product"
+        loading={deleting}
+        type="danger"
+        icon={Trash2}
+      />
     </div>
   );
 };

@@ -97,33 +97,6 @@ export default function EmployeeDetail() {
   };
 
   // Header Actions
-  useEffect(() => {
-    if (!employee) {
-      setActions(null);
-      return;
-    }
-    setActions(
-      <div className="flex items-center gap-3 animate-in fade-in slide-in-from-right-4 duration-300">
-        <div className="flex items-center gap-1.5">
-          <button
-            onClick={() => navigate(`/employee/${id}/edit`)}
-            className="w-10 h-10 flex items-center justify-center bg-white border border-slate-200 text-slate-600 rounded-xl hover:text-blue-600 hover:border-blue-100 transition-all shadow-sm active:scale-95"
-            title="Edit Member"
-          >
-            <Pencil size={18} />
-          </button>
-          <button
-            onClick={() => setShowDeleteModal(true)}
-            className="w-10 h-10 flex items-center justify-center bg-white border border-slate-200 text-slate-300 rounded-xl hover:text-rose-600 hover:border-rose-100 transition-all shadow-sm active:scale-95"
-            title="Remove Member"
-          >
-            <Trash2 size={18} />
-          </button>
-        </div>
-      </div>
-    );
-    return () => setActions(null);
-  }, [setActions, id, navigate, employee]);
 
   if (recordLoading) return <div className="p-20"><Loader /></div>;
   if (!employee) return (
@@ -146,7 +119,7 @@ export default function EmployeeDetail() {
 
   return (
     <div className="min-h-screen bg-slate-50/50 font-[Inter,sans-serif] animate-in fade-in duration-500">
-      <div className="max-w-7xl mx-auto px-4 md:px-8 py-4 space-y-6">
+      <div className="mx-auto  py-3 space-y-4">
 
         {/* Profile Header Card */}
         <ProfileHeaderCard
@@ -165,6 +138,24 @@ export default function EmployeeDetail() {
             { icon: Mail, text: String(employee.email || "No email") },
             { icon: Phone, text: String(employee.mobile_number || "No phone") }
           ]}
+          actions={
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => navigate(`/employee/${id}/edit`)}
+                className="w-10 h-10 flex items-center justify-center bg-white border border-slate-200 text-slate-400 hover:text-blue-600 rounded-xl transition-all shadow-sm active:scale-95"
+                title="Edit Member"
+              >
+                <Pencil size={18} />
+              </button>
+              <button
+                onClick={() => setShowDeleteModal(true)}
+                className="w-10 h-10 flex items-center justify-center bg-white border border-slate-200 text-slate-300 rounded-xl hover:text-rose-600 rounded-xl transition-all shadow-sm active:scale-95"
+                title="Remove Member"
+              >
+                <Trash2 size={18} />
+              </button>
+            </div>
+          }
         />
 
         {/* Tabs Navigation */}
@@ -174,8 +165,8 @@ export default function EmployeeDetail() {
               key={tab}
               onClick={() => setActiveTab(i)}
               className={`px-4 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === i
-                  ? "bg-blue-600 text-white shadow-lg shadow-blue-100"
-                  : "text-slate-400 hover:text-slate-600 hover:bg-slate-50"
+                ? "bg-blue-600 text-white shadow-lg shadow-blue-100"
+                : "text-slate-400 hover:text-slate-600 hover:bg-slate-50"
                 }`}
             >
               {tab}
@@ -183,14 +174,32 @@ export default function EmployeeDetail() {
           ))}
         </div>
 
+        {/* Quick Stats Grid */}
+        <div className="flex gap-2">
+          <StatCard
+            icon={Briefcase}
+            label="Tasks Done"
+            value="0"
+            iconBg="bg-blue-50 text-blue-600"
+            className=" min-w-[140px]"
+          />
+          <StatCard
+            icon={Star}
+            label="Rating"
+            value="5.0"
+            iconBg="bg-amber-50 text-amber-600"
+            className="min-w-[140px]"
+          />
+        </div>
+
         {/* Content Area */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
 
           {/* Main Info Area */}
-          <div className="lg:col-span-8 space-y-6">
+          <div className="lg:col-span-8 space-y-4">
             {activeTab === 0 && (
-              <SectionCard title="Professional Profile Information">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-y-8 gap-x-10 p-2">
+              <SectionCard title="Professional Profile Information" className="p-5">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-8 p-2">
                   <DetailItem
                     icon={User} label="Full Name" value={name}
                     onClick={() => setViewValue({ label: "Full Name", value: name })}
@@ -258,23 +267,6 @@ export default function EmployeeDetail() {
                 <InfoRow label="Added By" value={String(employee.added_by || "System")} />
                 <InfoRow label="Account ID" value={String(employee.account_id || "—")} />
                 <InfoRow label="Shop ID" value={String(employee.shop_id || "—")} />
-              </div>
-            </SectionCard>
-
-            <SectionCard title="Quick Stats">
-              <div className="space-y-4">
-                <StatCard
-                  icon={Briefcase}
-                  label="Tasks Done"
-                  value="0"
-                  iconBg="bg-blue-50 text-blue-600"
-                />
-                <StatCard
-                  icon={Star}
-                  label="Rating"
-                  value="5.0"
-                  iconBg="bg-amber-50 text-amber-600"
-                />
               </div>
             </SectionCard>
           </div>

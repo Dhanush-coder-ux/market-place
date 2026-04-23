@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { Search, Trash2, X, Edit, Bookmark, Users, Building2, Phone, Filter, Eye } from "lucide-react";
 import { GradientButton } from "@/components/ui/GradientButton";
 import Input from "@/components/ui/Input";
@@ -12,7 +12,7 @@ import { useToast } from "@/context/ToastContext";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { ColumnPicker } from "@/components/common/ColumnPicker";
 import { StatCard } from "@/components/common/StatsCard";
-import { SearchSelect } from "@/components/inputbuilders/SearchSelect";
+
 
 const Supplier = () => {
   const navigate = useNavigate();
@@ -88,7 +88,7 @@ const Supplier = () => {
       await deleteData(`${ENDPOINTS.SUPPLIERS}/${supplierToDelete.id}`);
       showToast("Supplier deleted successfully", "success");
       setRefreshKey(prev => prev + 1);
-    } catch (err) {
+    } catch {
       showToast("Failed to delete supplier", "error");
     } finally {
       setIsDeleteDialogOpen(false);

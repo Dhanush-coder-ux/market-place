@@ -1,11 +1,11 @@
 import { useState, useMemo } from "react";
 import {
-  Save, Plus, Trash2, Settings, ScanLine, Search,
+  Save, Plus, Trash2, Settings, ScanLine,
   Banknote, Smartphone, CreditCard, Landmark, ChevronUp, X, PackageOpen, Check, CalendarDays
 } from "lucide-react";
 
 import Input from "@/components/ui/Input";
-import { GradientButton } from "@/components/ui/GradientButton";
+
 import { useApi } from "@/context/ApiContext";
 import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 import { SearchSelect } from "@/components/inputbuilders/SearchSelect";

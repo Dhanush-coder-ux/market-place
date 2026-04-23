@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, Fragment } from "react";
+import { useState, useEffect, useMemo, Fragment } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Package, Search, Filter, Bookmark, Trash2, Edit3, Eye,
@@ -115,7 +115,7 @@ const BatchCards = ({ batches }: { batches: any[] }) => {
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-1.5">
                     <Tag size={12} className="text-slate-400" />
-                    <span className="text-sm font-semibold text-slate-800">{batch.lot_number || batch.batch || `BATCH-${i + 1}`}</span>
+                    <span className="text-sm font-semibold text-slate-800">{batch.lot_number || batch.batch || `BATCH-${idx + 1}`}</span>
                   </div>
                   <BatchBadge expDate={batch.expiry_date || batch.expiry} qty={Number(batch.quantity || batch.qty || 0)} />
                 </div>
@@ -293,7 +293,7 @@ const ProductInfos = () => {
     try {
       await deleteData(`${ENDPOINTS.INVENTORIES}/${productToDelete.id}`);
       showToast("Product deleted successfully", "success");
-      setRefreshKey(prev => prev + 1);
+      setRefreshKey((prev: number) => prev + 1);
     } catch {
       showToast("Failed to delete product", "error");
     } finally {
@@ -310,7 +310,7 @@ const ProductInfos = () => {
 
   const filteredProducts = useMemo(() => {
     return products.filter(p => {
-      const name = String((p.datas as any)?.name || p.name || "").toLowerCase();
+      const name = String((p.datas as any)?.name || (p as any).name || "").toLowerCase();
       const sku = String(p.barcode || "").toLowerCase();
       const category = String((p.datas as any)?.category || "").toLowerCase();
       return name.includes(searchTerm.toLowerCase()) || sku.includes(searchTerm.toLowerCase()) || category.includes(searchTerm.toLowerCase());
@@ -417,10 +417,6 @@ const ProductInfos = () => {
                     expandBadge = <span className="text-[10px] font-semibold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-100 flex items-center gap-1"><Calendar size={10}/>{batches.length} Batches</span>;
                   }
 
-                  // Use dynamic stock formatting to match screenshot
-                  const stockNumber = Number(datas.stocks || (p as any).stocks || 0);
-                  const stockLabel = `${stockNumber} ${datas.unit ? `(${datas.unit.split(" ")[0]})` : ""}`;
-                  const stockStatusColor = stockNumber <= 0 ? "text-rose-600 bg-rose-50 border-rose-200" : stockNumber <= 15 ? "text-amber-600 bg-amber-50 border-amber-200" : "text-emerald-600 bg-emerald-50 border-emerald-200";
 
                   return (
                     <Fragment key={p.id}>
@@ -445,10 +441,10 @@ const ProductInfos = () => {
                           <div className="flex items-center gap-4">
                             {/* Blue initial circle exactly like screenshot */}
                             <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white text-base font-semibold shadow-sm shrink-0">
-                              {String(datas.name || p.name || "?")[0].toUpperCase()}
+                              {String(datas.name || (p as any).name || "?")[0].toUpperCase()}
                             </div>
                             <div>
-                              <p className="text-[15px] font-semibold text-slate-800">{datas.name || p.name || "N/A"}</p>
+                              <p className="text-[15px] font-semibold text-slate-800">{datas.name || (p as any).name || "N/A"}</p>
                               <div className="flex items-center gap-2 mt-1 flex-wrap">
                                 <span className="text-[12px] text-slate-500">{p.barcode || "No SKU"}</span>
                                 {expandBadge}
@@ -550,7 +546,7 @@ const ProductInfos = () => {
         onClose={() => setIsDeleteDialogOpen(false)}
         onConfirm={handleDelete}
         title="Remove Product"
-        description={`This action cannot be undone. This will permanently remove "${(productToDelete?.datas as any)?.name || productToDelete?.name}" and all associated data.`}
+        description={`This action cannot be undone. This will permanently remove "${(productToDelete?.datas as any)?.name || (productToDelete as any)?.name}" and all associated data.`}
         confirmText="Remove Product"
         type="danger"
       />

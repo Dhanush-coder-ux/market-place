@@ -1,15 +1,14 @@
-﻿import React, {
+import React, {
   useState, useMemo, useEffect,
 } from "react";
 import {
-  Package, DollarSign, BarChart2, Settings, UploadCloud, X, Plus,
+  Package, DollarSign, BarChart2, Settings, X, Plus,
   Trash2, Info, Save, ChevronDown, Hash,
   Cpu, AlertCircle, RefreshCw,  ScanLine, Copy,
   Layers,  Zap,
   Bookmark,
 } from "lucide-react";
 import { GradientButton } from "@/components/ui/GradientButton";
-import Input from "@/components/ui/Input";
 import { useApi } from "@/context/ApiContext";
 import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
@@ -129,8 +128,8 @@ const PRESET_VALUES: Record<string, string[]> = {
 const CATEGORIES = Object.keys(CATEGORY_CONFIGS);
 const UNITS = ["Piece (pcs)", "Box", "Kilogram (kg)", "Gram (g)", "Litre (L)", "Metre (m)", "Set", "Pair"];
 const GST_RATES = ["0%", "5%", "12%", "18%", "28%"];
-const SUPPLIERS = ["TechDistro Global", "ABC Electronics", "Prime Supplies", "Metro Wholesale"];
-const LOCATIONS = ["Shelf 1 - Main", "Warehouse A", "Warehouse B", "Store Room"];
+// const SUPPLIERS = ["TechDistro Global", "ABC Electronics", "Prime Supplies", "Metro Wholesale"];
+// const LOCATIONS = ["Shelf 1 - Main", "Warehouse A", "Warehouse B", "Store Room"];
 
 let _uid = 0;
 const uid = () => `id_${++_uid}_${Math.random().toString(36).slice(2, 6)}`;
@@ -267,38 +266,10 @@ const SelectField: React.FC<SelectFieldProps> = ({ label, required, options, cla
   </div>
 );
 
-interface ToggleProps { active: boolean; onChange: () => void; label: string; hint?: string; }
-const Toggle: React.FC<ToggleProps> = ({ active, onChange, label, hint }) => (
-  <div className="flex items-center justify-between py-3">
-    <div>
-      <p className="text-sm font-medium text-slate-800">{label}</p>
-      {hint && <p className="text-[11px] text-slate-400 mt-0.5">{hint}</p>}
-    </div>
-    <button type="button" onClick={onChange}
-      className={`pf-toggle relative inline-flex h-5 w-9 items-center rounded-full flex-shrink-0 ${active ? "bg-blue-500" : "bg-slate-200"}`}>
-      <span className={`pf-toggle-knob inline-block h-3.5 w-3.5 rounded-full bg-white shadow-sm ${active ? "translate-x-[18px]" : "translate-x-[3px]"}`} />
-    </button>
-  </div>
-);
 
 /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    SECTION HEADER
 â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
-interface SectionHeaderProps {
-  icon: React.ReactNode;
-  iconColor: string;
-  title: string;
-  subtitle: string;
-}
-const SectionHeader: React.FC<SectionHeaderProps> = ({ icon, iconColor, title, subtitle }) => (
-  <div className={`flex items-center gap-3.5 mb-5 pb-4 border-b border-slate-100`}>
-    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${iconColor}`}>{icon}</div>
-    <div>
-      <h2 className="text-sm font-semibold text-slate-900">{title}</h2>
-      <p className="text-[11px] text-slate-400 mt-0.5">{subtitle}</p>
-    </div>
-  </div>
-);
 
 /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    TAG / CHIP
@@ -1048,8 +1019,6 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
   }, [id, getData, searchParams]);
 
   const [showAdvanced, setShowAdvanced] = useState(false);
-  const [savedNotice, setSavedNotice] = useState(false);
-  void savedNotice;
 
   const categoryConfig = CATEGORY_CONFIGS[form.category] ?? {
     suggestedVariantTypes: [],

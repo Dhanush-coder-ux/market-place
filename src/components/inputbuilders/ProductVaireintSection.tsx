@@ -27,7 +27,7 @@
  *   />
  */
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Plus, Trash2, X, ChevronDown, ScanLine, Copy,
   Hash, AlertCircle, RefreshCw, Cpu, Layers, Zap,

@@ -7,8 +7,6 @@ import {
   Phone, 
   Save, 
   Bookmark, 
-  ChevronLeft,
-  Briefcase,
   FileText,
   User,
   Globe,

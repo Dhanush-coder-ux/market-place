@@ -1,7 +1,6 @@
 import { 
-  Users, Search, Filter, Download, Upload, Trash2, Edit3, 
-  Eye, IndianRupee, CreditCard, AlertCircle, Bookmark, CheckCircle, 
-  MapPin, Phone, Mail, Building2, Tag, DollarSign, Wallet
+  Users, Search, Filter, Trash2, Edit3, 
+  Eye, IndianRupee, CreditCard, AlertCircle, Bookmark
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useHeader } from "@/context/HeaderContext";
@@ -15,7 +14,7 @@ import type { CustomerRecord } from "@/types/api";
 import { useToast } from "@/context/ToastContext";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { ColumnPicker } from "@/components/common/ColumnPicker";
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 export default function CustomerBalanceSummary() {
   const navigate = useNavigate();
@@ -91,7 +90,7 @@ export default function CustomerBalanceSummary() {
       await deleteData(`${ENDPOINTS.CUSTOMERS}/${SHOP_ID}/${customerToDelete.id}`);
       showToast("Customer deleted successfully", "success");
       setRefreshKey(prev => prev + 1);
-    } catch (err) {
+    } catch (_err) {
       showToast("Failed to delete customer", "error");
     } finally {
       setIsDeleteDialogOpen(false);

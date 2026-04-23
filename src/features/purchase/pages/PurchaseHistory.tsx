@@ -44,8 +44,9 @@ export interface DirectPurchaseData {
 type ViewMode = "grid" | "horizontal" | "vertical";
 
 function toDisplayData(p: PurchaseRecord): DirectPurchaseData {
-  const products = (p.datas?.products ?? p.datas?.purchase_products ?? p.datas?.grn_products ?? p.datas?.finished_products) as any[] | undefined;
-  const dateRaw = String(p.datas?.purchaseDetails?.date ?? p.datas?.purchase_date ?? p.datas?.production_date ?? p.datas?.receipt_date ?? p.date ?? new Date().toISOString());
+  const d2 = p.datas as any;
+  const products = (d2?.products ?? d2?.purchase_products ?? d2?.grn_products ?? d2?.finished_products) as any[] | undefined;
+  const dateRaw = String(d2?.purchaseDetails?.date ?? d2?.purchase_date ?? d2?.production_date ?? d2?.receipt_date ?? (p as any).date ?? new Date().toISOString());
   const d = new Date(dateRaw.includes("T") ? dateRaw : dateRaw + "T00:00:00");
   const typeMap: Record<string, PurchaseType> = {
     DIRECT: "Purchase",
@@ -54,14 +55,14 @@ function toDisplayData(p: PurchaseRecord): DirectPurchaseData {
   };
   
   // Try to find the vendor name from various possible fields
-  const vendorName = p.datas?.supplier_name ?? p.datas?.supplier ?? p.datas?.purchaseDetails?.supplier_name ?? "—";
+  const vendorName = d2?.supplier_name ?? d2?.supplier ?? d2?.purchaseDetails?.supplier_name ?? "—";
   
   // Try to find the total cost from payment info or direct fields
-  const totalCost = Number(p.datas?.payment?.amountPaid ?? p.datas?.total_cost ?? p.datas?.grand_total ?? 0);
+  const totalCost = Number(d2?.payment?.amountPaid ?? d2?.total_cost ?? d2?.grand_total ?? 0);
 
   return {
     id: p.id,
-    poNumber: p.datas?.purchaseDetails?.invoiceNo ?? p.id.slice(0, 8).toUpperCase(),
+    poNumber: d2?.purchaseDetails?.invoiceNo ?? p.id.slice(0, 8).toUpperCase(),
     date: d.toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" }),
     time: d.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }),
     vendor: String(vendorName),
@@ -71,10 +72,10 @@ function toDisplayData(p: PurchaseRecord): DirectPurchaseData {
     })),
     total_cost: totalCost,
     purchaseType: typeMap[p.type] ?? "Purchase",
-    paymentMethod: String(p.datas?.payment?.method ?? p.datas?.payment_method ?? "—"),
+    paymentMethod: String(d2?.payment?.method ?? d2?.payment_method ?? "—"),
     charges: {
-      other: Number(p.datas?.charges?.other ?? 0),
-      transport: Number(p.datas?.charges?.transport ?? 0),
+      other: Number(d2?.charges?.other ?? 0),
+      transport: Number(d2?.charges?.transport ?? 0),
     },
   };
 }

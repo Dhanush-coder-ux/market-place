@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from "react";
 import { 
   Search, Download, Eye,  
   X, RotateCcw, AlertTriangle, ArrowUp, ArrowDown, 
-  User, FileText, ArrowRight, TrendingUp, TrendingDown, Activity, Plus 
+  User, FileText, ArrowRight, TrendingUp, TrendingDown, Activity 
 } from "lucide-react";
 
 import { GradientButton } from "@/components/ui/GradientButton";
@@ -39,11 +39,12 @@ const STATUSES = ["All", "Completed", "Pending"];
 
 function purchaseToMovements(records: PurchaseRecord[], movType: MovementType): Movement[] {
   return records.flatMap(p => {
-    const products = (p.datas?.purchase_products ?? p.datas?.grn_products ?? p.datas?.finished_products ?? p.datas?.products) as any[] | undefined;
+    const d2 = p.datas as any;
+    const products = (d2?.purchase_products ?? d2?.grn_products ?? d2?.finished_products ?? d2?.products) as any[] | undefined;
     if (!products || products.length === 0) return [];
     
     return products.map(prod => {
-      const dateStr = String(p.datas?.purchaseDetails?.date ?? p.datas?.purchase_date ?? p.datas?.production_date ?? p.datas?.receipt_date ?? p.date ?? new Date().toISOString());
+      const dateStr = String(d2?.purchaseDetails?.date ?? d2?.purchase_date ?? d2?.production_date ?? d2?.receipt_date ?? (p as any).date ?? new Date().toISOString());
       return {
         id: p.id.slice(0, 8).toUpperCase(),
         product: String(prod?.product_name ?? prod?.name ?? "—"),
@@ -52,11 +53,11 @@ function purchaseToMovements(records: PurchaseRecord[], movType: MovementType): 
         qty: Number(prod?.quantity ?? prod?.qty ?? 1),
         source: "Supplier",
         destination: "Warehouse",
-        ref: String(p.datas?.purchaseDetails?.referenceNo ?? p.datas?.purchaseDetails?.invoiceNo ?? p.id.slice(0, 8).toUpperCase()),
+        ref: String(d2?.purchaseDetails?.referenceNo ?? d2?.purchaseDetails?.invoiceNo ?? p.id.slice(0, 8).toUpperCase()),
         date: dateStr.includes("T") ? dateStr : dateStr + "T00:00:00",
         status: "Completed" as StatusType,
-        user: String(p.added_by || "Admin"),
-        notes: p.datas?.purchaseDetails?.invoiceNo ? `Invoice: ${p.datas.purchaseDetails.invoiceNo}` : "",
+        user: String((p as any).added_by || "Admin"),
+        notes: d2?.purchaseDetails?.invoiceNo ? `Invoice: ${d2.purchaseDetails.invoiceNo}` : "",
       };
     });
   });

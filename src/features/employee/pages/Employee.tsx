@@ -13,7 +13,7 @@ import { useToast } from '@/context/ToastContext';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 import { ColumnPicker } from '@/components/common/ColumnPicker';
 import { SearchSelect } from '@/components/inputbuilders/SearchSelect';
-import React, { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 export default function Employee() {
   const { getData, deleteData, loading, error, clearError } = useApi();
@@ -90,7 +90,7 @@ export default function Employee() {
       await deleteData(`${ENDPOINTS.EMPLOYEES}/${SHOP_ID}/${employeeToDelete.employee_id}`);
       showToast("Employee deleted successfully", "success");
       setRefreshKey(prev => prev + 1);
-    } catch (err) {
+    } catch (_err) {
       showToast("Failed to delete employee", "error");
     } finally {
       setIsDeleteDialogOpen(false);

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, Fragment } from "react";
+import { useState, useEffect, Fragment } from "react";
 import { 
   ChevronRight, 
   ChevronDown, 
@@ -249,7 +249,7 @@ const InventoryPage = () => {
   const { getData, loading, error, clearError } = useApi();
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
-  const [refreshKey, setRefreshKey] = useState(0);
+  const [refreshKey] = useState(0);
 
   useEffect(() => {
     // Assuming getData returns { detail: {...}, data: [...] }

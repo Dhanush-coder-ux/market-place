@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { UserCheck, Bookmark } from "lucide-react";
 import { useHeader } from "@/context/HeaderContext";

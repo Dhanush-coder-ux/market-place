@@ -1,9 +1,9 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   Package, Edit3, Trash2, DollarSign, Download, Upload,
-  Tag, Layers, Search, X, Mail, Phone, Info, BarChart2,
-  Calendar, Hash, ShoppingCart, Bookmark, MapPin, FileText,
+  Tag, Layers, Info, BarChart2,
+  Hash, ShoppingCart, MapPin, FileText,
 } from "lucide-react";
 import { useApi } from "@/context/ApiContext";
 import { useToast } from "@/context/ToastContext";

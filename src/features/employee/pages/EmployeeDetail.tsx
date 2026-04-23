@@ -2,10 +2,10 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   Mail, Phone, Pencil, User, Trash2,
-  Database, Shield, Briefcase, Calendar, MapPin, Search, Star, Info
+  Database, Shield, Briefcase, Calendar, Star, Info
 } from "lucide-react";
 import {
-  fmt, StatusBadge, InfoRow, SectionCard, DetailItem,
+  InfoRow, SectionCard, DetailItem,
   ProfileHeaderCard,
   Modal
 } from "@/components/common/SuperUI";
@@ -15,46 +15,9 @@ import { useToast } from "@/context/ToastContext";
 import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 import Loader from "@/components/common/Loader";
 import type { EmployeeRecord } from "@/types/api";
-import { SearchSelect } from "@/components/inputbuilders/SearchSelect";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
-import { useHeader } from "@/context/HeaderContext";
 
-// ── Search bar ──────────────────────────────────────────────────────────────
-const EmployeeQuickSearch = () => {
-  const navigate = useNavigate();
-  const { getData } = useApi();
 
-  const fetchEmployees = async (q: string) => {
-    if (!q) return [];
-    try {
-      const res = await getData(ENDPOINTS.EMPLOYEES, { limit: "8", offset: "1", q, shop_id: SHOP_ID });
-      const data = res?.data ? (Array.isArray(res.data) ? res.data : [res.data]) : [];
-      return data.map((e: any) => ({
-        ...e,
-        displayName: e.name || e.email || e.employee_id
-      }));
-    } catch (error) {
-      return [];
-    }
-  };
-
-  return (
-    <div className="w-full relative z-50">
-      <SearchSelect
-        labelKey="displayName"
-        valueKey="employee_id"
-        fetchOptions={fetchEmployees}
-        placeholder="Search employee by name / ID…"
-        className="w-full"
-        onChange={(val) => {
-          if (val) {
-            navigate(`/employee/${val}`);
-          }
-        }}
-      />
-    </div>
-  );
-};
 
 const TABS = ["General Info", "Performance", "Schedule", "Timeline"];
 
@@ -64,7 +27,6 @@ export default function EmployeeDetail() {
   const navigate = useNavigate();
   const { getData, deleteData } = useApi();
   const { showToast } = useToast();
-  const { setActions } = useHeader();
 
   const [employee, setEmployee] = useState<EmployeeRecord | null>(null);
   const [recordLoading, setRecordLoading] = useState(true);
@@ -91,7 +53,7 @@ export default function EmployeeDetail() {
       await deleteData(`${ENDPOINTS.EMPLOYEES}/${SHOP_ID}/${employee.employee_id}`);
       showToast("Employee removed successfully", "success");
       navigate("/employee/all");
-    } catch (err) {
+    } catch (_err) {
       showToast("Failed to remove employee", "error");
     }
   };

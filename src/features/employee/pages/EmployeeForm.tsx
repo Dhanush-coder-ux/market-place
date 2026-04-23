@@ -9,9 +9,7 @@ import {
   Briefcase, 
   Shield,
   Calendar,
-  ChevronLeft,
   Bookmark,
-  UserPlus,
   Building2,
   FileText,
   Tag
@@ -36,7 +34,7 @@ const EmployeeForm = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { postData, putData, getData, loading } = useApi();
+  const { postData, putData, getData } = useApi();
   const { setActions } = useHeader();
   const { showToast } = useToast();
   const [submitting, setSubmitting] = useState(false);
@@ -180,7 +178,7 @@ const EmployeeForm = () => {
         }
         navigate("/employee/all");
       }
-    } catch (err) {
+    } catch (_err) {
       showToast("Failed to save employee", "error");
     } finally {
       setSubmitting(false);

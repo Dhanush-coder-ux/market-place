@@ -54,7 +54,7 @@ interface GRNFormProps {
 
 const LOW_STOCK_THRESHOLD = 5;
 
-const GRNForm: React.FC<GRNFormProps> = ({ onSubmit, onCancel }) => {
+const GRNForm: React.FC<GRNFormProps> = ({ onSubmit, onCancel: _onCancel }) => {
   const { postData, loading } = useApi();
   
   // --- State Management ---

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { DynamicForm, FieldConfig } from '../../components/common/DynamicForm';
 import { useBusinessApi } from '../../context/BusinessApiContext';
 
@@ -34,11 +34,11 @@ export const StockAdjustmentForm = () => {
       throw new Error("Products must be a valid JSON array");
     }
 
-    const finalData = { ...data, products: parsedProducts };
+    const finalData: any = { ...data, products: parsedProducts };
     delete finalData.products_json;
-
+    
     // Use inventory api adjustStock, if it has no 'id' it will assume CREATE logic contextually
-    const response = await inventory.adjustStock(finalData);
+    const response = await inventory.createStockAdjustment(finalData);
     setSuccessData(response.datas);
   };
 

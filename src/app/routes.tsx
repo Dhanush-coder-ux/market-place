@@ -4,7 +4,6 @@ import Loader from "@/components/common/Loader";
 import GRNListView from "@/features/purchase/pages/GrnListView";
 import GRNForm from "@/features/purchase/pages/GrnForm";
 import PurchaseForm from "@/features/purchase/pages/PurchaseForm";
-import ProductForm from "@/features/product/pages/ProductForm";
 import CustomerBalanceSummary from "@/features/customer/pages/CustomerBalanceSummary";
 import CustomerDetail from "@/features/customer/pages/Customerdetail";
 import CustomerList from "@/features/customer/pages/CustomerList";

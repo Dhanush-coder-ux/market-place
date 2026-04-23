@@ -28,7 +28,7 @@ const CustomerFormPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { postData, putData, getData, loading } = useApi();
+  const { postData, putData, getData } = useApi();
   const { setActions } = useHeader();
   const { showToast } = useToast();
   const [submitting, setSubmitting] = useState(false);

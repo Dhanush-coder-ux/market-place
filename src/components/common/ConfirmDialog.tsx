@@ -1,4 +1,3 @@
-import React from "react";
 import { Modal } from "@/features/customer/pages/CustomerDetailComponents";
 import { LucideIcon, AlertCircle } from "lucide-react";
 

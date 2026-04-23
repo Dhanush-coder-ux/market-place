@@ -1,6 +1,6 @@
-import React, { useEffect } from "react";
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Package, Search, Plus, Bookmark } from "lucide-react";
+import { Package, Bookmark } from "lucide-react";
 import { useHeader } from "@/context/HeaderContext";
 import { GradientButton } from "@/components/ui/GradientButton";
 import { SearchSelect } from "@/components/inputbuilders/SearchSelect";

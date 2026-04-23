@@ -7,7 +7,7 @@ import {
 } from "lucide-react";
 import {
   fmt, StatusBadge,FormInput, FormSelect,
-  FormTextarea, InfoRow, SectionCard, PaymentEntry, ActivityEntry, PendingInvoice,
+  FormTextarea, SectionCard, PaymentEntry, ActivityEntry,
 } from "./CustomerDetailComponents";
 import { Modal, ProfileHeaderCard } from "@/components/common/SuperUI";
 import { StatCard } from "@/components/common/StatsCard";
@@ -19,7 +19,6 @@ import Loader from "@/components/common/Loader";
 import type { CustomerRecord } from "@/types/api";
 import { SearchSelect } from "@/components/inputbuilders/SearchSelect";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
-import { Tooltip } from "@/components/common/Tootlip";
 
 // ── Search bar ──────────────────────────────────────────────────────────────
 const CustomerSearch = () => {
@@ -35,7 +34,7 @@ const CustomerSearch = () => {
         ...c,
         displayName: String(c.datas?.name ?? c.datas?.full_name ?? c.datas?.customer_name ?? c.id)
       }));
-    } catch (error) {
+    } catch (_error) {
       return [];
     }
   };
@@ -59,7 +58,7 @@ const CustomerSearch = () => {
 };
 
 // ── Static payment / activity data (frontend-only feature) ──────────────────
-const PENDING_INVOICES: PendingInvoice[] = [];
+
 const INITIAL_PAYMENTS: PaymentEntry[] = [];
 const INITIAL_ACTIVITIES: ActivityEntry[] = [];
 const TABS = ["General Info", "Financials", "Purchases", "Timeline"];
@@ -173,20 +172,7 @@ export default function CustomerDetail() {
   const name = (datas.first_name || datas.last_name) ? `${datas.first_name || ""} ${datas.last_name || ""}`.trim() : "Unknown Customer";
   const initials = name.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2);
 
-  // Build static labeled field list
-  const infoFields = [
-    { label: "First Name", value: String(datas.first_name ?? "—") },
-    { label: "Last Name", value: String(datas.last_name ?? "—") },
-    { label: "Company", value: String(datas.company ?? "—") },
-    { label: "Email", value: String(datas.email ?? "—") },
-    { label: "Phone", value: String(datas.phone ?? "—") },
-    { label: "Customer Type", value: String(datas.customer_type ?? "—") },
-    { label: "Street Address", value: String(datas.street_address ?? "—") },
-    { label: "City", value: String(datas.city ?? "—") },
-    { label: "State", value: String(datas.state ?? "—") },
-    { label: "ZIP Code", value: String(datas.zip_code ?? "—") },
-    { label: "Notes", value: String(datas.notes ?? "—") },
-  ];
+
 
   return (
     <>

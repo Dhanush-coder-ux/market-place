@@ -1,6 +1,4 @@
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
-import Title from "../../../components/common/Title";
 import {
   Store,
   Mail,
@@ -8,7 +6,6 @@ import {
   MapPin,
   Globe,
   FileText,
-  UserCheck2,
   Hash,
   Building2,
   Tag,
@@ -85,7 +82,6 @@ const FieldLabel: React.FC<FieldLabelProps> = ({ children, required }) => (
 
 const ProfileForm: React.FC = () => {
   const [logo, setLogo] = useState<File | null>(null);
-  const [banner, setBanner] = useState<File | null>(null);
 
   // Section 1 — Shop Identity
   const [shopName, setShopName] = useState("");

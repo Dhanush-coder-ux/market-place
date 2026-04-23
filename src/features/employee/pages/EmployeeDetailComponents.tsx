@@ -1,5 +1,5 @@
 import React from "react";
-import { LucideIcon, X } from "lucide-react";
+import { X } from "lucide-react";
 
 // ─── Utility ──────────────────────────────────────────────────────────────────
 export const fmt = (n: number) => "₹" + n.toLocaleString("en-IN");

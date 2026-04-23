@@ -1,12 +1,12 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
-  DollarSign, AlertCircle, Package, Star,
-  Mail, Pencil, User, Tag, MapPin, Phone, Trash2,
-  Store, FileText, Database, ShoppingBag, History, CreditCard, Banknote
+  AlertCircle, Package,
+  Mail, Pencil, User, MapPin, Phone, Trash2,
+  Store, Database, ShoppingBag, History, CreditCard
 } from "lucide-react";
 import {
-  fmt, StatusBadge, SectionCard, DetailItem, InfoRow, Modal,
+  fmt, SectionCard, DetailItem, InfoRow, Modal,
   ProfileHeaderCard
 } from "@/components/common/SuperUI";
 import { StatCard } from "@/components/common/StatsCard";
@@ -17,7 +17,7 @@ import Loader from "@/components/common/Loader";
 import type { SupplierRecord } from "@/types/api";
 import { SearchSelect } from "@/components/inputbuilders/SearchSelect";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
-import { useHeader } from "@/context/HeaderContext";
+
 
 const SupplierSearch = () => {
   const navigate = useNavigate();
@@ -56,7 +56,7 @@ export default function SupplierDetail() {
   const navigate = useNavigate();
   const { getData, deleteData } = useApi();
   const { showToast } = useToast();
-  const { setActions } = useHeader();
+
 
   const [supplier, setSupplier] = useState<SupplierRecord | null>(null);
   const [recordLoading, setRecordLoading] = useState(true);

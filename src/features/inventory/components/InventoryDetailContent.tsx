@@ -1,4 +1,4 @@
-import { Boxes, IndianRupee, Layers, Package, TrendingUp, TrendingDown } from "lucide-react";
+import { Boxes, IndianRupee, Layers, Package } from "lucide-react";
 import type { InventoryRecord } from "@/types/api";
 
 export const InventoryDetailContent = ({ item }: { item: InventoryRecord | null }) => {

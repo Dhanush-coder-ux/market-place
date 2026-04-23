@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { DynamicForm, FieldConfig } from '../../components/common/DynamicForm';
 import { useBusinessApi } from '../../context/BusinessApiContext';
 
@@ -38,7 +38,7 @@ export const PurchaseEntryForm = () => {
 
     // Prepare exactly as flat input. validateMandatory expects "products", so we add it. 
     // The "validation" doesn't care if it's arrays or objects as long as it exists.
-    const finalData = { ...data, products: parsedProducts };
+    const finalData: any = { ...data, products: parsedProducts };
     delete finalData.products_json;
 
     // Based on requirement, purchase flows through inventory api

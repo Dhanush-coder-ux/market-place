@@ -62,9 +62,16 @@ export default function CustomerBalanceSummary() {
         const data: CustomerRecord[] = Array.isArray(res.data) ? res.data : [res.data];
         setCustomers(data);
         
-        // Detect unique keys from the nested 'datas' wrapper
+        // Detect unique keys from both root and datas field
         const keys = new Set<string>();
         data.forEach((c: CustomerRecord) => {
+          // Root level keys
+          Object.keys(c).forEach(k => {
+            if (!["datas", "id", "shop_id"].includes(k)) {
+              keys.add(k);
+            }
+          });
+          // Nested datas keys
           if (c.datas) {
             Object.keys(c.datas).forEach(k => {
               if (!["first_name", "last_name", "id", "shop_id", "type"].includes(k)) {
@@ -191,7 +198,7 @@ export default function CustomerBalanceSummary() {
                     {selectedKeys.map(key => (
                       <td key={key} className="px-6 py-4 whitespace-nowrap">
                         <p className={`text-[12px] font-bold tracking-tight ${key === 'customer_type' ? 'text-blue-600 bg-blue-50 w-fit px-2 py-0.5 rounded-md' : 'text-slate-600'}`}>
-                          {String(c.datas?.[key] ?? "—")}
+                          {String(c.datas?.[key] ?? c[key] ?? "—")}
                         </p>
                       </td>
                     ))}

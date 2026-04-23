@@ -1,4 +1,4 @@
-import { useState, useEffect} from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   DollarSign, AlertCircle, Package, Star,
@@ -6,11 +6,12 @@ import {
   Store, FileText, Database
 } from "lucide-react";
 import {
-  fmt, StatusBadge, Modal, FormInput, FormSelect,
-  FormTextarea, InfoRow, SectionCard,PaymentEntry, ActivityEntry, PendingInvoice,
+  fmt, StatusBadge,FormInput, FormSelect,
+  FormTextarea, InfoRow, SectionCard, PaymentEntry, ActivityEntry, PendingInvoice,
 } from "./CustomerDetailComponents";
+import { Modal, ProfileHeaderCard } from "@/components/common/SuperUI";
 import { StatCard } from "@/components/common/StatsCard";
-import {  BiLogoWhatsapp } from "react-icons/bi";
+import { BiLogoWhatsapp } from "react-icons/bi";
 import { useApi } from "@/context/ApiContext";
 import { useToast } from "@/context/ToastContext";
 import { ENDPOINTS } from "@/services/endpoints";
@@ -65,7 +66,7 @@ const TABS = ["General Info", "Financials", "Purchases", "Timeline"];
 
 // ─── Helper Components ────────────────────────────────────────────────────────
 const DetailItem = ({ icon: Icon, label, value, onClick }: { icon: any, label: string, value: string, onClick?: () => void }) => (
-  <div 
+  <div
     onClick={onClick}
     className={`flex items-start gap-3 p-1 -m-1 rounded-lg transition-colors ${onClick ? "cursor-pointer hover:bg-slate-50 active:scale-[0.98]" : ""}`}
   >
@@ -136,7 +137,7 @@ export default function CustomerDetail() {
   async function handleDelete() {
     const targetId = customer?.id || id;
     if (!targetId) return;
-    
+
     setDeleting(true);
     try {
       const res = await deleteData(`${ENDPOINTS.CUSTOMERS}/${targetId}`);
@@ -197,55 +198,26 @@ export default function CustomerDetail() {
       <div className="min-h-screen bg-slate-50/50 font-[Inter,sans-serif]">
         <div className="max-w-7xl mx-auto px-4 md:px-8 py-4 space-y-6">
 
-          {/* Premium Profile Header Card - More Compact */}
-          <div className="bg-white rounded-[1.5rem] p-5 border border-slate-200 shadow-sm relative overflow-hidden group">
-            {/* Background Decorative Gradient */}
-            <div className="absolute top-0 right-0 w-48 h-48 bg-blue-500/5 rounded-full -mr-24 -mt-24 blur-3xl" />
-            
-            <div className="relative flex flex-col md:flex-row items-start md:items-center gap-6">
-                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-600 to-blue-400 flex items-center justify-center text-xl font-bold text-white shadow-lg shadow-blue-200 ring-2 ring-white">
-                  {initials}
-                </div>
-
-              {/* Title & Info - Smaller Fonts */}
-              <div className="flex-1 space-y-1">
-                <div className="flex flex-col mb-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h1 className="text-xl font-black text-slate-800 tracking-tight">{name}</h1>
-                    <div className="flex items-center gap-2">
-                      <span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 text-[9px] font-extrabold uppercase tracking-widest border border-blue-100">
-                        {String(datas.customer_type || "Normal")}
-                      </span>
-                      <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-widest border ${
-                        datas.is_active !== false 
-                          ? "bg-emerald-50 text-emerald-600 border-emerald-100" 
-                          : "bg-rose-50 text-rose-600 border-rose-100"
-                      }`}>
-                        <div className={`w-1.5 h-1.5 rounded-full ${datas.is_active !== false ? "bg-emerald-500" : "bg-rose-500"} animate-pulse`} />
-                        {datas.is_active !== false ? "Active" : "Inactive"}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="text-[11px] font-bold text-slate-400 font-mono tracking-tight">
-                    ID: {customer.id}
-                  </div>
-                </div>
-                
-                <div className="flex flex-wrap items-center gap-4 text-[12px] font-semibold text-slate-500">
-                  <div className="flex items-center gap-1.5">
-                    <Mail size={12} className="text-blue-400" />
-                    {String(datas.email || "No email")}
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <Phone size={12} className="text-blue-400" />
-                    {String(datas.phone || "No phone")}
-                  </div>
-                </div>
-              </div>
-
-              {/* Header Actions - Smaller */}
+          {/* Profile Header Card */}
+          <ProfileHeaderCard
+            name={name}
+            initials={initials}
+            subText={`ID: ${customer.id}`}
+            badges={[
+              { text: String(datas.customer_type || "Normal"), variant: "primary" },
+              {
+                text: datas.is_active !== false ? "Active" : "Inactive",
+                variant: datas.is_active !== false ? "success" : "danger",
+                showPulse: true
+              }
+            ]}
+            infoItems={[
+              { icon: Mail, text: String(datas.email || "No email") },
+              { icon: Phone, text: String(datas.phone || "No phone") }
+            ]}
+            actions={
               <div className="flex items-center gap-1.5">
-                <button 
+                <button
                   className="w-8 h-8 flex items-center justify-center bg-[#25D366] text-white rounded-lg hover:bg-[#20bd5a] transition-all shadow-md shadow-emerald-100 active:scale-95"
                   title="WhatsApp"
                 >
@@ -266,20 +238,19 @@ export default function CustomerDetail() {
                   <Trash2 size={14} />
                 </button>
               </div>
-            </div>
-          </div>
+            }
+          />
 
           {/* Tabs Navigation - Smaller */}
           <div className="flex gap-0.5 bg-white p-1 rounded-xl border border-slate-200 w-fit">
             {TABS.map((tab, i) => (
-              <button 
-                key={tab} 
+              <button
+                key={tab}
                 onClick={() => setActiveTab(i)}
-                className={`px-4 py-1.5 text-[11px] font-bold rounded-lg transition-all ${
-                  activeTab === i 
-                    ? "bg-blue-600 text-white shadow-md shadow-blue-100" 
+                className={`px-4 py-1.5 text-[11px] font-bold rounded-lg transition-all ${activeTab === i
+                    ? "bg-blue-600 text-white shadow-md shadow-blue-100"
                     : "text-slate-500 hover:bg-slate-50 hover:text-slate-700"
-                }`}
+                  }`}
               >
                 {tab}
               </button>
@@ -288,29 +259,29 @@ export default function CustomerDetail() {
 
           {/* Quick Stats Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <StatCard 
-              icon={DollarSign} 
-              label="Total Revenue" 
-              value={datas.total_purchases ? `₹${datas.total_purchases}` : "₹0"} 
-              iconBg="bg-blue-50 text-blue-600" 
+            <StatCard
+              icon={DollarSign}
+              label="Total Revenue"
+              value={datas.total_purchases ? `₹${datas.total_purchases}` : "₹0"}
+              iconBg="bg-blue-50 text-blue-600"
             />
-            <StatCard 
-              icon={AlertCircle} 
-              label="Outstanding" 
-              value={fmt(Number(datas.outstanding_balance) || outstanding || 0)} 
-              iconBg="bg-rose-50 text-rose-600" 
+            <StatCard
+              icon={AlertCircle}
+              label="Outstanding"
+              value={fmt(Number(datas.outstanding_balance) || outstanding || 0)}
+              iconBg="bg-rose-50 text-rose-600"
             />
-            <StatCard 
-              icon={Package} 
-              label="Total Orders" 
-              value={String(datas.total_orders || "0")} 
-              iconBg="bg-blue-50 text-blue-600" 
+            <StatCard
+              icon={Package}
+              label="Total Orders"
+              value={String(datas.total_orders || "0")}
+              iconBg="bg-blue-50 text-blue-600"
             />
-            <StatCard 
-              icon={Star} 
-              label="LTV Score" 
-              value={datas.lifetime_value ? `₹${datas.lifetime_value}` : "₹0"} 
-              iconBg="bg-amber-50 text-amber-600" 
+            <StatCard
+              icon={Star}
+              label="LTV Score"
+              value={datas.lifetime_value ? `₹${datas.lifetime_value}` : "₹0"}
+              iconBg="bg-amber-50 text-amber-600"
             />
           </div>
 
@@ -334,36 +305,36 @@ export default function CustomerDetail() {
 
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-y-8 gap-x-10">
                         {/* Always show key fields first */}
-                        <DetailItem 
-                          icon={User} label="Full Name" value={name} 
-                          onClick={() => setViewValue({ label: "Full Name", value: name })} 
+                        <DetailItem
+                          icon={User} label="Full Name" value={name}
+                          onClick={() => setViewValue({ label: "Full Name", value: name })}
                         />
-                        <DetailItem 
-                          icon={Mail} label="Email Address" value={String(datas.email || "—")} 
-                          onClick={() => setViewValue({ label: "Email Address", value: String(datas.email || "—") })} 
+                        <DetailItem
+                          icon={Mail} label="Email Address" value={String(datas.email || "—")}
+                          onClick={() => setViewValue({ label: "Email Address", value: String(datas.email || "—") })}
                         />
-                        <DetailItem 
-                          icon={Phone} label="Phone Number" value={String(datas.phone || "—")} 
-                          onClick={() => setViewValue({ label: "Phone Number", value: String(datas.phone || "—") })} 
+                        <DetailItem
+                          icon={Phone} label="Phone Number" value={String(datas.phone || "—")}
+                          onClick={() => setViewValue({ label: "Phone Number", value: String(datas.phone || "—") })}
                         />
-                        <DetailItem 
-                          icon={Store} label="Company" value={String(datas.company || "—")} 
-                          onClick={() => setViewValue({ label: "Company", value: String(datas.company || "—") })} 
+                        <DetailItem
+                          icon={Store} label="Company" value={String(datas.company || "—")}
+                          onClick={() => setViewValue({ label: "Company", value: String(datas.company || "—") })}
                         />
-                        
+
                         {/* Dynamically render all other fields */}
                         {Object.entries(datas).map(([key, val]) => {
                           // Skip fields we already showed or internal ones
                           if (["first_name", "last_name", "email", "phone", "company", "is_active", "street_address", "city", "state", "zip_code", "notes", "customer_type", "gst_number"].includes(key)) return null;
-                          
+
                           // Format key: snake_case to Title Case
                           const label = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
                           return (
-                            <DetailItem 
-                              key={key} 
-                              icon={Database} 
-                              label={label} 
-                              value={String(val ?? "—")} 
+                            <DetailItem
+                              key={key}
+                              icon={Database}
+                              label={label}
+                              value={String(val ?? "—")}
                               onClick={() => setViewValue({ label, value: String(val ?? "—") })}
                             />
                           );
@@ -487,7 +458,7 @@ export default function CustomerDetail() {
                       <div className="text-4xl font-black">{fmt(outstanding)}</div>
                       <div className="text-xs text-slate-400 font-medium">Net outstanding across all invoices</div>
                     </div>
-                    <button 
+                    <button
                       onClick={() => setShowPayment(true)}
                       className="w-full py-4 bg-blue-600 hover:bg-blue-700 rounded-2xl font-bold text-sm transition-all shadow-lg shadow-blue-900/20"
                     >
@@ -507,7 +478,7 @@ export default function CustomerDetail() {
                     {String(datas.total_orders || 0)} Total Orders
                   </div>
                 </div>
-                
+
                 <div className="overflow-x-auto -mx-8">
                   <table className="w-full text-left border-collapse">
                     <thead>
@@ -558,10 +529,10 @@ export default function CustomerDetail() {
                     {activities.map((a, i) => (
                       <div key={i} className="flex gap-6 group relative">
                         <div className="flex flex-col items-center">
-                           <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${a.iconBg} z-10 transition-transform group-hover:scale-110`}>
-                             {a.icon}
-                           </div>
-                           {i < activities.length - 1 && <div className="w-0.5 flex-1 bg-slate-100 -my-2" />}
+                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${a.iconBg} z-10 transition-transform group-hover:scale-110`}>
+                            {a.icon}
+                          </div>
+                          {i < activities.length - 1 && <div className="w-0.5 flex-1 bg-slate-100 -my-2" />}
                         </div>
                         <div className="flex-1 pb-10">
                           <div className="text-sm text-slate-800 mb-1" dangerouslySetInnerHTML={{ __html: a.text }} />
@@ -577,9 +548,9 @@ export default function CustomerDetail() {
         </div>
 
         {/* MODAL — View Full Value */}
-        <Modal 
-          show={!!viewValue} 
-          onClose={() => setViewValue(null)} 
+        <Modal
+          show={!!viewValue}
+          onClose={() => setViewValue(null)}
           title={viewValue?.label || "Field Detail"}
           className="max-w-md"
         >

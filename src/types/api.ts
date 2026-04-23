@@ -20,6 +20,7 @@ export interface SupplierRecord {
   id: string;
   shop_id: string;
   datas: Record<string, unknown>;
+  [key: string]: unknown;
 }
 
 // Employee API returns FLAT fields — no datas wrapper
@@ -34,6 +35,7 @@ export interface EmployeeRecord {
   added_by: string;
   role: string;
   id?: string;
+  datas?: Record<string, unknown>;
   [key: string]: unknown;
 }
 
@@ -41,6 +43,7 @@ export interface CustomerRecord {
   id: string;
   shop_id: string;
   datas: Record<string, unknown>;
+  [key: string]: unknown;
 }
 
 export interface InventoryDatas {

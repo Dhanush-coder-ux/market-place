@@ -12,6 +12,7 @@ import { useHeader } from '@/context/HeaderContext';
 import { useToast } from '@/context/ToastContext';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 import { ColumnPicker } from '@/components/common/ColumnPicker';
+import { SearchSelect } from '@/components/inputbuilders/SearchSelect';
 import React, { useEffect, useMemo, useState } from 'react';
 
 export default function Employee() {
@@ -59,15 +60,23 @@ export default function Employee() {
         const data: EmployeeRecord[] = Array.isArray(res.data) ? res.data : [res.data];
         setEmployees(data);
         
-        // Detect unique keys from the flat record
+        // Detect unique keys from both root and datas field
         const keys = new Set<string>();
-        data.forEach((e: EmployeeRecord) => {
+        data.forEach((e: any) => {
+          // Root level keys
           Object.keys(e).forEach(k => {
-            // Ignore system internal IDs and the primary name field
-            if (!["id", "shop_id", "account_id", "name"].includes(k)) {
+            if (!["id", "shop_id", "account_id", "name", "datas"].includes(k)) {
               keys.add(k);
             }
           });
+          // Nested datas keys
+          if (e.datas) {
+            Object.keys(e.datas).forEach(k => {
+              if (!["id", "shop_id", "name"].includes(k)) {
+                keys.add(k);
+              }
+            });
+          }
         });
         const sortedKeys = Array.from(keys).sort();
         setAvailableKeys(sortedKeys);
@@ -132,15 +141,25 @@ export default function Employee() {
 
       {/* Filter Section */}
       <div className="bg-white p-4 rounded-[1.5rem] border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="relative w-full sm:w-80">
-            <Input
-              leftIcon={<Search size={14} className='text-gray-400'/>}
-              type="text"
-              placeholder="Search employees..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="h-10 text-sm"
+        <div className="flex items-center gap-3 flex-1">
+          <div className="relative w-full max-w-md">
+            <SearchSelect
+              labelKey="displayName"
+              valueKey="employee_id"
+              placeholder="Search and quick view employee..."
+              fetchOptions={async (q) => {
+                if (!q) return [];
+                try {
+                  const res = await getData(ENDPOINTS.EMPLOYEES, { limit: "8", offset: "1", q });
+                  const data = res?.data ? (Array.isArray(res.data) ? res.data : [res.data]) : [];
+                  return data.map((e: any) => ({
+                    ...e,
+                    displayName: e.name || e.employee_id
+                  }));
+                } catch { return []; }
+              }}
+              onChange={(val) => val && navigate(`/employee/${val}`)}
+              className="w-full h-11"
             />
           </div>
           <ColumnPicker 
@@ -152,6 +171,14 @@ export default function Employee() {
         </div>
 
         <div className="flex items-center gap-3">
+          <Input
+            leftIcon={<Search size={14} className='text-gray-400'/>}
+            type="text"
+            placeholder="Filter by name..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="h-11 text-sm w-48"
+          />
           <button className="p-2.5 rounded-xl bg-slate-50 text-slate-400 border border-slate-100 hover:bg-slate-100 transition-all shadow-sm">
             <Filter size={18} />
           </button>
@@ -232,7 +259,7 @@ export default function Employee() {
                     {selectedKeys.map(key => (
                       <td key={key} className="px-6 py-4 whitespace-nowrap">
                         <p className={`text-[12px] font-bold tracking-tight ${key === 'role' ? 'text-blue-600 bg-blue-50 w-fit px-2 py-0.5 rounded-md' : 'text-slate-600'}`}>
-                          {String(emp[key] ?? "—")}
+                          {String(emp.datas?.[key] ?? emp[key] ?? "—")}
                         </p>
                       </td>
                     ))}

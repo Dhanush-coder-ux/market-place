@@ -5,8 +5,10 @@ import {
   Database, Shield, Briefcase, Calendar, MapPin, Search, Star, Info
 } from "lucide-react";
 import {
-  fmt, StatusBadge, Modal, FormInput, InfoRow, SectionCard
-} from "./EmployeeDetailComponents";
+  fmt, StatusBadge, InfoRow, SectionCard, DetailItem,
+  ProfileHeaderCard,
+  Modal
+} from "@/components/common/SuperUI";
 import { StatCard } from "@/components/common/StatsCard";
 import { useApi } from "@/context/ApiContext";
 import { useToast } from "@/context/ToastContext";
@@ -15,6 +17,7 @@ import Loader from "@/components/common/Loader";
 import type { EmployeeRecord } from "@/types/api";
 import { SearchSelect } from "@/components/inputbuilders/SearchSelect";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
+import { useHeader } from "@/context/HeaderContext";
 
 // ── Search bar ──────────────────────────────────────────────────────────────
 const EmployeeQuickSearch = () => {
@@ -55,28 +58,13 @@ const EmployeeQuickSearch = () => {
 
 const TABS = ["General Info", "Performance", "Schedule", "Timeline"];
 
-// ─── Helper Components ────────────────────────────────────────────────────────
-const DetailItem = ({ icon: Icon, label, value, onClick }: { icon: any, label: string, value: string, onClick?: () => void }) => (
-  <div 
-    onClick={onClick}
-    className={`flex items-start gap-3 p-1 -m-1 rounded-lg transition-colors ${onClick ? "cursor-pointer hover:bg-slate-50 active:scale-[0.98]" : ""}`}
-  >
-    <div className="w-7 h-7 rounded-lg bg-slate-100 flex items-center justify-center text-slate-400 shrink-0">
-      <Icon size={12} strokeWidth={2.5} />
-    </div>
-    <div className="min-w-0">
-      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.05em] mb-0.5">{label}</p>
-      <p className="text-[13px] font-bold text-slate-700 truncate tracking-tight">{value}</p>
-    </div>
-  </div>
-);
-
 // ── Main page ───────────────────────────────────────────────────────────────
 export default function EmployeeDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { getData, deleteData } = useApi();
   const { showToast } = useToast();
+  const { setActions } = useHeader();
 
   const [employee, setEmployee] = useState<EmployeeRecord | null>(null);
   const [recordLoading, setRecordLoading] = useState(true);
@@ -108,6 +96,35 @@ export default function EmployeeDetail() {
     }
   };
 
+  // Header Actions
+  useEffect(() => {
+    if (!employee) {
+      setActions(null);
+      return;
+    }
+    setActions(
+      <div className="flex items-center gap-3 animate-in fade-in slide-in-from-right-4 duration-300">
+        <div className="flex items-center gap-1.5">
+          <button
+            onClick={() => navigate(`/employee/${id}/edit`)}
+            className="w-10 h-10 flex items-center justify-center bg-white border border-slate-200 text-slate-600 rounded-xl hover:text-blue-600 hover:border-blue-100 transition-all shadow-sm active:scale-95"
+            title="Edit Member"
+          >
+            <Pencil size={18} />
+          </button>
+          <button
+            onClick={() => setShowDeleteModal(true)}
+            className="w-10 h-10 flex items-center justify-center bg-white border border-slate-200 text-slate-300 rounded-xl hover:text-rose-600 hover:border-rose-100 transition-all shadow-sm active:scale-95"
+            title="Remove Member"
+          >
+            <Trash2 size={18} />
+          </button>
+        </div>
+      </div>
+    );
+    return () => setActions(null);
+  }, [setActions, id, navigate, employee]);
+
   if (recordLoading) return <div className="p-20"><Loader /></div>;
   if (!employee) return (
     <div className="p-20 text-center space-y-6">
@@ -128,83 +145,38 @@ export default function EmployeeDetail() {
   const initials = name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
 
   return (
-    <div className="min-h-screen bg-slate-50/50 font-[Inter,sans-serif]">
+    <div className="min-h-screen bg-slate-50/50 font-[Inter,sans-serif] animate-in fade-in duration-500">
       <div className="max-w-7xl mx-auto px-4 md:px-8 py-4 space-y-6">
 
-        {/* Premium Profile Header Card */}
-        <div className="bg-white rounded-[1.5rem] p-5 border border-slate-200 shadow-sm relative overflow-hidden group">
-          <div className="absolute top-0 right-0 w-48 h-48 bg-blue-500/5 rounded-full -mr-24 -mt-24 blur-3xl" />
-          
-          <div className="relative flex flex-col md:flex-row items-start md:items-center gap-6">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-600 to-blue-400 flex items-center justify-center text-xl font-bold text-white shadow-lg shadow-blue-200 ring-2 ring-white">
-              {initials}
-            </div>
-
-            <div className="flex-1 space-y-1">
-              <div className="flex flex-col mb-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <h1 className="text-xl font-black text-slate-800 tracking-tight">{name}</h1>
-                  <div className="flex items-center gap-2">
-                    <span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 text-[9px] font-extrabold uppercase tracking-widest border border-blue-100">
-                      {String(employee.role || "Staff")}
-                    </span>
-                    <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-widest border ${
-                      employee.is_accepted 
-                        ? "bg-emerald-50 text-emerald-600 border-emerald-100" 
-                        : "bg-amber-50 text-amber-600 border-amber-100"
-                    }`}>
-                      <div className={`w-1.5 h-1.5 rounded-full ${employee.is_accepted ? "bg-emerald-500" : "bg-amber-500"} ${!employee.is_accepted ? "animate-pulse" : ""}`} />
-                      {employee.is_accepted ? "Accepted" : "Pending"}
-                    </div>
-                  </div>
-                </div>
-                <div className="text-[11px] font-bold text-slate-400 font-mono tracking-tight">
-                  ID: {employee.employee_id}
-                </div>
-              </div>
-              
-              <div className="flex flex-wrap items-center gap-4 text-[12px] font-semibold text-slate-500">
-                <div className="flex items-center gap-1.5">
-                  <Mail size={12} className="text-blue-400" />
-                  {String(employee.email || "No email")}
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <Phone size={12} className="text-blue-400" />
-                  {String(employee.mobile_number || "No phone")}
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-1.5">
-              <button
-                onClick={() => navigate(`/employee/${id}/edit`)}
-                className="w-8 h-8 flex items-center justify-center bg-white border border-slate-200 text-slate-600 rounded-lg hover:text-blue-600 hover:border-blue-100 transition-all shadow-sm active:scale-95"
-                title="Edit Member"
-              >
-                <Pencil size={14} />
-              </button>
-              <button
-                onClick={() => setShowDeleteModal(true)}
-                className="w-8 h-8 flex items-center justify-center bg-white border border-slate-200 text-slate-300 rounded-lg hover:text-rose-600 hover:border-rose-100 transition-all shadow-sm active:scale-95"
-                title="Remove Member"
-              >
-                <Trash2 size={14} />
-              </button>
-            </div>
-          </div>
-        </div>
+        {/* Profile Header Card */}
+        <ProfileHeaderCard
+          name={name}
+          initials={initials}
+          subText={`ID: ${employee.employee_id}`}
+          badges={[
+            { text: String(employee.role || "Staff"), variant: "primary" },
+            {
+              text: employee.is_accepted ? "Accepted" : "Pending",
+              variant: employee.is_accepted ? "success" : "warning",
+              showPulse: !employee.is_accepted
+            }
+          ]}
+          infoItems={[
+            { icon: Mail, text: String(employee.email || "No email") },
+            { icon: Phone, text: String(employee.mobile_number || "No phone") }
+          ]}
+        />
 
         {/* Tabs Navigation */}
         <div className="flex gap-0.5 bg-white p-1 rounded-xl border border-slate-200 w-fit overflow-x-auto">
           {TABS.map((tab, i) => (
-            <button 
-              key={tab} 
+            <button
+              key={tab}
               onClick={() => setActiveTab(i)}
-              className={`px-4 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${
-                activeTab === i 
-                  ? "bg-blue-600 text-white shadow-lg shadow-blue-100" 
+              className={`px-4 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === i
+                  ? "bg-blue-600 text-white shadow-lg shadow-blue-100"
                   : "text-slate-400 hover:text-slate-600 hover:bg-slate-50"
-              }`}
+                }`}
             >
               {tab}
             </button>
@@ -213,39 +185,39 @@ export default function EmployeeDetail() {
 
         {/* Content Area */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          
+
           {/* Main Info Area */}
           <div className="lg:col-span-8 space-y-6">
             {activeTab === 0 && (
               <SectionCard title="Professional Profile Information">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-y-8 gap-x-10 p-2">
-                  <DetailItem 
-                    icon={User} label="Full Name" value={name} 
-                    onClick={() => setViewValue({ label: "Full Name", value: name })} 
+                  <DetailItem
+                    icon={User} label="Full Name" value={name}
+                    onClick={() => setViewValue({ label: "Full Name", value: name })}
                   />
-                  <DetailItem 
-                    icon={Mail} label="Email Address" value={String(employee.email || "—")} 
-                    onClick={() => setViewValue({ label: "Email Address", value: String(employee.email || "—") })} 
+                  <DetailItem
+                    icon={Mail} label="Email Address" value={String(employee.email || "—")}
+                    onClick={() => setViewValue({ label: "Email Address", value: String(employee.email || "—") })}
                   />
-                  <DetailItem 
-                    icon={Phone} label="Mobile Number" value={String(employee.mobile_number || "—")} 
-                    onClick={() => setViewValue({ label: "Mobile Number", value: String(employee.mobile_number || "—") })} 
+                  <DetailItem
+                    icon={Phone} label="Mobile Number" value={String(employee.mobile_number || "—")}
+                    onClick={() => setViewValue({ label: "Mobile Number", value: String(employee.mobile_number || "—") })}
                   />
-                  <DetailItem 
-                    icon={Shield} label="Access Role" value={String(employee.role || "—")} 
-                    onClick={() => setViewValue({ label: "Access Role", value: String(employee.role || "—") })} 
+                  <DetailItem
+                    icon={Shield} label="Access Role" value={String(employee.role || "—")}
+                    onClick={() => setViewValue({ label: "Access Role", value: String(employee.role || "—") })}
                   />
-                  
+
                   {/* Dynamic fields */}
                   {Object.entries(employee).map(([key, val]) => {
                     if (["name", "email", "mobile_number", "role", "employee_id", "shop_id", "account_id", "is_accepted", "added_by", "id"].includes(key)) return null;
                     const label = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
                     return (
-                      <DetailItem 
-                        key={key} 
-                        icon={Database} 
-                        label={label} 
-                        value={String(val ?? "—")} 
+                      <DetailItem
+                        key={key}
+                        icon={Database}
+                        label={label}
+                        value={String(val ?? "—")}
                         onClick={() => setViewValue({ label, value: String(val ?? "—") })}
                       />
                     );
@@ -261,7 +233,7 @@ export default function EmployeeDetail() {
                 <p className="text-xs text-slate-400 font-bold mt-2 uppercase">No evaluation data available for this period.</p>
               </div>
             )}
-            
+
             {activeTab === 2 && (
               <div className="p-12 text-center bg-white rounded-[2rem] border border-slate-100 shadow-sm">
                 <Calendar size={40} className="mx-auto text-blue-200 mb-4" />
@@ -291,17 +263,17 @@ export default function EmployeeDetail() {
 
             <SectionCard title="Quick Stats">
               <div className="space-y-4">
-                <StatCard 
-                  icon={Briefcase} 
-                  label="Tasks Done" 
-                  value="0" 
-                  iconBg="bg-blue-50 text-blue-600" 
+                <StatCard
+                  icon={Briefcase}
+                  label="Tasks Done"
+                  value="0"
+                  iconBg="bg-blue-50 text-blue-600"
                 />
-                <StatCard 
-                  icon={Star} 
-                  label="Rating" 
-                  value="5.0" 
-                  iconBg="bg-amber-50 text-amber-600" 
+                <StatCard
+                  icon={Star}
+                  label="Rating"
+                  value="5.0"
+                  iconBg="bg-amber-50 text-amber-600"
                 />
               </div>
             </SectionCard>
@@ -309,9 +281,9 @@ export default function EmployeeDetail() {
         </div>
 
         {/* Modal: View Full Value */}
-        <Modal 
-          show={!!viewValue} 
-          onClose={() => setViewValue(null)} 
+        <Modal
+          show={!!viewValue}
+          onClose={() => setViewValue(null)}
           title={viewValue?.label || "Field Detail"}
           className="max-w-md"
         >

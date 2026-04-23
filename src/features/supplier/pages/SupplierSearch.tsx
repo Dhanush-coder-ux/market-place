@@ -1,4 +1,4 @@
-import { X } from "lucide-react";
+import { X, Bookmark } from "lucide-react";
 import { GradientButton } from "@/components/ui/GradientButton";
 import { SearchSelect } from "@/components/inputbuilders/SearchSelect";
 import { useNavigate } from "react-router-dom";
@@ -12,7 +12,13 @@ const SupplierSearch = () => {
   return (
     <div className="space-y-6">
       <div className="flex justify-end items-center gap-3">
-        <GradientButton path="/supplier/all" variant="outline">View All Suppliers</GradientButton>
+        <button 
+          onClick={() => navigate("/supplier/drafts")}
+          className="px-4 h-10 rounded-xl border border-blue-100 text-blue-600 font-bold text-[13px] bg-blue-50/50 hover:bg-blue-100 transition-all flex items-center gap-2"
+        >
+          <Bookmark size={16} />
+          Saved Drafts
+        </button>
         <GradientButton path="/supplier/add">+ Add Supplier</GradientButton>
       </div>
 
@@ -37,7 +43,7 @@ const SupplierSearch = () => {
                 const data = res?.data ? (Array.isArray(res.data) ? res.data : [res.data]) : [];
                 return data.map((s: any) => ({
                   ...s,
-                  displayName: String(s.datas?.supplier_name ?? s.supplier_name ?? s.id)
+                  displayName: String(s.datas?.supplier_name ?? (s as any).supplier_name ?? s.id)
                 }));
               } catch {
                 return [];

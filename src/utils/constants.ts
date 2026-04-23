@@ -91,12 +91,13 @@ export const sidebarLinks: SidebarLink[] = [
   },
 
   {
-    name: "Procurement",
+    name: "Supplier",
     icon: Wallet,
     subLinks: [
-      { name: "Suppliers", path: "/supplier/all" },
-      { name: "Add Suppliers", path: "/supplier/add" },
-      { name: "Supplier Details", path: "/supplier" },
+      { name: "Add Suppliers", path: "/supplier/add", icon: UserPlus },
+      { name: "Saved Drafts", path: "/supplier/drafts", icon: Bookmark },
+      { name: "Suppliers Infos", path: "/supplier/all", icon: ClipboardList },
+      { name: "Supplier Details", path: "/supplier", icon: FileText },
     ],
   },
 

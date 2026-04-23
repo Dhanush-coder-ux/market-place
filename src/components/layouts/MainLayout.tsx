@@ -166,6 +166,37 @@ const getPageHeaderInfo = (pathname: string) => {
     };
   }
 
+  // Dynamic match for Supplier Profile
+  if (pathname.match(/^\/supplier\/[^/]+$/)) {
+    return {
+      title: "Supplier Profile",
+      subtitle: "View complete supplier information and history.",
+    };
+  }
+
+  // Dynamic match for Edit Supplier
+  if (pathname.match(/^\/supplier\/[^/]+\/edit$/)) {
+    return {
+      title: "Update Supplier",
+      subtitle: "Modify existing supplier details.",
+    };
+  }
+
+  // Drafts Pages
+  if (pathname === "/supplier/drafts") {
+    return {
+      title: "Supplier Drafts",
+      subtitle: "Manage your locally saved vendor registrations.",
+    };
+  }
+
+  if (pathname === "/employee/drafts") {
+    return {
+      title: "Employee Drafts",
+      subtitle: "Manage your locally saved staff records.",
+    };
+  }
+
   return routes[pathname] || { 
     title: pathname.split("/").pop()?.replace("-", " ").toUpperCase() || "Home", 
     subtitle: "" 

@@ -17,6 +17,7 @@ import ProductionForm from "@/features/purchase/pages/ProductionForm";
 import CustomerFormPage from "@/features/customer/pages/CustomerFormPage";
 import CustomerDraftsPage from "@/features/customer/pages/CustomerDraftsPage";
 import SupplierForm from "@/features/supplier/pages/SupplierForm";
+import SupplierDraftsPage from "@/features/supplier/pages/SupplierDraftsPage";
 
 
 // Layout & Auth
@@ -100,6 +101,7 @@ export const router = createBrowserRouter([
       { path: 'supplier', element: <SupplierSearch /> },
       { path: '/supplier/all', element: <Supplier /> },
       { path: '/supplier/add', element: <SupplierForm /> },
+      { path: '/supplier/drafts', element: <SupplierDraftsPage /> },
       { path: '/supplier/:id/edit', element: <SupplierForm /> },
       { path: '/supplier/:id', element: <SupplierDetail /> },
 

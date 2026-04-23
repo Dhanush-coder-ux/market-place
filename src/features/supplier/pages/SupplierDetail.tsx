@@ -1,105 +1,69 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
-  Phone, Globe, MapPin, Mail, ShoppingBag, CreditCard,
-  History, Info, Package, CheckCircle2, Search, Edit2, X,
+  DollarSign, AlertCircle, Package, Star,
+  Mail, Pencil, User, Tag, MapPin, Phone, Trash2,
+  Store, FileText, Database, ShoppingBag, History, CreditCard, Banknote
 } from "lucide-react";
-import { StatsCard } from "@/components/common/StatsCard";
+import {
+  fmt, StatusBadge, SectionCard, DetailItem, InfoRow, Modal,
+  ProfileHeaderCard
+} from "@/components/common/SuperUI";
+import { StatCard } from "@/components/common/StatsCard";
 import { useApi } from "@/context/ApiContext";
+import { useToast } from "@/context/ToastContext";
 import { ENDPOINTS } from "@/services/endpoints";
 import Loader from "@/components/common/Loader";
 import type { SupplierRecord } from "@/types/api";
+import { SearchSelect } from "@/components/inputbuilders/SearchSelect";
+import { ConfirmDialog } from "@/components/common/ConfirmDialog";
+import { useHeader } from "@/context/HeaderContext";
 
-// ── Quick-search bar ────────────────────────────────────────────────────────
 const SupplierSearch = () => {
   const navigate = useNavigate();
   const { getData } = useApi();
-  const [query, setQuery] = useState("");
-  const [results, setResults] = useState<SupplierRecord[]>([]);
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (!query.trim()) { setResults([]); return; }
-    const t = setTimeout(() => {
-      getData(ENDPOINTS.SUPPLIERS, { limit: "8", offset: "1", q: query }).then((res) => {
-        if (res) setResults(Array.isArray(res.data) ? res.data : [res.data]);
-      });
-    }, 300);
-    return () => clearTimeout(t);
-  }, [query]);
-
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
+  const fetchSuppliers = async (q: string) => {
+    if (!q) return [];
+    try {
+      const res = await getData(ENDPOINTS.SUPPLIERS, { limit: "8", offset: "1", q });
+      const data = res?.data ? (Array.isArray(res.data) ? res.data : [res.data]) : [];
+      return data.map((s: any) => ({
+        ...s,
+        displayName: String(s.datas?.supplier_name || s.supplier_name || s.id)
+      }));
+    } catch { return []; }
+  };
 
   return (
-    <div ref={ref} className="relative w-full max-w-xs">
-      <div className="flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-xl bg-white shadow-sm">
-        <Search size={14} className="text-gray-400 shrink-0" />
-        <input
-          value={query}
-          onChange={(e) => { setQuery(e.target.value); setOpen(true); }}
-          placeholder="Search supplier by name / ID…"
-          className="flex-1 text-sm outline-none bg-transparent text-gray-700 placeholder-gray-400 min-w-0"
-        />
-        {query && (
-          <button onClick={() => { setQuery(""); setResults([]); }} className="text-gray-400 hover:text-gray-600">
-            <X size={13} />
-          </button>
-        )}
-      </div>
-      {open && results.length > 0 && (
-        <div className="absolute top-full mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-xl z-50 overflow-hidden">
-          {results.map((s) => (
-            <button
-              key={s.id}
-              onClick={() => { navigate(`/supplier/${s.id}`); setQuery(""); setOpen(false); }}
-              className="w-full px-4 py-3 text-left hover:bg-blue-50 border-b last:border-0 border-gray-100 transition-colors"
-            >
-              <p className="text-sm font-medium text-gray-900 truncate">
-                {String(s.datas?.name ?? s.datas?.vendor_name ?? "—")}
-              </p>
-              <p className="text-[11px] text-gray-400 font-mono mt-0.5 truncate">{s.id}</p>
-            </button>
-          ))}
-        </div>
-      )}
+    <div className="w-full relative z-50">
+      <SearchSelect
+        labelKey="displayName"
+        valueKey="id"
+        fetchOptions={fetchSuppliers}
+        placeholder="Search supplier by name / ID…"
+        className="w-full"
+        onChange={(val) => val && navigate(`/supplier/${val}`)}
+      />
     </div>
   );
 };
 
-// ── Sidebar item ────────────────────────────────────────────────────────────
-const SidebarItem = ({
-  icon: Icon, label, value, isMono = false,
-}: { icon: any; label: string; value: string; isMono?: boolean }) => (
-  <div className="flex gap-4 items-start group">
-    <div className="p-2 bg-gray-50/80 rounded-xl text-gray-400 shrink-0 mt-0.5 transition-colors group-hover:bg-blue-50 group-hover:text-blue-500">
-      <Icon size={16} strokeWidth={1.5} />
-    </div>
-    <div className="min-w-0 space-y-0.5">
-      <p className="text-[13px] font-medium text-gray-500">{label}</p>
-      <p className={`text-sm font-medium text-gray-900 break-words ${isMono ? "font-mono text-[13px] tracking-tight" : ""}`}>
-        {value}
-      </p>
-    </div>
-  </div>
-);
+const TABS = ["General Info", "Financials", "Purchase Orders", "Timeline"];
 
-// ── Main page ───────────────────────────────────────────────────────────────
-const SupplierDetail = () => {
+export default function SupplierDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { getData } = useApi();
+  const { getData, deleteData } = useApi();
+  const { showToast } = useToast();
+  const { setActions } = useHeader();
 
   const [supplier, setSupplier] = useState<SupplierRecord | null>(null);
   const [recordLoading, setRecordLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("General Info");
-  const tabs = ["General Info"];
+  const [activeTab, setActiveTab] = useState(0);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [viewValue, setViewValue] = useState<{ label: string, value: string } | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -110,142 +74,226 @@ const SupplierDetail = () => {
     });
   }, [id]);
 
-  if (recordLoading) {
-    return <div className="p-12 flex justify-center"><Loader /></div>;
+  async function handleDelete() {
+    if (!id) return;
+    setDeleting(true);
+    try {
+      const res = await deleteData(`${ENDPOINTS.SUPPLIERS}/${id}`);
+      if (res) {
+        showToast("Supplier deleted successfully", "success");
+        navigate("/supplier");
+      }
+    } catch {
+      showToast("Failed to delete supplier", "error");
+    } finally {
+      setDeleting(false);
+      setShowDeleteModal(false);
+    }
   }
 
-  if (!supplier) {
-    return (
-      <div className="text-center py-20 space-y-4">
-        <p className="text-gray-500">Supplier not found.</p>
-        <SupplierSearch />
+  // Header Actions
+  useEffect(() => {
+    if (!supplier) {
+      setActions(null);
+      return;
+    }
+    setActions(
+      <div className="flex items-center gap-3 animate-in fade-in slide-in-from-right-4 duration-300">
+        <div className="flex items-center gap-1.5">
+          <button
+            onClick={() => navigate(`/supplier/${id}/edit`)}
+            className="w-10 h-10 flex items-center justify-center bg-white border border-slate-200 text-slate-600 rounded-xl hover:text-blue-600 hover:border-blue-100 transition-all shadow-sm active:scale-95"
+            title="Edit Supplier"
+          >
+            <Pencil size={18} />
+          </button>
+          <button
+            onClick={() => setShowDeleteModal(true)}
+            className="w-10 h-10 flex items-center justify-center bg-white border border-slate-200 text-slate-300 rounded-xl hover:text-rose-600 hover:border-rose-100 transition-all shadow-sm active:scale-95"
+            title="Delete Supplier"
+          >
+            <Trash2 size={18} />
+          </button>
+        </div>
       </div>
     );
-  }
+    return () => setActions(null);
+  }, [setActions, id, navigate, supplier]);
 
-  const datas = (supplier.datas as any) ?? {};
-  
-  // Broaden data extraction to handle root fields AND datas fields
-  const getVal = (keys: string[], fallback = "—") => {
-    for (const key of keys) {
-      if ((supplier as any)[key]) return String((supplier as any)[key]);
-      if (datas[key]) return String(datas[key]);
-    }
-    return fallback;
-  };
+  if (recordLoading) return <div className="p-12 flex justify-center"><Loader /></div>;
+  if (!supplier) return (
+    <div className="text-center py-20 space-y-4">
+      <p className="text-slate-500">Supplier not found.</p>
+      <div className="flex justify-center max-w-sm mx-auto"><SupplierSearch /></div>
+    </div>
+  );
 
-  const name = getVal(["name", "vendor_name", "supplier_name", "business_name"], "Unknown Supplier");
-  const phone = getVal(["phone", "mobile", "contact_number", "mobile_number"]);
-  const email = getVal(["email", "email_address"]);
-  const gstin = getVal(["gst", "gstin", "gst_number"], "—");
-  const address = getVal(["address", "location", "billing_address", "street_address"]);
-
-  // Build static field list mapping to backend schema
-  const infoFields = [
-    { label: "Supplier Name", value: name },
-    { label: "Contact Person", value: getVal(["contact_person", "person_name"]) },
-    { label: "Email", value: email },
-    { label: "Phone", value: phone },
-    { label: "City", value: getVal(["city", "state", "town"]) },
-    { label: "Address", value: address },
-  ];
+  const datas = supplier.datas ?? {};
+  const name = String(datas.supplier_name || (supplier as any).supplier_name || "Unknown Supplier");
+  const initials = name.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2);
 
   return (
-    <div className="min-h-screen bg-gray-50/50 p-4 md:p-8 md:pt-10 font-sans selection:bg-blue-100">
-      <div className="max-w-7xl mx-auto space-y-8">
+    <div className="min-h-screen bg-slate-50/50 font-[Inter,sans-serif] animate-in fade-in duration-500">
+      <div className="max-w-7xl mx-auto px-4 md:px-8 py-4 space-y-6">
 
-        {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
-          <div className="space-y-2.5 flex-1 min-w-0">
-            <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-blue-50/50 border border-blue-100/50 text-blue-600">
-              <CheckCircle2 size={13} strokeWidth={2} />
-              <span className="text-[11px] font-medium tracking-wide uppercase">Verified Supplier</span>
-            </div>
-            <h1 className="heading-page text-gray-900 tracking-tight truncate">{name}</h1>
-          </div>
-          <div className="flex items-center gap-3 shrink-0">
-            <SupplierSearch />
+        {/* Profile Header Card */}
+        <ProfileHeaderCard
+          name={name}
+          initials={initials}
+          subText={`ID: ${supplier.id}`}
+          badges={[
+            { text: String(datas.type || "Vendor"), variant: "primary" },
+            {
+              text: datas.is_active !== false ? "Active" : "Inactive",
+              variant: datas.is_active !== false ? "success" : "danger",
+              showPulse: true
+            }
+          ]}
+          infoItems={[
+            { icon: Mail, text: String(datas.email || "No email") },
+            { icon: Phone, text: String(datas.phone || "No phone") }
+          ]}
+        />
+
+        {/* Tabs Navigation */}
+        <div className="flex gap-0.5 bg-white p-1 rounded-xl border border-slate-200 w-fit">
+          {TABS.map((tab, i) => (
             <button
-              onClick={() => navigate(`/supplier/${id}/edit`)}
-              className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-xl font-medium text-sm hover:bg-gray-50 hover:border-gray-300 transition-all shadow-sm whitespace-nowrap"
+              key={tab}
+              onClick={() => setActiveTab(i)}
+              className={`px-4 py-1.5 text-[11px] font-bold rounded-lg transition-all ${activeTab === i ? "bg-blue-600 text-white shadow-md shadow-blue-100" : "text-slate-500 hover:bg-slate-50 hover:text-slate-700"
+                }`}
             >
-              <Edit2 size={14} /> Edit
+              {tab}
             </button>
-          </div>
+          ))}
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-          <StatsCard iconBg="bg-blue-50" iconColor="text-blue-600" label="Total Items Bought" value={String(datas.total_items_bought || "0")} icon={Package} />
-          <StatsCard iconBg="bg-red-50" iconColor="text-red-600" label="Pending Amount" value={datas.pending_amount ? `₹${datas.pending_amount}` : "₹0"} icon={CreditCard} />
-          <StatsCard iconBg="bg-green-50" iconColor="text-green-600" label="Total Purchases" value={String(datas.total_purchases || "0")} icon={ShoppingBag} />
-          <StatsCard iconBg="bg-yellow-50" iconColor="text-yellow-600" label="Last Order" value={String(datas.last_order_date || "N/A")} icon={History} />
+        {/* Quick Stats Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <StatCard icon={ShoppingBag} label="Total Purchases" value={datas.total_purchases ? `₹${datas.total_purchases}` : "₹0"} iconBg="bg-blue-50 text-blue-600" />
+          <StatCard icon={AlertCircle} label="Outstanding" value={fmt(Number(datas.pending_amount) || 0)} iconBg="bg-rose-50 text-rose-600" />
+          <StatCard icon={Package} label="Total Items" value={String(datas.total_items_bought || "0")} iconBg="bg-blue-50 text-blue-600" />
+          <StatCard icon={History} label="Last Order" value={String(datas.last_order_date || "N/A")} iconBg="bg-amber-50 text-amber-600" />
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 md:gap-8">
+        {/* Tab Panels */}
+        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+          {activeTab === 0 && (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+              <div className="lg:col-span-2 space-y-5">
+                <SectionCard title="Supplier Profile Information">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-y-8 gap-x-10">
+                    <DetailItem
+                      icon={Store} label="Business Name" value={name}
+                      onClick={() => setViewValue({ label: "Business Name", value: name })}
+                    />
+                    <DetailItem
+                      icon={User} label="Contact Person" value={String(datas.contact_person || "—")}
+                      onClick={() => setViewValue({ label: "Contact Person", value: String(datas.contact_person || "—") })}
+                    />
+                    <DetailItem
+                      icon={Mail} label="Email" value={String(datas.email || "—")}
+                      onClick={() => setViewValue({ label: "Email", value: String(datas.email || "—") })}
+                    />
+                    <DetailItem
+                      icon={Phone} label="Phone" value={String(datas.phone || "—")}
+                      onClick={() => setViewValue({ label: "Phone", value: String(datas.phone || "—") })}
+                    />
+                    <DetailItem
+                      icon={MapPin} label="City" value={String(datas.city || "—")}
+                      onClick={() => setViewValue({ label: "City", value: String(datas.city || "—") })}
+                    />
 
-          {/* Sidebar */}
-          <div className="lg:col-span-1">
-            <div className="bg-white p-5 md:p-6 rounded-2xl border border-gray-100 shadow-sm space-y-6">
-              <h3 className="heading-label text-gray-900 pb-4 border-b border-gray-100">Identity & Contact</h3>
+                    {/* Dynamically render all other fields from datas */}
+                    {Object.entries(datas).map(([key, val]) => {
+                      if (["supplier_name", "contact_person", "email", "phone", "city", "address", "shop_id", "type", "id", "pending_amount", "total_purchases", "total_items_bought", "last_order_date"].includes(key)) return null;
+                      const label = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                      return (
+                        <DetailItem
+                          key={key} icon={Database} label={label} value={String(val ?? "—")}
+                          onClick={() => setViewValue({ label, value: String(val ?? "—") })}
+                        />
+                      );
+                    })}
+                  </div>
+                </SectionCard>
+
+                <SectionCard title="Business Address">
+                  <div className="space-y-4">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest text-xs font-semibold">Street Address</p>
+                    <p className="text-sm font-semibold text-slate-700 leading-relaxed bg-slate-50 p-4 rounded-xl border border-slate-100">
+                      {String(datas.address || "No specific address provided.")}
+                    </p>
+                  </div>
+                </SectionCard>
+              </div>
+
               <div className="space-y-5">
-                <SidebarItem icon={Phone} label="Phone" value={phone} />
-                <SidebarItem icon={Mail} label="Email" value={email} />
-                <SidebarItem icon={Globe} label="GSTIN" value={gstin} isMono />
-                <SidebarItem icon={MapPin} label="Address" value={address} />
+                <SectionCard title="Business Identity">
+                  <div className="space-y-3">
+                    <InfoRow label="Business Type" value={<span className="text-[12px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md">{String(datas.type || "Vendor")}</span>} />
+                    <InfoRow label="GST Number" value={<span className="text-[12px] font-bold text-slate-700 font-mono">{String(datas.gst_number || datas.gstin || "—")}</span>} />
+                  </div>
+                </SectionCard>
               </div>
             </div>
-          </div>
+          )}
 
-          {/* Main content */}
-          <div className="lg:col-span-3 space-y-6">
-            <div className="border-b border-gray-200/80">
-              <nav className="flex gap-6">
-                {tabs.map((tab) => (
-                  <button
-                    key={tab}
-                    onClick={() => setActiveTab(tab)}
-                    className={`pb-3 text-sm font-medium transition-all whitespace-nowrap border-b-2 relative -mb-px ${
-                      activeTab === tab
-                        ? "border-blue-500 text-gray-900"
-                        : "border-transparent text-gray-500 hover:text-gray-800 hover:border-gray-300"
-                    }`}
-                  >
-                    {tab}
-                  </button>
-                ))}
-              </nav>
-            </div>
-
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden min-h-[400px]">
-              {activeTab === "General Info" && (
-                <div className="p-6 md:p-8 space-y-6 animate-in fade-in duration-300">
-                  <div className="flex items-center gap-2.5 pb-4 border-b border-gray-50">
-                    <Info size={18} className="text-blue-500" strokeWidth={2} />
-                    <h2 className="heading-section text-gray-900">Business Profile</h2>
+          {activeTab === 1 && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <SectionCard title="Payment Status">
+                <div className="flex flex-col items-center py-12 text-center space-y-4">
+                  <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-300 mx-auto">
+                    <CreditCard size={32} />
                   </div>
-                  {infoFields.length === 0 ? (
-                    <p className="text-sm text-gray-500">No profile data available.</p>
-                  ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                      {infoFields.map((f) => (
-                        <div key={f.label}>
-                          <p className="text-[13px] font-medium text-gray-500 uppercase tracking-wide mb-1.5">{f.label}</p>
-                          <div className="bg-gray-50/50 px-4 py-3 rounded-xl border border-gray-100/60 text-sm text-gray-700 hover:border-gray-200 transition-colors">
-                            {f.value}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                  <p className="text-slate-400 font-medium">Financial records module loading...</p>
                 </div>
-              )}
+              </SectionCard>
+              <SectionCard className="bg-slate-900 text-white border-0 shadow-2xl shadow-blue-200">
+                <h2 className="text-[10px] font-bold text-blue-400 uppercase tracking-widest mb-6">Current Payable</h2>
+                <div className="space-y-1 mb-8">
+                  <div className="text-4xl font-black">{fmt(Number(datas.pending_amount) || 0)}</div>
+                  <div className="text-xs text-slate-400 font-medium">Net amount payable to this vendor</div>
+                </div>
+                <button className="w-full py-4 bg-blue-600 hover:bg-blue-700 rounded-2xl font-bold text-sm transition-all shadow-lg shadow-blue-900/20">
+                  Record Payment
+                </button>
+              </SectionCard>
             </div>
-          </div>
+          )}
         </div>
+
+        {/* Modal: View Full Value */}
+        <Modal
+          show={!!viewValue}
+          onClose={() => setViewValue(null)}
+          title={viewValue?.label || "Field Detail"}
+          className="max-w-md"
+        >
+          <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+            <p className="text-sm font-bold text-slate-700 break-words leading-relaxed select-all">
+              {viewValue?.value}
+            </p>
+          </div>
+          <p className="mt-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">
+            Double click the text to select and copy
+          </p>
+        </Modal>
+
+        {/* Confirm Dialog */}
+        <ConfirmDialog
+          isOpen={showDeleteModal}
+          onClose={() => setShowDeleteModal(false)}
+          onConfirm={handleDelete}
+          title="Delete Supplier"
+          description={`This action cannot be undone. This will permanently delete ${name} and all associated data.`}
+          confirmText="Delete Partner"
+          loading={deleting}
+          type="danger"
+        />
       </div>
     </div>
   );
-};
+}
 
-export default SupplierDetail;

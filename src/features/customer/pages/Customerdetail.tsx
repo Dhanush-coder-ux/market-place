@@ -287,7 +287,7 @@ export default function CustomerDetail() {
           </div>
 
           {/* Quick Stats Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="flex flex-wrap gap-3">
             <StatCard 
               icon={DollarSign} 
               label="Total Revenue" 

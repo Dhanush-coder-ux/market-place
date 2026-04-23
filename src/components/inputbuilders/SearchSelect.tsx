@@ -21,6 +21,8 @@ export interface SearchSelectProps<T extends BaseOption> {
   // Display & Mode props
   multiple?: boolean;
   tags?: boolean;
+  label?: string;
+  required?: boolean;
   placeholder?: string;
   disabled?: boolean;
   allowClear?: boolean;
@@ -37,6 +39,8 @@ export function SearchSelect<T extends BaseOption>({
   options: staticOptions = [],
   labelKey,
   valueKey,
+  label,
+  required,
   multiple = false,
   tags = false,
   placeholder = "Search...",
@@ -46,6 +50,7 @@ export function SearchSelect<T extends BaseOption>({
   renderOption,
 }: SearchSelectProps<T>) {
   const [searchValue, setSearchValue] = useState("");
+  const id = React.useId();
 
   // Initialize smart hook
   const { options, loading, handleSearch } = useSearchSelect<T>(
@@ -93,35 +98,47 @@ export function SearchSelect<T extends BaseOption>({
   };
 
   return (
-    <Select
-      className={className}
-      mode={mode}
-      showSearch
-      allowClear={allowClear}
-      value={value}
-      placeholder={placeholder}
-      disabled={disabled}
-      options={formattedOptions}
-      onSearch={onSearch}
-      onChange={handleChange}
-      // If async, disable Antd's local filtering to let the API handle it
-      filterOption={
-        isAsync
-          ? false
-          : (input, option) =>
-            String(option?.label ?? "")
-              .toLowerCase()
-              .includes(input.toLowerCase())
-      }
-      notFoundContent={
-        loading ? (
-          <div className="flex justify-center items-center py-4 text-gray-400">
-            <Spin size="small" className="mr-2" /> Searching...
-          </div>
-        ) : (
-          <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="No results found" />
-        )
-      }
-    />
+    <div className="flex flex-col gap-1.5 w-full">
+      {label && (
+        <label
+          htmlFor={id}
+          className="text-xs font-semibold text-slate-600 ml-0.5"
+        >
+          {label}
+          {required && <span className="text-red-500 ml-1">*</span>}
+        </label>
+      )}
+      <Select
+        id={id}
+        className={className}
+        mode={mode}
+        showSearch
+        allowClear={allowClear}
+        value={value}
+        placeholder={placeholder}
+        disabled={disabled}
+        options={formattedOptions}
+        onSearch={onSearch}
+        onChange={handleChange}
+        // If async, disable Antd's local filtering to let the API handle it
+        filterOption={
+          isAsync
+            ? false
+            : (input, option) =>
+              String(option?.label ?? "")
+                .toLowerCase()
+                .includes(input.toLowerCase())
+        }
+        notFoundContent={
+          loading ? (
+            <div className="flex justify-center items-center py-4 text-gray-400">
+              <Spin size="small" className="mr-2" /> Searching...
+            </div>
+          ) : (
+            <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="No results found" />
+          )
+        }
+      />
+    </div>
   );
 }

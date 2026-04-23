@@ -1,13 +1,13 @@
 import { useState, useMemo } from 'react';
-import { 
-  Factory, Package, Banknote, 
-  Save, Settings, Trash2, Plus, 
+import {
+  Factory, Package, Banknote,
+  Save, Settings, Trash2, Plus,
   CheckCircle2, Smartphone, CreditCard, Landmark,
-  CalendarDays
+  CalendarDays, X, PackageOpen, Check
 } from 'lucide-react';
 
 // Adjust these imports to match your project structure
-import Input from '@/components/ui/Input'; 
+import Input from '@/components/ui/Input';
 import { GradientButton } from '@/components/ui/GradientButton';
 import { useApi } from '@/context/ApiContext';
 import { ENDPOINTS, SHOP_ID } from '@/services/endpoints';
@@ -28,6 +28,7 @@ interface FinishedProduct {
   reorder: number | "";
   unit: string;
   variant: string;
+  sku?: string;
   marginPercent: number | "";
   marginAmount: number | "";
   marginType: "percent" | "amount" | "sellingPrice";
@@ -38,17 +39,19 @@ interface FinishedProduct {
 
 type PaymentMethod = "Cash" | "UPI" | "Card" | "Bank";
 
+const LOW_STOCK_THRESHOLD = 5;
+
 export default function ProductionEntryPage() {
   const { postData, loading } = useApi();
   // --- State Management ---
-  
+
   // 1. Production Details
   const [details, setDetails] = useState({
-    date: '2025-03-14',
-    reference: 'PRD-2025-0089',
+    date: '2026-03-14',
+    reference: 'PRD-2026-0089',
     location: 'Workshop A',
     supervisor: 'Sarah Johnson',
-    batch: 'BATCH-2025-001',
+    batch: 'BATCH-2026-001',
     status: 'Completed',
     notes: '',
   });
@@ -71,6 +74,7 @@ export default function ProductionEntryPage() {
       reorder: 20,
       unit: 'Piece',
       variant: 'Lavender',
+      sku: 'SOAP-LAV-01',
       manufacturingDate: "",
       expiryDate: "",
       batchTracking: false,
@@ -86,22 +90,32 @@ export default function ProductionEntryPage() {
     other: 150.00,
   });
 
-  // 4. Order & Payment Details (New State)
+  // 4. Order & Payment Details
   const [charges, setCharges] = useState({ transport: '', other: '' });
   const [payment, setPayment] = useState({ method: 'Cash' as PaymentMethod, amountPaid: '' });
   const [costMethod, setCostMethod] = useState('By Unit');
 
+  // --- Dynamic Modal State ---
+  const [variantModal, setVariantModal] = useState<{ 
+    isOpen: boolean; 
+    baseProduct: string; 
+    targetRowIndex: number;
+    variants: any[];
+    baseData: any;
+  }>({
+    isOpen: false, baseProduct: "", targetRowIndex: -1, variants: [], baseData: null
+  });
+  const [selectedVariants, setSelectedVariants] = useState<Set<string>>(new Set());
+
   // --- Handlers ---
   const handleDetailChange = (field: string, value: any) => setDetails(prev => ({ ...prev, [field]: value }));
   const handleCostChange = (field: string, value: string) => setCosts(prev => ({ ...prev, [field]: Number(value) || 0 }));
-  const handleProductChange = (index: number, field: keyof FinishedProduct, value: any) => {
-    setProducts(products.map((p, i) => i === index ? { ...p, [field]: value } : p));
-  };
+  
   // Product Handlers
   const addProduct = () => {
     setProducts([...products, {
       id: `prod-${Date.now()}`, product: '', qty: 1, unitCost: 0, sellingPrice: 0, showAdvanced: true,
-      expiry: '', storage: '', grade: '', reorder: 0, unit: 'Piece', variant: '',
+      expiry: '', storage: '', grade: '', reorder: 0, unit: 'Piece', variant: '', sku: '',
       marginPercent: "", marginAmount: "", marginType: "percent",
       manufacturingDate: "",
       expiryDate: "",
@@ -117,6 +131,63 @@ export default function ProductionEntryPage() {
   const removeProduct = (id: string) => setProducts(products.filter(p => p.id !== id));
   const toggleAdvanced = (id: string) => updateProduct(id, 'showAdvanced', !products.find(p => p.id === id)?.showAdvanced);
 
+  // --- Modal Handlers ---
+  const toggleVariantSelection = (variantId: string) => {
+    const newSelection = new Set(selectedVariants);
+    if (newSelection.has(variantId)) {
+      newSelection.delete(variantId);
+    } else {
+      newSelection.add(variantId);
+    }
+    setSelectedVariants(newSelection);
+  };
+
+  const confirmVariants = () => {
+    if (selectedVariants.size === 0) {
+      setVariantModal({ isOpen: false, baseProduct: "", targetRowIndex: -1, variants: [], baseData: null });
+      return;
+    }
+
+    const variantsToAdd = variantModal.variants.filter(v => selectedVariants.has(v.id));
+    const updatedProducts = [...products];
+    const baseOpt = variantModal.baseData;
+
+    // Update origin row
+    const firstVariant = variantsToAdd[0];
+    updatedProducts[variantModal.targetRowIndex] = {
+      ...updatedProducts[variantModal.targetRowIndex],
+      product: variantModal.baseProduct,
+      unitCost: baseOpt.buy_price ?? baseOpt.costPrice ?? 0,
+      sellingPrice: baseOpt.sell_price ?? baseOpt.sellingPrice ?? 0,
+      unit: baseOpt.unit ?? "Piece",
+      variant: firstVariant.name,
+      sku: firstVariant.sku
+    };
+
+    // Append new rows for multiple selections
+    for (let i = 1; i < variantsToAdd.length; i++) {
+      const v = variantsToAdd[i];
+      updatedProducts.push({
+        id: `prod-${Date.now()}-${i}`,
+        product: variantModal.baseProduct,
+        qty: 1,
+        unitCost: baseOpt.buy_price ?? baseOpt.costPrice ?? 0,
+        sellingPrice: baseOpt.sell_price ?? baseOpt.sellingPrice ?? 0,
+        showAdvanced: false,
+        expiry: '', storage: '', grade: '', reorder: 0,
+        unit: baseOpt.unit ?? "Piece",
+        marginPercent: "", marginAmount: "", marginType: "percent",
+        manufacturingDate: "", expiryDate: "", batchTracking: false,
+        sku: v.sku,
+        variant: v.name
+      });
+    }
+
+    setProducts(updatedProducts);
+    setVariantModal({ isOpen: false, baseProduct: "", targetRowIndex: -1, variants: [], baseData: null });
+    setSelectedVariants(new Set());
+  };
+
   // --- Calculations ---
   const summary = useMemo(() => {
     const totalProducts = products.length;
@@ -127,15 +198,14 @@ export default function ProductionEntryPage() {
     return { totalProducts, totalUnits, productValue, totalProductionCost };
   }, [products, costs]);
 
-  // Stats calculation for the Order Summary
   const stats = useMemo(() => {
     const subtotal = products.reduce((sum, p) => sum + ((Number(p.qty) || 0) * (Number(p.unitCost) || 0)), 0);
     const totalQty = products.reduce((sum, p) => sum + (Number(p.qty) || 0), 0);
     const transportAmount = Number(charges.transport) || 0;
     const otherAmount = Number(charges.other) || 0;
-    
+
     const grandTotal = subtotal + transportAmount + otherAmount;
-    
+
     const paid = Number(payment.amountPaid) || 0;
     const outstanding = grandTotal - paid;
 
@@ -146,22 +216,105 @@ export default function ProductionEntryPage() {
   const locationOptions = [{ value: 'Workshop A', label: 'Workshop A' }, { value: 'Factory Floor 1', label: 'Factory Floor 1' }];
   const supervisorOptions = [{ value: 'Sarah Johnson', label: 'Sarah Johnson' }, { value: 'Mike Wilson', label: 'Mike Wilson' }];
   const statusOptions = [{ value: 'In Progress', label: 'In Progress' }, { value: 'Completed', label: 'Completed' }];
-  const productOptions = [{ value: 'Handmade Soap Bar', label: 'Handmade Soap Bar' }, { value: 'Organic Face Cream', label: 'Organic Face Cream' }];
   const storageOptions = [{ value: 'Storage Room A', label: 'Storage Room A' }, { value: 'Warehouse A', label: 'Warehouse A' }];
   const gradeOptions = [{ value: 'Grade A', label: 'Grade A' }, { value: 'Grade B', label: 'Grade B' }];
   const unitOptions = [{ value: 'Piece', label: 'Piece' }, { value: 'Box', label: 'Box' }, { value: 'Kg', label: 'Kg' }];
 
   return (
-    <div className="flex min-h-screen font-sans text-slate-800 antialiased">
-      <main className="flex-1 mx-auto">
-        
+    <div className="flex min-h-screen font-sans text-slate-800 bg-[#FAFAFC] antialiased">
+      
+      {/* --- DYNAMIC VARIANT SELECTION MODAL --- */}
+      {variantModal.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col border border-slate-200/60 animate-in fade-in zoom-in-95 duration-200">
+            <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center bg-white">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-[#E8EFFF] text-[#4F7CFF] rounded-lg shadow-sm">
+                  <PackageOpen size={18} />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-slate-800 text-lg">Select Variants</h3>
+                  <p className="text-sm text-slate-500">Available variations for <span className="font-medium text-slate-700">{variantModal.baseProduct}</span></p>
+                </div>
+              </div>
+              <button onClick={() => setVariantModal({ isOpen: false, baseProduct: "", targetRowIndex: -1, variants: [], baseData: null })} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-lg transition-colors">
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="p-6 max-h-[60vh] overflow-y-auto bg-slate-50/50">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {variantModal.variants.map((variant) => {
+                  const stockNum = Number(variant.stock) || 0;
+                  const isLowStock = stockNum <= LOW_STOCK_THRESHOLD && stockNum > 0;
+                  const isOutOfStock = stockNum <= 0;
+                  const isSelected = selectedVariants.has(variant.id);
+
+                  return (
+                    <div
+                      key={variant.id}
+                      onClick={() => !isOutOfStock && toggleVariantSelection(variant.id)}
+                      className={`relative p-4 rounded-xl border transition-all duration-200 flex flex-col gap-2
+                        ${isOutOfStock
+                          ? 'border-slate-200 bg-slate-100/50 opacity-60 cursor-not-allowed'
+                          : isSelected
+                            ? 'border-blue-500 bg-[#E8EFFF]/50 cursor-pointer shadow-[0_2px_8px_rgba(59,130,246,0.12)]'
+                            : 'border-slate-200 hover:border-slate-300 hover:shadow-sm cursor-pointer bg-white'
+                        }
+                      `}
+                    >
+                      {!isOutOfStock && (
+                        <div className={`absolute top-4 right-4 h-5 w-5 rounded-full border flex items-center justify-center transition-colors ${isSelected ? 'bg-blue-500 border-blue-500 text-white' : 'border-slate-300'}`}>
+                          {isSelected && <Check size={12} strokeWidth={3} />}
+                        </div>
+                      )}
+
+                      <div>
+                        <h4 className="font-semibold text-slate-800 pr-6">{variant.name}</h4>
+                        <p className="text-xs text-slate-500 mt-1 font-mono">SKU: {variant.sku}</p>
+                      </div>
+                      
+                      <div className="mt-auto pt-3">
+                        <span className={`inline-flex px-2 py-1 rounded-md text-[11px] font-medium tracking-wide ${
+                            isOutOfStock ? 'bg-slate-200 text-slate-600' : 
+                            isLowStock ? 'bg-orange-100 text-orange-700' : 
+                            'bg-emerald-50 text-emerald-700 border border-emerald-100'
+                          }`}>
+                          {isOutOfStock ? 'Out of Stock' : isLowStock ? `Low Stock (${stockNum})` : `In Stock (${stockNum})`}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="p-4 border-t border-slate-100 bg-white flex justify-between items-center">
+              <span className="text-sm text-slate-500">
+                <span className="font-semibold text-slate-700">{selectedVariants.size}</span> variant(s) selected
+              </span>
+              <div className="flex gap-3">
+                <GradientButton variant="outline" onClick={() => setVariantModal({ isOpen: false, baseProduct: "", targetRowIndex: -1, variants: [], baseData: null })}>
+                  Cancel
+                </GradientButton>
+                <GradientButton variant="primary" onClick={confirmVariants} disabled={selectedVariants.size === 0}>
+                  Confirm Selection
+                </GradientButton>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* --- END MODAL --- */}
+
+      <main className="flex-1 mx-auto p-6">
 
         {/* Main Grid */}
         <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-[1fr_400px]">
-          
+
           {/* Left Column */}
           <div className="flex flex-col gap-6">
-            
+
             {/* 1. Production Details */}
             <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
               <div className="mb-5 flex items-center gap-3 border-b border-slate-200 pb-4">
@@ -173,19 +326,19 @@ export default function ProductionEntryPage() {
                   <p className="text-[13px] text-slate-500">Basic production information</p>
                 </div>
               </div>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <Input label="Production Date" required type="date" value={details.date} onChange={(e) => handleDetailChange('date', e.target.value)} />
-                <Input label="Reference Number" value={details.reference} disabled onChange={() => {}} />
-                <SearchSelect label="Location" options={locationOptions} value={details.location} onChange={(val) => handleDetailChange('location', String(val))} />
-                <SearchSelect label="Supervisor" options={supervisorOptions} value={details.supervisor} onChange={(val) => handleDetailChange('supervisor', String(val))} />
+                <Input label="Reference Number" value={details.reference} disabled onChange={() => { }} />
+                <SearchSelect labelKey="label" valueKey="value" label="Location" options={locationOptions} value={details.location} onChange={(val) => handleDetailChange('location', String(val))} />
+                <SearchSelect labelKey="label" valueKey="value" label="Supervisor" options={supervisorOptions} value={details.supervisor} onChange={(val) => handleDetailChange('supervisor', String(val))} />
                 <Input label="Batch Number" required value={details.batch} onChange={(e) => handleDetailChange('batch', e.target.value)} />
-                <SearchSelect label="Production Status" options={statusOptions} value={details.status} onChange={(val) => handleDetailChange('status', String(val))} />
+                <SearchSelect labelKey="label" valueKey="value" label="Production Status" options={statusOptions} value={details.status} onChange={(val) => handleDetailChange('status', String(val))} />
                 <div className="md:col-span-2">
                   <label className="mb-1.5 block text-[11px] font-bold uppercase tracking-widest text-slate-500 ml-1">Production Notes</label>
-                  <textarea 
-                    className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none" 
-                    rows={3} 
+                  <textarea
+                    className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none"
+                    rows={3}
                     value={details.notes}
                     onChange={(e) => handleDetailChange('notes', e.target.value)}
                     placeholder="Optional notes about this production batch..."
@@ -194,7 +347,7 @@ export default function ProductionEntryPage() {
               </div>
             </div>
 
- 
+
 
             {/* 3. Production Costs */}
             <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -216,9 +369,9 @@ export default function ProductionEntryPage() {
               </div>
             </div>
 
-            {/* 4. Order Summary & Payment Details (Newly Inserted Section) */}
+            {/* 4. Order Summary & Payment Details */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-              
+
               {/* LEFT SIDE: Order Summary */}
               <div className="bg-white rounded-2xl shadow-sm border border-slate-200/70 overflow-hidden flex flex-col h-full">
                 <div className="p-5 border-b border-slate-100 bg-slate-50/50 flex items-center gap-2">
@@ -257,9 +410,9 @@ export default function ProductionEntryPage() {
 
                 </div>
 
-                <div className="p-6 bg-white text-black mt-auto">
-                  <span className="block text-black-400 text-xs font-bold uppercase tracking-widest mb-1">Total Purchase Cost</span>
-                  <span className="text-4xl font-bold tracking-tight">
+                <div className="p-6 bg-slate-50 text-black mt-auto border-t border-slate-100">
+                  <span className="block text-slate-500 text-xs font-bold uppercase tracking-widest mb-1">Total Purchase Cost</span>
+                  <span className="text-4xl font-bold tracking-tight text-slate-900">
                     ₹{stats.grandTotal.toLocaleString()}
                   </span>
                 </div>
@@ -283,11 +436,10 @@ export default function ProductionEntryPage() {
                       <button
                         key={m.id}
                         onClick={() => setPayment({ ...payment, method: m.id as PaymentMethod })}
-                        className={`flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all duration-200 ${
-                          payment.method === m.id
+                        className={`flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all duration-200 ${payment.method === m.id
                             ? "border-blue-500 bg-blue-50 text-blue-700 shadow-sm"
                             : "border-slate-100 bg-white text-slate-500 hover:border-slate-300 hover:bg-slate-50"
-                        }`}
+                          }`}
                       >
                         <div className="mb-1.5">{m.icon}</div>
                         <span className="text-xs font-bold">{m.id}</span>
@@ -320,7 +472,7 @@ export default function ProductionEntryPage() {
               </div>
             </div>
 
-                       {/* 2. Finished Products */}
+            {/* 2. Finished Products */}
             <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
               <div className="mb-5 flex items-center justify-between border-b border-slate-200 pb-4">
                 <div className="flex items-center gap-3">
@@ -336,7 +488,7 @@ export default function ProductionEntryPage() {
               </div>
 
               {/* Distributor Cost Split Bar */}
-              <div className="px-6 py-4 bg-slate-50 border-b border-slate-200 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+              <div className="px-6 py-4 bg-slate-50 rounded-xl mb-6 border border-slate-200 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
                 <div className="flex items-center gap-4">
                   <span className="text-xs font-bold uppercase tracking-widest text-slate-500">
                     Distributor Cost Split
@@ -346,11 +498,10 @@ export default function ProductionEntryPage() {
                       <button
                         key={method}
                         onClick={() => setCostMethod(method)}
-                        className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all duration-200 ${
-                          costMethod === method 
-                            ? "bg-blue-500 text-white shadow-sm" 
+                        className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all duration-200 ${costMethod === method
+                            ? "bg-blue-500 text-white shadow-sm"
                             : "text-slate-400 hover:text-slate-700 hover:bg-slate-50"
-                        }`}
+                          }`}
                       >
                         {method}
                       </button>
@@ -415,190 +566,222 @@ export default function ProductionEntryPage() {
                 const valSellingPrice = isSPActive ? product.sellingPrice : (displaySellingPrice !== "" ? Number(displaySellingPrice).toFixed(2) : "");
 
                 return (
-                <div key={product.id} className="mb-4 rounded-xl border border-slate-200 bg-white p-5 hover:shadow-md transition-shadow">
-                  <div className="mb-4 flex items-center justify-between">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#E8EFFF] font-bold text-[#4F7CFF]">{index + 1}</div>
-                    <div className="flex gap-2">
-                      <button onClick={() => toggleAdvanced(product.id)} className={`flex h-9 w-9 items-center justify-center rounded-lg border transition-colors ${product.showAdvanced ? 'bg-[#E8EFFF] border-[#4F7CFF] text-[#4F7CFF]' : 'border-slate-200 text-slate-400 hover:bg-slate-50'}`}>
-                        <Settings size={16} />
-                      </button>
-                      <button onClick={() => removeProduct(product.id)} className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-400 transition-colors hover:border-red-500 hover:bg-red-50 hover:text-red-500">
-                        <Trash2 size={16} />
-                      </button>
+                  <div key={product.id} className="mb-4 rounded-xl border border-slate-200 bg-white p-5 hover:shadow-md transition-shadow">
+                    <div className="mb-4 flex items-center justify-between">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#E8EFFF] font-bold text-[#4F7CFF]">{index + 1}</div>
+                      <div className="flex gap-2">
+                        <button onClick={() => toggleAdvanced(product.id)} className={`flex h-9 w-9 items-center justify-center rounded-lg border transition-colors ${product.showAdvanced ? 'bg-[#E8EFFF] border-[#4F7CFF] text-[#4F7CFF]' : 'border-slate-200 text-slate-400 hover:bg-slate-50'}`}>
+                          <Settings size={16} />
+                        </button>
+                        <button onClick={() => removeProduct(product.id)} className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-400 transition-colors hover:border-red-500 hover:bg-red-50 hover:text-red-500">
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
                     </div>
-                  </div>
 
-                  <div className="grid grid-cols-2 lg:grid-cols-6 gap-4 items-start">
+                    <div className="grid grid-cols-2 lg:grid-cols-6 gap-4 items-start">
                       <div className="lg:col-span-2">
                         <SearchSelect
+                          label="Product"
+                          required
                           labelKey="name"
                           valueKey="id"
                           fetchOptions={async (q) => await inventoryApi.searchInventories(q)}
                           value={product.product}
                           onChange={(val, opt: any) => {
-                            if (!opt) {
-                              updateProduct(product.id, 'product', String(val));
+                            if (opt) {
+                              const hasVariants = opt.has_variants || (opt.datas && opt.datas.has_variants);
+                              const combinations = opt.combinations || (opt.datas && opt.datas.combinations) || [];
+                              
+                              if (hasVariants && combinations.length > 0) {
+                                const mappedVariants = combinations.map((c: any) => ({
+                                  id: c.id,
+                                  name: Object.values(c.attributes || {}).join(" - "),
+                                  sku: c.barcode || opt.barcode,
+                                  stock: c.stock || opt.stocks || 0,
+                                }));
+                                
+                                setVariantModal({
+                                  isOpen: true,
+                                  baseProduct: opt.name || String(val),
+                                  targetRowIndex: index,
+                                  variants: mappedVariants,
+                                  baseData: opt.datas || opt
+                                });
+                                setSelectedVariants(new Set());
+                              } else {
+                                const dataNode = opt.datas || opt;
+                                const fields: Partial<FinishedProduct> = {
+                                  product: dataNode.name || String(val),
+                                  unitCost: dataNode.buy_price ?? dataNode.costPrice ?? 0,
+                                  sellingPrice: dataNode.sell_price ?? dataNode.sellingPrice ?? 0,
+                                  unit: dataNode.unit ?? "Piece",
+                                  sku: dataNode.barcode ?? dataNode.sku ?? "",
+                                  variant: dataNode.variant ?? ""
+                                };
+                                updateProductFields(product.id, fields);
+                              }
                             } else {
-                              const fields: Partial<FinishedProduct> = {
-                                product: opt.name || opt.label || String(val),
-                                unitCost: opt.buy_price ?? opt.costPrice ?? 0,
-                                sellingPrice: opt.sell_price ?? opt.sellingPrice ?? 0,
-                                unit: opt.unit ?? "Piece",
-                              };
-                              updateProductFields(product.id, fields);
+                              updateProduct(product.id, 'product', String(val));
                             }
                           }}
                           placeholder="Select Product..."
                           className="w-full !bg-white !shadow-sm !border-slate-200"
                         />
+                        {/* Variant Details Display */}
+                        {product.variant && (
+                          <div className="mt-2 text-[11px] font-medium text-slate-500 flex gap-2 items-center">
+                            <span className="bg-slate-100 px-2 py-0.5 rounded text-slate-700 border border-slate-200">{product.variant}</span>
+                            <span className="text-slate-400">SKU: {product.sku}</span>
+                          </div>
+                        )}
                       </div>
-                    
-                    <Input label="Quantity *" type="number" value={product.qty as any} onChange={(e) => updateProduct(product.id, 'qty', e.target.value ? Number(e.target.value) : "")} />
-                    
-                    <Input label="Base Cost *" type="number" value={product.unitCost as any} onChange={(e) => updateProduct(product.id, 'unitCost', e.target.value ? Number(e.target.value) : "")} />
-                    
-                    {/* Allocation Read-only */}
-                    <div className="flex flex-col justify-center text-xs text-slate-500 bg-slate-50/80 px-3 py-[9px] rounded-lg border border-slate-100 h-[42px] mt-[1.4rem]">
-                      {finalCost > 0 ? (
-                        <>
-                          <div className="flex justify-between items-center mb-1">
-                            <span className="text-[10px] uppercase tracking-wider text-slate-400">Alloc</span> 
-                            <span className="font-medium text-slate-700">₹{allocated.toFixed(2)}</span>
-                          </div>
-                          <div className="flex justify-between items-center pt-1 border-t border-slate-200/80">
-                            <span className="text-[10px] uppercase tracking-wider text-slate-400">Final</span> 
-                            <span className="font-bold text-blue-600">₹{finalCost.toFixed(2)}</span>
-                          </div>
-                        </>
-                      ) : (
-                        <div className="text-center text-slate-400 font-medium py-1">-</div>
-                      )}
-                    </div>
 
-                    <Input label="Total" disabled value={`₹${rowTotal.toLocaleString()}`} onChange={() => {}} className="font-bold text-slate-800" />
-                  </div>
+                      <Input label="Quantity *" type="number" value={product.qty as any} onChange={(e) => updateProduct(product.id, 'qty', e.target.value ? Number(e.target.value) : "")} />
 
-                  {/* Margin Section */}
-                  <div className="mt-4 pt-4 border-t border-slate-100 grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50/50 p-4 rounded-xl items-end relative overflow-hidden">
-                    <div className="absolute top-0 left-0 w-1 h-full bg-indigo-400"></div>
-                    <div>
-                      <label className="mb-1.5 block text-[11px] font-bold uppercase tracking-widest text-slate-500 ml-1">Margin (% and ₹)</label>
-                      <div className="flex gap-2">
-                        <Input 
-                          type="number"
-                          placeholder="%" 
-                          className="!text-center !px-1"
-                          value={product.marginType === "percent" ? product.marginPercent as any : (product.marginPercent !== "" ? product.marginPercent : "")}
-                          onChange={(e) => updateProductFields(product.id, { marginType: "percent", marginPercent: e.target.value ? Number(e.target.value) : "" })}
-                        />
-                        <Input 
-                          type="number"
-                          placeholder="₹" 
-                          className="!text-center !px-1"
-                          value={valMarginAmount as any}
-                          onChange={(e) => updateProductFields(product.id, { marginType: "amount", marginAmount: e.target.value ? Number(e.target.value) : "" })}
-                        />
+                      <Input label="Base Cost *" type="number" value={product.unitCost as any} onChange={(e) => updateProduct(product.id, 'unitCost', e.target.value ? Number(e.target.value) : "")} />
+
+                      {/* Allocation Read-only */}
+                      <div className="flex flex-col justify-center text-xs text-slate-500 bg-slate-50/80 px-3 py-[9px] rounded-lg border border-slate-100 h-[42px] mt-[1.4rem]">
+                        {finalCost > 0 ? (
+                          <>
+                            <div className="flex justify-between items-center mb-1">
+                              <span className="text-[10px] uppercase tracking-wider text-slate-400">Alloc</span>
+                              <span className="font-medium text-slate-700">₹{allocated.toFixed(2)}</span>
+                            </div>
+                            <div className="flex justify-between items-center pt-1 border-t border-slate-200/80">
+                              <span className="text-[10px] uppercase tracking-wider text-slate-400">Final</span>
+                              <span className="font-bold text-blue-600">₹{finalCost.toFixed(2)}</span>
+                            </div>
+                          </>
+                        ) : (
+                          <div className="text-center text-slate-400 font-medium py-1">-</div>
+                        )}
                       </div>
+
+                      <Input label="Total" disabled value={`₹${rowTotal.toLocaleString()}`} onChange={() => { }} className="font-bold text-slate-800" />
                     </div>
-                    
-                    <div className="md:col-span-2">
-                      <Input 
-                        label="Final Selling Price (₹)"
-                        type="number" 
-                        placeholder="0.00" 
-                        className="!text-emerald-700 !bg-emerald-50/50 !border-emerald-200/60 font-semibold focus:!ring-emerald-100 focus:!border-emerald-400"
-                        value={valSellingPrice as any} 
-                        onChange={(e) => {
-                          updateProductFields(product.id, { marginType: "sellingPrice", sellingPrice: e.target.value ? Number(e.target.value) : "" });
-                        }} 
-                      />
-                    </div>
-                  </div>
 
-                   <div className="px-6 py-3 border-t border-slate-100/80 bg-white flex items-center gap-4 flex-wrap">
-                          <button
-                            onClick={() => updateProductFields(product.id, { batchTracking: !product.batchTracking })}
-                            className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all duration-300 border-2 ${
-                              product.batchTracking
-                                ? 'bg-gradient-to-r from-blue-500 to-blue-500 text-white border-transparent shadow-md shadow-blue-200'
-                                : 'bg-white text-slate-500 border-slate-200 hover:border-blue-300 hover:text-blue-600 hover:bg-blue-50'
-                            }`}
-                          >
-                            <CalendarDays size={14} />
-                            Batch Tracking
-                            {/* Toggle indicator */}
-                            <span className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors duration-300 ${
-                              product.batchTracking ? 'bg-white/30' : 'bg-slate-200'
-                            }`}>
-                              <span className={`inline-block h-3.5 w-3.5 rounded-full transition-all duration-300 ${
-                                product.batchTracking
-                                  ? 'translate-x-[18px] bg-white shadow-sm'
-                                  : 'translate-x-[3px] bg-slate-400'
-                              }`} />
-                            </span>
-                          </button>
-
-                          {/* Manufacturing & Expiry Date Fields */}
-                          <div
-                            className={`flex items-center gap-4 overflow-hidden transition-all duration-400 ease-in-out ${
-                              product.batchTracking
-                                ? 'max-w-[600px] opacity-100 translate-x-0'
-                                : 'max-w-0 opacity-0 -translate-x-4 pointer-events-none'
-                            }`}
-                          >
-                            <div className="flex items-center gap-2 min-w-[200px]">
-
-                              <Input
-                                label="Manufacturing Date"
-                                type="date"
-                                value={product.manufacturingDate}
-                                onChange={(e) => handleProductChange(index, "manufacturingDate", e.target.value)}
-                                className="!bg-violet-50/50 !border-violet-200/60 focus:!ring-violet-100 focus:!border-violet-400"
-                              />
-                            </div>
-                            <div className="flex items-center gap-2 min-w-[200px]">
-                              <Input
-                                label="Expiry Date"
-                                type="date"
-                                value={product.expiryDate}
-                                onChange={(e) => handleProductChange(index, "expiryDate", e.target.value)}
-                                className="!bg-amber-50/50 !border-amber-200/60 focus:!ring-amber-100 focus:!border-amber-400"
-                              />
-                            </div>
-                          </div>
+                    {/* Margin Section */}
+                    <div className="mt-4 pt-4 border-t border-slate-100 grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50/50 p-4 rounded-xl items-end relative overflow-hidden">
+                      <div className="absolute top-0 left-0 w-1 h-full bg-indigo-400"></div>
+                      <div>
+                        <label className="mb-1.5 block text-[11px] font-bold uppercase tracking-widest text-slate-500 ml-1">Margin (% and ₹)</label>
+                        <div className="flex gap-2">
+                          <Input
+                            type="number"
+                            placeholder="%"
+                            className="!text-center !px-1"
+                            value={product.marginType === "percent" ? product.marginPercent as any : (product.marginPercent !== "" ? product.marginPercent : "")}
+                            onChange={(e) => updateProductFields(product.id, { marginType: "percent", marginPercent: e.target.value ? Number(e.target.value) : "" })}
+                          />
+                          <Input
+                            type="number"
+                            placeholder="₹"
+                            className="!text-center !px-1"
+                            value={valMarginAmount as any}
+                            onChange={(e) => updateProductFields(product.id, { marginType: "amount", marginAmount: e.target.value ? Number(e.target.value) : "" })}
+                          />
                         </div>
+                      </div>
 
-                  {product.showAdvanced && (
-                    <div className="mt-4 pt-4 border-t border-slate-100 animate-in slide-in-from-top-2">
-                      <h4 className="text-xs font-bold text-slate-800 mb-3 flex items-center gap-2"><Settings size={14}/> Advanced Settings</h4>
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                        <Input label="Expiry Date" type="date" value={product.expiry} onChange={(e) => updateProduct(product.id, 'expiry', e.target.value)} />
-                        <SearchSelect label="Storage Location" options={storageOptions} value={product.storage} onChange={(val) => updateProduct(product.id, 'storage', String(val))} />
-                        <SearchSelect label="Quality Grade" options={gradeOptions} value={product.grade} onChange={(val) => updateProduct(product.id, 'grade', String(val))} />
-                        <Input label="Reorder Point" type="number" value={product.reorder} onChange={(e) => updateProduct(product.id, 'reorder', e.target.value)} />
-                        <SearchSelect 
-                          label="Unit" 
-                          options={unitOptions} 
-                          value={product.unit} 
-                          onChange={(val) => updateProduct(product.id, 'unit', String(val))} 
+                      <div className="md:col-span-2">
+                        <Input
+                          label="Final Selling Price (₹)"
+                          type="number"
+                          placeholder="0.00"
+                          className="!text-emerald-700 !bg-emerald-50/50 !border-emerald-200/60 font-semibold focus:!ring-emerald-100 focus:!border-emerald-400"
+                          value={valSellingPrice as any}
+                          onChange={(e) => {
+                            updateProductFields(product.id, { marginType: "sellingPrice", sellingPrice: e.target.value ? Number(e.target.value) : "" });
+                          }}
                         />
-                        <Input label="Color/Variant" placeholder="e.g. Lavender" value={product.variant} onChange={(e) => updateProduct(product.id, 'variant', e.target.value)} />
                       </div>
                     </div>
-                  )}
-                </div>
-              )})}
+
+                    <div className="px-6 py-3 border-t border-slate-100/80 bg-white flex items-center gap-4 flex-wrap mt-4">
+                      <button
+                        onClick={() => updateProductFields(product.id, { batchTracking: !product.batchTracking })}
+                        className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all duration-300 border-2 ${product.batchTracking
+                            ? 'bg-gradient-to-r from-blue-500 to-blue-500 text-white border-transparent shadow-md shadow-blue-200'
+                            : 'bg-white text-slate-500 border-slate-200 hover:border-blue-300 hover:text-blue-600 hover:bg-blue-50'
+                          }`}
+                      >
+                        <CalendarDays size={14} />
+                        Batch Tracking
+                        {/* Toggle indicator */}
+                        <span className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors duration-300 ${product.batchTracking ? 'bg-white/30' : 'bg-slate-200'
+                          }`}>
+                          <span className={`inline-block h-3.5 w-3.5 rounded-full transition-all duration-300 ${product.batchTracking
+                              ? 'translate-x-[18px] bg-white shadow-sm'
+                              : 'translate-x-[3px] bg-slate-400'
+                            }`} />
+                        </span>
+                      </button>
+
+                      {/* Manufacturing & Expiry Date Fields */}
+                      <div
+                        className={`flex items-center gap-4 overflow-hidden transition-all duration-400 ease-in-out ${product.batchTracking
+                            ? 'max-w-[600px] opacity-100 translate-x-0'
+                            : 'max-w-0 opacity-0 -translate-x-4 pointer-events-none'
+                          }`}
+                      >
+                        <div className="flex items-center gap-2 min-w-[200px]">
+
+                          <Input
+                            label="Manufacturing Date"
+                            type="date"
+                            value={product.manufacturingDate}
+                            onChange={(e) => updateProduct(product.id, "manufacturingDate", e.target.value)}
+                            className="!bg-violet-50/50 !border-violet-200/60 focus:!ring-violet-100 focus:!border-violet-400"
+                          />
+                        </div>
+                        <div className="flex items-center gap-2 min-w-[200px]">
+                          <Input
+                            label="Expiry Date"
+                            type="date"
+                            value={product.expiryDate}
+                            onChange={(e) => updateProduct(product.id, "expiryDate", e.target.value)}
+                            className="!bg-amber-50/50 !border-amber-200/60 focus:!ring-amber-100 focus:!border-amber-400"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {product.showAdvanced && (
+                      <div className="mt-4 pt-4 border-t border-slate-100 animate-in slide-in-from-top-2">
+                        <h4 className="text-xs font-bold text-slate-800 mb-3 flex items-center gap-2"><Settings size={14} /> Advanced Settings</h4>
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                          <SearchSelect labelKey="label" valueKey="value" label="Storage Location" options={storageOptions} value={product.storage} onChange={(val) => updateProduct(product.id, 'storage', String(val))} />
+                          <SearchSelect labelKey="label" valueKey="value" label="Quality Grade" options={gradeOptions} value={product.grade} onChange={(val) => updateProduct(product.id, 'grade', String(val))} />
+                          <Input label="Reorder Point" type="number" value={product.reorder} onChange={(e) => updateProduct(product.id, 'reorder', e.target.value)} />
+                          <SearchSelect
+                            labelKey="label"
+                            valueKey="value"
+                            label="Unit"
+                            options={unitOptions}
+                            value={product.unit}
+                            onChange={(val) => updateProduct(product.id, 'unit', String(val))}
+                          />
+                          <Input label="Color/Variant" placeholder="e.g. Lavender" value={product.variant} onChange={(e) => updateProduct(product.id, 'variant', e.target.value)} />
+                          <Input label="SKU / Barcode" placeholder="PRD-001" value={product.sku || ""} onChange={(e) => updateProduct(product.id, 'sku', e.target.value)} />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
             </div>
 
           </div>
 
           {/* Right Column - Summary Sidebar */}
           <div className="sticky top-6 flex flex-col gap-6">
-            
+
             {/* Quick Stats Box */}
             <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
               <h3 className="mb-5 border-b border-slate-200 pb-4 text-lg font-bold text-slate-800">Production Summary</h3>
-              
+
               <div className="mb-6 grid grid-cols-2 gap-3">
                 <div className="rounded-xl bg-slate-50 p-4 text-center">
                   <div className="mb-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-500">Products</div>
@@ -635,7 +818,7 @@ export default function ProductionEntryPage() {
                   <span className="text-[13px] font-medium text-slate-500">Other Costs</span>
                   <span className="tabular-nums text-sm font-bold text-slate-800">₹{costs.other.toLocaleString()}</span>
                 </div>
-                
+
                 <div className="flex items-center justify-between pt-3 border-t-2 border-slate-200">
                   <span className="text-[15px] font-bold text-slate-800">Total Prod Cost</span>
                   <span className="tabular-nums text-2xl font-black text-[#4F7CFF]">₹{summary.totalProductionCost.toLocaleString()}</span>

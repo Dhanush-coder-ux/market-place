@@ -110,7 +110,7 @@ export default function Employee() {
   return (
     <div className="space-y-6">
       {/* Stats Section */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="flex flex-wrap gap-3">
         <StatCard 
           icon={Users} 
           label="Total Employees" 

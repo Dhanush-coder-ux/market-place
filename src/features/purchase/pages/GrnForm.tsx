@@ -9,10 +9,10 @@ import {
   X,
   PackageOpen,
   Check,
-  CalendarDays
+  CalendarDays,
+  ChevronUp
 } from "lucide-react";
 
-// Adjust these imports to match your folder structure
 import Input from "@/components/ui/Input";
 import { GradientButton } from "@/components/ui/GradientButton";
 import { useApi } from "@/context/ApiContext";
@@ -30,15 +30,12 @@ export interface ProductItem {
   quantity: number | "";
   costPrice: number | "";
   sellingPrice: number | "";
-  // Advanced GRN fields (hidden behind settings toggle)
   storageLoc: string;
   batchNum: string;
   remarks: string;
-  // Batch tracking fields
   manufacturingDate: string;
   expiryDate: string;
   batchTracking: boolean;
-  // Variant additions
   variant?: string;
   sku?: string;
 }
@@ -55,38 +52,11 @@ interface GRNFormProps {
   onCancel?: () => void;
 }
 
-// --- Mock Variant Database ---
-const productVariantDB: Record<string, { id: string; name: string; sku: string; stock: number }[]> = {
-  "Wireless Headphones": [
-    { id: "wh-1", name: "Matte Black", sku: "WH-BLK-01", stock: 45 },
-    { id: "wh-2", name: "Pearl White", sku: "WH-WHT-01", stock: 2 }, // Low stock
-  ],
-  "Mechanical Keyboard": [
-    { id: "mk-1", name: "Tactile Blue Switch", sku: "MK-BLU-01", stock: 8 },
-    { id: "mk-2", name: "Linear Red Switch", sku: "MK-RED-01", stock: 0 }, // Out of stock
-  ],
-  "USB-C Hub": [
-    { id: "hub-1", name: "4-Port Basic", sku: "HUB-4-BSC", stock: 150 },
-    { id: "hub-2", name: "8-Port Pro", sku: "HUB-8-PRO", stock: 5 }, // Low stock
-  ]
-};
-
 const LOW_STOCK_THRESHOLD = 5;
-
-const supplierOptions = [
-  { value: "sup-1", label: "Global Tech" },
-  { value: "sup-2", label: "Mainstream Inc" },
-  { value: "sup-3", label: "Apex Wholesale" },
-];
-
-const productOptions = [
-  { value: "Wireless Headphones", label: "Wireless Headphones" },
-  { value: "Mechanical Keyboard", label: "Mechanical Keyboard" },
-  { value: "USB-C Hub", label: "USB-C Hub" }
-];
 
 const GRNForm: React.FC<GRNFormProps> = ({ onSubmit, onCancel }) => {
   const { postData, loading } = useApi();
+  
   // --- State Management ---
   const [grnDetails, setGrnDetails] = useState<GRNFormData>({
     poReference: "",
@@ -115,9 +85,15 @@ const GRNForm: React.FC<GRNFormProps> = ({ onSubmit, onCancel }) => {
 
   const [expandedProductIndex, setExpandedProductIndex] = useState<number | null>(null);
 
-  // --- Modal State ---
-  const [variantModal, setVariantModal] = useState<{ isOpen: boolean; baseProduct: string; targetRowIndex: number }>({
-    isOpen: false, baseProduct: "", targetRowIndex: -1
+  // --- Dynamic Modal State ---
+  const [variantModal, setVariantModal] = useState<{ 
+    isOpen: boolean; 
+    baseProduct: string; 
+    targetRowIndex: number;
+    variants: any[];
+    baseData: any;
+  }>({
+    isOpen: false, baseProduct: "", targetRowIndex: -1, variants: [], baseData: null
   });
   const [selectedVariants, setSelectedVariants] = useState<Set<string>>(new Set());
 
@@ -129,10 +105,8 @@ const GRNForm: React.FC<GRNFormProps> = ({ onSubmit, onCancel }) => {
     products.forEach(p => {
       const q = Number(p.quantity) || 0;
       const cp = Number(p.costPrice) || 0;
-      const sp = Number(p.sellingPrice) || 0;
       totalQty += q;
-      totalValue += (q * cp); // Using cost price for total value of GRN usually? Or user wants sell price? User said "sell price buy price on product section".
-      // Let's keep it as is or show both. I'll use cp for total value if it's a GRN.
+      totalValue += (q * cp); 
     });
 
     return { totalQty, totalValue, itemsCount: products.length };
@@ -140,13 +114,6 @@ const GRNForm: React.FC<GRNFormProps> = ({ onSubmit, onCancel }) => {
 
   // --- Handlers ---
   const handleProductChange = (index: number, field: keyof ProductItem, value: any) => {
-    if (field === "name") {
-      // Intercept product selection to show variants
-      setVariantModal({ isOpen: true, baseProduct: value, targetRowIndex: index });
-      setSelectedVariants(new Set());
-      return;
-    }
-
     const updated = [...products];
     updated[index] = { ...updated[index], [field]: value };
     setProducts(updated);
@@ -199,18 +166,21 @@ const GRNForm: React.FC<GRNFormProps> = ({ onSubmit, onCancel }) => {
 
   const confirmVariants = () => {
     if (selectedVariants.size === 0) {
-      setVariantModal({ isOpen: false, baseProduct: "", targetRowIndex: -1 });
+      setVariantModal({ isOpen: false, baseProduct: "", targetRowIndex: -1, variants: [], baseData: null });
       return;
     }
 
-    const variantsToAdd = productVariantDB[variantModal.baseProduct].filter(v => selectedVariants.has(v.id));
+    const variantsToAdd = variantModal.variants.filter(v => selectedVariants.has(v.id));
     const updatedProducts = [...products];
+    const baseOpt = variantModal.baseData;
 
     // Update origin row
     const firstVariant = variantsToAdd[0];
     updatedProducts[variantModal.targetRowIndex] = {
       ...updatedProducts[variantModal.targetRowIndex],
       name: variantModal.baseProduct,
+      costPrice: baseOpt.buy_price ?? baseOpt.costPrice ?? "",
+      sellingPrice: baseOpt.sell_price ?? baseOpt.sellingPrice ?? "",
       variant: firstVariant.name,
       sku: firstVariant.sku
     };
@@ -222,7 +192,8 @@ const GRNForm: React.FC<GRNFormProps> = ({ onSubmit, onCancel }) => {
         id: Math.random().toString(),
         name: variantModal.baseProduct,
         quantity: "",
-        sellingPrice: "",
+        costPrice: baseOpt.buy_price ?? baseOpt.costPrice ?? "",
+        sellingPrice: baseOpt.sell_price ?? baseOpt.sellingPrice ?? "",
         storageLoc: "",
         batchNum: "",
         remarks: "",
@@ -235,7 +206,7 @@ const GRNForm: React.FC<GRNFormProps> = ({ onSubmit, onCancel }) => {
     }
 
     setProducts(updatedProducts);
-    setVariantModal({ isOpen: false, baseProduct: "", targetRowIndex: -1 });
+    setVariantModal({ isOpen: false, baseProduct: "", targetRowIndex: -1, variants: [], baseData: null });
     setSelectedVariants(new Set());
   };
 
@@ -257,62 +228,66 @@ const GRNForm: React.FC<GRNFormProps> = ({ onSubmit, onCancel }) => {
   };
 
   return (
-    <div className="min-h-screen font-sans text-slate-800 relative">
+    <div className="min-h-screen font-sans text-slate-800 bg-[#FAFAFC] relative selection:bg-blue-100 p-6">
       
-      {/* --- VARIANT SELECTION MODAL --- */}
+      {/* --- DYNAMIC VARIANT SELECTION MODAL --- */}
       {variantModal.isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col border border-slate-200 animate-in fade-in zoom-in-95 duration-200">
-            <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col border border-slate-200/60 animate-in fade-in zoom-in-95 duration-200">
+            <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center bg-white">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-100 text-blue-600 rounded-lg">
-                  <PackageOpen size={20} />
+                <div className="p-2 bg-slate-50 border border-slate-100 text-slate-600 rounded-lg shadow-sm">
+                  <PackageOpen size={18} />
                 </div>
                 <div>
-                  <h3 className="font-bold text-slate-800 text-lg">Select Variants</h3>
-                  <p className="text-xs text-slate-500 font-medium">Choose variants for <span className="font-bold text-slate-700">{variantModal.baseProduct}</span></p>
+                  <h3 className="font-semibold text-slate-800 text-lg">Select Variants</h3>
+                  <p className="text-sm text-slate-500">Available variations for <span className="font-medium text-slate-700">{variantModal.baseProduct}</span></p>
                 </div>
               </div>
-              <button onClick={() => setVariantModal({ isOpen: false, baseProduct: "", targetRowIndex: -1 })} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors">
+              <button onClick={() => setVariantModal({ isOpen: false, baseProduct: "", targetRowIndex: -1, variants: [], baseData: null })} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-lg transition-colors">
                 <X size={20} />
               </button>
             </div>
 
-            <div className="p-6 max-h-[60vh] overflow-y-auto">
+            <div className="p-6 max-h-[60vh] overflow-y-auto bg-slate-50/50">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {productVariantDB[variantModal.baseProduct]?.map((variant) => {
-                  const isLowStock = variant.stock <= LOW_STOCK_THRESHOLD;
+                {variantModal.variants.map((variant) => {
+                  const stockNum = Number(variant.stock) || 0;
+                  const isLowStock = stockNum <= LOW_STOCK_THRESHOLD && stockNum > 0;
+                  const isOutOfStock = stockNum <= 0;
                   const isSelected = selectedVariants.has(variant.id);
 
                   return (
                     <div
                       key={variant.id}
-                      onClick={() => !isLowStock && toggleVariantSelection(variant.id)}
-                      className={`relative p-4 rounded-xl border-2 transition-all duration-200 flex flex-col gap-2
-                        ${isLowStock 
-                          ? 'border-slate-100 bg-slate-50 opacity-60 cursor-not-allowed' 
-                          : isSelected 
-                            ? 'border-blue-500 bg-blue-50/50 cursor-pointer shadow-sm' 
-                            : 'border-slate-200 hover:border-blue-300 hover:shadow-sm cursor-pointer bg-white'
+                      onClick={() => !isOutOfStock && toggleVariantSelection(variant.id)}
+                      className={`relative p-4 rounded-xl border transition-all duration-200 flex flex-col gap-2
+                        ${isOutOfStock
+                          ? 'border-slate-200 bg-slate-100/50 opacity-60 cursor-not-allowed'
+                          : isSelected
+                            ? 'border-blue-500 bg-blue-50/30 cursor-pointer shadow-[0_2px_8px_rgba(59,130,246,0.12)]'
+                            : 'border-slate-200 hover:border-slate-300 hover:shadow-sm cursor-pointer bg-white'
                         }
                       `}
                     >
-                      {!isLowStock && (
+                      {!isOutOfStock && (
                         <div className={`absolute top-4 right-4 h-5 w-5 rounded-full border flex items-center justify-center transition-colors ${isSelected ? 'bg-blue-500 border-blue-500 text-white' : 'border-slate-300'}`}>
                           {isSelected && <Check size={12} strokeWidth={3} />}
                         </div>
                       )}
 
                       <div>
-                        <h4 className="font-bold text-slate-800 pr-6">{variant.name}</h4>
-                        <p className="text-xs font-medium text-slate-500 mt-0.5">SKU: {variant.sku}</p>
+                        <h4 className="font-semibold text-slate-800 pr-6">{variant.name}</h4>
+                        <p className="text-xs text-slate-500 mt-1 font-mono">SKU: {variant.sku}</p>
                       </div>
                       
-                      <div className="mt-auto pt-2">
-                        <span className={`inline-flex px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider ${
-                          isLowStock ? 'bg-red-100 text-red-600' : 'bg-emerald-100 text-emerald-700'
-                        }`}>
-                          {isLowStock ? `Low Stock (${variant.stock})` : `In Stock (${variant.stock})`}
+                      <div className="mt-auto pt-3">
+                        <span className={`inline-flex px-2 py-1 rounded-md text-[11px] font-medium tracking-wide ${
+                            isOutOfStock ? 'bg-slate-200 text-slate-600' : 
+                            isLowStock ? 'bg-orange-100 text-orange-700' : 
+                            'bg-emerald-50 text-emerald-700 border border-emerald-100'
+                          }`}>
+                          {isOutOfStock ? 'Out of Stock' : isLowStock ? `Low Stock (${stockNum})` : `In Stock (${stockNum})`}
                         </span>
                       </div>
                     </div>
@@ -321,16 +296,16 @@ const GRNForm: React.FC<GRNFormProps> = ({ onSubmit, onCancel }) => {
               </div>
             </div>
 
-            <div className="p-4 border-t border-slate-100 bg-slate-50 flex justify-between items-center">
-              <span className="text-sm font-medium text-slate-500">
-                {selectedVariants.size} variant(s) selected
+            <div className="p-4 border-t border-slate-100 bg-white flex justify-between items-center">
+              <span className="text-sm text-slate-500">
+                <span className="font-semibold text-slate-700">{selectedVariants.size}</span> variant(s) selected
               </span>
               <div className="flex gap-3">
-                <GradientButton variant="outline" onClick={() => setVariantModal({ isOpen: false, baseProduct: "", targetRowIndex: -1 })}>
+                <GradientButton variant="outline" onClick={() => setVariantModal({ isOpen: false, baseProduct: "", targetRowIndex: -1, variants: [], baseData: null })}>
                   Cancel
                 </GradientButton>
                 <GradientButton variant="primary" onClick={confirmVariants} disabled={selectedVariants.size === 0}>
-                  Add Selected to GRN
+                  Confirm Selection
                 </GradientButton>
               </div>
             </div>
@@ -339,17 +314,17 @@ const GRNForm: React.FC<GRNFormProps> = ({ onSubmit, onCancel }) => {
       )}
       {/* --- END MODAL --- */}
 
-      <div className="flex flex-col xl:flex-row gap-6">
+      <div className="flex flex-col xl:flex-row gap-6 max-w-[1600px] mx-auto pb-20">
         
         {/* ================= LEFT COLUMN (MAIN FORM) ================= */}
         <div className="flex-1 space-y-6">
           
           {/* 1. General Information */}
-          <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
-            <h2 className="text-sm font-bold uppercase tracking-wider text-slate-500 mb-4">General Information</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200/60">
+            <h2 className="text-base font-semibold text-slate-800 mb-6">General Information</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="flex flex-col gap-1.5">
-                <label className="text-sm font-semibold text-slate-700">Supplier *</label>
+                <label className="text-sm font-medium text-slate-700">Supplier <span className="text-red-500">*</span></label>
                 <SearchSelect
                   labelKey="name"
                   valueKey="id"
@@ -357,6 +332,7 @@ const GRNForm: React.FC<GRNFormProps> = ({ onSubmit, onCancel }) => {
                   value={grnDetails.supplier}
                   onChange={(val) => setGrnDetails({...grnDetails, supplier: String(val)})}
                   placeholder="Select Supplier..."
+                  className="w-full !border-slate-200 focus:!border-blue-500 focus:!ring-1 focus:!ring-blue-500/20"
                 />
               </div>
               <Input 
@@ -370,184 +346,199 @@ const GRNForm: React.FC<GRNFormProps> = ({ onSubmit, onCancel }) => {
           </div>
 
           {/* 2. Quick Add Bar */}
-          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-xl border border-blue-100 shadow-inner flex items-center gap-4">
-            <button className="p-3 bg-white text-blue-600 rounded-lg shadow-sm border border-blue-200 hover:bg-blue-50 transition flex items-center gap-2 font-semibold whitespace-nowrap">
+          <div className="bg-white p-3 rounded-xl border border-blue-100 shadow-sm flex items-center gap-3 relative overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-r from-blue-50/50 to-indigo-50/50 pointer-events-none"></div>
+            <button className="relative z-10 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-md transition-all duration-200 flex items-center gap-2 font-semibold whitespace-nowrap">
               <ScanLine size={18} /> <span className="hidden sm:inline">Scan Barcode</span>
             </button>
-            <div className="flex-1">
+            <div className="flex-1 relative z-10">
               <Input 
                 onChange={() => {}}
                 value={""}
                 type="text" 
-                placeholder="Type product name to add quickly..." 
-                leftIcon={<Search size={18} />}
-                className="!border-transparent focus:!border-blue-400 focus:!ring-blue-100 text-blue-900 placeholder:text-blue-300"
+                placeholder="Type product name or scan to add quickly..." 
+                leftIcon={<Search size={18} className="text-blue-400" />}
+                className="!bg-white/80 backdrop-blur-sm !border-slate-200 focus:!border-blue-400 focus:!ring-blue-100 text-slate-800 placeholder:text-slate-400 !shadow-inner"
               />
             </div>
           </div>
 
           {/* 3. Product Entry */}
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-            <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-              <h2 className="text-sm font-bold uppercase tracking-wider text-slate-500">Received Products</h2>
-              <button type="button" onClick={addProduct} className="text-xs font-bold text-blue-600 bg-blue-50 px-3 py-1.5 rounded-md hover:bg-blue-100 flex items-center gap-1">
-                <Plus size={14} /> Add Row
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200/60 overflow-hidden">
+            <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-white">
+              <h2 className="text-sm font-semibold text-slate-800">Received Products</h2>
+              <button type="button" onClick={addProduct} className="text-sm font-medium text-slate-700 bg-slate-50 border border-slate-200 px-4 py-2 rounded-lg hover:bg-slate-100 transition-colors flex items-center gap-1.5 shadow-sm">
+                <Plus size={16} /> Add Row
               </button>
             </div>
             
-            <div className="p-0">
-              {/* Header Row */}
-              <div className="grid grid-cols-12 gap-3 p-4 bg-slate-50 border-b border-slate-200 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                <div className="col-span-4">Product Name</div>
-                <div className="col-span-2 text-center">Quantity</div>
-                <div className="col-span-2 text-right">Buy Price</div>
-                <div className="col-span-2 text-right">Sell Price</div>
-                <div className="col-span-2 text-right">Total</div>
-              </div>
+            <div className="p-0 overflow-x-auto">
+              <div className="min-w-[900px]">
+                {/* Header Row */}
+                <div className="grid grid-cols-12 gap-3 px-6 py-3 bg-slate-50 border-b border-slate-200 text-xs font-medium text-slate-500 uppercase tracking-wider items-center">
+                  <div className="col-span-4">Product Name</div>
+                  <div className="col-span-2 text-center">Quantity</div>
+                  <div className="col-span-2 text-right">Buy Price</div>
+                  <div className="col-span-2 text-right">Sell Price</div>
+                  <div className="col-span-2 text-right">Total</div>
+                </div>
 
-              {/* Product Rows */}
-              {products.map((product, index) => {
-                const rowTotal = (Number(product.quantity) || 0) * (Number(product.sellingPrice) || 0);
-                const isExpanded = expandedProductIndex === index;
+                {/* Product Rows */}
+                <div className="divide-y divide-slate-100 bg-white">
+                  {products.map((product, index) => {
+                    const rowTotal = (Number(product.quantity) || 0) * (Number(product.costPrice) || 0); // Using cost price for GRN typical row totals
+                    const isExpanded = expandedProductIndex === index;
 
-                return (
-                  <div key={product.id} className="border-b border-slate-100 last:border-0">
-                    <div className="grid grid-cols-12 gap-3 p-4 items-center hover:bg-slate-50/50 transition-colors">
-                      <div className="col-span-4">
-                        <SearchSelect
-                          labelKey="name"
-                          valueKey="id"
-                          fetchOptions={async (q) => await inventoryApi.searchInventories(q)}
-                          value={product.name}
-                          onChange={(val, opt: any) => {
-                            if (!opt) {
-                              handleProductChange(index, "name", String(val));
-                            } else {
-                              const updated = [...products];
-                              updated[index].name = opt.name || opt.label || String(val);
-                              updated[index].costPrice = opt.buy_price ?? opt.costPrice ?? "";
-                              updated[index].sellingPrice = opt.sell_price ?? opt.sellingPrice ?? "";
-                              updated[index].sku = opt.barcode ?? opt.sku ?? "";
-                              updated[index].variant = opt.variant ?? "";
-                              setProducts(updated);
-                            }
-                          }}
-                          placeholder="Select Product..."
-                          className="w-full !bg-white !shadow-sm !border-slate-200"
-                        />
-                        {/* Variant Details Display */}
-                        {product.variant && (
-                          <div className="mt-1 text-[10px] font-bold text-slate-500 flex gap-2">
-                            <span className="bg-slate-200 px-1.5 py-0.5 rounded text-slate-700">{product.variant}</span>
-                            <span className="text-slate-400 mt-0.5">SKU: {product.sku}</span>
+                    return (
+                      <div key={product.id} className="group transition-colors">
+                        <div className="grid grid-cols-12 gap-3 px-6 py-4 items-center">
+                          <div className="col-span-4">
+                            <SearchSelect
+                              labelKey="name"
+                              valueKey="id"
+                              fetchOptions={async (q) => await inventoryApi.searchInventories(q)}
+                              value={product.name}
+                              onChange={(val, opt: any) => {
+                                if (opt) {
+                                  // Check for dynamic variants from the API payload
+                                  const hasVariants = opt.has_variants || (opt.datas && opt.datas.has_variants);
+                                  const combinations = opt.combinations || (opt.datas && opt.datas.combinations) || [];
+                                  
+                                  if (hasVariants && combinations.length > 0) {
+                                    const mappedVariants = combinations.map((c: any) => ({
+                                      id: c.id,
+                                      name: Object.values(c.attributes || {}).join(" - "),
+                                      sku: c.barcode || opt.barcode,
+                                      stock: c.stock || opt.stocks || 0,
+                                    }));
+                                    
+                                    setVariantModal({
+                                      isOpen: true,
+                                      baseProduct: opt.name || String(val),
+                                      targetRowIndex: index,
+                                      variants: mappedVariants,
+                                      baseData: opt.datas || opt
+                                    });
+                                    setSelectedVariants(new Set());
+                                  } else {
+                                    // Handle non-variant directly
+                                    const dataNode = opt.datas || opt;
+                                    const updated = [...products];
+                                    updated[index].name = dataNode.name || String(val);
+                                    updated[index].costPrice = dataNode.buy_price ?? dataNode.costPrice ?? "";
+                                    updated[index].sellingPrice = dataNode.sell_price ?? dataNode.sellingPrice ?? "";
+                                    updated[index].sku = dataNode.barcode ?? dataNode.sku ?? "";
+                                    updated[index].variant = dataNode.variant ?? "";
+                                    setProducts(updated);
+                                  }
+                                } else {
+                                  handleProductChange(index, "name", String(val));
+                                }
+                              }}
+                              placeholder="Select Product..."
+                              className="w-full !border-slate-200"
+                            />
+                            {/* Variant Details Display */}
+                            {product.variant && (
+                              <div className="mt-2 text-[11px] font-medium text-slate-500 flex gap-2 items-center">
+                                <span className="bg-slate-100 px-2 py-0.5 rounded text-slate-700 border border-slate-200">{product.variant}</span>
+                                <span className="text-slate-400">SKU: {product.sku}</span>
+                              </div>
+                            )}
+                          </div>
+                          <div className="col-span-2">
+                            <Input 
+                              type="number" 
+                              placeholder="0" 
+                              className="!text-center !px-1 !border-slate-200"
+                              value={product.quantity as any} 
+                              onChange={(e) => handleProductChange(index, "quantity", e.target.value)} 
+                            />
+                          </div>
+                          <div className="col-span-2">
+                            <Input 
+                              type="number" 
+                              placeholder="0.00" 
+                              className="!text-right !px-2 !border-slate-200"
+                              value={product.costPrice as any} 
+                              onChange={(e) => handleProductChange(index, "costPrice", e.target.value)} 
+                            />
+                          </div>
+                          <div className="col-span-2">
+                            <Input 
+                              type="number" 
+                              placeholder="0.00" 
+                              className="!text-right !px-2 !font-medium !text-emerald-700 !border-slate-200"
+                              value={product.sellingPrice as any} 
+                              onChange={(e) => handleProductChange(index, "sellingPrice", e.target.value)} 
+                            />
+                          </div>
+                          <div className="col-span-2 flex items-center justify-end gap-3 h-[42px]">
+                            <span className="font-semibold text-slate-800 text-sm pr-1">₹{rowTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                            <div className="flex items-center gap-1 border-l border-slate-100 pl-2">
+                              <button type="button" onClick={() => toggleAdvanced(index)} className={`p-1.5 rounded-md transition-colors ${isExpanded ? 'bg-slate-100 text-slate-800' : 'text-slate-400 hover:bg-slate-50 hover:text-slate-600'}`}>
+                                {isExpanded ? <ChevronUp size={16} /> : <Settings size={16} />}
+                              </button>
+                              <button type="button" onClick={() => removeProduct(index)} disabled={products.length === 1} className="p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-600 rounded-md disabled:opacity-30 transition-colors">
+                                <Trash2 size={16} />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Batch Tracking Toggle & Date Fields */}
+                        <div className="px-6 py-3 border-t border-slate-50 bg-slate-50/30 flex items-center gap-4 flex-wrap">
+                          <button
+                            type="button"
+                            onClick={() => updateProductFields(index, { batchTracking: !product.batchTracking })}
+                            className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border ${
+                              product.batchTracking
+                                ? 'bg-slate-800 text-white border-slate-800'
+                                : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
+                            }`}
+                          >
+                            <CalendarDays size={14} />
+                            Batch Tracking
+                          </button>
+
+                          {/* Manufacturing & Expiry Date Fields */}
+                          <div
+                            className={`flex items-center gap-4 overflow-hidden transition-all duration-300 ${
+                              product.batchTracking
+                                ? 'opacity-100 max-w-[600px]'
+                                : 'opacity-0 max-w-0 pointer-events-none'
+                            }`}
+                          >
+                            <Input
+                              label="Mfg Date"
+                              type="date"
+                              value={product.manufacturingDate}
+                              onChange={(e) => handleProductChange(index, "manufacturingDate", e.target.value)}
+                              className="!h-8 !text-xs !border-slate-200"
+                            />
+                            <Input
+                              label="Exp Date"
+                              type="date"
+                              value={product.expiryDate}
+                              onChange={(e) => handleProductChange(index, "expiryDate", e.target.value)}
+                              className="!h-8 !text-xs !border-slate-200"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Advanced Settings Panel for GRN */}
+                        {isExpanded && (
+                          <div className="p-6 bg-slate-50 border-t border-slate-100 grid grid-cols-1 md:grid-cols-3 gap-5">
+                            <Input label="Storage Location" placeholder="e.g. Warehouse A, Shelf 3" value={product.storageLoc} onChange={(e) => handleProductChange(index, "storageLoc", e.target.value)} />
+                            <Input label="Batch Number" placeholder="BATCH-001" value={product.batchNum} onChange={(e) => handleProductChange(index, "batchNum", e.target.value)} />
+                            <Input label="Remarks" placeholder="Any damage or notes?" value={product.remarks} onChange={(e) => handleProductChange(index, "remarks", e.target.value)} />
                           </div>
                         )}
                       </div>
-                      <div className="col-span-2">
-                        <Input 
-                          type="number" 
-                          placeholder="0" 
-                          className="!text-center !px-1"
-                          value={product.quantity as any} 
-                          onChange={(e) => handleProductChange(index, "quantity", e.target.value)} 
-                        />
-                      </div>
-                      <div className="col-span-2">
-                        <Input 
-                          type="number" 
-                          placeholder="0.00" 
-                          className="!text-right !px-1"
-                          value={product.costPrice as any} 
-                          onChange={(e) => handleProductChange(index, "costPrice", e.target.value)} 
-                        />
-                      </div>
-                      <div className="col-span-2">
-                        <Input 
-                          type="number" 
-                          placeholder="0.00" 
-                          className="!text-right !px-1 font-semibold text-emerald-600"
-                          value={product.sellingPrice as any} 
-                          onChange={(e) => handleProductChange(index, "sellingPrice", e.target.value)} 
-                        />
-                      </div>
-                      <div className="col-span-2 flex items-center justify-end gap-3 h-[42px]">
-                        <span className="font-bold text-slate-700 text-sm">₹{rowTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                        <div className="flex items-center gap-1">
-                          <button type="button" onClick={() => toggleAdvanced(index)} className={`p-1.5 rounded-md transition-colors ${isExpanded ? 'bg-blue-100 text-blue-600' : 'text-slate-400 hover:bg-slate-100'}`}>
-                            <Settings size={14} />
-                          </button>
-                          <button type="button" onClick={() => removeProduct(index)} disabled={products.length === 1} className="p-1.5 text-red-400 hover:bg-red-50 hover:text-red-600 rounded-md disabled:opacity-30">
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Batch Tracking Toggle & Date Fields */}
-                    <div className="px-6 py-3 border-t border-slate-100/80 bg-white flex items-center gap-4 flex-wrap">
-                      <button
-                        type="button"
-                        onClick={() => updateProductFields(index, { batchTracking: !product.batchTracking })}
-                        className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all duration-300 border-2 ${
-                          product.batchTracking
-                            ? 'bg-gradient-to-r from-blue-500 to-blue-500 text-white border-transparent shadow-md shadow-blue-200'
-                            : 'bg-white text-slate-500 border-slate-200 hover:border-blue-300 hover:text-blue-600 hover:bg-blue-50'
-                        }`}
-                      >
-                        <CalendarDays size={14} />
-                        Batch Tracking
-                        {/* Toggle indicator */}
-                        <span className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors duration-300 ${
-                          product.batchTracking ? 'bg-white/30' : 'bg-slate-200'
-                        }`}>
-                          <span className={`inline-block h-3.5 w-3.5 rounded-full transition-all duration-300 ${
-                            product.batchTracking
-                              ? 'translate-x-[18px] bg-white shadow-sm'
-                              : 'translate-x-[3px] bg-slate-400'
-                          }`} />
-                        </span>
-                      </button>
-
-                      {/* Manufacturing & Expiry Date Fields */}
-                      <div
-                        className={`flex items-center gap-4 overflow-hidden transition-all duration-400 ease-in-out ${
-                          product.batchTracking
-                            ? 'max-w-[600px] opacity-100 translate-x-0'
-                            : 'max-w-0 opacity-0 -translate-x-4 pointer-events-none'
-                        }`}
-                      >
-                        <div className="flex items-center gap-2 min-w-[200px]">
-                          <Input
-                            label="Manufacturing Date"
-                            type="date"
-                            value={product.manufacturingDate}
-                            onChange={(e) => handleProductChange(index, "manufacturingDate", e.target.value)}
-                            className="!bg-violet-50/50 !border-violet-200/60 focus:!ring-violet-100 focus:!border-violet-400"
-                          />
-                        </div>
-                        <div className="flex items-center gap-2 min-w-[200px]">
-                          <Input
-                            label="Expiry Date"
-                            type="date"
-                            value={product.expiryDate}
-                            onChange={(e) => handleProductChange(index, "expiryDate", e.target.value)}
-                            className="!bg-amber-50/50 !border-amber-200/60 focus:!ring-amber-100 focus:!border-amber-400"
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Advanced Settings Panel for GRN */}
-                    {isExpanded && (
-                      <div className="p-5 bg-slate-50 border-t border-slate-100 grid grid-cols-1 md:grid-cols-3 gap-4 shadow-inner">
-                        <Input label="Storage Location" placeholder="e.g. Warehouse A, Shelf 3" value={product.storageLoc} onChange={(e) => handleProductChange(index, "storageLoc", e.target.value)} />
-                        <Input label="Batch Number" placeholder="BATCH-001" value={product.batchNum} onChange={(e) => handleProductChange(index, "batchNum", e.target.value)} />
-                        <Input label="Remarks" placeholder="Any damage or notes?" value={product.remarks} onChange={(e) => handleProductChange(index, "remarks", e.target.value)} />
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           </div>
 
@@ -557,33 +548,31 @@ const GRNForm: React.FC<GRNFormProps> = ({ onSubmit, onCancel }) => {
         <div className="w-full xl:w-96 space-y-6">
           
           <div className="grid grid-cols-2 gap-4">
-            <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 text-center">
-              <div className="text-3xl font-semibold text-slate-700">{stats.itemsCount}</div>
-              <div className="text-xs font-semibold text-slate-400 uppercase tracking-wide mt-1">Unique Items</div>
+            <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200/60 text-center flex flex-col justify-center">
+              <div className="text-3xl font-semibold text-slate-800">{stats.itemsCount}</div>
+              <div className="text-xs font-medium text-slate-500 uppercase tracking-wider mt-2">Unique Items</div>
             </div>
-            <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 text-center">
-              <div className="text-3xl font-black text-slate-700">{stats.totalQty}</div>
-              <div className="text-xs font-bold text-slate-400 uppercase tracking-wide mt-1">Total Qty Received</div>
+            <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200/60 text-center flex flex-col justify-center">
+              <div className="text-3xl font-bold text-blue-600">{stats.totalQty}</div>
+              <div className="text-xs font-medium text-slate-500 uppercase tracking-wider mt-2">Total Received</div>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden sticky top-6">
-            <div className="p-5 border-b border-slate-100 bg-slate-50">
-              <h2 className="text-sm font-bold uppercase tracking-wider text-slate-800">Value Summary</h2>
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200/60 overflow-hidden sticky top-6">
+            <div className="p-5 border-b border-slate-100 flex items-center gap-2">
+              <h2 className="text-sm font-semibold text-slate-800">Value Summary</h2>
             </div>
             
-            <div className="p-5 text-black">
-              <div className="flex justify-between items-end">
-                <div>
-                  <span className="block text-slate-400 text-xs font-semibold uppercase mb-1">Total GRN Value</span>
-                  <span className="font-bold text-3xl text-slate-900">₹{stats.totalValue.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                </div>
+            <div className="p-6">
+              <div className="flex flex-col gap-1">
+                <span className="text-slate-500 text-xs font-medium uppercase tracking-wider">Total GRN Value</span>
+                <span className="font-semibold text-3xl tracking-tight text-slate-900">₹{stats.totalValue.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
               </div>
             </div>
             
             <div className="p-5 bg-slate-50 border-t border-slate-100">
                <p className="text-xs text-slate-500 leading-relaxed">
-                 This value is calculated automatically based on the received product quantities multiplied by their assigned selling prices.
+                 This value is calculated automatically based on the received product quantities multiplied by their assigned cost prices.
                </p>
             </div>
           </div>
@@ -591,17 +580,19 @@ const GRNForm: React.FC<GRNFormProps> = ({ onSubmit, onCancel }) => {
         </div>
       </div>
       
-      <div className="flex justify-end items-center mb-6 p-5">
-        <div className="flex gap-3">
-          <GradientButton icon={<X size={16} />} variant="outline" onClick={onCancel}>
-            Cancel
-          </GradientButton>
-          
-          <GradientButton icon={<Save size={16} />} onClick={handleSubmit} disabled={loading}>
-            {loading ? "Saving..." : "Save Record"}
-          </GradientButton>
-        </div>
-      </div>
+  
+                 <div className="flex justify-end items-center gap-4 pt-4 border-t border-slate-200 mt-6">
+              <button className="px-6 py-2.5 text-sm font-medium text-slate-600 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-all">
+                Cancel
+              </button>
+              <button
+                disabled={loading}
+                onClick={handleSubmit}
+                className="px-8 py-2.5 text-sm font-semibold text-white bg-blue-600 rounded-xl hover:bg-blue-700 transition-all flex items-center gap-2 shadow-lg shadow-blue-200/60 disabled:opacity-50"
+              >
+                {loading ? "Saving..." : <><Save size={18} /> Save Purchase Order</>}
+              </button>
+            </div>
     </div>
   );
 };

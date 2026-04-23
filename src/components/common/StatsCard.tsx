@@ -27,24 +27,24 @@ export const StatCard: React.FC<StatsCardProps> = ({
   return (
     <div
       onClick={onClick}
-      className={`bg-white rounded-[1.5rem] p-5 shadow-sm border border-slate-100 flex items-center gap-4 group hover:shadow-md transition-all cursor-pointer ${className}`}
+      className={`bg-white rounded-lg p-1.5 pr-4 shadow-sm border border-slate-200 inline-flex items-center gap-3 group hover:shadow-md hover:border-slate-300 transition-all cursor-pointer w-fit ${className}`}
     >
       {Icon && (
-        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${iconBg} group-hover:scale-110 transition-transform ${iconColor}`}>
+        <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${iconBg} group-hover:scale-110 transition-transform ${iconColor}`}>
           {React.isValidElement(Icon) ? Icon : (
             typeof Icon === 'string' ? Icon : (
-              Icon && <Icon size={22} className="text-current" />
+              Icon && <Icon size={14} className="text-current" />
             )
           )}
         </div>
       )}
-      <div className="min-w-0">
-        <div className="text-[10px] text-slate-400 uppercase font-bold tracking-widest mb-0.5 truncate">
+      <div className="flex flex-col justify-center py-0.5">
+        <span className="text-[9px] text-slate-500 uppercase font-black tracking-widest leading-none mb-1 truncate">
           {label}
-        </div>
-        <div className={`text-xl font-bold tracking-tight truncate ${valueColor}`}>
+        </span>
+        <span className={`text-sm font-bold tracking-tight leading-none truncate ${valueColor}`}>
           {prefix}{value ?? 0}
-        </div>
+        </span>
       </div>
     </div>
   );

@@ -8,6 +8,8 @@ import Loader from "@/components/common/Loader";
 import { useApi } from "@/context/ApiContext";
 import { ENDPOINTS } from "@/services/endpoints";
 import type { SupplierRecord } from "@/types/api";
+import { StatCard } from "@/components/common/StatsCard";
+import { Users, Briefcase } from "lucide-react";
 
 const Supplier = () => {
   const navigate = useNavigate();
@@ -71,7 +73,14 @@ const Supplier = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-end items-center">
+      <div className="flex justify-between items-center">
+        <div className="flex gap-4 flex-1">
+          <StatCard 
+            icon={Briefcase} 
+            label="Total Suppliers" 
+            value={suppliers.length.toString()} 
+          />
+        </div>
         <GradientButton path="/supplier/add">+ Add Supplier</GradientButton>
       </div>
 

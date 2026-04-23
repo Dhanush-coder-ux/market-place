@@ -25,6 +25,7 @@ import Loader from "@/components/common/Loader";
 import { useApi } from "@/context/ApiContext";
 import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 import type { ProductRecord } from "@/types/api";
+import { StatCard } from "@/components/common/StatsCard";
 
 const STOCK_FILTERS = [
   { label: "High Stock", value: "HIGHSTOCK", icon: Package, color: "text-emerald-500", bg: "bg-emerald-50 ring-emerald-200" },
@@ -252,6 +253,29 @@ const Product = () => {
   return (
     <div className="space-y-4 relative bg-slate-50 min-h-screen p-1 rounded-2xl">
       <ProductHeader />
+
+      <div className="flex flex-wrap gap-3 mx-1">
+        <StatCard 
+          icon={Package} 
+          label="Total Products" 
+          value={products.length.toString()} 
+        />
+        <StatCard 
+          icon={Layers} 
+          label="Total Stock" 
+          value={products.reduce((acc, p) => acc + Number((p.datas as any)?.stocks || 0), 0).toString()} 
+          iconBg="bg-blue-50" iconColor="text-blue-600"
+        />
+        <StatCard 
+          icon={AlertTriangle} 
+          label="Low Stock Items" 
+          value={products.filter(p => {
+            const stock = Number((p.datas as any)?.stocks || 0);
+            return stock > 0 && stock <= 15;
+          }).length.toString()} 
+          iconBg="bg-amber-50" iconColor="text-amber-600"
+        />
+      </div>
 
       {error && (
         <div className="flex items-center justify-between gap-2 p-3 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm mx-1">

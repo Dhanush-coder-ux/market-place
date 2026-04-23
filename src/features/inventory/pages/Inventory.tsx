@@ -14,6 +14,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useApi } from "@/context/ApiContext";
 import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 import Loader from "@/components/common/Loader";
+import { StatCard } from "@/components/common/StatsCard";
 
 // --- Types based on your exact API response ---
 export interface VariantAttribute {
@@ -251,12 +252,22 @@ const InventoryPage = () => {
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6 bg-slate-50 min-h-screen">
       
-      {/* Page Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-800">Inventory Management</h1>
-          <p className="text-sm text-slate-500 mt-1">Manage your standard and variant products.</p>
-        </div>
+  
+      <div className="flex flex-wrap gap-3">
+        <StatCard 
+          icon={Package} 
+          label="Total Inventory Items" 
+          value={inventory.length.toString()} 
+        />
+        <StatCard 
+          icon={AlertCircle} 
+          label="Low Stock Items" 
+          value={inventory.filter(p => {
+            const stock = Number(p.stocks || 0);
+            return stock > 0 && stock <= 15;
+          }).length.toString()} 
+          iconBg="bg-amber-50" iconColor="text-amber-600"
+        />
       </div>
 
       {/* Error State */}

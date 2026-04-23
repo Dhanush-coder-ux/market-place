@@ -4,16 +4,17 @@ import {
   ChevronDown, 
   Layers, 
   Package,
-  MoreVertical,
   AlertCircle,
   Tag,
   Calendar,
-  X
+  X,
+  Eye
 } from "lucide-react";
 import { useApi } from "@/context/ApiContext";
 import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 import Loader from "@/components/common/Loader";
 import { StatCard } from "@/components/common/StatsCard";
+import { useNavigate } from "react-router-dom";
 
 // --- Types based on your exact API response ---
 export interface VariantAttribute {
@@ -98,7 +99,7 @@ const ProductRow = ({
   const stockNumber = Number(item.stocks || 0);
   const stockLabel = `${stockNumber} ${datas.unit ? `(${datas.unit.split(" ")[0]})` : ""}`;
   const stockStatusColor = stockNumber <= 0 ? "text-rose-600 bg-rose-50 border-rose-200" : stockNumber <= 15 ? "text-amber-600 bg-amber-50 border-amber-200" : "text-emerald-600 bg-emerald-50 border-emerald-200";
-
+  const navigate = useNavigate();
   return (
     <Fragment>
       <tr 
@@ -181,8 +182,12 @@ const ProductRow = ({
 
         {/* Actions */}
         <td className="px-6 py-4 text-center">
-          <button onClick={(e) => e.stopPropagation()} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-transparent hover:border-blue-100">
-            <MoreVertical size={18} />
+          <button
+            onClick={(e) => { e.stopPropagation(); navigate(`/product/${(item.id)}`); }}
+            className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-transparent hover:border-blue-100"
+            title="View Detail"
+          >
+            <Eye size={16} />
           </button>
         </td>
       </tr>
@@ -271,9 +276,9 @@ const InventoryPage = () => {
   };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6 bg-slate-50 min-h-screen">
+    <div className="max-w-7xl mx-auto space-y-6 bg-slate-50 min-h-screen">
       
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="flex gap-x-2">
         <StatCard 
           icon={Package} 
           label="Total Inventory Items" 

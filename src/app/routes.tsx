@@ -17,6 +17,7 @@ import CustomerFormPage from "@/features/customer/pages/CustomerFormPage";
 import CustomerDraftsPage from "@/features/customer/pages/CustomerDraftsPage";
 import SupplierForm from "@/features/supplier/pages/SupplierForm";
 import SupplierDraftsPage from "@/features/supplier/pages/SupplierDraftsPage";
+import StockAdjustmentDraftsPage from "@/features/inventory/pages/StockAdjustmentDraftsPage";
 
 
 // Layout & Auth
@@ -119,6 +120,7 @@ export const router = createBrowserRouter([
       { path: '/inventory', element: <Inventory /> },
       { path: "/stock-movement", element: <StockMovementPage /> },
       { path: "/stock-adjustment", element: <StockAdjustmentForm /> },
+      { path: "/stock-adjustment/drafts", element: <StockAdjustmentDraftsPage /> },
 
       // Orders & Billing
       { path: '/billing', element: <Billing /> },

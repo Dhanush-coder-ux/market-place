@@ -1,8 +1,10 @@
 import React, { useState, useMemo, useEffect } from "react";
-import { 
-  Search, Download, Eye,  
-  X, RotateCcw, AlertTriangle, ArrowUp, ArrowDown, 
-  User, FileText, ArrowRight, TrendingUp, TrendingDown, Activity 
+import {
+  Search, Eye,
+  X, RotateCcw, AlertTriangle, ArrowUp, ArrowDown,
+  User, TrendingUp, TrendingDown, Activity,
+  Bookmark, Plus,
+  FileText
 } from "lucide-react";
 
 import { GradientButton } from "@/components/ui/GradientButton";
@@ -10,6 +12,10 @@ import { StatCard } from "@/components/common/StatsCard";
 import { useApi } from "@/context/ApiContext";
 import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 import type { PurchaseRecord } from "@/types/api";
+import { useHeader } from "@/context/HeaderContext";
+import { ColumnPicker } from "@/components/common/ColumnPicker";
+import { useNavigate } from "react-router-dom";
+import { ReusableSelect } from "@/components/ui/ReusableSelect";
 
 // ─── Types & Interfaces ──────────────────────────────────────────────────────
 
@@ -35,14 +41,13 @@ export interface Movement {
 
 const WAREHOUSES = ["All Locations", "Warehouse A", "Warehouse B", "Store Front", "Cold Storage", "Returns Depot"];
 const MOVEMENT_TYPES = ["All", "PURCHASE", "PO_PURCHASE", "SALES", "TRANSFER", "SALE_RETURN", "STOCK_ADJUSTMENT"];
-const STATUSES = ["All", "Completed", "Pending"];
 
 function purchaseToMovements(records: PurchaseRecord[], movType: MovementType): Movement[] {
   return records.flatMap(p => {
     const d2 = p.datas as any;
     const products = (d2?.purchase_products ?? d2?.grn_products ?? d2?.finished_products ?? d2?.products) as any[] | undefined;
     if (!products || products.length === 0) return [];
-    
+
     return products.map(prod => {
       const dateStr = String(d2?.purchaseDetails?.date ?? d2?.purchase_date ?? d2?.production_date ?? d2?.receipt_date ?? (p as any).date ?? new Date().toISOString());
       return {
@@ -79,7 +84,7 @@ function getTypeStyle(type: MovementType) {
   const positive = ["PURCHASE", "PO_PURCHASE", "OPENING"];
   const negative = ["SALES", "PRODUCTION"];
   const salesReturn = "SALE_RETURN"
-  
+
   if (positive.includes(type)) {
     return { bg: "bg-emerald-50 text-emerald-700 border-emerald-200", dot: "bg-emerald-500" };
   }
@@ -98,13 +103,13 @@ function getTypeStyle(type: MovementType) {
 
 const STATUS_STYLES: Record<StatusType, string> = {
   Completed: "text-emerald-600",
-  Pending:   "text-amber-600",
+  Pending: "text-amber-600",
 };
 
 function TypeBadge({ type }: { type: MovementType }) {
   const s = getTypeStyle(type);
   const formattedType = type.replace('_', ' ');
-  
+
   return (
     <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium border ${s.bg}`}>
       <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
@@ -121,7 +126,7 @@ interface DetailDrawerProps {
 function DetailDrawer({ movement, onClose }: DetailDrawerProps) {
   if (!movement) return null;
   const s = getTypeStyle(movement.type);
-  
+
   return (
     <div className="fixed inset-0 z-50 flex justify-end" onClick={onClose}>
       <div className="absolute inset-0 bg-slate-900/30 backdrop-blur-sm" />
@@ -149,11 +154,11 @@ function DetailDrawer({ movement, onClose }: DetailDrawerProps) {
           {/* Movement Info */}
           <div className="grid grid-cols-2 gap-3">
             {[
-              ["Type",        <TypeBadge key="type" type={movement.type} />],
-              ["Quantity",    <span key="qty" className={`font-semibold font-mono text-base ${movement.qty > 0 ? "text-emerald-600" : movement.qty < 0 ? "text-rose-600" : "text-blue-600"}`}>{movement.qty > 0 ? `+${movement.qty}` : movement.qty}</span>],
-              ["Status",      <span key="status" className={`font-semibold text-sm ${STATUS_STYLES[movement.status]}`}>{movement.status}</span>],
-              ["Reference",   <span key="ref" className="text-slate-700 font-mono text-sm">{movement.ref}</span>],
-              ["Source",      <span key="src" className="text-slate-700 text-sm font-medium">{movement.source}</span>],
+              ["Type", <TypeBadge key="type" type={movement.type} />],
+              ["Quantity", <span key="qty" className={`font-semibold font-mono text-base ${movement.qty > 0 ? "text-emerald-600" : movement.qty < 0 ? "text-rose-600" : "text-blue-600"}`}>{movement.qty > 0 ? `+${movement.qty}` : movement.qty}</span>],
+              ["Status", <span key="status" className={`font-semibold text-sm ${STATUS_STYLES[movement.status]}`}>{movement.status}</span>],
+              ["Reference", <span key="ref" className="text-slate-700 font-mono text-sm">{movement.ref}</span>],
+              ["Source", <span key="src" className="text-slate-700 text-sm font-medium">{movement.source}</span>],
               ["Destination", <span key="dest" className="text-slate-700 text-sm font-medium">{movement.destination}</span>],
             ].map(([label, val]) => (
               <div key={label as string} className="bg-slate-50 rounded-xl p-3 border border-slate-100">
@@ -188,8 +193,8 @@ function DetailDrawer({ movement, onClose }: DetailDrawerProps) {
             <p className="text-xs text-slate-500 font-semibold uppercase tracking-widest mb-4">Movement Timeline</p>
             <div className="relative pl-4">
               {[
-                { label: "Record Created",   time: movement.date, color: "bg-slate-300" },
-                { label: "In Review",        time: movement.date, color: "bg-amber-400" },
+                { label: "Record Created", time: movement.date, color: "bg-slate-300" },
+                { label: "In Review", time: movement.date, color: "bg-amber-400" },
                 { label: movement.status === "Completed" ? "Completed" : "Awaiting Approval", time: movement.date, color: movement.status === "Completed" ? "bg-emerald-500" : "bg-amber-400" },
               ].map((ev, i) => (
                 <div key={i} className="flex items-start gap-3 mb-4 last:mb-0 relative">
@@ -206,7 +211,7 @@ function DetailDrawer({ movement, onClose }: DetailDrawerProps) {
         </div>
 
         {/* Footer actions */}
-       
+
       </div>
     </div>
   );
@@ -228,13 +233,13 @@ function AddMovementModal({ onClose }: { onClose: () => void }) {
         </div>
         <div className="space-y-4">
           {[
-            ["Product Name / SKU","text","e.g. Wireless Headphones"],
-            ["Movement Type","select", formTypes],
-            ["Quantity","number","e.g. 50"],
-            ["Source Location","select",WAREHOUSES.slice(1)],
-            ["Destination","select",WAREHOUSES.slice(1)],
-            ["Reference","text","Order ID / Invoice ID"],
-            ["Notes","textarea","Optional remarks"]
+            ["Product Name / SKU", "text", "e.g. Wireless Headphones"],
+            ["Movement Type", "select", formTypes],
+            ["Quantity", "number", "e.g. 50"],
+            ["Source Location", "select", WAREHOUSES.slice(1)],
+            ["Destination", "select", WAREHOUSES.slice(1)],
+            ["Reference", "text", "Order ID / Invoice ID"],
+            ["Notes", "textarea", "Optional remarks"]
           ].map(([label, type, placeholder]) => (
             <div key={label as string}>
               <label className="block text-xs text-slate-500 font-semibold uppercase tracking-widest mb-1.5">{label as string}</label>
@@ -262,21 +267,53 @@ function AddMovementModal({ onClose }: { onClose: () => void }) {
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function StockMovementPage() {
-  const [search, setSearch]         = useState("");
+  const navigate = useNavigate();
+  const { setActions } = useHeader();
+  const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("All");
-  const [statusFilter, setStatus]   = useState("All");
-  const [warehouseFilter, setWH]    = useState("All Locations");
-  const [dateFrom, setDateFrom]     = useState("");
-  const [dateTo, setDateTo]         = useState("");
-  const [selectedMvt, setSelected]  = useState<Movement | null>(null);
-  const [showAdd, setShowAdd]       = useState(false);
-  const [sortField, setSort]        = useState<"date" | "qty">("date");
-  const [sortDir, setSortDir]       = useState<"asc" | "desc">("desc");
-  const [page, setPage]             = useState(1);
-  const [movements, setMovements]   = useState<Movement[]>([]);
-  const PAGE_SIZE = 8;
+  const [statusFilter, setStatus] = useState("All");
+  const [warehouseFilter, setWH] = useState("All Locations");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [selectedMvt, setSelected] = useState<Movement | null>(null);
+  const [showAdd, setShowAdd] = useState(false);
+  const [sortField, setSort] = useState<"date" | "qty">("date");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+  const [page, setPage] = useState(1);
+  const [movements, setMovements] = useState<Movement[]>([]);
+  const PAGE_SIZE = 10;
+
+  // Dynamic Column State
+  const [availableKeys] = useState<string[]>(["sku", "source", "destination", "ref", "user", "notes"]);
+  const [selectedKeys, setSelectedKeys] = useState<string[]>(() => {
+    const saved = localStorage.getItem('stock_movement_columns');
+    return saved ? JSON.parse(saved) : ["sku", "ref", "user"];
+  });
 
   const { getData } = useApi();
+
+  // --- Header Actions ---
+  useEffect(() => {
+    setActions(
+      <div className="flex items-center gap-3 animate-in fade-in slide-in-from-right-4">
+        <button
+          onClick={() => navigate("/stock-adjustment/drafts")}
+          className="px-5 h-11 rounded-xl border border-blue-100 text-blue-600 font-bold text-[14px] bg-blue-50/50 hover:bg-blue-100 transition-all flex items-center gap-2"
+        >
+          <Bookmark size={18} />
+          Saved Drafts
+        </button>
+        <GradientButton
+          onClick={() => navigate("/stock-adjustment")}
+          icon={<Plus size={18} />}
+          className="h-11 flex items-center px-6 text-[14px] shadow-lg shadow-blue-200"
+        >
+          Add Adjustment
+        </GradientButton>
+      </div>
+    );
+    return () => setActions(null);
+  }, [setActions, navigate]);
 
   useEffect(() => {
     const load = async () => {
@@ -296,29 +333,29 @@ export default function StockMovementPage() {
       const adjRes = await getData(ENDPOINTS.S_ADJUSTMENTS, { shop_id: SHOP_ID, limit: "50", offset: "1" });
       const adjMovements: Movement[] = adjRes
         ? (Array.isArray(adjRes.data) ? adjRes.data : [adjRes.data]).flatMap((a: any) => {
-            const products = (a.datas?.products ?? a.datas?.adjustment_products) as any[] | undefined;
-            if (!products || products.length === 0) return [];
-            
-            return products.map(prod => {
-              const dateStr = String(a.datas?.date ?? a.date ?? new Date().toISOString());
-              const isDecrement = prod.type === 'DECREMENT' || prod.type === 'decrease';
-              const qty = Number(prod?.quantity ?? 0);
-              return {
-                id: a.id.slice(0, 8).toUpperCase(),
-                product: String(prod?.product_name ?? prod?.name ?? "—"),
-                sku: String(prod?.barcode ?? a.id.slice(0, 8)),
-                type: "STOCK_ADJUSTMENT" as MovementType,
-                qty: isDecrement ? -qty : qty,
-                source: "Stock",
-                destination: "Adjusted",
-                ref: String(a.datas?.referenceNumber ?? a.id.slice(0, 8).toUpperCase()),
-                date: dateStr.includes("T") ? dateStr : dateStr + "T00:00:00",
-                status: "Completed" as StatusType,
-                user: String(a.added_by || "Admin"),
-                notes: prod.reason ? `Reason: ${prod.reason}` : "",
-              };
-            });
-          })
+          const products = (a.datas?.products ?? a.datas?.adjustment_products) as any[] | undefined;
+          if (!products || products.length === 0) return [];
+
+          return products.map(prod => {
+            const dateStr = String(a.datas?.date ?? a.date ?? new Date().toISOString());
+            const isDecrement = prod.type === 'DECREMENT' || prod.type === 'decrease';
+            const qty = Number(prod?.quantity ?? 0);
+            return {
+              id: a.id.slice(0, 8).toUpperCase(),
+              product: String(prod?.product_name ?? prod?.name ?? "—"),
+              sku: String(prod?.barcode ?? a.id.slice(0, 8)),
+              type: "STOCK_ADJUSTMENT" as MovementType,
+              qty: isDecrement ? -qty : qty,
+              source: "Stock",
+              destination: "Adjusted",
+              ref: String(a.datas?.referenceNumber ?? a.id.slice(0, 8).toUpperCase()),
+              date: dateStr.includes("T") ? dateStr : dateStr + "T00:00:00",
+              status: "Completed" as StatusType,
+              user: String(a.added_by || "Admin"),
+              notes: prod.reason ? `Reason: ${prod.reason}` : "",
+            };
+          });
+        })
         : [];
 
       setMovements([...direct, ...grn, ...production, ...adjMovements]);
@@ -328,7 +365,7 @@ export default function StockMovementPage() {
 
   const filtered = useMemo(() => {
     let data = [...movements];
-    
+
     if (search) {
       const q = search.toLowerCase();
       data = data.filter(m => m.product.toLowerCase().includes(q) || m.sku.toLowerCase().includes(q) || m.id.toLowerCase().includes(q));
@@ -337,8 +374,8 @@ export default function StockMovementPage() {
     if (statusFilter !== "All") data = data.filter(m => m.status === statusFilter);
     if (warehouseFilter !== "All Locations") data = data.filter(m => m.source === warehouseFilter || m.destination === warehouseFilter);
     if (dateFrom) data = data.filter(m => fmtDate(m.date) >= dateFrom);
-    if (dateTo)   data = data.filter(m => fmtDate(m.date) <= dateTo);
-    
+    if (dateTo) data = data.filter(m => fmtDate(m.date) <= dateTo);
+
     data.sort((a, b) => {
       if (sortField === "date") {
         return sortDir === "asc" ? a.date.localeCompare(b.date) : b.date.localeCompare(a.date);
@@ -348,19 +385,19 @@ export default function StockMovementPage() {
         return sortDir === "asc" ? aQty - bQty : bQty - aQty;
       }
     });
-    
+
     return data;
-  }, [search, typeFilter, statusFilter, warehouseFilter, dateFrom, dateTo, sortField, sortDir]);
+  }, [movements, search, typeFilter, statusFilter, warehouseFilter, dateFrom, dateTo, sortField, sortDir]);
 
   const today = new Date().toISOString().slice(0, 10);
   const todayMvts = movements.filter(m => fmtDate(m.date) === today);
-  const totalIn  = todayMvts.filter(m => ["PURCHASE", "PO_PURCHASE"].includes(m.type)).reduce((s, m) => s + m.qty, 0);
+  const totalIn = todayMvts.filter(m => ["PURCHASE", "PO_PURCHASE"].includes(m.type)).reduce((s, m) => s + m.qty, 0);
   const totalOut = todayMvts.filter(m => m.type === "SALES").reduce((s, m) => s + Math.abs(m.qty), 0);
-  const netMov   = totalIn - totalOut;
+  const netMov = totalIn - totalOut;
   const lowStockAlerts = 0;
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const pageData   = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const pageData = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   function toggleSort(field: "date" | "qty") {
     if (sortField === field) setSortDir(d => d === "asc" ? "desc" : "asc");
@@ -371,15 +408,7 @@ export default function StockMovementPage() {
     setSearch(""); setTypeFilter("All"); setStatus("All"); setWH("All Locations"); setDateFrom(""); setDateTo(""); setPage(1);
   }
 
-  function exportCSV() {
-    const header = "Movement ID,Product,SKU,Type,Qty,Source,Destination,Reference,Date,Status\n";
-    const rows = filtered.map(m => `${m.id},${m.product},${m.sku},${m.type},${m.qty},${m.source},${m.destination},${m.ref},${m.date},${m.status}`).join("\n");
-    const blob = new Blob([header + rows], { type: "text/csv" });
-    const a = document.createElement("a"); 
-    a.href = URL.createObjectURL(blob); 
-    a.download = "stock_movements.csv"; 
-    a.click();
-  }
+
 
   const SortBtn = ({ field, label }: { field: "date" | "qty", label: string }) => (
     <button onClick={() => toggleSort(field)} className="flex items-center gap-1 text-slate-500 hover:text-blue-600 transition-colors font-semibold group">
@@ -402,151 +431,149 @@ export default function StockMovementPage() {
         ::-webkit-scrollbar-thumb:hover { background:#94a3b8; }
       `}</style>
 
-      {/* Added a container class here to provide padding and max-width */}
-      <div className=" mx-auto">
-  
-        <div className="flex flex-col sm:flex-row sm:items-center justify-end gap-4 mb-8">
-
-          
-          <div className="flex gap-2.5 flex-wrap">
-            <GradientButton
-              variant="outline"
-              onClick={exportCSV}
-              icon={<Download className="w-4 h-4" />}
-            >
-              Export CSV
-            </GradientButton>
-
-            {/* Added the missing trigger button for your Add Movement Modal */}
-            {/* <GradientButton
-              onClick={() => setShowAdd(true)}
-              icon={<Plus className="w-4 h-4" />}
-            >
-              New Movement
-            </GradientButton> */}
-          </div>
-        </div>
+      <div className="mx-auto">
 
         {/* ── Summary Cards ── */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-7">
-          <StatCard  label="Total Stock In"  value={`+${totalIn}`}     icon={TrendingUp} iconBg="bg-green-50" iconColor="text-green-600" />
-          <StatCard  label="Total Stock Out" value={`-${totalOut}`}   icon={TrendingDown} iconBg="bg-red-50" iconColor="text-red-600" />
-          <StatCard  label="Net Movement"    value={netMov >= 0 ? `+${netMov}` : `${netMov}`}  icon={Activity} iconBg="bg-blue-50" iconColor="text-blue-600" />
-          <StatCard  label="Low Stock Alerts" value={lowStockAlerts} icon={AlertTriangle} iconBg="bg-amber-50" iconColor="text-amber-600" />
+        <div className="flex gap-x-2 mb-6 animate-in fade-in slide-in-from-top-4 duration-700 delay-100">
+          <StatCard label="Total Stock In" value={`+${totalIn}`} icon={TrendingUp} iconBg="bg-emerald-50" iconColor="text-emerald-600" />
+          <StatCard label="Total Stock Out" value={`-${totalOut}`} icon={TrendingDown} iconBg="bg-rose-50" iconColor="text-rose-600" />
+          <StatCard label="Net Movement" value={netMov >= 0 ? `+${netMov}` : `${netMov}`} icon={Activity} iconBg="bg-blue-50" iconColor="text-blue-600" />
+          <StatCard label="Low Stock Alerts" value={lowStockAlerts} icon={AlertTriangle} iconBg="bg-amber-50" iconColor="text-amber-600" />
         </div>
 
-        {/* ── Filters ── */}
-        <div className="bg-white border border-slate-200 shadow-sm rounded-2xl p-4 mb-5 space-y-3">
-          <div className="flex flex-col sm:flex-row gap-3">
-            {/* Search */}
-            <div className="flex-1 relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
-                <Search className="w-4 h-4" />
-              </span>
-              <input
-                type="text" value={search} onChange={e => { setSearch(e.target.value); setPage(1); }}
-                placeholder="Search by product, SKU, or movement ID…"
-                className="w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 placeholder-slate-400 font-medium focus:outline-none focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/20 transition-all"
+        {/* ── Filter & Search Section ── */}
+        <div className="bg-white p-5 rounded-[1.5rem] border border-slate-200 shadow-sm mb-6 animate-in fade-in slide-in-from-top-4 duration-700 delay-200">
+          <div className="flex flex-col lg:flex-row lg:items-center gap-4">
+
+            {/* Left Side: Search & Primary Tools */}
+            <div className="flex items-center gap-3 flex-1">
+              <div className="relative flex-1 group">
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-blue-500 transition-colors pointer-events-none" />
+                <input
+                  type="text"
+                  value={search}
+                  onChange={e => { setSearch(e.target.value); setPage(1); }}
+                  placeholder="Search by product, SKU, or movement ID…"
+                  className="w-full pl-10 pr-4 h-11 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 placeholder:text-slate-400 font-medium focus:outline-none focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100 transition-all"
+                />
+              </div>
+              <ColumnPicker
+                availableKeys={availableKeys}
+                selectedKeys={selectedKeys}
+                onApply={setSelectedKeys}
+                storageKey="stock_movement_columns"
               />
+              <button
+                onClick={resetFilters}
+                className="h-11 px-4 rounded-xl bg-slate-50 border border-slate-200 text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-all flex items-center gap-2 text-xs font-bold uppercase tracking-widest"
+              >
+                <RotateCcw size={14} />
+                Reset
+              </button>
             </div>
-            <button onClick={resetFilters} className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-100 font-semibold text-sm transition-colors whitespace-nowrap">
-              <RotateCcw className="w-4 h-4" /> Reset
-            </button>
-          </div>
-          <div className="flex flex-wrap gap-3">
-            {/* Type */}
-            <div className="flex gap-1 bg-slate-50 rounded-xl p-1 border border-slate-200">
-              {MOVEMENT_TYPES.map(t => (
-                <button key={t} onClick={() => { setTypeFilter(t); setPage(1); }}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${typeFilter === t ? "bg-white text-blue-600 shadow-sm border border-slate-200" : "text-slate-500 hover:text-slate-700 border border-transparent"}`}>
-                  {t.replace('_', ' ')}
-                </button>
-              ))}
+
+            {/* Right Side: Specific Filters */}
+            <div className="flex flex-wrap items-center gap-3 lg:justify-end">
+              <div className="w-full sm:w-auto">
+                <ReusableSelect
+                  options={MOVEMENT_TYPES.map(t => ({ label: t.replace('_', ' '), value: t }))}
+                  value={typeFilter}
+                  onValueChange={(val) => { setTypeFilter(val); setPage(1); }}
+                  placeholder="Type"
+                  className="w-full sm:w-36 h-11"
+                />
+              </div>
+              <div className="w-full sm:w-auto">
+                <ReusableSelect
+                  options={WAREHOUSES.map(w => ({ label: w, value: w }))}
+                  value={warehouseFilter}
+                  onValueChange={(val) => { setWH(val); setPage(1); }}
+                  placeholder="Location"
+                  className="w-full sm:w-44 h-11"
+                />
+              </div>
+              <div className="flex items-center gap-2 bg-slate-50 p-1.5 rounded-xl border border-slate-200 h-11 w-full sm:w-auto">
+                <input
+                  type="date"
+                  value={dateFrom}
+                  onChange={e => { setDateFrom(e.target.value); setPage(1); }}
+                  className="bg-transparent border-none text-[10px] font-black text-slate-600 focus:ring-0 px-2 uppercase tracking-wider w-full"
+                />
+                <div className="w-px h-4 bg-slate-200 shrink-0" />
+                <input
+                  type="date"
+                  value={dateTo}
+                  onChange={e => { setDateTo(e.target.value); setPage(1); }}
+                  className="bg-transparent border-none text-[10px] font-black text-slate-600 focus:ring-0 px-2 uppercase tracking-wider w-full"
+                />
+              </div>
             </div>
-            {/* Warehouse */}
-            <select value={warehouseFilter} onChange={e => { setWH(e.target.value); setPage(1); }}
-              className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm font-medium text-slate-700 focus:outline-none focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/20 transition-all cursor-pointer">
-              {WAREHOUSES.map(w => <option key={w}>{w}</option>)}
-            </select>
-            {/* Status */}
-            <select value={statusFilter} onChange={e => { setStatus(e.target.value); setPage(1); }}
-              className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm font-medium text-slate-700 focus:outline-none focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/20 transition-all cursor-pointer">
-              {STATUSES.map(s => <option key={s}>{s}</option>)}
-            </select>
-            {/* Date range */}
-            <input type="date" value={dateFrom} onChange={e => { setDateFrom(e.target.value); setPage(1); }}
-              className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm font-medium text-slate-700 focus:outline-none focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/20 transition-all" />
-            <input type="date" value={dateTo} onChange={e => { setDateTo(e.target.value); setPage(1); }}
-              className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm font-medium text-slate-700 focus:outline-none focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/20 transition-all" />
           </div>
         </div>
 
-        {/* ── Table ── */}
-        <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+        {/* ── Table Section ── */}
+        <div className="bg-white border border-slate-200 rounded-[2rem] shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="border-b border-slate-200 bg-slate-50/50">
-                  {[
-                    ["Product", null],
-                    ["Type", null],
-                    ["Quantity", "qty"],
-                    ["Source → Destination", null],
-                    ["Reference", null],
-                    ["Date & Time", "date"],
-                    ["Actions", null],
-                  ].map(([col, field]) => (
-                    <th key={col as string} className="px-4 py-3.5 text-left text-xs font-medium text-slate-500 uppercase tracking-widest whitespace-nowrap">
-                      {field ? <SortBtn field={field as "date" | "qty"} label={col as string} /> : col as string}
-                    </th>
+                <tr className="bg-slate-50/50 text-slate-400 text-[10px] font-black uppercase tracking-[0.15em] border-b border-slate-100">
+                  <th className="px-6 py-5 whitespace-nowrap min-w-[200px]">Product Information</th>
+                  <th className="px-6 py-5 whitespace-nowrap">Movement Type</th>
+                  <th className="px-6 py-5 whitespace-nowrap text-center">
+                    <SortBtn field="qty" label="Quantity" />
+                  </th>
+                  {selectedKeys.map(key => (
+                    <th key={key} className="px-6 py-5 capitalize whitespace-nowrap">{key.replace(/_/g, ' ')}</th>
                   ))}
+                  <th className="px-6 py-5 whitespace-nowrap">
+                    <SortBtn field="date" label="Date & Time" />
+                  </th>
+                  <th className="px-6 py-5 text-right whitespace-nowrap">Actions</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-slate-50 text-sm">
                 {pageData.length === 0 ? (
-                  <tr><td colSpan={9} className="text-center py-16 text-slate-500">
-                    <div className="flex flex-col items-center gap-2">
-                      <span className="text-3xl">📦</span>
-                      <span className="text-sm font-medium text-slate-700">No movements found</span>
-                      <span className="text-xs">Try adjusting your search or filters</span>
-                    </div>
-                  </td></tr>
-                ) : pageData.map((m, i) => (
-                  <tr key={m.id}
-                    className={`border-b border-slate-100 transition-colors hover:bg-blue-50/40 cursor-default ${m.qty < 0 && Math.abs(m.qty) > 50 ? "bg-rose-50/40" : ""}`}
-                    style={{ animationDelay: `${i * 30}ms` }}
-                  >
-                    <td className="px-4 py-3.5 whitespace-nowrap">
-                      <div className="text-slate-900 font-semibold leading-tight">{m.product}</div>
-                      <div className="text-slate-500 text-xs font-mono mt-0.5">{m.sku}</div>
+                  <tr>
+                    <td colSpan={selectedKeys.length + 5} className="py-20 text-center text-slate-400 font-medium italic">
+                      No movements found matching your filters.
                     </td>
-                    <td className="px-4 py-3.5 whitespace-nowrap"><TypeBadge type={m.type} /></td>
-                    <td className="px-4 py-3.5 font-mono font-semibold text-base whitespace-nowrap">
-                      {/* Fixed classname evaluation to rely on actual m.qty rather than just checking if type === "IN" */}
-                      <span className={m.qty > 0 ? "text-emerald-600" : m.qty < 0 ? "text-rose-600" : "text-blue-600"}>
+                  </tr>
+                ) : pageData.map((m) => (
+                  <tr key={m.id}
+                    className="group hover:bg-blue-50/30 transition-all cursor-pointer"
+                    onClick={() => setSelected(m)}
+                  >
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-10 h-10 rounded-xl bg-gradient-to-br flex items-center justify-center text-white text-xs font-black shadow-lg shadow-blue-100 ${m.qty > 0 ? "from-emerald-600 to-emerald-400" : "from-rose-600 to-rose-400"}`}>
+                          {m.product[0].toUpperCase()}
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-slate-700 tracking-tight">{m.product}</p>
+                          <p className="text-[11px] font-bold text-slate-400 font-mono italic">#{m.id}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap"><TypeBadge type={m.type} /></td>
+                    <td className="px-6 py-4 text-center whitespace-nowrap">
+                      <span className={`text-base font-black tabular-nums ${m.qty > 0 ? "text-emerald-600" : "text-rose-600"}`}>
                         {m.qty > 0 ? `+${m.qty}` : m.qty}
                       </span>
                     </td>
-                    {m.type === "TRANSFER" ?<td className="px-4 py-3.5 whitespace-nowrap">
-                      <div className="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
-                        <span className="text-slate-700">{m.source}</span>
-                        <ArrowRight className="w-3.5 h-3.5 text-slate-400" />
-                        <span className="text-slate-700">{m.destination}</span>
-                      </div>
-                    </td> : <td className="px-4 py-3.5 whitespace-nowrap">
-                      <div className="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
-                        <span className="text-slate-700">-</span>
-                        <ArrowRight className="w-3.5 h-3.5 text-slate-400" />
-                        <span className="text-slate-700">-</span>
-                      </div>
-                    </td>}
-                    <td className="px-4 py-3.5 font-mono text-xs text-slate-500 font-medium whitespace-nowrap">{m.ref}</td>
-                    <td className="px-4 py-3.5 text-slate-600 text-xs font-medium whitespace-nowrap">{fmt(m.date)}</td>
-                    <td className="px-4 py-3.5 whitespace-nowrap">
-                      <div className="flex items-center gap-1">
-                        <button onClick={() => setSelected(m)} className="p-1.5 rounded-lg hover:bg-blue-100 text-slate-400 hover:text-blue-600 transition-colors" title="View"><Eye className="w-4 h-4" /></button>
-                        
-                      </div>
+                    {selectedKeys.map(key => (
+                      <td key={key} className="px-6 py-4 whitespace-nowrap">
+                        <p className="text-[12px] font-bold text-slate-600 tracking-tight">
+                          {String(m[key as keyof Movement] ?? "—")}
+                        </p>
+                      </td>
+                    ))}
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <p className="text-[12px] font-bold text-slate-600">{fmt(m.date)}</p>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <button onClick={() => setSelected(m)} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-white rounded-xl transition-all shadow-sm active:scale-95">
+                        <Eye size={16} />
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -571,11 +598,6 @@ export default function StockMovementPage() {
             </div>
           </div>
         </div>
-
-        {/* Footer */}
-        <p className="text-center text-xs text-slate-500 font-medium mt-6">
-          Inventory Management System · Stock Movement Module · Role: <span className="text-slate-800 font-semibold">Admin</span>
-        </p>
       </div>
 
       {/* Overlays */}

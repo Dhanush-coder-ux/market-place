@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Bookmark, User } from "lucide-react";
+import { Bookmark, Package } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useHeader } from "@/context/HeaderContext";
 import { useToast } from "@/context/ToastContext";
@@ -7,7 +7,7 @@ import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { EmptyState } from "@/components/common/EmptyState";
 import { DraftCard } from "@/components/common/DraftCard";
 
-const CustomerDraftsPage = () => {
+const StockAdjustmentDraftsPage = () => {
   const navigate = useNavigate();
   const [drafts, setDrafts] = useState<any[]>([]);
   const { setActions } = useHeader();
@@ -21,7 +21,7 @@ const CustomerDraftsPage = () => {
   }, [setActions, navigate]);
 
   useEffect(() => {
-    const storedDrafts = JSON.parse(localStorage.getItem("customer_drafts") || "[]");
+    const storedDrafts = JSON.parse(localStorage.getItem("stock_adjustment_drafts") || "[]");
     setDrafts(storedDrafts);
   }, []);
 
@@ -34,7 +34,7 @@ const CustomerDraftsPage = () => {
     if (!draftToDelete) return;
     const updated = drafts.filter((d) => d.id !== draftToDelete);
     setDrafts(updated);
-    localStorage.setItem("customer_drafts", JSON.stringify(updated));
+    localStorage.setItem("stock_adjustment_drafts", JSON.stringify(updated));
     showToast("Draft removed", "success");
     setDraftToDelete(null);
     setIsDeleteDialogOpen(false);
@@ -55,21 +55,21 @@ const CustomerDraftsPage = () => {
       {drafts.length === 0 ? (
         <EmptyState 
           title="No active drafts"
-          description="Start a new registration and save progress to see them here."
-          actionText="Create New Customer"
-          onAction={() => navigate("/customers/add")}
+          description="Start a new stock adjustment and save progress to see them here."
+          actionText="New Stock Adjustment"
+          onAction={() => navigate("/stock-adjustment")}
         />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {drafts.map((draft) => (
             <DraftCard
               key={draft.id}
-              title={draft.displayName || "Untitled Draft"}
+              title={draft.displayName || "Untitled Adjustment"}
               timestamp={draft.timestamp}
-              icon={User}
-              onEdit={() => navigate(`/customers/add?draftId=${draft.id}`)}
+              icon={Package}
+              onEdit={() => navigate(`/stock-adjustment?draftId=${draft.id}`)}
               onDelete={() => confirmDelete(draft.id)}
-              onComplete={() => navigate(`/customers/add?draftId=${draft.id}`)}
+              onComplete={() => navigate(`/stock-adjustment?draftId=${draft.id}`)}
             />
           ))}
         </div>
@@ -87,4 +87,4 @@ const CustomerDraftsPage = () => {
   );
 };
 
-export default CustomerDraftsPage;
+export default StockAdjustmentDraftsPage;

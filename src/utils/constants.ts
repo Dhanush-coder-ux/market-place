@@ -106,9 +106,10 @@ export const sidebarLinks: SidebarLink[] = [
     name: "Inventory",
     icon: Database,
     subLinks: [
-      { name: "Stock Levels", path: "/inventory" },
-      { name: "Stock Movements", path: "/stock-movement" },
-      { name: "Stock Adjustments", path: "/stock-adjustment" },
+      { name: "Stock Levels", path: "/inventory", icon: Package },
+      { name: "Stock Movements", path: "/stock-movement", icon: History },
+      { name: "Stock Adjustments", path: "/stock-adjustment", icon: ClipboardList },
+      { name: "Saved Drafts", path: "/stock-adjustment/drafts", icon: Bookmark },
     ],
   },
 

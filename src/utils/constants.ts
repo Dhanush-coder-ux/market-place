@@ -52,7 +52,8 @@ export const sidebarLinks: SidebarLink[] = [
     icon: Wallet,
     subLinks: [
       
-  {icon:Plus, name: "Add Purchase", path: "/purchase-order/add" },
+  {icon:Plus, name: "Add Purchase", path: "/purchase/add" },
+  {icon:Bookmark, name: "Saved Drafts", path: "/purchase/drafts" },
       // Purchase Orders group — gated by settings.poGrn
       {
         type: "group",

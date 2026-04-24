@@ -18,6 +18,7 @@ import CustomerDraftsPage from "@/features/customer/pages/CustomerDraftsPage";
 import SupplierForm from "@/features/supplier/pages/SupplierForm";
 import SupplierDraftsPage from "@/features/supplier/pages/SupplierDraftsPage";
 import StockAdjustmentDraftsPage from "@/features/inventory/pages/StockAdjustmentDraftsPage";
+import PurchaseDraftsPage from "@/features/purchase/pages/PurchaseDraftsPage";
 
 
 // Layout & Auth
@@ -98,7 +99,8 @@ export const router = createBrowserRouter([
       { path: "/purchase-history", element: <PurchaseHistory /> },
       { path: "/production-entry/add", element: <ProductionForm /> },
       { path: '/purchase/detail', element: <PurchaseDetail /> },
-      { path: '/purchase/add', element: <PurchaseForm /> },
+      {path: "/purchase/add", element: <PurchaseForm /> },
+      {path: "/purchase/drafts", element: <PurchaseDraftsPage /> },
 
       // Suppliers — static "add" before dynamic ":id"
       { path: 'supplier', element: <SupplierSearch /> },

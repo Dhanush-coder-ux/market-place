@@ -1,18 +1,33 @@
-import React, { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import {
-  Save,
-  Plus,
-  Trash2,
-  Settings,
+  Save, 
+  Plus, 
+  Trash2, 
+  Settings, 
   ScanLine,
-  Search,
-  X,
-  PackageOpen,
-  Check,
+  Banknote, 
+  Smartphone, 
+  CreditCard, 
+  Landmark, 
+  ChevronUp, 
+  X, 
+  PackageOpen, 
+  Check, 
   CalendarDays,
-  ChevronUp
+  Bookmark,
+  ChevronRight,
+  Clock,
+  Trash,
+  AlertTriangle,
+  Zap,
+  Percent,
+  Info,
+  FileText,
+  Truck
 } from "lucide-react";
 
+import { ReusableSelect } from "@/components/ui/ReusableSelect";
 import Input from "@/components/ui/Input";
 import { GradientButton } from "@/components/ui/GradientButton";
 import { useApi } from "@/context/ApiContext";
@@ -20,9 +35,12 @@ import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 import { SearchSelect } from "@/components/inputbuilders/SearchSelect";
 import { supplierApi } from "@/services/api/supplier";
 import { inventoryApi } from "@/services/api/inventory";
+import { useHeader } from "@/context/HeaderContext";
+import { useToast } from "@/context/ToastContext";
+import Loader from "@/components/common/Loader";
+import { InventoryItemsCard } from "@/features/purchase/components/InventoryItemsCard";
 
-// --- Types ---
-type GRNStatus = "Completed" | "Pending" | "Partial";
+type PaymentMethod = "Cash" | "UPI" | "Card" | "Bank";
 
 export interface ProductItem {
   id: string;
@@ -30,116 +48,204 @@ export interface ProductItem {
   quantity: number | "";
   costPrice: number | "";
   sellingPrice: number | "";
+  marginPercent: number | "";
+  marginAmount: number | "";
+  marginType: "percent" | "amount" | "sellingPrice";
+  unit: string;
+  taxGst: number | "";
   storageLoc: string;
-  batchNum: string;
-  remarks: string;
-  manufacturingDate: string;
+  reorderPoint: number | "";
   expiryDate: string;
+  manufacturingDate: string;
   batchTracking: boolean;
-  variant?: string;
-  sku?: string;
+  batchNum: string;
+  sku: string;
+  variant: string;
+  size: string;
+  category?: string;
+  remarks?: string;
 }
 
-interface GRNFormData {
-  poReference: string;
-  supplier: string;
-  date: string;
-  status: GRNStatus;
-}
+const GrnForm = () => {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const { postData, getData, putData } = useApi();
+  const { setActions } = useHeader();
+  const { showToast } = useToast();
+  const [submitting, setSubmitting] = useState(false);
 
-interface GRNFormProps {
-  onSubmit?: (data: any) => void;
-  onCancel?: () => void;
-}
-
-const LOW_STOCK_THRESHOLD = 5;
-
-const GRNForm: React.FC<GRNFormProps> = ({ onSubmit, onCancel: _onCancel }) => {
-  const { postData, loading } = useApi();
-  
   // --- State Management ---
-  const [grnDetails, setGrnDetails] = useState<GRNFormData>({
-    poReference: "",
+  const [grnDetails, setGrnDetails] = useState({
     supplier: "",
+    poReference: "",
+    invoiceNo: "",
     date: new Date().toISOString().split("T")[0],
-    status: "Pending",
+    referenceNo: `GRN-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 10000)).padStart(4, "0")}`,
+    status: "Completed",
   });
 
   const [products, setProducts] = useState<ProductItem[]>([
     {
-      id: Date.now().toString(),
-      name: "",
-      quantity: "",
-      costPrice: "",
-      sellingPrice: "",
-      storageLoc: "",
-      batchNum: "",
-      remarks: "",
-      manufacturingDate: "",
-      expiryDate: "",
-      batchTracking: false,
-      variant: "",
-      sku: ""
+      id: "1", name: "", quantity: "", costPrice: "", sellingPrice: "",
+      marginPercent: "", marginAmount: "", marginType: "percent",
+      unit: "pc", taxGst: 18, storageLoc: "", reorderPoint: "", expiryDate: "", manufacturingDate: "", batchTracking: false, batchNum: "", sku: "", variant: "", size: ""
     }
   ]);
 
-  const [expandedProductIndex, setExpandedProductIndex] = useState<number | null>(null);
-
-  // --- Dynamic Modal State ---
-  const [variantModal, setVariantModal] = useState<{ 
-    isOpen: boolean; 
-    baseProduct: string; 
-    targetRowIndex: number;
-    variants: any[];
-    baseData: any;
-  }>({
-    isOpen: false, baseProduct: "", targetRowIndex: -1, variants: [], baseData: null
-  });
-  const [selectedVariants, setSelectedVariants] = useState<Set<string>>(new Set());
+  const [charges, setCharges] = useState({ transport: "" as number | "", other: "" as number | "" });
+  const [payment, setPayment] = useState({ method: "Cash" as PaymentMethod, amountPaid: "" as number | "" });
+  const [costMethod, setCostMethod] = useState("None");
+  const [supplierDetails, setSupplierDetails] = useState<any>(null);
+  const [drafts, setDrafts] = useState<any[]>([]);
 
   // --- Calculations ---
   const stats = useMemo(() => {
     let totalQty = 0;
-    let totalValue = 0;
+    let subtotal = 0;
 
     products.forEach(p => {
       const q = Number(p.quantity) || 0;
-      const cp = Number(p.costPrice) || 0;
+      const c = Number(p.costPrice) || 0;
       totalQty += q;
-      totalValue += (q * cp); 
+      subtotal += (q * c);
     });
 
-    return { totalQty, totalValue, itemsCount: products.length };
-  }, [products]);
+    const transportCost = Number(charges.transport) || 0;
+    const otherCost = Number(charges.other) || 0;
+    const totalCharges = transportCost + otherCost;
+
+    const grandTotal = Math.round(subtotal + totalCharges);
+    const paid = Number(payment.amountPaid) || 0;
+    const outstanding = grandTotal - paid;
+
+    const allocations = products.map(p => {
+      const q = Number(p.quantity) || 0;
+      const c = Number(p.costPrice) || 0;
+      let alloc = 0;
+      if (costMethod === "By Unit" && totalQty > 0) {
+        alloc = (q / totalQty) * totalCharges;
+      } else if (costMethod === "By Value" && subtotal > 0) {
+        alloc = ((q * c) / subtotal) * totalCharges;
+      }
+      const netCostPerUnit = q > 0 ? (q * c + alloc) / q : c;
+      return { alloc, netCostPerUnit };
+    });
+
+    return { totalQty, subtotal, totalCharges, grandTotal, outstanding, allocations };
+  }, [products, charges, payment.amountPaid, costMethod]);
+
+  // --- Load Drafts for Sidebar ---
+  const loadDraftsList = () => {
+    const savedDrafts = JSON.parse(localStorage.getItem("purchase_drafts") || "[]");
+    setDrafts(savedDrafts.sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()).slice(0, 5));
+  };
+
+  useEffect(() => {
+    loadDraftsList();
+  }, []);
+
+  // --- Load Existing GRN or Draft ---
+  useEffect(() => {
+    if (id) {
+      const fetchGRN = async () => {
+        const res = await getData(`${ENDPOINTS.PURCHASES}/${id}`);
+        if (res && res.data) {
+          const data = res.data;
+          setGrnDetails(data.grnDetails || {
+            supplier: data.supplier_name,
+            poReference: data.po_reference || "",
+            invoiceNo: data.invoice_no || "",
+            date: data.date || new Date().toISOString().split("T")[0],
+            referenceNo: data.reference_no || "",
+            status: data.status || "Completed",
+          });
+          setProducts(data.products.map((p: any) => ({
+            id: p.id || Math.random().toString(),
+            name: p.name,
+            quantity: p.quantity,
+            costPrice: p.buy_price,
+            sellingPrice: p.sell_price,
+            marginPercent: "",
+            marginAmount: "",
+            marginType: "sellingPrice",
+            unit: p.unit || "pc",
+            taxGst: p.gst || 18,
+            sku: p.barcode,
+            variant: p.variant || "",
+            batchTracking: p.batch_tracking || false,
+            batchNum: p.batch_number || "",
+            manufacturingDate: p.manufacturing_date || "",
+            expiryDate: p.expiry_date || ""
+          })));
+          setCharges(data.charges || { transport: 0, other: 0 });
+          setPayment(data.payment || { method: "Cash", amountPaid: 0 });
+        }
+      };
+      fetchGRN();
+    } else {
+      const draftId = searchParams.get("draftId");
+      if (draftId) {
+        const savedDrafts = JSON.parse(localStorage.getItem("purchase_drafts") || "[]");
+        const draft = savedDrafts.find((d: any) => d.id === draftId);
+        if (draft) {
+          setGrnDetails(draft.data.grnDetails);
+          setProducts(draft.data.products);
+          setCharges(draft.data.charges);
+          setPayment(draft.data.payment);
+          setSupplierDetails(draft.data.supplierDetails);
+        }
+      }
+    }
+  }, [id, getData, searchParams]);
+
+  // --- Header Actions ---
+  useEffect(() => {
+    setActions(
+      <div className="flex items-center gap-4 animate-in fade-in slide-in-from-right-4 duration-300">
+        <div className="hidden md:flex items-center gap-2">
+          {!id && (
+            <button 
+              type="button"
+              onClick={handleSaveDraft}
+              className="px-4 h-11 rounded-xl border border-blue-100 text-blue-600 font-bold text-xs bg-blue-50/50 hover:bg-blue-100 transition-all flex items-center gap-2"
+            >
+              <Bookmark size={14} />
+              Save Draft
+            </button>
+          )}
+          <GradientButton 
+            icon={submitting ? <Loader className="h-4 w-4" /> : <Save size={16} />} 
+            onClick={handleSaveGRN} 
+            disabled={submitting}
+            className="rounded-xl shadow-md text-xs px-6 h-11 h-auto flex items-center py-3"
+          >
+            {submitting ? "Processing..." : (id ? "Update GRN" : "Confirm GRN")}
+          </GradientButton>
+        </div>
+      </div>
+    );
+    return () => setActions(null);
+  }, [setActions, grnDetails, products, charges, payment, submitting, id]);
 
   // --- Handlers ---
-  const handleProductChange = (index: number, field: keyof ProductItem, value: any) => {
-    const updated = [...products];
-    updated[index] = { ...updated[index], [field]: value };
-    setProducts(updated);
+  const handleProductChange = (index: number, field: string, value: any) => {
+    const next = [...products];
+    (next[index] as any)[field] = value;
+    setProducts(next);
   };
 
   const updateProductFields = (index: number, updates: Partial<ProductItem>) => {
-    const updated = [...products];
-    updated[index] = { ...updated[index], ...updates };
-    setProducts(updated);
+    const next = [...products];
+    next[index] = { ...next[index], ...updates };
+    setProducts(next);
   };
 
   const addProduct = () => {
     setProducts([...products, {
-      id: Math.random().toString(),
-      name: "",
-      quantity: "",
-      costPrice: "",
-      sellingPrice: "",
-      storageLoc: "",
-      batchNum: "",
-      remarks: "",
-      manufacturingDate: "",
-      expiryDate: "",
-      batchTracking: false,
-      variant: "",
-      sku: ""
+      id: Math.random().toString(), name: "", quantity: "", costPrice: "", sellingPrice: "",
+      marginPercent: "", marginAmount: "", marginType: "percent",
+      unit: "pc", taxGst: 18, storageLoc: "", reorderPoint: "", expiryDate: "", manufacturingDate: "", batchTracking: false, batchNum: "", sku: "", variant: "", size: ""
     }]);
   };
 
@@ -149,452 +255,340 @@ const GRNForm: React.FC<GRNFormProps> = ({ onSubmit, onCancel: _onCancel }) => {
     }
   };
 
-  const toggleAdvanced = (index: number) => {
-    setExpandedProductIndex(expandedProductIndex === index ? null : index);
-  };
+  const handleSaveDraft = () => {
+    const savedDrafts = JSON.parse(localStorage.getItem("purchase_drafts") || "[]");
+    const draftId = searchParams.get("draftId") || Date.now().toString();
+    
+    const newDraft = {
+      id: draftId,
+      type: "GRN Purchase", // Tag as requested
+      data: { grnDetails, products, charges, payment, supplierDetails },
+      timestamp: new Date().toISOString(),
+      displayName: `GRN: ${supplierDetails?.name || grnDetails.supplier || "Untitled GRN"}`
+    };
 
-  // --- Modal Handlers ---
-  const toggleVariantSelection = (variantId: string) => {
-    const newSelection = new Set(selectedVariants);
-    if (newSelection.has(variantId)) {
-      newSelection.delete(variantId);
+    const existingIndex = savedDrafts.findIndex((d: any) => d.id === draftId);
+    if (existingIndex > -1) {
+      savedDrafts[existingIndex] = newDraft;
     } else {
-      newSelection.add(variantId);
+      savedDrafts.push(newDraft);
     }
-    setSelectedVariants(newSelection);
+
+    localStorage.setItem("purchase_drafts", JSON.stringify(savedDrafts));
+    showToast("GRN progress saved as draft", "info");
+    loadDraftsList();
+    if (!searchParams.get("draftId")) {
+      navigate(`?draftId=${draftId}`, { replace: true });
+    }
   };
 
-  const confirmVariants = () => {
-    if (selectedVariants.size === 0) {
-      setVariantModal({ isOpen: false, baseProduct: "", targetRowIndex: -1, variants: [], baseData: null });
+  const deleteDraft = (e: React.MouseEvent, draftId: string) => {
+    e.stopPropagation();
+    const savedDrafts = JSON.parse(localStorage.getItem("purchase_drafts") || "[]");
+    const filtered = savedDrafts.filter((d: any) => d.id !== draftId);
+    localStorage.setItem("purchase_drafts", JSON.stringify(filtered));
+    loadDraftsList();
+    if (searchParams.get("draftId") === draftId) {
+      navigate("/po-grn/add", { replace: true });
+      window.location.reload();
+    }
+  };
+
+  const handleSaveGRN = async () => {
+    if (!grnDetails.supplier) {
+      showToast("Please select a supplier.", "error");
       return;
     }
 
-    const variantsToAdd = variantModal.variants.filter(v => selectedVariants.has(v.id));
-    const updatedProducts = [...products];
-    const baseOpt = variantModal.baseData;
-
-    // Update origin row
-    const firstVariant = variantsToAdd[0];
-    updatedProducts[variantModal.targetRowIndex] = {
-      ...updatedProducts[variantModal.targetRowIndex],
-      name: variantModal.baseProduct,
-      costPrice: baseOpt.buy_price ?? baseOpt.costPrice ?? "",
-      sellingPrice: baseOpt.sell_price ?? baseOpt.sellingPrice ?? "",
-      variant: firstVariant.name,
-      sku: firstVariant.sku
-    };
-
-    // Append new rows for multiple selections
-    for (let i = 1; i < variantsToAdd.length; i++) {
-      const v = variantsToAdd[i];
-      updatedProducts.push({
-        id: Math.random().toString(),
-        name: variantModal.baseProduct,
-        quantity: "",
-        costPrice: baseOpt.buy_price ?? baseOpt.costPrice ?? "",
-        sellingPrice: baseOpt.sell_price ?? baseOpt.sellingPrice ?? "",
-        storageLoc: "",
-        batchNum: "",
-        remarks: "",
-        manufacturingDate: "",
-        expiryDate: "",
-        batchTracking: false,
-        sku: v.sku,
-        variant: v.name
-      });
+    if (products.length === 0 || !products[0].name) {
+      showToast("Please add at least one product.", "error");
+      return;
     }
 
-    setProducts(updatedProducts);
-    setVariantModal({ isOpen: false, baseProduct: "", targetRowIndex: -1, variants: [], baseData: null });
-    setSelectedVariants(new Set());
-  };
+    setSubmitting(true);
+    try {
+      const transformedProducts = products.map((p) => {
+        const q = Math.floor(Number(p.quantity) || 0);
+        const baseCost = Number(p.costPrice) || 0;
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const finalData = {
-      ...grnDetails,
-      itemsCount: stats.itemsCount,
-      totalValue: stats.totalValue,
-      products
-    };
-    const payload = {
-      shop_id: SHOP_ID,
-      type: "GRN CREATE",
-      datas: finalData,
-    };
-    const res = await postData(ENDPOINTS.PURCHASES, payload);
-    if (res && onSubmit) onSubmit(finalData);
+        let allocated = 0;
+        if (costMethod === "By Unit" && stats.totalQty > 0) {
+          allocated = stats.totalCharges / stats.totalQty;
+        } else if (costMethod === "By Value" && stats.subtotal > 0) {
+          allocated = (baseCost / stats.subtotal) * stats.totalCharges;
+        }
+        const finalCost = baseCost + allocated;
+
+        let finalSellPrice = 0;
+        if (p.marginType === "percent") {
+          finalSellPrice = finalCost + (finalCost * ((Number(p.marginPercent) || 0) / 100));
+        } else if (p.marginType === "amount") {
+          finalSellPrice = finalCost + (Number(p.marginAmount) || 0);
+        } else {
+          finalSellPrice = Number(p.sellingPrice) || 0;
+        }
+
+        return {
+          id: p.id,
+          name: p.name,
+          barcode: p.sku,
+          quantity: q,
+          buy_price: baseCost,
+          sell_price: Number(finalSellPrice.toFixed(2)),
+          unit: p.unit || "pc",
+          gst: Number(p.taxGst) || 0,
+          batch_tracking: p.batchTracking,
+          batch_number: p.batchNum,
+          manufacturing_date: p.manufacturingDate,
+          expiry_date: p.expiryDate,
+          variant: p.variant,
+        };
+      });
+
+      const payload = {
+        datas: {
+          shop_id: SHOP_ID,
+          type: "GRN",
+          supplier_id: supplierDetails?.id || "SUP_" + grnDetails.supplier.substring(0, 3).toUpperCase(),
+          supplier_name: supplierDetails?.name || grnDetails.supplier,
+          grnDetails: { ...grnDetails },
+          charges: {
+            transport: Number(charges.transport) || 0,
+            other: Number(charges.other) || 0
+          },
+          payment: {
+            method: payment.method,
+            amountPaid: Number(payment.amountPaid) || 0
+          },
+          products: transformedProducts,
+        }
+      };
+
+      let res;
+      if (id) {
+        res = await putData(`${ENDPOINTS.PURCHASES}/${id}`, payload);
+      } else {
+        res = await postData(ENDPOINTS.PURCHASES, payload);
+      }
+
+      if (res) {
+        showToast(id ? "GRN updated" : "GRN created", "success");
+        // Clear draft
+        const draftId = searchParams.get("draftId");
+        if (draftId) {
+          const savedDrafts = JSON.parse(localStorage.getItem("purchase_drafts") || "[]");
+          const filtered = savedDrafts.filter((d: any) => d.id !== draftId);
+          localStorage.setItem("purchase_drafts", JSON.stringify(filtered));
+        }
+        navigate("/po-grn");
+      }
+    } catch (error: any) {
+      showToast(error.message || "Failed to save GRN", "error");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
-    <div className="min-h-screen font-sans text-slate-800 bg-[#FAFAFC] relative selection:bg-blue-100 p-6">
-      
-      {/* --- DYNAMIC VARIANT SELECTION MODAL --- */}
-      {variantModal.isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col border border-slate-200/60 animate-in fade-in zoom-in-95 duration-200">
-            <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center bg-white">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-slate-50 border border-slate-100 text-slate-600 rounded-lg shadow-sm">
-                  <PackageOpen size={18} />
+    <div className="min-h-screen bg-slate-50/50 p-4 md:p-6 lg:p-8 font-[Inter,sans-serif]">
+      <div className="max-w-[1600px] mx-auto">
+        <div className="grid grid-cols-1 lg:grid-cols-7 gap-6 items-start">
+          
+          <div className="lg:col-span-5 space-y-6">
+            {/* 1. GRN Details Card */}
+            <div className="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden transition-all hover:shadow-md">
+              <div className="px-8 py-5 bg-gradient-to-r from-blue-50/50 to-transparent border-b border-slate-100 flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-blue-100 flex items-center justify-center text-blue-600 border border-blue-200 shadow-sm">
+                  <Truck size={20} />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-slate-800 text-lg">Select Variants</h3>
-                  <p className="text-sm text-slate-500">Available variations for <span className="font-medium text-slate-700">{variantModal.baseProduct}</span></p>
+                  <h2 className="text-sm font-black text-slate-800 uppercase tracking-widest">Goods Receipt (GRN)</h2>
+                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">Receive products & update inventory</p>
                 </div>
               </div>
-              <button onClick={() => setVariantModal({ isOpen: false, baseProduct: "", targetRowIndex: -1, variants: [], baseData: null })} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-lg transition-colors">
-                <X size={20} />
-              </button>
-            </div>
-
-            <div className="p-6 max-h-[60vh] overflow-y-auto bg-slate-50/50">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {variantModal.variants.map((variant) => {
-                  const stockNum = Number(variant.stock) || 0;
-                  const isLowStock = stockNum <= LOW_STOCK_THRESHOLD && stockNum > 0;
-                  const isOutOfStock = stockNum <= 0;
-                  const isSelected = selectedVariants.has(variant.id);
-
-                  return (
-                    <div
-                      key={variant.id}
-                      onClick={() => !isOutOfStock && toggleVariantSelection(variant.id)}
-                      className={`relative p-4 rounded-xl border transition-all duration-200 flex flex-col gap-2
-                        ${isOutOfStock
-                          ? 'border-slate-200 bg-slate-100/50 opacity-60 cursor-not-allowed'
-                          : isSelected
-                            ? 'border-blue-500 bg-blue-50/30 cursor-pointer shadow-[0_2px_8px_rgba(59,130,246,0.12)]'
-                            : 'border-slate-200 hover:border-slate-300 hover:shadow-sm cursor-pointer bg-white'
-                        }
-                      `}
-                    >
-                      {!isOutOfStock && (
-                        <div className={`absolute top-4 right-4 h-5 w-5 rounded-full border flex items-center justify-center transition-colors ${isSelected ? 'bg-blue-500 border-blue-500 text-white' : 'border-slate-300'}`}>
-                          {isSelected && <Check size={12} strokeWidth={3} />}
-                        </div>
-                      )}
-
-                      <div>
-                        <h4 className="font-semibold text-slate-800 pr-6">{variant.name}</h4>
-                        <p className="text-xs text-slate-500 mt-1 font-mono">SKU: {variant.sku}</p>
-                      </div>
-                      
-                      <div className="mt-auto pt-3">
-                        <span className={`inline-flex px-2 py-1 rounded-md text-[11px] font-medium tracking-wide ${
-                            isOutOfStock ? 'bg-slate-200 text-slate-600' : 
-                            isLowStock ? 'bg-orange-100 text-orange-700' : 
-                            'bg-emerald-50 text-emerald-700 border border-emerald-100'
-                          }`}>
-                          {isOutOfStock ? 'Out of Stock' : isLowStock ? `Low Stock (${stockNum})` : `In Stock (${stockNum})`}
-                        </span>
-                      </div>
+              
+              <div className="p-8 grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="flex flex-col gap-2">
+                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Supplier *</label>
+                  <SearchSelect
+                    labelKey="name"
+                    valueKey="id"
+                    fetchOptions={async (q) => await supplierApi.searchSuppliers(q)}
+                    value={grnDetails.supplier}
+                    onChange={(val, opt: any) => {
+                      setGrnDetails({ ...grnDetails, supplier: String(val) });
+                      if (opt) setSupplierDetails(opt);
+                    }}
+                    placeholder="Search Supplier..."
+                    className="w-full"
+                  />
+                  {supplierDetails && (
+                    <div className="mt-2 p-3 bg-slate-50 border border-slate-100 rounded-2xl text-xs flex flex-col gap-1 text-slate-600 animate-in fade-in slide-in-from-top-2">
+                      <strong className="text-slate-800 font-bold">{supplierDetails.name}</strong>
+                      <span className="opacity-70 flex items-center gap-1.5">✉️ {supplierDetails.email || "No email"}</span>
+                      <span className="opacity-70 flex items-center gap-1.5">📞 {supplierDetails.mobile_number || "No phone"}</span>
                     </div>
-                  );
-                })}
-              </div>
-            </div>
+                  )}
+                </div>
 
-            <div className="p-4 border-t border-slate-100 bg-white flex justify-between items-center">
-              <span className="text-sm text-slate-500">
-                <span className="font-semibold text-slate-700">{selectedVariants.size}</span> variant(s) selected
-              </span>
-              <div className="flex gap-3">
-                <GradientButton variant="outline" onClick={() => setVariantModal({ isOpen: false, baseProduct: "", targetRowIndex: -1, variants: [], baseData: null })}>
-                  Cancel
-                </GradientButton>
-                <GradientButton variant="primary" onClick={confirmVariants} disabled={selectedVariants.size === 0}>
-                  Confirm Selection
-                </GradientButton>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-      {/* --- END MODAL --- */}
-
-      <div className="flex flex-col xl:flex-row gap-6 max-w-[1600px] mx-auto pb-20">
-        
-        {/* ================= LEFT COLUMN (MAIN FORM) ================= */}
-        <div className="flex-1 space-y-6">
-          
-          {/* 1. General Information */}
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200/60">
-            <h2 className="text-base font-semibold text-slate-800 mb-6">General Information</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="flex flex-col gap-1.5">
-                <label className="text-sm font-medium text-slate-700">Supplier <span className="text-red-500">*</span></label>
-                <SearchSelect
-                  labelKey="name"
-                  valueKey="id"
-                  fetchOptions={async (q) => await supplierApi.searchSuppliers(q)}
-                  value={grnDetails.supplier}
-                  onChange={(val) => setGrnDetails({...grnDetails, supplier: String(val)})}
-                  placeholder="Select Supplier..."
-                  className="w-full !border-slate-200 focus:!border-blue-500 focus:!ring-1 focus:!ring-blue-500/20"
+                <Input
+                  label="PO Reference #"
+                  placeholder="PO-..."
+                  value={grnDetails.poReference}
+                  onChange={(e) => setGrnDetails({ ...grnDetails, poReference: e.target.value })}
                 />
+                <Input
+                  label="Supplier Invoice #"
+                  placeholder="INV-..."
+                  value={grnDetails.invoiceNo}
+                  onChange={(e) => setGrnDetails({ ...grnDetails, invoiceNo: e.target.value })}
+                />
+                <Input
+                  label="Receipt Date"
+                  required
+                  type="date"
+                  value={grnDetails.date}
+                  onChange={(e) => setGrnDetails({ ...grnDetails, date: e.target.value })}
+                />
+                <div className="flex flex-col gap-2">
+                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Status</label>
+                  <ReusableSelect
+                    options={[
+                      { value: 'Completed', label: 'Completed (All Items)' },
+                      { value: 'Partial', label: 'Partial Receipt' },
+                      { value: 'Pending', label: 'Pending Review' }
+                    ]}
+                    value={grnDetails.status}
+                    onValueChange={(val) => setGrnDetails({ ...grnDetails, status: val })}
+                    placeholder="Select Status"
+                  />
+                </div>
               </div>
-              <Input 
-                label="Receipt Date"
-                required
-                type="date"
-                value={grnDetails.date}
-                onChange={(e) => setGrnDetails({...grnDetails, date: e.target.value})}
-              />
             </div>
+
+            {/* 2. Items Card */}
+            <InventoryItemsCard
+              products={products}
+              stats={stats}
+              costMethod={costMethod}
+              setCostMethod={setCostMethod}
+              handleProductChange={handleProductChange}
+              updateProductFields={updateProductFields}
+              setProducts={setProducts}
+              addProduct={addProduct}
+              removeProduct={removeProduct}
+              type="PURCHASE"
+            />
           </div>
 
-          {/* 2. Quick Add Bar */}
-          <div className="bg-white p-3 rounded-xl border border-blue-100 shadow-sm flex items-center gap-3 relative overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-r from-blue-50/50 to-indigo-50/50 pointer-events-none"></div>
-            <button className="relative z-10 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-md transition-all duration-200 flex items-center gap-2 font-semibold whitespace-nowrap">
-              <ScanLine size={18} /> <span className="hidden sm:inline">Scan Barcode</span>
-            </button>
-            <div className="flex-1 relative z-10">
-              <Input 
-                onChange={() => {}}
-                value={""}
-                type="text" 
-                placeholder="Type product name or scan to add quickly..." 
-                leftIcon={<Search size={18} className="text-blue-400" />}
-                className="!bg-white/80 backdrop-blur-sm !border-slate-200 focus:!border-blue-400 focus:!ring-blue-100 text-slate-800 placeholder:text-slate-400 !shadow-inner"
-              />
+          <div className="lg:col-span-2 space-y-6">
+            {/* 3. Summary Card */}
+            <div className="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden transition-all hover:shadow-md">
+              <div className="px-6 py-4 bg-gradient-to-r from-emerald-50/50 to-transparent border-b border-slate-100 flex items-center gap-3">
+                <div className="w-8 h-8 rounded-xl bg-emerald-100 flex items-center justify-center text-emerald-600 border border-emerald-200 shadow-sm">
+                  <Banknote size={16} />
+                </div>
+                <h2 className="text-xs font-bold text-slate-800 uppercase tracking-widest">Receipt Summary</h2>
+              </div>
+              
+              <div className="p-6 space-y-4">
+                <div className="flex justify-between items-center">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Items Received</span>
+                  <span className="text-sm font-black text-slate-800">{products.length}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Total Quantity</span>
+                  <span className="text-sm font-black text-slate-800">{stats.totalQty}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Subtotal Value</span>
+                  <span className="text-sm font-black text-slate-800">₹{stats.subtotal.toLocaleString()}</span>
+                </div>
+                
+                <div className="pt-4 border-t border-slate-100 space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-[11px] font-bold uppercase tracking-wider">Transport</span>
+                    <div className="w-24">
+                      <Input
+                        type="number"
+                        placeholder="0"
+                        className="!h-8 !text-right !text-xs !bg-slate-50/50"
+                        value={charges.transport as any}
+                        onChange={(e) => setCharges({ ...charges, transport: e.target.value ? Number(e.target.value) : "" })}
+                      />
+                    </div>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-[11px] font-bold uppercase tracking-wider">Other Charges</span>
+                    <div className="w-24">
+                      <Input
+                        type="number"
+                        placeholder="0"
+                        className="!h-8 !text-right !text-xs !bg-slate-50/50"
+                        value={charges.other as any}
+                        onChange={(e) => setCharges({ ...charges, other: e.target.value ? Number(e.target.value) : "" })}
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="pt-4 border-t border-slate-100 mt-2">
+                    <div className="flex flex-col gap-1">
+                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Grand Total</span>
+                      <span className="text-3xl font-black text-slate-900 tracking-tight">₹{stats.grandTotal.toLocaleString()}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
 
-          {/* 3. Product Entry */}
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200/60 overflow-hidden">
-            <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-white">
-              <h2 className="text-sm font-semibold text-slate-800">Received Products</h2>
-              <button type="button" onClick={addProduct} className="text-sm font-medium text-slate-700 bg-slate-50 border border-slate-200 px-4 py-2 rounded-lg hover:bg-slate-100 transition-colors flex items-center gap-1.5 shadow-sm">
-                <Plus size={16} /> Add Row
-              </button>
-            </div>
-            
-            <div className="p-0 overflow-x-auto">
-              <div className="min-w-[900px]">
-                {/* Header Row */}
-                <div className="grid grid-cols-12 gap-3 px-6 py-3 bg-slate-50 border-b border-slate-200 text-xs font-medium text-slate-500 uppercase tracking-wider items-center">
-                  <div className="col-span-4">Product Name</div>
-                  <div className="col-span-2 text-center">Quantity</div>
-                  <div className="col-span-2 text-right">Buy Price</div>
-                  <div className="col-span-2 text-right">Sell Price</div>
-                  <div className="col-span-2 text-right">Total</div>
+            {/* 4. Payment Details Card (Optional for GRN, but keeping consistent) */}
+            <div className="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden transition-all hover:shadow-md">
+              <div className="px-6 py-4 bg-gradient-to-r from-amber-50/50 to-transparent border-b border-slate-100 flex items-center gap-3">
+                <div className="w-8 h-8 rounded-xl bg-amber-100 flex items-center justify-center text-amber-600 border border-amber-200 shadow-sm">
+                  <CreditCard size={16} />
+                </div>
+                <h2 className="text-xs font-bold text-slate-800 uppercase tracking-widest">Payment Status</h2>
+              </div>
+              
+              <div className="p-6 space-y-6">
+                <div className="grid grid-cols-4 gap-2">
+                  {[
+                    { id: "Cash", icon: <Banknote size={16} /> },
+                    { id: "UPI", icon: <Smartphone size={16} /> },
+                    { id: "Card", icon: <CreditCard size={16} /> },
+                    { id: "Bank", icon: <Landmark size={16} /> }
+                  ].map((m) => (
+                    <button
+                      key={m.id}
+                      onClick={() => setPayment({ ...payment, method: m.id as PaymentMethod })}
+                      className={`flex flex-col items-center justify-center py-3 rounded-2xl border transition-all ${payment.method === m.id
+                        ? "border-amber-500 bg-amber-50 text-amber-700 shadow-sm"
+                        : "border-slate-100 bg-slate-50/50 text-slate-400 hover:border-amber-200"
+                        }`}
+                    >
+                      <div className="mb-1.5">{m.icon}</div>
+                      <span className="text-[9px] font-black uppercase tracking-widest">{m.id}</span>
+                    </button>
+                  ))}
                 </div>
 
-                {/* Product Rows */}
-                <div className="divide-y divide-slate-100 bg-white">
-                  {products.map((product, index) => {
-                    const rowTotal = (Number(product.quantity) || 0) * (Number(product.costPrice) || 0); // Using cost price for GRN typical row totals
-                    const isExpanded = expandedProductIndex === index;
-
-                    return (
-                      <div key={product.id} className="group transition-colors">
-                        <div className="grid grid-cols-12 gap-3 px-6 py-4 items-center">
-                          <div className="col-span-4">
-                            <SearchSelect
-                              labelKey="name"
-                              valueKey="id"
-                              fetchOptions={async (q) => await inventoryApi.searchInventories(q)}
-                              value={product.name}
-                              onChange={(val, opt: any) => {
-                                if (opt) {
-                                  // Check for dynamic variants from the API payload
-                                  const hasVariants = opt.has_variants || (opt.datas && opt.datas.has_variants);
-                                  const combinations = opt.combinations || (opt.datas && opt.datas.combinations) || [];
-                                  
-                                  if (hasVariants && combinations.length > 0) {
-                                    const mappedVariants = combinations.map((c: any) => ({
-                                      id: c.id,
-                                      name: Object.values(c.attributes || {}).join(" - "),
-                                      sku: c.barcode || opt.barcode,
-                                      stock: c.stock || opt.stocks || 0,
-                                    }));
-                                    
-                                    setVariantModal({
-                                      isOpen: true,
-                                      baseProduct: opt.name || String(val),
-                                      targetRowIndex: index,
-                                      variants: mappedVariants,
-                                      baseData: opt.datas || opt
-                                    });
-                                    setSelectedVariants(new Set());
-                                  } else {
-                                    // Handle non-variant directly
-                                    const dataNode = opt.datas || opt;
-                                    const updated = [...products];
-                                    updated[index].name = dataNode.name || String(val);
-                                    updated[index].costPrice = dataNode.buy_price ?? dataNode.costPrice ?? "";
-                                    updated[index].sellingPrice = dataNode.sell_price ?? dataNode.sellingPrice ?? "";
-                                    updated[index].sku = dataNode.barcode ?? dataNode.sku ?? "";
-                                    updated[index].variant = dataNode.variant ?? "";
-                                    setProducts(updated);
-                                  }
-                                } else {
-                                  handleProductChange(index, "name", String(val));
-                                }
-                              }}
-                              placeholder="Select Product..."
-                              className="w-full !border-slate-200"
-                            />
-                            {/* Variant Details Display */}
-                            {product.variant && (
-                              <div className="mt-2 text-[11px] font-medium text-slate-500 flex gap-2 items-center">
-                                <span className="bg-slate-100 px-2 py-0.5 rounded text-slate-700 border border-slate-200">{product.variant}</span>
-                                <span className="text-slate-400">SKU: {product.sku}</span>
-                              </div>
-                            )}
-                          </div>
-                          <div className="col-span-2">
-                            <Input 
-                              type="number" 
-                              placeholder="0" 
-                              className="!text-center !px-1 !border-slate-200"
-                              value={product.quantity as any} 
-                              onChange={(e) => handleProductChange(index, "quantity", e.target.value)} 
-                            />
-                          </div>
-                          <div className="col-span-2">
-                            <Input 
-                              type="number" 
-                              placeholder="0.00" 
-                              className="!text-right !px-2 !border-slate-200"
-                              value={product.costPrice as any} 
-                              onChange={(e) => handleProductChange(index, "costPrice", e.target.value)} 
-                            />
-                          </div>
-                          <div className="col-span-2">
-                            <Input 
-                              type="number" 
-                              placeholder="0.00" 
-                              className="!text-right !px-2 !font-medium !text-emerald-700 !border-slate-200"
-                              value={product.sellingPrice as any} 
-                              onChange={(e) => handleProductChange(index, "sellingPrice", e.target.value)} 
-                            />
-                          </div>
-                          <div className="col-span-2 flex items-center justify-end gap-3 h-[42px]">
-                            <span className="font-semibold text-slate-800 text-sm pr-1">₹{rowTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                            <div className="flex items-center gap-1 border-l border-slate-100 pl-2">
-                              <button type="button" onClick={() => toggleAdvanced(index)} className={`p-1.5 rounded-md transition-colors ${isExpanded ? 'bg-slate-100 text-slate-800' : 'text-slate-400 hover:bg-slate-50 hover:text-slate-600'}`}>
-                                {isExpanded ? <ChevronUp size={16} /> : <Settings size={16} />}
-                              </button>
-                              <button type="button" onClick={() => removeProduct(index)} disabled={products.length === 1} className="p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-600 rounded-md disabled:opacity-30 transition-colors">
-                                <Trash2 size={16} />
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Batch Tracking Toggle & Date Fields */}
-                        <div className="px-6 py-3 border-t border-slate-50 bg-slate-50/30 flex items-center gap-4 flex-wrap">
-                          <button
-                            type="button"
-                            onClick={() => updateProductFields(index, { batchTracking: !product.batchTracking })}
-                            className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border ${
-                              product.batchTracking
-                                ? 'bg-slate-800 text-white border-slate-800'
-                                : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
-                            }`}
-                          >
-                            <CalendarDays size={14} />
-                            Batch Tracking
-                          </button>
-
-                          {/* Manufacturing & Expiry Date Fields */}
-                          <div
-                            className={`flex items-center gap-4 overflow-hidden transition-all duration-300 ${
-                              product.batchTracking
-                                ? 'opacity-100 max-w-[600px]'
-                                : 'opacity-0 max-w-0 pointer-events-none'
-                            }`}
-                          >
-                            <Input
-                              label="Mfg Date"
-                              type="date"
-                              value={product.manufacturingDate}
-                              onChange={(e) => handleProductChange(index, "manufacturingDate", e.target.value)}
-                              className="!h-8 !text-xs !border-slate-200"
-                            />
-                            <Input
-                              label="Exp Date"
-                              type="date"
-                              value={product.expiryDate}
-                              onChange={(e) => handleProductChange(index, "expiryDate", e.target.value)}
-                              className="!h-8 !text-xs !border-slate-200"
-                            />
-                          </div>
-                        </div>
-
-                        {/* Advanced Settings Panel for GRN */}
-                        {isExpanded && (
-                          <div className="p-6 bg-slate-50 border-t border-slate-100 grid grid-cols-1 md:grid-cols-3 gap-5">
-                            <Input label="Storage Location" placeholder="e.g. Warehouse A, Shelf 3" value={product.storageLoc} onChange={(e) => handleProductChange(index, "storageLoc", e.target.value)} />
-                            <Input label="Batch Number" placeholder="BATCH-001" value={product.batchNum} onChange={(e) => handleProductChange(index, "batchNum", e.target.value)} />
-                            <Input label="Remarks" placeholder="Any damage or notes?" value={product.remarks} onChange={(e) => handleProductChange(index, "remarks", e.target.value)} />
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
+                <div className="space-y-4 pt-2">
+                  <Input
+                    label="Amount Paid (₹)"
+                    type="number"
+                    className="!h-12 !text-lg !font-black !text-emerald-600"
+                    value={payment.amountPaid as any}
+                    onChange={(e) => setPayment({ ...payment, amountPaid: e.target.value ? Number(e.target.value) : "" })}
+                    placeholder="0"
+                  />
                 </div>
               </div>
             </div>
           </div>
-
-        </div>
-
-        {/* ================= RIGHT COLUMN (SIDEBAR) ================= */}
-        <div className="w-full xl:w-96 space-y-6">
-          
-          <div className="grid grid-cols-2 gap-4">
-            <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200/60 text-center flex flex-col justify-center">
-              <div className="text-3xl font-semibold text-slate-800">{stats.itemsCount}</div>
-              <div className="text-xs font-medium text-slate-500 uppercase tracking-wider mt-2">Unique Items</div>
-            </div>
-            <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200/60 text-center flex flex-col justify-center">
-              <div className="text-3xl font-bold text-blue-600">{stats.totalQty}</div>
-              <div className="text-xs font-medium text-slate-500 uppercase tracking-wider mt-2">Total Received</div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200/60 overflow-hidden sticky top-6">
-            <div className="p-5 border-b border-slate-100 flex items-center gap-2">
-              <h2 className="text-sm font-semibold text-slate-800">Value Summary</h2>
-            </div>
-            
-            <div className="p-6">
-              <div className="flex flex-col gap-1">
-                <span className="text-slate-500 text-xs font-medium uppercase tracking-wider">Total GRN Value</span>
-                <span className="font-semibold text-3xl tracking-tight text-slate-900">₹{stats.totalValue.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-              </div>
-            </div>
-            
-            <div className="p-5 bg-slate-50 border-t border-slate-100">
-               <p className="text-xs text-slate-500 leading-relaxed">
-                 This value is calculated automatically based on the received product quantities multiplied by their assigned cost prices.
-               </p>
-            </div>
-          </div>
-          
         </div>
       </div>
-      
-  
-                 <div className="flex justify-end items-center gap-4 pt-4 border-t border-slate-200 mt-6">
-              <button className="px-6 py-2.5 text-sm font-medium text-slate-600 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-all">
-                Cancel
-              </button>
-              <button
-                disabled={loading}
-                onClick={handleSubmit}
-                className="px-8 py-2.5 text-sm font-semibold text-white bg-blue-600 rounded-xl hover:bg-blue-700 transition-all flex items-center gap-2 shadow-lg shadow-blue-200/60 disabled:opacity-50"
-              >
-                {loading ? "Saving..." : <><Save size={18} /> Save Purchase Order</>}
-              </button>
-            </div>
     </div>
   );
 };
 
-export default GRNForm;
+export default GrnForm;

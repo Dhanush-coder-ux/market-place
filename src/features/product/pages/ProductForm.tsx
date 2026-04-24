@@ -16,9 +16,9 @@ import { useHeader } from "@/context/HeaderContext";
 import { useToast } from "@/context/ToastContext";
 import { Switch } from "@/components/ui/switch";
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+/*  • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • •
    TYPES
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+ • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • */
 
 interface VariantType {
   id: string;
@@ -73,9 +73,9 @@ type FormData = {
   has_variants: boolean;
 };
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+/*  • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • •
    CONSTANTS
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+ • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • */
 
 const CATEGORY_CONFIGS: Record<string, CategoryConfig> = {
   "Mobile Phones": {
@@ -134,9 +134,9 @@ const GST_RATES = ["0%", "5%", "12%", "18%", "28%"];
 let _uid = 0;
 const uid = () => `id_${++_uid}_${Math.random().toString(36).slice(2, 6)}`;
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+/*  • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • •
    STYLES
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+ • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • */
 
 const STYLES = `
   @import url('https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap');
@@ -215,9 +215,9 @@ const STYLES = `
   @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity: 0.5; } }
 `;
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+/*  • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • •
    SMALL REUSABLE UI
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+ • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • */
 
 interface LabelProps { text: string; required?: boolean; hint?: string; }
 const Label: React.FC<LabelProps> = ({ text, required, hint }) => (
@@ -260,20 +260,20 @@ const SelectField: React.FC<SelectFieldProps> = ({ label, required, options, cla
       {...rest}
       className={`pf-select pf-input w-full px-3 py-2.5 pr-8 text-sm border border-slate-200 rounded-lg bg-white text-slate-800 ${className}`}
     >
-      <option value="">Selectâ€¦</option>
+      <option value="">Select</option>
       {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
     </select>
   </div>
 );
 
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+/*  • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • •
    SECTION HEADER
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+ • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • */
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+/*  • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • •
    TAG / CHIP
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+ • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • */
 interface TagChipProps { label: string; onRemove: () => void; color?: string; }
 const TagChip: React.FC<TagChipProps> = ({ label, onRemove, color = "bg-blue-50 text-blue-700 border-blue-100" }) => (
   <span className={`pf-tag inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium border ${color}`}>
@@ -284,9 +284,9 @@ const TagChip: React.FC<TagChipProps> = ({ label, onRemove, color = "bg-blue-50 
   </span>
 );
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+/*  • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • •
    VARIANT BUILDER
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+ • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • */
 interface VariantBuilderProps {
   variantTypes: VariantType[];
   onChange: (types: VariantType[]) => void;
@@ -388,7 +388,7 @@ const VariantBuilder: React.FC<VariantBuilderProps> = ({ variantTypes, onChange,
             <div className="flex gap-2">
               <input
                 className="pf-input flex-1 px-3 py-2 text-xs border border-slate-200 rounded-lg bg-white text-slate-800 placeholder-slate-300"
-                placeholder={`Add ${vt.name} valueâ€¦`}
+                placeholder={`Add ${vt.name} value`}
                 value={inputVal}
                 onChange={e => setValueInputs(p => ({ ...p, [vt.id]: e.target.value }))}
                 onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addValue(vt.id, inputVal); } }}
@@ -426,7 +426,7 @@ const VariantBuilder: React.FC<VariantBuilderProps> = ({ variantTypes, onChange,
       <div className="flex gap-2">
         <input
           className="pf-input flex-1 px-3 py-2.5 text-sm border border-dashed border-slate-300 rounded-xl bg-white text-slate-800 placeholder-slate-400"
-          placeholder="New variant type (e.g. Storage, Color)â€¦"
+          placeholder="New variant type (e.g. Storage, Color)"
           value={newTypeName}
           onChange={e => setNewTypeName(e.target.value)}
           onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addType(newTypeName); } }}
@@ -441,9 +441,9 @@ const VariantBuilder: React.FC<VariantBuilderProps> = ({ variantTypes, onChange,
   );
 };
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+/*  • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • •
    SERIAL NUMBER MANAGER (MODAL)
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+ • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • */
 interface SerialManagerProps {
   combo: VariantCombination;
   serialLabel: string;
@@ -532,7 +532,7 @@ const SerialManager: React.FC<SerialManagerProps> = ({ combo, serialLabel, onClo
             </div>
             <div>
               <p className="text-sm font-semibold text-slate-900">Manage {serialLabel}s</p>
-              <p className="text-[11px] text-slate-400 pf-mono mt-0.5">{comboLabel} Â· {combo.barcode}</p>
+              <p className="text-[11px] text-slate-400 pf-mono mt-0.5">{comboLabel}  · {combo.barcode}</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -660,9 +660,9 @@ const SerialManager: React.FC<SerialManagerProps> = ({ combo, serialLabel, onClo
   );
 };
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+/*  • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • •
    VARIANT MATRIX TABLE
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+ • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • */
 interface VariantMatrixTableProps {
   combinations: VariantCombination[];
   variantTypes: VariantType[];
@@ -716,7 +716,7 @@ const VariantMatrixTable: React.FC<VariantMatrixTableProps> = ({
           <div className="flex items-center gap-1.5">
             <input
               className="pf-input px-2.5 py-1.5 text-xs border border-slate-200 rounded-lg w-28 pf-mono"
-              placeholder="barcode baseâ€¦"
+              placeholder="barcode base"
               value={barcodeBase}
               onChange={e => setbarcodeBase(e.target.value)}
             />
@@ -749,7 +749,7 @@ const VariantMatrixTable: React.FC<VariantMatrixTableProps> = ({
                   </th>
                 ))}
                 <th className="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-widest text-slate-400 whitespace-nowrap">barcode</th>
-                <th className="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-widest text-slate-400 whitespace-nowrap">Price (â‚¹)</th>
+                <th className="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-widest text-slate-400 whitespace-nowrap">Price ()</th>
                 <th className="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-widest text-slate-400 whitespace-nowrap">Stock</th>
                 {supportsSerials && (
                   <th className="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-widest text-slate-400 whitespace-nowrap">{serialLabel}s</th>
@@ -778,7 +778,7 @@ const VariantMatrixTable: React.FC<VariantMatrixTableProps> = ({
                   </td>
                   <td className="px-4 py-3">
                     <div className="relative w-24">
-                      <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs">â‚¹</span>
+                      <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></span>
                       <input
                         className="pf-input w-full pl-6 pr-2 py-1.5 text-xs border border-slate-200 rounded-lg"
                         placeholder={basePriceStr || "0"}
@@ -840,9 +840,9 @@ const VariantMatrixTable: React.FC<VariantMatrixTableProps> = ({
   );
 };
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+/*  • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • •
    COMBINATION GENERATOR (useMemo hook logic)
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+ • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • */
 const generateCombinations = (
   variantTypes: VariantType[],
   existing: VariantCombination[],
@@ -885,9 +885,9 @@ const generateCombinations = (
   });
 };
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+/*  • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • •
    MAIN PRODUCT FORM
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+ • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • */
 interface ProductFormProps {
   initialData?: Record<string, unknown>;
   isLoading?: boolean;
@@ -1131,52 +1131,65 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
           <div className="grid grid-cols-1 lg:grid-cols-6 gap-5 items-start">
 
             {/* BOX 1: Identity */}
-            <div className="lg:col-span-4 bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden hover:shadow-md transition-all h-full">
+            <div className="lg:col-span-4 bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden hover:shadow-md transition-all">
               <div className="px-6 py-4 bg-gradient-to-r from-blue-50/50 to-transparent border-b border-slate-100 flex items-center gap-3">
                 <div className="w-8 h-8 rounded-xl bg-blue-100 flex items-center justify-center text-blue-600">
                   <Package size={16} />
                 </div>
                 <h2 className="text-xs font-bold text-slate-800 uppercase tracking-widest">Product Identity</h2>
               </div>
-              <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-5">
-                <div className="md:col-span-2">
-                  <InputField label="Product Name" name="name" required
-                    value={form.name} onChange={handleChange}
-                    placeholder="e.g. Apple iPhone 15 Pro Max"
+              <div className="p-6 space-y-4">
+                <InputField label="Product Name" name="name" required
+                  value={form.name} onChange={handleChange}
+                  placeholder="e.g. Apple iPhone 15 Pro Max"
+                />
+                
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <InputField label="Barcode / SKU" name="barcode" required
+                    value={form.barcode} onChange={handleChange}
+                    placeholder="SKU..."
+                  />
+                  <InputField label="Brand" name="brand"
+                    value={form.brand} onChange={handleChange}
+                    placeholder="e.g. Apple"
+                  />
+                  <SelectField label="Category" required
+                    value={form.category}
+                    onChange={e => handleCategoryChange(e.target.value)}
+                    options={CATEGORIES.map(c => ({ value: c, label: c }))}
+                  />
+                  <SelectField label="Unit" name="unit" required
+                    value={form.unit} onChange={handleChange}
+                    options={UNITS.map(u => ({ value: u, label: u }))}
                   />
                 </div>
-                <InputField label="Barcode / SKU" name="barcode" required
-                  value={form.barcode} onChange={handleChange}
-                  placeholder="Unique identifier"
-                />
-                <InputField label="Brand" name="brand"
-                  value={form.brand} onChange={handleChange}
-                  placeholder="e.g. Apple"
-                />
-                <SelectField label="Category" required
-                  value={form.category}
-                  onChange={e => handleCategoryChange(e.target.value)}
-                  options={CATEGORIES.map(c => ({ value: c, label: c }))}
-                />
-                <SelectField label="Unit of Measure" name="unit" required
-                  value={form.unit} onChange={handleChange}
-                  options={UNITS.map(u => ({ value: u, label: u }))}
-                />
-                <div className="md:col-span-2">
+
+                <div>
                   <Label text="Description" hint="optional" />
                   <textarea
                     name="description"
                     value={form.description}
                     onChange={handleChange}
-                    rows={2}
-                    className="pf-input w-full px-3 py-2.5 text-sm border border-slate-200 rounded-xl bg-white text-slate-800 resize-none placeholder-slate-300"
-                    placeholder="Key features, materials, dimensionsâ€¦"
+                    rows={1}
+                    className="pf-input w-full px-3 py-2 text-sm border border-slate-200 rounded-xl bg-white text-slate-800 resize-none placeholder-slate-300 min-h-[45px]"
+                    placeholder="Key features, materials, dimensions"
+                  />
+                </div>
+
+                <div className="pt-2 border-t border-slate-50 grid grid-cols-2 gap-4 mt-2">
+                  <SelectField label="GST Rate" name="gst" required
+                    value={form.gst} onChange={handleChange}
+                    options={GST_RATES.map(r => ({ value: r, label: r }))}
+                  />
+                  <InputField label="HSN Code" name="hsn"
+                    value={form.hsn} onChange={handleChange}
+                    placeholder="8517"
                   />
                 </div>
               </div>
             </div>
 
-            {/* BOX 2: Classification + Live Summary */}
+            {/* BOX 2: Classification */}
             <div className="lg:col-span-2 space-y-5">
               <div className="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden hover:shadow-md transition-all">
                 <div className="px-6 py-4 bg-gradient-to-r from-amber-50/50 to-transparent border-b border-slate-100 flex items-center gap-3">
@@ -1185,50 +1198,18 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                   </div>
                   <h2 className="text-xs font-bold text-slate-800 uppercase tracking-widest">Classification</h2>
                 </div>
-                <div className="p-6 space-y-5">
-                  <InputField label="Primary Supplier" name="supplier"
+                <div className="p-6 space-y-4">
+                  <InputField label="Supplier" name="supplier"
                     value={form.supplier} onChange={handleChange}
                     placeholder="e.g. TechDistro"
                   />
-                  <div className="flex items-center justify-between p-3.5 rounded-2xl bg-slate-50 border border-slate-100">
-                    <div>
-                      <span className="text-xs font-bold text-slate-600 uppercase tracking-widest block">Active Product</span>
-                      <span className="text-[10px] text-slate-400">Available for sale</span>
-                    </div>
+                  <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 border border-slate-100">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Active Product</span>
                     <Switch
                       checked={form.is_active}
                       onCheckedChange={(checked) => setForm(p => ({ ...p, is_active: checked }))}
                     />
                   </div>
-                </div>
-              </div>
-
-              {/* Live Summary card */}
-              <div className="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden">
-                <div className="px-6 py-4 border-b border-slate-100">
-                  <h2 className="text-xs font-bold text-slate-800 uppercase tracking-widest">Live Summary</h2>
-                </div>
-                <div className="divide-y divide-slate-50 px-6">
-                  {[
-                    { label: "SKU",      value: form.barcode || "â€”" },
-                    { label: "Cost",     value: form.buy_price ? `â‚¹${Number(form.buy_price).toLocaleString()}` : "â€”" },
-                    { label: "Price",    value: form.sell_price ? `â‚¹${Number(form.sell_price).toLocaleString()}` : "â€”" },
-                    { label: "Margin",   value: `${marginStats.pct}%`, color: marginStats.profit >= 0 ? "text-emerald-600" : "text-rose-600" },
-                    { label: "Variants", value: form.has_variants ? `${combinations.length} combos` : "None" },
-                    { label: "Stock",    value: totalStock > 0 ? `${totalStock}` : "â€”" },
-                  ].map(row => (
-                    <div key={row.label} className="flex items-center justify-between py-2.5">
-                      <span className="text-[11px] text-slate-400 font-medium">{row.label}</span>
-                      <span className={`text-[11px] font-bold font-mono ${(row as any).color ?? "text-slate-800"}`}>{row.value}</span>
-                    </div>
-                  ))}
-                </div>
-                <div className="px-6 pb-5 pt-2">
-                  <span className={`text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-lg ${
-                    form.is_active ? "bg-emerald-50 text-emerald-700 border border-emerald-100" : "bg-slate-100 text-slate-500"
-                  }`}>
-                    {form.is_active ? "Active" : "Draft"}
-                  </span>
                 </div>
               </div>
             </div>
@@ -1248,12 +1229,12 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
               <div className="p-6 space-y-5">
                 <div className="grid grid-cols-2 gap-5">
                   <InputField label="Cost Price" name="buy_price" required
-                    type="number" leftEl="â‚¹"
+                    type="number" leftEl=""
                     value={form.buy_price} onChange={handleChange}
                     placeholder="0.00"
                   />
                   <InputField label="Selling Price" name="sell_price" required
-                    type="number" leftEl="â‚¹"
+                    type="number" leftEl=""
                     value={form.sell_price} onChange={handleChange}
                     placeholder="0.00"
                   />
@@ -1261,64 +1242,65 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                 <div className="flex items-center justify-between px-4 py-3 bg-slate-50 rounded-2xl border border-slate-100">
                   <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Est. Margin</span>
                   <div className="flex items-center gap-2">
-                    <span className="font-bold text-slate-800 text-sm">â‚¹{marginStats.profit.toLocaleString()}</span>
+                    <span className="font-bold text-slate-800 text-sm">{marginStats.profit.toLocaleString()}</span>
                     <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${
                       marginStats.profit >= 0 ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"
                     }`}>{marginStats.pct}%</span>
                   </div>
                 </div>
-                <InputField label="MRP" name="mrp" type="number" leftEl="â‚¹"
+                <InputField label="MRP" name="mrp" type="number" leftEl=""
                   value={form.mrp} onChange={handleChange}
                   placeholder="0.00"
                 />
               </div>
             </div>
 
-            {/* BOX 4: Tax + Stock */}
+            {/* BOX 4: Live Summary + Stock */}
             <div className="lg:col-span-3 space-y-5">
-              <div className="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden hover:shadow-md transition-all">
-                <div className="px-6 py-4 bg-gradient-to-r from-slate-50 to-transparent border-b border-slate-100 flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-xl bg-slate-100 flex items-center justify-center text-slate-600">
-                    <Info size={16} />
-                  </div>
-                  <h2 className="text-xs font-bold text-slate-800 uppercase tracking-widest">Tax & Compliance</h2>
+              {/* Live Summary card */}
+              <div className="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden">
+                <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
+                  <h2 className="text-xs font-bold text-slate-800 uppercase tracking-widest">Live Summary</h2>
                 </div>
-                <div className="p-6 grid grid-cols-2 gap-5">
-                  <SelectField label="GST Rate" name="gst" required
-                    value={form.gst} onChange={handleChange}
-                    options={GST_RATES.map(r => ({ value: r, label: r }))}
-                  />
-                  <InputField label="HSN Code" name="hsn"
-                    value={form.hsn} onChange={handleChange}
-                    placeholder="e.g. 8517"
-                  />
+                <div className="divide-y divide-slate-50 px-6">
+                  {[
+                    { label: "SKU",      value: form.barcode || "-" },
+                    { label: "Cost",     value: form.buy_price ? `${Number(form.buy_price).toLocaleString()}` : "-" },
+                    { label: "Price",    value: form.sell_price ? `${Number(form.sell_price).toLocaleString()}` : "-" },
+                    { label: "Margin",   value: `${marginStats.pct}%`, color: marginStats.profit >= 0 ? "text-emerald-600" : "text-rose-600" },
+                    { label: "Variants", value: form.has_variants ? `${combinations.length} combos` : "None" },
+                    { label: "Stock",    value: totalStock > 0 ? `${totalStock}` : "-" },
+                  ].map(row => (
+                    <div key={row.label} className="flex items-center justify-between py-2.5">
+                      <span className="text-[11px] text-slate-400 font-medium">{row.label}</span>
+                      <span className={`text-[11px] font-bold font-mono ${(row as any).color ?? "text-slate-800"}`}>{row.value}</span>
+                    </div>
+                  ))}
                 </div>
               </div>
 
-              {!form.has_variants && (
-                <div className="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden hover:shadow-md transition-all pf-section-enter">
-                  <div className="px-6 py-4 bg-gradient-to-r from-amber-50/50 to-transparent border-b border-slate-100 flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-xl bg-amber-100 flex items-center justify-center text-amber-600">
-                      <BarChart2 size={16} />
-                    </div>
-                    <h2 className="text-xs font-bold text-slate-800 uppercase tracking-widest">Stock & Inventory</h2>
+              <div className="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden hover:shadow-md transition-all pf-section-enter">
+                <div className="px-6 py-4 bg-gradient-to-r from-amber-50/50 to-transparent border-b border-slate-100 flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-xl bg-amber-100 flex items-center justify-center text-amber-600">
+                    <BarChart2 size={16} />
                   </div>
-                  <div className="p-6 grid grid-cols-3 gap-5">
-                    <InputField label="Opening Stock" name="opening_stock"
-                      type="number" value={form.opening_stock} onChange={handleChange}
-                      placeholder="0"
-                    />
-                    <InputField label="Reorder Point" name="reorder_point" required
-                      type="number" value={form.reorder_point} onChange={handleChange}
-                      placeholder="5"
-                    />
-                    <InputField label="Max Stock" name="max_stock"
-                      type="number" value={form.max_stock} onChange={handleChange}
-                      placeholder="0"
-                    />
-                  </div>
+                  <h2 className="text-xs font-bold text-slate-800 uppercase tracking-widest">Stock & Inventory</h2>
                 </div>
-              )}
+                <div className="p-6 grid grid-cols-3 gap-5">
+                  <InputField label="Opening Stock" name="opening_stock"
+                    type="number" value={form.opening_stock} onChange={handleChange}
+                    placeholder="0"
+                  />
+                  <InputField label="Reorder Point" name="reorder_point" required
+                    type="number" value={form.reorder_point} onChange={handleChange}
+                    placeholder="5"
+                  />
+                  <InputField label="Max Stock" name="max_stock"
+                    type="number" value={form.max_stock} onChange={handleChange}
+                    placeholder="0"
+                  />
+                </div>
+              </div>
             </div>
           </div>
 
@@ -1387,7 +1369,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
             ) : (
               <div className="px-6 py-5 text-slate-400 text-sm flex items-center gap-3">
                 <Zap size={16} className="text-violet-300" />
-                Enable variants to manage multiple SKUs per product (e.g. iPhone 15 â€” 128GB / Black)
+                Enable variants to manage multiple SKUs per product (e.g. iPhone 15 128GB / Black)
               </div>
             )}
           </div>

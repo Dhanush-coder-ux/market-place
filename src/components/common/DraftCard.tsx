@@ -10,6 +10,7 @@ interface DraftCardProps {
   onComplete: () => void;
   badgeText?: string;
   actionText?: string;
+  typeTag?: string;
 }
 
 /**
@@ -25,6 +26,7 @@ export const DraftCard: React.FC<DraftCardProps> = ({
   onComplete,
   badgeText = "Local Draft",
   actionText = "Complete Now",
+  typeTag,
 }) => {
   const date = new Date(timestamp);
   const formattedTime = date.toLocaleDateString("en-US", {
@@ -40,8 +42,15 @@ export const DraftCard: React.FC<DraftCardProps> = ({
   return (
     <div className="group bg-white rounded-[2rem] border border-slate-200 p-6 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 relative">
       <div className="flex justify-between items-start mb-6">
-        <div className="w-12 h-12 rounded-2xl bg-blue-50/80 flex items-center justify-center text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-all duration-300 shadow-sm shadow-blue-100/50">
-          <Icon size={24} strokeWidth={2} />
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-2xl bg-blue-50/80 flex items-center justify-center text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-all duration-300 shadow-sm shadow-blue-100/50">
+            <Icon size={24} strokeWidth={2} />
+          </div>
+          {typeTag && (
+            <span className="px-3 py-1.5 rounded-xl bg-blue-600 text-white text-[9px] font-black uppercase tracking-widest shadow-lg shadow-blue-100 animate-in fade-in zoom-in duration-300">
+              {typeTag}
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-1.5">
           <button 

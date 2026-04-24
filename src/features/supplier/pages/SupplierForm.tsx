@@ -38,7 +38,7 @@ const SupplierForm = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { postData, putData, getData, loading } = useApi();
-  const { setActions } = useHeader();
+  const { setBottomActions } = useHeader();
   const { showToast } = useToast();
   const [submitting, setSubmitting] = useState(false);
 
@@ -58,13 +58,13 @@ const SupplierForm = () => {
 
   // Header Actions
   useEffect(() => {
-    setActions(
+    setBottomActions(
       <div className="flex items-center gap-3 animate-in fade-in slide-in-from-right-4 duration-300">
         {!id && (
           <button 
             type="button"
             onClick={handleSaveDraft}
-            className="px-4 h-11 rounded-xl border border-blue-100 text-blue-600 font-bold text-xs bg-blue-50/50 hover:bg-blue-100 transition-all flex items-center gap-2"
+            className="px-6 h-8 rounded-xl border border-blue-100 text-blue-600 font-bold text-xs bg-blue-50/50 hover:bg-blue-100 transition-all flex items-center gap-2"
           >
             <Bookmark size={14} />
             Save Draft
@@ -74,14 +74,14 @@ const SupplierForm = () => {
           icon={<Save size={16} />} 
           onClick={handleSubmit} 
           disabled={submitting}
-          className="rounded-xl shadow-md text-xs px-6 h-11 flex items-center"
+          className="rounded-xl shadow-md text-xs px-8 h-8 flex items-center"
         >
           {submitting ? "..." : (id ? "Save Changes" : "Register Supplier")}
         </GradientButton>
       </div>
     );
-    return () => setActions(null);
-  }, [setActions, formData, submitting, id, navigate]);
+    return () => setBottomActions(null);
+  }, [setBottomActions, formData, submitting, id, navigate]);
 
   // Load Data/Draft
   useEffect(() => {
@@ -147,13 +147,14 @@ const SupplierForm = () => {
       datas: {
         ...formData,
         shop_id: SHOP_ID,
-        type: id ? "SUPPLIER UPDATE" : "SUPPLIER CREATE"
+        type: id ? "SUPPLIER UPDATE" : "SUPPLIER CREATE",
+        id:id
       },
     };
 
     try {
       const res = id 
-        ? await putData(`${ENDPOINTS.SUPPLIERS}/${id}`, payload)
+        ? await putData(`${ENDPOINTS.SUPPLIERS}`, payload)
         : await postData(ENDPOINTS.SUPPLIERS, payload);
 
       if (res) {
@@ -164,7 +165,7 @@ const SupplierForm = () => {
           const drafts = JSON.parse(localStorage.getItem("supplier_drafts") || "[]");
           localStorage.setItem("supplier_drafts", JSON.stringify(drafts.filter((d: any) => d.id !== draftId)));
         }
-        navigate("/supplier");
+        navigate("/supplier/all");
       }
     } catch {
       showToast("Operation failed", "error");
@@ -340,8 +341,9 @@ const SupplierForm = () => {
         </div>
 
       </div>
+
     </div>
   );
 };
 
-export default SupplierForm;
+export default SupplierForm;

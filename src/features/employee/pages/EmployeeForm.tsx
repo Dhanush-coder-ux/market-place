@@ -35,7 +35,7 @@ const EmployeeForm = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { postData, putData, getData } = useApi();
-  const { setActions } = useHeader();
+  const { setActions, setBottomActions } = useHeader();
   const { showToast } = useToast();
   const [submitting, setSubmitting] = useState(false);
   
@@ -56,13 +56,7 @@ const EmployeeForm = () => {
 
   // Header Actions
   useEffect(() => {
-    const handleActionSubmit = (e: any) => {
-      e.preventDefault();
-      handleSubmit(e);
-    };
-
     setActions(
-      <div className="flex items-center gap-4 animate-in fade-in slide-in-from-right-4 duration-300">
         <div className="flex items-center gap-3 bg-white px-4 h-11 rounded-2xl border border-slate-200 shadow-sm scale-90 md:scale-100">
           <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Active</span>
           <Switch 
@@ -70,30 +64,35 @@ const EmployeeForm = () => {
             onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_accepted: checked }))}
           />
         </div>
-        <div className="hidden md:flex items-center gap-2">
-          {!id && (
-            <button 
-              type="button"
-              onClick={handleSaveDraft}
-              className="px-4 h-11 rounded-xl border border-blue-100 text-blue-600 font-bold text-xs bg-blue-50/50 hover:bg-blue-100 transition-all flex items-center gap-2"
-            >
-              <Bookmark size={14} />
-              Save Draft
-            </button>
-          )}
-          <GradientButton 
-            icon={<Save size={16} />} 
-            onClick={handleActionSubmit} 
-            disabled={submitting}
-            className="rounded-xl shadow-md text-xs px-6 h-11 flex items-center py-3"
-          >
-            {submitting ? "..." : (id ? "Save" : "Create")}
-          </GradientButton>
-        </div>
-      </div>
     );
     return () => setActions(null);
-  }, [setActions, formData.is_accepted, submitting, id, navigate, formData]);
+  }, [setActions, formData.is_accepted]);
+
+  useEffect(() => {
+    setBottomActions(
+      <div className="flex items-center gap-3 animate-in fade-in slide-in-from-right-4 duration-300">
+        {!id && (
+          <button 
+            type="button"
+            onClick={handleSaveDraft}
+            className="px-6 h-8 rounded-xl border border-blue-100 text-blue-600 font-bold text-xs bg-blue-50/50 hover:bg-blue-100 transition-all flex items-center gap-2"
+          >
+            <Bookmark size={14} />
+            Save Draft
+          </button>
+        )}
+        <GradientButton 
+          icon={<Save size={16} />} 
+          onClick={handleSubmit} 
+          disabled={submitting}
+          className="rounded-xl shadow-md text-xs px-8 h-8 flex items-center"
+        >
+          {submitting ? "..." : (id ? "Save Changes" : "Create Member")}
+        </GradientButton>
+      </div>
+    );
+    return () => setBottomActions(null);
+  }, [setBottomActions, submitting, id, formData]);
 
   // Load Existing or Draft
   useEffect(() => {
@@ -359,28 +358,6 @@ const EmployeeForm = () => {
             </div>
           </div>
         </form>
-
-        {/* Mobile Submit Button */}
-        <div className="md:hidden flex flex-col gap-3 pb-8">
-          {!id && (
-            <button 
-              type="button"
-              onClick={handleSaveDraft}
-              className="w-full h-12 rounded-2xl border border-blue-100 text-blue-600 font-bold text-sm bg-blue-50/50 hover:bg-blue-100 transition-all flex items-center justify-center gap-2"
-            >
-              <Bookmark size={18} />
-              Save Draft
-            </button>
-          )}
-          <GradientButton 
-            icon={<Save size={18} />} 
-            onClick={handleSubmit} 
-            disabled={submitting}
-            className="w-full rounded-2xl h-12"
-          >
-            {submitting ? "Processing..." : (id ? "Save Changes" : "Create Member")}
-          </GradientButton>
-        </div>
 
       </div>
     </div>

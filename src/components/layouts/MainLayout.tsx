@@ -229,7 +229,7 @@ const getPageHeaderInfo = (pathname: string) => {
 
 const MainLayout = () => {
   const location = useLocation();
-  const { actions } = useHeader();
+  const { actions, bottomActions } = useHeader();
   const isStorePage = 
     location.pathname === "/digital-store" || 
     location.pathname === "/digital-store/profile" || 
@@ -245,7 +245,7 @@ const MainLayout = () => {
       <div className="flex flex-1 overflow-hidden">
         <Sidebar links={sidebarLinks} />
         
-        <main className="flex-1 flex flex-col min-w-0">
+        <main className="flex-1 flex flex-col min-w-0 relative">
           <div className={`flex-1 overflow-y-auto custom-scrollbar relative ${isStorePage ? "p-0" : "p-1 md:p-2 lg:p-4"}`}>
             
             {!isStorePage && (
@@ -260,6 +260,18 @@ const MainLayout = () => {
             
             <Outlet />
           </div>
+
+          {/* Global Bottom Action Bar (Glassmorphism) */}
+          {bottomActions && (
+            <div className="h-12 flex-shrink-0 flex items-center justify-end px-8 gap-4
+              bg-white/10 backdrop-blur-3xl
+              border-t border-white/20
+              shadow-[0_-8px_30px_rgba(0,0,0,0.1)]
+              z-[60] animate-in slide-in-from-bottom-full duration-500">
+              
+              {bottomActions}
+            </div>
+)}
         </main>
       </div>
     </div>

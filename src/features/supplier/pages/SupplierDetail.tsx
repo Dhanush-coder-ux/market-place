@@ -81,7 +81,7 @@ export default function SupplierDetail() {
       const res = await deleteData(`${ENDPOINTS.SUPPLIERS}/${id}`);
       if (res) {
         showToast("Supplier deleted successfully", "success");
-        navigate("/supplier");
+        navigate("/supplier/all");
       }
     } catch {
       showToast("Failed to delete supplier", "error");

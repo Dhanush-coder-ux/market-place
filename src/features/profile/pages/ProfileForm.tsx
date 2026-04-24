@@ -14,6 +14,8 @@ import {
   Clock,
   BadgeCheck,
 } from "lucide-react";
+import { useEffect } from "react";
+import { useHeader } from "@/context/HeaderContext";
 import Input from "@/components/ui/Input";
 import { GradientButton } from "@/components/ui/GradientButton";
 import ImageUpload from "@/components/common/ImageUpload";
@@ -81,6 +83,7 @@ const FieldLabel: React.FC<FieldLabelProps> = ({ children, required }) => (
 // ─── ProfileForm (Shop Creation) ─────────────────────────────────────────────
 
 const ProfileForm: React.FC = () => {
+  const { setBottomActions } = useHeader();
   const [logo, setLogo] = useState<File | null>(null);
 
   // Section 1 — Shop Identity
@@ -126,6 +129,36 @@ const ProfileForm: React.FC = () => {
     if (!validate()) return;
     console.log("Submit:", action, { shopName, email, category });
   };
+
+  useEffect(() => {
+    setBottomActions(
+      <div className="flex items-center gap-3 animate-in fade-in slide-in-from-right-4 duration-300">
+        <button
+          type="button"
+          onClick={() => console.log("Discard")}
+          className="px-6 h-11 rounded-xl border border-slate-200 text-slate-500 font-bold text-xs hover:bg-slate-50 transition-all"
+        >
+          Discard Changes
+        </button>
+        <GradientButton
+          type="button"
+          variant="outline"
+          onClick={() => handleSubmit("add_more")}
+          className="rounded-xl border-slate-200 h-11 text-xs"
+        >
+          Save & Add Another
+        </GradientButton>
+        <GradientButton
+          type="button"
+          onClick={() => handleSubmit("save")}
+          className="rounded-xl shadow-md text-xs px-8 h-11 flex items-center"
+        >
+          Create Shop
+        </GradientButton>
+      </div>
+    );
+    return () => setBottomActions(null);
+  }, [setBottomActions, shopName, email, category, tagline, shopCode]);
 
   return (
     <div className="pb-10">
@@ -397,34 +430,6 @@ const ProfileForm: React.FC = () => {
 
           </div>
         </section>
-
-        {/* ── ACTION BAR ── */}
-        <div className="flex flex-col sm:flex-row justify-between items-center pt-8 border-t border-slate-100">
-          <button
-            type="button"
-            onClick={() => console.log("Discard")}
-            className="text-sm font-semibold text-slate-400 hover:text-red-500 transition-colors px-4 py-2"
-          >
-            Discard Changes
-          </button>
-          <div className="flex flex-wrap gap-3 mt-4 sm:mt-0">
-            <GradientButton
-              type="button"
-              variant="outline"
-              onClick={() => handleSubmit("add_more")}
-              className="border-slate-200"
-            >
-              Save &amp; Add Another
-            </GradientButton>
-            <GradientButton
-              type="button"
-              onClick={() => handleSubmit("save")}
-              className="min-w-[150px] shadow-lg shadow-blue-100"
-            >
-              Create Shop
-            </GradientButton>
-          </div>
-        </div>
 
       </div>
     </div>

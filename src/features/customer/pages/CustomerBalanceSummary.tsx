@@ -87,7 +87,7 @@ export default function CustomerBalanceSummary() {
   const handleDelete = async () => {
     if (!customerToDelete) return;
     try {
-      await deleteData(`${ENDPOINTS.CUSTOMERS}/${SHOP_ID}/${customerToDelete.id}`);
+      await deleteData(`${ENDPOINTS.CUSTOMERS}/${customerToDelete.id}`);
       showToast("Customer deleted successfully", "success");
       setRefreshKey(prev => prev + 1);
     } catch (_err) {

@@ -2,30 +2,16 @@ import { useState, useMemo, useEffect } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import {
   Save, 
-  Plus, 
-  Trash2, 
-  Settings, 
-  ScanLine,
   Banknote, 
   Smartphone, 
   CreditCard, 
   Landmark, 
-  ChevronUp, 
-  X, 
   PackageOpen, 
-  Check, 
-  CalendarDays,
   Bookmark,
-  ChevronRight,
-  Clock,
-  Trash,
-  AlertTriangle,
-  Zap,
-  Percent,
-  Info
+  Mail,
+  User
 } from "lucide-react";
 
-import { ReusableSelect } from "@/components/ui/ReusableSelect";
 
 import Input from "@/components/ui/Input";
 import { GradientButton } from "@/components/ui/GradientButton";
@@ -33,7 +19,6 @@ import { useApi } from "@/context/ApiContext";
 import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 import { SearchSelect } from "@/components/inputbuilders/SearchSelect";
 import { supplierApi } from "@/services/api/supplier";
-import { inventoryApi } from "@/services/api/inventory";
 import { useHeader } from "@/context/HeaderContext";
 import { useToast } from "@/context/ToastContext";
 import Loader from "@/components/common/Loader";
@@ -57,6 +42,8 @@ export interface ProductItem {
   expiryDate: string;
   manufacturingDate: string;
   batchTracking: boolean;
+  serialTracking: boolean;
+  serialNumbers: string;
   batchNum: string;
   sku: string;
   variant: string;
@@ -64,14 +51,13 @@ export interface ProductItem {
   category?: string;
 }
 
-const LOW_STOCK_THRESHOLD = 5;
 
 const PurchaseForm = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { postData, getData, putData } = useApi();
-  const { setActions } = useHeader();
+  const { setBottomActions } = useHeader();
   const { showToast } = useToast();
   const [submitting, setSubmitting] = useState(false);
 
@@ -87,7 +73,7 @@ const PurchaseForm = () => {
     {
       id: "1", name: "", quantity: "", costPrice: "", sellingPrice: "",
       marginPercent: "", marginAmount: "", marginType: "percent",
-      unit: "pc", taxGst: 18, storageLoc: "", reorderPoint: "", expiryDate: "", manufacturingDate: "", batchTracking: false, batchNum: "", sku: "", variant: "", size: ""
+      unit: "pc", taxGst: 18, storageLoc: "", reorderPoint: "", expiryDate: "", manufacturingDate: "", batchTracking: false, serialTracking: false, serialNumbers: "", batchNum: "", sku: "", variant: "", size: ""
     }
   ]);
 
@@ -95,7 +81,6 @@ const PurchaseForm = () => {
   const [payment, setPayment] = useState({ method: "Cash" as PaymentMethod, amountPaid: "" as number | "" });
   const [costMethod, setCostMethod] = useState("None");
   const [supplierDetails, setSupplierDetails] = useState<any>(null);
-  const [drafts, setDrafts] = useState<any[]>([]);
 
   // --- Calculations ---
   const stats = useMemo(() => {
@@ -136,8 +121,8 @@ const PurchaseForm = () => {
 
   // --- Load Drafts for Sidebar ---
   const loadDraftsList = () => {
-    const savedDrafts = JSON.parse(localStorage.getItem("purchase_drafts") || "[]");
-    setDrafts(savedDrafts.sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()).slice(0, 5));
+    // const savedDrafts = JSON.parse(localStorage.getItem("purchase_drafts") || "[]");
+    // setDrafts(savedDrafts.sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()).slice(0, 5));
   };
 
   useEffect(() => {
@@ -171,6 +156,7 @@ const PurchaseForm = () => {
             sku: p.barcode,
             variant: p.variant || "",
             batchTracking: p.batch_tracking || false,
+            serialTracking: p.serial_tracking || false,
             batchNum: p.batch_number || "",
             manufacturingDate: p.manufacturing_date || "",
             expiryDate: p.expiry_date || ""
@@ -198,32 +184,30 @@ const PurchaseForm = () => {
 
   // --- Header Actions ---
   useEffect(() => {
-    setActions(
-      <div className="flex items-center gap-4 animate-in fade-in slide-in-from-right-4 duration-300">
-        <div className="hidden md:flex items-center gap-2">
-          {!id && (
-            <button 
-              type="button"
-              onClick={handleSaveDraft}
-              className="px-4 h-11 rounded-xl border border-blue-100 text-blue-600 font-bold text-xs bg-blue-50/50 hover:bg-blue-100 transition-all flex items-center gap-2"
-            >
-              <Bookmark size={14} />
-              Save Draft
-            </button>
-          )}
-          <GradientButton 
-            icon={submitting ? <Loader className="h-4 w-4" /> : <Save size={16} />} 
-            onClick={handleSavePurchase} 
-            disabled={submitting}
-            className="rounded-xl shadow-md text-xs px-6 h-11 h-auto flex items-center py-3"
+    setBottomActions(
+      <div className="flex items-center gap-3 animate-in fade-in slide-in-from-right-4 duration-300">
+        {!id && (
+          <button 
+            type="button"
+            onClick={handleSaveDraft}
+            className="px-6 h-8 rounded-xl border border-blue-100 text-blue-600 font-bold text-xs bg-blue-50/50 hover:bg-blue-100 transition-all flex items-center gap-2"
           >
-            {submitting ? "Processing..." : (id ? "Update Purchase" : "Confirm Purchase")}
-          </GradientButton>
-        </div>
+            <Bookmark size={14} />
+            Save Draft
+          </button>
+        )}
+        <GradientButton 
+          icon={submitting ? <Loader className="h-4 w-4" /> : <Save size={16} />} 
+          onClick={handleSavePurchase} 
+          disabled={submitting}
+          className="rounded-xl shadow-md text-xs px-8 h-8 flex items-center"
+        >
+          {submitting ? "Processing..." : (id ? "Update Purchase" : "Confirm Purchase")}
+        </GradientButton>
       </div>
     );
-    return () => setActions(null);
-  }, [setActions, purchaseDetails, products, charges, payment, submitting, id]);
+    return () => setBottomActions(null);
+  }, [setBottomActions, purchaseDetails, products, charges, payment, submitting, id]);
 
   // --- Handlers ---
   const handleProductChange = (index: number, field: string, value: any) => {
@@ -242,7 +226,7 @@ const PurchaseForm = () => {
     setProducts([...products, {
       id: Math.random().toString(), name: "", quantity: "", costPrice: "", sellingPrice: "",
       marginPercent: "", marginAmount: "", marginType: "percent",
-      unit: "pc", taxGst: 18, storageLoc: "", reorderPoint: "", expiryDate: "", manufacturingDate: "", batchTracking: false, batchNum: "", sku: "", variant: "", size: ""
+      unit: "pc", taxGst: 18, storageLoc: "", reorderPoint: "", expiryDate: "", manufacturingDate: "", batchTracking: false, serialTracking: false, serialNumbers: "", batchNum: "", sku: "", variant: "", size: ""
     }]);
   };
 
@@ -281,17 +265,6 @@ const PurchaseForm = () => {
     }
   };
 
-  const deleteDraft = (e: React.MouseEvent, draftId: string) => {
-    e.stopPropagation();
-    const savedDrafts = JSON.parse(localStorage.getItem("purchase_drafts") || "[]");
-    const filtered = savedDrafts.filter((d: any) => d.id !== draftId);
-    localStorage.setItem("purchase_drafts", JSON.stringify(filtered));
-    loadDraftsList();
-    if (searchParams.get("draftId") === draftId) {
-      navigate("/purchase-add", { replace: true });
-      window.location.reload();
-    }
-  };
 
   const handleSavePurchase = async () => {
     if (!purchaseDetails.supplier) {
@@ -337,9 +310,11 @@ const PurchaseForm = () => {
           unit: p.unit || "pc",
           gst: Number(p.taxGst) || 0,
           batch_tracking: p.batchTracking,
+          serial_tracking: p.serialTracking,
           batch_number: p.batchNum,
           manufacturing_date: p.manufacturingDate,
           expiry_date: p.expiryDate,
+          serial_numbers: p.serialNumbers,
           variant: p.variant,
         };
       });
@@ -427,13 +402,6 @@ const PurchaseForm = () => {
                     placeholder="Search Supplier..."
                     className="w-full"
                   />
-                  {supplierDetails && (
-                    <div className="mt-2 p-3 bg-slate-50 border border-slate-100 rounded-2xl text-xs flex flex-col gap-1 text-slate-600 animate-in fade-in slide-in-from-top-2">
-                      <strong className="text-slate-800 font-bold">{supplierDetails.name}</strong>
-                      <span className="opacity-70 flex items-center gap-1.5">✉️ {supplierDetails.email || "No email"}</span>
-                      <span className="opacity-70 flex items-center gap-1.5">📞 {supplierDetails.mobile_number || "No phone"}</span>
-                    </div>
-                  )}
                 </div>
 
                 <Input
@@ -450,6 +418,48 @@ const PurchaseForm = () => {
                   onChange={(e) => setPurchaseDetails({ ...purchaseDetails, date: e.target.value })}
                 />
               </div>
+
+              {supplierDetails && (
+                <div className="px-8 pb-6 animate-in fade-in slide-in-from-top-2 duration-500">
+                  <div className="p-3 bg-gradient-to-r from-blue-50/30 via-white to-blue-50/20 border border-blue-100 rounded-[1.5rem] shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center text-blue-600 border border-blue-200 shadow-inner">
+                        <User size={20} />
+                      </div>
+                      <div>
+                        <p className="text-[9px] font-black text-blue-400 uppercase tracking-widest leading-none mb-0.5">Supplier</p>
+                        <p className="text-base font-black text-slate-800 tracking-tight">{supplierDetails.name || supplierDetails.supplier_name}</p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex flex-wrap items-center gap-2">
+                      <div className="flex items-center gap-2.5 px-3 py-1.5 bg-white rounded-xl border border-slate-100 transition-all hover:border-blue-200 group">
+                        <div className="w-6 h-6 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-blue-500 transition-colors">
+                          <Mail size={12} />
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none">Email</span>
+                          <span className="text-[10px] font-bold text-slate-600 truncate max-w-[150px]">
+                            {supplierDetails.email || "Missing"}
+                          </span>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center gap-2.5 px-3 py-1.5 bg-white rounded-xl border border-slate-100 transition-all hover:border-emerald-200 group">
+                        <div className="w-6 h-6 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-emerald-500 transition-colors">
+                          <Smartphone size={12} />
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none">Phone</span>
+                          <span className="text-[10px] font-bold text-slate-600">
+                            {supplierDetails.phone || supplierDetails.mobile_number || "Missing"}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* 2. Items List Card */}
@@ -571,6 +581,7 @@ const PurchaseForm = () => {
           </div>
         </div>
       </div>
+
     </div>
   );
 };

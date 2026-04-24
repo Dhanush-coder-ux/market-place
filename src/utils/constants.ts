@@ -11,6 +11,10 @@ import {
   Factory,
   UserPlus,
   FileText,
+  PlusCircle,
+  RefreshCw,
+  ListChecks,
+  PlusSquare
 } from "lucide-react";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -61,9 +65,9 @@ export const sidebarLinks: SidebarLink[] = [
         icon: ClipboardList,
         settingsKey: "poGrn",
         children: [
-          { name: "Add Purchase Order", path: "/po-grn/add" },
-          { name: "Update Purchase Order", path: "/po-grn/update" },
-          { name: "Purchase Order List", path: "/po-grn" },
+          { name: "Add Purchase Order", path: "/po-grn/add", icon: PlusCircle },
+          { name: "Update Purchase Order", path: "/po-grn/update", icon: RefreshCw },
+          { name: "Purchase Order List", path: "/po-grn", icon: ListChecks },
         ],
       },
 
@@ -74,7 +78,7 @@ export const sidebarLinks: SidebarLink[] = [
         icon: Factory,
         settingsKey: "productionEntry",
         children: [
-          { name: "Production Entry", path: "/production-entry/add" },
+          { name: "Production Entry", path: "/production-entry/add", icon: PlusSquare },
         ],
       },
       { name: "Purchase History", path: "/purchase-history", icon: History },

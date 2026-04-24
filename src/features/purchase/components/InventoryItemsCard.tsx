@@ -106,14 +106,18 @@ export const InventoryItemsCard = ({
         unit: baseOpt.unit ?? "pc",
         category: baseOpt.category ?? "",
         variant: first.name,
-        sku: first.sku
+        sku: first.sku,
+        batchTracking: !!(baseOpt.batch_tracking || (baseOpt.datas && baseOpt.datas.batch_tracking)),
+        serialTracking: !!(baseOpt.serial_tracking || (baseOpt.datas && baseOpt.datas.serial_tracking))
       };
 
       const otherVariants = variantsToAdd.slice(1).map(v => ({
         ...next[targetIdx],
         id: Math.random().toString(),
         variant: v.name,
-        sku: v.sku
+        sku: v.sku,
+        batchTracking: !!(baseOpt.batch_tracking || (baseOpt.datas && baseOpt.datas.batch_tracking)),
+        serialTracking: !!(baseOpt.serial_tracking || (baseOpt.datas && baseOpt.datas.serial_tracking))
       }));
 
       next.splice(targetIdx + 1, 0, ...otherVariants);
@@ -311,7 +315,9 @@ export const InventoryItemsCard = ({
                             sellingPrice: d.sell_price ?? d.sellingPrice ?? "",
                             sku: d.barcode ?? d.sku ?? "",
                             unit: d.unit ?? "pc",
-                            category: d.category ?? ""
+                            category: d.category ?? "",
+                            batchTracking: !!(d.batch_tracking || (d.datas && d.datas.batch_tracking)),
+                            serialTracking: !!(d.serial_tracking || (d.datas && d.datas.serial_tracking))
                           });
                         }
                       } else {
@@ -578,34 +584,21 @@ export const InventoryItemsCard = ({
                   </div>
 
                   {/* Batch tracking section */}
-                  <div className={`rounded-xl border transition-all duration-200 overflow-hidden ${
-                    product.batchTracking ? 'border-amber-200 bg-amber-50/30' : 'border-slate-200 bg-white'
-                  }`}>
-                    {/* Section header / toggle row */}
-                    <button
-                      onClick={() => updateProductFields(index, { batchTracking: !product.batchTracking })}
-                      className="w-full flex items-center justify-between px-3.5 py-2.5 text-left hover:bg-black/[0.02] transition-colors"
-                    >
-                      <div className="flex items-center gap-2">
-                        <Zap size={13} className={product.batchTracking ? "text-amber-500" : "text-slate-400"} />
-                        <span className={`text-[11px] font-medium ${product.batchTracking ? 'text-amber-700' : 'text-slate-500'}`}>
-                          Batch Tracking
-                        </span>
-                        {product.batchTracking && (
-                          <span className="text-[9px] font-semibold uppercase tracking-wider text-amber-600 bg-amber-100 px-1.5 py-0.5 rounded">
-                            On
+                  {product.batchTracking && (
+                    <div className="rounded-xl border border-amber-200 bg-amber-50/30 transition-all duration-200 overflow-hidden">
+                      <div className="flex items-center justify-between px-3.5 py-2.5 bg-amber-100/50 border-b border-amber-200">
+                        <div className="flex items-center gap-2">
+                          <Package size={13} className="text-amber-500" />
+                          <span className="text-[11px] font-bold text-amber-900 uppercase tracking-wider">
+                            Batch Tracking Active
                           </span>
-                        )}
+                        </div>
+                        <div className="h-4 w-7 rounded-full bg-amber-500 relative cursor-not-allowed">
+                          <div className="absolute right-0.5 top-0.5 h-3 w-3 rounded-full bg-white shadow-sm" />
+                        </div>
                       </div>
-                      {/* Toggle pill */}
-                      <div className={`w-7 h-3.5 rounded-full relative transition-colors shrink-0 ${product.batchTracking ? 'bg-amber-400' : 'bg-slate-200'}`}>
-                        <div className={`absolute top-0.5 w-2.5 h-2.5 rounded-full bg-white shadow transition-all ${product.batchTracking ? 'right-0.5' : 'left-0.5'}`} />
-                      </div>
-                    </button>
 
-                    {/* Expanded date fields */}
-                    {product.batchTracking && (
-                      <div className="px-3.5 pb-3.5 pt-1 grid grid-cols-2 gap-3 border-t border-amber-100 animate-in fade-in slide-in-from-top-1 duration-200">
+                      <div className="px-3.5 pb-3.5 pt-3 grid grid-cols-2 gap-3 animate-in fade-in slide-in-from-top-1 duration-200">
                         <div>
                           <label className="text-[11px] font-medium text-slate-500 block mb-1.5 ml-0.5">Mfg. Date</label>
                           <div className="relative">
@@ -631,8 +624,98 @@ export const InventoryItemsCard = ({
                           </div>
                         </div>
                       </div>
-                    )}
-                  </div>
+                    </div>
+                  )}
+
+                  {/* Serial tracking fields */}
+                  {product.serialTracking && (
+                    <div className="rounded-xl border border-violet-200 bg-violet-50/30 transition-all duration-200 overflow-hidden mt-3">
+                      <div className="flex items-center justify-between px-3.5 py-2.5 bg-violet-100/50 border-b border-violet-200">
+                        <div className="flex items-center gap-2">
+                          <Zap size={13} className="text-violet-500" />
+                          <span className="text-[11px] font-bold text-violet-900 uppercase tracking-wider">
+                            Serial Tracking Active
+                          </span>
+                        </div>
+                        <div className="h-4 w-7 rounded-full bg-violet-600 relative cursor-not-allowed">
+                          <div className="absolute right-0.5 top-0.5 h-3 w-3 rounded-full bg-white shadow-sm" />
+                        </div>
+                      </div>
+
+                      <div className="px-3.5 pb-3.5 pt-3 animate-in fade-in slide-in-from-top-1 duration-200">
+                        <div className="flex items-center justify-between mb-1.5">
+                          <label className="text-[11px] font-medium text-slate-500 block ml-0.5">Serial Numbers Management</label>
+                          <span className={`text-[9px] font-black uppercase px-1.5 py-0.5 rounded-md ${
+                            (product.serialNumbers?.split(',').filter(Boolean).length || 0) === q
+                              ? 'bg-emerald-100 text-emerald-700'
+                              : 'bg-violet-100 text-violet-700'
+                          }`}>
+                            {(product.serialNumbers?.split(',').filter(Boolean).length || 0)} / {q} Registered
+                          </span>
+                        </div>
+                        <div className="flex flex-wrap gap-1.5 p-2.5 border border-slate-200 rounded-xl bg-white min-h-[45px] transition-all focus-within:border-violet-300 focus-within:ring-2 focus-within:ring-violet-100">
+                          {(product.serialNumbers || "").split(',').filter(Boolean).map((s: string, i: number) => (
+                            <span key={i} className="px-2 py-1 bg-violet-100 text-violet-700 text-[10px] font-bold rounded-lg flex items-center gap-1.5 animate-in zoom-in-95 duration-150">
+                              {s}
+                              <button 
+                                type="button"
+                                onClick={() => {
+                                  const current = (product.serialNumbers || "").split(',').filter(Boolean);
+                                  const next = current.filter((_: string, idx: number) => idx !== i).join(',');
+                                  handleProductChange(index, "serialNumbers", next);
+                                }}
+                                className="hover:text-violet-900 transition-colors"
+                              >
+                                <X size={10} />
+                              </button>
+                            </span>
+                          ))}
+                          <input
+                            type="text"
+                            disabled={(product.serialNumbers || "").split(',').filter(Boolean).length >= q}
+                            placeholder={
+                              (product.serialNumbers || "").split(',').filter(Boolean).length === 0 
+                                ? "Type serial and press comma..." 
+                                : (product.serialNumbers || "").split(',').filter(Boolean).length >= q
+                                  ? "Limit reached"
+                                  : ""
+                            }
+                            className={`flex-1 min-w-[140px] outline-none text-[11px] text-slate-800 placeholder-slate-300 bg-transparent ${(product.serialNumbers || "").split(',').filter(Boolean).length >= q ? 'cursor-not-allowed' : ''}`}
+                            onKeyDown={(e) => {
+                              const current = (product.serialNumbers || "").split(',').filter(Boolean);
+                              if (e.key === ',' || e.key === 'Enter') {
+                                e.preventDefault();
+                                const val = e.currentTarget.value.trim();
+                                if (val && current.length < q) {
+                                  if (!current.includes(val)) {
+                                    const next = [...current, val].join(',');
+                                    handleProductChange(index, "serialNumbers", next);
+                                  }
+                                  e.currentTarget.value = "";
+                                }
+                              } else if (e.key === 'Backspace' && !e.currentTarget.value) {
+                                if (current.length > 0) {
+                                  const next = current.slice(0, -1).join(',');
+                                  handleProductChange(index, "serialNumbers", next);
+                                }
+                              }
+                            }}
+                            onBlur={(e) => {
+                              const val = e.currentTarget.value.trim();
+                              const current = (product.serialNumbers || "").split(',').filter(Boolean);
+                              if (val && current.length < q) {
+                                if (!current.includes(val)) {
+                                  const next = [...current, val].join(',');
+                                  handleProductChange(index, "serialNumbers", next);
+                                }
+                                e.currentTarget.value = "";
+                              }
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Advanced settings panel */}
                   {expandedSettings.has(index) && (

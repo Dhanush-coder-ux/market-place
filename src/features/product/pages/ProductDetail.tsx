@@ -75,7 +75,7 @@ const ProductDetail = () => {
     if (!id) return;
     setDeleting(true);
     try {
-      await deleteData(`${ENDPOINTS.INVENTORIES}/${id}`);
+      await deleteData(`${ENDPOINTS.INVENTORIES}/${id}/${SHOP_ID}`);
       showToast("Product deleted successfully", "success");
       navigate("/product/all");
     } catch {

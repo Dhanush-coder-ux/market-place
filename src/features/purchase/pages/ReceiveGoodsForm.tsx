@@ -6,6 +6,8 @@ import {
 import { GradientButton } from '@/components/ui/GradientButton';
 import { useApi } from '@/context/ApiContext';
 import { ENDPOINTS, SHOP_ID } from '@/services/endpoints';
+import { useHeader } from '@/context/HeaderContext';
+import { useEffect } from 'react';
 
 // --- Type Definitions ---
 type PaymentMethod = "Cash" | "UPI" | "Card" | "Bank";
@@ -95,6 +97,7 @@ const POFetcher = ({ onFetch, isLoading }: { onFetch: (id: string) => void, isLo
 
 // --- Sub-Component: The Main GRN Form ---
 const GRNForm = ({ poData, onSubmit }: { poData: PurchaseOrder, onSubmit: (payload: GRNPayload) => void }) => {
+  const { setBottomActions } = useHeader();
   // Global Fields State
   const [globalData, setGlobalData] = useState({
     received_date: new Date().toISOString().split("T")[0],
@@ -179,8 +182,8 @@ const GRNForm = ({ poData, onSubmit }: { poData: PurchaseOrder, onSubmit: (paylo
     };
   }, [items, globalData, charges, payment]);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     if (!stats.isValid) return;
 
     const payload: GRNPayload = {
@@ -199,6 +202,26 @@ const GRNForm = ({ poData, onSubmit }: { poData: PurchaseOrder, onSubmit: (paylo
 
     onSubmit(payload);
   };
+
+  useEffect(() => {
+    setBottomActions(
+      <div className="flex items-center gap-3 animate-in fade-in slide-in-from-right-4 duration-300">
+        <div className="hidden md:flex flex-col items-end mr-4">
+          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Grand Total</span>
+          <span className="text-xl font-black text-slate-900 leading-none">₹{stats.grandTotal.toLocaleString()}</span>
+        </div>
+        <GradientButton 
+          onClick={handleSubmit}
+          disabled={!stats.isValid}
+          className="rounded-xl shadow-md text-xs px-8 h-8 flex items-center"
+          icon={<Save size={18} />}
+        >
+          Submit GRN
+        </GradientButton>
+      </div>
+    );
+    return () => setBottomActions(null);
+  }, [setBottomActions, stats, globalData, items]);
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -510,33 +533,6 @@ const GRNForm = ({ poData, onSubmit }: { poData: PurchaseOrder, onSubmit: (paylo
             <textarea rows={1} value={globalData.notes} onChange={e => setGlobalData({...globalData, notes: e.target.value})} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none resize-none" placeholder="Optional notes..."/>
           </div>
         </div>
-
-        <div className="bg-slate-50 p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
-          <div>
-            <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider mb-4 border-b border-slate-200 pb-2">Receiving Summary</h3>
-            <div className="space-y-3 text-sm">
-              <div className="flex justify-between text-slate-600"><span>Total Ordered:</span> <span className="font-semibold">{stats.totalOrdered}</span></div>
-              <div className="flex justify-between text-slate-900 font-bold"><span>Receiving Now:</span> <span className="text-lg text-blue-600">{stats.totalReceivedNow}</span></div>
-              <div className="flex justify-between text-slate-600"><span>Remaining After:</span> <span className="font-semibold">{stats.totalRemainingAfter}</span></div>
-            </div>
-            
-            <div className="mt-5 h-2 w-full bg-slate-200 rounded-full overflow-hidden flex">
-               <div className="h-full bg-slate-400 transition-all" style={{ width: `${((stats.totalOrdered - stats.totalRemainingAfter - stats.totalReceivedNow) / stats.totalOrdered) * 100}%` }} title="Previously Received"/>
-               <div className="h-full bg-blue-500 transition-all relative overflow-hidden" style={{ width: `${(stats.totalReceivedNow / stats.totalOrdered) * 100}%` }}>
-                  <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGcgc3Ryb2tlPSJyZ2JhKDI1NSwyNTUsMjU1LDAuMykiIHN0cm9rZS13aWR0aD0iNCI+PHBhdGggZD0iTS0xMCAzMCBMMzAgLTEwIE0wIDQwIEw0MCAwIE0xMCA1MCBMNTAgMTAiIC8+PC9nPjwvc3ZnPg==')] opacity-30" />
-               </div>
-            </div>
-          </div>
-
-          <button 
-            type="submit"
-            disabled={!stats.isValid}
-            className="w-full mt-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-bold rounded-lg transition-colors flex justify-center items-center gap-2 shadow-sm"
-          >
-            <Save size={18} /> Submit GRN
-          </button>
-        </div>
-
       </div>
     </form>
   );

@@ -3,31 +3,21 @@ import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import {
   Save, 
   Plus, 
-  Trash2, 
-  Settings, 
-  Factory,
+  Factory, 
   Banknote, 
-  Smartphone, 
-  CreditCard, 
-  Landmark, 
-  ChevronUp, 
-  X, 
   PackageOpen, 
   Check, 
-  CalendarDays,
   Bookmark,
-  ChevronRight,
-  Clock,
-  Trash,
-  Zap,
-  Info,
   User,
   MapPin,
   ClipboardList,
-  Percent
+  Clock,
+  Info,
+  Zap
 } from "lucide-react";
 
 import { ReusableSelect } from "@/components/ui/ReusableSelect";
+
 import Input from "@/components/ui/Input";
 import { GradientButton } from "@/components/ui/GradientButton";
 import { useApi } from "@/context/ApiContext";
@@ -55,6 +45,8 @@ export interface ProductionItem {
   expiryDate: string;
   manufacturingDate: string;
   batchTracking: boolean;
+  serialTracking: boolean;
+  serialNumbers: string;
   batchNum: string;
   sku: string;
   variant: string;
@@ -62,14 +54,13 @@ export interface ProductionItem {
   category?: string;
 }
 
-const LOW_STOCK_THRESHOLD = 5;
 
 const ProductionForm = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { postData, getData, putData } = useApi();
-  const { setActions } = useHeader();
+  const { postData } = useApi();
+  const { setBottomActions } = useHeader();
   const { showToast } = useToast();
   const [submitting, setSubmitting] = useState(false);
 
@@ -88,7 +79,7 @@ const ProductionForm = () => {
     {
       id: "1", name: "", quantity: "", costPrice: "", sellingPrice: "",
       marginPercent: "", marginAmount: "", marginType: "percent",
-      unit: "pc", taxGst: 18, storageLoc: "", reorderPoint: "", expiryDate: "", manufacturingDate: "", batchTracking: false, batchNum: "", sku: "", variant: "", size: ""
+      unit: "pc", taxGst: 18, storageLoc: "", reorderPoint: "", expiryDate: "", manufacturingDate: "", batchTracking: false, serialTracking: false, serialNumbers: "", batchNum: "", sku: "", variant: "", size: ""
     }
   ]);
 
@@ -103,7 +94,6 @@ const ProductionForm = () => {
   const [charges, setCharges] = useState({ transport: "" as number | "", other: "" as number | "" });
   const [payment, setPayment] = useState({ method: "Cash" as PaymentMethod, amountPaid: "" as number | "" });
   const [costMethod, setCostMethod] = useState("None");
-  const [drafts, setDrafts] = useState<any[]>([]);
 
 
   // --- Calculations ---
@@ -152,8 +142,8 @@ const ProductionForm = () => {
 
   // --- Load Drafts ---
   const loadDraftsList = () => {
-    const savedDrafts = JSON.parse(localStorage.getItem("purchase_drafts") || "[]");
-    setDrafts(savedDrafts.sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()).slice(0, 5));
+    // const savedDrafts = JSON.parse(localStorage.getItem("purchase_drafts") || "[]");
+    // setDrafts(savedDrafts.sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()).slice(0, 5));
   };
 
   useEffect(() => {
@@ -178,32 +168,30 @@ const ProductionForm = () => {
 
   // --- Header Actions ---
   useEffect(() => {
-    setActions(
-      <div className="flex items-center gap-4 animate-in fade-in slide-in-from-right-4 duration-300">
-        <div className="hidden md:flex items-center gap-2">
-          {!id && (
-            <button 
-              type="button"
-              onClick={handleSaveDraft}
-              className="px-4 h-11 rounded-xl border border-blue-100 text-blue-600 font-bold text-xs bg-blue-50/50 hover:bg-blue-100 transition-all flex items-center gap-2"
-            >
-              <Bookmark size={14} />
-              Save Draft
-            </button>
-          )}
-          <GradientButton 
-            icon={submitting ? <Loader className="h-4 w-4" /> : <Save size={16} />} 
-            onClick={handleSaveProduction} 
-            disabled={submitting}
-            className="rounded-xl shadow-md text-xs px-6 h-11 h-auto flex items-center py-3"
+    setBottomActions(
+      <div className="flex items-center gap-3 animate-in fade-in slide-in-from-right-4 duration-300">
+        {!id && (
+          <button 
+            type="button"
+            onClick={handleSaveDraft}
+            className="px-6 h-8 rounded-xl border border-blue-100 text-blue-600 font-bold text-xs bg-blue-50/50 hover:bg-blue-100 transition-all flex items-center gap-2"
           >
-            {submitting ? "Processing..." : (id ? "Update Production" : "Confirm Production")}
-          </GradientButton>
-        </div>
+            <Bookmark size={14} />
+            Save Draft
+          </button>
+        )}
+        <GradientButton 
+          icon={submitting ? <Loader className="h-4 w-4" /> : <Save size={16} />} 
+          onClick={handleSaveProduction} 
+          disabled={submitting}
+          className="rounded-xl shadow-md text-xs px-8 h-8 flex items-center"
+        >
+          {submitting ? "Processing..." : (id ? "Update Production" : "Confirm Production")}
+        </GradientButton>
       </div>
     );
-    return () => setActions(null);
-  }, [setActions, productionDetails, products, productionCosts, charges, payment, submitting, id]);
+    return () => setBottomActions(null);
+  }, [setBottomActions, productionDetails, products, productionCosts, charges, payment, submitting, id]);
 
   // --- Handlers ---
   const handleProductChange = (index: number, field: string, value: any) => {
@@ -222,7 +210,7 @@ const ProductionForm = () => {
     setProducts([...products, {
       id: Math.random().toString(), name: "", quantity: "", costPrice: "", sellingPrice: "",
       marginPercent: "", marginAmount: "", marginType: "percent",
-      unit: "pc", taxGst: 18, storageLoc: "", reorderPoint: "", expiryDate: "", manufacturingDate: "", batchTracking: false, batchNum: "", sku: "", variant: "", size: ""
+      unit: "pc", taxGst: 18, storageLoc: "", reorderPoint: "", expiryDate: "", manufacturingDate: "", batchTracking: false, serialTracking: false, serialNumbers: "", batchNum: "", sku: "", variant: "", size: ""
     }]);
   };
 
@@ -259,14 +247,6 @@ const ProductionForm = () => {
     if (!searchParams.get("draftId")) {
       navigate(`?draftId=${draftId}`, { replace: true });
     }
-  };
-
-  const deleteDraft = (e: React.MouseEvent, draftId: string) => {
-    e.stopPropagation();
-    const savedDrafts = JSON.parse(localStorage.getItem("purchase_drafts") || "[]");
-    const filtered = savedDrafts.filter((d: any) => d.id !== draftId);
-    localStorage.setItem("purchase_drafts", JSON.stringify(filtered));
-    loadDraftsList();
   };
 
   const handleSaveProduction = async () => {
@@ -307,9 +287,11 @@ const ProductionForm = () => {
           unit: p.unit || "pc",
           gst: Number(p.taxGst) || 0,
           batch_tracking: p.batchTracking,
+          serial_tracking: p.serialTracking,
           batch_number: p.batchNum || productionDetails.batchNo,
           manufacturing_date: p.manufacturingDate,
           expiry_date: p.expiryDate,
+          serial_numbers: p.serialNumbers,
           variant: p.variant,
         };
       });
@@ -382,7 +364,7 @@ const ProductionForm = () => {
                         { value: 'Packaging Area', label: 'Packaging Area', icon: <MapPin size={14} /> }
                       ]}
                       value={productionDetails.location}
-                      onValueChange={(val) => setProductionDetails({ ...productionDetails, location: val })}
+                      onValueChange={(val: string) => setProductionDetails({ ...productionDetails, location: val })}
                       placeholder="Select Location"
                       className="!pl-11"
                     />
@@ -400,7 +382,7 @@ const ProductionForm = () => {
                         { value: 'Alex Chen', label: 'Alex Chen', icon: <User size={14} /> }
                       ]}
                       value={productionDetails.supervisor}
-                      onValueChange={(val) => setProductionDetails({ ...productionDetails, supervisor: val })}
+                      onValueChange={(val: string) => setProductionDetails({ ...productionDetails, supervisor: val })}
                       placeholder="Select Supervisor"
                       className="!pl-11"
                     />
@@ -432,7 +414,7 @@ const ProductionForm = () => {
                         { value: 'Completed', label: 'Completed', icon: <Check size={14} /> }
                       ]}
                       value={productionDetails.status}
-                      onValueChange={(val) => setProductionDetails({ ...productionDetails, status: val })}
+                      onValueChange={(val: string) => setProductionDetails({ ...productionDetails, status: val })}
                       placeholder="Status"
                       className="!pl-11"
                     />
@@ -519,10 +501,10 @@ const ProductionForm = () => {
               </div>
             </div>
 
-          </div>
         </div>
       </div>
     </div>
+  </div>
   );
 };
 

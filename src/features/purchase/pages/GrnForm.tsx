@@ -2,39 +2,22 @@ import { useState, useMemo, useEffect } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import {
   Save, 
-  Plus, 
-  Trash2, 
-  Settings, 
-  ScanLine,
   Banknote, 
   Smartphone, 
   CreditCard, 
   Landmark, 
-  ChevronUp, 
-  X, 
-  PackageOpen, 
-  Check, 
-  CalendarDays,
   Bookmark,
-  ChevronRight,
-  Clock,
-  Trash,
-  AlertTriangle,
-  Zap,
-  Percent,
-  Info,
-  FileText,
   Truck
 } from "lucide-react";
 
 import { ReusableSelect } from "@/components/ui/ReusableSelect";
+
 import Input from "@/components/ui/Input";
 import { GradientButton } from "@/components/ui/GradientButton";
 import { useApi } from "@/context/ApiContext";
 import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 import { SearchSelect } from "@/components/inputbuilders/SearchSelect";
 import { supplierApi } from "@/services/api/supplier";
-import { inventoryApi } from "@/services/api/inventory";
 import { useHeader } from "@/context/HeaderContext";
 import { useToast } from "@/context/ToastContext";
 import Loader from "@/components/common/Loader";
@@ -71,7 +54,7 @@ const GrnForm = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { postData, getData, putData } = useApi();
-  const { setActions } = useHeader();
+  const { setBottomActions } = useHeader();
   const { showToast } = useToast();
   const [submitting, setSubmitting] = useState(false);
 
@@ -97,7 +80,6 @@ const GrnForm = () => {
   const [payment, setPayment] = useState({ method: "Cash" as PaymentMethod, amountPaid: "" as number | "" });
   const [costMethod, setCostMethod] = useState("None");
   const [supplierDetails, setSupplierDetails] = useState<any>(null);
-  const [drafts, setDrafts] = useState<any[]>([]);
 
   // --- Calculations ---
   const stats = useMemo(() => {
@@ -137,8 +119,8 @@ const GrnForm = () => {
 
   // --- Load Drafts for Sidebar ---
   const loadDraftsList = () => {
-    const savedDrafts = JSON.parse(localStorage.getItem("purchase_drafts") || "[]");
-    setDrafts(savedDrafts.sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()).slice(0, 5));
+    // const savedDrafts = JSON.parse(localStorage.getItem("purchase_drafts") || "[]");
+    // setDrafts(savedDrafts.sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()).slice(0, 5));
   };
 
   useEffect(() => {
@@ -201,32 +183,30 @@ const GrnForm = () => {
 
   // --- Header Actions ---
   useEffect(() => {
-    setActions(
-      <div className="flex items-center gap-4 animate-in fade-in slide-in-from-right-4 duration-300">
-        <div className="hidden md:flex items-center gap-2">
-          {!id && (
-            <button 
-              type="button"
-              onClick={handleSaveDraft}
-              className="px-4 h-11 rounded-xl border border-blue-100 text-blue-600 font-bold text-xs bg-blue-50/50 hover:bg-blue-100 transition-all flex items-center gap-2"
-            >
-              <Bookmark size={14} />
-              Save Draft
-            </button>
-          )}
-          <GradientButton 
-            icon={submitting ? <Loader className="h-4 w-4" /> : <Save size={16} />} 
-            onClick={handleSaveGRN} 
-            disabled={submitting}
-            className="rounded-xl shadow-md text-xs px-6 h-11 h-auto flex items-center py-3"
+    setBottomActions(
+      <div className="flex items-center gap-3 animate-in fade-in slide-in-from-right-4 duration-300">
+        {!id && (
+          <button 
+            type="button"
+            onClick={handleSaveDraft}
+            className="px-6 h-8 rounded-xl border border-blue-100 text-blue-600 font-bold text-xs bg-blue-50/50 hover:bg-blue-100 transition-all flex items-center gap-2"
           >
-            {submitting ? "Processing..." : (id ? "Update GRN" : "Confirm GRN")}
-          </GradientButton>
-        </div>
+            <Bookmark size={14} />
+            Save Draft
+          </button>
+        )}
+        <GradientButton 
+          icon={submitting ? <Loader className="h-4 w-4" /> : <Save size={16} />} 
+          onClick={handleSaveGRN} 
+          disabled={submitting}
+          className="rounded-xl shadow-md text-xs px-8 h-8 flex items-center"
+        >
+          {submitting ? "Processing..." : (id ? "Update GRN" : "Confirm GRN")}
+        </GradientButton>
       </div>
     );
-    return () => setActions(null);
-  }, [setActions, grnDetails, products, charges, payment, submitting, id]);
+    return () => setBottomActions(null);
+  }, [setBottomActions, grnDetails, products, charges, payment, submitting, id]);
 
   // --- Handlers ---
   const handleProductChange = (index: number, field: string, value: any) => {
@@ -279,18 +259,6 @@ const GrnForm = () => {
     loadDraftsList();
     if (!searchParams.get("draftId")) {
       navigate(`?draftId=${draftId}`, { replace: true });
-    }
-  };
-
-  const deleteDraft = (e: React.MouseEvent, draftId: string) => {
-    e.stopPropagation();
-    const savedDrafts = JSON.parse(localStorage.getItem("purchase_drafts") || "[]");
-    const filtered = savedDrafts.filter((d: any) => d.id !== draftId);
-    localStorage.setItem("purchase_drafts", JSON.stringify(filtered));
-    loadDraftsList();
-    if (searchParams.get("draftId") === draftId) {
-      navigate("/po-grn/add", { replace: true });
-      window.location.reload();
     }
   };
 
@@ -459,7 +427,7 @@ const GrnForm = () => {
                       { value: 'Pending', label: 'Pending Review' }
                     ]}
                     value={grnDetails.status}
-                    onValueChange={(val) => setGrnDetails({ ...grnDetails, status: val })}
+                    onValueChange={(val: string) => setGrnDetails({ ...grnDetails, status: val })}
                     placeholder="Select Status"
                   />
                 </div>
@@ -587,6 +555,7 @@ const GrnForm = () => {
           </div>
         </div>
       </div>
+
     </div>
   );
 };

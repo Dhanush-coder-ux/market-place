@@ -159,10 +159,10 @@ const ProductRow = ({
 
         {/* Pricing */}
         <td className="px-6 py-4 text-right">
-          <div className="flex flex-col gap-0.5">
-            <span className="text-slate-400 line-through text-[12px]">{formatCurrency(item.buy_price)}</span>
-            <span className="text-[14px] font-semibold text-slate-800">{formatCurrency(item.sell_price)}</span>
-          </div>
+          <span className="text-[14px] font-medium text-slate-500">{formatCurrency(item.buy_price)}</span>
+        </td>
+        <td className="px-6 py-4 text-right">
+          <span className="text-[14px] font-semibold text-slate-800">{formatCurrency(item.sell_price)}</span>
         </td>
 
         {/* Stock */}
@@ -192,10 +192,9 @@ const ProductRow = ({
         </td>
       </tr>
 
-      {/* Expanded Variant Tree Rows */}
       {isExpanded && hasVariants && (
         <tr className="bg-slate-50/20">
-          <td colSpan={7} className="px-0 py-0 border-b border-slate-100">
+          <td colSpan={8} className="px-0 py-0 border-b border-slate-100">
             {/* pl-[88px] aligns the thread exactly under the title area */}
             <div className="pl-[88px] pr-6 py-2 pb-4">
               <div className="flex flex-col relative">
@@ -328,7 +327,8 @@ const InventoryPage = () => {
                   <th className="px-6 py-4 w-14"></th>
                   <th className="px-6 py-4 min-w-[260px]">Product Details</th>
                   <th className="px-6 py-4">Category & Supplier</th>
-                  <th className="px-6 py-4 text-right">Pricing (Buy/Sell)</th>
+                  <th className="px-6 py-4 text-right">Buy Price</th>
+                  <th className="px-6 py-4 text-right">Sell Price</th>
                   <th className="px-6 py-4 text-right">Stock</th>
                   <th className="px-6 py-4 text-right">Added Date</th>
                   <th className="px-6 py-4 w-12 text-center">Actions</th>

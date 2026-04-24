@@ -12,6 +12,8 @@ import FieldLabel from "./Fieldlable";
 import { FIELD_DESCRIPTIONS } from "../../../utils/constants";
 import { useApi } from "@/context/ApiContext";
 import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
+import { useHeader } from "@/context/HeaderContext";
+import { useEffect } from "react";
 
 const CATEGORIES = [
   { value: "electronics", label: "Electronics" },
@@ -22,6 +24,7 @@ const CATEGORIES = [
 const InventoryForm = () => {
   const navigate = useNavigate();
   const { postData, loading: submitting, error } = useApi();
+  const { setBottomActions } = useHeader();
 
   const [formData, setFormData] = useState({
     barcode: "",
@@ -81,6 +84,28 @@ const InventoryForm = () => {
     });
     if (res) navigate("/inventory");
   };
+
+  useEffect(() => {
+    setBottomActions(
+      <div className="flex items-center gap-3 animate-in fade-in slide-in-from-right-4 duration-300">
+        <button
+          type="button"
+          onClick={() => navigate("/inventory")}
+          className="px-6 h-11 rounded-xl border border-slate-200 text-slate-500 font-bold text-xs hover:bg-slate-50 transition-all"
+        >
+          Discard Draft
+        </button>
+        <GradientButton 
+          onClick={handleSubmit}
+          disabled={submitting}
+          className="rounded-xl shadow-md text-xs px-8 h-11 flex items-center"
+        >
+          {submitting ? "Saving…" : "Confirm & Save Product"}
+        </GradientButton>
+      </div>
+    );
+    return () => setBottomActions(null);
+  }, [setBottomActions, submitting, formData]);
 
   return (
     <form className="mx-auto space-y-10 p-6 bg-white" onSubmit={handleSubmit}>
@@ -228,21 +253,6 @@ const InventoryForm = () => {
         </div>
       </section>
 
-      {/* STICKY FOOTER ACTIONS */}
-      <div className="flex flex-col sm:flex-row justify-end items-center gap-4 pt-8 border-t border-gray-100 bg-white">
-        <button
-          type="button"
-          onClick={() => navigate("/inventory")}
-          className="text-sm font-medium text-gray-400 hover:text-gray-600 px-4"
-        >
-          Discard Draft
-        </button>
-        <div className="flex flex-wrap justify-center gap-3">
-          <GradientButton className="shadow-lg shadow-indigo-200 min-w-[180px]" disabled={submitting}>
-            {submitting ? "Saving…" : "Confirm & Save Product"}
-          </GradientButton>
-        </div>
-      </div>
     </form>
   );
 };

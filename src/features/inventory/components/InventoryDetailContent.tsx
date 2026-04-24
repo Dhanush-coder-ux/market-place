@@ -1,4 +1,4 @@
-import { Boxes, IndianRupee, Layers, Package } from "lucide-react";
+import { Boxes, IndianRupee, Layers, Package, ShieldCheck, Tag, Zap } from "lucide-react";
 import type { InventoryRecord } from "@/types/api";
 
 export const InventoryDetailContent = ({ item }: { item: InventoryRecord | null }) => {
@@ -36,11 +36,11 @@ export const InventoryDetailContent = ({ item }: { item: InventoryRecord | null 
   // Append any extra fields from datas that aren't already shown
   const extraFields = item.datas
     ? Object.entries(item.datas)
-        .filter(([k]) => !["name", "product_name", "description"].includes(k))
+        .filter(([k]) => !["name", "product_name", "description", "batch_tracking", "serial_tracking", "id", "shop_id", "type"].includes(k))
         .map(([k, v]) => ({
           label: k.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
           value: String(v ?? "—"),
-          icon: <Package size={20} className="text-slate-400" />,
+          icon: <Tag size={20} className="text-slate-400" />,
         }))
     : [];
 
@@ -92,6 +92,55 @@ export const InventoryDetailContent = ({ item }: { item: InventoryRecord | null 
         <h3 className="font-semibold text-gray-700 mb-2">Product Description</h3>
         <p className="text-gray-600 leading-relaxed text-sm">{description}</p>
       </div>
+
+      {/* Tracking & Verification Section */}
+      {(!!item.datas?.batch_tracking || !!item.datas?.serial_tracking) && (
+        <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
+          <div className="p-4 border-b bg-indigo-50/50 flex items-center gap-2">
+            <ShieldCheck size={18} className="text-indigo-600" />
+            <h3 className="font-semibold text-indigo-900">Tracking & Verification</h3>
+          </div>
+          <div className="p-5 space-y-4">
+            {!!item.datas?.batch_tracking && (
+              <div className="flex items-start gap-4 p-4 rounded-xl bg-blue-50/50 border border-blue-100">
+                <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center text-blue-600 shrink-0">
+                  <Package size={20} />
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-sm font-bold text-blue-900 uppercase tracking-wider">Batch Tracking Enabled</h4>
+                    <div className="h-5 w-9 rounded-full bg-blue-600 relative cursor-not-allowed opacity-80">
+                       <div className="absolute right-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow-sm" />
+                    </div>
+                  </div>
+                  <p className="text-xs text-blue-700/70 mt-1 font-medium">
+                    You enabled batch tracking for this product. This allows tracking of manufacturing/expiry dates and batch numbers across your inventory.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {!!item.datas?.serial_tracking && (
+              <div className="flex items-start gap-4 p-4 rounded-xl bg-violet-50/50 border border-violet-100">
+                <div className="w-10 h-10 rounded-xl bg-violet-100 flex items-center justify-center text-violet-600 shrink-0">
+                  <Zap size={20} />
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-sm font-bold text-violet-900 uppercase tracking-wider">Serial Tracking Enabled</h4>
+                    <div className="h-5 w-9 rounded-full bg-violet-600 relative cursor-not-allowed opacity-80">
+                       <div className="absolute right-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow-sm" />
+                    </div>
+                  </div>
+                  <p className="text-xs text-violet-700/70 mt-1 font-medium">
+                    Serial number tracking is active for this item. Each unit has a unique identifier for precision inventory management.
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
     </div>
   );

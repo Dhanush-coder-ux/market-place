@@ -291,7 +291,7 @@ const ProductInfos = () => {
   const handleDelete = async () => {
     if (!productToDelete) return;
     try {
-      await deleteData(`${ENDPOINTS.INVENTORIES}/${productToDelete.id}`);
+      await deleteData(`${ENDPOINTS.INVENTORIES}/${productToDelete.id}/${SHOP_ID}`);
       showToast("Product deleted successfully", "success");
       setRefreshKey((prev: number) => prev + 1);
     } catch {
@@ -487,7 +487,7 @@ const ProductInfos = () => {
                         })}
 
                         <td className="px-4 py-4 text-right whitespace-nowrap">
-                          <div className="flex items-center justify-end gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <div className="flex items-center justify-end gap-1.5 transition-opacity">
                             <button
                               onClick={(e) => { e.stopPropagation(); navigate(`/product/${p.id}`); }}
                               className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-transparent hover:border-blue-100"

@@ -3,28 +3,17 @@ import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import {
   Save, 
   Plus, 
-  Trash2, 
-  Settings, 
   Factory,
   Banknote, 
-  Smartphone, 
-  CreditCard, 
-  Landmark, 
-  ChevronUp, 
-  X, 
   PackageOpen, 
   Check, 
-  CalendarDays,
   Bookmark,
-  ChevronRight,
   Clock,
-  Trash,
   Zap,
   Info,
   User,
   MapPin,
   ClipboardList,
-  Percent
 } from "lucide-react";
 
 import { ReusableSelect } from "@/components/ui/ReusableSelect";
@@ -62,13 +51,13 @@ export interface ProductionItem {
   category?: string;
 }
 
-const LOW_STOCK_THRESHOLD = 5;
+
 
 const ProductionForm = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { postData, getData, putData } = useApi();
+  const { postData } = useApi();
   const { setActions } = useHeader();
   const { showToast } = useToast();
   const [submitting, setSubmitting] = useState(false);
@@ -103,7 +92,6 @@ const ProductionForm = () => {
   const [charges, setCharges] = useState({ transport: "" as number | "", other: "" as number | "" });
   const [payment, setPayment] = useState({ method: "Cash" as PaymentMethod, amountPaid: "" as number | "" });
   const [costMethod, setCostMethod] = useState("None");
-  const [drafts, setDrafts] = useState<any[]>([]);
 
 
   // --- Calculations ---
@@ -150,15 +138,7 @@ const ProductionForm = () => {
     return { totalQty, subtotal, totalCharges, totalProductionCosts, grandTotal, outstanding, allocations };
   }, [products, productionCosts, charges, payment.amountPaid, costMethod]);
 
-  // --- Load Drafts ---
-  const loadDraftsList = () => {
-    const savedDrafts = JSON.parse(localStorage.getItem("purchase_drafts") || "[]");
-    setDrafts(savedDrafts.sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()).slice(0, 5));
-  };
 
-  useEffect(() => {
-    loadDraftsList();
-  }, []);
 
   // --- Load Existing or Draft ---
   useEffect(() => {
@@ -255,19 +235,12 @@ const ProductionForm = () => {
 
     localStorage.setItem("purchase_drafts", JSON.stringify(savedDrafts));
     showToast("Progress saved as production draft", "info");
-    loadDraftsList();
     if (!searchParams.get("draftId")) {
       navigate(`?draftId=${draftId}`, { replace: true });
     }
   };
 
-  const deleteDraft = (e: React.MouseEvent, draftId: string) => {
-    e.stopPropagation();
-    const savedDrafts = JSON.parse(localStorage.getItem("purchase_drafts") || "[]");
-    const filtered = savedDrafts.filter((d: any) => d.id !== draftId);
-    localStorage.setItem("purchase_drafts", JSON.stringify(filtered));
-    loadDraftsList();
-  };
+
 
   const handleSaveProduction = async () => {
     if (!productionDetails.batchNo) {

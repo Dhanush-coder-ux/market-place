@@ -3,7 +3,7 @@ import React, {
 } from "react";
 import {
   Package, DollarSign, BarChart2, Settings, X, Plus,
-  Trash2, Info, Save, ChevronDown, Hash,
+  Trash2, Save, ChevronDown, Hash,
   Cpu, AlertCircle, RefreshCw,  ScanLine, Copy,
   Layers,  Zap,
   Bookmark,

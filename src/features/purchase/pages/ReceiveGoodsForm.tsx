@@ -1,622 +1,797 @@
-import React, { useState, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import {
-  Search, Package, AlertCircle, Save, Building2, Calendar, FileText,
-  Banknote, Smartphone, CreditCard, Landmark
-} from 'lucide-react';
-import { GradientButton } from '@/components/ui/GradientButton';
-import { useApi } from '@/context/ApiContext';
-import { ENDPOINTS, SHOP_ID } from '@/services/endpoints';
 
-// --- Type Definitions ---
-type PaymentMethod = "Cash" | "UPI" | "Card" | "Bank";
+  PackageCheck,
+  Search,
+  CheckCircle2,
+  AlertCircle,
+  Clock,
+  ChevronDown,
+  Minus,
+  Plus,
+  Truck,
+  BarChart3,
+  ArrowLeft,
+  RefreshCw,
+} from "lucide-react";
 
-type PurchaseOrder = {
+import Input from "@/components/ui/Input";
+import { GradientButton } from "@/components/ui/GradientButton";
+import { SearchSelect } from "@/components/inputbuilders/SearchSelect";
+import { useApi } from "@/context/ApiContext";
+import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
+import { useHeader } from "@/context/HeaderContext";
+import { useToast } from "@/context/ToastContext";
+import Loader from "@/components/common/Loader";
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+type ReceiveStatus = "Pending" | "Partial" | "Completed";
+
+interface POProduct {
   id: string;
-  supplier: string;
-  po_date: string;
-  expected_delivery: string;
-  status: string;
-  items: Array<{
-    product_id: string;
-    name: string;
-    ordered: number;
-    received: number;
-    unit_price: number; // Added to calculate the subtotal
-  }>;
+  name: string;
+  sku: string;
+  variant: string;
+  unit: string;
+  orderedQty: number;
+  previouslyReceivedQty: number;
+  receivedQty: number | "";   // what user enters now
+  costPrice: number;
+  batchTracking: boolean;
+  batchNum: string;
+  manufacturingDate: string;
+  expiryDate: string;
+  remarks: string;
+}
+
+interface POSummary {
+  id: string;
+  referenceNo: string;
+  supplierName: string;
+  supplierId: string;
+  date: string;
+  status: ReceiveStatus;
+  totalItems: number;
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+/** Fetch PO reference list for SearchSelect */
+const fetchPOOptions = async (query: string, getData: Function) => {
+  try {
+    const res = await getData(`${ENDPOINTS.PURCHASES}?search=${encodeURIComponent(query)}&type=PO&limit=15`);
+    const list: any[] = res?.data || res?.datas || [];
+    return list.map((po: any) => ({
+      id: po.id,
+      label: po.reference_no || po.referenceNo || po.id,
+      value: po.reference_no || po.id,
+      supplierName: po.supplier_name || "",
+      date: po.date || "",
+      status: po.status || "Pending",
+      totalItems: po.products?.length || 0,
+    }));
+  } catch {
+    return [];
+  }
 };
 
-type GRNPayload = {
-  po_id: string;
-  received_date: string;
-  received_by: string;
-  warehouse: string;
-  notes: string;
-  received_items: Array<{
-    product_id: string;
-    received_qty: number;
-    reason?: string;
-  }>;
+/** Derive receive status from product list */
+const deriveStatus = (items: POProduct[]): ReceiveStatus => {
+  if (items.length === 0) return "Pending";
+  const allFull = items.every(p => {
+    const remaining = p.orderedQty - p.previouslyReceivedQty;
+    return Number(p.receivedQty) >= remaining;
+  });
+  const anyReceived = items.some(p => Number(p.receivedQty) > 0);
+  if (allFull) return "Completed";
+  if (anyReceived) return "Partial";
+  return "Pending";
 };
 
-const WAREHOUSES = ["Main Hub (WH-01)", "East Wing (WH-02)", "Cold Storage (WH-03)"];
-const REASONS = ["Damaged", "Missing", "Supplier Delay", "Other"];
+// ─── Status Badge ─────────────────────────────────────────────────────────────
 
-// --- Sub-Component: Input ---
-const Input = ({ label, type = "text", placeholder, leftIcon, value, onChange, className = "" }: any) => (
-  <div>
-    {label && <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">{label}</label>}
-    <div className="relative">
-      {leftIcon && <div className="absolute left-3 top-1/2 -translate-y-1/2">{leftIcon}</div>}
-      <input
-        type={type}
-        placeholder={placeholder}
-        value={value}
-        onChange={onChange}
-        className={`w-full ${leftIcon ? 'pl-8' : 'px-3'} py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all ${className}`}
-      />
-    </div>
-  </div>
-);
-
-// --- Sub-Component: PO Fetcher ---
-const POFetcher = ({ onFetch, isLoading }: { onFetch: (id: string) => void, isLoading: boolean }) => {
-  const [inputId, setInputId] = useState("");
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (inputId.trim() && !isLoading) onFetch(inputId.trim());
-  };
-
+const StatusPill = ({ status }: { status: ReceiveStatus }) => {
+  const cfg = {
+    Pending:   { icon: <Clock size={11} />,        cls: "bg-amber-50 border-amber-200 text-amber-700"   },
+    Partial:   { icon: <AlertCircle size={11} />,  cls: "bg-blue-50 border-blue-200 text-blue-700"      },
+    Completed: { icon: <CheckCircle2 size={11} />, cls: "bg-emerald-50 border-emerald-200 text-emerald-700" },
+  }[status];
   return (
-    <form onSubmit={handleSubmit} className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm mb-6 flex items-end gap-4">
-      <div className="flex-1 max-w-sm">
-        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Purchase Order ID</label>
-        <div className="relative">
-          <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-          <input 
-            type="text" 
-            value={inputId}
-            onChange={(e) => setInputId(e.target.value)}
-            placeholder="e.g. PO-2026-001"
-            className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-            required
-            disabled={isLoading}
-          />
-        </div>
-      </div>
-      <div className="transition-opacity" style={{ opacity: isLoading ? 0.7 : 1, pointerEvents: isLoading ? 'none' : 'auto' }}>
-        <GradientButton icon={<Search size={16} />}>
-          {isLoading ? 'Fetching...' : 'Fetch PO'}
-        </GradientButton>
-      </div>
-    </form>
+    <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full border text-[11px] font-semibold ${cfg.cls}`}>
+      {cfg.icon} {status}
+    </span>
   );
 };
 
-// --- Sub-Component: The Main GRN Form ---
-const GRNForm = ({ poData, onSubmit }: { poData: PurchaseOrder, onSubmit: (payload: GRNPayload) => void }) => {
-  // Global Fields State
-  const [globalData, setGlobalData] = useState({
-    received_date: new Date().toISOString().split("T")[0],
-    received_by: "Current Admin",
-    warehouse: "",
-    notes: ""
-  });
+// ─── Progress Bar ─────────────────────────────────────────────────────────────
 
-  // Financial & Payment State
-  const [charges, setCharges] = useState<{ transport: number | string, other: number | string }>({ transport: "", other: "" });
-  const [payment, setPayment] = useState<{ method: PaymentMethod, amountPaid: number | string }>({ method: "Cash", amountPaid: "" });
-  const [costMethod, setCostMethod] = useState<string>("By Unit");
+const ProgressBar = ({ received, ordered }: { received: number; ordered: number }) => {
+  const pct = ordered > 0 ? Math.min(100, Math.round((received / ordered) * 100)) : 0;
+  return (
+    <div className="flex items-center gap-2">
+      <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+        <div
+          className={`h-full rounded-full transition-all duration-300 ${
+            pct >= 100 ? "bg-emerald-500" : pct > 0 ? "bg-blue-500" : "bg-slate-200"
+          }`}
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+      <span className="text-[11px] font-medium text-[#64748B] w-8 text-right">{pct}%</span>
+    </div>
+  );
+};
 
-  // Table Items State
-  const [items, setItems] = useState(() => poData.items.map(item => ({
-    ...item,
-    remaining: item.ordered - item.received,
-    receiveNow: "",
-    reason: "",
-    customReason: ""
-  })));
+// ─── Qty Stepper ──────────────────────────────────────────────────────────────
 
-  // Handlers
-  const handleItemChange = (index: number, field: string, value: any) => {
-    const newItems = [...items];
-    (newItems[index] as any)[field] = value;
-    
-    // Clear reason if fully received
-    if (field === "receiveNow" && Number(value) === newItems[index].remaining) {
-      newItems[index].reason = "";
-      newItems[index].customReason = "";
-    }
-    setItems(newItems);
-  };
-
-  // Validation & Calculations
-  const stats = useMemo(() => {
-    let totalOrdered = 0;
-    let totalReceivedNow = 0;
-    let totalRemainingAfter = 0;
-    let subtotal = 0;
-    let isTableValid = true;
-
-    items.forEach(item => {
-      totalOrdered += item.ordered;
-      const recNow = Number(item.receiveNow) || 0;
-      totalReceivedNow += recNow;
-      totalRemainingAfter += (item.remaining - recNow);
-      subtotal += recNow * item.unit_price;
-
-      // Validate quantity bounds
-      if (item.receiveNow === "" || recNow < 0 || recNow > item.remaining) {
-        isTableValid = false;
-      }
-      // Validate reason presence for partials
-      if (recNow < item.remaining) {
-        if (!item.reason || (item.reason === "Other" && !item.customReason.trim())) {
-          isTableValid = false;
-        }
-      }
-    });
-
-    // Financial Math
-    const transportCost = Number(charges.transport) || 0;
-    const otherCost = Number(charges.other) || 0;
-    const gstAmount = subtotal * 0.18; // Assuming 18% GST
-    const grandTotal = subtotal + transportCost + otherCost + gstAmount;
-    const outstanding = grandTotal - (Number(payment.amountPaid) || 0);
-
-    const isGlobalValid = !!globalData.warehouse && !!globalData.received_date && !!globalData.received_by;
-
-    return { 
-      totalOrdered, 
-      totalReceivedNow, 
-      totalRemainingAfter, 
-      isValid: isTableValid && isGlobalValid,
-      subtotal,
-      gstAmount,
-      grandTotal,
-      outstanding,
-      totalQty: totalReceivedNow
-    };
-  }, [items, globalData, charges, payment]);
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!stats.isValid) return;
-
-    const payload: GRNPayload = {
-      po_id: poData.id,
-      ...globalData,
-      received_items: items
-        .filter(item => Number(item.receiveNow) > 0)
-        .map(item => ({
-          product_id: item.product_id,
-          received_qty: Number(item.receiveNow),
-          ...(Number(item.receiveNow) < item.remaining ? { 
-            reason: item.reason === "Other" ? item.customReason : item.reason 
-          } : {})
-        }))
-    };
-
-    onSubmit(payload);
-  };
+const QtyInput = ({
+  value,
+  max,
+  onChange,
+}: {
+  value: number | "";
+  max: number;
+  onChange: (v: number | "") => void;
+}) => {
+  const num = Number(value) || 0;
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      
-      {/* 1. PO Details Header */}
-      <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-wrap gap-8 items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
-            <FileText size={24} />
-          </div>
-          <div>
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Purchase Order</p>
-            <h2 className="text-xl font-bold text-slate-900">{poData.id}</h2>
-          </div>
-        </div>
-        
-        <div className="flex gap-8">
-          <div>
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 flex items-center gap-1"><Building2 size={12}/> Supplier</p>
-            <p className="text-sm font-semibold text-slate-800">{poData.supplier}</p>
-          </div>
-          <div>
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 flex items-center gap-1"><Calendar size={12}/> Expected By</p>
-            <p className="text-sm font-semibold text-slate-800">{poData.expected_delivery}</p>
-          </div>
-          <div>
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Status</p>
-            <span className={`px-2.5 py-1 rounded text-xs font-bold uppercase tracking-wider ${poData.status === 'Pending' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}>
-              {poData.status}
-            </span>
-          </div>
-        </div>
+    <div className="flex items-center gap-1.5">
+      <button
+        type="button"
+        onClick={() => onChange(Math.max(0, num - 1))}
+        disabled={num <= 0}
+        className="w-7 h-7 rounded-lg bg-[#F8FAFC] border border-[#E2E8F0] flex items-center justify-center text-[#64748B] hover:bg-slate-100 disabled:opacity-30 transition-colors"
+      >
+        <Minus size={12} />
+      </button>
+      <input
+        type="number"
+        min={0}
+        max={max}
+        value={value}
+        onChange={(e) => onChange(e.target.value === "" ? "" : Math.min(max, Math.max(0, Number(e.target.value))))}
+        className="w-14 h-7 text-center text-sm font-semibold text-[#0F172A] border border-[#E2E8F0] rounded-lg bg-white focus:outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB]/20"
+      />
+      <button
+        type="button"
+        onClick={() => onChange(Math.min(max, num + 1))}
+        disabled={num >= max}
+        className="w-7 h-7 rounded-lg bg-[#EFF6FF] border border-blue-100 flex items-center justify-center text-[#2563EB] hover:bg-blue-100 disabled:opacity-30 transition-colors"
+      >
+        <Plus size={12} />
+      </button>
+    </div>
+  );
+};
+
+// ─── Main Component ───────────────────────────────────────────────────────────
+
+const ReceiveGoodForm = () => {
+  const navigate      = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const { getData, postData } = useApi();
+  const { setActions }  = useHeader();
+  const { showToast }   = useToast();
+
+  const [submitting,    setSubmitting]    = useState(false);
+  const [loadingPO,     setLoadingPO]     = useState(false);
+  const [poSummary,     setPOSummary]     = useState<POSummary | null>(null);
+  const [items,         setItems]         = useState<POProduct[]>([]);
+  const [selectedPORef, setSelectedPORef] = useState<string>("");
+  const [expandedRows,  setExpandedRows]  = useState<Set<string>>(new Set());
+  const [receiptDate,   setReceiptDate]   = useState(new Date().toISOString().split("T")[0]);
+  const [invoiceNo,     setInvoiceNo]     = useState("");
+  const [paymentMethod, setPaymentMethod] = useState<"Cash"|"UPI"|"Card"|"Bank">("Cash");
+  const [amountPaid,    setAmountPaid]    = useState<number | "">("");
+
+  // Restore PO from URL
+  useEffect(() => {
+    const poId = searchParams.get("poId");
+    if (poId) loadPO(poId);
+  }, []);
+
+  // ── Load PO Data ──
+
+  const loadPO = useCallback(async (poId: string) => {
+    setLoadingPO(true);
+    try {
+      const res = await getData(`${ENDPOINTS.PURCHASES}/${poId}`);
+      const data = res?.data || res?.datas;
+      if (!data) { showToast("PO not found", "error"); return; }
+
+      setPOSummary({
+        id:            data.id || poId,
+        referenceNo:   data.reference_no || data.referenceNo || poId,
+        supplierName:  data.supplier_name || "",
+        supplierId:    data.supplier_id   || "",
+        date:          data.date          || "",
+        status:        (data.status as ReceiveStatus) || "Pending",
+        totalItems:    data.products?.length || 0,
+      });
+
+      const mapped: POProduct[] = (data.products || []).map((p: any) => ({
+        id:                   p.id || crypto.randomUUID(),
+        name:                 p.name || "",
+        sku:                  p.barcode || p.sku || "",
+        variant:              p.variant || "",
+        unit:                 p.unit || "pc",
+        orderedQty:           Number(p.quantity) || 0,
+        previouslyReceivedQty: Number(p.received_qty) || 0,
+        receivedQty:          "",         // user fills this
+        costPrice:            Number(p.buy_price || p.costPrice) || 0,
+        batchTracking:        !!p.batch_tracking,
+        batchNum:             p.batch_number || "",
+        manufacturingDate:    p.manufacturing_date || "",
+        expiryDate:           p.expiry_date || "",
+        remarks:              "",
+      }));
+
+      setItems(mapped);
+      setSearchParams(prev => { prev.set("poId", data.id || poId); return prev; }, { replace: true });
+    } catch {
+      showToast("Failed to load PO", "error");
+    } finally {
+      setLoadingPO(false);
+    }
+  }, [getData, showToast, setSearchParams]);
+
+  // ── Computed ──
+
+  const liveStatus = useMemo(() => deriveStatus(items), [items]);
+
+  const stats = useMemo(() => {
+    const totalOrdered   = items.reduce((s, p) => s + p.orderedQty, 0);
+    const totalPrevRec   = items.reduce((s, p) => s + p.previouslyReceivedQty, 0);
+    const totalThisRec   = items.reduce((s, p) => s + (Number(p.receivedQty) || 0), 0);
+    const totalRemaining = Math.max(0, totalOrdered - totalPrevRec - totalThisRec);
+    const receiptValue   = items.reduce((s, p) => s + (Number(p.receivedQty) || 0) * p.costPrice, 0);
+    return { totalOrdered, totalPrevRec, totalThisRec, totalRemaining, receiptValue };
+  }, [items]);
+
+  // ── Update a single item field ──
+
+  const updateItem = useCallback((id: string, updates: Partial<POProduct>) => {
+    setItems(prev => prev.map(p => p.id === id ? { ...p, ...updates } : p));
+  }, []);
+
+  // ── Fill all remaining ──
+
+  const fillAll = () => {
+    setItems(prev => prev.map(p => ({
+      ...p,
+      receivedQty: Math.max(0, p.orderedQty - p.previouslyReceivedQty),
+    })));
+  };
+
+  // ── Toggle row expand ──
+
+  const toggleRow = (id: string) => {
+    setExpandedRows(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  // ── Submit ──
+
+  const handleSubmit = async () => {
+    if (!poSummary) { showToast("Please select a PO reference first", "error"); return; }
+
+    const itemsToReceive = items.filter(p => Number(p.receivedQty) > 0);
+    if (itemsToReceive.length === 0) {
+      showToast("Please enter received quantity for at least one item", "error");
+      return;
+    }
+
+    // Batch tracking validation
+    for (const p of itemsToReceive) {
+      if (p.batchTracking && !p.batchNum) {
+        showToast(`"${p.name}": Batch number is required for batch-tracked items`, "error");
+        return;
+      }
+    }
+
+    setSubmitting(true);
+    try {
+      const payload = {
+        datas: {
+          shop_id:          SHOP_ID,
+          type:             "PO_UPDATE",
+          po_id:            poSummary.id,
+          po_reference:     poSummary.referenceNo,
+          supplier_id:      poSummary.supplierId,
+          supplier_name:    poSummary.supplierName,
+          receipt_date:     receiptDate,
+          invoice_no:       invoiceNo,
+          status:           liveStatus,           // "Completed" | "Partial" | "Pending"
+          payment: {
+            method:      paymentMethod,
+            amount_paid: Number(amountPaid) || 0,
+          },
+          items: itemsToReceive.map(p => ({
+            product_id:          p.id,
+            name:                p.name,
+            barcode:             p.sku,
+            variant:             p.variant,
+            unit:                p.unit,
+            ordered_qty:         p.orderedQty,
+            previously_received: p.previouslyReceivedQty,
+            received_qty:        Number(p.receivedQty),
+            buy_price:           p.costPrice,
+            batch_tracking:      p.batchTracking,
+            batch_number:        p.batchTracking ? p.batchNum : "",
+            manufacturing_date:  p.manufacturingDate,
+            expiry_date:         p.expiryDate,
+            remarks:             p.remarks,
+          })),
+        },
+      };
+
+      const res = await postData(ENDPOINTS.PURCHASES, payload);
+      if (res) {
+        showToast(
+          liveStatus === "Completed"
+            ? "All goods received. PO marked Completed."
+            : "Partial receipt recorded successfully.",
+          "success"
+        );
+        navigate("/po-grn");
+      }
+    } catch (err: any) {
+      showToast(err.message || "Failed to record receipt", "error");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // ── Header ──
+
+  useEffect(() => {
+    setActions(
+      <div className="flex items-center gap-3 animate-in fade-in duration-300">
+        <button
+          onClick={() => navigate(-1)}
+          className="px-4 h-10 rounded-xl border border-[#E2E8F0] text-sm font-medium text-[#64748B] hover:bg-slate-50 transition-colors flex items-center gap-2"
+        >
+          <ArrowLeft size={14} /> Back
+        </button>
+        <GradientButton
+          icon={submitting ? <Loader className="h-4 w-4" /> : <PackageCheck size={15} />}
+          onClick={handleSubmit}
+          disabled={submitting || !poSummary || items.length === 0}
+          className="rounded-xl text-xs px-6 h-10"
+        >
+          {submitting ? "Recording…" : "Record Receipt"}
+        </GradientButton>
       </div>
+    );
+    return () => setActions(null);
+  }, [setActions, poSummary, items, submitting, liveStatus, amountPaid, paymentMethod, receiptDate, invoiceNo]);
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-        {/* LEFT SIDE: Order Summary */}
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200/70 overflow-hidden flex flex-col h-full">
-          <div className="p-5 border-b border-slate-100 bg-slate-50/50 flex items-center gap-2">
-            <div className="h-5 w-1 bg-indigo-500 rounded-full"></div>
-            <h2 className="text-sm font-bold uppercase tracking-wider text-slate-700">Order Summary</h2>
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Render
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  return (
+    <div className="min-h-screen bg-[#F8FAFC] p-4 md:p-6 font-sans">
+      <div className="max-w-[1400px] mx-auto space-y-5">
+
+        {/* ── Page Title ── */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-xl font-semibold text-[#0F172A]">Receive Goods</h1>
+            <p className="text-sm text-[#64748B] mt-0.5">Record incoming stock against a Purchase Order</p>
           </div>
-
-          <div className="p-6 space-y-5 flex-1">
-            <div className="flex justify-between items-center text-slate-600">
-              <span className="text-sm font-medium">Subtotal (Product Cost)</span>
-              <span className="font-semibold text-slate-800">
-                ₹{stats.subtotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-              </span>
-            </div>
-
-            <div className="pt-4 border-t border-slate-100 space-y-4">
-              <Input
-                label="Transport Charges"
-                type="number"
-                placeholder="0.00"
-                leftIcon={<span className="text-slate-400 text-sm font-medium">₹</span>}
-                value={charges.transport as any}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCharges({ ...charges, transport: e.target.value ? Number(e.target.value) : "" })}
-              />
-
-              <Input
-                label="Other Charges (Loading etc.)"
-                type="number"
-                placeholder="0.00"
-                leftIcon={<span className="text-slate-400 text-sm font-medium">₹</span>}
-                value={charges.other as any}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCharges({ ...charges, other: e.target.value ? Number(e.target.value) : "" })}
-              />
-            </div>
-
-          </div>
-
-          <div className="p-6 bg-white text-black mt-auto">
-            <span className="block text-black-400 text-xs font-bold uppercase tracking-widest mb-1">Total Purchase Cost</span>
-            <span className="text-4xl font-bold tracking-tight">
-              ₹{stats.grandTotal.toLocaleString()}
-            </span>
-          </div>
+          {poSummary && <StatusPill status={liveStatus} />}
         </div>
 
-        {/* RIGHT SIDE: Payment Details & Distributor */}
-        <div className="space-y-6 h-full flex flex-col">
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200/70 overflow-hidden flex-1">
-            <div className="flex items-center gap-2 mb-5">
-              <div className="h-5 w-1 bg-emerald-500 rounded-full"></div>
-              <h2 className="text-sm font-bold uppercase tracking-wider text-slate-700">Payment Details</h2>
-            </div>
+        <div className="grid grid-cols-1 lg:grid-cols-7 gap-5 items-start">
 
-            <div className="grid grid-cols-4 gap-3 mb-6">
-              {[
-                { id: "Cash", icon: <Banknote size={20} strokeWidth={1.5} /> },
-                { id: "UPI", icon: <Smartphone size={20} strokeWidth={1.5} /> },
-                { id: "Card", icon: <CreditCard size={20} strokeWidth={1.5} /> },
-                { id: "Bank", icon: <Landmark size={20} strokeWidth={1.5} /> }
-              ].map((m) => (
-                <button
-                  key={m.id}
-                  type="button"
-                  onClick={() => setPayment({ ...payment, method: m.id as PaymentMethod })}
-                  className={`flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all duration-200 ${
-                    payment.method === m.id
-                      ? "border-blue-500 bg-blue-50 text-blue-700 shadow-sm"
-                      : "border-slate-100 bg-white text-slate-500 hover:border-slate-300 hover:bg-slate-50"
-                  }`}
-                >
-                  <div className="mb-1.5">{m.icon}</div>
-                  <span className="text-xs font-bold">{m.id}</span>
-                </button>
-              ))}
-            </div>
+          {/* ── LEFT: PO Search + Items ── */}
+          <div className="lg:col-span-5 space-y-5">
 
-            <div className="flex flex-col sm:flex-row gap-4 bg-slate-50/80 p-5 rounded-xl border border-slate-100 items-center">
-              <div className="flex-1 w-full">
+            {/* PO Selection Card */}
+            <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-[0_1px_3px_rgba(15,23,42,0.06)] overflow-hidden">
+              <div className="px-6 py-4 border-b border-[#E2E8F0] flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-[#EFF6FF] flex items-center justify-center border border-blue-100">
+                  <Search size={16} className="text-[#2563EB]" />
+                </div>
+                <div>
+                  <h2 className="text-sm font-semibold text-[#0F172A]">Select Purchase Order</h2>
+                  <p className="text-[11px] text-[#64748B]">Search by PO reference number to load items</p>
+                </div>
+              </div>
+
+              <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-5">
+                {/* PO Ref SearchSelect */}
+                <div className="md:col-span-2 flex flex-col gap-1.5">
+                  <label className="text-xs font-medium text-[#64748B] uppercase tracking-wide">
+                    PO Reference # <span className="text-red-500">*</span>
+                  </label>
+                  <SearchSelect
+                    labelKey="label"
+                    valueKey="id"
+                    fetchOptions={(q) => fetchPOOptions(q, getData)}
+                    value={selectedPORef}
+                    onChange={(val, opt: any) => {
+                      setSelectedPORef(String(val));
+                      if (opt?.id) loadPO(opt.id);
+                    }}
+                    placeholder="Search PO-2026-0001…"
+                    className="w-full !border-[#E2E8F0]"
+                    renderOption={(opt: any) => (
+                      <div className="flex items-center justify-between w-full py-0.5">
+                        <div>
+                          <p className="text-xs font-semibold text-[#0F172A]">{opt.label}</p>
+                          <p className="text-[11px] text-[#64748B]">{opt.supplierName} · {opt.date}</p>
+                        </div>
+                        <StatusPill status={opt.status as ReceiveStatus} />
+                      </div>
+                    )}
+                  />
+                </div>
+
                 <Input
-                  label="Amount Paid Now (₹)"
-                  type="number"
-                  className="!text-lg !font-bold !text-blue-700 placeholder:!text-blue-300"
-                  value={payment.amountPaid as any}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPayment({ ...payment, amountPaid: e.target.value ? Number(e.target.value) : "" })}
-                  placeholder={stats.grandTotal.toString()}
+                  label="Supplier Invoice #"
+                  placeholder="INV-2026-…"
+                  value={invoiceNo}
+                  onChange={(e) => setInvoiceNo(e.target.value)}
+                />
+                <Input
+                  label="Receipt Date"
+                  type="date"
+                  required
+                  value={receiptDate}
+                  onChange={(e) => setReceiptDate(e.target.value)}
                 />
               </div>
-              <div className="w-px h-12 bg-slate-200 hidden sm:block"></div>
-              <div className="flex-1 w-full flex flex-col justify-center sm:items-end sm:text-right">
-                <span className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">
-                  Outstanding
-                </span>
-                <span className={`text-2xl font-bold ${stats.outstanding > 0 ? "text-orange-500" : "text-emerald-500"}`}>
-                  ₹{stats.outstanding.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                </span>
-              </div>
+
+              {/* PO Info strip */}
+              {poSummary && (
+                <div className="px-6 py-3 bg-[#EFF6FF] border-t border-blue-100 flex flex-wrap items-center gap-4 text-xs">
+                  <span className="flex items-center gap-1.5 text-[#2563EB] font-semibold">
+                    <Truck size={13} /> {poSummary.referenceNo}
+                  </span>
+                  <span className="text-[#64748B]">Supplier: <strong className="text-[#0F172A]">{poSummary.supplierName}</strong></span>
+                  <span className="text-[#64748B]">PO Date: <strong className="text-[#0F172A]">{poSummary.date}</strong></span>
+                  <span className="text-[#64748B]">{poSummary.totalItems} item(s)</span>
+                </div>
+              )}
             </div>
+
+            {/* Items Table */}
+            {loadingPO ? (
+              <div className="bg-white rounded-2xl border border-[#E2E8F0] p-12 flex flex-col items-center gap-3 text-[#64748B]">
+                <RefreshCw size={24} className="animate-spin text-[#2563EB]" />
+                <p className="text-sm font-medium">Loading PO items…</p>
+              </div>
+            ) : items.length > 0 ? (
+              <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-[0_1px_3px_rgba(15,23,42,0.06)] overflow-hidden">
+                {/* Table Header */}
+                <div className="px-6 py-4 border-b border-[#E2E8F0] flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-slate-50 flex items-center justify-center border border-[#E2E8F0]">
+                      <PackageCheck size={16} className="text-[#64748B]" />
+                    </div>
+                    <div>
+                      <h2 className="text-sm font-semibold text-[#0F172A]">Items to Receive</h2>
+                      <p className="text-[11px] text-[#64748B]">Enter quantity received per item</p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={fillAll}
+                    className="px-3 py-1.5 text-xs font-semibold text-[#2563EB] bg-[#EFF6FF] border border-blue-100 rounded-lg hover:bg-blue-100 transition-colors"
+                  >
+                    Receive All Remaining
+                  </button>
+                </div>
+
+                {/* Column Header */}
+                <div className="hidden md:grid grid-cols-12 gap-3 px-6 py-2.5 bg-[#F8FAFC] border-b border-[#E2E8F0] text-[11px] font-medium uppercase tracking-wider text-[#64748B]">
+                  <div className="col-span-4">Product</div>
+                  <div className="col-span-1 text-center">Ordered</div>
+                  <div className="col-span-1 text-center">Prev Rec</div>
+                  <div className="col-span-1 text-center">Remaining</div>
+                  <div className="col-span-2 text-center">Receive Now</div>
+                  <div className="col-span-2 text-center">Progress</div>
+                  <div className="col-span-1" />
+                </div>
+
+                {/* Rows */}
+                <div className="divide-y divide-[#F1F5F9]">
+                  {items.map(item => {
+                    const remaining  = Math.max(0, item.orderedQty - item.previouslyReceivedQty);
+                    const totalRecv  = item.previouslyReceivedQty + (Number(item.receivedQty) || 0);
+                    const isFull     = totalRecv >= item.orderedQty;
+                    const isExpanded = expandedRows.has(item.id);
+
+                    return (
+                      <div key={item.id} className={`bg-white hover:bg-[#F8FAFC] transition-colors ${isFull ? "border-l-2 border-emerald-400" : ""}`}>
+                        {/* Main row */}
+                        <div className="grid grid-cols-12 gap-3 px-6 py-4 items-center">
+
+                          {/* Product info */}
+                          <div className="col-span-4">
+                            <p className="text-sm font-semibold text-[#0F172A] leading-tight">{item.name}</p>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              {item.variant && (
+                                <span className="text-[10px] bg-[#EFF6FF] text-[#2563EB] px-1.5 py-0.5 rounded font-medium border border-blue-100">
+                                  {item.variant}
+                                </span>
+                              )}
+                              {item.sku && (
+                                <span className="text-[10px] text-[#64748B] font-mono">{item.sku}</span>
+                              )}
+                              {isFull && (
+                                <span className="text-[10px] bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded border border-emerald-100 font-medium">
+                                  ✓ Complete
+                                </span>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Ordered */}
+                          <div className="col-span-1 text-center">
+                            <span className="text-sm font-medium text-[#0F172A]">{item.orderedQty}</span>
+                            <span className="text-[10px] text-[#64748B] block">{item.unit}</span>
+                          </div>
+
+                          {/* Previously received */}
+                          <div className="col-span-1 text-center">
+                            <span className={`text-sm font-medium ${item.previouslyReceivedQty > 0 ? "text-blue-600" : "text-slate-300"}`}>
+                              {item.previouslyReceivedQty || "—"}
+                            </span>
+                          </div>
+
+                          {/* Remaining */}
+                          <div className="col-span-1 text-center">
+                            <span className={`text-sm font-semibold ${remaining === 0 ? "text-emerald-600" : "text-[#0F172A]"}`}>
+                              {remaining === 0 ? "✓" : remaining}
+                            </span>
+                          </div>
+
+                          {/* Receive qty stepper */}
+                          <div className="col-span-2 flex justify-center">
+                            {remaining > 0 ? (
+                              <QtyInput
+                                value={item.receivedQty}
+                                max={remaining}
+                                onChange={(v) => updateItem(item.id, { receivedQty: v })}
+                              />
+                            ) : (
+                              <span className="text-xs text-emerald-600 font-medium">All received</span>
+                            )}
+                          </div>
+
+                          {/* Progress */}
+                          <div className="col-span-2">
+                            <ProgressBar
+                              received={totalRecv}
+                              ordered={item.orderedQty}
+                            />
+                          </div>
+
+                          {/* Expand toggle */}
+                          <div className="col-span-1 flex justify-end">
+                            {(item.batchTracking || true) && (
+                              <button
+                                type="button"
+                                onClick={() => toggleRow(item.id)}
+                                className={`p-1.5 rounded-lg border transition-colors ${
+                                  isExpanded
+                                    ? "bg-[#EFF6FF] border-blue-100 text-[#2563EB]"
+                                    : "border-[#E2E8F0] text-[#64748B] hover:bg-slate-50"
+                                }`}
+                              >
+                                <ChevronDown
+                                  size={14}
+                                  className={`transition-transform duration-200 ${isExpanded ? "rotate-180" : ""}`}
+                                />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Expanded: batch + remarks */}
+                        {isExpanded && (
+                          <div className="px-6 py-4 bg-[#F8FAFC] border-t border-[#F1F5F9]">
+                            {item.batchTracking ? (
+                              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                <div className="flex items-center gap-2 md:col-span-4 mb-1">
+                                  <div className="w-5 h-5 rounded-md bg-[#EFF6FF] flex items-center justify-center">
+                                    <BarChart3 size={11} className="text-[#2563EB]" />
+                                  </div>
+                                  <span className="text-xs font-semibold text-[#2563EB] uppercase tracking-wide">Batch Information</span>
+                                </div>
+                                <Input
+                                  label="Batch Number *"
+                                  placeholder="BATCH-001"
+                                  value={item.batchNum}
+                                  onChange={(e) => updateItem(item.id, { batchNum: e.target.value })}
+                                  className="!h-8 !text-xs !border-[#E2E8F0]"
+                                />
+                                <Input
+                                  label="Manufacturing Date"
+                                  type="date"
+                                  value={item.manufacturingDate}
+                                  onChange={(e) => updateItem(item.id, { manufacturingDate: e.target.value })}
+                                  className="!h-8 !text-xs !border-[#E2E8F0]"
+                                />
+                                <Input
+                                  label="Expiry Date"
+                                  type="date"
+                                  value={item.expiryDate}
+                                  onChange={(e) => updateItem(item.id, { expiryDate: e.target.value })}
+                                  className="!h-8 !text-xs !border-[#E2E8F0]"
+                                />
+                                <Input
+                                  label="Remarks"
+                                  placeholder="Optional note…"
+                                  value={item.remarks}
+                                  onChange={(e) => updateItem(item.id, { remarks: e.target.value })}
+                                  className="!h-8 !text-xs !border-[#E2E8F0]"
+                                />
+                              </div>
+                            ) : (
+                              <div className="grid grid-cols-2 gap-4">
+                                <Input
+                                  label="Remarks"
+                                  placeholder="Optional note about this item…"
+                                  value={item.remarks}
+                                  onChange={(e) => updateItem(item.id, { remarks: e.target.value })}
+                                  className="!h-8 !text-xs !border-[#E2E8F0]"
+                                />
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Table footer summary */}
+                <div className="px-6 py-3 bg-[#F8FAFC] border-t border-[#E2E8F0] flex flex-wrap items-center justify-between gap-3 text-xs">
+                  <div className="flex items-center gap-6 text-[#64748B]">
+                    <span>Ordered: <strong className="text-[#0F172A]">{stats.totalOrdered}</strong></span>
+                    <span>Previously Received: <strong className="text-blue-600">{stats.totalPrevRec}</strong></span>
+                    <span>This Receipt: <strong className="text-emerald-600">{stats.totalThisRec}</strong></span>
+                    <span>Remaining: <strong className={stats.totalRemaining === 0 ? "text-emerald-600" : "text-orange-600"}>{stats.totalRemaining}</strong></span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[#64748B]">Receipt Value:</span>
+                    <span className="font-semibold text-[#0F172A]">₹{stats.receiptValue.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                  </div>
+                </div>
+              </div>
+            ) : !loadingPO && selectedPORef ? null : (
+              /* Empty state */
+              <div className="bg-white rounded-2xl border border-dashed border-[#E2E8F0] p-16 flex flex-col items-center gap-3 text-center">
+                <div className="w-14 h-14 rounded-2xl bg-[#F8FAFC] border border-[#E2E8F0] flex items-center justify-center">
+                  <PackageCheck size={24} className="text-slate-300" />
+                </div>
+                <p className="text-sm font-semibold text-[#64748B]">No PO Selected</p>
+                <p className="text-xs text-[#64748B] max-w-xs">Search and select a Purchase Order reference above to load its items and begin recording the receipt.</p>
+              </div>
+            )}
           </div>
 
-          {/* Distributor Cost Card */}
-          <div className="bg-white p-6 rounded-2xl shadow-md flex flex-col gap-4 text-black">
-            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-              <span className="text-xs font-bold uppercase tracking-widest text-slate-400">
-                Distributor Cost Split
-              </span>
-              
-              <div className="flex items-center gap-3 self-start sm:self-auto">
-                <div className="flex items-center bg-white p-1 rounded-lg border border-slate-700">
-                  {["By Unit", "By Value"].map((method) => (
+          {/* ── RIGHT: Status + Payment ── */}
+          <div className="lg:col-span-2 space-y-5">
+
+            {/* Receipt Status Card */}
+            <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-[0_1px_3px_rgba(15,23,42,0.06)] overflow-hidden">
+              <div className="px-5 py-4 border-b border-[#E2E8F0]">
+                <h2 className="text-xs font-semibold text-[#0F172A] uppercase tracking-wide">Receipt Status</h2>
+              </div>
+              <div className="p-5 space-y-4">
+
+                {/* Auto-derived status */}
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-medium text-[#64748B]">Detected Status</span>
+                  <StatusPill status={liveStatus} />
+                </div>
+
+                {/* Status explanation */}
+                <div className={`p-3 rounded-xl text-xs ${
+                  liveStatus === "Completed" ? "bg-emerald-50 border border-emerald-100 text-emerald-800" :
+                  liveStatus === "Partial"   ? "bg-blue-50 border border-blue-100 text-blue-800" :
+                                               "bg-amber-50 border border-amber-100 text-amber-800"
+                }`}>
+                  {liveStatus === "Completed" && "✓ All ordered items have been fully received. PO will be closed."}
+                  {liveStatus === "Partial"   && "⚡ Some items received. PO remains open for future receipts."}
+                  {liveStatus === "Pending"   && "⏳ No quantities entered yet. Enter quantities to update status."}
+                </div>
+
+                {/* Progress overview */}
+                {items.length > 0 && (
+                  <div className="space-y-3 pt-1">
+                    <div className="flex justify-between text-xs text-[#64748B]">
+                      <span>Overall progress</span>
+                      <span className="font-semibold text-[#0F172A]">
+                        {stats.totalPrevRec + stats.totalThisRec} / {stats.totalOrdered}
+                      </span>
+                    </div>
+                    <ProgressBar
+                      received={stats.totalPrevRec + stats.totalThisRec}
+                      ordered={stats.totalOrdered}
+                    />
+                    <div className="grid grid-cols-2 gap-2 pt-1">
+                      {[
+                        { label: "This Receipt", value: stats.totalThisRec, color: "text-emerald-600" },
+                        { label: "Remaining",    value: stats.totalRemaining, color: stats.totalRemaining > 0 ? "text-orange-600" : "text-emerald-600" },
+                      ].map(s => (
+                        <div key={s.label} className="bg-[#F8FAFC] rounded-xl border border-[#E2E8F0] px-3 py-2.5 text-center">
+                          <p className={`text-base font-semibold ${s.color}`}>{s.value}</p>
+                          <p className="text-[10px] text-[#64748B] mt-0.5">{s.label}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Payment Card */}
+            <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-[0_1px_3px_rgba(15,23,42,0.06)] overflow-hidden">
+              <div className="px-5 py-4 border-b border-[#E2E8F0]">
+                <h2 className="text-xs font-semibold text-[#0F172A] uppercase tracking-wide">Payment (Optional)</h2>
+              </div>
+              <div className="p-5 space-y-4">
+                <div className="grid grid-cols-4 gap-1.5">
+                  {(["Cash", "UPI", "Card", "Bank"] as const).map(m => (
                     <button
-                      key={method}
+                      key={m}
                       type="button"
-                      onClick={() => setCostMethod(method)}
-                      className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all duration-200 ${
-                        costMethod === method 
-                          ? "bg-blue-500 text-white shadow-sm" 
-                          : "text-slate-400 hover:text-black hover:bg-white"
+                      onClick={() => setPaymentMethod(m)}
+                      className={`py-2 rounded-xl border text-[10px] font-semibold uppercase transition-all ${
+                        paymentMethod === m
+                          ? "border-[#2563EB] bg-[#EFF6FF] text-[#2563EB]"
+                          : "border-[#E2E8F0] text-[#64748B] hover:border-blue-200"
                       }`}
                     >
-                      {method}
+                      {m}
                     </button>
                   ))}
                 </div>
-
-                <button type="button" className="px-5 py-2 text-xs font-bold text-slate-900 bg-white border border-transparent rounded-lg shadow-sm hover:bg-slate-100 active:bg-slate-200 transition-all duration-200 flex items-center gap-2">
-                  Distributor Cost
-                </button>
+                <Input
+                  label="Amount Paid (₹)"
+                  type="number"
+                  placeholder="0.00"
+                  value={amountPaid as any}
+                  onChange={(e) => setAmountPaid(e.target.value ? Number(e.target.value) : "")}
+                  className="!font-semibold"
+                />
+                {stats.receiptValue > 0 && (
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-[#64748B]">Receipt Value</span>
+                    <span className="font-semibold text-[#0F172A]">₹{stats.receiptValue.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                  </div>
+                )}
               </div>
             </div>
 
-            <div className="flex items-baseline mt-2">
-              <span className="text-3xl font-bold tracking-tight">
-                ₹{stats.grandTotal.toLocaleString()}
-              </span>
-              {costMethod === "By Unit" && (
-                <span className="ml-3 text-sm font-medium text-blue-300 bg-blue-500/20 px-2.5 py-1 rounded-md border border-blue-500/30">
-                  ~₹{stats.totalQty > 0 ? (stats.grandTotal / stats.totalQty).toLocaleString(undefined, { maximumFractionDigits: 2 }) : 0} <span className="text-blue-400/70 text-xs">/ unit</span>
-                </span>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* 2. Products Table */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse min-w-[1100px]">
-            <thead>
-              <tr className="bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-500 uppercase tracking-wider">
-                <th className="p-4 sticky top-0 bg-slate-50 z-10 w-1/4">Product</th>
-                <th className="p-4 sticky top-0 bg-slate-50 z-10">Ordered</th>
-                <th className="p-4 sticky top-0 bg-slate-50 z-10">Rcvd Prev.</th>
-                <th className="p-4 sticky top-0 bg-slate-50 z-10 text-blue-600">Remaining</th>
-                <th className="p-4 sticky top-0 bg-slate-50 z-10 w-32">Receive Now *</th>
-                <th className="p-4 sticky top-0 bg-slate-50 z-10">Base Cost</th>
-                <th className="p-4 sticky top-0 bg-slate-50 z-10 w-40">Allocated</th>
-                <th className="p-4 sticky top-0 bg-slate-50 z-10 w-48">Reason (If Partial)</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {items.map((item, idx) => {
-                if (item.remaining === 0) return null;
-
-                const recNow = Number(item.receiveNow) || 0;
-                const isPartial = item.receiveNow !== "" && recNow < item.remaining;
-                const isError = recNow > item.remaining || (item.receiveNow !== "" && recNow < 0);
-
-                // Calculate allocations for this row
-                const baseCost = Number(item.unit_price) || 0;
-                const transportCost = Number(charges.transport) || 0;
-                const otherCost = Number(charges.other) || 0;
-                const totalCharges = transportCost + otherCost;
-                
-                let allocated = 0;
-                if (costMethod === "By Unit" && stats.totalQty > 0) {
-                  allocated = totalCharges / stats.totalQty;
-                } else if (costMethod === "By Value" && stats.subtotal > 0) {
-                  allocated = (baseCost / stats.subtotal) * totalCharges;
-                }
-                const finalCost = baseCost + allocated;
-
-                return (
-                  <tr key={item.product_id} className={`transition-colors ${isPartial ? 'bg-orange-50/40' : 'hover:bg-slate-50/50'}`}>
-                    <td className="p-4">
-                      <p className="text-sm font-semibold text-slate-800">{item.name}</p>
-                      <p className="text-xs text-slate-400">{item.product_id}</p>
-                    </td>
-                    <td className="p-4 text-sm font-medium text-slate-600">{item.ordered}</td>
-                    <td className="p-4 text-sm font-medium text-slate-600">{item.received}</td>
-                    <td className="p-4 text-sm font-bold text-blue-600">{item.remaining}</td>
-                    <td className="p-4">
-                      <input 
-                        type="number"
-                        min="0"
-                        max={item.remaining}
-                        value={item.receiveNow}
-                        onChange={(e) => handleItemChange(idx, "receiveNow", e.target.value)}
-                        className={`w-full px-3 py-2 border rounded-md text-sm font-semibold outline-none transition-all ${isError ? 'border-red-400 focus:ring-red-500 ring-1 ring-red-400' : 'border-slate-200 focus:ring-blue-500 focus:border-blue-500'}`}
-                      />
-                      {isError && <span className="text-[10px] text-red-500 font-bold mt-1 block">Max {item.remaining}</span>}
-                    </td>
-                    <td className="p-4 text-sm font-medium text-slate-600">
-                      ₹{baseCost.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                    </td>
-                    <td className="p-4 text-sm font-medium text-slate-600">
-                      {recNow > 0 ? (
-                        <div className="flex flex-col justify-center text-xs text-slate-500 bg-white/80 px-2.5 py-2 rounded-lg border border-slate-200 shadow-sm w-full">
-                          <div className="flex justify-between items-center gap-2">
-                            <span className="text-[10px] uppercase tracking-wider text-slate-400">Alloc</span> 
-                            <span className="font-medium">₹{allocated.toFixed(2)}</span>
-                          </div>
-                          <div className="flex justify-between items-center mt-1.5 pt-1.5 border-t border-slate-100 gap-2">
-                            <span className="text-[10px] uppercase tracking-wider text-slate-400">Final</span> 
-                            <span className="font-bold text-blue-600">₹{finalCost.toFixed(2)}</span>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="text-center text-slate-300 font-medium">-</div>
-                      )}
-                    </td>
-                    <td className="p-4">
-                      {isPartial && (
-                        <div className="space-y-2 animate-in fade-in slide-in-from-left-2 duration-200">
-                          <select
-                            value={item.reason}
-                            onChange={(e) => handleItemChange(idx, "reason", e.target.value)}
-                            className={`w-full px-2 py-2 border rounded-md text-xs outline-none ${!item.reason ? 'border-orange-400 ring-1 ring-orange-400' : 'border-slate-200'}`}
-                          >
-                            <option value="">Select reason...</option>
-                            {REASONS.map(r => <option key={r} value={r}>{r}</option>)}
-                          </select>
-                          {item.reason === "Other" && (
-                             <input 
-                               type="text"
-                               placeholder="Specify reason..."
-                               value={item.customReason}
-                               onChange={(e) => handleItemChange(idx, "customReason", e.target.value)}
-                               className="w-full px-2 py-1.5 border border-slate-200 rounded-md text-xs outline-none focus:border-orange-400"
-                             />
-                          )}
-                        </div>
-                      )}
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* 3. Global Fields & Summary */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
-        <div className="lg:col-span-2 bg-white p-6 rounded-xl border border-slate-200 shadow-sm grid grid-cols-1 sm:grid-cols-2 gap-5">
-           <div>
-            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Receiving Date *</label>
-            <input type="date" required value={globalData.received_date} onChange={e => setGlobalData({...globalData, received_date: e.target.value})} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
-          </div>
-          <div>
-            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Received By *</label>
-            <input type="text" required value={globalData.received_by} onChange={e => setGlobalData({...globalData, received_by: e.target.value})} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
-          </div>
-          <div>
-            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Warehouse Location *</label>
-            <select required value={globalData.warehouse} onChange={e => setGlobalData({...globalData, warehouse: e.target.value})} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
-              <option value="">Select Location...</option>
-              {WAREHOUSES.map(w => <option key={w} value={w}>{w}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Remarks / Notes</label>
-            <textarea rows={1} value={globalData.notes} onChange={e => setGlobalData({...globalData, notes: e.target.value})} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none resize-none" placeholder="Optional notes..."/>
-          </div>
-        </div>
-
-        <div className="bg-slate-50 p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
-          <div>
-            <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider mb-4 border-b border-slate-200 pb-2">Receiving Summary</h3>
-            <div className="space-y-3 text-sm">
-              <div className="flex justify-between text-slate-600"><span>Total Ordered:</span> <span className="font-semibold">{stats.totalOrdered}</span></div>
-              <div className="flex justify-between text-slate-900 font-bold"><span>Receiving Now:</span> <span className="text-lg text-blue-600">{stats.totalReceivedNow}</span></div>
-              <div className="flex justify-between text-slate-600"><span>Remaining After:</span> <span className="font-semibold">{stats.totalRemainingAfter}</span></div>
-            </div>
-            
-            <div className="mt-5 h-2 w-full bg-slate-200 rounded-full overflow-hidden flex">
-               <div className="h-full bg-slate-400 transition-all" style={{ width: `${((stats.totalOrdered - stats.totalRemainingAfter - stats.totalReceivedNow) / stats.totalOrdered) * 100}%` }} title="Previously Received"/>
-               <div className="h-full bg-blue-500 transition-all relative overflow-hidden" style={{ width: `${(stats.totalReceivedNow / stats.totalOrdered) * 100}%` }}>
-                  <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGcgc3Ryb2tlPSJyZ2JhKDI1NSwyNTUsMjU1LDAuMykiIHN0cm9rZS13aWR0aD0iNCI+PHBhdGggZD0iTS0xMCAzMCBMMzAgLTEwIE0wIDQwIEw0MCAwIE0xMCA1MCBMNTAgMTAiIC8+PC9nPjwvc3ZnPg==')] opacity-30" />
-               </div>
+            {/* Mobile CTA */}
+            <div className="lg:hidden">
+              <button
+                disabled={submitting || !poSummary}
+                onClick={handleSubmit}
+                className="w-full py-3 rounded-xl bg-[#2563EB] text-sm font-semibold text-white hover:bg-blue-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {submitting ? <><RefreshCw size={14} className="animate-spin" /> Recording…</> : <><PackageCheck size={15} /> Record Receipt</>}
+              </button>
             </div>
           </div>
 
-          <button 
-            type="submit"
-            disabled={!stats.isValid}
-            className="w-full mt-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-bold rounded-lg transition-colors flex justify-center items-center gap-2 shadow-sm"
-          >
-            <Save size={18} /> Submit GRN
-          </button>
         </div>
-
       </div>
-    </form>
+    </div>
   );
 };
 
-// --- Main Page Component ---
-export default function ReceiveGoodsPage() {
-  const { getData, postData } = useApi();
-  const [poData, setPoData] = useState<PurchaseOrder | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState("");
-
-  const fetchPO = async (id: string) => {
-    setIsLoading(true);
-    setError("");
-    try {
-      const res = await getData(ENDPOINTS.PURCHASES, {
-        type: "PO CREATE",
-        shop_id: SHOP_ID,
-        q: id,
-        limit: "10",
-        offset: "1",
-      });
-      if (!res) throw new Error("Failed to fetch PO");
-      const records: any[] = Array.isArray(res.data) ? res.data : [res.data];
-      const match = records.find(r => r.id.startsWith(id) || r.id.slice(0, 8).toUpperCase() === id.toUpperCase());
-      if (!match) throw new Error(`No GRN purchase found for "${id}". Enter a valid PO ID prefix.`);
-      const products: any[] = match.datas?.grn_products ?? match.datas?.purchase_products ?? [];
-      setPoData({
-        id: match.id.slice(0, 8).toUpperCase(),
-        supplier: String(match.datas?.supplier ?? "—"),
-        po_date: String(match.datas?.receipt_date ?? match.datas?.purchase_date ?? "—"),
-        expected_delivery: String(match.datas?.expected_delivery ?? "—"),
-        status: String(match.datas?.status ?? "Pending"),
-        items: products.map((p: any, i: number) => ({
-          product_id: String(p.barcode ?? p.product_id ?? `ITEM-${i + 1}`),
-          name: String(p.product_name ?? p.name ?? "Item"),
-          ordered: Number(p.quantity ?? p.qty ?? 0),
-          received: 0,
-          unit_price: Number(p.unit_price ?? p.price ?? 0),
-        })),
-      });
-    } catch (err: any) {
-      setError(err.message || "Failed to fetch PO");
-      setPoData(null);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const submitGRN = async (payload: GRNPayload) => {
-    const res = await postData(ENDPOINTS.PURCHASES, {
-      shop_id: SHOP_ID,
-      type: "PO_UPDATE",
-      datas: payload,
-    });
-    if (res) {
-      setPoData(null);
-      setError("");
-    }
-  };
-
-  return (
-    <div className="max-w-7xl mx-auto font-sans text-slate-800 bg-slate-50/50 min-h-screen p-6">
-      <div className="mb-8">
-        <h1 className="text-2xl font-semibold text-slate-900 flex items-center gap-3">
-          <Package className="text-blue-600" /> Goods Receipt Note (GRN)
-        </h1>
-        <p className="text-slate-500 mt-1">Record incoming inventory against an existing Purchase Order.</p>
-      </div>
-
-      <POFetcher onFetch={fetchPO} isLoading={isLoading} />
-
-      {error && (
-        <div className="p-4 mb-6 bg-red-50 text-red-700 border border-red-200 rounded-lg flex items-center gap-2 font-medium">
-          <AlertCircle size={18} /> {error}
-        </div>
-      )}
-
-      {poData && <GRNForm poData={poData} onSubmit={submitGRN} />}
-    </div>
-  );
-}
+export default ReceiveGoodForm;

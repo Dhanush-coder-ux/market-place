@@ -2,30 +2,15 @@ import { useState, useMemo, useEffect } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import {
   Save, 
-  Plus, 
-  Trash2, 
-  Settings, 
-  ScanLine,
   Banknote, 
   Smartphone, 
   CreditCard, 
   Landmark, 
-  ChevronUp, 
-  X, 
   PackageOpen, 
-  Check, 
-  CalendarDays,
   Bookmark,
-  ChevronRight,
-  Clock,
-  Trash,
-  AlertTriangle,
-  Zap,
-  Percent,
-  Info
 } from "lucide-react";
 
-import { ReusableSelect } from "@/components/ui/ReusableSelect";
+
 
 import Input from "@/components/ui/Input";
 import { GradientButton } from "@/components/ui/GradientButton";
@@ -33,7 +18,6 @@ import { useApi } from "@/context/ApiContext";
 import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 import { SearchSelect } from "@/components/inputbuilders/SearchSelect";
 import { supplierApi } from "@/services/api/supplier";
-import { inventoryApi } from "@/services/api/inventory";
 import { useHeader } from "@/context/HeaderContext";
 import { useToast } from "@/context/ToastContext";
 import Loader from "@/components/common/Loader";
@@ -64,7 +48,7 @@ export interface ProductItem {
   category?: string;
 }
 
-const LOW_STOCK_THRESHOLD = 5;
+
 
 const PurchaseForm = () => {
   const { id } = useParams();
@@ -95,7 +79,6 @@ const PurchaseForm = () => {
   const [payment, setPayment] = useState({ method: "Cash" as PaymentMethod, amountPaid: "" as number | "" });
   const [costMethod, setCostMethod] = useState("None");
   const [supplierDetails, setSupplierDetails] = useState<any>(null);
-  const [drafts, setDrafts] = useState<any[]>([]);
 
   // --- Calculations ---
   const stats = useMemo(() => {
@@ -134,15 +117,7 @@ const PurchaseForm = () => {
     return { totalQty, subtotal, totalCharges, grandTotal, outstanding, allocations };
   }, [products, charges, payment.amountPaid, costMethod]);
 
-  // --- Load Drafts for Sidebar ---
-  const loadDraftsList = () => {
-    const savedDrafts = JSON.parse(localStorage.getItem("purchase_drafts") || "[]");
-    setDrafts(savedDrafts.sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()).slice(0, 5));
-  };
 
-  useEffect(() => {
-    loadDraftsList();
-  }, []);
 
   // --- Load Existing Purchase or Draft ---
   useEffect(() => {
@@ -275,23 +250,12 @@ const PurchaseForm = () => {
 
     localStorage.setItem("purchase_drafts", JSON.stringify(savedDrafts));
     showToast("Progress saved as draft", "info");
-    loadDraftsList();
     if (!searchParams.get("draftId")) {
       navigate(`?draftId=${draftId}`, { replace: true });
     }
   };
 
-  const deleteDraft = (e: React.MouseEvent, draftId: string) => {
-    e.stopPropagation();
-    const savedDrafts = JSON.parse(localStorage.getItem("purchase_drafts") || "[]");
-    const filtered = savedDrafts.filter((d: any) => d.id !== draftId);
-    localStorage.setItem("purchase_drafts", JSON.stringify(filtered));
-    loadDraftsList();
-    if (searchParams.get("draftId") === draftId) {
-      navigate("/purchase-add", { replace: true });
-      window.location.reload();
-    }
-  };
+
 
   const handleSavePurchase = async () => {
     if (!purchaseDetails.supplier) {

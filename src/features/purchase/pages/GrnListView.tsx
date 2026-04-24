@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import {
   Eye, Search, SlidersHorizontal, Package,
   Calendar, Building2, FileText, LayoutGrid, List, ArrowRight, X,
+  Copy, Check
 } from "lucide-react";
 
 import { FloatingFormCard } from "@/components/common/FloatingFormCard";
@@ -38,6 +39,25 @@ const ProductPill = ({ name, qty }: { name: string; qty: number }) => (
   </span>
 );
 
+const CopyButton = ({ text }: { text: string }) => {
+  const [copied, setCopied] = useState(false);
+  const handleCopy = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+  return (
+    <button
+      onClick={handleCopy}
+      className={`p-1 rounded-md transition-all ${copied ? "text-emerald-600 bg-emerald-50" : "text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100"}`}
+      title="Copy to clipboard"
+    >
+      {copied ? <Check size={12} /> : <Copy size={12} />}
+    </button>
+  );
+};
+
 // Map a PurchaseRecord to a display-friendly shape
 const toGrnShape = (p: PurchaseRecord) => {
   const d = p.datas;
@@ -67,6 +87,7 @@ const GridCard = ({ row, onClick }: { row: ReturnType<typeof toGrnShape>; onClic
           <FileText size={13} className="text-blue-600" />
         </div>
         <span className="text-sm font-semibold text-zinc-800 truncate">{row.poReference}</span>
+        <CopyButton text={row.poReference} />
       </div>
       <StatusBadge value={row.status} />
     </div>
@@ -145,6 +166,7 @@ const VerticalTable = ({ data, onClick }: { data: ReturnType<typeof toGrnShape>[
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-md bg-blue-50 flex items-center justify-center shrink-0"><FileText size={14} className="text-blue-600" /></div>
                   <span className="text-sm font-semibold text-zinc-800">{row.poReference}</span>
+                  <CopyButton text={row.poReference} />
                 </div>
               </td>
               <td className="px-5 py-4 text-sm font-medium text-zinc-700">{row.supplier}</td>
@@ -179,7 +201,7 @@ const GRNCardView = () => {
   const [refreshKey] = useState(0);
 
   useEffect(() => {
-    getData(ENDPOINTS.PURCHASES, { type: "PO CREATE", shop_id: SHOP_ID, limit: "50", offset: "1" }).then((res) => {
+    getData(ENDPOINTS.PURCHASES, { type: "PO_CREATE", shop_id: SHOP_ID, limit: "50", offset: "1" }).then((res) => {
       if (res) setPurchases(Array.isArray(res.data) ? res.data : [res.data]);
     });
   }, [refreshKey]);

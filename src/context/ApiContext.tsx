@@ -18,7 +18,15 @@ const ApiContext = createContext<ApiContextType | null>(null);
 const parseError = async (res: Response): Promise<string> => {
   try {
     const body = await res.json();
-    return body?.detail?.msg ?? body?.detail ?? `Request failed (${res.status})`;
+    const detail = body?.detail;
+
+    if (Array.isArray(detail)) {
+      return detail.map((d: any) => d?.msg || d?.description || JSON.stringify(d)).join(", ");
+    }
+    if (typeof detail === "object" && detail !== null) {
+      return detail.description || detail.msg || JSON.stringify(detail);
+    }
+    return detail ?? body?.message ?? body?.description ?? `Request failed (${res.status})`;
   } catch {
     return `Request failed (${res.status})`;
   }

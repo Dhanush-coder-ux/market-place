@@ -120,14 +120,8 @@ const PurchaseForm = () => {
   }, [products, charges, payment.amountPaid, costMethod]);
 
   // --- Load Drafts for Sidebar ---
-  const loadDraftsList = () => {
-    // const savedDrafts = JSON.parse(localStorage.getItem("purchase_drafts") || "[]");
-    // setDrafts(savedDrafts.sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()).slice(0, 5));
-  };
 
-  useEffect(() => {
-    loadDraftsList();
-  }, []);
+
 
   // --- Load Existing Purchase or Draft ---
   useEffect(() => {
@@ -259,7 +253,6 @@ const PurchaseForm = () => {
 
     localStorage.setItem("purchase_drafts", JSON.stringify(savedDrafts));
     showToast("Progress saved as draft", "info");
-    loadDraftsList();
     if (!searchParams.get("draftId")) {
       navigate(`?draftId=${draftId}`, { replace: true });
     }

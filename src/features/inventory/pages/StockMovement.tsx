@@ -298,7 +298,7 @@ export default function StockMovementPage() {
       <div className="flex items-center gap-3 animate-in fade-in slide-in-from-right-4">
         <button
           onClick={() => navigate("/stock-adjustment/drafts")}
-          className="px-5 h-11 rounded-xl border border-blue-100 text-blue-600 font-bold text-[14px] bg-blue-50/50 hover:bg-blue-100 transition-all flex items-center gap-2"
+          className="px-5 h-11 rounded-xl border border-blue-100 text-blue-600 font-semibold text-[14px] bg-blue-50/50 hover:bg-blue-100 transition-all flex items-center gap-2"
         >
           <Bookmark size={18} />
           Saved Drafts
@@ -434,11 +434,11 @@ export default function StockMovementPage() {
       <div className="mx-auto">
 
         {/* ── Summary Cards ── */}
-        <div className="flex gap-x-2 mb-6 animate-in fade-in slide-in-from-top-4 duration-700 delay-100">
-          <StatCard label="Total Stock In" value={`+${totalIn}`} icon={TrendingUp} iconBg="bg-emerald-50" iconColor="text-emerald-600" />
-          <StatCard label="Total Stock Out" value={`-${totalOut}`} icon={TrendingDown} iconBg="bg-rose-50" iconColor="text-rose-600" />
-          <StatCard label="Net Movement" value={netMov >= 0 ? `+${netMov}` : `${netMov}`} icon={Activity} iconBg="bg-blue-50" iconColor="text-blue-600" />
-          <StatCard label="Low Stock Alerts" value={lowStockAlerts} icon={AlertTriangle} iconBg="bg-amber-50" iconColor="text-amber-600" />
+        <div className="flex flex-nowrap overflow-x-auto custom-scrollbar gap-3 pb-2 -mx-2 px-2 sm:grid sm:grid-cols-2 lg:grid-cols-4 sm:overflow-visible sm:pb-0 sm:mx-0 sm:px-0 touch-pan-x mb-6">
+          <StatCard label="Total Stock In" value={`+${totalIn}`} icon={TrendingUp} iconBg="bg-emerald-50" iconColor="text-emerald-600" className="flex-1" />
+          <StatCard label="Total Stock Out" value={`-${totalOut}`} icon={TrendingDown} iconBg="bg-rose-50" iconColor="text-rose-600" className="flex-1" />
+          <StatCard label="Net Movement" value={netMov >= 0 ? `+${netMov}` : `${netMov}`} icon={Activity} iconBg="bg-blue-50" iconColor="text-blue-600" className="flex-1" />
+          <StatCard label="Low Stock Alerts" value={lowStockAlerts} icon={AlertTriangle} iconBg="bg-amber-50" iconColor="text-amber-600" className="flex-1" />
         </div>
 
         {/* ── Filter & Search Section ── */}
@@ -465,7 +465,7 @@ export default function StockMovementPage() {
               />
               <button
                 onClick={resetFilters}
-                className="h-11 px-4 rounded-xl bg-slate-50 border border-slate-200 text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-all flex items-center gap-2 text-xs font-bold uppercase tracking-widest"
+                className="h-11 px-4 rounded-xl bg-slate-50 border border-slate-200 text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-all flex items-center gap-2 text-xs font-semibold uppercase tracking-widest"
               >
                 <RotateCcw size={14} />
                 Reset
@@ -497,7 +497,7 @@ export default function StockMovementPage() {
                   type="date"
                   value={dateFrom}
                   onChange={e => { setDateFrom(e.target.value); setPage(1); }}
-                  className="bg-transparent border-none text-[10px] font-black text-slate-600 focus:ring-0 px-2 uppercase tracking-wider w-full"
+                  className="bg-transparent border-none text-[10px] font-bold text-slate-600 focus:ring-0 px-2 uppercase tracking-wider w-full"
                 />
                 <div className="w-px h-4 bg-slate-200 shrink-0" />
                 <input
@@ -516,7 +516,7 @@ export default function StockMovementPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-slate-50/50 text-slate-400 text-[10px] font-black uppercase tracking-[0.15em] border-b border-slate-100">
+                <tr className="bg-slate-50/50 text-slate-400 text-[10px] font-bold uppercase tracking-[0.15em] border-b border-slate-100">
                   <th className="px-6 py-5 whitespace-nowrap min-w-[200px]">Product Information</th>
                   <th className="px-6 py-5 whitespace-nowrap">Movement Type</th>
                   <th className="px-6 py-5 whitespace-nowrap text-center">
@@ -545,18 +545,18 @@ export default function StockMovementPage() {
                   >
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-3">
-                        <div className={`w-10 h-10 rounded-xl bg-gradient-to-br flex items-center justify-center text-white text-xs font-black shadow-lg shadow-blue-100 ${m.qty > 0 ? "from-emerald-600 to-emerald-400" : "from-rose-600 to-rose-400"}`}>
+                        <div className={`w-10 h-10 rounded-xl bg-gradient-to-br flex items-center justify-center text-white text-xs font-bold shadow-lg shadow-blue-100 ${m.qty > 0 ? "from-emerald-600 to-emerald-400" : "from-rose-600 to-rose-400"}`}>
                           {m.product[0].toUpperCase()}
                         </div>
                         <div>
-                          <p className="text-sm font-bold text-slate-700 tracking-tight">{m.product}</p>
-                          <p className="text-[11px] font-bold text-slate-400 font-mono italic">#{m.id}</p>
+                          <p className="text-sm font-semibold text-slate-700 tracking-tight">{m.product}</p>
+                          <p className="text-[11px] font-semibold text-slate-400 font-mono italic">#{m.id}</p>
                         </div>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap"><TypeBadge type={m.type} /></td>
                     <td className="px-6 py-4 text-center whitespace-nowrap">
-                      <span className={`text-base font-black tabular-nums ${m.qty > 0 ? "text-emerald-600" : "text-rose-600"}`}>
+                      <span className={`text-base font-bold tabular-nums ${m.qty > 0 ? "text-emerald-600" : "text-rose-600"}`}>
                         {m.qty > 0 ? `+${m.qty}` : m.qty}
                       </span>
                     </td>

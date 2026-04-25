@@ -250,7 +250,7 @@ const ProductInfos = () => {
       <div className="flex items-center gap-3">
         <button 
           onClick={() => navigate("/product/drafts")}
-          className="px-4 h-10 rounded-xl border border-blue-100 text-blue-600 font-bold text-[13px] bg-blue-50/50 hover:bg-blue-100 transition-all flex items-center gap-2"
+          className="px-4 h-10 rounded-xl border border-blue-100 text-blue-600 font-semibold text-[13px] bg-blue-50/50 hover:bg-blue-100 transition-all flex items-center gap-2"
         >
           <Bookmark size={16} />
           Saved Drafts
@@ -320,7 +320,7 @@ const ProductInfos = () => {
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
       {/* Stats */}
-      <div className="flex gap-x-2">
+      <div className="flex flex-nowrap overflow-x-auto custom-scrollbar gap-3 pb-2 -mx-2 px-2 sm:grid sm:grid-cols-2 lg:grid-cols-4 sm:overflow-visible sm:pb-0 sm:mx-0 sm:px-0 touch-pan-x">
         <StatCard label="Total Products" value={products.length} icon={Package} />
         <StatCard label="Total Stock" value={products.reduce((acc, p) => acc + Number((p.datas as any)?.stocks || 0), 0)}
           icon={Layers} iconBg="bg-blue-50" iconColor="text-blue-700" />
@@ -384,7 +384,7 @@ const ProductInfos = () => {
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-white border-b border-slate-200 text-slate-500 text-[11px] font-bold uppercase tracking-wider">
+              <tr className="bg-white border-b border-slate-200 text-slate-500 text-[11px] font-semibold uppercase tracking-wider">
                 <th className="px-4 py-4 w-14 text-center"></th>
                 <th className="px-4 py-4 whitespace-nowrap w-full min-w-[260px]">Product Details</th>
                 {selectedKeys.map(key => (
@@ -440,7 +440,7 @@ const ProductInfos = () => {
                         <td className="px-4 py-4 whitespace-nowrap">
                           <div className="flex items-center gap-4">
                             {/* Blue initial circle exactly like screenshot */}
-                            <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white text-base font-semibold shadow-sm shrink-0">
+                            <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white text-base font-bold shadow-sm shrink-0">
                               {String(datas.name || (p as any).name || "?")[0].toUpperCase()}
                             </div>
                             <div>

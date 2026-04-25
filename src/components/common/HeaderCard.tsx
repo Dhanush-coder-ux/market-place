@@ -80,10 +80,10 @@ const HeaderCard: React.FC<LowStockCardProps> = ({
   return (
     <div
       onClick={onClick}
-      // CHANGED: reduced padding (p-3), reduced rounded (rounded-xl)
+      // CHANGED: reduced padding (p-2 on mobile, p-3 on sm+), reduced rounded (rounded-xl)
       className={`
         group relative w-full overflow-hidden rounded-xl border ${t.border} ${t.bg}
-        p-3 transition-all duration-300 ease-in-out
+        p-2 sm:p-3 transition-all duration-300 ease-in-out
         hover:-translate-y-1 hover:shadow-lg hover:shadow-${theme}-500/10 cursor-pointer
         active:scale-[0.98] active:shadow-sm z-0
       `}
@@ -95,13 +95,13 @@ const HeaderCard: React.FC<LowStockCardProps> = ({
         {/* Left Side: Content */}
         <div className="flex flex-col gap-0.5 z-10">
           {/* CHANGED: text-xs instead of text-sm */}
-          <span className={`text-xs font-bold tracking-wide uppercase ${t.subtext}`}>
+          <span className={`text-xs font-semibold tracking-wide uppercase ${t.subtext}`}>
             {title}
           </span>
           
           <div className="flex items-baseline gap-2 mt-0.5">
-            {/* CHANGED: text-2xl instead of text-3xl */}
-            <h2 className={`text-2xl font-black tracking-tight ${t.text}`}>
+            {/* CHANGED: text-2xl font-bold instead of font-black */}
+            <h2 className={`text-2xl font-bold tracking-tight ${t.text}`}>
               {value}
             </h2>
           </div>

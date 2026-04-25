@@ -84,7 +84,7 @@ const Table: React.FC<TableProps> = ({
           <thead>
             <tr>
               {onSelectionChange && (
-                <th className="px-5 py-3.5 w-10 text-left border-b border-slate-100 bg-slate-50 first:rounded-tl-2xl">
+                <th className="px-3 py-2.5 sm:px-5 sm:py-3.5 w-10 text-left border-b border-slate-100 bg-slate-50 first:rounded-tl-2xl">
                   <input
                     type="checkbox"
                     ref={(el) => {
@@ -101,7 +101,7 @@ const Table: React.FC<TableProps> = ({
                 <th
                   key={col.key}
                   className={`
-                    px-5 py-3.5 text-left border-b border-slate-100 bg-slate-50
+                    px-3 py-2.5 sm:px-5 sm:py-3.5 text-left border-b border-slate-100 bg-slate-50
                     text-[11px] font-semibold text-slate-500 uppercase tracking-widest
                     ${!onSelectionChange && i === 0 ? "rounded-tl-2xl" : ""}
                     ${i === columns.length - 1 ? "rounded-tr-2xl" : ""}
@@ -134,7 +134,7 @@ const Table: React.FC<TableProps> = ({
                 >
                   {onSelectionChange && (
                     <td
-                      className={`px-5 py-3.5 whitespace-nowrap ${
+                      className={`px-3 py-2.5 sm:px-5 sm:py-3.5 whitespace-nowrap ${
                         !isLast ? "border-b border-slate-100" : ""
                       }`}
                     >
@@ -159,7 +159,7 @@ const Table: React.FC<TableProps> = ({
                       <td
                         key={col.key}
                         className={`
-                          px-5 py-3.5 text-[13px] text-slate-700 whitespace-nowrap font-medium
+                          px-3 py-2.5 sm:px-5 sm:py-3.5 text-[13px] text-slate-700 whitespace-nowrap font-medium
                           ${!isLast ? "border-b border-slate-100" : ""}
                         `}
                       >
@@ -191,7 +191,7 @@ const Table: React.FC<TableProps> = ({
 
       {/* ================= FOOTER ================= */}
 
-      <div className="flex flex-col sm:flex-row items-center justify-between px-5 py-4 bg-white border-t border-slate-100 rounded-b-2xl gap-4">
+      <div className="flex flex-col sm:flex-row items-center justify-between px-3 py-3 sm:px-5 sm:py-4 bg-white border-t border-slate-100 rounded-b-2xl gap-4">
         
         {/* Selection Info */}
 

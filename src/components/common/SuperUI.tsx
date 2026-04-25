@@ -36,10 +36,10 @@ export interface SectionCardProps {
 
 export function SectionCard({ children, title, className = "" }: SectionCardProps) {
   return (
-    <div className={`bg-white rounded-[1.5rem] border border-slate-200 p-6 shadow-sm overflow-hidden relative ${className}`}>
+    <div className={`bg-white rounded-[1.5rem] border border-slate-200 p-3 sm:p-5 shadow-sm overflow-hidden relative ${className}`}>
       {title && (
-        <div className="flex items-center gap-2.5 mb-6 border-b border-slate-50 pb-4">
-          <h2 className="text-[10px] font-black text-slate-800 uppercase tracking-[0.15em]">{title}</h2>
+        <div className="flex items-center gap-2.5 mb-4 sm:mb-5 border-b border-slate-100 pb-2 sm:pb-3">
+          <h2 className="text-[10px] font-semibold text-slate-500 uppercase tracking-[0.12em]">{title}</h2>
         </div>
       )}
       {children}
@@ -66,8 +66,8 @@ export function DetailItem({ icon: Icon, label, value, onClick }: DetailItemProp
         <Icon size={12} strokeWidth={2.5} />
       </div>
       <div className="min-w-0">
-        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.05em] mb-0.5">{label}</p>
-        <p className="text-[13px] font-bold text-slate-700 truncate tracking-tight">{value}</p>
+        <p className="text-[10px] font-medium text-slate-400 uppercase tracking-[0.05em] mb-0.5">{label}</p>
+        <p className="text-[13px] font-semibold text-slate-700 truncate tracking-tight">{value}</p>
       </div>
     </div>
   );
@@ -78,8 +78,8 @@ export function DetailItem({ icon: Icon, label, value, onClick }: DetailItemProp
 export function InfoRow({ label, value }: { label: string, value: string | React.ReactNode }) {
   return (
     <div className="flex justify-between items-center py-1">
-      <span className="text-[11px] font-bold text-slate-400 uppercase tracking-tight">{label}</span>
-      <span className="text-[12px] font-bold text-slate-700 tracking-tight">{value}</span>
+      <span className="text-[11px] font-medium text-slate-400 uppercase tracking-tight">{label}</span>
+      <span className="text-[12px] font-semibold text-slate-700 tracking-tight">{value}</span>
     </div>
   );
 }
@@ -191,7 +191,7 @@ export function BottomActionBar({ label, actions }: BottomActionBarProps) {
           <button
             key={action.label}
             onClick={action.onClick}
-            className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest flex items-center gap-2 transition-all active:scale-95 shadow-sm ${variantClass[action.variant ?? "secondary"]
+            className={`px-5 py-2.5 rounded-xl text-xs font-semibold uppercase tracking-wider flex items-center gap-2 transition-all active:scale-95 shadow-sm ${variantClass[action.variant ?? "secondary"]
               }`}
           >
             {typeof action.icon === 'function' ? <action.icon size={14} /> : action.icon}
@@ -246,7 +246,7 @@ export function ProfileHeaderCard({
         <div className="flex-1 space-y-1">
           <div className="flex flex-col mb-1">
             <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-xl font-black text-slate-800 tracking-tight">{name}</h1>
+              <h1 className="text-lg font-semibold text-slate-800 tracking-tight">{name}</h1>
               <div className="flex items-center gap-2">
                 {badges.map((badge, i) => {
                   const styles = badge.variant === "success"
@@ -272,7 +272,7 @@ export function ProfileHeaderCard({
               </div>
             </div>
             {subText && (
-              <div className="text-[11px] font-bold text-slate-400 font-mono tracking-tight">
+              <div className="text-[11px] font-medium text-slate-400 font-mono tracking-tight">
                 {subText}
               </div>
             )}

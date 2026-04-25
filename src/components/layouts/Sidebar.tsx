@@ -1,7 +1,7 @@
 import { useState, useEffect, FC } from "react";
-import { NavLink, useLocation } from "react-router-dom";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, ChevronDown, ListMinus } from "lucide-react";
+import { ChevronLeft, ChevronDown, ListMinus, Plus } from "lucide-react";
 import { usePurchaseSettings } from "@/context/PurchaseContext";
 import type { SidebarLink, SubItem, SubGroup, SubLink } from "@/utils/constants";
 
@@ -17,6 +17,7 @@ interface SidebarItemProps {
   sidebarOpen: boolean;
   index: number;
   collapseTrigger: number;
+  onHover: (link: SidebarLink | null, top: number) => void;
 }
 
 interface SubGroupItemProps {
@@ -28,7 +29,8 @@ interface SubGroupItemProps {
 // ─── Sidebar Root ─────────────────────────────────────────────────────────────
 
 const Sidebar: FC<{ links: SidebarLink[] }> = ({ links }) => {
-  const [isOpen, setIsOpen] = useState(true);
+  const [isOpen, setIsOpen] = useState(false);
+  const [hoveredItem, setHoveredItem] = useState<{ link: SidebarLink; top: number } | null>(null);
   const [collapseTrigger, setCollapseTrigger] = useState(0);
   const { settings } = usePurchaseSettings();
 
@@ -93,9 +95,8 @@ const Sidebar: FC<{ links: SidebarLink[] }> = ({ links }) => {
 
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className={`p-1.5 rounded-md text-white/35 bg-transparent hover:bg-white/10 hover:text-white/70 transition-colors flex items-center justify-center shrink-0 ${
-            !isOpen ? "mx-auto" : ""
-          }`}
+          className={`p-1.5 rounded-md text-white/35 bg-transparent hover:bg-white/10 hover:text-white/70 transition-colors flex items-center justify-center shrink-0 ${!isOpen ? "mx-auto" : ""
+            }`}
         >
           <motion.div animate={{ rotate: isOpen ? 0 : 180 }} transition={{ duration: 0.28 }}>
             <ChevronLeft size={14} strokeWidth={2.5} />
@@ -130,15 +131,47 @@ const Sidebar: FC<{ links: SidebarLink[] }> = ({ links }) => {
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto overflow-x-hidden flex flex-col gap-0.5 px-2 py-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
         {filteredLinks.map((link, i) => (
-          <SidebarItem 
-            key={link.name} 
-            link={link} 
-            sidebarOpen={isOpen} 
-            index={i} 
+          <SidebarItem
+            key={link.name}
+            link={link}
+            sidebarOpen={isOpen}
+            index={i}
             collapseTrigger={collapseTrigger}
+            onHover={(link, top) => setHoveredItem(link ? { link, top } : null)}
           />
         ))}
       </nav>
+
+      {/* Floating Hover Card (Portal-like Fixed Positioning) */}
+      <AnimatePresence>
+        {hoveredItem && !isOpen && (
+          <motion.div
+            initial={{ opacity: 0, x: -10 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -10 }}
+            transition={{ duration: 0.2 }}
+            style={{ position: 'fixed', top: hoveredItem.top, left: 60 }}
+            onMouseEnter={() => setHoveredItem(hoveredItem)}
+            onMouseLeave={() => setHoveredItem(null)}
+            className="z-[9999] pl-2"
+          >
+            <div className="bg-gradient-to-br from-blue-600/95 via-blue-700/95 to-blue-900/95 border border-white/20 rounded-xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] py-3 w-[220px] overflow-hidden backdrop-blur-xl">
+              <div className="px-4 pb-2.5 mb-1.5 border-b border-white/5">
+                <span className="text-[10px] font-black uppercase tracking-widest text-white">{hoveredItem.link.name}</span>
+              </div>
+              <div className="px-1.5 py-0.5 flex flex-col gap-0.5">
+                {hoveredItem.link.subLinks!.map((item) => (
+                  isSubGroup(item) ? (
+                    item.children.map(child => <FlatSubLink key={child.path} sub={child} isPopup />)
+                  ) : (
+                    <FlatSubLink key={(item as SubLink).path} sub={item as SubLink} isPopup />
+                  )
+                ))}
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Divider */}
       <div className="h-px bg-white/5 mx-3" />
@@ -146,9 +179,8 @@ const Sidebar: FC<{ links: SidebarLink[] }> = ({ links }) => {
       {/* Footer */}
       <div className="p-2.5 px-2">
         <div
-          className={`flex items-center gap-2.5 px-2.5 py-2 rounded-lg bg-white/5 border border-white/5 ${
-            isOpen ? "justify-start" : "justify-center"
-          }`}
+          className={`flex items-center gap-2.5 px-2.5 py-2 rounded-lg bg-white/5 border border-white/5 ${isOpen ? "justify-start" : "justify-center"
+            }`}
         >
           <div className="w-7 h-7 rounded-md bg-gradient-to-br from-emerald-400 to-teal-600 shrink-0 flex items-center justify-center text-[11px] font-bold text-white shadow-md">
             A
@@ -180,8 +212,9 @@ const Sidebar: FC<{ links: SidebarLink[] }> = ({ links }) => {
 
 // ─── Top-level Sidebar Item ───────────────────────────────────────────────────
 
-const SidebarItem: FC<SidebarItemProps> = ({ link, sidebarOpen, index, collapseTrigger }) => {
+const SidebarItem: FC<SidebarItemProps> = ({ link, sidebarOpen, index, collapseTrigger, onHover }) => {
   const { pathname } = useLocation();
+  const navigate = useNavigate();
   const Icon = link.icon;
   const hasSub = !!link.subLinks?.length;
 
@@ -214,97 +247,137 @@ const SidebarItem: FC<SidebarItemProps> = ({ link, sidebarOpen, index, collapseT
       ? "bg-white/15 text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.1)]"
       : "bg-transparent text-white/55 hover:bg-white/10 hover:text-white/80";
 
+  const handleMouseEnter = (e: React.MouseEvent) => {
+    if (!sidebarOpen && hasSub) {
+      const rect = e.currentTarget.getBoundingClientRect();
+      onHover(link, rect.top);
+    }
+  };
+
+  const handleMouseLeave = () => {
+    if (!sidebarOpen) {
+      onHover(null, 0);
+    }
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, x: -6 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ duration: 0.2, delay: index * 0.04 }}
-      className="flex flex-col"
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+      className="flex flex-col relative group/sub"
     >
       {hasSub ? (
         /* ── Dropdown trigger ── */
-        <button
-          onClick={() => sidebarOpen && setIsDrop(!isDrop)}
-          className={`${baseItemClasses} ${getActiveClass(isChildActive)} ${
-            sidebarOpen ? "justify-between" : "justify-center"
-          }`}
-        >
-          <div className="flex items-center gap-2.5 min-w-0">
-            <Icon size={15} strokeWidth={1.75} className="shrink-0" />
-            <AnimatePresence mode="wait">
-              {sidebarOpen && (
-                <motion.span
-                  key="label"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.1 }}
-                  className="truncate"
-                >
-                  {link.name}
-                </motion.span>
-              )}
-            </AnimatePresence>
-          </div>
+        <div className="group/sub relative flex items-center w-full">
+          <button
+            onClick={() => sidebarOpen && setIsDrop(!isDrop)}
+            className={`${baseItemClasses} flex-1 ${getActiveClass(isChildActive)} ${sidebarOpen ? "justify-between" : "justify-center"
+              }`}
+          >
+            <div className="flex items-center gap-2.5 min-w-0">
+              <Icon size={15} strokeWidth={1.75} className="shrink-0" />
+              <AnimatePresence mode="wait">
+                {sidebarOpen && (
+                  <motion.span
+                    key="label"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.1 }}
+                    className="truncate"
+                  >
+                    {link.name}
+                  </motion.span>
+                )}
+              </AnimatePresence>
+            </div>
 
-          {sidebarOpen && (
-            <motion.div
-              animate={{ rotate: isDrop ? 180 : 0 }}
-              transition={{ duration: 0.22 }}
-              className="text-white/20 flex shrink-0"
+            {sidebarOpen && (
+              <motion.div
+                animate={{ rotate: isDrop ? 180 : 0 }}
+                transition={{ duration: 0.22 }}
+                className="text-white/20 flex shrink-0"
+              >
+                <ChevronDown size={12} strokeWidth={2.5} />
+              </motion.div>
+            )}
+
+            {!sidebarOpen && !hasSub && <Tooltip label={link.name} />}
+          </button>
+
+          {link.addPath && sidebarOpen && (
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                navigate(link.addPath!);
+              }}
+              className="absolute right-7 w-6 h-6 rounded-md flex items-center justify-center bg-white/10 text-white/50 hover:bg-white hover:text-blue-600 hover:scale-110 opacity-0 group-hover/sub:opacity-100 transition-all duration-200 shadow-[0_0_10px_rgba(255,255,255,0.1)] border border-white/10 active:scale-95"
             >
-              <ChevronDown size={12} strokeWidth={2.5} />
-            </motion.div>
+              <Plus size={12} strokeWidth={3.5} />
+            </button>
           )}
-
-          {/* Collapsed tooltip */}
-          {!sidebarOpen && (
-            <Tooltip label={link.name} />
-          )}
-        </button>
+        </div>
       ) : (
         /* ── Plain NavLink ── */
-        <NavLink
-          to={link.path!}
-          className={({ isActive }) =>
-            `${baseItemClasses} ${getActiveClass(isActive)} ${
-              sidebarOpen ? "justify-between" : "justify-center"
-            }`
-          }
-        >
-          {({ isActive }) => (
-            <>
-              {isActive && (
-                <motion.div
-                  layoutId="activeIndicator"
-                  className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-[18px] bg-white/70 rounded-full"
-                />
-              )}
-              <div className="flex items-center gap-2.5 min-w-0">
-                <Icon
-                  size={15}
-                  strokeWidth={1.75}
-                  className={`shrink-0 ${isActive ? "opacity-100" : "opacity-75"}`}
-                />
-                <AnimatePresence mode="wait">
-                  {sidebarOpen && (
-                    <motion.span
-                      key="label"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      transition={{ duration: 0.1 }}
-                      className="truncate"
-                    >
-                      {link.name}
-                    </motion.span>
-                  )}
-                </AnimatePresence>
-              </div>
-              {!sidebarOpen && <Tooltip label={link.name} />}
-            </>
+        <div className="group/sub relative flex items-center w-full">
+          <NavLink
+            to={link.path!}
+            className={({ isActive }) =>
+              `${baseItemClasses} flex-1 ${getActiveClass(isActive)} ${
+                sidebarOpen ? "justify-between" : "justify-center"
+              }`
+            }
+          >
+            {({ isActive }) => (
+              <>
+                {isActive && sidebarOpen && (
+                  <motion.div
+                    layoutId="activeIndicator"
+                    className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-[18px] bg-white/70 rounded-full"
+                  />
+                )}
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <Icon
+                    size={15}
+                    strokeWidth={1.75}
+                    className={`shrink-0 ${isActive ? "opacity-100" : "opacity-75"}`}
+                  />
+                  <AnimatePresence mode="wait">
+                    {sidebarOpen && (
+                      <motion.span
+                        key="label"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.1 }}
+                        className="truncate"
+                      >
+                        {link.name}
+                      </motion.span>
+                    )}
+                  </AnimatePresence>
+                </div>
+                {!sidebarOpen && <Tooltip label={link.name} />}
+              </>
+            )}
+          </NavLink>
+          {link.addPath && sidebarOpen && (
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                navigate(link.addPath!);
+              }}
+              className="absolute right-2 w-6 h-6 rounded-md flex items-center justify-center bg-white/5 text-white/40 hover:bg-white/15 hover:text-white/90 opacity-0 group-hover/sub:opacity-100 transition-all duration-200 shadow-sm border border-white/5"
+            >
+              <Plus size={12} strokeWidth={3} />
+            </button>
           )}
-        </NavLink>
+        </div>
       )}
 
       {/* ── Submenu panel ── */}
@@ -321,10 +394,10 @@ const SidebarItem: FC<SidebarItemProps> = ({ link, sidebarOpen, index, collapseT
               {link.subLinks!.map((item) =>
                 isSubGroup(item) ? (
                   // ── Level 2: SubGroup (folder) ──
-                  <SubGroupItem 
-                    key={item.name} 
-                    group={item} 
-                    sidebarOpen={sidebarOpen} 
+                  <SubGroupItem
+                    key={item.name}
+                    group={item}
+                    sidebarOpen={sidebarOpen}
                     collapseTrigger={collapseTrigger}
                   />
                 ) : (
@@ -364,11 +437,10 @@ const SubGroupItem: FC<SubGroupItemProps> = ({ group, collapseTrigger }) => {
       {/* Group header button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className={`group flex items-center justify-between pl-3.5 pr-2.5 py-1.5 rounded-r-[7px] text-[11.5px] font-semibold tracking-tight transition-colors w-full text-left ${
-          isChildActive
+        className={`group flex items-center justify-between pl-3.5 pr-2.5 py-1.5 rounded-r-[7px] text-[11.5px] font-semibold tracking-tight transition-colors w-full text-left ${isChildActive
             ? "text-white/90 bg-white/5"
             : "text-white/50 hover:text-white/70 hover:bg-white/5"
-        }`}
+          }`}
       >
         <div className="flex items-center gap-2 min-w-0">
           {Icon && (
@@ -401,7 +473,7 @@ const SubGroupItem: FC<SubGroupItemProps> = ({ group, collapseTrigger }) => {
           >
             <div className="ml-3 border-l border-white/[0.07] py-0.5 flex flex-col gap-0.5">
               {group.children.map((child) => (
-                <FlatSubLink key={child.path} sub={child} indent />
+                <FlatSubLink key={child.path} sub={child} />
               ))}
             </div>
           </motion.div>
@@ -413,34 +485,55 @@ const SubGroupItem: FC<SubGroupItemProps> = ({ group, collapseTrigger }) => {
 
 // ─── Flat SubLink — reusable leaf node ───────────────────────────────────────
 
-const FlatSubLink: FC<{ sub: SubLink; indent?: boolean }> = ({ sub, indent = false }) => {
+const FlatSubLink: FC<{ sub: SubLink; isPopup?: boolean }> = ({ sub, isPopup = false }) => {
   const Icon = sub.icon;
+  const navigate = useNavigate();
+  const active = window.location.pathname === sub.path;
+
   return (
-    <NavLink
-      to={sub.path}
-      className={({ isActive }) =>
-        `flex items-center gap-2 pr-2.5 py-1.5 text-[11.5px] rounded-r-[7px] no-underline tracking-tight leading-none transition-colors ${
-          indent ? "pl-3" : "pl-3.5"
-        } ${
-          isActive
-            ? "font-semibold text-white bg-white/5"
-            : "font-normal text-white/60 hover:text-white/80"
-        }`
-      }
-    >
-      {({ isActive }) => (
-        <>
-          {Icon && (
-            <Icon 
-              size={12} 
-              strokeWidth={2} 
-              className={`shrink-0 ${isActive ? "opacity-100" : "opacity-50"}`} 
-            />
-          )}
-          <span className="truncate">{sub.name}</span>
-        </>
+    <div className="group/sub relative flex items-center w-full pr-1.5">
+      <NavLink
+        to={sub.path}
+        className={({ isActive }) =>
+          `flex-1 flex items-center gap-2 py-1.5 px-3 text-[11.5px] rounded-lg no-underline tracking-tight leading-none transition-all duration-200 ${
+            isActive
+              ? (isPopup ? "bg-[#3B82F6] text-white font-semibold shadow-lg" : "bg-white/5 text-white")
+              : (isPopup ? "text-slate-300 hover:text-white hover:bg-white/5" : "text-white/60 hover:text-white/80")
+          }`
+        }
+      >
+        {({ isActive }) => (
+          <>
+            {Icon && (
+              <Icon 
+                size={12} 
+                strokeWidth={2} 
+                className={`shrink-0 ${isActive ? "opacity-100" : "opacity-50"}`} 
+              />
+            )}
+            <span className="truncate">{sub.name}</span>
+          </>
+        )}
+      </NavLink>
+
+      {sub.addPath && (
+        <button
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            navigate(sub.addPath!);
+          }}
+          className={`absolute right-2 w-6 h-6 rounded-md flex items-center justify-center transition-all duration-200 ${
+            isPopup 
+              ? `bg-transparent text-white/50 hover:text-white ${active ? "opacity-100" : "opacity-0"}`
+              : "bg-white/10 text-white/50 hover:bg-white hover:text-blue-600 hover:scale-110 border border-white/10 opacity-0"
+          } group-hover/sub:opacity-100 active:scale-95`}
+          title={`Add New ${sub.name.replace(/s\sInfos|Infos|List/g, '')}`}
+        >
+          <Plus size={12} strokeWidth={active ? 3.5 : 2} />
+        </button>
       )}
-    </NavLink>
+    </div>
   );
 };
 

@@ -41,7 +41,7 @@ export default function CustomerBalanceSummary() {
       <div className="flex items-center gap-2">
         <button 
           onClick={() => navigate("/customers/drafts")}
-          className="px-4 h-10 rounded-xl border border-blue-100 text-blue-600 font-bold text-[13px] bg-blue-50/50 hover:bg-blue-100 transition-all flex items-center gap-2"
+          className="px-4 h-10 rounded-xl border border-blue-100 text-blue-600 font-semibold text-[13px] bg-blue-50/50 hover:bg-blue-100 transition-all flex items-center gap-2"
         >
           <Bookmark size={16} />
           Saved Drafts
@@ -110,7 +110,7 @@ export default function CustomerBalanceSummary() {
   return (
     <div className="space-y-6">
       {/* Stats Section */}
-      <div className="flex gap-x-2">
+      <div className="flex flex-nowrap overflow-x-auto custom-scrollbar gap-3 pb-2 -mx-2 px-2 sm:grid sm:grid-cols-2 lg:grid-cols-4 sm:overflow-visible sm:pb-0 sm:mx-0 sm:px-0 touch-pan-x">
         <StatCard label="Total Customers" value={customers.length} icon={Users} className="flex-1"/>
         <StatCard label="Shop" value={SHOP_ID.slice(0, 8) + "…"} icon={IndianRupee} iconBg="bg-green-50" iconColor="text-green-600" className="flex-1"/>
         <StatCard label="API Source" value="Live" icon={AlertCircle} iconBg="bg-rose-50" iconColor="text-rose-600" className="flex-1"/>
@@ -155,7 +155,7 @@ export default function CustomerBalanceSummary() {
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-slate-50/50 text-slate-400 text-[10px] font-black uppercase tracking-widest border-b border-slate-100">
+              <tr className="bg-slate-50/50 text-slate-400 text-[10px] font-bold uppercase tracking-widest border-b border-slate-100">
                 <th className="px-6 py-4 whitespace-nowrap min-w-[200px]">Customer</th>
                 {selectedKeys.map(key => (
                   <th key={key} className="px-6 py-4 whitespace-nowrap capitalize">{key.replace(/_/g, ' ')}</th>
@@ -181,14 +181,14 @@ export default function CustomerBalanceSummary() {
                   >
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-blue-400 flex items-center justify-center text-white text-sm font-black shadow-lg shadow-blue-100">
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-blue-400 flex items-center justify-center text-white text-sm font-bold shadow-lg shadow-blue-100">
                           {String(c.datas?.first_name || c.datas?.company || "?")[0].toUpperCase()}
                         </div>
                         <div>
-                          <p className="text-sm font-bold text-slate-700 tracking-tight">
+                          <p className="text-sm font-semibold text-slate-700 tracking-tight">
                             {String(c.datas?.first_name || "")} {String(c.datas?.last_name || "")}
                           </p>
-                          <p className="text-[11px] font-bold text-slate-400">
+                          <p className="text-[11px] font-semibold text-slate-400">
                             {String(c.datas?.phone || "No phone")}
                           </p>
                         </div>
@@ -196,7 +196,7 @@ export default function CustomerBalanceSummary() {
                     </td>
                     {selectedKeys.map(key => (
                       <td key={key} className="px-6 py-4 whitespace-nowrap">
-                        <p className={`text-[12px] font-bold tracking-tight ${key === 'customer_type' ? 'text-blue-600 bg-blue-50 w-fit px-2 py-0.5 rounded-md' : 'text-slate-600'}`}>
+                        <p className={`text-[12px] font-semibold tracking-tight ${key === 'customer_type' ? 'text-blue-600 bg-blue-50 w-fit px-2 py-0.5 rounded-md' : 'text-slate-600'}`}>
                           {String(c.datas?.[key] ?? c[key] ?? "—")}
                         </p>
                       </td>

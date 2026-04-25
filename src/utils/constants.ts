@@ -23,6 +23,7 @@ export interface SubLink {
   name: string;
   path: string;
   icon?: any;
+  addPath?: string;
 }
 
 export interface SubGroup {
@@ -40,6 +41,7 @@ export interface SidebarLink {
   name: string;
   icon: any;
   path?: string;
+  addPath?: string;
   badge?: string | number;
   /** Top-level subLinks: can be flat SubLinks OR SubGroups */
   subLinks?: SubItem[];
@@ -49,7 +51,7 @@ export interface SidebarLink {
 
 export const sidebarLinks: SidebarLink[] = [
   { name: "Dashboard", icon: LayoutDashboard, path: "/" },
-  { name: "Sales", icon: IndianRupee, path: "/sales" },
+  { name: "Sales", icon: IndianRupee, path: "/sales", addPath: "/billing" },
 
   {
     name: "Purchase",
@@ -67,7 +69,7 @@ export const sidebarLinks: SidebarLink[] = [
         children: [
           { name: "Add Purchase Order", path: "/po-grn/add", icon: PlusCircle },
           { name: "Update Purchase Order", path: "/po-grn/update", icon: RefreshCw },
-          { name: "Purchase Order List", path: "/po-grn", icon: ListChecks },
+          { name: "Purchase Order List", path: "/po-grn", icon: ListChecks, addPath: "/po-grn/add" },
         ],
       },
 
@@ -81,17 +83,18 @@ export const sidebarLinks: SidebarLink[] = [
           { name: "Production Entry", path: "/production-entry/add", icon: PlusSquare },
         ],
       },
-      { name: "Purchase History", path: "/purchase-history", icon: History },
+      { name: "Purchase History", path: "/purchase-history", icon: History, addPath: "/purchase/add" },
     ],
   },
 
   {
     name: "Products",
     icon: Package,
+    addPath: "/product/add",
     subLinks: [
       { name: "Add Product", path: "/product/add", icon: UserPlus },
       { name: "Saved Drafts", path: "/product/drafts", icon: Bookmark },
-      { name: "Product Infos", path: "/product/all", icon: ClipboardList },
+      { name: "Product Infos", path: "/product/all", icon: ClipboardList, addPath: "/product/add" },
       { name: "Product Detail", path: "/product", icon: FileText },
     ],
   },
@@ -99,10 +102,11 @@ export const sidebarLinks: SidebarLink[] = [
   {
     name: "Supplier",
     icon: Wallet,
+    addPath: "/supplier/add",
     subLinks: [
       { name: "Add Suppliers", path: "/supplier/add", icon: UserPlus },
       { name: "Saved Drafts", path: "/supplier/drafts", icon: Bookmark },
-      { name: "Suppliers Infos", path: "/supplier/all", icon: ClipboardList },
+      { name: "Suppliers Infos", path: "/supplier/all", icon: ClipboardList, addPath: "/supplier/add" },
       { name: "Supplier Details", path: "/supplier", icon: FileText },
     ],
   },
@@ -111,8 +115,8 @@ export const sidebarLinks: SidebarLink[] = [
     name: "Inventory",
     icon: Database,
     subLinks: [
-      { name: "Stock Levels", path: "/inventory", icon: Package },
-      { name: "Stock Movements", path: "/stock-movement", icon: History },
+      { name: "Stock Levels", path: "/inventory", icon: Package, addPath: "/product/add" },
+      { name: "Stock Movements", path: "/stock-movement", icon: History, addPath: "/stock-adjustment" },
       { name: "Stock Adjustments", path: "/stock-adjustment", icon: ClipboardList },
       { name: "Saved Drafts", path: "/stock-adjustment/drafts", icon: Bookmark },
     ],
@@ -124,10 +128,11 @@ export const sidebarLinks: SidebarLink[] = [
   {
     name: "Customers",
     icon: UserCircle,
+    addPath: "/customers/add",
     subLinks: [
       { name: "Add Customer", path: "/customers/add", icon: UserPlus },
       { name: "Saved Drafts", path: "/customers/drafts", icon: Bookmark },
-      { name: "Customers Infos", path: "/customers-Summary", icon: ClipboardList },
+      { name: "Customers Infos", path: "/customers-Summary", icon: ClipboardList, addPath: "/customers/add" },
       { name: "Customer Details", path: "/customers", icon: FileText },
     ],
   },
@@ -135,10 +140,11 @@ export const sidebarLinks: SidebarLink[] = [
   {
     name: "Employees",
     icon: Users,
+    addPath: "/employee/add",
     subLinks: [
       { name: "Add Employee", path: "/employee/add", icon: UserPlus },
       { name: "Saved Drafts", path: "/employee/drafts", icon: Bookmark },
-      { name: "Employee Infos", path: "/employee/all", icon: ClipboardList },
+      { name: "Employee Infos", path: "/employee/all", icon: ClipboardList, addPath: "/employee/add" },
       { name: "Employee Details", path: "/employee", icon: FileText },
     ],
   },

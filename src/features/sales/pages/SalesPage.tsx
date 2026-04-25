@@ -1366,10 +1366,10 @@ const SalesListPage: React.FC = () => {
   return (
     <>
       <style>{STYLES}</style>
-      <div className="sr-root min-h-screen bg-slate-50/50 p-6 space-y-5">
+      <div className="sr-root min-h-screen bg-slate-50/50 p-2 sm:p-4 lg:p-6 space-y-3 sm:space-y-5">
 
         {/* Stats */}
-        <div className="flex gap-3 flex-wrap">
+        <div className="flex flex-nowrap overflow-x-auto custom-scrollbar gap-2.5 pb-2 -mx-2 px-2 sm:mx-0 sm:px-0 sm:grid sm:grid-cols-2 lg:grid-cols-4 sm:overflow-visible sm:pb-0 touch-pan-x">
           <StatsCard iconColor="text-green-500" iconBg="bg-green-50" label="Total Revenue" icon={DollarSign} value={fmt(totalRevenue)} />
           <StatsCard iconColor="text-blue-500" iconBg="bg-blue-50" label="Total Sales" icon={BarChart2} value={salesCount} />
           <StatsCard iconColor="text-red-500" iconBg="bg-red-50" label="Sales Returns" icon={RefreshCw} value={salesReturnCount} />
@@ -1377,7 +1377,7 @@ const SalesListPage: React.FC = () => {
         </div>
 
         {/* Toolbar */}
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm px-4 py-3 flex flex-wrap items-center gap-2.5">
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm px-3 py-2 sm:px-4 sm:py-3 flex flex-wrap items-center gap-2">
           <div className="relative flex-1 min-w-[180px] max-w-sm">
             <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
             <input
@@ -1411,7 +1411,7 @@ const SalesListPage: React.FC = () => {
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-100">
                   {["Invoice", "Customer", "Type", "Origin", "Payment", "Date", "Items", "Amount", "Status", "Actions"].map((h, i) => (
-                    <th key={i} className="py-3 px-4 first:pl-5 last:pr-5 text-[10px] font-semibold uppercase tracking-widest text-slate-400 whitespace-nowrap text-left last:text-right">
+                    <th key={i} className="py-2 px-3 sm:py-3 sm:px-4 first:pl-3 sm:first:pl-5 last:pr-3 sm:last:pr-5 text-[10px] font-semibold uppercase tracking-widest text-slate-400 whitespace-nowrap text-left last:text-right">
                       {h}
                     </th>
                   ))}
@@ -1436,22 +1436,22 @@ const SalesListPage: React.FC = () => {
                   const returnable = sale.status === "Completed" && sale.origin !== "Sales Return";
                   return (
                     <tr key={sale.id} className="sr-row">
-                      <td className="py-3.5 pl-5 pr-4">
-                        <span className="sr-mono text-xs font-medium text-slate-700">{sale.invoiceNumber}</span>
+                      <td className="py-2.5 pl-3 sm:pl-5 pr-3 sm:pr-4">
+                        <span className="sr-mono text-[11px] font-medium text-slate-700">{sale.invoiceNumber}</span>
                       </td>
-                      <td className="py-3.5 px-4">
-                        <p className="text-xs font-medium text-slate-800 whitespace-nowrap">{sale.customerName}</p>
+                      <td className="py-2.5 px-3 sm:px-4">
+                        <p className="text-[11px] font-medium text-slate-800 whitespace-nowrap">{sale.customerName}</p>
                       </td>
-                      <td className="py-3.5 px-4"><Badge cls={oCfg.cls} dot={oCfg.dot} label={sale.origin} /></td>
-                      <td className="py-3.5 px-4"><Badge cls={tCfg.cls} dot={tCfg.dot} label={sale.salesType} /></td>
-                      <td className="py-3.5 px-4"><Badge cls={pCfg.cls} dot={pCfg.dot} label={sale.paymentMethod} /></td>
-                      <td className="py-3.5 px-4 text-xs text-slate-500 whitespace-nowrap tabular-nums">{sale.date}</td>
-                      <td className="py-3.5 px-4 text-center text-xs font-medium text-slate-600 tabular-nums">{sale.itemsCount}</td>
-                      <td className="py-3.5 px-4 text-right">
-                        <span className="sr-mono text-xs font-semibold text-slate-900">{fmt(sale.totalAmount)}</span>
+                      <td className="py-2.5 px-3 sm:px-4"><Badge cls={oCfg.cls} dot={oCfg.dot} label={sale.origin} /></td>
+                      <td className="py-2.5 px-3 sm:px-4"><Badge cls={tCfg.cls} dot={tCfg.dot} label={sale.salesType} /></td>
+                      <td className="py-2.5 px-3 sm:px-4"><Badge cls={pCfg.cls} dot={pCfg.dot} label={sale.paymentMethod} /></td>
+                      <td className="py-2.5 px-3 sm:px-4 text-[11px] text-slate-500 whitespace-nowrap tabular-nums">{sale.date}</td>
+                      <td className="py-2.5 px-3 sm:px-4 text-center text-[11px] font-medium text-slate-600 tabular-nums">{sale.itemsCount}</td>
+                      <td className="py-2.5 px-3 sm:px-4 text-right">
+                        <span className="sr-mono text-[11px] font-semibold text-slate-900">{fmt(sale.totalAmount)}</span>
                       </td>
-                      <td className="py-3.5 px-4"><Badge cls={sCfg.cls} dot={sCfg.dot} label={sale.status} /></td>
-                      <td className="py-3.5 pl-4 pr-5">
+                      <td className="py-2.5 px-3 sm:px-4"><Badge cls={sCfg.cls} dot={sCfg.dot} label={sale.status} /></td>
+                      <td className="py-2.5 pl-3 sm:pl-4 pr-3 sm:pr-5">
                         <div className=" flex items-center justify-end gap-1">
                           <button onClick={() => openSidebar(sale)}
                             className="w-7 h-7 flex items-center justify-center rounded-md text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-all">

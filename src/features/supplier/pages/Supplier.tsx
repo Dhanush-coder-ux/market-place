@@ -38,7 +38,7 @@ const Supplier = () => {
       <div className="flex items-center gap-3">
         <button 
           onClick={() => navigate("/supplier/drafts")}
-          className="px-5 h-11 rounded-xl border border-blue-100 text-blue-600 font-bold text-[14px] bg-blue-50/50 hover:bg-blue-100 transition-all flex items-center gap-2"
+          className="px-5 h-11 rounded-xl border border-blue-100 text-blue-600 font-semibold text-[14px] bg-blue-50/50 hover:bg-blue-100 transition-all flex items-center gap-2"
         >
           <Bookmark size={18} />
           Saved Drafts
@@ -97,10 +97,10 @@ const Supplier = () => {
   };
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
+    <div className="space-y-6 animate-in fade-in duration-500 custom-scrollbar">
       
       {/* Stats Section */}
-      <div className="flex gap-x-2">
+      <div className="flex flex-nowrap overflow-x-auto custom-scrollbar gap-3 pb-2 -mx-2 px-2 sm:grid sm:grid-cols-2 lg:grid-cols-3 sm:overflow-visible sm:pb-0 sm:mx-0 sm:px-0 touch-pan-x">
         <StatCard 
           icon={Building2} 
           label="Total Suppliers" 
@@ -163,7 +163,7 @@ const Supplier = () => {
       {/* Error State */}
       {error && (
         <div className="p-4 bg-rose-50 border border-rose-100 rounded-2xl flex items-center justify-between animate-in fade-in slide-in-from-top-2">
-          <p className="text-sm font-bold text-rose-600">{error}</p>
+          <p className="text-sm font-semibold text-rose-600">{error}</p>
           <button onClick={clearError} className="p-1 hover:bg-rose-100 rounded-lg transition-colors text-rose-400">
             <X size={18} />
           </button>
@@ -175,7 +175,7 @@ const Supplier = () => {
         <div className="overflow-x-auto">
           <table className="w-full text-left border-separate border-spacing-0">
             <thead>
-              <tr className="bg-slate-50/50 text-slate-400 text-[10px] font-black uppercase tracking-[0.15em] border-b border-slate-100">
+              <tr className="bg-slate-50/50 text-slate-400 text-[10px] font-bold uppercase tracking-[0.15em] border-b border-slate-100">
                 <th className="px-6 py-5 whitespace-nowrap min-w-[200px]">Supplier Details</th>
                 {selectedKeys.map(key => (
                   <th key={key} className="px-6 py-5 capitalize whitespace-nowrap">{key.replace(/_/g, ' ')}</th>
@@ -205,15 +205,15 @@ const Supplier = () => {
                           {(String(sup.datas?.supplier_name || (sup as any).supplier_name || 'S')).charAt(0).toUpperCase()}
                         </div>
                         <div>
-                          <p className="text-sm font-bold text-slate-700 tracking-tight">{String(sup.datas?.supplier_name || (sup as any).supplier_name)}</p>
-                          <p className="text-[11px] font-bold text-slate-400 font-mono">ID: {sup.id}</p>
+                          <p className="text-sm font-semibold text-slate-700 tracking-tight">{String(sup.datas?.supplier_name || (sup as any).supplier_name)}</p>
+                          <p className="text-[11px] font-semibold text-slate-400 font-mono">ID: {sup.id}</p>
                         </div>
                       </div>
                     </td>
                     
                     {selectedKeys.map(key => (
                       <td key={key} className="px-6 py-4 whitespace-nowrap">
-                        <p className="text-[12px] font-bold tracking-tight text-slate-600">
+                        <p className="text-[12px] font-semibold tracking-tight text-slate-600">
                           {String(sup.datas?.[key] ?? sup[key] ?? "—")}
                         </p>
                       </td>

@@ -47,7 +47,7 @@ const ProductDraftsPage = () => {
       <div className="bg-blue-50 border border-blue-100 rounded-2xl px-6 py-3 text-blue-700 flex items-center gap-3">
         <Bookmark size={16} className="text-blue-500 shrink-0" />
         <p className="text-sm font-semibold">
-          <span className="font-bold mr-2 uppercase text-[10px] bg-blue-100 px-1.5 py-0.5 rounded tracking-wider">Notice:</span>
+          <span className="font-semibold mr-2 uppercase text-[10px] bg-blue-100 px-1.5 py-0.5 rounded tracking-wider">Notice:</span>
           Drafts are saved locally in your browser and will be removed if you clear your site data
         </p>
       </div>

@@ -12,7 +12,7 @@ import { useHeader } from '@/context/HeaderContext';
 import { useToast } from '@/context/ToastContext';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 import { ColumnPicker } from '@/components/common/ColumnPicker';
-import { SearchSelect } from '@/components/inputbuilders/SearchSelect';
+
 import { useEffect, useMemo, useState } from 'react';
 
 export default function Employee() {
@@ -40,7 +40,7 @@ export default function Employee() {
       <div className="flex items-center gap-2">
         <button 
           onClick={() => navigate("/employee/drafts")}
-          className="px-4 h-10 rounded-xl border border-blue-100 text-blue-600 font-bold text-[13px] bg-blue-50/50 hover:bg-blue-100 transition-all flex items-center gap-2"
+          className="px-4 h-10 rounded-xl border border-blue-100 text-blue-600 font-semibold text-[13px] bg-blue-50/50 hover:bg-blue-100 transition-all flex items-center gap-2"
         >
           <Bookmark size={16} />
           Saved Drafts
@@ -119,7 +119,7 @@ export default function Employee() {
   return (
     <div className="space-y-6">
       {/* Stats Section */}
-      <div className="flex gap-2">
+      <div className="flex flex-nowrap overflow-x-auto custom-scrollbar gap-3 pb-2 -mx-2 px-2 sm:grid sm:grid-cols-2 lg:grid-cols-3 sm:overflow-visible sm:pb-0 sm:mx-0 sm:px-0 touch-pan-x">
         <StatCard 
           icon={Users} 
           label="Total Employees" 
@@ -145,24 +145,14 @@ export default function Employee() {
       {/* Filter Section */}
       <div className="bg-white p-4 rounded-[1.5rem] border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3 flex-1">
-          <div className="relative w-full max-w-md">
-            <SearchSelect
-              labelKey="displayName"
-              valueKey="employee_id"
-              placeholder="Search and quick view employee..."
-              fetchOptions={async (q) => {
-                if (!q) return [];
-                try {
-                  const res = await getData(ENDPOINTS.EMPLOYEES, { limit: "8", offset: "1", q });
-                  const data = res?.data ? (Array.isArray(res.data) ? res.data : [res.data]) : [];
-                  return data.map((e: any) => ({
-                    ...e,
-                    displayName: e.name || e.employee_id
-                  }));
-                } catch { return []; }
-              }}
-              onChange={(val) => val && navigate(`/employee/${val}`)}
-              className="w-full h-11"
+          <div className="relative w-full sm:w-80">
+            <Input
+              leftIcon={<Search size={14} className='text-gray-400'/>}
+              type="text"
+              placeholder="Filter by name..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="h-10 text-sm"
             />
           </div>
           <ColumnPicker 
@@ -200,7 +190,7 @@ export default function Employee() {
         <div className="p-4 bg-rose-50 border border-rose-100 rounded-2xl flex items-center justify-between animate-in fade-in slide-in-from-top-2">
           <div className="flex items-center gap-3 text-rose-600">
             <AlertCircle size={20} />
-            <p className="text-sm font-bold">{error}</p>
+            <p className="text-sm font-semibold">{error}</p>
           </div>
           <button onClick={clearError} className="p-1 hover:bg-rose-100 rounded-lg transition-colors text-rose-400">
             <X size={18} />
@@ -213,7 +203,7 @@ export default function Employee() {
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-slate-50/50 text-slate-400 text-[10px] font-black uppercase tracking-[0.15em] border-b border-slate-100">
+              <tr className="bg-slate-50/50 text-slate-400 text-[10px] font-bold uppercase tracking-[0.15em] border-b border-slate-100">
                 <th className="px-6 py-5 whitespace-nowrap min-w-[200px]">Employee Name</th>
                 <th className="px-6 py-5 whitespace-nowrap">Status</th>
                 {selectedKeys.map(key => (
@@ -240,17 +230,17 @@ export default function Employee() {
                   >
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-blue-400 flex items-center justify-center text-white text-sm font-black shadow-lg shadow-blue-100">
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-blue-400 flex items-center justify-center text-white text-sm font-bold shadow-lg shadow-blue-100">
                           {emp.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
                         </div>
                         <div>
-                          <p className="text-sm font-bold text-slate-700 tracking-tight">{emp.name}</p>
-                          <p className="text-[11px] font-bold text-slate-400 font-mono">ID: {emp.employee_id}</p>
+                          <p className="text-sm font-semibold text-slate-700 tracking-tight">{emp.name}</p>
+                          <p className="text-[11px] font-semibold text-slate-400 font-mono">ID: {emp.employee_id}</p>
                         </div>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border shadow-sm ${
+                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border shadow-sm ${
                         emp.is_accepted 
                           ? "bg-emerald-50 text-emerald-600 border-emerald-100" 
                           : "bg-amber-50 text-amber-600 border-amber-100"
@@ -261,7 +251,7 @@ export default function Employee() {
                     </td>
                     {selectedKeys.map(key => (
                       <td key={key} className="px-6 py-4 whitespace-nowrap">
-                        <p className={`text-[12px] font-bold tracking-tight ${key === 'role' ? 'text-blue-600 bg-blue-50 w-fit px-2 py-0.5 rounded-md' : 'text-slate-600'}`}>
+                        <p className={`text-[12px] font-semibold tracking-tight ${key === 'role' ? 'text-blue-600 bg-blue-50 w-fit px-2 py-0.5 rounded-md' : 'text-slate-600'}`}>
                           {String(emp.datas?.[key] ?? emp[key] ?? "—")}
                         </p>
                       </td>

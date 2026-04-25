@@ -102,14 +102,14 @@ export default function StockAdjustmentPage() {
   useEffect(() => {
     setBottomActions(
       <div className="flex items-center gap-3 animate-in fade-in slide-in-from-right-4 duration-300">
-        <button 
-          type="button"
-          onClick={handleSaveDraft}
-          className="px-6 h-8 rounded-xl border border-blue-100 text-blue-600 font-bold text-xs bg-blue-50/50 hover:bg-blue-100 transition-all flex items-center gap-2"
-        >
-          <Bookmark size={14} />
-          Save Draft
-        </button>
+          <button 
+            type="button"
+            onClick={handleSaveDraft}
+            className="px-4 h-8 rounded-xl border border-blue-100 text-blue-600 font-bold text-xs bg-blue-50/50 hover:bg-blue-100 transition-all flex items-center gap-2 whitespace-nowrap overflow-hidden"
+          >
+            <Bookmark size={14} className="shrink-0" />
+            <span className="truncate">Save Draft</span>
+          </button>
         <GradientButton 
           icon={isSubmitting ? <Loader className="h-4 w-4" /> : <Save size={16} />} 
           onClick={handleSubmit} 

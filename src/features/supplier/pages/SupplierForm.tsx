@@ -64,10 +64,10 @@ const SupplierForm = () => {
           <button 
             type="button"
             onClick={handleSaveDraft}
-            className="px-6 h-8 rounded-xl border border-blue-100 text-blue-600 font-bold text-xs bg-blue-50/50 hover:bg-blue-100 transition-all flex items-center gap-2"
+            className="px-4 h-8 rounded-xl border border-blue-100 text-blue-600 font-bold text-xs bg-blue-50/50 hover:bg-blue-100 transition-all flex items-center gap-2 whitespace-nowrap overflow-hidden"
           >
-            <Bookmark size={14} />
-            Save Draft
+            <Bookmark size={14} className="shrink-0" />
+            <span className="truncate">Save Draft</span>
           </button>
         )}
         <GradientButton 

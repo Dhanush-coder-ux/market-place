@@ -217,10 +217,10 @@ const GrnForm = () => {
           <button 
             type="button"
             onClick={handleSaveDraft}
-            className="px-6 h-8 rounded-xl border border-blue-100 text-blue-600 font-bold text-xs bg-blue-50/50 hover:bg-blue-100 transition-all flex items-center gap-2"
+            className="px-4 h-8 rounded-xl border border-blue-100 text-blue-600 font-bold text-xs bg-blue-50/50 hover:bg-blue-100 transition-all flex items-center gap-2 whitespace-nowrap overflow-hidden"
           >
-            <Bookmark size={14} />
-            Save Draft
+            <Bookmark size={14} className="shrink-0" />
+            <span className="truncate">Save Draft</span>
           </button>
         )}
         <GradientButton 
@@ -590,27 +590,9 @@ const GrnForm = () => {
               </div>
             </div>
 
-            {/* Mobile save button */}
-            <div className="lg:hidden flex gap-3">
-              <button
-                onClick={handleSaveDraft}
-                className="flex-1 py-3 rounded-xl border border-[#E2E8F0] text-sm font-semibold text-[#64748B] hover:bg-slate-50 transition-colors"
-              >
-                Save Draft
-              </button>
-              <button
-                disabled={submitting}
-                onClick={handleSaveGRN}
-                className="flex-1 py-3 rounded-xl bg-[#2563EB] text-sm font-semibold text-white hover:bg-blue-700 transition-all disabled:opacity-50"
-              >
-                {submitting ? "Processing…" : "Confirm GRN"}
-              </button>
-            </div>
           </div>
-
         </div>
       </div>
-
     </div>
   );
 };

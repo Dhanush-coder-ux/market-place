@@ -91,7 +91,7 @@ const AnalyticsDashboard = () => {
       <div className="p-6 space-y-5">
 
         {/* ── STAT CARDS ── */}
-        <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
+        <div className="flex flex-nowrap overflow-x-auto custom-scrollbar gap-4 pb-2 -mx-2 px-2 xl:grid xl:grid-cols-4 xl:overflow-visible xl:pb-0 xl:mx-0 xl:px-0 touch-pan-x">
           {[
             { title: "Daily Revenue", value: "₹8,750", change: "12%", positive: true, subtitle: "Daily since yesterday", icon: <IndianRupee className="w-5 h-5 text-blue-600" />, accent: "bg-blue-50" },
             { title: "Monthly Revenue", value: "₹2,40,500", change: "18%", positive: true, subtitle: "36 days since last month", icon: <TrendingUp className="w-5 h-5 text-violet-600" />, accent: "bg-violet-50" },
@@ -130,7 +130,7 @@ const AnalyticsDashboard = () => {
         </div>
       </div>
         {/* ── SALES PERFORMANCE LABEL ── */}
-        <h2 className="display-font text-base font-bold text-slate-600 tracking-wide uppercase fade-up fade-up-2">
+        <h2 className="display-font text-base font-semibold text-slate-600 tracking-wide uppercase fade-up fade-up-2">
           Sales Performance
         </h2>
 
@@ -189,8 +189,8 @@ const AnalyticsDashboard = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-xs text-slate-400">Today's Profit</p>
-                    <p className="display-font text-xl font-bold text-slate-800">₹2,580</p>
-                    <p className="text-xs text-emerald-500 font-semibold">+200 since yesterday · +8%</p>
+                    <p className="display-font text-xl font-semibold text-slate-800">₹2,580</p>
+                    <p className="text-xs text-emerald-500 font-medium">+200 since yesterday · +8%</p>
                   </div>
                 </div>
                 <div className="h-px bg-slate-100" />
@@ -210,7 +210,7 @@ const AnalyticsDashboard = () => {
                   <BarChart2 className="w-6 h-6 text-emerald-600" />
                 </div>
                 <div>
-                  <p className="display-font text-2xl font-bold text-emerald-500">28.5%</p>
+                  <p className="display-font text-2xl font-semibold text-emerald-500">28.5%</p>
                   <p className="text-xs text-slate-400">Improved</p>
                 </div>
               </div>
@@ -228,7 +228,7 @@ const AnalyticsDashboard = () => {
                 <div key={p.name}>
                   <div className="flex justify-between text-xs text-slate-500 mb-1">
                     <span className="truncate pr-2">{p.name}</span>
-                    <span className="font-semibold text-slate-700 shrink-0">₹{p.revenue.toLocaleString()}</span>
+                    <span className="font-medium text-slate-700 shrink-0">₹{p.revenue.toLocaleString()}</span>
                   </div>
                   <div className="w-full bg-slate-100 rounded-full h-1.5">
                     <div
@@ -344,7 +344,7 @@ const AnalyticsDashboard = () => {
                 <div key={item.label}>
                   <div className="flex justify-between text-xs mb-1.5">
                     <span className="text-slate-500">{item.label}</span>
-                    <span className="font-bold text-slate-700">{item.value}</span>
+                    <span className="font-semibold text-slate-700">{item.value}</span>
                   </div>
                   <div className="w-full bg-slate-100 rounded-full h-1.5">
                     <div className="h-1.5 rounded-full" style={{ width: `${item.bar}%`, background: item.color }} />

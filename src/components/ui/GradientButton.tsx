@@ -20,7 +20,7 @@ export const GradientButton: React.FC<ButtonProps> = ({
   ...props
 }) => {
   // Enhanced base styles with focus outlines and smooth scaling
-  const baseStyles = "group inline-flex items-center justify-center gap-2.5 px-5 py-2.5 rounded-xl font-semibold text-[14px] transition-all duration-300 ease-out active:scale-[0.97] disabled:opacity-50 disabled:pointer-events-none focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2";
+  const baseStyles = "group inline-flex items-center justify-center gap-2.5 px-5 py-2.5 rounded-xl font-semibold text-[14px] whitespace-nowrap overflow-hidden transition-all duration-300 ease-out active:scale-[0.97] disabled:opacity-50 disabled:pointer-events-none focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2";
 
   // Ultra-premium modern variants with micro-interactions
   const variants = {

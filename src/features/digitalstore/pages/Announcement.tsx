@@ -513,9 +513,9 @@ export default function AnnouncementsPage() {
                       <button
                         onClick={() => { setStatus("Draft"); setSent(false); }}
                         disabled={!text.trim()}
-                        className={`px-4 py-2 rounded-xl border-[1.5px] border-slate-200 bg-white text-[13px] font-semibold text-slate-600 transition-all duration-150 ${text.trim() ? "cursor-pointer hover:bg-slate-50" : "cursor-not-allowed opacity-40"}`}
+                        className={`px-4 py-2 rounded-xl border-[1.5px] border-slate-200 bg-white text-[13px] font-semibold text-slate-600 transition-all duration-150 whitespace-nowrap overflow-hidden flex items-center justify-center ${text.trim() ? "cursor-pointer hover:bg-slate-50" : "cursor-not-allowed opacity-40"}`}
                       >
-                        Save Draft
+                        <span className="truncate">Save Draft</span>
                       </button>
 
                       <button

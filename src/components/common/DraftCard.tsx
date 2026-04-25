@@ -47,7 +47,7 @@ export const DraftCard: React.FC<DraftCardProps> = ({
             <Icon size={24} strokeWidth={2} />
           </div>
           {typeTag && (
-            <span className="px-3 py-1.5 rounded-xl bg-blue-600 text-white text-[9px] font-black uppercase tracking-widest shadow-lg shadow-blue-100 animate-in fade-in zoom-in duration-300">
+            <span className="px-3 py-1.5 rounded-xl bg-blue-600 text-white text-[9px] font-bold uppercase tracking-widest shadow-lg shadow-blue-100 animate-in fade-in zoom-in duration-300">
               {typeTag}
             </span>
           )}
@@ -71,22 +71,22 @@ export const DraftCard: React.FC<DraftCardProps> = ({
       </div>
 
       <div className="space-y-1.5">
-        <h4 className="text-xl font-black text-slate-800 tracking-tight leading-tight line-clamp-1">
+        <h4 className="text-xl font-semibold text-slate-800 tracking-tight leading-tight line-clamp-1">
           {title || "Untitled Draft"}
         </h4>
-        <div className="flex items-center gap-2 text-slate-400 text-[10px] font-black uppercase tracking-[0.15em]">
+        <div className="flex items-center gap-2 text-slate-400 text-[10px] font-medium uppercase tracking-[0.15em]">
           <Clock size={12} strokeWidth={3} />
           {formattedTime}
         </div>
       </div>
 
       <div className="mt-8 pt-6 border-t border-slate-50 flex items-center justify-between">
-        <span className="px-3 py-1.5 rounded-lg bg-slate-50 text-[9px] font-black text-slate-500 uppercase tracking-widest border border-slate-100">
+        <span className="px-3 py-1.5 rounded-lg bg-slate-50 text-[9px] font-semibold text-slate-500 uppercase tracking-widest border border-slate-100">
           {badgeText}
         </span>
         <button 
           onClick={onComplete}
-          className="text-[11px] font-black text-blue-600 hover:text-blue-700 transition-colors flex items-center gap-1.5 uppercase tracking-widest group/btn"
+          className="text-[11px] font-semibold text-blue-600 hover:text-blue-700 transition-colors flex items-center gap-1.5 uppercase tracking-widest group/btn"
         >
           {actionText} <span className="transition-transform group-hover/btn:translate-x-1">→</span>
         </button>

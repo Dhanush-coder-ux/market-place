@@ -5,6 +5,7 @@ import Sidebar from "./Sidebar";
 import Title from "../common/Title"
 import { sidebarLinks } from "@/utils/constants";
 import { useHeader } from "@/context/HeaderContext";
+import MobileBottomBar from "./MobileBottomBar";
 
 const getPageHeaderInfo = (pathname: string) => {
   const routes: Record<string, { title: string; subtitle?: string; icon?: any }> = {
@@ -243,16 +244,19 @@ const MainLayout = () => {
       <Navbar />
       
       <div className="flex flex-1 overflow-hidden">
-        <Sidebar links={sidebarLinks} />
+        {/* Sidebar — hidden on mobile, visible on md+ */}
+        <div className="hidden md:flex">
+          <Sidebar links={sidebarLinks} />
+        </div>
         
-        <main className="flex-1 flex flex-col min-w-0 relative">
-          <div className={`flex-1 overflow-y-auto custom-scrollbar relative ${isStorePage ? "p-0" : "p-1 md:p-2 lg:p-4"}`}>
+        <main className="flex-1 flex flex-col min-w-0 relative overflow-hidden">
+          <div className={`flex-1 overflow-y-auto custom-scrollbar relative ${isStorePage ? "p-0 pb-20 md:pb-0" : "p-2 md:p-3 lg:p-4 pb-36 md:pb-0"} ${!bottomActions && "pb-20 md:pb-0"}`}>
             
             {!isStorePage && (
-              <div className="mb-4">
+              <div className="mb-2 sm:mb-4">
                 <Breadcrumb />
                
-                <div className="mt-4">
+                <div className="mt-2 sm:mt-4">
                   <Title title={title} subtitle={subtitle} icon={icon} actions={actions} />
                 </div>
               </div>
@@ -263,17 +267,23 @@ const MainLayout = () => {
 
           {/* Global Bottom Action Bar (Glassmorphism) */}
           {bottomActions && (
-            <div className="h-12 flex-shrink-0 flex items-center justify-end px-8 gap-4
-              bg-white/10 backdrop-blur-3xl
-              border-t border-white/20
-              shadow-[0_-8px_30px_rgba(0,0,0,0.1)]
-              z-[60] animate-in slide-in-from-bottom-full duration-500">
-              
-              {bottomActions}
+            <div className="flex-shrink-0 h-16 md:h-12 flex items-center justify-end px-4 md:px-8 gap-3
+              fixed bottom-[calc(60px+env(safe-area-inset-bottom))] left-0 right-0 
+              md:relative md:bottom-0
+              bg-white/95 backdrop-blur-xl
+              border-t border-slate-200/80
+              shadow-[0_-8px_30px_rgba(0,0,0,0.08)]
+              z-[65] animate-in slide-in-from-bottom-full duration-500">
+              <div className="flex items-center gap-2 w-full md:w-auto justify-end">
+                {bottomActions}
+              </div>
             </div>
 )}
         </main>
       </div>
+
+      {/* Mobile Bottom Navigation Bar */}
+      <MobileBottomBar />
     </div>
   );
 };

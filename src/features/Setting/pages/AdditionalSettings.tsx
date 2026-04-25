@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import DropDown from "@/components/common/Dropdown";
 import { ReusableSelect } from "@/components/ui/ReusableSelect";
 import { SelectPickerModal } from "../components/SelectPickerModal";
+import { useMediaQuery } from "@/hooks/use-media-query";
 
 export type SettingType = "string" | "boolean" | "number" | "date" | "select";
 
@@ -186,6 +187,8 @@ const dropdownOptions = selectedCategory
     }
   };
 
+  const isMobile = useMediaQuery("(max-width: 768px)");
+
   return (
     <>
       {/* Modal — rendered at root level so it overlays everything */}
@@ -197,34 +200,43 @@ const dropdownOptions = selectedCategory
         />
       )}
 
-      <div className="w-full bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+      <div className="w-full bg-white md:rounded-2xl border-y md:border border-slate-200 shadow-sm overflow-hidden mb-20 md:mb-0">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-5 border-b border-slate-50 bg-slate-50/30">
+        <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100 bg-slate-50/30">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-indigo-100 rounded-xl text-indigo-600">
+            <div className="p-2 bg-blue-100 rounded-xl text-blue-600">
               <Settings2 size={20} />
             </div>
             <div>
-              <h2 className="heading-section text-slate-800">{title}</h2>
-              <p className="text-xs text-slate-500">{description}</p>
+              <h2 className="text-[15px] font-semibold text-slate-800">{title}</h2>
+              <p className="text-xs text-slate-500 mt-0.5">{description}</p>
             </div>
           </div>
           <Button
             onClick={addSetting}
             variant="outline"
-            className="border-indigo-200 text-indigo-600 hover:bg-indigo-50 gap-2 h-9 text-xs font-bold"
+            className="border-blue-200 text-blue-600 hover:bg-blue-50 gap-2 h-9 text-xs font-semibold shrink-0 hidden md:flex"
           >
             <Plus size={14} /> Add Row
           </Button>
+          <button
+            onClick={addSetting}
+            className="w-9 h-9 flex items-center justify-center bg-blue-50 text-blue-600 rounded-xl md:hidden"
+          >
+            <Plus size={18} />
+          </button>
         </div>
 
-        <div className="p-6 space-y-3">
+        <div className="p-4 md:p-6 space-y-3">
           {settings.map((setting) => (
             <div
               key={setting.id}
-              className="flex items-center gap-3 p-2 rounded-xl border border-transparent hover:border-slate-100 hover:bg-slate-50/50 transition-all group"
+              className="flex flex-col md:flex-row md:items-center gap-3 p-3 md:p-2 rounded-xl border border-slate-100 md:border-transparent md:hover:border-slate-100 md:hover:bg-slate-50/50 transition-all group"
             >
               <div className="flex-[0.8]">
+                <div className="flex items-center justify-between mb-1.5 md:hidden">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Config Key</span>
+                </div>
                 <input
                   type="text"
                   placeholder="CONFIG_KEY"
@@ -236,21 +248,27 @@ const dropdownOptions = selectedCategory
                       e.target.value.toUpperCase().replace(/\s+/g, "_")
                     )
                   }
-                  className="w-full h-10 px-3 py-2 text-xs font-mono font-bold bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
+                  className="w-full h-10 px-3 py-2 text-xs font-mono font-semibold bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                 />
               </div>
 
               <div className="flex-1">
+                <div className="flex items-center justify-between mb-1.5 md:hidden">
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Value ({setting.type})</span>
+                </div>
                 {renderValueInput(setting)}
               </div>
 
-              <div className="flex items-center">
+              <div className="flex items-center justify-end border-t border-slate-50 mt-2 pt-2 md:border-none md:mt-0 md:pt-0">
                 <DropDown
                   triggerIcon={
-                    <MoreVertical
-                      size={18}
-                      className="text-slate-400 group-hover:text-slate-600"
-                    />
+                    <div className="flex items-center gap-2 px-3 py-1.5 md:p-0 rounded-lg bg-slate-50 md:bg-transparent">
+                      <span className="text-[10px] font-semibold text-slate-500 md:hidden uppercase">Settings</span>
+                      <MoreVertical
+                        size={18}
+                        className="text-slate-400 group-hover:text-slate-600"
+                      />
+                    </div>
                   }
                   label="Data Type"
                   items={[
@@ -265,19 +283,41 @@ const dropdownOptions = selectedCategory
               </div>
             </div>
           ))}
+
+          {settings.length === 0 && (
+            <div className="py-12 flex flex-col items-center justify-center text-center">
+              <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center mb-4 border border-slate-100">
+                <Settings2 size={32} className="text-slate-300" />
+              </div>
+              <p className="text-sm font-semibold text-slate-900">No settings defined</p>
+              <p className="text-xs text-slate-500 mt-1">Click "Add Row" to create your first configuration key.</p>
+            </div>
+          )}
         </div>
 
-        {/* Footer */}
-        <div className="px-6 py-4 bg-slate-50/50 border-t border-slate-100 flex justify-between items-center">
-          <p className="text-[10px] text-slate-400 font-medium italic" />
+        {/* Footer (Desktop) */}
+        <div className="hidden md:flex px-6 py-4 bg-slate-50/50 border-t border-slate-100 justify-between items-center">
+          <p className="text-[10px] text-slate-400 font-medium italic">Changes will be applied system-wide.</p>
           <Button
             onClick={() => onSave?.(settings)}
-            className="bg-blue-600 hover:bg-blue-700 gap-2 px-6 h-9 text-xs font-bold shadow-md shadow-blue-100"
+            className="bg-blue-600 hover:bg-blue-700 gap-2 px-6 h-9 text-xs font-semibold shadow-md shadow-blue-100"
           >
             <Save size={14} /> Save Configuration
           </Button>
         </div>
       </div>
+
+      {/* Mobile Fixed Action Bar */}
+      {isMobile && (
+        <div className="fixed bottom-[72px] left-0 right-0 px-4 pt-4 pb-4 bg-white/95 backdrop-blur-3xl border-t border-slate-200 z-[100] flex gap-3 shadow-[0_-15px_45px_rgba(0,0,0,0.12)]">
+          <Button
+            onClick={() => onSave?.(settings)}
+            className="flex-1 bg-blue-600 hover:bg-blue-700 text-white h-12 rounded-2xl font-bold shadow-lg shadow-blue-200 flex items-center justify-center gap-2"
+          >
+            <Save size={18} /> Save Settings
+          </Button>
+        </div>
+      )}
     </>
   );
 };

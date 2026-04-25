@@ -124,10 +124,10 @@ export const Navbar = () => {
               <Store className="w-4 h-4" />
             </div>
             <div className="flex flex-col items-start text-left hidden sm:flex">
-              <span className="text-slate-800 font-bold text-sm leading-tight">
+              <span className="text-slate-800 font-semibold text-sm leading-tight">
                 {selectedStore.name}
               </span>
-              <span className="text-[11px] font-medium text-slate-400 leading-tight">
+              <span className="text-[11px] font-normal text-slate-400 leading-tight">
                 Switch Workspace
               </span>
             </div>

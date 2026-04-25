@@ -275,13 +275,15 @@ const InventoryPage = () => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6 bg-slate-50 min-h-screen">
+    <div className="space-y-6 bg-slate-50 min-h-screen">
       
-      <div className="flex gap-x-2">
+      {/* Stats Section */}
+      <div className="flex flex-nowrap overflow-x-auto custom-scrollbar gap-3 pb-2 -mx-2 px-2 sm:grid sm:grid-cols-2 lg:grid-cols-4 sm:overflow-visible sm:pb-0 sm:mx-0 sm:px-0 touch-pan-x">
         <StatCard 
           icon={Package} 
           label="Total Inventory Items" 
           value={inventory.length.toString()} 
+          className="flex-1"
         />
         <StatCard 
           icon={AlertCircle} 
@@ -291,6 +293,7 @@ const InventoryPage = () => {
             return stock > 0 && stock <= 15;
           }).length.toString()} 
           iconBg="bg-amber-50" iconColor="text-amber-600"
+          className="flex-1"
         />
       </div>
 
@@ -323,7 +326,7 @@ const InventoryPage = () => {
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse whitespace-nowrap">
               <thead>
-                <tr className="bg-white border-b border-slate-200 text-[11px] uppercase tracking-wider text-slate-500 font-bold">
+                <tr className="bg-white border-b border-slate-200 text-[11px] uppercase tracking-wider text-slate-500 font-semibold">
                   <th className="px-6 py-4 w-14"></th>
                   <th className="px-6 py-4 min-w-[260px]">Product Details</th>
                   <th className="px-6 py-4">Category & Supplier</th>

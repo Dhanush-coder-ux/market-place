@@ -149,8 +149,8 @@
   * {
     @apply border-border outline-ring/50;
   }
-  body {
-    @apply bg-background text-foreground font-sans;
+  html, body {
+    @apply bg-background text-foreground font-sans overflow-x-hidden max-w-full;
   }
   @theme {
     --font-sans:  "Poppins", sans-serif;
@@ -218,10 +218,11 @@
      .heading-label   → Small label / compact card header H4
    ─────────────────────────────────────────────────────────────────────────── */
 @layer utilities {
-  .heading-page    { @apply text-3xl font-bold; }
-  .heading-section { @apply text-xl font-semibold; }
-  .heading-sub     { @apply text-lg font-medium; }
-  .heading-label   { @apply text-sm font-medium; }
+  /* Softened typography — semibold page titles, medium sections */
+  .heading-page    { @apply text-xl font-semibold tracking-tight; }
+  .heading-section { @apply text-base font-semibold tracking-tight; }
+  .heading-sub     { @apply text-sm font-medium; }
+  .heading-label   { @apply text-xs font-medium; }
 }
 
 /* --- DASHBOARD FONTS & ANIMATIONS --- */

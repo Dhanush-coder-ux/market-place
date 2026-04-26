@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import {
   Save, 
@@ -208,34 +208,6 @@ const GrnForm = () => {
     }
   }, [id, getData, searchParams]);
 
-  // ── Header actions ──
-
-  useEffect(() => {
-    setBottomActions(
-      <div className="flex items-center gap-3 animate-in fade-in slide-in-from-right-4 duration-300">
-        {!id && (
-          <button 
-            type="button"
-            onClick={handleSaveDraft}
-            className="px-4 h-8 rounded-xl border border-blue-100 text-blue-600 font-bold text-xs bg-blue-50/50 hover:bg-blue-100 transition-all flex items-center gap-2 whitespace-nowrap overflow-hidden"
-          >
-            <Bookmark size={14} className="shrink-0" />
-            <span className="truncate">Save Draft</span>
-          </button>
-        )}
-        <GradientButton 
-          icon={submitting ? <Loader className="h-4 w-4" /> : <Save size={16} />} 
-          onClick={handleSaveGRN} 
-          disabled={submitting}
-          className="rounded-xl shadow-md text-xs px-8 h-8 flex items-center"
-        >
-          {submitting ? "Processing..." : (id ? "Update GRN" : "Confirm GRN")}
-        </GradientButton>
-      </div>
-    );
-    return () => setBottomActions(null);
-  }, [setBottomActions, grnDetails, products, charges, payment, submitting, id]);
-
   // ── Handlers ──
 
   const handleProductChange = (index: number, field: string, value: any) => {
@@ -265,7 +237,7 @@ const GrnForm = () => {
     if (products.length > 1) setProducts(prev => prev.filter((_, i) => i !== index));
   };
 
-  const handleSaveDraft = () => {
+  const handleSaveDraft = useCallback(() => {
     const savedDrafts = JSON.parse(localStorage.getItem("purchase_drafts") || "[]");
     const draftId = searchParams.get("draftId") || Date.now().toString();
     const newDraft = {
@@ -284,9 +256,9 @@ const GrnForm = () => {
     if (!searchParams.get("draftId")) {
       navigate(`?draftId=${draftId}`, { replace: true });
     }
-  };
+  }, [grnDetails, products, charges, payment, supplierDetails, searchParams, navigate, showToast]);
 
-  const handleSaveGRN = async () => {
+  const handleSaveGRN = useCallback(async () => {
     if (!grnDetails.supplier) { showToast("Please select a supplier.", "error"); return; }
     if (!products[0]?.name)   { showToast("Please add at least one product.", "error"); return; }
 
@@ -359,7 +331,36 @@ const GrnForm = () => {
     } finally {
       setSubmitting(false);
     }
-  };
+  }, [grnDetails, products, charges, payment, supplierDetails, costMethod, stats, id, postData, putData, navigate, showToast, searchParams]);
+
+  // ── Header actions ──
+
+  // Stable bottom actions — only re-render when submitting state or id changes
+  useEffect(() => {
+    setBottomActions(
+      <div className="flex items-center gap-3 animate-in fade-in slide-in-from-right-4 duration-300">
+        {!id && (
+          <button 
+            type="button"
+            onClick={handleSaveDraft}
+            className="px-4 h-8 rounded-xl border border-blue-100 text-blue-600 font-bold text-xs bg-blue-50/50 hover:bg-blue-100 transition-all flex items-center gap-2 whitespace-nowrap overflow-hidden"
+          >
+            <Bookmark size={14} className="shrink-0" />
+            <span className="truncate">Save Draft</span>
+          </button>
+        )}
+        <GradientButton 
+          icon={submitting ? <Loader className="h-4 w-4" /> : <Save size={16} />} 
+          onClick={handleSaveGRN} 
+          disabled={submitting}
+          className="rounded-xl shadow-md text-xs px-8 h-8 flex items-center"
+        >
+          {submitting ? "Processing..." : (id ? "Update GRN" : "Confirm GRN")}
+        </GradientButton>
+      </div>
+    );
+    return () => setBottomActions(null);
+  }, [setBottomActions, submitting, id, handleSaveDraft, handleSaveGRN]);
 
   // ─────────────────────────────────────────────────────────────────────────────
   // Render

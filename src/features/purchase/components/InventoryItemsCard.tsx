@@ -17,7 +17,7 @@ import {
   TrendingUp,
   Package
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useCallback, memo } from "react";
 import { SearchSelect } from "@/components/inputbuilders/SearchSelect";
 import { inventoryApi } from "@/services/api/inventory";
 import { ReusableSelect } from "@/components/ui/ReusableSelect";
@@ -37,7 +37,7 @@ interface InventoryItemsCardProps {
   removeProduct: (index: number) => void;
 }
 
-export const InventoryItemsCard = ({
+export const InventoryItemsCard = memo(function InventoryItemsCard({
   products,
   stats,
   costMethod,
@@ -48,7 +48,7 @@ export const InventoryItemsCard = ({
   setProducts,
   addProduct,
   removeProduct
-}: InventoryItemsCardProps) => {
+}: InventoryItemsCardProps) {
   const [expandedBreakdown, setExpandedBreakdown] = useState<Set<number>>(new Set());
   const [expandedSettings, setExpandedSettings] = useState<Set<number>>(new Set());
   const [collapsedProducts, setCollapsedProducts] = useState<Set<number>>(new Set());
@@ -64,26 +64,32 @@ export const InventoryItemsCard = ({
   });
   const [selectedVariants, setSelectedVariants] = useState<Set<string>>(new Set());
 
-  const toggleBreakdown = (index: number) => {
-    const next = new Set(expandedBreakdown);
-    if (next.has(index)) next.delete(index);
-    else next.add(index);
-    setExpandedBreakdown(next);
-  };
+  const toggleBreakdown = useCallback((index: number) => {
+    setExpandedBreakdown(prev => {
+      const next = new Set(prev);
+      if (next.has(index)) next.delete(index);
+      else next.add(index);
+      return next;
+    });
+  }, []);
 
-  const toggleSettings = (index: number) => {
-    const next = new Set(expandedSettings);
-    if (next.has(index)) next.delete(index);
-    else next.add(index);
-    setExpandedSettings(next);
-  };
+  const toggleSettings = useCallback((index: number) => {
+    setExpandedSettings(prev => {
+      const next = new Set(prev);
+      if (next.has(index)) next.delete(index);
+      else next.add(index);
+      return next;
+    });
+  }, []);
 
-  const toggleCollapse = (index: number) => {
-    const next = new Set(collapsedProducts);
-    if (next.has(index)) next.delete(index);
-    else next.add(index);
-    setCollapsedProducts(next);
-  };
+  const toggleCollapse = useCallback((index: number) => {
+    setCollapsedProducts(prev => {
+      const next = new Set(prev);
+      if (next.has(index)) next.delete(index);
+      else next.add(index);
+      return next;
+    });
+  }, []);
 
   const confirmVariants = () => {
     if (selectedVariants.size === 0) {
@@ -852,4 +858,4 @@ export const InventoryItemsCard = ({
       </div>
     </div>
   );
-};
+});

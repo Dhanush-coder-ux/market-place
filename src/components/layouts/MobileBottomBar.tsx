@@ -152,7 +152,7 @@ const NavigationDialog = ({
     : ALL_NAV_GROUPS;
 
   return (
-    <AnimatePresence>
+    <AnimatePresence initial={false}>
       {open && (
         <>
           {/* Backdrop */}
@@ -323,10 +323,10 @@ const MobileBottomBar = () => {
       />
 
       <motion.nav
-        initial={{ y: 80 }}
+        initial={false}
         animate={{ y: 0 }}
         transition={{ type: "spring", damping: 24, stiffness: 260, delay: 0.1 }}
-        className="fixed bottom-0 left-0 right-0 z-[70] md:hidden"
+        className="fixed bottom-0 left-0 right-0 z-[70] md:hidden gpu-layer"
       >
         {/* Frosted glass bar */}
         <div className="bg-white/90 backdrop-blur-xl border-t border-slate-200/80 shadow-[0_-4px_24px_rgba(0,0,0,0.08)]">

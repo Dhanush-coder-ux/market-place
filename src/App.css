@@ -1,5 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800&family=Outfit:wght@600;700;800&display=swap');
+/* Fonts are now loaded via <link> in index.html — not @import — to prevent render blocking */
 @import "tailwindcss";
 @import "tw-animate-css";
 
@@ -148,13 +147,51 @@
 @layer base {
   * {
     @apply border-border outline-ring/50;
+    /* Remove tap highlight color on Android WebView */
+    -webkit-tap-highlight-color: transparent;
+    /* Prevent text selection flicker on fast taps */
+    -webkit-touch-callout: none;
   }
   html, body {
     @apply bg-background text-foreground font-sans overflow-x-hidden max-w-full;
+    /* Prevent elastic scrolling on the root (Flutter WebView handles this) */
+    overscroll-behavior: none;
   }
   @theme {
     --font-sans:  "Poppins", sans-serif;
-    /* --font-mono: "Roboto Mono", monospace; */
+  }
+}
+
+/* ─── WebView / Mobile Scroll Performance ────────────────────────────────────
+   These styles ensure native-feeling scroll in Flutter WebView.
+   Apply .mobile-scroll to any vertically-scrollable container.
+─────────────────────────────────────────────────────────────────────────── */
+@layer utilities {
+  .mobile-scroll {
+    /* Smooth momentum scrolling on iOS */
+    -webkit-overflow-scrolling: touch;
+    /* Only allow vertical panning — critical for WebView gesture pass-through */
+    touch-action: pan-y;
+    /* Prevent scroll chaining to the WebView's outer scroll */
+    overscroll-behavior-y: contain;
+  }
+
+  /* Apply to fixed bottom bars for GPU compositing (no repaint) */
+  .gpu-layer {
+    will-change: transform;
+    transform: translateZ(0);
+    backface-visibility: hidden;
+  }
+
+  /* Reduce blur cost on low-end devices — use sparingly */
+  .backdrop-mobile {
+    /* Full blur on desktop, cheaper solid bg on mobile */
+    backdrop-filter: blur(12px);
+  }
+  @media (max-width: 768px) {
+    .backdrop-mobile {
+      backdrop-filter: blur(4px);
+    }
   }
 }
 

@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import {
   Save, 
@@ -204,17 +204,21 @@ const PurchaseForm = () => {
   }, [setBottomActions, purchaseDetails, products, charges, payment, submitting, id]);
 
   // --- Handlers ---
-  const handleProductChange = (index: number, field: string, value: any) => {
-    const next = [...products];
-    (next[index] as any)[field] = value;
-    setProducts(next);
-  };
+  const handleProductChange = useCallback((index: number, field: string, value: any) => {
+    setProducts(prev => {
+      const next = [...prev];
+      (next[index] as any)[field] = value;
+      return next;
+    });
+  }, []);
 
-  const updateProductFields = (index: number, updates: Partial<ProductItem>) => {
-    const next = [...products];
-    next[index] = { ...next[index], ...updates };
-    setProducts(next);
-  };
+  const updateProductFields = useCallback((index: number, updates: Partial<ProductItem>) => {
+    setProducts(prev => {
+      const next = [...prev];
+      next[index] = { ...next[index], ...updates };
+      return next;
+    });
+  }, []);
 
   const addProduct = () => {
     setProducts([...products, {

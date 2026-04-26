@@ -47,6 +47,8 @@ export interface ProductItem {
   expiryDate: string;
   manufacturingDate: string;
   batchTracking: boolean;
+  serialTracking: boolean;
+  serialNumbers: string;
   batchNum: string;
   sku: string;
   variant: string;
@@ -101,6 +103,7 @@ const GrnForm = () => {
       marginPercent: "", marginAmount: "", marginType: "percent",
       unit: "pc", taxGst: 18, storageLoc: "", reorderPoint: "",
       expiryDate: "", manufacturingDate: "", batchTracking: false,
+      serialTracking: false, serialNumbers: "",
       batchNum: "", sku: "", variant: "", size: "",
     },
   ]);
@@ -210,19 +213,21 @@ const GrnForm = () => {
 
   // ── Handlers ──
 
-  const handleProductChange = (index: number, field: string, value: any) => {
-    const next = [...products];
-    (next[index] as any)[field] = value;
-    setProducts(next);
-  };
+  const handleProductChange = useCallback((index: number, field: string, value: any) => {
+    setProducts(prev => {
+      const next = [...prev];
+      (next[index] as any)[field] = value;
+      return next;
+    });
+  }, []);
 
-  const updateProductFields = (index: number, updates: Partial<ProductItem>) => {
+  const updateProductFields = useCallback((index: number, updates: Partial<ProductItem>) => {
     setProducts(prev => {
       const next = [...prev];
       next[index] = { ...next[index], ...updates };
       return next;
     });
-  };
+  }, []);
 
   const addProduct = () =>
     setProducts(prev => [...prev, {
@@ -230,6 +235,7 @@ const GrnForm = () => {
       marginPercent: "", marginAmount: "", marginType: "percent",
       unit: "pc", taxGst: 18, storageLoc: "", reorderPoint: "",
       expiryDate: "", manufacturingDate: "", batchTracking: false,
+      serialTracking: false, serialNumbers: "",
       batchNum: "", sku: "", variant: "", size: "",
     }]);
 

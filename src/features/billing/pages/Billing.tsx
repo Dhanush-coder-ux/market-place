@@ -174,7 +174,7 @@ const Billing = () => {
   }, []);
 
   return (
-    <div className="flex flex-col h-[calc(100vh-2rem)] gap-4">
+    <div className="flex flex-col lg:h-[calc(100vh-2rem)] gap-4">
 
       {/* Customer Details Section */}
       <div className="shrink-0 bg-white rounded-2xl border border-slate-200 p-5 shadow-sm flex flex-col md:flex-row gap-6">
@@ -285,7 +285,7 @@ const Billing = () => {
       </div>
 
       {/* Main Split Content Area */}
-      <div className="flex flex-col lg:flex-row flex-1 overflow-hidden gap-6 pb-4">
+      <div className="flex flex-col lg:flex-row flex-1 lg:overflow-hidden gap-6 pb-4">
 
         {/* Left: Line-item table */}
         <div className="flex-1 overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-sm">
@@ -293,7 +293,7 @@ const Billing = () => {
         </div>
 
         {/* Right: Invoice Summary & Payment */}
-        <div className="w-full lg:w-[380px] shrink-0 h-full overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+        <div className="w-full lg:w-[380px] shrink-0 lg:h-full overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-sm">
           <BillingHeader
             items={items}
             customerData={customerData}

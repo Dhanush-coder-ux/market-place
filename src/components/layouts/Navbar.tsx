@@ -119,8 +119,8 @@ export const Navbar = () => {
       {/* LEFT - Store Selector */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <button className="flex items-center gap-3 py-1.5 px-2 hover:bg-slate-100 rounded-xl transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500/20 group">
-            <div className="w-9 h-9 flex items-center justify-center bg-blue-50 rounded-lg text-blue-600 border border-blue-100 group-hover:bg-blue-100 transition-colors">
+          <button className="flex items-center gap-3 py-1.5 px-2 md:hover:bg-slate-100 rounded-xl md:transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500/20 group">
+            <div className="w-9 h-9 flex items-center justify-center bg-blue-50 rounded-lg text-blue-600 border border-blue-100 md:group-hover:bg-blue-100 md:transition-colors">
               <Store className="w-4 h-4" />
             </div>
             <div className="flex flex-col items-start text-left hidden sm:flex">
@@ -131,7 +131,7 @@ export const Navbar = () => {
                 Switch Workspace
               </span>
             </div>
-            <ChevronDown className="w-4 h-4 text-slate-400 group-hover:text-slate-600 transition-colors hidden sm:block" />
+            <ChevronDown className="w-4 h-4 text-slate-400 md:group-hover:text-slate-600 md:transition-colors hidden sm:block" />
           </button>
         </DropdownMenuTrigger>
 
@@ -144,8 +144,8 @@ export const Navbar = () => {
             <DropdownMenuItem
               key={store.id}
               onClick={() => setSelectedStore(store)}
-              className={`flex items-center justify-between cursor-pointer rounded-xl px-2.5 py-2 my-0.5 transition-colors ${
-                selectedStore.id === store.id ? "bg-blue-50 text-blue-700" : "hover:bg-slate-50 text-slate-700"
+              className={`flex items-center justify-between cursor-pointer rounded-xl px-2.5 py-2 my-0.5 md:transition-colors ${
+                selectedStore.id === store.id ? "bg-blue-50 text-blue-700" : "md:hover:bg-slate-50 text-slate-700"
               }`}
             >
               <div className="flex items-center gap-3">
@@ -174,12 +174,12 @@ export const Navbar = () => {
       {/* CENTER - Global Search (Command Palette Style) */}
       <div className="relative flex-1 max-w-lg mx-4 lg:mx-8 hidden md:block" ref={searchRef}>
         <div className="relative group">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 md:group-focus-within:text-blue-500 md:transition-colors" />
           <input
             ref={inputRef}
             type="text"
             placeholder="Search pages, orders, products..."
-            className="w-full pl-10 pr-12 py-2 bg-slate-100/70 border border-slate-200/60 rounded-full text-sm font-medium text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white transition-all shadow-sm"
+            className="w-full pl-10 pr-12 py-2 bg-slate-100/70 border border-slate-200/60 rounded-full text-sm font-medium text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white md:transition-all shadow-sm"
             value={searchQuery}
             onChange={(e) => {
               setSearchQuery(e.target.value);
@@ -209,17 +209,17 @@ export const Navbar = () => {
                     <button
                       key={route.path}
                       onClick={() => handleNavigate(route.path)}
-                      className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-blue-50 text-sm group transition-colors"
+                      className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl md:hover:bg-blue-50 text-sm group md:transition-colors"
                     >
                       <div className="flex items-center gap-3">
-                        <div className="p-1.5 rounded-md bg-slate-100 group-hover:bg-white group-hover:text-blue-600 group-hover:shadow-sm transition-all">
+                        <div className="p-1.5 rounded-md bg-slate-100 md:group-hover:bg-white md:group-hover:text-blue-600 md:group-hover:shadow-sm md:transition-all">
                           <Icon className="w-4 h-4 text-slate-500 group-hover:text-blue-600" />
                         </div>
                         <span className="text-slate-700 group-hover:text-blue-700 font-semibold">
                           {route.name}
                         </span>
                       </div>
-                      <ArrowRight className="w-4 h-4 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 text-blue-600 transition-all duration-200" />
+                      <ArrowRight className="w-4 h-4 opacity-0 -translate-x-2 md:group-hover:opacity-100 md:group-hover:translate-x-0 text-blue-600 md:transition-all md:duration-200" />
                     </button>
                   );
                 })}
@@ -243,7 +243,7 @@ export const Navbar = () => {
         {/* Create Store Button (Hidden on very small screens) */}
         <Link 
           to={'/create-digital-store'} 
-          className="hidden sm:flex items-center gap-1.5 text-sm font-semibold text-slate-600 px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 hover:text-blue-600 hover:border-blue-200 transition-all shadow-sm"
+          className="hidden sm:flex items-center gap-1.5 text-sm font-semibold text-slate-600 px-3 py-1.5 rounded-lg border border-slate-200 bg-white md:hover:bg-slate-50 md:hover:text-blue-600 md:hover:border-blue-200 md:transition-all shadow-sm"
         >
           <Plus className="w-4 h-4" />
           <span>Digital Store</span>
@@ -251,13 +251,13 @@ export const Navbar = () => {
 
         {/* Action Icons */}
         <div className="flex items-center gap-1 sm:gap-2">
-          <button className="relative p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700 rounded-full transition-colors">
+          <button className="relative p-2 text-slate-400 md:hover:bg-slate-100 md:hover:text-slate-700 rounded-full md:transition-colors">
             <Bell className="w-5 h-5" />
             <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-rose-500 rounded-full border-2 border-white"></span>
           </button>
           <Link to={'/profile'}>
-          <button className="p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700 rounded-full transition-colors group">
-            <Settings className="w-5 h-5 group-hover:rotate-45 transition-transform duration-300" />
+          <button className="p-2 text-slate-400 md:hover:bg-slate-100 md:hover:text-slate-700 rounded-full md:transition-colors group">
+            <Settings className="w-5 h-5 md:group-hover:rotate-45 md:transition-transform md:duration-300" />
           </button>
           </Link>
         </div>
@@ -268,7 +268,7 @@ export const Navbar = () => {
         {/* Profile Avatar */}
         <Link
           to="/profile"
-          className="relative w-9 h-9 rounded-full p-0.5 bg-gradient-to-tr from-indigo-500 to-fuchsia-500 hover:scale-105 transition-transform cursor-pointer shadow-md"
+          className="relative w-9 h-9 rounded-full p-0.5 bg-gradient-to-tr from-indigo-500 to-fuchsia-500 md:hover:scale-105 md:transition-transform cursor-pointer shadow-md"
         >
           <div className="w-full h-full bg-white rounded-full p-0.5">
             <img 

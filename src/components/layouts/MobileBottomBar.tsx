@@ -161,7 +161,7 @@ const NavigationDialog = ({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
+            transition={{ duration: 0.15 }}
             className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[80]"
             onClick={onClose}
           />
@@ -172,7 +172,7 @@ const NavigationDialog = ({
             initial={{ y: "100%" }}
             animate={{ y: 0 }}
             exit={{ y: "100%" }}
-            transition={{ type: "spring", damping: 28, stiffness: 300 }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
             className="fixed bottom-0 left-0 right-0 z-[90] bg-white rounded-t-2xl shadow-2xl max-h-[85vh] flex flex-col"
           >
             {/* Handle bar */}
@@ -325,7 +325,7 @@ const MobileBottomBar = () => {
       <motion.nav
         initial={false}
         animate={{ y: 0 }}
-        transition={{ type: "spring", damping: 24, stiffness: 260, delay: 0.1 }}
+        transition={{ duration: 0.3, ease: "easeOut", delay: 0.05 }}
         className="fixed bottom-0 left-0 right-0 z-[70] md:hidden gpu-layer"
       >
         {/* Frosted glass bar */}
@@ -356,7 +356,7 @@ const MobileBottomBar = () => {
                     <motion.div
                       layoutId="bottomBarIndicator"
                       className="absolute inset-0 bg-blue-50 rounded-xl"
-                      transition={{ type: "spring", damping: 20, stiffness: 300 }}
+                      transition={{ duration: 0.2 }}
                     />
                   )}
 

@@ -273,7 +273,7 @@ const MainLayout = () => {
               bg-white/95 backdrop-mobile
               border-t border-slate-200/80
               shadow-[0_-8px_30px_rgba(0,0,0,0.08)]
-              z-[65] animate-in slide-in-from-bottom-full duration-500
+              z-[65] md:animate-in md:slide-in-from-bottom-full md:duration-500
               gpu-layer">
               <div className="flex items-center gap-2 w-full md:w-auto justify-end">
                 {bottomActions}

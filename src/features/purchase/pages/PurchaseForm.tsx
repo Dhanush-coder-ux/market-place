@@ -1,12 +1,12 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import {
-  Save, 
-  Banknote, 
-  Smartphone, 
-  CreditCard, 
-  Landmark, 
-  PackageOpen, 
+  Save,
+  Banknote,
+  Smartphone,
+  CreditCard,
+  Landmark,
+  PackageOpen,
   Bookmark,
   Mail,
   User
@@ -183,7 +183,7 @@ const PurchaseForm = () => {
     setBottomActions(
       <div className="flex items-center gap-3 animate-in fade-in slide-in-from-right-4 duration-300">
         {!id && (
-          <button 
+          <button
             type="button"
             onClick={handleSaveDraft}
             className="px-4 h-8 rounded-xl border border-blue-100 text-blue-600 font-bold text-xs bg-blue-50/50 hover:bg-blue-100 transition-all flex items-center gap-2 whitespace-nowrap overflow-hidden"
@@ -192,9 +192,9 @@ const PurchaseForm = () => {
             <span className="truncate">Save Draft</span>
           </button>
         )}
-        <GradientButton 
-          icon={submitting ? <Loader className="h-4 w-4" /> : <Save size={16} />} 
-          onClick={handleSavePurchase} 
+        <GradientButton
+          icon={submitting ? <Loader className="h-4 w-4" /> : <Save size={16} />}
+          onClick={handleSavePurchase}
           disabled={submitting}
           className="rounded-xl shadow-md text-xs px-8 h-8 flex items-center"
         >
@@ -241,7 +241,7 @@ const PurchaseForm = () => {
   const handleSaveDraft = () => {
     const savedDrafts = JSON.parse(localStorage.getItem("purchase_drafts") || "[]");
     const draftId = searchParams.get("draftId") || Date.now().toString();
-    
+
     const newDraft = {
       id: draftId,
       type: "PURCHASE",
@@ -368,14 +368,14 @@ const PurchaseForm = () => {
 
   return (
     <div className="min-h-screen bg-slate-50/50 p-4 md:p-6 lg:p-8 font-[Inter,sans-serif]">
-      
+
 
       <div className="max-w-[1600px] mx-auto">
         <div className="grid grid-cols-1 lg:grid-cols-7 gap-6 items-start">
-          
+
           {/* LEFT COLUMN: Main Form (5 cols) */}
           <div className="lg:col-span-5 space-y-6">
-            
+
             {/* 1. Purchase Details Card */}
             <div className="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden transition-all hover:shadow-md">
               <div className="px-8 py-5 bg-gradient-to-r from-blue-50/50 to-transparent border-b border-slate-100 flex items-center gap-3">
@@ -387,7 +387,7 @@ const PurchaseForm = () => {
                   <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">Basic information & supplier</p>
                 </div>
               </div>
-              
+
               <div className="p-8 grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="flex flex-col gap-2">
                   <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Supplier *</label>
@@ -432,7 +432,7 @@ const PurchaseForm = () => {
                         <p className="text-base font-black text-slate-800 tracking-tight">{supplierDetails.name || supplierDetails.supplier_name}</p>
                       </div>
                     </div>
-                    
+
                     <div className="flex flex-wrap items-center gap-2">
                       <div className="flex items-center gap-2.5 px-3 py-1.5 bg-white rounded-xl border border-slate-100 transition-all hover:border-blue-200 group">
                         <div className="w-6 h-6 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-blue-500 transition-colors">
@@ -445,7 +445,7 @@ const PurchaseForm = () => {
                           </span>
                         </div>
                       </div>
-                      
+
                       <div className="flex items-center gap-2.5 px-3 py-1.5 bg-white rounded-xl border border-slate-100 transition-all hover:border-emerald-200 group">
                         <div className="w-6 h-6 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-emerald-500 transition-colors">
                           <Smartphone size={12} />
@@ -480,7 +480,7 @@ const PurchaseForm = () => {
 
           {/* RIGHT COLUMN: Summary & Payment (2 cols) */}
           <div className="lg:col-span-2 space-y-6">
-            
+
             {/* 3. Order Summary Card */}
             <div className="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden transition-all hover:shadow-md">
               <div className="px-6 py-4 bg-gradient-to-r from-emerald-50/50 to-transparent border-b border-slate-100 flex items-center gap-3">
@@ -489,7 +489,7 @@ const PurchaseForm = () => {
                 </div>
                 <h2 className="text-xs font-bold text-slate-800 uppercase tracking-widest">Order Summary</h2>
               </div>
-              
+
               <div className="p-6 space-y-4">
                 <div className="flex justify-between items-center text-slate-500">
                   <span className="text-[11px] font-bold uppercase tracking-wider">Subtotal</span>
@@ -519,7 +519,7 @@ const PurchaseForm = () => {
                     />
                   </div>
                 </div>
-                
+
                 <div className="pt-4 border-t border-slate-100 mt-2">
                   <div className="flex flex-col gap-1">
                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Grand Total</span>
@@ -537,7 +537,7 @@ const PurchaseForm = () => {
                 </div>
                 <h2 className="text-xs font-bold text-slate-800 uppercase tracking-widest">Payment Details</h2>
               </div>
-              
+
               <div className="p-6 space-y-6">
                 <div className="grid grid-cols-4 gap-2">
                   {[
@@ -569,7 +569,7 @@ const PurchaseForm = () => {
                     onChange={(e) => setPayment({ ...payment, amountPaid: e.target.value ? Number(e.target.value) : "" })}
                     placeholder={stats.grandTotal.toString()}
                   />
-                  
+
                   <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 flex flex-col gap-1">
                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Outstanding Balance</span>
                     <span className={`text-xl font-black ${stats.outstanding > 0 ? "text-rose-600" : "text-emerald-600"}`}>

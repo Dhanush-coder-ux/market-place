@@ -827,8 +827,8 @@ const ReturnModal: React.FC<ReturnModalProps> = ({ sale, onClose }) => {
                                 key={selItem.id}
                                 onClick={() => setActiveReplaceId(selItem.id)}
                                 className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium border transition-all ${isActive
-                                    ? "border-blue-500 bg-blue-50 text-blue-700 shadow-sm"
-                                    : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                                  ? "border-blue-500 bg-blue-50 text-blue-700 shadow-sm"
+                                  : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
                                   }`}
                               >
                                 {selItem.name}
@@ -918,8 +918,8 @@ const ReturnModal: React.FC<ReturnModalProps> = ({ sale, onClose }) => {
                         value={state.reason}
                         onChange={e => m.setReason(e.target.value as ReturnReason)}
                         className={`sr-select w-full px-3.5 py-2.5 text-xs border rounded-xl bg-white text-slate-700 outline-none transition-all pr-9 ${state.errors.reason
-                            ? "border-red-200 bg-red-50/30"
-                            : "border-slate-200 focus:border-blue-300 focus:ring-2 focus:ring-blue-500/10"
+                          ? "border-red-200 bg-red-50/30"
+                          : "border-slate-200 focus:border-blue-300 focus:ring-2 focus:ring-blue-500/10"
                           }`}
                       >
                         <option value="">Select a reason…</option>
@@ -1249,8 +1249,8 @@ const SaleDetailSidebar: React.FC<SidebarProps> = ({ sale, isOpen, onClose, onRe
                 disabled={!canReturn}
                 title={alreadyRet ? "Already returned" : !canReturn ? `Cannot return: ${sale.status}` : "Process return"}
                 className={`py-2.5 rounded-lg text-[11px] font-semibold transition-colors border ${canReturn
-                    ? "bg-red-50 border-red-100 text-red-600 hover:bg-red-100"
-                    : "bg-slate-50 border-slate-100 text-slate-300 cursor-not-allowed"
+                  ? "bg-red-50 border-red-100 text-red-600 hover:bg-red-100"
+                  : "bg-slate-50 border-slate-100 text-slate-300 cursor-not-allowed"
                   }`}
               >
                 Return
@@ -1462,8 +1462,8 @@ const SalesListPage: React.FC = () => {
                             disabled={!returnable}
                             title={!returnable ? (sale.origin === "Sales Return" ? "Already returned" : `Status: ${sale.status}`) : "Process return"}
                             className={`w-7 h-7 flex items-center justify-center rounded-md transition-all ${returnable
-                                ? "text-slate-400 hover:text-red-600 hover:bg-red-50"
-                                : "text-slate-200 cursor-not-allowed"
+                              ? "text-slate-400 hover:text-red-600 hover:bg-red-50"
+                              : "text-slate-200 cursor-not-allowed"
                               }`}
                           >
                             <RotateCcw size={14} />

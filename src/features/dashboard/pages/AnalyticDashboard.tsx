@@ -1,12 +1,12 @@
 import { useState } from "react";
-import { 
-  Headphones, Cable, Link2, Armchair, Coffee, 
-  IndianRupee, TrendingUp, ShoppingCart, Zap, 
-  BarChart2, Globe, Star 
+import {
+  Headphones, Cable, Link2, Armchair, Coffee,
+  IndianRupee, TrendingUp, ShoppingCart, Zap,
+  BarChart2, Globe, Star
 } from "lucide-react";
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
-  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts";
 import { StatCard } from "../components/StatCard";
 import { SectionCard } from "../components/SectionCard";
@@ -86,7 +86,7 @@ const AnalyticsDashboard = () => {
   return (
     <div className="min-h-screen bg-slate-50">
 
-   
+
 
       <div className="p-6 space-y-5">
 
@@ -103,32 +103,31 @@ const AnalyticsDashboard = () => {
             </div>
           ))}
         </div>
-             {/* ── TOP BAR ── */}
-      <div className="bg-white border-b border-slate-100 ">
-        <div className="flex items-center justify-between px-6 py-4">
-          <div>
-            <h1 className="display-font heading-page text-slate-800">Overview</h1>
-          
-          </div>
+        {/* ── TOP BAR ── */}
+        <div className="bg-white border-b border-slate-100 ">
+          <div className="flex items-center justify-between px-6 py-4">
+            <div>
+              <h1 className="display-font heading-page text-slate-800">Overview</h1>
 
-          {/* Range Selector */}
-          <div className="flex items-center gap-1 bg-slate-100 rounded-xl p-1">
-            {ranges.map((r) => (
-              <button
-                key={r}
-                onClick={() => setActiveRange(r)}
-                className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                  activeRange === r
-                    ? "bg-white text-blue-600 shadow-sm"
-                    : "text-slate-500 hover:text-slate-700"
-                }`}
-              >
-                {r}
-              </button>
-            ))}
+            </div>
+
+            {/* Range Selector */}
+            <div className="flex items-center gap-1 bg-slate-100 rounded-xl p-1">
+              {ranges.map((r) => (
+                <button
+                  key={r}
+                  onClick={() => setActiveRange(r)}
+                  className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${activeRange === r
+                      ? "bg-white text-blue-600 shadow-sm"
+                      : "text-slate-500 hover:text-slate-700"
+                    }`}
+                >
+                  {r}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
-      </div>
         {/* ── SALES PERFORMANCE LABEL ── */}
         <h2 className="display-font text-base font-semibold text-slate-600 tracking-wide uppercase fade-up fade-up-2">
           Sales Performance
@@ -147,9 +146,8 @@ const AnalyticsDashboard = () => {
                     <button
                       key={v}
                       onClick={() => setChartView(v)}
-                      className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${
-                        chartView === v ? "bg-white text-blue-600 shadow-sm" : "text-slate-400"
-                      }`}
+                      className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${chartView === v ? "bg-white text-blue-600 shadow-sm" : "text-slate-400"
+                        }`}
                     >
                       {v}
                     </button>

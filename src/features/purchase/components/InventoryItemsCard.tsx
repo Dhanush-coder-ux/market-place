@@ -218,11 +218,10 @@ export const InventoryItemsCard = ({
               <button
                 key={method}
                 onClick={() => setCostMethod(method)}
-                className={`px-3 py-1.5 text-[11px] font-medium rounded-md transition-all ${
-                  costMethod === method
+                className={`px-3 py-1.5 text-[11px] font-medium rounded-md transition-all ${costMethod === method
                     ? "bg-white text-slate-800 shadow-sm"
                     : "text-slate-500 hover:text-slate-700"
-                }`}
+                  }`}
               >
                 {method}
               </button>
@@ -274,18 +273,16 @@ export const InventoryItemsCard = ({
           return (
             <div
               key={product.id}
-              className={`group relative rounded-2xl border transition-all duration-200 overflow-hidden ${
-                hasProduct
+              className={`group relative rounded-2xl border transition-all duration-200 overflow-hidden ${hasProduct
                   ? 'border-slate-200 bg-white shadow-sm'
                   : 'border-dashed border-slate-200 bg-slate-50/40'
-              }`}
+                }`}
             >
               {/* Row Header */}
               <div className={`px-4 py-3 flex items-center gap-3 ${hasProduct ? 'border-b border-slate-100' : ''}`}>
                 {/* Index badge */}
-                <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-[11px] font-semibold shrink-0 ${
-                  hasProduct ? `bg-${themeColor}-600 text-white` : 'bg-slate-200 text-slate-500'
-                }`}>
+                <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-[11px] font-semibold shrink-0 ${hasProduct ? `bg-${themeColor}-600 text-white` : 'bg-slate-200 text-slate-500'
+                  }`}>
                   {index + 1}
                 </div>
 
@@ -340,22 +337,20 @@ export const InventoryItemsCard = ({
                 <div className="flex items-center gap-1 shrink-0">
                   <button
                     onClick={() => toggleBreakdown(index)}
-                    className={`p-1.5 rounded-lg transition-all text-[11px] ${
-                      expandedBreakdown.has(index)
+                    className={`p-1.5 rounded-lg transition-all text-[11px] ${expandedBreakdown.has(index)
                         ? 'bg-slate-800 text-white'
                         : 'text-slate-400 hover:bg-slate-100 hover:text-slate-600'
-                    }`}
+                      }`}
                     title="Cost breakdown"
                   >
                     <Info size={14} />
                   </button>
                   <button
                     onClick={() => toggleSettings(index)}
-                    className={`p-1.5 rounded-lg transition-all ${
-                      expandedSettings.has(index)
+                    className={`p-1.5 rounded-lg transition-all ${expandedSettings.has(index)
                         ? `bg-${themeColor}-600 text-white`
                         : `text-slate-400 hover:bg-slate-100 hover:text-slate-600`
-                    }`}
+                      }`}
                     title="Advanced settings"
                   >
                     <Settings size={14} />
@@ -414,11 +409,10 @@ export const InventoryItemsCard = ({
 
                   {/* Margin — always show suggestion when cost is set */}
                   {suggestedMarginPct && (
-                    <span className={`inline-flex items-center gap-1 pl-1.5 pr-2 py-0.5 rounded-md text-[10px] border ${
-                      isMarginUserSet
+                    <span className={`inline-flex items-center gap-1 pl-1.5 pr-2 py-0.5 rounded-md text-[10px] border ${isMarginUserSet
                         ? 'bg-violet-50 border-violet-100'
                         : 'bg-slate-50 border-slate-200'
-                    }`}>
+                      }`}>
                       <span className={`font-medium ${isMarginUserSet ? 'text-violet-400' : 'text-slate-400'}`}>Margin</span>
                       <span className={`font-semibold ${isMarginUserSet ? 'text-violet-700' : 'text-slate-500'}`}>
                         +{suggestedMarginPct}%
@@ -431,11 +425,10 @@ export const InventoryItemsCard = ({
 
                   {/* Sell Price — always show suggestion when cost is set */}
                   {suggestedSellPrice > 0 && (
-                    <span className={`inline-flex items-center gap-1 pl-1.5 pr-2 py-0.5 rounded-md text-[10px] border ${
-                      isMarginUserSet
+                    <span className={`inline-flex items-center gap-1 pl-1.5 pr-2 py-0.5 rounded-md text-[10px] border ${isMarginUserSet
                         ? 'bg-teal-50 border-teal-100'
                         : 'bg-slate-50 border-slate-200'
-                    }`}>
+                      }`}>
                       <span className={`font-medium ${isMarginUserSet ? 'text-teal-500' : 'text-slate-400'}`}>Sell Price</span>
                       <span className={`font-semibold tabular-nums ${isMarginUserSet ? 'text-teal-700' : 'text-slate-500'}`}>
                         ₹{suggestedSellPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -469,7 +462,7 @@ export const InventoryItemsCard = ({
                         label="Unit"
                         disabled
                         value={product.unit}
-                        onChange={() => {}}
+                        onChange={() => { }}
                       />
                     </div>
                     <div className="col-span-3">
@@ -526,21 +519,19 @@ export const InventoryItemsCard = ({
                           <div className="flex items-center bg-slate-100 rounded p-0.5 gap-0.5">
                             <button
                               onClick={() => handleProductChange(index, "marginType", "percent")}
-                              className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-semibold transition-all ${
-                                product.marginType === "percent"
+                              className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-semibold transition-all ${product.marginType === "percent"
                                   ? "bg-white text-slate-700 shadow-sm"
                                   : "text-slate-400 hover:text-slate-600"
-                              }`}
+                                }`}
                             >
                               <Percent size={8} /> %
                             </button>
                             <button
                               onClick={() => handleProductChange(index, "marginType", "amount")}
-                              className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-semibold transition-all ${
-                                product.marginType === "amount"
+                              className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-semibold transition-all ${product.marginType === "amount"
                                   ? "bg-white text-slate-700 shadow-sm"
                                   : "text-slate-400 hover:text-slate-600"
-                              }`}
+                                }`}
                             >
                               <Banknote size={8} /> ₹
                             </button>
@@ -645,11 +636,10 @@ export const InventoryItemsCard = ({
                       <div className="px-3.5 pb-3.5 pt-3 animate-in fade-in slide-in-from-top-1 duration-200">
                         <div className="flex items-center justify-between mb-1.5">
                           <label className="text-[11px] font-medium text-slate-500 block ml-0.5">Serial Numbers Management</label>
-                          <span className={`text-[9px] font-black uppercase px-1.5 py-0.5 rounded-md ${
-                            (product.serialNumbers?.split(',').filter(Boolean).length || 0) === q
+                          <span className={`text-[9px] font-black uppercase px-1.5 py-0.5 rounded-md ${(product.serialNumbers?.split(',').filter(Boolean).length || 0) === q
                               ? 'bg-emerald-100 text-emerald-700'
                               : 'bg-violet-100 text-violet-700'
-                          }`}>
+                            }`}>
                             {(product.serialNumbers?.split(',').filter(Boolean).length || 0)} / {q} Registered
                           </span>
                         </div>
@@ -657,7 +647,7 @@ export const InventoryItemsCard = ({
                           {(product.serialNumbers || "").split(',').filter(Boolean).map((s: string, i: number) => (
                             <span key={i} className="px-2 py-1 bg-violet-100 text-violet-700 text-[10px] font-bold rounded-lg flex items-center gap-1.5 animate-in zoom-in-95 duration-150">
                               {s}
-                              <button 
+                              <button
                                 type="button"
                                 onClick={() => {
                                   const current = (product.serialNumbers || "").split(',').filter(Boolean);
@@ -674,8 +664,8 @@ export const InventoryItemsCard = ({
                             type="text"
                             disabled={(product.serialNumbers || "").split(',').filter(Boolean).length >= q}
                             placeholder={
-                              (product.serialNumbers || "").split(',').filter(Boolean).length === 0 
-                                ? "Type serial and press comma..." 
+                              (product.serialNumbers || "").split(',').filter(Boolean).length === 0
+                                ? "Type serial and press comma..."
                                 : (product.serialNumbers || "").split(',').filter(Boolean).length >= q
                                   ? "Limit reached"
                                   : ""

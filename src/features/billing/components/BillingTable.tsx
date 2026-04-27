@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, useEffect } from "react";
+import React, { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { 
   Trash2, IndianRupee, Package, Keyboard, Barcode, 
   Clock, ShieldCheck, AlertTriangle, XCircle, 
@@ -91,7 +91,7 @@ const BatchDetails = ({ mfg, exp }: { mfg?: string, exp?: string }) => {
   );
 };
 
-const ShortcutKbd = ({ keys, label }: { keys: string[], label: string }) => (
+const ShortcutKbd = ({ keys, label }: { keys: string[]; label: string; }) => (
   <div className="flex items-center gap-1.5">
     <div className="flex gap-0.5">
       {keys.map((k, i) => (
@@ -103,6 +103,119 @@ const ShortcutKbd = ({ keys, label }: { keys: string[], label: string }) => (
     <span className="text-[11px] text-slate-400 font-medium ml-0.5">{label}</span>
   </div>
 );
+
+const BillingRow = React.memo(({ 
+  item, index, isLast, codeOptions, nameOptions, hasSerial, 
+  handleProductSelectClick, updateItem, handleDeleteRow, handleAddRow 
+}: {
+  item: BillingItem;
+  index: number;
+  isLast: boolean;
+  codeOptions: SelectOption[];
+  nameOptions: SelectOption[];
+  hasSerial: boolean;
+  handleProductSelectClick: any;
+  updateItem: (id: string, updates: Partial<BillingItem>) => void;
+  handleDeleteRow: (id: string) => void;
+  handleAddRow: () => void;
+}) => {
+  const isFilled = !!item.name;
+  const [baseName, variantName] = item.name ? item.name.split(' - ') : ["", ""];
+
+  return (
+    <tr className={`group/row transition-colors duration-150 ${isFilled ? "hover:bg-slate-50/50" : "hover:bg-slate-50/30"}`}>
+      <td className={`hidden sm:table-cell px-5 py-4 align-top ${!isLast ? "border-b border-slate-100" : ""}`}>
+        <div className="w-6 h-6 mt-1 rounded flex items-center justify-center text-[11px] font-semibold text-slate-400">
+          {index + 1}
+        </div>
+      </td>
+
+      <td className={`px-3 py-4 min-w-[300px] align-top ${!isLast ? "border-b border-slate-100" : ""}`}>
+        <div className="w-full max-w-lg">
+          <div className="flex gap-2">
+            <div className="w-2/5">
+              <ReusableCombobox
+                options={codeOptions}
+                value={item.code || ""} 
+                placeholder="Barcode..."
+                onChange={(selected) => handleProductSelectClick(selected, item.id, 'code')}
+              />
+            </div>
+            <div className="w-3/5">
+              <ReusableCombobox
+                options={nameOptions}
+                value={baseName} 
+                placeholder="Search product..."
+                onChange={(selected) => handleProductSelectClick(selected, item.id, 'name')}
+              />
+            </div>
+          </div>
+          
+          {isFilled && (variantName || hasSerial) && (
+            <div className="flex flex-wrap items-center gap-2 mt-2">
+              {variantName && (
+                <span className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md">
+                  <Tag size={10} className="text-slate-400"/>
+                  {variantName}
+                </span>
+              )}
+              {hasSerial && (
+                <span className="inline-flex items-center gap-1 text-[11px] font-medium text-blue-700 bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-md">
+                  <Barcode size={12} className="text-blue-500" />
+                  SN: {item.serialNumber}
+                </span>
+              )}
+            </div>
+          )}
+
+          {isFilled && item.batchTracking && (
+            <BatchDetails mfg={item.manufacturingDate} exp={item.expiryDate} />
+          )}
+        </div>
+      </td>
+
+      <td className={`px-3 py-4 align-top text-right ${!isLast ? "border-b border-slate-100" : ""}`}>
+        <input
+          type="number"
+          min="0"
+          value={item.qty || ""}
+          placeholder="0"
+          disabled={hasSerial}
+          onChange={(e) => updateItem(item.id, { qty: Number(e.target.value) })}
+          onKeyDown={(e) => { if (e.key === "Enter") handleAddRow(); }}
+          className={`w-20 px-3 py-1.5 mt-0.5 rounded-lg border text-sm font-semibold text-right tabular-nums focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all ${
+              hasSerial ? "bg-slate-50 text-slate-400 border-slate-100 cursor-not-allowed" : "bg-white border-slate-200 text-slate-800 hover:border-slate-300 shadow-sm"
+          }`}
+        />
+      </td>
+
+      <td className={`px-3 py-4 align-top text-right ${!isLast ? "border-b border-slate-100" : ""}`}>
+        <div className="inline-flex items-center justify-end gap-1 px-3 py-1.5 mt-0.5 rounded-lg">
+          <IndianRupee size={12} strokeWidth={2.5} className="text-slate-400" />
+          <span className="text-sm font-medium text-slate-600 tabular-nums min-w-[48px]">
+            {item.price > 0 ? item.price.toLocaleString("en-IN", { minimumFractionDigits: 2 }) : "0.00"}
+          </span>
+        </div>
+      </td>
+
+      <td className={`px-5 py-4 align-top text-right ${!isLast ? "border-b border-slate-100" : ""}`}>
+        <div className={`inline-flex items-center justify-end gap-1 mt-1 font-bold text-base tabular-nums tracking-tight ${item.tprice > 0 ? "text-slate-900" : "text-slate-300"}`}>
+          <IndianRupee size={14} strokeWidth={2.5} className={item.tprice > 0 ? "text-slate-900" : "text-slate-300"} />
+          {item.tprice > 0 ? item.tprice.toLocaleString("en-IN", { minimumFractionDigits: 2 }) : "0.00"}
+        </div>
+      </td>
+
+      <td className={`px-3 py-4 align-top text-center ${!isLast ? "border-b border-slate-100" : ""}`}>
+        <button
+          onClick={() => handleDeleteRow(item.id)}
+          className="w-8 h-8 mt-0.5 rounded-lg flex items-center justify-center mx-auto text-slate-400 hover:text-red-600 hover:bg-red-50 transition-all duration-200"
+        >
+          <Trash2 size={16} strokeWidth={2} />
+        </button>
+      </td>
+    </tr>
+  );
+});
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -134,15 +247,21 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
     onItemsChange(items.length === 1 ? [createEmptyRow()] : items.filter((item) => item.id !== id));
   }, [items, onItemsChange]);
 
+  const itemsRef = useRef(items);
+  
+  useEffect(() => {
+    itemsRef.current = items;
+  }, [items]);
+
   const updateItem = useCallback((id: string, updates: Partial<BillingItem>) => {
     onItemsChange(
-      items.map((item) => {
+      itemsRef.current.map((item: BillingItem) => {
         if (item.id !== id) return item;
         const merged = { ...item, ...updates };
         return { ...merged, tprice: (merged.qty || 0) * (merged.price || 0) };
       })
     );
-  }, [items, onItemsChange]);
+  }, [onItemsChange]);
 
   // ── Modal Handlers ────────────────────────────────────────────────────────
 
@@ -217,9 +336,11 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
 
   // ── Derived values ────────────────────────────────────────────────────────
 
-  const grandTotal  = items.reduce((sum, item) => sum + item.tprice, 0);
-  const totalQty    = items.reduce((sum, item) => sum + item.qty,    0);
-  const filledRows  = items.filter((i) => i.name).length;
+  // ── Derived values ────────────────────────────────────────────────────────
+
+  const grandTotal = useMemo(() => items.reduce((sum, item) => sum + item.tprice, 0), [items]);
+  const totalQty   = useMemo(() => items.reduce((sum, item) => sum + item.qty,    0), [items]);
+  const filledRows = useMemo(() => items.filter((i) => i.name).length, [items]);
 
   // ─── Render ───────────────────────────────────────────────────────────────
 
@@ -268,6 +389,7 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
                   <th
                     key={h + i}
                     className={`px-5 py-3 text-left text-[11px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-100 bg-slate-50/50 
+                      ${i === 0 ? "hidden sm:table-cell" : ""}
                       ${i === 2 || i === 3 || i === 4 ? "text-right" : ""} 
                       ${i === 5 ? "w-14" : ""}`
                     }
@@ -279,122 +401,21 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
             </thead>
 
             <tbody>
-              {items.map((item, index) => {
-                const isLast   = index === items.length - 1;
-                const isFilled = !!item.name;
-                const hasSerial = !!item.serialNumber;
-                
-                // Parse variant out for cleaner display
-                const [baseName, variantName] = item.name.split(' - ');
-
-                return (
-                  <tr
-                    key={item.id}
-                    className={`group/row transition-colors duration-150 ${isFilled ? "hover:bg-slate-50/50" : "hover:bg-slate-50/30"}`}
-                  >
-                    {/* Row Number */}
-                    <td className={`px-5 py-4 align-top ${!isLast ? "border-b border-slate-100" : ""}`}>
-                      <div className="w-6 h-6 mt-1 rounded flex items-center justify-center text-[11px] font-semibold text-slate-400">
-                        {index + 1}
-                      </div>
-                    </td>
-
-                    {/* Product Cell */}
-                    <td className={`px-3 py-4 min-w-[300px] align-top ${!isLast ? "border-b border-slate-100" : ""}`}>
-                      <div className="w-full max-w-lg">
-                        <div className="flex gap-2">
-                          <div className="w-2/5">
-                            <ReusableCombobox
-                              options={codeOptions}
-                              value={item.code || ""} 
-                              placeholder="Barcode search..."
-                              onChange={(selected) => handleProductSelectClick(selected, item.id, 'code')}
-                            />
-                          </div>
-                          <div className="w-3/5">
-                            <ReusableCombobox
-                              options={nameOptions}
-                              value={baseName} 
-                              placeholder="Select product..."
-                              onChange={(selected) => handleProductSelectClick(selected, item.id, 'name')}
-                            />
-                          </div>
-                        </div>
-                        
-                        {/* Variant & Serial Tags */}
-                        {isFilled && (variantName || hasSerial) && (
-                          <div className="flex flex-wrap items-center gap-2 mt-2">
-                            {variantName && (
-                              <span className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md">
-                                <Tag size={10} className="text-slate-400"/>
-                                {variantName}
-                              </span>
-                            )}
-                            {hasSerial && (
-                              <span className="inline-flex items-center gap-1 text-[11px] font-medium text-blue-700 bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-md">
-                                <Barcode size={12} className="text-blue-500" />
-                                SN: {item.serialNumber}
-                              </span>
-                            )}
-                          </div>
-                        )}
-
-                        {/* Batch details rendered as structured badges */}
-                        {isFilled && item.batchTracking && (
-                          <BatchDetails mfg={item.manufacturingDate} exp={item.expiryDate} />
-                        )}
-                      </div>
-                    </td>
-
-                    {/* Quantity Cell */}
-                    <td className={`px-3 py-4 align-top text-right ${!isLast ? "border-b border-slate-100" : ""}`}>
-                      <input
-                        type="number"
-                        min="0"
-                        value={item.qty || ""}
-                        placeholder="0"
-                        disabled={hasSerial}
-                        onChange={(e) => updateItem(item.id, { qty: Number(e.target.value) })}
-                        onKeyDown={(e) => { if (e.key === "Enter") handleAddRow(); }}
-                        className={`w-20 px-3 py-1.5 mt-0.5 rounded-lg border text-sm font-semibold text-right tabular-nums focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
-                            hasSerial ? "bg-slate-50 text-slate-400 border-slate-100 cursor-not-allowed" : "bg-white border-slate-200 text-slate-800 hover:border-slate-300 shadow-sm"
-                        }`}
-                      />
-                    </td>
-
-                    {/* Unit Price */}
-                    <td className={`px-3 py-4 align-top text-right ${!isLast ? "border-b border-slate-100" : ""}`}>
-                      <div className="inline-flex items-center justify-end gap-1 px-3 py-1.5 mt-0.5 rounded-lg bg-transparent">
-                        <IndianRupee size={12} strokeWidth={2.5} className="text-slate-400" />
-                        <span className="text-sm font-medium text-slate-600 tabular-nums min-w-[48px]">
-                          {item.price > 0 ? item.price.toLocaleString("en-IN", { minimumFractionDigits: 2 }) : "0.00"}
-                        </span>
-                      </div>
-                    </td>
-
-                    {/* Total Price */}
-                    <td className={`px-5 py-4 align-top text-right ${!isLast ? "border-b border-slate-100" : ""}`}>
-                      <div className={`inline-flex items-center justify-end gap-1 mt-1 font-bold text-base tabular-nums tracking-tight ${item.tprice > 0 ? "text-slate-900" : "text-slate-300"}`}>
-                        <IndianRupee size={14} strokeWidth={2.5} className={item.tprice > 0 ? "text-slate-900" : "text-slate-300"} />
-                        {item.tprice > 0
-                          ? item.tprice.toLocaleString("en-IN", { minimumFractionDigits: 2 })
-                          : "0.00"}
-                      </div>
-                    </td>
-
-                    {/* Delete Action */}
-                    <td className={`px-3 py-4 align-top text-center ${!isLast ? "border-b border-slate-100" : ""}`}>
-                      <button
-                        onClick={() => handleDeleteRow(item.id)}
-                        title="Remove row"
-                        className="w-8 h-8 mt-0.5 rounded-lg flex items-center justify-center mx-auto text-slate-400  hover:text-red-600 hover:bg-red-50 transition-all duration-200"
-                      >
-                        <Trash2 size={16} strokeWidth={2} />
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
+              {items.map((item, index) => (
+                <BillingRow
+                  key={item.id}
+                  item={item}
+                  index={index}
+                  isLast={index === items.length - 1}
+                  codeOptions={codeOptions}
+                  nameOptions={nameOptions}
+                  hasSerial={!!item.serialNumber}
+                  handleProductSelectClick={handleProductSelectClick}
+                  updateItem={updateItem}
+                  handleDeleteRow={handleDeleteRow}
+                  handleAddRow={handleAddRow}
+                />
+              ))}
             </tbody>
           </table>
         </div>

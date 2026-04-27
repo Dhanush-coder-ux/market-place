@@ -1,76 +1,87 @@
 import React, { Suspense } from "react";
 import { createBrowserRouter } from "react-router-dom";
 import Loader from "@/components/common/Loader";
-import GRNListView from "@/features/purchase/pages/GrnListView";
-import GRNForm from "@/features/purchase/pages/GrnForm";
-import PurchaseForm from "@/features/purchase/pages/PurchaseForm";
-import CustomerBalanceSummary from "@/features/customer/pages/CustomerBalanceSummary";
-import CustomerDetail from "@/features/customer/pages/Customerdetail";
-import CustomerList from "@/features/customer/pages/CustomerList";
-import PurchaseHistory from "@/features/purchase/pages/PurchaseHistory";
-import SalesListPage from "@/features/sales/pages/SalesPage";
-import StockMovementPage from "@/features/inventory/pages/StockMovement";
-import ReceiveGoodsPage from "@/features/purchase/pages/ReceiveGoodsForm";
-import StockAdjustmentForm from "@/features/inventory/pages/StockAdjusstment";
-import ProductionForm from "@/features/purchase/pages/ProductionForm";
-import CustomerFormPage from "@/features/customer/pages/CustomerFormPage";
-import CustomerDraftsPage from "@/features/customer/pages/CustomerDraftsPage";
-import SupplierForm from "@/features/supplier/pages/SupplierForm";
-import SupplierDraftsPage from "@/features/supplier/pages/SupplierDraftsPage";
-import StockAdjustmentDraftsPage from "@/features/inventory/pages/StockAdjustmentDraftsPage";
-import PurchaseDraftsPage from "@/features/purchase/pages/PurchaseDraftsPage";
 
+// ─── Route-level Suspense fallback ───────────────────────────────────────────
+// Every lazy import gets this same lightweight spinner. The Loader component
+// should be a simple CSS spinner with NO heavy dependencies.
 
-// Layout & Auth
+// ─── Layout & Auth ───────────────────────────────────────────────────────────
 const MainLayout = React.lazy(() => import("../components/layouts/MainLayout"));
-const Login = React.lazy(() => import("../features/auth/pages/Login"));
+const Login      = React.lazy(() => import("../features/auth/pages/Login"));
 
-// Dashboard
+// ─── Dashboard ───────────────────────────────────────────────────────────────
 const AnalyticsDashboard = React.lazy(() => import("@/features/dashboard/pages/AnalyticDashboard"));
 
-// Profile & Settings
+// ─── Profile & Settings ──────────────────────────────────────────────────────
 const ProfileSettingsPage = React.lazy(() =>
-  import("@/features/Setting/pages/ProfileSettingPage").then(module => ({ default: module.ProfileSettingsPage }))
+  import("@/features/Setting/pages/ProfileSettingPage").then(m => ({ default: m.ProfileSettingsPage }))
 );
 const ProfileForm = React.lazy(() => import("../features/profile/pages/ProfileForm"));
 
-// Products
-const ProductInfos = React.lazy(() => import("@/features/product/pages/ProductInfos"));
-const ProductSearch = React.lazy(() => import("@/features/product/pages/ProductSearch"));
-const ProductDetail = React.lazy(() => import("@/features/product/pages/ProductDetail"));
-const ProductForm = React.lazy(() => import("@/features/product/pages/ProductForm"));
-
-// Purchase
-const PurchaseDetail = React.lazy(() => import("@/features/purchase/pages/PurchaseDetail"));
-
-// Supplier
-const Supplier = React.lazy(() => import("@/features/supplier/pages/Supplier"));
-const SupplierSearch = React.lazy(() => import("@/features/supplier/pages/SupplierSearch"));
-const SupplierDetail = React.lazy(() => import("@/features/supplier/pages/SupplierDetail"));
-
-// Employee
-const Employee = React.lazy(() => import("../features/employee/pages/Employee"));
-const EmployeeSearch = React.lazy(() => import("../features/employee/pages/EmployeeSearch"));
-const EmployeeForm = React.lazy(() => import("../features/employee/pages/EmployeeForm"));
-const EmployeeDetail = React.lazy(() => import("../features/employee/pages/EmployeeDetail"));
-const EmployeeDraftsPage = React.lazy(() => import("../features/employee/pages/EmployeeDraftsPage"));
-
-// Inventory
-const Inventory = React.lazy(() => import("../features/inventory/pages/Inventory"));
+// ─── Products ────────────────────────────────────────────────────────────────
+const ProductInfos    = React.lazy(() => import("@/features/product/pages/ProductInfos"));
+const ProductSearch   = React.lazy(() => import("@/features/product/pages/ProductSearch"));
+const ProductDetail   = React.lazy(() => import("@/features/product/pages/ProductDetail"));
+const ProductForm     = React.lazy(() => import("@/features/product/pages/ProductForm"));
 const ProductDraftsPage = React.lazy(() => import("../features/product/pages/ProductDraftsPage"));
 
-// Orders & Billing
-const Order = React.lazy(() => import("../features/order/pages/Order"));
-const Billing = React.lazy(() => import("../features/billing/pages/Billing"));
+// ─── Purchase ────────────────────────────────────────────────────────────────
+const PurchaseDetail      = React.lazy(() => import("@/features/purchase/pages/PurchaseDetail"));
+const PurchaseForm        = React.lazy(() => import("@/features/purchase/pages/PurchaseForm"));
+const PurchaseHistory     = React.lazy(() => import("@/features/purchase/pages/PurchaseHistory"));
+const PurchaseDraftsPage  = React.lazy(() => import("@/features/purchase/pages/PurchaseDraftsPage"));
+const GRNListView         = React.lazy(() => import("@/features/purchase/pages/GrnListView"));
+const GRNForm             = React.lazy(() => import("@/features/purchase/pages/GrnForm"));
+const ReceiveGoodsPage    = React.lazy(() => import("@/features/purchase/pages/ReceiveGoodsForm"));
+const ProductionForm      = React.lazy(() => import("@/features/purchase/pages/ProductionForm"));
 
-// Digital Store
+// ─── Supplier ────────────────────────────────────────────────────────────────
+const Supplier            = React.lazy(() => import("@/features/supplier/pages/Supplier"));
+const SupplierSearch      = React.lazy(() => import("@/features/supplier/pages/SupplierSearch"));
+const SupplierDetail      = React.lazy(() => import("@/features/supplier/pages/SupplierDetail"));
+const SupplierForm        = React.lazy(() => import("@/features/supplier/pages/SupplierForm"));
+const SupplierDraftsPage  = React.lazy(() => import("@/features/supplier/pages/SupplierDraftsPage"));
+
+// ─── Employee ────────────────────────────────────────────────────────────────
+const Employee            = React.lazy(() => import("../features/employee/pages/Employee"));
+const EmployeeSearch      = React.lazy(() => import("../features/employee/pages/EmployeeSearch"));
+const EmployeeForm        = React.lazy(() => import("../features/employee/pages/EmployeeForm"));
+const EmployeeDetail      = React.lazy(() => import("../features/employee/pages/EmployeeDetail"));
+const EmployeeDraftsPage  = React.lazy(() => import("../features/employee/pages/EmployeeDraftsPage"));
+
+// ─── Inventory ───────────────────────────────────────────────────────────────
+const Inventory                   = React.lazy(() => import("../features/inventory/pages/Inventory"));
+const StockMovementPage           = React.lazy(() => import("../features/inventory/pages/StockMovement"));
+const StockAdjustmentForm         = React.lazy(() => import("../features/inventory/pages/StockAdjusstment"));
+const StockAdjustmentDraftsPage   = React.lazy(() => import("../features/inventory/pages/StockAdjustmentDraftsPage"));
+
+// ─── Customers ───────────────────────────────────────────────────────────────
+const CustomerList           = React.lazy(() => import("@/features/customer/pages/CustomerList"));
+const CustomerDetail         = React.lazy(() => import("@/features/customer/pages/Customerdetail"));
+const CustomerBalanceSummary = React.lazy(() => import("@/features/customer/pages/CustomerBalanceSummary"));
+const CustomerFormPage       = React.lazy(() => import("@/features/customer/pages/CustomerFormPage"));
+const CustomerDraftsPage     = React.lazy(() => import("@/features/customer/pages/CustomerDraftsPage"));
+
+// ─── Sales & Orders ──────────────────────────────────────────────────────────
+const SalesListPage = React.lazy(() => import("@/features/sales/pages/SalesPage"));
+const Order         = React.lazy(() => import("../features/order/pages/Order"));
+const Billing       = React.lazy(() => import("../features/billing/pages/Billing"));
+
+// ─── Digital Store ───────────────────────────────────────────────────────────
 const StoreSetupForm = React.lazy(() => import("@/features/digitalstore/pages/DigitalStoreForm"));
-const DigitalMain = React.lazy(() => import("@/features/digitalstore/components/DigitalMain"));
+const DigitalMain    = React.lazy(() => import("@/features/digitalstore/components/DigitalMain"));
 
+// ─── Shared route Suspense wrapper ───────────────────────────────────────────
+// Wraps each route-level component so navigation shows a per-page spinner
+// instead of unmounting the whole app.
+const Page = ({ children }: { children: React.ReactNode }) => (
+  <Suspense fallback={<Loader />}>{children}</Suspense>
+);
 
-// ==========================================
+// ──────────────────────────────────────────────────────────────────────────────
 // ROUTER CONFIGURATION
-// ==========================================
+// ──────────────────────────────────────────────────────────────────────────────
 export const router = createBrowserRouter([
   {
     path: '/',
@@ -80,69 +91,69 @@ export const router = createBrowserRouter([
       </Suspense>
     ),
     children: [
-      { index: true, element: <AnalyticsDashboard /> },
-      { path: "/sales", element: <SalesListPage /> },
+      { index: true,                   element: <Page><AnalyticsDashboard /></Page> },
+      { path: "/sales",                element: <Page><SalesListPage /></Page> },
 
       // Products — static "add" before dynamic ":id"
-      { path: 'product', element: <ProductSearch /> },
-      { path: '/product/all', element: <ProductInfos /> },
-      { path: '/product/add', element: <ProductForm /> },
-      { path: '/product/drafts', element: <ProductDraftsPage /> },
-      { path: '/product/:id/edit', element: <ProductForm /> },
-      { path: '/product/:id', element: <ProductDetail /> },
+      { path: 'product',               element: <Page><ProductSearch /></Page> },
+      { path: '/product/all',          element: <Page><ProductInfos /></Page> },
+      { path: '/product/add',          element: <Page><ProductForm /></Page> },
+      { path: '/product/drafts',       element: <Page><ProductDraftsPage /></Page> },
+      { path: '/product/:id/edit',     element: <Page><ProductForm /></Page> },
+      { path: '/product/:id',          element: <Page><ProductDetail /></Page> },
 
       // Purchase
-      { path: "/purchase-order/add", element: <PurchaseForm /> },
-      { path: "/po-grn", element: <GRNListView /> },
-      { path: '/po-grn/add', element: <GRNForm /> },
-      { path: '/po-grn/update', element: <ReceiveGoodsPage /> },
-      { path: "/purchase-history", element: <PurchaseHistory /> },
-      { path: "/production-entry/add", element: <ProductionForm /> },
-      { path: '/purchase/detail', element: <PurchaseDetail /> },
-      {path: "/purchase/add", element: <PurchaseForm /> },
-      {path: "/purchase/drafts", element: <PurchaseDraftsPage /> },
+      { path: "/purchase-order/add",   element: <Page><PurchaseForm /></Page> },
+      { path: "/po-grn",               element: <Page><GRNListView /></Page> },
+      { path: '/po-grn/add',           element: <Page><GRNForm /></Page> },
+      { path: '/po-grn/update',        element: <Page><ReceiveGoodsPage /></Page> },
+      { path: "/purchase-history",     element: <Page><PurchaseHistory /></Page> },
+      { path: "/production-entry/add", element: <Page><ProductionForm /></Page> },
+      { path: '/purchase/detail',      element: <Page><PurchaseDetail /></Page> },
+      { path: "/purchase/add",         element: <Page><PurchaseForm /></Page> },
+      { path: "/purchase/drafts",      element: <Page><PurchaseDraftsPage /></Page> },
 
       // Suppliers — static "add" before dynamic ":id"
-      { path: 'supplier', element: <SupplierSearch /> },
-      { path: '/supplier/all', element: <Supplier /> },
-      { path: '/supplier/add', element: <SupplierForm /> },
-      { path: '/supplier/drafts', element: <SupplierDraftsPage /> },
-      { path: '/supplier/:id/edit', element: <SupplierForm /> },
-      { path: '/supplier/:id', element: <SupplierDetail /> },
+      { path: 'supplier',              element: <Page><SupplierSearch /></Page> },
+      { path: '/supplier/all',         element: <Page><Supplier /></Page> },
+      { path: '/supplier/add',         element: <Page><SupplierForm /></Page> },
+      { path: '/supplier/drafts',      element: <Page><SupplierDraftsPage /></Page> },
+      { path: '/supplier/:id/edit',    element: <Page><SupplierForm /></Page> },
+      { path: '/supplier/:id',         element: <Page><SupplierDetail /></Page> },
 
       // Employees
-      { path: '/employee', element: <EmployeeSearch /> },
-      { path: '/employee/all', element: <Employee /> },
-      { path: '/employee/add', element: <EmployeeForm /> },
-      { path: '/employee/drafts', element: <EmployeeDraftsPage /> },
-      { path: '/employee/:id/edit', element: <EmployeeForm /> },
-      { path: '/employee/:id', element: <EmployeeDetail /> },
+      { path: '/employee',             element: <Page><EmployeeSearch /></Page> },
+      { path: '/employee/all',         element: <Page><Employee /></Page> },
+      { path: '/employee/add',         element: <Page><EmployeeForm /></Page> },
+      { path: '/employee/drafts',      element: <Page><EmployeeDraftsPage /></Page> },
+      { path: '/employee/:id/edit',    element: <Page><EmployeeForm /></Page> },
+      { path: '/employee/:id',         element: <Page><EmployeeDetail /></Page> },
 
       // Inventory
-      { path: '/inventory', element: <Inventory /> },
-      { path: "/stock-movement", element: <StockMovementPage /> },
-      { path: "/stock-adjustment", element: <StockAdjustmentForm /> },
-      { path: "/stock-adjustment/drafts", element: <StockAdjustmentDraftsPage /> },
+      { path: '/inventory',            element: <Page><Inventory /></Page> },
+      { path: "/stock-movement",       element: <Page><StockMovementPage /></Page> },
+      { path: "/stock-adjustment",     element: <Page><StockAdjustmentForm /></Page> },
+      { path: "/stock-adjustment/drafts", element: <Page><StockAdjustmentDraftsPage /></Page> },
 
       // Orders & Billing
-      { path: '/billing', element: <Billing /> },
-      { path: '/orders', element: <Order /> },
+      { path: '/billing',              element: <Page><Billing /></Page> },
+      { path: '/orders',               element: <Page><Order /></Page> },
 
       // Profile
-      { path: '/profile', element: <ProfileSettingsPage /> },
-      { path: '/profile/add', element: <ProfileForm /> },
+      { path: '/profile',              element: <Page><ProfileSettingsPage /></Page> },
+      { path: '/profile/add',          element: <Page><ProfileForm /></Page> },
 
       // Digital Store
-      { path: '/create-digital-store', element: <StoreSetupForm /> },
-      { path: '/digital-store/profile', element: <DigitalMain /> },
+      { path: '/create-digital-store', element: <Page><StoreSetupForm /></Page> },
+      { path: '/digital-store/profile',element: <Page><DigitalMain /></Page> },
 
       // Customers — static "add" before dynamic ":id"
-      { path: "/customers", element: <CustomerList /> },
-      { path: "/customers-Summary", element: <CustomerBalanceSummary /> },
-      { path: "/customers/add", element: <CustomerFormPage /> },
-      { path: "/customers/drafts", element: <CustomerDraftsPage /> },
-      { path: "/customers/:id/edit", element: <CustomerFormPage /> },
-      { path: "/customers/:id", element: <CustomerDetail /> },
+      { path: "/customers",            element: <Page><CustomerList /></Page> },
+      { path: "/customers-Summary",    element: <Page><CustomerBalanceSummary /></Page> },
+      { path: "/customers/add",        element: <Page><CustomerFormPage /></Page> },
+      { path: "/customers/drafts",     element: <Page><CustomerDraftsPage /></Page> },
+      { path: "/customers/:id/edit",   element: <Page><CustomerFormPage /></Page> },
+      { path: "/customers/:id",        element: <Page><CustomerDetail /></Page> },
     ]
   },
   {
@@ -155,6 +166,6 @@ export const router = createBrowserRouter([
   },
   {
     path: "*",
-    element: <div>Page Not Found</div>,
+    element: <div className="flex items-center justify-center h-screen text-slate-500">Page Not Found</div>,
   }
 ]);

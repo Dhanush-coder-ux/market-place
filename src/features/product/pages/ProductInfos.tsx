@@ -96,7 +96,7 @@ const BatchCards = ({ batches }: { batches: any[] }) => {
   const remaining = batches.length - 3;
 
   return (
-    <div className="animate-in fade-in duration-300 pt-2 pb-4">
+    <div className="md:animate-in fade-in duration-300 pt-2 pb-4">
       <div className="flex items-center gap-2 mb-4">
         <Calendar size={16} className="text-slate-400" />
         <p className="text-sm font-medium text-slate-600">Active Batches</p>
@@ -111,7 +111,7 @@ const BatchCards = ({ batches }: { batches: any[] }) => {
               <div className="absolute left-[11px] top-[34px] w-[21px] h-[2px] bg-slate-200"></div>
 
               {/* Batch Card */}
-              <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm hover:border-blue-300 transition-colors">
+              <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm md:hover:border-blue-300 md:transition-colors">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-1.5">
                     <Tag size={12} className="text-slate-400" />
@@ -143,7 +143,7 @@ const BatchCards = ({ batches }: { batches: any[] }) => {
           <div className="relative pl-8 pb-2 pt-1">
             <div className="absolute left-[11px] w-[2px] bg-slate-200 top-0 h-[22px]"></div>
             <div className="absolute left-[11px] top-[22px] w-[21px] h-[2px] bg-slate-200"></div>
-            <button className="w-full py-2.5 text-sm font-medium text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors">
+            <button className="w-full py-2.5 text-sm font-medium text-slate-600 border border-slate-200 rounded-xl md:hover:bg-slate-50 md:transition-colors">
               View All {batches.length} Batches
             </button>
           </div>
@@ -158,7 +158,7 @@ const VariantRows = ({ combinations, baseSellPrice }: { combinations: any[]; bas
   const [expandedVariant, setExpandedVariant] = useState<string | null>(null);
 
   return (
-    <div className="animate-in fade-in duration-300 pt-2 pb-4">
+    <div className="md:animate-in fade-in duration-300 pt-2 pb-4">
       <div className="flex items-center gap-2 mb-4">
         <Layers size={16} className="text-slate-400" />
         <p className="text-sm font-medium text-slate-600">Product Variants</p>
@@ -180,14 +180,14 @@ const VariantRows = ({ combinations, baseSellPrice }: { combinations: any[]; bas
               <div className="absolute left-[11px] top-[32px] w-[21px] h-[2px] bg-slate-200"></div>
 
               {/* Variant Card */}
-              <div className={`border border-slate-200 rounded-xl overflow-hidden bg-white shadow-sm transition-all hover:border-blue-300 ${isVarExpanded ? 'ring-1 ring-blue-500/20' : ''}`}>
+              <div className={`border border-slate-200 rounded-xl overflow-hidden bg-white shadow-sm md:transition-all md:hover:border-blue-300 ${isVarExpanded ? 'ring-1 ring-blue-500/20' : ''}`}>
                 <div
                   className={`flex items-center gap-4 px-5 py-3.5 ${hasBatches ? 'hover:bg-slate-50 cursor-pointer' : ''}`}
                   onClick={() => hasBatches && setExpandedVariant(isVarExpanded ? null : variantId)}
                 >
                   {/* Expand Icon for Batches */}
                   {hasBatches && (
-                    <div className={`w-5 h-5 rounded flex items-center justify-center transition-all shrink-0 ${isVarExpanded ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-500"}`}>
+                    <div className={`w-5 h-5 rounded flex items-center justify-center md:transition-all shrink-0 ${isVarExpanded ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-500"}`}>
                       {isVarExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
                     </div>
                   )}
@@ -250,7 +250,7 @@ const ProductInfos = () => {
       <div className="flex items-center gap-3">
         <button 
           onClick={() => navigate("/product/drafts")}
-          className="px-4 h-10 rounded-xl border border-blue-100 text-blue-600 font-semibold text-[13px] bg-blue-50/50 hover:bg-blue-100 transition-all flex items-center gap-2"
+          className="px-4 h-10 rounded-xl border border-blue-100 text-blue-600 font-semibold text-[13px] bg-blue-50/50 md:hover:bg-blue-100 md:transition-all flex items-center gap-2"
         >
           <Bookmark size={16} />
           Saved Drafts
@@ -318,7 +318,7 @@ const ProductInfos = () => {
   }, [products, searchTerm]);
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
+    <div className="space-y-6 md:animate-in md:fade-in md:duration-500">
       {/* Stats */}
       <div className="flex flex-nowrap overflow-x-auto custom-scrollbar gap-3 pb-2 -mx-2 px-2 sm:grid sm:grid-cols-2 lg:grid-cols-4 sm:overflow-visible sm:pb-0 sm:mx-0 sm:px-0 touch-pan-x">
         <StatCard label="Total Products" value={products.length} icon={Package} />
@@ -349,7 +349,7 @@ const ProductInfos = () => {
           />
         </div>
         <div className="flex items-center gap-3">
-          <button className="p-2.5 rounded-lg bg-white text-slate-500 border border-slate-200 hover:bg-slate-50 transition-all shadow-sm">
+          <button className="p-2.5 rounded-lg bg-white text-slate-500 border border-slate-200 md:hover:bg-slate-50 md:transition-all shadow-sm">
             <Filter size={16} />
           </button>
           <ReusableSelect
@@ -368,12 +368,12 @@ const ProductInfos = () => {
       </div>
 
       {error && (
-        <div className="p-4 bg-rose-50 border border-rose-200 rounded-xl flex items-center justify-between animate-in fade-in">
+        <div className="p-4 bg-rose-50 border border-rose-200 rounded-xl flex items-center justify-between md:animate-in md:fade-in">
           <div className="flex items-center gap-3 text-rose-700">
             <AlertCircle size={20} />
             <p className="text-sm font-medium">{error}</p>
           </div>
-          <button onClick={clearError} className="p-1 hover:bg-rose-100 rounded-lg transition-colors text-rose-500">
+          <button onClick={clearError} className="p-1 md:hover:bg-rose-100 rounded-lg md:transition-colors text-rose-500">
             <X size={18} />
           </button>
         </div>
@@ -421,13 +421,13 @@ const ProductInfos = () => {
                   return (
                     <Fragment key={p.id}>
                       <tr
-                        className={`group transition-colors ${isExpanded ? "bg-slate-50/30" : "hover:bg-slate-50"}`}
+                        className={`group md:transition-colors ${isExpanded ? "bg-slate-50/30" : "md:hover:bg-slate-50"}`}
                         onClick={() => isExpandable ? toggleExpand(p.id) : navigate(`/product/${p.id}`)}
                         style={{ cursor: "pointer" }}
                       >
                         <td className="px-4 py-4 text-center">
                           {isExpandable ? (
-                            <div className={`w-7 h-7 rounded-md flex items-center justify-center transition-all shadow-sm ${isExpanded ? "bg-blue-600 text-white shadow-blue-500/20" : "bg-white border border-slate-200 text-slate-500 group-hover:bg-slate-50"}`}>
+                            <div className={`w-7 h-7 rounded-md flex items-center justify-center md:transition-all shadow-sm ${isExpanded ? "bg-blue-600 text-white shadow-blue-500/20" : "bg-white border border-slate-200 text-slate-500 md:group-hover:bg-slate-50"}`}>
                               {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
                             </div>
                           ) : (
@@ -490,21 +490,21 @@ const ProductInfos = () => {
                           <div className="flex items-center justify-end gap-1.5 transition-opacity">
                             <button
                               onClick={(e) => { e.stopPropagation(); navigate(`/product/${p.id}`); }}
-                              className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-transparent hover:border-blue-100"
+                              className="p-2 text-slate-400 md:hover:text-blue-600 md:hover:bg-blue-50 rounded-lg md:transition-colors border border-transparent md:hover:border-blue-100"
                               title="View Detail"
                             >
                               <Eye size={16} />
                             </button>
                             <button
                               onClick={(e) => { e.stopPropagation(); navigate(`/product/${p.id}/edit`); }}
-                              className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-transparent hover:border-blue-100"
+                              className="p-2 text-slate-400 md:hover:text-blue-600 md:hover:bg-blue-50 rounded-lg md:transition-colors border border-transparent md:hover:border-blue-100"
                               title="Edit Product"
                             >
                               <Edit3 size={16} />
                             </button>
                             <button
                               onClick={(e) => { e.stopPropagation(); setProductToDelete(p); setIsDeleteDialogOpen(true); }}
-                              className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors border border-transparent hover:border-rose-100"
+                              className="p-2 text-slate-400 md:hover:text-rose-600 md:hover:bg-rose-50 rounded-lg md:transition-colors border border-transparent md:hover:border-rose-100"
                               title="Delete Product"
                             >
                               <Trash2 size={16} />

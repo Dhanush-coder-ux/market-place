@@ -1,4 +1,4 @@
-import { useState, useEffect, FC } from "react";
+import { useState, useEffect, FC, useMemo, useCallback, memo } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, ChevronDown, ListMinus, Plus } from "lucide-react";
@@ -15,7 +15,6 @@ const isSubGroup = (item: SubItem): item is SubGroup =>
 interface SidebarItemProps {
   link: SidebarLink;
   sidebarOpen: boolean;
-  index: number;
   collapseTrigger: number;
   onHover: (link: SidebarLink | null, top: number) => void;
 }
@@ -39,17 +38,24 @@ const Sidebar: FC<{ links: SidebarLink[] }> = ({ links }) => {
    * For "Purchase", we filter each SubItem based on its settingsKey.
    * All other top-level links pass through untouched.
    */
-  const filteredLinks: SidebarLink[] = links.map((link) => {
+  // Memoize — only recomputes when settings or links change, not on every render
+  const filteredLinks: SidebarLink[] = useMemo(() => links.map((link) => {
     if (link.name === "Purchase" && link.subLinks) {
       const visibleSubItems = link.subLinks.filter((item) => {
-        if (!isSubGroup(item)) return true; // plain SubLinks always visible
-        if (!item.settingsKey) return true; // no gate = always visible
+        if (!isSubGroup(item)) return true;
+        if (!item.settingsKey) return true;
         return settings[item.settingsKey] === true;
       });
       return { ...link, subLinks: visibleSubItems };
     }
     return link;
-  });
+  }), [links, settings]);
+
+  // Stable callback — defined at component level (hooks cannot be called inside JSX)
+  const handleHover = useCallback(
+    (link: SidebarLink | null, top: number) => setHoveredItem(link ? { link, top } : null),
+    []
+  );
 
   return (
     <motion.div
@@ -130,20 +136,19 @@ const Sidebar: FC<{ links: SidebarLink[] }> = ({ links }) => {
 
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto overflow-x-hidden flex flex-col gap-0.5 px-2 py-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-        {filteredLinks.map((link, i) => (
+        {filteredLinks.map((link) => (
           <SidebarItem
             key={link.name}
             link={link}
             sidebarOpen={isOpen}
-            index={i}
             collapseTrigger={collapseTrigger}
-            onHover={(link, top) => setHoveredItem(link ? { link, top } : null)}
+            onHover={handleHover}
           />
         ))}
       </nav>
 
       {/* Floating Hover Card (Portal-like Fixed Positioning) */}
-      <AnimatePresence>
+      <AnimatePresence initial={false}>
         {hoveredItem && !isOpen && (
           <motion.div
             initial={{ opacity: 0, x: -10 }}
@@ -212,7 +217,7 @@ const Sidebar: FC<{ links: SidebarLink[] }> = ({ links }) => {
 
 // ─── Top-level Sidebar Item ───────────────────────────────────────────────────
 
-const SidebarItem: FC<SidebarItemProps> = ({ link, sidebarOpen, index, collapseTrigger, onHover }) => {
+const SidebarItem = memo(({ link, sidebarOpen, collapseTrigger, onHover }: SidebarItemProps) => {
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const Icon = link.icon;
@@ -247,24 +252,24 @@ const SidebarItem: FC<SidebarItemProps> = ({ link, sidebarOpen, index, collapseT
       ? "bg-white/15 text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.1)]"
       : "bg-transparent text-white/55 hover:bg-white/10 hover:text-white/80";
 
-  const handleMouseEnter = (e: React.MouseEvent) => {
+  const handleMouseEnter = useCallback((e: React.MouseEvent) => {
     if (!sidebarOpen && hasSub) {
       const rect = e.currentTarget.getBoundingClientRect();
       onHover(link, rect.top);
     }
-  };
+  }, [sidebarOpen, hasSub, onHover, link]);
 
-  const handleMouseLeave = () => {
+  const handleMouseLeave = useCallback(() => {
     if (!sidebarOpen) {
       onHover(null, 0);
     }
-  };
+  }, [sidebarOpen, onHover]);
 
   return (
     <motion.div
-      initial={{ opacity: 0, x: -6 }}
+      initial={false}
       animate={{ opacity: 1, x: 0 }}
-      transition={{ duration: 0.2, delay: index * 0.04 }}
+      transition={{ duration: 0.2 }}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       className="flex flex-col relative group/sub"
@@ -381,7 +386,7 @@ const SidebarItem: FC<SidebarItemProps> = ({ link, sidebarOpen, index, collapseT
       )}
 
       {/* ── Submenu panel ── */}
-      <AnimatePresence>
+      <AnimatePresence initial={false}>
         {hasSub && isDrop && sidebarOpen && (
           <motion.div
             initial={{ height: 0, opacity: 0 }}
@@ -411,7 +416,7 @@ const SidebarItem: FC<SidebarItemProps> = ({ link, sidebarOpen, index, collapseT
       </AnimatePresence>
     </motion.div>
   );
-};
+});
 
 // ─── SubGroup (folder) Item — Level 2 ────────────────────────────────────────
 
@@ -462,7 +467,7 @@ const SubGroupItem: FC<SubGroupItemProps> = ({ group, collapseTrigger }) => {
       </button>
 
       {/* Level 3: children */}
-      <AnimatePresence>
+      <AnimatePresence initial={false}>
         {isOpen && (
           <motion.div
             initial={{ height: 0, opacity: 0 }}
@@ -485,7 +490,7 @@ const SubGroupItem: FC<SubGroupItemProps> = ({ group, collapseTrigger }) => {
 
 // ─── Flat SubLink — reusable leaf node ───────────────────────────────────────
 
-const FlatSubLink: FC<{ sub: SubLink; isPopup?: boolean }> = ({ sub, isPopup = false }) => {
+const FlatSubLink: FC<{ sub: SubLink; isPopup?: boolean }> = memo(({ sub, isPopup = false }) => {
   const Icon = sub.icon;
   const navigate = useNavigate();
   const active = window.location.pathname === sub.path;
@@ -535,7 +540,7 @@ const FlatSubLink: FC<{ sub: SubLink; isPopup?: boolean }> = ({ sub, isPopup = f
       )}
     </div>
   );
-};
+});
 
 // ─── Tooltip (collapsed state) ────────────────────────────────────────────────
 

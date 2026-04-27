@@ -1,5 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800&family=Outfit:wght@600;700;800&display=swap');
+/* Fonts are now loaded via <link> in index.html — not @import — to prevent render blocking */
 @import "tailwindcss";
 @import "tw-animate-css";
 
@@ -11,7 +10,7 @@
 }
 
 .btn-gradient-blue {
-  @apply bg-gradient-to-r from-blue-600 to-blue-400 text-white px-5 py-3 rounded-lg shadow-md hover:from-blue-700 hover:to-blue-500 transition-all duration-300;
+  @apply bg-gradient-to-r from-blue-600 to-blue-400 text-white px-5 py-3 rounded-lg shadow-md md:hover:from-blue-700 md:hover:to-blue-500 md:transition-all md:duration-300;
 }
 
 .card {
@@ -31,7 +30,7 @@
 }
 
 .create-shop {
-  @apply rounded-xl border-2 border-dashed border-gray-300 bg-transparent p-6 flex flex-col items-center justify-center text-center cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition-all min-h-[250px];
+  @apply rounded-xl border-2 border-dashed border-gray-300 bg-transparent p-6 flex flex-col items-center justify-center text-center cursor-pointer md:hover:border-blue-500 md:hover:bg-blue-50 md:transition-all min-h-[250px];
 }
 
 /* --- THEME VARIABLES --- */
@@ -148,13 +147,51 @@
 @layer base {
   * {
     @apply border-border outline-ring/50;
+    /* Remove tap highlight color on Android WebView */
+    -webkit-tap-highlight-color: transparent;
+    /* Prevent text selection flicker on fast taps */
+    -webkit-touch-callout: none;
   }
   html, body {
     @apply bg-background text-foreground font-sans overflow-x-hidden max-w-full;
+    /* Prevent elastic scrolling on the root (Flutter WebView handles this) */
+    overscroll-behavior: none;
   }
   @theme {
     --font-sans:  "Poppins", sans-serif;
-    /* --font-mono: "Roboto Mono", monospace; */
+  }
+}
+
+/* ─── WebView / Mobile Scroll Performance ────────────────────────────────────
+   These styles ensure native-feeling scroll in Flutter WebView.
+   Apply .mobile-scroll to any vertically-scrollable container.
+─────────────────────────────────────────────────────────────────────────── */
+@layer utilities {
+  .mobile-scroll {
+    /* Smooth momentum scrolling on iOS */
+    -webkit-overflow-scrolling: touch;
+    /* Only allow vertical panning — critical for WebView gesture pass-through */
+    touch-action: pan-y;
+    /* Prevent scroll chaining to the WebView's outer scroll */
+    overscroll-behavior-y: contain;
+  }
+
+  /* Apply to fixed bottom bars for GPU compositing (no repaint) */
+  .gpu-layer {
+    will-change: transform;
+    transform: translateZ(0);
+    backface-visibility: hidden;
+  }
+
+  /* Reduce blur cost on low-end devices — use sparingly */
+  .backdrop-mobile {
+    /* Full blur on desktop, cheaper solid bg on mobile */
+    backdrop-filter: blur(12px);
+  }
+  @media (max-width: 768px) {
+    .backdrop-mobile {
+      backdrop-filter: blur(4px);
+    }
   }
 }
 
@@ -232,10 +269,27 @@
   from { opacity: 0; transform: translateY(12px); }
   to   { opacity: 1; transform: translateY(0); }
 }
-.fade-up   { animation: fadeUp 0.4s ease forwards; }
-.fade-up-1 { animation-delay: 0.05s; opacity: 0; }
-.fade-up-2 { animation-delay: 0.1s;  opacity: 0; }
-.fade-up-3 { animation-delay: 0.15s; opacity: 0; }
-.fade-up-4 { animation-delay: 0.2s;  opacity: 0; }
-.fade-up-5 { animation-delay: 0.25s; opacity: 0; }
-.fade-up-6 { animation-delay: 0.3s;  opacity: 0; }
+
+/* Disable fade-up on mobile for performance */
+@media (min-width: 768px) {
+  .fade-up   { animation: fadeUp 0.4s ease forwards; }
+  .fade-up-1 { animation-delay: 0.05s; opacity: 0; }
+  .fade-up-2 { animation-delay: 0.1s;  opacity: 0; }
+  .fade-up-3 { animation-delay: 0.15s; opacity: 0; }
+  .fade-up-4 { animation-delay: 0.2s;  opacity: 0; }
+  .fade-up-5 { animation-delay: 0.25s; opacity: 0; }
+  .fade-up-6 { animation-delay: 0.3s;  opacity: 0; }
+}
+
+/* Respect Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-delay: -1ms !important;
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    background-attachment: initial !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0s !important;
+    transition-delay: 0s !important;
+  }
+}

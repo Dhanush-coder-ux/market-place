@@ -1,4 +1,4 @@
-import { useState, useEffect, Fragment } from "react";
+import React, { useState, useEffect, Fragment, useMemo, useCallback } from "react";
 import { 
   ChevronRight, 
   ChevronDown, 
@@ -83,7 +83,7 @@ const formatCurrency = (amount?: number | string) => {
 
 // --- Sub Components ---
 
-const ProductRow = ({ 
+const ProductRow = React.memo(({ 
   item, 
   isExpanded, 
   toggleExpand 
@@ -246,17 +246,17 @@ const ProductRow = ({
       )}
     </Fragment>
   );
-};
+});
 
 // --- Main Component ---
 const InventoryPage = () => {
   const { getData, loading, error, clearError } = useApi();
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [refreshKey] = useState(0);
 
   useEffect(() => {
-    // Assuming getData returns { detail: {...}, data: [...] }
     getData(ENDPOINTS.INVENTORIES, { shop_id: SHOP_ID }).then((res: any) => {
       if (res && res.data) {
         setInventory(res.data);
@@ -264,37 +264,70 @@ const InventoryPage = () => {
     });
   }, [refreshKey, getData]);
 
-  const toggleExpand = (id: string) => {
-    const newExpanded = new Set(expandedRows);
-    if (newExpanded.has(id)) {
-      newExpanded.delete(id);
-    } else {
-      newExpanded.add(id);
-    }
-    setExpandedRows(newExpanded);
-  };
+  // --- Optimized Filtering ---
+  const filteredInventory = useMemo(() => {
+    if (!searchQuery) return inventory;
+    const q = searchQuery.toLowerCase();
+    return inventory.filter(item => 
+      item.barcode?.toLowerCase().includes(q) || 
+      item.datas?.name?.toLowerCase().includes(q) ||
+      item.datas?.brand?.toLowerCase().includes(q) ||
+      item.datas?.category?.toLowerCase().includes(q)
+    );
+  }, [inventory, searchQuery]);
+
+  // --- Optimized Stats ---
+  const stats = useMemo(() => {
+    const total = filteredInventory.length;
+    const lowStock = filteredInventory.filter((p: InventoryItem) => {
+      const stock = Number(p.stocks || 0);
+      return stock > 0 && stock <= 15;
+    }).length;
+    return { total, lowStock };
+  }, [filteredInventory]);
+
+  const toggleExpand = useCallback((id: string) => {
+    setExpandedRows(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
 
   return (
     <div className="space-y-6 bg-slate-50 min-h-screen">
       
-      {/* Stats Section */}
-      <div className="flex flex-nowrap overflow-x-auto custom-scrollbar gap-3 pb-2 -mx-2 px-2 sm:grid sm:grid-cols-2 lg:grid-cols-4 sm:overflow-visible sm:pb-0 sm:mx-0 sm:px-0 touch-pan-x">
-        <StatCard 
-          icon={Package} 
-          label="Total Inventory Items" 
-          value={inventory.length.toString()} 
-          className="flex-1"
-        />
-        <StatCard 
-          icon={AlertCircle} 
-          label="Low Stock Items" 
-          value={inventory.filter(p => {
-            const stock = Number(p.stocks || 0);
-            return stock > 0 && stock <= 15;
-          }).length.toString()} 
-          iconBg="bg-amber-50" iconColor="text-amber-600"
-          className="flex-1"
-        />
+      {/* Search and Stats Section */}
+      <div className="space-y-4">
+        <div className="relative group">
+          <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-blue-500 transition-colors">
+            <Package size={18} />
+          </div>
+          <input
+            type="text"
+            placeholder="Search by name, SKU, brand, or category..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-11 pr-4 py-3 bg-white border border-slate-200 rounded-2xl shadow-sm focus:ring-4 focus:ring-blue-100 focus:border-blue-400 outline-none transition-all font-medium text-slate-700"
+          />
+        </div>
+
+        <div className="flex flex-nowrap overflow-x-auto custom-scrollbar gap-3 pb-2 -mx-2 px-2 sm:grid sm:grid-cols-2 lg:grid-cols-4 sm:overflow-visible sm:pb-0 sm:mx-0 sm:px-0 touch-pan-x">
+          <StatCard 
+            icon={Package} 
+            label="Total Inventory Items" 
+            value={stats.total.toString()} 
+            className="flex-1"
+          />
+          <StatCard 
+            icon={AlertCircle} 
+            label="Low Stock Items" 
+            value={stats.lowStock.toString()} 
+            iconBg="bg-amber-50" iconColor="text-amber-600"
+            className="flex-1"
+          />
+        </div>
       </div>
 
       {/* Error State */}
@@ -338,7 +371,7 @@ const InventoryPage = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {inventory.map((item) => (
+                {filteredInventory.map((item: InventoryItem) => (
                   <ProductRow 
                     key={item.id} 
                     item={item} 

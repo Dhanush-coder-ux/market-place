@@ -38,7 +38,7 @@ const Supplier = () => {
       <div className="flex items-center gap-3">
         <button 
           onClick={() => navigate("/supplier/drafts")}
-          className="px-5 h-11 rounded-xl border border-blue-100 text-blue-600 font-semibold text-[14px] bg-blue-50/50 hover:bg-blue-100 transition-all flex items-center gap-2"
+          className="px-5 h-11 rounded-xl border border-blue-100 text-blue-600 font-semibold text-[14px] bg-blue-50/50 md:hover:bg-blue-100 md:transition-all flex items-center gap-2"
         >
           <Bookmark size={18} />
           Saved Drafts
@@ -97,7 +97,7 @@ const Supplier = () => {
   };
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500 custom-scrollbar">
+    <div className="space-y-6 md:animate-in md:fade-in md:duration-500 custom-scrollbar">
       
       {/* Stats Section */}
       <div className="flex flex-nowrap overflow-x-auto custom-scrollbar gap-3 pb-2 -mx-2 px-2 sm:grid sm:grid-cols-2 lg:grid-cols-3 sm:overflow-visible sm:pb-0 sm:mx-0 sm:px-0 touch-pan-x">
@@ -154,7 +154,7 @@ const Supplier = () => {
             onChange={(e) => setSearchTerm(e.target.value)}
             className="h-11 text-sm w-48"
           />
-          <button className="p-2.5 rounded-xl bg-slate-50 text-slate-400 border border-slate-100 hover:bg-slate-100 transition-all shadow-sm">
+          <button className="p-2.5 rounded-xl bg-slate-50 text-slate-400 border border-slate-100 md:hover:bg-slate-100 md:transition-all shadow-sm">
             <Filter size={18} />
           </button>
         </div>
@@ -162,7 +162,7 @@ const Supplier = () => {
 
       {/* Error State */}
       {error && (
-        <div className="p-4 bg-rose-50 border border-rose-100 rounded-2xl flex items-center justify-between animate-in fade-in slide-in-from-top-2">
+        <div className="p-4 bg-rose-50 border border-rose-100 rounded-2xl flex items-center justify-between md:animate-in md:fade-in md:slide-in-from-top-2">
           <p className="text-sm font-semibold text-rose-600">{error}</p>
           <button onClick={clearError} className="p-1 hover:bg-rose-100 rounded-lg transition-colors text-rose-400">
             <X size={18} />
@@ -171,7 +171,7 @@ const Supplier = () => {
       )}
 
       {/* Table Section */}
-      <div className="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden transition-all duration-300">
+      <div className="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden md:transition-all md:duration-300">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-separate border-spacing-0">
             <thead>
@@ -196,7 +196,7 @@ const Supplier = () => {
                 suppliers.map((sup) => (
                   <tr 
                     key={sup.id} 
-                    className="group hover:bg-blue-50/30 transition-all cursor-pointer"
+                    className="group md:hover:bg-blue-50/30 md:transition-all cursor-pointer"
                     onClick={() => navigate(`/supplier/${sup.id}`)}
                   >
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -223,19 +223,19 @@ const Supplier = () => {
                       <div className="flex items-center justify-end gap-1">
                         <button 
                           onClick={(e) => { e.stopPropagation(); navigate(`/supplier/${sup.id}`); }}
-                          className="p-2 text-slate-400 hover:text-blue-600 hover:bg-white rounded-xl transition-all shadow-sm active:scale-95"
+                          className="p-2 text-slate-400 md:hover:text-blue-600 md:hover:bg-white rounded-xl md:transition-all shadow-sm md:active:scale-95"
                         >
                           <Eye size={16} />
                         </button>
                         <button 
                           onClick={(e) => { e.stopPropagation(); navigate(`/supplier/${sup.id}/edit`); }}
-                          className="p-2 text-slate-400 hover:text-blue-600 hover:bg-white rounded-xl transition-all shadow-sm active:scale-95"
+                          className="p-2 text-slate-400 md:hover:text-blue-600 md:hover:bg-white rounded-xl md:transition-all shadow-sm md:active:scale-95"
                         >
                           <Edit size={16} />
                         </button>
                         <button 
                           onClick={(e) => { e.stopPropagation(); setSupplierToDelete(sup); setIsDeleteDialogOpen(true); }}
-                          className="p-2 text-slate-400 hover:text-rose-600 hover:bg-white rounded-xl transition-all shadow-sm active:scale-95"
+                          className="p-2 text-slate-400 md:hover:text-rose-600 md:hover:bg-white rounded-xl md:transition-all shadow-sm md:active:scale-95"
                         >
                           <Trash2 size={16} />
                         </button>

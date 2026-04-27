@@ -59,12 +59,12 @@ const SupplierForm = () => {
   // Header Actions
   useEffect(() => {
     setBottomActions(
-      <div className="flex items-center gap-3 animate-in fade-in slide-in-from-right-4 duration-300">
+      <div className="flex items-center gap-3 md:animate-in md:fade-in md:slide-in-from-right-4 md:duration-300">
         {!id && (
           <button 
             type="button"
             onClick={handleSaveDraft}
-            className="px-4 h-8 rounded-xl border border-blue-100 text-blue-600 font-bold text-xs bg-blue-50/50 hover:bg-blue-100 transition-all flex items-center gap-2 whitespace-nowrap overflow-hidden"
+            className="px-4 h-8 rounded-xl border border-blue-100 text-blue-600 font-bold text-xs bg-blue-50/50 md:hover:bg-blue-100 md:transition-all flex items-center gap-2 whitespace-nowrap overflow-hidden"
           >
             <Bookmark size={14} className="shrink-0" />
             <span className="truncate">Save Draft</span>
@@ -177,7 +177,7 @@ const SupplierForm = () => {
   if (loading && id) return <div className="py-20 text-center"><Loader /></div>;
 
   return (
-    <div className="max-w-7xl mx-auto p-4 md:p-8 animate-in fade-in duration-500">
+    <div className="max-w-7xl mx-auto p-4 md:p-8 md:animate-in md:fade-in md:duration-500">
       <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
         
         {/* Left Column: Main Identity & Contact */}
@@ -279,7 +279,7 @@ const SupplierForm = () => {
                   value={formData.address}
                   onChange={handleChange}
                   rows={3}
-                  className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-4 py-3 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-blue-100 transition-all placeholder:text-slate-300 resize-none"
+                  className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-4 py-3 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-blue-100 md:transition-all placeholder:text-slate-300 resize-none"
                   placeholder="Enter full address details..."
                 />
               </div>
@@ -313,7 +313,7 @@ const SupplierForm = () => {
                 className="bg-slate-50 border-slate-100 text-slate-800 placeholder:text-slate-300 h-12"
               />
               <div className="p-4 rounded-2xl bg-blue-50 border border-blue-100 flex gap-3 items-start">
-                <div className="mt-1 w-2 h-2 rounded-full bg-blue-500 animate-pulse shrink-0" />
+                <div className="mt-1 w-2 h-2 rounded-full bg-blue-500 md:animate-pulse shrink-0" />
                 <p className="text-[10px] font-bold text-blue-600 leading-relaxed uppercase tracking-wider">
                   Ensure the Tax ID is valid for generating B2B invoices and claiming Input Tax Credit.
                 </p>
@@ -334,7 +334,7 @@ const SupplierForm = () => {
               value={formData.notes}
               onChange={handleChange}
               rows={5}
-              className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-4 py-3 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-blue-100 transition-all placeholder:text-slate-300 resize-none"
+              className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-4 py-3 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-blue-100 md:transition-all placeholder:text-slate-300 resize-none"
               placeholder="Additional comments about this partner..."
             />
           </div>

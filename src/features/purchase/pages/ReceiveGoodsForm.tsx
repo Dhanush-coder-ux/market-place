@@ -63,7 +63,7 @@ const WAREHOUSES = ["Main Warehouse", "Secondary Warehouse", "Shop Floor"];
 /** Fetch PO reference list for SearchSelect */
 const fetchPOOptions = async (query: string, getData: Function) => {
   try {
-    const res = await getData(`${ENDPOINTS.PURCHASES}?search=${encodeURIComponent(query)}&type=PO_CREATE`);
+    const res = await getData(`${ENDPOINTS.PURCHASES}?search=${encodeURIComponent(query)}&view=PO_VIEW`);
     const list: any[] = res?.data || res?.datas || [];
     return list.map((po: any) => ({
       id: po.id,

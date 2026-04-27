@@ -13,7 +13,9 @@ export interface ProductRecord {
   id: string;
   barcode: string;
   date?: string;
-  datas: Record<string, unknown>;
+  datas: Record<string, any>;
+  variants?: any[];
+  batches?: any[];
 }
 
 export interface SupplierRecord {

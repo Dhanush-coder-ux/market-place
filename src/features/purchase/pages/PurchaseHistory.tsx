@@ -372,9 +372,9 @@ const PurchaseHistory = () => {
   useEffect(() => {
     const load = async () => {
       const [direct, grn, prod] = await Promise.all([
-        getData(ENDPOINTS.PURCHASES, { type: "DIRECT", shop_id: SHOP_ID, limit: "50", offset: "1" }),
-        getData(ENDPOINTS.PURCHASES, { type: "PO_CREATE", shop_id: SHOP_ID, limit: "50", offset: "1" }),
-        getData(ENDPOINTS.PURCHASES, { type: "PRODUCTION", shop_id: SHOP_ID, limit: "50", offset: "1" }),
+        getData(ENDPOINTS.PURCHASES, { view: "PURCHASE_VIEW", shop_id: SHOP_ID, limit: "50", offset: "1" }),
+        getData(ENDPOINTS.PURCHASES, { view: "PO_VIEW", shop_id: SHOP_ID, limit: "50", offset: "1" }),
+        getData(ENDPOINTS.PURCHASES, { view: "STOCKADJUSTMENT_VIEW", shop_id: SHOP_ID, limit: "50", offset: "1" }),
       ]);
       const toList = (res: any): PurchaseRecord[] =>
         res ? (Array.isArray(res.data) ? res.data : [res.data]) : [];

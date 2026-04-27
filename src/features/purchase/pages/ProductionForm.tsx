@@ -31,6 +31,8 @@ type PaymentMethod = "Cash" | "UPI" | "Card" | "Bank";
 
 export interface ProductionItem {
   id: string;
+  inventory_id?: string;
+  variant_id?: string;
   name: string;
   quantity: number | "";
   costPrice: number | "";
@@ -259,6 +261,12 @@ const ProductionForm = () => {
       return;
     }
 
+    const unselected = products.find(p => !p.inventory_id && p.name);
+    if (unselected) {
+      showToast(`Product "${unselected.name}" was not selected from inventory. Please search and select it.`, "error");
+      return;
+    }
+
     setSubmitting(true);
     try {
       const transformedProducts = products.map((p, idx) => {
@@ -276,11 +284,13 @@ const ProductionForm = () => {
         }
 
         return {
-          id: p.id,
+          inventory_id: p.inventory_id || (p.id.length > 10 ? p.id : undefined),
+          variant_id: p.variant_id,
           name: p.name,
           barcode: p.sku,
           quantity: q,
-          cost_price: baseCost,
+          received_qty: q,
+          buy_price: baseCost,
           net_cost: Number(netCostPerUnit.toFixed(2)),
           sell_price: Number(finalSellPrice.toFixed(2)),
           unit: p.unit || "pc",
@@ -290,7 +300,13 @@ const ProductionForm = () => {
           batch_number: p.batchNum || productionDetails.batchNo,
           manufacturing_date: p.manufacturingDate,
           expiry_date: p.expiryDate,
-          serial_numbers: p.serialNumbers,
+          batches: {
+            batch_number: p.batchNum || productionDetails.batchNo,
+            quantity: q,
+            manufacturing_date: p.manufacturingDate,
+            expiry_date: p.expiryDate
+          },
+          serial_numbers: p.serialNumbers ? p.serialNumbers.split(",").map(s => s.trim()).filter(Boolean) : [],
           variant: p.variant,
         };
       });
@@ -299,12 +315,14 @@ const ProductionForm = () => {
         datas: {
           shop_id: SHOP_ID,
           type: "PRODUCTION",
+          supplier_id: "INTERNAL_PRODUCTION",
+          supplier_name: "Internal Workshop",
           productionDetails: { ...productionDetails },
           productionCosts: { ...productionCosts },
-          charges: { ...charges },
-          payment: { ...payment },
+          charges: { transport: Number(charges.transport) || 0, other: Number(charges.other) || 0 },
+          payment: { method: payment.method, amountPaid: Number(payment.amountPaid) || 0 },
           products: transformedProducts,
-        }
+        },
       };
 
       const res = await postData(ENDPOINTS.PURCHASES, payload); // Using purchase endpoint as generic entry point for now

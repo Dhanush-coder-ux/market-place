@@ -401,8 +401,9 @@ const ProductInfos = () => {
               ) : (
                 filteredProducts.map((p) => {
                   const datas = (p.datas as any) || {};
-                  const hasVariants = datas.has_variants && datas.combinations?.length > 0;
-                  const batches: any[] = datas.batches || [];
+                  const hasVariants = (datas.has_varients || datas.has_variants) && ((p.variants && p.variants.length > 0) || (datas.combinations && datas.combinations.length > 0));
+                  const combinations = p.variants || datas.combinations || [];
+                  const batches: any[] = p.batches || datas.batches || [];
                   const hasBatches = batches.length > 0;
                   const isExpandable = hasVariants || hasBatches;
                   const isExpanded = expandedRows.has(p.id);
@@ -412,7 +413,7 @@ const ProductInfos = () => {
                   if (hasVariants && hasBatches) {
                     expandBadge = <span className="text-[10px] font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-100">Variant + Batch</span>;
                   } else if (hasVariants) {
-                    expandBadge = <span className="text-[10px] font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-100 flex items-center gap-1"><Layers size={10}/>{datas.combinations?.length} Variants</span>;
+                    expandBadge = <span className="text-[10px] font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-100 flex items-center gap-1"><Layers size={10}/>{combinations.length} Variants</span>;
                   } else if (hasBatches) {
                     expandBadge = <span className="text-[10px] font-semibold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-100 flex items-center gap-1"><Calendar size={10}/>{batches.length} Batches</span>;
                   }
@@ -521,7 +522,7 @@ const ProductInfos = () => {
                             <div className="pl-[88px] pr-6 py-2">
                               {hasVariants && (
                                 <VariantRows
-                                  combinations={datas.combinations}
+                                  combinations={combinations}
                                   baseSellPrice={datas.sell_price || (p as any).sell_price}
                                 />
                               )}

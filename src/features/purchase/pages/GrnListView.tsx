@@ -201,7 +201,7 @@ const GRNCardView = () => {
   const [refreshKey] = useState(0);
 
   useEffect(() => {
-    getData(ENDPOINTS.PURCHASES, { type: "PO_CREATE", shop_id: SHOP_ID, limit: "50", offset: "1" }).then((res) => {
+    getData(ENDPOINTS.PURCHASES, { view: "PO_VIEW", shop_id: SHOP_ID, limit: "50", offset: "1" }).then((res) => {
       if (res) setPurchases(Array.isArray(res.data) ? res.data : [res.data]);
     });
   }, [refreshKey]);

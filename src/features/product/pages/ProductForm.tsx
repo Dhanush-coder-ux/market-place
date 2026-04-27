@@ -981,7 +981,9 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
       const fetchProduct = async () => {
         const res = await getData(`${ENDPOINTS.INVENTORIES}/by/${id}/${SHOP_ID}`);
         if (res && res.data) {
-          const prod = res.data;
+          const prod = Array.isArray(res.data) ? res.data[0] : res.data;
+          if (!prod) return;
+
           const datas = prod.datas || {};
           setForm({
             name: prod.name || datas.name || "",
@@ -1003,12 +1005,47 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
             reorder_point: String(datas.reorder_point || "5"),
             max_stock: String(datas.max_stock || ""),
             location: datas.location || "",
-            has_variants: !!datas.has_variants,
-            batch_tracking: !!datas.batch_tracking,
-            serial_tracking: !!datas.serial_tracking,
+            has_variants: !!(datas.has_varients ?? datas.has_variants),
+            batch_tracking: !!(datas.has_batch_tracking ?? datas.batch_tracking),
+            serial_tracking: !!(datas.has_serialno_tracking ?? datas.serial_tracking),
           });
-          if (datas.variantTypes) setVariantTypes(datas.variantTypes);
-          if (datas.combinations) setCombinations(datas.combinations);
+
+          // Restore variant types
+          if (datas.variantTypes) {
+            setVariantTypes(datas.variantTypes);
+          } else if (prod.variants && prod.variants.length > 0) {
+            const firstVarDatas = prod.variants[0].datas || {};
+            const attributes = firstVarDatas.attributes;
+            if (attributes) {
+              const types = Object.keys(attributes).map(key => ({
+                id: uid(),
+                name: key,
+                values: Array.from(new Set(prod.variants.map((v: any) => v.datas?.attributes?.[key]))).filter(Boolean) as string[]
+              }));
+              setVariantTypes(types);
+            }
+          }
+
+          // Restore combinations
+          if (datas.combinations) {
+            setCombinations(datas.combinations);
+          } else if (prod.variants) {
+            setCombinations(prod.variants.map((v: any) => ({
+              id: v.id,
+              attributes: v.datas?.attributes || {},
+              barcode: v.barcode,
+              price: String(v.datas?.sell_price || ""),
+              stock: String(v.stocks || ""),
+              active: true,
+              serials: (v.datas?.serial_numbers || []).map((sn: string) => ({
+                id: uid(),
+                serial: sn,
+                status: "available" as const,
+                purchaseDate: "",
+                warrantyMonths: "12",
+              }))
+            })));
+          }
         }
       };
       fetchProduct();
@@ -1092,16 +1129,69 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (form.has_variants && combinations.length === 0) {
+      showToast("Please add at least one variant combination", "error");
+      return;
+    }
+
+    const mappedVarients = combinations.map(combo => {
+      const buyPrice = Number(form.buy_price) || 0;
+      const sellPrice = Number(combo.price) || 0;
+      const stocks = Number(combo.stock) || 0;
+      const v: any = {
+        barcode: combo.barcode,
+        stocks: stocks,
+        buy_price: buyPrice,
+        sell_price: sellPrice,
+        datas: {
+          stocks: stocks,
+          barcode: combo.barcode,
+          buy_price: buyPrice,
+          sell_price: sellPrice,
+          serial_numbers: combo.serials.map(s => s.serial),
+          attributes: combo.attributes,
+        },
+        batches: []
+      };
+      if (!combo.id.startsWith("id_")) v.id = combo.id;
+      return v;
+    });
+
     const payload = {
+      id: id || undefined,
+      barcode: form.barcode,
+      stocks: totalStock,
       datas: { 
-        ...form, 
-        variantTypes, 
-        combinations,
+        id: id || null,
+        name: form.name,
+        barcode: form.barcode,
         shop_id: SHOP_ID,
-        id,
-        stocks:form.opening_stock,
+        category: form.category,
+        buy_price: Number(form.buy_price) || 0,
+        account_id: "",
+        sell_price: Number(form.sell_price) || 0,
+        description: form.description,
+        has_varients: form.has_variants,
+        has_batch_tracking: form.batch_tracking,
+        has_serialno_tracking: form.serial_tracking,
+        brand: form.brand,
+        unit: form.unit,
+        mrp: Number(form.mrp) || 0,
+        gst: form.gst,
+        hsn: form.hsn,
+        supplier: form.supplier,
+        opening_stock: Number(form.opening_stock) || 0,
+        reorder_point: Number(form.reorder_point) || 0,
+        max_stock: Number(form.max_stock) || 0,
+        location: form.location,
+        is_active: form.is_active,
+        stocks: totalStock,
+        variantTypes,
+        varients: form.has_variants ? mappedVarients : [], // Inside datas
         type: id ? "DIRECT" : "DIRECT"
       },
+      varients: form.has_variants ? mappedVarients : [] // At root
     };
     
     let res;

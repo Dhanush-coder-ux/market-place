@@ -33,6 +33,8 @@ type GRNStatus = "Pending" | "Partial" | "Completed";
 
 export interface ProductItem {
   id: string;
+  inventory_id?: string;
+  variant_id?: string;
   name: string;
   quantity: number | "";
   costPrice: number | "";
@@ -270,6 +272,12 @@ const GrnForm = () => {
     if (!grnDetails.supplier) { showToast("Please select a supplier.", "error"); return; }
     if (!products[0]?.name)   { showToast("Please add at least one product.", "error"); return; }
 
+    const unselected = products.find(p => !p.inventory_id && p.name);
+    if (unselected) {
+      showToast(`Product "${unselected.name}" was not selected from inventory. Please search and select it.`, "error");
+      return;
+    }
+
     setSubmitting(true);
     try {
       const transformedProducts = products.map(p => {
@@ -292,15 +300,28 @@ const GrnForm = () => {
                                        Number(p.sellingPrice) || 0;
 
         return {
-          id: p.id, name: p.name, barcode: p.sku, quantity: q,
+          inventory_id: p.inventory_id || (p.id.length > 10 ? p.id : undefined),
+          variant_id: p.variant_id,
+          name: p.name,
+          barcode: p.sku,
+          quantity: q,
+          received_qty: q,
           buy_price: baseCost,
           sell_price: Number(finalSellPrice.toFixed(2)),
           unit: p.unit || "pc",
           gst: Number(p.taxGst) || 0,
           batch_tracking: p.batchTracking,
+          serial_tracking: p.serialTracking,
           batch_number: p.batchNum,
           manufacturing_date: p.manufacturingDate,
           expiry_date: p.expiryDate,
+          batches: {
+            batch_number: p.batchNum,
+            quantity: q,
+            manufacturing_date: p.manufacturingDate,
+            expiry_date: p.expiryDate
+          },
+          serial_numbers: p.serialNumbers ? p.serialNumbers.split(",").map(s => s.trim()).filter(Boolean) : [],
           variant: p.variant,
         };
       });

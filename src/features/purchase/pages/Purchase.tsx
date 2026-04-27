@@ -84,7 +84,7 @@ const PurchaseHistoryTab = () => {
 
   useEffect(() => {
     const params: Record<string, string> = {
-      type: "DIRECT",
+      view: "PURCHASE_VIEW",
       shop_id: SHOP_ID,
       limit: "50",
       offset: "1",

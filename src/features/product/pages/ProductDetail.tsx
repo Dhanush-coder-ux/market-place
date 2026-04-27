@@ -107,9 +107,9 @@ const ProductDetail = () => {
   const buyingPrice = (product as any).buy_price ?? datas.buy_price ?? datas.buying_price ?? "—";
   const currentStock = (product as any).stocks ?? datas.stocks ?? datas.stock ?? "—";
   const unit = String(datas.unit ?? "—");
-  const combinations: any[] = datas.combinations ?? [];
+  const combinations: any[] = product.variants ?? datas.combinations ?? [];
   const variantTypes: any[] = datas.variantTypes ?? [];
-  const hasVariants = datas.has_variants === true || combinations.length > 0;
+  const hasVariants = datas.has_variants === true || datas.has_varients === true || combinations.length > 0;
   const isActive = datas.is_active !== false;
 
   const TABS = ["General Info", ...(hasVariants ? ["Variants"] : [])];

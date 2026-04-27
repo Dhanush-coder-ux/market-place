@@ -100,6 +100,8 @@ export const InventoryItemsCard = ({
       const first = variantsToAdd[0];
       next[targetIdx] = {
         ...next[targetIdx],
+        inventory_id: baseOpt.id || baseOpt.inventory_id,
+        variant_id: first.id,
         name: variantModal.baseProduct,
         costPrice: baseOpt.buy_price ?? baseOpt.costPrice ?? "",
         sellingPrice: baseOpt.sell_price ?? baseOpt.sellingPrice ?? "",
@@ -114,6 +116,8 @@ export const InventoryItemsCard = ({
       const otherVariants = variantsToAdd.slice(1).map(v => ({
         ...next[targetIdx],
         id: Math.random().toString(),
+        inventory_id: baseOpt.id || baseOpt.inventory_id,
+        variant_id: v.id,
         variant: v.name,
         sku: v.sku,
         batchTracking: !!(baseOpt.batch_tracking || (baseOpt.datas && baseOpt.datas.batch_tracking)),
@@ -295,6 +299,26 @@ export const InventoryItemsCard = ({
                     value={product.name}
                     onChange={(val, opt: any) => {
                       if (opt) {
+                        if (opt.is_variant) {
+                          // Directly add the variant if picked from search
+                          updateProductFields(index, {
+                            inventory_id: opt.id,
+                            variant_id: opt.variant_id,
+                            name: opt.name.split(" (")[0],
+                            variant: opt.variant_name,
+                            costPrice: opt.buy_price ?? "",
+                            sellingPrice: opt.sell_price ?? "",
+                            sku: opt.barcode ?? "",
+                            unit: opt.unit ?? "pc",
+                            category: opt.category ?? "",
+                            batchTracking: !!(opt.batch_tracking || opt.has_batch_tracking),
+                            serialTracking: !!(opt.serial_tracking || opt.has_serialno_tracking),
+                            // Store base variants for later modal access
+                            baseVariants: opt.combinations || [] 
+                          });
+                          return;
+                        }
+
                         const hasVariants = opt.has_variants || (opt.datas && opt.datas.has_variants);
                         const combinations = opt.combinations || (opt.datas && opt.datas.combinations) || [];
                         if (hasVariants && combinations.length > 0) {
@@ -307,14 +331,18 @@ export const InventoryItemsCard = ({
                         } else {
                           const d = opt.datas || opt;
                           updateProductFields(index, {
-                            name: d.name || String(val),
+                            inventory_id: opt.id,
+                            variant_id: undefined,
+                            name: opt.name || d.name || String(val),
                             costPrice: d.buy_price ?? d.costPrice ?? "",
                             sellingPrice: d.sell_price ?? d.sellingPrice ?? "",
                             sku: d.barcode ?? d.sku ?? "",
                             unit: d.unit ?? "pc",
                             category: d.category ?? "",
-                            batchTracking: !!(d.batch_tracking || (d.datas && d.datas.batch_tracking)),
-                            serialTracking: !!(d.serial_tracking || (d.datas && d.datas.serial_tracking))
+                            batchTracking: !!(d.batch_tracking || d.has_batch_tracking || (d.datas && d.datas.batch_tracking)),
+                            serialTracking: !!(d.serial_tracking || d.has_serialno_tracking || (d.datas && d.datas.serial_tracking)),
+                            hasVariants: true,
+                            baseVariants: combinations
                           });
                         }
                       } else {
@@ -381,6 +409,28 @@ export const InventoryItemsCard = ({
                       <span className={`text-${themeColor}-400 font-medium`}>Variant</span>
                       <span className={`text-${themeColor}-700 font-semibold`}>{product.variant}</span>
                     </span>
+                  )}
+
+                  {/* Manual Variant Picker Trigger */}
+                  {(product.baseVariants?.length > 0 || product.hasVariants) && (
+                    <button
+                      onClick={() => {
+                        const mappedVariants = (product.baseVariants || []).map((c: any) => ({
+                          id: c.id, name: Object.values(c.attributes || {}).join(" - "),
+                          sku: c.barcode || product.sku, stock: c.stock || 0,
+                        }));
+                        setVariantModal({
+                          isOpen: true,
+                          baseProduct: product.name,
+                          targetRowIndex: index,
+                          variants: mappedVariants,
+                          baseData: product
+                        });
+                      }}
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-50 border border-blue-200 text-[10px] text-blue-600 font-bold hover:bg-blue-100 transition-colors"
+                    >
+                      <Plus size={10} /> Select Variants
+                    </button>
                   )}
 
                   {/* SKU */}

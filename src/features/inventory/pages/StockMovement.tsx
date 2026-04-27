@@ -318,19 +318,19 @@ export default function StockMovementPage() {
   useEffect(() => {
     const load = async () => {
       const fetchType = async (type: string, movType: MovementType) => {
-        const res = await getData(ENDPOINTS.PURCHASES, { type, shop_id: SHOP_ID, limit: "50", offset: "1" });
+        const res = await getData(ENDPOINTS.PURCHASES, { view: type, shop_id: SHOP_ID, limit: "50", offset: "1" });
         if (!res) return [];
         const records: PurchaseRecord[] = Array.isArray(res.data) ? res.data : [res.data];
         return purchaseToMovements(records, movType);
       };
 
       const [direct, grn, production] = await Promise.all([
-        fetchType("DIRECT", "PURCHASE"),
-        fetchType("PO_CREATE", "PO_PURCHASE"),
-        fetchType("PRODUCTION", "PRODUCTION"),
+        fetchType("PURCHASE_VIEW", "PURCHASE"),
+        fetchType("PO_VIEW", "PO_PURCHASE"),
+        fetchType("STOCKADJUSTMENT_VIEW", "PRODUCTION"),
       ]);
 
-      const adjRes = await getData(ENDPOINTS.S_ADJUSTMENTS, { shop_id: SHOP_ID, limit: "50", offset: "1" });
+      const adjRes = await getData(ENDPOINTS.S_ADJUSTMENTS, { view: "STOCKADJUSTMENT_VIEW", shop_id: SHOP_ID, limit: "50", offset: "1" });
       const adjMovements: Movement[] = adjRes
         ? (Array.isArray(adjRes.data) ? adjRes.data : [adjRes.data]).flatMap((a: any) => {
           const products = (a.datas?.products ?? a.datas?.adjustment_products) as any[] | undefined;

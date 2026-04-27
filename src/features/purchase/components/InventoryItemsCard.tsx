@@ -214,7 +214,7 @@ export const InventoryItemsCard = ({
         <div className="flex items-center gap-2">
           {/* Cost Method Toggle */}
           <div className="hidden sm:flex items-center bg-slate-100 rounded-lg p-0.5">
-            {["None", "By Unit", "By Value"].map((method) => (
+            {["None", "By Unit", "By Value", "Equally"].map((method) => (
               <button
                 key={method}
                 onClick={() => setCostMethod(method)}

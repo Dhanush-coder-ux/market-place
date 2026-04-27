@@ -111,6 +111,8 @@ const PurchaseForm = () => {
         alloc = (q / totalQty) * totalCharges;
       } else if (costMethod === "By Value" && subtotal > 0) {
         alloc = ((q * c) / subtotal) * totalCharges;
+      } else if (costMethod === "Equally" && products.length > 0) {
+        alloc = totalCharges / products.length;
       }
       const netCostPerUnit = q > 0 ? (q * c + alloc) / q : c;
       return { alloc, netCostPerUnit };
@@ -281,6 +283,8 @@ const PurchaseForm = () => {
           allocated = stats.totalCharges / stats.totalQty;
         } else if (costMethod === "By Value" && stats.subtotal > 0) {
           allocated = (baseCost / stats.subtotal) * stats.totalCharges;
+        } else if (costMethod === "Equally" && products.length > 0) {
+          allocated = (stats.totalCharges / products.length) / (q > 0 ? q : 1);
         }
         const finalCost = baseCost + allocated;
 

@@ -97,7 +97,7 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
   ): Promise<any> => {
     let url = `${BASE_URL}${endpoint}`;
     if (params && Object.keys(params).length > 0) {
-      url += `?${new URLSearchParams(params).toString()}`;
+      url += `?${new URLSearchParams(params).toString()}`
     }
 
     // GET cache check

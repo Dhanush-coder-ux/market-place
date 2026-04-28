@@ -157,17 +157,18 @@
     /* Standard momentum scrolling for all scrollable areas */
     -webkit-overflow-scrolling: touch;
   }
-  html, body {
+
+  html,
+  body {
     @apply bg-background text-foreground font-sans overflow-x-hidden max-w-full;
     /* Smooth native-like scrolling behavior */
     scroll-behavior: smooth;
     /* Prevent elastic scrolling on the root (Flutter WebView handles this) */
     overscroll-behavior: none;
-    /* Standardize scrolling across platforms */
-    scrollbar-gutter: stable both-edges;
   }
+
   @theme {
-    --font-sans:  "Poppins", sans-serif;
+    --font-sans: "Poppins", sans-serif;
   }
 }
 
@@ -216,15 +217,17 @@
     /* Full blur on desktop, cheaper solid bg on mobile */
     backdrop-filter: blur(12px);
   }
+
   @media (max-width: 768px) {
     .backdrop-mobile {
       backdrop-filter: none;
       background-color: rgba(255, 255, 255, 0.95);
     }
-    
+
     /* Performance: Disable complex shadows on mobile if they are deep */
-    .shadow-xl, .shadow-2xl {
-      box-shadow: 0 4px 12px rgba(0,0,0,0.08) !important;
+    .shadow-xl,
+    .shadow-2xl {
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
     }
   }
 
@@ -236,6 +239,7 @@
 
 /* --- UTILITIES (Fixed Scrollbar) --- */
 @layer utilities {
+
   /* Unified Custom Scrollbar 
      Supports both Vertical and Horizontal scrolling
   */
@@ -250,6 +254,7 @@
     width: 4px;
     height: 4px;
   }
+
   @media (min-width: 768px) {
     .custom-scrollbar::-webkit-scrollbar {
       width: 6px;
@@ -262,16 +267,19 @@
   }
 
   .custom-scrollbar::-webkit-scrollbar-thumb {
-    background-color: #cbd5e1; /* slate-300 */
+    background-color: #cbd5e1;
+    /* slate-300 */
     border-radius: 10px;
-    border: 1px solid transparent; /* padding around thumb */
+    border: 1px solid transparent;
+    /* padding around thumb */
     background-clip: content-box;
   }
 
   .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background-color: #3b82f6; /* blue-500 */
+    background-color: #3b82f6;
+    /* blue-500 */
   }
-  
+
   /* Corner styling (where horizontal meets vertical) */
   .custom-scrollbar::-webkit-scrollbar-corner {
     background: transparent;
@@ -279,6 +287,7 @@
 }
 
 @layer utilities {
+
   /* Hide scrollbar for Chrome, Safari and Opera */
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
@@ -286,8 +295,10 @@
 
   /* Hide scrollbar for IE, Edge and Firefox */
   .scrollbar-hide {
-    -ms-overflow-style: none;  /* IE and Edge */
-    scrollbar-width: none;  /* Firefox */
+    -ms-overflow-style: none;
+    /* IE and Edge */
+    scrollbar-width: none;
+    /* Firefox */
   }
 }
 
@@ -300,35 +311,85 @@
      .heading-label   → Small label / compact card header H4
    ─────────────────────────────────────────────────────────────────────────── */
 @layer utilities {
+
   /* Softened typography — semibold page titles, medium sections */
-  .heading-page    { @apply text-xl font-semibold tracking-tight; }
-  .heading-section { @apply text-base font-semibold tracking-tight; }
-  .heading-sub     { @apply text-sm font-medium; }
-  .heading-label   { @apply text-xs font-medium; }
+  .heading-page {
+    @apply text-xl font-semibold tracking-tight;
+  }
+
+  .heading-section {
+    @apply text-base font-semibold tracking-tight;
+  }
+
+  .heading-sub {
+    @apply text-sm font-medium;
+  }
+
+  .heading-label {
+    @apply text-xs font-medium;
+  }
 }
 
 /* --- DASHBOARD FONTS & ANIMATIONS --- */
-.display-font { font-family: 'Outfit', sans-serif; }
+.display-font {
+  font-family: 'Outfit', sans-serif;
+}
 
 @keyframes fadeUp {
-  from { opacity: 0; transform: translateY(12px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* Disable fade-up on mobile for performance */
 @media (min-width: 768px) {
-  .fade-up   { animation: fadeUp 0.4s ease forwards; }
-  .fade-up-1 { animation-delay: 0.05s; opacity: 0; }
-  .fade-up-2 { animation-delay: 0.1s;  opacity: 0; }
-  .fade-up-3 { animation-delay: 0.15s; opacity: 0; }
-  .fade-up-4 { animation-delay: 0.2s;  opacity: 0; }
-  .fade-up-5 { animation-delay: 0.25s; opacity: 0; }
-  .fade-up-6 { animation-delay: 0.3s;  opacity: 0; }
+  .fade-up {
+    animation: fadeUp 0.4s ease forwards;
+  }
+
+  .fade-up-1 {
+    animation-delay: 0.05s;
+    opacity: 0;
+  }
+
+  .fade-up-2 {
+    animation-delay: 0.1s;
+    opacity: 0;
+  }
+
+  .fade-up-3 {
+    animation-delay: 0.15s;
+    opacity: 0;
+  }
+
+  .fade-up-4 {
+    animation-delay: 0.2s;
+    opacity: 0;
+  }
+
+  .fade-up-5 {
+    animation-delay: 0.25s;
+    opacity: 0;
+  }
+
+  .fade-up-6 {
+    animation-delay: 0.3s;
+    opacity: 0;
+  }
 }
 
 /* Respect Reduced Motion */
 @media (prefers-reduced-motion: reduce) {
-  *, ::before, ::after {
+
+  *,
+  ::before,
+  ::after {
     animation-delay: -1ms !important;
     animation-duration: 1ms !important;
     animation-iteration-count: 1 !important;
@@ -337,4 +398,34 @@
     transition-duration: 0s !important;
     transition-delay: 0s !important;
   }
-}
+}
+
+/* ─── Mobile / Flutter WebView Performance ────────────────────────────────
+   Reduce animation & transition cost on small screens where GPU
+   compositing is slower (especially inside Flutter WebView).
+─────────────────────────────────────────────────────────────────────────── */
+@media (max-width: 767px) {
+
+  /* Disable tw-animate-css slide-in / fade-in entrance animations */
+  .animate-in {
+    animation: none !important;
+    opacity: 1 !important;
+  }
+
+  /* Cap all transition durations to 100ms — keeps UI feeling snappy
+     without the rendering cost of 300ms+ transitions */
+  *,
+  ::before,
+  ::after {
+    transition-duration: 100ms !important;
+  }
+
+  /* backdrop-blur is extremely expensive on mobile GPU — remove globally */
+  .backdrop-blur-sm,
+  .backdrop-blur-md,
+  .backdrop-blur-lg,
+  .backdrop-blur-xl {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+}

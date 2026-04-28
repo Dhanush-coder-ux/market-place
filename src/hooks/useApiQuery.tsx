@@ -64,7 +64,7 @@ export function useApiQuery<T = unknown>(
         setLoading(false);
       }
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [endpoint, skip, trigger, JSON.stringify(params), ...deps]);
 
   useEffect(() => {

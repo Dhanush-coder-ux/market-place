@@ -1,8 +1,8 @@
 import React, { useState, useEffect, Fragment, useMemo, useCallback } from "react";
-import { 
-  ChevronRight, 
-  ChevronDown, 
-  Layers, 
+import {
+  ChevronRight,
+  ChevronDown,
+  Layers,
   Package,
   AlertCircle,
   Tag,
@@ -100,13 +100,13 @@ const parseData = (val: any) => {
   return [];
 };
 
-const ProductRow = React.memo(({ 
-  item, 
-  isExpanded, 
-  toggleExpand 
-}: { 
-  item: InventoryItem; 
-  isExpanded: boolean; 
+const ProductRow = React.memo(({
+  item,
+  isExpanded,
+  toggleExpand
+}: {
+  item: InventoryItem;
+  isExpanded: boolean;
   toggleExpand: (id: string) => void;
 }) => {
   const datas = item.datas || {};
@@ -115,7 +115,7 @@ const ProductRow = React.memo(({
   const hasVariants = datas.has_variants && combinations.length > 0;
   const hasBatches = batches.length > 0;
   const isExpandable = hasVariants || hasBatches;
-  
+
   // Use explicit stock number to combine with units properly for the parent
   const stockNumber = Number(item.stocks || 0);
   const stockLabel = `${stockNumber} ${datas.unit ? `(${datas.unit.split(" ")[0]})` : ""}`;
@@ -132,7 +132,7 @@ const ProductRow = React.memo(({
       const cDatas = c.datas || {};
       const cSerials = parseData(cDatas.serial_numbers || c.serial_numbers);
       totalSerials += cSerials.length;
-      
+
       const cBatches = parseData(c.batches);
       totalBatches += cBatches.length;
     });
@@ -175,7 +175,7 @@ const ProductRow = React.memo(({
 
   return (
     <Fragment>
-      <tr 
+      <tr
         onClick={() => isExpandable && toggleExpand(item.id)}
         className={`group transition-colors ${isExpandable ? 'cursor-pointer' : ''} ${isExpanded ? "bg-slate-50/30" : "hover:bg-slate-50"}`}
       >
@@ -310,8 +310,8 @@ const InventoryPage = () => {
   const filteredInventory = useMemo(() => {
     if (!searchQuery) return inventory;
     const q = searchQuery.toLowerCase();
-    return inventory.filter(item => 
-      item.barcode?.toLowerCase().includes(q) || 
+    return inventory.filter(item =>
+      item.barcode?.toLowerCase().includes(q) ||
       (item.datas?.name || item.name || "").toLowerCase().includes(q) ||
       (item.datas?.brand || item.brand || "").toLowerCase().includes(q) ||
       (item.datas?.category || item.category || "").toLowerCase().includes(q)
@@ -339,7 +339,7 @@ const InventoryPage = () => {
 
   return (
     <div className="space-y-6 bg-slate-50 min-h-screen">
-      
+
       {/* Search and Stats Section */}
       <div className="space-y-4">
         <div className="relative group">
@@ -356,16 +356,16 @@ const InventoryPage = () => {
         </div>
 
         <div className="flex flex-nowrap overflow-x-auto custom-scrollbar gap-3 pb-2 -mx-2 px-2 sm:grid sm:grid-cols-2 lg:grid-cols-4 sm:overflow-visible sm:pb-0 sm:mx-0 sm:px-0 touch-pan-x">
-          <StatCard 
-            icon={Package} 
-            label="Total Inventory Items" 
-            value={stats.total.toString()} 
+          <StatCard
+            icon={Package}
+            label="Total Inventory Items"
+            value={stats.total.toString()}
             className="flex-1"
           />
-          <StatCard 
-            icon={AlertCircle} 
-            label="Low Stock Items" 
-            value={stats.lowStock.toString()} 
+          <StatCard
+            icon={AlertCircle}
+            label="Low Stock Items"
+            value={stats.lowStock.toString()}
             iconBg="bg-amber-50" iconColor="text-amber-600"
             className="flex-1"
           />
@@ -414,11 +414,11 @@ const InventoryPage = () => {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {filteredInventory.map((item: InventoryItem) => (
-                  <ProductRow 
-                    key={item.id} 
-                    item={item} 
-                    isExpanded={expandedRows.has(item.id)} 
-                    toggleExpand={toggleExpand} 
+                  <ProductRow
+                    key={item.id}
+                    item={item}
+                    isExpanded={expandedRows.has(item.id)}
+                    toggleExpand={toggleExpand}
                   />
                 ))}
               </tbody>

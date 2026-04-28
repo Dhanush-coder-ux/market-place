@@ -1,97 +1,106 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
 
-    <!-- ─── Viewport ──────────────────────────────────────────────────────────
+<head>
+  <meta charset="UTF-8" />
+
+  <!-- ─── Viewport ──────────────────────────────────────────────────────────
          viewport-fit=cover → safe-area-inset works correctly inside Flutter WebView
          user-scalable=no → prevents accidental pinch-zoom on form fields
     ──────────────────────────────────────────────────────────────────────── -->
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
 
-    <!-- ─── PWA / WebView identity ─────────────────────────────────────────── -->
-    <meta name="theme-color" content="#2563EB" />
-    <meta name="mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="apple-mobile-web-app-title" content="MarketPlace" />
+  <!-- ─── PWA / WebView identity ─────────────────────────────────────────── -->
+  <meta name="theme-color" content="#2563EB" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="MarketPlace" />
 
-    <!-- ─── SEO ────────────────────────────────────────────────────────────── -->
-    <meta name="description" content="MarketPlace — Business ERP for inventory, sales, purchase, and supplier management." />
-    <meta name="robots" content="noindex" />
+  <!-- ─── SEO ────────────────────────────────────────────────────────────── -->
+  <meta name="description"
+    content="MarketPlace — Business ERP for inventory, sales, purchase, and supplier management." />
+  <meta name="robots" content="noindex" />
 
-    <!-- ─── Favicon ─────────────────────────────────────────────────────────── -->
-    <link rel="icon" type="image/png" href="/icon.png" />
+  <!-- ─── Favicon ─────────────────────────────────────────────────────────── -->
+  <link rel="icon" type="image/png" href="/icon.png" />
 
-    <!-- ─── Font Preconnect ────────────────────────────────────────────────── -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <!-- ─── Font Preconnect ────────────────────────────────────────────────── -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 
-    <!-- ─── Fonts ──────────────────────────────────────────────────────────── -->
-    <link
-      href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Poppins:wght@300;400;500;600;700;800&display=swap"
-      rel="stylesheet"
-    />
-    <link
-      href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=Outfit:wght@600;700;800&display=swap"
-      rel="stylesheet"
-    />
+  <!-- ─── Fonts ──────────────────────────────────────────────────────────── -->
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Poppins:wght@300;400;500;600;700;800&display=swap"
+    rel="stylesheet" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=Outfit:wght@600;700;800&display=swap"
+    rel="stylesheet" />
 
-    <style>
-      /* Pre-React Loading Spinner — provides instant feedback in WebView */
-      #initial-loader {
-        position: fixed;
-        inset: 0;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: #f8fafc;
-        z-index: 9999;
-        transition: opacity 0.4s ease-out;
+  <style>
+    /* Pre-React Loading Spinner — provides instant feedback in WebView */
+    #initial-loader {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #f8fafc;
+      z-index: 9999;
+      transition: opacity 0.4s ease-out;
+    }
+
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid #e2e8f0;
+      border-top-color: #2563eb;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
       }
-      .spinner {
-        width: 40px;
-        height: 40px;
-        border: 3px solid #e2e8f0;
-        border-top-color: #2563eb;
-        border-radius: 50%;
-        animation: spin 0.8s linear infinite;
+    }
+
+    .loading-text {
+      position: absolute;
+      bottom: 20%;
+      font-family: 'Poppins', sans-serif;
+      font-size: 13px;
+      color: #64748b;
+      font-weight: 500;
+      letter-spacing: 0.02em;
+    }
+  </style>
+
+  <title>MarketPlace</title>
+</head>
+
+<body>
+  <div id="initial-loader">
+    <div class="spinner"></div>
+    <div class="loading-text">Optimizing experience...</div>
+  </div>
+
+  <div id="root"></div>
+
+  <script type="module" src="/src/app/main.tsx"></script>
+
+  <script>
+    // Remove loader once React has mounted (roughly)
+    window.addEventListener('load', () => {
+      const loader = document.getElementById('initial-loader');
+      if (loader) {
+        setTimeout(() => {
+          loader.style.opacity = '0';
+          setTimeout(() => loader.remove(), 400);
+        }, 300);
       }
-      @keyframes spin { to { transform: rotate(360deg); } }
-      .loading-text {
-        position: absolute;
-        bottom: 20%;
-        font-family: 'Poppins', sans-serif;
-        font-size: 13px;
-        color: #64748b;
-        font-weight: 500;
-        letter-spacing: 0.02em;
-      }
-    </style>
+    });
+  </script>
+</body>
 
-    <title>MarketPlace</title>
-  </head>
-  <body>
-    <div id="initial-loader">
-      <div class="spinner"></div>
-      <div class="loading-text">Optimizing experience...</div>
-    </div>
-
-    <div id="root"></div>
-
-    <script type="module" src="/src/app/main.tsx"></script>
-
-    <script>
-      // Remove loader once React has mounted (roughly)
-      window.addEventListener('load', () => {
-        const loader = document.getElementById('initial-loader');
-        if (loader) {
-          setTimeout(() => {
-            loader.style.opacity = '0';
-            setTimeout(() => loader.remove(), 400);
-          }, 300);
-        }
-      });
-    </script>
-  </body>
 </html>

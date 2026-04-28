@@ -55,10 +55,10 @@ function purchaseToMovements(records: PurchaseRecord[], movType: MovementType): 
     return products.map(prod => {
       const pAny = p as any;
       const dateStr = String(d2?.purchaseDetails?.date ?? d2?.purchase_date ?? d2?.production_date ?? d2?.receipt_date ?? p.date ?? pAny.created_at ?? new Date().toISOString());
-      
+
       const rawType = String(p.type || d2?.type || "");
       let finalType: MovementType = movType;
-      
+
       if (rawType.includes("PO_") || rawType === "PO") {
         finalType = "PO_PURCHASE" as MovementType;
       } else if (rawType === "PRODUCTION") {
@@ -185,7 +185,7 @@ function DetailDrawer({ movement, onClose }: DetailDrawerProps) {
             <p className="text-xs text-slate-500 font-semibold uppercase tracking-widest mb-1">Product</p>
             <p className="text-slate-900 font-semibold text-lg">{movement.product}</p>
             <div className="flex items-center gap-2 mt-1">
-              <button 
+              <button
                 onClick={(e) => copyToClipboard(e, movement.id)}
                 className="group flex items-center gap-1.5 text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded border border-blue-100 hover:bg-blue-100 transition-colors"
               >
@@ -203,7 +203,7 @@ function DetailDrawer({ movement, onClose }: DetailDrawerProps) {
               ["Quantity", <span key="qty" className={`font-semibold font-mono text-base ${movement.qty > 0 ? "text-emerald-600" : movement.qty < 0 ? "text-rose-600" : "text-blue-600"}`}>{movement.qty > 0 ? `+${movement.qty}` : movement.qty}</span>],
               ["Status", <span key="status" className={`font-semibold text-sm ${STATUS_STYLES[movement.status]}`}>{movement.status}</span>],
               ["Variant ID", (
-                <button 
+                <button
                   key="var"
                   onClick={(e) => copyToClipboard(e, movement.variant || "")}
                   className="group flex items-center gap-1.5 text-slate-700 font-mono text-sm hover:text-blue-600 transition-colors"
@@ -425,42 +425,19 @@ export default function StockMovementPage() {
       const adjRes = await getData(ENDPOINTS.S_ADJUSTMENTS, { view: "STOCKADJUSTMENT_VIEW", shop_id: SHOP_ID, limit: "50", offset: "1" });
       const aData = adjRes?.data || adjRes?.datas || (Array.isArray(adjRes) ? adjRes : []);
       const adjMovements: Movement[] = aData.flatMap((a: any) => {
-          const d = a.datas || a;
-          // Some views return a products array, others return a single product in 'datas'
-          const products = (d?.products ?? d?.adjustment_products ?? a.products) as any[] | undefined;
-          
-          if (products && Array.isArray(products) && products.length > 0) {
-            return products.map(prod => {
-              const dateStr = String(d?.date ?? a.date ?? a.created_at ?? new Date().toISOString());
-              const isDecrement = prod.type === 'DECREMENT' || prod.type === 'decrease' || prod.type === 'Decrement';
-              const qty = Number(prod?.quantity ?? 0);
-              return {
-                id: a.id?.slice(0, 8).toUpperCase() || "ADJ",
-                product: String(prod?.product_name ?? prod?.name ?? "—"),
-                sku: String(prod?.barcode ?? (a.id?.slice(0, 8) || "")),
-                type: "STOCK_ADJUSTMENT" as MovementType,
-                qty: isDecrement ? -qty : qty,
-                source: "Stock",
-                destination: "Adjusted",
-                ref: String(d?.referenceNumber ?? d?.reference_number ?? (a.id?.slice(0, 8).toUpperCase() || "REF")),
-                date: dateStr.includes("T") ? dateStr : dateStr + "T00:00:00",
-                status: "Completed" as StatusType,
-                user: String(a.added_by || d?.added_by || "Admin"),
-                notes: prod.reason ? `Reason: ${prod.reason}` : (d?.reason || d?.notes || ""),
-                variant: prod.variant_name || prod.variant || prod.variant_id || prod.varient_id || "",
-                batch: prod.batch_name || prod.batch_id || "",
-                serial_numbers: Array.isArray(prod.serial_numbers) ? prod.serial_numbers : [],
-              };
-            });
-          } else if (d?.name || d?.barcode || a.barcode) {
-            // Handle single product record (flat view)
+        const d = a.datas || a;
+        // Some views return a products array, others return a single product in 'datas'
+        const products = (d?.products ?? d?.adjustment_products ?? a.products) as any[] | undefined;
+
+        if (products && Array.isArray(products) && products.length > 0) {
+          return products.map(prod => {
             const dateStr = String(d?.date ?? a.date ?? a.created_at ?? new Date().toISOString());
-            const isDecrement = d?.type === 'DECREMENT' || d?.type === 'decrease' || d?.type === 'Decrement';
-            const qty = Math.abs(Number(d?.quantity ?? 0));
-            return [{
+            const isDecrement = prod.type === 'DECREMENT' || prod.type === 'decrease' || prod.type === 'Decrement';
+            const qty = Number(prod?.quantity ?? 0);
+            return {
               id: a.id?.slice(0, 8).toUpperCase() || "ADJ",
-              product: String(d?.name ?? d?.product_name ?? "—"),
-              sku: String(d?.barcode ?? d?.sku ?? (a.id?.slice(0, 8) || "")),
+              product: String(prod?.product_name ?? prod?.name ?? "—"),
+              sku: String(prod?.barcode ?? (a.id?.slice(0, 8) || "")),
               type: "STOCK_ADJUSTMENT" as MovementType,
               qty: isDecrement ? -qty : qty,
               source: "Stock",
@@ -469,15 +446,38 @@ export default function StockMovementPage() {
               date: dateStr.includes("T") ? dateStr : dateStr + "T00:00:00",
               status: "Completed" as StatusType,
               user: String(a.added_by || d?.added_by || "Admin"),
-              notes: d?.reason ? `Reason: ${d.reason}` : (d?.notes || d?.reason || ""),
-              variant: d?.variant_name || d?.variant || d?.variant_id || d?.varient_id || "",
-              batch: d?.batch_name || d?.batch_id || "",
-              serial_numbers: Array.isArray(d?.serial_numbers) ? d?.serial_numbers : [],
-            }];
-          }
-          
-          return [];
-        });
+              notes: prod.reason ? `Reason: ${prod.reason}` : (d?.reason || d?.notes || ""),
+              variant: prod.variant_name || prod.variant || prod.variant_id || prod.varient_id || "",
+              batch: prod.batch_name || prod.batch_id || "",
+              serial_numbers: Array.isArray(prod.serial_numbers) ? prod.serial_numbers : [],
+            };
+          });
+        } else if (d?.name || d?.barcode || a.barcode) {
+          // Handle single product record (flat view)
+          const dateStr = String(d?.date ?? a.date ?? a.created_at ?? new Date().toISOString());
+          const isDecrement = d?.type === 'DECREMENT' || d?.type === 'decrease' || d?.type === 'Decrement';
+          const qty = Math.abs(Number(d?.quantity ?? 0));
+          return [{
+            id: a.id?.slice(0, 8).toUpperCase() || "ADJ",
+            product: String(d?.name ?? d?.product_name ?? "—"),
+            sku: String(d?.barcode ?? d?.sku ?? (a.id?.slice(0, 8) || "")),
+            type: "STOCK_ADJUSTMENT" as MovementType,
+            qty: isDecrement ? -qty : qty,
+            source: "Stock",
+            destination: "Adjusted",
+            ref: String(d?.referenceNumber ?? d?.reference_number ?? (a.id?.slice(0, 8).toUpperCase() || "REF")),
+            date: dateStr.includes("T") ? dateStr : dateStr + "T00:00:00",
+            status: "Completed" as StatusType,
+            user: String(a.added_by || d?.added_by || "Admin"),
+            notes: d?.reason ? `Reason: ${d.reason}` : (d?.notes || d?.reason || ""),
+            variant: d?.variant_name || d?.variant || d?.variant_id || d?.varient_id || "",
+            batch: d?.batch_name || d?.batch_id || "",
+            serial_numbers: Array.isArray(d?.serial_numbers) ? d?.serial_numbers : [],
+          }];
+        }
+
+        return [];
+      });
 
       setMovements([...pMovements, ...adjMovements]);
     };
@@ -672,7 +672,7 @@ export default function StockMovementPage() {
                         <div>
                           <p className="text-sm font-semibold text-slate-700 tracking-tight">{m.product}</p>
                           <div className="flex items-center flex-wrap gap-2 mt-0.5">
-                            <button 
+                            <button
                               onClick={(e) => copyToClipboard(e, m.id)}
                               className="group flex items-center gap-1.5 text-[9px] font-bold text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-100 hover:bg-slate-100 hover:text-slate-600 transition-all"
                             >
@@ -681,7 +681,7 @@ export default function StockMovementPage() {
                             </button>
                             <span className="text-[9px] font-medium text-slate-400 font-mono">SKU: {m.sku}</span>
                             {m.variant && (
-                              <button 
+                              <button
                                 onClick={(e) => copyToClipboard(e, m.variant || "")}
                                 className="group flex items-center gap-0.5 text-[9px] font-bold text-violet-500 bg-violet-50 px-1.5 py-0.5 rounded-md border border-violet-100 hover:bg-violet-100 transition-all"
                               >
@@ -690,7 +690,7 @@ export default function StockMovementPage() {
                               </button>
                             )}
                             {m.batch && (
-                              <button 
+                              <button
                                 onClick={(e) => copyToClipboard(e, m.batch || "")}
                                 className="group flex items-center gap-0.5 text-[9px] font-bold text-amber-500 bg-amber-50 px-1.5 py-0.5 rounded-md border border-amber-100 hover:bg-amber-100 transition-all"
                               >

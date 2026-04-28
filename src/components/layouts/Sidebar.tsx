@@ -332,8 +332,7 @@ const SidebarItem = memo(({ link, sidebarOpen, collapseTrigger, onHover }: Sideb
           <NavLink
             to={link.path!}
             className={({ isActive }) =>
-              `${baseItemClasses} flex-1 ${getActiveClass(isActive)} ${
-                sidebarOpen ? "justify-between" : "justify-center"
+              `${baseItemClasses} flex-1 ${getActiveClass(isActive)} ${sidebarOpen ? "justify-between" : "justify-center"
               }`
             }
           >
@@ -443,8 +442,8 @@ const SubGroupItem: FC<SubGroupItemProps> = ({ group, collapseTrigger }) => {
       <button
         onClick={() => setIsOpen(!isOpen)}
         className={`group flex items-center justify-between pl-3.5 pr-2.5 py-1.5 rounded-r-[7px] text-[11.5px] font-semibold tracking-tight transition-colors w-full text-left ${isChildActive
-            ? "text-white/90 bg-white/5"
-            : "text-white/50 hover:text-white/70 hover:bg-white/5"
+          ? "text-white/90 bg-white/5"
+          : "text-white/50 hover:text-white/70 hover:bg-white/5"
           }`}
       >
         <div className="flex items-center gap-2 min-w-0">
@@ -500,20 +499,19 @@ const FlatSubLink: FC<{ sub: SubLink; isPopup?: boolean }> = memo(({ sub, isPopu
       <NavLink
         to={sub.path}
         className={({ isActive }) =>
-          `flex-1 flex items-center gap-2 py-1.5 px-3 text-[11.5px] rounded-lg no-underline tracking-tight leading-none transition-all duration-200 ${
-            isActive
-              ? (isPopup ? "bg-[#3B82F6] text-white font-semibold shadow-lg" : "bg-white/5 text-white")
-              : (isPopup ? "text-slate-300 hover:text-white hover:bg-white/5" : "text-white/60 hover:text-white/80")
+          `flex-1 flex items-center gap-2 py-1.5 px-3 text-[11.5px] rounded-lg no-underline tracking-tight leading-none transition-all duration-200 ${isActive
+            ? (isPopup ? "bg-[#3B82F6] text-white font-semibold shadow-lg" : "bg-white/5 text-white")
+            : (isPopup ? "text-slate-300 hover:text-white hover:bg-white/5" : "text-white/60 hover:text-white/80")
           }`
         }
       >
         {({ isActive }) => (
           <>
             {Icon && (
-              <Icon 
-                size={12} 
-                strokeWidth={2} 
-                className={`shrink-0 ${isActive ? "opacity-100" : "opacity-50"}`} 
+              <Icon
+                size={12}
+                strokeWidth={2}
+                className={`shrink-0 ${isActive ? "opacity-100" : "opacity-50"}`}
               />
             )}
             <span className="truncate">{sub.name}</span>
@@ -528,11 +526,10 @@ const FlatSubLink: FC<{ sub: SubLink; isPopup?: boolean }> = memo(({ sub, isPopu
             e.stopPropagation();
             navigate(sub.addPath!);
           }}
-          className={`absolute right-2 w-6 h-6 rounded-md flex items-center justify-center transition-all duration-200 ${
-            isPopup 
+          className={`absolute right-2 w-6 h-6 rounded-md flex items-center justify-center transition-all duration-200 ${isPopup
               ? `bg-transparent text-white/50 hover:text-white ${active ? "opacity-100" : "opacity-0"}`
               : "bg-white/10 text-white/50 hover:bg-white hover:text-blue-600 hover:scale-110 border border-white/10 opacity-0"
-          } group-hover/sub:opacity-100 active:scale-95`}
+            } group-hover/sub:opacity-100 active:scale-95`}
           title={`Add New ${sub.name.replace(/s\sInfos|Infos|List/g, '')}`}
         >
           <Plus size={12} strokeWidth={active ? 3.5 : 2} />

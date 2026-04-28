@@ -250,14 +250,12 @@ export const VariantRows = ({ combinations, baseSellPrice, baseBuyPrice }: { com
         {combinations.map((comb: any, idx: number) => {
           const isLast = idx === combinations.length - 1;
           const combDatas = comb.datas || {};
-          const attributes = comb.attributes || combDatas.attributes || {};
+          const attributes = comb.attributes || combDatas.attributes || combDatas.datas?.attributes || {};
           
           // Improved variant label extraction based on sample response
-          let variantLabel = comb.name || 'Standard Variant';
+          let variantLabel = comb.name || combDatas.name || 'Standard Variant';
           if (Object.keys(attributes).length > 0) {
             variantLabel = Object.values(attributes).join(' / ');
-          } else if (comb.name || combDatas.name) {
-            variantLabel = comb.name || combDatas.name;
           } else if (comb.barcode && comb.barcode !== combDatas.barcode) {
             variantLabel = comb.barcode; // Fallback if barcode is used as label
           }
@@ -265,13 +263,13 @@ export const VariantRows = ({ combinations, baseSellPrice, baseBuyPrice }: { com
           const variantId = comb.id || String(idx);
           const isVarExpanded = expandedVariant === variantId;
           const batches = parseBatches(comb.batches);
-          const serials = parseBatches(combDatas.serial_numbers || comb.serial_numbers);
+          const serials = parseBatches(combDatas.serial_numbers || comb.serial_numbers || combDatas.datas?.serial_numbers);
           const hasBatches = batches.length > 0;
           const hasSerials = serials.length > 0;
-          const stockNum = Number(comb.stocks ?? comb.stock ?? combDatas.stocks ?? 0);
+          const stockNum = Number(comb.stocks ?? comb.stock ?? combDatas.stocks ?? combDatas.datas?.stocks ?? 0);
           const stockStatus = getStockStatus(stockNum);
-          const sellPrice = comb.sell_price ?? comb.price ?? combDatas.sell_price ?? baseSellPrice;
-          const buyPrice = comb.buy_price ?? combDatas.buy_price ?? baseBuyPrice ?? 0;
+          const sellPrice = comb.sell_price ?? comb.price ?? combDatas.sell_price ?? combDatas.datas?.sell_price ?? baseSellPrice;
+          const buyPrice = comb.buy_price ?? combDatas.buy_price ?? combDatas.datas?.buy_price ?? baseBuyPrice ?? 0;
 
           return (
             <div key={variantId} className="relative md:pl-6 pl-4">

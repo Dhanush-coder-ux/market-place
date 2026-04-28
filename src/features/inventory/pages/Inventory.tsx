@@ -51,6 +51,7 @@ export interface ProductDatas {
   serial_number?: string;
   description?: string;
   has_variants?: boolean;
+  has_varients?: boolean;
   variantTypes?: VariantType[];
   combinations?: Combination[];
   variants?: any[];
@@ -110,9 +111,23 @@ const ProductRow = React.memo(({
   toggleExpand: (id: string) => void;
 }) => {
   const datas = item.datas || {};
-  const combinations = parseData(item.variants || datas.combinations || datas.variants);
-  const batches = parseData(item.batches || datas.batches);
-  const hasVariants = datas.has_variants && combinations.length > 0;
+  
+  const combinations = useMemo(() => {
+    const raw = parseData(item.variants || datas.combinations || datas.variants);
+    return raw.filter((v: any) => v && v.id !== null);
+  }, [item.variants, datas.combinations, datas.variants]);
+
+  const batches = useMemo(() => {
+    let raw: any[] = [];
+    if (!(datas.has_variants || datas.has_varients) && item.variants && item.variants.length > 0) {
+      raw = parseData(item.variants[0].batches);
+    } else {
+      raw = parseData(item.batches || datas.batches);
+    }
+    return raw.filter((b: any) => b && b.id !== null);
+  }, [item.variants, item.batches, datas.batches, datas.has_variants, datas.has_varients]);
+
+  const hasVariants = (datas.has_variants || datas.has_varients) && combinations.length > 0;
   const hasBatches = batches.length > 0;
   const isExpandable = hasVariants || hasBatches;
 

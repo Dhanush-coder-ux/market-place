@@ -81,9 +81,22 @@ const ProductRow = React.memo(({
     return [];
   };
 
-  const combinations = parseData(p.variants || datas.combinations || datas.variants);
-  const batches = parseData(p.batches || datas.batches);
-  const hasVariants = datas.has_variants && (combinations.length > 0);
+  const combinations = useMemo(() => {
+    const raw = parseData(p.variants || datas.combinations || datas.variants);
+    return raw.filter((v: any) => v && v.id !== null);
+  }, [p.variants, datas.combinations, datas.variants]);
+
+  const batches = useMemo(() => {
+    let raw: any[] = [];
+    if (!(datas.has_variants || datas.has_varients) && p.variants && p.variants.length > 0) {
+      raw = parseData(p.variants[0].batches);
+    } else {
+      raw = parseData(p.batches || datas.batches);
+    }
+    return raw.filter((b: any) => b && b.id !== null);
+  }, [p.variants, p.batches, datas.batches, datas.has_variants, datas.has_varients]);
+
+  const hasVariants = (datas.has_variants || datas.has_varients) && combinations.length > 0;
   const hasBatches = batches.length > 0;
   const isExpandable = hasVariants || hasBatches;
   

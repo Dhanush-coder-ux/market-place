@@ -9,8 +9,9 @@ import {
   Calendar,
   X,
   Eye,
-  Clock
+  Hash
 } from "lucide-react";
+import { VariantRows, BatchCards } from "../components/StockTree";
 import { useApi } from "@/context/ApiContext";
 import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 import Loader from "@/components/common/Loader";
@@ -50,11 +51,10 @@ export interface ProductDatas {
   serial_number?: string;
   description?: string;
   has_variants?: boolean;
-  has_varients?: boolean;
-  has_batch_tracking?: boolean;
-  has_serialno_tracking?: boolean;
   variantTypes?: VariantType[];
   combinations?: Combination[];
+  variants?: any[];
+  serial_numbers?: string[];
   batches?: any[];
 }
 
@@ -67,6 +67,7 @@ export interface InventoryItem {
   date: string;
   datas?: ProductDatas;
   variants?: any[];
+  serial_numbers?: string[];
   batches?: any[];
   name?: string;
   brand?: string;
@@ -81,200 +82,23 @@ const formatDate = (dateStr?: string) => {
   return new Date(dateStr).toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' });
 };
 
-const getStockStatus = (stock: number | string) => {
-  const stockNum = Number(stock) || 0;
-  if (stockNum <= 0) return { label: '0 In Stock', color: 'text-rose-600 bg-rose-50 border-rose-200' };
-  if (stockNum <= 15) return { label: `${stockNum} Low Stock`, color: 'text-amber-600 bg-amber-50 border-amber-200' };
-  return { label: `${stockNum} In Stock`, color: 'text-emerald-600 bg-emerald-50 border-emerald-200' };
-};
+// getStockStatus is used in VariantRows but defined there. 
+// If it's unused here, we can remove it.
 
 const formatCurrency = (amount?: number | string) => {
   if (amount === undefined || amount === null) return 'N/A';
   return `₹${Number(amount).toFixed(2)}`;
 };
 
-/* ─── Batch Expiry Helpers ────────────────────────────────────────────────── */
-const getDaysLeft = (expDate?: string) => {
-  if (!expDate) return null;
-  const now = new Date();
-  const exp = new Date(expDate);
-  const diff = Math.ceil((exp.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-  return diff;
-};
-
-const BatchBadge = ({ expDate, qty }: { expDate?: string; qty: number }) => {
-  const days = getDaysLeft(expDate);
-  if (qty <= 0) {
-    return (
-      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium border bg-slate-50 text-slate-500 border-slate-200">
-        Depleted
-      </span>
-    );
-  }
-  if (days === null) return null;
-  if (days < 0) {
-    return (
-      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium border bg-rose-50 text-rose-700 border-rose-200">
-        Expired
-      </span>
-    );
-  }
-  if (days <= 90) {
-    return (
-      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium border bg-amber-50 text-amber-700 border-amber-200">
-        <Clock size={10} /> {days}d left
-      </span>
-    );
-  }
-  return (
-    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium border bg-emerald-50 text-emerald-700 border-emerald-200">
-      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" /> {days}d left
-    </span>
-  );
-};
-
-/* ─── Batch Cards (With Tree Lines) ───────────────────────────────────────── */
-const BatchCards = ({ batches }: { batches: any[] }) => {
-  const visible = batches.slice(0, 3);
-  const remaining = batches.length - 3;
-
-  return (
-    <div className="animate-in fade-in duration-300 pt-2 pb-4">
-      <div className="flex items-center gap-2 mb-4">
-        <Calendar size={16} className="text-slate-400" />
-        <p className="text-sm font-medium text-slate-600">Active Batches</p>
-      </div>
-      <div className="flex flex-col relative">
-        {visible.map((batch: any, idx: number) => {
-          const isLast = idx === visible.length - 1 && remaining <= 0;
-          return (
-            <div key={batch.id || idx} className="relative pl-8 pb-3">
-              {/* --- Tree Branches --- */}
-              <div className={`absolute left-[11px] w-[2px] bg-slate-200 ${isLast ? 'top-0 h-[34px]' : 'top-0 bottom-0'}`}></div>
-              <div className="absolute left-[11px] top-[34px] w-[21px] h-[2px] bg-slate-200"></div>
-
-              {/* Batch Card */}
-              <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm hover:border-blue-300 transition-colors">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-1.5">
-                    <Tag size={12} className="text-slate-400" />
-                    <span className="text-sm font-semibold text-slate-800">{batch.name || batch.batch || `BATCH-${idx + 1}`}</span>
-                  </div>
-                  <BatchBadge expDate={batch.expiry_date || batch.expiry} qty={Number(batch.stocks || batch.qty || 0)} />
-                </div>
-                <div className="grid grid-cols-3 gap-4">
-                  <div>
-                    <p className="text-[11px] text-slate-500 mb-0.5">Mfg Date</p>
-                    <p className="text-sm font-medium text-slate-800">{batch.mfg_date ? new Date(batch.mfg_date).toLocaleDateString() : "—"}</p>
-                  </div>
-                  <div>
-                    <p className="text-[11px] text-slate-500 mb-0.5">Exp Date</p>
-                    <p className="text-sm font-medium text-slate-800">{batch.expiry_date ? new Date(batch.expiry_date).toLocaleDateString() : "—"}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-[11px] text-slate-500 mb-0.5">Available Qty</p>
-                    <p className={`text-sm font-bold ${Number(batch.stocks || batch.qty) <= 0 ? "text-rose-600" : "text-slate-800"}`}>
-                      {Number(batch.stocks ?? batch.qty ?? 0)}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          );
-        })}
-        {remaining > 0 && (
-          <div className="relative pl-8 pb-2 pt-1">
-            <div className="absolute left-[11px] w-[2px] bg-slate-200 top-0 h-[22px]"></div>
-            <div className="absolute left-[11px] top-[22px] w-[21px] h-[2px] bg-slate-200"></div>
-            <button className="w-full py-2.5 text-sm font-medium text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors">
-              View All {batches.length} Batches
-            </button>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
-
-/* ─── Variant Sub-rows (With Tree Lines) ──────────────────────────────────── */
-const VariantRows = ({ combinations, baseSellPrice }: { combinations: any[]; baseSellPrice: any }) => {
-  const [expandedVariant, setExpandedVariant] = useState<string | null>(null);
-
-  return (
-    <div className="animate-in fade-in duration-300 pt-2 pb-4">
-      <div className="flex items-center gap-2 mb-4">
-        <Layers size={16} className="text-slate-400" />
-        <p className="text-sm font-medium text-slate-600">Product Variants</p>
-      </div>
-      <div className="flex flex-col relative">
-        {combinations.map((comb: any, idx: number) => {
-          const isLast = idx === combinations.length - 1;
-          const combDatas = comb.datas || {};
-          const attributes = comb.attributes || combDatas.attributes || {};
-          const variantLabel = Object.keys(attributes).length > 0 
-            ? Object.values(attributes).join(' / ') 
-            : 'N/A';
-          const variantId = comb.id || String(idx);
-          const isVarExpanded = expandedVariant === variantId;
-          const batches: any[] = comb.batches || [];
-          const hasBatches = batches.length > 0;
-          const stockStatus = getStockStatus(Number(comb.stocks ?? comb.stock ?? combDatas.stocks ?? 0));
-          const price = comb.sell_price ?? comb.price ?? combDatas.sell_price ?? baseSellPrice;
-
-          return (
-            <div key={variantId} className="relative pl-8 pb-3">
-              {/* --- Tree Branches --- */}
-              <div className={`absolute left-[11px] w-[2px] bg-slate-200 ${isLast && !isVarExpanded ? 'top-0 h-[32px]' : 'top-0 bottom-0'}`}></div>
-              <div className="absolute left-[11px] top-[32px] w-[21px] h-[2px] bg-slate-200"></div>
-
-              {/* Variant Card */}
-              <div className={`border border-slate-200 rounded-xl overflow-hidden bg-white shadow-sm transition-all hover:border-blue-300 ${isVarExpanded ? 'ring-1 ring-blue-500/20' : ''}`}>
-                <div
-                  className={`flex items-center gap-4 px-5 py-3.5 ${hasBatches ? 'hover:bg-slate-50 cursor-pointer' : ''}`}
-                  onClick={() => hasBatches && setExpandedVariant(isVarExpanded ? null : variantId)}
-                >
-                  {/* Expand Icon for Batches */}
-                  {hasBatches && (
-                    <div className={`w-5 h-5 rounded flex items-center justify-center transition-all shrink-0 ${isVarExpanded ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-500"}`}>
-                      {isVarExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                    </div>
-                  )}
-
-                  <div className="flex-1">
-                    <p className="text-sm font-semibold text-slate-800">{variantLabel}</p>
-                    <p className="text-xs text-slate-500 mt-1">{comb.barcode || combDatas.barcode || "No SKU"}</p>
-                  </div>
-                  
-                  {/* Fixed Width Columns matching table headers */}
-                  <div className="flex items-center gap-8 md:gap-16">
-                    <p className="text-sm text-slate-600 min-w-[80px] text-right">{formatCurrency(price)}</p>
-                    <p className="text-sm font-semibold text-slate-800 min-w-[80px] text-right">{formatCurrency(price)}</p>
-                    <div className="min-w-[120px] text-right">
-                      <span className={`inline-flex px-3 py-1.5 rounded-lg text-xs font-medium border ${stockStatus.color}`}>
-                        {stockStatus.label}
-                      </span>
-                    </div>
-                    {/* Placeholder for action column alignment */}
-                    <div className="w-8"></div>
-                  </div>
-                </div>
-
-                {/* Nested Batches Area */}
-                {isVarExpanded && hasBatches && (
-                  <div className="border-t border-slate-100 bg-slate-50/50 p-4 pl-6">
-                    <BatchCards batches={batches} />
-                  </div>
-                )}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-};
-
 // --- Sub Components ---
+
+const parseData = (val: any) => {
+  if (Array.isArray(val)) return val;
+  if (typeof val === 'string') {
+    try { return JSON.parse(val); } catch (e) { return []; }
+  }
+  return [];
+};
 
 const ProductRow = React.memo(({ 
   item, 
@@ -286,9 +110,9 @@ const ProductRow = React.memo(({
   toggleExpand: (id: string) => void;
 }) => {
   const datas = item.datas || {};
-  const combinations = item.variants || datas.combinations || [];
-  const hasVariants = (datas.has_varients || datas.has_variants) && combinations.length > 0;
-  const batches = item.batches || datas.batches || [];
+  const combinations = parseData(item.variants || datas.combinations || datas.variants);
+  const batches = parseData(item.batches || datas.batches);
+  const hasVariants = datas.has_variants && combinations.length > 0;
   const hasBatches = batches.length > 0;
   const isExpandable = hasVariants || hasBatches;
   
@@ -298,15 +122,56 @@ const ProductRow = React.memo(({
   const stockStatusColor = stockNumber <= 0 ? "text-rose-600 bg-rose-50 border-rose-200" : stockNumber <= 15 ? "text-amber-600 bg-amber-50 border-amber-200" : "text-emerald-600 bg-emerald-50 border-emerald-200";
   const navigate = useNavigate();
 
-  // Badge for variants/batches
-  let expandBadge = null;
-  if (hasVariants && hasBatches) {
-    expandBadge = <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold text-blue-600 bg-blue-50 border border-blue-100">Variant + Batch</span>;
-  } else if (hasVariants) {
-    expandBadge = <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold text-blue-600 bg-blue-50 border border-blue-100"><Layers size={10} /> {combinations.length} Variants</span>;
-  } else if (hasBatches) {
-    expandBadge = <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold text-indigo-600 bg-indigo-50 border border-indigo-100"><Calendar size={10} /> {batches.length} Batches</span>;
+  // --- Aggregation logic for badges ---
+  const serials = parseData(datas.serial_numbers || item.serial_numbers);
+  let totalSerials = serials.length;
+  let totalBatches = batches.length;
+
+  if (hasVariants) {
+    combinations.forEach((c: any) => {
+      const cDatas = c.datas || {};
+      const cSerials = parseData(cDatas.serial_numbers || c.serial_numbers);
+      totalSerials += cSerials.length;
+      
+      const cBatches = parseData(c.batches);
+      totalBatches += cBatches.length;
+    });
   }
+
+  const [showAllBadges, setShowAllBadges] = useState(false);
+
+  const badges = [];
+  if (hasVariants) {
+    badges.push(
+      <span key="var" className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider text-blue-600 bg-blue-50 border border-blue-100 whitespace-nowrap">
+        <Layers size={10} /> {combinations.length} Variants
+      </span>
+    );
+  }
+  if (totalBatches > 0) {
+    badges.push(
+      <span key="batch" className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider text-indigo-600 bg-indigo-50 border border-indigo-100 whitespace-nowrap">
+        <Calendar size={10} /> {totalBatches} Batches
+      </span>
+    );
+  }
+  if (totalSerials > 0) {
+    badges.push(
+      <span key="serial" className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider text-purple-600 bg-purple-50 border border-purple-100 whitespace-nowrap">
+        <Hash size={10} /> {totalSerials} Serials
+      </span>
+    );
+  }
+  if (badges.length === 0) {
+    badges.push(
+      <span key="std" className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider text-slate-500 bg-slate-50 border border-slate-200 whitespace-nowrap">
+        <Tag size={10} /> Standard
+      </span>
+    );
+  }
+
+  const visibleBadges = showAllBadges ? badges : badges.slice(0, 2);
+  const remainingBadges = badges.length - 2;
 
   return (
     <Fragment>
@@ -336,11 +201,17 @@ const ProductRow = React.memo(({
             <div className="flex flex-col gap-1">
               <div className="text-[15px] font-semibold text-slate-800 flex items-center gap-2">
                 {datas.name || item.name || "N/A"}
-                {expandBadge ? expandBadge : (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold text-slate-600 bg-slate-100 border border-slate-200">
-                    <Tag size={10} /> Standard
-                  </span>
-                )}
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {visibleBadges}
+                  {!showAllBadges && remainingBadges > 0 && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setShowAllBadges(true); }}
+                      className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-bold uppercase bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200 transition-colors"
+                    >
+                      +{remainingBadges} more
+                    </button>
+                  )}
+                </div>
               </div>
               <div className="flex items-center gap-3 text-[12px] text-slate-500 font-medium">
                 <span className="font-mono text-slate-500">{item.barcode || "No SKU"}</span>
@@ -405,6 +276,7 @@ const ProductRow = React.memo(({
                 <VariantRows
                   combinations={combinations}
                   baseSellPrice={item.sell_price}
+                  baseBuyPrice={item.buy_price}
                 />
               )}
               {!hasVariants && hasBatches && (

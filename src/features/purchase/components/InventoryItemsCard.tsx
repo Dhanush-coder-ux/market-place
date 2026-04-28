@@ -10,7 +10,6 @@ import {
   Banknote,
   Percent,
   AlertTriangle,
-  Zap,
   CalendarDays,
   Clock,
   X,
@@ -23,6 +22,8 @@ import { inventoryApi } from "@/services/api/inventory";
 import { ReusableSelect } from "@/components/ui/ReusableSelect";
 import Input from "@/components/ui/Input";
 import { GradientButton } from "@/components/ui/GradientButton";
+import { useToast } from "@/context/ToastContext";
+import { InlineSerialManager } from "@/components/common/InlineSerialManager";
 
 interface InventoryItemsCardProps {
   products: any[];
@@ -52,6 +53,7 @@ export const InventoryItemsCard = ({
   const [expandedBreakdown, setExpandedBreakdown] = useState<Set<number>>(new Set());
   const [expandedSettings, setExpandedSettings] = useState<Set<number>>(new Set());
   const [collapsedProducts, setCollapsedProducts] = useState<Set<number>>(new Set());
+  const { showToast } = useToast();
 
   const [variantModal, setVariantModal] = useState<{
     isOpen: boolean;
@@ -62,7 +64,15 @@ export const InventoryItemsCard = ({
   }>({
     isOpen: false, baseProduct: "", targetRowIndex: -1, variants: [], baseData: null
   });
-  const [selectedVariants, setSelectedVariants] = useState<Set<string>>(new Set());
+  const [selectedVariants, setSelectedVariants] = useState<string | null>(null);
+  const [batchModal, setBatchModal] = useState<{
+    isOpen: boolean;
+    rowIndex: number;
+    batches: any[];
+    productName: string;
+    variantName: string;
+    existingSerials: string[];
+  }>({ isOpen: false, rowIndex: -1, batches: [], productName: "", variantName: "", existingSerials: [] });
 
   const toggleBreakdown = (index: number) => {
     const next = new Set(expandedBreakdown);
@@ -86,7 +96,7 @@ export const InventoryItemsCard = ({
   };
 
   const confirmVariants = () => {
-    if (selectedVariants.size === 0) {
+    if (!selectedVariants) {
       setVariantModal({ isOpen: false, baseProduct: "", targetRowIndex: -1, variants: [], baseData: null });
       return;
     }
@@ -94,42 +104,63 @@ export const InventoryItemsCard = ({
     setProducts(prev => {
       const next = [...prev];
       const baseOpt = variantModal.baseData;
-      const variantsToAdd = variantModal.variants.filter(v => selectedVariants.has(v.id));
+      const selectedId = selectedVariants;
+      const variantItem = variantModal.variants.find(v => v.id === selectedId);
       const targetIdx = variantModal.targetRowIndex;
 
-      const first = variantsToAdd[0];
+      if (!variantItem) return prev;
+
+      const hasBatchTracking = !!(baseOpt.batch_tracking || baseOpt.has_batch_tracking || (baseOpt.datas && (baseOpt.datas.batch_tracking || baseOpt.datas.has_batch_tracking)));
+      const hasSerialTracking = !!(baseOpt.serial_tracking || baseOpt.has_serialno_tracking || (baseOpt.datas && (baseOpt.datas.serial_tracking || baseOpt.datas.has_serialno_tracking)));
+
       next[targetIdx] = {
         ...next[targetIdx],
         inventory_id: baseOpt.id || baseOpt.inventory_id,
-        variant_id: first.id,
+        variant_id: variantItem.id,
         name: variantModal.baseProduct,
         costPrice: baseOpt.buy_price ?? baseOpt.costPrice ?? "",
         sellingPrice: baseOpt.sell_price ?? baseOpt.sellingPrice ?? "",
         unit: baseOpt.unit ?? "pc",
         category: baseOpt.category ?? "",
-        variant: first.name,
-        sku: first.sku,
-        batchTracking: !!(baseOpt.batch_tracking || (baseOpt.datas && baseOpt.datas.batch_tracking)),
-        serialTracking: !!(baseOpt.serial_tracking || (baseOpt.datas && baseOpt.datas.serial_tracking))
+        variant: variantItem.name,
+        sku: variantItem.sku,
+        batchTracking: hasBatchTracking,
+        serialTracking: hasSerialTracking,
+        existingSerials: baseOpt.serial_numbers || baseOpt.datas?.serial_numbers || []
       };
 
-      const otherVariants = variantsToAdd.slice(1).map(v => ({
-        ...next[targetIdx],
-        id: Math.random().toString(),
-        inventory_id: baseOpt.id || baseOpt.inventory_id,
-        variant_id: v.id,
-        variant: v.name,
-        sku: v.sku,
-        batchTracking: !!(baseOpt.batch_tracking || (baseOpt.datas && baseOpt.datas.batch_tracking)),
-        serialTracking: !!(baseOpt.serial_tracking || (baseOpt.datas && baseOpt.datas.serial_tracking))
-      }));
+      // If it has batches, show batch modal
+      if (hasBatchTracking) {
+        const d = baseOpt.datas || baseOpt;
+        const allVariants = baseOpt.variants || baseOpt.varients || d.combinations || d.varients || d.variants || [];
+        const variantData = allVariants.find((v: any) => v.id === selectedId);
+        const batches = variantData?.batches || baseOpt.batches || d.batches || [];
+        
+        setBatchModal({
+          isOpen: true,
+          rowIndex: targetIdx,
+          batches: Array.isArray(batches) ? batches : JSON.parse(batches || "[]"),
+          productName: variantModal.baseProduct,
+          variantName: variantItem.name,
+          existingSerials: baseOpt.serial_numbers || baseOpt.datas?.serial_numbers || []
+        });
+      }
 
-      next.splice(targetIdx + 1, 0, ...otherVariants);
       return next;
     });
 
     setVariantModal({ isOpen: false, baseProduct: "", targetRowIndex: -1, variants: [], baseData: null });
-    setSelectedVariants(new Set());
+    setSelectedVariants(null);
+  };
+
+  const selectBatch = (rowIndex: number, batch: any) => {
+    updateProductFields(rowIndex, {
+      batchNum: batch.name || batch.batch_number,
+      manufacturingDate: batch.mfg_date ? new Date(batch.mfg_date).toISOString().split('T')[0] : "",
+      expiryDate: batch.expiry_date ? new Date(batch.expiry_date).toISOString().split('T')[0] : "",
+      batchNumReadOnly: true
+    });
+    setBatchModal({ isOpen: false, rowIndex: -1, batches: [], productName: "", variantName: "", existingSerials: [] });
   };
 
   const themeColor = type === "PURCHASE" ? "indigo" : "emerald";
@@ -163,23 +194,25 @@ export const InventoryItemsCard = ({
             <div className="p-6 max-h-[50vh] overflow-y-auto bg-slate-50/50">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {variantModal.variants.map((variant) => {
-                  const isSelected = selectedVariants.has(variant.id);
+                  const isSelected = selectedVariants === variant.id;
                   return (
                     <div
                       key={variant.id}
-                      onClick={() => {
-                        const next = new Set(selectedVariants);
-                        if (next.has(variant.id)) next.delete(variant.id);
-                        else next.add(variant.id);
-                        setSelectedVariants(next);
-                      }}
+                      onClick={() => setSelectedVariants(variant.id)}
                       className={`relative p-4 rounded-2xl border-2 transition-all cursor-pointer ${isSelected ? 'border-indigo-500 bg-indigo-50/40' : 'border-slate-200 bg-white hover:border-indigo-200'}`}
                     >
                       <div className={`absolute top-4 right-4 h-5 w-5 rounded-full border-2 flex items-center justify-center transition-all ${isSelected ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-slate-300'}`}>
                         {isSelected && <Check size={11} strokeWidth={3} />}
                       </div>
                       <h4 className="font-semibold text-slate-800 text-sm pr-6">{variant.name}</h4>
-                      <p className="text-[10px] text-slate-400 mt-1 uppercase tracking-wider font-medium">SKU: {variant.sku}</p>
+                      <div className="flex items-center gap-3 mt-1.5">
+                        <p className="text-[10px] text-slate-400 uppercase tracking-wider font-medium">SKU: {variant.sku}</p>
+                        {variant.batchCount > 0 && (
+                          <span className="flex items-center gap-1 text-[9px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-md border border-amber-100">
+                            <Package size={8} /> {variant.batchCount} Batches
+                          </span>
+                        )}
+                      </div>
                     </div>
                   );
                 })}
@@ -187,7 +220,7 @@ export const InventoryItemsCard = ({
             </div>
 
             <div className="px-6 py-4 border-t border-slate-100 flex justify-between items-center">
-              <span className="text-xs text-slate-500"><span className="text-indigo-600 font-semibold">{selectedVariants.size}</span> selected</span>
+              <span className="text-xs text-slate-500">Pick a variation to continue</span>
               <div className="flex gap-3">
                 <button
                   onClick={() => setVariantModal({ isOpen: false, baseProduct: "", targetRowIndex: -1, variants: [], baseData: null })}
@@ -195,13 +228,91 @@ export const InventoryItemsCard = ({
                 >
                   Cancel
                 </button>
-                <GradientButton onClick={confirmVariants} disabled={selectedVariants.size === 0} className="rounded-xl px-6 h-9 text-xs">
-                  Add Items
+                <GradientButton onClick={confirmVariants} disabled={!selectedVariants} className="rounded-xl px-6 h-9 text-xs">
+                  Continue
                 </GradientButton>
               </div>
             </div>
           </div>
         </div>
+      )}
+ 
+      {/* Batch Modal */}
+      {batchModal.isOpen && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col border border-slate-200 animate-in zoom-in-95 duration-200">
+            <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center bg-amber-50/30">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-amber-100 flex items-center justify-center text-amber-600 border border-amber-200">
+                  <Package size={18} />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-800 text-sm">Select Batch</h3>
+                  <p className="text-[10px] text-slate-500 mt-0.5">
+                    {batchModal.productName} {batchModal.variantName ? `(${batchModal.variantName})` : ""}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setBatchModal({ isOpen: false, rowIndex: -1, batches: [], productName: "", variantName: "", existingSerials: [] })}
+                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="p-6 max-h-[60vh] overflow-y-auto space-y-3">
+              <button
+                onClick={() => setBatchModal({ isOpen: false, rowIndex: -1, batches: [], productName: "", variantName: "", existingSerials: [] })}
+                className="w-full p-4 rounded-2xl border-2 border-dashed border-slate-200 text-slate-500 hover:border-amber-400 hover:text-amber-600 hover:bg-amber-50 transition-all flex flex-col items-center gap-1 group"
+              >
+                <Plus size={20} className="group-hover:scale-110 transition-transform" />
+                <span className="text-xs font-bold uppercase tracking-widest">Create New Batch</span>
+              </button>
+
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center" aria-hidden="true">
+                  <div className="w-full border-t border-slate-100"></div>
+                </div>
+                <div className="relative flex justify-center text-[10px] uppercase font-bold text-slate-300">
+                  <span className="bg-white px-2">Existing Batches</span>
+                </div>
+              </div>
+
+              {batchModal.batches.length > 0 ? (
+                <div className="grid grid-cols-1 gap-2">
+                  {batchModal.batches.map((batch: any, i: number) => (
+                    <button
+                      key={i}
+                      onClick={() => selectBatch(batchModal.rowIndex, batch)}
+                      className="flex items-center justify-between p-4 rounded-2xl border border-slate-200 bg-white hover:border-amber-300 hover:shadow-md transition-all text-left group"
+                    >
+                      <div className="space-y-1">
+                        <p className="text-sm font-bold text-slate-800 group-hover:text-amber-700 transition-colors">
+                          {batch.name || batch.batch_number}
+                        </p>
+                        <div className="flex items-center gap-3 text-[10px] text-slate-400 font-medium">
+                          <span className="flex items-center gap-1"><CalendarDays size={10} /> Mfg: {batch.mfg_date ? new Date(batch.mfg_date).toLocaleDateString() : 'N/A'}</span>
+                          <span className="flex items-center gap-1"><Clock size={10} className="text-rose-400" /> Exp: {batch.expiry_date ? new Date(batch.expiry_date).toLocaleDateString() : 'N/A'}</span>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">In Stock</p>
+                        <p className="text-xs font-black text-slate-700">{batch.stocks || 0} pcs</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-6">
+                  <p className="text-xs text-slate-400 font-medium italic">No existing batches found</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+
       )}
 
       {/* Card Header */}
@@ -299,6 +410,12 @@ export const InventoryItemsCard = ({
                     value={product.name}
                     onChange={(val, opt: any) => {
                       if (opt) {
+                        const d = opt.datas || opt;
+                        const hasBatchTracking = !!(opt.batch_tracking || opt.has_batch_tracking || (d && (d.batch_tracking || d.has_batch_tracking)));
+                        const hasSerialTracking = !!(opt.serial_tracking || opt.has_serialno_tracking || (d && (d.serial_tracking || d.has_serialno_tracking)));
+                        const combinations = opt.variants || opt.varients || d.combinations || d.varients || d.variants || [];
+                        const existingSerials = d.serial_numbers || d.datas?.serial_numbers || [];
+
                         if (opt.is_variant) {
                           // Directly add the variant if picked from search
                           updateProductFields(index, {
@@ -311,25 +428,39 @@ export const InventoryItemsCard = ({
                             sku: opt.barcode ?? "",
                             unit: opt.unit ?? "pc",
                             category: opt.category ?? "",
-                            batchTracking: !!(opt.batch_tracking || opt.has_batch_tracking),
-                            serialTracking: !!(opt.serial_tracking || opt.has_serialno_tracking),
+                            batchTracking: hasBatchTracking,
+                            serialTracking: hasSerialTracking,
+                            existingSerials: existingSerials,
                             // Store base variants for later modal access
-                            baseVariants: opt.combinations || [] 
+                            baseVariants: combinations
                           });
+
+                          if (hasBatchTracking) {
+                            const batches = opt.batches || [];
+                            setBatchModal({
+                              isOpen: true,
+                              rowIndex: index,
+                              batches: Array.isArray(batches) ? batches : JSON.parse(batches || "[]"),
+                              productName: opt.name.split(" (")[0],
+                              variantName: opt.variant_name,
+                              existingSerials: existingSerials
+                            });
+                          }
                           return;
                         }
 
                         const hasVariants = opt.has_variants || (opt.datas && opt.datas.has_variants);
-                        const combinations = opt.combinations || (opt.datas && opt.datas.combinations) || [];
                         if (hasVariants && combinations.length > 0) {
                           const mappedVariants = combinations.map((c: any) => ({
-                            id: c.id, name: Object.values(c.attributes || {}).join(" - "),
-                            sku: c.barcode || opt.barcode, stock: c.stock || opt.stocks || 0,
+                            id: c.id, 
+                            name: c.name || Object.values(c.attributes || c.datas?.attributes || {}).join(" - ") || c.barcode || "Variant",
+                            sku: c.barcode || opt.barcode, 
+                            stock: c.stocks || c.stock || opt.stocks || 0,
+                            batchCount: Array.isArray(c.batches) ? c.batches.length : (c.batches ? (typeof c.batches === 'string' ? JSON.parse(c.batches).length : 0) : 0),
                           }));
-                          setVariantModal({ isOpen: true, baseProduct: opt.name || String(val), targetRowIndex: index, variants: mappedVariants, baseData: opt.datas || opt });
-                          setSelectedVariants(new Set());
+                          setVariantModal({ isOpen: true, baseProduct: opt.name || String(val), targetRowIndex: index, variants: mappedVariants, baseData: opt });
+                          setSelectedVariants(null);
                         } else {
-                          const d = opt.datas || opt;
                           updateProductFields(index, {
                             inventory_id: opt.id,
                             variant_id: undefined,
@@ -339,11 +470,24 @@ export const InventoryItemsCard = ({
                             sku: d.barcode ?? d.sku ?? "",
                             unit: d.unit ?? "pc",
                             category: d.category ?? "",
-                            batchTracking: !!(d.batch_tracking || d.has_batch_tracking || (d.datas && d.datas.batch_tracking)),
-                            serialTracking: !!(d.serial_tracking || d.has_serialno_tracking || (d.datas && d.datas.serial_tracking)),
-                            hasVariants: true,
+                            batchTracking: hasBatchTracking,
+                            serialTracking: hasSerialTracking,
+                            existingSerials: existingSerials,
+                            hasVariants: false,
                             baseVariants: combinations
                           });
+
+                          if (hasBatchTracking) {
+                            const batches = opt.batches || d.batches || [];
+                            setBatchModal({
+                              isOpen: true,
+                              rowIndex: index,
+                              batches: Array.isArray(batches) ? batches : JSON.parse(batches || "[]"),
+                              productName: opt.name || d.name || String(val),
+                              variantName: "",
+                              existingSerials: existingSerials
+                            });
+                          }
                         }
                       } else {
                         handleProductChange(index, "name", String(val));
@@ -639,7 +783,17 @@ export const InventoryItemsCard = ({
                         </div>
                       </div>
 
-                      <div className="px-3.5 pb-3.5 pt-3 grid grid-cols-2 gap-3 animate-in fade-in slide-in-from-top-1 duration-200">
+                      <div className="px-3.5 pb-3.5 pt-3 grid grid-cols-3 gap-3 animate-in fade-in slide-in-from-top-1 duration-200">
+                        <div>
+                          <label className="text-[11px] font-medium text-slate-500 block mb-1.5 ml-0.5">Batch Number</label>
+                          <Input
+                            type="text"
+                            value={product.batchNum}
+                            onChange={(e) => handleProductChange(index, "batchNum", e.target.value)}
+                            disabled={product.batchNumReadOnly}
+                            placeholder="BATCH-001"
+                          />
+                        </div>
                         <div>
                           <label className="text-[11px] font-medium text-slate-500 block mb-1.5 ml-0.5">Mfg. Date</label>
                           <div className="relative">
@@ -648,6 +802,7 @@ export const InventoryItemsCard = ({
                               type="date"
                               value={product.manufacturingDate}
                               onChange={(e) => handleProductChange(index, "manufacturingDate", e.target.value)}
+                              disabled={product.batchNumReadOnly}
                               className="!pl-9"
                             />
                           </div>
@@ -660,6 +815,7 @@ export const InventoryItemsCard = ({
                               type="date"
                               value={product.expiryDate}
                               onChange={(e) => handleProductChange(index, "expiryDate", e.target.value)}
+                              disabled={product.batchNumReadOnly}
                               className="!pl-9"
                             />
                           </div>
@@ -670,90 +826,16 @@ export const InventoryItemsCard = ({
 
                   {/* Serial tracking fields */}
                   {product.serialTracking && (
-                    <div className="rounded-xl border border-violet-200 bg-violet-50/30 transition-all duration-200 overflow-hidden mt-3">
-                      <div className="flex items-center justify-between px-3.5 py-2.5 bg-violet-100/50 border-b border-violet-200">
-                        <div className="flex items-center gap-2">
-                          <Zap size={13} className="text-violet-500" />
-                          <span className="text-[11px] font-bold text-violet-900 uppercase tracking-wider">
-                            Serial Tracking Active
-                          </span>
-                        </div>
-                        <div className="h-4 w-7 rounded-full bg-violet-600 relative cursor-not-allowed">
-                          <div className="absolute right-0.5 top-0.5 h-3 w-3 rounded-full bg-white shadow-sm" />
-                        </div>
-                      </div>
-
-                      <div className="px-3.5 pb-3.5 pt-3 animate-in fade-in slide-in-from-top-1 duration-200">
-                        <div className="flex items-center justify-between mb-1.5">
-                          <label className="text-[11px] font-medium text-slate-500 block ml-0.5">Serial Numbers Management</label>
-                          <span className={`text-[9px] font-black uppercase px-1.5 py-0.5 rounded-md ${(product.serialNumbers?.split(',').filter(Boolean).length || 0) === q
-                              ? 'bg-emerald-100 text-emerald-700'
-                              : 'bg-violet-100 text-violet-700'
-                            }`}>
-                            {(product.serialNumbers?.split(',').filter(Boolean).length || 0)} / {q} Registered
-                          </span>
-                        </div>
-                        <div className="flex flex-wrap gap-1.5 p-2.5 border border-slate-200 rounded-xl bg-white min-h-[45px] transition-all focus-within:border-violet-300 focus-within:ring-2 focus-within:ring-violet-100">
-                          {(product.serialNumbers || "").split(',').filter(Boolean).map((s: string, i: number) => (
-                            <span key={i} className="px-2 py-1 bg-violet-100 text-violet-700 text-[10px] font-bold rounded-lg flex items-center gap-1.5 animate-in zoom-in-95 duration-150">
-                              {s}
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  const current = (product.serialNumbers || "").split(',').filter(Boolean);
-                                  const next = current.filter((_: string, idx: number) => idx !== i).join(',');
-                                  handleProductChange(index, "serialNumbers", next);
-                                }}
-                                className="hover:text-violet-900 transition-colors"
-                              >
-                                <X size={10} />
-                              </button>
-                            </span>
-                          ))}
-                          <input
-                            type="text"
-                            disabled={(product.serialNumbers || "").split(',').filter(Boolean).length >= q}
-                            placeholder={
-                              (product.serialNumbers || "").split(',').filter(Boolean).length === 0
-                                ? "Type serial and press comma..."
-                                : (product.serialNumbers || "").split(',').filter(Boolean).length >= q
-                                  ? "Limit reached"
-                                  : ""
-                            }
-                            className={`flex-1 min-w-[140px] outline-none text-[11px] text-slate-800 placeholder-slate-300 bg-transparent ${(product.serialNumbers || "").split(',').filter(Boolean).length >= q ? 'cursor-not-allowed' : ''}`}
-                            onKeyDown={(e) => {
-                              const current = (product.serialNumbers || "").split(',').filter(Boolean);
-                              if (e.key === ',' || e.key === 'Enter') {
-                                e.preventDefault();
-                                const val = e.currentTarget.value.trim();
-                                if (val && current.length < q) {
-                                  if (!current.includes(val)) {
-                                    const next = [...current, val].join(',');
-                                    handleProductChange(index, "serialNumbers", next);
-                                  }
-                                  e.currentTarget.value = "";
-                                }
-                              } else if (e.key === 'Backspace' && !e.currentTarget.value) {
-                                if (current.length > 0) {
-                                  const next = current.slice(0, -1).join(',');
-                                  handleProductChange(index, "serialNumbers", next);
-                                }
-                              }
-                            }}
-                            onBlur={(e) => {
-                              const val = e.currentTarget.value.trim();
-                              const current = (product.serialNumbers || "").split(',').filter(Boolean);
-                              if (val && current.length < q) {
-                                if (!current.includes(val)) {
-                                  const next = [...current, val].join(',');
-                                  handleProductChange(index, "serialNumbers", next);
-                                }
-                                e.currentTarget.value = "";
-                              }
-                            }}
-                          />
-                        </div>
-                      </div>
+                    <div className="mt-3">
+                      <InlineSerialManager
+                        serials={(product.serialNumbers || "").split(',').filter(Boolean)}
+                        serialLabel="Serial"
+                        onUpdate={(next) => handleProductChange(index, "serialNumbers", next.join(','))}
+                        limit={q}
+                        existingSerials={product.existingSerials}
+                        validationType="increase"
+                        onValidationError={(msg) => showToast(msg, "error")}
+                      />
                     </div>
                   )}
 

@@ -4,7 +4,9 @@ import {
   Search, AlertCircle, Save,
   Plus, Minus, Clock,
   CheckCircle2, ChevronDown, BarChart3, RefreshCw, Truck,
-  PackageCheck
+  PackageCheck,
+  Zap,
+  X
 } from 'lucide-react';
 import { GradientButton } from '@/components/ui/GradientButton';
 import { useApi } from '@/context/ApiContext';
@@ -22,6 +24,7 @@ type ReceiveStatus = "Pending" | "Partial" | "Completed";
 type POProduct = {
   id: string;
   product_id: string; // for API payload
+  variant_id?: string;
   name: string;
   sku: string;
   variant: string;
@@ -41,6 +44,8 @@ type POProduct = {
   reason: string;
   customReason: string;
   sellPrice: number;
+  serialTracking: boolean;
+  serialNumbers: string[];
 }
 
 interface POSummary {
@@ -222,7 +227,8 @@ const ReceiveGoodForm = () => {
 
       const mapped: POProduct[] = (data.products || []).map((p: any) => ({
         id:                   p.id || crypto.randomUUID(),
-        product_id:           p.product_id || p.id,
+        product_id:           p.inventory_id || p.product_id || p.id,
+        variant_id:           p.varient_id || p.variant_id || (p.datas && (p.datas.varient_id || p.datas.variant_id)) || null,
         name:                 p.name || "",
         sku:                  p.barcode || p.sku || "",
         variant:              p.variant || "",
@@ -242,6 +248,8 @@ const ReceiveGoodForm = () => {
         reason:               "",
         customReason:         "",
         sellPrice:            Number(p.sell_price || p.sellPrice) || 0,
+        serialTracking:       !!(p.serial_tracking || p.has_serialno_tracking),
+        serialNumbers:        [],
       }));
 
       setItems(mapped);
@@ -254,7 +262,20 @@ const ReceiveGoodForm = () => {
   }, [getData, showToast, setSearchParams]);
 
   const updateItem = (id: string, updates: Partial<POProduct>) => {
-    setItems(prev => prev.map(p => p.id === id ? { ...p, ...updates } : p));
+    setItems(prev => prev.map(p => {
+      if (p.id === id) {
+        const nextItem = { ...p, ...updates };
+        // Sync serial numbers if quantity is reduced
+        if (updates.receivedQty !== undefined) {
+          const qty = Number(updates.receivedQty) || 0;
+          if (nextItem.serialNumbers.length > qty) {
+            nextItem.serialNumbers = nextItem.serialNumbers.slice(0, qty);
+          }
+        }
+        return nextItem;
+      }
+      return p;
+    }));
   };
 
   const fillAll = () => {
@@ -309,17 +330,23 @@ const ReceiveGoodForm = () => {
             amount_paid: Number(amountPaid) || 0,
           },
           products: items.filter(p => Number(p.receivedQty) > 0).map(p => ({
-            id: p.product_id,
+            inventory_id: p.product_id || p.id,
+            product_id: p.product_id || p.id,
+            varient_id: p.variant_id || null,
             barcode: p.sku,
             name: p.name,
-            quantity: Number(p.receivedQty),
+            quantity: p.orderedQty,
+            received_qty: Number(p.receivedQty),
             buy_price: p.costPrice,
             sell_price: p.sellPrice,
-            batch_tracking: p.batchTracking,
-            batch_number: p.batchNum,
-            manufacturing_date: p.manufacturingDate,
-            expiry_date: p.expiryDate,
-            remarks: p.remarks,
+            batch_name: p.batchNum || null,
+            batches: {
+              batch_number: p.batchNum,
+              manufacturing_date: p.manufacturingDate,
+              expiry_date: p.expiryDate,
+              remarks: p.remarks,
+            },
+            serial_numbers: p.serialNumbers,
             ...(Number(p.receivedQty) < (p.orderedQty - p.previouslyReceivedQty) ? { 
               reason: p.reason === "Other" ? p.customReason : p.reason 
             } : {})
@@ -540,15 +567,11 @@ const ReceiveGoodForm = () => {
 
                           {/* Receive qty stepper */}
                           <div className="col-span-2 flex justify-center">
-                            {remaining > 0 ? (
-                              <QtyInput
-                                value={item.receivedQty}
-                                max={remaining}
-                                onChange={(v) => updateItem(item.id, { receivedQty: v })}
-                              />
-                            ) : (
-                              <span className="text-xs text-emerald-600 font-medium">All received</span>
-                            )}
+                            <QtyInput
+                              value={item.receivedQty}
+                              max={999999} // Allow over-receiving
+                              onChange={(v) => updateItem(item.id, { receivedQty: v })}
+                            />
                           </div>
 
                           {/* Progress */}
@@ -582,14 +605,14 @@ const ReceiveGoodForm = () => {
 
                         {/* Expanded: batch + remarks */}
                         {isExpanded && (
-                          <div className="px-6 py-4 bg-[#F8FAFC] border-t border-[#F1F5F9]">
-                            {item.batchTracking ? (
+                          <div className="px-6 py-4 bg-[#F8FAFC] border-t border-[#F1F5F9] space-y-4">
+                            {item.batchTracking && (
                               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                                 <div className="flex items-center gap-2 md:col-span-4 mb-1">
-                                  <div className="w-5 h-5 rounded-md bg-[#EFF6FF] flex items-center justify-center">
-                                    <BarChart3 size={11} className="text-[#2563EB]" />
+                                  <div className="w-5 h-5 rounded-md bg-amber-50 flex items-center justify-center border border-amber-100">
+                                    <BarChart3 size={11} className="text-amber-600" />
                                   </div>
-                                  <span className="text-xs font-semibold text-[#2563EB] uppercase tracking-wide">Batch Information</span>
+                                  <span className="text-xs font-semibold text-amber-700 uppercase tracking-wide">Batch Information</span>
                                 </div>
                                 <Input
                                   label="Batch Number *"
@@ -620,16 +643,60 @@ const ReceiveGoodForm = () => {
                                   className="!h-8 !text-xs !border-[#E2E8F0]"
                                 />
                               </div>
-                            ) : (
-                              <div className="grid grid-cols-2 gap-4">
-                                <Input
-                                  label="Remarks"
-                                  placeholder="Optional note about this item…"
-                                  value={item.remarks}
-                                  onChange={(e) => updateItem(item.id, { remarks: e.target.value })}
-                                  className="!h-8 !text-xs !border-[#E2E8F0]"
-                                />
+                            )}
+
+                            {item.serialTracking && (
+                              <div className="bg-white p-4 rounded-xl border border-violet-100 shadow-sm">
+                                <div className="flex items-center justify-between mb-3">
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-5 h-5 rounded-md bg-violet-50 flex items-center justify-center border border-violet-100">
+                                      <Zap size={11} className="text-violet-600" />
+                                    </div>
+                                    <span className="text-xs font-semibold text-violet-700 uppercase tracking-wide">Serial Numbers Management</span>
+                                  </div>
+                                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${item.serialNumbers.length === Number(item.receivedQty) ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
+                                    {item.serialNumbers.length} / {item.receivedQty || 0} Entered
+                                  </span>
+                                </div>
+
+                                <div className="flex flex-wrap gap-2 min-h-[42px] p-2 bg-slate-50/50 border border-slate-100 rounded-lg">
+                                  {item.serialNumbers.map((s, idx) => (
+                                    <span key={idx} className="flex items-center gap-1.5 px-2 py-1 bg-white border border-violet-200 text-violet-700 text-[10px] font-bold rounded-md shadow-sm">
+                                      {s}
+                                      <button onClick={() => updateItem(item.id, { serialNumbers: item.serialNumbers.filter((_, i) => i !== idx) })} className="hover:text-red-500">
+                                        <X size={10} />
+                                      </button>
+                                    </span>
+                                  ))}
+                                  {item.serialNumbers.length < (Number(item.receivedQty) || 0) && (
+                                    <input
+                                      type="text"
+                                      placeholder="Type and press Enter/Comma..."
+                                      className="flex-1 bg-transparent border-none outline-none text-xs min-w-[150px]"
+                                      onKeyDown={(e) => {
+                                        if (e.key === 'Enter' || e.key === ',') {
+                                          e.preventDefault();
+                                          const val = e.currentTarget.value.trim();
+                                          if (val && !item.serialNumbers.includes(val)) {
+                                            updateItem(item.id, { serialNumbers: [...item.serialNumbers, val] });
+                                            e.currentTarget.value = "";
+                                          }
+                                        }
+                                      }}
+                                    />
+                                  )}
+                                </div>
                               </div>
+                            )}
+
+                            {!item.batchTracking && !item.serialTracking && (
+                              <Input
+                                label="Remarks"
+                                placeholder="Optional note about this item…"
+                                value={item.remarks}
+                                onChange={(e) => updateItem(item.id, { remarks: e.target.value })}
+                                className="!h-8 !text-xs !border-[#E2E8F0]"
+                              />
                             )}
                           </div>
                         )}

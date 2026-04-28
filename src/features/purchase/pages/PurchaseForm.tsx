@@ -311,7 +311,7 @@ const PurchaseForm = () => {
 
         return {
           inventory_id: p.inventory_id || (p.id.length > 10 ? p.id : undefined),
-          variant_id: p.variant_id,
+          varient_id: p.variant_id,
           name: p.name,
           barcode: p.sku,
           quantity: q,

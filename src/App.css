@@ -151,11 +151,20 @@
     -webkit-tap-highlight-color: transparent;
     /* Prevent text selection flicker on fast taps */
     -webkit-touch-callout: none;
+    /* Optimize font rendering for mobile screens */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    /* Standard momentum scrolling for all scrollable areas */
+    -webkit-overflow-scrolling: touch;
   }
   html, body {
     @apply bg-background text-foreground font-sans overflow-x-hidden max-w-full;
+    /* Smooth native-like scrolling behavior */
+    scroll-behavior: smooth;
     /* Prevent elastic scrolling on the root (Flutter WebView handles this) */
     overscroll-behavior: none;
+    /* Standardize scrolling across platforms */
+    scrollbar-gutter: stable both-edges;
   }
   @theme {
     --font-sans:  "Poppins", sans-serif;
@@ -170,17 +179,36 @@
   .mobile-scroll {
     /* Smooth momentum scrolling on iOS */
     -webkit-overflow-scrolling: touch;
+    /* Enable smooth scroll behavior */
+    scroll-behavior: smooth;
     /* Only allow vertical panning — critical for WebView gesture pass-through */
     touch-action: pan-y;
     /* Prevent scroll chaining to the WebView's outer scroll */
     overscroll-behavior-y: contain;
+    /* GPU Accelerated Scrolling */
+    transform: translateZ(0);
+    will-change: scroll-position;
   }
 
   /* Apply to fixed bottom bars for GPU compositing (no repaint) */
   .gpu-layer {
-    will-change: transform;
+    will-change: transform, opacity;
     transform: translateZ(0);
     backface-visibility: hidden;
+    perspective: 1000px;
+  }
+
+  /* Optimize touch target feedback */
+  .touch-active:active {
+    opacity: 0.7 !important;
+    transform: scale(0.96) !important;
+    transition: transform 0.1s ease !important;
+  }
+
+  /* Fast click optimization for mobile */
+  .btn-snappy {
+    touch-action: manipulation;
+    user-select: none;
   }
 
   /* Reduce blur cost on low-end devices — use sparingly */
@@ -190,8 +218,19 @@
   }
   @media (max-width: 768px) {
     .backdrop-mobile {
-      backdrop-filter: blur(4px);
+      backdrop-filter: none;
+      background-color: rgba(255, 255, 255, 0.95);
     }
+    
+    /* Performance: Disable complex shadows on mobile if they are deep */
+    .shadow-xl, .shadow-2xl {
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08) !important;
+    }
+  }
+
+  /* Adaptive Shadow for performance */
+  .shadow-performance {
+    @apply shadow-sm md:shadow-md transition-shadow duration-300;
   }
 }
 
@@ -206,10 +245,16 @@
     scrollbar-color: #cbd5e1 transparent;
   }
 
-  /* Chrome, Safari, Edge */
+  /* Chrome, Safari, Edge - Make them extremely thin on mobile */
   .custom-scrollbar::-webkit-scrollbar {
-    width: 6px;   /* Width for vertical scrollbar */
-    height: 6px;  /* Height for horizontal scrollbar (Critical for tables) */
+    width: 4px;
+    height: 4px;
+  }
+  @media (min-width: 768px) {
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
   }
 
   .custom-scrollbar::-webkit-scrollbar-track {

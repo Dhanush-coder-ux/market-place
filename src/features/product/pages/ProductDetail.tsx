@@ -13,6 +13,7 @@ import { StatCard } from "@/components/common/StatsCard";
 import { Modal, ProfileHeaderCard, SectionCard, DetailItem } from "@/components/common/SuperUI";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { SearchSelect } from "@/components/inputbuilders/SearchSelect";
+import { VariantRows, SerialBadgeList } from "../../inventory/components/StockTree";
 import type { ProductRecord } from "@/types/api";
 
 // ── Search bar ───────────────────────────────────────────────────────────────
@@ -215,7 +216,16 @@ const ProductDetail = () => {
                     <DetailItem icon={Hash} label="Brand" value={String(datas.brand || "—")} onClick={click("Brand", String(datas.brand || "—"))} />
                     <DetailItem icon={Info} label="Unit" value={unit} onClick={click("Unit", unit)} />
                     <DetailItem icon={Hash} label="Barcode / SKU" value={sku} onClick={click("Barcode / SKU", sku)} />
-                    <DetailItem icon={FileText} label="Serial Number" value={String(datas.serial_number || "—")} onClick={click("Serial Number", String(datas.serial_number || "—"))} />
+                    <div className="lg:col-span-2">
+                      <p className="text-[10px] font-medium text-slate-400 uppercase tracking-[0.05em] mb-1.5 flex items-center gap-1.5">
+                        <FileText size={12} className="text-blue-400" /> Serial Numbers
+                      </p>
+                      {datas.serial_numbers && datas.serial_numbers.length > 0 ? (
+                        <SerialBadgeList serials={datas.serial_numbers} />
+                      ) : (
+                        <p className="text-[13px] font-semibold text-slate-400">—</p>
+                      )}
+                    </div>
                     <DetailItem icon={ShoppingCart} label="Supplier" value={String(datas.supplier || "—")} onClick={click("Supplier", String(datas.supplier || "—"))} />
                     <DetailItem icon={Info} label="Description" value={description} onClick={click("Description", description)} />
                   </div>
@@ -311,7 +321,7 @@ const ProductDetail = () => {
               </SectionCard>
             )}
 
-            {/* Combinations table */}
+            {/* Combinations tree */}
             <SectionCard className="rounded-[1.5rem] p-4">
               <div className="flex items-center gap-2 mb-4">
                 <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-100">
@@ -321,49 +331,9 @@ const ProductDetail = () => {
                   Combinations ({combinations.length})
                 </h2>
               </div>
-              <div className="overflow-x-auto rounded-xl border border-slate-100">
-                <table className="w-full text-left border-collapse">
-                  <thead className="bg-slate-50 border-b border-slate-100">
-                    <tr>
-                      {["Attributes", "Barcode", "Price", "Stock", "Status"].map(h => (
-                        <th key={h} className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-50">
-                    {combinations.map(c => (
-                      <tr key={c.id} className="hover:bg-blue-50/30 transition-colors">
-                        <td className="px-4 py-3">
-                          <div className="flex flex-wrap gap-1.5">
-                            {Object.entries(c.attributes ?? {}).map(([k, v]) => (
-                              <span key={k} className="px-2 py-0.5 bg-blue-50 text-blue-600 rounded text-[11px] font-bold">
-                                {k}: {String(v)}
-                              </span>
-                            ))}
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 text-xs font-mono font-bold text-slate-500">{c.barcode || "—"}</td>
-                        <td className="px-4 py-3 text-sm font-bold text-slate-700">{c.price ? `₹${c.price}` : "—"}</td>
-                        <td className="px-4 py-3">
-                          <span className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border ${
-                            Number(c.stock) <= 0 ? "text-rose-600 bg-rose-50 border-rose-100"
-                              : Number(c.stock) <= 15 ? "text-amber-600 bg-amber-50 border-amber-100"
-                              : "text-emerald-600 bg-emerald-50 border-emerald-100"
-                          }`}>
-                            {c.stock || 0}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3">
-                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
-                            c.active !== false ? "bg-emerald-50 text-emerald-600 border border-emerald-100" : "bg-rose-50 text-rose-600 border border-rose-100"
-                          }`}>
-                            {c.active !== false ? "Active" : "Inactive"}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              
+              <div className="bg-slate-50/30 rounded-2xl p-4 border border-slate-100">
+                <VariantRows combinations={combinations} baseSellPrice={sellingPrice} />
               </div>
             </SectionCard>
           </div>

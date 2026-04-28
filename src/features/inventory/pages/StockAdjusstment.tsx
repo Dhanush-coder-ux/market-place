@@ -26,10 +26,12 @@ import Loader from "@/components/common/Loader";
 import { useHeader } from "@/context/HeaderContext";
 import { useToast } from "@/context/ToastContext";
 import { FloatingFormCard } from '@/components/common/FloatingFormCard';
+import { InlineSerialManager } from '@/components/common/InlineSerialManager';
 
 // --- Type definitions ---
 interface AdjustmentItem {
-  id: string;
+  id: string; // Internal local ID
+  inventory_id: string; // The backend product/inventory ID
   product: string;
   barcode: string;
   currentStock: number;
@@ -39,7 +41,14 @@ interface AdjustmentItem {
   notes: string;
   internalNote: string;
   variant?: string;
+  variant_id?: string;
+  batch_id?: string;
+  batch_name?: string;
+  serial_numbers: string[];
   sku?: string;
+  has_serialno_tracking?: boolean;
+  existing_serial_numbers?: string[];
+  has_batch_tracking?: boolean;
 }
 
 const typeOptions = [
@@ -56,6 +65,18 @@ const reasonOptions = [
 ];
 
 const LOW_STOCK_THRESHOLD = 5;
+const parseBatches = (batches: any) => {
+  if (Array.isArray(batches)) return batches;
+  if (typeof batches === 'string') {
+    try {
+      const parsed = JSON.parse(batches);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (e) {
+      return [];
+    }
+  }
+  return [];
+};
 
 export default function StockAdjustmentPage() {
   const navigate = useNavigate();
@@ -65,7 +86,6 @@ export default function StockAdjustmentPage() {
 
   const [items, setItems] = useState<AdjustmentItem[]>([]);
   const [adjustmentDate, setAdjustmentDate] = useState(() => new Date().toISOString().split('T')[0]);
-  const [referenceNumber] = useState(`ADJ-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 10000)).padStart(4, '0')}`);
   const [notes, setNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [_submitError, setSubmitError] = useState<string | null>(null);
@@ -80,7 +100,17 @@ export default function StockAdjustmentPage() {
   }>({
     isOpen: false, baseProduct: "", targetRowIndex: -1, variants: [], baseData: null
   });
-  const [selectedVariants, setSelectedVariants] = useState<Set<string>>(new Set());
+  const [selectedVariant, setSelectedVariant] = useState<string | null>(null);
+
+  const [batchModal, setBatchModal] = useState<{
+    isOpen: boolean;
+    variantName: string;
+    targetRowIndex: number;
+    batches: any[];
+    variantData: any;
+  }>({
+    isOpen: false, variantName: "", targetRowIndex: -1, batches: [], variantData: null
+  });
 
   // --- Load Draft ---
   useEffect(() => {
@@ -127,6 +157,7 @@ export default function StockAdjustmentPage() {
   const handleAddItem = () => {
     const newItem: AdjustmentItem = {
       id: `item-${Date.now()}`,
+      inventory_id: '',
       product: '',
       barcode: '',
       currentStock: 0,
@@ -136,7 +167,14 @@ export default function StockAdjustmentPage() {
       notes: '',
       internalNote: '',
       variant: '',
-      sku: ''
+      variant_id: '',
+      batch_id: '',
+      batch_name: '',
+      serial_numbers: [],
+      sku: '',
+      has_serialno_tracking: false,
+      existing_serial_numbers: [],
+      has_batch_tracking: false
     };
     setItems(prev => [...prev, newItem]);
   };
@@ -159,56 +197,75 @@ export default function StockAdjustmentPage() {
     ));
   };
 
-  const toggleVariantSelection = (variantId: string) => {
-    const newSelection = new Set(selectedVariants);
-    if (newSelection.has(variantId)) {
-      newSelection.delete(variantId);
+  const confirmVariant = () => {
+    if (!selectedVariant) return;
+
+    const variantData = variantModal.variants.find(v => v.id === selectedVariant);
+    if (!variantData) return;
+
+    const batches = parseBatches(variantData.batches);
+    
+    if (batches.length > 0) {
+      setBatchModal({
+        isOpen: true,
+        variantName: variantData.name,
+        targetRowIndex: variantModal.targetRowIndex,
+        batches: batches,
+        variantData: variantData
+      });
+      // Don't close variant modal yet if we want a sequence, but usually we swap
+      setVariantModal(prev => ({ ...prev, isOpen: false }));
     } else {
-      newSelection.add(variantId);
+      const updatedItems = [...items];
+      updatedItems[variantModal.targetRowIndex] = {
+        ...updatedItems[variantModal.targetRowIndex],
+        inventory_id: variantModal.baseData.id,
+        product: variantModal.baseProduct,
+        barcode: variantData.sku || variantModal.baseData.barcode || '',
+        currentStock: variantData.stock || 0,
+        variant: variantData.name,
+        variant_id: variantData.id,
+        sku: variantData.sku || variantData.barcode,
+        has_serialno_tracking: variantModal.baseData.has_serialno_tracking || variantModal.baseData.datas?.has_serialno_tracking || false,
+        existing_serial_numbers: variantData.serial_numbers || [],
+        serial_numbers: [],
+        type: (variantModal.baseData.has_serialno_tracking || variantModal.baseData.datas?.has_serialno_tracking) && (!variantData.serial_numbers || variantData.serial_numbers.length === 0)
+          ? 'increase'
+          : updatedItems[variantModal.targetRowIndex].type
+      };
+      setItems(updatedItems);
+      setVariantModal({ isOpen: false, baseProduct: "", targetRowIndex: -1, variants: [], baseData: null });
+      setSelectedVariant(null);
     }
-    setSelectedVariants(newSelection);
   };
 
-  const confirmVariants = () => {
-    if (selectedVariants.size === 0) {
-      setVariantModal({ isOpen: false, baseProduct: "", targetRowIndex: -1, variants: [], baseData: null });
-      return;
-    }
-
-    const variantsToAdd = variantModal.variants.filter(v => selectedVariants.has(v.id));
+  const confirmBatch = (batch: any) => {
     const updatedItems = [...items];
-    const baseOpt = variantModal.baseData;
-
-    const firstVariant = variantsToAdd[0];
-    updatedItems[variantModal.targetRowIndex] = {
-      ...updatedItems[variantModal.targetRowIndex],
+    const vData = batchModal.variantData;
+    
+    updatedItems[batchModal.targetRowIndex] = {
+      ...updatedItems[batchModal.targetRowIndex],
+      inventory_id: variantModal.baseData.id,
       product: variantModal.baseProduct,
-      barcode: firstVariant.sku || baseOpt.barcode || '',
-      currentStock: firstVariant.stock || baseOpt.stocks || baseOpt.stock || 0,
-      variant: firstVariant.name,
-      sku: firstVariant.sku || firstVariant.barcode
+      barcode: batch.barcode || vData.sku || variantModal.baseData.barcode || '',
+      currentStock: batch.stocks || batch.quantity || 0,
+      variant: vData.name,
+      variant_id: vData.id,
+      batch_id: batch.id,
+      batch_name: batch.name || batch.batch,
+      sku: vData.sku || vData.barcode,
+      has_serialno_tracking: variantModal.baseData.has_serialno_tracking || variantModal.baseData.datas?.has_serialno_tracking || false,
+      existing_serial_numbers: vData.serial_numbers || [],
+      serial_numbers: [],
+      type: (variantModal.baseData.has_serialno_tracking || variantModal.baseData.datas?.has_serialno_tracking) && (!vData.serial_numbers || vData.serial_numbers.length === 0)
+        ? 'increase'
+        : updatedItems[batchModal.targetRowIndex].type
     };
-
-    for (let i = 1; i < variantsToAdd.length; i++) {
-      const v = variantsToAdd[i];
-      updatedItems.push({
-        id: `item-${Date.now()}-${i}`,
-        product: variantModal.baseProduct,
-        barcode: v.sku || baseOpt.barcode || '',
-        currentStock: v.stock || baseOpt.stocks || baseOpt.stock || 0,
-        type: 'decrease',
-        quantity: 1,
-        reason: 'Stock Correction',
-        notes: '',
-        internalNote: '',
-        variant: v.name,
-        sku: v.sku || v.barcode
-      });
-    }
-
+    
     setItems(updatedItems);
+    setBatchModal({ isOpen: false, variantName: "", targetRowIndex: -1, batches: [], variantData: null });
     setVariantModal({ isOpen: false, baseProduct: "", targetRowIndex: -1, variants: [], baseData: null });
-    setSelectedVariants(new Set());
+    setSelectedVariant(null);
   };
 
   const handleSaveDraft = () => {
@@ -244,24 +301,20 @@ export default function StockAdjustmentPage() {
       setSubmitError(null);
 
       const products = items.map(item => ({
-        id: item.id, 
-        name: item.product,
+        id: item.inventory_id || item.id, 
         barcode: item.barcode,
-        currentStock: item.currentStock,
+        varient_id: item.variant_id || null,
+        batch_id: item.batch_id || null,
+        serial_numbers: item.serial_numbers.length > 0 ? item.serial_numbers : null,
+        name: item.product,
+        quantity: Number(item.quantity) || 0,
         type: item.type === 'increase' ? 'INCREMENT' : 'DECREMENT',
-        quantity: item.quantity,
         reason: item.reason,
         notes: item.internalNote || item.notes,
-        variant: item.variant,
-        sku: item.sku
       }));
 
       const payload = {
         shop_id: SHOP_ID,
-        type: "STOCK_ADJUSTMENT",
-        date: adjustmentDate,
-        referenceNumber,
-        notes,
         products
       };
 
@@ -369,12 +422,13 @@ export default function StockAdjustmentPage() {
                 {variantModal.variants.map((variant) => {
                   const stockNum = Number(variant.stock) || 0;
                   const isLowStock = stockNum <= LOW_STOCK_THRESHOLD && stockNum > 0;
-                  const isSelected = selectedVariants.has(variant.id);
+                  const isSelected = selectedVariant === variant.id;
+                  const batchCount = parseBatches(variant.batches).length;
 
                   return (
                     <div
                       key={variant.id}
-                      onClick={() => toggleVariantSelection(variant.id)}
+                      onClick={() => setSelectedVariant(variant.id)}
                       className={`relative p-4 rounded-2xl border-2 transition-all duration-200 cursor-pointer
                         ${isSelected
                             ? 'border-blue-500 bg-blue-50/40 shadow-lg'
@@ -391,7 +445,7 @@ export default function StockAdjustmentPage() {
                         <p className="text-[9px] text-slate-400 mt-1 font-medium uppercase tracking-wider">SKU: {variant.sku}</p>
                       </div>
                       
-                      <div className="mt-2">
+                      <div className="mt-2 flex flex-wrap gap-2">
                         <span className={`inline-flex px-2 py-0.5 rounded-lg text-[9px] font-semibold uppercase tracking-wider ${
                             stockNum <= 0 ? 'bg-slate-200 text-slate-600' : 
                             isLowStock ? 'bg-orange-100 text-orange-700' : 
@@ -399,6 +453,11 @@ export default function StockAdjustmentPage() {
                           }`}>
                           Stock: {stockNum}
                         </span>
+                        {batchCount > 0 && (
+                          <span className="inline-flex px-2 py-0.5 rounded-lg bg-indigo-50 text-indigo-700 text-[9px] font-bold border border-indigo-100 uppercase tracking-wider">
+                            {batchCount} {batchCount === 1 ? 'Batch' : 'Batches'}
+                          </span>
+                        )}
                       </div>
                     </div>
                   );
@@ -408,7 +467,7 @@ export default function StockAdjustmentPage() {
 
             <div className="p-4 border-t border-slate-100 bg-white flex justify-between items-center shrink-0">
               <span className="text-xs font-semibold text-slate-500">
-                <span className="text-blue-600">{selectedVariants.size}</span> selected
+                {selectedVariant ? <span className="text-blue-600">1 variant selected</span> : "Please pick a variant"}
               </span>
               <div className="flex gap-3">
                 <button 
@@ -417,10 +476,70 @@ export default function StockAdjustmentPage() {
                 >
                   Cancel
                 </button>
-                <GradientButton variant="primary" onClick={confirmVariants} disabled={selectedVariants.size === 0} className="rounded-xl px-6 h-10 text-xs">
-                  Add to List
+                <GradientButton variant="primary" onClick={confirmVariant} disabled={!selectedVariant} className="rounded-xl px-6 h-10 text-xs">
+                  Continue
                 </GradientButton>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- BATCH SELECTION MODAL --- */}
+      {batchModal.isOpen && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col border border-slate-200 animate-in zoom-in-95 duration-200">
+            <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center bg-amber-50/30">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center text-amber-600 border border-amber-100">
+                  <PackageOpen size={20} />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-800 text-base">Select Batch</h3>
+                  <p className="text-xs text-slate-500 font-medium">{batchModal.variantName}</p>
+                </div>
+              </div>
+              <button onClick={() => setBatchModal({ ...batchModal, isOpen: false })} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-white rounded-lg transition-all shadow-sm">
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="p-6 overflow-y-auto max-h-[60vh] bg-white">
+              <div className="grid grid-cols-1 gap-3">
+                {parseBatches(batchModal.batches).map((batch: any) => (
+                  <div
+                    key={batch.id}
+                    onClick={() => confirmBatch(batch)}
+                    className="group relative p-4 rounded-2xl border border-slate-100 bg-slate-50/50 hover:bg-white hover:border-blue-200 hover:shadow-lg hover:shadow-blue-500/5 transition-all cursor-pointer"
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="font-bold text-slate-800 text-sm">{batch.name || batch.batch}</h4>
+                      <div className="w-6 h-6 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Check size={14} />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-y-2">
+                      <div className="flex flex-col">
+                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Available Stock</span>
+                        <span className="text-xs font-bold text-emerald-600">{batch.stocks || batch.quantity || 0} Units</span>
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Expiry</span>
+                        <span className="text-xs font-bold text-slate-600">{batch.expiry_date || batch.expiry || 'N/A'}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="p-4 border-t border-slate-100 bg-slate-50/50 flex justify-end shrink-0">
+              <button 
+                onClick={() => setBatchModal({ ...batchModal, isOpen: false })}
+                className="px-6 h-10 rounded-xl bg-white border border-slate-200 text-slate-600 font-bold text-xs hover:bg-slate-100 transition-all shadow-sm"
+              >
+                Back to Variants
+              </button>
             </div>
           </div>
         </div>
@@ -525,16 +644,22 @@ export default function StockAdjustmentPage() {
                                   valueKey="id"
                                   onChange={(val, opt: any) => {
                                     if (opt) {
-                                      const hasVariants = opt.has_variants || (opt.datas && opt.datas.has_variants);
+                                      const hasVariants = opt.has_variants || opt.has_varients || (opt.datas && (opt.datas.has_variants || opt.datas.has_varients));
                                       const combinations = opt.combinations || (opt.datas && opt.datas.combinations) || [];
                                       
                                       if (hasVariants && combinations.length > 0) {
-                                        const mappedVariants = combinations.map((c: any) => ({
-                                          id: c.id,
-                                          name: Object.values(c.attributes || {}).join(" - "),
-                                          sku: c.barcode || opt.barcode,
-                                          stock: c.stock || opt.stocks || 0,
-                                        }));
+                                        const mappedVariants = combinations.map((c: any) => {
+                                          const d = c.datas || {};
+                                          const dd = d.datas || {};
+                                          return {
+                                            id: c.id,
+                                            name: d.name || Object.values(dd.attributes || d.attributes || c.attributes || {}).join(" - ") || c.name || "Variant",
+                                            sku: c.barcode || d.barcode || opt.barcode,
+                                            stock: c.stocks ?? c.stock ?? d.stocks ?? opt.stocks ?? 0,
+                                            batches: parseBatches(c.batches || d.batches),
+                                            serial_numbers: d.serial_numbers || dd.serial_numbers || c.serial_numbers || [],
+                                          };
+                                        });
                                         
                                         setVariantModal({
                                           isOpen: true,
@@ -543,15 +668,25 @@ export default function StockAdjustmentPage() {
                                           variants: mappedVariants,
                                           baseData: opt.datas || opt
                                         });
-                                        setSelectedVariants(new Set());
+                                        setSelectedVariant(null);
                                       } else {
                                         const dataNode = opt.datas || opt;
                                         updateMultiple(item.id, { 
+                                          inventory_id: dataNode.id || opt.id,
                                           product: dataNode.name || opt.label || String(val),
                                           barcode: dataNode.barcode || '',
                                           currentStock: dataNode.stocks || dataNode.stock || 0,
                                           variant: dataNode.variant || '',
-                                          sku: dataNode.barcode || dataNode.sku || ''
+                                          variant_id: '',
+                                          batch_id: '',
+                                          batch_name: '',
+                                          sku: dataNode.barcode || dataNode.sku || '',
+                                          has_serialno_tracking: dataNode.has_serialno_tracking || opt.has_serialno_tracking || false,
+                                          existing_serial_numbers: dataNode.serial_numbers || opt.serial_numbers || [],
+                                          serial_numbers: [],
+                                          type: (dataNode.has_serialno_tracking || opt.has_serialno_tracking) && (!(dataNode.serial_numbers || opt.serial_numbers) || (dataNode.serial_numbers || opt.serial_numbers).length === 0)
+                                            ? 'increase'
+                                            : item.type
                                         });
                                       }
                                     } else {
@@ -569,6 +704,14 @@ export default function StockAdjustmentPage() {
                                       <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest ml-1 mb-0.5">Variation</span>
                                       <div className="px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 text-[10px] font-bold border border-blue-100 uppercase tracking-widest shadow-sm">
                                         {item.variant}
+                                      </div>
+                                    </div>
+                                  )}
+                                  {item.batch_name && (
+                                    <div className="flex flex-col">
+                                      <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest ml-1 mb-0.5">Batch</span>
+                                      <div className="px-3 py-1.5 rounded-lg bg-amber-50 text-amber-700 text-[10px] font-bold border border-amber-100 uppercase tracking-widest shadow-sm">
+                                        {item.batch_name}
                                       </div>
                                     </div>
                                   )}
@@ -592,7 +735,11 @@ export default function StockAdjustmentPage() {
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <ReusableSelect 
                                   label="Action Type" 
-                                  options={typeOptions} 
+                                  options={
+                                    item.has_serialno_tracking && (!item.existing_serial_numbers || item.existing_serial_numbers.length === 0)
+                                    ? typeOptions.filter(o => o.value === 'increase')
+                                    : typeOptions
+                                  } 
                                   value={item.type}
                                   onValueChange={(val) => updateItem(item.id, 'type', val)}
                                   className={item.type === 'increase' ? 'border-emerald-200 bg-emerald-50/30' : 'border-rose-200 bg-rose-50/30'}
@@ -619,6 +766,19 @@ export default function StockAdjustmentPage() {
                                 />
                               </div>
                             </div>
+                            {item.has_serialno_tracking && (
+                              <div className="xl:col-span-12 mt-4">
+                                <InlineSerialManager
+                                  serials={item.serial_numbers}
+                                  serialLabel="Serial Number"
+                                  onUpdate={(next) => updateItem(item.id, 'serial_numbers', next)}
+                                  limit={Number(item.quantity || 0)}
+                                  existingSerials={item.existing_serial_numbers}
+                                  validationType={item.type}
+                                  onValidationError={(msg) => showToast(msg, "error")}
+                                />
+                              </div>
+                            )}
                           </div>
                         </div>
                       );

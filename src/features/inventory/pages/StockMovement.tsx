@@ -4,7 +4,7 @@ import {
   X, RotateCcw, AlertTriangle, ArrowUp, ArrowDown,
   User, TrendingUp, TrendingDown, Activity,
   Bookmark, Plus,
-  FileText
+  FileText, Layers, Hash, Zap, Copy
 } from "lucide-react";
 
 import { GradientButton } from "@/components/ui/GradientButton";
@@ -16,6 +16,7 @@ import { useHeader } from "@/context/HeaderContext";
 import { ColumnPicker } from "@/components/common/ColumnPicker";
 import { useNavigate } from "react-router-dom";
 import { ReusableSelect } from "@/components/ui/ReusableSelect";
+import { useToast } from "@/context/ToastContext";
 
 // ─── Types & Interfaces ──────────────────────────────────────────────────────
 
@@ -35,6 +36,9 @@ export interface Movement {
   status: StatusType;
   user: string;
   notes: string;
+  variant?: string;
+  batch?: string;
+  serial_numbers?: string[];
 }
 
 // ─── Mock Data ───────────────────────────────────────────────────────────────
@@ -49,20 +53,36 @@ function purchaseToMovements(records: PurchaseRecord[], movType: MovementType): 
     if (!products || products.length === 0) return [];
 
     return products.map(prod => {
-      const dateStr = String(d2?.purchaseDetails?.date ?? d2?.purchase_date ?? d2?.production_date ?? d2?.receipt_date ?? (p as any).date ?? new Date().toISOString());
+      const pAny = p as any;
+      const dateStr = String(d2?.purchaseDetails?.date ?? d2?.purchase_date ?? d2?.production_date ?? d2?.receipt_date ?? p.date ?? pAny.created_at ?? new Date().toISOString());
+      
+      const rawType = String(p.type || d2?.type || "");
+      let finalType: MovementType = movType;
+      
+      if (rawType.includes("PO_") || rawType === "PO") {
+        finalType = "PO_PURCHASE" as MovementType;
+      } else if (rawType === "PRODUCTION") {
+        finalType = "PRODUCTION" as MovementType;
+      } else if (rawType === "DIRECT" || rawType === "PURCHASE") {
+        finalType = "PURCHASE" as MovementType;
+      }
+
       return {
         id: p.id.slice(0, 8).toUpperCase(),
         product: String(prod?.product_name ?? prod?.name ?? "—"),
         sku: String(prod?.barcode ?? p.id.slice(0, 8)),
-        type: movType,
+        type: finalType,
         qty: Number(prod?.quantity ?? prod?.qty ?? 1),
         source: "Supplier",
         destination: "Warehouse",
-        ref: String(d2?.purchaseDetails?.referenceNo ?? d2?.purchaseDetails?.invoiceNo ?? p.id.slice(0, 8).toUpperCase()),
+        ref: String(d2?.purchaseDetails?.referenceNo ?? d2?.purchaseDetails?.invoiceNo ?? d2?.referenceNumber ?? p.id.slice(0, 8).toUpperCase()),
         date: dateStr.includes("T") ? dateStr : dateStr + "T00:00:00",
         status: "Completed" as StatusType,
-        user: String((p as any).added_by || "Admin"),
-        notes: d2?.purchaseDetails?.invoiceNo ? `Invoice: ${d2.purchaseDetails.invoiceNo}` : "",
+        user: String((p as any).added_by || d2?.added_by || "Admin"),
+        notes: d2?.purchaseDetails?.invoiceNo ? `Invoice: ${d2.purchaseDetails.invoiceNo}` : (prod.notes || ""),
+        variant: prod.variant_name || prod.variant || prod.variant_id || prod.varient_id || "",
+        batch: prod.batch_name || prod.batch_id || "",
+        serial_numbers: Array.isArray(prod.serial_numbers) ? prod.serial_numbers : [],
       };
     });
   });
@@ -101,6 +121,14 @@ function getTypeStyle(type: MovementType) {
   return { bg: "bg-blue-50 text-blue-700 border-blue-200", dot: "bg-blue-500" };
 }
 
+function truncateId(id: string | undefined) {
+  if (!id) return "";
+  if (id.length > 12 && id.includes("-")) {
+    return id.slice(0, 8).toUpperCase();
+  }
+  return id;
+}
+
 const STATUS_STYLES: Record<StatusType, string> = {
   Completed: "text-emerald-600",
   Pending: "text-amber-600",
@@ -124,7 +152,15 @@ interface DetailDrawerProps {
 }
 
 function DetailDrawer({ movement, onClose }: DetailDrawerProps) {
+  const { showToast } = useToast();
   if (!movement) return null;
+
+  const copyToClipboard = (e: React.MouseEvent, text: string) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(text);
+    showToast("Copied to clipboard!", "success");
+  };
+
   const s = getTypeStyle(movement.type);
 
   return (
@@ -147,8 +183,17 @@ function DetailDrawer({ movement, onClose }: DetailDrawerProps) {
           {/* Product */}
           <div className={`rounded-xl border ${s.bg} p-4`}>
             <p className="text-xs text-slate-500 font-semibold uppercase tracking-widest mb-1">Product</p>
-            <p className="text-slate-900 font-semibold">{movement.product}</p>
-            <p className="text-slate-500 text-sm font-mono">{movement.sku}</p>
+            <p className="text-slate-900 font-semibold text-lg">{movement.product}</p>
+            <div className="flex items-center gap-2 mt-1">
+              <button 
+                onClick={(e) => copyToClipboard(e, movement.id)}
+                className="group flex items-center gap-1.5 text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded border border-blue-100 hover:bg-blue-100 transition-colors"
+              >
+                ID: {movement.id}
+                <Copy size={10} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+              </button>
+              <span className="text-slate-400 text-xs font-mono">SKU: {movement.sku}</span>
+            </div>
           </div>
 
           {/* Movement Info */}
@@ -157,7 +202,16 @@ function DetailDrawer({ movement, onClose }: DetailDrawerProps) {
               ["Type", <TypeBadge key="type" type={movement.type} />],
               ["Quantity", <span key="qty" className={`font-semibold font-mono text-base ${movement.qty > 0 ? "text-emerald-600" : movement.qty < 0 ? "text-rose-600" : "text-blue-600"}`}>{movement.qty > 0 ? `+${movement.qty}` : movement.qty}</span>],
               ["Status", <span key="status" className={`font-semibold text-sm ${STATUS_STYLES[movement.status]}`}>{movement.status}</span>],
-              ["Reference", <span key="ref" className="text-slate-700 font-mono text-sm">{movement.ref}</span>],
+              ["Variant ID", (
+                <button 
+                  key="var"
+                  onClick={(e) => copyToClipboard(e, movement.variant || "")}
+                  className="group flex items-center gap-1.5 text-slate-700 font-mono text-sm hover:text-blue-600 transition-colors"
+                >
+                  {truncateId(movement.variant) || "N/A"}
+                  {movement.variant && <Copy size={12} className="opacity-0 group-hover:opacity-100 transition-opacity" />}
+                </button>
+              )],
               ["Source", <span key="src" className="text-slate-700 text-sm font-medium">{movement.source}</span>],
               ["Destination", <span key="dest" className="text-slate-700 text-sm font-medium">{movement.destination}</span>],
             ].map(([label, val]) => (
@@ -167,6 +221,44 @@ function DetailDrawer({ movement, onClose }: DetailDrawerProps) {
               </div>
             ))}
           </div>
+
+          {/* Variant & Batch Info */}
+          {(movement.variant || movement.batch) && (
+            <div className="grid grid-cols-2 gap-3">
+              {movement.variant && (
+                <div className="bg-violet-50 rounded-xl p-3 border border-violet-100">
+                  <div className="flex items-center gap-2 text-violet-600 font-bold text-[10px] uppercase tracking-wider mb-1">
+                    <Layers size={14} /> Variant
+                  </div>
+                  <p className="text-slate-800 font-semibold text-sm">{movement.variant}</p>
+                </div>
+              )}
+              {movement.batch && (
+                <div className="bg-amber-50 rounded-xl p-3 border border-amber-100">
+                  <div className="flex items-center gap-2 text-amber-600 font-bold text-[10px] uppercase tracking-wider mb-1">
+                    <Hash size={14} /> Batch
+                  </div>
+                  <p className="text-slate-800 font-semibold text-sm">{movement.batch}</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Serial Numbers */}
+          {movement.serial_numbers && movement.serial_numbers.length > 0 && (
+            <div className="bg-emerald-50/50 rounded-xl px-4 py-4 border border-emerald-100/60">
+              <div className="flex items-center gap-2 text-emerald-600 font-bold text-[10px] uppercase tracking-wider mb-3">
+                <Zap size={14} fill="currentColor" /> Serial Numbers ({movement.serial_numbers.length})
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {movement.serial_numbers.map((sn, i) => (
+                  <span key={i} className="px-2 py-0.5 rounded-md bg-white border border-emerald-100 text-emerald-700 font-mono text-[11px] font-bold shadow-sm">
+                    {sn}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Date & User */}
           <div className="space-y-3">
@@ -281,7 +373,14 @@ export default function StockMovementPage() {
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [page, setPage] = useState(1);
   const [movements, setMovements] = useState<Movement[]>([]);
+  const { showToast } = useToast();
   const PAGE_SIZE = 10;
+
+  const copyToClipboard = (e: React.MouseEvent, text: string) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(text);
+    showToast("Copied to clipboard!", "success");
+  };
 
   // Dynamic Column State
   const [availableKeys] = useState<string[]>(["sku", "source", "destination", "ref", "user", "notes"]);
@@ -317,51 +416,73 @@ export default function StockMovementPage() {
 
   useEffect(() => {
     const load = async () => {
-      const fetchType = async (type: string, movType: MovementType) => {
-        const res = await getData(ENDPOINTS.PURCHASES, { view: type, shop_id: SHOP_ID, limit: "50", offset: "1" });
-        if (!res) return [];
-        const records: PurchaseRecord[] = Array.isArray(res.data) ? res.data : [res.data];
-        return purchaseToMovements(records, movType);
-      };
+      // 1. Fetch Purchases (Unified view)
+      const pRes = await getData(ENDPOINTS.PURCHASES, { view: "STOCKADJUSTMENT_VIEW", shop_id: SHOP_ID, limit: "50", offset: "1" });
+      const pData = pRes?.data || pRes?.datas || (Array.isArray(pRes) ? pRes : []);
+      const pMovements = purchaseToMovements(pData, "PURCHASE");
 
-      const [direct, grn, production] = await Promise.all([
-        fetchType("PURCHASE_VIEW", "PURCHASE"),
-        fetchType("PO_VIEW", "PO_PURCHASE"),
-        fetchType("STOCKADJUSTMENT_VIEW", "PRODUCTION"),
-      ]);
-
+      // 2. Fetch Stock Adjustments
       const adjRes = await getData(ENDPOINTS.S_ADJUSTMENTS, { view: "STOCKADJUSTMENT_VIEW", shop_id: SHOP_ID, limit: "50", offset: "1" });
-      const adjMovements: Movement[] = adjRes
-        ? (Array.isArray(adjRes.data) ? adjRes.data : [adjRes.data]).flatMap((a: any) => {
-          const products = (a.datas?.products ?? a.datas?.adjustment_products) as any[] | undefined;
-          if (!products || products.length === 0) return [];
-
-          return products.map(prod => {
-            const dateStr = String(a.datas?.date ?? a.date ?? new Date().toISOString());
-            const isDecrement = prod.type === 'DECREMENT' || prod.type === 'decrease';
-            const qty = Number(prod?.quantity ?? 0);
-            return {
-              id: a.id.slice(0, 8).toUpperCase(),
-              product: String(prod?.product_name ?? prod?.name ?? "—"),
-              sku: String(prod?.barcode ?? a.id.slice(0, 8)),
+      const aData = adjRes?.data || adjRes?.datas || (Array.isArray(adjRes) ? adjRes : []);
+      const adjMovements: Movement[] = aData.flatMap((a: any) => {
+          const d = a.datas || a;
+          // Some views return a products array, others return a single product in 'datas'
+          const products = (d?.products ?? d?.adjustment_products ?? a.products) as any[] | undefined;
+          
+          if (products && Array.isArray(products) && products.length > 0) {
+            return products.map(prod => {
+              const dateStr = String(d?.date ?? a.date ?? a.created_at ?? new Date().toISOString());
+              const isDecrement = prod.type === 'DECREMENT' || prod.type === 'decrease' || prod.type === 'Decrement';
+              const qty = Number(prod?.quantity ?? 0);
+              return {
+                id: a.id?.slice(0, 8).toUpperCase() || "ADJ",
+                product: String(prod?.product_name ?? prod?.name ?? "—"),
+                sku: String(prod?.barcode ?? (a.id?.slice(0, 8) || "")),
+                type: "STOCK_ADJUSTMENT" as MovementType,
+                qty: isDecrement ? -qty : qty,
+                source: "Stock",
+                destination: "Adjusted",
+                ref: String(d?.referenceNumber ?? d?.reference_number ?? (a.id?.slice(0, 8).toUpperCase() || "REF")),
+                date: dateStr.includes("T") ? dateStr : dateStr + "T00:00:00",
+                status: "Completed" as StatusType,
+                user: String(a.added_by || d?.added_by || "Admin"),
+                notes: prod.reason ? `Reason: ${prod.reason}` : (d?.reason || d?.notes || ""),
+                variant: prod.variant_name || prod.variant || prod.variant_id || prod.varient_id || "",
+                batch: prod.batch_name || prod.batch_id || "",
+                serial_numbers: Array.isArray(prod.serial_numbers) ? prod.serial_numbers : [],
+              };
+            });
+          } else if (d?.name || d?.barcode || a.barcode) {
+            // Handle single product record (flat view)
+            const dateStr = String(d?.date ?? a.date ?? a.created_at ?? new Date().toISOString());
+            const isDecrement = d?.type === 'DECREMENT' || d?.type === 'decrease' || d?.type === 'Decrement';
+            const qty = Math.abs(Number(d?.quantity ?? 0));
+            return [{
+              id: a.id?.slice(0, 8).toUpperCase() || "ADJ",
+              product: String(d?.name ?? d?.product_name ?? "—"),
+              sku: String(d?.barcode ?? d?.sku ?? (a.id?.slice(0, 8) || "")),
               type: "STOCK_ADJUSTMENT" as MovementType,
               qty: isDecrement ? -qty : qty,
               source: "Stock",
               destination: "Adjusted",
-              ref: String(a.datas?.referenceNumber ?? a.id.slice(0, 8).toUpperCase()),
+              ref: String(d?.referenceNumber ?? d?.reference_number ?? (a.id?.slice(0, 8).toUpperCase() || "REF")),
               date: dateStr.includes("T") ? dateStr : dateStr + "T00:00:00",
               status: "Completed" as StatusType,
-              user: String(a.added_by || "Admin"),
-              notes: prod.reason ? `Reason: ${prod.reason}` : "",
-            };
-          });
-        })
-        : [];
+              user: String(a.added_by || d?.added_by || "Admin"),
+              notes: d?.reason ? `Reason: ${d.reason}` : (d?.notes || d?.reason || ""),
+              variant: d?.variant_name || d?.variant || d?.variant_id || d?.varient_id || "",
+              batch: d?.batch_name || d?.batch_id || "",
+              serial_numbers: Array.isArray(d?.serial_numbers) ? d?.serial_numbers : [],
+            }];
+          }
+          
+          return [];
+        });
 
-      setMovements([...direct, ...grn, ...production, ...adjMovements]);
+      setMovements([...pMovements, ...adjMovements]);
     };
     load();
-  }, []);
+  }, [getData]);
 
   const filtered = useMemo(() => {
     let data = [...movements];
@@ -550,7 +671,39 @@ export default function StockMovementPage() {
                         </div>
                         <div>
                           <p className="text-sm font-semibold text-slate-700 tracking-tight">{m.product}</p>
-                          <p className="text-[11px] font-semibold text-slate-400 font-mono italic">#{m.id}</p>
+                          <div className="flex items-center flex-wrap gap-2 mt-0.5">
+                            <button 
+                              onClick={(e) => copyToClipboard(e, m.id)}
+                              className="group flex items-center gap-1.5 text-[9px] font-bold text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-100 hover:bg-slate-100 hover:text-slate-600 transition-all"
+                            >
+                              ID: {m.id}
+                              <Copy size={10} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+                            </button>
+                            <span className="text-[9px] font-medium text-slate-400 font-mono">SKU: {m.sku}</span>
+                            {m.variant && (
+                              <button 
+                                onClick={(e) => copyToClipboard(e, m.variant || "")}
+                                className="group flex items-center gap-0.5 text-[9px] font-bold text-violet-500 bg-violet-50 px-1.5 py-0.5 rounded-md border border-violet-100 hover:bg-violet-100 transition-all"
+                              >
+                                <Layers size={10} /> {truncateId(m.variant)}
+                                <Copy size={8} className="opacity-0 group-hover:opacity-100 transition-opacity ml-0.5" />
+                              </button>
+                            )}
+                            {m.batch && (
+                              <button 
+                                onClick={(e) => copyToClipboard(e, m.batch || "")}
+                                className="group flex items-center gap-0.5 text-[9px] font-bold text-amber-500 bg-amber-50 px-1.5 py-0.5 rounded-md border border-amber-100 hover:bg-amber-100 transition-all"
+                              >
+                                <Hash size={10} /> {truncateId(m.batch)}
+                                <Copy size={8} className="opacity-0 group-hover:opacity-100 transition-opacity ml-0.5" />
+                              </button>
+                            )}
+                            {m.serial_numbers && m.serial_numbers.length > 0 && (
+                              <span className="flex items-center gap-0.5 text-[9px] font-bold text-emerald-500 bg-emerald-50 px-1.5 py-0.5 rounded-md border border-emerald-100">
+                                <Zap size={10} fill="currentColor" /> {m.serial_numbers.length} Serials
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </td>

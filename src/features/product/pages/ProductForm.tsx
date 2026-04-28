@@ -3,7 +3,7 @@ import React, {
 } from "react";
 import {
   Package, DollarSign, BarChart2, Save, ChevronDown, Hash,
-  Cpu, AlertCircle, RefreshCw,  ScanLine, Copy,
+  Cpu, AlertCircle, RefreshCw,  ScanLine,
   Layers,  Zap,
   Bookmark,
   X,
@@ -17,6 +17,7 @@ import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useHeader } from "@/context/HeaderContext";
 import { useToast } from "@/context/ToastContext";
 import { Switch } from "@/components/ui/switch";
+import { InlineSerialManager } from "@/components/common/InlineSerialManager";
 
 /*  • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • •
    TYPES
@@ -32,7 +33,9 @@ interface VariantCombination {
   id: string;
   attributes: Record<string, string>;  // { Color: "Black", Storage: "128GB" }
   barcode: string;
-  price: string;
+  price: string;       // Selling Price
+  buy_price: string;   // Cost Price
+  mrp: string;         // Max Retail Price
   stock: string;
   active: boolean;
   serials: SerialEntry[];
@@ -445,224 +448,10 @@ const VariantBuilder: React.FC<VariantBuilderProps> = ({ variantTypes, onChange,
   );
 };
 
-/*  • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • •
-   SERIAL NUMBER MANAGER (MODAL)
- • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • */
-interface SerialManagerProps {
-  combo: VariantCombination;
-  serialLabel: string;
-  onClose: () => void;
-  onUpdate: (serials: SerialEntry[]) => void;
-}
 
-const SerialManager: React.FC<SerialManagerProps> = ({ combo, serialLabel, onClose, onUpdate }) => {
-  const [serials, setSerials] = useState<SerialEntry[]>(combo.serials);
-  const [bulkInput, setBulkInput] = useState("");
-  const [showBulk, setShowBulk] = useState(false);
-  const [error, setError] = useState("");
+/*  •  •  •  •  •  •  •  •  •  •  •  •  •  •  •  •  •  •  •  •  •  •  •  •  •  •  •  •  •  •  •  •  •  •  •  •  •  •  •  •  •  •  •  •  •  •  •  •  •  •  •  •  •  •  • 
 
-  const addSerial = () => {
-    const entry: SerialEntry = {
-      id: uid(), serial: "", purchaseDate: "", warrantyMonths: "12", status: "available",
-    };
-    setSerials(p => [...p, entry]);
-  };
 
-  const updateSerial = (id: string, field: keyof SerialEntry, val: string) => {
-    setSerials(p => p.map(s => s.id === id ? { ...s, [field]: val } : s));
-    setError("");
-  };
-
-  const removeSerial = (id: string) => setSerials(p => p.filter(s => s.id !== id));
-
-  const importBulk = () => {
-    const incoming = bulkInput
-      .split(/[\n,;]/)
-      .map(s => s.trim())
-      .filter(Boolean);
-
-    const existing = new Set(serials.map(s => s.serial));
-    const duplicates = incoming.filter(s => existing.has(s));
-
-    if (duplicates.length > 0) {
-      setError(`Duplicate serials: ${duplicates.join(", ")}`);
-      return;
-    }
-
-    const newEntries: SerialEntry[] = incoming.map(s => ({
-      id: uid(), serial: s, purchaseDate: "", warrantyMonths: "12", status: "available",
-    }));
-
-    setSerials(p => [...p, ...newEntries]);
-    setBulkInput("");
-    setShowBulk(false);
-    setError("");
-  };
-
-  const save = () => {
-    const serials_ = serials.filter(s => s.serial.trim());
-    const allSerials = serials_.map(s => s.serial.trim());
-    const unique = new Set(allSerials);
-    if (unique.size < allSerials.length) {
-      setError("Duplicate serial numbers detected.");
-      return;
-    }
-    onUpdate(serials_);
-    onClose();
-  };
-
-  const statusColors: Record<SerialEntry["status"], string> = {
-    available: "bg-emerald-50 text-emerald-700 border-emerald-100",
-    sold:      "bg-slate-100 text-slate-600 border-slate-200",
-    defective: "bg-red-50 text-red-600 border-red-100",
-  };
-
-  const comboLabel = Object.values(combo.attributes).join(" / ");
-
-  return (
-    <div className="pf-serial-backdrop fixed inset-0 z-[200] flex items-end sm:items-center justify-center p-4"
-      style={{ background: "rgba(15,23,42,0.45)", backdropFilter: "blur(4px)" }}
-      onClick={onClose}
-    >
-      <div className="pf-serial-modal bg-white rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col overflow-hidden"
-        style={{ maxHeight: "85vh" }}
-        onClick={e => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-slate-900 rounded-lg flex items-center justify-center">
-              <ScanLine size={15} className="text-white" />
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-slate-900">Manage {serialLabel}s</p>
-              <p className="text-[11px] text-slate-400 pf-mono mt-0.5">{comboLabel}  · {combo.barcode}</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <button type="button" onClick={() => setShowBulk(p => !p)}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 transition-colors">
-              <Copy size={12} /> Bulk Import
-            </button>
-            <button onClick={onClose}
-              className="w-7 h-7 flex items-center justify-center rounded-full bg-slate-100 text-slate-400 hover:bg-slate-200 transition-colors">
-              <X size={14} />
-            </button>
-          </div>
-        </div>
-
-        {/* Bulk import */}
-        {showBulk && (
-          <div className="px-5 py-3 bg-slate-50 border-b border-slate-100 pf-section-enter">
-            <Label text="Paste serial numbers (comma, semicolon, or newline separated)" />
-            <textarea
-              value={bulkInput}
-              onChange={e => setBulkInput(e.target.value)}
-              rows={3}
-              className="pf-input w-full px-3 py-2.5 text-xs border border-slate-200 rounded-lg resize-none bg-white pf-mono"
-              placeholder="SN001, SN002, SN003&#10;or one per line"
-            />
-            <div className="mt-2 flex items-center gap-2">
-              <button type="button" onClick={importBulk}
-                className="pf-btn-primary px-4 py-2 text-xs font-medium bg-blue-600 text-white rounded-lg">
-                Import
-              </button>
-              <button type="button" onClick={() => { setShowBulk(false); setBulkInput(""); }}
-                className="px-4 py-2 text-xs font-medium text-slate-500 hover:bg-slate-100 rounded-lg transition-colors">
-                Cancel
-              </button>
-            </div>
-          </div>
-        )}
-
-        {error && (
-          <div className="px-5 py-2 bg-red-50 border-b border-red-100">
-            <p className="text-[11px] text-red-600 flex items-center gap-1.5"><AlertCircle size={11}/>{error}</p>
-          </div>
-        )}
-
-        {/* Serials list */}
-        <div className="pf-scroll flex-1 overflow-y-auto">
-          {serials.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 text-center gap-3">
-              <div className="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center border border-slate-100">
-                <Hash size={20} className="text-slate-300" />
-              </div>
-              <p className="text-sm text-slate-500">No serial numbers added yet</p>
-              <p className="text-xs text-slate-400">Add individually or use bulk import</p>
-            </div>
-          ) : (
-            <div>
-              {/* Table header */}
-              <div className="grid gap-3 px-5 py-2.5 border-b border-slate-100 bg-slate-50 pf-sticky-th"
-                style={{ gridTemplateColumns: "1fr 130px 100px 110px 28px" }}>
-                {[serialLabel, "Purchase Date", "Warranty", "Status"].map(h => (
-                  <p key={h} className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">{h}</p>
-                ))}
-                <div />
-              </div>
-              {serials.map((s, idx) => (
-                <div key={s.id}
-                  className="pf-matrix-row grid gap-3 items-center px-5 py-3 border-b border-slate-50"
-                  style={{ gridTemplateColumns: "1fr 130px 100px 110px 28px" }}>
-                  <input
-                    className="pf-input px-2.5 py-1.5 text-xs border border-slate-200 rounded-lg pf-mono"
-                    placeholder={`${serialLabel} ${idx + 1}`}
-                    value={s.serial}
-                    onChange={e => updateSerial(s.id, "serial", e.target.value)}
-                  />
-                  <input
-                    type="date"
-                    className="pf-input px-2.5 py-1.5 text-xs border border-slate-200 rounded-lg"
-                    value={s.purchaseDate}
-                    onChange={e => updateSerial(s.id, "purchaseDate", e.target.value)}
-                  />
-                  <div className="flex items-center gap-1">
-                    <input
-                      className="pf-input w-full px-2.5 py-1.5 text-xs border border-slate-200 rounded-lg"
-                      placeholder="12"
-                      value={s.warrantyMonths}
-                      onChange={e => updateSerial(s.id, "warrantyMonths", e.target.value)}
-                    />
-                    <span className="text-[10px] text-slate-400 shrink-0">mo</span>
-                  </div>
-                  <select
-                    value={s.status}
-                    onChange={e => updateSerial(s.id, "status", e.target.value as SerialEntry["status"])}
-                    className={`pf-select text-[10px] font-medium px-2 py-1.5 border rounded-lg ${statusColors[s.status]}`}
-                  >
-                    <option value="available">Available</option>
-                    <option value="sold">Sold</option>
-                    <option value="defective">Defective</option>
-                  </select>
-                  <button type="button" onClick={() => removeSerial(s.id)}
-                    className="w-7 h-7 flex items-center justify-center rounded-md text-slate-300 hover:text-red-500 hover:bg-red-50 transition-all">
-                    <X size={13} />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Footer */}
-        <div className="shrink-0 px-5 py-4 border-t border-slate-100 flex items-center justify-between bg-white">
-          <button type="button" onClick={addSerial}
-            className="flex items-center gap-2 px-4 py-2.5 text-xs font-medium border border-dashed border-slate-300 rounded-xl text-slate-600 hover:border-blue-300 hover:text-blue-600 hover:bg-blue-50 transition-all">
-            <Plus size={13} /> Add {serialLabel}
-          </button>
-          <div className="flex items-center gap-2.5">
-            <span className="text-[11px] text-slate-400">{serials.filter(s => s.serial).length} units</span>
-            <button type="button" onClick={save}
-              className="pf-btn-primary px-5 py-2.5 text-xs font-semibold bg-slate-900 text-white rounded-xl">
-              Save
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
 
 /*  • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • •
    VARIANT MATRIX TABLE
@@ -677,10 +466,9 @@ interface VariantMatrixTableProps {
 }
 
 const VariantMatrixTable: React.FC<VariantMatrixTableProps> = ({
-  combinations, basePriceStr, supportsSerials, serialLabel, onChange,
+  combinations, supportsSerials, serialLabel, onChange,
 }) => {
-  const [serialsFor, setSerialsFor] = useState<VariantCombination | null>(null);
-  // const [showAllbarcodes, setShowAllbarcodes] = useState(false);
+  const [expandedSerialId, setExpandedSerialId] = useState<string | null>(null);
 
   const update = (id: string, field: keyof VariantCombination, val: unknown) => {
     onChange(combinations.map(c => c.id === id ? { ...c, [field]: val } : c));
@@ -742,8 +530,8 @@ const VariantMatrixTable: React.FC<VariantMatrixTableProps> = ({
       </div>
 
       {/* Table */}
-      <div className="border border-slate-200 rounded-xl overflow-hidden">
-        <div className="pf-scroll overflow-x-auto">
+      <div className="border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+        <div className="pf-scroll mobile-scroll custom-scrollbar overflow-x-auto">
           <table className="w-full text-sm border-collapse min-w-[700px]">
             <thead>
               <tr className="pf-sticky-th bg-slate-50 border-b border-slate-200">
@@ -753,7 +541,9 @@ const VariantMatrixTable: React.FC<VariantMatrixTableProps> = ({
                   </th>
                 ))}
                 <th className="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-widest text-slate-400 whitespace-nowrap">barcode</th>
-                <th className="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-widest text-slate-400 whitespace-nowrap">Price ()</th>
+                <th className="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-widest text-slate-400 whitespace-nowrap">Buy Price</th>
+                <th className="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-widest text-slate-400 whitespace-nowrap">Sell Price</th>
+                <th className="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-widest text-slate-400 whitespace-nowrap">MRP</th>
                 <th className="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-widest text-slate-400 whitespace-nowrap">Stock</th>
                 {supportsSerials && (
                   <th className="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-widest text-slate-400 whitespace-nowrap">{serialLabel}s</th>
@@ -762,84 +552,113 @@ const VariantMatrixTable: React.FC<VariantMatrixTableProps> = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {combinations.map((combo, idx) => (
-                <tr key={combo.id} className={`pf-matrix-row pf-combo-appear ${!combo.active ? "opacity-50" : ""}`}
-                  style={{ animationDelay: `${idx * 0.02}s` }}>
-                  {attrKeys.map(k => (
-                    <td key={k} className="px-4 py-3">
-                      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-medium bg-slate-100 text-slate-700">
-                        {combo.attributes[k]}
-                      </span>
-                    </td>
-                  ))}
-                  <td className="px-4 py-3">
-                    <input
-                      className="pf-input px-2.5 py-1.5 text-xs border border-slate-200 rounded-lg w-28 pf-mono"
-                      placeholder="barcode-001"
-                      value={combo.barcode}
-                      onChange={e => update(combo.id, "barcode", e.target.value)}
-                    />
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="relative w-24">
-                      <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></span>
-                      <input
-                        className="pf-input w-full pl-6 pr-2 py-1.5 text-xs border border-slate-200 rounded-lg"
-                        placeholder={basePriceStr || "0"}
-                        value={combo.price}
-                        onChange={e => update(combo.id, "price", e.target.value)}
-                        type="number"
-                      />
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <input
-                      className="pf-input px-2.5 py-1.5 text-xs border border-slate-200 rounded-lg w-20 text-center"
-                      placeholder="0"
-                      value={combo.stock}
-                      onChange={e => update(combo.id, "stock", e.target.value)}
-                      type="number"
-                      min="0"
-                    />
-                  </td>
-                  {supportsSerials && (
-                    <td className="px-4 py-3">
-                      <button type="button"
-                        onClick={() => setSerialsFor(combo)}
-                        className="flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-medium text-slate-600 border border-slate-200 rounded-lg hover:border-blue-300 hover:text-blue-600 hover:bg-blue-50 transition-all">
-                        <ScanLine size={11} />
-                        {combo.serials.length > 0
-                          ? <span className="pf-mono text-blue-600">{combo.serials.filter(s => s.status === "available").length} avail.</span>
-                          : "Add"}
-                      </button>
-                    </td>
-                  )}
-                  <td className="px-4 py-3 text-center">
-                    <button type="button"
-                      onClick={() => update(combo.id, "active", !combo.active)}
-                      className={`relative inline-flex h-4.5 w-8 h-[18px] w-[32px] items-center rounded-full pf-toggle ${combo.active ? "bg-blue-500" : "bg-slate-200"}`}>
-                      <span className={`pf-toggle-knob inline-block h-3 w-3 rounded-full bg-white shadow-sm ${combo.active ? "translate-x-[16px]" : "translate-x-[2px]"}`} />
-                    </button>
-                  </td>
-                </tr>
-              ))}
+              {combinations.map((combo, idx) => {
+                const isExpanded = expandedSerialId === combo.id;
+                return (
+                  <React.Fragment key={combo.id}>
+                    <tr className={`pf-matrix-row pf-combo-appear ${!combo.active ? "opacity-50" : ""} ${isExpanded ? "bg-blue-50/30" : ""}`}
+                      style={{ animationDelay: `${idx * 0.02}s` }}>
+                      {attrKeys.map(k => (
+                        <td key={k} className="px-4 py-3">
+                          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-medium bg-slate-100 text-slate-700">
+                            {combo.attributes[k]}
+                          </span>
+                        </td>
+                      ))}
+                      <td className="px-4 py-3">
+                        <input
+                          className="pf-input px-2.5 py-1.5 text-xs border border-slate-200 rounded-lg w-28 pf-mono"
+                          placeholder="barcode-001"
+                          value={combo.barcode}
+                          onChange={e => update(combo.id, "barcode", e.target.value)}
+                        />
+                      </td>
+                      <td className="px-4 py-3">
+                        <input
+                          className="pf-input px-2.5 py-1.5 text-xs border border-slate-200 rounded-lg w-24"
+                          placeholder="0.00"
+                          value={combo.buy_price}
+                          onChange={e => update(combo.id, "buy_price", e.target.value)}
+                          type="number"
+                        />
+                      </td>
+                      <td className="px-4 py-3">
+                        <input
+                          className="pf-input px-2.5 py-1.5 text-xs border border-slate-200 rounded-lg w-24"
+                          placeholder="0.00"
+                          value={combo.price}
+                          onChange={e => update(combo.id, "price", e.target.value)}
+                          type="number"
+                        />
+                      </td>
+                      <td className="px-4 py-3">
+                        <input
+                          className="pf-input px-2.5 py-1.5 text-xs border border-slate-200 rounded-lg w-24"
+                          placeholder="0.00"
+                          value={combo.mrp}
+                          onChange={e => update(combo.id, "mrp", e.target.value)}
+                          type="number"
+                        />
+                      </td>
+                      <td className="px-4 py-3">
+                        <input
+                          className="pf-input px-2.5 py-1.5 text-xs border border-slate-200 rounded-lg w-20 text-center"
+                          placeholder="0"
+                          value={combo.stock}
+                          onChange={e => update(combo.id, "stock", e.target.value)}
+                          type="number"
+                          min="0"
+                        />
+                      </td>
+                      {supportsSerials && (
+                        <td className="px-4 py-3">
+                          <button type="button"
+                            onClick={() => setExpandedSerialId(isExpanded ? null : combo.id)}
+                            className={`flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-medium rounded-lg transition-all ${
+                              isExpanded 
+                                ? "bg-violet-600 text-white shadow-sm" 
+                                : "text-slate-600 border border-slate-200 hover:border-violet-300 hover:text-violet-600 hover:bg-violet-50"
+                            }`}>
+                            <ScanLine size={11} />
+                            {combo.serials.length > 0
+                              ? <span className={`pf-mono ${isExpanded ? "text-violet-100" : "text-violet-600"}`}>{combo.serials.length} registered</span>
+                              : "Add"}
+                          </button>
+                        </td>
+                      )}
+                      <td className="px-4 py-3 text-center">
+                        <button type="button"
+                          onClick={() => update(combo.id, "active", !combo.active)}
+                          className={`relative inline-flex h-4.5 w-8 h-[18px] w-[32px] items-center rounded-full pf-toggle ${combo.active ? "bg-blue-500" : "bg-slate-200"}`}>
+                          <span className={`pf-toggle-knob inline-block h-3 w-3 rounded-full bg-white shadow-sm ${combo.active ? "translate-x-[16px]" : "translate-x-[2px]"}`} />
+                        </button>
+                      </td>
+                    </tr>
+                    {isExpanded && supportsSerials && (
+                      <tr className="bg-slate-50/50">
+                        <td colSpan={attrKeys.length + 5} className="px-4 py-4">
+                          <InlineSerialManager
+                            serials={combo.serials.map(s => s.serial)}
+                            serialLabel={serialLabel}
+                            limit={Number(combo.stock) || 0}
+                            onUpdate={(newSerials) => {
+                              const updatedEntries: SerialEntry[] = newSerials.map(s => {
+                                const existing = combo.serials.find(e => e.serial === s);
+                                return existing || { id: uid(), serial: s, purchaseDate: "", warrantyMonths: "12", status: "available" };
+                              });
+                              update(combo.id, "serials", updatedEntries);
+                            }}
+                          />
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
+                );
+              })}
             </tbody>
           </table>
         </div>
       </div>
-
-      {/* Serial manager modal */}
-      {serialsFor && (
-        <SerialManager
-          combo={serialsFor}
-          serialLabel={serialLabel}
-          onClose={() => setSerialsFor(null)}
-          onUpdate={(serials) => {
-            onChange(combinations.map(c => c.id === serialsFor.id ? { ...c, serials } : c));
-            setSerialsFor(null);
-          }}
-        />
-      )}
     </>
   );
 };
@@ -850,6 +669,7 @@ const VariantMatrixTable: React.FC<VariantMatrixTableProps> = ({
 const generateCombinations = (
   variantTypes: VariantType[],
   existing: VariantCombination[],
+  defaults: { buy_price: string; sell_price: string; mrp: string }
 ): VariantCombination[] => {
   const validTypes = variantTypes.filter(t => t.values.length > 0);
   if (validTypes.length === 0) return [];
@@ -881,7 +701,9 @@ const generateCombinations = (
       id: uid(),
       attributes,
       barcode: barcodeSuffix,
-      price: "",
+      price: defaults.sell_price,
+      buy_price: defaults.buy_price,
+      mrp: defaults.mrp,
       stock: "",
       active: true,
       serials: [],
@@ -933,6 +755,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
 
   const [variantTypes, setVariantTypes] = useState<VariantType[]>([]);
   const [combinations, setCombinations] = useState<VariantCombination[]>([]);
+  const [baseSerials, setBaseSerials] = useState<string[]>([]);
 
   // Header Actions
   useEffect(() => {
@@ -1104,7 +927,11 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
   // Regenerate combinations whenever variant types change
   useEffect(() => {
     if (!form.has_variants) return;
-    const newCombos = generateCombinations(variantTypes, combinations);
+    const newCombos = generateCombinations(variantTypes, combinations, {
+      buy_price: form.buy_price,
+      sell_price: form.sell_price,
+      mrp: form.mrp
+    });
     setCombinations(newCombos);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [variantTypes, form.has_variants]);
@@ -1136,19 +963,27 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
     }
 
     const mappedVarients = combinations.map(combo => {
-      const buyPrice = Number(form.buy_price) || 0;
-      const sellPrice = Number(combo.price) || 0;
+      const buyPrice = Number(combo.buy_price) || Number(form.buy_price) || 0;
+      const sellPrice = Number(combo.price) || Number(form.sell_price) || 0;
+      const mrp = Number(combo.mrp) || Number(form.mrp) || 0;
       const stocks = Number(combo.stock) || 0;
+      const variantName = Object.values(combo.attributes).join(" / ");
+      
       const v: any = {
+        name: variantName,
         barcode: combo.barcode,
         stocks: stocks,
         buy_price: buyPrice,
         sell_price: sellPrice,
+        mrp: mrp,
+        serial_numbers: combo.serials.map(s => s.serial),
         datas: {
+          name: variantName,
           stocks: stocks,
           barcode: combo.barcode,
           buy_price: buyPrice,
           sell_price: sellPrice,
+          mrp: mrp,
           serial_numbers: combo.serials.map(s => s.serial),
           attributes: combo.attributes,
         },
@@ -1188,6 +1023,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
         is_active: form.is_active,
         stocks: totalStock,
         variantTypes,
+        serial_numbers: !form.has_variants ? baseSerials : [],
         varients: form.has_variants ? mappedVarients : [], // Inside datas
         type: id ? "DIRECT" : "DIRECT"
       },
@@ -1400,6 +1236,16 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                     placeholder="0"
                   />
                 </div>
+                {form.serial_tracking && !form.has_variants && (
+                  <div className="mt-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                    <InlineSerialManager
+                      serials={baseSerials}
+                      serialLabel={categoryConfig.serialLabel}
+                      limit={Number(form.opening_stock) || 0}
+                      onUpdate={setBaseSerials}
+                    />
+                  </div>
+                )}
               </div>
             </div>
           </div>

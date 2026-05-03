@@ -108,10 +108,18 @@ const EmployeeForm = () => {
       getData(`${ENDPOINTS.EMPLOYEES}/by/${id}`).then(res => {
         if (res?.data) {
           const emp = Array.isArray(res.data) ? res.data[0] : res.data;
+          const datas = emp.datas || {};
           setFormData({
-            ...initialFormData,
-            ...emp,
-            is_accepted: emp.is_accepted ?? true,
+            name: emp.name || "",
+            email: emp.email || "",
+            role: emp.role || "staff",
+            mobile_number: emp.mobile_number || "",
+            address: datas.address || "",
+            joinDate: emp.joined_date || new Date().toISOString().split('T')[0],
+            is_accepted: true, // is_accepted not in schema anymore, but keep for UI
+            employee_id_custom: emp.id || "",
+            department: emp.department || "",
+            salary_range: String(datas.salary_rage || ""),
           });
         }
       });
@@ -152,14 +160,23 @@ const EmployeeForm = () => {
     }
 
     setSubmitting(true);
-    const payload = {
+    const payload: any = {
+      shop_id: SHOP_ID,
+      name: formData.name,
+      email: formData.email,
+      role: formData.role,
+      mobile_number: formData.mobile_number,
+      joined_date: formData.joinDate,
+      department: formData.department,
       datas: {
-        ...formData,
-        id,
-        shop_id: SHOP_ID,
-        type: id ? "EMPLOYEE UPDATE" : "EMPLOYEE CREATE"
+        salary_rage: Number(formData.salary_range) || 0,
+        address: { address: formData.address } // Assuming address schema is a dict
       }
     };
+
+    if (id) {
+      payload.id = id;
+    }
 
     try {
       const res = id 

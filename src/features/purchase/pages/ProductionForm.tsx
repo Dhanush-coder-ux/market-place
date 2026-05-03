@@ -26,6 +26,7 @@ import { useHeader } from "@/context/HeaderContext";
 import { useToast } from "@/context/ToastContext";
 import Loader from "@/components/common/Loader";
 import { InventoryItemsCard } from "../components/InventoryItemsCard";
+import { QuickCreateProductModal } from "@/features/common/QuickCreate/QuickCreateProductModal";
 
 type PaymentMethod = "Cash" | "UPI" | "Card" | "Bank";
 
@@ -65,6 +66,9 @@ const ProductionForm = () => {
   const { setBottomActions } = useHeader();
   const { showToast } = useToast();
   const [submitting, setSubmitting] = useState(false);
+
+  // Modal State for On-The-Fly Creation
+  const [modalState, setModalState] = useState<{ type: "Product" | null; query: string }>({ type: null, query: "" });
 
   // --- State Management ---
   const [productionDetails, setProductionDetails] = useState({
@@ -447,7 +451,6 @@ const ProductionForm = () => {
               </div>
             </div>
 
-            {/* 2. Finished Products Card */}
             <InventoryItemsCard
               products={products}
               stats={stats}
@@ -459,6 +462,7 @@ const ProductionForm = () => {
               addProduct={addProduct}
               removeProduct={removeProduct}
               type="PRODUCTION"
+              onAddNewProduct={(q) => setModalState({ type: "Product", query: q })}
             />
           </div>
 
@@ -520,6 +524,42 @@ const ProductionForm = () => {
 
         </div>
       </div>
+
+      {/* On-The-Fly Creation Modals */}
+      <QuickCreateProductModal
+        isOpen={modalState.type === "Product"}
+        onClose={() => setModalState({ type: null, query: "" })}
+        initialName={modalState.query}
+        onSuccess={(newProduct: any) => {
+          const emptyIndex = products.findIndex(p => !p.name && !p.inventory_id);
+          const hasBatchTracking = !!newProduct.has_batch || !!(newProduct.datas && newProduct.datas.has_batch);
+          const hasSerialTracking = !!newProduct.has_serialno || !!(newProduct.datas && newProduct.datas.has_serialno);
+
+          const productData = {
+            inventory_id: newProduct.id,
+            name: newProduct.name,
+            costPrice: newProduct.buy_price,
+            sellingPrice: newProduct.sell_price,
+            sku: newProduct.barcode,
+            unit: newProduct.datas?.unit || "pc",
+            taxGst: parseInt(newProduct.datas?.gst) || 18,
+            batchTracking: hasBatchTracking,
+            serialTracking: hasSerialTracking
+          };
+
+          if (emptyIndex >= 0) {
+            updateProductFields(emptyIndex, productData);
+          } else {
+            setProducts(prev => [...prev, {
+              ...products[0],
+              ...productData,
+              id: crypto.randomUUID(),
+              quantity: 1
+            }]);
+          }
+          showToast("New product created and added to list", "success");
+        }}
+      />
     </div>
   </div>
   );

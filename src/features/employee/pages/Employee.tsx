@@ -1,4 +1,4 @@
-import { Search, Filter, Users, UserCheck, UserX, Trash2, Bookmark, Eye, Edit3, X, AlertCircle } from 'lucide-react';
+import { Search, Filter, Users, Trash2, Bookmark, Eye, Edit3, X, AlertCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { StatCard } from '@/components/common/StatsCard';
 import { ReusableSelect } from '@/components/ui/ReusableSelect';
@@ -38,7 +38,7 @@ export default function Employee() {
   useEffect(() => {
     setActions(
       <div className="flex items-center gap-2">
-        <button 
+        <button
           onClick={() => navigate("/employee/drafts")}
           className="px-4 h-10 rounded-xl border border-blue-100 text-blue-600 font-semibold text-[13px] bg-blue-50/50 hover:bg-blue-100 transition-all flex items-center gap-2"
         >
@@ -54,29 +54,31 @@ export default function Employee() {
   useEffect(() => {
     const params: Record<string, string> = { limit: "50", offset: "1" };
     if (searchTerm) params.q = searchTerm;
-    
+
     getData(ENDPOINTS.EMPLOYEES, params).then((res) => {
       if (res) {
         const data: EmployeeRecord[] = Array.isArray(res.data) ? res.data : [res.data];
         setEmployees(data);
-        
+
         // Detect unique keys from both root and datas field
         const keys = new Set<string>();
         data.forEach((e: any) => {
           // Root level keys
           Object.keys(e).forEach(k => {
-            if (!["id", "shop_id", "account_id", "name", "datas"].includes(k)) {
+            if (!["id", "shop_id", "ui_id", "name", "datas", "created_at", "updated_at", "joined_date"].includes(k)) {
               keys.add(k);
             }
           });
           // Nested datas keys
           if (e.datas) {
             Object.keys(e.datas).forEach(k => {
-              if (!["id", "shop_id", "name"].includes(k)) {
+              if (!["id", "shop_id", "name", "salary_rage", "address"].includes(k)) {
                 keys.add(k);
               }
             });
           }
+          keys.add("department");
+          keys.add("joined_date");
         });
         const sortedKeys = Array.from(keys).sort();
         setAvailableKeys(sortedKeys);
@@ -87,7 +89,7 @@ export default function Employee() {
   const handleDelete = async () => {
     if (!employeeToDelete) return;
     try {
-      await deleteData(`${ENDPOINTS.EMPLOYEES}/${SHOP_ID}/${employeeToDelete.employee_id}`);
+      await deleteData(`${ENDPOINTS.EMPLOYEES}/${SHOP_ID}/${employeeToDelete.id}`);
       showToast("Employee deleted successfully", "success");
       setRefreshKey(prev => prev + 1);
     } catch (_err) {
@@ -101,8 +103,8 @@ export default function Employee() {
   const filteredEmployees = useMemo(() => {
     return employees.filter(emp => {
       const matchesRole = roleFilter === 'All' || emp.role === roleFilter;
-      const matchesSearch = emp.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                           emp.email?.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesSearch = emp.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        emp.email?.toLowerCase().includes(searchTerm.toLowerCase());
       return matchesRole && matchesSearch;
     });
   }, [employees, roleFilter, searchTerm]);
@@ -120,23 +122,22 @@ export default function Employee() {
     <div className="space-y-6">
       {/* Stats Section */}
       <div className="flex flex-nowrap overflow-x-auto custom-scrollbar gap-3 pb-2 -mx-2 px-2 sm:grid sm:grid-cols-2 lg:grid-cols-3 sm:overflow-visible sm:pb-0 sm:mx-0 sm:px-0 touch-pan-x">
-        <StatCard 
-          icon={Users} 
-          label="Total Employees" 
-          value={employees.length.toString()} 
+        <StatCard
+          icon={Users}
+          label="Total Employees"
+          value={employees.length.toString()}
           className='flex-1'
         />
-        <StatCard 
-          icon={UserCheck} 
-          label="Accepted" 
-          value={employees.filter(e => e.is_accepted).length.toString()} 
+        <StatCard
+          label="Departments"
+          value={new Set(employees.map(e => e.department)).size.toString()}
           iconBg="bg-emerald-50" iconColor="text-emerald-600"
           className='flex-1'
         />
-        <StatCard 
-          icon={UserX} 
-          label="Pending" 
-          value={employees.filter(e => !e.is_accepted).length.toString()} 
+        <StatCard
+          icon={Bookmark}
+          label="Active Roles"
+          value={new Set(employees.map(e => e.role)).size.toString()}
           iconBg="bg-amber-50" iconColor="text-amber-600"
           className='flex-1'
         />
@@ -147,7 +148,7 @@ export default function Employee() {
         <div className="flex items-center gap-3 flex-1">
           <div className="relative w-full sm:w-80">
             <Input
-              leftIcon={<Search size={14} className='text-gray-400'/>}
+              leftIcon={<Search size={14} className='text-gray-400' />}
               type="text"
               placeholder="Filter by name..."
               value={searchTerm}
@@ -155,7 +156,7 @@ export default function Employee() {
               className="h-10 text-sm"
             />
           </div>
-          <ColumnPicker 
+          <ColumnPicker
             availableKeys={availableKeys}
             selectedKeys={selectedKeys}
             onApply={setSelectedKeys}
@@ -165,7 +166,7 @@ export default function Employee() {
 
         <div className="flex items-center gap-3">
           <Input
-            leftIcon={<Search size={14} className='text-gray-400'/>}
+            leftIcon={<Search size={14} className='text-gray-400' />}
             type="text"
             placeholder="Filter by name..."
             value={searchTerm}
@@ -223,10 +224,10 @@ export default function Employee() {
                 </tr>
               ) : (
                 filteredEmployees.map((emp) => (
-                  <tr 
-                    key={emp.employee_id} 
+                  <tr
+                    key={emp.id}
                     className="group hover:bg-blue-50/30 transition-all cursor-pointer"
-                    onClick={() => navigate(`/employee/${emp.employee_id || emp.id}`)}
+                    onClick={() => navigate(`/employee/${emp.id}`)}
                   >
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-3">
@@ -235,42 +236,38 @@ export default function Employee() {
                         </div>
                         <div>
                           <p className="text-sm font-semibold text-slate-700 tracking-tight">{emp.name}</p>
-                          <p className="text-[11px] font-semibold text-slate-400 font-mono">ID: {emp.employee_id}</p>
+                          <p className="text-[11px] font-semibold text-slate-400 font-mono">ID: {emp.id}</p>
                         </div>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border shadow-sm ${
-                        emp.is_accepted 
-                          ? "bg-emerald-50 text-emerald-600 border-emerald-100" 
-                          : "bg-amber-50 text-amber-600 border-amber-100"
-                      }`}>
-                        <div className={`w-1.5 h-1.5 rounded-full ${emp.is_accepted ? "bg-emerald-500" : "bg-amber-500"} ${!emp.is_accepted ? "animate-pulse" : ""}`} />
-                        {emp.is_accepted ? "Accepted" : "Pending"}
+                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border shadow-sm bg-emerald-50 text-emerald-600 border-emerald-100`}>
+                        <div className={`w-1.5 h-1.5 rounded-full bg-emerald-500`} />
+                        Accepted
                       </span>
                     </td>
                     {selectedKeys.map(key => (
                       <td key={key} className="px-6 py-4 whitespace-nowrap">
                         <p className={`text-[12px] font-semibold tracking-tight ${key === 'role' ? 'text-blue-600 bg-blue-50 w-fit px-2 py-0.5 rounded-md' : 'text-slate-600'}`}>
-                          {String(emp.datas?.[key] ?? emp[key] ?? "—")}
+                          {String((emp.datas as any)?.[key] ?? (emp as any)[key] ?? "—")}
                         </p>
                       </td>
                     ))}
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-1">
-                        <button 
-                          onClick={(e) => { e.stopPropagation(); navigate(`/employee/${emp.employee_id || emp.id}`); }}
+                        <button
+                          onClick={(e) => { e.stopPropagation(); navigate(`/employee/${emp.id}`); }}
                           className="p-2 text-slate-400 hover:text-blue-600 hover:bg-white rounded-xl transition-all shadow-sm active:scale-95"
                         >
                           <Eye size={16} />
                         </button>
-                        <button 
-                          onClick={(e) => { e.stopPropagation(); navigate(`/employee/${emp.employee_id || emp.id}/edit`); }}
+                        <button
+                          onClick={(e) => { e.stopPropagation(); navigate(`/employee/${emp.id}/edit`); }}
                           className="p-2 text-slate-400 hover:text-blue-600 hover:bg-white rounded-xl transition-all shadow-sm active:scale-95"
                         >
                           <Edit3 size={16} />
                         </button>
-                        <button 
+                        <button
                           onClick={(e) => { e.stopPropagation(); setEmployeeToDelete(emp); setIsDeleteDialogOpen(true); }}
                           className="p-2 text-slate-400 hover:text-rose-600 hover:bg-white rounded-xl transition-all shadow-sm active:scale-95"
                         >

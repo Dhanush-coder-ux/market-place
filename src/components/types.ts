@@ -4,8 +4,8 @@ import { ReactNode } from "react";
 
 export interface TitleProps {
   title: string;
-  subtitle?: string; 
-  icon?: ReactNode;   
+  subtitle?: string;
+  icon?: ReactNode;
   actions?: ReactNode;
 }
 
@@ -15,12 +15,12 @@ export type GradientButtonProps = {
   disabled?: boolean;
   className?: string;
   type?: "button" | "submit" | "reset";
-  icon?:React.ReactNode
+  icon?: React.ReactNode
   variant?: "gradient" | "outline";
 };
 
 export interface InputProps {
-  name?:string
+  name?: string
   value: string | number;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   placeholder?: string;
@@ -30,7 +30,7 @@ export interface InputProps {
   leftIcon?: React.ReactNode;
   label?: string;
   required?: boolean;
-    
+
 }
 
 
@@ -46,7 +46,7 @@ export type SearchActionCardProps = {
   onSearchChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   placeholder?: string;
   FilterOption?: string;
-  maxWidth?:string
+  maxWidth?: string
 
 };
 
@@ -117,7 +117,7 @@ export interface SelectOption {
 
 export interface ReusableSelectProps {
   options: SelectOption[]
-  required?:React.ReactNode
+  required?: React.ReactNode
   value?: string
   onValueChange: (value: string) => void
   placeholder?: string

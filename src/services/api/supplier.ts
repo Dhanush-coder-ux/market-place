@@ -6,14 +6,14 @@ import { ENDPOINTS } from '../endpoints';
 export const supplierApi = {
   createSupplier: async (data: Record<string, any>) => {
     validateMandatory(data, SCHEMAS.supplier_create);
-    console.log("Payload:", { datas: data });
-    return await apiClient.post(ENDPOINTS.SUPPLIERS, { datas: data });
+    console.log("Payload:", data);
+    return await apiClient.post(ENDPOINTS.SUPPLIERS, data);
   },
   
   updateSupplier: async (data: Record<string, any>) => {
     validateMandatory(data, SCHEMAS.supplier_update);
-    console.log("Payload:", { datas: data });
-    return await apiClient.put(`${ENDPOINTS.SUPPLIERS}/${data.id}`, { datas: data });
+    console.log("Payload:", data);
+    return await apiClient.put(`${ENDPOINTS.SUPPLIERS}`, data);
   },
 
   searchSuppliers: async (query: string): Promise<any[]> => {
@@ -21,9 +21,9 @@ export const supplierApi = {
       const response = await apiClient.get(`${ENDPOINTS.SUPPLIERS}/search`, { q: query, limit: "10" });
       const suppliers = response.data || [];
       return suppliers.map((s: any) => ({
-        ...s.datas,
+        ...s,
         id: s.id,
-        name: s.datas?.supplier_name || s.datas?.name || "Unknown Supplier"
+        name: s.name || s.datas?.supplier_name || s.datas?.name || "Unknown Supplier"
       }));
     } catch {
       return [];

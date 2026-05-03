@@ -17,7 +17,7 @@ import { ReusableSelect } from "@/components/ui/ReusableSelect";
 import Input from "@/components/ui/Input";
 import Loader from "@/components/common/Loader";
 import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
-import type { ProductRecord } from "@/types/api";
+import type { InventoryRecord } from "@/types/api";
 
 const formatCurrency = (amount?: any) => {
   if (amount === undefined || amount === null || amount === "—") return "N/A";
@@ -52,27 +52,27 @@ const getStockStatus = (stock: number) => {
 };
 
 /* ─── Product Row Component ────────────────────────────────────────────────── */
-const ProductRow = React.memo(({ 
-  p, 
-  isExpanded, 
+const ProductRow = React.memo(({
+  p,
+  isExpanded,
   toggleExpand,
   selectedKeys,
   formatCurrency,
   navigate,
   setProductToDelete,
   setIsDeleteDialogOpen
-}: { 
-  p: ProductRecord; 
-  isExpanded: boolean; 
+}: {
+  p: InventoryRecord;
+  isExpanded: boolean;
   toggleExpand: (id: string) => void;
   selectedKeys: string[];
   formatCurrency: (amount?: number | string) => string;
   navigate: any;
-  setProductToDelete: (p: ProductRecord) => void;
+  setProductToDelete: (p: InventoryRecord) => void;
   setIsDeleteDialogOpen: (val: boolean) => void;
 }) => {
   const datas = (p.datas as any) || {};
-  
+
   const parseData = (val: any) => {
     if (Array.isArray(val)) return val;
     if (typeof val === 'string') {
@@ -82,26 +82,19 @@ const ProductRow = React.memo(({
   };
 
   const combinations = useMemo(() => {
-    const raw = parseData(p.variants || datas.combinations || datas.variants);
-    return raw.filter((v: any) => v && v.id !== null);
-  }, [p.variants, datas.combinations, datas.variants]);
+    return (p.variants || []).filter((v: any) => v && v.id !== null);
+  }, [p.variants]);
 
   const batches = useMemo(() => {
-    let raw: any[] = [];
-    if (!(datas.has_variants || datas.has_varients) && p.variants && p.variants.length > 0) {
-      raw = parseData(p.variants[0].batches);
-    } else {
-      raw = parseData(p.batches || datas.batches);
-    }
-    return raw.filter((b: any) => b && b.id !== null);
-  }, [p.variants, p.batches, datas.batches, datas.has_variants, datas.has_varients]);
+    return (p.batches || []).filter((b: any) => b && b.id !== null);
+  }, [p.batches]);
 
-  const hasVariants = (datas.has_variants || datas.has_varients) && combinations.length > 0;
-  const hasBatches = batches.length > 0;
+  const hasVariants = p.has_variant && combinations.length > 0;
+  const hasBatches = p.has_batch && batches.length > 0;
   const isExpandable = hasVariants || hasBatches;
-  
+
   // --- Aggregation logic for badges ---
-  const serials = parseData(datas.serial_numbers || (p as any).serial_numbers);
+  const serials = p.serial_number || [];
   let totalSerials = serials.length;
   let totalBatches = batches.length;
 
@@ -110,8 +103,8 @@ const ProductRow = React.memo(({
       const cDatas = c.datas || {};
       const cSerials = parseData(cDatas.serial_numbers || c.serial_numbers);
       totalSerials += cSerials.length;
-      
-      const cBatches = parseData(c.batches);
+
+      const cBatches = c.batches || [];
       totalBatches += cBatches.length;
     });
   }
@@ -177,7 +170,7 @@ const ProductRow = React.memo(({
             </div>
             <div className="flex flex-col gap-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <p className="text-[14px] sm:text-[15px] font-semibold text-slate-800 truncate">{datas.name || (p as any).name || "N/A"}</p>
+                <p className="text-[14px] sm:text-[15px] font-semibold text-slate-800 truncate">{p.name || "N/A"}</p>
                 <div className="flex items-center gap-1.5 flex-wrap">
                   {visibleBadges}
                   {!showAllBadges && remainingBadges > 0 && (
@@ -194,13 +187,13 @@ const ProductRow = React.memo(({
                 <span className="font-mono text-slate-500">{p.barcode || "No SKU"}</span>
                 <span className="text-slate-300 hidden sm:inline">•</span>
                 <span className="flex items-center gap-1">
-                   <span className="sm:hidden">Brand: </span>
-                   <span className="text-slate-700">{datas.brand || (p as any).brand || "N/A"}</span>
+                  <span className="sm:hidden">Brand: </span>
+                  <span className="text-slate-700">{datas.brand || (p as any).brand || "N/A"}</span>
                 </span>
                 <span className="text-slate-300 hidden sm:inline">•</span>
                 <span className="flex items-center gap-1">
-                   <span className="sm:hidden">GST: </span>
-                   <span className="text-slate-700">{datas.gst || (p as any).gst || "N/A"}</span>
+                  <span className="sm:hidden">GST: </span>
+                  <span className="text-slate-700">{datas.gst || (p as any).gst || "N/A"}</span>
                 </span>
               </div>
             </div>
@@ -209,7 +202,7 @@ const ProductRow = React.memo(({
 
         {selectedKeys.map(key => {
           const value = datas[key] !== undefined ? datas[key] : (p as any)[key];
-          
+
           if (key === "buy_price" || key === "sell_price" || key === "price") {
             return (
               <td key={key} className="px-6 py-4 whitespace-nowrap">
@@ -219,7 +212,7 @@ const ProductRow = React.memo(({
               </td>
             );
           }
-          
+
           if (key === "stocks" || key === "quantity") {
             const status = getStockStatus(value);
             return (
@@ -234,17 +227,17 @@ const ProductRow = React.memo(({
           if (key === "category" || key === "supplier") {
             // Only render once if both are selected, but we need to handle the loop
             if (key === "category" && selectedKeys.includes("supplier")) {
-               return (
+              return (
                 <td key="cat_sup" className="px-6 py-4">
                   <div className="flex flex-col gap-0.5">
                     <span className="text-[14px] font-medium text-slate-800">{datas.category || (p as any).category || "N/A"}</span>
                     <span className="text-[12px] text-slate-500 font-medium">{datas.supplier || (p as any).supplier || "N/A"}</span>
                   </div>
                 </td>
-               );
+              );
             }
             if (key === "supplier" && selectedKeys.includes("category")) return null; // Skip supplier if category handled it
-            
+
             return (
               <td key={key} className="px-6 py-4 whitespace-nowrap">
                 <span className="text-[13px] font-medium text-slate-600">{value || "—"}</span>
@@ -317,12 +310,12 @@ const ProductInfos = () => {
   const { getData, deleteData, loading, error, clearError } = useApi();
   const { showToast } = useToast();
 
-  const [products, setProducts] = useState<ProductRecord[]>([]);
+  const [products, setProducts] = useState<InventoryRecord[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [refreshKey, setRefreshKey] = useState(0);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [productToDelete, setProductToDelete] = useState<ProductRecord | null>(null);
+  const [productToDelete, setProductToDelete] = useState<InventoryRecord | null>(null);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
   const [availableKeys, setAvailableKeys] = useState<string[]>([]);
@@ -334,7 +327,7 @@ const ProductInfos = () => {
   useEffect(() => {
     setActions(
       <div className="flex items-center gap-3">
-        <button 
+        <button
           onClick={() => navigate("/product/drafts")}
           className="px-4 h-10 rounded-xl border border-blue-100 text-blue-600 font-semibold text-[13px] bg-blue-50/50 md:hover:bg-blue-100 md:transition-all flex items-center gap-2"
         >
@@ -355,19 +348,20 @@ const ProductInfos = () => {
 
     getData(ENDPOINTS.INVENTORIES, params).then((res) => {
       if (res) {
-        const data: ProductRecord[] = Array.isArray(res.data) ? res.data : [res.data];
+        const data: InventoryRecord[] = Array.isArray(res.data) ? res.data : [res.data];
         setProducts(data);
 
         const keys = new Set<string>();
-        data.forEach((p: ProductRecord) => {
+        data.forEach((p: InventoryRecord) => {
           if (p.datas) {
             Object.keys(p.datas).forEach(k => {
-              if (!["name", "id", "shop_id", "combinations", "variantTypes", "has_variants", "images", "description"].includes(k)) keys.add(k);
+              if (!["name", "id", "shop_id", "variantTypes", "is_active"].includes(k)) keys.add(k);
             });
           }
-          Object.keys(p).forEach(k => {
-            if (!["id", "shop_id", "barcode", "name", "datas", "created_at", "updated_at"].includes(k)) keys.add(k);
-          });
+          keys.add("category");
+          keys.add("sell_price");
+          keys.add("buy_price");
+          keys.add("stocks");
         });
         setAvailableKeys(Array.from(keys).sort());
       }
@@ -396,20 +390,20 @@ const ProductInfos = () => {
 
   const filteredProducts = useMemo(() => {
     return products.filter(p => {
-      const name = String((p.datas as any)?.name || (p as any).name || "").toLowerCase();
+      const name = String(p.name || "").toLowerCase();
       const sku = String(p.barcode || "").toLowerCase();
-      const category = String((p.datas as any)?.category || "").toLowerCase();
+      const category = String(p.category || "").toLowerCase();
       return name.includes(searchTerm.toLowerCase()) || sku.includes(searchTerm.toLowerCase()) || category.includes(searchTerm.toLowerCase());
     });
   }, [products, searchTerm]);
 
-  const totalStock = useMemo(() => 
-    products.reduce((acc, p) => acc + Number((p.datas as any)?.stocks || 0), 0), 
+  const totalStock = useMemo(() =>
+    products.reduce((acc, p) => acc + Number(p.stocks || 0), 0),
     [products]
   );
 
-  const lowStockCount = useMemo(() => 
-    products.filter(p => Number((p.datas as any)?.stocks || 0) <= 15).length, 
+  const lowStockCount = useMemo(() =>
+    products.filter(p => Number(p.stocks || 0) <= 15).length,
     [products]
   );
 
@@ -418,19 +412,19 @@ const ProductInfos = () => {
       {/* Stats */}
       <div className="flex flex-nowrap overflow-x-auto custom-scrollbar gap-3 pb-2 -mx-2 px-2 sm:grid sm:grid-cols-2 lg:grid-cols-4 sm:overflow-visible sm:pb-0 sm:mx-0 sm:px-0 touch-pan-x">
         <StatCard label="Total Products" value={products.length} icon={Package} />
-        <StatCard 
-          label="Total Stock" 
+        <StatCard
+          label="Total Stock"
           value={totalStock}
-          icon={Layers} 
-          iconBg="bg-blue-50" 
-          iconColor="text-blue-700" 
+          icon={Layers}
+          iconBg="bg-blue-50"
+          iconColor="text-blue-700"
         />
-        <StatCard 
-          label="Low Stock Items" 
+        <StatCard
+          label="Low Stock Items"
           value={lowStockCount}
-          icon={AlertTriangle} 
-          iconBg="bg-rose-50" 
-          iconColor="text-rose-700" 
+          icon={AlertTriangle}
+          iconBg="bg-rose-50"
+          iconColor="text-rose-700"
         />
       </div>
 
@@ -504,29 +498,29 @@ const ProductInfos = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-                {loading ? (
-                  <tr><td colSpan={selectedKeys.length + 3} className="py-16 text-center"><Loader /></td></tr>
-                ) : filteredProducts.length === 0 ? (
-                  <tr><td colSpan={selectedKeys.length + 3} className="py-16 text-center text-slate-500 text-sm">No products matching your search.</td></tr>
-                ) : (
-                  filteredProducts.map((p) => (
-                    <ProductRow
-                      key={p.id}
-                      p={p}
-                      isExpanded={expandedRows.has(p.id)}
-                      toggleExpand={toggleExpand}
-                      selectedKeys={selectedKeys}
-                      formatCurrency={formatCurrency}
-                      navigate={navigate}
-                      setProductToDelete={setProductToDelete}
-                      setIsDeleteDialogOpen={setIsDeleteDialogOpen}
-                    />
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+              {loading ? (
+                <tr><td colSpan={selectedKeys.length + 3} className="py-16 text-center"><Loader /></td></tr>
+              ) : filteredProducts.length === 0 ? (
+                <tr><td colSpan={selectedKeys.length + 3} className="py-16 text-center text-slate-500 text-sm">No products matching your search.</td></tr>
+              ) : (
+                filteredProducts.map((p) => (
+                  <ProductRow
+                    key={p.id}
+                    p={p}
+                    isExpanded={expandedRows.has(p.id)}
+                    toggleExpand={toggleExpand}
+                    selectedKeys={selectedKeys}
+                    formatCurrency={formatCurrency}
+                    navigate={navigate}
+                    setProductToDelete={setProductToDelete}
+                    setIsDeleteDialogOpen={setIsDeleteDialogOpen}
+                  />
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
+      </div>
 
       <ConfirmDialog
         isOpen={isDeleteDialogOpen}

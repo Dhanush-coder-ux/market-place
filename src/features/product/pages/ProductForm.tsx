@@ -1,14 +1,8 @@
-import React, {
-  useState, useMemo, useEffect,
-} from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   Package, DollarSign, BarChart2, Save, ChevronDown, Hash,
-  Cpu, AlertCircle, RefreshCw,  ScanLine,
-  Layers,  Zap,
-  Bookmark,
-  X,
-  Plus,
-  Trash2,
+  Cpu, AlertCircle, RefreshCw, ScanLine,
+  Layers, Zap, Bookmark, X, Plus, Trash2, CheckCircle2, ChevronLeft, ChevronRight
 } from "lucide-react";
 import { GradientButton } from "@/components/ui/GradientButton";
 import { useApi } from "@/context/ApiContext";
@@ -18,42 +12,25 @@ import { useHeader } from "@/context/HeaderContext";
 import { useToast } from "@/context/ToastContext";
 import { Switch } from "@/components/ui/switch";
 import { InlineSerialManager } from "@/components/common/InlineSerialManager";
+import { SearchSelect } from "@/components/inputbuilders/SearchSelect";
+import { supplierApi } from "@/services/api/supplier";
+import { QuickCreateSupplierModal } from "@/features/common/QuickCreate/QuickCreateSupplierModal";
+import { 
+  VariantType, 
+  VariantCombination, 
+  VariantBuilder, 
+  VariantMatrixTable, 
+  generateCombinations 
+} from "../components/VariantManager";
 
-/*  • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • •
+/*   • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • •
    TYPES
- • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • */
+ • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • */
 
-interface VariantType {
-  id: string;
-  name: string;          // e.g. "Color"
-  values: string[];      // e.g. ["Black", "White", "Silver"]
-}
 
-interface VariantCombination {
-  id: string;
-  attributes: Record<string, string>;  // { Color: "Black", Storage: "128GB" }
-  barcode: string;
-  price: string;       // Selling Price
-  buy_price: string;   // Cost Price
-  mrp: string;         // Max Retail Price
-  stock: string;
-  active: boolean;
-  serials: SerialEntry[];
-}
-
-interface SerialEntry {
-  id: string;
-  serial: string;       // IMEI / Serial Number
-  purchaseDate: string;
-  warrantyMonths: string;
-  status: "available" | "sold" | "defective";
-}
-
-interface CategoryConfig {
-  suggestedVariantTypes: string[];
-  supportsSerials: boolean;
-  serialLabel: string;
-}
+/*   • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • •
+   MODALS: ON-THE-FLY CREATION
+ • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • */
 
 type FormData = {
   name: string;
@@ -80,70 +57,32 @@ type FormData = {
   serial_tracking: boolean;
 };
 
-/*  • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • •
-   CONSTANTS
- • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • */
+interface CategoryConfig {
+  suggestedVariantTypes: string[];
+  supportsSerials: boolean;
+  serialLabel: string;
+}
 
 const CATEGORY_CONFIGS: Record<string, CategoryConfig> = {
-  "Mobile Phones": {
-    suggestedVariantTypes: ["Storage", "Color", "Model"],
-    supportsSerials: true,
-    serialLabel: "IMEI Number",
-  },
-  "Laptops": {
-    suggestedVariantTypes: ["RAM", "Storage", "Color"],
-    supportsSerials: true,
-    serialLabel: "Serial Number",
-  },
-  "Clothing": {
-    suggestedVariantTypes: ["Size", "Color"],
-    supportsSerials: false,
-    serialLabel: "Serial Number",
-  },
-  "Footwear": {
-    suggestedVariantTypes: ["Size", "Color"],
-    supportsSerials: false,
-    serialLabel: "Serial Number",
-  },
-  "Electronics": {
-    suggestedVariantTypes: ["Color", "Wattage", "Model"],
-    supportsSerials: true,
-    serialLabel: "Serial Number",
-  },
-  "Accessories": {
-    suggestedVariantTypes: ["Color", "Size"],
-    supportsSerials: false,
-    serialLabel: "Serial Number",
-  },
-  "Tablets": {
-    suggestedVariantTypes: ["Storage", "Connectivity", "Color"],
-    supportsSerials: true,
-    serialLabel: "IMEI / Serial",
-  },
-};
-
-const PRESET_VALUES: Record<string, string[]> = {
-  "Storage":      ["64GB", "128GB", "256GB", "512GB", "1TB"],
-  "Color":        ["Black", "White", "Silver", "Gold", "Blue", "Red", "Green", "Pink"],
-  "Size":         ["XS", "S", "M", "L", "XL", "XXL"],
-  "RAM":          ["4GB", "8GB", "16GB", "32GB"],
-  "Model":        ["Pro", "Pro Max", "Standard", "Plus", "Mini"],
-  "Connectivity": ["Wi-Fi", "Wi-Fi + Cellular"],
-  "Wattage":      ["500W", "750W", "1000W"],
+  "Mobile Phones": { suggestedVariantTypes: ["Storage", "Color", "Model"], supportsSerials: true, serialLabel: "IMEI Number" },
+  "Laptops": { suggestedVariantTypes: ["RAM", "Storage", "Color"], supportsSerials: true, serialLabel: "Serial Number" },
+  "Clothing": { suggestedVariantTypes: ["Size", "Color"], supportsSerials: false, serialLabel: "Serial Number" },
+  "Footwear": { suggestedVariantTypes: ["Size", "Color"], supportsSerials: false, serialLabel: "Serial Number" },
+  "Electronics": { suggestedVariantTypes: ["Color", "Wattage", "Model"], supportsSerials: true, serialLabel: "Serial Number" },
+  "Accessories": { suggestedVariantTypes: ["Color", "Size"], supportsSerials: false, serialLabel: "Serial Number" },
+  "Tablets": { suggestedVariantTypes: ["Storage", "Connectivity", "Color"], supportsSerials: true, serialLabel: "IMEI / Serial" },
 };
 
 const CATEGORIES = Object.keys(CATEGORY_CONFIGS);
 const UNITS = ["Piece (pcs)", "Box", "Kilogram (kg)", "Gram (g)", "Litre (L)", "Metre (m)", "Set", "Pair"];
 const GST_RATES = ["0%", "5%", "12%", "18%", "28%"];
-// const SUPPLIERS = ["TechDistro Global", "ABC Electronics", "Prime Supplies", "Metro Wholesale"];
-// const LOCATIONS = ["Shelf 1 - Main", "Warehouse A", "Warehouse B", "Store Room"];
 
-let _uid = 0;
-const uid = () => `id_${++_uid}_${Math.random().toString(36).slice(2, 6)}`;
+const uid = () => `id_${Math.random().toString(36).slice(2, 11)}`;
 
-/*  • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • •
-   STYLES
- • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • */
+
+/*   • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • •
+   STYLES & SMALL REUSABLE UI
+ • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • */
 
 const STYLES = `
   @import url('https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap');
@@ -222,10 +161,6 @@ const STYLES = `
   @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity: 0.5; } }
 `;
 
-/*  • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • •
-   SMALL REUSABLE UI
- • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • */
-
 interface LabelProps { text: string; required?: boolean; hint?: string; }
 const Label: React.FC<LabelProps> = ({ text, required, hint }) => (
   <label className="block text-[11px] font-semibold uppercase tracking-widest text-slate-500 mb-1.5">
@@ -251,7 +186,7 @@ const InputField: React.FC<InputFieldProps> = ({ label, required, hint, leftEl, 
         className={`pf-input w-full px-3 py-2.5 text-sm border border-slate-200 rounded-lg bg-white text-slate-800 placeholder-slate-300 ${leftEl ? "pl-7" : ""} ${error ? "border-red-300 bg-red-50/30" : ""} ${className}`}
       />
     </div>
-    {error && <p className="mt-1 text-[11px] text-red-500 flex items-center gap-1"><AlertCircle size={10}/>{error}</p>}
+    {error && <p className="mt-1 text-[11px] text-red-500 flex items-center gap-1"><AlertCircle size={10} />{error}</p>}
   </div>
 );
 
@@ -274,13 +209,6 @@ const SelectField: React.FC<SelectFieldProps> = ({ label, required, options, cla
 );
 
 
-/*  • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • •
-   SECTION HEADER
- • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • */
-
-/*  • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • •
-   TAG / CHIP
- • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • */
 interface TagChipProps { label: string; onRemove: () => void; color?: string; }
 const TagChip: React.FC<TagChipProps> = ({ label, onRemove, color = "bg-blue-50 text-blue-700 border-blue-100" }) => (
   <span className={`pf-tag inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium border ${color}`}>
@@ -291,429 +219,14 @@ const TagChip: React.FC<TagChipProps> = ({ label, onRemove, color = "bg-blue-50 
   </span>
 );
 
-/*  • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • •
-   VARIANT BUILDER
- • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • */
-interface VariantBuilderProps {
-  variantTypes: VariantType[];
-  onChange: (types: VariantType[]) => void;
-  suggestedTypes: string[];
-}
 
-const VariantBuilder: React.FC<VariantBuilderProps> = ({ variantTypes, onChange, suggestedTypes }) => {
-  const [newTypeName, setNewTypeName] = useState("");
-  const [valueInputs, setValueInputs] = useState<Record<string, string>>({});
-  const [showPresets, setShowPresets] = useState<Record<string, boolean>>({});
+/*   • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • •
+   VARIANT BUILDER & MATRIX (Unchanged)
+ • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • */
 
-  const addType = (name: string) => {
-    if (!name.trim()) return;
-    if (variantTypes.find(t => t.name.toLowerCase() === name.toLowerCase())) return;
-    onChange([...variantTypes, { id: uid(), name: name.trim(), values: [] }]);
-    setNewTypeName("");
-  };
-
-  const removeType = (id: string) => onChange(variantTypes.filter(t => t.id !== id));
-
-  const addValue = (typeId: string, val: string) => {
-    if (!val.trim()) return;
-    onChange(variantTypes.map(t => {
-      if (t.id !== typeId) return t;
-      if (t.values.includes(val.trim())) return t;
-      return { ...t, values: [...t.values, val.trim()] };
-    }));
-    setValueInputs(p => ({ ...p, [typeId]: "" }));
-  };
-
-  const addPresetValue = (typeId: string, val: string) => {
-    onChange(variantTypes.map(t => {
-      if (t.id !== typeId) return t;
-      if (t.values.includes(val)) return t;
-      return { ...t, values: [...t.values, val] };
-    }));
-  };
-
-  const removeValue = (typeId: string, val: string) => {
-    onChange(variantTypes.map(t =>
-      t.id === typeId ? { ...t, values: t.values.filter(v => v !== val) } : t
-    ));
-  };
-
-  const unusedSuggestions = suggestedTypes.filter(
-    s => !variantTypes.find(t => t.name.toLowerCase() === s.toLowerCase())
-  );
-
-  return (
-    <div className="space-y-4">
-      {/* Suggested types pills */}
-      {unusedSuggestions.length > 0 && (
-        <div>
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 mb-2">
-            <Zap size={9} className="inline mr-1 text-amber-400" />
-            Suggested for this category
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {unusedSuggestions.map(s => (
-              <button key={s} type="button" onClick={() => addType(s)}
-                className="pf-suggest px-3 py-1.5 text-xs font-medium border border-slate-200 rounded-full text-slate-600 bg-white flex items-center gap-1.5">
-                <Plus size={10} />{s}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Existing variant types */}
-      {variantTypes.map(vt => {
-        const presets = PRESET_VALUES[vt.name] ?? [];
-        const unusedPresets = presets.filter(p => !vt.values.includes(p));
-        const inputVal = valueInputs[vt.id] ?? "";
-
-        return (
-          <div key={vt.id} className="border border-slate-200 rounded-xl p-4 bg-slate-50/50 pf-section-enter">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <div className="w-1.5 h-6 bg-blue-400 rounded-full" />
-                <span className="text-sm font-semibold text-slate-800">{vt.name}</span>
-                <span className="text-[10px] text-slate-400 pf-mono">{vt.values.length} value{vt.values.length !== 1 ? "s" : ""}</span>
-              </div>
-              <button type="button" onClick={() => removeType(vt.id)}
-                className="w-6 h-6 flex items-center justify-center rounded-md text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all">
-                <Trash2 size={13} />
-              </button>
-            </div>
-
-            {/* Value chips */}
-            {vt.values.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 mb-3">
-                {vt.values.map(v => (
-                  <TagChip key={v} label={v} onRemove={() => removeValue(vt.id, v)} />
-                ))}
-              </div>
-            )}
-
-            {/* Add value input */}
-            <div className="flex gap-2">
-              <input
-                className="pf-input flex-1 px-3 py-2 text-xs border border-slate-200 rounded-lg bg-white text-slate-800 placeholder-slate-300"
-                placeholder={`Add ${vt.name} value`}
-                value={inputVal}
-                onChange={e => setValueInputs(p => ({ ...p, [vt.id]: e.target.value }))}
-                onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addValue(vt.id, inputVal); } }}
-              />
-              <button type="button" onClick={() => addValue(vt.id, inputVal)}
-                className="px-3 py-2 text-xs font-medium bg-blue-50 text-blue-600 border border-blue-100 rounded-lg hover:bg-blue-100 transition-colors">
-                Add
-              </button>
-              {presets.length > 0 && (
-                <button type="button"
-                  onClick={() => setShowPresets(p => ({ ...p, [vt.id]: !p[vt.id] }))}
-                  className="px-3 py-2 text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-200 transition-colors flex items-center gap-1">
-                  <ChevronDown size={11} className={`transition-transform ${showPresets[vt.id] ? "rotate-180" : ""}`} />
-                  Presets
-                </button>
-              )}
-            </div>
-
-            {/* Preset picker */}
-            {showPresets[vt.id] && unusedPresets.length > 0 && (
-              <div className="mt-2.5 flex flex-wrap gap-1.5">
-                {unusedPresets.map(p => (
-                  <button key={p} type="button" onClick={() => addPresetValue(vt.id, p)}
-                    className="px-2.5 py-1 text-[11px] border border-dashed border-slate-300 rounded-full text-slate-500 hover:border-blue-300 hover:text-blue-600 hover:bg-blue-50 transition-all">
-                    +{p}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        );
-      })}
-
-      {/* Add new variant type */}
-      <div className="flex gap-2">
-        <input
-          className="pf-input flex-1 px-3 py-2.5 text-sm border border-dashed border-slate-300 rounded-xl bg-white text-slate-800 placeholder-slate-400"
-          placeholder="New variant type (e.g. Storage, Color)"
-          value={newTypeName}
-          onChange={e => setNewTypeName(e.target.value)}
-          onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addType(newTypeName); } }}
-        />
-        <button type="button" onClick={() => addType(newTypeName)}
-          disabled={!newTypeName.trim()}
-          className="pf-btn-primary px-4 py-2.5 text-sm font-medium bg-slate-900 text-white rounded-xl disabled:opacity-40">
-          <Plus size={16} />
-        </button>
-      </div>
-    </div>
-  );
-};
-
-
-/*  •  •  •  •  •  •  •  •  •  •  •  •  •  •  •  •  •  •  •  •  •  •  •  •  •  •  •  •  •  •  •  •  •  •  •  •  •  •  •  •  •  •  •  •  •  •  •  •  •  •  •  •  •  •  • 
-
-
-
-/*  • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • •
-   VARIANT MATRIX TABLE
- • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • */
-interface VariantMatrixTableProps {
-  combinations: VariantCombination[];
-  variantTypes: VariantType[];
-  basePriceStr: string;
-  supportsSerials: boolean;
-  serialLabel: string;
-  onChange: (combos: VariantCombination[]) => void;
-}
-
-const VariantMatrixTable: React.FC<VariantMatrixTableProps> = ({
-  combinations, supportsSerials, serialLabel, onChange,
-}) => {
-  const [expandedSerialId, setExpandedSerialId] = useState<string | null>(null);
-
-  const update = (id: string, field: keyof VariantCombination, val: unknown) => {
-    onChange(combinations.map(c => c.id === id ? { ...c, [field]: val } : c));
-  };
-
-  const bulkToggleAll = (active: boolean) => {
-    onChange(combinations.map(c => ({ ...c, active })));
-  };
-
-  const regenAllbarcodes = (basebarcode: string) => {
-    if (!basebarcode) return;
-    onChange(combinations.map((c, i) => ({
-      ...c,
-      barcode: `${basebarcode}-${Object.values(c.attributes).map(v => v.slice(0, 3).toUpperCase()).join("-")}-${String(i + 1).padStart(2, "0")}`,
-    })));
-  };
-
-  const [barcodeBase, setbarcodeBase] = useState("");
-
-  if (combinations.length === 0) return null;
-
-  const attrKeys = Object.keys(combinations[0]?.attributes ?? {});
-
-  return (
-    <>
-      {/* Controls bar */}
-      <div className="flex items-center justify-between mb-3 gap-2 flex-wrap">
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1.5 pf-pulse">
-            <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-            <span className="text-[11px] font-medium text-slate-500">
-              {combinations.length} combination{combinations.length !== 1 ? "s" : ""} generated
-            </span>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1.5">
-            <input
-              className="pf-input px-2.5 py-1.5 text-xs border border-slate-200 rounded-lg w-28 pf-mono"
-              placeholder="barcode base"
-              value={barcodeBase}
-              onChange={e => setbarcodeBase(e.target.value)}
-            />
-            <button type="button" onClick={() => regenAllbarcodes(barcodeBase)}
-              disabled={!barcodeBase}
-              className="flex items-center gap-1 px-2.5 py-1.5 text-[11px] font-medium text-slate-600 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors disabled:opacity-40">
-              <RefreshCw size={11} /> Auto barcode
-            </button>
-          </div>
-          <button type="button" onClick={() => bulkToggleAll(true)}
-            className="px-2.5 py-1.5 text-[11px] font-medium text-emerald-600 bg-emerald-50 border border-emerald-100 rounded-lg hover:bg-emerald-100 transition-colors">
-            All On
-          </button>
-          <button type="button" onClick={() => bulkToggleAll(false)}
-            className="px-2.5 py-1.5 text-[11px] font-medium text-slate-500 bg-slate-50 border border-slate-200 rounded-lg hover:bg-slate-100 transition-colors">
-            All Off
-          </button>
-        </div>
-      </div>
-
-      {/* Table */}
-      <div className="border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-        <div className="pf-scroll mobile-scroll custom-scrollbar overflow-x-auto">
-          <table className="w-full text-sm border-collapse min-w-[700px]">
-            <thead>
-              <tr className="pf-sticky-th bg-slate-50 border-b border-slate-200">
-                {attrKeys.map(k => (
-                  <th key={k} className="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-widest text-slate-400 whitespace-nowrap">
-                    {k}
-                  </th>
-                ))}
-                <th className="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-widest text-slate-400 whitespace-nowrap">barcode</th>
-                <th className="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-widest text-slate-400 whitespace-nowrap">Buy Price</th>
-                <th className="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-widest text-slate-400 whitespace-nowrap">Sell Price</th>
-                <th className="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-widest text-slate-400 whitespace-nowrap">MRP</th>
-                <th className="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-widest text-slate-400 whitespace-nowrap">Stock</th>
-                {supportsSerials && (
-                  <th className="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-widest text-slate-400 whitespace-nowrap">{serialLabel}s</th>
-                )}
-                <th className="px-4 py-3 text-center text-[10px] font-semibold uppercase tracking-widest text-slate-400">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {combinations.map((combo, idx) => {
-                const isExpanded = expandedSerialId === combo.id;
-                return (
-                  <React.Fragment key={combo.id}>
-                    <tr className={`pf-matrix-row pf-combo-appear ${!combo.active ? "opacity-50" : ""} ${isExpanded ? "bg-blue-50/30" : ""}`}
-                      style={{ animationDelay: `${idx * 0.02}s` }}>
-                      {attrKeys.map(k => (
-                        <td key={k} className="px-4 py-3">
-                          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-medium bg-slate-100 text-slate-700">
-                            {combo.attributes[k]}
-                          </span>
-                        </td>
-                      ))}
-                      <td className="px-4 py-3">
-                        <input
-                          className="pf-input px-2.5 py-1.5 text-xs border border-slate-200 rounded-lg w-28 pf-mono"
-                          placeholder="barcode-001"
-                          value={combo.barcode}
-                          onChange={e => update(combo.id, "barcode", e.target.value)}
-                        />
-                      </td>
-                      <td className="px-4 py-3">
-                        <input
-                          className="pf-input px-2.5 py-1.5 text-xs border border-slate-200 rounded-lg w-24"
-                          placeholder="0.00"
-                          value={combo.buy_price}
-                          onChange={e => update(combo.id, "buy_price", e.target.value)}
-                          type="number"
-                        />
-                      </td>
-                      <td className="px-4 py-3">
-                        <input
-                          className="pf-input px-2.5 py-1.5 text-xs border border-slate-200 rounded-lg w-24"
-                          placeholder="0.00"
-                          value={combo.price}
-                          onChange={e => update(combo.id, "price", e.target.value)}
-                          type="number"
-                        />
-                      </td>
-                      <td className="px-4 py-3">
-                        <input
-                          className="pf-input px-2.5 py-1.5 text-xs border border-slate-200 rounded-lg w-24"
-                          placeholder="0.00"
-                          value={combo.mrp}
-                          onChange={e => update(combo.id, "mrp", e.target.value)}
-                          type="number"
-                        />
-                      </td>
-                      <td className="px-4 py-3">
-                        <input
-                          className="pf-input px-2.5 py-1.5 text-xs border border-slate-200 rounded-lg w-20 text-center"
-                          placeholder="0"
-                          value={combo.stock}
-                          onChange={e => update(combo.id, "stock", e.target.value)}
-                          type="number"
-                          min="0"
-                        />
-                      </td>
-                      {supportsSerials && (
-                        <td className="px-4 py-3">
-                          <button type="button"
-                            onClick={() => setExpandedSerialId(isExpanded ? null : combo.id)}
-                            className={`flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-medium rounded-lg transition-all ${
-                              isExpanded 
-                                ? "bg-violet-600 text-white shadow-sm" 
-                                : "text-slate-600 border border-slate-200 hover:border-violet-300 hover:text-violet-600 hover:bg-violet-50"
-                            }`}>
-                            <ScanLine size={11} />
-                            {combo.serials.length > 0
-                              ? <span className={`pf-mono ${isExpanded ? "text-violet-100" : "text-violet-600"}`}>{combo.serials.length} registered</span>
-                              : "Add"}
-                          </button>
-                        </td>
-                      )}
-                      <td className="px-4 py-3 text-center">
-                        <button type="button"
-                          onClick={() => update(combo.id, "active", !combo.active)}
-                          className={`relative inline-flex h-4.5 w-8 h-[18px] w-[32px] items-center rounded-full pf-toggle ${combo.active ? "bg-blue-500" : "bg-slate-200"}`}>
-                          <span className={`pf-toggle-knob inline-block h-3 w-3 rounded-full bg-white shadow-sm ${combo.active ? "translate-x-[16px]" : "translate-x-[2px]"}`} />
-                        </button>
-                      </td>
-                    </tr>
-                    {isExpanded && supportsSerials && (
-                      <tr className="bg-slate-50/50">
-                        <td colSpan={attrKeys.length + 5} className="px-4 py-4">
-                          <InlineSerialManager
-                            serials={combo.serials.map(s => s.serial)}
-                            serialLabel={serialLabel}
-                            limit={Number(combo.stock) || 0}
-                            onUpdate={(newSerials) => {
-                              const updatedEntries: SerialEntry[] = newSerials.map(s => {
-                                const existing = combo.serials.find(e => e.serial === s);
-                                return existing || { id: uid(), serial: s, purchaseDate: "", warrantyMonths: "12", status: "available" };
-                              });
-                              update(combo.id, "serials", updatedEntries);
-                            }}
-                          />
-                        </td>
-                      </tr>
-                    )}
-                  </React.Fragment>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </>
-  );
-};
-
-/*  • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • •
-   COMBINATION GENERATOR (useMemo hook logic)
- • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • */
-const generateCombinations = (
-  variantTypes: VariantType[],
-  existing: VariantCombination[],
-  defaults: { buy_price: string; sell_price: string; mrp: string }
-): VariantCombination[] => {
-  const validTypes = variantTypes.filter(t => t.values.length > 0);
-  if (validTypes.length === 0) return [];
-
-  // Cartesian product
-  const product = (arrays: string[][]): string[][] =>
-    arrays.reduce<string[][]>(
-      (acc, cur) => acc.flatMap(a => cur.map(b => [...a, b])),
-      [[]]
-    );
-
-  const valueSets = validTypes.map(t => t.values);
-  const combos = product(valueSets);
-
-  return combos.map(combo => {
-    const attributes: Record<string, string> = {};
-    validTypes.forEach((t, i) => { attributes[t.name] = combo[i]; });
-
-    // Preserve existing combo data if attributes match
-    const key = JSON.stringify(attributes);
-    const existing_ = existing.find(
-      e => JSON.stringify(e.attributes) === key
-    );
-
-    if (existing_) return existing_;
-
-    const barcodeSuffix = combo.map(v => v.slice(0, 3).toUpperCase()).join("-");
-    return {
-      id: uid(),
-      attributes,
-      barcode: barcodeSuffix,
-      price: defaults.sell_price,
-      buy_price: defaults.buy_price,
-      mrp: defaults.mrp,
-      stock: "",
-      active: true,
-      serials: [],
-    };
-  });
-};
-
-/*  • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • •
+/*   • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • •
    MAIN PRODUCT FORM
- • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • */
+ • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • */
 interface ProductFormProps {
   initialData?: Record<string, unknown>;
   isLoading?: boolean;
@@ -727,7 +240,10 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
   const { setActions } = useHeader();
   const { showToast } = useToast();
   const isLoading = externalLoading || loading;
-  // Core form
+
+  // 💡 NEW: State for On-The-Fly Supplier Creation
+  const [modalState, setModalState] = useState<{ type: "Supplier" | null; query: string }>({ type: null, query: "" });
+
   const [form, setForm] = useState<FormData>({
     name: (propInitialData.name as string) || "",
     stocks: (propInitialData.stocks as number) || 0,
@@ -756,18 +272,17 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
   const [variantTypes, setVariantTypes] = useState<VariantType[]>([]);
   const [combinations, setCombinations] = useState<VariantCombination[]>([]);
   const [baseSerials, setBaseSerials] = useState<string[]>([]);
+  const [supplierDetails, setSupplierDetails] = useState<any>(null);
 
-  // Header Actions
   useEffect(() => {
-
     setActions(
-        <div className="flex items-center gap-3 bg-white px-4 h-11 rounded-2xl border border-slate-200 shadow-sm scale-90 md:scale-100">
-          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Active</span>
-          <Switch 
-            checked={form.is_active} 
-            onCheckedChange={(checked) => setForm(prev => ({ ...prev, is_active: checked }))}
-          />
-        </div>
+      <div className="flex items-center gap-3 bg-white px-4 h-11 rounded-2xl border border-slate-200 shadow-sm scale-90 md:scale-100">
+        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Active</span>
+        <Switch
+          checked={form.is_active}
+          onCheckedChange={(checked) => setForm(prev => ({ ...prev, is_active: checked }))}
+        />
+      </div>
     );
     return () => setActions(null);
   }, [setActions, form.is_active]);
@@ -777,18 +292,18 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
     setBottomActions(
       <div className="flex items-center gap-3 animate-in fade-in slide-in-from-right-4 duration-300">
         {!id && (
-          <button 
+          <button
             type="button"
             onClick={handleSaveDraft}
-            className="px-4 h-8 rounded-xl border border-blue-100 text-blue-600 font-bold text-xs bg-blue-50/50 hover:bg-blue-100 transition-all flex items-center gap-2 whitespace-nowrap overflow-hidden"
+            className="px-4 h-8 rounded-xl border border-blue-100 text-blue-600 font-bold text-xs bg-blue-50/50 hover:bg-blue-100 transition-all flex items-center gap-2 overflow-hidden"
           >
             <Bookmark size={14} className="shrink-0" />
             <span className="truncate">Save Draft</span>
           </button>
         )}
-        <GradientButton 
-          icon={<Save size={16} />} 
-          onClick={handleSubmit} 
+        <GradientButton
+          icon={<Save size={16} />}
+          onClick={handleSubmit}
           disabled={isLoading}
           className="rounded-xl shadow-md text-xs px-8 h-8 flex items-center"
         >
@@ -809,13 +324,13 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
 
           const datas = prod.datas || {};
           setForm({
-            name: prod.name || datas.name || "",
-            stocks: prod.stocks || datas.stocks || 0,
-            serial_number: prod.serial_number || datas.serial_number || "",
-            barcode: prod.barcode || datas.barcode || "",
-            brand: prod.brand || datas.brand || "",
-            category: prod.category || datas.category || "",
-            unit: prod.unit || datas.unit || "Piece (pcs)",
+            name: prod.name || "",
+            stocks: prod.stocks || 0,
+            serial_number: (prod.serial_number && prod.serial_number[0]) || "",
+            barcode: prod.barcode || "",
+            brand: datas.brand || "",
+            category: prod.category || "",
+            unit: datas.unit || "Piece (pcs)",
             description: prod.description || datas.description || "",
             is_active: prod.is_active ?? datas.is_active ?? true,
             buy_price: String(prod.buy_price || datas.buy_price || ""),
@@ -828,12 +343,19 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
             reorder_point: String(datas.reorder_point || "5"),
             max_stock: String(datas.max_stock || ""),
             location: datas.location || "",
-            has_variants: !!(datas.has_varients ?? datas.has_variants),
-            batch_tracking: !!(datas.has_batch_tracking ?? datas.batch_tracking),
-            serial_tracking: !!(datas.has_serialno_tracking ?? datas.serial_tracking),
+            has_variants: !!prod.has_variant,
+            batch_tracking: !!prod.has_batch,
+            serial_tracking: !!prod.has_serialno,
           });
 
-          // Restore variant types
+          // Fetch matching supplier details for SearchSelect display if ID is set
+          if (datas.supplier) {
+            supplierApi.searchSuppliers(datas.supplier).then((sups: any[]) => {
+              const matched = sups.find((s: any) => s.id === datas.supplier);
+              if (matched) setSupplierDetails(matched);
+            });
+          }
+
           if (datas.variantTypes) {
             setVariantTypes(datas.variantTypes);
           } else if (prod.variants && prod.variants.length > 0) {
@@ -849,15 +371,14 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
             }
           }
 
-          // Restore combinations
-          if (datas.combinations) {
-            setCombinations(datas.combinations);
-          } else if (prod.variants) {
+          if (prod.variants) {
             setCombinations(prod.variants.map((v: any) => ({
               id: v.id,
               attributes: v.datas?.attributes || {},
-              barcode: v.barcode,
-              price: String(v.datas?.sell_price || ""),
+              barcode: v.datas?.barcode || "",
+              price: String(v.sell_price || ""),
+              buy_price: String(v.buy_price || ""),
+              mrp: String(v.datas?.mrp || ""),
               stock: String(v.stocks || ""),
               active: true,
               serials: (v.datas?.serial_numbers || []).map((sn: string) => ({
@@ -869,11 +390,14 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
               }))
             })));
           }
+
+          if (!prod.has_variant && prod.serial_number) {
+            setBaseSerials(prod.serial_number);
+          }
         }
       };
       fetchProduct();
     } else {
-      // Check for draft
       const draftId = searchParams.get("draftId");
       if (draftId) {
         const drafts = JSON.parse(localStorage.getItem("product_drafts") || "[]");
@@ -887,17 +411,14 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
     }
   }, [id, getData, searchParams]);
 
-
   const categoryConfig = CATEGORY_CONFIGS[form.category] ?? {
     suggestedVariantTypes: [],
     supportsSerials: false,
     serialLabel: "Serial Number",
   };
 
-  // When category changes, optionally pre-suggest types
   const handleCategoryChange = (val: string) => {
     setForm(p => ({ ...p, category: val }));
-    // Reset variant types when category changes
     setVariantTypes([]);
     setCombinations([]);
   };
@@ -905,7 +426,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
   const handleSaveDraft = () => {
     const drafts = JSON.parse(localStorage.getItem("product_drafts") || "[]");
     const draftId = searchParams.get("draftId") || Date.now().toString();
-    
+
     const newDraft = {
       id: draftId,
       data: { form, variantTypes, combinations },
@@ -924,7 +445,6 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
     showToast("Progress saved as draft", "info");
   };
 
-  // Regenerate combinations whenever variant types change
   useEffect(() => {
     if (!form.has_variants) return;
     const newCombos = generateCombinations(variantTypes, combinations, {
@@ -933,14 +453,13 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
       mrp: form.mrp
     });
     setCombinations(newCombos);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [variantTypes, form.has_variants]);
 
   const marginStats = useMemo(() => {
-    const cost    = Number(form.buy_price) || 0;
+    const cost = Number(form.buy_price) || 0;
     const selling = Number(form.sell_price) || 0;
-    const profit  = selling - cost;
-    const pct     = selling > 0 ? ((profit / selling) * 100).toFixed(1) : "0.0";
+    const profit = selling - cost;
+    const pct = selling > 0 ? ((profit / selling) * 100).toFixed(1) : "0.0";
     return { profit, pct };
   }, [form.buy_price, form.sell_price]);
 
@@ -968,48 +487,38 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
       const mrp = Number(combo.mrp) || Number(form.mrp) || 0;
       const stocks = Number(combo.stock) || 0;
       const variantName = Object.values(combo.attributes).join(" / ");
-      
+
       const v: any = {
         name: variantName,
-        barcode: combo.barcode,
-        stocks: stocks,
         buy_price: buyPrice,
         sell_price: sellPrice,
-        mrp: mrp,
+        stocks: stocks,
         serial_numbers: combo.serials.map(s => s.serial),
         datas: {
-          name: variantName,
-          stocks: stocks,
           barcode: combo.barcode,
-          buy_price: buyPrice,
-          sell_price: sellPrice,
           mrp: mrp,
-          serial_numbers: combo.serials.map(s => s.serial),
           attributes: combo.attributes,
         },
         batches: []
       };
-      if (!combo.id.startsWith("id_")) v.id = combo.id;
       return v;
     });
 
-    const payload = {
-      id: id || undefined,
-      barcode: form.barcode,
+    const payload: any = {
+      shop_id: SHOP_ID,
+      name: form.name,
+      category: form.category,
+      description: form.description,
+      buy_price: Number(form.buy_price) || 0,
+      sell_price: Number(form.sell_price) || 0,
       stocks: totalStock,
-      datas: { 
-        id: id || null,
-        name: form.name,
-        barcode: form.barcode,
-        shop_id: SHOP_ID,
-        category: form.category,
-        buy_price: Number(form.buy_price) || 0,
-        account_id: "",
-        sell_price: Number(form.sell_price) || 0,
-        description: form.description,
-        has_varients: form.has_variants,
-        has_batch_tracking: form.batch_tracking,
-        has_serialno_tracking: form.serial_tracking,
+      barcode: form.barcode,
+      has_variant: form.has_variants,
+      has_serialno: form.serial_tracking,
+      has_batch: form.batch_tracking,
+      variants: form.has_variants ? mappedVarients : [],
+      serial_numbers: !form.has_variants ? baseSerials : [],
+      datas: {
         brand: form.brand,
         unit: form.unit,
         mrp: Number(form.mrp) || 0,
@@ -1021,15 +530,14 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
         max_stock: Number(form.max_stock) || 0,
         location: form.location,
         is_active: form.is_active,
-        stocks: totalStock,
         variantTypes,
-        serial_numbers: !form.has_variants ? baseSerials : [],
-        varients: form.has_variants ? mappedVarients : [], // Inside datas
-        type: id ? "DIRECT" : "DIRECT"
-      },
-      varients: form.has_variants ? mappedVarients : [] // At root
+      }
     };
-    
+
+    if (id) {
+      payload.id = id;
+    }
+
     let res;
     if (id) {
       res = await putData(`${ENDPOINTS.INVENTORIES}`, payload);
@@ -1039,19 +547,19 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
 
     if (res) {
       showToast(id ? "Product updated successfully" : "Product created successfully", "success");
-      
-      // Clear draft if it exists
+
       const draftId = searchParams.get("draftId");
       if (draftId) {
         const drafts = JSON.parse(localStorage.getItem("product_drafts") || "[]");
         const filtered = drafts.filter((d: any) => d.id !== draftId);
         localStorage.setItem("product_drafts", JSON.stringify(filtered));
       }
-      
+
       setTimeout(() => {
         navigate("/product/all");
       }, 1000);
     } else {
+      console.log(payload);
       showToast("Failed to save product", "error");
     }
   };
@@ -1062,7 +570,6 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
       <div className="pf-root min-h-screen bg-slate-50/50 font-[Inter,sans-serif]">
         <form onSubmit={handleSubmit} className="max-w-7xl mx-auto space-y-5">
 
-          {/* ROW 1: Product Identity (4 cols) + Classification & Summary (2 cols) */}
           <div className="grid grid-cols-1 lg:grid-cols-6 gap-5 items-start">
 
             {/* BOX 1: Identity */}
@@ -1078,7 +585,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                   value={form.name} onChange={handleChange}
                   placeholder="e.g. Apple iPhone 15 Pro Max"
                 />
-                
+
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <InputField label="Barcode / SKU" name="barcode" required
                     value={form.barcode} onChange={handleChange}
@@ -1134,11 +641,27 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                   <h2 className="text-xs font-bold text-slate-800 uppercase tracking-widest">Classification</h2>
                 </div>
                 <div className="p-6 space-y-4">
-                  <InputField label="Supplier" name="supplier"
-                    value={form.supplier} onChange={handleChange}
-                    placeholder="e.g. TechDistro"
-                  />
-                  <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 border border-slate-100">
+
+                  {/* 💡 MODIFIED: Changed text input to SearchSelect for Supplier */}
+                  <div className="flex flex-col gap-1.5">
+                    <Label text="Supplier" hint="optional" />
+                    <SearchSelect
+                      labelKey="name"
+                      valueKey="id"
+                      fetchOptions={async (q) => await supplierApi.searchSuppliers(q)}
+                      value={supplierDetails?.id || form.supplier}
+                      onChange={(val, opt: any) => {
+                        setForm(p => ({ ...p, supplier: String(val) }));
+                        if (opt) setSupplierDetails(opt);
+                      }}
+                      // Triggers the On-The-Fly Supplier Modal
+                      onCreateNew={(query) => setModalState({ type: "Supplier", query })}
+                      placeholder="Search Supplier..."
+                    />
+                  </div>
+                  {/* --- */}
+
+                  <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 border border-slate-100 mt-2">
                     <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Active Product</span>
                     <Switch
                       checked={form.is_active}
@@ -1150,9 +673,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
             </div>
           </div>
 
-          {/* ROW 2: Pricing (3 cols) + Tax & Stock (3 cols) */}
           <div className="grid grid-cols-1 lg:grid-cols-6 gap-5">
-
             {/* BOX 3: Pricing */}
             <div className="lg:col-span-3 bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden hover:shadow-md transition-all">
               <div className="px-6 py-4 bg-gradient-to-r from-emerald-50/50 to-transparent border-b border-slate-100 flex items-center gap-3">
@@ -1178,9 +699,8 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                   <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Est. Margin</span>
                   <div className="flex items-center gap-2">
                     <span className="font-bold text-slate-800 text-sm">{marginStats.profit.toLocaleString()}</span>
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${
-                      marginStats.profit >= 0 ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"
-                    }`}>{marginStats.pct}%</span>
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${marginStats.profit >= 0 ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"
+                      }`}>{marginStats.pct}%</span>
                   </div>
                 </div>
                 <InputField label="MRP" name="mrp" type="number" leftEl=""
@@ -1192,19 +712,18 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
 
             {/* BOX 4: Live Summary + Stock */}
             <div className="lg:col-span-3 space-y-5">
-              {/* Live Summary card */}
               <div className="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden">
                 <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
                   <h2 className="text-xs font-bold text-slate-800 uppercase tracking-widest">Live Summary</h2>
                 </div>
                 <div className="divide-y divide-slate-50 px-6">
                   {[
-                    { label: "SKU",      value: form.barcode || "-" },
-                    { label: "Cost",     value: form.buy_price ? `${Number(form.buy_price).toLocaleString()}` : "-" },
-                    { label: "Price",    value: form.sell_price ? `${Number(form.sell_price).toLocaleString()}` : "-" },
-                    { label: "Margin",   value: `${marginStats.pct}%`, color: marginStats.profit >= 0 ? "text-emerald-600" : "text-rose-600" },
+                    { label: "SKU", value: form.barcode || "-" },
+                    { label: "Cost", value: form.buy_price ? `${Number(form.buy_price).toLocaleString()}` : "-" },
+                    { label: "Price", value: form.sell_price ? `${Number(form.sell_price).toLocaleString()}` : "-" },
+                    { label: "Margin", value: `${marginStats.pct}%`, color: marginStats.profit >= 0 ? "text-emerald-600" : "text-rose-600" },
                     { label: "Variants", value: form.has_variants ? `${combinations.length} combos` : "None" },
-                    { label: "Stock",    value: totalStock > 0 ? `${totalStock}` : "-" },
+                    { label: "Stock", value: totalStock > 0 ? `${totalStock}` : "-" },
                   ].map(row => (
                     <div key={row.label} className="flex items-center justify-between py-2.5">
                       <span className="text-[11px] text-slate-400 font-medium">{row.label}</span>
@@ -1222,7 +741,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                   <h2 className="text-xs font-bold text-slate-800 uppercase tracking-widest">Stock & Inventory</h2>
                 </div>
                 <div className="p-6 grid grid-cols-3 gap-5">
-                   <InputField label="Opening Stock" name="opening_stock"
+                  <InputField label="Opening Stock" name="opening_stock"
                     type="number" value={form.opening_stock} onChange={handleChange}
                     placeholder="0"
                     disabled={!!id}
@@ -1251,38 +770,38 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-              <div className="flex items-start gap-4 p-4 rounded-2xl bg-slate-50/50 border border-slate-100 hover:bg-white shadow-sm transition-all duration-300">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <h3 className="text-[11px] font-black text-slate-800 uppercase tracking-widest">Enable Batch Tracking</h3>
-                    {!id && <span className="px-1.5 py-0.5 rounded-md bg-blue-100 text-blue-700 text-[8px] font-black uppercase">Purchase Entry</span>}
-                  </div>
-                  <p className="text-[10px] text-slate-400 leading-relaxed font-medium">
-                    If you want batch tracking options during purchase, please enable it. Required for giving manufacture and expiry dates on purchase entries (e.g., medicines, foods).
-                  </p>
+            <div className="flex items-start gap-4 p-4 rounded-2xl bg-slate-50/50 border border-slate-100 hover:bg-white shadow-sm transition-all duration-300">
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <h3 className="text-[11px] font-black text-slate-800 uppercase tracking-widest">Enable Batch Tracking</h3>
+                  {!id && <span className="px-1.5 py-0.5 rounded-md bg-blue-100 text-blue-700 text-[8px] font-black uppercase">Purchase Entry</span>}
                 </div>
-                <Switch 
-                  checked={form.batch_tracking}
-                  onCheckedChange={(val) => setForm(p => ({ ...p, batch_tracking: val }))}
-                />
+                <p className="text-[10px] text-slate-400 leading-relaxed font-medium">
+                  If you want batch tracking options during purchase, please enable it. Required for giving manufacture and expiry dates on purchase entries (e.g., medicines, foods).
+                </p>
               </div>
-
-              <div className="flex items-start gap-4 p-4 rounded-2xl bg-slate-50/50 border border-slate-100 hover:bg-white shadow-sm transition-all duration-300">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <h3 className="text-[11px] font-black text-slate-800 uppercase tracking-widest">Serial Number Tracking</h3>
-                    {!id && <span className="px-1.5 py-0.5 rounded-md bg-violet-100 text-violet-700 text-[8px] font-black uppercase">Unique ID</span>}
-                  </div>
-                  <p className="text-[10px] text-slate-400 leading-relaxed font-medium">
-                    Track unique identification numbers for each individual unit. Ideal for electronics like mobile phones, laptops, and appliances.
-                  </p>
-                </div>
-                <Switch 
-                  checked={form.serial_tracking}
-                  onCheckedChange={(val) => setForm(p => ({ ...p, serial_tracking: val }))}
-                />
-              </div>
+              <Switch
+                checked={form.batch_tracking}
+                onCheckedChange={(val) => setForm(p => ({ ...p, batch_tracking: val }))}
+              />
             </div>
+
+            <div className="flex items-start gap-4 p-4 rounded-2xl bg-slate-50/50 border border-slate-100 hover:bg-white shadow-sm transition-all duration-300">
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <h3 className="text-[11px] font-black text-slate-800 uppercase tracking-widest">Serial Number Tracking</h3>
+                  {!id && <span className="px-1.5 py-0.5 rounded-md bg-violet-100 text-violet-700 text-[8px] font-black uppercase">Unique ID</span>}
+                </div>
+                <p className="text-[10px] text-slate-400 leading-relaxed font-medium">
+                  Track unique identification numbers for each individual unit. Ideal for electronics like mobile phones, laptops, and appliances.
+                </p>
+              </div>
+              <Switch
+                checked={form.serial_tracking}
+                onCheckedChange={(val) => setForm(p => ({ ...p, serial_tracking: val }))}
+              />
+            </div>
+          </div>
 
           {/* ROW 3: Variants (full width) */}
           <div className="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden hover:shadow-md transition-all">
@@ -1326,7 +845,6 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                     <VariantMatrixTable
                       combinations={combinations}
                       variantTypes={variantTypes}
-                      basePriceStr={form.sell_price}
                       supportsSerials={categoryConfig.supportsSerials}
                       serialLabel={categoryConfig.serialLabel}
                       onChange={setCombinations}
@@ -1356,6 +874,17 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
 
         </form>
       </div>
+
+      {/* Quick Supplier Modal */}
+      <QuickCreateSupplierModal
+        isOpen={modalState.type === "Supplier"}
+        onClose={() => setModalState({ type: null, query: "" })}
+        initialName={modalState.query}
+        onSuccess={(sup) => {
+          setForm(prev => ({ ...prev, supplier: sup.id }));
+          setSupplierDetails(sup);
+        }}
+      />
     </>
   );
 };

@@ -23,15 +23,15 @@ const Input: React.FC<InputProps & { label?: string; required?: boolean }> = ({
     <div className="flex flex-col gap-1.5 w-full">
       {/* Label Section */}
       {label && (
-        <label 
-          htmlFor={id} 
+        <label
+          htmlFor={id}
           className="text-xs font-semibold text-slate-600 ml-0.5"
         >
           {label}
           {required && <span className="text-red-500 ml-1">*</span>}
         </label>
       )}
-      
+
 
       <div className="relative">
         {leftIcon && (

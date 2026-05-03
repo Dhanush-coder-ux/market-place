@@ -36,6 +36,8 @@ interface InventoryItemsCardProps {
   setProducts: React.Dispatch<React.SetStateAction<any[]>>;
   addProduct: () => void;
   removeProduct: (index: number) => void;
+  // 💡 NEW: Added this prop to receive the modal trigger from GrnForm
+  onAddNewProduct?: (query: string) => void; 
 }
 
 export const InventoryItemsCard = ({
@@ -48,7 +50,8 @@ export const InventoryItemsCard = ({
   updateProductFields,
   setProducts,
   addProduct,
-  removeProduct
+  removeProduct,
+  onAddNewProduct // 💡 NEW: Destructured the prop
 }: InventoryItemsCardProps) => {
   const [expandedBreakdown, setExpandedBreakdown] = useState<Set<number>>(new Set());
   const [expandedSettings, setExpandedSettings] = useState<Set<number>>(new Set());
@@ -139,7 +142,7 @@ export const InventoryItemsCard = ({
         setBatchModal({
           isOpen: true,
           rowIndex: targetIdx,
-          batches: Array.isArray(batches) ? batches : JSON.parse(batches || "[]"),
+          batches: Array.isArray(batches) ? batches : (typeof batches === 'string' ? JSON.parse(batches || "[]") : []),
           productName: variantModal.baseProduct,
           variantName: variantItem.name,
           existingSerials: baseOpt.serial_numbers || baseOpt.datas?.serial_numbers || []
@@ -311,8 +314,6 @@ export const InventoryItemsCard = ({
             </div>
           </div>
         </div>
-
-
       )}
 
       {/* Card Header */}
@@ -407,7 +408,9 @@ export const InventoryItemsCard = ({
                     labelKey="name"
                     valueKey="id"
                     fetchOptions={async (q) => await inventoryApi.searchInventories(q)}
-                    value={product.name}
+                    value={product.inventory_id}
+                    // 💡 NEW: Passing the passed down prop directly to the SearchSelect trigger
+                    onCreateNew={onAddNewProduct} 
                     onChange={(val, opt: any) => {
                       if (opt) {
                         const d = opt.datas || opt;
@@ -421,7 +424,7 @@ export const InventoryItemsCard = ({
                           updateProductFields(index, {
                             inventory_id: opt.id,
                             variant_id: opt.variant_id,
-                            name: opt.name.split(" (")[0],
+                            name: (opt.name || "").split(" (")[0],
                             variant: opt.variant_name,
                             costPrice: opt.buy_price ?? "",
                             sellingPrice: opt.sell_price ?? "",
@@ -440,7 +443,7 @@ export const InventoryItemsCard = ({
                             setBatchModal({
                               isOpen: true,
                               rowIndex: index,
-                              batches: Array.isArray(batches) ? batches : JSON.parse(batches || "[]"),
+                              batches: Array.isArray(batches) ? batches : (typeof batches === 'string' ? JSON.parse(batches || "[]") : []),
                               productName: opt.name.split(" (")[0],
                               variantName: opt.variant_name,
                               existingSerials: existingSerials
@@ -482,8 +485,8 @@ export const InventoryItemsCard = ({
                             setBatchModal({
                               isOpen: true,
                               rowIndex: index,
-                              batches: Array.isArray(batches) ? batches : JSON.parse(batches || "[]"),
-                              productName: opt.name || d.name || String(val),
+                              batches: Array.isArray(batches) ? batches : (typeof batches === 'string' ? JSON.parse(batches || "[]") : []),
+                              productName: (opt.name || d.name || String(val || "")).split(" (")[0],
                               variantName: "",
                               existingSerials: existingSerials
                             });

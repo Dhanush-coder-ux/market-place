@@ -1,4 +1,4 @@
-import React, { useCallback } from "react";
+import React, { useCallback, useMemo } from "react";
 import { FieldDefinition } from "./context/InputBuilderContext";
 import { SearchSelect } from "./SearchSelect"; // ← your existing component
 
@@ -227,7 +227,7 @@ const SearchSelectField: React.FC<DynamicFieldProps> = ({ field, value, onChange
   const isDisabled = disabled ?? !field.can_update;
 
   /* ── Normalise static options ── */
-  const staticOptions = (() => {
+  const staticOptions = useMemo(() => {
     if (!field.values || !Array.isArray(field.values)) return [];
 
     // string[] → [{ label: "X", value: "X" }]
@@ -237,7 +237,7 @@ const SearchSelectField: React.FC<DynamicFieldProps> = ({ field, value, onChange
 
     // object[] → use as-is (labelKey / valueKey come from search_config)
     return field.values as Record<string, unknown>[];
-  })();
+  }, [field.values]);
 
   /* ── Optional async fetcher ── */
   const fetchOptions = useCallback(

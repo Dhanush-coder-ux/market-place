@@ -90,16 +90,17 @@ const SupplierForm = () => {
         if (res && res.data) {
           const sup = Array.isArray(res.data) ? res.data[0] : res.data;
           const d = sup.datas || {};
+          const contact = sup.contact_info || {};
           setFormData({
-            supplier_name: sup.supplier_name || d.supplier_name || "",
-            contact_person: d.contact_person || "",
-            email: d.email || "",
-            phone: d.phone || "",
-            address: d.address || "",
-            city: d.city || "",
-            type: d.type || "Vendor",
-            gst_number: d.gst_number || d.gstin || "",
-            notes: d.notes || ""
+            supplier_name: sup.name || d.supplier_name || "",
+            contact_person: contact.contact_person || "",
+            email: sup.email || "",
+            phone: sup.mobile_number || "",
+            address: contact.address || "",
+            city: contact.city || "",
+            type: contact.type || "Vendor",
+            gst_number: sup.gst_no || "",
+            notes: d.internal_notes || ""
           });
         }
       });
@@ -143,14 +144,26 @@ const SupplierForm = () => {
     if (!formData.supplier_name) return showToast("Supplier name is required", "error");
 
     setSubmitting(true);
-    const payload = {
-      datas: {
-        ...formData,
-        shop_id: SHOP_ID,
-        type: id ? "SUPPLIER UPDATE" : "SUPPLIER CREATE",
-        id:id
+    const payload: any = {
+      shop_id: SHOP_ID,
+      name: formData.supplier_name,
+      email: formData.email,
+      mobile_number: formData.phone,
+      gst_no: formData.gst_number,
+      contact_info: {
+        contact_person: formData.contact_person,
+        type: formData.type,
+        address: formData.address,
+        city: formData.city,
       },
+      datas: {
+        internal_notes: formData.notes
+      }
     };
+
+    if (id) {
+      payload.id = id;
+    }
 
     try {
       const res = id 

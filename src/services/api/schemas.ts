@@ -1,8 +1,8 @@
 export const SCHEMAS = {
-  inventory_create: ['shop_id', 'barcode', 'stocks', 'buy_price', 'sell_price', 'name', 'description', 'category'],
-  inventory_update: ['id', 'shop_id', 'barcode', 'stocks', 'buy_price', 'sell_price', 'name', 'description', 'category'],
+  inventory_create: ['shop_id', 'barcode', 'name', 'category', 'description', 'buy_price', 'sell_price'],
+  inventory_update: ['id', 'shop_id'],
   
-  customer_create: ['shop_id'],
+  customer_create: ['shop_id', 'name', 'email', 'mobile_number', 'credit_limit', 'is_active'],
   customer_update: ['id', 'shop_id'],
   
   purchase_create: ['shop_id', 'type', 'supplier_id', 'supplier_name', 'products'],
@@ -11,12 +11,12 @@ export const SCHEMAS = {
   stock_adjustment_create: ['shop_id', 'products'],
   stock_adjustment_update: ['id', 'shop_id', 'type'],
   
-  employee_create: ['email', 'name', 'mobile_number', 'role', 'shop_id'],
-  employee_update: ['id', 'account_id', 'shop_id', 'email', 'name', 'mobile_number', 'role'],
+  employee_create: ['shop_id', 'name', 'role', 'joined_date', 'mobile_number', 'email', 'department'],
+  employee_update: ['id', 'shop_id'],
   
-  supplier_create: ['shop_id'],
+  supplier_create: ['shop_id', 'name', 'mobile_number', 'gst_no'],
   supplier_update: ['id', 'shop_id'],
 
-  shop_create: [], // dynamic
+  shop_create: ['name', 'category', 'business_infos', 'address'],
   shop_update: ['id']
 };

@@ -101,26 +101,27 @@ const CustomerFormPage = () => {
       const fetchCustomer = async () => {
         const res = await getData(`${ENDPOINTS.CUSTOMERS}/by/${id}`);
         if (res && res.data) {
-          const cust = res.data;
+          const cust = Array.isArray(res.data) ? res.data[0] : res.data;
           const datas = cust.datas || {};
+          const address = datas.address || {};
           
           setFormData({
             ...initialFormData,
-            first_name: cust.first_name || datas.first_name || "",
-            last_name: cust.last_name || datas.last_name || "",
-            company: cust.company || datas.company || "",
-            email: cust.email || datas.email || "",
-            phone: cust.phone || datas.phone || "",
-            customer_type: cust.customer_type || datas.customer_type || "Normal",
-            street_address: datas.street_address || "",
-            city: datas.city || "",
-            state: datas.state || "",
-            zip_code: datas.zip_code || "",
-            notes: datas.notes || "",
-            is_active: cust.is_active !== undefined ? cust.is_active : (datas.is_active !== undefined ? datas.is_active : true),
-            credit_limit: cust.credit_limit || datas.credit_limit || "",
-            credit_terms: cust.credit_terms || datas.credit_terms || "7-days",
-            gst_number: cust.gst_number || datas.gst_number || "",
+            first_name: cust.name?.split(" ")[0] || "",
+            last_name: cust.name?.split(" ").slice(1).join(" ") || "",
+            company: datas.company || "",
+            email: cust.email || "",
+            phone: cust.mobile_number || "",
+            customer_type: datas.customer_type || "Normal",
+            street_address: address.street_address || "",
+            city: address.city || "",
+            state: address.state || "",
+            zip_code: address.zip_code || "",
+            notes: datas.additional_notes || "",
+            is_active: cust.is_active !== undefined ? cust.is_active : true,
+            credit_limit: String(cust.credit_limit || ""),
+            credit_terms: datas.payment_cycle || "7-days",
+            gst_number: datas.gst_number || "",
           });
         }
       };
@@ -172,14 +173,32 @@ const CustomerFormPage = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
-    const payload = {
+    const payload: any = {
+      shop_id: SHOP_ID,
+      name: `${formData.first_name} ${formData.last_name}`.trim(),
+      email: formData.email,
+      mobile_number: formData.phone,
+      credit_limit: Number(formData.credit_limit) || 0,
+      is_active: formData.is_active,
       datas: {
-        ...formData,
-        id,
-        shop_id: SHOP_ID,
-        type: id ? "CUSTOMER UPDATE" : "CUSTOMER CREATE",
-      },
+        address: {
+          street_address: formData.street_address,
+          city: formData.city,
+          state: formData.state,
+          zip_code: formData.zip_code,
+        },
+        additional_notes: formData.notes,
+        payment_cycle: formData.credit_terms,
+        // Extra fields not strictly in CustomerOptionalFieldsSchema but used in UI
+        customer_type: formData.customer_type,
+        gst_number: formData.gst_number,
+        company: formData.company,
+      }
     };
+
+    if (id) {
+      payload.id = id;
+    }
     
     let res;
     try {

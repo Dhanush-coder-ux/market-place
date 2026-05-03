@@ -63,16 +63,20 @@ const Supplier = () => {
         data.forEach((s: SupplierRecord) => {
           // Root level keys
           Object.keys(s).forEach(k => {
-            if (!["datas", "supplier_name", "id", "shop_id"].includes(k)) {
+            if (!["datas", "name", "id", "shop_id", "ui_id", "created_at", "updated_at", "contact_info"].includes(k)) {
               keys.add(k);
             }
           });
+          // Nested contact_info keys
+          if (s.contact_info) {
+            Object.keys(s.contact_info).forEach(k => {
+              keys.add(k);
+            });
+          }
           // Nested datas keys
           if (s.datas) {
             Object.keys(s.datas).forEach(k => {
-              if (!["supplier_name", "id", "shop_id", "type"].includes(k)) {
-                keys.add(k);
-              }
+              keys.add(k);
             });
           }
         });
@@ -202,10 +206,10 @@ const Supplier = () => {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-blue-400 flex items-center justify-center text-white text-sm font-black shadow-lg shadow-blue-100">
-                          {(String(sup.datas?.supplier_name || (sup as any).supplier_name || 'S')).charAt(0).toUpperCase()}
+                          {(String(sup.name || 'S')).charAt(0).toUpperCase()}
                         </div>
                         <div>
-                          <p className="text-sm font-semibold text-slate-700 tracking-tight">{String(sup.datas?.supplier_name || (sup as any).supplier_name)}</p>
+                          <p className="text-sm font-semibold text-slate-700 tracking-tight">{String(sup.name)}</p>
                           <p className="text-[11px] font-semibold text-slate-400 font-mono">ID: {sup.id}</p>
                         </div>
                       </div>
@@ -214,7 +218,7 @@ const Supplier = () => {
                     {selectedKeys.map(key => (
                       <td key={key} className="px-6 py-4 whitespace-nowrap">
                         <p className="text-[12px] font-semibold tracking-tight text-slate-600">
-                          {String(sup.datas?.[key] ?? sup[key] ?? "—")}
+                          {String(sup[key] ?? sup.contact_info?.[key] ?? sup.datas?.[key] ?? "—")}
                         </p>
                       </td>
                     ))}

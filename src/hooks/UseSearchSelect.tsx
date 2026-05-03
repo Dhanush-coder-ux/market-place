@@ -5,18 +5,14 @@ export function useSearchSelect<T>(
   initialOptions: T[] = [],
   debounceMs = 300
 ) {
-  const [options, setOptions] = useState<T[]>(initialOptions);
+  const [asyncOptions, setAsyncOptions] = useState<T[]>([]);
   const [loading, setLoading] = useState(false);
   
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  // Sync internal state if static options change
-  useEffect(() => {
-    if (!fetchOptions) {
-      setOptions(initialOptions);
-    }
-  }, [initialOptions, fetchOptions]);
+  // Derive final options: Use async results if fetcher exists, otherwise use static prop
+  const options = fetchOptions ? asyncOptions : initialOptions;
 
   const handleSearch = useCallback(
     (query: string) => {
@@ -28,7 +24,7 @@ export function useSearchSelect<T>(
       if (abortControllerRef.current) abortControllerRef.current.abort();
 
       if (!query.trim()) {
-        setOptions([]); // Or revert to initialOptions if preferred
+        setAsyncOptions([]); 
         setLoading(false);
         return;
       }
@@ -42,14 +38,13 @@ export function useSearchSelect<T>(
             query,
             abortControllerRef.current.signal
           );
-          setOptions(results);
+          setAsyncOptions(results);
         } catch (error: unknown) {
           if (error instanceof Error && error.name === "AbortError") {
-            // Ignore aborted requests; a new one is already in flight
             return;
           }
           console.error("Failed to fetch options:", error);
-          setOptions([]);
+          setAsyncOptions([]);
         } finally {
           setLoading(false);
         }

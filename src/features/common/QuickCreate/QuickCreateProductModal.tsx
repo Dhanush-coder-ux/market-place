@@ -1,0 +1,353 @@
+import React, { useState, useEffect, useMemo } from "react";
+import { 
+  Package, 
+  BarChart2, 
+  Hash, 
+  Layers, 
+  Zap, 
+  Trash2, 
+  AlertCircle 
+} from "lucide-react";
+import { QuickCreateModal, QuickCreateStep } from "./QuickCreateModal";
+import Input from "@/components/ui/Input";
+import { ReusableSelect } from "@/components/ui/ReusableSelect";
+import { useApi } from "@/context/ApiContext";
+import { useToast } from "@/context/ToastContext";
+import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
+import { Switch } from "@/components/ui/switch";
+import { 
+  VariantType, 
+  VariantCombination, 
+  VariantBuilder, 
+  VariantMatrixTable, 
+  generateCombinations 
+} from "@/features/product/components/VariantManager";
+
+// --- Constants (Shared with ProductForm) ---
+
+const CATEGORY_CONFIGS: Record<string, { suggestedVariantTypes: string[]; supportsSerials: boolean; serialLabel: string }> = {
+  "Mobile Phones": { suggestedVariantTypes: ["Storage", "Color", "Model"], supportsSerials: true, serialLabel: "IMEI Number" },
+  "Laptops": { suggestedVariantTypes: ["RAM", "Storage", "Color"], supportsSerials: true, serialLabel: "Serial Number" },
+  "Clothing": { suggestedVariantTypes: ["Size", "Color"], supportsSerials: false, serialLabel: "Serial Number" },
+  "Footwear": { suggestedVariantTypes: ["Size", "Color"], supportsSerials: false, serialLabel: "Serial Number" },
+  "Electronics": { suggestedVariantTypes: ["Color", "Wattage", "Model"], supportsSerials: true, serialLabel: "Serial Number" },
+  "Accessories": { suggestedVariantTypes: ["Color", "Size"], supportsSerials: false, serialLabel: "Serial Number" },
+  "Tablets": { suggestedVariantTypes: ["Storage", "Connectivity", "Color"], supportsSerials: true, serialLabel: "IMEI / Serial" },
+};
+
+const CATEGORIES = Object.keys(CATEGORY_CONFIGS);
+const UNITS = ["Piece (pcs)", "Box", "Kilogram (kg)", "Gram (g)", "Litre (L)", "Metre (m)", "Set", "Pair"];
+const GST_RATES = ["0%", "5%", "12%", "18%", "28%"];
+
+interface QuickCreateProductModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  initialName?: string;
+  onSuccess: (product: any) => void;
+}
+
+export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = ({
+  isOpen,
+  onClose,
+  initialName = "",
+  onSuccess,
+}) => {
+  const { postData } = useApi();
+  const { showToast } = useToast();
+  const [submitting, setSubmitting] = useState(false);
+
+  // --- Form State ---
+  const [form, setForm] = useState({
+    name: initialName,
+    barcode: "",
+    brand: "",
+    category: "Electronics",
+    unit: "Piece (pcs)",
+    description: "",
+    is_active: true,
+    buy_price: "",
+    sell_price: "",
+    mrp: "",
+    gst: "18%",
+    hsn: "",
+    opening_stock: "0",
+    reorder_point: "5",
+    batch_tracking: false,
+    serial_tracking: false,
+    has_variants: false,
+  });
+
+  // --- Variant State ---
+  const [variantTypes, setVariantTypes] = useState<VariantType[]>([]);
+  const [combinations, setCombinations] = useState<VariantCombination[]>([]);
+
+  const config = CATEGORY_CONFIGS[form.category] || {
+    suggestedVariantTypes: [],
+    supportsSerials: false,
+    serialLabel: "Serial Number"
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  // Sync combinations when variant types or base prices change
+  useEffect(() => {
+    if (form.has_variants) {
+      setCombinations(prev => generateCombinations(
+        variantTypes,
+        prev,
+        { buy_price: form.buy_price, sell_price: form.sell_price, mrp: form.mrp }
+      ));
+    }
+  }, [variantTypes, form.has_variants, form.buy_price, form.sell_price, form.mrp]);
+
+  const steps: QuickCreateStep[] = [
+    {
+      id: 1,
+      title: "Product Identity",
+      subtitle: "Basic identification",
+      isValid: !!form.name,
+      content: (
+        <div className="space-y-6">
+          <Input
+            label="Product Name"
+            name="name"
+            value={form.name}
+            onChange={handleChange}
+            placeholder="e.g. iPhone 15 Pro"
+            className="h-12 font-bold text-slate-700"
+            required
+          />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Input label="Barcode / SKU" name="barcode" value={form.barcode} onChange={handleChange} leftIcon={<Hash size={16} />} />
+            <Input label="Brand" name="brand" value={form.brand} onChange={handleChange} placeholder="e.g. Apple" />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Category</label>
+              <ReusableSelect
+                value={form.category}
+                onValueChange={(val) => setForm(p => ({ ...p, category: val }))}
+                options={CATEGORIES.map(c => ({ label: c, value: c }))}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Unit</label>
+              <ReusableSelect
+                value={form.unit}
+                onValueChange={(val) => setForm(p => ({ ...p, unit: val }))}
+                options={UNITS.map(u => ({ label: u, value: u }))}
+              />
+            </div>
+          </div>
+        </div>
+      )
+    },
+    {
+      id: 2,
+      title: "Tracking & Inventory",
+      subtitle: "Management settings",
+      content: (
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+             <Input label="Opening Stock" type="number" name="opening_stock" value={form.opening_stock} onChange={handleChange} />
+             <Input label="Reorder Point" type="number" name="reorder_point" value={form.reorder_point} onChange={handleChange} />
+          </div>
+          
+          <div className="space-y-4 pt-2">
+            <div className="flex items-center justify-between p-4 rounded-2xl border border-slate-100 bg-slate-50/50">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-blue-600 shadow-sm border border-slate-100">
+                  <BarChart2 size={18} />
+                </div>
+                <div>
+                  <p className="text-xs font-black text-slate-800 uppercase tracking-tight">Batch Tracking</p>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Track expiry & manufacture</p>
+                </div>
+              </div>
+              <Switch checked={form.batch_tracking} onCheckedChange={(val) => setForm(f => ({ ...f, batch_tracking: val }))} />
+            </div>
+
+            <div className="flex items-center justify-between p-4 rounded-2xl border border-slate-100 bg-slate-50/50">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-violet-600 shadow-sm border border-slate-100">
+                  <Layers size={18} />
+                </div>
+                <div>
+                  <p className="text-xs font-black text-slate-800 uppercase tracking-tight">Serial Tracking</p>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Track unique IDs / IMEIs</p>
+                </div>
+              </div>
+              <Switch checked={form.serial_tracking} onCheckedChange={(val) => setForm(f => ({ ...f, serial_tracking: val }))} />
+            </div>
+          </div>
+        </div>
+      )
+    },
+    {
+      id: 3,
+      title: "Pricing & Tax",
+      subtitle: "Financial details",
+      content: (
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <Input label="Buy Price" type="number" name="buy_price" value={form.buy_price} onChange={handleChange} placeholder="0.00" />
+            <Input label="Sell Price" type="number" name="sell_price" value={form.sell_price} onChange={handleChange} placeholder="0.00" />
+            <Input label="MRP" type="number" name="mrp" value={form.mrp} onChange={handleChange} placeholder="0.00" />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">GST Rate</label>
+              <ReusableSelect
+                value={form.gst}
+                onValueChange={(val) => setForm(p => ({ ...p, gst: val }))}
+                options={GST_RATES.map(r => ({ label: r, value: r }))}
+              />
+            </div>
+            <Input label="HSN Code" name="hsn" value={form.hsn} onChange={handleChange} placeholder="e.g. 8517" />
+          </div>
+        </div>
+      )
+    },
+    {
+      id: 4,
+      title: "Variants",
+      subtitle: "Product attributes & combinations",
+      content: (
+        <div className="space-y-6">
+          <div className="flex items-center justify-between p-5 rounded-[1.5rem] bg-indigo-50 border border-indigo-100 mb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-indigo-600 shadow-sm border border-indigo-50">
+                <Zap size={20} />
+              </div>
+              <div>
+                <p className="text-xs font-black text-indigo-900 uppercase tracking-tight">Enable Variants</p>
+                <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider">Multiple sizes, colors, etc.</p>
+              </div>
+            </div>
+            <Switch checked={form.has_variants} onCheckedChange={(val) => setForm(f => ({ ...f, has_variants: val }))} />
+          </div>
+
+          {form.has_variants && (
+            <div className="space-y-8 animate-in fade-in slide-in-from-top-4 duration-500">
+              <VariantBuilder
+                variantTypes={variantTypes}
+                onChange={setVariantTypes}
+                suggestedTypes={config.suggestedVariantTypes}
+              />
+              
+              {variantTypes.some(t => t.values.length > 0) && (
+                <div className="pt-4 border-t border-slate-100">
+                  <VariantMatrixTable
+                    combinations={combinations}
+                    variantTypes={variantTypes}
+                    supportsSerials={form.serial_tracking}
+                    serialLabel={config.serialLabel}
+                    onChange={setCombinations}
+                  />
+                </div>
+              )}
+            </div>
+          )}
+
+          {!form.has_variants && (
+            <div className="py-20 flex flex-col items-center justify-center text-center space-y-4 opacity-50 bg-slate-50/50 rounded-[2.5rem] border border-dashed border-slate-200">
+              <div className="w-16 h-16 rounded-[2rem] bg-slate-100 flex items-center justify-center text-slate-300">
+                <Layers size={32} />
+              </div>
+              <div>
+                <p className="text-sm font-black text-slate-800 uppercase tracking-tight">No Variants Enabled</p>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider max-w-[200px]">
+                  Enable variants to add multiple versions of this product
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+      )
+    }
+  ];
+
+  const handleSubmit = async () => {
+    if (!form.name) return showToast("Product name is required", "error");
+
+    setSubmitting(true);
+    try {
+      const mappedVariants = form.has_variants ? combinations.filter(c => c.active).map(combo => {
+        const buyPrice = Number(combo.buy_price) || Number(form.buy_price) || 0;
+        const sellPrice = Number(combo.price) || Number(form.sell_price) || 0;
+        const mrp = Number(combo.mrp) || Number(form.mrp) || 0;
+        const stocks = Number(combo.stock) || 0;
+        const variantName = Object.values(combo.attributes).join(" / ");
+
+        return {
+          name: variantName,
+          buy_price: buyPrice,
+          sell_price: sellPrice,
+          stocks: stocks,
+          serial_numbers: combo.serials.map(s => s.serial),
+          datas: {
+            barcode: combo.barcode,
+            mrp: mrp,
+            attributes: combo.attributes,
+          },
+          batches: []
+        };
+      }) : [];
+
+      const payload = {
+        shop_id: SHOP_ID,
+        name: form.name,
+        category: form.category,
+        description: form.description,
+        buy_price: Number(form.buy_price) || 0,
+        sell_price: Number(form.sell_price) || 0,
+        stocks: form.has_variants 
+          ? combinations.reduce((s, c) => s + (Number(c.stock) || 0), 0)
+          : (Number(form.opening_stock) || 0),
+        barcode: form.barcode,
+        has_variant: form.has_variants,
+        has_serialno: form.serial_tracking,
+        has_batch: form.batch_tracking,
+        variants: mappedVariants,
+        datas: {
+          brand: form.brand,
+          unit: form.unit,
+          mrp: Number(form.mrp) || 0,
+          gst: form.gst,
+          hsn: form.hsn,
+          reorder_point: Number(form.reorder_point) || 0,
+          description: form.description,
+          is_active: form.is_active,
+          variantTypes: form.has_variants ? variantTypes : [],
+        }
+      };
+
+      const res = await postData(ENDPOINTS.INVENTORIES, payload);
+      if (res && res.data) {
+        showToast("Product created successfully", "success");
+        onSuccess(res.data);
+        onClose();
+      }
+    } catch (error) {
+      showToast("Failed to create product", "error");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <QuickCreateModal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Create New Product"
+      steps={steps}
+      onSubmit={handleSubmit}
+      isSubmitting={submitting}
+      submitLabel="Complete Creation"
+      size="2xl"
+    />
+  );
+};

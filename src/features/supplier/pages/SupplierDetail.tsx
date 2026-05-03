@@ -30,7 +30,7 @@ const SupplierSearch = () => {
       const data = res?.data ? (Array.isArray(res.data) ? res.data : [res.data]) : [];
       return data.map((s: any) => ({
         ...s,
-        displayName: String(s.datas?.supplier_name || s.supplier_name || s.id)
+        displayName: String(s.name || s.datas?.supplier_name || s.id)
       }));
     } catch { return []; }
   };
@@ -100,7 +100,8 @@ export default function SupplierDetail() {
   );
 
   const datas = supplier.datas ?? {};
-  const name = String(datas.supplier_name || (supplier as any).supplier_name || "Unknown Supplier");
+  const contact = supplier.contact_info ?? {};
+  const name = String(supplier.name || datas.supplier_name || "Unknown Supplier");
   const initials = name.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2);
 
   return (
@@ -113,16 +114,16 @@ export default function SupplierDetail() {
           initials={initials}
           subText={`ID: ${supplier.id}`}
           badges={[
-            { text: String(datas.type || "Vendor"), variant: "primary" },
+            { text: String(contact.type || "Vendor"), variant: "primary" },
             {
-              text: datas.is_active !== false ? "Active" : "Inactive",
-              variant: datas.is_active !== false ? "success" : "danger",
+              text: "Active",
+              variant: "success",
               showPulse: true
             }
           ]}
           infoItems={[
-            { icon: Mail, text: String(datas.email || "No email") },
-            { icon: Phone, text: String(datas.phone || "No phone") }
+            { icon: Mail, text: String(supplier.email || "No email") },
+            { icon: Phone, text: String(supplier.mobile_number || "No phone") }
           ]}
           actions={
             <div className="flex items-center gap-2">
@@ -178,25 +179,25 @@ export default function SupplierDetail() {
                       onClick={() => setViewValue({ label: "Business Name", value: name })}
                     />
                     <DetailItem
-                      icon={User} label="Contact Person" value={String(datas.contact_person || "—")}
-                      onClick={() => setViewValue({ label: "Contact Person", value: String(datas.contact_person || "—") })}
+                      icon={User} label="Contact Person" value={String(contact.contact_person || "—")}
+                      onClick={() => setViewValue({ label: "Contact Person", value: String(contact.contact_person || "—") })}
                     />
                     <DetailItem
-                      icon={Mail} label="Email" value={String(datas.email || "—")}
-                      onClick={() => setViewValue({ label: "Email", value: String(datas.email || "—") })}
+                      icon={Mail} label="Email" value={String(supplier.email || "—")}
+                      onClick={() => setViewValue({ label: "Email", value: String(supplier.email || "—") })}
                     />
                     <DetailItem
-                      icon={Phone} label="Phone" value={String(datas.phone || "—")}
-                      onClick={() => setViewValue({ label: "Phone", value: String(datas.phone || "—") })}
+                      icon={Phone} label="Phone" value={String(supplier.mobile_number || "—")}
+                      onClick={() => setViewValue({ label: "Phone", value: String(supplier.mobile_number || "—") })}
                     />
                     <DetailItem
-                      icon={MapPin} label="City" value={String(datas.city || "—")}
-                      onClick={() => setViewValue({ label: "City", value: String(datas.city || "—") })}
+                      icon={MapPin} label="City" value={String(contact.city || "—")}
+                      onClick={() => setViewValue({ label: "City", value: String(contact.city || "—") })}
                     />
 
                     {/* Dynamically render all other fields from datas */}
                     {Object.entries(datas).map(([key, val]) => {
-                      if (["supplier_name", "contact_person", "email", "phone", "city", "address", "shop_id", "type", "id", "pending_amount", "total_purchases", "total_items_bought", "last_order_date"].includes(key)) return null;
+                      if (["internal_notes", "supplier_name"].includes(key)) return null;
                       const label = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
                       return (
                         <DetailItem
@@ -212,7 +213,7 @@ export default function SupplierDetail() {
                   <div className="space-y-4">
                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest text-xs font-semibold">Street Address</p>
                     <p className="text-sm font-semibold text-slate-700 leading-relaxed bg-slate-50 p-4 rounded-xl border border-slate-100">
-                      {String(datas.address || "No specific address provided.")}
+                      {String(contact.address || "No specific address provided.")}
                     </p>
                   </div>
                 </SectionCard>
@@ -221,8 +222,8 @@ export default function SupplierDetail() {
               <div className="space-y-5">
                 <SectionCard title="Business Identity">
                   <div className="space-y-3">
-                    <InfoRow label="Business Type" value={<span className="text-[12px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md">{String(datas.type || "Vendor")}</span>} />
-                    <InfoRow label="GST Number" value={<span className="text-[12px] font-bold text-slate-700 font-mono">{String(datas.gst_number || datas.gstin || "—")}</span>} />
+                    <InfoRow label="Business Type" value={<span className="text-[12px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md">{String(contact.type || "Vendor")}</span>} />
+                    <InfoRow label="GST Number" value={<span className="text-[12px] font-bold text-slate-700 font-mono">{String(supplier.gst_no || "—")}</span>} />
                   </div>
                 </SectionCard>
               </div>

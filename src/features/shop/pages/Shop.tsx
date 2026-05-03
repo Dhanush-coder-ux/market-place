@@ -112,12 +112,17 @@ export default function Shop() {
       if (!res) return;
       const d = Array.isArray(res.data) ? res.data[0] : res.data;
       if (!d) return;
+
+      const business = d.business_infos || {};
+      const address = d.address || {};
+      const datas = d.datas || {};
+
       setShopInfo({
-        shopName: String(d.datas?.shop_name ?? d.datas?.name ?? "My Shop"),
-        shopDescription: String(d.datas?.description ?? d.datas?.about ?? ""),
-        location: String(d.datas?.location ?? d.datas?.address ?? ""),
-        operatingHours: String(d.datas?.operating_hours ?? d.datas?.timings ?? ""),
-        rating: Number(d.datas?.rating ?? 0),
+        shopName: d.name || datas.shop_name || "My Shop",
+        shopDescription: datas.description || "Digital retail management console.",
+        location: address.street ? `${address.street}, ${address.city}` : "Location not set",
+        operatingHours: business.open_time ? `${business.open_time} - ${business.close_time}` : "Flexible Hours",
+        rating: Number(datas.rating || 5.0),
       });
     });
   }, []);

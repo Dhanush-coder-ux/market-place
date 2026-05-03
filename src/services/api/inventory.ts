@@ -6,14 +6,14 @@ import { ENDPOINTS, SHOP_ID } from '../endpoints';
 export const inventoryApi = {
   createInventory: async (data: Record<string, any>) => {
     validateMandatory(data, SCHEMAS.inventory_create);
-    console.log("Payload:", { datas: data });
-    return await apiClient.post(ENDPOINTS.INVENTORIES, { datas: data });
+    console.log("Payload:", data);
+    return await apiClient.post(ENDPOINTS.INVENTORIES, data);
   },
   
   updateInventory: async (data: Record<string, any>) => {
     validateMandatory(data, SCHEMAS.inventory_update);
-    console.log("Payload:", { datas: data });
-    return await apiClient.put(`${ENDPOINTS.INVENTORIES}/${data.id}`, { datas: data });
+    console.log("Payload:", data);
+    return await apiClient.put(`${ENDPOINTS.INVENTORIES}`, data);
   },
 
   createStockAdjustment: async (data: Record<string, any>) => {
@@ -46,28 +46,19 @@ export const inventoryApi = {
 
   searchInventories: async (query: string): Promise<any[]> => {
     try {
-      // Try both search and q params for broader compatibility
-      const response = await apiClient.get(`${ENDPOINTS.INVENTORIES}?search=${query}&q=${query}&shop_id=${SHOP_ID}`);
-      const items = response?.data || response?.datas || (Array.isArray(response) ? response : []);
-      const results: any[] = [];
+      const response = await apiClient.get(`${ENDPOINTS.INVENTORIES}?q=${query}&shop_id=${SHOP_ID}`);
+      const items = response?.data || (Array.isArray(response) ? response : []);
       
-      items.forEach((i: any) => {
-        const baseName = i.datas?.name || i.datas?.product_name || "Unknown Product";
-        
-        // Add Base Product
-        results.push({
-          ...i.datas,
-          id: i.id,
-          name: baseName,
-          stocks: i.stocks ?? i.datas?.stocks ?? 0,
-          buy_price: i.buy_price ?? i.datas?.buy_price ?? 0,
-          sell_price: i.sell_price ?? i.datas?.sell_price ?? 0,
-          barcode: i.barcode ?? i.datas?.barcode ?? "",
-          has_variants: i.datas?.has_variants || i.datas?.has_varients || false,
-          combinations: i.variants || i.datas?.combinations || i.datas?.varients || []
-        });
-      });
-      return results;
+      return items.map((i: any) => ({
+        ...i,
+        name: i.name || "Unknown Product",
+        stocks: i.stocks ?? 0,
+        buy_price: i.buy_price ?? 0,
+        sell_price: i.sell_price ?? 0,
+        barcode: i.barcode ?? "",
+        has_variants: i.has_variant || false,
+        combinations: i.variants || []
+      }));
     } catch {
       return [];
     }

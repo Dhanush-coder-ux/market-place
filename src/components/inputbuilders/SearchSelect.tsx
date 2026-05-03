@@ -1,5 +1,6 @@
-import React, { useMemo, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import { Select, Spin, Empty } from "antd";
+import { Plus } from "lucide-react"; 
 import { useSearchSelect } from "../../hooks/UseSearchSelect";
 import { HighlightText } from "./HighLightText";
 
@@ -30,13 +31,18 @@ export interface SearchSelectProps<T extends BaseOption> {
 
   // Custom rendering
   renderOption?: (option: T, searchValue: string) => React.ReactNode;
+  
+  // NEW: Callback to trigger creation modal
+  onCreateNew?: (searchValue: string) => void;
 }
+
+const EMPTY_ARRAY: any[] = [];
 
 export function SearchSelect<T extends BaseOption>({
   value,
   onChange,
   fetchOptions,
-  options: staticOptions = [],
+  options: staticOptions = EMPTY_ARRAY,
   labelKey,
   valueKey,
   label,
@@ -48,6 +54,7 @@ export function SearchSelect<T extends BaseOption>({
   allowClear = true,
   className,
   renderOption,
+  onCreateNew,
 }: SearchSelectProps<T>) {
   const [searchValue, setSearchValue] = useState("");
   const id = React.useId();
@@ -61,10 +68,10 @@ export function SearchSelect<T extends BaseOption>({
   const isAsync = !!fetchOptions;
   const mode = tags ? "tags" : multiple ? "multiple" : undefined;
 
-  const onSearch = (val: string) => {
+  const onSearch = useCallback((val: string) => {
     setSearchValue(val);
     handleSearch(val);
-  };
+  }, [handleSearch]);
 
   // Map generic objects to Ant Design Option format
   const formattedOptions = useMemo(() => {
@@ -85,8 +92,16 @@ export function SearchSelect<T extends BaseOption>({
     });
   }, [options, labelKey, valueKey, renderOption, searchValue]);
 
+  // Check if an exact match exists so we hide the "Create" button if it does
+  const exactMatchExists = useMemo(() => {
+    if (!searchValue) return true; 
+    return options.some(
+      (opt) => String(opt[labelKey]).toLowerCase() === searchValue.toLowerCase().trim()
+    );
+  }, [options, labelKey, searchValue]);
+
   // Ant Design expects standard values in onChange. We intercept it to also pass the raw T object back.
-  const handleChange = (val: any, antdOption: any) => {
+  const handleChange = useCallback((val: any, antdOption: any) => {
     if (!onChange) return;
 
     if (Array.isArray(antdOption)) {
@@ -95,7 +110,32 @@ export function SearchSelect<T extends BaseOption>({
     } else {
       onChange(val, antdOption?.rawOption as T);
     }
-  };
+  }, [onChange]);
+
+  const dropdownRender = useCallback(
+    (menu: React.ReactNode) => (
+      <>
+        {menu}
+        {onCreateNew && searchValue && !exactMatchExists && (
+          <div className="p-2 border-t border-slate-100 bg-slate-50 mt-1">
+            <button
+              type="button"
+              onMouseDown={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+              }}
+              onClick={() => onCreateNew(searchValue)}
+              className="w-full flex items-center justify-center gap-2 py-2 bg-blue-50 text-blue-600 rounded-lg text-sm font-semibold hover:bg-blue-100 transition-colors cursor-pointer"
+            >
+              <Plus size={16} />
+              Create "{searchValue}"
+            </button>
+          </div>
+        )}
+      </>
+    ),
+    [onCreateNew, searchValue, exactMatchExists]
+  );
 
   return (
     <div className="flex flex-col gap-1.5 w-full">
@@ -120,14 +160,13 @@ export function SearchSelect<T extends BaseOption>({
         options={formattedOptions}
         onSearch={onSearch}
         onChange={handleChange}
-        // If async, disable Antd's local filtering to let the API handle it
         filterOption={
           isAsync
             ? false
             : (input, option) =>
-              String(option?.label ?? "")
-                .toLowerCase()
-                .includes(input.toLowerCase())
+                String(option?.label ?? "")
+                  .toLowerCase()
+                  .includes(input.toLowerCase())
         }
         notFoundContent={
           loading ? (
@@ -135,9 +174,13 @@ export function SearchSelect<T extends BaseOption>({
               <Spin size="small" className="mr-2" /> Searching...
             </div>
           ) : (
-            <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="No results found" />
+            <Empty
+              image={Empty.PRESENTED_IMAGE_SIMPLE}
+              description="No results found"
+            />
           )
         }
+        dropdownRender={dropdownRender}
       />
     </div>
   );

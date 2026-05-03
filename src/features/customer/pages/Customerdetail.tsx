@@ -3,10 +3,10 @@ import { useParams, useNavigate } from "react-router-dom";
 import {
   DollarSign, AlertCircle, Package, Star,
   Banknote, Mail, Wallet, Pencil, User, Tag, MapPin, Phone, Trash2,
-  Store, FileText, Database
+  FileText, Database, CreditCard
 } from "lucide-react";
 import {
-  fmt, StatusBadge,FormInput, FormSelect,
+  fmt, StatusBadge, FormInput, FormSelect,
   FormTextarea, SectionCard, PaymentEntry, ActivityEntry,
 } from "./CustomerDetailComponents";
 import { Modal, ProfileHeaderCard } from "@/components/common/SuperUI";
@@ -169,7 +169,7 @@ export default function CustomerDetail() {
   }
 
   const datas = customer.datas ?? {};
-  const name = (datas.first_name || datas.last_name) ? `${datas.first_name || ""} ${datas.last_name || ""}`.trim() : "Unknown Customer";
+  const name = customer.name || "Unknown Customer";
   const initials = name.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2);
 
 
@@ -192,14 +192,14 @@ export default function CustomerDetail() {
             badges={[
               { text: String(datas.customer_type || "Normal"), variant: "primary" },
               {
-                text: datas.is_active !== false ? "Active" : "Inactive",
-                variant: datas.is_active !== false ? "success" : "danger",
+                text: customer.is_active ? "Active" : "Inactive",
+                variant: customer.is_active ? "success" : "danger",
                 showPulse: true
               }
             ]}
             infoItems={[
-              { icon: Mail, text: String(datas.email || "No email") },
-              { icon: Phone, text: String(datas.phone || "No phone") }
+              { icon: Mail, text: String(customer.email || "No email") },
+              { icon: Phone, text: String(customer.mobile_number || "No phone") }
             ]}
             actions={
               <div className="flex items-center gap-1.5">
@@ -234,8 +234,8 @@ export default function CustomerDetail() {
                 key={tab}
                 onClick={() => setActiveTab(i)}
                 className={`px-4 py-1.5 text-[11px] font-bold rounded-lg transition-all ${activeTab === i
-                    ? "bg-blue-600 text-white shadow-md shadow-blue-100"
-                    : "text-slate-500 hover:bg-slate-50 hover:text-slate-700"
+                  ? "bg-blue-600 text-white shadow-md shadow-blue-100"
+                  : "text-slate-500 hover:bg-slate-50 hover:text-slate-700"
                   }`}
               >
                 {tab}
@@ -299,22 +299,22 @@ export default function CustomerDetail() {
                           onClick={() => setViewValue({ label: "Full Name", value: name })}
                         />
                         <DetailItem
-                          icon={Mail} label="Email Address" value={String(datas.email || "—")}
-                          onClick={() => setViewValue({ label: "Email Address", value: String(datas.email || "—") })}
+                          icon={Mail} label="Email Address" value={String(customer.email || "—")}
+                          onClick={() => setViewValue({ label: "Email Address", value: String(customer.email || "—") })}
                         />
                         <DetailItem
-                          icon={Phone} label="Phone Number" value={String(datas.phone || "—")}
-                          onClick={() => setViewValue({ label: "Phone Number", value: String(datas.phone || "—") })}
+                          icon={Phone} label="Phone Number" value={String(customer.mobile_number || "—")}
+                          onClick={() => setViewValue({ label: "Phone Number", value: String(customer.mobile_number || "—") })}
                         />
                         <DetailItem
-                          icon={Store} label="Company" value={String(datas.company || "—")}
-                          onClick={() => setViewValue({ label: "Company", value: String(datas.company || "—") })}
+                          icon={CreditCard} label="Credit Limit" value={fmt(customer.credit_limit || 0)}
+                          onClick={() => setViewValue({ label: "Credit Limit", value: fmt(customer.credit_limit || 0) })}
                         />
 
                         {/* Dynamically render all other fields */}
                         {Object.entries(datas).map(([key, val]) => {
                           // Skip fields we already showed or internal ones
-                          if (["first_name", "last_name", "email", "phone", "company", "is_active", "street_address", "city", "state", "zip_code", "notes", "customer_type", "gst_number"].includes(key)) return null;
+                          if (["name", "email", "mobile_number", "credit_limit", "is_active", "shop_id", "id", "ui_id", "created_at", "updated_at", "datas"].includes(key)) return null;
 
                           // Format key: snake_case to Title Case
                           const label = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
@@ -347,17 +347,17 @@ export default function CustomerDetail() {
                         <div className="md:col-span-2">
                           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 text-xs font-semibold">Street Address</p>
                           <p className="text-sm font-semibold text-slate-700 leading-relaxed bg-slate-50 p-3 rounded-xl border border-slate-100">
-                            {String(datas.street_address || "No street address provided.")}
+                            {String((datas.address as any)?.street_address || "No street address provided.")}
                           </p>
                         </div>
                         <div className="space-y-4">
                           <div>
                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 text-xs font-semibold">City / State</p>
-                            <p className="text-sm font-semibold text-slate-700">{datas.city ? `${datas.city}, ${datas.state || ""}` : "—"}</p>
+                            <p className="text-sm font-semibold text-slate-700">{datas.address ? `${(datas.address as any).city || ""}, ${(datas.address as any).state || ""}` : "—"}</p>
                           </div>
                           <div>
                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 text-xs font-semibold">Zip Code</p>
-                            <p className="text-sm font-bold font-mono text-slate-700 tracking-tight">{String(datas.zip_code || "—")}</p>
+                            <p className="text-sm font-bold font-mono text-slate-700 tracking-tight">{String((datas.address as any)?.zip_code || "—")}</p>
                           </div>
                         </div>
                       </div>
@@ -398,7 +398,7 @@ export default function CustomerDetail() {
                     <div className="relative">
                       <div className="absolute left-0 top-0 bottom-0 w-1 bg-slate-200 rounded-full" />
                       <p className="pl-4 text-[13px] font-medium text-slate-500 leading-relaxed italic break-words">
-                        {String(datas.notes || "No internal notes registered for this customer.")}
+                        {String(datas.additional_notes || "No internal notes registered for this customer.")}
                       </p>
                     </div>
                   </SectionCard>
@@ -598,7 +598,7 @@ export default function CustomerDetail() {
           }
         >
           <div className="space-y-5">
-            <FormInput label="Email Address" type="email" defaultValue={String(datas.email ?? "")} />
+            <FormInput label="Email Address" type="email" defaultValue={String(customer.email ?? "")} />
             <FormInput label="Subject" type="text" defaultValue="Invoice from Market Place" />
             <FormTextarea label="Message" defaultValue={`Dear ${name},\n\nPlease find attached your invoice.\n\nThank you!\n\nBest regards,\nMarket Place Team`} style={{ minHeight: 120 }} />
           </div>

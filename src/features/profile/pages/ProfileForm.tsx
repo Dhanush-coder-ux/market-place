@@ -125,9 +125,37 @@ const ProfileForm: React.FC = () => {
     return !Object.values(e).some(Boolean);
   };
 
-  const handleSubmit = (action: "save" | "add_more") => {
+  const handleSubmit = async (action: "save" | "add_more") => {
     if (!validate()) return;
-    console.log("Submit:", action, { shopName, email, category });
+    
+    const payload = {
+      name: shopName,
+      category: category,
+      business_infos: {
+        business_type: businessType,
+        gst: gst,
+        currency: currency,
+        open_time: openTime,
+        close_time: closeTime,
+      },
+      address: {
+        street: address,
+        city: city,
+        pincode: pincode,
+      },
+      image_urls: [], // Logic for images can be added later
+      datas: {
+        description: description,
+        emails: [email],
+        mobile_numbers: [phone],
+        website: website,
+        tagline: tagline, // Adding tagline to datas
+        shop_code: shopCode, // Adding shop_code to datas
+      }
+    };
+
+    console.log("Submit:", action, payload);
+    // In a real scenario, call shopApi.createShop(payload) here
   };
 
   useEffect(() => {
@@ -158,7 +186,7 @@ const ProfileForm: React.FC = () => {
       </div>
     );
     return () => setBottomActions(null);
-  }, [setBottomActions, shopName, email, category, tagline, shopCode]);
+  }, [setBottomActions, shopName, email, category, tagline, shopCode, businessType, gst, currency, openTime, closeTime, address, city, pincode, website, description, phone]);
 
   return (
     <div className="pb-10">

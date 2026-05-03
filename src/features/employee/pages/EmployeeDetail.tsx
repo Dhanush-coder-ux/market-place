@@ -50,7 +50,7 @@ export default function EmployeeDetail() {
   const handleDelete = async () => {
     if (!employee) return;
     try {
-      await deleteData(`${ENDPOINTS.EMPLOYEES}/${SHOP_ID}/${employee.employee_id}`);
+      await deleteData(`${ENDPOINTS.EMPLOYEES}/${SHOP_ID}/${employee.id}`);
       showToast("Employee removed successfully", "success");
       navigate("/employee/all");
     } catch (_err) {
@@ -87,13 +87,13 @@ export default function EmployeeDetail() {
         <ProfileHeaderCard
           name={name}
           initials={initials}
-          subText={`ID: ${employee.employee_id}`}
+          subText={`ID: ${employee.id}`}
           badges={[
             { text: String(employee.role || "Staff"), variant: "primary" },
             {
-              text: employee.is_accepted ? "Accepted" : "Pending",
-              variant: employee.is_accepted ? "success" : "warning",
-              showPulse: !employee.is_accepted
+              text: "Accepted",
+              variant: "success",
+              showPulse: false
             }
           ]}
           infoItems={[
@@ -178,10 +178,22 @@ export default function EmployeeDetail() {
                     icon={Shield} label="Access Role" value={String(employee.role || "—")}
                     onClick={() => setViewValue({ label: "Access Role", value: String(employee.role || "—") })}
                   />
+                  <DetailItem
+                    icon={Briefcase} label="Department" value={String(employee.department || "—")}
+                    onClick={() => setViewValue({ label: "Department", value: String(employee.department || "—") })}
+                  />
+                  <DetailItem
+                    icon={Calendar} label="Joining Date" value={String(employee.joined_date || "—")}
+                    onClick={() => setViewValue({ label: "Joining Date", value: String(employee.joined_date || "—") })}
+                  />
+                  <DetailItem
+                    icon={Database} label="Salary Range" value={String((employee.datas as any)?.salary_rage || "—")}
+                    onClick={() => setViewValue({ label: "Salary Range", value: String((employee.datas as any)?.salary_rage || "—") })}
+                  />
 
                   {/* Dynamic fields */}
                   {Object.entries(employee).map(([key, val]) => {
-                    if (["name", "email", "mobile_number", "role", "employee_id", "shop_id", "account_id", "is_accepted", "added_by", "id"].includes(key)) return null;
+                    if (["name", "email", "mobile_number", "role", "department", "joined_date", "employee_id", "shop_id", "account_id", "is_accepted", "added_by", "id", "datas", "ui_id", "created_at", "updated_at"].includes(key)) return null;
                     const label = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
                     return (
                       <DetailItem
@@ -226,9 +238,8 @@ export default function EmployeeDetail() {
           <div className="lg:col-span-4 space-y-6">
             <SectionCard title="System Context">
               <div className="space-y-4">
-                <InfoRow label="Added By" value={String(employee.added_by || "System")} />
-                <InfoRow label="Account ID" value={String(employee.account_id || "—")} />
-                <InfoRow label="Shop ID" value={String(employee.shop_id || "—")} />
+                <InfoRow label="Employee ID" value={String(employee.id || "—")} />
+                <InfoRow label="Shop ID" value={String(employee.shop_id || SHOP_ID)} />
               </div>
             </SectionCard>
           </div>

@@ -20,71 +20,127 @@ export interface ProductRecord {
 
 export interface SupplierRecord {
   id: string;
-  shop_id: string;
-  datas: Record<string, unknown>;
+  ui_id: number;
+  name: string;
+  email?: string;
+  mobile_number: string;
+  gst_no: string;
+  contact_info?: {
+    contact_person?: string;
+    type?: string;
+    address?: string;
+    city?: string;
+    [key: string]: any;
+  };
+  datas?: {
+    internal_notes?: string;
+    [key: string]: any;
+  };
+  created_at: string;
+  updated_at: string;
   [key: string]: unknown;
 }
 
 // Employee API returns FLAT fields — no datas wrapper
 export interface EmployeeRecord {
-  employee_id: string;
-  account_id: string;
-  shop_id: string;
+  id: string;
+  ui_id: number;
   name: string;
   email: string;
   mobile_number: string;
-  is_accepted: boolean;
-  added_by: string;
   role: string;
-  id?: string;
-  datas?: Record<string, unknown>;
+  department: string;
+  created_at: string;
+  updated_at: string;
+  joined_date: string;
+  datas?: {
+    salary_rage?: number;
+    address?: Record<string, any>;
+  };
   [key: string]: unknown;
 }
 
 export interface CustomerRecord {
   id: string;
   shop_id: string;
-  datas: Record<string, unknown>;
+  ui_id: number;
+  name: string;
+  email: string;
+  mobile_number: string;
+  credit_limit: number;
+  is_active: boolean;
+  datas?: {
+    address?: {
+      street_address?: string;
+      city?: string;
+      state?: string;
+      zip_code?: string;
+    };
+    additional_notes?: string;
+    payment_cycle?: string;
+    [key: string]: any;
+  };
+  created_at: string;
+  updated_at: string;
   [key: string]: unknown;
 }
 
-export interface InventoryDatas {
-  name?: string;
-  description?: string;
-  variants?: Array<{
-    id: string;
-    name: string;
-    sku: string;
-    buyPrice: number;
-    sellPrice: number;
-    stock: number;
-    batchTracking?: boolean;
-    batches?: Array<{
-      id: string;
-      batchNo: string;
-      mfgDate: string;
-      expDate: string;
-      stock: number;
-    }>;
-  }>;
-  batches?: Array<{
-    id: string;
-    batchNo: string;
-    mfgDate: string;
-    expDate: string;
-    stock: number;
-  }>;
-  [key: string]: unknown; // allow any extra fields from the API
+export interface InventoryBatch {
+  name: string;
+  expiry_date: string;
+  manufacturing_date: string;
+}
+
+export interface InventoryBatchResponse {
+  id: string;
+  name: string;
+  stocks: number;
+  expiry_date: string;
+  manufacturing_date: string;
+  serial_numbers?: string[];
+}
+
+export interface InventoryVariant {
+  name: string;
+  sell_price: number;
+  buy_price: number;
+  stocks: number;
+  serial_numbers?: string[];
+  batch?: InventoryBatch;
+  datas?: Record<string, any>;
+}
+
+export interface InventoryResponseVariant {
+  name: string;
+  sell_price: number;
+  buy_price: number;
+  stocks: number;
+  serial_numbers?: string[];
+  batches?: InventoryBatch[];
+  datas?: Record<string, any>;
 }
 
 export interface InventoryRecord {
   id: string;
-  shop_id: string;
-  barcode: string;
-  stocks: number;
-  buy_price: number;
+  ui_id: number;
+  name: string;
+  description: string;
+  category: string;
   sell_price: number;
-  datas?: InventoryDatas;
+  buy_price: number;
+  stocks: number;
+  barcode: string;
+  shop_id: string;
+  added_by: string;
+  datas?: Record<string, any>;
+  created_at: string;
+  updated_at: string;
+  has_variant: boolean;
+  has_batch: boolean;
+  has_serialno: boolean;
+  variants?: InventoryResponseVariant[];
+  batches?: InventoryBatchResponse[];
+  serial_number?: string[];
 }
 
 export interface OrderRecord {
@@ -116,7 +172,32 @@ export interface StockAdjRecord {
 
 export interface ShopRecord {
   id: string;
-  account_id?: string;
-  datas: Record<string, unknown>;
-  date?: string;
+  ui_id: number;
+  name: string;
+  category: string;
+  address: {
+    street: string;
+    city: string;
+    pincode: string;
+    [key: string]: any;
+  };
+  business_infos: {
+    business_type: string;
+    gst?: string;
+    currency: string;
+    open_time?: string;
+    close_time?: string;
+    [key: string]: any;
+  };
+  datas: {
+    description?: string;
+    emails?: string[];
+    mobile_numbers?: string[];
+    website?: string;
+    [key: string]: any;
+  };
+  image_urls: string[];
+  created_at: string;
+  updated_at: string;
+  [key: string]: unknown;
 }

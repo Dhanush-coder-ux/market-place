@@ -14,7 +14,7 @@ import { Modal, ProfileHeaderCard, SectionCard, DetailItem } from "@/components/
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { SearchSelect } from "@/components/inputbuilders/SearchSelect";
 import { VariantRows, SerialBadgeList } from "../../inventory/components/StockTree";
-import type { ProductRecord } from "@/types/api";
+import type { InventoryRecord } from "@/types/api";
 
 // ── Search bar ───────────────────────────────────────────────────────────────
 const ProductSearchSelect = () => {
@@ -56,7 +56,7 @@ const ProductDetail = () => {
   const { getData, deleteData } = useApi();
   const { showToast } = useToast();
 
-  const [product, setProduct] = useState<ProductRecord | null>(null);
+  const [product, setProduct] = useState<InventoryRecord | null>(null);
   const [recordLoading, setRecordLoading] = useState(true);
   const [activeTab, setActiveTab] = useState(0);
   const [viewValue, setViewValue] = useState<{ label: string; value: string } | null>(null);
@@ -98,19 +98,19 @@ const ProductDetail = () => {
     );
   }
 
-  const datas = (product as any).datas ?? {};
-  const name = String(datas.name ?? datas.product_name ?? product.barcode ?? "Unknown Product");
+  const datas = product.datas ?? {};
+  const name = String(product.name || "Unknown Product");
   const initials = name.slice(0, 2).toUpperCase();
-  const sku = String(product.barcode ?? datas.barcode ?? "—");
-  const category = String(datas.category ?? "—");
-  const description = String(datas.description ?? "—");
-  const sellingPrice = (product as any).sell_price ?? datas.sell_price ?? datas.selling_price ?? "—";
-  const buyingPrice = (product as any).buy_price ?? datas.buy_price ?? datas.buying_price ?? "—";
-  const currentStock = (product as any).stocks ?? datas.stocks ?? datas.stock ?? "—";
+  const sku = String(product.barcode || "—");
+  const category = String(product.category || "—");
+  const description = String(product.description || "—");
+  const sellingPrice = product.sell_price ?? "—";
+  const buyingPrice = product.buy_price ?? "—";
+  const currentStock = product.stocks ?? "—";
   const unit = String(datas.unit ?? "—");
-  const combinations: any[] = product.variants ?? datas.combinations ?? [];
+  const combinations: any[] = product.variants ?? [];
   const variantTypes: any[] = datas.variantTypes ?? [];
-  const hasVariants = datas.has_variants === true || datas.has_varients === true || combinations.length > 0;
+  const hasVariants = product.has_variant === true && combinations.length > 0;
   const isActive = datas.is_active !== false;
 
   const TABS = ["General Info", ...(hasVariants ? ["Variants"] : [])];
@@ -160,11 +160,10 @@ const ProductDetail = () => {
           <button
             key={tab}
             onClick={() => setActiveTab(i)}
-            className={`px-4 py-1.5 text-[11px] font-bold rounded-lg transition-all ${
-              activeTab === i
+            className={`px-4 py-1.5 text-[11px] font-bold rounded-lg transition-all ${activeTab === i
                 ? "bg-blue-600 text-white shadow-md shadow-blue-100"
                 : "text-slate-500 hover:bg-slate-50 hover:text-slate-700"
-            }`}
+              }`}
           >
             {tab}
           </button>
@@ -182,7 +181,7 @@ const ProductDetail = () => {
           icon={DollarSign}
           label="Stock Value"
           value={
-            currentStock !== "—" && buyingPrice !== "—"
+            String(currentStock) !== "—" && String(buyingPrice) !== "—"
               ? `₹${(Number(currentStock) * Number(buyingPrice)).toLocaleString()}`
               : "—"
           }
@@ -220,8 +219,8 @@ const ProductDetail = () => {
                       <p className="text-[10px] font-medium text-slate-400 uppercase tracking-[0.05em] mb-1.5 flex items-center gap-1.5">
                         <FileText size={12} className="text-blue-400" /> Serial Numbers
                       </p>
-                      {datas.serial_numbers && datas.serial_numbers.length > 0 ? (
-                        <SerialBadgeList serials={datas.serial_numbers} />
+                      {product.serial_number && product.serial_number.length > 0 ? (
+                        <SerialBadgeList serials={product.serial_number} />
                       ) : (
                         <p className="text-[13px] font-semibold text-slate-400">—</p>
                       )}
@@ -241,8 +240,8 @@ const ProductDetail = () => {
                   <h2 className="text-[10px] font-black text-slate-800 uppercase tracking-[0.15em]">Pricing & Compliance</h2>
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-y-6 gap-x-8">
-                  <DetailItem icon={Download} label="Buying Price" value={buyingPrice !== "—" ? `₹${buyingPrice}` : "—"} onClick={click("Buying Price", `₹${buyingPrice}`)} />
-                  <DetailItem icon={Upload} label="Selling Price" value={sellingPrice !== "—" ? `₹${sellingPrice}` : "—"} onClick={click("Selling Price", `₹${sellingPrice}`)} />
+                  <DetailItem icon={Download} label="Buying Price" value={String(buyingPrice) !== "—" ? `₹${buyingPrice}` : "—"} onClick={click("Buying Price", `₹${buyingPrice}`)} />
+                  <DetailItem icon={Upload} label="Selling Price" value={String(sellingPrice) !== "—" ? `₹${sellingPrice}` : "—"} onClick={click("Selling Price", `₹${sellingPrice}`)} />
                   <DetailItem icon={Tag} label="MRP" value={datas.mrp ? `₹${datas.mrp}` : "—"} onClick={click("MRP", datas.mrp ? `₹${datas.mrp}` : "—")} />
                   <DetailItem icon={BarChart2} label="GST Rate" value={String(datas.gst || "—")} onClick={click("GST Rate", String(datas.gst || "—"))} />
                   <DetailItem icon={Hash} label="HSN Code" value={String(datas.hsn || "—")} onClick={click("HSN Code", String(datas.hsn || "—"))} />
@@ -331,7 +330,7 @@ const ProductDetail = () => {
                   Combinations ({combinations.length})
                 </h2>
               </div>
-              
+
               <div className="bg-slate-50/30 rounded-2xl p-4 border border-slate-100">
                 <VariantRows combinations={combinations} baseSellPrice={sellingPrice} />
               </div>

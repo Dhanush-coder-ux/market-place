@@ -14,6 +14,8 @@ interface ConfirmDialogProps {
   variant?: "danger" | "info";
 }
 
+import { useScrollLock } from "@/hooks/useScrollLock";
+
 export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   isOpen,
   onClose,
@@ -24,6 +26,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   cancelText = "Cancel",
   variant = "danger"
 }) => {
+  useScrollLock(isOpen);
   const isDesktop = useMediaQuery("(min-width: 768px)");
 
   return (

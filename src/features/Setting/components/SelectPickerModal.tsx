@@ -23,10 +23,10 @@ export const SelectPickerModal = ({
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
-    document.body.style.overflow = "hidden";
+    document.body.classList.add("no-scroll");
     document.addEventListener("keydown", handleKeyDown);
     return () => {
-      document.body.style.overflow = "unset";
+      document.body.classList.remove("no-scroll");
       document.removeEventListener("keydown", handleKeyDown);
     };
   }, [onClose]);
@@ -52,7 +52,7 @@ export const SelectPickerModal = ({
         </div>
 
         {/* Options List */}
-        <div className="py-2 max-h-[60vh] overflow-y-auto">
+        <div className="py-2 max-h-[60vh] overflow-y-auto modal-content">
           {options.length === 0 ? (
             <div className="px-6 py-12 text-center text-slate-400 italic text-sm">
               No categories built yet. Go to Dropdown Settings to create some.

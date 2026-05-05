@@ -161,7 +161,7 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
           </div>
           
           <div className="space-y-4 pt-2">
-            <div className="flex items-center justify-between p-4 rounded-2xl border border-slate-100 bg-slate-50/50">
+            <div className="flex items-center justify-between p-3 md:p-4 rounded-2xl border border-slate-100 bg-slate-50/50">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-blue-600 shadow-sm border border-slate-100">
                   <BarChart2 size={18} />
@@ -174,7 +174,7 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
               <Switch checked={form.batch_tracking} onCheckedChange={(val) => setForm(f => ({ ...f, batch_tracking: val }))} />
             </div>
 
-            <div className="flex items-center justify-between p-4 rounded-2xl border border-slate-100 bg-slate-50/50">
+            <div className="flex items-center justify-between p-3 md:p-4 rounded-2xl border border-slate-100 bg-slate-50/50">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-violet-600 shadow-sm border border-slate-100">
                   <Layers size={18} />
@@ -189,7 +189,7 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
 
             {/* Conditional Tracking Inputs */}
             {form.batch_tracking && !form.has_variants && (
-              <div className="bg-white rounded-2xl border border-slate-200 p-6 space-y-4 animate-in fade-in slide-in-from-top-4">
+              <div className="bg-white rounded-2xl border border-slate-200 p-4 md:p-6 space-y-4 animate-in fade-in slide-in-from-top-4">
                 <div className="flex items-center gap-2 mb-2">
                   <Calendar size={14} className="text-blue-600" />
                   <span className="text-[10px] font-black uppercase text-slate-800 tracking-widest">Initial Batch Information</span>
@@ -203,7 +203,7 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
             )}
 
             {form.serial_tracking && !form.has_variants && (
-              <div className="bg-white rounded-2xl border border-slate-200 p-6 space-y-4 animate-in fade-in slide-in-from-top-4">
+              <div className="bg-white rounded-2xl border border-slate-200 p-4 md:p-6 space-y-4 animate-in fade-in slide-in-from-top-4">
                 <div className="flex items-center gap-2 mb-2">
                   <Hash size={14} className="text-violet-600" />
                   <span className="text-[10px] font-black uppercase text-slate-800 tracking-widest">{config.serialLabel} Management</span>
@@ -251,7 +251,7 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
       subtitle: "Product attributes & combinations",
       content: (
         <div className="space-y-6">
-          <div className="flex items-center justify-between p-5 rounded-[1.5rem] bg-indigo-50 border border-indigo-100 mb-4">
+          <div className="flex items-center justify-between p-4 md:p-5 rounded-[1.5rem] bg-indigo-50 border border-indigo-100 mb-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-indigo-600 shadow-sm border border-indigo-50">
                 <Zap size={20} />
@@ -309,15 +309,15 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
       subtitle: "Review details before creating",
       content: (
         <div className="space-y-6">
-          <div className="bg-slate-50 rounded-[2rem] p-8 border border-slate-100 space-y-6">
+          <div className="bg-slate-50 rounded-[1.5rem] md:rounded-[2rem] p-4 md:p-6 border border-slate-100 space-y-6">
             <div className="flex items-start justify-between">
               <div>
-                <h4 className="text-2xl font-black text-slate-800 tracking-tight">{form.name || "Untitled Product"}</h4>
+                <h4 className="text-lg md:text-2xl font-black text-slate-800 tracking-tight">{form.name || "Untitled Product"}</h4>
                 <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">{form.category} • {form.brand || "No Brand"}</p>
               </div>
               <div className="text-right">
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Stock</p>
-                <p className="text-xl font-black text-blue-600">
+                <p className="text-base md:text-xl font-black text-blue-600">
                   {form.has_variants 
                     ? combinations.reduce((s, c) => s + (Number(c.stock) || 0), 0)
                     : (Number(form.opening_stock) || 0)}
@@ -361,7 +361,7 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
 
           {/* NEW: Detailed Breakdown for Tracking & Variants */}
           {form.has_variants && combinations.filter(c => c.active).length > 0 && (
-            <div className="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-700">
+            <div className="bg-white rounded-[1.5rem] md:rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-700">
               <div className="px-6 py-4 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between">
                 <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Active Variants Details</h3>
                 <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-100">
@@ -417,7 +417,7 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
           )}
 
           {!form.has_variants && (form.batch_tracking || form.serial_tracking) && (
-            <div className="p-6 rounded-[2rem] border border-slate-200 bg-white shadow-sm space-y-4">
+            <div className="p-4 md:p-6 rounded-[1.5rem] md:rounded-[2rem] border border-slate-200 bg-white shadow-sm space-y-4">
               <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tracking Details</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {form.batch_tracking && form.batch_name && (
@@ -451,7 +451,7 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
             </div>
           )}
 
-          <div className="p-6 rounded-[2rem] bg-blue-50/50 border border-blue-100 flex gap-4 items-start">
+          <div className="p-4 md:p-6 rounded-[1.5rem] md:rounded-[2rem] bg-blue-50/50 border border-blue-100 flex gap-3 md:gap-4 items-start">
             <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-blue-600 shadow-sm shrink-0">
               <CheckCircle2 size={20} />
             </div>
@@ -564,7 +564,7 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
       onSubmit={handleSubmit}
       isSubmitting={submitting}
       submitLabel="Complete Creation"
-      size="2xl"
+      size="xl"
     />
   );
 };

@@ -341,7 +341,10 @@ interface SerialManagerProps {
   onUpdate: (serials: SerialEntry[]) => void;
 }
 
+import { useScrollLock } from "@/hooks/useScrollLock";
+
 const SerialManager: React.FC<SerialManagerProps> = ({ combo, serialLabel, onClose, onUpdate }) => {
+  useScrollLock(true);
   const [serials, setSerials] = useState<SerialEntry[]>(combo.serials);
   const [bulkInput, setBulkInput] = useState("");
   const [showBulk, setShowBulk] = useState(false);
@@ -442,7 +445,7 @@ const SerialManager: React.FC<SerialManagerProps> = ({ combo, serialLabel, onClo
           </div>
         )}
 
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto modal-content">
           {serials.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 gap-3">
               <div className="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center border border-slate-100">

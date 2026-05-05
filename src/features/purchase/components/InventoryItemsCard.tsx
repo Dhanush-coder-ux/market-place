@@ -16,7 +16,7 @@ import {
   TrendingUp,
   Package
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { SearchSelect } from "@/components/inputbuilders/SearchSelect";
 import { inventoryApi } from "@/services/api/inventory";
 import { ReusableSelect } from "@/components/ui/ReusableSelect";
@@ -79,6 +79,17 @@ export const InventoryItemsCard = ({
     existingSerials: string[];
     allowNewBatch: boolean;
   }>({ isOpen: false, rowIndex: -1, batches: [], productName: "", variantName: "", existingSerials: [], allowNewBatch: true });
+
+  useEffect(() => {
+    if (variantModal.isOpen || batchModal.isOpen) {
+      document.body.classList.add("no-scroll");
+    } else {
+      document.body.classList.remove("no-scroll");
+    }
+    return () => {
+      document.body.classList.remove("no-scroll");
+    };
+  }, [variantModal.isOpen, batchModal.isOpen]);
 
   const toggleBreakdown = (index: number) => {
     const next = new Set(expandedBreakdown);
@@ -209,7 +220,7 @@ export const InventoryItemsCard = ({
               </button>
             </div>
 
-            <div className="p-6 max-h-[50vh] overflow-y-auto bg-slate-50/50">
+            <div className="p-6 max-h-[50vh] overflow-y-auto modal-content bg-slate-50/50">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {variantModal.variants.map((variant) => {
                   const isSelected = selectedVariants === variant.id;
@@ -279,7 +290,7 @@ export const InventoryItemsCard = ({
               </button>
             </div>
 
-            <div className="p-6 max-h-[60vh] overflow-y-auto space-y-3">
+            <div className="p-6 max-h-[60vh] overflow-y-auto modal-content space-y-3">
               {batchModal.allowNewBatch && (
                 <button
                   onClick={() => {

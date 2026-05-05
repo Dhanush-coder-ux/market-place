@@ -32,6 +32,17 @@ export interface ModalProps {
 }
 
 export function Modal({ show, onClose, title, children, className = "max-w-lg" }: ModalProps) {
+  React.useEffect(() => {
+    if (show) {
+      document.body.classList.add("no-scroll");
+    } else {
+      document.body.classList.remove("no-scroll");
+    }
+    return () => {
+      document.body.classList.remove("no-scroll");
+    };
+  }, [show]);
+
   if (!show) return null;
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
@@ -40,7 +51,7 @@ export function Modal({ show, onClose, title, children, className = "max-w-lg" }
         onClick={onClose}
       />
       <div
-        className={`relative bg-white w-full ${className} rounded-[2rem] shadow-2xl overflow-hidden border border-slate-100 animate-in zoom-in-95 duration-200`}
+        className={`relative bg-white w-full ${className} rounded-[2rem] shadow-2xl overflow-y-auto modal-content border border-slate-100 animate-in zoom-in-95 duration-200`}
       >
         <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
           <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest">{title}</h3>

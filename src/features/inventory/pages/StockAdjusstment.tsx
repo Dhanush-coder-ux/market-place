@@ -27,6 +27,7 @@ import { useHeader } from "@/context/HeaderContext";
 import { useToast } from "@/context/ToastContext";
 import { FloatingFormCard } from '@/components/common/FloatingFormCard';
 import { InlineSerialManager } from '@/components/common/InlineSerialManager';
+import { useScrollLock } from '@/hooks/useScrollLock';
 
 // --- Type definitions ---
 interface AdjustmentItem {
@@ -121,6 +122,10 @@ export default function StockAdjustmentPage() {
   }>({
     isOpen: false, variantName: "", targetRowIndex: -1, batches: [], variantData: null
   });
+
+  const [isImpactModalOpen, setIsImpactModalOpen] = useState(false);
+
+  useScrollLock(variantModal.isOpen || batchModal.isOpen || isImpactModalOpen);
 
   // --- Load Draft ---
   useEffect(() => {
@@ -393,7 +398,6 @@ export default function StockAdjustmentPage() {
     return { netChange, impactList, reasons, validProductCount };
   }, [items]);
 
-  const [isImpactModalOpen, setIsImpactModalOpen] = useState(false);
 
   return (
     <div className="min-h-screen bg-slate-50/50 pb-24 md:pb-4 font-[Inter,sans-serif]">
@@ -439,7 +443,7 @@ export default function StockAdjustmentPage() {
               </button>
             </div>
 
-            <div className="p-6 overflow-y-auto flex-1 bg-slate-50/30">
+            <div className="p-6 overflow-y-auto flex-1 bg-slate-50/30 modal-content">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {variantModal.variants.map((variant) => {
                   const stockNum = Number(variant.stock) || 0;
@@ -526,7 +530,7 @@ export default function StockAdjustmentPage() {
               </button>
             </div>
 
-            <div className="p-6 overflow-y-auto max-h-[60vh] bg-white">
+            <div className="p-6 overflow-y-auto max-h-[60vh] bg-white modal-content">
               <div className="grid grid-cols-1 gap-3">
                 {parseBatches(batchModal.batches).map((batch: any) => (
                   <div

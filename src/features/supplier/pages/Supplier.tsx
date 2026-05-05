@@ -12,6 +12,7 @@ import { useToast } from "@/context/ToastContext";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { ColumnPicker } from "@/components/common/ColumnPicker";
 import { StatCard } from "@/components/common/StatsCard";
+import { useQuickCreate } from "@/features/common/QuickCreate/QuickCreateContext";
 
 
 const Supplier = () => {
@@ -19,6 +20,7 @@ const Supplier = () => {
   const { getData, deleteData, loading, error, clearError } = useApi();
   const { setActions } = useHeader();
   const { showToast } = useToast();
+  const { openQuickCreate } = useQuickCreate();
 
   const [suppliers, setSuppliers] = useState<SupplierRecord[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -43,11 +45,22 @@ const Supplier = () => {
           <Bookmark size={18} />
           Saved Drafts
         </button>
-        <GradientButton path="/supplier/add" className="h-11 flex items-center">+ Add Supplier</GradientButton>
+        <GradientButton 
+          onClick={() => openQuickCreate("SUPPLIER", () => setRefreshKey(prev => prev + 1))}
+          className="h-11 flex items-center shadow-lg shadow-blue-100"
+        >
+          + Quick Add
+        </GradientButton>
+        <button 
+          onClick={() => navigate("/supplier/add")}
+          className="h-11 px-6 rounded-xl border border-slate-200 bg-white text-slate-600 font-bold text-sm hover:bg-slate-50 transition-all flex items-center"
+        >
+          + Full Form
+        </button>
       </div>
     );
     return () => setActions(null);
-  }, [setActions, navigate]);
+  }, [setActions, navigate, openQuickCreate]);
 
   useEffect(() => {
     const params: Record<string, string> = { limit: "50", offset: "1" };

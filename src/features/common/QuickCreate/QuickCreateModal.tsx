@@ -36,8 +36,14 @@ export const QuickCreateModal: React.FC<QuickCreateModalProps> = ({
 
   React.useEffect(() => {
     if (isOpen) {
+      document.body.classList.add("no-scroll");
       setCurrentStep(0);
+    } else {
+      document.body.classList.remove("no-scroll");
     }
+    return () => {
+      document.body.classList.remove("no-scroll");
+    };
   }, [isOpen]);
 
   if (!isOpen) return null;
@@ -57,6 +63,7 @@ export const QuickCreateModal: React.FC<QuickCreateModalProps> = ({
   };
 
   const maxWidthClass = {
+    sm: "max-w-sm",
     md: "max-w-md",
     lg: "max-w-lg",
     xl: "max-w-xl",
@@ -69,34 +76,34 @@ export const QuickCreateModal: React.FC<QuickCreateModalProps> = ({
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 20 }}
-        className={`w-full ${maxWidthClass} bg-white rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col border border-white/20`}
+        className={`w-full ${maxWidthClass} bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col border border-white/20`}
       >
         {/* Header */}
-        <div className="px-8 py-6 flex items-center justify-between border-b border-slate-100 bg-slate-50/50">
-          <div className="flex items-center gap-3">
-            <div className="w-1.5 h-6 bg-blue-600 rounded-full" />
-            <h2 className="text-sm font-black text-slate-800 uppercase tracking-widest">
+        <div className="px-5 md:px-6 py-3 md:py-4 flex items-center justify-between border-b border-slate-100 bg-slate-50/50">
+          <div className="flex items-center gap-2">
+            <div className="w-1 h-5 bg-blue-600 rounded-full" />
+            <h2 className="text-[12px] font-black text-slate-800 uppercase tracking-widest">
               {title}
             </h2>
           </div>
           <button
             onClick={onClose}
-            className="p-2 rounded-2xl hover:bg-slate-200 text-slate-400 transition-all hover:rotate-90"
+            className="p-1.5 rounded-xl hover:bg-slate-200 text-slate-400 transition-all hover:rotate-90"
           >
-            <X size={20} />
+            <X size={18} />
           </button>
         </div>
 
         {/* Stepper Progress */}
-        <div className="px-10 pt-8 pb-4 flex items-center justify-between relative">
+        <div className="px-4 md:px-8 pt-4 md:pt-6 pb-2 md:pb-3 flex items-center justify-between relative overflow-x-auto no-scrollbar">
           <div className="absolute left-16 right-16 top-1/2 h-[2px] bg-slate-100 -z-10 -translate-y-2" />
           {steps.map((step, idx) => {
             const isActive = idx === currentStep;
             const isPassed = idx < currentStep;
             return (
-              <div key={step.id} className="flex flex-col items-center gap-2 bg-white px-3 relative z-10">
+              <div key={step.id} className="flex flex-col items-center gap-1.5 md:gap-2 bg-white px-1 md:px-3 relative z-10 shrink-0">
                 <div
-                  className={`w-10 h-10 rounded-2xl flex items-center justify-center text-xs font-black transition-all duration-300 ${
+                  className={`w-7 h-7 md:w-9 md:h-9 rounded-lg md:rounded-xl flex items-center justify-center text-[10px] md:text-xs font-black transition-all duration-300 ${
                     isActive
                       ? "bg-blue-600 text-white shadow-lg shadow-blue-200 scale-110"
                       : isPassed
@@ -104,10 +111,10 @@ export const QuickCreateModal: React.FC<QuickCreateModalProps> = ({
                       : "bg-slate-50 text-slate-400 border border-slate-100"
                   }`}
                 >
-                  {isPassed ? <CheckCircle2 size={18} /> : step.id}
+                  {isPassed ? <CheckCircle2 size={14} className="md:w-4 md:h-4" /> : step.id}
                 </div>
                 <span
-                  className={`text-[9px] font-black uppercase tracking-[0.15em] ${
+                  className={`text-[7px] md:text-[8px] font-black uppercase tracking-[0.05em] md:tracking-[0.1em] ${
                     isActive ? "text-blue-600" : "text-slate-400"
                   }`}
                 >
@@ -119,7 +126,7 @@ export const QuickCreateModal: React.FC<QuickCreateModalProps> = ({
         </div>
 
         {/* Content Area */}
-        <div className="p-8 min-h-[400px] max-h-[70vh] overflow-y-auto custom-scrollbar">
+        <div className="p-4 md:p-6 min-h-[300px] md:min-h-[350px] max-h-[55vh] md:max-h-[60vh] overflow-y-auto modal-content custom-scrollbar">
           <AnimatePresence mode="wait">
             <motion.div
               key={currentStep}
@@ -128,11 +135,11 @@ export const QuickCreateModal: React.FC<QuickCreateModalProps> = ({
               exit={{ opacity: 0, x: -20 }}
               transition={{ duration: 0.2 }}
             >
-              <div className="mb-8">
-                <h3 className="text-xl font-black text-slate-800 tracking-tight">
+              <div className="mb-4 md:mb-6">
+                <h3 className="text-base md:text-lg font-black text-slate-800 tracking-tight">
                   {steps[currentStep].title}
                 </h3>
-                <p className="text-xs font-bold text-slate-400 mt-1 uppercase tracking-wider">
+                <p className="text-[9px] md:text-[10px] font-bold text-slate-400 mt-0.5 uppercase tracking-wider">
                   {steps[currentStep].subtitle}
                 </p>
               </div>
@@ -142,13 +149,13 @@ export const QuickCreateModal: React.FC<QuickCreateModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="px-8 py-6 bg-slate-50/80 border-t border-slate-100 flex items-center justify-between">
+        <div className="px-5 md:px-6 py-3 md:py-4 bg-slate-50/80 border-t border-slate-100 flex items-center justify-between">
           <button
             onClick={handleBack}
             disabled={currentStep === 0}
-            className="px-6 py-2.5 text-xs font-black text-slate-500 hover:text-slate-800 disabled:opacity-30 flex items-center gap-2 transition-all uppercase tracking-widest"
+            className="px-3 md:px-6 py-2.5 text-[10px] md:text-xs font-black text-slate-500 hover:text-slate-800 disabled:opacity-30 flex items-center gap-1 md:gap-2 transition-all uppercase tracking-widest"
           >
-            <ChevronLeft size={18} /> Back
+            <ChevronLeft size={16} className="md:w-[18px] md:h-[18px]" /> Back
           </button>
           
           <div className="flex items-center gap-4">
@@ -160,15 +167,15 @@ export const QuickCreateModal: React.FC<QuickCreateModalProps> = ({
             <GradientButton
               onClick={handleNext}
               disabled={isSubmitting || (steps[currentStep].isValid === false)}
-              className="rounded-[1.25rem] px-10 h-11 text-xs font-black uppercase tracking-widest shadow-xl shadow-blue-100 flex items-center gap-2"
+              className="rounded-xl px-5 md:px-8 h-9 md:h-10 text-[9px] md:text-[10px] font-black uppercase tracking-widest shadow-lg shadow-blue-100 flex items-center gap-1 md:gap-2"
             >
               {isSubmitting ? (
-                "Processing..."
+                "Wait..."
               ) : currentStep === steps.length - 1 ? (
                 submitLabel
               ) : (
                 <>
-                  Continue <ChevronRight size={18} />
+                  Next <ChevronRight size={14} className="md:w-4 md:h-4" />
                 </>
               )}
             </GradientButton>

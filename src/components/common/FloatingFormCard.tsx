@@ -22,11 +22,11 @@ export const FloatingFormCard: React.FC<FloatingFormCardProps> = ({
   // Prevent body scroll when modal is open
   useEffect(() => {
     if (isOpen) {
-      document.body.style.overflow = "hidden";
+      document.body.classList.add("no-scroll");
     } else {
-      document.body.style.overflow = "unset";
+      document.body.classList.remove("no-scroll");
     }
-    return () => { document.body.style.overflow = "unset"; };
+    return () => { document.body.classList.remove("no-scroll"); };
   }, [isOpen]);
 
   if (!isOpen) return null;
@@ -61,7 +61,7 @@ export const FloatingFormCard: React.FC<FloatingFormCardProps> = ({
         </div>
 
         {/* Form Content Area (Scrollable) */}
-        <div className="p-4 sm:p-6 overflow-y-auto flex-1 custom-scrollbar">
+        <div className="p-4 sm:p-6 overflow-y-auto flex-1 custom-scrollbar modal-content">
           {children}
         </div>
 

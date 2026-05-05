@@ -7,6 +7,8 @@ import {
   AlertCircle
 } from "lucide-react";
 
+import { useScrollLock } from "@/hooks/useScrollLock";
+
 interface ImportExportFloatingCardProps {
   onClose: () => void;
   onImport?: (file: File) => void;
@@ -18,6 +20,7 @@ const ImportExportFloatingCard: FC<ImportExportFloatingCardProps> = ({
   onImport,
   onExport
 }) => {
+  useScrollLock(true);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [isDragging, setIsDragging] = useState(false);
 

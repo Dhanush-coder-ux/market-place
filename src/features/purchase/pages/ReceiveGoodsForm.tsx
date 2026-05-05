@@ -230,6 +230,17 @@ const ReceiveGoodForm = () => {
     variantName: string;
   }>({ isOpen: false, itemId: "", batches: [], productName: "", variantName: "" });
 
+  useEffect(() => {
+    if (batchModal.isOpen) {
+      document.body.classList.add("no-scroll");
+    } else {
+      document.body.classList.remove("no-scroll");
+    }
+    return () => {
+      document.body.classList.remove("no-scroll");
+    };
+  }, [batchModal.isOpen]);
+
   // Restore PO from URL
   useEffect(() => {
     const poId = searchParams.get("poId");
@@ -948,7 +959,7 @@ const ReceiveGoodForm = () => {
               </button>
             </div>
 
-            <div className="p-6 max-h-[60vh] overflow-y-auto space-y-3">
+            <div className="p-6 max-h-[60vh] overflow-y-auto modal-content space-y-3">
               <button
                 onClick={() => {
                   updateItem(batchModal.itemId, { isNewBatch: true, batch_id: null, batchNum: "", manufacturingDate: "", expiryDate: "" });

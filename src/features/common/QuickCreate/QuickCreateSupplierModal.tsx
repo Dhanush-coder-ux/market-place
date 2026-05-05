@@ -137,7 +137,7 @@ export const QuickCreateSupplierModal: React.FC<QuickCreateSupplierModalProps> =
               value={form.address}
               onChange={handleChange}
               rows={3}
-              className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-4 py-3 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-blue-100 transition-all placeholder:text-slate-300 resize-none"
+              className="w-full bg-slate-50 border border-slate-100 rounded-xl md:rounded-2xl px-4 py-3 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-blue-100 transition-all placeholder:text-slate-300 resize-none"
               placeholder="Enter full address details..."
             />
           </div>
@@ -150,7 +150,7 @@ export const QuickCreateSupplierModal: React.FC<QuickCreateSupplierModalProps> =
       subtitle: "Taxation and Internal Notes",
       content: (
         <div className="space-y-6">
-          <div className="p-6 rounded-[1.5rem] bg-blue-50 border border-blue-100 flex gap-4 items-start">
+          <div className="p-4 md:p-6 rounded-[1.5rem] bg-blue-50 border border-blue-100 flex gap-3 md:gap-4 items-start">
             <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-blue-600 shadow-sm shrink-0">
               <Tag size={20} />
             </div>
@@ -181,7 +181,7 @@ export const QuickCreateSupplierModal: React.FC<QuickCreateSupplierModalProps> =
               value={form.notes}
               onChange={handleChange}
               rows={4}
-              className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-4 py-3 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-blue-100 transition-all placeholder:text-slate-300 resize-none"
+              className="w-full bg-slate-50 border border-slate-100 rounded-xl md:rounded-2xl px-4 py-3 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-blue-100 transition-all placeholder:text-slate-300 resize-none"
               placeholder="Additional comments about this partner..."
             />
           </div>
@@ -194,10 +194,10 @@ export const QuickCreateSupplierModal: React.FC<QuickCreateSupplierModalProps> =
       subtitle: "Review partner details",
       content: (
         <div className="space-y-6">
-          <div className="bg-slate-50 rounded-[2rem] p-8 border border-slate-100 space-y-6">
+          <div className="bg-slate-50 rounded-[1.5rem] md:rounded-[2rem] p-4 md:p-6 border border-slate-100 space-y-6">
             <div className="flex items-start justify-between">
               <div>
-                <h4 className="text-2xl font-black text-slate-800 tracking-tight">{form.supplier_name || "Untitled Supplier"}</h4>
+                <h4 className="text-lg md:text-2xl font-black text-slate-800 tracking-tight">{form.supplier_name || "Untitled Supplier"}</h4>
                 <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">{form.type} • {form.city || "No City"}</p>
               </div>
               <div className="text-right">
@@ -251,7 +251,7 @@ export const QuickCreateSupplierModal: React.FC<QuickCreateSupplierModalProps> =
             </div>
           </div>
 
-          <div className="p-6 rounded-[2rem] bg-emerald-50/50 border border-emerald-100 flex gap-4 items-start">
+          <div className="p-4 md:p-6 rounded-[1.5rem] md:rounded-[2rem] bg-emerald-50/50 border border-emerald-100 flex gap-3 md:gap-4 items-start">
             <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-emerald-600 shadow-sm shrink-0">
               <CheckCircle2 size={20} />
             </div>
@@ -320,7 +320,7 @@ export const QuickCreateSupplierModal: React.FC<QuickCreateSupplierModalProps> =
       onSubmit={handleSubmit}
       isSubmitting={submitting}
       submitLabel="Register Supplier"
-      size="xl"
+      size="lg"
     />
   );
 };

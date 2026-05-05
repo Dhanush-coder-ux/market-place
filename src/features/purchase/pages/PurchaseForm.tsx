@@ -22,8 +22,7 @@ import { useHeader } from "@/context/HeaderContext";
 import { useToast } from "@/context/ToastContext";
 import Loader from "@/components/common/Loader";
 import { InventoryItemsCard } from "@/features/purchase/components/InventoryItemsCard";
-import { QuickCreateSupplierModal } from "@/features/common/QuickCreate/QuickCreateSupplierModal";
-import { QuickCreateProductModal } from "@/features/common/QuickCreate/QuickCreateProductModal";
+import { useQuickCreate } from "@/features/common/QuickCreate/QuickCreateContext";
 
 type PaymentMethod = "Cash" | "UPI" | "Card" | "Bank";
 
@@ -68,8 +67,7 @@ const PurchaseForm = () => {
   const { showToast } = useToast();
   const [submitting, setSubmitting] = useState(false);
 
-  // Modal State for On-The-Fly Creation
-  const [modalState, setModalState] = useState<{ type: "Product" | "Supplier" | null; query: string }>({ type: null, query: "" });
+  const { openQuickCreate } = useQuickCreate();
 
   // --- State Management ---
   const [purchaseDetails, setPurchaseDetails] = useState({
@@ -417,8 +415,40 @@ const PurchaseForm = () => {
   }, [setBottomActions, submitting, id, handleSavePurchase, handleSaveDraft]);
 
   const handleAddNewProduct = useCallback((query: string) => {
-    setModalState({ type: "Product", query });
-  }, []);
+    openQuickCreate("PRODUCT", (newProduct: any) => {
+      const emptyIndex = products.findIndex(p => !p.name && !p.inventory_id);
+      const hasBatchTracking = !!newProduct.has_batch || !!(newProduct.datas && newProduct.datas.has_batch);
+      const hasSerialTracking = !!newProduct.has_serialno || !!(newProduct.datas && newProduct.datas.has_serialno);
+
+      if (emptyIndex >= 0) {
+        updateProductFields(emptyIndex, {
+          inventory_id: newProduct.id,
+          name: newProduct.name,
+          costPrice: newProduct.buy_price,
+          sellingPrice: newProduct.sell_price,
+          sku: newProduct.barcode,
+          unit: newProduct.datas?.unit || "pc",
+          taxGst: parseInt(newProduct.datas?.gst) || 18,
+          batchTracking: hasBatchTracking,
+          serialTracking: hasSerialTracking
+        });
+      } else {
+        setProducts(prev => [...prev, {
+          ...defaultProductRow,
+          id: crypto.randomUUID(),
+          inventory_id: newProduct.id,
+          name: newProduct.name,
+          costPrice: newProduct.buy_price,
+          sellingPrice: newProduct.sell_price,
+          sku: newProduct.barcode,
+          unit: newProduct.datas?.unit || "pc",
+          taxGst: parseInt(newProduct.datas?.gst) || 18,
+          batchTracking: hasBatchTracking,
+          serialTracking: hasSerialTracking
+        }]);
+      }
+    }, { name: query });
+  }, [openQuickCreate, products, updateProductFields, defaultProductRow]);
 
   return (
     <>
@@ -456,7 +486,10 @@ const PurchaseForm = () => {
                         setSupplierDetails(opt || null);
                       }}
                       // 💡 Triggers the On-The-Fly Supplier Modal
-                      onCreateNew={(query) => setModalState({ type: "Supplier", query })}
+                      onCreateNew={(query) => openQuickCreate("SUPPLIER", (newSupplier: any) => {
+                        setPurchaseDetails(prev => ({ ...prev, supplier: String(newSupplier.id) }));
+                        setSupplierDetails(newSupplier);
+                      }, { name: query })}
                       placeholder="Search Supplier..."
                       className="w-full"
                     />
@@ -643,55 +676,6 @@ const PurchaseForm = () => {
         </div>
       </div>
 
-      {/* ─── Modals Rendered Here ─── */}
-      <QuickCreateSupplierModal
-        isOpen={modalState.type === "Supplier"}
-        onClose={() => setModalState({ type: null, query: "" })}
-        initialName={modalState.query}
-        onSuccess={(newSupplier: any) => {
-          setPurchaseDetails(prev => ({ ...prev, supplier: String(newSupplier.id) }));
-          setSupplierDetails(newSupplier);
-        }}
-      />
-
-      <QuickCreateProductModal
-        isOpen={modalState.type === "Product"}
-        onClose={() => setModalState({ type: null, query: "" })}
-        initialName={modalState.query}
-        onSuccess={(newProduct: any) => {
-          const emptyIndex = products.findIndex(p => !p.name && !p.inventory_id);
-          const hasBatchTracking = !!newProduct.has_batch || !!(newProduct.datas && newProduct.datas.has_batch);
-          const hasSerialTracking = !!newProduct.has_serialno || !!(newProduct.datas && newProduct.datas.has_serialno);
-
-          if (emptyIndex >= 0) {
-            updateProductFields(emptyIndex, {
-              inventory_id: newProduct.id,
-              name: newProduct.name,
-              costPrice: newProduct.buy_price,
-              sellingPrice: newProduct.sell_price,
-              sku: newProduct.barcode,
-              unit: newProduct.datas?.unit || "pc",
-              taxGst: parseInt(newProduct.datas?.gst) || 18,
-              batchTracking: hasBatchTracking,
-              serialTracking: hasSerialTracking
-            });
-          } else {
-            setProducts(prev => [...prev, {
-              ...defaultProductRow,
-              id: crypto.randomUUID(),
-              inventory_id: newProduct.id,
-              name: newProduct.name,
-              costPrice: newProduct.buy_price,
-              sellingPrice: newProduct.sell_price,
-              sku: newProduct.barcode,
-              unit: newProduct.datas?.unit || "pc",
-              taxGst: parseInt(newProduct.datas?.gst) || 18,
-              batchTracking: hasBatchTracking,
-              serialTracking: hasSerialTracking
-            }]);
-          }
-        }}
-      />
     </>
   );
 };

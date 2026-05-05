@@ -96,13 +96,24 @@ export interface ModalProps {
 }
 
 export function Modal({ show, onClose, title, children, footer, className }: ModalProps) {
+  React.useEffect(() => {
+    if (show) {
+      document.body.classList.add("no-scroll");
+    } else {
+      document.body.classList.remove("no-scroll");
+    }
+    return () => {
+      document.body.classList.remove("no-scroll");
+    };
+  }, [show]);
+
   if (!show) return null;
   return (
     <div
       className="fixed inset-0 bg-black/50 z-[1000] flex items-center justify-center"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className={`bg-white rounded-2xl w-[90%] max-h-[90vh] overflow-y-auto shadow-2xl animate-[slideUp_0.3s_ease] ${className || "max-w-xl"}`}>
+      <div className={`bg-white rounded-2xl w-[90%] max-h-[90vh] overflow-y-auto modal-content shadow-2xl animate-[slideUp_0.3s_ease] ${className || "max-w-xl"}`}>
         {/* Header */}
         <div className="px-6 py-5 border-b border-slate-200 flex justify-between items-center">
           <h2 className="text-xl font-semibold text-slate-700">{title}</h2>

@@ -10,6 +10,7 @@ import "primeicons/primeicons.css";
 import { InputBuilderProvider } from '@/components/inputbuilders/context/InputBuilderContext';
 import { HeaderProvider } from '@/context/HeaderContext';
 import { ToastProvider } from '@/context/ToastContext';
+import { QuickCreateProvider } from '@/features/common/QuickCreate/QuickCreateContext';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -18,7 +19,9 @@ createRoot(document.getElementById('root')!).render(
         <InputBuilderProvider>
           <HeaderProvider>
             <ToastProvider>
-              <App />
+              <QuickCreateProvider>
+                <App />
+              </QuickCreateProvider>
             </ToastProvider>
           </HeaderProvider>
         </InputBuilderProvider>

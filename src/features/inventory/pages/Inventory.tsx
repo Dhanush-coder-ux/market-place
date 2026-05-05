@@ -7,7 +7,6 @@ import {
   ChevronDown,
   ChevronRight,
   Package,
-  AlertTriangle,
   Layers,
   Calendar,
   Filter,
@@ -455,7 +454,7 @@ const InventoryPage = () => {
   }, []);
 
   return (
-    <div className="space-y-8 bg-slate-50/50 min-h-screen p-2 sm:p-4 animate-in fade-in duration-700">
+    <div className="space-y-4 bg-slate-50/50 min-h-screen p-2 sm:p-4 animate-in fade-in duration-700">
 
 
       {/* STATS CARDS */}
@@ -494,7 +493,7 @@ const InventoryPage = () => {
         />
       </div>
       {/* Toolbar */}
-            <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-4">
+            <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex flex-wrap items-center justify-between">
               <div className="flex items-center gap-3 flex-1 min-w-[300px]">
                 <div className="relative flex-1 max-w-md">
                   <Input
@@ -547,6 +546,7 @@ const InventoryPage = () => {
             </div>
           </div>
         </div>
+
 
         {loading ? (
           <div className="p-20 flex justify-center"><Loader /></div>

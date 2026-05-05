@@ -38,6 +38,8 @@ export interface Movement {
   notes: string;
   variant?: string;
   batch?: string;
+  expiry_date?: string;
+  manufacturing_date?: string;
   serial_numbers?: string[];
 }
 
@@ -49,10 +51,10 @@ const MOVEMENT_TYPES = ["All", "PURCHASE", "PO_PURCHASE", "SALES", "TRANSFER", "
 function purchaseToMovements(records: PurchaseRecord[], movType: MovementType): Movement[] {
   return records.flatMap(p => {
     const d2 = p.datas as any;
-    const products = (d2?.purchase_products ?? d2?.grn_products ?? d2?.finished_products ?? d2?.products) as any[] | undefined;
+    const products = ((p as any).products ?? d2?.purchase_products ?? d2?.grn_products ?? d2?.finished_products ?? d2?.products) as any[] | undefined;
     if (!products || products.length === 0) return [];
 
-    return products.map(prod => {
+    return products.flatMap(prod => {
       const pAny = p as any;
       const dateStr = String(d2?.purchaseDetails?.date ?? d2?.purchase_date ?? d2?.production_date ?? d2?.receipt_date ?? p.date ?? pAny.created_at ?? new Date().toISOString());
 
@@ -67,12 +69,11 @@ function purchaseToMovements(records: PurchaseRecord[], movType: MovementType): 
         finalType = "PURCHASE" as MovementType;
       }
 
-      return {
+      const baseMovement = {
         id: p.id.slice(0, 8).toUpperCase(),
         product: String(prod?.product_name ?? prod?.name ?? "—"),
         sku: String(prod?.barcode ?? p.id.slice(0, 8)),
         type: finalType,
-        qty: Number(prod?.quantity ?? prod?.qty ?? 1),
         source: "Supplier",
         destination: "Warehouse",
         ref: String(d2?.purchaseDetails?.referenceNo ?? d2?.purchaseDetails?.invoiceNo ?? d2?.referenceNumber ?? p.id.slice(0, 8).toUpperCase()),
@@ -80,10 +81,63 @@ function purchaseToMovements(records: PurchaseRecord[], movType: MovementType): 
         status: "Completed" as StatusType,
         user: String((p as any).added_by || d2?.added_by || "Admin"),
         notes: d2?.purchaseDetails?.invoiceNo ? `Invoice: ${d2.purchaseDetails.invoiceNo}` : (prod.notes || ""),
-        variant: prod.variant_name || prod.variant || prod.variant_id || prod.varient_id || "",
-        batch: prod.batch_name || prod.batch_id || "",
-        serial_numbers: Array.isArray(prod.serial_numbers) ? prod.serial_numbers : [],
       };
+
+      const movements: Movement[] = [];
+
+      // If it has nested variants array
+      if (Array.isArray(prod.variants) && prod.variants.length > 0) {
+        prod.variants.forEach(variant => {
+          if (Array.isArray(variant.batches) && variant.batches.length > 0) {
+            variant.batches.forEach(batch => {
+              movements.push({
+                ...baseMovement,
+                qty: Number(batch.stocks ?? batch.quantity ?? 1),
+                variant: variant.name || variant.variant_name || variant.id,
+                batch: batch.name || batch.batch_name || batch.id,
+                serial_numbers: Array.isArray(batch.serial_numbers?.serial_numbers) 
+                  ? batch.serial_numbers.serial_numbers 
+                  : (Array.isArray(batch.serial_numbers) ? batch.serial_numbers : []),
+                expiry_date: batch.expiry_date,
+                manufacturing_date: batch.manufacturing_date,
+              });
+            });
+          } else {
+            movements.push({
+              ...baseMovement,
+              qty: Number(variant.stocks ?? variant.quantity ?? 1),
+              variant: variant.name || variant.variant_name || variant.id,
+            });
+          }
+        });
+      } 
+      // Else if it has nested batches array directly
+      else if (Array.isArray(prod.batches) && prod.batches.length > 0) {
+        prod.batches.forEach(batch => {
+          movements.push({
+            ...baseMovement,
+            qty: Number(batch.stocks ?? batch.quantity ?? 1),
+            batch: batch.name || batch.batch_name || batch.id,
+            serial_numbers: Array.isArray(batch.serial_numbers?.serial_numbers) 
+              ? batch.serial_numbers.serial_numbers 
+              : (Array.isArray(batch.serial_numbers) ? batch.serial_numbers : []),
+            expiry_date: batch.expiry_date,
+            manufacturing_date: batch.manufacturing_date,
+          });
+        });
+      } 
+      // Base case (no nested arrays, use direct properties if any)
+      else {
+        movements.push({
+          ...baseMovement,
+          qty: Number(prod?.quantity ?? prod?.qty ?? prod?.stocks ?? 1),
+          variant: prod.variant_name || prod.variant || prod.variant_id || prod.varient_id || "",
+          batch: prod.batch_name || prod.batch_id || "",
+          serial_numbers: Array.isArray(prod.serial_numbers) ? prod.serial_numbers : [],
+        });
+      }
+
+      return movements;
     });
   });
 }
@@ -162,6 +216,7 @@ function DetailDrawer({ movement, onClose }: DetailDrawerProps) {
   };
 
   const s = getTypeStyle(movement.type);
+  const isPositive = movement.qty > 0;
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end" onClick={onClose}>
@@ -172,137 +227,187 @@ function DetailDrawer({ movement, onClose }: DetailDrawerProps) {
         style={{ animation: "slideIn .22s cubic-bezier(.4,0,.2,1)" }}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100">
-          <button onClick={onClose} className="p-2 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50/50 sticky top-0 z-10 backdrop-blur-md">
+          <div className="flex items-center gap-3">
+             <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-lg ${isPositive ? 'bg-emerald-500 shadow-emerald-200' : 'bg-rose-500 shadow-rose-200'}`}>
+                {isPositive ? <TrendingUp size={20} /> : <TrendingDown size={20} />}
+             </div>
+             <div>
+                <h3 className="text-sm font-bold text-slate-800 uppercase tracking-tight">Movement Detail</h3>
+                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">REF: {movement.ref}</p>
+             </div>
+          </div>
+          <button onClick={onClose} className="p-2 rounded-xl hover:bg-white hover:shadow-sm text-slate-400 hover:text-slate-700 transition-all border border-transparent hover:border-slate-200">
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Content */}
-        <div className="flex-1 px-6 py-5 space-y-6">
-          {/* Product */}
-          <div className={`rounded-xl border ${s.bg} p-4`}>
-            <p className="text-xs text-slate-500 font-semibold uppercase tracking-widest mb-1">Product</p>
-            <p className="text-slate-900 font-semibold text-lg">{movement.product}</p>
-            <div className="flex items-center gap-2 mt-1">
-              <button
-                onClick={(e) => copyToClipboard(e, movement.id)}
-                className="group flex items-center gap-1.5 text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded border border-blue-100 hover:bg-blue-100 transition-colors"
-              >
-                ID: {movement.id}
-                <Copy size={10} className="opacity-0 group-hover:opacity-100 transition-opacity" />
-              </button>
-              <span className="text-slate-400 text-xs font-mono">SKU: {movement.sku}</span>
+        <div className="flex-1 p-6 space-y-6">
+          
+          {/* Main Impact Hero */}
+          <div className={`rounded-3xl border-2 p-6 text-center space-y-2 transition-all ${isPositive ? 'bg-emerald-50/30 border-emerald-100/50' : 'bg-rose-50/30 border-rose-100/50'}`}>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Net Stock Impact</p>
+            <div className="flex items-center justify-center gap-3">
+               <span className={`text-4xl font-black tabular-nums ${isPositive ? 'text-emerald-600' : 'text-rose-600'}`}>
+                 {isPositive ? `+${movement.qty}` : movement.qty}
+               </span>
+               <span className="text-slate-400 font-bold text-sm">Units</span>
+            </div>
+            <div className="inline-flex items-center px-3 py-1 rounded-full bg-white border border-slate-100 shadow-sm">
+               <TypeBadge type={movement.type} />
             </div>
           </div>
 
-          {/* Movement Info */}
-          <div className="grid grid-cols-2 gap-3">
-            {[
-              ["Type", <TypeBadge key="type" type={movement.type} />],
-              ["Quantity", <span key="qty" className={`font-semibold font-mono text-base ${movement.qty > 0 ? "text-emerald-600" : movement.qty < 0 ? "text-rose-600" : "text-blue-600"}`}>{movement.qty > 0 ? `+${movement.qty}` : movement.qty}</span>],
-              ["Status", <span key="status" className={`font-semibold text-sm ${STATUS_STYLES[movement.status]}`}>{movement.status}</span>],
-              ["Variant ID", (
-                <button
-                  key="var"
-                  onClick={(e) => copyToClipboard(e, movement.variant || "")}
-                  className="group flex items-center gap-1.5 text-slate-700 font-mono text-sm hover:text-blue-600 transition-colors"
-                >
-                  {truncateId(movement.variant) || "N/A"}
-                  {movement.variant && <Copy size={12} className="opacity-0 group-hover:opacity-100 transition-opacity" />}
-                </button>
-              )],
-              ["Source", <span key="src" className="text-slate-700 text-sm font-medium">{movement.source}</span>],
-              ["Destination", <span key="dest" className="text-slate-700 text-sm font-medium">{movement.destination}</span>],
-            ].map(([label, val]) => (
-              <div key={label as string} className="bg-slate-50 rounded-xl p-3 border border-slate-100">
-                <p className="text-xs font-medium text-slate-500 mb-1">{label as string}</p>
-                {val as React.ReactNode}
-              </div>
-            ))}
-          </div>
-
-          {/* Variant & Batch Info */}
-          {(movement.variant || movement.batch) && (
-            <div className="grid grid-cols-2 gap-3">
-              {movement.variant && (
-                <div className="bg-violet-50 rounded-xl p-3 border border-violet-100">
-                  <div className="flex items-center gap-2 text-violet-600 font-bold text-[10px] uppercase tracking-wider mb-1">
-                    <Layers size={14} /> Variant
-                  </div>
-                  <p className="text-slate-800 font-semibold text-sm">{movement.variant}</p>
+          {/* Structured Inventory Path */}
+          <div className="space-y-4">
+             <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] px-1">Inventory Specification Path</h4>
+             
+             {/* Product Level */}
+             <div className="relative pl-6 before:absolute before:left-[11px] before:top-8 before:bottom-0 before:w-0.5 before:bg-slate-100">
+                <div className="relative group">
+                   <div className="absolute -left-[19px] top-1.5 w-4 h-4 rounded-full border-2 border-blue-500 bg-white z-10" />
+                   <div className="bg-blue-50/40 border border-blue-100 rounded-2xl p-4 transition-all hover:bg-blue-50 hover:shadow-md hover:shadow-blue-500/5">
+                      <div className="flex items-center gap-2 text-blue-600 font-black text-[10px] uppercase tracking-widest mb-1">
+                         <Layers size={12} /> Product Root
+                      </div>
+                      <p className="text-slate-800 font-bold text-base leading-tight">{movement.product}</p>
+                      <div className="flex items-center gap-2 mt-2">
+                         <span className="text-[10px] font-mono text-slate-400 bg-white px-2 py-0.5 rounded border border-slate-100">SKU: {movement.sku}</span>
+                         <button onClick={(e) => copyToClipboard(e, movement.id)} className="text-[9px] font-bold text-blue-500 hover:underline">Copy ID</button>
+                      </div>
+                   </div>
                 </div>
-              )}
-              {movement.batch && (
-                <div className="bg-amber-50 rounded-xl p-3 border border-amber-100">
-                  <div className="flex items-center gap-2 text-amber-600 font-bold text-[10px] uppercase tracking-wider mb-1">
-                    <Hash size={14} /> Batch
-                  </div>
-                  <p className="text-slate-800 font-semibold text-sm">{movement.batch}</p>
-                </div>
-              )}
-            </div>
-          )}
 
-          {/* Serial Numbers */}
-          {movement.serial_numbers && movement.serial_numbers.length > 0 && (
-            <div className="bg-emerald-50/50 rounded-xl px-4 py-4 border border-emerald-100/60">
-              <div className="flex items-center gap-2 text-emerald-600 font-bold text-[10px] uppercase tracking-wider mb-3">
-                <Zap size={14} fill="currentColor" /> Serial Numbers ({movement.serial_numbers.length})
-              </div>
-              <div className="flex flex-wrap gap-1.5">
-                {movement.serial_numbers.map((sn, i) => (
-                  <span key={i} className="px-2 py-0.5 rounded-md bg-white border border-emerald-100 text-emerald-700 font-mono text-[11px] font-bold shadow-sm">
-                    {sn}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
+                {/* Variant Level */}
+                {movement.variant && (
+                   <div className="mt-4 relative group">
+                      <div className="absolute -left-[19px] top-1.5 w-4 h-4 rounded-full border-2 border-violet-500 bg-white z-10" />
+                      <div className="bg-violet-50/40 border border-violet-100 rounded-2xl p-4 ml-2 transition-all hover:bg-violet-50 hover:shadow-md hover:shadow-violet-500/5">
+                         <div className="flex items-center gap-2 text-violet-600 font-black text-[10px] uppercase tracking-widest mb-1">
+                            <Activity size={12} /> Variant Configuration
+                         </div>
+                         <p className="text-slate-800 font-bold text-sm">{movement.variant}</p>
+                      </div>
+                   </div>
+                )}
 
-          {/* Date & User */}
-          <div className="space-y-3">
-            <div className="flex items-center gap-3 text-sm text-slate-600 bg-slate-50 rounded-xl px-4 py-3 border border-slate-100">
-              <span className="text-slate-400">🕐</span>
-              <span className="font-medium">{fmt(movement.date)}</span>
+                {/* Batch Level */}
+                {movement.batch && (
+                   <div className="mt-4 relative group">
+                      <div className="absolute -left-[19px] top-1.5 w-4 h-4 rounded-full border-2 border-amber-500 bg-white z-10" />
+                      <div className="bg-amber-50/40 border border-amber-100 rounded-2xl p-4 ml-4 transition-all hover:bg-amber-50 hover:shadow-md hover:shadow-amber-500/5">
+                         <div className="flex items-center gap-2 text-amber-600 font-black text-[10px] uppercase tracking-widest mb-1">
+                            <Hash size={12} /> Batch Identifier
+                         </div>
+                         <p className="text-slate-800 font-bold text-sm mb-2">{movement.batch}</p>
+                         
+                         {(movement.expiry_date || movement.manufacturing_date) && (
+                            <div className="space-y-1.5 border-t border-amber-100 pt-2 mt-2">
+                               {movement.manufacturing_date && (
+                                  <div className="flex justify-between items-center text-[10px]">
+                                     <span className="text-amber-600/70 font-bold uppercase tracking-tight">MFG Date</span>
+                                     <span className="text-slate-700 font-bold">{fmtDate(movement.manufacturing_date)}</span>
+                                  </div>
+                               )}
+                               {movement.expiry_date && (
+                                  <>
+                                     <div className="flex justify-between items-center text-[10px]">
+                                        <span className="text-amber-600/70 font-bold uppercase tracking-tight">EXP Date</span>
+                                        <span className="text-slate-700 font-bold">{fmtDate(movement.expiry_date)}</span>
+                                     </div>
+                                     <div className="flex justify-between items-center bg-white/50 rounded-lg px-2 py-1 mt-1">
+                                        <span className="text-[9px] font-black text-rose-500 uppercase tracking-widest">Remaining</span>
+                                        <span className="text-[10px] font-black text-rose-600 tabular-nums">
+                                           {(() => {
+                                              const diff = new Date(movement.expiry_date).getTime() - new Date().getTime();
+                                              const days = Math.ceil(diff / (1000 * 3600 * 24));
+                                              return days > 0 ? `${days} Days` : "Expired";
+                                           })()}
+                                        </span>
+                                     </div>
+                                  </>
+                               )}
+                            </div>
+                         )}
+                      </div>
+                   </div>
+                )}
+
+                {/* Serial Numbers Level */}
+                {movement.serial_numbers && movement.serial_numbers.length > 0 && (
+                   <div className="mt-4 relative group">
+                      <div className="absolute -left-[19px] top-1.5 w-4 h-4 rounded-full border-2 border-emerald-500 bg-white z-10" />
+                      <div className="bg-emerald-50/30 border border-emerald-100 rounded-2xl p-4 ml-6 transition-all hover:bg-emerald-50/50 hover:shadow-md hover:shadow-emerald-500/5">
+                         <div className="flex items-center gap-2 text-emerald-600 font-black text-[10px] uppercase tracking-widest mb-3">
+                            <Zap size={12} fill="currentColor" /> Unique Serials ({movement.serial_numbers.length})
+                         </div>
+                         <div className="flex flex-wrap gap-1.5 max-h-[120px] overflow-y-auto custom-scrollbar pr-1">
+                            {movement.serial_numbers.map((sn, i) => (
+                               <span key={i} className="px-2 py-1 rounded-lg bg-white border border-emerald-100 text-emerald-700 font-mono text-[10px] font-bold shadow-sm">
+                                  {sn}
+                               </span>
+                            ))}
+                         </div>
+                      </div>
+                   </div>
+                )}
+             </div>
+          </div>
+
+          {/* Context Details */}
+          <div className="grid grid-cols-2 gap-3 pt-4 border-t border-slate-100">
+             <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100">
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Source</p>
+                <p className="text-slate-900 font-bold text-xs">{movement.source}</p>
+             </div>
+             <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100">
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Destination</p>
+                <p className="text-slate-900 font-bold text-xs">{movement.destination}</p>
+             </div>
+          </div>
+
+          {/* Timeline & Metadata */}
+          <div className="space-y-3 pt-2">
+            <div className="flex items-center gap-3 text-xs text-slate-600 bg-slate-50 rounded-2xl p-4 border border-slate-100">
+              <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center shadow-sm text-slate-400 border border-slate-200">🕐</div>
+              <div>
+                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">Processed At</p>
+                 <span className="font-bold text-slate-700">{fmt(movement.date)}</span>
+              </div>
             </div>
-            <div className="flex items-center gap-3 text-sm text-slate-600 bg-slate-50 rounded-xl px-4 py-3 border border-slate-100">
-              <User className="w-4 h-4 text-slate-400" />
-              <span>Performed by <strong className="text-slate-900">{movement.user}</strong></span>
+            <div className="flex items-center gap-3 text-xs text-slate-600 bg-slate-50 rounded-2xl p-4 border border-slate-100">
+              <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center shadow-sm text-slate-400 border border-slate-200">
+                 <User size={16} />
+              </div>
+              <div>
+                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">Executed By</p>
+                 <span className="font-bold text-slate-700">{movement.user}</span>
+              </div>
             </div>
           </div>
 
-          {/* Notes */}
+          {/* Notes Card */}
           {movement.notes && (
-            <div className="bg-blue-50/50 rounded-xl px-4 py-3 border border-blue-100">
-              <div className="flex items-center gap-2 text-blue-600 font-semibold text-xs mb-2"><FileText className="w-4 h-4" /> Notes</div>
-              <p className="text-slate-700 text-sm leading-relaxed">{movement.notes}</p>
+            <div className="bg-blue-50/50 rounded-2xl p-4 border border-blue-100/50">
+              <div className="flex items-center gap-2 text-blue-600 font-bold text-[10px] uppercase tracking-widest mb-2">
+                 <FileText size={14} /> Description / Reason
+              </div>
+              <p className="text-slate-700 text-xs leading-relaxed font-medium">{movement.notes}</p>
             </div>
           )}
 
-          {/* Movement history stub */}
-          <div>
-            <p className="text-xs text-slate-500 font-semibold uppercase tracking-widest mb-4">Movement Timeline</p>
-            <div className="relative pl-4">
-              {[
-                { label: "Record Created", time: movement.date, color: "bg-slate-300" },
-                { label: "In Review", time: movement.date, color: "bg-amber-400" },
-                { label: movement.status === "Completed" ? "Completed" : "Awaiting Approval", time: movement.date, color: movement.status === "Completed" ? "bg-emerald-500" : "bg-amber-400" },
-              ].map((ev, i) => (
-                <div key={i} className="flex items-start gap-3 mb-4 last:mb-0 relative">
-                  <div className={`w-2.5 h-2.5 rounded-full mt-1 shrink-0 ${ev.color} ring-4 ring-white relative z-10`} style={{ marginLeft: "-5px" }} />
-                  <div>
-                    <p className="text-slate-900 text-sm font-medium">{ev.label}</p>
-                    <p className="text-slate-500 text-xs mt-0.5">{fmt(ev.time)}</p>
-                  </div>
-                </div>
-              ))}
-              <div className="absolute left-[3px] top-2 bottom-4 w-px bg-slate-200 z-0" />
-            </div>
-          </div>
         </div>
 
         {/* Footer actions */}
+        <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/30 flex gap-3 sticky bottom-0">
+           <button 
+             onClick={onClose}
+             className="flex-1 h-10 rounded-xl bg-white border border-slate-200 text-slate-600 font-bold text-xs hover:bg-slate-50 transition-all shadow-sm"
+           >
+             Close View
+           </button>
+        </div>
 
       </div>
     </div>
@@ -417,66 +522,85 @@ export default function StockMovementPage() {
   useEffect(() => {
     const load = async () => {
       // 1. Fetch Purchases (Unified view)
-      const pRes = await getData(ENDPOINTS.PURCHASES, { view: "STOCKADJUSTMENT_VIEW", shop_id: SHOP_ID, limit: "50", offset: "1" });
+      const pRes = await getData(`${ENDPOINTS.PURCHASES}`, { view: "STOCKADJUSTMENT_VIEW", shop_id: SHOP_ID, limit: "50", offset: "1" });
       const pData = pRes?.data || pRes?.datas || (Array.isArray(pRes) ? pRes : []);
       const pMovements = purchaseToMovements(pData, "PURCHASE");
 
       // 2. Fetch Stock Adjustments
-      const adjRes = await getData(ENDPOINTS.S_ADJUSTMENTS, { view: "STOCKADJUSTMENT_VIEW", shop_id: SHOP_ID, limit: "50", offset: "1" });
+      const adjRes = await getData(`${ENDPOINTS.S_ADJUSTMENTS}/by/shop/${SHOP_ID}`, { view: "STOCKADJUSTMENT_VIEW", shop_id: SHOP_ID, limit: "50", offset: "1" });
       const aData = adjRes?.data || adjRes?.datas || (Array.isArray(adjRes) ? adjRes : []);
+      
       const adjMovements: Movement[] = aData.flatMap((a: any) => {
-        const d = a.datas || a;
-        // Some views return a products array, others return a single product in 'datas'
-        const products = (d?.products ?? d?.adjustment_products ?? a.products) as any[] | undefined;
+        const products = (a.products || []) as any[];
+        const dateStr = String(a.adjusted_date || a.created_at || new Date().toISOString());
 
-        if (products && Array.isArray(products) && products.length > 0) {
-          return products.map(prod => {
-            const dateStr = String(d?.date ?? a.date ?? a.created_at ?? new Date().toISOString());
-            const isDecrement = prod.type === 'DECREMENT' || prod.type === 'decrease' || prod.type === 'Decrement';
-            const qty = Number(prod?.quantity ?? 0);
-            return {
+        return products.flatMap(prod => {
+          const results: Movement[] = [];
+          const isDecrement = prod.type === 'DECREMENT';
+          const baseQty = Number(prod.stocks || 0);
+
+          if (prod.variants && prod.variants.length > 0) {
+            prod.variants.forEach((v: any) => {
+              if (v.batches && v.batches.length > 0) {
+                v.batches.forEach((b: any) => {
+                  results.push({
+                    id: a.id?.slice(0, 8).toUpperCase() || "ADJ",
+                    product: prod.name || "—",
+                    sku: b.barcode || v.sku || prod.barcode || (a.id?.slice(0, 8) || ""),
+                    type: "STOCK_ADJUSTMENT" as MovementType,
+                    qty: isDecrement ? -Number(b.stocks || v.stocks || baseQty) : Number(b.stocks || v.stocks || baseQty),
+                    source: "Stock",
+                    destination: "Adjusted",
+                    ref: String(a.ui_id || a.id?.slice(0, 8).toUpperCase() || "REF"),
+                    date: dateStr.includes("T") ? dateStr : dateStr + "T00:00:00",
+                    status: "Completed" as StatusType,
+                    user: String(a.added_by || "Admin"),
+                    notes: a.description || "",
+                    variant: v.name || "",
+                    batch: b.name || "",
+                    expiry_date: b.expiry_date,
+                    manufacturing_date: b.manufacturing_date,
+                    serial_numbers: Array.isArray(b.serial_numbers?.serial_numbers) ? b.serial_numbers.serial_numbers : (Array.isArray(v.serial_numbers?.serial_numbers) ? v.serial_numbers.serial_numbers : [])
+                  });
+                });
+              } else {
+                results.push({
+                  id: a.id?.slice(0, 8).toUpperCase() || "ADJ",
+                  product: prod.name || "—",
+                  sku: v.sku || prod.barcode || (a.id?.slice(0, 8) || ""),
+                  type: "STOCK_ADJUSTMENT" as MovementType,
+                  qty: isDecrement ? -Number(v.stocks || baseQty) : Number(v.stocks || baseQty),
+                  source: "Stock",
+                  destination: "Adjusted",
+                  ref: String(a.ui_id || a.id?.slice(0, 8).toUpperCase() || "REF"),
+                  date: dateStr.includes("T") ? dateStr : dateStr + "T00:00:00",
+                  status: "Completed" as StatusType,
+                  user: String(a.added_by || "Admin"),
+                  notes: a.description || "",
+                  variant: v.name || "",
+                  serial_numbers: Array.isArray(v.serial_numbers?.serial_numbers) ? v.serial_numbers.serial_numbers : []
+                });
+              }
+            });
+          } else {
+            results.push({
               id: a.id?.slice(0, 8).toUpperCase() || "ADJ",
-              product: String(prod?.product_name ?? prod?.name ?? "—"),
-              sku: String(prod?.barcode ?? (a.id?.slice(0, 8) || "")),
+              product: prod.name || "—",
+              sku: prod.barcode || (a.id?.slice(0, 8) || ""),
               type: "STOCK_ADJUSTMENT" as MovementType,
-              qty: isDecrement ? -qty : qty,
+              qty: isDecrement ? -baseQty : baseQty,
               source: "Stock",
               destination: "Adjusted",
-              ref: String(d?.referenceNumber ?? d?.reference_number ?? (a.id?.slice(0, 8).toUpperCase() || "REF")),
+              ref: String(a.ui_id || a.id?.slice(0, 8).toUpperCase() || "REF"),
               date: dateStr.includes("T") ? dateStr : dateStr + "T00:00:00",
               status: "Completed" as StatusType,
-              user: String(a.added_by || d?.added_by || "Admin"),
-              notes: prod.reason ? `Reason: ${prod.reason}` : (d?.reason || d?.notes || ""),
-              variant: prod.variant_name || prod.variant || prod.variant_id || prod.varient_id || "",
-              batch: prod.batch_name || prod.batch_id || "",
-              serial_numbers: Array.isArray(prod.serial_numbers) ? prod.serial_numbers : [],
-            };
-          });
-        } else if (d?.name || d?.barcode || a.barcode) {
-          // Handle single product record (flat view)
-          const dateStr = String(d?.date ?? a.date ?? a.created_at ?? new Date().toISOString());
-          const isDecrement = d?.type === 'DECREMENT' || d?.type === 'decrease' || d?.type === 'Decrement';
-          const qty = Math.abs(Number(d?.quantity ?? 0));
-          return [{
-            id: a.id?.slice(0, 8).toUpperCase() || "ADJ",
-            product: String(d?.name ?? d?.product_name ?? "—"),
-            sku: String(d?.barcode ?? d?.sku ?? (a.id?.slice(0, 8) || "")),
-            type: "STOCK_ADJUSTMENT" as MovementType,
-            qty: isDecrement ? -qty : qty,
-            source: "Stock",
-            destination: "Adjusted",
-            ref: String(d?.referenceNumber ?? d?.reference_number ?? (a.id?.slice(0, 8).toUpperCase() || "REF")),
-            date: dateStr.includes("T") ? dateStr : dateStr + "T00:00:00",
-            status: "Completed" as StatusType,
-            user: String(a.added_by || d?.added_by || "Admin"),
-            notes: d?.reason ? `Reason: ${d.reason}` : (d?.notes || d?.reason || ""),
-            variant: d?.variant_name || d?.variant || d?.variant_id || d?.varient_id || "",
-            batch: d?.batch_name || d?.batch_id || "",
-            serial_numbers: Array.isArray(d?.serial_numbers) ? d?.serial_numbers : [],
-          }];
-        }
-
-        return [];
+              user: String(a.added_by || "Admin"),
+              notes: a.description || "",
+              serial_numbers: Array.isArray(prod.serial_numbers?.serial_numbers) ? prod.serial_numbers.serial_numbers : []
+            });
+          }
+          return results;
+        });
       });
 
       setMovements([...pMovements, ...adjMovements]);
@@ -659,8 +783,8 @@ export default function StockMovementPage() {
                       No movements found matching your filters.
                     </td>
                   </tr>
-                ) : pageData.map((m) => (
-                  <tr key={m.id}
+                ) : pageData.map((m, idx) => (
+                  <tr key={`${m.id}-${idx}`}
                     className="group hover:bg-blue-50/30 transition-all cursor-pointer"
                     onClick={() => setSelected(m)}
                   >

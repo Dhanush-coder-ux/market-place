@@ -20,6 +20,7 @@ export interface ProductRecord {
 
 export interface SupplierRecord {
   id: string;
+  shop_id: string;
   ui_id: number;
   name: string;
   email?: string;
@@ -44,6 +45,7 @@ export interface SupplierRecord {
 // Employee API returns FLAT fields — no datas wrapper
 export interface EmployeeRecord {
   id: string;
+  shop_id: string;
   ui_id: number;
   name: string;
   email: string;
@@ -55,7 +57,10 @@ export interface EmployeeRecord {
   joined_date: string;
   datas?: {
     salary_rage?: number;
-    address?: Record<string, any>;
+    address?: {
+      full_address?: string;
+      zip_code?: string;
+    };
   };
   [key: string]: unknown;
 }
@@ -71,9 +76,7 @@ export interface CustomerRecord {
   is_active: boolean;
   datas?: {
     address?: {
-      street_address?: string;
-      city?: string;
-      state?: string;
+      full_address?: string;
       zip_code?: string;
     };
     additional_notes?: string;
@@ -120,6 +123,22 @@ export interface InventoryResponseVariant {
   datas?: Record<string, any>;
 }
 
+export interface InventoryBatch {
+  name: string;
+  expiry_date: string;
+  manufacturing_date: string;
+}
+
+export interface InventoryVariant {
+  name: string;
+  sell_price: number;
+  buy_price: number;
+  stocks: number;
+  serial_numbers?: string[];
+  batch?: InventoryBatch;
+  datas?: Record<string, any>;
+}
+
 export interface InventoryRecord {
   id: string;
   ui_id: number;
@@ -138,9 +157,9 @@ export interface InventoryRecord {
   has_variant: boolean;
   has_batch: boolean;
   has_serialno: boolean;
-  variants?: InventoryResponseVariant[];
-  batches?: InventoryBatchResponse[];
-  serial_number?: string[];
+  variants?: InventoryVariant[];
+  batch?: InventoryBatch;
+  serial_numbers?: string[];
 }
 
 export interface OrderRecord {

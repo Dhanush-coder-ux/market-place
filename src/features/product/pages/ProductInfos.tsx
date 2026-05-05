@@ -5,7 +5,7 @@ import {
   ChevronDown, ChevronRight, Layers, Tag, AlertTriangle,
   X, AlertCircle, Calendar, Hash
 } from "lucide-react";
-import { VariantRows, BatchCards } from "../../inventory/components/StockTree";
+import { VariantRows, BatchCards, SerialBadgeList } from "../../inventory/components/StockTree";
 import { useHeader } from "@/context/HeaderContext";
 import { useApi } from "@/context/ApiContext";
 import { useToast } from "@/context/ToastContext";
@@ -36,7 +36,6 @@ const columnLabels: Record<string, string> = {
   brand: "Brand",
   supplier: "Supplier",
   serial_number: "Serial Number",
-  hsn_code: "HSN Code",
 };
 
 const getColumnLabel = (key: string) => {
@@ -73,6 +72,13 @@ const ProductRow = React.memo(({
 }) => {
   const datas = (p.datas as any) || {};
 
+  const extractSerials = (val: any): string[] => {
+    if (!val) return [];
+    if (Array.isArray(val)) return val;
+    if (val.serial_numbers && Array.isArray(val.serial_numbers)) return val.serial_numbers;
+    return [];
+  };
+
   const parseData = (val: any) => {
     if (Array.isArray(val)) return val;
     if (typeof val === 'string') {
@@ -94,18 +100,24 @@ const ProductRow = React.memo(({
   const isExpandable = hasVariants || hasBatches;
 
   // --- Aggregation logic for badges ---
-  const serials = p.serial_number || [];
-  let totalSerials = serials.length;
+  const rootSerials = extractSerials(p.serial_number);
+  let totalSerials = rootSerials.length;
   let totalBatches = batches.length;
 
   if (hasVariants) {
     combinations.forEach((c: any) => {
       const cDatas = c.datas || {};
-      const cSerials = parseData(cDatas.serial_numbers || c.serial_numbers);
+      const cSerials = extractSerials(c.serial_numbers || cDatas.serial_numbers || (cDatas.datas && cDatas.datas.serial_numbers));
       totalSerials += cSerials.length;
 
       const cBatches = c.batches || [];
       totalBatches += cBatches.length;
+      
+      // Also check if batches within variants have serials
+      cBatches.forEach((cb: any) => {
+        const cbSerials = extractSerials(cb.serial_numbers || (cb.datas && cb.datas.serial_numbers));
+        totalSerials += cbSerials.length;
+      });
     });
   }
 
@@ -224,6 +236,33 @@ const ProductRow = React.memo(({
             );
           }
 
+          if (key === "serial_number") {
+            const sList = extractSerials(p.serial_number);
+            if (sList.length === 0 && totalSerials > 0) {
+              return (
+                <td key={key} className="px-6 py-4 whitespace-nowrap">
+                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest bg-slate-50 px-2 py-1 rounded-md border border-slate-100">
+                    See Variants
+                  </span>
+                </td>
+              );
+            }
+            return (
+              <td key={key} className="px-6 py-4 whitespace-nowrap">
+                {sList.length > 0 ? (
+                  <div className="flex items-center gap-1.5">
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-mono font-bold bg-purple-50 text-purple-600 border border-purple-100">
+                      {sList[0]}
+                    </span>
+                    {sList.length > 1 && (
+                      <span className="text-[10px] font-bold text-purple-400">+{sList.length - 1} more</span>
+                    )}
+                  </div>
+                ) : <span className="text-slate-300">—</span>}
+              </td>
+            );
+          }
+
           if (key === "category" || key === "supplier") {
             // Only render once if both are selected, but we need to handle the loop
             if (key === "category" && selectedKeys.includes("supplier")) {
@@ -284,7 +323,20 @@ const ProductRow = React.memo(({
         <tr key={`${p.id}-expand`} className="bg-slate-50/20">
           <td colSpan={selectedKeys.length + 3} className="px-0 py-0 border-b border-slate-100">
             {/* Responsive padding: large on desktop to align with text, small on mobile to save space */}
-            <div className="md:pl-[88px] pl-4 pr-4 sm:pr-6 py-2">
+            <div className="md:pl-[88px] pl-4 pr-4 sm:pr-6 py-4">
+              {!hasVariants && rootSerials.length > 0 && (
+                <div className="mb-6 bg-purple-50/30 border border-purple-100/50 p-4 rounded-2xl">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="w-6 h-6 rounded-lg bg-purple-100 flex items-center justify-center text-purple-600">
+                      <Hash size={12} />
+                    </div>
+                    <span className="text-[11px] font-black uppercase text-slate-800 tracking-widest">Product Serial Numbers</span>
+                    <span className="ml-auto text-[10px] font-bold bg-white px-2 py-0.5 rounded-full border border-purple-100 text-purple-600">{rootSerials.length}</span>
+                  </div>
+                  <SerialBadgeList serials={rootSerials} title={`Product Serials: ${p.name}`} />
+                </div>
+              )}
+
               {hasVariants && (
                 <VariantRows
                   combinations={combinations}
@@ -346,7 +398,7 @@ const ProductInfos = () => {
     const params: Record<string, string> = { shop_id: SHOP_ID, limit: "100", offset: "1" };
     if (searchTerm) params.q = searchTerm;
 
-    getData(ENDPOINTS.INVENTORIES, params).then((res) => {
+    getData(`${ENDPOINTS.INVENTORIES}/by/shop/${SHOP_ID}`, params).then((res) => {
       if (res) {
         const data: InventoryRecord[] = Array.isArray(res.data) ? res.data : [res.data];
         setProducts(data);
@@ -371,7 +423,7 @@ const ProductInfos = () => {
   const handleDelete = async () => {
     if (!productToDelete) return;
     try {
-      await deleteData(`${ENDPOINTS.INVENTORIES}/${productToDelete.id}/${SHOP_ID}`);
+      await deleteData(`${ENDPOINTS.INVENTORIES}/${SHOP_ID}/${productToDelete.id}`);
       showToast("Product deleted successfully", "success");
       setRefreshKey((prev: number) => prev + 1);
     } catch {

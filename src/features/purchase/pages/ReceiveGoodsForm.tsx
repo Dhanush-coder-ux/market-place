@@ -6,7 +6,9 @@ import {
   CheckCircle2, ChevronDown, BarChart3, RefreshCw, Truck,
   PackageCheck,
   Zap,
-  X
+  X,
+  Package,
+  CalendarDays
 } from 'lucide-react';
 import { GradientButton } from '@/components/ui/GradientButton';
 import { useApi } from '@/context/ApiContext';
@@ -23,7 +25,7 @@ type ReceiveStatus = "Pending" | "Partial" | "Completed";
 
 type POProduct = {
   id: string;
-  product_id: string; // for API payload
+  product_id: string;
   variant_id?: string;
   name: string;
   sku: string;
@@ -31,21 +33,28 @@ type POProduct = {
   unit: string;
   orderedQty: number;
   previouslyReceivedQty: number;
-  receivedQty: number | "";   // what user enters now
+  receivedQty: number | "";
   costPrice: number;
   batchTracking: boolean;
   batchNum: string;
   manufacturingDate: string;
   expiryDate: string;
   remarks: string;
-  unit_price: number; // for financial math
-  remaining: number; // for form state
+  unit_price: number;
+  remaining: number;
   receiveNow: number | "";
   reason: string;
   customReason: string;
   sellPrice: number;
   serialTracking: boolean;
   serialNumbers: string[];
+  // Extended tracking
+  has_batch: boolean;
+  has_serialno: boolean;
+  batch_id: string | null;
+  serialno_id: string | null;
+  isNewBatch: boolean;
+  availableBatches: any[];
 }
 
 interface POSummary {
@@ -68,17 +77,29 @@ const WAREHOUSES = ["Main Warehouse", "Secondary Warehouse", "Shop Floor"];
 /** Fetch PO reference list for SearchSelect */
 const fetchPOOptions = async (query: string, getData: Function) => {
   try {
-    const res = await getData(`${ENDPOINTS.PURCHASES}?search=${encodeURIComponent(query)}&view=PO_VIEW`);
-    const list: any[] = res?.data || res?.datas || [];
-    return list.map((po: any) => ({
-      id: po.id,
-      label: po.reference_no || po.referenceNo || po.id,
-      value: po.reference_no || po.id,
-      supplierName: po.supplier_name || "",
-      date: po.date || "",
-      status: po.status || "Pending",
-      totalItems: po.products?.length || 0,
-    }));
+    const res = await getData(`${ENDPOINTS.PURCHASES}/by/${SHOP_ID}/${query}`);
+    let list: any[] = [];
+    if (res?.data) {
+      list = Array.isArray(res.data) ? res.data : [res.data];
+    } else if (res?.datas) {
+      list = Array.isArray(res.datas) ? res.datas : [res.datas];
+    }
+    
+    return list.map((po: any) => {
+      const refNo = po.datas?.purchaseDetails?.referenceNo || po.reference_no || po.id;
+      const productNames = po.products?.map((p: any) => p.name).join(", ") || "";
+      const label = productNames ? `${refNo} (${productNames})` : refNo;
+      
+      return {
+        id: po.id,
+        label: label,
+        value: refNo,
+        supplierName: po.datas?.supplier_name || po.supplier_name || "",
+        date: po.datas?.purchaseDetails?.date || po.date || "",
+        status: po.status || "Pending",
+        totalItems: po.products?.length || 0,
+      };
+    });
   } catch {
     return [];
   }
@@ -179,7 +200,7 @@ const QtyInput = ({
 const ReceiveGoodForm = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { getData, putData } = useApi();
+  const { getData, putData,postData } = useApi();
   const { setBottomActions } = useHeader();
   const { showToast } = useToast();
 
@@ -202,6 +223,14 @@ const ReceiveGoodForm = () => {
     notes: ""
   });
 
+  const [batchModal, setBatchModal] = useState<{
+    isOpen: boolean;
+    itemId: string;
+    batches: any[];
+    productName: string;
+    variantName: string;
+  }>({ isOpen: false, itemId: "", batches: [], productName: "", variantName: "" });
+
   // Restore PO from URL
   useEffect(() => {
     const poId = searchParams.get("poId");
@@ -211,48 +240,81 @@ const ReceiveGoodForm = () => {
   const loadPO = useCallback(async (poId: string) => {
     setLoadingPO(true);
     try {
-      const res = await getData(`${ENDPOINTS.PURCHASES}/${poId}`);
+      const res = await getData(`${ENDPOINTS.PURCHASES}/by/${SHOP_ID}/${poId}`);
       const data = res?.data || res?.datas;
       if (!data) { showToast("PO not found", "error"); return; }
 
       setPOSummary({
         id:            data.id || poId,
-        referenceNo:   data.reference_no || data.referenceNo || poId,
-        supplierName:  data.supplier_name || "",
+        referenceNo:   data.datas?.purchaseDetails?.referenceNo || data.reference_no || data.referenceNo || poId,
+        supplierName:  data.datas?.supplier_name || data.supplier_name || "",
         supplierId:    data.supplier_id   || "",
-        date:          data.date          || "",
-        status:        (data.status as ReceiveStatus) || "Pending",
+        date:          data.datas?.purchaseDetails?.date || data.date || "",
+        status:        (data.datas?.status as ReceiveStatus) || (data.status as ReceiveStatus) || "Pending",
         totalItems:    data.products?.length || 0,
       });
 
       const mapped: POProduct[] = (data.products || []).map((p: any) => ({
         id:                   p.id || crypto.randomUUID(),
         product_id:           p.inventory_id || p.product_id || p.id,
-        variant_id:           p.varient_id || p.variant_id || (p.datas && (p.datas.varient_id || p.datas.variant_id)) || null,
+        variant_id:           p.variant_id || p.varient_id || (p.variants && p.variants.length > 0 ? p.variants[0].id : null),
         name:                 p.name || "",
         sku:                  p.barcode || p.sku || "",
         variant:              p.variant || "",
         unit:                 p.unit || "pc",
-        orderedQty:           Number(p.quantity) || 0,
-        previouslyReceivedQty: Number(p.received_qty) || 0,
+        orderedQty:           Number(p.stocks || p.quantity) || 0,
+        previouslyReceivedQty: Number(p.received_stocks || p.received_qty) || 0,
         receivedQty:          "",
         costPrice:            Number(p.buy_price || p.costPrice) || 0,
         unit_price:           Number(p.buy_price || p.costPrice) || 0,
-        batchTracking:        !!p.batch_tracking,
-        batchNum:             p.batch_number || "",
-        manufacturingDate:    p.manufacturing_date || "",
-        expiryDate:           p.expiry_date || "",
+        batchTracking:        !!(p.has_batch || p.batch_tracking),
+        batchNum:             "",
+        manufacturingDate:    "",
+        expiryDate:           "",
         remarks:              "",
-        remaining:            (Number(p.quantity) || 0) - (Number(p.received_qty) || 0),
+        remaining:            (Number(p.stocks) || 0) - (Number(p.received_qty) || 0),
         receiveNow:           "",
         reason:               "",
         customReason:         "",
         sellPrice:            Number(p.sell_price || p.sellPrice) || 0,
-        serialTracking:       !!(p.serial_tracking || p.has_serialno_tracking),
+        serialTracking:       !!(p.has_serialno || p.serial_tracking),
         serialNumbers:        [],
+        has_batch:            !!(p.has_batch || p.batch_tracking),
+        has_serialno:         !!(p.has_serialno || p.serial_tracking),
+        batch_id:             p.batch_id || null,
+        serialno_id:          p.serialno_id || p.serial_number?.id || null,
+        isNewBatch:           false,
+        availableBatches:     [],
       }));
 
-      setItems(mapped);
+      // Fetch full inventory data per unique inventory_id to populate available batches
+      const uniqueIds = [...new Set(mapped.map(m => m.product_id).filter(Boolean))];
+      const invFetches = await Promise.all(
+        uniqueIds.map(async (invId) => {
+          try {
+            const r = await getData(`${ENDPOINTS.INVENTORIES}/by/${SHOP_ID}/${invId}`);
+            return { invId, data: r?.data || null };
+          } catch { return { invId, data: null }; }
+        })
+      );
+      const invMap: Record<string, any> = {};
+      invFetches.forEach(({ invId, data: inv }) => { if (inv) invMap[invId] = inv; });
+
+      const enriched = mapped.map(m => {
+        const inv = invMap[m.product_id];
+        if (!inv) return m;
+        // Find batches: if variant, look inside that variant; else root batches
+        let batches: any[] = [];
+        if (m.variant_id && inv.variants) {
+          const v = inv.variants.find((v: any) => v.id === m.variant_id);
+          batches = v?.batches ?? [];
+        } else {
+          batches = inv.batches ?? [];
+        }
+        return { ...m, availableBatches: batches };
+      });
+
+      setItems(enriched);
       setSearchParams(prev => { prev.set("poId", data.id || poId); return prev; }, { replace: true });
     } catch {
       showToast("Failed to load PO", "error");
@@ -311,14 +373,48 @@ const ReceiveGoodForm = () => {
     if (!poSummary) return;
     setSubmitting(true);
     try {
+      const productLines = items.filter(p => Number(p.receivedQty) > 0).map(p => ({
+        inventory_id: p.product_id || p.id,
+        variant_id: p.variant_id || null,
+        barcode: p.sku,
+        name: p.name,
+        stocks: p.orderedQty,
+        received_stocks: Number(p.receivedQty),
+        buy_price: p.costPrice,
+        sell_price: p.sellPrice,
+        margin: 0,
+        // Batch: send batch_id if existing, or batch object if new
+        ...(p.has_batch ? (
+          p.batch_id && !p.isNewBatch
+            ? { batch_id: p.batch_id }
+            : {
+                batch: {
+                  name: p.batchNum,
+                  manufacturing_date: p.manufacturingDate || null,
+                  expiry_date: p.expiryDate || null,
+                }
+              }
+        ) : {}),
+        // Serials: only if has_serialno and user entered some
+        ...(p.has_serialno && p.serialNumbers.length > 0 ? { serial_numbers: p.serialNumbers, serialno_id: p.serialno_id || undefined } : {}),
+      }));
+
       const payload = {
+        shop_id: SHOP_ID,
+        type: "PO_UPDATE",
+        purchase_id: poSummary.id,
+        supplier_id: poSummary.supplierId,
+        calculations: {
+          divided_by: "NONE",
+          gst: { type: "inclusive", value: 18, registered: true }
+        },
+        additional_charges: {
+          delivery_charge: 0,
+          other_charge: 0,
+        },
         datas: {
-          shop_id: SHOP_ID,
-          type: "PO_UPDATE",
-          id: poSummary.id,
-          po_reference: poSummary.referenceNo,
-          supplier_id: poSummary.supplierId,
           supplier_name: poSummary.supplierName,
+          po_reference: poSummary.referenceNo,
           receipt_date: receiptDate,
           invoice_no: invoiceNo,
           status: liveStatus,
@@ -327,34 +423,13 @@ const ReceiveGoodForm = () => {
           received_by: globalData.received_by,
           payment: {
             method: paymentMethod,
-            amount_paid: Number(amountPaid) || 0,
+            amountPaid: Number(amountPaid) || 0,
           },
-          products: items.filter(p => Number(p.receivedQty) > 0).map(p => ({
-            inventory_id: p.product_id || p.id,
-            product_id: p.product_id || p.id,
-            varient_id: p.variant_id || null,
-            barcode: p.sku,
-            name: p.name,
-            quantity: p.orderedQty,
-            received_qty: Number(p.receivedQty),
-            buy_price: p.costPrice,
-            sell_price: p.sellPrice,
-            batch_name: p.batchNum || null,
-            batches: {
-              batch_number: p.batchNum,
-              manufacturing_date: p.manufacturingDate,
-              expiry_date: p.expiryDate,
-              remarks: p.remarks,
-            },
-            serial_numbers: p.serialNumbers,
-            ...(Number(p.receivedQty) < (p.orderedQty - p.previouslyReceivedQty) ? { 
-              reason: p.reason === "Other" ? p.customReason : p.reason 
-            } : {})
-          })),
-        }
+        },
+        products: productLines,
       };
 
-      const res = await putData(ENDPOINTS.PURCHASES, payload);
+      const res = await postData(ENDPOINTS.PURCHASES, payload);
       if (res) {
         showToast("Receipt recorded successfully", "success");
         navigate("/po-grn");
@@ -603,62 +678,77 @@ const ReceiveGoodForm = () => {
                           </div>
                         </div>
 
-                        {/* Expanded: batch + remarks */}
+                        {/* Expanded: batch + serial */}
                         {isExpanded && (
                           <div className="px-6 py-4 bg-[#F8FAFC] border-t border-[#F1F5F9] space-y-4">
-                            {item.batchTracking && (
-                              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                                <div className="flex items-center gap-2 md:col-span-4 mb-1">
+
+                            {/* Batch Selection */}
+                            {item.has_batch && (
+                              <div>
+                                <div className="flex items-center gap-2 mb-2">
                                   <div className="w-5 h-5 rounded-md bg-amber-50 flex items-center justify-center border border-amber-100">
                                     <BarChart3 size={11} className="text-amber-600" />
                                   </div>
-                                  <span className="text-xs font-semibold text-amber-700 uppercase tracking-wide">Batch Information</span>
+                                  <span className="text-xs font-semibold text-amber-700 uppercase tracking-wide">Batch</span>
+                                  {item.batch_id && !item.isNewBatch && (
+                                    <span className="text-[10px] px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full font-bold">
+                                      {item.availableBatches.find((b: any) => b.id === item.batch_id)?.name || 'Selected'}
+                                    </span>
+                                  )}
+                                  {item.isNewBatch && (
+                                    <span className="text-[10px] px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full font-bold">New Batch</span>
+                                  )}
                                 </div>
-                                <Input
-                                  label="Batch Number *"
-                                  placeholder="BATCH-001"
-                                  value={item.batchNum}
-                                  onChange={(e) => updateItem(item.id, { batchNum: e.target.value })}
-                                  className="!h-8 !text-xs !border-[#E2E8F0]"
-                                />
-                                <Input
-                                  label="Manufacturing Date"
-                                  type="date"
-                                  value={item.manufacturingDate}
-                                  onChange={(e) => updateItem(item.id, { manufacturingDate: e.target.value })}
-                                  className="!h-8 !text-xs !border-[#E2E8F0]"
-                                />
-                                <Input
-                                  label="Expiry Date"
-                                  type="date"
-                                  value={item.expiryDate}
-                                  onChange={(e) => updateItem(item.id, { expiryDate: e.target.value })}
-                                  className="!h-8 !text-xs !border-[#E2E8F0]"
-                                />
-                                <Input
-                                  label="Remarks"
-                                  placeholder="Optional note…"
-                                  value={item.remarks}
-                                  onChange={(e) => updateItem(item.id, { remarks: e.target.value })}
-                                  className="!h-8 !text-xs !border-[#E2E8F0]"
-                                />
+
+                                {/* Batch Trigger */}
+                                <div className="mb-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => setBatchModal({ isOpen: true, itemId: item.id, batches: item.availableBatches || [], productName: item.name, variantName: item.variant })}
+                                    className="px-4 py-2 rounded-xl border border-amber-200 text-amber-700 font-bold text-xs hover:bg-amber-50 hover:border-amber-300 transition-all bg-white shadow-sm flex items-center gap-2"
+                                  >
+                                    <Package size={14} />
+                                    {item.batch_id && !item.isNewBatch ? "Change Batch" : item.isNewBatch ? "Select from Existing" : "Select Batch"}
+                                  </button>
+                                </div>
+
+                                {/* New batch form fields */}
+                                {item.isNewBatch && (
+                                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-2">
+                                    <Input label="Batch Number *" placeholder="BATCH-001"
+                                      value={item.batchNum}
+                                      onChange={(e) => updateItem(item.id, { batchNum: e.target.value })}
+                                      className="!h-8 !text-xs !border-[#E2E8F0]"
+                                    />
+                                    <Input label="Manufacturing Date" type="date"
+                                      value={item.manufacturingDate}
+                                      onChange={(e) => updateItem(item.id, { manufacturingDate: e.target.value })}
+                                      className="!h-8 !text-xs !border-[#E2E8F0]"
+                                    />
+                                    <Input label="Expiry Date" type="date"
+                                      value={item.expiryDate}
+                                      onChange={(e) => updateItem(item.id, { expiryDate: e.target.value })}
+                                      className="!h-8 !text-xs !border-[#E2E8F0]"
+                                    />
+                                  </div>
+                                )}
                               </div>
                             )}
 
-                            {item.serialTracking && (
+                            {/* Serial Numbers */}
+                            {item.has_serialno && (
                               <div className="bg-white p-4 rounded-xl border border-violet-100 shadow-sm">
                                 <div className="flex items-center justify-between mb-3">
                                   <div className="flex items-center gap-2">
                                     <div className="w-5 h-5 rounded-md bg-violet-50 flex items-center justify-center border border-violet-100">
                                       <Zap size={11} className="text-violet-600" />
                                     </div>
-                                    <span className="text-xs font-semibold text-violet-700 uppercase tracking-wide">Serial Numbers Management</span>
+                                    <span className="text-xs font-semibold text-violet-700 uppercase tracking-wide">Serial Numbers</span>
                                   </div>
                                   <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${item.serialNumbers.length === Number(item.receivedQty) ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
                                     {item.serialNumbers.length} / {item.receivedQty || 0} Entered
                                   </span>
                                 </div>
-
                                 <div className="flex flex-wrap gap-2 min-h-[42px] p-2 bg-slate-50/50 border border-slate-100 rounded-lg">
                                   {item.serialNumbers.map((s, idx) => (
                                     <span key={idx} className="flex items-center gap-1.5 px-2 py-1 bg-white border border-violet-200 text-violet-700 text-[10px] font-bold rounded-md shadow-sm">
@@ -671,7 +761,7 @@ const ReceiveGoodForm = () => {
                                   {item.serialNumbers.length < (Number(item.receivedQty) || 0) && (
                                     <input
                                       type="text"
-                                      placeholder="Type and press Enter/Comma..."
+                                      placeholder="Type serial and press Enter…"
                                       className="flex-1 bg-transparent border-none outline-none text-xs min-w-[150px]"
                                       onKeyDown={(e) => {
                                         if (e.key === 'Enter' || e.key === ',') {
@@ -689,10 +779,9 @@ const ReceiveGoodForm = () => {
                               </div>
                             )}
 
-                            {!item.batchTracking && !item.serialTracking && (
-                              <Input
-                                label="Remarks"
-                                placeholder="Optional note about this item…"
+                            {/* Remarks (always) */}
+                            {!item.has_batch && !item.has_serialno && (
+                              <Input label="Remarks" placeholder="Optional note about this item…"
                                 value={item.remarks}
                                 onChange={(e) => updateItem(item.id, { remarks: e.target.value })}
                                 className="!h-8 !text-xs !border-[#E2E8F0]"
@@ -825,6 +914,88 @@ const ReceiveGoodForm = () => {
           </div>
         </div>
       </div>
+
+      {/* Batch Modal */}
+      {batchModal.isOpen && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col border border-slate-200 animate-in zoom-in-95 duration-200">
+            <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center bg-amber-50/30">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-amber-100 flex items-center justify-center text-amber-600 border border-amber-200">
+                  <Package size={18} />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-800 text-sm">Select Batch</h3>
+                  <p className="text-[10px] text-slate-500 mt-0.5">
+                    {batchModal.productName} {batchModal.variantName ? `(${batchModal.variantName})` : ""}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setBatchModal({ isOpen: false, itemId: "", batches: [], productName: "", variantName: "" })}
+                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="p-6 max-h-[60vh] overflow-y-auto space-y-3">
+              <button
+                onClick={() => {
+                   updateItem(batchModal.itemId, { isNewBatch: true, batch_id: null, batchNum: "", manufacturingDate: "", expiryDate: "" });
+                   setBatchModal({ isOpen: false, itemId: "", batches: [], productName: "", variantName: "" });
+                }}
+                className="w-full p-4 rounded-2xl border-2 border-dashed border-slate-200 text-slate-500 hover:border-amber-400 hover:text-amber-600 hover:bg-amber-50 transition-all flex flex-col items-center gap-1 group"
+              >
+                <Plus size={20} className="group-hover:scale-110 transition-transform" />
+                <span className="text-xs font-bold uppercase tracking-widest">Create New Batch</span>
+              </button>
+
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center" aria-hidden="true">
+                  <div className="w-full border-t border-slate-100"></div>
+                </div>
+                <div className="relative flex justify-center text-[10px] uppercase font-bold text-slate-300">
+                  <span className="bg-white px-2">Existing Batches</span>
+                </div>
+              </div>
+
+              {batchModal.batches.length > 0 ? (
+                <div className="grid grid-cols-1 gap-2">
+                  {batchModal.batches.map((batch: any, i: number) => (
+                    <button
+                      key={i}
+                      onClick={() => {
+                        updateItem(batchModal.itemId, { batch_id: batch.id, serialno_id: batch.serial_numbers?.id || null, batchNum: batch.name, isNewBatch: false, manufacturingDate: batch.manufacturing_date?.slice(0,10) || "", expiryDate: batch.expiry_date?.slice(0,10) || "" });
+                        setBatchModal({ isOpen: false, itemId: "", batches: [], productName: "", variantName: "" });
+                      }}
+                      className="flex items-center justify-between p-4 rounded-2xl border border-slate-200 bg-white hover:border-amber-300 hover:shadow-md transition-all text-left group"
+                    >
+                      <div className="space-y-1">
+                        <p className="text-sm font-bold text-slate-800 group-hover:text-amber-700 transition-colors">
+                          {batch.name || batch.batch_number}
+                        </p>
+                        <div className="flex items-center gap-3 text-[10px] text-slate-400 font-medium">
+                          <span className="flex items-center gap-1"><CalendarDays size={10} /> Mfg: {(batch.manufacturing_date || batch.mfg_date) ? new Date(batch.manufacturing_date || batch.mfg_date).toLocaleDateString() : 'N/A'}</span>
+                          <span className="flex items-center gap-1"><Clock size={10} className="text-rose-400" /> Exp: {batch.expiry_date ? new Date(batch.expiry_date).toLocaleDateString() : 'N/A'}</span>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">In Stock</p>
+                        <p className="text-xs font-black text-slate-700">{batch.stocks || 0} pcs</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-6">
+                  <p className="text-xs text-slate-400 font-medium italic">No existing batches found</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

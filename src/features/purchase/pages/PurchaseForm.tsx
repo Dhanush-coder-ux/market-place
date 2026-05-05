@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import {
   Save,
@@ -9,11 +9,7 @@ import {
   PackageOpen,
   Bookmark,
   Mail,
-  User,
-  X,
-  CheckCircle2,
-  ChevronRight,
-  ChevronLeft
+  User
 } from "lucide-react";
 
 import Input from "@/components/ui/Input";
@@ -52,6 +48,8 @@ export interface ProductItem {
   serialTracking: boolean;
   serialNumbers: string;
   batchNum: string;
+  batch_id?: string;
+  serialno_id?: string;
   sku: string;
   variant: string;
   size: string;
@@ -84,12 +82,17 @@ const PurchaseForm = () => {
   const defaultProductRow: ProductItem = {
     id: crypto.randomUUID(), name: "", quantity: "", costPrice: "", sellingPrice: "",
     marginPercent: "", marginAmount: "", marginType: "percent",
-    unit: "pc", taxGst: 18, storageLoc: "", reorderPoint: "", expiryDate: "", manufacturingDate: "", batchTracking: false, serialTracking: false, serialNumbers: "", batchNum: "", sku: "", variant: "", size: ""
+    unit: "pc", taxGst: 18, storageLoc: "", reorderPoint: "", expiryDate: "", manufacturingDate: "", batchTracking: false, serialTracking: false, serialNumbers: "", batchNum: "", batch_id: "", serialno_id: "", sku: "", variant: "", size: ""
   };
 
   const [products, setProducts] = useState<ProductItem[]>([defaultProductRow]);
 
   const [charges, setCharges] = useState({ transport: "" as number | "", other: "" as number | "" });
+  const [purchaseType, setPurchaseType] = useState<"DIRECT" | "PO_CREATE" | "PO_UPDATE" | "PRODUCTION">(() => {
+    const type = searchParams.get("type");
+    return (type as any) || "DIRECT";
+  });
+  const [purchaseId, setPurchaseId] = useState<string | null>(null);
   const [payment, setPayment] = useState({ method: "Cash" as PaymentMethod, amountPaid: "" as number | "" });
   const [costMethod, setCostMethod] = useState("None");
   const [supplierDetails, setSupplierDetails] = useState<any>(null);
@@ -146,6 +149,8 @@ const PurchaseForm = () => {
             date: data.date || new Date().toISOString().split("T")[0],
             referenceNo: data.reference_no || "",
           });
+          setPurchaseType(data.type || "DIRECT");
+          setPurchaseId(data.id);
           setProducts(data.products.map((p: any) => ({
             id: p.id || Math.random().toString(),
             name: p.name,
@@ -256,6 +261,25 @@ const PurchaseForm = () => {
       return;
     }
 
+    // 💡 Strict validation for GRN/Direct
+    if (purchaseType !== "PO_CREATE") {
+      const missingBatch = products.find(p => p.batchTracking && !p.batchNum);
+      if (missingBatch) {
+        showToast(`Product "${missingBatch.name}" requires a batch number.`, "error");
+        return;
+      }
+      
+      const missingSerials = products.find(p => {
+        if (!p.serialTracking) return false;
+        const count = p.serialNumbers?.split(",").filter((s: string) => s.trim()).length || 0;
+        return count < (Number(p.quantity) || 0);
+      });
+      if (missingSerials) {
+        showToast(`Product "${missingSerials.name}" requires ${missingSerials.quantity} serial numbers.`, "error");
+        return;
+      }
+    }
+
     setSubmitting(true);
     try {
       const transformedProducts = products.map((p) => {
@@ -282,49 +306,59 @@ const PurchaseForm = () => {
         }
 
         return {
-          inventory_id: p.inventory_id || (p.id.length > 10 ? p.id : undefined),
-          varient_id: p.variant_id,
+          inventory_id: p.inventory_id,
+          variant_id: p.variant_id,
           name: p.name,
           barcode: p.sku,
-          quantity: q,
-          received_qty: q,
+          stocks: q,
+          received_stocks: q,
           buy_price: baseCost,
           sell_price: Number(finalSellPrice.toFixed(2)),
-          unit: p.unit || "pc",
-          gst: Number(p.taxGst) || 0,
-          batch_tracking: p.batchTracking,
-          serial_tracking: p.serialTracking,
-          batch_number: p.batchNum,
-          manufacturing_date: p.manufacturingDate,
-          expiry_date: p.expiryDate,
-          batches: {
-            batch_number: p.batchNum,
-            quantity: q,
-            manufacturing_date: p.manufacturingDate,
-            expiry_date: p.expiryDate
-          },
+          margin: Number(p.marginPercent) || 0,
+          batch_id: p.batch_id,
+          serialno_id: p.serialno_id,
           serial_numbers: p.serialNumbers ? p.serialNumbers.split(",").map(s => s.trim()).filter(Boolean) : [],
-          variant: p.variant,
+          batch: (!p.batch_id && p.batchTracking && p.batchNum) ? {
+            name: p.batchNum,
+            manufacturing_date: p.manufacturingDate || new Date().toISOString(),
+            expiry_date: p.expiryDate || new Date().toISOString()
+          } : undefined,
         };
       });
 
+      const costMethodMap: Record<string, any> = {
+        "None": "NONE",
+        "By Unit": "BY_QUANTITY",
+        "By Value": "BY_VALUE",
+        "Equally": "BY_EQUAL"
+      };
+
       const payload = {
+        shop_id: SHOP_ID,
+        type: purchaseType,
+        purchase_id: purchaseId,
+        supplier_id: supplierDetails?.id || "SUP_" + purchaseDetails.supplier.substring(0, 3).toUpperCase(),
+        calculations: {
+           divided_by: costMethodMap[costMethod] || "NONE",
+           gst: {
+              type: "inclusive",
+              value: 18,
+              registered: true
+           }
+        },
+        additional_charges: {
+           delivery_charge: Number(charges.transport) || 0,
+           other_charge: Number(charges.other) || 0
+        },
         datas: {
-          shop_id: SHOP_ID,
-          type: "DIRECT",
-          supplier_id: supplierDetails?.id || "SUP_" + purchaseDetails.supplier.substring(0, 3).toUpperCase(),
           supplier_name: supplierDetails?.name || purchaseDetails.supplier,
           purchaseDetails: { ...purchaseDetails },
-          charges: {
-            transport: Number(charges.transport) || 0,
-            other: Number(charges.other) || 0
-          },
           payment: {
             method: payment.method,
             amountPaid: Number(payment.amountPaid) || 0
           },
-          products: transformedProducts,
-        }
+        },
+        products: transformedProducts,
       };
 
       let res;
@@ -402,6 +436,7 @@ const PurchaseForm = () => {
                     <h2 className="text-sm font-black text-slate-800 uppercase tracking-widest">Purchase Details</h2>
                     <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">Basic information & supplier</p>
                   </div>
+                  
                 </div>
 
                 <div className="p-8 grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -493,7 +528,7 @@ const PurchaseForm = () => {
                 addProduct={addProduct}
                 removeProduct={removeProduct}
                 type="PURCHASE"
-                // 💡 Triggers the On-The-Fly Product Modal
+                purchaseType={purchaseType}
                 onAddNewProduct={handleAddNewProduct}
               />
             </div>

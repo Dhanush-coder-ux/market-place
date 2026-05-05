@@ -2,7 +2,8 @@ import React, { useState, useMemo, useEffect } from "react";
 import {
   Package, DollarSign, BarChart2, Save, ChevronDown, Hash,
   Cpu, AlertCircle, RefreshCw, ScanLine,
-  Layers, Zap, Bookmark, X, Plus, Trash2, CheckCircle2, ChevronLeft, ChevronRight
+  Layers, Zap, Bookmark, X, Plus, Trash2, CheckCircle2, ChevronLeft, ChevronRight,
+  Calendar
 } from "lucide-react";
 import { GradientButton } from "@/components/ui/GradientButton";
 import { useApi } from "@/context/ApiContext";
@@ -46,15 +47,16 @@ type FormData = {
   sell_price: string;
   mrp: string;
   gst: string;
-  hsn: string;
   supplier: string;
   opening_stock: string;
   reorder_point: string;
-  max_stock: string;
   location: string;
   has_variants: boolean;
   batch_tracking: boolean;
   serial_tracking: boolean;
+  batch_name: string;
+  mfg_date: string;
+  exp_date: string;
 };
 
 interface CategoryConfig {
@@ -258,15 +260,16 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
     sell_price: (propInitialData.selling_price as string) || "",
     mrp: (propInitialData.mrp as string) || "",
     gst: (propInitialData.gst as string) || "18%",
-    hsn: (propInitialData.hsn as string) || "",
     supplier: (propInitialData.supplier as string) || "",
     opening_stock: (propInitialData.opening_stock as string) || "",
     reorder_point: (propInitialData.reorder_point as string) || "5",
-    max_stock: (propInitialData.max_stock as string) || "",
     location: (propInitialData.location as string) || "",
     has_variants: false,
     batch_tracking: (propInitialData.batch_tracking as boolean) || false,
     serial_tracking: (propInitialData.serial_tracking as boolean) || false,
+    batch_name: "",
+    mfg_date: "",
+    exp_date: "",
   });
 
   const [variantTypes, setVariantTypes] = useState<VariantType[]>([]);
@@ -312,12 +315,12 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
       </div>
     );
     return () => setBottomActions(null);
-  }, [setBottomActions, isLoading, id, form, variantTypes, combinations]);
+  }, [setBottomActions, isLoading, id, form, variantTypes, combinations, baseSerials, supplierDetails]);
 
   useEffect(() => {
     if (id) {
       const fetchProduct = async () => {
-        const res = await getData(`${ENDPOINTS.INVENTORIES}/by/${id}/${SHOP_ID}`);
+        const res = await getData(`${ENDPOINTS.INVENTORIES}/by/${SHOP_ID}/${id}`);
         if (res && res.data) {
           const prod = Array.isArray(res.data) ? res.data[0] : res.data;
           if (!prod) return;
@@ -346,6 +349,9 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
             has_variants: !!prod.has_variant,
             batch_tracking: !!prod.has_batch,
             serial_tracking: !!prod.has_serialno,
+            batch_name: prod.batch?.name || "",
+            mfg_date: prod.batch?.manufacturing_date || "",
+            exp_date: prod.batch?.expiry_date || "",
           });
 
           // Fetch matching supplier details for SearchSelect display if ID is set
@@ -499,7 +505,8 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
           mrp: mrp,
           attributes: combo.attributes,
         },
-        batches: []
+        batches: [],
+        batch: combo.batch
       };
       return v;
     });
@@ -518,19 +525,22 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
       has_batch: form.batch_tracking,
       variants: form.has_variants ? mappedVarients : [],
       serial_numbers: !form.has_variants ? baseSerials : [],
+      batch: (!form.has_variants && form.batch_tracking) ? {
+        name: form.batch_name,
+        manufacturing_date: form.mfg_date,
+        expiry_date: form.exp_date
+      } : null,
       datas: {
         brand: form.brand,
         unit: form.unit,
         mrp: Number(form.mrp) || 0,
         gst: form.gst,
-        hsn: form.hsn,
         supplier: form.supplier,
         opening_stock: Number(form.opening_stock) || 0,
         reorder_point: Number(form.reorder_point) || 0,
-        max_stock: Number(form.max_stock) || 0,
-        location: form.location,
+        storage_location: form.location,
         is_active: form.is_active,
-        variantTypes,
+        variant_types: variantTypes,
       }
     };
 
@@ -572,77 +582,72 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
 
           <div className="grid grid-cols-1 lg:grid-cols-6 gap-5 items-start">
 
-            {/* BOX 1: Identity */}
-            <div className="lg:col-span-4 bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden hover:shadow-md transition-all">
-              <div className="px-6 py-4 bg-gradient-to-r from-blue-50/50 to-transparent border-b border-slate-100 flex items-center gap-3">
-                <div className="w-8 h-8 rounded-xl bg-blue-100 flex items-center justify-center text-blue-600">
-                  <Package size={16} />
+            <div className="lg:col-span-4 space-y-6">
+              
+              {/* SECTION 1: IDENTITY */}
+              <div className="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden hover:shadow-md transition-all">
+                <div className="px-6 py-4 bg-gradient-to-r from-blue-50/50 to-transparent border-b border-slate-100 flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-xl bg-blue-100 flex items-center justify-center text-blue-600">
+                    <Package size={16} />
+                  </div>
+                  <h2 className="text-xs font-bold text-slate-800 uppercase tracking-widest">Product Identity</h2>
                 </div>
-                <h2 className="text-xs font-bold text-slate-800 uppercase tracking-widest">Product Identity</h2>
+                <div className="p-6 space-y-5">
+                  <InputField label="Product Name" name="name" required
+                    value={form.name} onChange={handleChange}
+                    placeholder="e.g. Apple iPhone 15 Pro Max"
+                  />
+
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <InputField label="Barcode / SKU" name="barcode" required
+                      value={form.barcode} onChange={handleChange}
+                      placeholder="SKU..."
+                    />
+                    <InputField label="Brand" name="brand"
+                      value={form.brand} onChange={handleChange}
+                      placeholder="e.g. Apple"
+                    />
+                    <SelectField label="Category" required
+                      value={form.category}
+                      onChange={e => handleCategoryChange(e.target.value)}
+                      options={CATEGORIES.map(c => ({ value: c, label: c }))}
+                    />
+                    <SelectField label="Unit" name="unit" required
+                      value={form.unit} onChange={handleChange}
+                      options={UNITS.map(u => ({ value: u, label: u }))}
+                    />
+                  </div>
+
+                  <div>
+                    <Label text="Description" hint="optional" />
+                    <textarea
+                      name="description"
+                      value={form.description}
+                      onChange={handleChange}
+                      rows={1}
+                      className="pf-input w-full px-4 py-3 text-sm border border-slate-200 rounded-2xl bg-white text-slate-800 resize-none placeholder-slate-300 min-h-[50px]"
+                      placeholder="Key features, materials, dimensions"
+                    />
+                  </div>
+
+                  <div className="pt-2 border-t border-slate-50 mt-2">
+                    <SelectField label="GST Rate" name="gst" required
+                      value={form.gst} onChange={handleChange}
+                      options={GST_RATES.map(r => ({ value: r, label: r }))}
+                    />
+                  </div>
+                </div>
               </div>
-              <div className="p-6 space-y-4">
-                <InputField label="Product Name" name="name" required
-                  value={form.name} onChange={handleChange}
-                  placeholder="e.g. Apple iPhone 15 Pro Max"
-                />
 
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <InputField label="Barcode / SKU" name="barcode" required
-                    value={form.barcode} onChange={handleChange}
-                    placeholder="SKU..."
-                  />
-                  <InputField label="Brand" name="brand"
-                    value={form.brand} onChange={handleChange}
-                    placeholder="e.g. Apple"
-                  />
-                  <SelectField label="Category" required
-                    value={form.category}
-                    onChange={e => handleCategoryChange(e.target.value)}
-                    options={CATEGORIES.map(c => ({ value: c, label: c }))}
-                  />
-                  <SelectField label="Unit" name="unit" required
-                    value={form.unit} onChange={handleChange}
-                    options={UNITS.map(u => ({ value: u, label: u }))}
-                  />
-                </div>
-
-                <div>
-                  <Label text="Description" hint="optional" />
-                  <textarea
-                    name="description"
-                    value={form.description}
-                    onChange={handleChange}
-                    rows={1}
-                    className="pf-input w-full px-3 py-2 text-sm border border-slate-200 rounded-xl bg-white text-slate-800 resize-none placeholder-slate-300 min-h-[45px]"
-                    placeholder="Key features, materials, dimensions"
-                  />
-                </div>
-
-                <div className="pt-2 border-t border-slate-50 grid grid-cols-2 gap-4 mt-2">
-                  <SelectField label="GST Rate" name="gst" required
-                    value={form.gst} onChange={handleChange}
-                    options={GST_RATES.map(r => ({ value: r, label: r }))}
-                  />
-                  <InputField label="HSN Code" name="hsn"
-                    value={form.hsn} onChange={handleChange}
-                    placeholder="8517"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* BOX 2: Classification */}
-            <div className="lg:col-span-2 space-y-5">
+              {/* SECTION 2: CLASSIFICATION */}
               <div className="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden hover:shadow-md transition-all">
                 <div className="px-6 py-4 bg-gradient-to-r from-amber-50/50 to-transparent border-b border-slate-100 flex items-center gap-3">
                   <div className="w-8 h-8 rounded-xl bg-amber-100 flex items-center justify-center text-amber-600">
                     <Hash size={16} />
                   </div>
-                  <h2 className="text-xs font-bold text-slate-800 uppercase tracking-widest">Classification</h2>
+                  <h2 className="text-xs font-bold text-slate-800 uppercase tracking-widest">Classification & Status</h2>
                 </div>
-                <div className="p-6 space-y-4">
-
-                  {/* 💡 MODIFIED: Changed text input to SearchSelect for Supplier */}
+                <div className="p-6 space-y-5">
                   <div className="flex flex-col gap-1.5">
                     <Label text="Supplier" hint="optional" />
                     <SearchSelect
@@ -654,15 +659,16 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                         setForm(p => ({ ...p, supplier: String(val) }));
                         if (opt) setSupplierDetails(opt);
                       }}
-                      // Triggers the On-The-Fly Supplier Modal
                       onCreateNew={(query) => setModalState({ type: "Supplier", query })}
                       placeholder="Search Supplier..."
                     />
                   </div>
-                  {/* --- */}
 
-                  <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 border border-slate-100 mt-2">
-                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Active Product</span>
+                  <div className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 border border-slate-100 mt-2">
+                    <div>
+                      <span className="text-[11px] font-black text-slate-800 uppercase tracking-widest block">Active Product</span>
+                      <span className="text-[10px] text-slate-400 font-medium">Visible in POS and Inventory lists</span>
+                    </div>
                     <Switch
                       checked={form.is_active}
                       onCheckedChange={(checked) => setForm(p => ({ ...p, is_active: checked }))}
@@ -670,12 +676,85 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                   </div>
                 </div>
               </div>
-            </div>
-          </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-6 gap-5">
+              {/* SECTION 3: INVENTORY TRACKING SETTINGS */}
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="flex items-start gap-4 p-5 rounded-[2rem] bg-white border border-slate-200 shadow-sm hover:shadow-md transition-all">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h3 className="text-[11px] font-black text-slate-800 uppercase tracking-widest">Batch Tracking</h3>
+                        {!id && <span className="px-1.5 py-0.5 rounded-md bg-blue-100 text-blue-700 text-[8px] font-black uppercase">Purchase</span>}
+                      </div>
+                      <p className="text-[10px] text-slate-400 leading-relaxed font-medium">Track manufacturing and expiry dates per batch.</p>
+                    </div>
+                    <Switch
+                      checked={form.batch_tracking}
+                      onCheckedChange={(val) => setForm(p => ({ ...p, batch_tracking: val }))}
+                    />
+                  </div>
+
+                  <div className="flex items-start gap-4 p-5 rounded-[2rem] bg-white border border-slate-200 shadow-sm hover:shadow-md transition-all">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h3 className="text-[11px] font-black text-slate-800 uppercase tracking-widest">Serial Tracking</h3>
+                        {!id && <span className="px-1.5 py-0.5 rounded-md bg-violet-100 text-violet-700 text-[8px] font-black uppercase">Unique</span>}
+                      </div>
+                      <p className="text-[10px] text-slate-400 leading-relaxed font-medium">Track unique identification for each individual unit.</p>
+                    </div>
+                    <Switch
+                      checked={form.serial_tracking}
+                      onCheckedChange={(val) => setForm(p => ({ ...p, serial_tracking: val }))}
+                    />
+                  </div>
+                </div>
+
+                {/* CONDITIONAL TRACKING PANELS */}
+                {form.batch_tracking && !form.has_variants && (
+                  <div className="bg-white rounded-[2rem] border border-slate-200 p-7 shadow-sm pf-section-enter space-y-5">
+                    <div className="flex items-center gap-3 mb-2 border-b border-slate-50 pb-4">
+                      <div className="w-8 h-8 rounded-xl bg-amber-100 flex items-center justify-center text-amber-500">
+                        <Calendar size={16} />
+                      </div>
+                      <span className="text-[11px] font-black uppercase text-slate-800 tracking-widest">Initial Batch Information</span>
+                    </div>
+                    <InputField label="Batch Name" name="batch_name" 
+                      value={form.batch_name} onChange={handleChange}
+                      placeholder="e.g. BATCH-001"
+                    />
+                    <div className="grid grid-cols-2 gap-5">
+                      <InputField label="Mfg Date" name="mfg_date" type="date"
+                        value={form.mfg_date} onChange={handleChange}
+                      />
+                      <InputField label="Expiry Date" name="exp_date" type="date"
+                        value={form.exp_date} onChange={handleChange}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {form.serial_tracking && !form.has_variants && (
+                  <div className="bg-white rounded-[2rem] border border-slate-200 p-7 shadow-sm pf-section-enter space-y-5">
+                    <div className="flex items-center gap-3 mb-2 border-b border-slate-50 pb-4">
+                      <div className="w-8 h-8 rounded-xl bg-violet-100 flex items-center justify-center text-violet-600">
+                        <Hash size={16} />
+                      </div>
+                      <span className="text-[11px] font-black uppercase text-slate-800 tracking-widest">{categoryConfig.serialLabel} Management</span>
+                    </div>
+                    <InlineSerialManager
+                      serials={baseSerials}
+                      serialLabel={categoryConfig.serialLabel}
+                      limit={Number(form.opening_stock) || 0}
+                      onUpdate={setBaseSerials}
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+            {/* --- RIGHT COLUMN: SIDEBAR --- */}
+            <div className="lg:col-span-2 space-y-6 lg:sticky lg:top-6">
             {/* BOX 3: Pricing */}
-            <div className="lg:col-span-3 bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden hover:shadow-md transition-all">
+            <div className="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden hover:shadow-md transition-all">
               <div className="px-6 py-4 bg-gradient-to-r from-emerald-50/50 to-transparent border-b border-slate-100 flex items-center gap-3">
                 <div className="w-8 h-8 rounded-xl bg-emerald-100 flex items-center justify-center text-emerald-600">
                   <DollarSign size={16} />
@@ -711,7 +790,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
             </div>
 
             {/* BOX 4: Live Summary + Stock */}
-            <div className="lg:col-span-3 space-y-5">
+            <div className="space-y-6">
               <div className="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden">
                 <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
                   <h2 className="text-xs font-bold text-slate-800 uppercase tracking-widest">Live Summary</h2>
@@ -740,7 +819,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                   </div>
                   <h2 className="text-xs font-bold text-slate-800 uppercase tracking-widest">Stock & Inventory</h2>
                 </div>
-                <div className="p-6 grid grid-cols-3 gap-5">
+                <div className="p-6 grid grid-cols-2 gap-5">
                   <InputField label="Opening Stock" name="opening_stock"
                     type="number" value={form.opening_stock} onChange={handleChange}
                     placeholder="0"
@@ -750,69 +829,22 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                     type="number" value={form.reorder_point} onChange={handleChange}
                     placeholder="5"
                   />
-                  <InputField label="Max Stock" name="max_stock"
-                    type="number" value={form.max_stock} onChange={handleChange}
-                    placeholder="0"
-                  />
                 </div>
-                {form.serial_tracking && !form.has_variants && (
-                  <div className="mt-4 animate-in fade-in slide-in-from-top-2 duration-300">
-                    <InlineSerialManager
-                      serials={baseSerials}
-                      serialLabel={categoryConfig.serialLabel}
-                      limit={Number(form.opening_stock) || 0}
-                      onUpdate={setBaseSerials}
-                    />
-                  </div>
-                )}
               </div>
             </div>
           </div>
+        </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-            <div className="flex items-start gap-4 p-4 rounded-2xl bg-slate-50/50 border border-slate-100 hover:bg-white shadow-sm transition-all duration-300">
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <h3 className="text-[11px] font-black text-slate-800 uppercase tracking-widest">Enable Batch Tracking</h3>
-                  {!id && <span className="px-1.5 py-0.5 rounded-md bg-blue-100 text-blue-700 text-[8px] font-black uppercase">Purchase Entry</span>}
-                </div>
-                <p className="text-[10px] text-slate-400 leading-relaxed font-medium">
-                  If you want batch tracking options during purchase, please enable it. Required for giving manufacture and expiry dates on purchase entries (e.g., medicines, foods).
-                </p>
-              </div>
-              <Switch
-                checked={form.batch_tracking}
-                onCheckedChange={(val) => setForm(p => ({ ...p, batch_tracking: val }))}
-              />
-            </div>
-
-            <div className="flex items-start gap-4 p-4 rounded-2xl bg-slate-50/50 border border-slate-100 hover:bg-white shadow-sm transition-all duration-300">
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <h3 className="text-[11px] font-black text-slate-800 uppercase tracking-widest">Serial Number Tracking</h3>
-                  {!id && <span className="px-1.5 py-0.5 rounded-md bg-violet-100 text-violet-700 text-[8px] font-black uppercase">Unique ID</span>}
-                </div>
-                <p className="text-[10px] text-slate-400 leading-relaxed font-medium">
-                  Track unique identification numbers for each individual unit. Ideal for electronics like mobile phones, laptops, and appliances.
-                </p>
-              </div>
-              <Switch
-                checked={form.serial_tracking}
-                onCheckedChange={(val) => setForm(p => ({ ...p, serial_tracking: val }))}
-              />
-            </div>
-          </div>
-
-          {/* ROW 3: Variants (full width) */}
+          {/* BOTTOM SECTION: VARIANTS */}
           <div className="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden hover:shadow-md transition-all">
-            <div className="px-6 py-4 bg-gradient-to-r from-violet-50/50 to-transparent border-b border-slate-100 flex items-center justify-between">
+            <div className="px-6 py-5 bg-gradient-to-r from-violet-50/50 to-transparent border-b border-slate-100 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-xl bg-violet-100 flex items-center justify-center text-violet-600">
-                  <Layers size={16} />
+                <div className="w-10 h-10 rounded-2xl bg-violet-100 flex items-center justify-center text-violet-600 shadow-sm">
+                  <Layers size={20} />
                 </div>
                 <div>
-                  <h2 className="text-xs font-bold text-slate-800 uppercase tracking-widest">Product Variants</h2>
-                  <p className="text-[10px] text-slate-400 mt-0.5">Colors, sizes, storage and other variations</p>
+                  <h2 className="text-sm font-black text-slate-800 uppercase tracking-widest">Product Variants</h2>
+                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">Manage Configurations</p>
                 </div>
               </div>
               <Switch
@@ -845,7 +877,8 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                     <VariantMatrixTable
                       combinations={combinations}
                       variantTypes={variantTypes}
-                      supportsSerials={categoryConfig.supportsSerials}
+                      supportsSerials={form.serial_tracking}
+                      supportsBatch={form.batch_tracking}
                       serialLabel={categoryConfig.serialLabel}
                       onChange={setCombinations}
                     />

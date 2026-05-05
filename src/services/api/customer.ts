@@ -14,5 +14,11 @@ export const customerApi = {
     validateMandatory(data, SCHEMAS.customer_update);
     console.log("Payload:", data);
     return await apiClient.put(`${ENDPOINTS.CUSTOMERS}`, data);
+  },
+
+  deleteCustomer: async (data: { id: string; shop_id: string }) => {
+    validateMandatory(data, SCHEMAS.customer_delete);
+    console.log("Payload:", data);
+    return await apiClient.delete(`${ENDPOINTS.CUSTOMERS}`, data);
   }
 };

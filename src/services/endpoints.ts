@@ -5,6 +5,7 @@ export const ENDPOINTS = {
   CUSTOMERS:     "/customers",
   INVENTORIES:   "/inventories/inventories",
   S_ADJUSTMENTS: "/inventories/s-adjustments",
+  S_MOVEMENTS:   "/inventories/s_movements",
   PURCHASES:     "/inventories/purchases",
   ORDERS:        "/orders",
   SHOPS:         "/shops",
@@ -13,4 +14,4 @@ export const ENDPOINTS = {
 } as const;
 
 // Hardcoded until auth wires up shop_id from login session
-export const SHOP_ID = "37d5519b-51a1-5854-982b-4d6524171017";
+export const SHOP_ID = "TEST-SHOP";

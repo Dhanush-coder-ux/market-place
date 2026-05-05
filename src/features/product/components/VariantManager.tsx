@@ -7,7 +7,8 @@ import {
   RefreshCw, 
   ScanLine, 
   Plus as PlusIcon,
-  Zap
+  Zap,
+  Calendar
 } from "lucide-react";
 import { InlineSerialManager } from "@/components/common/InlineSerialManager";
 
@@ -37,6 +38,11 @@ export interface VariantCombination {
   stock: string;
   active: boolean;
   serials: SerialEntry[];
+  batch?: {
+    name: string;
+    expiry_date: string;
+    manufacturing_date: string;
+  };
 }
 
 // --- Constants ---
@@ -219,14 +225,16 @@ interface VariantMatrixTableProps {
   combinations: VariantCombination[];
   variantTypes: VariantType[];
   supportsSerials: boolean;
+  supportsBatch: boolean;
   serialLabel: string;
   onChange: (combos: VariantCombination[]) => void;
 }
 
 export const VariantMatrixTable: React.FC<VariantMatrixTableProps> = ({
-  combinations, supportsSerials, serialLabel, onChange,
+  combinations, supportsSerials, supportsBatch, serialLabel, onChange,
 }) => {
   const [expandedSerialId, setExpandedSerialId] = useState<string | null>(null);
+  const [expandedBatchId, setExpandedBatchId] = useState<string | null>(null);
   const [barcodeBase, setbarcodeBase] = useState("");
 
   const update = (id: string, field: keyof VariantCombination, val: unknown) => {
@@ -305,6 +313,9 @@ export const VariantMatrixTable: React.FC<VariantMatrixTableProps> = ({
                 {supportsSerials && (
                   <th className="px-5 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400 whitespace-nowrap">{serialLabel}s</th>
                 )}
+                {supportsBatch && (
+                  <th className="px-5 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400 whitespace-nowrap">Batch</th>
+                )}
                 <th className="px-5 py-4 text-center text-[10px] font-black uppercase tracking-widest text-slate-400">Status</th>
               </tr>
             </thead>
@@ -381,6 +392,19 @@ export const VariantMatrixTable: React.FC<VariantMatrixTableProps> = ({
                           </button>
                         </td>
                       )}
+                      {supportsBatch && (
+                        <td className="px-5 py-4">
+                          <button type="button"
+                            onClick={() => setExpandedBatchId(expandedBatchId === combo.id ? null : combo.id)}
+                            className={`flex items-center gap-2 h-9 px-4 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all shadow-sm ${expandedBatchId === combo.id
+                                ? "bg-amber-600 text-white shadow-amber-100"
+                                : "text-amber-600 bg-amber-50 border border-amber-100 hover:bg-amber-100"
+                              }`}>
+                            <Calendar size={14} />
+                            {combo.batch?.name ? "Set" : "Add"}
+                          </button>
+                        </td>
+                      )}
                       <td className="px-5 py-4 text-center">
                         <button type="button"
                           onClick={() => update(combo.id, "active", !combo.active)}
@@ -389,22 +413,87 @@ export const VariantMatrixTable: React.FC<VariantMatrixTableProps> = ({
                         </button>
                       </td>
                     </tr>
-                    {isExpanded && supportsSerials && (
-                      <tr className="bg-slate-50/50">
-                        <td colSpan={attrKeys.length + 7} className="px-8 py-8 border-y border-slate-100">
-                          <div className="max-w-4xl mx-auto">
-                            <InlineSerialManager
-                              serials={combo.serials.map(s => s.serial)}
-                              serialLabel={serialLabel}
-                              limit={Number(combo.stock) || 0}
-                              onUpdate={(newSerials) => {
-                                const updatedEntries: SerialEntry[] = newSerials.map(s => {
-                                  const existing = combo.serials.find(e => e.serial === s);
-                                  return existing || { id: uid(), serial: s, purchaseDate: "", warrantyMonths: "12", status: "available" };
-                                });
-                                update(combo.id, "serials", updatedEntries);
-                              }}
-                            />
+                    {/* CONSOLIDATED EXPANDED MANAGEMENT PANEL */}
+                    {(isExpanded || (expandedBatchId === combo.id)) && (
+                      <tr className="bg-slate-50/30">
+                        <td colSpan={attrKeys.length + 8} className="px-5 py-8 border-y border-slate-100">
+                          <div className={`max-w-6xl mx-auto grid gap-6 items-start ${
+                            (isExpanded && expandedBatchId === combo.id) ? "grid-cols-1 lg:grid-cols-2" : "grid-cols-1"
+                          }`}>
+                            
+                            {/* SERIALS MANAGEMENT PANEL */}
+                            {isExpanded && supportsSerials && (
+                              <div className="animate-in fade-in slide-in-from-left-4 duration-500 h-full">
+                                <div className="bg-white p-1 rounded-[2.5rem] border border-slate-200 shadow-xl shadow-slate-100/50 h-full">
+                                  <div className="p-1">
+                                    <InlineSerialManager
+                                      serials={combo.serials.map(s => s.serial)}
+                                      serialLabel={serialLabel}
+                                      limit={Number(combo.stock) || 0}
+                                      onUpdate={(newSerials) => {
+                                        const updatedEntries: SerialEntry[] = newSerials.map(s => {
+                                          const existing = combo.serials.find(e => e.serial === s);
+                                          return existing || { id: uid(), serial: s, purchaseDate: "", warrantyMonths: "12", status: "available" };
+                                        });
+                                        update(combo.id, "serials", updatedEntries);
+                                      }}
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* BATCH MANAGEMENT PANEL */}
+                            {expandedBatchId === combo.id && supportsBatch && (
+                              <div className="animate-in fade-in slide-in-from-right-4 duration-500 h-full">
+                                <div className="bg-white p-7 rounded-[2.5rem] border border-slate-200 shadow-xl shadow-slate-100/50 h-full">
+                                  <div className="flex items-center gap-3 mb-6 border-b border-slate-50 pb-5">
+                                    <div className="w-10 h-10 rounded-2xl bg-amber-100 flex items-center justify-center text-amber-600 shadow-sm">
+                                      <Calendar size={18} />
+                                    </div>
+                                    <div>
+                                      <h3 className="text-[12px] font-black uppercase text-slate-800 tracking-widest">Batch Details</h3>
+                                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">
+                                        {Object.values(combo.attributes).join(" · ")}
+                                      </p>
+                                    </div>
+                                  </div>
+
+                                  <div className="space-y-6">
+                                    <div className="space-y-2">
+                                      <label className="block text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Batch Name / ID</label>
+                                      <input
+                                        className="w-full h-12 px-5 text-sm border border-slate-200 rounded-2xl focus:ring-4 focus:ring-amber-50 focus:border-amber-200 outline-none transition-all placeholder-slate-300 font-medium"
+                                        placeholder="e.g. B-BATCH-001"
+                                        value={combo.batch?.name || ""}
+                                        onChange={e => update(combo.id, "batch", { ...(combo.batch || {}), name: e.target.value })}
+                                      />
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-5">
+                                      <div className="space-y-2">
+                                        <label className="block text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Mfg Date</label>
+                                        <input
+                                          type="date"
+                                          className="w-full h-12 px-5 text-sm border border-slate-200 rounded-2xl focus:ring-4 focus:ring-amber-50 focus:border-amber-200 outline-none transition-all font-medium"
+                                          value={combo.batch?.manufacturing_date || ""}
+                                          onChange={e => update(combo.id, "batch", { ...(combo.batch || {}), manufacturing_date: e.target.value })}
+                                        />
+                                      </div>
+                                      <div className="space-y-2">
+                                        <label className="block text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Expiry Date</label>
+                                        <input
+                                          type="date"
+                                          className="w-full h-12 px-5 text-sm border border-slate-200 rounded-2xl focus:ring-4 focus:ring-amber-50 focus:border-amber-200 outline-none transition-all font-medium"
+                                          value={combo.batch?.expiry_date || ""}
+                                          onChange={e => update(combo.id, "batch", { ...(combo.batch || {}), expiry_date: e.target.value })}
+                                        />
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
                           </div>
                         </td>
                       </tr>

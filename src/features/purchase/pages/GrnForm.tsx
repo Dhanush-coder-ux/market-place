@@ -11,9 +11,6 @@ import {
   Clock,
   AlertCircle,
   CheckCircle2,
-  X,
-  ChevronRight,
-  ChevronLeft
 } from "lucide-react";
 
 import { ReusableSelect } from "@/components/ui/ReusableSelect";
@@ -288,13 +285,14 @@ const GrnForm = () => {
 
         return {
           inventory_id: p.inventory_id || (p.id.length > 10 ? p.id : undefined),
-          varient_id: p.variant_id,
+          variant_id: p.variant_id,
           name: p.name,
           barcode: p.sku,
-          quantity: q,
-          received_qty: q,
+          stocks: q,
+          received_stocks: q,
           buy_price: baseCost,
           sell_price: Number(finalSellPrice.toFixed(2)),
+          margin: Number(p.marginPercent) || 0,
           unit: p.unit || "pc",
           gst: Number(p.taxGst) || 0,
           batch_tracking: p.batchTracking,
@@ -302,23 +300,30 @@ const GrnForm = () => {
           batch_number: p.batchNum,
           manufacturing_date: p.manufacturingDate,
           expiry_date: p.expiryDate,
-          batches: { batch_number: p.batchNum, quantity: q, manufacturing_date: p.manufacturingDate, expiry_date: p.expiryDate },
+          batches: { batch_number: p.batchNum, stocks: q, manufacturing_date: p.manufacturingDate, expiry_date: p.expiryDate },
           serial_numbers: p.serialNumbers ? p.serialNumbers.split(",").map(s => s.trim()).filter(Boolean) : [],
           variant: p.variant,
         };
       });
 
       const payload = {
+        shop_id: SHOP_ID,
+        type: "PO_CREATE",
+        supplier_id: supplierDetails?.id || "",
+        calculations: {
+           divided_by: costMethod === "By Unit" ? "BY_QUANTITY" : costMethod === "By Value" ? "BY_VALUE" : costMethod === "Equally" ? "BY_EQUAL" : "NONE",
+           gst: { type: "inclusive", value: 18, registered: true }
+        },
+        additional_charges: {
+           delivery_charge: Number(charges.transport) || 0,
+           other_charge: Number(charges.other) || 0
+        },
         datas: {
-          shop_id: SHOP_ID,
-          type: "PO_CREATE",
-          supplier_id:   supplierDetails?.id || "",
           supplier_name: supplierDetails?.name || grnDetails.supplier,
           purchaseDetails: { invoiceNo: grnDetails.invoiceNo, date: grnDetails.date, referenceNo: grnDetails.referenceNo, poReference: grnDetails.poReference },
-          charges: { transport: Number(charges.transport) || 0, other: Number(charges.other) || 0 },
           payment: { method: payment.method, amountPaid: Number(payment.amountPaid) || 0 },
-          products: transformedProducts,
         },
+        products: transformedProducts,
       };
 
       const res = id ? await putData(`${ENDPOINTS.PURCHASES}/${id}`, payload) : await postData(ENDPOINTS.PURCHASES, payload);

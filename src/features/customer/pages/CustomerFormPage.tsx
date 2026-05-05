@@ -1,12 +1,12 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
-import { 
-  Save, 
-  User, 
-  Mail, 
-  Phone, 
-  MapPin, 
-  Building2, 
+import {
+  Save,
+  User,
+  Mail,
+  Phone,
+  MapPin,
+  Building2,
   Tag,
   CreditCard,
   DollarSign,
@@ -16,8 +16,8 @@ import {
 } from "lucide-react";
 
 import { Switch } from "@/components/ui/switch";
-import Input from "@/components/ui/Input"; 
-import { ReusableSelect } from "@/components/ui/ReusableSelect"; 
+import Input from "@/components/ui/Input";
+import { ReusableSelect } from "@/components/ui/ReusableSelect";
 import { GradientButton } from "@/components/ui/GradientButton";
 import { useApi } from "@/context/ApiContext";
 import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
@@ -32,17 +32,15 @@ const CustomerFormPage = () => {
   const { setActions, setBottomActions } = useHeader();
   const { showToast } = useToast();
   const [submitting, setSubmitting] = useState(false);
-  
+
   const initialFormData = {
     first_name: "",
     last_name: "",
     company: "",
     email: "",
     phone: "",
-    customer_type: "Normal", 
-    street_address: "",
-    city: "",
-    state: "",
+    customer_type: "Normal",
+    full_address: "",
     zip_code: "",
     notes: "",
     is_active: true,
@@ -59,8 +57,8 @@ const CustomerFormPage = () => {
     setActions(
       <div className="flex items-center gap-3 bg-white px-4 h-11 rounded-2xl border border-slate-200 shadow-sm scale-90 md:scale-100">
         <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Active</span>
-        <Switch 
-          checked={formData.is_active} 
+        <Switch
+          checked={formData.is_active}
           onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_active: checked }))}
         />
       </div>
@@ -73,7 +71,7 @@ const CustomerFormPage = () => {
     setBottomActions(
       <div className="flex items-center gap-3 animate-in fade-in slide-in-from-right-4 duration-300">
         {!id && (
-          <button 
+          <button
             type="button"
             onClick={handleSaveDraft}
             className="px-4 h-8 rounded-xl border border-blue-100 text-blue-600 font-bold text-xs bg-blue-50/50 hover:bg-blue-100 transition-all flex items-center gap-2 whitespace-nowrap overflow-hidden"
@@ -82,9 +80,9 @@ const CustomerFormPage = () => {
             <span className="truncate">Save Draft</span>
           </button>
         )}
-        <GradientButton 
-          icon={submitting ? <Save className="animate-pulse" size={16} /> : <Save size={16} />} 
-          onClick={handleSubmit} 
+        <GradientButton
+          icon={submitting ? <Save className="animate-pulse" size={16} /> : <Save size={16} />}
+          onClick={handleSubmit}
           disabled={submitting}
           className="rounded-xl shadow-md text-xs px-8 h-8 flex items-center"
         >
@@ -99,12 +97,12 @@ const CustomerFormPage = () => {
   useEffect(() => {
     if (id) {
       const fetchCustomer = async () => {
-        const res = await getData(`${ENDPOINTS.CUSTOMERS}/by/${id}`);
+        const res = await getData(`${ENDPOINTS.CUSTOMERS}/by/${SHOP_ID}/${id}`);
         if (res && res.data) {
           const cust = Array.isArray(res.data) ? res.data[0] : res.data;
           const datas = cust.datas || {};
           const address = datas.address || {};
-          
+
           setFormData({
             ...initialFormData,
             first_name: cust.name?.split(" ")[0] || "",
@@ -113,9 +111,7 @@ const CustomerFormPage = () => {
             email: cust.email || "",
             phone: cust.mobile_number || "",
             customer_type: datas.customer_type || "Normal",
-            street_address: address.street_address || "",
-            city: address.city || "",
-            state: address.state || "",
+            full_address: address.full_address || "",
             zip_code: address.zip_code || "",
             notes: datas.additional_notes || "",
             is_active: cust.is_active !== undefined ? cust.is_active : true,
@@ -151,7 +147,7 @@ const CustomerFormPage = () => {
   const handleSaveDraft = () => {
     const drafts = JSON.parse(localStorage.getItem("customer_drafts") || "[]");
     const draftId = searchParams.get("draftId") || Date.now().toString();
-    
+
     const newDraft = {
       id: draftId,
       data: formData,
@@ -182,24 +178,18 @@ const CustomerFormPage = () => {
       is_active: formData.is_active,
       datas: {
         address: {
-          street_address: formData.street_address,
-          city: formData.city,
-          state: formData.state,
+          full_address: formData.full_address,
           zip_code: formData.zip_code,
         },
         additional_notes: formData.notes,
         payment_cycle: formData.credit_terms,
-        // Extra fields not strictly in CustomerOptionalFieldsSchema but used in UI
-        customer_type: formData.customer_type,
-        gst_number: formData.gst_number,
-        company: formData.company,
       }
     };
 
     if (id) {
       payload.id = id;
     }
-    
+
     let res;
     try {
       if (id) {
@@ -227,16 +217,16 @@ const CustomerFormPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50/50 p-4 md:p-6 lg:p-8 font-[Inter,sans-serif]">
-      <div className="max-w-7xl mx-auto space-y-8">
-        
+    <div className="min-h-screen bg-slate-50/50  font-[Inter,sans-serif]">
+      <div className="mx-auto space-y-8">
+
         {/* FORM REMOVED (actions now in global header) */}
 
         {/* ── FORM ── */}
         <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-6 gap-6 items-start">
-          
-          {/* BOX 1: IDENTITY (Spans 4 cols) */}
-          <div className="lg:col-span-4 bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden transition-all hover:shadow-md h-full">
+
+          {/* BOX 1: IDENTITY (Spans 6 cols) */}
+          <div className="lg:col-span-6 bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden transition-all hover:shadow-md">
             <div className="px-6 py-4 bg-gradient-to-r from-blue-50/50 to-transparent border-b border-slate-100 flex items-center gap-3">
               <div className="w-8 h-8 rounded-xl bg-blue-100 flex items-center justify-center text-blue-600">
                 <User size={18} />
@@ -293,8 +283,8 @@ const CustomerFormPage = () => {
             <div className="p-8 space-y-6">
               <div className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 border border-slate-100">
                 <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Account Active</span>
-                <Switch 
-                  checked={formData.is_active} 
+                <Switch
+                  checked={formData.is_active}
                   onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_active: checked }))}
                 />
               </div>
@@ -313,75 +303,8 @@ const CustomerFormPage = () => {
             </div>
           </div>
 
-          {/* BOX 3: BUSINESS (Spans 2 cols) */}
-          <div className="lg:col-span-2 bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden transition-all hover:shadow-md">
-            <div className="px-6 py-4 bg-gradient-to-r from-blue-50/50 to-transparent border-b border-slate-100 flex items-center gap-3">
-              <div className="w-8 h-8 rounded-xl bg-blue-100 flex items-center justify-center text-blue-600">
-                <Building2 size={18} />
-              </div>
-              <h2 className="text-xs font-bold text-slate-800 uppercase tracking-widest">Business</h2>
-            </div>
-            <div className="p-8">
-              <Input
-                label="Company Name"
-                name="company"
-                value={formData.company}
-                onChange={handleChange}
-                placeholder="e.g. Acme Industries"
-                leftIcon={<Building2 size={16} className="text-slate-400" />}
-              />
-            </div>
-          </div>
-
-          {/* BOX 4: TAX INFO (Spans 2 cols) */}
-          <div className="lg:col-span-2 bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden transition-all hover:shadow-md">
-            <div className="px-6 py-4 bg-gradient-to-r from-slate-50 to-transparent border-b border-slate-100 flex items-center gap-3">
-              <div className="w-8 h-8 rounded-xl bg-slate-100 flex items-center justify-center text-slate-600">
-                <FileText size={18} />
-              </div>
-              <h2 className="text-xs font-bold text-slate-800 uppercase tracking-widest">Tax Identity</h2>
-            </div>
-            <div className="p-8">
-              <Input
-                label="GST Number"
-                name="gst_number"
-                value={formData.gst_number}
-                onChange={handleChange}
-                placeholder="GSTIN"
-                leftIcon={<Tag size={16} className="text-slate-400" />}
-              />
-            </div>
-          </div>
-
-          {/* BOX 5: CREDIT TERMS (Spans 2 cols) */}
-          <div className="lg:col-span-2 bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden transition-all hover:shadow-md">
-            <div className="px-6 py-4 bg-gradient-to-r from-purple-50/50 to-transparent border-b border-slate-100 flex items-center gap-3">
-              <div className="w-8 h-8 rounded-xl bg-purple-100 flex items-center justify-center text-purple-600">
-                <ChevronLeft size={18} className="rotate-180" />
-              </div>
-              <h2 className="text-xs font-bold text-slate-800 uppercase tracking-widest">Payment Cycle</h2>
-            </div>
-            <div className="p-8">
-              <ReusableSelect
-                key={`terms-${id || searchParams.get("draftId") || "new"}-${formData.credit_terms}`}
-                label="Credit Terms"
-                value={formData.credit_terms}
-                onValueChange={(val) => handleSelectChange("credit_terms", val)}
-                options={[
-                  { label: "7 Days", value: "7-days" },
-                  { label: "15 Days", value: "15-days" },
-                  { label: "30 Days", value: "30-days" },
-                  { label: "45 Days", value: "45-days" },
-                  { label: "60 Days", value: "60-days" },
-                  { label: "90 Days", value: "90-days" },
-                ]}
-                placeholder="Select Terms"
-              />
-            </div>
-          </div>
-
-          {/* BOX 6: BILLING ADDRESS (Spans 3 cols) */}
-          <div className="lg:col-span-3 bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden transition-all hover:shadow-md">
+          {/* BOX 6: BILLING ADDRESS (Spans 2 cols) */}
+          <div className="lg:col-span-2 bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden transition-all hover:shadow-md h-full">
             <div className="px-6 py-4 bg-gradient-to-r from-emerald-50/50 to-transparent border-b border-slate-100 flex items-center gap-3">
               <div className="w-8 h-8 rounded-xl bg-emerald-100 flex items-center justify-center text-emerald-600">
                 <MapPin size={18} />
@@ -390,41 +313,25 @@ const CustomerFormPage = () => {
             </div>
             <div className="p-8 space-y-6">
               <Input
-                label="Street Address"
-                name="street_address"
-                value={formData.street_address}
+                label="Full Address"
+                name="full_address"
+                value={formData.full_address}
                 onChange={handleChange}
-                placeholder="123, Business Park"
+                placeholder="123, Business Park, City, State"
                 leftIcon={<MapPin size={16} className="text-slate-400" />}
               />
-              <div className="grid grid-cols-2 gap-6">
-                <Input
-                  label="City"
-                  name="city"
-                  value={formData.city}
-                  onChange={handleChange}
-                  placeholder="City"
-                />
-                <Input
-                  label="ZIP Code"
-                  name="zip_code"
-                  value={formData.zip_code}
-                  onChange={handleChange}
-                  placeholder="ZIP"
-                />
-              </div>
               <Input
-                label="State"
-                name="state"
-                value={formData.state}
+                label="ZIP Code"
+                name="zip_code"
+                value={formData.zip_code}
                 onChange={handleChange}
-                placeholder="State / Province"
+                placeholder="ZIP"
               />
             </div>
           </div>
 
-          {/* BOX 7: CREDIT & NOTES (Spans 3 cols) */}
-          <div className="lg:col-span-3 bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden transition-all hover:shadow-md h-full flex flex-col">
+          {/* BOX 7: CREDIT & NOTES (Spans 2 cols) */}
+          <div className="lg:col-span-2 bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden transition-all hover:shadow-md h-full flex flex-col">
             <div className="px-6 py-4 bg-gradient-to-r from-rose-50/50 to-transparent border-b border-slate-100 flex items-center gap-3">
               <div className="w-8 h-8 rounded-xl bg-rose-100 flex items-center justify-center text-rose-600">
                 <CreditCard size={18} />
@@ -432,15 +339,30 @@ const CustomerFormPage = () => {
               <h2 className="text-xs font-bold text-slate-800 uppercase tracking-widest">Financial & Notes</h2>
             </div>
             <div className="p-8 space-y-6 flex-1 flex flex-col">
-              <Input
-                label="Credit Limit"
-                type="number"
-                name="credit_limit"
-                value={formData.credit_limit}
-                onChange={handleChange}
-                placeholder="0.00"
-                leftIcon={<DollarSign size={16} className="text-emerald-500" />}
-              />
+                <Input
+                  label="Credit Limit"
+                  type="number"
+                  name="credit_limit"
+                  value={formData.credit_limit}
+                  onChange={handleChange}
+                  placeholder="0.00"
+                  leftIcon={<DollarSign size={16} className="text-emerald-500" />}
+                />
+                <ReusableSelect
+                  key={`terms-${id || searchParams.get("draftId") || "new"}-${formData.credit_terms}`}
+                  label="Credit Terms"
+                  value={formData.credit_terms}
+                  onValueChange={(val) => handleSelectChange("credit_terms", val)}
+                  options={[
+                    { label: "7 Days", value: "7-days" },
+                    { label: "15 Days", value: "15-days" },
+                    { label: "30 Days", value: "30-days" },
+                    { label: "45 Days", value: "45-days" },
+                    { label: "60 Days", value: "60-days" },
+                    { label: "90 Days", value: "90-days" },
+                  ]}
+                  placeholder="Select Terms"
+                />
               <div className="flex flex-col gap-1.5 w-full flex-1">
                 <label className="text-[11px] font-bold text-slate-500 ml-1 uppercase tracking-wider">
                   Internal Remarks

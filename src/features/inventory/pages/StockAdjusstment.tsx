@@ -31,18 +31,19 @@ import { InlineSerialManager } from '@/components/common/InlineSerialManager';
 // --- Type definitions ---
 interface AdjustmentItem {
   id: string; // Internal local ID
-  inventory_id: string; // The backend product/inventory ID
-  product: string;
+  inventory_id: string; // Product UUID
+  variant_id?: string; // Variant UUID
+  batch_id?: string; // Batch UUID
+  serialno_id?: string; // Serial record UUID (from serial_numbers.id)
+  product: string; // Display name
   barcode: string;
   currentStock: number;
-  type: 'increase' | 'decrease';
-  quantity: number | ''; 
+  type: 'INCREMENT' | 'DECREMENT';
+  stocks: number | ''; // Quantity to adjust
   reason: string;
   notes: string;
   internalNote: string;
-  variant?: string;
-  variant_id?: string;
-  batch_id?: string;
+  variant_name?: string;
   batch_name?: string;
   serial_numbers: string[];
   sku?: string;
@@ -52,8 +53,8 @@ interface AdjustmentItem {
 }
 
 const typeOptions = [
-  { value: 'increase', label: 'Increase (+)' },
-  { value: 'decrease', label: 'Decrease (−)' }
+  { value: 'INCREMENT', label: 'Increase (+)' },
+  { value: 'DECREMENT', label: 'Decrease (−)' }
 ];
 
 const reasonOptions = [
@@ -76,6 +77,15 @@ const parseBatches = (batches: any) => {
     }
   }
   return [];
+};
+
+const extractSerials = (obj: any) => {
+  if (!obj) return { id: null, list: [] };
+  if (Array.isArray(obj)) return { id: null, list: obj };
+  if (obj.serial_numbers && Array.isArray(obj.serial_numbers)) {
+    return { id: obj.id || null, list: obj.serial_numbers };
+  }
+  return { id: null, list: [] };
 };
 
 export default function StockAdjustmentPage() {
@@ -161,12 +171,12 @@ export default function StockAdjustmentPage() {
       product: '',
       barcode: '',
       currentStock: 0,
-      type: 'decrease',
-      quantity: 1,
+      type: 'DECREMENT',
+      stocks: 1,
       reason: 'Stock Correction',
       notes: '',
       internalNote: '',
-      variant: '',
+      variant_name: '',
       variant_id: '',
       batch_id: '',
       batch_name: '',
@@ -213,24 +223,26 @@ export default function StockAdjustmentPage() {
         batches: batches,
         variantData: variantData
       });
-      // Don't close variant modal yet if we want a sequence, but usually we swap
       setVariantModal(prev => ({ ...prev, isOpen: false }));
     } else {
       const updatedItems = [...items];
+      const serialInfo = extractSerials(variantData.serial_numbers);
+      
       updatedItems[variantModal.targetRowIndex] = {
         ...updatedItems[variantModal.targetRowIndex],
         inventory_id: variantModal.baseData.id,
         product: variantModal.baseProduct,
         barcode: variantData.sku || variantModal.baseData.barcode || '',
-        currentStock: variantData.stock || 0,
-        variant: variantData.name,
+        currentStock: variantData.stocks ?? variantData.stock ?? 0,
+        variant_name: variantData.name,
         variant_id: variantData.id,
+        serialno_id: serialInfo.id,
         sku: variantData.sku || variantData.barcode,
-        has_serialno_tracking: variantModal.baseData.has_serialno_tracking || variantModal.baseData.datas?.has_serialno_tracking || false,
-        existing_serial_numbers: variantData.serial_numbers || [],
+        has_serialno_tracking: variantModal.baseData.has_serialno || variantModal.baseData.datas?.has_serialno || false,
+        existing_serial_numbers: serialInfo.list,
         serial_numbers: [],
-        type: (variantModal.baseData.has_serialno_tracking || variantModal.baseData.datas?.has_serialno_tracking) && (!variantData.serial_numbers || variantData.serial_numbers.length === 0)
-          ? 'increase'
+        type: (variantModal.baseData.has_serialno || variantModal.baseData.datas?.has_serialno) && serialInfo.list.length === 0
+          ? 'INCREMENT'
           : updatedItems[variantModal.targetRowIndex].type
       };
       setItems(updatedItems);
@@ -242,6 +254,7 @@ export default function StockAdjustmentPage() {
   const confirmBatch = (batch: any) => {
     const updatedItems = [...items];
     const vData = batchModal.variantData;
+    const serialInfo = extractSerials(batch.serial_numbers || vData.serial_numbers);
     
     updatedItems[batchModal.targetRowIndex] = {
       ...updatedItems[batchModal.targetRowIndex],
@@ -249,16 +262,17 @@ export default function StockAdjustmentPage() {
       product: variantModal.baseProduct,
       barcode: batch.barcode || vData.sku || variantModal.baseData.barcode || '',
       currentStock: batch.stocks || batch.quantity || 0,
-      variant: vData.name,
+      variant_name: vData.name,
       variant_id: vData.id,
       batch_id: batch.id,
       batch_name: batch.name || batch.batch,
+      serialno_id: serialInfo.id,
       sku: vData.sku || vData.barcode,
-      has_serialno_tracking: variantModal.baseData.has_serialno_tracking || variantModal.baseData.datas?.has_serialno_tracking || false,
-      existing_serial_numbers: vData.serial_numbers || [],
+      has_serialno_tracking: variantModal.baseData.has_serialno || variantModal.baseData.datas?.has_serialno || false,
+      existing_serial_numbers: serialInfo.list,
       serial_numbers: [],
-      type: (variantModal.baseData.has_serialno_tracking || variantModal.baseData.datas?.has_serialno_tracking) && (!vData.serial_numbers || vData.serial_numbers.length === 0)
-        ? 'increase'
+      type: (variantModal.baseData.has_serialno || variantModal.baseData.datas?.has_serialno) && serialInfo.list.length === 0
+        ? 'INCREMENT'
         : updatedItems[batchModal.targetRowIndex].type
     };
     
@@ -301,21 +315,29 @@ export default function StockAdjustmentPage() {
       setSubmitError(null);
 
       const products = items.map(item => ({
-        id: item.inventory_id || item.id, 
-        barcode: item.barcode,
-        varient_id: item.variant_id || null,
+        inventory_id: item.inventory_id,
+        variant_id: item.variant_id || null,
         batch_id: item.batch_id || null,
+        serialno_id: item.serialno_id || null,
         serial_numbers: item.serial_numbers.length > 0 ? item.serial_numbers : null,
-        name: item.product,
-        quantity: Number(item.quantity) || 0,
-        type: item.type === 'increase' ? 'INCREMENT' : 'DECREMENT',
-        reason: item.reason,
-        notes: item.internalNote || item.notes,
+        stocks: Number(item.stocks) || 0,
+        type: item.type, // INCREMENT or DECREMENT
+        datas: {
+          reason: item.reason,
+          notes: item.internalNote || item.notes,
+          barcode: item.barcode,
+          product_name: item.product,
+          variant_name: item.variant_name,
+          batch_name: item.batch_name
+        }
       }));
 
       const payload = {
         shop_id: SHOP_ID,
-        products
+        adjusted_date: adjustmentDate,
+        description: notes || `Stock Adjustment - ${new Date().toLocaleDateString()}`,
+        products: products,
+        datas: {}
       };
 
       await inventoryApi.createStockAdjustment(payload);
@@ -351,11 +373,11 @@ export default function StockAdjustmentPage() {
       if (!item.product) return;
       validProductCount++;
 
-      const qty = Number(item.quantity) || 0;
-      const changeAmt = item.type === 'increase' ? qty : -qty;
+      const qty = Number(item.stocks) || 0;
+      const changeAmt = item.type === 'INCREMENT' ? qty : -qty;
       netChange += changeAmt;
       
-      const displayName = item.variant ? `${item.product} (${item.variant})` : item.product;
+      const displayName = item.variant_name ? `${item.product} (${item.variant_name})` : item.product;
 
       impactList.push({
         name: displayName,
@@ -388,9 +410,9 @@ export default function StockAdjustmentPage() {
             <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-100 hover:border-blue-200 transition-all">
               <div className="flex flex-col">
                 <span className="text-xs font-semibold text-slate-700">{stat.name}</span>
-                <span className="text-[9px] font-medium text-slate-400 uppercase tracking-wider mt-0.5">{stat.type === 'increase' ? 'Inbound' : 'Outbound'}</span>
+                <span className="text-[9px] font-medium text-slate-400 uppercase tracking-wider mt-0.5">{stat.type === 'INCREMENT' ? 'Inbound' : 'Outbound'}</span>
               </div>
-              <span className={`text-sm font-bold tabular-nums ${stat.type === 'increase' ? 'text-emerald-600' : 'text-rose-600'}`}>
+              <span className={`text-sm font-bold tabular-nums ${stat.type === 'INCREMENT' ? 'text-emerald-600' : 'text-rose-600'}`}>
                 {stat.change > 0 ? '+' : ''}{stat.change}
               </span>
             </div>
@@ -601,9 +623,9 @@ export default function StockAdjustmentPage() {
                                 ) : (
                   <div className="space-y-4">
                     {items.map((item, index) => {
-                      const qtyNum = Number(item.quantity) || 0;
+                      const qtyNum = Number(item.stocks) || 0;
                       const newStock = item.product 
-                        ? (item.type === 'increase' ? item.currentStock + qtyNum : Math.max(0, item.currentStock - qtyNum))
+                        ? (item.type === 'INCREMENT' ? item.currentStock + qtyNum : Math.max(0, item.currentStock - qtyNum))
                         : 0;
 
                       return (
@@ -637,73 +659,87 @@ export default function StockAdjustmentPage() {
                             <div className="xl:col-span-5 space-y-3">
                               <div className="flex flex-col gap-1.5">
                                 <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Product Details</label>
-                                <SearchSelect 
-                                  fetchOptions={async (q) => await inventoryApi.searchInventories(q)}
-                                  value={item.product}
-                                  labelKey="name"
-                                  valueKey="id"
-                                  onChange={(val, opt: any) => {
-                                    if (opt) {
-                                      const hasVariants = opt.has_variants || opt.has_varients || (opt.datas && (opt.datas.has_variants || opt.datas.has_varients));
-                                      const combinations = opt.combinations || (opt.datas && opt.datas.combinations) || [];
-                                      
-                                      if (hasVariants && combinations.length > 0) {
-                                        const mappedVariants = combinations.map((c: any) => {
-                                          const d = c.datas || {};
-                                          const dd = d.datas || {};
-                                          return {
-                                            id: c.id,
-                                            name: d.name || Object.values(dd.attributes || d.attributes || c.attributes || {}).join(" - ") || c.name || "Variant",
-                                            sku: c.barcode || d.barcode || opt.barcode,
-                                            stock: c.stocks ?? c.stock ?? d.stocks ?? opt.stocks ?? 0,
-                                            batches: parseBatches(c.batches || d.batches),
-                                            serial_numbers: d.serial_numbers || dd.serial_numbers || c.serial_numbers || [],
-                                          };
-                                        });
+                                  <SearchSelect 
+                                    fetchOptions={async (q) => await inventoryApi.searchInventories(q)}
+                                    value={item.product}
+                                    labelKey="name"
+                                    valueKey="id"
+                                    onChange={(val, opt: any) => {
+                                      if (opt) {
+                                        const hasVariants = opt.has_variant || (opt.datas && opt.datas.has_variant);
+                                        const combinations = opt.variants || (opt.datas && opt.datas.variants) || [];
                                         
-                                        setVariantModal({
-                                          isOpen: true,
-                                          baseProduct: opt.name || opt.label || String(val),
-                                          targetRowIndex: index,
-                                          variants: mappedVariants,
-                                          baseData: opt.datas || opt
-                                        });
-                                        setSelectedVariant(null);
+                                        if (hasVariants && combinations.length > 0) {
+                                          const mappedVariants = combinations.map((c: any) => {
+                                            const d = c.datas || {};
+                                            return {
+                                              id: c.id,
+                                              name: d.name || c.name || "Variant",
+                                              sku: c.barcode || d.barcode || opt.barcode,
+                                              stock: c.stocks ?? c.stock ?? d.stocks ?? 0,
+                                              batches: parseBatches(c.batches || d.batches),
+                                              serial_numbers: d.serial_numbers || c.serial_numbers || null,
+                                            };
+                                          });
+                                          
+                                          setVariantModal({
+                                            isOpen: true,
+                                            baseProduct: opt.name || String(val),
+                                            targetRowIndex: index,
+                                            variants: mappedVariants,
+                                            baseData: opt
+                                          });
+                                          setSelectedVariant(null);
+                                        } else {
+                                          // Handle Root level Batches/Serials
+                                          const rootBatches = parseBatches(opt.batches || (opt.datas && opt.datas.batches));
+                                          
+                                          if (rootBatches.length > 0) {
+                                            setBatchModal({
+                                              isOpen: true,
+                                              variantName: opt.name || String(val),
+                                              targetRowIndex: index,
+                                              batches: rootBatches,
+                                              variantData: opt // Using opt as variant data for standard products
+                                            });
+                                            setVariantModal(prev => ({ ...prev, baseData: opt }));
+                                          } else {
+                                            const serialInfo = extractSerials(opt.serial_number || (opt.datas && opt.datas.serial_number));
+                                            updateMultiple(item.id, { 
+                                              inventory_id: opt.id,
+                                              product: opt.name || String(val),
+                                              barcode: opt.barcode || '',
+                                              currentStock: opt.stocks || 0,
+                                              variant_name: '',
+                                              variant_id: '',
+                                              batch_id: '',
+                                              batch_name: '',
+                                              serialno_id: serialInfo.id,
+                                              sku: opt.barcode || '',
+                                              has_serialno_tracking: opt.has_serialno || (opt.datas && opt.datas.has_serialno) || false,
+                                              existing_serial_numbers: serialInfo.list,
+                                              serial_numbers: [],
+                                              type: (opt.has_serialno || (opt.datas && opt.datas.has_serialno)) && serialInfo.list.length === 0
+                                                ? 'INCREMENT'
+                                                : item.type
+                                            });
+                                          }
+                                        }
                                       } else {
-                                        const dataNode = opt.datas || opt;
-                                        updateMultiple(item.id, { 
-                                          inventory_id: dataNode.id || opt.id,
-                                          product: dataNode.name || opt.label || String(val),
-                                          barcode: dataNode.barcode || '',
-                                          currentStock: dataNode.stocks || dataNode.stock || 0,
-                                          variant: dataNode.variant || '',
-                                          variant_id: '',
-                                          batch_id: '',
-                                          batch_name: '',
-                                          sku: dataNode.barcode || dataNode.sku || '',
-                                          has_serialno_tracking: dataNode.has_serialno_tracking || opt.has_serialno_tracking || false,
-                                          existing_serial_numbers: dataNode.serial_numbers || opt.serial_numbers || [],
-                                          serial_numbers: [],
-                                          type: (dataNode.has_serialno_tracking || opt.has_serialno_tracking) && (!(dataNode.serial_numbers || opt.serial_numbers) || (dataNode.serial_numbers || opt.serial_numbers).length === 0)
-                                            ? 'increase'
-                                            : item.type
-                                        });
+                                        updateItem(item.id, 'product', String(val));
                                       }
-                                    } else {
-                                      updateItem(item.id, 'product', String(val));
-                                    }
-                                  }}
-                                  placeholder="Search or scan product..."
-                                />
+                                    }}
+                                    placeholder="Search or scan product..."
+                                  />
                               </div>
 
                               {item.product && (
                                 <div className="flex flex-wrap gap-2 animate-in zoom-in-95 mt-[-4px]">
-                                  {item.variant && (
+                                  {item.variant_name && (
                                     <div className="flex flex-col">
                                       <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest ml-1 mb-0.5">Variation</span>
                                       <div className="px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 text-[10px] font-bold border border-blue-100 uppercase tracking-widest shadow-sm">
-                                        {item.variant}
+                                        {item.variant_name}
                                       </div>
                                     </div>
                                   )}
@@ -721,7 +757,7 @@ export default function StockAdjustmentPage() {
                                       <div className="px-3 py-1.5 rounded-lg bg-slate-100 text-slate-600 text-[10px] font-bold border border-slate-200">
                                         Prev: {item.currentStock}
                                       </div>
-                                      <div className={`px-3 py-1.5 rounded-lg text-[10px] font-bold border shadow-sm ${item.type === 'increase' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-rose-50 text-rose-700 border-rose-100'}`}>
+                                      <div className={`px-3 py-1.5 rounded-lg text-[10px] font-bold border shadow-sm ${item.type === 'INCREMENT' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-rose-50 text-rose-700 border-rose-100'}`}>
                                         New: {newStock}
                                       </div>
                                     </div>
@@ -737,18 +773,18 @@ export default function StockAdjustmentPage() {
                                   label="Action Type" 
                                   options={
                                     item.has_serialno_tracking && (!item.existing_serial_numbers || item.existing_serial_numbers.length === 0)
-                                    ? typeOptions.filter(o => o.value === 'increase')
+                                    ? typeOptions.filter(o => o.value === 'INCREMENT')
                                     : typeOptions
                                   } 
                                   value={item.type}
                                   onValueChange={(val) => updateItem(item.id, 'type', val)}
-                                  className={item.type === 'increase' ? 'border-emerald-200 bg-emerald-50/30' : 'border-rose-200 bg-rose-50/30'}
+                                  className={item.type === 'INCREMENT' ? 'border-emerald-200 bg-emerald-50/30' : 'border-rose-200 bg-rose-50/30'}
                                 />
                                 <Input 
                                   label="Quantity" 
                                   type="number" 
-                                  value={item.quantity}
-                                  onChange={(e) => updateItem(item.id, 'quantity', e.target.value)}
+                                  value={item.stocks}
+                                  onChange={(e) => updateItem(item.id, 'stocks', e.target.value)}
                                   placeholder="0"
                                 />
                                 <ReusableSelect 
@@ -772,9 +808,9 @@ export default function StockAdjustmentPage() {
                                   serials={item.serial_numbers}
                                   serialLabel="Serial Number"
                                   onUpdate={(next) => updateItem(item.id, 'serial_numbers', next)}
-                                  limit={Number(item.quantity || 0)}
+                                  limit={Number(item.stocks || 0)}
                                   existingSerials={item.existing_serial_numbers}
-                                  validationType={item.type}
+                                  validationType={item.type === 'INCREMENT' ? 'increase' : 'decrease'}
                                   onValidationError={(msg) => showToast(msg, "error")}
                                 />
                               </div>

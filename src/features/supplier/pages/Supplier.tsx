@@ -5,7 +5,7 @@ import Input from "@/components/ui/Input";
 import { useNavigate } from "react-router-dom";
 import Loader from "@/components/common/Loader";
 import { useApi } from "@/context/ApiContext";
-import { ENDPOINTS } from "@/services/endpoints";
+import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 import type { SupplierRecord } from "@/types/api";
 import { useHeader } from "@/context/HeaderContext";
 import { useToast } from "@/context/ToastContext";
@@ -36,7 +36,7 @@ const Supplier = () => {
   useEffect(() => {
     setActions(
       <div className="flex items-center gap-3">
-        <button 
+        <button
           onClick={() => navigate("/supplier/drafts")}
           className="px-5 h-11 rounded-xl border border-blue-100 text-blue-600 font-semibold text-[14px] bg-blue-50/50 md:hover:bg-blue-100 md:transition-all flex items-center gap-2"
         >
@@ -52,15 +52,16 @@ const Supplier = () => {
   useEffect(() => {
     const params: Record<string, string> = { limit: "50", offset: "1" };
     if (searchTerm) params.q = searchTerm;
-    
-    getData(ENDPOINTS.SUPPLIERS, params).then((res) => {
+
+    getData(`${ENDPOINTS.SUPPLIERS}/by/shop/${SHOP_ID}`, params).then((res) => {
       if (res) {
         const data: SupplierRecord[] = Array.isArray(res.data) ? res.data : [res.data];
         setSuppliers(data);
-        
+
         // Detect unique keys from both root and datas field
         const keys = new Set<string>();
         data.forEach((s: SupplierRecord) => {
+          if (!s) return;
           // Root level keys
           Object.keys(s).forEach(k => {
             if (!["datas", "name", "id", "shop_id", "ui_id", "created_at", "updated_at", "contact_info"].includes(k)) {
@@ -70,13 +71,17 @@ const Supplier = () => {
           // Nested contact_info keys
           if (s.contact_info) {
             Object.keys(s.contact_info).forEach(k => {
-              keys.add(k);
+              if (k !== "type") keys.add(k); // type is usually special
             });
           }
           // Nested datas keys
           if (s.datas) {
             Object.keys(s.datas).forEach(k => {
-              keys.add(k);
+              if (k === "address") {
+                 if (s.datas?.address?.full_address) keys.add("address");
+              } else {
+                keys.add(k);
+              }
             });
           }
         });
@@ -89,7 +94,7 @@ const Supplier = () => {
   const handleDelete = async () => {
     if (!supplierToDelete) return;
     try {
-      await deleteData(`${ENDPOINTS.SUPPLIERS}/${supplierToDelete.id}`);
+      await deleteData(`${ENDPOINTS.SUPPLIERS}/${SHOP_ID}/${supplierToDelete.id}`);
       showToast("Supplier deleted successfully", "success");
       setRefreshKey(prev => prev + 1);
     } catch {
@@ -102,27 +107,27 @@ const Supplier = () => {
 
   return (
     <div className="space-y-6 md:animate-in md:fade-in md:duration-500 custom-scrollbar">
-      
+
       {/* Stats Section */}
       <div className="flex flex-nowrap overflow-x-auto custom-scrollbar gap-3 pb-2 -mx-2 px-2 sm:grid sm:grid-cols-2 lg:grid-cols-3 sm:overflow-visible sm:pb-0 sm:mx-0 sm:px-0 touch-pan-x">
-        <StatCard 
-          icon={Building2} 
-          label="Total Suppliers" 
-          value={suppliers.length.toString()} 
+        <StatCard
+          icon={Building2}
+          label="Total Suppliers"
+          value={suppliers.length.toString()}
           iconBg="bg-blue-50 text-blue-600"
           className="flex-1"
         />
-        <StatCard 
-          icon={Users} 
-          label="Active Partners" 
-          value={suppliers.length.toString()} 
+        <StatCard
+          icon={Users}
+          label="Active Partners"
+          value={suppliers.length.toString()}
           iconBg="bg-emerald-50 text-emerald-600"
           className="flex-1"
         />
-        <StatCard 
-          icon={Phone} 
-          label="Support Contacts" 
-          value={suppliers.filter(s => s.datas?.phone).length.toString()} 
+        <StatCard
+          icon={Phone}
+          label="Support Contacts"
+          value={suppliers.filter(s => s && s.datas?.phone).length.toString()}
           iconBg="bg-amber-50 text-amber-600"
           className="flex-1"
         />
@@ -133,7 +138,7 @@ const Supplier = () => {
         <div className="flex items-center gap-3 flex-1">
           <div className="relative w-full sm:w-80">
             <Input
-              leftIcon={<Search size={14} className='text-gray-400'/>}
+              leftIcon={<Search size={14} className='text-gray-400' />}
               type="text"
               placeholder="Filter by name..."
               value={searchTerm}
@@ -141,7 +146,7 @@ const Supplier = () => {
               className="h-10 text-sm"
             />
           </div>
-          <ColumnPicker 
+          <ColumnPicker
             availableKeys={availableKeys}
             selectedKeys={selectedKeys}
             onApply={setSelectedKeys}
@@ -151,7 +156,7 @@ const Supplier = () => {
 
         <div className="flex items-center gap-3">
           <Input
-            leftIcon={<Search size={14} className='text-gray-400'/>}
+            leftIcon={<Search size={14} className='text-gray-400' />}
             type="text"
             placeholder="Filter by name..."
             value={searchTerm}
@@ -197,9 +202,11 @@ const Supplier = () => {
                   <td colSpan={selectedKeys.length + 2} className="py-20 text-center text-slate-400 font-medium italic">No suppliers matching your filters.</td>
                 </tr>
               ) : (
-                suppliers.map((sup) => (
-                  <tr 
-                    key={sup.id} 
+                suppliers.map((sup) => {
+                  if (!sup) return null;
+                  return (
+                  <tr
+                    key={sup.id}
                     className="group md:hover:bg-blue-50/30 md:transition-all cursor-pointer"
                     onClick={() => navigate(`/supplier/${sup.id}`)}
                   >
@@ -214,30 +221,42 @@ const Supplier = () => {
                         </div>
                       </div>
                     </td>
-                    
-                    {selectedKeys.map(key => (
-                      <td key={key} className="px-6 py-4 whitespace-nowrap">
-                        <p className="text-[12px] font-semibold tracking-tight text-slate-600">
-                          {String(sup[key] ?? sup.contact_info?.[key] ?? sup.datas?.[key] ?? "—")}
-                        </p>
-                      </td>
-                    ))}
+
+                    {selectedKeys.map(key => {
+                      let val: any = sup[key] ?? sup.contact_info?.[key] ?? sup.datas?.[key] ?? "—";
+                      
+                      // Handle nested address object display
+                      if (key === 'address' && typeof val === 'object' && val !== null) {
+                        val = val.full_address || val.address || "—";
+                      }
+                      
+                      // Final safety check for any remaining objects
+                      const displayVal = typeof val === 'object' ? JSON.stringify(val) : String(val);
+
+                      return (
+                        <td key={key} className="px-6 py-4 whitespace-nowrap">
+                          <p className="text-[12px] font-semibold tracking-tight text-slate-600">
+                            {displayVal}
+                          </p>
+                        </td>
+                      );
+                    })}
 
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-1">
-                        <button 
+                        <button
                           onClick={(e) => { e.stopPropagation(); navigate(`/supplier/${sup.id}`); }}
                           className="p-2 text-slate-400 md:hover:text-blue-600 md:hover:bg-white rounded-xl md:transition-all shadow-sm md:active:scale-95"
                         >
                           <Eye size={16} />
                         </button>
-                        <button 
+                        <button
                           onClick={(e) => { e.stopPropagation(); navigate(`/supplier/${sup.id}/edit`); }}
                           className="p-2 text-slate-400 md:hover:text-blue-600 md:hover:bg-white rounded-xl md:transition-all shadow-sm md:active:scale-95"
                         >
                           <Edit size={16} />
                         </button>
-                        <button 
+                        <button
                           onClick={(e) => { e.stopPropagation(); setSupplierToDelete(sup); setIsDeleteDialogOpen(true); }}
                           className="p-2 text-slate-400 md:hover:text-rose-600 md:hover:bg-white rounded-xl md:transition-all shadow-sm md:active:scale-95"
                         >
@@ -246,7 +265,8 @@ const Supplier = () => {
                       </div>
                     </td>
                   </tr>
-                ))
+                  );
+                })
               )}
             </tbody>
           </table>

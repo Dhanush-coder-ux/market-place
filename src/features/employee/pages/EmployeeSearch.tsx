@@ -31,7 +31,7 @@ const EmployeeSearch = () => {
   const fetchEmployees = async (q: string) => {
     if (!q) return [];
     try {
-      const res = await getData(ENDPOINTS.EMPLOYEES, { limit: "10", offset: "1", q, shop_id: SHOP_ID });
+      const res = await getData(`${ENDPOINTS.EMPLOYEES}/by/shop/${SHOP_ID}`, { limit: "10", offset: "1", q});
       const data = res?.data ? (Array.isArray(res.data) ? res.data : [res.data]) : [];
       return data.map((e: any) => ({
         ...e,

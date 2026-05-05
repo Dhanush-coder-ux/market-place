@@ -9,7 +9,8 @@ import {
   Calendar,
   X,
   Eye,
-  Hash
+  Hash,
+  Info
 } from "lucide-react";
 import { VariantRows, BatchCards } from "../components/StockTree";
 import { useApi } from "@/context/ApiContext";
@@ -127,18 +128,24 @@ const ProductRow = React.memo(({
     return raw.filter((b: any) => b && b.id !== null);
   }, [item.variants, item.batches, datas.batches, datas.has_variants, datas.has_varients]);
 
+  const serials = parseData(datas.serial_numbers || item.serial_numbers);
+  const variantTypes = datas.variantTypes || datas.variant_types || [];
+
   const hasVariants = (datas.has_variants || datas.has_varients) && combinations.length > 0;
   const hasBatches = batches.length > 0;
-  const isExpandable = hasVariants || hasBatches;
+  const hasSerials = serials.length > 0;
+  const isExpandable = hasVariants || hasBatches || hasSerials;
 
-  // Use explicit stock number to combine with units properly for the parent
   const stockNumber = Number(item.stocks || 0);
-  const stockLabel = `${stockNumber} ${datas.unit ? `(${datas.unit.split(" ")[0]})` : ""}`;
-  const stockStatusColor = stockNumber <= 0 ? "text-rose-600 bg-rose-50 border-rose-200" : stockNumber <= 15 ? "text-amber-600 bg-amber-50 border-amber-200" : "text-emerald-600 bg-emerald-50 border-emerald-200";
+  const stockLabel = `${stockNumber} ${datas.unit ? datas.unit.split(" ")[0] : "Units"}`;
+  const stockStatusColor = stockNumber <= 0 
+    ? "text-rose-600 bg-rose-50 border-rose-100" 
+    : stockNumber <= 15 
+      ? "text-amber-600 bg-amber-50 border-amber-100" 
+      : "text-emerald-600 bg-emerald-50 border-emerald-100";
+  
   const navigate = useNavigate();
 
-  // --- Aggregation logic for badges ---
-  const serials = parseData(datas.serial_numbers || item.serial_numbers);
   let totalSerials = serials.length;
   let totalBatches = batches.length;
 
@@ -147,7 +154,6 @@ const ProductRow = React.memo(({
       const cDatas = c.datas || {};
       const cSerials = parseData(cDatas.serial_numbers || c.serial_numbers);
       totalSerials += cSerials.length;
-
       const cBatches = parseData(c.batches);
       totalBatches += cBatches.length;
     });
@@ -158,29 +164,22 @@ const ProductRow = React.memo(({
   const badges = [];
   if (hasVariants) {
     badges.push(
-      <span key="var" className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider text-blue-600 bg-blue-50 border border-blue-100 whitespace-nowrap">
-        <Layers size={10} /> {combinations.length} Variants
+      <span key="var" className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-widest text-blue-600 bg-blue-50 border border-blue-100">
+        <Layers size={10} className="stroke-[2.5]" /> {combinations.length} Variants
       </span>
     );
   }
   if (totalBatches > 0) {
     badges.push(
-      <span key="batch" className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider text-indigo-600 bg-indigo-50 border border-indigo-100 whitespace-nowrap">
-        <Calendar size={10} /> {totalBatches} Batches
+      <span key="batch" className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-widest text-indigo-600 bg-indigo-50 border border-indigo-100">
+        <Calendar size={10} className="stroke-[2.5]" /> {totalBatches} Batches
       </span>
     );
   }
   if (totalSerials > 0) {
     badges.push(
-      <span key="serial" className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider text-purple-600 bg-purple-50 border border-purple-100 whitespace-nowrap">
-        <Hash size={10} /> {totalSerials} Serials
-      </span>
-    );
-  }
-  if (badges.length === 0) {
-    badges.push(
-      <span key="std" className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider text-slate-500 bg-slate-50 border border-slate-200 whitespace-nowrap">
-        <Tag size={10} /> Standard
+      <span key="serial" className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-widest text-violet-600 bg-violet-50 border border-violet-100">
+        <Hash size={10} className="stroke-[2.5]" /> {totalSerials} Serials
       </span>
     );
   }
@@ -192,111 +191,157 @@ const ProductRow = React.memo(({
     <Fragment>
       <tr
         onClick={() => isExpandable && toggleExpand(item.id)}
-        className={`group transition-colors ${isExpandable ? 'cursor-pointer' : ''} ${isExpanded ? "bg-slate-50/30" : "hover:bg-slate-50"}`}
+        className={`group transition-all ${isExpandable ? 'cursor-pointer' : ''} ${isExpanded ? "bg-blue-50/20" : "hover:bg-slate-50/50"}`}
       >
-        {/* Expand Icon */}
-        <td className="px-6 py-4 text-center w-14">
+        <td className="px-8 py-5 text-center w-14">
           {isExpandable ? (
-            <div className={`w-7 h-7 rounded-md flex items-center justify-center transition-all shadow-sm mx-auto ${isExpanded ? "bg-blue-600 text-white shadow-blue-500/20" : "bg-white border border-slate-200 text-slate-500 group-hover:bg-slate-50"}`}>
-              {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+            <div className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all ${isExpanded ? "bg-blue-600 text-white shadow-lg shadow-blue-200" : "bg-white border border-slate-200 text-slate-400 group-hover:border-blue-300 group-hover:text-blue-500 shadow-sm"}`}>
+              {isExpanded ? <ChevronDown size={18} className="stroke-[3]" /> : <ChevronRight size={18} className="stroke-[3]" />}
             </div>
           ) : (
-            <div className="w-7 h-7 rounded-md flex items-center justify-center mx-auto">
-              <Package size={16} className="text-slate-300" />
+            <div className="w-8 h-8 rounded-xl flex items-center justify-center mx-auto bg-slate-50 text-slate-300">
+              <Package size={18} />
             </div>
           )}
         </td>
 
-        {/* Product Info */}
-        <td className="px-6 py-4">
-          <div className="flex items-center gap-4">
-            <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white text-base font-semibold shadow-sm shrink-0">
+        <td className="px-6 py-5">
+          <div className="flex items-center gap-5">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white text-lg font-black shadow-lg shadow-blue-100 shrink-0">
               {String(datas.name || item.name || "N")[0].toUpperCase()}
             </div>
-            <div className="flex flex-col gap-1">
-              <div className="text-[15px] font-semibold text-slate-800 flex items-center gap-2">
-                {datas.name || item.name || "N/A"}
-                <div className="flex items-center gap-1.5 flex-wrap">
+            <div className="flex flex-col gap-1.5 min-w-0">
+              <div className="flex items-center gap-3 flex-wrap">
+                <span className="text-[14px] font-black text-slate-800 uppercase tracking-tight truncate max-w-[200px]">
+                  {datas.name || item.name || "N/A"}
+                </span>
+                <div className="flex items-center gap-1.5">
                   {visibleBadges}
                   {!showAllBadges && remainingBadges > 0 && (
                     <button
                       onClick={(e) => { e.stopPropagation(); setShowAllBadges(true); }}
-                      className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-bold uppercase bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200 transition-colors"
+                      className="px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase tracking-widest bg-slate-100 text-slate-500 border border-slate-200 hover:bg-slate-200 transition-all"
                     >
-                      +{remainingBadges} more
+                      +{remainingBadges}
                     </button>
                   )}
                 </div>
               </div>
-              <div className="flex items-center gap-3 text-[12px] text-slate-500 font-medium">
-                <span className="font-mono text-slate-500">{item.barcode || "No SKU"}</span>
-                <span className="text-slate-300">•</span>
-                <span>Brand: <span className="text-slate-700">{datas.brand || item.brand || "N/A"}</span></span>
-                <span className="text-slate-300">•</span>
-                <span>GST: <span className="text-slate-700">{datas.gst || item.gst || "N/A"}</span></span>
+              <div className="flex items-center gap-3 text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                <span className="font-mono text-slate-500 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-100">{item.barcode || "NO-SKU"}</span>
+                <span className="w-1 h-1 rounded-full bg-slate-200" />
+                <span>{datas.brand || item.brand || "Generic"}</span>
               </div>
             </div>
           </div>
         </td>
 
-        {/* Category & Supplier */}
-        <td className="px-6 py-4">
+        <td className="px-6 py-5">
           <div className="flex flex-col gap-1">
-            <span className="text-[14px] font-medium text-slate-800">{datas.category || item.category || "N/A"}</span>
-            <span className="text-[12px] text-slate-500">{datas.supplier || item.supplier || "N/A"}</span>
+            <span className="text-[11px] font-black text-slate-800 uppercase tracking-widest">{datas.category || item.category || "Uncategorized"}</span>
+            <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{datas.supplier || item.supplier || "No Supplier"}</span>
           </div>
         </td>
 
-        {/* Pricing */}
-        <td className="px-6 py-4 text-right">
-          <span className="text-[14px] font-medium text-slate-500">{formatCurrency(item.buy_price)}</span>
+        <td className="px-6 py-5 text-right">
+          <span className="text-[13px] font-bold text-slate-400">{formatCurrency(item.buy_price)}</span>
         </td>
-        <td className="px-6 py-4 text-right">
-          <span className="text-[14px] font-semibold text-slate-800">{formatCurrency(item.sell_price)}</span>
+        <td className="px-6 py-5 text-right">
+          <span className="text-[14px] font-black text-slate-800">{formatCurrency(item.sell_price)}</span>
         </td>
 
-        {/* Stock */}
-        <td className="px-6 py-4 text-right">
-          <span className={`inline-flex px-3 py-1 rounded-md text-[12px] font-medium border ${stockStatusColor}`}>
+        <td className="px-6 py-5 text-right">
+          <span className={`inline-flex px-3 py-1 rounded-xl text-[11px] font-black uppercase tracking-widest border shadow-sm ${stockStatusColor}`}>
             {stockLabel}
           </span>
         </td>
 
-        {/* Date */}
-        <td className="px-6 py-4 text-right">
-          <div className="flex items-center justify-end gap-1.5 text-[13px] text-slate-500">
-            <Calendar size={14} />
-            {formatDate(item.date)}
+        <td className="px-6 py-5 text-right">
+          <div className="flex flex-col items-end">
+            <span className="text-[12px] font-bold text-slate-700">{formatDate(item.date)}</span>
+            <span className="text-[9px] text-slate-400 font-black uppercase tracking-tighter">System Entry</span>
           </div>
         </td>
 
-        {/* Actions */}
-        <td className="px-6 py-4 text-center">
+        <td className="px-8 py-5 text-center">
           <button
             onClick={(e) => { e.stopPropagation(); navigate(`/product/${(item.id)}`); }}
-            className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-transparent hover:border-blue-100"
-            title="View Detail"
+            className="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all border border-transparent hover:border-blue-100 shadow-sm active:scale-95"
+            title="View Details"
           >
-            <Eye size={16} />
+            <Eye size={18} />
           </button>
         </td>
       </tr>
 
       {isExpanded && isExpandable && (
-        <tr className="bg-slate-50/20">
-          <td colSpan={8} className="px-0 py-0 border-b border-slate-100">
-            {/* pl-[88px] aligns the thread exactly under the title area */}
-            <div className="pl-[88px] pr-6 py-2">
-              {hasVariants && (
-                <VariantRows
-                  combinations={combinations}
-                  baseSellPrice={item.sell_price}
-                  baseBuyPrice={item.buy_price}
-                />
+        <tr className="bg-blue-50/5">
+          <td colSpan={8} className="px-0 py-0">
+            <div className="pl-[104px] pr-8 py-8 border-l-[3px] border-blue-500/20 ml-12 space-y-6">
+              
+              {/* Product Overview (Description & Units) */}
+              {(datas.description || item.description || datas.unit) && (
+                <div className="bg-white rounded-2xl border border-slate-100 p-4 shadow-sm">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                    <Info size={12} className="text-blue-400" /> Product Overview
+                  </p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {datas.unit && (
+                      <div className="bg-slate-50 border border-slate-100 rounded-xl px-4 py-2">
+                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter leading-none mb-1">Stocking Unit</p>
+                        <p className="text-xs font-black text-slate-700">{datas.unit}</p>
+                      </div>
+                    )}
+                    {(datas.description || item.description) && (
+                      <div className="bg-slate-50 border border-slate-100 rounded-xl px-4 py-2">
+                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter leading-none mb-1">Description</p>
+                        <p className="text-xs font-medium text-slate-600 line-clamp-2">{datas.description || item.description}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
               )}
-              {!hasVariants && hasBatches && (
-                <BatchCards batches={batches} />
+
+              {/* Variant Configuration (if any) */}
+              {hasVariants && variantTypes.length > 0 && (
+                <div className="bg-white rounded-2xl border border-slate-100 p-4 shadow-sm">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                    <Layers size={12} className="text-blue-400" /> Configuration Matrix
+                  </p>
+                  <div className="flex flex-wrap gap-3">
+                    {variantTypes.map((vt: any) => (
+                      <div key={vt.id} className="bg-slate-50 border border-slate-100 rounded-xl px-4 py-2">
+                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter leading-none mb-1">{vt.name}</p>
+                        <p className="text-xs font-black text-slate-700">{(vt.values as string[]).join(", ")}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               )}
+
+              {/* Root Serial Numbers (if any) */}
+              {!hasVariants && !hasBatches && hasSerials && (
+                <div className="bg-white rounded-2xl border border-slate-100 p-4 shadow-sm">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                    <Hash size={12} className="text-violet-400" /> Serial Number Tracking
+                  </p>
+                  <SerialBadgeList serials={serials} title={`Serials: ${datas.name || item.name}`} />
+                </div>
+              )}
+
+              {/* Main Content Areas */}
+              <div className="animate-in fade-in slide-in-from-top-4 duration-500">
+                {hasVariants && (
+                  <VariantRows
+                    combinations={combinations}
+                    baseSellPrice={item.sell_price}
+                    baseBuyPrice={item.buy_price}
+                  />
+                )}
+                {!hasVariants && hasBatches && (
+                  <BatchCards batches={batches} />
+                )}
+              </div>
             </div>
           </td>
         </tr>
@@ -314,7 +359,7 @@ const InventoryPage = () => {
   const [refreshKey] = useState(0);
 
   useEffect(() => {
-    getData(ENDPOINTS.INVENTORIES, { shop_id: SHOP_ID }).then((res: any) => {
+    getData(`${ENDPOINTS.INVENTORIES}/by/shop/${SHOP_ID}`).then((res: any) => {
       if (res && res.data) {
         setInventory(res.data);
       }
@@ -353,81 +398,131 @@ const InventoryPage = () => {
   }, []);
 
   return (
-    <div className="space-y-6 bg-slate-50 min-h-screen">
+    <div className="space-y-8 bg-slate-50/50 min-h-screen p-2 sm:p-4 animate-in fade-in duration-700">
 
-      {/* Search and Stats Section */}
-      <div className="space-y-4">
-        <div className="relative group">
-          <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-blue-500 transition-colors">
-            <Package size={18} />
+      {/* HEADER SECTION */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-2">
+        <div className="space-y-1.5">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-[1.5rem] bg-blue-600 flex items-center justify-center text-white shadow-xl shadow-blue-100">
+              <Package size={24} />
+            </div>
+            <div>
+              <h1 className="text-xl font-black text-slate-800 uppercase tracking-widest leading-none">Stock Levels</h1>
+              <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest mt-1">Inventory Management Console</p>
+            </div>
+          </div>
+        </div>
+
+        {/* SEARCH BAR - Super UI Style */}
+        <div className="relative group w-full lg:max-w-md">
+          <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none text-slate-400 group-focus-within:text-blue-600 transition-colors">
+            <Package size={20} className="stroke-[2.5]" />
           </div>
           <input
             type="text"
-            placeholder="Search by name, SKU, brand, or category..."
+            placeholder="Search SKU, name, or brand..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-11 pr-4 py-3 bg-white border border-slate-200 rounded-2xl shadow-sm focus:ring-4 focus:ring-blue-100 focus:border-blue-400 outline-none transition-all font-medium text-slate-700"
+            className="w-full pl-14 pr-6 py-4 bg-white border border-slate-200 rounded-[2rem] shadow-sm hover:shadow-md focus:ring-8 focus:ring-blue-100 focus:border-blue-400 outline-none transition-all font-bold text-sm text-slate-700 placeholder-slate-300"
           />
+          <div className="absolute inset-y-0 right-0 pr-5 flex items-center pointer-events-none">
+            <div className="px-2 py-1 rounded-md bg-slate-50 border border-slate-100 text-[10px] font-black text-slate-400 uppercase tracking-tighter shadow-inner">
+              CTRL + K
+            </div>
+          </div>
         </div>
+      </div>
 
-        <div className="flex flex-nowrap overflow-x-auto custom-scrollbar gap-3 pb-2 -mx-2 px-2 sm:grid sm:grid-cols-2 lg:grid-cols-4 sm:overflow-visible sm:pb-0 sm:mx-0 sm:px-0 touch-pan-x">
-          <StatCard
-            icon={Package}
-            label="Total Inventory Items"
-            value={stats.total.toString()}
-            className="flex-1"
-          />
-          <StatCard
-            icon={AlertCircle}
-            label="Low Stock Items"
-            value={stats.lowStock.toString()}
-            iconBg="bg-amber-50" iconColor="text-amber-600"
-            className="flex-1"
-          />
-        </div>
+      {/* STATS CARDS */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        <StatCard
+          icon={Package}
+          label="Catalog Coverage"
+          value={stats.total.toString()}
+          subValue="Total Items"
+          iconBg="bg-blue-50" iconColor="text-blue-600"
+          className="rounded-[2rem] border-slate-200 shadow-sm"
+        />
+        <StatCard
+          icon={AlertCircle}
+          label="Restock Alerts"
+          value={stats.lowStock.toString()}
+          subValue="Priority Items"
+          iconBg="bg-amber-50" iconColor="text-amber-600"
+          className="rounded-[2rem] border-slate-200 shadow-sm"
+        />
+        <StatCard
+          icon={Tag}
+          label="Category Count"
+          value={new Set(inventory.map(i => i.datas?.category || i.category)).size.toString()}
+          subValue="Active Tags"
+          iconBg="bg-emerald-50" iconColor="text-emerald-600"
+          className="rounded-[2rem] border-slate-200 shadow-sm"
+        />
+        <StatCard
+          icon={Hash}
+          label="Total SKU Count"
+          value={inventory.reduce((acc, curr) => acc + (curr.variants?.length || 1), 0).toString()}
+          subValue="Unique Variants"
+          iconBg="bg-violet-50" iconColor="text-violet-600"
+          className="rounded-[2rem] border-slate-200 shadow-sm"
+        />
       </div>
 
       {/* Error State */}
       {error && (
-        <div className="flex items-center justify-between p-4 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 text-sm font-medium shadow-sm animate-in fade-in">
-          <div className="flex items-center gap-2">
-            <AlertCircle size={18} />
+        <div className="flex items-center justify-between p-5 bg-rose-50 border border-rose-100 rounded-[1.5rem] text-rose-700 text-xs font-black uppercase tracking-widest shadow-sm animate-in fade-in slide-in-from-top-4">
+          <div className="flex items-center gap-3">
+            <AlertCircle size={20} className="text-rose-500" />
             <span>{error}</span>
           </div>
-          <button onClick={clearError} className="text-rose-500 hover:text-rose-700 transition-colors p-1 hover:bg-rose-100 rounded-lg">
-            <X size={16} />
+          <button onClick={clearError} className="text-rose-400 hover:text-rose-700 transition-colors p-2 hover:bg-white rounded-xl shadow-sm">
+            <X size={18} />
           </button>
         </div>
       )}
 
-      {/* Main Table Card */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-        {loading ? (
-          <div className="p-16 flex justify-center"><Loader /></div>
-        ) : inventory.length === 0 ? (
-          <div className="p-20 text-center flex flex-col items-center justify-center">
-            <div className="w-16 h-16 bg-slate-50 border border-slate-100 rounded-2xl flex items-center justify-center text-slate-400 mb-4 shadow-sm">
-              <Package size={32} />
+      {/* Main Table Card - Super UI High Density */}
+      <div className="bg-white rounded-[2rem] shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition-shadow">
+        <div className="px-8 py-6 bg-gradient-to-r from-slate-50 to-transparent border-b border-slate-100 flex items-center justify-between">
+          <div>
+            <h2 className="text-xs font-black text-slate-800 uppercase tracking-widest">Inventory Ledger</h2>
+            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Real-time stock synchronization</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="px-3 py-1 rounded-full bg-emerald-50 text-emerald-600 text-[10px] font-black uppercase border border-emerald-100">
+              Live Feed
             </div>
-            <h3 className="text-lg font-semibold text-slate-800">No inventory found</h3>
-            <p className="text-sm text-slate-500 mt-1">Your product list is currently empty.</p>
+          </div>
+        </div>
+
+        {loading ? (
+          <div className="p-20 flex justify-center"><Loader /></div>
+        ) : inventory.length === 0 ? (
+          <div className="p-32 text-center flex flex-col items-center justify-center bg-slate-50/20">
+            <div className="w-20 h-20 bg-white border border-slate-100 rounded-[2.5rem] flex items-center justify-center text-slate-200 mb-6 shadow-sm">
+              <Package size={40} />
+            </div>
+            <h3 className="text-lg font-black text-slate-800 uppercase tracking-widest">No Inventory Records</h3>
+            <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest mt-2 max-w-[240px]">Start adding products to your catalog to track stock levels.</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto pf-scroll">
             <table className="w-full text-left border-collapse whitespace-nowrap">
               <thead>
-                <tr className="bg-white border-b border-slate-200 text-[11px] uppercase tracking-wider text-slate-500 font-semibold">
-                  <th className="px-6 py-4 w-14"></th>
-                  <th className="px-6 py-4 min-w-[260px]">Product Details</th>
-                  <th className="px-6 py-4">Category & Supplier</th>
-                  <th className="px-6 py-4 text-right">Buy Price</th>
-                  <th className="px-6 py-4 text-right">Sell Price</th>
-                  <th className="px-6 py-4 text-right">Stock</th>
-                  <th className="px-6 py-4 text-right">Added Date</th>
-                  <th className="px-6 py-4 w-12 text-center">Actions</th>
+                <tr className="text-[11px] uppercase tracking-[0.2em] text-slate-400 font-black">
+                  <th className="px-8 py-6 w-14"></th>
+                  <th className="px-6 py-6 min-w-[320px]">Product Identity</th>
+                  <th className="px-6 py-6">Classification</th>
+                  <th className="px-6 py-6 text-right">Costing</th>
+                  <th className="px-6 py-6 text-right">Selling</th>
+                  <th className="px-6 py-6 text-right">Inventory</th>
+                  <th className="px-6 py-6 text-right">Updated</th>
+                  <th className="px-8 py-6 w-12 text-center">Detail</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-slate-50">
                 {filteredInventory.map((item: InventoryItem) => (
                   <ProductRow
                     key={item.id}

@@ -61,11 +61,37 @@ const CopyButton = ({ text }: { text: string }) => {
 // Map a PurchaseRecord to a display-friendly shape
 const toGrnShape = (p: PurchaseRecord) => {
   const d = p.datas;
-  const rawProds = (d?.grn_products ?? d?.purchase_products ?? []) as any[];
+  const rawProds = ((p as any).products ?? d?.grn_products ?? d?.purchase_products ?? d?.products ?? []) as any[];
   const products = rawProds.map((r: any) => ({
     name: String(r.product_name ?? r.name ?? "Item"),
-    quantity: Number(r.quantity ?? r.qty ?? 0),
+    quantity: Number(r.quantity ?? r.qty ?? r.stocks ?? 1),
+    variants: Array.isArray(r.variants) ? r.variants.map((v: any) => ({
+      id: v.id,
+      name: v.name,
+      buy_price: v.buy_price,
+      sell_price: v.sell_price,
+      stocks: v.stocks,
+      batches: Array.isArray(v.batches) ? v.batches.map((b: any) => ({
+        name: b.name,
+        stocks: b.stocks ?? b.quantity ?? 1,
+        expiry_date: b.expiry_date,
+        manufacturing_date: b.manufacturing_date,
+        serial_numbers: b.serial_numbers?.serial_numbers || null,
+      })) : []
+    })) : undefined,
+    batches: Array.isArray(r.batches) ? r.batches.map((b: any) => ({
+      name: b.name,
+      stocks: b.stocks ?? b.quantity ?? 1,
+      expiry_date: b.expiry_date,
+      manufacturing_date: b.manufacturing_date,
+      serial_numbers: b.serial_numbers?.serial_numbers || null,
+    })) : undefined,
   }));
+  let totalValue = Number(d?.total_value ?? d?.grand_total ?? d?.total_cost ?? 0);
+  if (totalValue === 0 && products.length > 0) {
+    totalValue = rawProds.reduce((sum: number, pr: any) => sum + (Number(pr.quantity ?? pr.qty ?? pr.stocks ?? 1) * Number(pr.buy_price ?? 0)), 0);
+  }
+
   return {
     id: p.id,
     poReference: String(d?.po_reference ?? d?.reference ?? p.id.slice(0, 8)),
@@ -73,7 +99,7 @@ const toGrnShape = (p: PurchaseRecord) => {
     date: String(d?.receipt_date ?? d?.purchase_date ?? p.date ?? "—"),
     status: String(d?.status ?? "Pending"),
     itemsCount: products.reduce((s: number, i: any) => s + i.quantity, 0),
-    totalValue: Number(d?.total_value ?? d?.grand_total ?? d?.total_cost ?? 0),
+    totalValue,
     products,
   };
 };
@@ -277,10 +303,110 @@ const GRNCardView = () => {
               <div className="space-y-2 max-h-[40vh] overflow-y-auto pr-2">
                 {selectedGRN.products.length === 0
                   ? <p className="text-sm text-zinc-400 text-center py-4">No items recorded</p>
-                  : selectedGRN.products.map((p, i) => (
-                    <div key={i} className="flex items-center justify-between p-3 rounded-lg border border-zinc-100 hover:border-blue-100 hover:bg-blue-50/30 transition-colors">
-                      <span className="text-sm font-medium text-zinc-700">{p.name}</span>
-                      <span className="text-sm font-bold text-zinc-600 bg-white px-3 py-1 rounded-md border border-zinc-200 shadow-sm">×{p.quantity}</span>
+                  : selectedGRN.products.map((product: any, idx: number) => (
+                    <div key={idx} className="flex flex-col p-3 rounded-lg border border-zinc-200 bg-white shadow-sm hover:border-blue-200 transition-colors">
+                      <div className="flex items-start justify-between mb-3 border-b border-zinc-50 pb-2">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-bold text-zinc-800">{product.name}</span>
+                            {product.barcode && <span className="text-[10px] font-mono text-zinc-500 bg-zinc-100 border border-zinc-200 px-1.5 py-0.5 rounded">{product.barcode}</span>}
+                          </div>
+                          {product.category && <p className="text-[11px] font-medium text-zinc-500 mt-0.5">{product.category}</p>}
+                        </div>
+                        <div className="text-right flex flex-col items-end">
+                          <span className="text-sm font-bold text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-md border border-blue-100 shadow-sm mb-1.5">
+                            × {product.quantity}
+                          </span>
+                          {(product.buy_price !== undefined || product.sell_price !== undefined) && (
+                            <div className="text-[10px] font-medium text-zinc-500 flex flex-col items-end gap-0.5">
+                              {product.buy_price !== undefined && <span>Buy: ₹{product.buy_price}</span>}
+                              {product.sell_price !== undefined && <span className="text-emerald-600">Sell: ₹{product.sell_price}</span>}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Render Variants */}
+                      {product.variants && product.variants.length > 0 && (
+                        <div className="mt-2 space-y-3 pl-3 border-l-2 border-zinc-100">
+                          {product.variants.map((variant: any, vIdx: number) => (
+                            <div key={vIdx} className="space-y-2">
+                              <div className="flex items-start justify-between">
+                                <div className="flex items-center gap-2">
+                                  <div className="w-1.5 h-1.5 rounded-full bg-blue-400" />
+                                  <span className="text-xs font-bold text-zinc-600">{variant.name}</span>
+                                </div>
+                                <div className="text-right flex flex-col items-end">
+                                  {(variant.buy_price !== undefined || variant.sell_price !== undefined) && (
+                                    <div className="text-[9px] font-medium text-zinc-500 flex flex-col items-end gap-0.5">
+                                      {variant.buy_price !== undefined && <span>Buy: ₹{variant.buy_price}</span>}
+                                      {variant.sell_price !== undefined && <span className="text-emerald-600">Sell: ₹{variant.sell_price}</span>}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                              
+                              {/* Variant Batches */}
+                              {variant.batches && variant.batches.length > 0 && (
+                                <div className="grid grid-cols-1 gap-2 pl-4">
+                                  {variant.batches.map((batch: any, bIdx: number) => (
+                                    <div key={bIdx} className="p-2 bg-zinc-50 rounded border border-zinc-100">
+                                      <div className="flex justify-between items-center mb-1">
+                                        <span className="text-xs font-semibold text-zinc-700">{batch.name}</span>
+                                        <span className="text-[10px] font-bold text-zinc-500">Qty: {batch.stocks}</span>
+                                      </div>
+                                      {(batch.expiry_date || batch.manufacturing_date) && (
+                                        <div className="flex items-center gap-3 text-[9px] text-zinc-400 mt-0.5">
+                                          {batch.manufacturing_date && <span>MFG: {new Date(batch.manufacturing_date).toLocaleDateString()}</span>}
+                                          {batch.expiry_date && <span>EXP: {new Date(batch.expiry_date).toLocaleDateString()}</span>}
+                                        </div>
+                                      )}
+                                      {batch.serial_numbers && batch.serial_numbers.length > 0 && (
+                                        <div className="flex flex-wrap gap-1 mt-1.5">
+                                          {batch.serial_numbers.map((sn: string, snIdx: number) => (
+                                            <span key={snIdx} className="text-[9px] font-mono bg-white border border-zinc-200 px-1.5 py-0.5 rounded text-zinc-500">
+                                              {sn}
+                                            </span>
+                                          ))}
+                                        </div>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Render Product Level Batches (if no variants) */}
+                      {(!product.variants || product.variants.length === 0) && product.batches && product.batches.length > 0 && (
+                        <div className="mt-2 grid grid-cols-1 gap-2 pl-3 border-l-2 border-zinc-100">
+                          {product.batches.map((batch: any, bIdx: number) => (
+                            <div key={bIdx} className="p-2 bg-zinc-50 rounded border border-zinc-100">
+                              <div className="flex justify-between items-center mb-1">
+                                <span className="text-xs font-semibold text-zinc-700">{batch.name}</span>
+                                <span className="text-[10px] font-bold text-zinc-500">Qty: {batch.stocks}</span>
+                              </div>
+                              {(batch.expiry_date || batch.manufacturing_date) && (
+                                <div className="flex items-center gap-3 text-[9px] text-zinc-400 mt-0.5">
+                                  {batch.manufacturing_date && <span>MFG: {new Date(batch.manufacturing_date).toLocaleDateString()}</span>}
+                                  {batch.expiry_date && <span>EXP: {new Date(batch.expiry_date).toLocaleDateString()}</span>}
+                                </div>
+                              )}
+                              {batch.serial_numbers && batch.serial_numbers.length > 0 && (
+                                <div className="flex flex-wrap gap-1 mt-1.5">
+                                  {batch.serial_numbers.map((sn: string, snIdx: number) => (
+                                    <span key={snIdx} className="text-[9px] font-mono bg-white border border-zinc-200 px-1.5 py-0.5 rounded text-zinc-500">
+                                      {sn}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   ))}
               </div>

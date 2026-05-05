@@ -14,5 +14,10 @@ export const employeeApi = {
     validateMandatory(data, SCHEMAS.employee_update);
     console.log("Payload:", data);
     return await apiClient.put(`${ENDPOINTS.EMPLOYEES}`, data);
+  },
+
+  deleteEmployee: async (data: Record<string, any>) => {
+    validateMandatory(data, SCHEMAS.employee_delete);
+    return await apiClient.delete(ENDPOINTS.EMPLOYEES, data);
   }
 };

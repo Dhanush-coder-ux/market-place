@@ -16,10 +16,15 @@ export const inventoryApi = {
     return await apiClient.put(`${ENDPOINTS.INVENTORIES}`, data);
   },
 
+  deleteInventory: async (data: { id: string; shop_id: string }) => {
+    validateMandatory(data, SCHEMAS.inventory_delete);
+    return await apiClient.delete(ENDPOINTS.INVENTORIES, data);
+  },
+
   createStockAdjustment: async (data: Record<string, any>) => {
     validateMandatory(data, SCHEMAS.stock_adjustment_create);
-    console.log("Payload:", { datas: data });
-    return await apiClient.post(ENDPOINTS.S_ADJUSTMENTS, { datas: data });
+    console.log("Payload:", data );
+    return await apiClient.post(ENDPOINTS.S_ADJUSTMENTS, data );
   },
 
   updateStockAdjustment: async (data: Record<string, any>) => {
@@ -46,7 +51,7 @@ export const inventoryApi = {
 
   searchInventories: async (query: string): Promise<any[]> => {
     try {
-      const response = await apiClient.get(`${ENDPOINTS.INVENTORIES}?q=${query}&shop_id=${SHOP_ID}`);
+      const response = await apiClient.get(`${ENDPOINTS.INVENTORIES}/by/shop/${SHOP_ID}?q=${query}`);
       const items = response?.data || (Array.isArray(response) ? response : []);
       
       return items.map((i: any) => ({

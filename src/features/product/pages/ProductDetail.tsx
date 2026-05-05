@@ -4,6 +4,7 @@ import {
   Package, Edit3, Trash2, DollarSign, Download, Upload,
   Tag, Layers, Info, BarChart2,
   Hash, ShoppingCart, MapPin, FileText,
+  ArrowUp, ArrowDown, TrendingUp, Activity, RefreshCcw,
 } from "lucide-react";
 import { useApi } from "@/context/ApiContext";
 import { useToast } from "@/context/ToastContext";
@@ -13,7 +14,7 @@ import { StatCard } from "@/components/common/StatsCard";
 import { Modal, ProfileHeaderCard, SectionCard, DetailItem } from "@/components/common/SuperUI";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { SearchSelect } from "@/components/inputbuilders/SearchSelect";
-import { VariantRows, SerialBadgeList } from "../../inventory/components/StockTree";
+import { VariantRows, SerialBadgeList, BatchCards } from "../../inventory/components/StockTree";
 import type { InventoryRecord } from "@/types/api";
 
 // ── Search bar ───────────────────────────────────────────────────────────────
@@ -62,21 +63,54 @@ const ProductDetail = () => {
   const [viewValue, setViewValue] = useState<{ label: string; value: string } | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [movements, setMovements] = useState<any[]>([]);
+  const [movLoading, setMovLoading] = useState(false);
+  const [purchases, setPurchases] = useState<any[]>([]);
+  const [purLoading, setPurLoading] = useState(false);
 
   useEffect(() => {
     if (!id) return;
     setRecordLoading(true);
-    getData(`${ENDPOINTS.INVENTORIES}/by/${id}/${SHOP_ID}`).then((res) => {
+    getData(`${ENDPOINTS.INVENTORIES}/by/${SHOP_ID}/${id}`).then((res) => {
       if (res) setProduct(Array.isArray(res.data) ? res.data[0] : res.data);
       setRecordLoading(false);
     });
   }, [id]);
 
+  // Lazy-load movements/purchases when their tab is activated
+  // These must be here (before early returns) to satisfy Rules of Hooks
+  const MOV_TAB_LABEL = "Stock Movements";
+  const PUR_TAB_LABEL = "Purchases";
+
+  useEffect(() => {
+    if (!id || !product) return;
+    const hasInvTab = (product.has_variant === true && (product.variants ?? []).length > 0) || (product.has_batch === true && (product.batches ?? []).length > 0);
+    const movIdx = hasInvTab ? 2 : 1;
+    if (activeTab !== movIdx) return;
+    setMovLoading(true);
+    getData(`${ENDPOINTS.S_ADJUSTMENTS}/by/product/${SHOP_ID}/${id}`).then((res: any) => {
+      setMovements(res?.data ? (Array.isArray(res.data) ? res.data : [res.data]) : []);
+      setMovLoading(false);
+    }).catch(() => setMovLoading(false));
+  }, [activeTab, id, product]);
+
+  useEffect(() => {
+    if (!id || !product) return;
+    const hasInvTab = (product.has_variant === true && (product.variants ?? []).length > 0) || (product.has_batch === true && (product.batches ?? []).length > 0);
+    const purIdx = hasInvTab ? 3 : 2;
+    if (activeTab !== purIdx) return;
+    setPurLoading(true);
+    getData(`${ENDPOINTS.PURCHASES}/by/product/${SHOP_ID}/${id}`).then((res: any) => {
+      setPurchases(res?.data ? (Array.isArray(res.data) ? res.data : [res.data]) : []);
+      setPurLoading(false);
+    }).catch(() => setPurLoading(false));
+  }, [activeTab, id, product]);
+
   const handleDelete = async () => {
     if (!id) return;
     setDeleting(true);
     try {
-      await deleteData(`${ENDPOINTS.INVENTORIES}/${id}/${SHOP_ID}`);
+      await deleteData(`${ENDPOINTS.INVENTORIES}/${SHOP_ID}/${id}`);
       showToast("Product deleted successfully", "success");
       navigate("/product/all");
     } catch {
@@ -109,11 +143,23 @@ const ProductDetail = () => {
   const currentStock = product.stocks ?? "—";
   const unit = String(datas.unit ?? "—");
   const combinations: any[] = product.variants ?? [];
-  const variantTypes: any[] = datas.variantTypes ?? [];
+  const variantTypes: any[] = datas.variant_types ?? datas.variantTypes ?? [];
+  const batches: any[] = product.batches ?? [];
+  
+  const extractSerials = (val: any): string[] => {
+    if (!val) return [];
+    if (Array.isArray(val)) return val;
+    if (val.serial_numbers && Array.isArray(val.serial_numbers)) return val.serial_numbers;
+    return [];
+  };
+
+  const rootSerials = extractSerials(product.serial_number);
   const hasVariants = product.has_variant === true && combinations.length > 0;
+  const hasBatches = product.has_batch === true && batches.length > 0;
   const isActive = datas.is_active !== false;
 
-  const TABS = ["General Info", ...(hasVariants ? ["Variants"] : [])];
+
+  const TABS = ["General Info", ...((hasVariants || hasBatches) ? ["Inventory & Variants"] : []), MOV_TAB_LABEL, PUR_TAB_LABEL];
 
   // Clickable field definition
   const click = (label: string, value: string) => () => setViewValue({ label, value });
@@ -219,8 +265,13 @@ const ProductDetail = () => {
                       <p className="text-[10px] font-medium text-slate-400 uppercase tracking-[0.05em] mb-1.5 flex items-center gap-1.5">
                         <FileText size={12} className="text-blue-400" /> Serial Numbers
                       </p>
-                      {product.serial_number && product.serial_number.length > 0 ? (
-                        <SerialBadgeList serials={product.serial_number} />
+                      {rootSerials.length > 0 ? (
+                        <SerialBadgeList serials={rootSerials} />
+                      ) : hasVariants ? (
+                        <div className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 border border-indigo-100 rounded-xl w-fit">
+                          <Layers size={12} className="text-indigo-500" />
+                          <span className="text-[11px] font-bold text-indigo-600">Available in Inventory tab</span>
+                        </div>
                       ) : (
                         <p className="text-[13px] font-semibold text-slate-400">—</p>
                       )}
@@ -244,10 +295,8 @@ const ProductDetail = () => {
                   <DetailItem icon={Upload} label="Selling Price" value={String(sellingPrice) !== "—" ? `₹${sellingPrice}` : "—"} onClick={click("Selling Price", `₹${sellingPrice}`)} />
                   <DetailItem icon={Tag} label="MRP" value={datas.mrp ? `₹${datas.mrp}` : "—"} onClick={click("MRP", datas.mrp ? `₹${datas.mrp}` : "—")} />
                   <DetailItem icon={BarChart2} label="GST Rate" value={String(datas.gst || "—")} onClick={click("GST Rate", String(datas.gst || "—"))} />
-                  <DetailItem icon={Hash} label="HSN Code" value={String(datas.hsn || "—")} onClick={click("HSN Code", String(datas.hsn || "—"))} />
                   <DetailItem icon={Info} label="Reorder Point" value={String(datas.reorder_point || "—")} onClick={click("Reorder Point", String(datas.reorder_point || "—"))} />
-                  <DetailItem icon={Package} label="Max Stock" value={String(datas.max_stock || "—")} onClick={click("Max Stock", String(datas.max_stock || "—"))} />
-                  <DetailItem icon={MapPin} label="Location" value={String(datas.location || "—")} onClick={click("Location", String(datas.location || "—"))} />
+                  <DetailItem icon={MapPin} label="Location" value={String(datas.storage_location || datas.location || "—")} onClick={click("Location", String(datas.storage_location || datas.location || "—"))} />
                 </div>
               </SectionCard>
             </div>
@@ -297,46 +346,304 @@ const ProductDetail = () => {
           </div>
         )}
 
-        {/* TAB 1 — Variants */}
-        {activeTab === 1 && hasVariants && (
-          <div className="space-y-4">
-            {/* Variant types chips */}
-            {variantTypes.length > 0 && (
-              <SectionCard className="rounded-[1.5rem] p-4">
-                <div className="flex items-center gap-2 mb-4">
-                  <div className="w-8 h-8 rounded-lg bg-violet-600 flex items-center justify-center text-white shadow-lg shadow-violet-100">
-                    <Layers size={16} />
-                  </div>
-                  <h2 className="text-[10px] font-black text-slate-800 uppercase tracking-[0.15em]">Variant Types</h2>
-                </div>
-                <div className="flex flex-wrap gap-3">
-                  {variantTypes.map(vt => (
-                    <div key={vt.id} className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3">
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">{vt.name}</p>
-                      <p className="text-sm font-bold text-slate-700">{(vt.values as string[]).join(", ")}</p>
+        {/* TAB 1 — Inventory & Variants */}
+        {activeTab === 1 && (hasVariants || hasBatches) && (
+          <div className="space-y-4 animate-in fade-in slide-in-from-top-4 duration-500">
+            {/* Variants Section */}
+            {hasVariants && (
+              <div className="space-y-4">
+                {variantTypes.length > 0 && (
+                  <SectionCard className="rounded-[1.5rem] p-4">
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="w-8 h-8 rounded-lg bg-violet-600 flex items-center justify-center text-white shadow-lg shadow-violet-100">
+                        <Layers size={16} />
+                      </div>
+                      <h2 className="text-[10px] font-black text-slate-800 uppercase tracking-[0.15em]">Variant Types</h2>
                     </div>
-                  ))}
-                </div>
-              </SectionCard>
+                    <div className="flex flex-wrap gap-3">
+                      {variantTypes.map(vt => (
+                        <div key={vt.id} className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3">
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">{vt.name}</p>
+                          <p className="text-sm font-bold text-slate-700">{(vt.values as string[]).join(", ")}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </SectionCard>
+                )}
+
+                <SectionCard className="rounded-[1.5rem] p-4">
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-100">
+                      <Tag size={16} />
+                    </div>
+                    <h2 className="text-[10px] font-black text-slate-800 uppercase tracking-[0.15em]">
+                      Combinations ({combinations.length})
+                    </h2>
+                  </div>
+
+                  <div className="bg-slate-50/30 rounded-2xl p-4 border border-slate-100">
+                    <VariantRows combinations={combinations} baseSellPrice={sellingPrice} />
+                  </div>
+                </SectionCard>
+              </div>
             )}
 
-            {/* Combinations tree */}
-            <SectionCard className="rounded-[1.5rem] p-4">
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-100">
-                  <Tag size={16} />
+            {/* Root Batches Section (if no variants but has batches) */}
+            {!hasVariants && hasBatches && (
+              <SectionCard className="rounded-[1.5rem] p-4">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-8 h-8 rounded-lg bg-amber-600 flex items-center justify-center text-white shadow-lg shadow-amber-100">
+                    <Tag size={16} />
+                  </div>
+                  <h2 className="text-[10px] font-black text-slate-800 uppercase tracking-[0.15em]">Batch Tracking</h2>
                 </div>
-                <h2 className="text-[10px] font-black text-slate-800 uppercase tracking-[0.15em]">
-                  Combinations ({combinations.length})
-                </h2>
-              </div>
-
-              <div className="bg-slate-50/30 rounded-2xl p-4 border border-slate-100">
-                <VariantRows combinations={combinations} baseSellPrice={sellingPrice} />
-              </div>
-            </SectionCard>
+                <BatchCards batches={batches} />
+              </SectionCard>
+            )}
           </div>
         )}
+
+        {/* TAB — Stock Movements */}
+        {TABS[activeTab] === "Stock Movements" && (() => {
+          // Flatten nested structure: adjustment → products → variants → batches → rows
+          const rows: any[] = [];
+          movements.forEach((adj: any) => {
+            (adj.products ?? []).forEach((prod: any) => {
+              const isInc = prod.type === 'INCREMENT';
+              const baseRow = {
+                adjId: adj.id,
+                date: adj.adjusted_date || adj.created_at,
+                description: adj.description,
+                type: prod.type,
+                isInc,
+                productName: prod.name,
+                barcode: prod.barcode,
+                stocks: prod.stocks,
+              };
+
+              const variants = prod.variants ?? [];
+              if (variants.length > 0) {
+                variants.forEach((v: any) => {
+                  const batches = v.batches ?? [];
+                  if (batches.length > 0) {
+                    batches.forEach((b: any) => {
+                      const sns = Array.isArray(b.serial_numbers) ? b.serial_numbers : (b.serial_numbers?.serial_numbers ?? []);
+                      rows.push({ ...baseRow, variant: v.name, batch: b.name, batchStocks: b.stocks, serials: sns });
+                    });
+                  } else {
+                    rows.push({ ...baseRow, variant: v.name, batch: null, batchStocks: null, serials: [] });
+                  }
+                });
+              } else {
+                rows.push({ ...baseRow, variant: null, batch: null, batchStocks: null, serials: [] });
+              }
+            });
+          });
+
+          return (
+            <div className="space-y-4 animate-in fade-in slide-in-from-top-4 duration-500">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-100"><Activity size={16} /></div>
+                  <h2 className="text-[10px] font-black text-slate-800 uppercase tracking-[0.15em]">Stock Adjustments</h2>
+                </div>
+                {movLoading && <RefreshCcw size={14} className="text-slate-400 animate-spin" />}
+              </div>
+              {movLoading ? (
+                <div className="py-16 flex justify-center"><RefreshCcw size={24} className="text-blue-400 animate-spin" /></div>
+              ) : rows.length === 0 ? (
+                <div className="py-16 text-center">
+                  <TrendingUp size={32} className="mx-auto text-slate-200 mb-3" />
+                  <p className="text-sm font-bold text-slate-400">No stock adjustments found</p>
+                </div>
+              ) : (
+                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left whitespace-nowrap">
+                      <thead>
+                        <tr className="text-[10px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-100 bg-slate-50/50">
+                          <th className="px-5 py-3">Type</th>
+                          <th className="px-5 py-3">Qty</th>
+                          <th className="px-5 py-3">Variant</th>
+                          <th className="px-5 py-3">Batch</th>
+                          <th className="px-5 py-3">Serials</th>
+                          <th className="px-5 py-3">Description</th>
+                          <th className="px-5 py-3">Date</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-50">
+                        {rows.map((r: any, i: number) => (
+                          <tr key={`${r.adjId}-${i}`} className={`hover:bg-slate-50/60 transition-colors ${r.isInc ? 'border-l-2 border-emerald-300' : 'border-l-2 border-rose-300'}`}>
+                            <td className="px-5 py-3">
+                              <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
+                                r.isInc ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-rose-50 text-rose-700 border-rose-200'
+                              }`}>
+                                {r.isInc ? <ArrowUp size={10} /> : <ArrowDown size={10} />}
+                                {r.type}
+                              </span>
+                            </td>
+                            <td className="px-5 py-3">
+                              <span className={`font-black text-sm tabular-nums ${r.isInc ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                {r.isInc ? '+' : '-'}{r.batchStocks ?? r.stocks ?? 0}
+                              </span>
+                            </td>
+                            <td className="px-5 py-3">
+                              {r.variant ? (
+                                <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-violet-50 text-violet-700 border border-violet-100">{r.variant}</span>
+                              ) : <span className="text-slate-300">—</span>}
+                            </td>
+                            <td className="px-5 py-3">
+                              {r.batch ? (
+                                <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-100">{r.batch}</span>
+                              ) : <span className="text-slate-300">—</span>}
+                            </td>
+                            <td className="px-5 py-3">
+                              {r.serials.length > 0 ? (
+                                <div className="flex flex-wrap gap-1 max-w-[200px]">
+                                  {r.serials.slice(0, 3).map((s: string, si: number) => (
+                                    <span key={si} className="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-slate-100 text-slate-600">{s}</span>
+                                  ))}
+                                  {r.serials.length > 3 && (
+                                    <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-slate-200 text-slate-500">+{r.serials.length - 3}</span>
+                                  )}
+                                </div>
+                              ) : <span className="text-slate-300">—</span>}
+                            </td>
+                            <td className="px-5 py-3 text-xs text-slate-500 max-w-[160px] truncate">{r.description || '—'}</td>
+                            <td className="px-5 py-3 text-xs text-slate-500 whitespace-nowrap">
+                              {r.date ? new Date(r.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
+        {/* TAB — Purchases */}
+        {TABS[activeTab] === "Purchases" && (() => {
+          // Flatten: purchase → products rows, with purchase-level metadata attached
+          const rows: any[] = [];
+          purchases.forEach((p: any) => {
+            const d = p.datas ?? {};
+            const pd = d.purchaseDetails ?? {};
+            const payment = d.payment ?? {};
+            const charges = p.additional_charges ?? {};
+            const purchaseMeta = {
+              purchaseId: p.id,
+              type: p.type,
+              supplier: d.supplier_name || '—',
+              invoiceNo: pd.invoiceNo || '—',
+              referenceNo: pd.referenceNo || '—',
+              purchaseDate: pd.date || p.created_at,
+              paymentMethod: payment.method || '—',
+              amountPaid: payment.amountPaid ?? 0,
+              deliveryCharge: charges.delivery_charge ?? 0,
+              otherCharge: charges.other_charge ?? 0,
+              uiId: p.ui_id,
+            };
+            (p.products ?? []).forEach((prod: any) => {
+              rows.push({ ...purchaseMeta, stocks: prod.stocks, buy_price: prod.buy_price, sell_price: prod.sell_price });
+            });
+          });
+
+          return (
+            <div className="space-y-4 animate-in fade-in slide-in-from-top-4 duration-500">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-100"><ShoppingCart size={16} /></div>
+                  <h2 className="text-[10px] font-black text-slate-800 uppercase tracking-[0.15em]">Purchase History</h2>
+                </div>
+                {purLoading && <RefreshCcw size={14} className="text-slate-400 animate-spin" />}
+              </div>
+              {purLoading ? (
+                <div className="py-16 flex justify-center"><RefreshCcw size={24} className="text-indigo-400 animate-spin" /></div>
+              ) : rows.length === 0 ? (
+                <div className="py-16 text-center">
+                  <ShoppingCart size={32} className="mx-auto text-slate-200 mb-3" />
+                  <p className="text-sm font-bold text-slate-400">No purchases found for this product</p>
+                </div>
+              ) : (
+                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left whitespace-nowrap">
+                      <thead>
+                        <tr className="text-[10px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-100 bg-slate-50/50">
+                          <th className="px-5 py-3">#</th>
+                          <th className="px-5 py-3">Type</th>
+                          <th className="px-5 py-3">Supplier</th>
+                          <th className="px-5 py-3">Qty</th>
+                          <th className="px-5 py-3">Buy Price</th>
+                          <th className="px-5 py-3">Sell Price</th>
+                          <th className="px-5 py-3">Payment</th>
+                          <th className="px-5 py-3">Invoice</th>
+                          <th className="px-5 py-3">Reference</th>
+                          <th className="px-5 py-3">Date</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-50">
+                        {rows.map((r: any, i: number) => (
+                          <tr key={`${r.purchaseId}-${i}`} className="hover:bg-indigo-50/20 transition-colors border-l-2 border-indigo-200">
+                            <td className="px-5 py-3">
+                              <span className="text-[10px] font-black text-slate-400 tabular-nums">#{r.uiId}</span>
+                            </td>
+                            <td className="px-5 py-3">
+                              <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
+                                r.type === 'DIRECT' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                                r.type?.includes('PO') ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                                'bg-slate-50 text-slate-600 border-slate-200'
+                              }`}>
+                                <span className="w-1.5 h-1.5 rounded-full bg-current" />
+                                {(r.type || '—').replace(/_/g, ' ')}
+                              </span>
+                            </td>
+                            <td className="px-5 py-3 text-xs font-medium text-slate-700">{r.supplier}</td>
+                            <td className="px-5 py-3">
+                              <span className="font-black text-sm text-slate-800 tabular-nums">{r.stocks ?? '—'}</span>
+                            </td>
+                            <td className="px-5 py-3">
+                              <span className="text-xs font-bold text-slate-700">₹{r.buy_price ?? '—'}</span>
+                            </td>
+                            <td className="px-5 py-3">
+                              <span className="text-xs font-bold text-emerald-700">₹{r.sell_price ?? '—'}</span>
+                            </td>
+                            <td className="px-5 py-3">
+                              <div className="flex flex-col gap-0.5">
+                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md w-fit ${
+                                  r.paymentMethod === 'Cash' ? 'bg-green-50 text-green-700' :
+                                  r.paymentMethod === 'UPI' ? 'bg-violet-50 text-violet-700' :
+                                  'bg-slate-50 text-slate-600'
+                                }`}>{r.paymentMethod}</span>
+                                {r.amountPaid > 0 && (
+                                  <span className="text-[9px] text-slate-400 font-bold">Paid: ₹{r.amountPaid}</span>
+                                )}
+                              </div>
+                            </td>
+                            <td className="px-5 py-3 text-xs font-mono text-slate-500">{r.invoiceNo}</td>
+                            <td className="px-5 py-3 text-xs font-mono text-slate-400">{r.referenceNo}</td>
+                            <td className="px-5 py-3 text-xs text-slate-500 whitespace-nowrap">
+                              {r.purchaseDate ? new Date(r.purchaseDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  {/* Charges footer summary */}
+                  {rows.some(r => r.deliveryCharge > 0 || r.otherCharge > 0) && (
+                    <div className="px-5 py-3 border-t border-slate-100 bg-slate-50/50 flex flex-wrap gap-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                      <span>Delivery charges may apply — check individual purchase records</span>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })()}
       </div>
 
       {/* ── Field Value Modal (global SuperUI Modal) ──────────── */}

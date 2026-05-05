@@ -17,6 +17,21 @@ const formatCurrency = (amount?: number | string) => {
   return `₹${Number(amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
 };
 
+const formatDate = (dateStr?: string) => {
+  if (!dateStr) return '—';
+  try {
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return dateStr;
+    return date.toLocaleDateString('en-GB', { 
+      day: '2-digit', 
+      month: 'short', 
+      year: 'numeric' 
+    });
+  } catch (e) {
+    return dateStr;
+  }
+};
+
 const getStockStatus = (stock: number | string) => {
   const stockNum = Number(stock) || 0;
   if (stockNum <= 0) return { label: '0 In Stock', color: 'text-rose-600 bg-rose-50 border-rose-200' };
@@ -138,6 +153,13 @@ const parseBatches = (b: any) => {
   return [];
 };
 
+const extractSerials = (val: any): string[] => {
+  if (!val) return [];
+  if (Array.isArray(val)) return val;
+  if (val.serial_numbers && Array.isArray(val.serial_numbers)) return val.serial_numbers;
+  return [];
+};
+
 export const BatchCards = ({ batches }: { batches: any | any[] }) => {
   const safeBatches = parseBatches(batches);
   const [showAll, setShowAll] = useState(false);
@@ -164,7 +186,7 @@ export const BatchCards = ({ batches }: { batches: any | any[] }) => {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-2 gap-3 sm:gap-4">
         {visible.map((batch: any, idx: number) => {
           const qty = Number(batch.stocks ?? batch.quantity ?? batch.qty ?? 0);
-          const serials = batch.datas?.serial_numbers || batch.serial_numbers || [];
+          const serials = extractSerials(batch.serial_numbers || batch.datas?.serial_numbers);
           const daysToExpiry = getDaysDiff(batch.expiry_date || batch.expiry);
           
           return (
@@ -185,10 +207,11 @@ export const BatchCards = ({ batches }: { batches: any | any[] }) => {
               {/* Card Body */}
               <div className="p-3 sm:p-4 space-y-2.5 sm:space-y-3 flex-1">
                 {[
-                  { label: "Lot Number:", value: batch.lot_number || `LOT-2024-${String(idx + 1).padStart(3, '0')}` },
+                  { label: "Lot Number:", value: batch.lot_number || batch.batch_no || `BATCH-${String(idx + 1).padStart(3, '0')}` },
                   { label: "Stock:", value: `${qty} units` },
-                  { label: "Expiry:", value: batch.expiry_date || batch.expiry || "2025-01-10" },
-                  { label: "Location:", value: batch.location || `Shelf A-${10 + idx}` }
+                  { label: "Mfg Date:", value: formatDate(batch.manufacturing_date) },
+                  { label: "Expiry:", value: formatDate(batch.expiry_date || batch.expiry) },
+                  { label: "Location:", value: batch.location || "Default" }
                 ].map((item, i) => (
                   <div key={i} className="flex items-center justify-between py-1 border-b border-slate-50 last:border-0">
                     <span className="text-[11px] sm:text-[12px] text-slate-400 font-medium">{item.label}</span>
@@ -262,8 +285,8 @@ export const VariantRows = ({ combinations, baseSellPrice, baseBuyPrice }: { com
 
           const variantId = comb.id || String(idx);
           const isVarExpanded = expandedVariant === variantId;
-          const batches = parseBatches(comb.batches);
-          const serials = parseBatches(combDatas.serial_numbers || comb.serial_numbers || combDatas.datas?.serial_numbers);
+          const batches = (comb.batches || []);
+          const serials = extractSerials(comb.serial_numbers || combDatas.serial_numbers || combDatas.datas?.serial_numbers);
           const hasBatches = batches.length > 0;
           const hasSerials = serials.length > 0;
           const stockNum = Number(comb.stocks ?? comb.stock ?? combDatas.stocks ?? combDatas.datas?.stocks ?? 0);

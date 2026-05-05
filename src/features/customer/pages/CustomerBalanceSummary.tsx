@@ -56,24 +56,23 @@ export default function CustomerBalanceSummary() {
     const params: Record<string, string> = { limit: "100", offset: "1" };
     if (searchTerm) params.q = searchTerm;
     
-    getData(ENDPOINTS.CUSTOMERS, params).then((res) => {
+    getData(`${ENDPOINTS.CUSTOMERS}/by/shop/${SHOP_ID}`, params).then((res) => {
       if (res) {
         const data: CustomerRecord[] = Array.isArray(res.data) ? res.data : [res.data];
         setCustomers(data);
         
         // Detect unique keys from both root and datas field
         const keys = new Set<string>();
-        data.forEach((c: CustomerRecord) => {
-          // Root level keys
-          Object.keys(c).forEach(k => {
-            if (!["datas", "id", "shop_id"].includes(k)) {
-              keys.add(k);
-            }
-          });
+        data.forEach((c: any) => {
+          if (!c) return;
+          // Root level keys from schema
+          const rootKeys = ["email", "mobile_number", "credit_limit", "is_active", "ui_id", "created_at"];
+          rootKeys.forEach(k => keys.add(k));
+          
           // Nested datas keys
           if (c.datas) {
             Object.keys(c.datas).forEach(k => {
-              if (!["first_name", "last_name", "id", "shop_id", "type"].includes(k)) {
+              if (k !== "address") { // address is usually too long for a table cell
                 keys.add(k);
               }
             });
@@ -87,7 +86,7 @@ export default function CustomerBalanceSummary() {
   const handleDelete = async () => {
     if (!customerToDelete) return;
     try {
-      await deleteData(`${ENDPOINTS.CUSTOMERS}/${customerToDelete.id}`);
+      await deleteData(`${ENDPOINTS.CUSTOMERS}/${SHOP_ID}/${customerToDelete.id}`);
       showToast("Customer deleted successfully", "success");
       setRefreshKey(prev => prev + 1);
     } catch (_err) {
@@ -100,9 +99,13 @@ export default function CustomerBalanceSummary() {
 
   const filteredCustomers = useMemo(() => {
     return customers.filter(c => {
-      const name = `${c.datas?.first_name || ""} ${c.datas?.last_name || ""}`.toLowerCase();
+      if (!c) return false;
+      const name = (c.name || "").toLowerCase();
+      const email = (c.email || "").toLowerCase();
+      const mobile = (c.mobile_number || "").toLowerCase();
       const matchesSearch = name.includes(searchTerm.toLowerCase()) || 
-                           String(c.datas?.email || "").toLowerCase().includes(searchTerm.toLowerCase());
+                           email.includes(searchTerm.toLowerCase()) ||
+                           mobile.includes(searchTerm.toLowerCase());
       return matchesSearch;
     });
   }, [customers, searchTerm]);
@@ -112,9 +115,6 @@ export default function CustomerBalanceSummary() {
       {/* Stats Section */}
       <div className="flex flex-nowrap overflow-x-auto custom-scrollbar gap-3 pb-2 -mx-2 px-2 sm:grid sm:grid-cols-2 lg:grid-cols-4 sm:overflow-visible sm:pb-0 sm:mx-0 sm:px-0 touch-pan-x">
         <StatCard label="Total Customers" value={customers.length} icon={Users} className="flex-1"/>
-        <StatCard label="Shop" value={SHOP_ID.slice(0, 8) + "…"} icon={IndianRupee} iconBg="bg-green-50" iconColor="text-green-600" className="flex-1"/>
-        <StatCard label="API Source" value="Live" icon={AlertCircle} iconBg="bg-rose-50" iconColor="text-rose-600" className="flex-1"/>
-        <StatCard label="Showing" value={filteredCustomers.length} icon={CreditCard} iconBg="bg-amber-50" iconColor="text-amber-600" className="flex-1"/>
       </div>
 
       <div className="bg-white p-3 rounded-t-xl border-b border-gray-200 flex flex-col sm:flex-row gap-3 justify-between items-center mt-6">
@@ -182,22 +182,24 @@ export default function CustomerBalanceSummary() {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-blue-400 flex items-center justify-center text-white text-sm font-bold shadow-lg shadow-blue-100">
-                          {String(c.datas?.first_name || c.datas?.company || "?")[0].toUpperCase()}
+                          {String(c.name || "?")[0].toUpperCase()}
                         </div>
                         <div>
                           <p className="text-sm font-semibold text-slate-700 tracking-tight">
-                            {String(c.datas?.first_name || "")} {String(c.datas?.last_name || "")}
+                            {String(c.name || "Untitled")}
                           </p>
                           <p className="text-[11px] font-semibold text-slate-400">
-                            {String(c.datas?.phone || "No phone")}
+                            {String(c.mobile_number || "No phone")}
                           </p>
                         </div>
                       </div>
                     </td>
                     {selectedKeys.map(key => (
                       <td key={key} className="px-6 py-4 whitespace-nowrap">
-                        <p className={`text-[12px] font-semibold tracking-tight ${key === 'customer_type' ? 'text-blue-600 bg-blue-50 w-fit px-2 py-0.5 rounded-md' : 'text-slate-600'}`}>
-                          {String(c.datas?.[key] ?? c[key] ?? "—")}
+                        <p className={`text-[12px] font-semibold tracking-tight ${key === 'customer_type' || key === 'payment_cycle' ? 'text-blue-600 bg-blue-50 w-fit px-2 py-0.5 rounded-md' : 'text-slate-600'}`}>
+                          {key === 'is_active' 
+                            ? (c[key] ? "Active" : "Inactive") 
+                            : String((c as any).datas?.[key] ?? (c as any)[key] ?? "—")}
                         </p>
                       </td>
                     ))}
@@ -236,7 +238,7 @@ export default function CustomerBalanceSummary() {
         onClose={() => setIsDeleteDialogOpen(false)}
         onConfirm={handleDelete}
         title="Remove Customer"
-        description={`Are you sure you want to remove ${customerToDelete?.datas?.first_name}? This action cannot be undone.`}
+        description={`Are you sure you want to remove ${customerToDelete?.name}? This action cannot be undone.`}
         confirmText="Remove Customer"
         type="danger"
       />

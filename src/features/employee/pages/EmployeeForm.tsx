@@ -25,9 +25,15 @@ import { useHeader } from "@/context/HeaderContext";
 import { useToast } from "@/context/ToastContext";
 
 const roleOptions = [
-  { label: "Admin", value: "admin" },
-  { label: "Manager", value: "manager" },
-  { label: "Staff", value: "staff" },
+  { label: "User", value: "USER" },
+  { label: "Admin", value: "ADMIN" },
+  { label: "Super Admin", value: "SUPER_ADMIN" },
+];
+
+const departmentOptions = [
+  { label: "Sales", value: "SALES" },
+  { label: "Biller", value: "BILLER" },
+  { label: "Manager", value: "MANAGER" },
 ];
 
 const EmployeeForm = () => {
@@ -42,12 +48,12 @@ const EmployeeForm = () => {
   const initialFormData = {
     name: "",
     email: "",
-    role: "staff",
+    role: "USER",
     mobile_number: "",
     address: "",
+    zip_code: "",
     joinDate: new Date().toISOString().split('T')[0],
     is_accepted: true,
-    employee_id_custom: "",
     department: "",
     salary_range: "",
   };
@@ -105,7 +111,7 @@ const EmployeeForm = () => {
         showToast("Draft loaded successfully", "success");
       }
     } else if (id) {
-      getData(`${ENDPOINTS.EMPLOYEES}/by/${id}`).then(res => {
+      getData(`${ENDPOINTS.EMPLOYEES}/by/${SHOP_ID}/${id}`).then(res => {
         if (res?.data) {
           const emp = Array.isArray(res.data) ? res.data[0] : res.data;
           const datas = emp.datas || {};
@@ -114,10 +120,10 @@ const EmployeeForm = () => {
             email: emp.email || "",
             role: emp.role || "staff",
             mobile_number: emp.mobile_number || "",
-            address: datas.address || "",
+            address: datas.address?.full_address || "",
+            zip_code: datas.address?.zip_code || "",
             joinDate: emp.joined_date || new Date().toISOString().split('T')[0],
-            is_accepted: true, // is_accepted not in schema anymore, but keep for UI
-            employee_id_custom: emp.id || "",
+            is_accepted: true,
             department: emp.department || "",
             salary_range: String(datas.salary_rage || ""),
           });
@@ -170,7 +176,10 @@ const EmployeeForm = () => {
       department: formData.department,
       datas: {
         salary_rage: Number(formData.salary_range) || 0,
-        address: { address: formData.address } // Assuming address schema is a dict
+        address: { 
+          full_address: formData.address,
+          zip_code: formData.zip_code
+        }
       }
     };
 
@@ -211,8 +220,8 @@ const EmployeeForm = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50/50 p-2 md:p-4 lg:p-6 font-[Inter,sans-serif]">
-      <div className="max-w-7xl mx-auto space-y-4 relative">
+    <div className="min-h-screen bg-slate-50/50 font-[Inter,sans-serif]">
+      <div className="mx-auto space-y-4 relative">
         
 
         {/* ── FORM ── */}
@@ -283,39 +292,20 @@ const EmployeeForm = () => {
                   onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_accepted: checked }))}
                 />
               </div>
-              <Input
-                label="Department"
-                name="department"
-                value={formData.department}
-                onChange={handleChange}
-                placeholder="e.g. Sales, Ops"
-                leftIcon={<Building2 size={16} className="text-slate-300" />}
-              />
-            </div>
-          </div>
-
-          {/* BOX 3: EMPLOYMENT (Spans 2 cols) */}
-          <div className="lg:col-span-2 bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden transition-all hover:shadow-md">
-            <div className="px-6 py-4 bg-gradient-to-r from-purple-50/50 to-transparent border-b border-slate-100 flex items-center gap-3">
-              <div className="w-8 h-8 rounded-xl bg-purple-100 flex items-center justify-center text-purple-600">
-                <Briefcase size={18} />
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-bold text-slate-500 ml-1 uppercase tracking-wider">Department</label>
+                <ReusableSelect
+                  options={departmentOptions}
+                  value={formData.department}
+                  onValueChange={(val) => handleSelectChange("department", val)}
+                  placeholder="Select Department"
+                />
               </div>
-              <h2 className="text-xs font-bold text-slate-800 uppercase tracking-widest">Employment</h2>
-            </div>
-            <div className="p-8">
-              <Input
-                label="Employee ID (Custom)"
-                name="employee_id_custom"
-                value={formData.employee_id_custom}
-                onChange={handleChange}
-                placeholder="EMP-102"
-                leftIcon={<Tag size={16} className="text-slate-300" />}
-              />
             </div>
           </div>
 
-          {/* BOX 4: FINANCIALS (Spans 2 cols) */}
-          <div className="lg:col-span-2 bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden transition-all hover:shadow-md">
+          {/* BOX 4: FINANCIALS (Spans 3 cols) */}
+          <div className="lg:col-span-3 bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden transition-all hover:shadow-md h-full">
             <div className="px-6 py-4 bg-gradient-to-r from-emerald-50/50 to-transparent border-b border-slate-100 flex items-center gap-3">
               <div className="w-8 h-8 rounded-xl bg-emerald-100 flex items-center justify-center text-emerald-600">
                 <FileText size={18} />
@@ -328,14 +318,14 @@ const EmployeeForm = () => {
                 name="salary_range"
                 value={formData.salary_range}
                 onChange={handleChange}
-                placeholder="e.g. 5L - 7L"
+                placeholder="e.g. 50000"
                 leftIcon={<Tag size={16} className="text-slate-300" />}
               />
             </div>
           </div>
 
-          {/* BOX 5: DATE (Spans 2 cols) */}
-          <div className="lg:col-span-2 bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden transition-all hover:shadow-md">
+          {/* BOX 5: DATE (Spans 3 cols) */}
+          <div className="lg:col-span-3 bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden transition-all hover:shadow-md h-full">
             <div className="px-6 py-4 bg-gradient-to-r from-rose-50/50 to-transparent border-b border-slate-100 flex items-center gap-3">
               <div className="w-8 h-8 rounded-xl bg-rose-100 flex items-center justify-center text-rose-600">
                 <Calendar size={18} />
@@ -362,14 +352,23 @@ const EmployeeForm = () => {
               </div>
               <h2 className="text-xs font-bold text-slate-800 uppercase tracking-widest">Residance & Work Location</h2>
             </div>
-            <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="p-8 grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="md:col-span-2">
+                <Input
+                  label="Physical Address"
+                  name="address"
+                  value={formData.address}
+                  onChange={handleChange}
+                  placeholder="Street, Area, City"
+                  leftIcon={<MapPin size={16} className="text-slate-300" />}
+                />
+              </div>
               <Input
-                label="Physical Address"
-                name="address"
-                value={formData.address}
+                label="ZIP Code"
+                name="zip_code"
+                value={formData.zip_code}
                 onChange={handleChange}
-                placeholder="Full address of residence or assigned office..."
-                className="md:col-span-2"
+                placeholder="ZIP"
                 leftIcon={<MapPin size={16} className="text-slate-300" />}
               />
             </div>

@@ -14,7 +14,7 @@ import { StatCard } from "@/components/common/StatsCard";
 import { BiLogoWhatsapp } from "react-icons/bi";
 import { useApi } from "@/context/ApiContext";
 import { useToast } from "@/context/ToastContext";
-import { ENDPOINTS } from "@/services/endpoints";
+import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 import Loader from "@/components/common/Loader";
 import type { CustomerRecord } from "@/types/api";
 import { SearchSelect } from "@/components/inputbuilders/SearchSelect";
@@ -112,7 +112,7 @@ export default function CustomerDetail() {
   useEffect(() => {
     if (!id) return;
     setRecordLoading(true);
-    getData(`${ENDPOINTS.CUSTOMERS}/by/${id}`).then((res) => {
+    getData(`${ENDPOINTS.CUSTOMERS}/by/${SHOP_ID}/${id}`).then((res) => {
       if (res) setCustomer(Array.isArray(res.data) ? res.data[0] : res.data);
       setRecordLoading(false);
     });
@@ -139,7 +139,7 @@ export default function CustomerDetail() {
 
     setDeleting(true);
     try {
-      const res = await deleteData(`${ENDPOINTS.CUSTOMERS}/${targetId}`);
+      const res = await deleteData(`${ENDPOINTS.CUSTOMERS}/${SHOP_ID}/${targetId}`);
       if (res) {
         showToast("Customer deleted successfully!", "success");
         setTimeout(() => navigate("/customers-Summary"), 1500);
@@ -314,7 +314,7 @@ export default function CustomerDetail() {
                         {/* Dynamically render all other fields */}
                         {Object.entries(datas).map(([key, val]) => {
                           // Skip fields we already showed or internal ones
-                          if (["name", "email", "mobile_number", "credit_limit", "is_active", "shop_id", "id", "ui_id", "created_at", "updated_at", "datas"].includes(key)) return null;
+                          if (["name", "email", "mobile_number", "credit_limit", "is_active", "shop_id", "id", "ui_id", "created_at", "updated_at", "datas", "address"].includes(key)) return null;
 
                           // Format key: snake_case to Title Case
                           const label = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
@@ -345,19 +345,17 @@ export default function CustomerDetail() {
 
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div className="md:col-span-2">
-                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 text-xs font-semibold">Street Address</p>
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 text-xs font-semibold">Registered Address</p>
                           <p className="text-sm font-semibold text-slate-700 leading-relaxed bg-slate-50 p-3 rounded-xl border border-slate-100">
-                            {String((datas.address as any)?.street_address || "No street address provided.")}
+                            {String((datas.address as any)?.full_address || "No address provided.")}
                           </p>
                         </div>
                         <div className="space-y-4">
                           <div>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 text-xs font-semibold">City / State</p>
-                            <p className="text-sm font-semibold text-slate-700">{datas.address ? `${(datas.address as any).city || ""}, ${(datas.address as any).state || ""}` : "—"}</p>
-                          </div>
-                          <div>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 text-xs font-semibold">Zip Code</p>
-                            <p className="text-sm font-bold font-mono text-slate-700 tracking-tight">{String((datas.address as any)?.zip_code || "—")}</p>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 text-xs font-semibold">Zip Code</p>
+                            <p className="text-sm font-bold font-mono text-slate-700 tracking-tight bg-slate-50 p-3 rounded-xl border border-slate-100 flex items-center h-[46px]">
+                              {String((datas.address as any)?.zip_code || "—")}
+                            </p>
                           </div>
                         </div>
                       </div>
@@ -379,10 +377,6 @@ export default function CustomerDetail() {
                       <div className="p-3.5 rounded-2xl bg-white border border-slate-100 shadow-sm flex justify-between items-center">
                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Type</span>
                         <span className="text-[12px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md">{String(datas.customer_type || "Normal")}</span>
-                      </div>
-                      <div className="p-3.5 rounded-2xl bg-white border border-slate-100 shadow-sm flex justify-between items-center">
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">GSTN</span>
-                        <span className="text-[12px] font-bold text-slate-700 font-mono tracking-tighter">{String(datas.gst_number || "—")}</span>
                       </div>
                     </div>
                   </SectionCard>

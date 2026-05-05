@@ -55,7 +55,7 @@ export default function Employee() {
     const params: Record<string, string> = { limit: "50", offset: "1" };
     if (searchTerm) params.q = searchTerm;
 
-    getData(ENDPOINTS.EMPLOYEES, params).then((res) => {
+    getData(`${ENDPOINTS.EMPLOYEES}/by/shop/${SHOP_ID}`, params).then((res) => {
       if (res) {
         const data: EmployeeRecord[] = Array.isArray(res.data) ? res.data : [res.data];
         setEmployees(data);
@@ -102,16 +102,17 @@ export default function Employee() {
 
   const filteredEmployees = useMemo(() => {
     return employees.filter(emp => {
+      if (!emp) return false;
       const matchesRole = roleFilter === 'All' || emp.role === roleFilter;
-      const matchesSearch = emp.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        emp.email?.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesSearch = (emp.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (emp.email || "").toLowerCase().includes(searchTerm.toLowerCase());
       return matchesRole && matchesSearch;
     });
   }, [employees, roleFilter, searchTerm]);
 
   const roles = useMemo(() => {
-    const r = new Set(employees.map(e => e.role));
-    const uniqueRoles = Array.from(r);
+    const r = new Set(employees.filter(Boolean).map(e => e.role));
+    const uniqueRoles = Array.from(r).filter(Boolean);
     return [
       { label: 'All Roles', value: 'All' },
       ...uniqueRoles.map(role => ({ label: role.charAt(0).toUpperCase() + role.slice(1), value: role }))
@@ -130,14 +131,14 @@ export default function Employee() {
         />
         <StatCard
           label="Departments"
-          value={new Set(employees.map(e => e.department)).size.toString()}
+          value={new Set(employees.filter(Boolean).map(e => e.department)).size.toString()}
           iconBg="bg-emerald-50" iconColor="text-emerald-600"
           className='flex-1'
         />
         <StatCard
           icon={Bookmark}
           label="Active Roles"
-          value={new Set(employees.map(e => e.role)).size.toString()}
+          value={new Set(employees.filter(Boolean).map(e => e.role)).size.toString()}
           iconBg="bg-amber-50" iconColor="text-amber-600"
           className='flex-1'
         />

@@ -23,11 +23,14 @@ import Loader from "@/components/common/Loader";
 
 export interface SupplierData {
   supplier_name: string;
-  contact_person: string; 
+  contact_name: string; 
+  contact_email: string;
+  contact_mobile: string;
   email: string;          
   phone: string;
   address: string;        
   city: string;           
+  zipcode: string;
   type: string;
   gst_number: string;
   notes: string;
@@ -44,11 +47,14 @@ const SupplierForm = () => {
 
   const initialFormData: SupplierData = {
     supplier_name: "",
-    contact_person: "",
+    contact_name: "",
+    contact_email: "",
+    contact_mobile: "",
     email: "",
     phone: "",
     address: "",
     city: "",
+    zipcode: "",
     type: "Vendor",
     gst_number: "",
     notes: ""
@@ -86,18 +92,21 @@ const SupplierForm = () => {
   // Load Data/Draft
   useEffect(() => {
     if (id) {
-      getData(`${ENDPOINTS.SUPPLIERS}/by/${id}`).then((res) => {
+      getData(`${ENDPOINTS.SUPPLIERS}/by/${SHOP_ID}/${id}`).then((res) => {
         if (res && res.data) {
           const sup = Array.isArray(res.data) ? res.data[0] : res.data;
           const d = sup.datas || {};
           const contact = sup.contact_info || {};
           setFormData({
             supplier_name: sup.name || d.supplier_name || "",
-            contact_person: contact.contact_person || "",
+            contact_name: contact.name || "",
+            contact_email: contact.email || "",
+            contact_mobile: contact.mobile_number || "",
             email: sup.email || "",
             phone: sup.mobile_number || "",
-            address: contact.address || "",
-            city: contact.city || "",
+            address: d.address?.full_address || "",
+            city: d.address?.city || "",
+            zipcode: d.address?.zipcode || "",
             type: contact.type || "Vendor",
             gst_number: sup.gst_no || "",
             notes: d.internal_notes || ""
@@ -147,17 +156,22 @@ const SupplierForm = () => {
     const payload: any = {
       shop_id: SHOP_ID,
       name: formData.supplier_name,
-      email: formData.email,
+      email: formData.email || null,
       mobile_number: formData.phone,
       gst_no: formData.gst_number,
       contact_info: {
-        contact_person: formData.contact_person,
+        name: formData.contact_name,
+        mobile_number: formData.contact_mobile,
+        email: formData.contact_email || null,
         type: formData.type,
-        address: formData.address,
-        city: formData.city,
       },
       datas: {
-        internal_notes: formData.notes
+        internal_notes: formData.notes,
+        address: {
+          full_address: formData.address,
+          city: formData.city,
+          zipcode: formData.zipcode
+        }
       }
     };
 
@@ -221,12 +235,29 @@ const SupplierForm = () => {
                 />
               </div>
               <Input
-                label="Contact Person"
-                name="contact_person"
-                value={formData.contact_person}
+                label="Contact Person Name"
+                name="contact_name"
+                value={formData.contact_name}
                 onChange={handleChange}
                 placeholder="Full Name"
                 leftIcon={<User size={16} className="text-slate-400" />}
+              />
+              <Input
+                label="Contact Person Email"
+                name="contact_email"
+                type="email"
+                value={formData.contact_email}
+                onChange={handleChange}
+                placeholder="contact@example.com"
+                leftIcon={<Mail size={16} className="text-slate-400" />}
+              />
+              <Input
+                label="Contact Person Mobile"
+                name="contact_mobile"
+                value={formData.contact_mobile}
+                onChange={handleChange}
+                placeholder="+91 00000 00000"
+                leftIcon={<Phone size={16} className="text-slate-400" />}
               />
               <div className="space-y-1.5">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Business Type</label>
@@ -275,13 +306,21 @@ const SupplierForm = () => {
                 placeholder="+91 00000 00000"
                 leftIcon={<Phone size={16} className="text-slate-400" />}
               />
-              <div className="md:col-span-2">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <Input
                   label="City / Region"
                   name="city"
                   value={formData.city}
                   onChange={handleChange}
                   placeholder="e.g. Mumbai, Maharashtra"
+                  leftIcon={<MapPin size={16} className="text-slate-400" />}
+                />
+                <Input
+                  label="ZIP Code"
+                  name="zipcode"
+                  value={formData.zipcode}
+                  onChange={handleChange}
+                  placeholder="000 000"
                   leftIcon={<MapPin size={16} className="text-slate-400" />}
                 />
               </div>

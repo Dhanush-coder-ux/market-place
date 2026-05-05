@@ -12,7 +12,7 @@ import {
 import { StatCard } from "@/components/common/StatsCard";
 import { useApi } from "@/context/ApiContext";
 import { useToast } from "@/context/ToastContext";
-import { ENDPOINTS } from "@/services/endpoints";
+import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 import Loader from "@/components/common/Loader";
 import type { SupplierRecord } from "@/types/api";
 import { SearchSelect } from "@/components/inputbuilders/SearchSelect";
@@ -26,7 +26,7 @@ const SupplierSearch = () => {
   const fetchSuppliers = async (q: string) => {
     if (!q) return [];
     try {
-      const res = await getData(ENDPOINTS.SUPPLIERS, { limit: "8", offset: "1", q });
+      const res = await getData(`${ENDPOINTS.SUPPLIERS}/by/shop/${SHOP_ID}`, { limit: "8", offset: "1", q });
       const data = res?.data ? (Array.isArray(res.data) ? res.data : [res.data]) : [];
       return data.map((s: any) => ({
         ...s,
@@ -68,7 +68,7 @@ export default function SupplierDetail() {
   useEffect(() => {
     if (!id) return;
     setRecordLoading(true);
-    getData(`${ENDPOINTS.SUPPLIERS}/by/${id}`).then((res) => {
+    getData(`${ENDPOINTS.SUPPLIERS}/by/${SHOP_ID}/${id}`).then((res) => {
       if (res) setSupplier(Array.isArray(res.data) ? res.data[0] : res.data);
       setRecordLoading(false);
     });
@@ -78,7 +78,7 @@ export default function SupplierDetail() {
     if (!id) return;
     setDeleting(true);
     try {
-      const res = await deleteData(`${ENDPOINTS.SUPPLIERS}/${id}`);
+      const res = await deleteData(`${ENDPOINTS.SUPPLIERS}/${SHOP_ID}/${id}`);
       if (res) {
         showToast("Supplier deleted successfully", "success");
         navigate("/supplier/all");
@@ -179,8 +179,16 @@ export default function SupplierDetail() {
                       onClick={() => setViewValue({ label: "Business Name", value: name })}
                     />
                     <DetailItem
-                      icon={User} label="Contact Person" value={String(contact.contact_person || "—")}
-                      onClick={() => setViewValue({ label: "Contact Person", value: String(contact.contact_person || "—") })}
+                      icon={User} label="Contact Person" value={String(contact.name || "—")}
+                      onClick={() => setViewValue({ label: "Contact Person", value: String(contact.name || "—") })}
+                    />
+                    <DetailItem
+                      icon={Mail} label="Contact Email" value={String(contact.email || "—")}
+                      onClick={() => setViewValue({ label: "Contact Email", value: String(contact.email || "—") })}
+                    />
+                    <DetailItem
+                      icon={Phone} label="Contact Mobile" value={String(contact.mobile_number || "—")}
+                      onClick={() => setViewValue({ label: "Contact Mobile", value: String(contact.mobile_number || "—") })}
                     />
                     <DetailItem
                       icon={Mail} label="Email" value={String(supplier.email || "—")}
@@ -191,13 +199,17 @@ export default function SupplierDetail() {
                       onClick={() => setViewValue({ label: "Phone", value: String(supplier.mobile_number || "—") })}
                     />
                     <DetailItem
-                      icon={MapPin} label="City" value={String(contact.city || "—")}
-                      onClick={() => setViewValue({ label: "City", value: String(contact.city || "—") })}
+                      icon={MapPin} label="City" value={String(datas.address?.city || "—")}
+                      onClick={() => setViewValue({ label: "City", value: String(datas.address?.city || "—") })}
+                    />
+                    <DetailItem
+                      icon={MapPin} label="Zip Code" value={String(datas.address?.zipcode || "—")}
+                      onClick={() => setViewValue({ label: "Zip Code", value: String(datas.address?.zipcode || "—") })}
                     />
 
                     {/* Dynamically render all other fields from datas */}
                     {Object.entries(datas).map(([key, val]) => {
-                      if (["internal_notes", "supplier_name"].includes(key)) return null;
+                      if (["internal_notes", "supplier_name","address"].includes(key)) return null;
                       const label = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
                       return (
                         <DetailItem
@@ -213,7 +225,7 @@ export default function SupplierDetail() {
                   <div className="space-y-4">
                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest text-xs font-semibold">Street Address</p>
                     <p className="text-sm font-semibold text-slate-700 leading-relaxed bg-slate-50 p-4 rounded-xl border border-slate-100">
-                      {String(contact.address || "No specific address provided.")}
+                      {String(datas.address?.full_address || "No specific address provided.")}
                     </p>
                   </div>
                 </SectionCard>

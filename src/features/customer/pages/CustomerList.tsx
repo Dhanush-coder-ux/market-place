@@ -5,7 +5,7 @@ import { useHeader } from "@/context/HeaderContext";
 import { GradientButton } from "@/components/ui/GradientButton";
 import { SearchSelect } from "@/components/inputbuilders/SearchSelect";
 import { useApi } from "@/context/ApiContext";
-import { ENDPOINTS } from "@/services/endpoints";
+import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 
 const CustomerList = () => {
   const navigate = useNavigate();
@@ -31,7 +31,7 @@ const CustomerList = () => {
   const fetchCustomers = async (q: string) => {
     if (!q) return [];
     try {
-      const res = await getData(ENDPOINTS.CUSTOMERS, { limit: "10", offset: "1", q });
+      const res = await getData(`${ENDPOINTS.CUSTOMERS}/by/shop/${SHOP_ID}`, { limit: "10", offset: "1", q });
       const data = res?.data ? (Array.isArray(res.data) ? res.data : [res.data]) : [];
       return data.map((c: any) => ({
         ...c,

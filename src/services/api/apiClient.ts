@@ -42,5 +42,5 @@ export const apiClient = {
   get: (endpoint: string, params?: Record<string, string>) => request({ method: "GET", endpoint, params }),
   post: (endpoint: string, body: unknown) => request({ method: "POST", endpoint, body }),
   put: (endpoint: string, body: unknown) => request({ method: "PUT", endpoint, body }),
-  delete: (endpoint: string) => request({ method: "DELETE", endpoint }),
+  delete: (endpoint: string, body?: unknown) => request({ method: "DELETE", endpoint, body }),
 };

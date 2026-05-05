@@ -39,7 +39,7 @@ type ApiContextType = {
   getData: (endpoint: string, params?: Record<string, string>, cacheKey?: string) => Promise<any>;
   postData: (endpoint: string, body: unknown) => Promise<any>;
   putData: (endpoint: string, body: unknown) => Promise<any>;
-  deleteData: (endpoint: string) => Promise<any>;
+  deleteData: (endpoint: string, body?: unknown) => Promise<any>;
   patchData: (endpoint: string, body: unknown) => Promise<any>;
   clearError: () => void;
 };
@@ -166,7 +166,7 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
   );
 
   const deleteData = useCallback(
-    (endpoint: string) => request("DELETE", endpoint),
+    (endpoint: string, body?: unknown) => request("DELETE", endpoint, body),
     [request]
   );
 

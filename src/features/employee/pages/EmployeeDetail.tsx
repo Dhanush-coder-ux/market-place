@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
-  Mail, Phone, Pencil, User, Trash2,
+  Mail, Phone, Pencil, User, Trash2, MapPin,
   Database, Shield, Briefcase, Calendar, Star, Info
 } from "lucide-react";
 import {
@@ -38,7 +38,7 @@ export default function EmployeeDetail() {
     if (!id) return;
     setRecordLoading(true);
     // Note: Adjust endpoint based on how your API fetches single employee
-    getData(`${ENDPOINTS.EMPLOYEES}/by/${id}`)
+    getData(`${ENDPOINTS.EMPLOYEES}/by/${SHOP_ID}/${id}`)
       .then((res) => {
         if (res?.data) {
           setEmployee(Array.isArray(res.data) ? res.data[0] : res.data);
@@ -187,8 +187,16 @@ export default function EmployeeDetail() {
                     onClick={() => setViewValue({ label: "Joining Date", value: String(employee.joined_date || "—") })}
                   />
                   <DetailItem
-                    icon={Database} label="Salary Range" value={String((employee.datas as any)?.salary_rage || "—")}
-                    onClick={() => setViewValue({ label: "Salary Range", value: String((employee.datas as any)?.salary_rage || "—") })}
+                    icon={Database} label="Salary Range" value={employee.datas?.salary_rage ? `₹${employee.datas.salary_rage}` : "—"}
+                    onClick={() => setViewValue({ label: "Salary Range", value: String(employee.datas?.salary_rage || "—") })}
+                  />
+                  <DetailItem
+                    icon={MapPin} label="Full Address" value={employee.datas?.address?.full_address || "—"}
+                    onClick={() => setViewValue({ label: "Full Address", value: employee.datas?.address?.full_address || "—" })}
+                  />
+                  <DetailItem
+                    icon={MapPin} label="Zip Code" value={employee.datas?.address?.zip_code || "—"}
+                    onClick={() => setViewValue({ label: "Zip Code", value: employee.datas?.address?.zip_code || "—" })}
                   />
 
                   {/* Dynamic fields */}

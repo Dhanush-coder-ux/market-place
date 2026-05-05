@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
-  AlertCircle, Package,
-  Mail, Pencil, User, MapPin, Phone, Trash2,
-  Store, Database, ShoppingBag, History, CreditCard
+  AlertCircle, Package, Mail, Pencil, User, MapPin, Phone, Trash2,
+  Store, Database, ShoppingBag, History, CreditCard,
+  RefreshCcw, ShoppingCart
 } from "lucide-react";
 import {
   fmt, SectionCard, DetailItem, InfoRow, Modal,
@@ -64,6 +64,8 @@ export default function SupplierDetail() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [viewValue, setViewValue] = useState<{ label: string, value: string } | null>(null);
+  const [purchases, setPurchases] = useState<any[]>([]);
+  const [purLoading, setPurLoading] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -73,6 +75,15 @@ export default function SupplierDetail() {
       setRecordLoading(false);
     });
   }, [id]);
+
+  useEffect(() => {
+    if (!id || activeTab !== 2) return;
+    setPurLoading(true);
+    getData(`${ENDPOINTS.PURCHASES}/by/supplier/${SHOP_ID}/${id}`).then((res: any) => {
+      setPurchases(res?.data ? (Array.isArray(res.data) ? res.data : [res.data]) : []);
+      setPurLoading(false);
+    }).catch(() => setPurLoading(false));
+  }, [activeTab, id]);
 
   async function handleDelete() {
     if (!id) return;
@@ -264,6 +275,132 @@ export default function SupplierDetail() {
               </SectionCard>
             </div>
           )}
+
+          {activeTab === 2 && (() => {
+            // Flatten: purchase → products rows, with purchase-level metadata attached
+            const rows: any[] = [];
+            purchases.forEach((p: any) => {
+              const d = p.datas ?? {};
+              const pd = d.purchaseDetails ?? {};
+              const payment = d.payment ?? {};
+              const charges = p.additional_charges ?? {};
+              const purchaseMeta = {
+                purchaseId: p.id,
+                type: p.type,
+                productName: '—', // We'll fill this from products
+                invoiceNo: pd.invoiceNo || '—',
+                referenceNo: pd.referenceNo || '—',
+                purchaseDate: pd.date || p.created_at,
+                paymentMethod: payment.method || '—',
+                amountPaid: payment.amountPaid ?? 0,
+                deliveryCharge: charges.delivery_charge ?? 0,
+                otherCharge: charges.other_charge ?? 0,
+                uiId: p.ui_id,
+              };
+              (p.products ?? []).forEach((prod: any) => {
+                rows.push({ 
+                  ...purchaseMeta, 
+                  productName: prod.name || 'Unknown Product',
+                  stocks: prod.stocks, 
+                  buy_price: prod.buy_price, 
+                  sell_price: prod.sell_price 
+                });
+              });
+            });
+
+            return (
+              <div className="space-y-4 animate-in fade-in slide-in-from-top-4 duration-500">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-100"><ShoppingCart size={16} /></div>
+                    <h2 className="text-[10px] font-black text-slate-800 uppercase tracking-[0.15em]">Purchase History</h2>
+                  </div>
+                  {purLoading && <RefreshCcw size={14} className="text-slate-400 animate-spin" />}
+                </div>
+                {purLoading ? (
+                  <div className="py-16 flex justify-center"><RefreshCcw size={24} className="text-indigo-400 animate-spin" /></div>
+                ) : rows.length === 0 ? (
+                  <div className="py-16 text-center">
+                    <ShoppingCart size={32} className="mx-auto text-slate-200 mb-3" />
+                    <p className="text-sm font-bold text-slate-400">No purchases found for this supplier</p>
+                  </div>
+                ) : (
+                  <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left whitespace-nowrap">
+                        <thead>
+                          <tr className="text-[10px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-100 bg-slate-50/50">
+                            <th className="px-5 py-3">#</th>
+                            <th className="px-5 py-3">Type</th>
+                            <th className="px-5 py-3">Product</th>
+                            <th className="px-5 py-3">Qty</th>
+                            <th className="px-5 py-3">Buy Price</th>
+                            <th className="px-5 py-3">Sell Price</th>
+                            <th className="px-5 py-3">Payment</th>
+                            <th className="px-5 py-3">Invoice</th>
+                            <th className="px-5 py-3">Reference</th>
+                            <th className="px-5 py-3">Date</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-50">
+                          {rows.map((r: any, i: number) => (
+                            <tr key={`${r.purchaseId}-${i}`} className="hover:bg-indigo-50/20 transition-colors border-l-2 border-indigo-200">
+                              <td className="px-5 py-3">
+                                <span className="text-[10px] font-black text-slate-400 tabular-nums">#{r.uiId}</span>
+                              </td>
+                              <td className="px-5 py-3">
+                                <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
+                                  r.type === 'DIRECT' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                                  r.type?.includes('PO') ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                                  'bg-slate-50 text-slate-600 border-slate-200'
+                                }`}>
+                                  <span className="w-1.5 h-1.5 rounded-full bg-current" />
+                                  {(r.type || '—').replace(/_/g, ' ')}
+                                </span>
+                              </td>
+                              <td className="px-5 py-3 text-xs font-medium text-slate-700">{r.productName}</td>
+                              <td className="px-5 py-3">
+                                <span className="font-black text-sm text-slate-800 tabular-nums">{r.stocks ?? '—'}</span>
+                              </td>
+                              <td className="px-5 py-3">
+                                <span className="text-xs font-bold text-slate-700">₹{r.buy_price ?? '—'}</span>
+                              </td>
+                              <td className="px-5 py-3">
+                                <span className="text-xs font-bold text-emerald-700">₹{r.sell_price ?? '—'}</span>
+                              </td>
+                              <td className="px-5 py-3">
+                                <div className="flex flex-col gap-0.5">
+                                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md w-fit ${
+                                    r.paymentMethod === 'Cash' ? 'bg-green-50 text-green-700' :
+                                    r.paymentMethod === 'UPI' ? 'bg-violet-50 text-violet-700' :
+                                    'bg-slate-50 text-slate-600'
+                                  }`}>{r.paymentMethod}</span>
+                                  {r.amountPaid > 0 && (
+                                    <span className="text-[9px] text-slate-400 font-bold">Paid: ₹{r.amountPaid}</span>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="px-5 py-3 text-xs font-mono text-slate-500">{r.invoiceNo}</td>
+                              <td className="px-5 py-3 text-xs font-mono text-slate-400">{r.referenceNo}</td>
+                              <td className="px-5 py-3 text-xs text-slate-500 whitespace-nowrap">
+                                {r.purchaseDate ? new Date(r.purchaseDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    {/* Charges footer summary */}
+                    {rows.some(r => r.deliveryCharge > 0 || r.otherCharge > 0) && (
+                      <div className="px-5 py-3 border-t border-slate-100 bg-slate-50/50 flex flex-wrap gap-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                        <span>Delivery charges may apply — check individual purchase records</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
         </div>
 
         {/* Modal: View Full Value */}

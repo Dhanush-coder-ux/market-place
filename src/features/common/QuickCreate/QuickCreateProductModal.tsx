@@ -541,11 +541,10 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
       };
 
       const res = await postData(ENDPOINTS.INVENTORIES, payload);
-      console.log("payload", payload);
-
-      if (res && res.data) {
+      
+      if (res) {
         showToast("Product created successfully", "success");
-        onSuccess(res.data);
+        onSuccess(res.data || res);
         onClose();
       }
     } catch (error) {

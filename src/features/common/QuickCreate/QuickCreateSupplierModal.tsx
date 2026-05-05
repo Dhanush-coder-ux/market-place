@@ -41,7 +41,9 @@ export const QuickCreateSupplierModal: React.FC<QuickCreateSupplierModalProps> =
     city: "",
     address: "",
     gst_number: "",
-    notes: ""
+    notes: "",
+    contact_person_email: "",
+    contact_person_phone: ""
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -68,12 +70,31 @@ export const QuickCreateSupplierModal: React.FC<QuickCreateSupplierModalProps> =
           />
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Input
-              label="Contact Person"
+              label="Contact Person Name"
               name="contact_person"
               value={form.contact_person}
               onChange={handleChange}
               placeholder="Full Name"
               leftIcon={<User size={16} className="text-slate-400" />}
+            />
+            <Input
+              label="Contact Person Email"
+              name="contact_person_email"
+              type="email"
+              value={form.contact_person_email}
+              onChange={handleChange}
+              placeholder="contact@example.com"
+              leftIcon={<Mail size={16} className="text-slate-400" />}
+            />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Input
+              label="Contact Person Phone"
+              name="contact_person_phone"
+              value={form.contact_person_phone}
+              onChange={handleChange}
+              placeholder="+91 00000 00000"
+              leftIcon={<Phone size={16} className="text-slate-400" />}
             />
             <div className="space-y-1.5">
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
@@ -277,13 +298,13 @@ export const QuickCreateSupplierModal: React.FC<QuickCreateSupplierModalProps> =
       const payload: any = {
         shop_id: SHOP_ID,
         name: form.supplier_name,
-        email: form.email || null,
+        email: form.email && form.email.includes("@") ? form.email : null,
         mobile_number: form.phone,
         gst_no: form.gst_number,
         contact_info: {
           name: form.contact_person,
-          mobile_number: form.phone, // Using business phone as contact phone in quick create
-          email: form.email || null,
+          email: form.contact_person_email || (form.email && form.email.includes("@") ? form.email : null),
+          mobile_number: form.contact_person_phone || form.phone,
           type: form.type,
         },
         datas: {
@@ -297,11 +318,10 @@ export const QuickCreateSupplierModal: React.FC<QuickCreateSupplierModalProps> =
       };
 
       const res = await postData(ENDPOINTS.SUPPLIERS, payload);
-      console.log("payload", payload);
-
-      if (res && res.data) {
+      
+      if (res) {
         showToast("Supplier registered successfully", "success");
-        onSuccess(res.data);
+        onSuccess(res.data || res);
         onClose();
       }
     } catch (error) {

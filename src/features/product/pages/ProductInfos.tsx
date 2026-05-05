@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo, Fragment } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  Package, Search, Filter, Bookmark, Trash2, Edit3, Eye,
-  ChevronDown, ChevronRight, Layers, Tag, AlertTriangle,
+  Package, Search, Filter, Bookmark, Trash2, Eye,
+  ChevronDown, ChevronRight, Layers, AlertTriangle,
   X, AlertCircle, Calendar, Hash
 } from "lucide-react";
 import { VariantRows, BatchCards, SerialBadgeList } from "../../inventory/components/StockTree";
@@ -75,7 +75,9 @@ const ProductRow = React.memo(({
   const extractSerials = (val: any): string[] => {
     if (!val) return [];
     if (Array.isArray(val)) return val;
-    if (val.serial_numbers && Array.isArray(val.serial_numbers)) return val.serial_numbers;
+    if (val && typeof val === 'object') {
+      if (Array.isArray(val.serial_numbers)) return val.serial_numbers;
+    }
     return [];
   };
 
@@ -88,9 +90,10 @@ const ProductRow = React.memo(({
     return (p.batches || []).filter((b: any) => b && b.id !== null);
   }, [p.batches]);
 
-  const hasVariants = p.has_variant && combinations.length > 0;
-  const hasBatches = p.has_batch && batches.length > 0;
-  const isExpandable = hasVariants || hasBatches;
+  const hasVariants = (p.has_variant || (p as any).has_varients) && combinations.length > 0;
+  const hasBatches = (p.has_batch || batches.length > 0);
+  const hasSerials = (p.has_serialno || extractSerials(p.serial_number).length > 0);
+  const isExpandable = hasVariants || hasBatches || hasSerials;
 
   // --- Aggregation logic for badges ---
   const rootSerials = extractSerials(p.serial_number);
@@ -106,7 +109,6 @@ const ProductRow = React.memo(({
       const cBatches = c.batches || [];
       totalBatches += cBatches.length;
       
-      // Also check if batches within variants have serials
       cBatches.forEach((cb: any) => {
         const cbSerials = extractSerials(cb.serial_numbers || (cb.datas && cb.datas.serial_numbers));
         totalSerials += cbSerials.length;
@@ -138,13 +140,6 @@ const ProductRow = React.memo(({
       </span>
     );
   }
-  if (badges.length === 0) {
-    badges.push(
-      <span key="std" className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider text-slate-500 bg-slate-50 border border-slate-200 whitespace-nowrap">
-        <Tag size={10} /> Standard
-      </span>
-    );
-  }
 
   const visibleBadges = showAllBadges ? badges : badges.slice(0, 2);
   const remainingBadges = badges.length - 2;
@@ -152,17 +147,22 @@ const ProductRow = React.memo(({
   return (
     <Fragment key={p.id}>
       <tr
-        className={`group md:transition-colors ${isExpanded ? "bg-slate-50/30" : "md:hover:bg-slate-50"}`}
+        className={`group md:transition-colors ${isExpanded ? "bg-slate-50/50" : "md:hover:bg-slate-50"}`}
         onClick={() => isExpandable ? toggleExpand(p.id) : navigate(`/product/${p.id}`)}
         style={{ cursor: "pointer" }}
       >
-        <td className="px-4 py-4 text-center">
+        <td className="px-4 py-4 text-center relative w-14">
+          {/* Vertical Indicator Line */}
+          {isExpanded && (
+            <div className="absolute top-[50%] bottom-0 left-[27px] w-[1.5px] bg-blue-500/30 z-10" />
+          )}
+
           {isExpandable ? (
-            <div className={`w-7 h-7 rounded-md flex items-center justify-center md:transition-all shadow-sm ${isExpanded ? "bg-blue-600 text-white shadow-blue-500/20" : "bg-white border border-slate-200 text-slate-500 md:group-hover:bg-slate-50"}`}>
+            <div className={`w-7 h-7 mx-auto rounded-md flex items-center justify-center md:transition-all shadow-sm ${isExpanded ? "bg-blue-600 text-white shadow-blue-500/20" : "bg-white border border-slate-200 text-slate-500 md:group-hover:bg-slate-50"}`}>
               {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
             </div>
           ) : (
-            <div className="w-7 h-7 rounded-md flex items-center justify-center">
+            <div className="w-7 h-7 mx-auto rounded-md flex items-center justify-center">
               <Package size={16} className="text-slate-300" />
             </div>
           )}
@@ -183,23 +183,17 @@ const ProductRow = React.memo(({
                       onClick={(e) => { e.stopPropagation(); setShowAllBadges(true); }}
                       className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-bold uppercase bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200 transition-colors"
                     >
-                      +{remainingBadges} more
+                      +{remainingBadges}
                     </button>
                   )}
                 </div>
               </div>
               <div className="flex items-center gap-2 sm:gap-3 text-[11px] sm:text-[12px] text-slate-500 font-medium flex-wrap">
-                <span className="font-mono text-slate-500">{p.barcode || "No SKU"}</span>
+                <span className="font-mono text-slate-500 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-100">{p.barcode || "No SKU"}</span>
                 <span className="text-slate-300 hidden sm:inline">•</span>
-                <span className="flex items-center gap-1">
-                  <span className="sm:hidden">Brand: </span>
-                  <span className="text-slate-700">{datas.brand || (p as any).brand || "N/A"}</span>
-                </span>
+                <span className="text-slate-700">{datas.brand || (p as any).brand || "N/A"}</span>
                 <span className="text-slate-300 hidden sm:inline">•</span>
-                <span className="flex items-center gap-1">
-                  <span className="sm:hidden">GST: </span>
-                  <span className="text-slate-700">{datas.gst || (p as any).gst || "N/A"}</span>
-                </span>
+                <span className="text-slate-700">GST: {datas.gst || (p as any).gst || "N/A"}</span>
               </div>
             </div>
           </div>
@@ -248,7 +242,7 @@ const ProductRow = React.memo(({
                       {sList[0]}
                     </span>
                     {sList.length > 1 && (
-                      <span className="text-[10px] font-bold text-purple-400">+{sList.length - 1} more</span>
+                      <span className="text-[10px] font-bold text-purple-400">+{sList.length - 1}</span>
                     )}
                   </div>
                 ) : <span className="text-slate-300">—</span>}
@@ -257,7 +251,6 @@ const ProductRow = React.memo(({
           }
 
           if (key === "category" || key === "supplier") {
-            // Only render once if both are selected, but we need to handle the loop
             if (key === "category" && selectedKeys.includes("supplier")) {
               return (
                 <td key="cat_sup" className="px-6 py-4">
@@ -268,7 +261,7 @@ const ProductRow = React.memo(({
                 </td>
               );
             }
-            if (key === "supplier" && selectedKeys.includes("category")) return null; // Skip supplier if category handled it
+            if (key === "supplier" && selectedKeys.includes("category")) return null;
 
             return (
               <td key={key} className="px-6 py-4 whitespace-nowrap">
@@ -294,13 +287,6 @@ const ProductRow = React.memo(({
               <Eye size={16} />
             </button>
             <button
-              onClick={(e) => { e.stopPropagation(); navigate(`/product/${p.id}/edit`); }}
-              className="p-2 text-slate-400 md:hover:text-blue-600 md:hover:bg-blue-50 rounded-lg md:transition-colors border border-transparent md:hover:border-blue-100"
-              title="Edit Product"
-            >
-              <Edit3 size={16} />
-            </button>
-            <button
               onClick={(e) => { e.stopPropagation(); setProductToDelete(p); setIsDeleteDialogOpen(true); }}
               className="p-2 text-slate-400 md:hover:text-rose-600 md:hover:bg-rose-50 rounded-lg md:transition-colors border border-transparent md:hover:border-rose-100"
               title="Delete Product"
@@ -314,32 +300,39 @@ const ProductRow = React.memo(({
       {/* EXPANDED TREE AREA */}
       {isExpanded && (
         <tr key={`${p.id}-expand`} className="bg-slate-50/20">
-          <td colSpan={selectedKeys.length + 3} className="px-0 py-0 border-b border-slate-100">
-            {/* Responsive padding: large on desktop to align with text, small on mobile to save space */}
-            <div className="md:pl-[88px] pl-4 pr-4 sm:pr-6 py-4">
+          <td colSpan={selectedKeys.length + 3} className="px-0 py-0 border-b border-slate-100 relative">
+            {/* Vertical Route Indicator Line */}
+            <div className="absolute top-0 bottom-0 left-[27px] w-[1.5px] bg-blue-500/30 z-10" />
+
+            <div className="md:pl-[84px] pl-10 pr-6 py-6 space-y-6">
               {!hasVariants && rootSerials.length > 0 && (
-                <div className="mb-6 bg-purple-50/30 border border-purple-100/50 p-4 rounded-2xl">
+                <div className="bg-white rounded-xl border border-slate-100 p-4 shadow-sm relative">
+                   {/* Horizontal connecting line */}
+                  <div className="absolute top-8 left-[-18px] md:left-[-57px] w-4 md:w-[57px] h-[1.5px] bg-blue-500/30" />
+                  
                   <div className="flex items-center gap-2 mb-3">
-                    <div className="w-6 h-6 rounded-lg bg-purple-100 flex items-center justify-center text-purple-600">
-                      <Hash size={12} />
-                    </div>
-                    <span className="text-[11px] font-black uppercase text-slate-800 tracking-widest">Product Serial Numbers</span>
-                    <span className="ml-auto text-[10px] font-bold bg-white px-2 py-0.5 rounded-full border border-purple-100 text-purple-600">{rootSerials.length}</span>
+                    <Hash size={12} className="text-violet-400" />
+                    <span className="text-[10px] font-bold uppercase text-slate-400 tracking-widest">Serial Number Tracking</span>
                   </div>
-                  <SerialBadgeList serials={rootSerials} title={`Product Serials: ${p.name}`} />
+                  <SerialBadgeList serials={rootSerials} title={`Serials: ${p.name}`} />
                 </div>
               )}
 
-              {hasVariants && (
-                <VariantRows
-                  combinations={combinations}
-                  baseSellPrice={datas.sell_price || (p as any).sell_price}
-                  baseBuyPrice={datas.buy_price || (p as any).buy_price}
-                />
-              )}
-              {!hasVariants && hasBatches && (
-                <BatchCards batches={batches} />
-              )}
+              <div className="animate-in fade-in slide-in-from-top-4 duration-500 relative">
+                 {/* Horizontal connecting line for tree components */}
+                 <div className="absolute top-8 left-[-18px] md:left-[-57px] w-4 md:w-[57px] h-[1.5px] bg-blue-500/30" />
+
+                  {hasVariants && (
+                    <VariantRows
+                      combinations={combinations}
+                      baseSellPrice={datas.sell_price || (p as any).sell_price}
+                      baseBuyPrice={datas.buy_price || (p as any).buy_price}
+                    />
+                  )}
+                  {!hasVariants && hasBatches && (
+                    <BatchCards batches={batches} />
+                  )}
+              </div>
             </div>
           </td>
         </tr>
@@ -455,21 +448,28 @@ const ProductInfos = () => {
   return (
     <div className="space-y-6 md:animate-in md:fade-in md:duration-500">
       {/* Stats */}
-      <div className="flex flex-nowrap overflow-x-auto custom-scrollbar gap-3 pb-2 -mx-2 px-2 sm:grid sm:grid-cols-2 lg:grid-cols-4 sm:overflow-visible sm:pb-0 sm:mx-0 sm:px-0 touch-pan-x">
-        <StatCard label="Total Products" value={products.length} icon={Package} />
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <StatCard
+          label="Total Products"
+          value={products.length.toString()}
+          icon={Package}
+          className="rounded-xl border-slate-200 shadow-sm"
+        />
         <StatCard
           label="Total Stock"
-          value={totalStock}
+          value={totalStock.toString()}
           icon={Layers}
           iconBg="bg-blue-50"
-          iconColor="text-blue-700"
+          iconColor="text-blue-600"
+          className="rounded-xl border-slate-200 shadow-sm"
         />
         <StatCard
           label="Low Stock Items"
-          value={lowStockCount}
+          value={lowStockCount.toString()}
           icon={AlertTriangle}
           iconBg="bg-rose-50"
-          iconColor="text-rose-700"
+          iconColor="text-rose-600"
+          className="rounded-xl border-slate-200 shadow-sm"
         />
       </div>
 

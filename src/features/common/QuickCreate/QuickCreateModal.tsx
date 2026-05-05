@@ -107,9 +107,9 @@ export const QuickCreateModal: React.FC<QuickCreateModalProps> = ({
                     isActive
                       ? "bg-blue-600 text-white shadow-lg shadow-blue-200 scale-110"
                       : isPassed
-                      ? "bg-emerald-100 text-emerald-600 border border-emerald-200"
-                      : "bg-slate-50 text-slate-400 border border-slate-100"
-                  }`}
+                        ? "bg-emerald-100 text-emerald-600 border border-emerald-200"
+                        : "bg-slate-50 text-slate-400 border border-slate-100"
+                    }`}
                 >
                   {isPassed ? <CheckCircle2 size={14} className="md:w-4 md:h-4" /> : step.id}
                 </div>
@@ -157,13 +157,13 @@ export const QuickCreateModal: React.FC<QuickCreateModalProps> = ({
           >
             <ChevronLeft size={16} className="md:w-[18px] md:h-[18px]" /> Back
           </button>
-          
+
           <div className="flex items-center gap-4">
             <div className="hidden md:block text-right mr-2">
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Step</p>
               <p className="text-xs font-black text-slate-800">{currentStep + 1} of {steps.length}</p>
             </div>
-            
+
             <GradientButton
               onClick={handleNext}
               disabled={isSubmitting || (steps[currentStep].isValid === false)}

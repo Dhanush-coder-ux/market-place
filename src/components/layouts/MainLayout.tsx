@@ -222,18 +222,18 @@ const getPageHeaderInfo = (pathname: string) => {
     };
   }
 
-  return routes[pathname] || { 
-    title: pathname.split("/").pop()?.replace("-", " ").toUpperCase() || "Home", 
-    subtitle: "" 
+  return routes[pathname] || {
+    title: pathname.split("/").pop()?.replace("-", " ").toUpperCase() || "Home",
+    subtitle: ""
   };
 };
 
 const MainLayout = () => {
   const location = useLocation();
   const { actions, bottomActions } = useHeader();
-  const isStorePage = 
-    location.pathname === "/digital-store" || 
-    location.pathname === "/digital-store/profile" || 
+  const isStorePage =
+    location.pathname === "/digital-store" ||
+    location.pathname === "/digital-store/profile" ||
     location.pathname === "/";
 
   // 3. Extract the current title info based on the URL
@@ -242,26 +242,26 @@ const MainLayout = () => {
   return (
     <div className="h-screen w-full flex flex-col overflow-hidden bg-slate-50">
       <Navbar />
-      
+
       <div className="flex flex-1 overflow-hidden">
         {/* Sidebar — hidden on mobile, visible on md+ */}
         <div className="hidden md:flex">
           <Sidebar links={sidebarLinks} />
         </div>
-        
+
         <main className="flex-1 flex flex-col min-w-0 relative overflow-hidden">
           <div className={`flex-1 overflow-y-auto custom-scrollbar mobile-scroll relative ${isStorePage ? "p-0 pb-20 md:pb-0" : "p-2 md:p-3 lg:p-4 pb-36 md:pb-0"} ${!bottomActions && "pb-20 md:pb-0"}`}>
-            
+
             {!isStorePage && (
               <div className="mb-2 sm:mb-4">
                 <Breadcrumb />
-               
+
                 <div className="mt-2 sm:mt-4">
                   <Title title={title} subtitle={subtitle} icon={icon} actions={actions} />
                 </div>
               </div>
             )}
-            
+
             <Outlet />
           </div>
 
@@ -279,7 +279,7 @@ const MainLayout = () => {
                 {bottomActions}
               </div>
             </div>
-)}
+          )}
         </main>
       </div>
 

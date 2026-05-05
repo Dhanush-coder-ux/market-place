@@ -297,11 +297,10 @@ export const QuickCreateSupplierModal: React.FC<QuickCreateSupplierModalProps> =
       };
 
       const res = await postData(ENDPOINTS.SUPPLIERS, payload);
-      console.log("payload", payload);
-
-      if (res && res.data) {
+      
+      if (res) {
         showToast("Supplier registered successfully", "success");
-        onSuccess(res.data);
+        onSuccess(res.data || res);
         onClose();
       }
     } catch (error) {

@@ -1,9 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { 
-  FileText, 
   Layers, 
-  Package, 
-  Tag, 
   Hash, 
   Calendar, 
   ListPlus, 
@@ -16,12 +13,9 @@ import { BiRupee } from "react-icons/bi";
 import { useNavigate } from "react-router-dom";
 
 import Input from "../../../components/ui/Input";
-import { ReusableCombobox } from "@/components/ui/ReusableCombobox";
 import { ReusableSelect } from "@/components/ui/ReusableSelect";
-import ImageUpload from "@/components/common/ImageUpload";
 import { GradientButton } from "@/components/ui/GradientButton";
 import FieldLabel from "./Fieldlable";
-import { FIELD_DESCRIPTIONS } from "../../../utils/constants";
 import { useApi } from "@/context/ApiContext";
 import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 import { useHeader } from "@/context/HeaderContext";

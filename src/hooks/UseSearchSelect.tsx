@@ -12,7 +12,7 @@ export function useSearchSelect<T>(
   const abortControllerRef = useRef<AbortController | null>(null);
 
   // Derive final options: Use async results if fetcher exists, otherwise use static prop
-  const options = fetchOptions ? asyncOptions : initialOptions;
+  const options = fetchOptions ? [...initialOptions, ...asyncOptions] : initialOptions;
 
   const handleSearch = useCallback(
     (query: string) => {

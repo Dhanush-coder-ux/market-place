@@ -37,7 +37,7 @@ interface InventoryItemsCardProps {
   addProduct: () => void;
   removeProduct: (index: number) => void;
   // 💡 NEW: Added this prop to receive the modal trigger from GrnForm
-  onAddNewProduct?: (query: string) => void; 
+  onAddNewProduct?: (query: string) => void;
   purchaseType?: string;
 }
 
@@ -132,8 +132,8 @@ export const InventoryItemsCard = ({
         sku: variantItem.sku,
         batchTracking: hasBatchTracking,
         serialTracking: hasSerialTracking,
-        existingSerials: Array.isArray(baseOpt.serial_numbers) 
-          ? baseOpt.serial_numbers 
+        existingSerials: Array.isArray(baseOpt.serial_numbers)
+          ? baseOpt.serial_numbers
           : (baseOpt.serial_numbers?.serial_numbers || baseOpt.datas?.serial_numbers?.serial_numbers || []),
         serialno_id: baseOpt.serial_numbers?.id || baseOpt.datas?.serial_numbers?.id
       };
@@ -145,7 +145,7 @@ export const InventoryItemsCard = ({
         const variantData = allVariants.find((v: any) => v.id === selectedId);
         const batches = variantData?.batches || baseOpt.batches || d.batches || [];
         const isPoCreate = purchaseType === 'PO_CREATE';
-        
+
         setBatchModal({
           isOpen: true,
           rowIndex: targetIdx,
@@ -171,8 +171,8 @@ export const InventoryItemsCard = ({
       batchNum: batch.name || batch.batch_number,
       batch_id: batch.id,
       serialno_id: batch.serial_numbers?.id || batch.serial_number?.id,
-      existingSerials: Array.isArray(batch.serial_numbers) 
-        ? batch.serial_numbers 
+      existingSerials: Array.isArray(batch.serial_numbers)
+        ? batch.serial_numbers
         : (batch.serial_numbers?.serial_numbers || batch.serial_number?.serial_numbers || []),
       manufacturingDate: (batch.manufacturing_date || batch.mfg_date) ? new Date(batch.manufacturing_date || batch.mfg_date).toISOString().split('T')[0] : "",
       expiryDate: batch.expiry_date ? new Date(batch.expiry_date).toISOString().split('T')[0] : "",
@@ -254,7 +254,7 @@ export const InventoryItemsCard = ({
           </div>
         </div>
       )}
- 
+
       {/* Batch Modal */}
       {batchModal.isOpen && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
@@ -283,8 +283,8 @@ export const InventoryItemsCard = ({
               {batchModal.allowNewBatch && (
                 <button
                   onClick={() => {
-                     updateProductFields(batchModal.rowIndex, { batch_id: undefined, batchNum: "", batchNumReadOnly: false });
-                     setBatchModal({ isOpen: false, rowIndex: -1, batches: [], productName: "", variantName: "", existingSerials: [], allowNewBatch: true });
+                    updateProductFields(batchModal.rowIndex, { batch_id: undefined, batchNum: "", batchNumReadOnly: false });
+                    setBatchModal({ isOpen: false, rowIndex: -1, batches: [], productName: "", variantName: "", existingSerials: [], allowNewBatch: true });
                   }}
                   className="w-full p-4 rounded-2xl border-2 border-dashed border-slate-200 text-slate-500 hover:border-amber-400 hover:text-amber-600 hover:bg-amber-50 transition-all flex flex-col items-center gap-1 group"
                 >
@@ -355,8 +355,8 @@ export const InventoryItemsCard = ({
                 key={method}
                 onClick={() => setCostMethod(method)}
                 className={`px-3 py-1.5 text-[11px] font-medium rounded-md transition-all ${costMethod === method
-                    ? "bg-white text-slate-800 shadow-sm"
-                    : "text-slate-500 hover:text-slate-700"
+                  ? "bg-white text-slate-800 shadow-sm"
+                  : "text-slate-500 hover:text-slate-700"
                   }`}
               >
                 {method}
@@ -410,8 +410,8 @@ export const InventoryItemsCard = ({
             <div
               key={product.id}
               className={`group relative rounded-2xl border transition-all duration-200 overflow-hidden ${hasProduct
-                  ? 'border-slate-200 bg-white shadow-sm'
-                  : 'border-dashed border-slate-200 bg-slate-50/40'
+                ? 'border-slate-200 bg-white shadow-sm'
+                : 'border-dashed border-slate-200 bg-slate-50/40'
                 }`}
             >
               {/* Row Header */}
@@ -424,14 +424,15 @@ export const InventoryItemsCard = ({
 
                 {/* Product search */}
                 <div className="flex-1 min-w-0">
-                  <SearchSelect
-                    labelKey="name"
-                    valueKey="id"
-                    fetchOptions={async (q) => await inventoryApi.searchInventories(q)}
-                    value={product.inventory_id}
-                    // 💡 NEW: Passing the passed down prop directly to the SearchSelect trigger
-                    onCreateNew={onAddNewProduct} 
-                    onChange={(val, opt: any) => {
+                    <SearchSelect
+                      labelKey="name"
+                      valueKey="id"
+                      fetchOptions={async (q) => await inventoryApi.searchInventories(q)}
+                      options={product.inventory_id ? [{ id: product.inventory_id, name: product.name }] as any[] : []}
+                      value={product.inventory_id}
+                      // 💡 NEW: Passing the passed down prop directly to the SearchSelect trigger
+                      onCreateNew={onAddNewProduct}
+                      onChange={(val, opt: any) => {
                       if (opt) {
                         const d = opt.datas || opt;
                         const hasBatchTracking = !!(opt.batch_tracking || opt.has_batch_tracking || opt.has_batch || (d && (d.batch_tracking || d.has_batch_tracking || d.has_batch)));
@@ -476,51 +477,51 @@ export const InventoryItemsCard = ({
                         }
 
                         const hasVariants = opt.has_variants || opt.has_variant || (opt.datas && (opt.datas.has_variants || opt.datas.has_variant));
-                        
+
                         // 💡 PO_CREATE: Allow variant + existing batch only, no serial tracking
                         if (purchaseType === 'PO_CREATE') {
-                           if (hasVariants && combinations.length > 0) {
-                             // Still open variant picker
-                             const mappedVariants = combinations.map((c: any) => ({
-                               id: c.id,
-                               name: c.name || Object.values(c.attributes || c.datas?.attributes || {}).join(" - ") || c.barcode || "Variant",
-                               sku: c.barcode || opt.barcode,
-                               stock: c.stocks || c.stock || opt.stocks || 0,
-                               batchCount: Array.isArray(c.batches) ? c.batches.length : 0,
-                             }));
-                             setVariantModal({ isOpen: true, baseProduct: opt.name || String(val), targetRowIndex: index, variants: mappedVariants, baseData: opt });
-                             setSelectedVariants(null);
-                           } else {
-                             updateProductFields(index, {
-                               inventory_id: opt.id,
-                               name: opt.name || d.name || String(val),
-                               costPrice: d.buy_price ?? d.costPrice ?? "",
-                               sellingPrice: d.sell_price ?? d.sellingPrice ?? "",
-                               sku: d.barcode ?? d.sku ?? "",
-                               unit: d.unit ?? "pc",
-                               category: d.category ?? "",
-                               batchTracking: hasBatchTracking,
-                               serialTracking: false,
-                             });
-                             if (hasBatchTracking) {
-                               const batches = opt.batches || d.batches || [];
-                               setBatchModal({
-                                 isOpen: true, rowIndex: index,
-                                 batches: Array.isArray(batches) ? batches : [],
-                                 productName: opt.name || d.name || String(val),
-                                 variantName: "", existingSerials: [],
-                                 allowNewBatch: false,
-                               });
-                             }
-                           }
-                           return;
+                          if (hasVariants && combinations.length > 0) {
+                            // Still open variant picker
+                            const mappedVariants = combinations.map((c: any) => ({
+                              id: c.id,
+                              name: c.name || Object.values(c.attributes || c.datas?.attributes || {}).join(" - ") || c.barcode || "Variant",
+                              sku: c.barcode || opt.barcode,
+                              stock: c.stocks || c.stock || opt.stocks || 0,
+                              batchCount: Array.isArray(c.batches) ? c.batches.length : 0,
+                            }));
+                            setVariantModal({ isOpen: true, baseProduct: opt.name || String(val), targetRowIndex: index, variants: mappedVariants, baseData: opt });
+                            setSelectedVariants(null);
+                          } else {
+                            updateProductFields(index, {
+                              inventory_id: opt.id,
+                              name: opt.name || d.name || String(val),
+                              costPrice: d.buy_price ?? d.costPrice ?? "",
+                              sellingPrice: d.sell_price ?? d.sellingPrice ?? "",
+                              sku: d.barcode ?? d.sku ?? "",
+                              unit: d.unit ?? "pc",
+                              category: d.category ?? "",
+                              batchTracking: hasBatchTracking,
+                              serialTracking: false,
+                            });
+                            if (hasBatchTracking) {
+                              const batches = opt.batches || d.batches || [];
+                              setBatchModal({
+                                isOpen: true, rowIndex: index,
+                                batches: Array.isArray(batches) ? batches : [],
+                                productName: opt.name || d.name || String(val),
+                                variantName: "", existingSerials: [],
+                                allowNewBatch: false,
+                              });
+                            }
+                          }
+                          return;
                         }
 
                         if (hasVariants && combinations.length > 0) {
                           const mappedVariants = combinations.map((c: any) => ({
-                            id: c.id, 
+                            id: c.id,
                             name: c.name || Object.values(c.attributes || c.datas?.attributes || {}).join(" - ") || c.barcode || "Variant",
-                            sku: c.barcode || opt.barcode, 
+                            sku: c.barcode || opt.barcode,
                             stock: c.stocks || c.stock || opt.stocks || 0,
                             batchCount: Array.isArray(c.batches) ? c.batches.length : (c.batches ? (typeof c.batches === 'string' ? JSON.parse(c.batches).length : 0) : 0),
                           }));
@@ -578,8 +579,8 @@ export const InventoryItemsCard = ({
                   <button
                     onClick={() => toggleBreakdown(index)}
                     className={`p-1.5 rounded-lg transition-all text-[11px] ${expandedBreakdown.has(index)
-                        ? 'bg-slate-800 text-white'
-                        : 'text-slate-400 hover:bg-slate-100 hover:text-slate-600'
+                      ? 'bg-slate-800 text-white'
+                      : 'text-slate-400 hover:bg-slate-100 hover:text-slate-600'
                       }`}
                     title="Cost breakdown"
                   >
@@ -588,8 +589,8 @@ export const InventoryItemsCard = ({
                   <button
                     onClick={() => toggleSettings(index)}
                     className={`p-1.5 rounded-lg transition-all ${expandedSettings.has(index)
-                        ? `bg-${themeColor}-600 text-white`
-                        : `text-slate-400 hover:bg-slate-100 hover:text-slate-600`
+                      ? `bg-${themeColor}-600 text-white`
+                      : `text-slate-400 hover:bg-slate-100 hover:text-slate-600`
                       }`}
                     title="Advanced settings"
                   >
@@ -672,8 +673,8 @@ export const InventoryItemsCard = ({
                   {/* Margin — always show suggestion when cost is set */}
                   {suggestedMarginPct && (
                     <span className={`inline-flex items-center gap-1 pl-1.5 pr-2 py-0.5 rounded-md text-[10px] border ${isMarginUserSet
-                        ? 'bg-violet-50 border-violet-100'
-                        : 'bg-slate-50 border-slate-200'
+                      ? 'bg-violet-50 border-violet-100'
+                      : 'bg-slate-50 border-slate-200'
                       }`}>
                       <span className={`font-medium ${isMarginUserSet ? 'text-violet-400' : 'text-slate-400'}`}>Margin</span>
                       <span className={`font-semibold ${isMarginUserSet ? 'text-violet-700' : 'text-slate-500'}`}>
@@ -688,8 +689,8 @@ export const InventoryItemsCard = ({
                   {/* Sell Price — always show suggestion when cost is set */}
                   {suggestedSellPrice > 0 && (
                     <span className={`inline-flex items-center gap-1 pl-1.5 pr-2 py-0.5 rounded-md text-[10px] border ${isMarginUserSet
-                        ? 'bg-teal-50 border-teal-100'
-                        : 'bg-slate-50 border-slate-200'
+                      ? 'bg-teal-50 border-teal-100'
+                      : 'bg-slate-50 border-slate-200'
                       }`}>
                       <span className={`font-medium ${isMarginUserSet ? 'text-teal-500' : 'text-slate-400'}`}>Sell Price</span>
                       <span className={`font-semibold tabular-nums ${isMarginUserSet ? 'text-teal-700' : 'text-slate-500'}`}>
@@ -782,8 +783,8 @@ export const InventoryItemsCard = ({
                             <button
                               onClick={() => handleProductChange(index, "marginType", "percent")}
                               className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-semibold transition-all ${product.marginType === "percent"
-                                  ? "bg-white text-slate-700 shadow-sm"
-                                  : "text-slate-400 hover:text-slate-600"
+                                ? "bg-white text-slate-700 shadow-sm"
+                                : "text-slate-400 hover:text-slate-600"
                                 }`}
                             >
                               <Percent size={8} /> %
@@ -791,8 +792,8 @@ export const InventoryItemsCard = ({
                             <button
                               onClick={() => handleProductChange(index, "marginType", "amount")}
                               className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-semibold transition-all ${product.marginType === "amount"
-                                  ? "bg-white text-slate-700 shadow-sm"
-                                  : "text-slate-400 hover:text-slate-600"
+                                ? "bg-white text-slate-700 shadow-sm"
+                                : "text-slate-400 hover:text-slate-600"
                                 }`}
                             >
                               <Banknote size={8} /> ₹
@@ -892,20 +893,20 @@ export const InventoryItemsCard = ({
                     </div>
                   )}
 
-                   {/* Serial tracking fields */}
-                   {product.serialTracking && purchaseType !== 'PO_CREATE' && purchaseType !== 'PO_UPDATE' && (
-                     <div className="mt-3">
-                       <InlineSerialManager
-                         serials={(product.serialNumbers || "").split(',').filter(Boolean)}
-                         serialLabel="Serial"
-                         onUpdate={(next) => handleProductChange(index, "serialNumbers", next.join(','))}
-                         limit={q}
-                         existingSerials={product.existingSerials}
-                         validationType="increase"
-                         onValidationError={(msg) => showToast(msg, "error")}
-                       />
-                     </div>
-                   )}
+                  {/* Serial tracking fields */}
+                  {product.serialTracking && purchaseType !== 'PO_CREATE' && purchaseType !== 'PO_UPDATE' && (
+                    <div className="mt-3">
+                      <InlineSerialManager
+                        serials={(product.serialNumbers || "").split(',').filter(Boolean)}
+                        serialLabel="Serial"
+                        onUpdate={(next) => handleProductChange(index, "serialNumbers", next.join(','))}
+                        limit={q}
+                        existingSerials={product.existingSerials}
+                        validationType="increase"
+                        onValidationError={(msg) => showToast(msg, "error")}
+                      />
+                    </div>
+                  )}
 
                   {/* Advanced settings panel */}
                   {expandedSettings.has(index) && (

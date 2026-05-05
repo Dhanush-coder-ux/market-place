@@ -34,6 +34,12 @@ export const QuickCreateModal: React.FC<QuickCreateModalProps> = ({
 }) => {
   const [currentStep, setCurrentStep] = useState(0);
 
+  React.useEffect(() => {
+    if (isOpen) {
+      setCurrentStep(0);
+    }
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   const handleNext = () => {

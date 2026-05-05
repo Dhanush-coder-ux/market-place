@@ -1,13 +1,12 @@
 import React, { useState } from "react";
 import { 
-  Building2, 
   MapPin, 
   Mail, 
   Phone, 
   User, 
-  Globe, 
   Tag, 
-  FileText 
+  FileText,
+  CheckCircle2
 } from "lucide-react";
 import { QuickCreateModal, QuickCreateStep } from "./QuickCreateModal";
 import Input from "@/components/ui/Input";
@@ -189,6 +188,83 @@ export const QuickCreateSupplierModal: React.FC<QuickCreateSupplierModalProps> =
         </div>
       ),
     },
+    {
+      id: 4,
+      title: "Overview",
+      subtitle: "Review partner details",
+      content: (
+        <div className="space-y-6">
+          <div className="bg-slate-50 rounded-[2rem] p-8 border border-slate-100 space-y-6">
+            <div className="flex items-start justify-between">
+              <div>
+                <h4 className="text-2xl font-black text-slate-800 tracking-tight">{form.supplier_name || "Untitled Supplier"}</h4>
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">{form.type} • {form.city || "No City"}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tax ID</p>
+                <p className="text-sm font-black text-blue-600">{form.gst_number || "NOT PROVIDED"}</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 border-t border-slate-200/60">
+              <div className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-xl bg-white flex items-center justify-center text-slate-400 shadow-sm border border-slate-100">
+                    <User size={14} />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Contact Person</p>
+                    <p className="text-xs font-bold text-slate-700 mt-1">{form.contact_person || "-"}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-xl bg-white flex items-center justify-center text-slate-400 shadow-sm border border-slate-100">
+                    <Phone size={14} />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Mobile</p>
+                    <p className="text-xs font-bold text-slate-700 mt-1">{form.phone || "-"}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-xl bg-white flex items-center justify-center text-slate-400 shadow-sm border border-slate-100">
+                    <Mail size={14} />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Email Address</p>
+                    <p className="text-xs font-bold text-slate-700 mt-1">{form.email || "-"}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-xl bg-white flex items-center justify-center text-slate-400 shadow-sm border border-slate-100">
+                    <MapPin size={14} />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Location</p>
+                    <p className="text-xs font-bold text-slate-700 mt-1 truncate max-w-[150px]">{form.address || "-"}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="p-6 rounded-[2rem] bg-emerald-50/50 border border-emerald-100 flex gap-4 items-start">
+            <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-emerald-600 shadow-sm shrink-0">
+              <CheckCircle2 size={20} />
+            </div>
+            <div className="space-y-1">
+              <p className="text-xs font-black text-emerald-800 uppercase tracking-widest">Verified Details</p>
+              <p className="text-[10px] font-bold text-emerald-600 leading-relaxed uppercase tracking-wider">
+                This supplier will be added to your procurement database once you click complete.
+              </p>
+            </div>
+          </div>
+        </div>
+      ),
+    },
   ];
 
   const handleSubmit = async () => {
@@ -198,24 +274,31 @@ export const QuickCreateSupplierModal: React.FC<QuickCreateSupplierModalProps> =
 
     setSubmitting(true);
     try {
-      const payload = {
+      const payload: any = {
         shop_id: SHOP_ID,
         name: form.supplier_name,
-        email: form.email,
+        email: form.email || null,
         mobile_number: form.phone,
         gst_no: form.gst_number,
         contact_info: {
-          contact_person: form.contact_person,
+          name: form.contact_person,
+          mobile_number: form.phone, // Using business phone as contact phone in quick create
+          email: form.email || null,
           type: form.type,
-          address: form.address,
-          city: form.city,
         },
         datas: {
-          internal_notes: form.notes
+          internal_notes: form.notes,
+          address: {
+            full_address: form.address,
+            city: form.city,
+            zipcode: "" // Optional in quick create
+          }
         }
       };
 
       const res = await postData(ENDPOINTS.SUPPLIERS, payload);
+      console.log("payload", payload);
+
       if (res && res.data) {
         showToast("Supplier registered successfully", "success");
         onSuccess(res.data);

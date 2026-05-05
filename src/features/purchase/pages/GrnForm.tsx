@@ -404,6 +404,7 @@ const GrnForm = () => {
                       labelKey="name"
                       valueKey="id"
                       fetchOptions={async (q) => await supplierApi.searchSuppliers(q)}
+                      options={supplierDetails ? [supplierDetails] : []}
                       value={supplierDetails?.id || grnDetails.supplier}
                       onChange={(val, opt: any) => {
                         setGrnDetails(d => ({ ...d, supplier: String(val) }));
@@ -422,7 +423,7 @@ const GrnForm = () => {
                     )}
                   </div>
 
-                  <Input label="PO Reference #" placeholder="PO-..." value={grnDetails.poReference} onChange={(e) => setGrnDetails(d => ({ ...d, poReference: e.target.value }))} />
+                  {/* <Input label="PO Reference #" placeholder="PO-..." value={grnDetails.poReference} onChange={(e) => setGrnDetails(d => ({ ...d, poReference: e.target.value }))} /> */}
                   <Input label="Supplier Invoice #" placeholder="INV-…" value={grnDetails.invoiceNo} onChange={(e) => setGrnDetails(d => ({ ...d, invoiceNo: e.target.value }))} />
                   <Input label="Receipt Date" required type="date" value={grnDetails.date} onChange={(e) => setGrnDetails(d => ({ ...d, date: e.target.value }))} />
 
@@ -442,12 +443,12 @@ const GrnForm = () => {
                   </div>
 
                   {/* GRN Ref (read-only) */}
-                  <div className="flex flex-col gap-1.5">
+                  {/* <div className="flex flex-col gap-1.5">
                     <label className="text-xs font-medium text-[#64748B] uppercase tracking-wide">GRN Reference</label>
                     <div className="h-10 px-3 flex items-center bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg text-sm font-mono text-[#64748B]">
                       {grnDetails.referenceNo}
                     </div>
-                  </div>
+                  </div> */}
                 </div>
               </div>
 
@@ -612,7 +613,6 @@ const GrnForm = () => {
               quantity: 1
             }]);
           }
-          showToast("New product created and added to list", "success");
         }}
       />
     </>

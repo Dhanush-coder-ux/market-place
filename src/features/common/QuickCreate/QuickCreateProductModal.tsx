@@ -1,13 +1,13 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import { 
-  Package, 
-  BarChart2, 
-  Hash, 
-  Layers, 
-  Zap, 
-  Trash2, 
-  AlertCircle 
+  Zap,
+  Calendar,
+  BarChart2,
+  Hash,
+  Layers,
+  CheckCircle2
 } from "lucide-react";
+import { InlineSerialManager } from "@/components/common/InlineSerialManager";
 import { QuickCreateModal, QuickCreateStep } from "./QuickCreateModal";
 import Input from "@/components/ui/Input";
 import { ReusableSelect } from "@/components/ui/ReusableSelect";
@@ -75,7 +75,11 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
     batch_tracking: false,
     serial_tracking: false,
     has_variants: false,
+    batch_name: "",
+    mfg_date: "",
+    exp_date: "",
   });
+  const [baseSerials, setBaseSerials] = useState<string[]>([]);
 
   // --- Variant State ---
   const [variantTypes, setVariantTypes] = useState<VariantType[]>([]);
@@ -182,6 +186,36 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
               </div>
               <Switch checked={form.serial_tracking} onCheckedChange={(val) => setForm(f => ({ ...f, serial_tracking: val }))} />
             </div>
+
+            {/* Conditional Tracking Inputs */}
+            {form.batch_tracking && !form.has_variants && (
+              <div className="bg-white rounded-2xl border border-slate-200 p-6 space-y-4 animate-in fade-in slide-in-from-top-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Calendar size={14} className="text-blue-600" />
+                  <span className="text-[10px] font-black uppercase text-slate-800 tracking-widest">Initial Batch Information</span>
+                </div>
+                <Input label="Batch Name" name="batch_name" value={form.batch_name} onChange={handleChange} placeholder="e.g. BATCH-001" />
+                <div className="grid grid-cols-2 gap-4">
+                  <Input label="Mfg Date" name="mfg_date" type="date" value={form.mfg_date} onChange={handleChange} />
+                  <Input label="Expiry Date" name="exp_date" type="date" value={form.exp_date} onChange={handleChange} />
+                </div>
+              </div>
+            )}
+
+            {form.serial_tracking && !form.has_variants && (
+              <div className="bg-white rounded-2xl border border-slate-200 p-6 space-y-4 animate-in fade-in slide-in-from-top-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Hash size={14} className="text-violet-600" />
+                  <span className="text-[10px] font-black uppercase text-slate-800 tracking-widest">{config.serialLabel} Management</span>
+                </div>
+                <InlineSerialManager
+                  serials={baseSerials}
+                  serialLabel={config.serialLabel}
+                  limit={Number(form.opening_stock) || 0}
+                  onUpdate={setBaseSerials}
+                />
+              </div>
+            )}
           </div>
         </div>
       )
@@ -206,7 +240,7 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
                 options={GST_RATES.map(r => ({ label: r, value: r }))}
               />
             </div>
-            <Input label="HSN Code" name="hsn" value={form.hsn} onChange={handleChange} placeholder="e.g. 8517" />
+
           </div>
         </div>
       )
@@ -244,6 +278,7 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
                     combinations={combinations}
                     variantTypes={variantTypes}
                     supportsSerials={form.serial_tracking}
+                    supportsBatch={form.batch_tracking}
                     serialLabel={config.serialLabel}
                     onChange={setCombinations}
                   />
@@ -265,6 +300,168 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
               </div>
             </div>
           )}
+        </div>
+      )
+    },
+    {
+      id: 5,
+      title: "Overview",
+      subtitle: "Review details before creating",
+      content: (
+        <div className="space-y-6">
+          <div className="bg-slate-50 rounded-[2rem] p-8 border border-slate-100 space-y-6">
+            <div className="flex items-start justify-between">
+              <div>
+                <h4 className="text-2xl font-black text-slate-800 tracking-tight">{form.name || "Untitled Product"}</h4>
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">{form.category} • {form.brand || "No Brand"}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Stock</p>
+                <p className="text-xl font-black text-blue-600">
+                  {form.has_variants 
+                    ? combinations.reduce((s, c) => s + (Number(c.stock) || 0), 0)
+                    : (Number(form.opening_stock) || 0)}
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-6 pt-6 border-t border-slate-200/60">
+              <div className="space-y-1">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Buy Price</p>
+                <p className="text-sm font-bold text-slate-700">₹{Number(form.buy_price).toLocaleString()}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Sell Price</p>
+                <p className="text-sm font-bold text-slate-700">₹{Number(form.sell_price).toLocaleString()}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tax (GST)</p>
+                <p className="text-sm font-bold text-slate-700">{form.gst}</p>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-2 pt-4">
+              {form.has_variants && (
+                <span className="px-3 py-1 rounded-full bg-indigo-100 text-indigo-700 text-[9px] font-black uppercase tracking-widest">
+                  {combinations.length} Variants
+                </span>
+              )}
+              {form.batch_tracking && (
+                <span className="px-3 py-1 rounded-full bg-amber-100 text-amber-700 text-[9px] font-black uppercase tracking-widest">
+                  Batch Tracked
+                </span>
+              )}
+              {form.serial_tracking && (
+                <span className="px-3 py-1 rounded-full bg-violet-100 text-violet-700 text-[9px] font-black uppercase tracking-widest">
+                  Serial Tracked
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* NEW: Detailed Breakdown for Tracking & Variants */}
+          {form.has_variants && combinations.filter(c => c.active).length > 0 && (
+            <div className="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-700">
+              <div className="px-6 py-4 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between">
+                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Active Variants Details</h3>
+                <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-100">
+                  {combinations.filter(c => c.active).length} Active
+                </span>
+              </div>
+              <div className="divide-y divide-slate-50">
+                {combinations.filter(c => c.active).map((combo, idx) => (
+                  <div key={combo.id} className="p-4 flex items-center justify-between hover:bg-slate-50 transition-colors">
+                    <div className="flex items-center gap-4">
+                      <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-[10px] font-black text-slate-500">
+                        {idx + 1}
+                      </div>
+                      <div>
+                        <p className="text-xs font-black text-slate-800 uppercase tracking-tight">
+                          {Object.values(combo.attributes).join(" / ")}
+                        </p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">SKU: {combo.barcode || "N/A"}</span>
+                          <span className="w-1 h-1 rounded-full bg-slate-300" />
+                          <span className="text-[9px] font-bold text-blue-600 uppercase tracking-widest">Stock: {combo.stock}</span>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-3">
+                      {form.batch_tracking && combo.batch?.name && (
+                        <div className="flex flex-col items-end">
+                          <span className="text-[9px] font-black text-amber-600 uppercase tracking-widest bg-amber-50 px-2 py-0.5 rounded-md border border-amber-100">
+                            Batch: {combo.batch.name}
+                          </span>
+                          <span className="text-[8px] text-slate-400 mt-0.5 uppercase tracking-tighter">Exp: {combo.batch.expiry_date || 'N/A'}</span>
+                        </div>
+                      )}
+                      {form.serial_tracking && combo.serials.length > 0 && (
+                        <div className="flex flex-col items-end">
+                          <span className="text-[9px] font-black text-violet-600 uppercase tracking-widest bg-violet-50 px-2 py-0.5 rounded-md border border-violet-100">
+                            {combo.serials.length} Serials
+                          </span>
+                          <div className="flex gap-1 mt-1">
+                             {combo.serials.slice(0, 2).map((s, i) => (
+                               <span key={i} className="text-[8px] font-mono text-slate-400 bg-slate-100 px-1 rounded truncate max-w-[50px]">{s.serial}</span>
+                             ))}
+                             {combo.serials.length > 2 && <span className="text-[8px] text-slate-300">+{combo.serials.length - 2}</span>}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {!form.has_variants && (form.batch_tracking || form.serial_tracking) && (
+            <div className="p-6 rounded-[2rem] border border-slate-200 bg-white shadow-sm space-y-4">
+              <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tracking Details</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {form.batch_tracking && form.batch_name && (
+                  <div className="p-4 rounded-2xl bg-amber-50/50 border border-amber-100">
+                    <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest mb-2">Active Batch</p>
+                    <p className="text-sm font-bold text-slate-800">{form.batch_name}</p>
+                    <div className="flex gap-3 mt-2">
+                       <div>
+                         <p className="text-[8px] text-slate-400 uppercase font-black">MFG</p>
+                         <p className="text-[10px] font-bold text-slate-600">{form.mfg_date || 'N/A'}</p>
+                       </div>
+                       <div>
+                         <p className="text-[8px] text-slate-400 uppercase font-black">EXP</p>
+                         <p className="text-[10px] font-bold text-slate-600">{form.exp_date || 'N/A'}</p>
+                       </div>
+                    </div>
+                  </div>
+                )}
+                {form.serial_tracking && baseSerials.length > 0 && (
+                  <div className="p-4 rounded-2xl bg-violet-50/50 border border-violet-100">
+                    <p className="text-[10px] font-black text-violet-600 uppercase tracking-widest mb-2">{baseSerials.length} Registered Serials</p>
+                    <div className="flex flex-wrap gap-1">
+                      {baseSerials.slice(0, 5).map((s, i) => (
+                        <span key={i} className="text-[9px] font-mono bg-white border border-violet-100 text-violet-500 px-1.5 py-0.5 rounded-md">{s}</span>
+                      ))}
+                      {baseSerials.length > 5 && <span className="text-[9px] text-violet-300 font-bold">+{baseSerials.length - 5} more</span>}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          <div className="p-6 rounded-[2rem] bg-blue-50/50 border border-blue-100 flex gap-4 items-start">
+            <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-blue-600 shadow-sm shrink-0">
+              <CheckCircle2 size={20} />
+            </div>
+            <div className="space-y-1">
+              <p className="text-xs font-black text-blue-800 uppercase tracking-widest">Ready for Creation</p>
+              <p className="text-[10px] font-bold text-blue-600 leading-relaxed uppercase tracking-wider">
+                Click complete below to finalize the registration of this product into your inventory.
+              </p>
+            </div>
+          </div>
         </div>
       )
     }
@@ -293,7 +490,15 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
             mrp: mrp,
             attributes: combo.attributes,
           },
-          batches: []
+          batch: combo.batch?.name ? {
+            name: combo.batch.name,
+            expiry_date: combo.batch.expiry_date,
+            manufacturing_date: combo.batch.manufacturing_date,
+            stocks: stocks,
+            serial_numbers: combo.serials.length > 0 ? {
+              serial_numbers: combo.serials.map(s => s.serial)
+            } : null
+          } : null
         };
       }) : [];
 
@@ -312,6 +517,15 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
         has_serialno: form.serial_tracking,
         has_batch: form.batch_tracking,
         variants: mappedVariants,
+        serial_numbers: !form.has_variants ? baseSerials : [],
+        batch: (!form.has_variants && form.batch_tracking) ? {
+          name: form.batch_name,
+          manufacturing_date: form.mfg_date,
+          expiry_date: form.exp_date,
+          serial_numbers: baseSerials.length > 0 ? {
+            serial_numbers: baseSerials
+          } : null
+        } : null,
         datas: {
           brand: form.brand,
           unit: form.unit,
@@ -319,13 +533,16 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
           gst: form.gst,
           hsn: form.hsn,
           reorder_point: Number(form.reorder_point) || 0,
+          opening_stock: Number(form.opening_stock) || 0,
           description: form.description,
           is_active: form.is_active,
-          variantTypes: form.has_variants ? variantTypes : [],
+          variant_types: form.has_variants ? variantTypes : [],
         }
       };
 
       const res = await postData(ENDPOINTS.INVENTORIES, payload);
+      console.log("payload", payload);
+
       if (res && res.data) {
         showToast("Product created successfully", "success");
         onSuccess(res.data);

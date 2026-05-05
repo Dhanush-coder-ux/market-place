@@ -1,8 +1,8 @@
 import React, { useState, useMemo, useEffect } from "react";
 import {
-  Package, DollarSign, BarChart2, Save, ChevronDown, Hash,
-  Cpu, AlertCircle, RefreshCw, ScanLine,
-  Layers, Zap, Bookmark, X, Plus, Trash2, CheckCircle2, ChevronLeft, ChevronRight,
+  Package, DollarSign, BarChart2, Save, Hash,
+  Cpu, AlertCircle,
+  Layers, Zap, Bookmark, Plus,
   Calendar
 } from "lucide-react";
 import { GradientButton } from "@/components/ui/GradientButton";
@@ -13,7 +13,6 @@ import { useHeader } from "@/context/HeaderContext";
 import { useToast } from "@/context/ToastContext";
 import { Switch } from "@/components/ui/switch";
 import { InlineSerialManager } from "@/components/common/InlineSerialManager";
-import { SearchSelect } from "@/components/inputbuilders/SearchSelect";
 import { supplierApi } from "@/services/api/supplier";
 import { QuickCreateSupplierModal } from "@/features/common/QuickCreate/QuickCreateSupplierModal";
 import { 
@@ -47,9 +46,11 @@ type FormData = {
   sell_price: string;
   mrp: string;
   gst: string;
+  hsn: string;
   supplier: string;
   opening_stock: string;
   reorder_point: string;
+  max_stock: string;
   location: string;
   has_variants: boolean;
   batch_tracking: boolean;
@@ -211,15 +212,7 @@ const SelectField: React.FC<SelectFieldProps> = ({ label, required, options, cla
 );
 
 
-interface TagChipProps { label: string; onRemove: () => void; color?: string; }
-const TagChip: React.FC<TagChipProps> = ({ label, onRemove, color = "bg-blue-50 text-blue-700 border-blue-100" }) => (
-  <span className={`pf-tag inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium border ${color}`}>
-    {label}
-    <button type="button" onClick={onRemove} className="hover:text-red-500 transition-colors ml-0.5">
-      <X size={10} />
-    </button>
-  </span>
-);
+
 
 
 /*   • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • •
@@ -260,9 +253,11 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
     sell_price: (propInitialData.selling_price as string) || "",
     mrp: (propInitialData.mrp as string) || "",
     gst: (propInitialData.gst as string) || "18%",
+    hsn: "",
     supplier: (propInitialData.supplier as string) || "",
     opening_stock: (propInitialData.opening_stock as string) || "",
     reorder_point: (propInitialData.reorder_point as string) || "5",
+    max_stock: (propInitialData.max_stock as string) || "",
     location: (propInitialData.location as string) || "",
     has_variants: false,
     batch_tracking: (propInitialData.batch_tracking as boolean) || false,
@@ -505,8 +500,15 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
           mrp: mrp,
           attributes: combo.attributes,
         },
-        batches: [],
-        batch: combo.batch
+        batch: combo.batch?.name ? {
+          name: combo.batch.name,
+          expiry_date: combo.batch.expiry_date,
+          manufacturing_date: combo.batch.manufacturing_date,
+          stocks: stocks,
+          serial_numbers: combo.serials.length > 0 ? {
+            serial_numbers: combo.serials.map(s => s.serial)
+          } : null
+        } : null
       };
       return v;
     });
@@ -528,7 +530,10 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
       batch: (!form.has_variants && form.batch_tracking) ? {
         name: form.batch_name,
         manufacturing_date: form.mfg_date,
-        expiry_date: form.exp_date
+        expiry_date: form.exp_date,
+        serial_numbers: baseSerials.length > 0 ? {
+          serial_numbers: baseSerials
+        } : null
       } : null,
       datas: {
         brand: form.brand,
@@ -648,7 +653,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                   <h2 className="text-xs font-bold text-slate-800 uppercase tracking-widest">Classification & Status</h2>
                 </div>
                 <div className="p-6 space-y-5">
-                  <div className="flex flex-col gap-1.5">
+                  {/* <div className="flex flex-col gap-1.5">
                     <Label text="Supplier" hint="optional" />
                     <SearchSelect
                       labelKey="name"
@@ -662,7 +667,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                       onCreateNew={(query) => setModalState({ type: "Supplier", query })}
                       placeholder="Search Supplier..."
                     />
-                  </div>
+                  </div> */}
 
                   <div className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 border border-slate-100 mt-2">
                     <div>

@@ -170,7 +170,10 @@ const PurchaseForm = () => {
             manufacturingDate: p.manufacturing_date || "",
             expiryDate: p.expiry_date || ""
           })));
-          setCharges(data.charges || { transport: 0, other: 0 });
+          setCharges(data.additional_charges ? {
+            transport: data.additional_charges.delivery_charge,
+            other: data.additional_charges.other_charge
+          } : data.charges || { transport: 0, other: 0 });
           setPayment(data.payment || { method: "Cash", amountPaid: 0 });
         }
       };
@@ -268,7 +271,7 @@ const PurchaseForm = () => {
         showToast(`Product "${missingBatch.name}" requires a batch number.`, "error");
         return;
       }
-      
+
       const missingSerials = products.find(p => {
         if (!p.serialTracking) return false;
         const count = p.serialNumbers?.split(",").filter((s: string) => s.trim()).length || 0;
@@ -339,16 +342,16 @@ const PurchaseForm = () => {
         purchase_id: purchaseId,
         supplier_id: supplierDetails?.id || "SUP_" + purchaseDetails.supplier.substring(0, 3).toUpperCase(),
         calculations: {
-           divided_by: costMethodMap[costMethod] || "NONE",
-           gst: {
-              type: "inclusive",
-              value: 18,
-              registered: true
-           }
+          divided_by: costMethodMap[costMethod] || "NONE",
+          gst: {
+            type: "inclusive",
+            value: 18,
+            registered: true
+          }
         },
         additional_charges: {
-           delivery_charge: Number(charges.transport) || 0,
-           other_charge: Number(charges.other) || 0
+          delivery_charge: Number(charges.transport) || 0,
+          other_charge: Number(charges.other) || 0
         },
         datas: {
           supplier_name: supplierDetails?.name || purchaseDetails.supplier,
@@ -377,7 +380,7 @@ const PurchaseForm = () => {
           const filtered = savedDrafts.filter((d: any) => d.id !== draftId);
           localStorage.setItem("purchase_drafts", JSON.stringify(filtered));
         }
-        navigate("/purchase-Summary");
+        navigate("/purchase-history");
       }
     } catch (error: any) {
       showToast(error.message || "Failed to save purchase", "error");
@@ -436,7 +439,7 @@ const PurchaseForm = () => {
                     <h2 className="text-sm font-black text-slate-800 uppercase tracking-widest">Purchase Details</h2>
                     <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">Basic information & supplier</p>
                   </div>
-                  
+
                 </div>
 
                 <div className="p-8 grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -446,6 +449,7 @@ const PurchaseForm = () => {
                       labelKey="name"
                       valueKey="id"
                       fetchOptions={async (q) => await supplierApi.searchSuppliers(q)}
+                      options={supplierDetails ? [supplierDetails] : []}
                       value={supplierDetails?.id || purchaseDetails.supplier}
                       onChange={(val, opt: any) => {
                         setPurchaseDetails({ ...purchaseDetails, supplier: val ? String(val) : "" });

@@ -87,9 +87,9 @@ function purchaseToMovements(records: PurchaseRecord[], movType: MovementType): 
 
       // If it has nested variants array
       if (Array.isArray(prod.variants) && prod.variants.length > 0) {
-        prod.variants.forEach(variant => {
+        prod.variants.forEach((variant: any) => {
           if (Array.isArray(variant.batches) && variant.batches.length > 0) {
-            variant.batches.forEach(batch => {
+            variant.batches.forEach((batch: any) => {
               movements.push({
                 ...baseMovement,
                 qty: Number(batch.stocks ?? batch.quantity ?? 1),
@@ -113,7 +113,7 @@ function purchaseToMovements(records: PurchaseRecord[], movType: MovementType): 
       } 
       // Else if it has nested batches array directly
       else if (Array.isArray(prod.batches) && prod.batches.length > 0) {
-        prod.batches.forEach(batch => {
+        prod.batches.forEach((batch: any) => {
           movements.push({
             ...baseMovement,
             qty: Number(batch.stocks ?? batch.quantity ?? 1),
@@ -183,10 +183,6 @@ function truncateId(id: string | undefined) {
   return id;
 }
 
-const STATUS_STYLES: Record<StatusType, string> = {
-  Completed: "text-emerald-600",
-  Pending: "text-amber-600",
-};
 
 function TypeBadge({ type }: { type: MovementType }) {
   const s = getTypeStyle(type);
@@ -215,7 +211,7 @@ function DetailDrawer({ movement, onClose }: DetailDrawerProps) {
     showToast("Copied to clipboard!", "success");
   };
 
-  const s = getTypeStyle(movement.type);
+
   const isPositive = movement.qty > 0;
 
   return (

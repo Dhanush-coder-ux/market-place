@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   Search, AlertCircle, Save,
   Plus, Minus, Clock,
-  CheckCircle2, ChevronDown, BarChart3, RefreshCw, Truck,
+  CheckCircle2, BarChart3, RefreshCw, Truck,
   PackageCheck,
   Zap,
   X,
@@ -55,6 +55,7 @@ type POProduct = {
   serialno_id: string | null;
   isNewBatch: boolean;
   availableBatches: any[];
+  existingSerials: string[];
 }
 
 interface POSummary {
@@ -84,12 +85,12 @@ const fetchPOOptions = async (query: string, getData: Function) => {
     } else if (res?.datas) {
       list = Array.isArray(res.datas) ? res.datas : [res.datas];
     }
-    
+
     return list.map((po: any) => {
       const refNo = po.datas?.purchaseDetails?.referenceNo || po.reference_no || po.id;
       const productNames = po.products?.map((p: any) => p.name).join(", ") || "";
       const label = productNames ? `${refNo} (${productNames})` : refNo;
-      
+
       return {
         id: po.id,
         label: label,
@@ -122,8 +123,8 @@ const deriveStatus = (items: POProduct[]): ReceiveStatus => {
 
 const StatusPill = ({ status }: { status: ReceiveStatus }) => {
   const cfg = {
-    Pending:   { icon: <Clock size={11} />,        cls: "bg-amber-50 border-amber-200 text-amber-700"   },
-    Partial:   { icon: <AlertCircle size={11} />,  cls: "bg-blue-50 border-blue-200 text-blue-700"      },
+    Pending: { icon: <Clock size={11} />, cls: "bg-amber-50 border-amber-200 text-amber-700" },
+    Partial: { icon: <AlertCircle size={11} />, cls: "bg-blue-50 border-blue-200 text-blue-700" },
     Completed: { icon: <CheckCircle2 size={11} />, cls: "bg-emerald-50 border-emerald-200 text-emerald-700" },
   }[status];
   return (
@@ -141,9 +142,8 @@ const ProgressBar = ({ received, ordered }: { received: number; ordered: number 
     <div className="flex items-center gap-2">
       <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
         <div
-          className={`h-full rounded-full transition-all duration-300 ${
-            pct >= 100 ? "bg-emerald-500" : pct > 0 ? "bg-blue-500" : "bg-slate-200"
-          }`}
+          className={`h-full rounded-full transition-all duration-300 ${pct >= 100 ? "bg-emerald-500" : pct > 0 ? "bg-blue-500" : "bg-slate-200"
+            }`}
           style={{ width: `${pct}%` }}
         />
       </div>
@@ -200,7 +200,7 @@ const QtyInput = ({
 const ReceiveGoodForm = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { getData, putData,postData } = useApi();
+  const { getData, postData } = useApi();
   const { setBottomActions } = useHeader();
   const { showToast } = useToast();
 
@@ -209,8 +209,7 @@ const ReceiveGoodForm = () => {
   const [poSummary, setPOSummary] = useState<POSummary | null>(null);
   const [items, setItems] = useState<POProduct[]>([]);
   const [selectedPORef, setSelectedPORef] = useState<string>("");
-  const [expandedRows, setExpandedRows]  = useState<Set<string>>(new Set());
-  
+
   const [invoiceNo, setInvoiceNo] = useState("");
   const [receiptDate, setReceiptDate] = useState(new Date().toISOString().split("T")[0]);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("Cash");
@@ -245,46 +244,46 @@ const ReceiveGoodForm = () => {
       if (!data) { showToast("PO not found", "error"); return; }
 
       setPOSummary({
-        id:            data.id || poId,
-        referenceNo:   data.datas?.purchaseDetails?.referenceNo || data.reference_no || data.referenceNo || poId,
-        supplierName:  data.datas?.supplier_name || data.supplier_name || "",
-        supplierId:    data.supplier_id   || "",
-        date:          data.datas?.purchaseDetails?.date || data.date || "",
-        status:        (data.datas?.status as ReceiveStatus) || (data.status as ReceiveStatus) || "Pending",
-        totalItems:    data.products?.length || 0,
+        id: data.id || poId,
+        referenceNo: data.datas?.purchaseDetails?.referenceNo || data.reference_no || data.referenceNo || poId,
+        supplierName: data.datas?.supplier_name || data.supplier_name || "",
+        supplierId: data.supplier_id || "",
+        date: data.datas?.purchaseDetails?.date || data.date || "",
+        status: (data.datas?.status as ReceiveStatus) || (data.status as ReceiveStatus) || "Pending",
+        totalItems: data.products?.length || 0,
       });
 
       const mapped: POProduct[] = (data.products || []).map((p: any) => ({
-        id:                   p.id || crypto.randomUUID(),
-        product_id:           p.inventory_id || p.product_id || p.id,
-        variant_id:           p.variant_id || p.varient_id || (p.variants && p.variants.length > 0 ? p.variants[0].id : null),
-        name:                 p.name || "",
-        sku:                  p.barcode || p.sku || "",
-        variant:              p.variant || "",
-        unit:                 p.unit || "pc",
-        orderedQty:           Number(p.stocks || p.quantity) || 0,
+        id: p.id || crypto.randomUUID(),
+        product_id: p.inventory_id || p.product_id || p.id,
+        variant_id: p.variant_id || p.varient_id || (p.variants && p.variants.length > 0 ? p.variants[0].id : null),
+        name: p.name || "",
+        sku: p.barcode || p.sku || "",
+        variant: p.variant || "",
+        unit: p.unit || "pc",
+        orderedQty: Number(p.stocks || p.quantity) || 0,
         previouslyReceivedQty: Number(p.received_stocks || p.received_qty) || 0,
-        receivedQty:          "",
-        costPrice:            Number(p.buy_price || p.costPrice) || 0,
-        unit_price:           Number(p.buy_price || p.costPrice) || 0,
-        batchTracking:        !!(p.has_batch || p.batch_tracking),
-        batchNum:             "",
-        manufacturingDate:    "",
-        expiryDate:           "",
-        remarks:              "",
-        remaining:            (Number(p.stocks) || 0) - (Number(p.received_qty) || 0),
-        receiveNow:           "",
-        reason:               "",
-        customReason:         "",
-        sellPrice:            Number(p.sell_price || p.sellPrice) || 0,
-        serialTracking:       !!(p.has_serialno || p.serial_tracking),
-        serialNumbers:        [],
-        has_batch:            !!(p.has_batch || p.batch_tracking),
-        has_serialno:         !!(p.has_serialno || p.serial_tracking),
-        batch_id:             p.batch_id || null,
-        serialno_id:          p.serialno_id || p.serial_number?.id || null,
-        isNewBatch:           false,
-        availableBatches:     [],
+        receivedQty: "",
+        costPrice: Number(p.buy_price || p.costPrice) || 0,
+        unit_price: Number(p.buy_price || p.costPrice) || 0,
+        batchTracking: !!(p.has_batch || p.batch_tracking),
+        batchNum: "",
+        manufacturingDate: "",
+        expiryDate: "",
+        remarks: "",
+        remaining: (Number(p.stocks) || 0) - (Number(p.received_qty) || 0),
+        receiveNow: "",
+        reason: "",
+        customReason: "",
+        sellPrice: Number(p.sell_price || p.sellPrice) || 0,
+        serialTracking: !!(p.has_serialno || p.serial_tracking),
+        serialNumbers: [],
+        has_batch: !!(p.has_batch || p.batch_tracking),
+        has_serialno: !!(p.has_serialno || p.serial_tracking),
+        serialno_id: p.serialno_id || (p.serial_number as any)?.id || null,
+        isNewBatch: false,
+        availableBatches: [],
+        existingSerials: [],
       }));
 
       // Fetch full inventory data per unique inventory_id to populate available batches
@@ -302,7 +301,7 @@ const ReceiveGoodForm = () => {
 
       const enriched = mapped.map(m => {
         const inv = invMap[m.product_id];
-        if (!inv) return m;
+        if (!inv) return { ...m, existingSerials: [] };
         // Find batches: if variant, look inside that variant; else root batches
         let batches: any[] = [];
         if (m.variant_id && inv.variants) {
@@ -311,10 +310,21 @@ const ReceiveGoodForm = () => {
         } else {
           batches = inv.batches ?? [];
         }
-        return { ...m, availableBatches: batches };
+
+        // Aggregate all existing serial numbers for this product/variant
+        const existingSerials: string[] = [];
+        batches.forEach((b: any) => {
+          const serials = b.serial_numbers?.serial_numbers || b.serial_number?.serial_numbers || [];
+          if (Array.isArray(serials)) {
+            existingSerials.push(...serials);
+          }
+        });
+
+        return { ...m, availableBatches: batches, existingSerials };
       });
 
       setItems(enriched);
+      setSelectedPORef(data.id || poId);
       setSearchParams(prev => { prev.set("poId", data.id || poId); return prev; }, { replace: true });
     } catch {
       showToast("Failed to load PO", "error");
@@ -347,23 +357,15 @@ const ReceiveGoodForm = () => {
     })));
   };
 
-  const toggleRow = (id: string) => {
-    setExpandedRows(prev => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
-    });
-  };
-
   const liveStatus = useMemo(() => deriveStatus(items), [items]);
 
   const stats = useMemo(() => {
-    const totalOrdered   = items.reduce((s, p) => s + p.orderedQty, 0);
-    const totalPrevRec   = items.reduce((s, p) => s + p.previouslyReceivedQty, 0);
-    const totalThisRec   = items.reduce((s, p) => s + (Number(p.receivedQty) || 0), 0);
+    const totalOrdered = items.reduce((s, p) => s + p.orderedQty, 0);
+    const totalPrevRec = items.reduce((s, p) => s + p.previouslyReceivedQty, 0);
+    const totalThisRec = items.reduce((s, p) => s + (Number(p.receivedQty) || 0), 0);
     const totalRemaining = Math.max(0, totalOrdered - totalPrevRec - totalThisRec);
-    const receiptValue   = items.reduce((s, p) => s + (Number(p.receivedQty) || 0) * p.costPrice, 0);
-    
+    const receiptValue = items.reduce((s, p) => s + (Number(p.receivedQty) || 0) * p.costPrice, 0);
+
     const isValid = !!globalData.warehouse && !!receiptDate && totalThisRec > 0;
 
     return { totalOrdered, totalPrevRec, totalThisRec, totalRemaining, receiptValue, grandTotal: receiptValue, isValid };
@@ -388,12 +390,12 @@ const ReceiveGoodForm = () => {
           p.batch_id && !p.isNewBatch
             ? { batch_id: p.batch_id }
             : {
-                batch: {
-                  name: p.batchNum,
-                  manufacturing_date: p.manufacturingDate || null,
-                  expiry_date: p.expiryDate || null,
-                }
+              batch: {
+                name: p.batchNum,
+                manufacturing_date: p.manufacturingDate || null,
+                expiry_date: p.expiryDate || null,
               }
+            }
         ) : {}),
         // Serials: only if has_serialno and user entered some
         ...(p.has_serialno && p.serialNumbers.length > 0 ? { serial_numbers: p.serialNumbers, serialno_id: p.serialno_id || undefined } : {}),
@@ -448,7 +450,7 @@ const ReceiveGoodForm = () => {
           <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Grand Total</span>
           <span className="text-xl font-black text-slate-900 leading-none">₹{stats.grandTotal.toLocaleString()}</span>
         </div>
-        <GradientButton 
+        <GradientButton
           onClick={handleSubmit}
           disabled={!stats.isValid || submitting}
           className="rounded-xl shadow-md text-xs px-8 h-8 flex items-center"
@@ -590,10 +592,9 @@ const ReceiveGoodForm = () => {
                 {/* Rows */}
                 <div className="divide-y divide-[#F1F5F9]">
                   {items.map(item => {
-                    const remaining  = Math.max(0, item.orderedQty - item.previouslyReceivedQty);
-                    const totalRecv  = item.previouslyReceivedQty + (Number(item.receivedQty) || 0);
-                    const isFull     = totalRecv >= item.orderedQty;
-                    const isExpanded = expandedRows.has(item.id);
+                    const remaining = Math.max(0, item.orderedQty - item.previouslyReceivedQty);
+                    const totalRecv = item.previouslyReceivedQty + (Number(item.receivedQty) || 0);
+                    const isFull = totalRecv >= item.orderedQty;
 
                     return (
                       <div key={item.id} className={`bg-white hover:bg-[#F8FAFC] transition-colors ${isFull ? "border-l-2 border-emerald-400" : ""}`}>
@@ -657,55 +658,41 @@ const ReceiveGoodForm = () => {
                             />
                           </div>
 
-                          {/* Expand toggle */}
-                          <div className="col-span-1 flex justify-end">
-                            {(item.batchTracking || true) && (
-                              <button
-                                type="button"
-                                onClick={() => toggleRow(item.id)}
-                                className={`p-1.5 rounded-lg border transition-colors ${
-                                  isExpanded
-                                    ? "bg-[#EFF6FF] border-blue-100 text-[#2563EB]"
-                                    : "border-[#E2E8F0] text-[#64748B] hover:bg-slate-50"
-                                }`}
-                              >
-                                <ChevronDown
-                                  size={14}
-                                  className={`transition-transform duration-200 ${isExpanded ? "rotate-180" : ""}`}
-                                />
-                              </button>
-                            )}
-                          </div>
+                          {/* Empty space - replaced toggle */}
+                          <div className="col-span-1" />
                         </div>
 
-                        {/* Expanded: batch + serial */}
-                        {isExpanded && (
-                          <div className="px-6 py-4 bg-[#F8FAFC] border-t border-[#F1F5F9] space-y-4">
+                        {/* Card Content: batch + serial - ALWAYS VISIBLE */}
+                        <div className="px-6 py-5 bg-[#F8FAFC]/50 border-y border-[#F1F5F9] space-y-5">
 
-                            {/* Batch Selection */}
-                            {item.has_batch && (
-                              <div>
-                                <div className="flex items-center gap-2 mb-2">
-                                  <div className="w-5 h-5 rounded-md bg-amber-50 flex items-center justify-center border border-amber-100">
-                                    <BarChart3 size={11} className="text-amber-600" />
-                                  </div>
-                                  <span className="text-xs font-semibold text-amber-700 uppercase tracking-wide">Batch</span>
-                                  {item.batch_id && !item.isNewBatch && (
-                                    <span className="text-[10px] px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full font-bold">
-                                      {item.availableBatches.find((b: any) => b.id === item.batch_id)?.name || 'Selected'}
-                                    </span>
-                                  )}
-                                  {item.isNewBatch && (
-                                    <span className="text-[10px] px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full font-bold">New Batch</span>
-                                  )}
+                          {/* Batch Selection */}
+                          {item.has_batch && (
+                            <div className="bg-white p-5 rounded-2xl border border-amber-100/50 shadow-sm">
+                              <div className="flex items-center gap-3 mb-4">
+                                <div className="w-8 h-8 rounded-xl bg-amber-50 flex items-center justify-center border border-amber-100">
+                                  <BarChart3 size={14} className="text-amber-600" />
                                 </div>
+                                <div>
+                                  <h3 className="text-[11px] font-black text-amber-700 uppercase tracking-widest">Batch Selection</h3>
+                                  <p className="text-[10px] text-amber-500 font-medium">Link this receipt to a batch</p>
+                                </div>
+                                {item.batch_id && !item.isNewBatch && (
+                                  <span className="text-[10px] px-2.5 py-1 bg-amber-100 text-amber-700 rounded-lg font-black ml-auto border border-amber-200 uppercase tracking-tighter">
+                                    {item.availableBatches.find((b: any) => b.id === item.batch_id)?.name || 'Selected'}
+                                  </span>
+                                )}
+                                {item.isNewBatch && (
+                                  <span className="text-[10px] px-2.5 py-1 bg-emerald-100 text-emerald-700 rounded-lg font-black ml-auto border border-emerald-200 uppercase tracking-tighter">New Batch</span>
+                                )}
+                              </div>
 
+                              <div className="flex flex-col md:flex-row gap-4 items-start">
                                 {/* Batch Trigger */}
-                                <div className="mb-2">
+                                <div className="shrink-0">
                                   <button
                                     type="button"
                                     onClick={() => setBatchModal({ isOpen: true, itemId: item.id, batches: item.availableBatches || [], productName: item.name, variantName: item.variant })}
-                                    className="px-4 py-2 rounded-xl border border-amber-200 text-amber-700 font-bold text-xs hover:bg-amber-50 hover:border-amber-300 transition-all bg-white shadow-sm flex items-center gap-2"
+                                    className="h-10 px-4 rounded-xl border border-amber-200 text-amber-700 font-black text-[10px] uppercase tracking-widest hover:bg-amber-50 hover:border-amber-300 transition-all bg-white shadow-sm flex items-center gap-2 whitespace-nowrap"
                                   >
                                     <Package size={14} />
                                     {item.batch_id && !item.isNewBatch ? "Change Batch" : item.isNewBatch ? "Select from Existing" : "Select Batch"}
@@ -714,46 +701,54 @@ const ReceiveGoodForm = () => {
 
                                 {/* New batch form fields */}
                                 {item.isNewBatch && (
-                                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-2">
+                                  <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-3">
                                     <Input label="Batch Number *" placeholder="BATCH-001"
                                       value={item.batchNum}
                                       onChange={(e) => updateItem(item.id, { batchNum: e.target.value })}
-                                      className="!h-8 !text-xs !border-[#E2E8F0]"
+                                      className="!h-10 !text-xs !bg-slate-50/50"
                                     />
                                     <Input label="Manufacturing Date" type="date"
                                       value={item.manufacturingDate}
                                       onChange={(e) => updateItem(item.id, { manufacturingDate: e.target.value })}
-                                      className="!h-8 !text-xs !border-[#E2E8F0]"
+                                      className="!h-10 !text-xs !bg-slate-50/50"
                                     />
                                     <Input label="Expiry Date" type="date"
                                       value={item.expiryDate}
                                       onChange={(e) => updateItem(item.id, { expiryDate: e.target.value })}
-                                      className="!h-8 !text-xs !border-[#E2E8F0]"
+                                      className="!h-10 !text-xs !bg-slate-50/50"
                                     />
                                   </div>
                                 )}
                               </div>
-                            )}
+                            </div>
+                          )}
 
-                            {/* Serial Numbers */}
-                            {item.has_serialno && (
-                              <div className="bg-white p-4 rounded-xl border border-violet-100 shadow-sm">
-                                <div className="flex items-center justify-between mb-3">
-                                  <div className="flex items-center gap-2">
-                                    <div className="w-5 h-5 rounded-md bg-violet-50 flex items-center justify-center border border-violet-100">
-                                      <Zap size={11} className="text-violet-600" />
-                                    </div>
-                                    <span className="text-xs font-semibold text-violet-700 uppercase tracking-wide">Serial Numbers</span>
+                          {/* Serial Numbers */}
+                          {/* Serial Numbers */}
+                          {item.has_serialno && (
+                            <div className="bg-white p-5 rounded-2xl border border-violet-100 shadow-sm">
+                              <div className="flex items-center justify-between mb-4">
+                                <div className="flex items-center gap-3">
+                                  <div className="w-8 h-8 rounded-xl bg-violet-50 flex items-center justify-center border border-violet-100">
+                                    <Zap size={14} className="text-violet-600" />
                                   </div>
-                                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${item.serialNumbers.length === Number(item.receivedQty) ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
-                                    {item.serialNumbers.length} / {item.receivedQty || 0} Entered
-                                  </span>
+                                  <div>
+                                    <h3 className="text-[11px] font-black text-violet-700 uppercase tracking-widest">Serial Number Management</h3>
+                                    <p className="text-[10px] text-violet-500 font-medium">Assign unique IDs to each unit</p>
+                                  </div>
                                 </div>
-                                <div className="flex flex-wrap gap-2 min-h-[42px] p-2 bg-slate-50/50 border border-slate-100 rounded-lg">
+                                <span className={`text-[10px] font-black px-3 py-1 rounded-lg border uppercase tracking-widest ${item.serialNumbers.length === Number(item.receivedQty) ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-slate-50 text-slate-500 border-slate-100'}`}>
+                                  {item.serialNumbers.length} / {item.receivedQty || 0} Entered
+                                </span>
+                              </div>
+
+                              <div className="space-y-4">
+                                {/* Serial Input */}
+                                <div className="flex flex-wrap gap-2 min-h-[50px] p-3 bg-slate-50/50 border border-slate-100 rounded-xl transition-all focus-within:border-violet-300 focus-within:bg-white focus-within:ring-4 focus-within:ring-violet-50">
                                   {item.serialNumbers.map((s, idx) => (
-                                    <span key={idx} className="flex items-center gap-1.5 px-2 py-1 bg-white border border-violet-200 text-violet-700 text-[10px] font-bold rounded-md shadow-sm">
+                                    <span key={idx} className="flex items-center gap-1.5 px-2.5 py-1.5 bg-white border border-violet-200 text-violet-700 text-[10px] font-black rounded-lg shadow-sm group hover:border-red-200 hover:text-red-600 transition-all">
                                       {s}
-                                      <button onClick={() => updateItem(item.id, { serialNumbers: item.serialNumbers.filter((_, i) => i !== idx) })} className="hover:text-red-500">
+                                      <button onClick={() => updateItem(item.id, { serialNumbers: item.serialNumbers.filter((_, i) => i !== idx) })} className="opacity-40 group-hover:opacity-100">
                                         <X size={10} />
                                       </button>
                                     </span>
@@ -762,7 +757,7 @@ const ReceiveGoodForm = () => {
                                     <input
                                       type="text"
                                       placeholder="Type serial and press Enter…"
-                                      className="flex-1 bg-transparent border-none outline-none text-xs min-w-[150px]"
+                                      className="flex-1 bg-transparent border-none outline-none text-xs min-w-[200px] font-medium placeholder:text-slate-400"
                                       onKeyDown={(e) => {
                                         if (e.key === 'Enter' || e.key === ',') {
                                           e.preventDefault();
@@ -776,19 +771,35 @@ const ReceiveGoodForm = () => {
                                     />
                                   )}
                                 </div>
-                              </div>
-                            )}
 
-                            {/* Remarks (always) */}
-                            {!item.has_batch && !item.has_serialno && (
-                              <Input label="Remarks" placeholder="Optional note about this item…"
-                                value={item.remarks}
-                                onChange={(e) => updateItem(item.id, { remarks: e.target.value })}
-                                className="!h-8 !text-xs !border-[#E2E8F0]"
-                              />
-                            )}
-                          </div>
-                        )}
+                                {/* Existing Serial Numbers Display */}
+                                {item.existingSerials && item.existingSerials.length > 0 && (
+                                  <div className="pt-3 border-t border-slate-100">
+                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                                      <Clock size={10} /> Existing Serials in System
+                                    </p>
+                                    <div className="flex flex-wrap gap-1.5 max-h-[80px] overflow-y-auto pr-1">
+                                      {item.existingSerials.map((s, idx) => (
+                                        <span key={idx} className="px-2 py-0.5 bg-slate-100 text-slate-400 text-[9px] font-mono rounded border border-slate-200/50">
+                                          {s}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Remarks (always) */}
+                          {!item.has_batch && !item.has_serialno && (
+                            <Input label="Remarks" placeholder="Optional note about this item…"
+                              value={item.remarks}
+                              onChange={(e) => updateItem(item.id, { remarks: e.target.value })}
+                              className="!h-8 !text-xs !border-[#E2E8F0]"
+                            />
+                          )}
+                        </div>
                       </div>
                     );
                   })}
@@ -832,14 +843,13 @@ const ReceiveGoodForm = () => {
                   <span className="text-xs font-medium text-[#64748B]">Detected Status</span>
                   <StatusPill status={liveStatus} />
                 </div>
-                <div className={`p-3 rounded-xl text-xs ${
-                  liveStatus === "Completed" ? "bg-emerald-50 border border-emerald-100 text-emerald-800" :
-                  liveStatus === "Partial"   ? "bg-blue-50 border border-blue-100 text-blue-800" :
-                                               "bg-amber-50 border border-amber-100 text-amber-800"
-                }`}>
+                <div className={`p-3 rounded-xl text-xs ${liveStatus === "Completed" ? "bg-emerald-50 border border-emerald-100 text-emerald-800" :
+                  liveStatus === "Partial" ? "bg-blue-50 border border-blue-100 text-blue-800" :
+                    "bg-amber-50 border border-amber-100 text-amber-800"
+                  }`}>
                   {liveStatus === "Completed" && "✓ All ordered items have been fully received. PO will be closed."}
-                  {liveStatus === "Partial"   && "⚡ Some items received. PO remains open for future receipts."}
-                  {liveStatus === "Pending"   && "⏳ No quantities entered yet. Enter quantities to update status."}
+                  {liveStatus === "Partial" && "⚡ Some items received. PO remains open for future receipts."}
+                  {liveStatus === "Pending" && "⏳ No quantities entered yet. Enter quantities to update status."}
                 </div>
               </div>
             </div>
@@ -853,14 +863,14 @@ const ReceiveGoodForm = () => {
                 <Input
                   label="Received By *"
                   value={globalData.received_by}
-                  onChange={e => setGlobalData({...globalData, received_by: e.target.value})}
+                  onChange={e => setGlobalData({ ...globalData, received_by: e.target.value })}
                 />
                 <div className="flex flex-col gap-1.5">
                   <label className="text-xs font-medium text-[#64748B] uppercase tracking-wide">Warehouse Location *</label>
-                  <select 
-                    required 
-                    value={globalData.warehouse} 
-                    onChange={e => setGlobalData({...globalData, warehouse: e.target.value})} 
+                  <select
+                    required
+                    value={globalData.warehouse}
+                    onChange={e => setGlobalData({ ...globalData, warehouse: e.target.value })}
                     className="w-full px-3 py-2 border border-[#E2E8F0] rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white"
                   >
                     <option value="">Select Location...</option>
@@ -869,11 +879,11 @@ const ReceiveGoodForm = () => {
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <label className="text-xs font-medium text-[#64748B] uppercase tracking-wide">Remarks / Notes</label>
-                  <textarea 
-                    rows={2} 
-                    value={globalData.notes} 
-                    onChange={e => setGlobalData({...globalData, notes: e.target.value})} 
-                    className="w-full px-3 py-2 border border-[#E2E8F0] rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none resize-none bg-white" 
+                  <textarea
+                    rows={2}
+                    value={globalData.notes}
+                    onChange={e => setGlobalData({ ...globalData, notes: e.target.value })}
+                    className="w-full px-3 py-2 border border-[#E2E8F0] rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none resize-none bg-white"
                     placeholder="Optional notes..."
                   />
                 </div>
@@ -892,11 +902,10 @@ const ReceiveGoodForm = () => {
                       key={m}
                       type="button"
                       onClick={() => setPaymentMethod(m)}
-                      className={`py-2 rounded-xl border text-[10px] font-semibold uppercase transition-all ${
-                        paymentMethod === m
-                          ? "border-[#2563EB] bg-[#EFF6FF] text-[#2563EB]"
-                          : "border-[#E2E8F0] text-[#64748B] hover:border-blue-200"
-                      }`}
+                      className={`py-2 rounded-xl border text-[10px] font-semibold uppercase transition-all ${paymentMethod === m
+                        ? "border-[#2563EB] bg-[#EFF6FF] text-[#2563EB]"
+                        : "border-[#E2E8F0] text-[#64748B] hover:border-blue-200"
+                        }`}
                     >
                       {m}
                     </button>
@@ -942,8 +951,8 @@ const ReceiveGoodForm = () => {
             <div className="p-6 max-h-[60vh] overflow-y-auto space-y-3">
               <button
                 onClick={() => {
-                   updateItem(batchModal.itemId, { isNewBatch: true, batch_id: null, batchNum: "", manufacturingDate: "", expiryDate: "" });
-                   setBatchModal({ isOpen: false, itemId: "", batches: [], productName: "", variantName: "" });
+                  updateItem(batchModal.itemId, { isNewBatch: true, batch_id: null, batchNum: "", manufacturingDate: "", expiryDate: "" });
+                  setBatchModal({ isOpen: false, itemId: "", batches: [], productName: "", variantName: "" });
                 }}
                 className="w-full p-4 rounded-2xl border-2 border-dashed border-slate-200 text-slate-500 hover:border-amber-400 hover:text-amber-600 hover:bg-amber-50 transition-all flex flex-col items-center gap-1 group"
               >
@@ -966,7 +975,7 @@ const ReceiveGoodForm = () => {
                     <button
                       key={i}
                       onClick={() => {
-                        updateItem(batchModal.itemId, { batch_id: batch.id, serialno_id: batch.serial_numbers?.id || null, batchNum: batch.name, isNewBatch: false, manufacturingDate: batch.manufacturing_date?.slice(0,10) || "", expiryDate: batch.expiry_date?.slice(0,10) || "" });
+                        updateItem(batchModal.itemId, { batch_id: batch.id, serialno_id: batch.serial_numbers?.id || null, batchNum: batch.name, isNewBatch: false, manufacturingDate: batch.manufacturing_date?.slice(0, 10) || "", expiryDate: batch.expiry_date?.slice(0, 10) || "" });
                         setBatchModal({ isOpen: false, itemId: "", batches: [], productName: "", variantName: "" });
                       }}
                       className="flex items-center justify-between p-4 rounded-2xl border border-slate-200 bg-white hover:border-amber-300 hover:shadow-md transition-all text-left group"

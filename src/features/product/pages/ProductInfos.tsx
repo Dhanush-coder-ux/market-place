@@ -79,13 +79,6 @@ const ProductRow = React.memo(({
     return [];
   };
 
-  const parseData = (val: any) => {
-    if (Array.isArray(val)) return val;
-    if (typeof val === 'string') {
-      try { return JSON.parse(val); } catch (e) { return []; }
-    }
-    return [];
-  };
 
   const combinations = useMemo(() => {
     return (p.variants || []).filter((v: any) => v && v.id !== null);

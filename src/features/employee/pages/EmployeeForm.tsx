@@ -6,11 +6,9 @@ import {
   Mail, 
   Phone, 
   MapPin, 
-  Briefcase, 
   Shield,
   Calendar,
   Bookmark,
-  Building2,
   FileText,
   Tag
 } from "lucide-react";

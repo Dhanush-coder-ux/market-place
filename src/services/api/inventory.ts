@@ -9,7 +9,7 @@ export const inventoryApi = {
     console.log("Payload:", data);
     return await apiClient.post(ENDPOINTS.INVENTORIES, data);
   },
-  
+
   updateInventory: async (data: Record<string, any>) => {
     validateMandatory(data, SCHEMAS.inventory_update);
     console.log("Payload:", data);
@@ -23,8 +23,8 @@ export const inventoryApi = {
 
   createStockAdjustment: async (data: Record<string, any>) => {
     validateMandatory(data, SCHEMAS.stock_adjustment_create);
-    console.log("Payload:", data );
-    return await apiClient.post(ENDPOINTS.S_ADJUSTMENTS, data );
+    console.log("Payload:", data);
+    return await apiClient.post(ENDPOINTS.S_ADJUSTMENTS, data);
   },
 
   updateStockAdjustment: async (data: Record<string, any>) => {
@@ -53,7 +53,7 @@ export const inventoryApi = {
     try {
       const response = await apiClient.get(`${ENDPOINTS.INVENTORIES}/by/shop/${SHOP_ID}?q=${query}`);
       const items = response?.data || (Array.isArray(response) ? response : []);
-      
+
       return items.map((i: any) => ({
         ...i,
         name: i.name || "Unknown Product",

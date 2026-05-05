@@ -320,7 +320,7 @@ export const VariantMatrixTable: React.FC<VariantMatrixTableProps> = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
-              {combinations.map((combo, idx) => {
+              {combinations.map((combo) => {
                 const isExpanded = expandedSerialId === combo.id;
                 return (
                   <React.Fragment key={combo.id}>

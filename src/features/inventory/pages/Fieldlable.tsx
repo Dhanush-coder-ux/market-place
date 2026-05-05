@@ -8,7 +8,7 @@ const FieldLabel = ({
   required = false,
 }: {
   label: string;
-  tooltip: string;
+  tooltip?: string;
   required?: boolean;
 }) => {
   return (
@@ -18,12 +18,14 @@ const FieldLabel = ({
         {required && <Required />}
       </span>
 
-      <Tooltip message={tooltip}>
-        <Info
-          size={14}
-          className="text-gray-400 hover:text-gray-600 cursor-pointer"
-        />
-      </Tooltip>
+      {tooltip && (
+        <Tooltip message={tooltip}>
+          <Info
+            size={14}
+            className="text-gray-400 hover:text-gray-600 cursor-pointer"
+          />
+        </Tooltip>
+      )}
     </div>
   );
 };

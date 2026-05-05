@@ -305,7 +305,7 @@ export default function StockAdjustmentPage() {
   };
 
   const handleSubmit = async () => {
-    if (items.length === 0 || items.some(item => !item.product || item.quantity === '')) {
+    if (items.length === 0 || items.some(item => !item.product || item.stocks === '')) {
       showToast("Please ensure all items have a product and quantity.", "error");
       return;
     }

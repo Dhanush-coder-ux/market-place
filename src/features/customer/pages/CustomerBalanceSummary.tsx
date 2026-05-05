@@ -1,6 +1,6 @@
 import { 
   Users, Search, Filter, Trash2, Edit3, 
-  Eye, IndianRupee, CreditCard, AlertCircle, Bookmark
+  Eye, Bookmark
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useHeader } from "@/context/HeaderContext";

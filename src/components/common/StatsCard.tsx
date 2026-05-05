@@ -4,6 +4,7 @@ interface StatsCardProps {
   label: string;
   value?: string | number;
   prefix?: string;
+  subValue?: string; // Added
   icon?: any; 
   iconBg?: string;
   iconColor?: string;
@@ -16,6 +17,7 @@ export const StatCard: React.FC<StatsCardProps> = React.memo(({
   label,
   value,
   prefix = "",
+  subValue, // Added
   icon: Icon,
   iconBg = "bg-blue-50",
   iconColor = "text-blue-600",
@@ -37,13 +39,18 @@ export const StatCard: React.FC<StatsCardProps> = React.memo(({
           )}
         </div>
       )}
-      <div className="flex flex-col justify-center py-0.5 min-w-0">
+      <div className="flex flex-col justify-center py-0.5 min-w-0 flex-1">
         <span className="text-[9px] text-slate-400 uppercase font-semibold tracking-widest leading-none mb-1.5 truncate">
           {label}
         </span>
-        <span className={`text-base font-semibold tracking-tight leading-none truncate ${valueColor}`}>
-          {prefix}{value ?? 0}
-        </span>
+        <div className="flex items-center justify-between gap-2">
+          <span className={`text-base font-semibold tracking-tight leading-none truncate ${valueColor}`}>
+            {prefix}{value ?? 0}
+          </span>
+          {subValue && (
+            <span className="text-[10px] text-slate-400 font-bold uppercase truncate">{subValue}</span>
+          )}
+        </div>
       </div>
     </div>
   );

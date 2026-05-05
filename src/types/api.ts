@@ -157,8 +157,10 @@ export interface InventoryRecord {
   has_variant: boolean;
   has_batch: boolean;
   has_serialno: boolean;
-  variants?: InventoryVariant[];
+  variants?: any[];
+  batches?: any[];
   batch?: InventoryBatch;
+  serial_number?: any;
   serial_numbers?: string[];
 }
 
@@ -180,6 +182,11 @@ export interface PurchaseRecord {
   type: "DIRECT" | "PO_CREATE" | "PO_UPDATE" | "PRODUCTION";
   datas: Record<string, unknown>;
   date?: string;
+  additional_charges?: {
+    delivery_charge?: number;
+    other_charge?: number;
+    [key: string]: any;
+  };
 }
 
 export interface StockAdjRecord {

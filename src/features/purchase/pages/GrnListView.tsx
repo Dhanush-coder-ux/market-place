@@ -2,8 +2,9 @@ import { useState, useEffect } from "react";
 import {
   Eye, Search, SlidersHorizontal, Package,
   Calendar, Building2, FileText, LayoutGrid, List, ArrowRight, X,
-  Copy, Check
+  Copy, Check, Truck
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 import { FloatingFormCard } from "@/components/common/FloatingFormCard";
 import GrnHeader from "../components/GrnHeader";
@@ -105,7 +106,7 @@ const toGrnShape = (p: PurchaseRecord) => {
 };
 
 /* ================= GRID CARD ================= */
-const GridCard = ({ row, onClick }: { row: ReturnType<typeof toGrnShape>; onClick: () => void }) => (
+const GridCard = ({ row, onClick, onReceive }: { row: ReturnType<typeof toGrnShape>; onClick: () => void; onReceive: (e: React.MouseEvent) => void }) => (
   <div onClick={onClick} className="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden flex flex-col cursor-pointer hover:-translate-y-0.5 hover:shadow-md transition-all">
     <div className="px-4 py-3.5 border-b border-zinc-100 bg-zinc-50/50 flex items-center justify-between gap-3">
       <div className="flex items-center gap-2 min-w-0">
@@ -165,6 +166,15 @@ const GridCard = ({ row, onClick }: { row: ReturnType<typeof toGrnShape>; onClic
         </div>
       </div>
       <div className="flex items-center gap-1">
+        {(row.status === "Pending" || row.status === "Partial") && (
+          <button 
+            onClick={onReceive}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-blue-600 bg-blue-50 border border-blue-100 rounded-lg hover:bg-blue-100 transition-all mr-1"
+          >
+            <Truck size={12} />
+            Receive Items
+          </button>
+        )}
         <button onClick={(e) => { e.stopPropagation(); onClick(); }} className="w-8 h-8 flex items-center justify-center rounded-lg text-zinc-400 hover:text-blue-600 hover:bg-blue-50 transition-all">
           <Eye size={15} />
         </button>
@@ -174,7 +184,7 @@ const GridCard = ({ row, onClick }: { row: ReturnType<typeof toGrnShape>; onClic
 );
 
 /* ================= VERTICAL TABLE ================= */
-const VerticalTable = ({ data, onClick }: { data: ReturnType<typeof toGrnShape>[]; onClick: (row: any) => void }) => (
+const VerticalTable = ({ data, onClick, onReceive }: { data: ReturnType<typeof toGrnShape>[]; onClick: (row: any) => void; onReceive: (id: string) => void }) => (
   <div className="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden">
     <div className="overflow-x-auto">
       <table className="w-full text-left border-collapse whitespace-nowrap">
@@ -207,7 +217,18 @@ const VerticalTable = ({ data, onClick }: { data: ReturnType<typeof toGrnShape>[
               <td className="px-5 py-4 text-right text-sm font-semibold text-zinc-700 tabular-nums">{row.itemsCount}</td>
               <td className="px-5 py-4 text-right text-sm font-bold text-zinc-900 tabular-nums">₹{row.totalValue.toLocaleString()}</td>
               <td className="px-5 py-4 text-right">
-                <button onClick={(e) => { e.stopPropagation(); onClick(row); }} className="w-8 h-8 flex items-center justify-center rounded-lg text-zinc-400 hover:text-blue-600 hover:bg-blue-50 transition-all"><ArrowRight size={15} /></button>
+                <div className="flex items-center justify-end gap-2">
+                  {(row.status === "Pending" || row.status === "Partial") && (
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); onReceive(row.id); }}
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-blue-600 bg-blue-50 border border-blue-100 rounded-lg hover:bg-blue-100 transition-all"
+                    >
+                      <Truck size={12} />
+                      Receive
+                    </button>
+                  )}
+                  <button onClick={(e) => { e.stopPropagation(); onClick(row); }} className="w-8 h-8 flex items-center justify-center rounded-lg text-zinc-400 hover:text-blue-600 hover:bg-blue-50 transition-all"><ArrowRight size={15} /></button>
+                </div>
               </td>
             </tr>
           ))}
@@ -219,12 +240,17 @@ const VerticalTable = ({ data, onClick }: { data: ReturnType<typeof toGrnShape>[
 
 /* ================= MAIN COMPONENT ================= */
 const GRNCardView = () => {
+  const navigate = useNavigate();
   const { getData, loading, error, clearError } = useApi();
   const [purchases, setPurchases] = useState<PurchaseRecord[]>([]);
   const [search, setSearch] = useState("");
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
   const [selectedGRN, setSelectedGRN] = useState<ReturnType<typeof toGrnShape> | null>(null);
   const [refreshKey] = useState(0);
+
+  const handleReceive = (id: string) => {
+    navigate(`/po-grn/update?poId=${id}`);
+  };
 
   useEffect(() => {
     getData(ENDPOINTS.PURCHASES, { view: "PO_VIEW", shop_id: SHOP_ID, limit: "50", offset: "1" }).then((res) => {
@@ -279,10 +305,21 @@ const GRNCardView = () => {
           </div>
         ) : viewMode === "grid" ? (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-            {filtered.map((row) => <GridCard key={row.id} row={row} onClick={() => setSelectedGRN(row)} />)}
+            {filtered.map((row) => (
+              <GridCard 
+                key={row.id} 
+                row={row} 
+                onClick={() => setSelectedGRN(row)} 
+                onReceive={(e) => { e.stopPropagation(); handleReceive(row.id); }}
+              />
+            ))}
           </div>
         ) : (
-          <VerticalTable data={filtered} onClick={(row) => setSelectedGRN(row)} />
+          <VerticalTable 
+            data={filtered} 
+            onClick={(row) => setSelectedGRN(row)} 
+            onReceive={handleReceive}
+          />
         )}
       </div>
 
@@ -412,6 +449,15 @@ const GRNCardView = () => {
               </div>
             </div>
             <div className="flex justify-end gap-3 pt-4 border-t border-zinc-100">
+              {(selectedGRN.status === "Pending" || selectedGRN.status === "Partial") && (
+                <button 
+                  onClick={() => handleReceive(selectedGRN.id)}
+                  className="flex items-center gap-2 px-4 py-2 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-all"
+                >
+                  <Truck size={16} />
+                  Continue Receipt
+                </button>
+              )}
               <button onClick={() => setSelectedGRN(null)} className="px-4 py-2 text-sm font-semibold text-zinc-600 bg-white border border-zinc-200 hover:bg-zinc-50 rounded-lg transition-colors">Close</button>
             </div>
           </div>

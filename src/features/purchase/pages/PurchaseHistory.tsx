@@ -85,9 +85,15 @@ function toDisplayData(p: PurchaseRecord): DirectPurchaseData {
   const vendorName = d2?.supplier_name ?? d2?.supplier ?? d2?.purchaseDetails?.supplier_name ?? "—";
   
   let totalCost = Number(d2?.payment?.amountPaid ?? d2?.total_cost ?? d2?.grand_total ?? 0);
+  
+  const otherCharge = Number(p.additional_charges?.other_charge ?? d2?.charges?.other ?? 0);
+  const transportCharge = Number(p.additional_charges?.delivery_charge ?? d2?.charges?.transport ?? 0);
+
   if (totalCost === 0 && Array.isArray((p as any).products ?? d2?.products ?? d2?.purchase_products ?? d2?.grn_products ?? d2?.finished_products)) {
     const prods = ((p as any).products ?? d2?.products ?? d2?.purchase_products ?? d2?.grn_products ?? d2?.finished_products);
     totalCost = prods.reduce((sum: number, pr: any) => sum + (Number(pr.quantity ?? pr.qty ?? pr.stocks ?? 1) * Number(pr.buy_price ?? 0)), 0);
+    // Include charges in the manually calculated total cost
+    totalCost += otherCharge + transportCharge;
   }
 
   return {
@@ -129,8 +135,8 @@ function toDisplayData(p: PurchaseRecord): DirectPurchaseData {
     purchaseType: typeMap[p.type] ?? "Purchase",
     paymentMethod: String(d2?.payment?.method ?? d2?.payment_method ?? "—"),
     charges: {
-      other: Number(d2?.charges?.other ?? 0),
-      transport: Number(d2?.charges?.transport ?? 0),
+      other: otherCharge,
+      transport: transportCharge,
     },
   };
 }

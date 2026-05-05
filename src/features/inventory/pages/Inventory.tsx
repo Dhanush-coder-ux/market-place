@@ -12,7 +12,7 @@ import {
   Hash,
   Info
 } from "lucide-react";
-import { VariantRows, BatchCards } from "../components/StockTree";
+import { VariantRows, BatchCards, SerialBadgeList } from "../components/StockTree";
 import { useApi } from "@/context/ApiContext";
 import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 import Loader from "@/components/common/Loader";
@@ -54,6 +54,7 @@ export interface ProductDatas {
   has_variants?: boolean;
   has_varients?: boolean;
   variantTypes?: VariantType[];
+  variant_types?: any[];
   combinations?: Combination[];
   variants?: any[];
   serial_numbers?: string[];
@@ -75,6 +76,7 @@ export interface InventoryItem {
   brand?: string;
   category?: string;
   supplier?: string;
+  description?: string;
   gst?: string;
 }
 

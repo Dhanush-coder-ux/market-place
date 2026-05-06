@@ -377,13 +377,36 @@ const ReceiveGoodForm = () => {
     const totalRemaining = Math.max(0, totalOrdered - totalPrevRec - totalThisRec);
     const receiptValue = items.reduce((s, p) => s + (Number(p.receivedQty) || 0) * p.costPrice, 0);
 
-    const isValid = !!globalData.warehouse && !!receiptDate && totalThisRec > 0;
+    // Validate batch/serial requirements for items being received
+    const itemsToReceive = items.filter(p => Number(p.receivedQty) > 0);
+    const batchValid = itemsToReceive.every(p => {
+      if (!p.has_batch) return true;
+      // Must have either an existing batch selected or a new batch with a name
+      return (p.batch_id && !p.isNewBatch) || (p.isNewBatch && p.batchNum.trim().length > 0);
+    });
+    const serialValid = itemsToReceive.every(p => {
+      if (!p.has_serialno) return true;
+      return p.serialNumbers.length === Number(p.receivedQty);
+    });
 
-    return { totalOrdered, totalPrevRec, totalThisRec, totalRemaining, receiptValue, grandTotal: receiptValue, isValid };
+    const isValid = !!globalData.warehouse && !!receiptDate && totalThisRec > 0 && batchValid && serialValid;
+
+    return { totalOrdered, totalPrevRec, totalThisRec, totalRemaining, receiptValue, grandTotal: receiptValue, isValid, batchValid, serialValid };
   }, [items, globalData.warehouse, receiptDate]);
 
   const handleSubmit = async () => {
     if (!poSummary) return;
+    
+    // Validate batch/serial requirements before submit
+    if (!stats.batchValid) {
+      showToast("Please select or create a batch for all batch-tracked items", "error");
+      return;
+    }
+    if (!stats.serialValid) {
+      showToast("Please enter all required serial numbers for serial-tracked items", "error");
+      return;
+    }
+
     setSubmitting(true);
     try {
       const productLines = items.filter(p => Number(p.receivedQty) > 0).map(p => ({
@@ -607,8 +630,14 @@ const ReceiveGoodForm = () => {
                     const totalRecv = item.previouslyReceivedQty + (Number(item.receivedQty) || 0);
                     const isFull = totalRecv >= item.orderedQty;
 
+                    // Per-item validation
+                    const recvQty = Number(item.receivedQty) || 0;
+                    const needsBatch = item.has_batch && recvQty > 0 && !((item.batch_id && !item.isNewBatch) || (item.isNewBatch && item.batchNum.trim().length > 0));
+                    const needsSerials = item.has_serialno && recvQty > 0 && item.serialNumbers.length !== recvQty;
+                    const hasWarning = needsBatch || needsSerials;
+
                     return (
-                      <div key={item.id} className={`bg-white hover:bg-[#F8FAFC] transition-colors ${isFull ? "border-l-2 border-emerald-400" : ""}`}>
+                      <div key={item.id} className={`bg-white hover:bg-[#F8FAFC] transition-colors ${isFull ? "border-l-2 border-emerald-400" : ""} ${hasWarning ? "border-l-2 border-red-400" : ""}`}>
                         {/* Main row */}
                         <div className="grid grid-cols-12 gap-3 px-6 py-4 items-center">
 
@@ -669,8 +698,19 @@ const ReceiveGoodForm = () => {
                             />
                           </div>
 
-                          {/* Empty space - replaced toggle */}
-                          <div className="col-span-1" />
+                          {/* Validation warnings */}
+                          <div className="col-span-1 flex flex-col items-center gap-1">
+                            {needsBatch && (
+                              <span className="text-[8px] font-black text-red-500 bg-red-50 px-1.5 py-0.5 rounded border border-red-100 uppercase tracking-wider" title="Batch required">
+                                Batch!
+                              </span>
+                            )}
+                            {needsSerials && (
+                              <span className="text-[8px] font-black text-red-500 bg-red-50 px-1.5 py-0.5 rounded border border-red-100 uppercase tracking-wider" title="Serials required">
+                                Serial!
+                              </span>
+                            )}
+                          </div>
                         </div>
 
                         {/* Card Content: batch + serial - ALWAYS VISIBLE */}
@@ -934,8 +974,7 @@ const ReceiveGoodForm = () => {
           </div>
         </div>
       </div>
-
-      {/* Batch Modal */}
+      {/* Batch Modal — rendered at top level to avoid overflow clipping */}
       {batchModal.isOpen && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col border border-slate-200 animate-in zoom-in-95 duration-200">

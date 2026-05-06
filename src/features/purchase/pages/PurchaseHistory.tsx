@@ -120,7 +120,7 @@ function toDisplayData(p: PurchaseRecord): DirectPurchaseData {
           stocks: b.stocks ?? b.quantity ?? 1,
           expiry_date: b.expiry_date,
           manufacturing_date: b.manufacturing_date,
-          serial_numbers: b.serial_numbers?.serial_numbers || null,
+          serial_numbers: b.serial_numbers?.serial_numbers || b.serial_number?.serial_numbers || null,
         })) : []
       })) : undefined,
       batches: Array.isArray(pr.batches) ? pr.batches.map((b: any) => ({
@@ -128,7 +128,7 @@ function toDisplayData(p: PurchaseRecord): DirectPurchaseData {
         stocks: b.stocks ?? b.quantity ?? 1,
         expiry_date: b.expiry_date,
         manufacturing_date: b.manufacturing_date,
-        serial_numbers: b.serial_numbers?.serial_numbers || null,
+        serial_numbers: b.serial_numbers?.serial_numbers || b.serial_number?.serial_numbers || null,
       })) : undefined,
     })),
     total_cost: totalCost,

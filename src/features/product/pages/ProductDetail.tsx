@@ -87,18 +87,26 @@ const ProductDetail = () => {
     const hasInvTab = (product.has_variant === true && (product.variants ?? []).length > 0) || (product.has_batch === true && (product.batches ?? []).length > 0);
     const movIdx = hasInvTab ? 2 : 1;
     if (activeTab !== movIdx) return;
+    
     setMovLoading(true);
-    getData(`${ENDPOINTS.S_ADJUSTMENTS}/by/product/${SHOP_ID}/${id}`).then((res: any) => {
-      setMovements(res?.data ? (Array.isArray(res.data) ? res.data : [res.data]) : []);
+    // Load both adjustments and purchases for unified stock movements view
+    Promise.all([
+      getData(`${ENDPOINTS.S_ADJUSTMENTS}/by/product/${SHOP_ID}/${id}`).catch(() => null),
+      getData(`${ENDPOINTS.PURCHASES}/by/product/${SHOP_ID}/${id}`).catch(() => null),
+    ]).then(([adjRes, purRes]) => {
+      setMovements(adjRes?.data ? (Array.isArray(adjRes.data) ? adjRes.data : [adjRes.data]) : []);
+      setPurchases(purRes?.data ? (Array.isArray(purRes.data) ? purRes.data : [purRes.data]) : []);
       setMovLoading(false);
     }).catch(() => setMovLoading(false));
   }, [activeTab, id, product]);
 
   useEffect(() => {
     if (!id || !product) return;
+    if (purchases.length > 0) return; // Already loaded from movements tab
     const hasInvTab = (product.has_variant === true && (product.variants ?? []).length > 0) || (product.has_batch === true && (product.batches ?? []).length > 0);
     const purIdx = hasInvTab ? 3 : 2;
     if (activeTab !== purIdx) return;
+    
     setPurLoading(true);
     getData(`${ENDPOINTS.PURCHASES}/by/product/${SHOP_ID}/${id}`).then((res: any) => {
       setPurchases(res?.data ? (Array.isArray(res.data) ? res.data : [res.data]) : []);
@@ -134,6 +142,7 @@ const ProductDetail = () => {
 
   const datas = product.datas ?? {};
   const name = String(product.name || "Unknown Product");
+  const reorderPoint = product?.reorder_point;
   const initials = name.slice(0, 2).toUpperCase();
   const sku = String(product.barcode || "—");
   const category = String(product.category || "—");
@@ -295,7 +304,7 @@ const ProductDetail = () => {
                   <DetailItem icon={Upload} label="Selling Price" value={String(sellingPrice) !== "—" ? `₹${sellingPrice}` : "—"} onClick={click("Selling Price", `₹${sellingPrice}`)} />
                   <DetailItem icon={Tag} label="MRP" value={datas.mrp ? `₹${datas.mrp}` : "—"} onClick={click("MRP", datas.mrp ? `₹${datas.mrp}` : "—")} />
                   <DetailItem icon={BarChart2} label="GST Rate" value={String(datas.gst || "—")} onClick={click("GST Rate", String(datas.gst || "—"))} />
-                  <DetailItem icon={Info} label="Reorder Point" value={String(datas.reorder_point || "—")} onClick={click("Reorder Point", String(datas.reorder_point || "—"))} />
+                  <DetailItem icon={Info} label="Reorder Point" value={String(reorderPoint || "—")} onClick={click("Reorder Point", String(reorderPoint || "—"))} />
                   <DetailItem icon={MapPin} label="Location" value={String(datas.storage_location || datas.location || "—")} onClick={click("Location", String(datas.storage_location || datas.location || "—"))} />
                 </div>
               </SectionCard>
@@ -405,20 +414,20 @@ const ProductDetail = () => {
 
         {/* TAB — Stock Movements */}
         {TABS[activeTab] === "Stock Movements" && (() => {
-          // Flatten nested structure: adjustment → products → variants → batches → rows
           const rows: any[] = [];
+          
           movements.forEach((adj: any) => {
             (adj.products ?? []).forEach((prod: any) => {
               const isInc = prod.type === 'INCREMENT';
               const baseRow = {
-                adjId: adj.id,
+                id: adj.id,
                 date: adj.adjusted_date || adj.created_at,
-                description: adj.description,
-                type: prod.type,
+                description: adj.description || 'Stock Adjustment',
+                displayType: isInc ? 'Adjustment (In)' : 'Adjustment (Out)',
                 isInc,
-                productName: prod.name,
-                barcode: prod.barcode,
-                stocks: prod.stocks,
+                stocks: prod.stocks ?? 0,
+                stocksBefore: prod.stocks_before ?? null,
+                source: 'adjustment' as const,
               };
 
               const variants = prod.variants ?? [];
@@ -428,24 +437,64 @@ const ProductDetail = () => {
                   if (batches.length > 0) {
                     batches.forEach((b: any) => {
                       const sns = Array.isArray(b.serial_numbers) ? b.serial_numbers : (b.serial_numbers?.serial_numbers ?? []);
-                      rows.push({ ...baseRow, variant: v.name, batch: b.name, batchStocks: b.stocks, serials: sns });
+                      rows.push({ ...baseRow, variant: v.name, batch: b.name, stocks: b.stocks, serials: sns });
                     });
                   } else {
-                    rows.push({ ...baseRow, variant: v.name, batch: null, batchStocks: null, serials: [] });
+                    rows.push({ ...baseRow, variant: v.name, batch: null, serials: [] });
                   }
                 });
               } else {
-                rows.push({ ...baseRow, variant: null, batch: null, batchStocks: null, serials: [] });
+                rows.push({ ...baseRow, variant: null, batch: null, serials: [] });
               }
             });
           });
+
+          // Merge purchases into the movements timeline
+          purchases.forEach((p: any) => {
+            const d = p.datas ?? {};
+            const pd = d.purchaseDetails ?? {};
+            const pType = p.type === 'DIRECT' ? 'Purchase' : (p.type?.includes('PO') ? 'PO Purchase' : 'Purchase');
+            
+            (p.products ?? []).forEach((prod: any) => {
+              const baseRow = {
+                id: p.id,
+                date: pd.date || p.created_at,
+                description: `Supplier: ${d.supplier_name || '—'}`,
+                displayType: pType,
+                isInc: true,
+                stocks: prod.stocks ?? 0,
+                stocksBefore: prod.stocks_before ?? null,
+                uiId: p.ui_id,
+                source: 'purchase' as const,
+              };
+
+              const variants = prod.variants ?? [];
+              if (variants.length > 0) {
+                variants.forEach((v: any) => {
+                  const batches = v.batches ?? [];
+                  if (batches.length > 0) {
+                    batches.forEach((b: any) => {
+                      const sns = Array.isArray(b.serial_numbers) ? b.serial_numbers : (b.serial_numbers?.serial_numbers ?? []);
+                      rows.push({ ...baseRow, variant: v.name, batch: b.name, stocks: b.stocks, serials: sns });
+                    });
+                  } else {
+                    rows.push({ ...baseRow, variant: v.name, batch: null, serials: [] });
+                  }
+                });
+              } else {
+                rows.push({ ...baseRow, variant: null, batch: null, serials: [] });
+              }
+            });
+          });
+
+          rows.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
           return (
             <div className="space-y-4 animate-in fade-in slide-in-from-top-4 duration-500">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-100"><Activity size={16} /></div>
-                  <h2 className="text-[10px] font-black text-slate-800 uppercase tracking-[0.15em]">Stock Adjustments</h2>
+                  <h2 className="text-[10px] font-black text-slate-800 uppercase tracking-[0.15em]">Stock Movements</h2>
                 </div>
                 {movLoading && <RefreshCcw size={14} className="text-slate-400 animate-spin" />}
               </div>
@@ -454,7 +503,7 @@ const ProductDetail = () => {
               ) : rows.length === 0 ? (
                 <div className="py-16 text-center">
                   <TrendingUp size={32} className="mx-auto text-slate-200 mb-3" />
-                  <p className="text-sm font-bold text-slate-400">No stock adjustments found</p>
+                  <p className="text-sm font-bold text-slate-400">No stock movements found</p>
                 </div>
               ) : (
                 <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
@@ -462,59 +511,69 @@ const ProductDetail = () => {
                     <table className="w-full text-left whitespace-nowrap">
                       <thead>
                         <tr className="text-[10px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-100 bg-slate-50/50">
-                          <th className="px-5 py-3">Type</th>
-                          <th className="px-5 py-3">Qty</th>
-                          <th className="px-5 py-3">Variant</th>
-                          <th className="px-5 py-3">Batch</th>
-                          <th className="px-5 py-3">Serials</th>
-                          <th className="px-5 py-3">Description</th>
                           <th className="px-5 py-3">Date</th>
+                          <th className="px-5 py-3">Type</th>
+                          <th className="px-5 py-3">Product / Variant / Batch</th>
+                          <th className="px-5 py-3">Change</th>
+                          <th className="px-5 py-3">Balance</th>
+                          <th className="px-5 py-3">Details</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-50">
-                        {rows.map((r: any, i: number) => (
-                          <tr key={`${r.adjId}-${i}`} className={`hover:bg-slate-50/60 transition-colors ${r.isInc ? 'border-l-2 border-emerald-300' : 'border-l-2 border-rose-300'}`}>
-                            <td className="px-5 py-3">
-                              <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
-                                r.isInc ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-rose-50 text-rose-700 border-rose-200'
-                              }`}>
-                                {r.isInc ? <ArrowUp size={10} /> : <ArrowDown size={10} />}
-                                {r.type}
-                              </span>
-                            </td>
-                            <td className="px-5 py-3">
-                              <span className={`font-black text-sm tabular-nums ${r.isInc ? 'text-emerald-600' : 'text-rose-600'}`}>
-                                {r.isInc ? '+' : '-'}{r.batchStocks ?? r.stocks ?? 0}
-                              </span>
-                            </td>
-                            <td className="px-5 py-3">
-                              {r.variant ? (
-                                <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-violet-50 text-violet-700 border border-violet-100">{r.variant}</span>
-                              ) : <span className="text-slate-300">—</span>}
-                            </td>
-                            <td className="px-5 py-3">
-                              {r.batch ? (
-                                <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-100">{r.batch}</span>
-                              ) : <span className="text-slate-300">—</span>}
-                            </td>
-                            <td className="px-5 py-3">
-                              {r.serials.length > 0 ? (
-                                <div className="flex flex-wrap gap-1 max-w-[200px]">
-                                  {r.serials.slice(0, 3).map((s: string, si: number) => (
-                                    <span key={si} className="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-slate-100 text-slate-600">{s}</span>
-                                  ))}
-                                  {r.serials.length > 3 && (
-                                    <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-slate-200 text-slate-500">+{r.serials.length - 3}</span>
+                        {rows.map((r: any, i: number) => {
+                          const balanceStr = r.stocksBefore !== null && r.stocksBefore !== undefined
+                            ? `${r.stocksBefore} → ${r.stocksBefore + (r.isInc ? r.stocks : -r.stocks)}`
+                            : '—';
+
+                          return (
+                            <tr key={`${r.id}-${i}`} className={`hover:bg-slate-50/60 transition-colors ${
+                              r.source === 'purchase' ? 'border-l-2 border-indigo-300' : r.isInc ? 'border-l-2 border-emerald-300' : 'border-l-2 border-rose-300'
+                            }`}>
+                              <td className="px-5 py-3 text-xs text-slate-500 font-medium">
+                                {r.date ? new Date(r.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
+                              </td>
+                              <td className="px-5 py-3">
+                                <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
+                                  r.source === 'purchase'
+                                    ? (r.displayType === 'PO Purchase' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-indigo-50 text-indigo-700 border-indigo-200')
+                                    : r.isInc ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-rose-50 text-rose-700 border-rose-200'
+                                }`}>
+                                  {r.isInc ? <ArrowUp size={10} /> : <ArrowDown size={10} />}
+                                  {r.displayType}
+                                </span>
+                              </td>
+                              <td className="px-5 py-3">
+                                <div className="flex flex-col gap-1">
+                                  {r.variant && <span className="w-fit px-2 py-0.5 rounded-md text-[10px] font-bold bg-violet-50 text-violet-700 border border-violet-100">V: {r.variant}</span>}
+                                  {r.batch && <span className="w-fit px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-100">B: {r.batch}</span>}
+                                  {!r.variant && !r.batch && <span className="text-slate-300">—</span>}
+                                  {r.serials?.length > 0 && (
+                                    <div className="flex flex-wrap gap-1 mt-0.5 max-w-[150px]">
+                                      <span className="text-[9px] text-slate-400 font-bold uppercase">SN: </span>
+                                      {r.serials.slice(0, 2).map((s: string, si: number) => (
+                                        <span key={si} className="text-[9px] font-mono font-bold text-slate-500">{s}{si === 0 && r.serials.length > 1 ? ',' : ''}</span>
+                                      ))}
+                                      {r.serials.length > 2 && <span className="text-[9px] font-bold text-slate-400">+{r.serials.length - 2}</span>}
+                                    </div>
                                   )}
                                 </div>
-                              ) : <span className="text-slate-300">—</span>}
-                            </td>
-                            <td className="px-5 py-3 text-xs text-slate-500 max-w-[160px] truncate">{r.description || '—'}</td>
-                            <td className="px-5 py-3 text-xs text-slate-500 whitespace-nowrap">
-                              {r.date ? new Date(r.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
-                            </td>
-                          </tr>
-                        ))}
+                              </td>
+                              <td className="px-5 py-3">
+                                <span className={`font-black text-sm tabular-nums ${r.isInc ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                  {r.isInc ? '+' : '-'}{r.stocks}
+                                </span>
+                              </td>
+                              <td className="px-5 py-3">
+                                <span className="text-xs font-bold text-slate-700 tabular-nums bg-slate-50 px-2 py-1 rounded-md border border-slate-100">
+                                  {balanceStr}
+                                </span>
+                              </td>
+                              <td className="px-5 py-3 text-xs text-slate-500 max-w-[200px] truncate" title={r.description}>
+                                {r.description}
+                              </td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>
@@ -526,30 +585,45 @@ const ProductDetail = () => {
 
         {/* TAB — Purchases */}
         {TABS[activeTab] === "Purchases" && (() => {
-          // Flatten: purchase → products rows, with purchase-level metadata attached
           const rows: any[] = [];
+          
           purchases.forEach((p: any) => {
             const d = p.datas ?? {};
             const pd = d.purchaseDetails ?? {};
-            const payment = d.payment ?? {};
-            const charges = p.additional_charges ?? {};
-            const purchaseMeta = {
-              purchaseId: p.id,
-              type: p.type,
-              supplier: d.supplier_name || '—',
-              invoiceNo: pd.invoiceNo || '—',
-              referenceNo: pd.referenceNo || '—',
-              purchaseDate: pd.date || p.created_at,
-              paymentMethod: payment.method || '—',
-              amountPaid: payment.amountPaid ?? 0,
-              deliveryCharge: charges.delivery_charge ?? 0,
-              otherCharge: charges.other_charge ?? 0,
-              uiId: p.ui_id,
-            };
+            const pType = p.type === 'DIRECT' ? 'Purchase' : (p.type?.includes('PO') ? 'PO Purchase' : 'Purchase');
+            
             (p.products ?? []).forEach((prod: any) => {
-              rows.push({ ...purchaseMeta, stocks: prod.stocks, buy_price: prod.buy_price, sell_price: prod.sell_price });
+              const baseRow = {
+                id: p.id,
+                date: pd.date || p.created_at,
+                description: `Supplier: ${d.supplier_name || '—'} ${pd.invoiceNo ? `| Inv: ${pd.invoiceNo}` : ''}`,
+                displayType: pType,
+                isInc: true, // Purchases always add stock
+                stocks: prod.stocks ?? 0,
+                stocksBefore: prod.stocks_before ?? null,
+                uiId: p.ui_id,
+              };
+
+              const variants = prod.variants ?? [];
+              if (variants.length > 0) {
+                variants.forEach((v: any) => {
+                  const batches = v.batches ?? [];
+                  if (batches.length > 0) {
+                    batches.forEach((b: any) => {
+                      const sns = Array.isArray(b.serial_numbers) ? b.serial_numbers : (b.serial_numbers?.serial_numbers ?? []);
+                      rows.push({ ...baseRow, variant: v.name, batch: b.name, stocks: b.stocks, serials: sns });
+                    });
+                  } else {
+                    rows.push({ ...baseRow, variant: v.name, batch: null, serials: [] });
+                  }
+                });
+              } else {
+                rows.push({ ...baseRow, variant: null, batch: null, serials: [] });
+              }
             });
           });
+
+          rows.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
           return (
             <div className="space-y-4 animate-in fade-in slide-in-from-top-4 duration-500">
@@ -574,71 +648,73 @@ const ProductDetail = () => {
                       <thead>
                         <tr className="text-[10px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-100 bg-slate-50/50">
                           <th className="px-5 py-3">#</th>
-                          <th className="px-5 py-3">Type</th>
-                          <th className="px-5 py-3">Supplier</th>
-                          <th className="px-5 py-3">Qty</th>
-                          <th className="px-5 py-3">Buy Price</th>
-                          <th className="px-5 py-3">Sell Price</th>
-                          <th className="px-5 py-3">Payment</th>
-                          <th className="px-5 py-3">Invoice</th>
-                          <th className="px-5 py-3">Reference</th>
                           <th className="px-5 py-3">Date</th>
+                          <th className="px-5 py-3">Type</th>
+                          <th className="px-5 py-3">Product / Variant / Batch</th>
+                          <th className="px-5 py-3">Change</th>
+                          <th className="px-5 py-3">Balance</th>
+                          <th className="px-5 py-3">Details</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-50">
-                        {rows.map((r: any, i: number) => (
-                          <tr key={`${r.purchaseId}-${i}`} className="hover:bg-indigo-50/20 transition-colors border-l-2 border-indigo-200">
-                            <td className="px-5 py-3">
-                              <span className="text-[10px] font-black text-slate-400 tabular-nums">#{r.uiId}</span>
-                            </td>
-                            <td className="px-5 py-3">
-                              <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
-                                r.type === 'DIRECT' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
-                                r.type?.includes('PO') ? 'bg-blue-50 text-blue-700 border-blue-200' :
-                                'bg-slate-50 text-slate-600 border-slate-200'
-                              }`}>
-                                <span className="w-1.5 h-1.5 rounded-full bg-current" />
-                                {(r.type || '—').replace(/_/g, ' ')}
-                              </span>
-                            </td>
-                            <td className="px-5 py-3 text-xs font-medium text-slate-700">{r.supplier}</td>
-                            <td className="px-5 py-3">
-                              <span className="font-black text-sm text-slate-800 tabular-nums">{r.stocks ?? '—'}</span>
-                            </td>
-                            <td className="px-5 py-3">
-                              <span className="text-xs font-bold text-slate-700">₹{r.buy_price ?? '—'}</span>
-                            </td>
-                            <td className="px-5 py-3">
-                              <span className="text-xs font-bold text-emerald-700">₹{r.sell_price ?? '—'}</span>
-                            </td>
-                            <td className="px-5 py-3">
-                              <div className="flex flex-col gap-0.5">
-                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md w-fit ${
-                                  r.paymentMethod === 'Cash' ? 'bg-green-50 text-green-700' :
-                                  r.paymentMethod === 'UPI' ? 'bg-violet-50 text-violet-700' :
-                                  'bg-slate-50 text-slate-600'
-                                }`}>{r.paymentMethod}</span>
-                                {r.amountPaid > 0 && (
-                                  <span className="text-[9px] text-slate-400 font-bold">Paid: ₹{r.amountPaid}</span>
-                                )}
-                              </div>
-                            </td>
-                            <td className="px-5 py-3 text-xs font-mono text-slate-500">{r.invoiceNo}</td>
-                            <td className="px-5 py-3 text-xs font-mono text-slate-400">{r.referenceNo}</td>
-                            <td className="px-5 py-3 text-xs text-slate-500 whitespace-nowrap">
-                              {r.purchaseDate ? new Date(r.purchaseDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
-                            </td>
-                          </tr>
-                        ))}
+                        {rows.map((r: any, i: number) => {
+                          const balanceStr = r.stocksBefore !== null && r.stocksBefore !== undefined
+                            ? `${r.stocksBefore} → ${r.stocksBefore + (r.isInc ? r.stocks : -r.stocks)}`
+                            : '—';
+
+                          return (
+                            <tr key={`${r.id}-${i}`} className={`hover:bg-indigo-50/20 transition-colors border-l-2 border-indigo-200`}>
+                              <td className="px-5 py-3">
+                                <span className="text-[10px] font-black text-slate-400 tabular-nums">#{r.uiId}</span>
+                              </td>
+                              <td className="px-5 py-3 text-xs text-slate-500 font-medium">
+                                {r.date ? new Date(r.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
+                              </td>
+                              <td className="px-5 py-3">
+                                <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
+                                  r.displayType === 'PO Purchase'
+                                    ? 'bg-blue-50 text-blue-700 border-blue-200'
+                                    : 'bg-indigo-50 text-indigo-700 border-indigo-200'
+                                }`}>
+                                  <ArrowUp size={10} />
+                                  {r.displayType}
+                                </span>
+                              </td>
+                              <td className="px-5 py-3">
+                                <div className="flex flex-col gap-1">
+                                  {r.variant && <span className="w-fit px-2 py-0.5 rounded-md text-[10px] font-bold bg-violet-50 text-violet-700 border border-violet-100">V: {r.variant}</span>}
+                                  {r.batch && <span className="w-fit px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-100">B: {r.batch}</span>}
+                                  {!r.variant && !r.batch && <span className="text-slate-300">—</span>}
+                                  {r.serials?.length > 0 && (
+                                    <div className="flex flex-wrap gap-1 mt-0.5 max-w-[150px]">
+                                      <span className="text-[9px] text-slate-400 font-bold uppercase">SN: </span>
+                                      {r.serials.slice(0, 2).map((s: string, si: number) => (
+                                        <span key={si} className="text-[9px] font-mono font-bold text-slate-500">{s}{si === 0 && r.serials.length > 1 ? ',' : ''}</span>
+                                      ))}
+                                      {r.serials.length > 2 && <span className="text-[9px] font-bold text-slate-400">+{r.serials.length - 2}</span>}
+                                    </div>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="px-5 py-3">
+                                <span className={`font-black text-sm tabular-nums text-emerald-600`}>
+                                  +{r.stocks}
+                                </span>
+                              </td>
+                              <td className="px-5 py-3">
+                                <span className="text-xs font-bold text-slate-700 tabular-nums bg-slate-50 px-2 py-1 rounded-md border border-slate-100">
+                                  {balanceStr}
+                                </span>
+                              </td>
+                              <td className="px-5 py-3 text-xs text-slate-500 max-w-[200px] truncate" title={r.description}>
+                                {r.description}
+                              </td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>
-                  {/* Charges footer summary */}
-                  {rows.some(r => r.deliveryCharge > 0 || r.otherCharge > 0) && (
-                    <div className="px-5 py-3 border-t border-slate-100 bg-slate-50/50 flex flex-wrap gap-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest">
-                      <span>Delivery charges may apply — check individual purchase records</span>
-                    </div>
-                  )}
                 </div>
               )}
             </div>

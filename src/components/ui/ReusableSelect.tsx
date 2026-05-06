@@ -41,7 +41,7 @@ export function ReusableSelect({
           <SelectValue placeholder={placeholder} />
         </SelectTrigger>
         <SelectPortal>
-        <SelectContent className="rounded-2xl shadow-2xl border-gray-100 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+        <SelectContent className="z-[9999] rounded-2xl shadow-2xl border-gray-100 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
           {options.map((option) => (
             <SelectItem 
               key={option.value} 

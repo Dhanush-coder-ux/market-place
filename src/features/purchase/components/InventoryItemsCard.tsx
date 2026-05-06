@@ -130,6 +130,16 @@ export const InventoryItemsCard = ({
       const hasBatchTracking = !!(baseOpt.batch_tracking || baseOpt.has_batch_tracking || baseOpt.has_batch || (baseOpt.datas && (baseOpt.datas.batch_tracking || baseOpt.datas.has_batch_tracking || baseOpt.datas.has_batch)));
       const hasSerialTracking = !!(baseOpt.serial_tracking || baseOpt.has_serialno_tracking || baseOpt.has_serialno || (baseOpt.datas && (baseOpt.datas.serial_tracking || baseOpt.datas.has_serialno_tracking || baseOpt.datas.has_serialno)));
 
+      const d = baseOpt.datas || baseOpt;
+      const allVariants = baseOpt.variants || baseOpt.varients || d.combinations || d.varients || d.variants || [];
+      const variantData = allVariants.find((v: any) => v.id === selectedId);
+      
+      const rawSerials = variantData?.serial_numbers || variantData?.serial_number || variantData?.datas?.serial_numbers || variantData?.datas?.serial_number || baseOpt.serial_numbers || baseOpt.serial_number || baseOpt.datas?.serial_numbers || baseOpt.datas?.serial_number;
+      const parsedSerials = Array.isArray(rawSerials)
+        ? rawSerials
+        : (rawSerials?.serial_numbers || rawSerials?.serial_number || []);
+      const serialnoId = rawSerials?.id || baseOpt.serialno_id || d.serialno_id;
+
       next[targetIdx] = {
         ...next[targetIdx],
         inventory_id: baseOpt.id || baseOpt.inventory_id,
@@ -143,17 +153,12 @@ export const InventoryItemsCard = ({
         sku: variantItem.sku,
         batchTracking: hasBatchTracking,
         serialTracking: hasSerialTracking,
-        existingSerials: Array.isArray(baseOpt.serial_numbers)
-          ? baseOpt.serial_numbers
-          : (baseOpt.serial_numbers?.serial_numbers || baseOpt.datas?.serial_numbers?.serial_numbers || []),
-        serialno_id: baseOpt.serial_numbers?.id || baseOpt.datas?.serial_numbers?.id
+        existingSerials: parsedSerials,
+        serialno_id: serialnoId
       };
 
       // If it has batches, show batch modal
       if (hasBatchTracking) {
-        const d = baseOpt.datas || baseOpt;
-        const allVariants = baseOpt.variants || baseOpt.varients || d.combinations || d.varients || d.variants || [];
-        const variantData = allVariants.find((v: any) => v.id === selectedId);
         const batches = variantData?.batches || baseOpt.batches || d.batches || [];
         const isPoCreate = purchaseType === 'PO_CREATE';
 
@@ -163,9 +168,7 @@ export const InventoryItemsCard = ({
           batches: Array.isArray(batches) ? batches : (typeof batches === 'string' ? JSON.parse(batches || "[]") : []),
           productName: variantModal.baseProduct,
           variantName: variantItem.name,
-          existingSerials: Array.isArray(baseOpt.serial_numbers)
-            ? baseOpt.serial_numbers
-            : (baseOpt.serial_numbers?.serial_numbers || baseOpt.datas?.serial_numbers?.serial_numbers || []),
+          existingSerials: parsedSerials,
           allowNewBatch: !isPoCreate,
         });
       }
@@ -178,13 +181,17 @@ export const InventoryItemsCard = ({
   };
 
   const selectBatch = (rowIndex: number, batch: any) => {
+    const batchSerials = Array.isArray(batch.serial_numbers)
+      ? batch.serial_numbers
+      : Array.isArray(batch.serial_number)
+        ? batch.serial_number
+        : (batch.serial_numbers?.serial_numbers || batch.serial_number?.serial_numbers || []);
+
     updateProductFields(rowIndex, {
       batchNum: batch.name || batch.batch_number,
       batch_id: batch.id,
-      serialno_id: batch.serial_numbers?.id || batch.serial_number?.id,
-      existingSerials: Array.isArray(batch.serial_numbers)
-        ? batch.serial_numbers
-        : (batch.serial_numbers?.serial_numbers || batch.serial_number?.serial_numbers || []),
+      serialno_id: batch.serial_numbers?.id || batch.serial_number?.id || products[rowIndex]?.serialno_id,
+      existingSerials: batchSerials.length > 0 ? batchSerials : batchModal.existingSerials,
       manufacturingDate: (batch.manufacturing_date || batch.mfg_date) ? new Date(batch.manufacturing_date || batch.mfg_date).toISOString().split('T')[0] : "",
       expiryDate: batch.expiry_date ? new Date(batch.expiry_date).toISOString().split('T')[0] : "",
       batchNumReadOnly: true
@@ -196,9 +203,8 @@ export const InventoryItemsCard = ({
   const typeText = type === "PURCHASE" ? "Purchase" : "Production";
 
   return (
-    <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
-
-      {/* Variant Modal */}
+    <>
+      {/* Variant Modal — rendered outside the card to avoid overflow clipping */}
       {variantModal.isOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/30 backdrop-blur-sm p-4">
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col border border-slate-200">
@@ -266,7 +272,7 @@ export const InventoryItemsCard = ({
         </div>
       )}
 
-      {/* Batch Modal */}
+      {/* Batch Modal — rendered outside the card to avoid overflow clipping */}
       {batchModal.isOpen && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col border border-slate-200 animate-in zoom-in-95 duration-200">
@@ -347,6 +353,7 @@ export const InventoryItemsCard = ({
         </div>
       )}
 
+    <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
       {/* Card Header */}
       <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -448,8 +455,8 @@ export const InventoryItemsCard = ({
                         const d = opt.datas || opt;
                         const hasBatchTracking = !!(opt.batch_tracking || opt.has_batch_tracking || opt.has_batch || (d && (d.batch_tracking || d.has_batch_tracking || d.has_batch)));
                         const hasSerialTracking = !!(opt.serial_tracking || opt.has_serialno_tracking || opt.has_serialno || (d && (d.serial_tracking || d.has_serialno_tracking || d.has_serialno)));
-                        const rawSerials = opt.serial_numbers || d.serial_numbers || d.datas?.serial_numbers;
-                        const existingSerials = Array.isArray(rawSerials) ? rawSerials : (rawSerials?.serial_numbers || []);
+                        const rawSerials = opt.serial_numbers || opt.serial_number || d.serial_numbers || d.serial_number || d.datas?.serial_numbers || d.datas?.serial_number;
+                        const existingSerials = Array.isArray(rawSerials) ? rawSerials : (rawSerials?.serial_numbers || rawSerials?.serial_number || []);
                         const serialnoId = rawSerials?.id || opt.serialno_id || d.serialno_id;
                         const combinations = opt.variants || opt.varients || d.combinations || d.varients || d.variants || [];
 
@@ -1053,5 +1060,6 @@ export const InventoryItemsCard = ({
         </button>
       </div>
     </div>
+    </>
   );
 };

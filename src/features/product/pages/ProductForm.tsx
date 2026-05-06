@@ -1,9 +1,8 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import {
-  Package, DollarSign, BarChart2, Save, Hash,
+  Package, BarChart2, Save, Hash,
   Cpu, AlertCircle,
-  Layers, Zap, Bookmark, Plus,
-  Calendar
+  Layers, Zap, Bookmark, Plus
 } from "lucide-react";
 import { GradientButton } from "@/components/ui/GradientButton";
 import { useApi } from "@/context/ApiContext";
@@ -12,7 +11,7 @@ import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useHeader } from "@/context/HeaderContext";
 import { useToast } from "@/context/ToastContext";
 import { Switch } from "@/components/ui/switch";
-import { InlineSerialManager } from "@/components/common/InlineSerialManager";
+
 import { supplierApi } from "@/services/api/supplier";
 import { QuickCreateSupplierModal } from "@/features/common/QuickCreate/QuickCreateSupplierModal";
 import { 
@@ -338,7 +337,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
             hsn: String(datas.hsn || ""),
             supplier: datas.supplier || "",
             opening_stock: String(datas.opening_stock || ""),
-            reorder_point: String(datas.reorder_point || "5"),
+            reorder_point: String(prod.reorder_point || "5"),
             max_stock: String(datas.max_stock || ""),
             location: datas.location || "",
             has_variants: !!prod.has_variant,
@@ -449,25 +448,14 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
   useEffect(() => {
     if (!form.has_variants) return;
     const newCombos = generateCombinations(variantTypes, combinations, {
-      buy_price: form.buy_price,
-      sell_price: form.sell_price,
-      mrp: form.mrp
+      buy_price: "0",
+      sell_price: "0",
+      mrp: "0"
     });
     setCombinations(newCombos);
   }, [variantTypes, form.has_variants]);
 
-  const marginStats = useMemo(() => {
-    const cost = Number(form.buy_price) || 0;
-    const selling = Number(form.sell_price) || 0;
-    const profit = selling - cost;
-    const pct = selling > 0 ? ((profit / selling) * 100).toFixed(1) : "0.0";
-    return { profit, pct };
-  }, [form.buy_price, form.sell_price]);
 
-  const totalStock = useMemo(() => {
-    if (!form.has_variants) return Number(form.opening_stock) || 0;
-    return combinations.reduce((s, c) => s + (Number(c.stock) || 0), 0);
-  }, [form.has_variants, form.opening_stock, combinations]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -477,16 +465,18 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (form.has_variants && combinations.length === 0) {
-      showToast("Please add at least one variant combination", "error");
+    const activeCombinations = combinations.filter(c => c.active);
+
+    if (form.has_variants && activeCombinations.length === 0) {
+      showToast("Please have at least one active variant combination", "error");
       return;
     }
 
-    const mappedVarients = combinations.map(combo => {
-      const buyPrice = Number(combo.buy_price) || Number(form.buy_price) || 0;
-      const sellPrice = Number(combo.price) || Number(form.sell_price) || 0;
-      const mrp = Number(combo.mrp) || Number(form.mrp) || 0;
-      const stocks = Number(combo.stock) || 0;
+    const mappedVarients = activeCombinations.map(combo => {
+      const buyPrice = 0;
+      const sellPrice = 0;
+      const mrp = 0;
+      const stocks = 0;
       const variantName = Object.values(combo.attributes).join(" / ");
 
       const v: any = {
@@ -500,15 +490,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
           mrp: mrp,
           attributes: combo.attributes,
         },
-        batch: combo.batch?.name ? {
-          name: combo.batch.name,
-          expiry_date: combo.batch.expiry_date,
-          manufacturing_date: combo.batch.manufacturing_date,
-          stocks: stocks,
-          serial_numbers: combo.serials.length > 0 ? {
-            serial_numbers: combo.serials.map(s => s.serial)
-          } : null
-        } : null
+        batch: null
       };
       return v;
     });
@@ -518,31 +500,25 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
       name: form.name,
       category: form.category,
       description: form.description,
-      buy_price: Number(form.buy_price) || 0,
-      sell_price: Number(form.sell_price) || 0,
-      stocks: totalStock,
+      buy_price: 0,
+      sell_price: 0,
+      stocks: 0,
       barcode: form.barcode,
       has_variant: form.has_variants,
       has_serialno: form.serial_tracking,
       has_batch: form.batch_tracking,
       variants: form.has_variants ? mappedVarients : [],
       serial_numbers: !form.has_variants ? baseSerials : [],
-      batch: (!form.has_variants && form.batch_tracking) ? {
-        name: form.batch_name,
-        manufacturing_date: form.mfg_date,
-        expiry_date: form.exp_date,
-        serial_numbers: baseSerials.length > 0 ? {
-          serial_numbers: baseSerials
-        } : null
-      } : null,
+      batch: null,
+      reorder_point: Number(form.reorder_point) || 0,
       datas: {
         brand: form.brand,
         unit: form.unit,
         mrp: Number(form.mrp) || 0,
         gst: form.gst,
         supplier: form.supplier,
-        opening_stock: Number(form.opening_stock) || 0,
-        reorder_point: Number(form.reorder_point) || 0,
+        opening_stock: 0,
+        
         storage_location: form.location,
         is_active: form.is_active,
         variant_types: variantTypes,
@@ -715,84 +691,13 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                 </div>
 
                 {/* CONDITIONAL TRACKING PANELS */}
-                {form.batch_tracking && !form.has_variants && (
-                  <div className="bg-white rounded-[2rem] border border-slate-200 p-7 shadow-sm pf-section-enter space-y-5">
-                    <div className="flex items-center gap-3 mb-2 border-b border-slate-50 pb-4">
-                      <div className="w-8 h-8 rounded-xl bg-amber-100 flex items-center justify-center text-amber-500">
-                        <Calendar size={16} />
-                      </div>
-                      <span className="text-[11px] font-black uppercase text-slate-800 tracking-widest">Initial Batch Information</span>
-                    </div>
-                    <InputField label="Batch Name" name="batch_name" 
-                      value={form.batch_name} onChange={handleChange}
-                      placeholder="e.g. BATCH-001"
-                    />
-                    <div className="grid grid-cols-2 gap-5">
-                      <InputField label="Mfg Date" name="mfg_date" type="date"
-                        value={form.mfg_date} onChange={handleChange}
-                      />
-                      <InputField label="Expiry Date" name="exp_date" type="date"
-                        value={form.exp_date} onChange={handleChange}
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {form.serial_tracking && !form.has_variants && (
-                  <div className="bg-white rounded-[2rem] border border-slate-200 p-7 shadow-sm pf-section-enter space-y-5">
-                    <div className="flex items-center gap-3 mb-2 border-b border-slate-50 pb-4">
-                      <div className="w-8 h-8 rounded-xl bg-violet-100 flex items-center justify-center text-violet-600">
-                        <Hash size={16} />
-                      </div>
-                      <span className="text-[11px] font-black uppercase text-slate-800 tracking-widest">{categoryConfig.serialLabel} Management</span>
-                    </div>
-                    <InlineSerialManager
-                      serials={baseSerials}
-                      serialLabel={categoryConfig.serialLabel}
-                      limit={Number(form.opening_stock) || 0}
-                      onUpdate={setBaseSerials}
-                    />
-                  </div>
-                )}
+                {/* CONDITIONAL TRACKING PANELS - REMOVED AS PER REQUEST */}
               </div>
             </div>
             {/* --- RIGHT COLUMN: SIDEBAR --- */}
             <div className="lg:col-span-2 space-y-6 lg:sticky lg:top-6">
             {/* BOX 3: Pricing */}
-            <div className="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden hover:shadow-md transition-all">
-              <div className="px-6 py-4 bg-gradient-to-r from-emerald-50/50 to-transparent border-b border-slate-100 flex items-center gap-3">
-                <div className="w-8 h-8 rounded-xl bg-emerald-100 flex items-center justify-center text-emerald-600">
-                  <DollarSign size={16} />
-                </div>
-                <h2 className="text-xs font-bold text-slate-800 uppercase tracking-widest">Pricing & Margin</h2>
-              </div>
-              <div className="p-6 space-y-5">
-                <div className="grid grid-cols-2 gap-5">
-                  <InputField label="Cost Price" name="buy_price" required
-                    type="number" leftEl=""
-                    value={form.buy_price} onChange={handleChange}
-                    placeholder="0.00"
-                  />
-                  <InputField label="Selling Price" name="sell_price" required
-                    type="number" leftEl=""
-                    value={form.sell_price} onChange={handleChange}
-                    placeholder="0.00"
-                  />
-                </div>
-                <div className="flex items-center justify-between px-4 py-3 bg-slate-50 rounded-2xl border border-slate-100">
-                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Est. Margin</span>
-                  <div className="flex items-center gap-2">
-                    <span className="font-bold text-slate-800 text-sm">{marginStats.profit.toLocaleString()}</span>
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${marginStats.profit >= 0 ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"
-                      }`}>{marginStats.pct}%</span>
-                  </div>
-                </div>
-                <InputField label="MRP" name="mrp" type="number" leftEl=""
-                  value={form.mrp} onChange={handleChange}
-                  placeholder="0.00"
-                />
-              </div>
-            </div>
+            {/* Pricing section removed as per request */}
 
             {/* BOX 4: Live Summary + Stock */}
             <div className="space-y-6">
@@ -803,15 +708,11 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                 <div className="divide-y divide-slate-50 px-6">
                   {[
                     { label: "SKU", value: form.barcode || "-" },
-                    { label: "Cost", value: form.buy_price ? `${Number(form.buy_price).toLocaleString()}` : "-" },
-                    { label: "Price", value: form.sell_price ? `${Number(form.sell_price).toLocaleString()}` : "-" },
-                    { label: "Margin", value: `${marginStats.pct}%`, color: marginStats.profit >= 0 ? "text-emerald-600" : "text-rose-600" },
                     { label: "Variants", value: form.has_variants ? `${combinations.length} combos` : "None" },
-                    { label: "Stock", value: totalStock > 0 ? `${totalStock}` : "-" },
                   ].map(row => (
                     <div key={row.label} className="flex items-center justify-between py-2.5">
                       <span className="text-[11px] text-slate-400 font-medium">{row.label}</span>
-                      <span className={`text-[11px] font-bold font-mono ${(row as any).color ?? "text-slate-800"}`}>{row.value}</span>
+                      <span className={`text-[11px] font-bold font-mono text-slate-800`}>{row.value}</span>
                     </div>
                   ))}
                 </div>
@@ -824,12 +725,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                   </div>
                   <h2 className="text-xs font-bold text-slate-800 uppercase tracking-widest">Stock & Inventory</h2>
                 </div>
-                <div className="p-6 grid grid-cols-2 gap-5">
-                  <InputField label="Opening Stock" name="opening_stock"
-                    type="number" value={form.opening_stock} onChange={handleChange}
-                    placeholder="0"
-                    disabled={!!id}
-                  />
+                <div className="p-6 grid grid-cols-1 gap-5">
                   <InputField label="Reorder Point" name="reorder_point" required
                     type="number" value={form.reorder_point} onChange={handleChange}
                     placeholder="5"

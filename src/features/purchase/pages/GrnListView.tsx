@@ -77,7 +77,7 @@ const toGrnShape = (p: PurchaseRecord) => {
         stocks: b.stocks ?? b.quantity ?? 1,
         expiry_date: b.expiry_date,
         manufacturing_date: b.manufacturing_date,
-        serial_numbers: b.serial_numbers?.serial_numbers || null,
+        serial_numbers: b.serial_numbers?.serial_numbers || b.serial_number?.serial_numbers || null,
       })) : []
     })) : undefined,
     batches: Array.isArray(r.batches) ? r.batches.map((b: any) => ({
@@ -85,7 +85,7 @@ const toGrnShape = (p: PurchaseRecord) => {
       stocks: b.stocks ?? b.quantity ?? 1,
       expiry_date: b.expiry_date,
       manufacturing_date: b.manufacturing_date,
-      serial_numbers: b.serial_numbers?.serial_numbers || null,
+      serial_numbers: b.serial_numbers?.serial_numbers || b.serial_number?.serial_numbers || null,
     })) : undefined,
   }));
   let totalValue = Number(d?.total_value ?? d?.grand_total ?? d?.total_cost ?? 0);

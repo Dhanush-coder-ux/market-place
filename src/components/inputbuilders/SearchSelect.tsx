@@ -57,6 +57,8 @@ export function SearchSelect<T extends BaseOption>({
   onCreateNew,
 }: SearchSelectProps<T>) {
   const [searchValue, setSearchValue] = useState("");
+  const [open, setOpen] = useState(false);
+  const selectRef = React.useRef<any>(null);
   const id = React.useId();
 
   // Initialize smart hook
@@ -130,7 +132,11 @@ export function SearchSelect<T extends BaseOption>({
                 e.preventDefault();
                 e.stopPropagation();
               }}
-              onClick={() => onCreateNew(searchValue)}
+              onClick={() => {
+                setOpen(false);
+                selectRef.current?.blur();
+                onCreateNew(searchValue);
+              }}
               className="w-full flex items-center justify-center gap-2 py-2 bg-blue-50 text-blue-600 rounded-lg text-sm font-semibold hover:bg-blue-100 transition-colors cursor-pointer"
             >
               <Plus size={16} />
@@ -155,6 +161,9 @@ export function SearchSelect<T extends BaseOption>({
         </label>
       )}
       <Select
+        ref={selectRef}
+        open={open}
+        onDropdownVisibleChange={(visible) => setOpen(visible)}
         id={id}
         className={className}
         mode={mode}

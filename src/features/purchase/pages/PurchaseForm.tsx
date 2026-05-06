@@ -166,7 +166,10 @@ const PurchaseForm = () => {
             serialTracking: p.serial_tracking || false,
             batchNum: p.batch_number || "",
             manufacturingDate: p.manufacturing_date || "",
-            expiryDate: p.expiry_date || ""
+            expiryDate: p.expiry_date || "",
+            serialno_id: p.serialno_id || p.serial_number?.id || p.serial_numbers?.id,
+            serialNumbers: Array.isArray(p.serial_numbers) ? p.serial_numbers.join(',') : (p.serial_numbers?.serial_numbers || p.serial_number?.serial_numbers || []).join(','),
+            existingSerials: Array.isArray(p.serial_numbers) ? p.serial_numbers : (p.serial_numbers?.serial_numbers || p.serial_number?.serial_numbers || [])
           })));
           setCharges(data.additional_charges ? {
             transport: data.additional_charges.delivery_charge,

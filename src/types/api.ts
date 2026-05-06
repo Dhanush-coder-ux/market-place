@@ -162,6 +162,7 @@ export interface InventoryRecord {
   batch?: InventoryBatch;
   serial_number?: any;
   serial_numbers?: string[];
+  reorder_point?: number;
 }
 
 export interface OrderRecord {

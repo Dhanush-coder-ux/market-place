@@ -5,12 +5,10 @@ import {
   X, 
   ChevronDown, 
   RefreshCw, 
-  ScanLine, 
   Plus as PlusIcon,
-  Zap,
-  Calendar
+  Zap
 } from "lucide-react";
-import { InlineSerialManager } from "@/components/common/InlineSerialManager";
+
 
 // --- Types ---
 
@@ -231,17 +229,19 @@ interface VariantMatrixTableProps {
 }
 
 export const VariantMatrixTable: React.FC<VariantMatrixTableProps> = ({
-  combinations, supportsSerials, supportsBatch, serialLabel, onChange,
+  combinations, onChange,
 }) => {
-  const [expandedSerialId, setExpandedSerialId] = useState<string | null>(null);
-  const [expandedBatchId, setExpandedBatchId] = useState<string | null>(null);
+
   const [barcodeBase, setbarcodeBase] = useState("");
 
   const update = (id: string, field: keyof VariantCombination, val: unknown) => {
     onChange(combinations.map(c => c.id === id ? { ...c, [field]: val } : c));
   };
 
+  const activeCount = combinations.filter(c => c.active).length;
+
   const bulkToggleAll = (active: boolean) => {
+    if (!active && combinations.length <= 1) return; // Can't turn off all if only 1
     onChange(combinations.map(c => ({ ...c, active })));
   };
 
@@ -288,7 +288,8 @@ export const VariantMatrixTable: React.FC<VariantMatrixTableProps> = ({
             All On
           </button>
           <button type="button" onClick={() => bulkToggleAll(false)}
-            className="h-9 px-4 text-[10px] font-black uppercase tracking-widest text-slate-500 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-all">
+            disabled={combinations.length <= 1}
+            className="h-9 px-4 text-[10px] font-black uppercase tracking-widest text-slate-500 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-all disabled:opacity-30 disabled:cursor-not-allowed">
             All Off
           </button>
         </div>
@@ -306,25 +307,14 @@ export const VariantMatrixTable: React.FC<VariantMatrixTableProps> = ({
                   </th>
                 ))}
                 <th className="px-5 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400 whitespace-nowrap">barcode</th>
-                <th className="px-5 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400 whitespace-nowrap">Buy Price</th>
-                <th className="px-5 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400 whitespace-nowrap">Sell Price</th>
-                <th className="px-5 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400 whitespace-nowrap">MRP</th>
-                <th className="px-5 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400 whitespace-nowrap">Stock</th>
-                {supportsSerials && (
-                  <th className="px-5 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400 whitespace-nowrap">{serialLabel}s</th>
-                )}
-                {supportsBatch && (
-                  <th className="px-5 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400 whitespace-nowrap">Batch</th>
-                )}
                 <th className="px-5 py-4 text-center text-[10px] font-black uppercase tracking-widest text-slate-400">Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
               {combinations.map((combo) => {
-                const isExpanded = expandedSerialId === combo.id;
                 return (
                   <React.Fragment key={combo.id}>
-                    <tr className={`hover:bg-slate-50/50 transition-all duration-150 ${!combo.active ? "opacity-40 grayscale-[0.5]" : ""} ${isExpanded ? "bg-blue-50/30" : ""}`}>
+                    <tr className={`hover:bg-slate-50/50 transition-all duration-150 ${!combo.active ? "opacity-40 grayscale-[0.5]" : ""}`}>
                       {attrKeys.map(k => (
                         <td key={k} className="px-5 py-4">
                           <span className="inline-flex items-center px-3 py-1 rounded-lg text-[11px] font-black uppercase tracking-tight bg-slate-100 text-slate-600">
@@ -340,164 +330,20 @@ export const VariantMatrixTable: React.FC<VariantMatrixTableProps> = ({
                           onChange={e => update(combo.id, "barcode", e.target.value)}
                         />
                       </td>
-                      <td className="px-5 py-4">
-                        <input
-                          className="h-9 px-3 text-xs border border-slate-200 rounded-xl w-24 focus:ring-2 focus:ring-blue-100 outline-none"
-                          placeholder="0.00"
-                          value={combo.buy_price}
-                          onChange={e => update(combo.id, "buy_price", e.target.value)}
-                          type="number"
-                        />
-                      </td>
-                      <td className="px-5 py-4">
-                        <input
-                          className="h-9 px-3 text-xs border border-slate-200 rounded-xl w-24 focus:ring-2 focus:ring-blue-100 outline-none"
-                          placeholder="0.00"
-                          value={combo.price}
-                          onChange={e => update(combo.id, "price", e.target.value)}
-                          type="number"
-                        />
-                      </td>
-                      <td className="px-5 py-4">
-                        <input
-                          className="h-9 px-3 text-xs border border-slate-200 rounded-xl w-24 focus:ring-2 focus:ring-blue-100 outline-none"
-                          placeholder="0.00"
-                          value={combo.mrp}
-                          onChange={e => update(combo.id, "mrp", e.target.value)}
-                          type="number"
-                        />
-                      </td>
-                      <td className="px-5 py-4">
-                        <input
-                          className="h-9 px-3 text-xs border border-slate-200 rounded-xl w-20 text-center font-black focus:ring-2 focus:ring-blue-100 outline-none"
-                          placeholder="0"
-                          value={combo.stock}
-                          onChange={e => update(combo.id, "stock", e.target.value)}
-                          type="number"
-                          min="0"
-                        />
-                      </td>
-                      {supportsSerials && (
-                        <td className="px-5 py-4">
-                          <button type="button"
-                            onClick={() => setExpandedSerialId(isExpanded ? null : combo.id)}
-                            className={`flex items-center gap-2 h-9 px-4 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all shadow-sm ${isExpanded
-                                ? "bg-violet-600 text-white shadow-violet-100"
-                                : "text-violet-600 bg-violet-50 border border-violet-100 hover:bg-violet-100"
-                              }`}>
-                            <ScanLine size={14} />
-                            {combo.serials.length > 0
-                              ? <span>{combo.serials.length} Added</span>
-                              : "Add"}
-                          </button>
-                        </td>
-                      )}
-                      {supportsBatch && (
-                        <td className="px-5 py-4">
-                          <button type="button"
-                            onClick={() => setExpandedBatchId(expandedBatchId === combo.id ? null : combo.id)}
-                            className={`flex items-center gap-2 h-9 px-4 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all shadow-sm ${expandedBatchId === combo.id
-                                ? "bg-amber-600 text-white shadow-amber-100"
-                                : "text-amber-600 bg-amber-50 border border-amber-100 hover:bg-amber-100"
-                              }`}>
-                            <Calendar size={14} />
-                            {combo.batch?.name ? "Set" : "Add"}
-                          </button>
-                        </td>
-                      )}
                       <td className="px-5 py-4 text-center">
                         <button type="button"
-                          onClick={() => update(combo.id, "active", !combo.active)}
-                          className={`relative inline-flex h-5 w-10 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out outline-none ${combo.active ? "bg-blue-600" : "bg-slate-200"}`}>
+                          onClick={() => {
+                            // Prevent turning off the last active variant
+                            if (combo.active && activeCount <= 1) return;
+                            update(combo.id, "active", !combo.active);
+                          }}
+                          disabled={combo.active && activeCount <= 1}
+                          className={`relative inline-flex h-5 w-10 shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out outline-none ${combo.active ? "bg-blue-600" : "bg-slate-200"} ${combo.active && activeCount <= 1 ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}>
                           <span className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${combo.active ? "translate-x-5" : "translate-x-0"}`} />
                         </button>
                       </td>
                     </tr>
-                    {/* CONSOLIDATED EXPANDED MANAGEMENT PANEL */}
-                    {(isExpanded || (expandedBatchId === combo.id)) && (
-                      <tr className="bg-slate-50/30">
-                        <td colSpan={attrKeys.length + 8} className="px-5 py-8 border-y border-slate-100">
-                          <div className={`max-w-6xl mx-auto grid gap-6 items-start ${
-                            (isExpanded && expandedBatchId === combo.id) ? "grid-cols-1 lg:grid-cols-2" : "grid-cols-1"
-                          }`}>
-                            
-                            {/* SERIALS MANAGEMENT PANEL */}
-                            {isExpanded && supportsSerials && (
-                              <div className="animate-in fade-in slide-in-from-left-4 duration-500 h-full">
-                                <div className="bg-white p-1 rounded-[2.5rem] border border-slate-200 shadow-xl shadow-slate-100/50 h-full">
-                                  <div className="p-1">
-                                    <InlineSerialManager
-                                      serials={combo.serials.map(s => s.serial)}
-                                      serialLabel={serialLabel}
-                                      limit={Number(combo.stock) || 0}
-                                      onUpdate={(newSerials) => {
-                                        const updatedEntries: SerialEntry[] = newSerials.map(s => {
-                                          const existing = combo.serials.find(e => e.serial === s);
-                                          return existing || { id: uid(), serial: s, purchaseDate: "", warrantyMonths: "12", status: "available" };
-                                        });
-                                        update(combo.id, "serials", updatedEntries);
-                                      }}
-                                    />
-                                  </div>
-                                </div>
-                              </div>
-                            )}
-
-                            {/* BATCH MANAGEMENT PANEL */}
-                            {expandedBatchId === combo.id && supportsBatch && (
-                              <div className="animate-in fade-in slide-in-from-right-4 duration-500 h-full">
-                                <div className="bg-white p-7 rounded-[2.5rem] border border-slate-200 shadow-xl shadow-slate-100/50 h-full">
-                                  <div className="flex items-center gap-3 mb-6 border-b border-slate-50 pb-5">
-                                    <div className="w-10 h-10 rounded-2xl bg-amber-100 flex items-center justify-center text-amber-600 shadow-sm">
-                                      <Calendar size={18} />
-                                    </div>
-                                    <div>
-                                      <h3 className="text-[12px] font-black uppercase text-slate-800 tracking-widest">Batch Details</h3>
-                                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">
-                                        {Object.values(combo.attributes).join(" · ")}
-                                      </p>
-                                    </div>
-                                  </div>
-
-                                  <div className="space-y-6">
-                                    <div className="space-y-2">
-                                      <label className="block text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Batch Name / ID</label>
-                                      <input
-                                        className="w-full h-12 px-5 text-sm border border-slate-200 rounded-2xl focus:ring-4 focus:ring-amber-50 focus:border-amber-200 outline-none transition-all placeholder-slate-300 font-medium"
-                                        placeholder="e.g. B-BATCH-001"
-                                        value={combo.batch?.name || ""}
-                                        onChange={e => update(combo.id, "batch", { ...(combo.batch || {}), name: e.target.value })}
-                                      />
-                                    </div>
-
-                                    <div className="grid grid-cols-2 gap-5">
-                                      <div className="space-y-2">
-                                        <label className="block text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Mfg Date</label>
-                                        <input
-                                          type="date"
-                                          className="w-full h-12 px-5 text-sm border border-slate-200 rounded-2xl focus:ring-4 focus:ring-amber-50 focus:border-amber-200 outline-none transition-all font-medium"
-                                          value={combo.batch?.manufacturing_date || ""}
-                                          onChange={e => update(combo.id, "batch", { ...(combo.batch || {}), manufacturing_date: e.target.value })}
-                                        />
-                                      </div>
-                                      <div className="space-y-2">
-                                        <label className="block text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Expiry Date</label>
-                                        <input
-                                          type="date"
-                                          className="w-full h-12 px-5 text-sm border border-slate-200 rounded-2xl focus:ring-4 focus:ring-amber-50 focus:border-amber-200 outline-none transition-all font-medium"
-                                          value={combo.batch?.expiry_date || ""}
-                                          onChange={e => update(combo.id, "batch", { ...(combo.batch || {}), expiry_date: e.target.value })}
-                                        />
-                                      </div>
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    )}
+                    {/* EXPANDED PANELS REMOVED AS PER REQUEST */}
                   </React.Fragment>
                 );
               })}

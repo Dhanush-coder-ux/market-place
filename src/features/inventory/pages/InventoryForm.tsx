@@ -6,10 +6,8 @@ import {
   ListPlus, 
   Trash2, 
   Settings,
-  Plus,
-  X
+  Plus
 } from "lucide-react";
-import { BiRupee } from "react-icons/bi";
 import { useNavigate } from "react-router-dom";
 
 import Input from "../../../components/ui/Input";
@@ -36,10 +34,7 @@ const InventoryForm = () => {
     barcode: "",
     name: "",
     description: "",
-    currentStock: "",
     category: "",
-    currentPrice: "",
-    sellingPrice: "",
     image: null as File | null,
     
     // Feature Toggles
@@ -57,33 +52,21 @@ const InventoryForm = () => {
     variants: [] as InventoryVariant[]
   });
 
-  const [newSerial, setNewSerial] = useState("");
+
 
   const [errors, setErrors] = useState({
     barcode: false,
     name: false,
     category: false,
-    currentStock: false,
-    currentPrice: false,
-    sellingPrice: false,
   });
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-    if (value && errors[name as keyof typeof errors]) {
-      setErrors((prev) => ({ ...prev, [name]: false }));
-    }
-  };
+
 
   const validate = (): boolean => {
     const newErrors = {
       barcode: !formData.barcode,
       name: !formData.name,
       category: !formData.category,
-      currentStock: !formData.has_variant && !formData.currentStock,
-      currentPrice: !formData.has_variant && !formData.currentPrice,
-      sellingPrice: !formData.has_variant && !formData.sellingPrice,
     };
     setErrors(newErrors);
     return !Object.values(newErrors).some(Boolean);
@@ -99,9 +82,9 @@ const InventoryForm = () => {
       name: formData.name,
       category: formData.category,
       description: formData.description,
-      buy_price: Number(formData.currentPrice) || 0,
-      sell_price: Number(formData.sellingPrice) || 0,
-      stocks: Number(formData.currentStock) || 0,
+      buy_price: 0,
+      sell_price: 0,
+      stocks: 0,
       
       has_variant: formData.has_variant,
       has_serialno: formData.has_serialno,
@@ -110,12 +93,13 @@ const InventoryForm = () => {
       datas: {} // Optional generic data
     };
 
+    // No initial data for serial numbers or batch when creating
     if (formData.has_serialno) {
-      payload.serial_numbers = formData.serial_numbers;
+      payload.serial_numbers = [];
     }
 
     if (formData.has_batch) {
-      payload.batch = formData.batch;
+      payload.batch = null;
     }
 
     if (formData.has_variant) {
@@ -126,28 +110,13 @@ const InventoryForm = () => {
     if (res) navigate("/inventory");
   };
 
-  const addSerial = () => {
-    if (newSerial && !formData.serial_numbers.includes(newSerial)) {
-      setFormData(prev => ({
-        ...prev,
-        serial_numbers: [...prev.serial_numbers, newSerial]
-      }));
-      setNewSerial("");
-    }
-  };
 
-  const removeSerial = (serial: string) => {
-    setFormData(prev => ({
-      ...prev,
-      serial_numbers: prev.serial_numbers.filter(s => s !== serial)
-    }));
-  };
 
   const addVariant = () => {
     const newVariant: InventoryVariant = {
       name: "",
-      buy_price: Number(formData.currentPrice) || 0,
-      sell_price: Number(formData.sellingPrice) || 0,
+      buy_price: 0,
+      sell_price: 0,
       stocks: 0,
     };
     setFormData(prev => ({
@@ -241,87 +210,7 @@ const InventoryForm = () => {
       </section>
 
       {/* SECTION 3: CONDITIONAL TRACKING DETAILS */}
-      {(formData.has_serialno || formData.has_batch) && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Serial Numbers */}
-          {formData.has_serialno && (
-            <section className="bg-white rounded-[2rem] border border-slate-200 p-8 shadow-sm space-y-6">
-              <div className="flex items-center gap-3 border-b border-slate-50 pb-6">
-                <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-600">
-                  <Hash size={20} />
-                </div>
-                <h3 className="text-[10px] font-black text-slate-800 uppercase tracking-widest">Serial Inventory</h3>
-              </div>
-              
-              <div className="space-y-4">
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="Enter serial number..."
-                    value={newSerial}
-                    onChange={(e) => setNewSerial(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addSerial())}
-                    className="h-11"
-                  />
-                  <button
-                    type="button"
-                    onClick={addSerial}
-                    className="w-11 h-11 flex items-center justify-center bg-slate-900 text-white rounded-xl hover:bg-slate-800 md:transition-all shrink-0"
-                  >
-                    <Plus size={20} />
-                  </button>
-                </div>
-                
-                <div className="flex flex-wrap gap-2">
-                  {formData.serial_numbers.map(s => (
-                    <span key={s} className="flex items-center gap-2 px-3 py-1.5 bg-slate-100 text-slate-600 rounded-lg text-xs font-bold border border-slate-200">
-                      {s}
-                      <X size={14} className="cursor-pointer hover:text-rose-500" onClick={() => removeSerial(s)} />
-                    </span>
-                  ))}
-                  {formData.serial_numbers.length === 0 && (
-                    <p className="text-[10px] font-bold text-slate-300 italic py-2">No serial numbers added yet.</p>
-                  )}
-                </div>
-              </div>
-            </section>
-          )}
-
-          {/* Batch Tracking */}
-          {formData.has_batch && (
-            <section className="bg-white rounded-[2rem] border border-slate-200 p-8 shadow-sm space-y-6">
-              <div className="flex items-center gap-3 border-b border-slate-50 pb-6">
-                <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-600">
-                  <Calendar size={20} />
-                </div>
-                <h3 className="text-[10px] font-black text-slate-800 uppercase tracking-widest">Batch Details</h3>
-              </div>
-              
-              <div className="grid grid-cols-1 gap-6">
-                <Input
-                  label="Batch Name / ID"
-                  value={formData.batch.name}
-                  onChange={(e) => setFormData(p => ({ ...p, batch: { ...p.batch, name: e.target.value } }))}
-                  placeholder="e.g. BATCH-2024-001"
-                />
-                <div className="grid grid-cols-2 gap-4">
-                  <Input
-                    label="Mfg Date"
-                    type="date"
-                    value={formData.batch.manufacturing_date}
-                    onChange={(e) => setFormData(p => ({ ...p, batch: { ...p.batch, manufacturing_date: e.target.value } }))}
-                  />
-                  <Input
-                    label="Expiry Date"
-                    type="date"
-                    value={formData.batch.expiry_date}
-                    onChange={(e) => setFormData(p => ({ ...p, batch: { ...p.batch, expiry_date: e.target.value } }))}
-                  />
-                </div>
-              </div>
-            </section>
-          )}
-        </div>
-      )}
+      {/* SECTION 3: CONDITIONAL TRACKING DETAILS - REMOVED AS PER REQUEST */}
 
       {/* SECTION 4: VARIANTS OR BASIC LOGISTICS */}
       {formData.has_variant ? (
@@ -347,9 +236,6 @@ const InventoryForm = () => {
               <thead>
                 <tr className="border-b border-slate-50">
                   <th className="text-[10px] font-black text-slate-400 uppercase tracking-widest text-left pb-4 px-2">Variant Name</th>
-                  <th className="text-[10px] font-black text-slate-400 uppercase tracking-widest text-left pb-4 px-2 w-32">Buy Price</th>
-                  <th className="text-[10px] font-black text-slate-400 uppercase tracking-widest text-left pb-4 px-2 w-32">Sell Price</th>
-                  <th className="text-[10px] font-black text-slate-400 uppercase tracking-widest text-left pb-4 px-2 w-24">Stocks</th>
                   <th className="pb-4 px-2 w-10"></th>
                 </tr>
               </thead>
@@ -361,30 +247,6 @@ const InventoryForm = () => {
                         value={v.name}
                         onChange={(e) => updateVariant(i, 'name', e.target.value)}
                         placeholder="e.g. XL / Blue"
-                        className="h-10 bg-slate-50/50 border-transparent focus:bg-white focus:border-slate-200"
-                      />
-                    </td>
-                    <td className="py-4 px-2">
-                      <Input
-                        type="number"
-                        value={v.buy_price}
-                        onChange={(e) => updateVariant(i, 'buy_price', Number(e.target.value))}
-                        className="h-10 bg-slate-50/50 border-transparent focus:bg-white focus:border-slate-200"
-                      />
-                    </td>
-                    <td className="py-4 px-2">
-                      <Input
-                        type="number"
-                        value={v.sell_price}
-                        onChange={(e) => updateVariant(i, 'sell_price', Number(e.target.value))}
-                        className="h-10 bg-slate-50/50 border-transparent focus:bg-white focus:border-slate-200"
-                      />
-                    </td>
-                    <td className="py-4 px-2">
-                      <Input
-                        type="number"
-                        value={v.stocks}
-                        onChange={(e) => updateVariant(i, 'stocks', Number(e.target.value))}
                         className="h-10 bg-slate-50/50 border-transparent focus:bg-white focus:border-slate-200"
                       />
                     </td>
@@ -412,14 +274,14 @@ const InventoryForm = () => {
         </section>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <section className="bg-slate-50/50 p-8 rounded-[2rem] border border-slate-100 space-y-6">
+          <section className="bg-slate-50/50 p-8 rounded-[2rem] border border-slate-100 space-y-6 w-full">
             <div className="flex items-center gap-3 border-b border-slate-100 pb-6">
               <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-slate-400">
                 <Layers size={20} />
               </div>
-              <h3 className="text-[10px] font-black text-slate-800 uppercase tracking-widest">Inventory Status</h3>
+              <h3 className="text-[10px] font-black text-slate-800 uppercase tracking-widest">Inventory Classification</h3>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 gap-6">
               <div className="space-y-1.5">
                 <FieldLabel label="Category" required />
                 <ReusableSelect
@@ -429,52 +291,10 @@ const InventoryForm = () => {
                 />
                 {errors.category && <span className="text-xs text-red-500">Required</span>}
               </div>
-              <div className="space-y-1.5">
-                <FieldLabel label="Stock Level" required />
-                <Input
-                  name="currentStock"
-                  value={formData.currentStock}
-                  onChange={handleInputChange}
-                  type="number"
-                  placeholder="0"
-                  className={errors.currentStock ? "border-red-500" : ""}
-                />
-              </div>
             </div>
           </section>
 
-          <section className="bg-white rounded-[2rem] border border-slate-200 p-8 shadow-sm space-y-6">
-            <div className="flex items-center gap-3 border-b border-slate-50 pb-6">
-              <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-600">
-                <BiRupee size={20} />
-              </div>
-              <h3 className="text-[10px] font-black text-slate-800 uppercase tracking-widest">Pricing Strategy</h3>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-1.5">
-                <FieldLabel label="Buy Price" required />
-                <Input
-                  name="currentPrice"
-                  value={formData.currentPrice}
-                  onChange={handleInputChange}
-                  type="number"
-                  placeholder="0.00"
-                  className={errors.currentPrice ? "border-red-500" : ""}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <FieldLabel label="Sell Price" required />
-                <Input
-                  name="sellingPrice"
-                  value={formData.sellingPrice}
-                  onChange={handleInputChange}
-                  type="number"
-                  placeholder="0.00"
-                  className={errors.sellingPrice ? "border-red-500" : ""}
-                />
-              </div>
-            </div>
-          </section>
+          {/* Pricing Strategy section removed as per request */}
         </div>
       )}
 

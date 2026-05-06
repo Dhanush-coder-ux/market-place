@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import {
   Store,
   Mail,
@@ -13,14 +14,42 @@ import {
   Facebook,
   Clock,
   BadgeCheck,
+  Save,
+  Bookmark,
+  Image as ImageIcon,
 } from "lucide-react";
-import { useEffect } from "react";
 import { useHeader } from "@/context/HeaderContext";
+import { useToast } from "@/context/ToastContext";
+import { useApi } from "@/context/ApiContext";
+import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 import Input from "@/components/ui/Input";
 import { GradientButton } from "@/components/ui/GradientButton";
 import ImageUpload from "@/components/common/ImageUpload";
 import { ReusableSelect } from "@/components/ui/ReusableSelect";
-import { Required } from "@/components/ui/Require";
+import Loader from "@/components/common/Loader";
+
+// ─── Interfaces ─────────────────────────────────────────────────────────────
+
+export interface ProfileData {
+  name: string;
+  shop_code: string;
+  category: string;
+  tagline: string;
+  email: string;
+  phone: string;
+  address: string;
+  city: string;
+  pincode: string;
+  website: string;
+  instagram: string;
+  facebook: string;
+  business_type: string;
+  gst_number: string;
+  currency: string;
+  open_time: string;
+  close_time: string;
+  description: string;
+}
 
 // ─── Options ────────────────────────────────────────────────────────────────
 
@@ -50,414 +79,451 @@ const currencyOptions = [
   { label: "GBP — British Pound (£)", value: "GBP" },
 ];
 
-// ─── Section Header ──────────────────────────────────────────────────────────
-
-type SectionHeaderProps = {
-  icon: React.ReactNode;
-  title: string;
-  subtitle: string;
-  color: string;   // e.g. "bg-blue-50 text-blue-600"
-};
-
-const SectionHeader: React.FC<SectionHeaderProps> = ({ icon, title, subtitle, color }) => (
-  <div className="flex items-center gap-3 border-b border-slate-100 pb-4 mb-8">
-    <div className={`p-2 rounded-lg ${color}`}>{icon}</div>
-    <div>
-      <h3 className="text-base font-semibold text-slate-900">{title}</h3>
-      <p className="text-sm text-gray-500">{subtitle}</p>
-    </div>
-  </div>
-);
-
-// ─── Field Label ─────────────────────────────────────────────────────────────
-
-type FieldLabelProps = { children: React.ReactNode; required?: boolean };
-
-const FieldLabel: React.FC<FieldLabelProps> = ({ children, required }) => (
-  <label className="text-xs font-semibold text-slate-500 uppercase flex items-center gap-1 mb-1.5">
-    {children}
-    {required && <Required />}
-  </label>
-);
-
-// ─── ProfileForm (Shop Creation) ─────────────────────────────────────────────
+// ─── ProfileForm ────────────────────────────────────────────────────────────
 
 const ProfileForm: React.FC = () => {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { setBottomActions } = useHeader();
+  const { showToast } = useToast();
+  const { postData, putData, getData, loading } = useApi();
+  
   const [logo, setLogo] = useState<File | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
-  // Section 1 — Shop Identity
-  const [shopName, setShopName] = useState("");
-  const [shopCode, setShopCode] = useState("");
-  const [category, setCategory] = useState("");
-  const [tagline, setTagline] = useState("");
-
-  // Section 2 — Contact & Location
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  const [address, setAddress] = useState("");
-  const [city, setCity] = useState("");
-  const [pincode, setPincode] = useState("");
-
-  // Section 3 — Online Presence
-  const [website, setWebsite] = useState("");
-  const [instagram, setInstagram] = useState("");
-  const [facebook, setFacebook] = useState("");
-
-  // Section 4 — Business Details
-  const [businessType, setBusinessType] = useState("");
-  const [gst, setGst] = useState("");
-  const [currency, setCurrency] = useState("INR");
-  const [openTime, setOpenTime] = useState("09:00");
-  const [closeTime, setCloseTime] = useState("21:00");
-  const [description, setDescription] = useState("");
-
-  // Validation
-  const [errors, setErrors] = useState({ shopName: false, email: false, category: false });
-
-  const validate = () => {
-    const e = {
-      shopName: !shopName.trim(),
-      email: !email.trim(),
-      category: !category,
-    };
-    setErrors(e);
-    return !Object.values(e).some(Boolean);
+  const initialFormData: ProfileData = {
+    name: "",
+    shop_code: "",
+    category: "",
+    tagline: "",
+    email: "",
+    phone: "",
+    address: "",
+    city: "",
+    pincode: "",
+    website: "",
+    instagram: "",
+    facebook: "",
+    business_type: "",
+    gst_number: "",
+    currency: "INR",
+    open_time: "09:00",
+    close_time: "21:00",
+    description: "",
   };
 
-  const handleSubmit = async (action: "save" | "add_more") => {
-    if (!validate()) return;
-    
-    const payload = {
-      name: shopName,
-      category: category,
-      business_infos: {
-        business_type: businessType,
-        gst: gst,
-        currency: currency,
-        open_time: openTime,
-        close_time: closeTime,
-      },
-      address: {
-        street: address,
-        city: city,
-        pincode: pincode,
-      },
-      image_urls: [], // Logic for images can be added later
-      datas: {
-        description: description,
-        emails: [email],
-        mobile_numbers: [phone],
-        website: website,
-        tagline: tagline, // Adding tagline to datas
-        shop_code: shopCode, // Adding shop_code to datas
+  const [formData, setFormData] = useState<ProfileData>(initialFormData);
+
+  // Load Data/Draft
+  useEffect(() => {
+    if (id) {
+      getData(`${ENDPOINTS.SHOPS}/${id}`).then((res) => {
+        if (res && res.data) {
+          const shop = res.data;
+          const d = shop.datas || {};
+          const b = shop.business_infos || {};
+          const a = shop.address || {};
+          
+          setFormData({
+            name: shop.name || "",
+            shop_code: d.shop_code || "",
+            category: shop.category || "",
+            tagline: d.tagline || "",
+            email: d.emails?.[0] || "",
+            phone: d.mobile_numbers?.[0] || "",
+            address: a.street || "",
+            city: a.city || "",
+            pincode: a.pincode || "",
+            website: d.website || "",
+            instagram: d.instagram || "",
+            facebook: d.facebook || "",
+            business_type: b.business_type || "",
+            gst_number: b.gst || "",
+            currency: b.currency || "INR",
+            open_time: b.open_time || "09:00",
+            close_time: b.close_time || "21:00",
+            description: d.description || "",
+          });
+        }
+      });
+    } else {
+      const draftId = searchParams.get("draftId");
+      if (draftId) {
+        const drafts = JSON.parse(localStorage.getItem("profile_drafts") || "[]");
+        const draft = drafts.find((d: any) => d.id === draftId);
+        if (draft) setFormData(draft.data);
       }
-    };
+    }
+  }, [id, searchParams]);
 
-    console.log("Submit:", action, payload);
-    // In a real scenario, call shopApi.createShop(payload) here
-  };
-
+  // Header Actions
   useEffect(() => {
     setBottomActions(
-      <div className="flex items-center gap-3 animate-in fade-in slide-in-from-right-4 duration-300">
-        <button
-          type="button"
-          onClick={() => console.log("Discard")}
-          className="px-6 h-11 rounded-xl border border-slate-200 text-slate-500 font-bold text-xs hover:bg-slate-50 transition-all"
+      <div className="flex items-center gap-3 md:animate-in md:fade-in md:slide-in-from-right-4 md:duration-300">
+        {!id && (
+          <button 
+            type="button"
+            onClick={handleSaveDraft}
+            className="px-4 h-8 rounded-xl border border-blue-100 text-blue-600 font-bold text-xs bg-blue-50/50 md:hover:bg-blue-100 md:transition-all flex items-center gap-2 whitespace-nowrap overflow-hidden"
+          >
+            <Bookmark size={14} className="shrink-0" />
+            <span className="truncate">Save Draft</span>
+          </button>
+        )}
+        <GradientButton 
+          icon={<Save size={16} />} 
+          onClick={() => handleSubmit()} 
+          disabled={submitting}
+          className="rounded-xl shadow-md text-xs px-8 h-8 flex items-center"
         >
-          Discard Changes
-        </button>
-        <GradientButton
-          type="button"
-          variant="outline"
-          onClick={() => handleSubmit("add_more")}
-          className="rounded-xl border-slate-200 h-11 text-xs"
-        >
-          Save & Add Another
-        </GradientButton>
-        <GradientButton
-          type="button"
-          onClick={() => handleSubmit("save")}
-          className="rounded-xl shadow-md text-xs px-8 h-11 flex items-center"
-        >
-          Create Shop
+          {submitting ? "..." : (id ? "Save Changes" : "Create Shop")}
         </GradientButton>
       </div>
     );
     return () => setBottomActions(null);
-  }, [setBottomActions, shopName, email, category, tagline, shopCode, businessType, gst, currency, openTime, closeTime, address, city, pincode, website, description, phone]);
+  }, [setBottomActions, formData, submitting, id, navigate]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleSaveDraft = () => {
+    const drafts = JSON.parse(localStorage.getItem("profile_drafts") || "[]");
+    const draftId = searchParams.get("draftId") || crypto.randomUUID();
+    
+    const newDraft = {
+      id: draftId,
+      timestamp: new Date().toISOString(),
+      displayName: formData.name || "New Shop",
+      data: formData
+    };
+
+    const existingIndex = drafts.findIndex((d: any) => d.id === draftId);
+    if (existingIndex > -1) drafts[existingIndex] = newDraft;
+    else drafts.unshift(newDraft);
+
+    localStorage.setItem("profile_drafts", JSON.stringify(drafts));
+    showToast("Progress saved to drafts", "success");
+    if (!searchParams.get("draftId")) navigate(`/profile/add?draftId=${draftId}`, { replace: true });
+  };
+
+  const handleSubmit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!formData.name) return showToast("Shop name is required", "error");
+    if (!formData.category) return showToast("Category is required", "error");
+
+    setSubmitting(true);
+    
+    const payload = {
+      name: formData.name,
+      category: formData.category,
+      business_infos: {
+        business_type: formData.business_type,
+        gst: formData.gst_number,
+        currency: formData.currency,
+        open_time: formData.open_time,
+        close_time: formData.close_time,
+      },
+      address: {
+        street: formData.address,
+        city: formData.city,
+        pincode: formData.pincode,
+      },
+      image_urls: [], // Logic for images can be added later
+      datas: {
+        description: formData.description,
+        emails: [formData.email],
+        mobile_numbers: [formData.phone],
+        website: formData.website,
+        tagline: formData.tagline,
+        shop_code: formData.shop_code,
+        instagram: formData.instagram,
+        facebook: formData.facebook,
+      }
+    };
+
+    try {
+      const res = id 
+        ? await putData(ENDPOINTS.SHOPS, { ...payload, id })
+        : await postData(ENDPOINTS.SHOPS, payload);
+
+      if (res) {
+        showToast(id ? "Shop profile updated" : "Shop created successfully", "success");
+        // Remove draft if it exists
+        const draftId = searchParams.get("draftId");
+        if (draftId) {
+          const drafts = JSON.parse(localStorage.getItem("profile_drafts") || "[]");
+          localStorage.setItem("profile_drafts", JSON.stringify(drafts.filter((d: any) => d.id !== draftId)));
+        }
+        navigate("/profile");
+      }
+    } catch {
+      showToast("Operation failed", "error");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (loading && id) return <div className="py-20 text-center"><Loader /></div>;
 
   return (
-    <div className="pb-10">
-
-
-
-      <div className="max-w-7xl mx-auto p-6 space-y-12 bg-white">
-
-        {/* ── SECTION 1: SHOP IDENTITY ── */}
-        <section>
-          <SectionHeader
-            icon={<Store size={22} />}
-            title="Shop Identity"
-            subtitle="Your brand name, code, and visual assets."
-            color="bg-blue-50 text-blue-600"
-          />
-
-          {/* Logo + Banner upload row */}
-          <div className="flex flex-wrap items-start gap-8 mb-8">
-            <div className="flex flex-col items-center gap-2">
-              <span className="text-xs font-semibold text-slate-500 uppercase tracking-widest">Shop Logo</span>
-              <ImageUpload label="Logo" value={logo} onChange={setLogo} />
-            </div>
+    <div className="max-w-7xl mx-auto p-4 md:p-8 md:animate-in md:fade-in md:duration-500">
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
+        
+        {/* Left Column (8/12) */}
+        <div className="md:col-span-8 space-y-8">
           
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-
-            <div className="space-y-1.5">
-              <FieldLabel required>Shop Name</FieldLabel>
-              <Input
-                placeholder="e.g. Sunrise Mart"
-                value={shopName}
-                onChange={(e) => { setShopName(e.target.value); if (e.target.value) setErrors(p => ({ ...p, shopName: false })); }}
-                leftIcon={<Store size={18} className="text-slate-400" />}
-                className={errors.shopName ? "border-red-500" : "bg-slate-50/50"}
-              />
+          {/* Shop Identity Box */}
+          <div className="bg-white rounded-[2rem] border border-slate-200 p-8 shadow-sm space-y-8 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50/50 rounded-full -mr-16 -mt-16" />
+            <div className="flex items-center gap-3 border-b border-slate-50 pb-6">
+              <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600">
+                <Store size={20} />
+              </div>
+              <div>
+                <h3 className="text-[10px] font-black text-slate-800 uppercase tracking-widest">Shop Identity</h3>
+                <p className="text-[11px] font-bold text-slate-400">Brand and visual presence</p>
+              </div>
             </div>
 
-            <div className="space-y-1.5">
-              <FieldLabel>Shop Code / ID</FieldLabel>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="md:col-span-2 flex flex-col items-center justify-center py-4 bg-slate-50/50 rounded-3xl border border-dashed border-slate-200 gap-3">
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Shop Logo</span>
+                <ImageUpload label="Logo" value={logo} onChange={setLogo} />
+              </div>
+
+              <div className="md:col-span-2">
+                <Input
+                  label="Shop Name"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleChange}
+                  placeholder="e.g. Sunrise Mart"
+                  className="h-12 font-bold text-slate-700"
+                  required
+                />
+              </div>
+
               <Input
+                label="Shop Code / ID"
+                name="shop_code"
+                value={formData.shop_code}
+                onChange={handleChange}
                 placeholder="e.g. SHOP-001"
-                value={shopCode}
-                onChange={(e) => setShopCode(e.target.value)}
-                leftIcon={<Hash size={18} className="text-slate-400" />}
-                className="bg-slate-50/50"
+                leftIcon={<Hash size={16} className="text-slate-400" />}
               />
-            </div>
 
-            <div className="space-y-1.5">
-              <FieldLabel required>Category</FieldLabel>
-              <ReusableSelect
-                options={categoryOptions}
-                value={category}
-                onValueChange={(val) => { setCategory(val); if (val) setErrors(p => ({ ...p, category: false })); }}
-                placeholder="Select a category"
-              />
-            </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Category</label>
+                <ReusableSelect
+                  value={formData.category}
+                  onValueChange={(val) => setFormData(p => ({ ...p, category: val }))}
+                  options={categoryOptions}
+                  placeholder="Select Category"
+                />
+              </div>
 
-            <div className="space-y-1.5 md:col-span-2 lg:col-span-3">
-              <FieldLabel>Tagline</FieldLabel>
-              <Input
-                placeholder="e.g. Fresh deals, every day!"
-                value={tagline}
-                onChange={(e) => setTagline(e.target.value)}
-                leftIcon={<Tag size={18} className="text-slate-400" />}
-                className="bg-slate-50/50"
-              />
+              <div className="md:col-span-2">
+                <Input
+                  label="Tagline"
+                  name="tagline"
+                  value={formData.tagline}
+                  onChange={handleChange}
+                  placeholder="e.g. Fresh deals, every day!"
+                  leftIcon={<Tag size={16} className="text-slate-400" />}
+                />
+              </div>
             </div>
-
           </div>
-        </section>
 
-        {/* ── SECTION 2: CONTACT & LOCATION ── */}
-        <section>
-          <SectionHeader
-            icon={<MapPin size={22} />}
-            title="Contact & Location"
-            subtitle="Customer-facing contact details and your physical address."
-            color="bg-emerald-50 text-emerald-600"
-          />
+          {/* Contact & Location Box */}
+          <div className="bg-white rounded-[2rem] border border-slate-200 p-8 shadow-sm space-y-8">
+            <div className="flex items-center gap-3 border-b border-slate-50 pb-6">
+              <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600">
+                <MapPin size={20} />
+              </div>
+              <div>
+                <h3 className="text-[10px] font-black text-slate-800 uppercase tracking-widest">Contact & Location</h3>
+                <p className="text-[11px] font-bold text-slate-400">Physical and digital reach</p>
+              </div>
+            </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-
-            <div className="space-y-1.5">
-              <FieldLabel required>Email Address</FieldLabel>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <Input
+                label="Email Address"
+                name="email"
                 type="email"
+                value={formData.email}
+                onChange={handleChange}
                 placeholder="shop@example.com"
-                value={email}
-                onChange={(e) => { setEmail(e.target.value); if (e.target.value) setErrors(p => ({ ...p, email: false })); }}
-                leftIcon={<Mail size={18} className="text-slate-400" />}
-                className={errors.email ? "border-red-500" : "bg-slate-50/50"}
+                leftIcon={<Mail size={16} className="text-slate-400" />}
               />
-            </div>
-
-            <div className="space-y-1.5">
-              <FieldLabel>Phone Number</FieldLabel>
               <Input
-                placeholder="+91 98765 00000"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                leftIcon={<Phone size={18} className="text-slate-400" />}
-                className="bg-slate-50/50"
+                label="Phone Number"
+                name="phone"
+                value={formData.phone}
+                onChange={handleChange}
+                placeholder="+91 00000 00000"
+                leftIcon={<Phone size={16} className="text-slate-400" />}
               />
-            </div>
-
-            <div className="space-y-1.5">
-              <FieldLabel>City</FieldLabel>
               <Input
+                label="City"
+                name="city"
+                value={formData.city}
+                onChange={handleChange}
                 placeholder="e.g. Chennai"
-                value={city}
-                onChange={(e) => setCity(e.target.value)}
-                leftIcon={<Building2 size={18} className="text-slate-400" />}
-                className="bg-slate-50/50"
+                leftIcon={<Building2 size={16} className="text-slate-400" />}
               />
-            </div>
-
-            <div className="space-y-1.5 md:col-span-2">
-              <FieldLabel>Street Address</FieldLabel>
               <Input
-                placeholder="House No, Street, Area"
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
-                leftIcon={<MapPin size={18} className="text-slate-400" />}
-                className="bg-slate-50/50"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <FieldLabel>PIN Code</FieldLabel>
-              <Input
+                label="PIN Code"
+                name="pincode"
+                value={formData.pincode}
+                onChange={handleChange}
                 placeholder="600001"
-                value={pincode}
-                onChange={(e) => setPincode(e.target.value)}
-                leftIcon={<Hash size={18} className="text-slate-400" />}
-                className="bg-slate-50/50"
+                leftIcon={<Hash size={16} className="text-slate-400" />}
               />
+              <div className="md:col-span-2 space-y-1.5">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Street Address</label>
+                <textarea
+                  name="address"
+                  value={formData.address}
+                  onChange={handleChange}
+                  rows={3}
+                  className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-4 py-3 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-blue-100 md:transition-all placeholder:text-slate-300 resize-none outline-none"
+                  placeholder="House No, Street, Area"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Online Presence Box */}
+          <div className="bg-white rounded-[2rem] border border-slate-200 p-8 shadow-sm space-y-8">
+            <div className="flex items-center gap-3 border-b border-slate-50 pb-6">
+              <div className="w-10 h-10 rounded-xl bg-purple-50 flex items-center justify-center text-purple-600">
+                <Globe size={20} />
+              </div>
+              <div>
+                <h3 className="text-[10px] font-black text-slate-800 uppercase tracking-widest">Online Presence</h3>
+                <p className="text-[11px] font-bold text-slate-400">Social media and website links</p>
+              </div>
             </div>
 
-          </div>
-        </section>
-
-        {/* ── SECTION 3: ONLINE PRESENCE ── */}
-        <section>
-          <SectionHeader
-            icon={<Globe size={22} />}
-            title="Online Presence"
-            subtitle="Website and social media links for your shop."
-            color="bg-purple-50 text-purple-600"
-          />
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-
-            <div className="space-y-1.5">
-              <FieldLabel>Website</FieldLabel>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <Input
+                label="Website"
+                name="website"
+                value={formData.website}
+                onChange={handleChange}
                 placeholder="https://yourshop.com"
-                value={website}
-                onChange={(e) => setWebsite(e.target.value)}
-                leftIcon={<Globe size={18} className="text-slate-400" />}
-                className="bg-slate-50/50"
+                leftIcon={<Globe size={16} className="text-slate-400" />}
               />
-            </div>
-
-            <div className="space-y-1.5">
-              <FieldLabel>Instagram Handle</FieldLabel>
               <Input
+                label="Instagram"
+                name="instagram"
+                value={formData.instagram}
+                onChange={handleChange}
                 placeholder="@yourshop"
-                value={instagram}
-                onChange={(e) => setInstagram(e.target.value)}
-                leftIcon={<Instagram size={18} className="text-slate-400" />}
-                className="bg-slate-50/50"
+                leftIcon={<Instagram size={16} className="text-slate-400" />}
               />
-            </div>
-
-            <div className="space-y-1.5">
-              <FieldLabel>Facebook Page</FieldLabel>
               <Input
+                label="Facebook"
+                name="facebook"
+                value={formData.facebook}
+                onChange={handleChange}
                 placeholder="facebook.com/yourshop"
-                value={facebook}
-                onChange={(e) => setFacebook(e.target.value)}
-                leftIcon={<Facebook size={18} className="text-slate-400" />}
-                className="bg-slate-50/50"
+                leftIcon={<Facebook size={16} className="text-slate-400" />}
               />
             </div>
-
           </div>
-        </section>
+        </div>
 
-        {/* ── SECTION 4: BUSINESS DETAILS ── */}
-        <section>
-          <SectionHeader
-            icon={<BadgeCheck size={22} />}
-            title="Business Details"
-            subtitle="Legal, financial, and operational configuration."
-            color="bg-amber-50 text-amber-600"
-          />
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-
-            <div className="space-y-1.5">
-              <FieldLabel>Business Type</FieldLabel>
-              <ReusableSelect
-                options={businessTypeOptions}
-                value={businessType}
-                onValueChange={setBusinessType}
-                placeholder="Select type"
-              />
+        {/* Right Column (4/12) */}
+        <div className="md:col-span-4 space-y-8">
+          
+          {/* Business Details Box */}
+          <div className="bg-white rounded-[2rem] border border-slate-200 p-8 shadow-sm space-y-8 relative overflow-hidden">
+            <div className="absolute bottom-0 right-0 w-24 h-24 bg-blue-50 rounded-full -mr-8 -mb-8 blur-2xl" />
+            <div className="flex items-center gap-3 border-b border-slate-50 pb-6">
+              <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-blue-600">
+                <BadgeCheck size={20} />
+              </div>
+              <div>
+                <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-800">Business Details</h3>
+                <p className="text-[11px] font-bold text-slate-400">Operational configuration</p>
+              </div>
             </div>
 
-            <div className="space-y-1.5">
-              <FieldLabel>GST Number</FieldLabel>
+            <div className="space-y-6">
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Business Type</label>
+                <ReusableSelect
+                  value={formData.business_type}
+                  onValueChange={(val) => setFormData(p => ({ ...p, business_type: val }))}
+                  options={businessTypeOptions}
+                  placeholder="Select Type"
+                />
+              </div>
+
               <Input
+                label="GST Number"
+                name="gst_number"
+                value={formData.gst_number}
+                onChange={handleChange}
                 placeholder="22AAAAA0000A1Z5"
-                value={gst}
-                onChange={(e) => setGst(e.target.value)}
-                leftIcon={<FileText size={18} className="text-slate-400" />}
-                className="bg-slate-50/50"
+                leftIcon={<FileText size={16} className="text-slate-400" />}
               />
-            </div>
 
-            <div className="space-y-1.5">
-              <FieldLabel>Currency</FieldLabel>
-              <ReusableSelect
-                options={currencyOptions}
-                value={currency}
-                onValueChange={setCurrency}
-                placeholder="Select currency"
-              />
-            </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Currency</label>
+                <ReusableSelect
+                  value={formData.currency}
+                  onValueChange={(val) => setFormData(p => ({ ...p, currency: val }))}
+                  options={currencyOptions}
+                  placeholder="Select Currency"
+                />
+              </div>
 
-            <div className="space-y-1.5">
-              <FieldLabel>Opening Time</FieldLabel>
-              <Input
-                type="time"
-                value={openTime}
-                onChange={(e) => setOpenTime(e.target.value)}
-                leftIcon={<Clock size={18} className="text-slate-400" />}
-                className="bg-slate-50/50"
-              />
+              <div className="grid grid-cols-2 gap-4">
+                <Input
+                  label="Opening Time"
+                  name="open_time"
+                  type="time"
+                  value={formData.open_time}
+                  onChange={handleChange}
+                  leftIcon={<Clock size={16} className="text-slate-400" />}
+                />
+                <Input
+                  label="Closing Time"
+                  name="close_time"
+                  type="time"
+                  value={formData.close_time}
+                  onChange={handleChange}
+                  leftIcon={<Clock size={16} className="text-slate-400" />}
+                />
+              </div>
             </div>
-
-            <div className="space-y-1.5">
-              <FieldLabel>Closing Time</FieldLabel>
-              <Input
-                type="time"
-                value={closeTime}
-                onChange={(e) => setCloseTime(e.target.value)}
-                leftIcon={<Clock size={18} className="text-slate-400" />}
-                className="bg-slate-50/50"
-              />
-            </div>
-
-            <div className="space-y-1.5 md:col-span-2 lg:col-span-3">
-              <FieldLabel>Shop Description</FieldLabel>
-              <textarea
-                rows={4}
-                placeholder="Tell customers what makes your shop special..."
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                className="w-full px-4 py-3 rounded-lg border border-slate-200 text-sm text-slate-900 
-                           placeholder:text-slate-400 bg-slate-50/50 resize-none
-                           transition-all duration-200
-                           focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none"
-              />
-            </div>
-
           </div>
-        </section>
+
+          {/* Shop Description Box */}
+          <div className="bg-white rounded-[2rem] border border-slate-200 p-8 shadow-sm space-y-6">
+            <div className="flex items-center gap-3 border-b border-slate-50 pb-4">
+              <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400">
+                <FileText size={16} />
+              </div>
+              <h3 className="text-[10px] font-black text-slate-800 uppercase tracking-widest">Shop Description</h3>
+            </div>
+            <textarea
+              name="description"
+              value={formData.description}
+              onChange={handleChange}
+              rows={5}
+              className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-4 py-3 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-blue-100 md:transition-all placeholder:text-slate-300 resize-none outline-none"
+              placeholder="Tell customers what makes your shop special..."
+            />
+          </div>
+        </div>
 
       </div>
     </div>

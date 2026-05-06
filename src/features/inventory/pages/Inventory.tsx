@@ -20,8 +20,6 @@ import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 import Loader from "@/components/common/Loader";
 import { StatCard } from "@/components/common/StatsCard";
 import { useNavigate } from "react-router-dom";
-import { GradientButton } from "@/components/ui/GradientButton";
-import { useQuickCreate } from "@/features/common/QuickCreate/QuickCreateContext";
 import Input from "@/components/ui/Input";
 
 // --- Types based on your exact API response ---
@@ -411,8 +409,7 @@ const InventoryPage = () => {
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
-  const [refreshKey, setRefreshKey] = useState(0);
-  const { openQuickCreate } = useQuickCreate();
+  const [refreshKey] = useState(0);
 
   useEffect(() => {
     getData(`${ENDPOINTS.INVENTORIES}/by/shop/${SHOP_ID}`).then((res: any) => {
@@ -529,23 +526,7 @@ const InventoryPage = () => {
 
       {/* Main Table Card - Modern & Refined */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-        <div className="px-8 py-6 bg-gradient-to-r from-slate-50 to-transparent border-b border-slate-100 flex items-center justify-between">
-          <div>
-            <h2 className="text-xs font-black text-slate-800 uppercase tracking-widest">Inventory Ledger</h2>
-            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Real-time stock synchronization</p>
-          </div>
-          <div className="flex items-center gap-4">
-            <GradientButton 
-              onClick={() => openQuickCreate("PRODUCT", () => setRefreshKey(prev => prev + 1))}
-              className="h-8 px-6 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-blue-100"
-            >
-              Add Product
-            </GradientButton>
-            <div className="hidden md:block px-3 py-1 rounded-full bg-emerald-50 text-emerald-600 text-[10px] font-black uppercase border border-emerald-100">
-              Live Feed
-            </div>
-          </div>
-        </div>
+        
 
 
         {loading ? (

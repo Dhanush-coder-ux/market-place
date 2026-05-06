@@ -48,18 +48,18 @@ const SEARCHABLE_ROUTES = [
   { name: "Dashboard", path: "/", icon: LayoutDashboard },
   { name: "Orders", path: "/orders", icon: ShoppingCart },
   { name: "Products", path: "/product", icon: Package },
-  { name: "Add Products", path: "/product/add",icon:PlusCircle},
+  { name: "Add Products", path: "/product/add", icon: PlusCircle },
   { name: "Add Employee", path: "/employee/add", icon: UserPlus },
-  { name: "Add Inventory", path: "/inventory/add",icon:PlusCircle},
+  { name: "Add Inventory", path: "/inventory/add", icon: PlusCircle },
   { name: "Inventory", path: "/inventory", icon: Boxes },
   { name: "Billing & Invoices", path: "/billing", icon: Receipt },
   { name: "Purchase History", path: "/purchase", icon: History },
   { name: "Suppliers", path: "/supplier", icon: Truck },
-  { name: "Add Suppliers" , path: "/supplier/add",icon:PlusCircle},
+  { name: "Add Suppliers", path: "/supplier/add", icon: PlusCircle },
   { name: "Refill Inventory", path: "/inventory/re-fill", icon: RefreshCw },
   { name: "Create Digital Store", path: "/create-digital-store", icon: Plus },
   { name: "Digital Store Profile", path: "/digital-store/profile", icon: Store },
-  { name: "Settings", path: "/profile", icon: Settings2}
+  { name: "Settings", path: "/profile", icon: Settings2 }
 ];
 
 export const Navbar = () => {
@@ -95,7 +95,7 @@ export const Navbar = () => {
         e.preventDefault(); // Prevents the browser's default search bar from opening
         inputRef.current?.focus(); // Focus your search input
       }
-      
+
       // Pressing 'Escape' closes the search menu and unfocuses
       if (e.key === "Escape") {
         setIsSearchOpen(false);
@@ -115,7 +115,7 @@ export const Navbar = () => {
 
   return (
     <div className="sticky top-0 z-40 w-full flex items-center justify-between px-4 lg:px-6 bg-white/80 backdrop-blur-md border-b border-slate-200/60 shadow-sm">
-      
+
       {/* LEFT - Store Selector */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
@@ -139,19 +139,17 @@ export const Navbar = () => {
           <DropdownMenuLabel className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-2 py-1.5">
             My Workspaces
           </DropdownMenuLabel>
-          
+
           {MY_STORES.map((store) => (
             <DropdownMenuItem
               key={store.id}
               onClick={() => setSelectedStore(store)}
-              className={`flex items-center justify-between cursor-pointer rounded-xl px-2.5 py-2 my-0.5 md:transition-colors ${
-                selectedStore.id === store.id ? "bg-blue-50 text-blue-700" : "md:hover:bg-slate-50 text-slate-700"
-              }`}
+              className={`flex items-center justify-between cursor-pointer rounded-xl px-2.5 py-2 my-0.5 md:transition-colors ${selectedStore.id === store.id ? "bg-blue-50 text-blue-700" : "md:hover:bg-slate-50 text-slate-700"
+                }`}
             >
               <div className="flex items-center gap-3">
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold border ${
-                  selectedStore.id === store.id ? "bg-white border-blue-200 text-blue-600" : "bg-slate-100 border-slate-200 text-slate-500"
-                }`}>
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold border ${selectedStore.id === store.id ? "bg-white border-blue-200 text-blue-600" : "bg-slate-100 border-slate-200 text-slate-500"
+                  }`}>
                   {store.name.charAt(0)}
                 </div>
                 <span className="font-semibold text-sm">{store.name}</span>
@@ -239,10 +237,10 @@ export const Navbar = () => {
 
       {/* RIGHT - Actions & Profile */}
       <div className="flex items-center gap-2 sm:gap-4">
-        
+
         {/* Create Store Button (Hidden on very small screens) */}
-        <Link 
-          to={'/create-digital-store'} 
+        <Link
+          to={'/create-digital-store'}
           className="hidden sm:flex items-center gap-1.5 text-sm font-semibold text-slate-600 px-3 py-1.5 rounded-lg border border-slate-200 bg-white md:hover:bg-slate-50 md:hover:text-blue-600 md:hover:border-blue-200 md:transition-all shadow-sm"
         >
           <Plus className="w-4 h-4" />
@@ -256,9 +254,9 @@ export const Navbar = () => {
             <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-rose-500 rounded-full border-2 border-white"></span>
           </button>
           <Link to={'/profile'}>
-          <button className="p-2 text-slate-400 md:hover:bg-slate-100 md:hover:text-slate-700 rounded-full md:transition-colors group">
-            <Settings className="w-5 h-5 md:group-hover:rotate-45 md:transition-transform md:duration-300" />
-          </button>
+            <button className="p-2 text-slate-400 md:hover:bg-slate-100 md:hover:text-slate-700 rounded-full md:transition-colors group">
+              <Settings className="w-5 h-5 md:group-hover:rotate-45 md:transition-transform md:duration-300" />
+            </button>
           </Link>
         </div>
 
@@ -271,14 +269,14 @@ export const Navbar = () => {
           className="relative w-9 h-9 rounded-full p-0.5 bg-gradient-to-tr from-indigo-500 to-fuchsia-500 md:hover:scale-105 md:transition-transform cursor-pointer shadow-md"
         >
           <div className="w-full h-full bg-white rounded-full p-0.5">
-            <img 
-              src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix" 
-              alt="Profile" 
+            <img
+              src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix"
+              alt="Profile"
               className="w-full h-full rounded-full bg-slate-100 object-cover"
             />
           </div>
         </Link>
-        
+
       </div>
     </div>
   );

@@ -45,13 +45,13 @@ const Supplier = () => {
           <Bookmark size={18} />
           Saved Drafts
         </button>
-        <GradientButton 
+        <GradientButton
           onClick={() => openQuickCreate("SUPPLIER", () => setRefreshKey(prev => prev + 1))}
           className="h-11 flex items-center shadow-lg shadow-blue-100"
         >
           + Quick Add
         </GradientButton>
-        <button 
+        <button
           onClick={() => navigate("/supplier/add")}
           className="h-11 px-6 rounded-xl border border-slate-200 bg-white text-slate-600 font-bold text-sm hover:bg-slate-50 transition-all flex items-center"
         >
@@ -91,7 +91,7 @@ const Supplier = () => {
           if (s.datas) {
             Object.keys(s.datas).forEach(k => {
               if (k === "address") {
-                 if (s.datas?.address?.full_address) keys.add("address");
+                if (s.datas?.address?.full_address) keys.add("address");
               } else {
                 keys.add(k);
               }
@@ -218,66 +218,66 @@ const Supplier = () => {
                 suppliers.map((sup) => {
                   if (!sup) return null;
                   return (
-                  <tr
-                    key={sup.id}
-                    className="group md:hover:bg-blue-50/30 md:transition-all cursor-pointer"
-                    onClick={() => navigate(`/supplier/${sup.id}`)}
-                  >
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-blue-400 flex items-center justify-center text-white text-sm font-black shadow-lg shadow-blue-100">
-                          {(String(sup.name || 'S')).charAt(0).toUpperCase()}
+                    <tr
+                      key={sup.id}
+                      className="group md:hover:bg-blue-50/30 md:transition-all cursor-pointer"
+                      onClick={() => navigate(`/supplier/${sup.id}`)}
+                    >
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-blue-400 flex items-center justify-center text-white text-sm font-black shadow-lg shadow-blue-100">
+                            {(String(sup.name || 'S')).charAt(0).toUpperCase()}
+                          </div>
+                          <div>
+                            <p className="text-sm font-semibold text-slate-700 tracking-tight">{String(sup.name)}</p>
+                            <p className="text-[11px] font-semibold text-slate-400 font-mono">ID: {sup.id}</p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-sm font-semibold text-slate-700 tracking-tight">{String(sup.name)}</p>
-                          <p className="text-[11px] font-semibold text-slate-400 font-mono">ID: {sup.id}</p>
+                      </td>
+
+                      {selectedKeys.map(key => {
+                        let val: any = sup[key] ?? sup.contact_info?.[key] ?? sup.datas?.[key] ?? "—";
+
+                        // Handle nested address object display
+                        if (key === 'address' && typeof val === 'object' && val !== null) {
+                          val = val.full_address || val.address || "—";
+                        }
+
+                        // Final safety check for any remaining objects
+                        const displayVal = typeof val === 'object' ? JSON.stringify(val) : String(val);
+
+                        return (
+                          <td key={key} className="px-6 py-4 whitespace-nowrap">
+                            <p className="text-[12px] font-semibold tracking-tight text-slate-600">
+                              {displayVal}
+                            </p>
+                          </td>
+                        );
+                      })}
+
+                      <td className="px-6 py-4 text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); navigate(`/supplier/${sup.id}`); }}
+                            className="p-2 text-slate-400 md:hover:text-blue-600 md:hover:bg-white rounded-xl md:transition-all shadow-sm md:active:scale-95"
+                          >
+                            <Eye size={16} />
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); navigate(`/supplier/${sup.id}/edit`); }}
+                            className="p-2 text-slate-400 md:hover:text-blue-600 md:hover:bg-white rounded-xl md:transition-all shadow-sm md:active:scale-95"
+                          >
+                            <Edit size={16} />
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setSupplierToDelete(sup); setIsDeleteDialogOpen(true); }}
+                            className="p-2 text-slate-400 md:hover:text-rose-600 md:hover:bg-white rounded-xl md:transition-all shadow-sm md:active:scale-95"
+                          >
+                            <Trash2 size={16} />
+                          </button>
                         </div>
-                      </div>
-                    </td>
-
-                    {selectedKeys.map(key => {
-                      let val: any = sup[key] ?? sup.contact_info?.[key] ?? sup.datas?.[key] ?? "—";
-                      
-                      // Handle nested address object display
-                      if (key === 'address' && typeof val === 'object' && val !== null) {
-                        val = val.full_address || val.address || "—";
-                      }
-                      
-                      // Final safety check for any remaining objects
-                      const displayVal = typeof val === 'object' ? JSON.stringify(val) : String(val);
-
-                      return (
-                        <td key={key} className="px-6 py-4 whitespace-nowrap">
-                          <p className="text-[12px] font-semibold tracking-tight text-slate-600">
-                            {displayVal}
-                          </p>
-                        </td>
-                      );
-                    })}
-
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        <button
-                          onClick={(e) => { e.stopPropagation(); navigate(`/supplier/${sup.id}`); }}
-                          className="p-2 text-slate-400 md:hover:text-blue-600 md:hover:bg-white rounded-xl md:transition-all shadow-sm md:active:scale-95"
-                        >
-                          <Eye size={16} />
-                        </button>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); navigate(`/supplier/${sup.id}/edit`); }}
-                          className="p-2 text-slate-400 md:hover:text-blue-600 md:hover:bg-white rounded-xl md:transition-all shadow-sm md:active:scale-95"
-                        >
-                          <Edit size={16} />
-                        </button>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); setSupplierToDelete(sup); setIsDeleteDialogOpen(true); }}
-                          className="p-2 text-slate-400 md:hover:text-rose-600 md:hover:bg-white rounded-xl md:transition-all shadow-sm md:active:scale-95"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
+                      </td>
+                    </tr>
                   );
                 })
               )}

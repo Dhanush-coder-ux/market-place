@@ -175,7 +175,7 @@
   .no-scroll {
     overflow: hidden !important;
   }
-  
+
   /* Target the main scroll container specifically when modal is open */
   .no-scroll .overflow-y-auto:not(.modal-content) {
     overflow-y: hidden !important;

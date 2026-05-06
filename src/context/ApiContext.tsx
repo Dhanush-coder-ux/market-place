@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useRef, useCallback, ReactNode } from "react";
+import { createContext, useContext, useState, useRef, useCallback, ReactNode, useEffect } from "react";
 
 const BASE_URL = import.meta.env.VITE_GATEWAY_URL as string;
 
@@ -42,6 +42,7 @@ type ApiContextType = {
   deleteData: (endpoint: string, body?: unknown) => Promise<any>;
   patchData: (endpoint: string, body: unknown) => Promise<any>;
   clearError: () => void;
+  _subscribe: (fn: () => void) => () => void;
 };
 
 const ApiContext = createContext<ApiContextType | null>(null);
@@ -67,27 +68,34 @@ const parseError = async (res: Response): Promise<string> => {
 // ─── Provider ─────────────────────────────────────────────────────────────────
 
 export const ApiProvider = ({ children }: { children: ReactNode }) => {
-  // Coarse global loading (kept for backward compat with existing consumers)
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Per-request loading map — avoids global re-render on every API call
-  const [loadingMap, setLoadingMap] = useState<Record<string, boolean>>({});
+  const loadingMapRef = useRef<Record<string, boolean>>({});
+  const subscribersRef = useRef<Set<() => void>>(new Set());
   const inflightRef = useRef(0);
+  const inflightPromises = useRef<Map<string, Promise<any>>>(new Map());
 
-  const setKey = useCallback((key: string, val: boolean) => {
-    setLoadingMap(prev => {
-      if (prev[key] === val) return prev; // bail if unchanged
-      const next = { ...prev };
-      if (val) next[key] = true;
-      else delete next[key];
-      return next;
-    });
+  const notify = useCallback(() => {
+    subscribersRef.current.forEach(fn => fn());
   }, []);
 
-  const isLoading = useCallback((key: string) => !!loadingMap[key], [loadingMap]);
+  const setKey = useCallback((key: string, val: boolean) => {
+    const current = loadingMapRef.current[key] || false;
+    if (current === val) return;
+    
+    if (val) loadingMapRef.current[key] = true;
+    else delete loadingMapRef.current[key];
+    
+    notify();
+  }, [notify]);
 
-  // ─── Core request ──────────────────────────────────────────────────────────
+  const isLoading = useCallback((key: string) => {
+    // This will be called by the useApiLoading hook which subscribes to updates
+    return !!loadingMapRef.current[key];
+  }, []);
+
+  // --- Core request ---
   const request = useCallback(async (
     method: string,
     endpoint: string,
@@ -100,96 +108,114 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
       url += `?${new URLSearchParams(params).toString()}`
     }
 
-    // GET cache check
+    const key = options?.cacheKey ?? `${method}:${url}`;
+
     if (method === "GET") {
       const cached = getCached(url);
       if (cached !== null) return cached;
     }
 
-    const key = options?.cacheKey ?? `${method}:${url}`;
-    setKey(key, true);
-    inflightRef.current += 1;
-    if (inflightRef.current === 1) setLoading(true);
-    setError(null);
-
-    try {
-      const res = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
-        signal: options?.signal,
-      });
-
-      if (!res.ok) {
-        const msg = await parseError(res);
-        setError(msg);
-        return null;
-      }
-
-      const data = await res.json();
-
-      // Cache successful GET responses
-      if (method === "GET") {
-        setCache(url, data);
-      } else {
-        // Invalidate cache for the affected resource on mutations
-        invalidateCache(`${BASE_URL}${endpoint}`);
-      }
-
-      return data;
-    } catch (err: any) {
-      if (err?.name === "AbortError") return null; // navigation cancelled — silent
-      setError(err?.message ?? "Network error");
-      return null;
-    } finally {
-      setKey(key, false);
-      inflightRef.current -= 1;
-      if (inflightRef.current === 0) setLoading(false);
+    if (inflightPromises.current.has(key)) {
+      return inflightPromises.current.get(key);
     }
+
+    const executeRequest = async () => {
+      setKey(key, true);
+      inflightRef.current += 1;
+      if (inflightRef.current === 1) setLoading(true);
+      setError(null);
+
+      try {
+        const res = await fetch(url, {
+          method,
+          headers: { "Content-Type": "application/json" },
+          ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+          signal: options?.signal,
+        });
+
+        if (!res.ok) {
+          const msg = await parseError(res);
+          setError(msg);
+          return null;
+        }
+
+        const data = await res.json();
+
+        if (method === "GET") {
+          setCache(url, data);
+        } else {
+          invalidateCache(`${BASE_URL}${endpoint}`);
+        }
+
+        return data;
+      } catch (err: any) {
+        if (err?.name === "AbortError") return null;
+        setError(err?.message ?? "Network error");
+        return null;
+      } finally {
+        setKey(key, false);
+        inflightRef.current -= 1;
+        if (inflightRef.current === 0) setLoading(false);
+        inflightPromises.current.delete(key);
+      }
+    };
+
+    const promise = executeRequest();
+    inflightPromises.current.set(key, promise);
+    return promise;
   }, [setKey]);
 
-  // ─── Public API ───────────────────────────────────────────────────────────
-  const getData = useCallback(
-    (endpoint: string, params?: Record<string, string>, cacheKey?: string) =>
-      request("GET", endpoint, undefined, params, { cacheKey }),
-    [request]
-  );
-
-  const postData = useCallback(
-    (endpoint: string, body: unknown) => request("POST", endpoint, body),
-    [request]
-  );
-
-  const putData = useCallback(
-    (endpoint: string, body: unknown) => request("PUT", endpoint, body),
-    [request]
-  );
-
-  const deleteData = useCallback(
-    (endpoint: string, body?: unknown) => request("DELETE", endpoint, body),
-    [request]
-  );
-
-  const patchData = useCallback(
-    (endpoint: string, body: unknown) => request("PATCH", endpoint, body),
-    [request]
-  );
-
+  const getData = useCallback((e: string, p?: any, k?: string) => request("GET", e, undefined, p, { cacheKey: k }), [request]);
+  const postData = useCallback((e: string, b: any) => request("POST", e, b), [request]);
+  const putData = useCallback((e: string, b: any) => request("PUT", e, b), [request]);
+  const deleteData = useCallback((e: string, b?: any) => request("DELETE", e, b), [request]);
+  const patchData = useCallback((e: string, b: any) => request("PATCH", e, b), [request]);
   const clearError = useCallback(() => setError(null), []);
+
+  const subscribe = useCallback((fn: () => void) => {
+    subscribersRef.current.add(fn);
+    return () => subscribersRef.current.delete(fn);
+  }, []);
 
   return (
     <ApiContext.Provider
-      value={{ loading, isLoading, error, getData, postData, putData, deleteData, patchData, clearError }}
+      value={{ 
+        loading, 
+        isLoading, 
+        error, 
+        getData, 
+        postData, 
+        putData, 
+        deleteData, 
+        patchData, 
+        clearError,
+        _subscribe: subscribe // Internal use for the hook
+      }}
     >
       {children}
     </ApiContext.Provider>
   );
 };
 
-// ─── Hook ─────────────────────────────────────────────────────────────────────
+// --- Hooks ---
 
 export const useApi = (): ApiContextType => {
   const ctx = useContext(ApiContext);
   if (!ctx) throw new Error("useApi must be used within ApiProvider");
   return ctx;
+};
+
+/** Specialized hook for tracking a specific request's loading state without re-rendering the whole app */
+export const useApiLoading = (key: string): boolean => {
+  const api = useApi();
+  const [val, setVal] = useState(() => api.isLoading(key));
+
+  useEffect(() => {
+    return (api as any)._subscribe(() => {
+      const next = api.isLoading(key);
+      setVal(next);
+    });
+  }, [api, key]);
+
+  return val;
 };

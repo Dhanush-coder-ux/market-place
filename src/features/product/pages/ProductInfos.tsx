@@ -7,7 +7,7 @@ import {
 } from "lucide-react";
 import { VariantRows, BatchCards, SerialBadgeList } from "../../inventory/components/StockTree";
 import { useHeader } from "@/context/HeaderContext";
-import { useApi } from "@/context/ApiContext";
+import { useApi, useApiLoading } from "@/context/ApiContext";
 import { useToast } from "@/context/ToastContext";
 import { StatCard } from "@/components/common/StatsCard";
 import { ColumnPicker } from "@/components/common/ColumnPicker";
@@ -36,6 +36,8 @@ const columnLabels: Record<string, string> = {
   brand: "Brand",
   supplier: "Supplier",
   serial_number: "Serial Number",
+  reorder_point: "Reorder Pt",
+  status: "Stock Status",
 };
 
 const getColumnLabel = (key: string) => {
@@ -43,11 +45,12 @@ const getColumnLabel = (key: string) => {
   return key.split("_").map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(" ");
 };
 
-const getStockStatus = (stock: number) => {
+const getStockStatus = (stock: number, reorderPoint?: number) => {
   const s = Number(stock) || 0;
-  if (s <= 0) return { label: "0 In Stock", color: "text-rose-600 bg-rose-50 border-rose-200" };
-  if (s <= 15) return { label: `${s} Low Stock`, color: "text-amber-600 bg-amber-50 border-amber-200" };
-  return { label: `${s} In Stock`, color: "text-emerald-600 bg-emerald-50 border-emerald-200" };
+  const rp = Number(reorderPoint) || 10;
+  if (s <= 0) return { label: "Out of Stock", color: "text-rose-600 bg-rose-50 border-rose-200", icon: AlertCircle };
+  if (s <= rp) return { label: "Low Stock", color: "text-amber-600 bg-amber-50 border-amber-200", icon: AlertTriangle };
+  return { label: "In Stock", color: "text-emerald-600 bg-emerald-50 border-emerald-200", icon: Package };
 };
 
 /* ─── Product Row Component ────────────────────────────────────────────────── */
@@ -97,24 +100,27 @@ const ProductRow = React.memo(({
 
   // --- Aggregation logic for badges ---
   const rootSerials = extractSerials(p.serial_number);
-  let totalSerials = rootSerials.length;
-  let totalBatches = batches.length;
+  const { totalSerials, totalBatches } = useMemo(() => {
+    let ts = rootSerials.length;
+    let tb = batches.length;
 
-  if (hasVariants) {
-    combinations.forEach((c: any) => {
-      const cDatas = c.datas || {};
-      const cSerials = extractSerials(c.serial_numbers || cDatas.serial_numbers || (cDatas.datas && cDatas.datas.serial_numbers));
-      totalSerials += cSerials.length;
+    if (hasVariants) {
+      combinations.forEach((c: any) => {
+        const cDatas = c.datas || {};
+        const cSerials = extractSerials(c.serial_numbers || cDatas.serial_numbers || (cDatas.datas && cDatas.datas.serial_numbers));
+        ts += cSerials.length;
 
-      const cBatches = c.batches || [];
-      totalBatches += cBatches.length;
-      
-      cBatches.forEach((cb: any) => {
-        const cbSerials = extractSerials(cb.serial_numbers || (cb.datas && cb.datas.serial_numbers));
-        totalSerials += cbSerials.length;
+        const cBatches = c.batches || [];
+        tb += cBatches.length;
+        
+        cBatches.forEach((cb: any) => {
+          const cbSerials = extractSerials(cb.serial_numbers || (cb.datas && cb.datas.serial_numbers));
+          ts += cbSerials.length;
+        });
       });
-    });
-  }
+    }
+    return { totalSerials: ts, totalBatches: tb };
+  }, [rootSerials, batches, hasVariants, combinations]);
 
   const [showAllBadges, setShowAllBadges] = useState(false);
 
@@ -200,7 +206,7 @@ const ProductRow = React.memo(({
         </td>
 
         {selectedKeys.map(key => {
-          const value = datas[key] !== undefined ? datas[key] : (p as any)[key];
+          const value = (datas[key] !== undefined && datas[key] !== null) ? datas[key] : (p as any)[key];
 
           if (key === "buy_price" || key === "sell_price" || key === "price") {
             return (
@@ -213,10 +219,31 @@ const ProductRow = React.memo(({
           }
 
           if (key === "stocks" || key === "quantity") {
-            const status = getStockStatus(value);
             return (
               <td key={key} className="px-6 py-4 whitespace-nowrap">
-                <span className={`inline-flex px-3 py-1 rounded-md text-[12px] font-medium border ${status.color}`}>
+                <span className="text-[14px] font-black text-slate-800 tabular-nums">{value}</span>
+              </td>
+            );
+          }
+
+          if (key === "reorder_point") {
+            return (
+              <td key={key} className="px-6 py-4 whitespace-nowrap">
+                <span className="text-[12px] font-bold text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-100">
+                  {value !== undefined && value !== null ? value : "—"}
+                </span>
+              </td>
+            );
+          }
+
+          if (key === "status") {
+            const stocks = datas.stocks !== undefined ? datas.stocks : (p as any).stocks;
+            const reorderPoint = Number((p as any).reorder_point ?? datas.reorder_point ?? 0);
+            const status = getStockStatus(stocks, reorderPoint);
+            return (
+              <td key={key} className="px-6 py-4 whitespace-nowrap">
+                <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold border shadow-sm w-fit ${status.color}`}>
+                  <status.icon size={12} />
                   {status.label}
                 </span>
               </td>
@@ -270,9 +297,25 @@ const ProductRow = React.memo(({
             );
           }
 
+          const renderValue = () => {
+            if (value === undefined || value === null || value === "") return "—";
+            if (Array.isArray(value)) {
+              if (value.length === 0) return "—";
+              // Handle variant_types specifically
+              if (typeof value[0] === 'object' && value[0].name) {
+                return value.map((v: any) => v.name).join(", ");
+              }
+              return value.join(", ");
+            }
+            if (typeof value === 'object') {
+              return JSON.stringify(value);
+            }
+            return String(value);
+          };
+
           return (
             <td key={key} className="px-6 py-4 whitespace-nowrap">
-              <span className="text-[13px] font-medium text-slate-600">{value || "—"}</span>
+              <span className="text-[13px] font-medium text-slate-600">{renderValue()}</span>
             </td>
           );
         })}
@@ -345,7 +388,8 @@ const ProductRow = React.memo(({
 const ProductInfos = () => {
   const navigate = useNavigate();
   const { setActions } = useHeader();
-  const { getData, deleteData, loading, error, clearError } = useApi();
+  const { getData, deleteData, error, clearError } = useApi();
+  const loading = useApiLoading("products-list");
   const { showToast } = useToast();
 
   const [products, setProducts] = useState<InventoryRecord[]>([]);
@@ -359,7 +403,7 @@ const ProductInfos = () => {
   const [availableKeys, setAvailableKeys] = useState<string[]>([]);
   const [selectedKeys, setSelectedKeys] = useState<string[]>(() => {
     const saved = localStorage.getItem("product_table_columns");
-    return saved ? JSON.parse(saved) : ["category", "sell_price", "stocks"];
+    return saved ? JSON.parse(saved) : ["category", "sell_price", "stocks", "reorder_point", "status"];
   });
 
   useEffect(() => {
@@ -400,6 +444,8 @@ const ProductInfos = () => {
           keys.add("sell_price");
           keys.add("buy_price");
           keys.add("stocks");
+          keys.add("reorder_point");
+          keys.add("status");
         });
         setAvailableKeys(Array.from(keys).sort());
       }
@@ -441,14 +487,18 @@ const ProductInfos = () => {
   );
 
   const lowStockCount = useMemo(() =>
-    products.filter(p => Number(p.stocks || 0) <= 15).length,
+    products.filter(p => {
+      const stock = Number(p.stocks || 0);
+      const rp = Number((p as any).reorder_point ?? p.datas?.reorder_point ?? 10);
+      return stock <= rp;
+    }).length,
     [products]
   );
 
   return (
     <div className="space-y-6 md:animate-in md:fade-in md:duration-500">
       {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="flex flex-nowrap overflow-x-auto custom-scrollbar gap-3 pb-2 -mx-2 px-2 sm:grid sm:grid-cols-2 lg:grid-cols-4 sm:overflow-visible sm:pb-0 sm:mx-0 sm:px-0 touch-pan-x">
         <StatCard
           label="Total Products"
           value={products.length.toString()}
@@ -542,7 +592,7 @@ const ProductInfos = () => {
                 <th className="px-6 py-4 text-right whitespace-nowrap">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-slate-100 performance-list">
               {loading ? (
                 <tr><td colSpan={selectedKeys.length + 3} className="py-16 text-center"><Loader /></td></tr>
               ) : filteredProducts.length === 0 ? (

@@ -1,4 +1,5 @@
 import { FC, useRef, ChangeEvent, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   FileSpreadsheet,
   FileText,
@@ -43,7 +44,7 @@ const ImportExportFloatingCard: FC<ImportExportFloatingCardProps> = ({
     if (file && onImport) onImport(file);
   };
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-md transition-all">
       <div className="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-black/5">
         
@@ -133,7 +134,8 @@ const ImportExportFloatingCard: FC<ImportExportFloatingCardProps> = ({
           </footer>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

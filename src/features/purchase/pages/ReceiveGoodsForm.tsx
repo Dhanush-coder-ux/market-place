@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   Search, AlertCircle, Save,
@@ -975,7 +976,7 @@ const ReceiveGoodForm = () => {
         </div>
       </div>
       {/* Batch Modal — rendered at top level to avoid overflow clipping */}
-      {batchModal.isOpen && (
+      {batchModal.isOpen && createPortal(
         <div className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col border border-slate-200 animate-in zoom-in-95 duration-200">
             <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center bg-amber-50/30">
@@ -1053,7 +1054,8 @@ const ReceiveGoodForm = () => {
               )}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

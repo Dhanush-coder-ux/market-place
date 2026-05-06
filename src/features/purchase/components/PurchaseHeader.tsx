@@ -11,7 +11,7 @@ const PurchaseHeader = () => {
         subtitle="Monitor supplier invoices, and payment statuses"
         actions={
           <GradientButton path="/purchase/add" className="h-10 text-[13px] px-4">
-            + Add Direct Purchase
+            + Add Purchase
           </GradientButton>
         }
       />

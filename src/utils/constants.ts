@@ -94,7 +94,7 @@ export const sidebarLinks: SidebarLink[] = [
     subLinks: [
       { name: "Add Product", path: "/product/add", icon: UserPlus },
       { name: "Saved Drafts", path: "/product/drafts", icon: Bookmark },
-      { name: "Product Infos", path: "/product/all", icon: ClipboardList, addPath: "/product/add" },
+      { name: "Products List", path: "/product/all", icon: ClipboardList, addPath: "/product/add" },
       { name: "Product Detail", path: "/product", icon: FileText },
     ],
   },
@@ -106,7 +106,7 @@ export const sidebarLinks: SidebarLink[] = [
     subLinks: [
       { name: "Add Suppliers", path: "/supplier/add", icon: UserPlus },
       { name: "Saved Drafts", path: "/supplier/drafts", icon: Bookmark },
-      { name: "Suppliers Infos", path: "/supplier/all", icon: ClipboardList, addPath: "/supplier/add" },
+      { name: "Suppliers List", path: "/supplier/all", icon: ClipboardList, addPath: "/supplier/add" },
       { name: "Supplier Details", path: "/supplier", icon: FileText },
     ],
   },
@@ -132,7 +132,7 @@ export const sidebarLinks: SidebarLink[] = [
     subLinks: [
       { name: "Add Customer", path: "/customers/add", icon: UserPlus },
       { name: "Saved Drafts", path: "/customers/drafts", icon: Bookmark },
-      { name: "Customers Infos", path: "/customers-Summary", icon: ClipboardList, addPath: "/customers/add" },
+      { name: "Customers List", path: "/customers-Summary", icon: ClipboardList, addPath: "/customers/add" },
       { name: "Customer Details", path: "/customers", icon: FileText },
     ],
   },
@@ -144,7 +144,7 @@ export const sidebarLinks: SidebarLink[] = [
     subLinks: [
       { name: "Add Employee", path: "/employee/add", icon: UserPlus },
       { name: "Saved Drafts", path: "/employee/drafts", icon: Bookmark },
-      { name: "Employee Infos", path: "/employee/all", icon: ClipboardList, addPath: "/employee/add" },
+      { name: "Employee List", path: "/employee/all", icon: ClipboardList, addPath: "/employee/add" },
       { name: "Employee Details", path: "/employee", icon: FileText },
     ],
   },

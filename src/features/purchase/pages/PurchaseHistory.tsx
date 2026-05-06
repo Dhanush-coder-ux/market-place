@@ -9,6 +9,7 @@ import {
   SlidersHorizontal,
   LayoutGrid,
   List,
+  TrendingUp,
 } from "lucide-react";
 import DirectHeader from "../components/DirectHeader";
 import { FloatingFormCard } from "@/components/common/FloatingFormCard";
@@ -21,6 +22,7 @@ import type { PurchaseRecord } from "@/types/api";
 export interface ProductItem {
   name: string;
   quantity: number;
+  stocks_before?: number;
   buy_price?: number;
   sell_price?: number;
   barcode?: string;
@@ -31,6 +33,7 @@ export interface ProductItem {
     buy_price?: number;
     sell_price?: number;
     stocks?: number;
+    stocks_before?: number;
     batches: {
       name: string;
       stocks: number;
@@ -46,7 +49,6 @@ export interface ProductItem {
     manufacturing_date?: string;
     serial_numbers?: string[];
   }[];
-
 }
 
 export type PurchaseType = "Purchase" | "PO Purchase" | "Production";
@@ -105,6 +107,7 @@ function toDisplayData(p: PurchaseRecord): DirectPurchaseData {
     products: (products ?? []).map((pr: any) => ({
       name: String(pr.name ?? pr.product_name ?? "Item"),
       quantity: Number(pr.quantity ?? pr.qty ?? pr.stocks ?? 1),
+      stocks_before: pr.stocks_before,
       buy_price: pr.buy_price,
       sell_price: pr.sell_price,
       barcode: pr.barcode,
@@ -115,6 +118,7 @@ function toDisplayData(p: PurchaseRecord): DirectPurchaseData {
         buy_price: v.buy_price,
         sell_price: v.sell_price,
         stocks: v.stocks,
+        stocks_before: v.stocks_before,
         batches: Array.isArray(v.batches) ? v.batches.map((b: any) => ({
           name: b.name,
           stocks: b.stocks ?? b.quantity ?? 1,
@@ -583,6 +587,32 @@ const PurchaseHistory = () => {
                         )}
                       </div>
                     </div>
+
+                    {/* Stock Movement Tracking */}
+                    {product.stocks_before !== undefined && (
+                      <div className="mb-3 p-2.5 bg-zinc-50 rounded-xl border border-zinc-100 flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                          <div className="flex flex-col">
+                            <span className="text-[8px] font-black text-zinc-400 uppercase tracking-widest">Opening Stock</span>
+                            <span className="text-xs font-bold text-zinc-600">{product.stocks_before}</span>
+                          </div>
+                          <div className="w-px h-6 bg-zinc-200" />
+                          <div className="flex flex-col">
+                            <span className="text-[8px] font-black text-blue-400 uppercase tracking-widest">Purchased</span>
+                            <span className="text-xs font-bold text-blue-600">+{product.quantity}</span>
+                          </div>
+                          <div className="w-px h-6 bg-zinc-200" />
+                          <div className="flex flex-col">
+                            <span className="text-[8px] font-black text-emerald-400 uppercase tracking-widest">Closing Stock</span>
+                            <span className="text-xs font-bold text-emerald-600">{(product.stocks_before ?? 0) + product.quantity}</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1.5 px-2 py-1 bg-emerald-100/50 rounded-lg border border-emerald-100">
+                          <TrendingUp size={12} className="text-emerald-600" />
+                          <span className="text-[9px] font-black text-emerald-700 uppercase">Stock Updated</span>
+                        </div>
+                      </div>
+                    )}
 
                     {/* Render Variants */}
                     {product.variants && product.variants.length > 0 && (

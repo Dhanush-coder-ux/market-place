@@ -247,13 +247,19 @@ export default function Employee() {
                         Accepted
                       </span>
                     </td>
-                    {selectedKeys.map(key => (
-                      <td key={key} className="px-6 py-4 whitespace-nowrap">
-                        <p className={`text-[12px] font-semibold tracking-tight ${key === 'role' ? 'text-blue-600 bg-blue-50 w-fit px-2 py-0.5 rounded-md' : 'text-slate-600'}`}>
-                          {String((emp.datas as any)?.[key] ?? (emp as any)[key] ?? "—")}
-                        </p>
-                      </td>
-                    ))}
+                    {selectedKeys.map(key => {
+                      const value = (emp.datas as any)?.[key] ?? (emp as any)[key];
+                      const displayValue = value === undefined || value === null ? "—" : 
+                                          typeof value === 'object' ? (Array.isArray(value) ? value.join(", ") : JSON.stringify(value)) : 
+                                          String(value);
+                      return (
+                        <td key={key} className="px-6 py-4 whitespace-nowrap">
+                          <p className={`text-[12px] font-semibold tracking-tight ${key === 'role' ? 'text-blue-600 bg-blue-50 w-fit px-2 py-0.5 rounded-md' : 'text-slate-600'}`}>
+                            {displayValue}
+                          </p>
+                        </td>
+                      );
+                    })}
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-1">
                         <button

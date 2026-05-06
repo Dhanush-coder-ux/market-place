@@ -12,10 +12,11 @@ import {
   Filter,
   Search,
   AlertCircle,
-  Tag
+  Tag,
+  AlertTriangle
 } from "lucide-react";
 import { VariantRows, BatchCards, SerialBadgeList } from "../components/StockTree";
-import { useApi } from "@/context/ApiContext";
+import { useApi, useApiLoading } from "@/context/ApiContext";
 import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 import Loader from "@/components/common/Loader";
 import { StatCard } from "@/components/common/StatsCard";
@@ -90,11 +91,13 @@ const formatDate = (dateStr?: string) => {
   return new Date(dateStr).toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' });
 };
 
-const getStockStatus = (stock: number) => {
+const getStockStatus = (stock: number, reorderPoint?: number) => {
   const s = Number(stock) || 0;
-  if (s <= 0) return { label: "0 In Stock", color: "text-rose-600 bg-rose-50 border-rose-200" };
-  if (s <= 15) return { label: `${s} Low Stock`, color: "text-amber-600 bg-amber-50 border-amber-200" };
-  return { label: `${s} In Stock`, color: "text-emerald-600 bg-emerald-50 border-emerald-200" };
+  const rp = Number(reorderPoint) || 10; // Fallback to 10 if not set
+
+  if (s <= 0) return { label: "Out of Stock", color: "text-rose-600 bg-rose-50 border-rose-200", icon: AlertCircle };
+  if (s <= rp) return { label: "Low Stock", color: "text-amber-600 bg-amber-50 border-amber-200", icon: AlertTriangle };
+  return { label: "In Stock", color: "text-emerald-600 bg-emerald-50 border-emerald-200", icon: Package };
 };
 
 const formatCurrency = (amount?: number | string) => {
@@ -155,22 +158,25 @@ const ProductRow = React.memo(({
   const isExpandable = hasVariants || hasBatches || hasSerials;
 
   const stockNumber = Number(item.stocks || 0);
-  const status = getStockStatus(stockNumber);
+  const reorderPoint = Number((item as any).reorder_point ?? datas.reorder_point ?? 0);
+  const status = getStockStatus(stockNumber, reorderPoint);
   
   const navigate = useNavigate();
 
-  let totalSerials = serials.length;
-  let totalBatches = batches.length;
-
-  if (hasVariants) {
-    combinations.forEach((c: any) => {
-      const cDatas = c.datas || {};
-      const cSerials = parseData(cDatas.serial_numbers || c.serial_numbers || (cDatas.datas && cDatas.datas.serial_numbers));
-      totalSerials += cSerials.length;
-      const cBatches = parseData(c.batches);
-      totalBatches += cBatches.length;
-    });
-  }
+  const { totalSerials, totalBatches } = useMemo(() => {
+    let ts = serials.length;
+    let tb = batches.length;
+    if (hasVariants) {
+      combinations.forEach((c: any) => {
+        const cDatas = c.datas || {};
+        const cSerials = parseData(cDatas.serial_numbers || c.serial_numbers || (cDatas.datas && cDatas.datas.serial_numbers));
+        ts += cSerials.length;
+        const cBatches = parseData(c.batches);
+        tb += cBatches.length;
+      });
+    }
+    return { totalSerials: ts, totalBatches: tb };
+  }, [serials, batches, hasVariants, combinations]);
 
   const [showAllBadges, setShowAllBadges] = useState(false);
 
@@ -290,7 +296,14 @@ const ProductRow = React.memo(({
         </td>
 
         <td className="px-6 py-4 text-right">
-          <span className={`inline-flex px-3 py-1 rounded-md text-[12px] font-medium border ${status.color}`}>
+          <span className="text-[14px] font-black text-slate-800 tabular-nums">{stockNumber}</span>
+        </td>
+        <td className="px-6 py-4 text-center">
+           <span className="text-[12px] font-bold text-slate-400 bg-slate-50 px-2 py-1 rounded border border-slate-100">{reorderPoint !== undefined && reorderPoint !== null ? reorderPoint : "—"}</span>
+        </td>
+        <td className="px-6 py-4 text-right">
+          <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold border shadow-sm transition-all ${status.color}`}>
+            <status.icon size={12} />
             {status.label}
           </span>
         </td>
@@ -405,14 +418,15 @@ const ProductRow = React.memo(({
 
 // --- Main Component ---
 const InventoryPage = () => {
-  const { getData, loading, error, clearError } = useApi();
+  const { getData, error, clearError } = useApi();
+  const loading = useApiLoading("inventory-list");
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [refreshKey] = useState(0);
 
   useEffect(() => {
-    getData(`${ENDPOINTS.INVENTORIES}/by/shop/${SHOP_ID}`).then((res: any) => {
+    getData(`${ENDPOINTS.INVENTORIES}/by/shop/${SHOP_ID}`, undefined, "inventory-list").then((res: any) => {
       if (res && res.data) {
         setInventory(res.data);
       }
@@ -436,7 +450,8 @@ const InventoryPage = () => {
     const total = filteredInventory.length;
     const lowStock = filteredInventory.filter((p: InventoryItem) => {
       const stock = Number(p.stocks || 0);
-      return stock > 0 && stock <= 15;
+      const rp = Number((p as any).reorder_point ?? p.datas?.reorder_point ?? 10);
+      return stock <= rp;
     }).length;
     return { total, lowStock };
   }, [filteredInventory]);
@@ -455,7 +470,7 @@ const InventoryPage = () => {
 
 
       {/* STATS CARDS */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+      <div className="flex flex-nowrap overflow-x-auto custom-scrollbar gap-3 pb-2 -mx-2 px-2 sm:grid sm:grid-cols-2 lg:grid-cols-4 sm:overflow-visible sm:pb-0 sm:mx-0 sm:px-0 touch-pan-x">
         <StatCard
           icon={Package}
           label="Catalog Coverage"
@@ -550,12 +565,14 @@ const InventoryPage = () => {
                   <th className="px-6 py-6">Serial Tracking</th>
                   <th className="px-6 py-6 text-right">Costing</th>
                   <th className="px-6 py-6 text-right">Selling</th>
-                  <th className="px-6 py-6 text-right">Inventory</th>
+                  <th className="px-6 py-6 text-right">Stock</th>
+                  <th className="px-6 py-6 text-center">Reorder Pt</th>
+                  <th className="px-6 py-6 text-right">Status</th>
                   <th className="px-6 py-6 text-right">Updated</th>
                   <th className="px-8 py-6 w-12 text-center">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-50">
+              <tbody className="bg-white divide-y divide-slate-100 performance-list">
                 {filteredInventory.map((item: InventoryItem) => (
                   <ProductRow
                     key={item.id}

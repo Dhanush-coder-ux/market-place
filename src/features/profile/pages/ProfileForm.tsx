@@ -16,12 +16,11 @@ import {
   BadgeCheck,
   Save,
   Bookmark,
-  Image as ImageIcon,
 } from "lucide-react";
 import { useHeader } from "@/context/HeaderContext";
 import { useToast } from "@/context/ToastContext";
 import { useApi } from "@/context/ApiContext";
-import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
+import { ENDPOINTS } from "@/services/endpoints";
 import Input from "@/components/ui/Input";
 import { GradientButton } from "@/components/ui/GradientButton";
 import ImageUpload from "@/components/common/ImageUpload";

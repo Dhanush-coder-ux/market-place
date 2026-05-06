@@ -1,4 +1,5 @@
 import React from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { AlertTriangle, X } from "lucide-react";
 import { useMediaQuery } from "@/hooks/use-media-query";
@@ -29,7 +30,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   useScrollLock(isOpen);
   const isDesktop = useMediaQuery("(min-width: 768px)");
 
-  return (
+  return createPortal(
     <AnimatePresence>
       {isOpen && (
         <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4">
@@ -88,6 +89,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
           </motion.div>
         </div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 };

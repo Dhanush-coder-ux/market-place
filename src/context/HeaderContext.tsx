@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, ReactNode } from "react";
+import { createContext, useContext, useState, ReactNode, useMemo } from "react";
 
 interface HeaderContextType {
   actions: ReactNode | null;
@@ -13,8 +13,15 @@ export const HeaderProvider = ({ children }: { children: ReactNode }) => {
   const [actions, setActions] = useState<ReactNode | null>(null);
   const [bottomActions, setBottomActions] = useState<ReactNode | null>(null);
 
+  const value = useMemo(() => ({ 
+    actions, 
+    setActions, 
+    bottomActions, 
+    setBottomActions 
+  }), [actions, bottomActions]);
+
   return (
-    <HeaderContext.Provider value={{ actions, setActions, bottomActions, setBottomActions }}>
+    <HeaderContext.Provider value={value}>
       {children}
     </HeaderContext.Provider>
   );

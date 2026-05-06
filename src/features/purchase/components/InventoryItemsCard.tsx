@@ -17,6 +17,7 @@ import {
   Package
 } from "lucide-react";
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { SearchSelect } from "@/components/inputbuilders/SearchSelect";
 import { inventoryApi } from "@/services/api/inventory";
 import { ReusableSelect } from "@/components/ui/ReusableSelect";
@@ -205,7 +206,7 @@ export const InventoryItemsCard = ({
   return (
     <>
       {/* Variant Modal — rendered outside the card to avoid overflow clipping */}
-      {variantModal.isOpen && (
+      {variantModal.isOpen && createPortal(
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/30 backdrop-blur-sm p-4">
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col border border-slate-200">
             <div className="px-8 py-5 border-b border-slate-100 flex justify-between items-center">
@@ -269,11 +270,12 @@ export const InventoryItemsCard = ({
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Batch Modal — rendered outside the card to avoid overflow clipping */}
-      {batchModal.isOpen && (
+      {batchModal.isOpen && createPortal(
         <div className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col border border-slate-200 animate-in zoom-in-95 duration-200">
             <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center bg-amber-50/30">
@@ -350,7 +352,8 @@ export const InventoryItemsCard = ({
               )}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
     <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">

@@ -1,6 +1,5 @@
 import { createRoot } from 'react-dom/client'
 import App from './App'
-import { StrictMode } from 'react';
 import { PurchaseSettingsProvider } from '@/context/PurchaseContext';
 import { ApiProvider } from '@/context/ApiContext';
 
@@ -13,19 +12,17 @@ import { ToastProvider } from '@/context/ToastContext';
 import { QuickCreateProvider } from '@/features/common/QuickCreate/QuickCreateContext';
 
 createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <ApiProvider>
-      <PurchaseSettingsProvider>
-        <InputBuilderProvider>
-          <HeaderProvider>
-            <ToastProvider>
-              <QuickCreateProvider>
-                <App />
-              </QuickCreateProvider>
-            </ToastProvider>
-          </HeaderProvider>
-        </InputBuilderProvider>
-      </PurchaseSettingsProvider>
-    </ApiProvider>
-  </StrictMode>
+  <ApiProvider>
+    <PurchaseSettingsProvider>
+      <InputBuilderProvider>
+        <HeaderProvider>
+          <ToastProvider>
+            <QuickCreateProvider>
+              <App />
+            </QuickCreateProvider>
+          </ToastProvider>
+        </HeaderProvider>
+      </InputBuilderProvider>
+    </PurchaseSettingsProvider>
+  </ApiProvider>
 )

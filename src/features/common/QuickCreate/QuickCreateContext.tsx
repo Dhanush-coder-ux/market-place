@@ -39,8 +39,10 @@ export const QuickCreateProvider: React.FC<{ children: React.ReactNode }> = ({ c
     closeQuickCreate();
   };
 
+  const value = React.useMemo(() => ({ openQuickCreate, closeQuickCreate }), [openQuickCreate, closeQuickCreate]);
+
   return (
-    <QuickCreateContext.Provider value={{ openQuickCreate, closeQuickCreate }}>
+    <QuickCreateContext.Provider value={value}>
       {children}
       
       {state.type === 'PRODUCT' && (

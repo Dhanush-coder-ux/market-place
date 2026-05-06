@@ -10,7 +10,6 @@ import { useApi } from "@/context/ApiContext";
 import { useToast } from "@/context/ToastContext";
 import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 import Loader from "@/components/common/Loader";
-import { StatCard } from "@/components/common/StatsCard";
 import { Modal, ProfileHeaderCard, SectionCard, DetailItem } from "@/components/common/SuperUI";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { SearchSelect } from "@/components/inputbuilders/SearchSelect";
@@ -225,7 +224,7 @@ const ProductDetail = () => {
         ))}
       </div>
 
-      <div className="flex flex-wrap gap-2">
+      {/* <div className="flex flex-wrap gap-2">
         <StatCard icon={Package} label="Current Stock" value={String(currentStock)}
           iconBg="bg-blue-50" iconColor="text-blue-600" className="flex-1 min-w-[140px]" />
         <StatCard icon={Download} label="Buying Price" value={`₹${buyingPrice}`}
@@ -243,7 +242,7 @@ const ProductDetail = () => {
           iconBg="bg-indigo-50" iconColor="text-indigo-600"
           className="flex-1 min-w-[140px]"
         />
-      </div>
+      </div> */}
 
       {/* ── Tab Panels ───────────────────────────────────────── */}
       <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">

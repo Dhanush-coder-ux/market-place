@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { createPortal } from "react-dom";
 import { X, CheckCircle2, ChevronRight, ChevronLeft } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { GradientButton } from "@/components/ui/GradientButton";
@@ -70,7 +71,7 @@ export const QuickCreateModal: React.FC<QuickCreateModalProps> = ({
     "2xl": "max-w-2xl",
   }[size];
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-md p-4 animate-in fade-in duration-300">
       <motion.div
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -182,6 +183,7 @@ export const QuickCreateModal: React.FC<QuickCreateModalProps> = ({
           </div>
         </div>
       </motion.div>
-    </div>
+    </div>,
+    document.body
   );
 };

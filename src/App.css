@@ -165,6 +165,10 @@
     scroll-behavior: smooth;
     /* Prevent elastic scrolling on the root (Flutter WebView handles this) */
     overscroll-behavior: none;
+    /* GPU acceleration for the entire viewport */
+    transform: translateZ(0);
+    /* Improve scroll performance by signaling that we won't shift layout significantly */
+    contain: layout style;
   }
 
   @theme {
@@ -244,6 +248,12 @@
   /* Adaptive Shadow for performance */
   .shadow-performance {
     @apply shadow-sm md:shadow-md transition-shadow duration-300;
+  }
+
+  /* Extreme WebView Performance: Skip rendering of off-screen list items */
+  .performance-list > * {
+    content-visibility: auto;
+    contain-intrinsic-size: 0 80px; /* Guessing average row height */
   }
 }
 

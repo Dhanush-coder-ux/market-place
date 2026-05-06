@@ -1,4 +1,5 @@
 import React, { useEffect } from "react";
+import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 
 
@@ -31,7 +32,7 @@ export const FloatingFormCard: React.FC<FloatingFormCardProps> = ({
 
   if (!isOpen) return null;
 
-  return (
+  return createPortal(
     // 1. Backdrop Overlay (Added p-4 to ensure card never touches screen edges on mobile)
     <div 
       className="fixed inset-0 z-[999] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 sm:p-6 transition-all animate-in fade-in duration-200"
@@ -66,6 +67,7 @@ export const FloatingFormCard: React.FC<FloatingFormCardProps> = ({
         </div>
 
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

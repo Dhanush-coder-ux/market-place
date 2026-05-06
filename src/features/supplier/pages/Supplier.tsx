@@ -46,17 +46,11 @@ const Supplier = () => {
           Saved Drafts
         </button>
         <GradientButton
-          onClick={() => openQuickCreate("SUPPLIER", () => setRefreshKey(prev => prev + 1))}
+          onClick={() => navigate("/supplier/add")}
           className="h-11 flex items-center shadow-lg shadow-blue-100"
         >
-          + Quick Add
+          + Add Supplier
         </GradientButton>
-        <button
-          onClick={() => navigate("/supplier/add")}
-          className="h-11 px-6 rounded-xl border border-slate-200 bg-white text-slate-600 font-bold text-sm hover:bg-slate-50 transition-all flex items-center"
-        >
-          + Full Form
-        </button>
       </div>
     );
     return () => setActions(null);

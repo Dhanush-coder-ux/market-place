@@ -17,6 +17,7 @@ import { ColumnPicker } from "@/components/common/ColumnPicker";
 import { useNavigate } from "react-router-dom";
 import { ReusableSelect } from "@/components/ui/ReusableSelect";
 import { useToast } from "@/context/ToastContext";
+import { createPortal } from "react-dom";
 
 // ─── Types & Interfaces ──────────────────────────────────────────────────────
 
@@ -29,6 +30,7 @@ export interface Movement {
   sku: string;
   type: MovementType;
   qty: number;
+  stocks_before?: number;
   source: string;
   destination: string;
   ref: string;
@@ -93,6 +95,7 @@ function purchaseToMovements(records: PurchaseRecord[], movType: MovementType): 
               movements.push({
                 ...baseMovement,
                 qty: Number(batch.stocks ?? batch.quantity ?? 1),
+                stocks_before: batch.stocks_before ?? variant.stocks_before ?? prod.stocks_before,
                 variant: variant.name || variant.variant_name || variant.id,
                 batch: batch.name || batch.batch_name || batch.id,
                 serial_numbers: Array.isArray(batch.serial_numbers?.serial_numbers) 
@@ -106,6 +109,7 @@ function purchaseToMovements(records: PurchaseRecord[], movType: MovementType): 
             movements.push({
               ...baseMovement,
               qty: Number(variant.stocks ?? variant.quantity ?? 1),
+              stocks_before: variant.stocks_before ?? prod.stocks_before,
               variant: variant.name || variant.variant_name || variant.id,
             });
           }
@@ -117,6 +121,7 @@ function purchaseToMovements(records: PurchaseRecord[], movType: MovementType): 
           movements.push({
             ...baseMovement,
             qty: Number(batch.stocks ?? batch.quantity ?? 1),
+            stocks_before: batch.stocks_before ?? prod.stocks_before,
             batch: batch.name || batch.batch_name || batch.id,
             serial_numbers: Array.isArray(batch.serial_numbers?.serial_numbers) 
               ? batch.serial_numbers.serial_numbers 
@@ -131,6 +136,7 @@ function purchaseToMovements(records: PurchaseRecord[], movType: MovementType): 
         movements.push({
           ...baseMovement,
           qty: Number(prod?.quantity ?? prod?.qty ?? prod?.stocks ?? 1),
+          stocks_before: prod.stocks_before,
           variant: prod.variant_name || prod.variant || prod.variant_id || prod.varient_id || "",
           batch: prod.batch_name || prod.batch_id || "",
           serial_numbers: Array.isArray(prod.serial_numbers) ? prod.serial_numbers : [],
@@ -211,19 +217,17 @@ function DetailDrawer({ movement, onClose }: DetailDrawerProps) {
     showToast("Copied to clipboard!", "success");
   };
 
-
   const isPositive = movement.qty > 0;
 
-  return (
-    <div className="fixed inset-0 z-50 flex justify-end" onClick={onClose}>
-      <div className="absolute inset-0 bg-slate-900/30 backdrop-blur-sm" />
+  return createPortal(
+    <div className="fixed inset-0 z-[100] flex justify-end" onClick={onClose}>
+      <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity" />
       <div
-        className="relative w-full max-w-md bg-white border-l border-slate-200 h-full overflow-y-auto shadow-2xl flex flex-col"
+        className="relative w-full max-w-md bg-white border-l border-slate-200 h-full overflow-y-auto shadow-2xl flex flex-col animate-in slide-in-from-right duration-300"
         onClick={e => e.stopPropagation()}
-        style={{ animation: "slideIn .22s cubic-bezier(.4,0,.2,1)" }}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50/50 sticky top-0 z-10 backdrop-blur-md">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-white/80 sticky top-0 z-20 backdrop-blur-md">
           <div className="flex items-center gap-3">
              <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-lg ${isPositive ? 'bg-emerald-500 shadow-emerald-200' : 'bg-rose-500 shadow-rose-200'}`}>
                 {isPositive ? <TrendingUp size={20} /> : <TrendingDown size={20} />}
@@ -233,23 +237,45 @@ function DetailDrawer({ movement, onClose }: DetailDrawerProps) {
                 <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">REF: {movement.ref}</p>
              </div>
           </div>
-          <button onClick={onClose} className="p-2 rounded-xl hover:bg-white hover:shadow-sm text-slate-400 hover:text-slate-700 transition-all border border-transparent hover:border-slate-200">
+          <button onClick={onClose} className="p-2 rounded-xl hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-all border border-transparent hover:border-slate-200">
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Content */}
-        <div className="flex-1 p-6 space-y-6">
+        <div className="flex-1 p-6 space-y-8">
           
           {/* Main Impact Hero */}
-          <div className={`rounded-3xl border-2 p-6 text-center space-y-2 transition-all ${isPositive ? 'bg-emerald-50/30 border-emerald-100/50' : 'bg-rose-50/30 border-rose-100/50'}`}>
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Net Stock Impact</p>
-            <div className="flex items-center justify-center gap-3">
-               <span className={`text-4xl font-black tabular-nums ${isPositive ? 'text-emerald-600' : 'text-rose-600'}`}>
-                 {isPositive ? `+${movement.qty}` : movement.qty}
-               </span>
-               <span className="text-slate-400 font-bold text-sm">Units</span>
+          <div className={`rounded-3xl border-2 p-6 text-center space-y-4 shadow-sm transition-all ${isPositive ? 'bg-emerald-50/50 border-emerald-100/50' : 'bg-rose-50/50 border-rose-100/50'}`}>
+            <div className="space-y-1">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Net Stock Impact</p>
+              <div className="flex items-center justify-center gap-3">
+                <span className={`text-4xl font-black tabular-nums ${isPositive ? 'text-emerald-600' : 'text-rose-600'}`}>
+                  {isPositive ? `+${movement.qty}` : movement.qty}
+                </span>
+                <span className="text-slate-400 font-bold text-sm">Units</span>
+              </div>
             </div>
+
+            {movement.stocks_before !== undefined && (
+              <div className="grid grid-cols-3 gap-2 bg-white/80 p-3 rounded-2xl border border-white shadow-sm">
+                <div className="flex flex-col items-center">
+                  <span className="text-[8px] font-black text-slate-400 uppercase tracking-tighter">Opening</span>
+                  <span className="text-xs font-bold text-slate-700">{movement.stocks_before}</span>
+                </div>
+                <div className="flex flex-col items-center border-x border-slate-100">
+                  <span className={`text-[8px] font-black uppercase tracking-tighter ${isPositive ? 'text-emerald-400' : 'text-rose-400'}`}>Change</span>
+                  <span className={`text-xs font-bold ${isPositive ? 'text-emerald-600' : 'text-rose-600'}`}>
+                    {isPositive ? `+${movement.qty}` : movement.qty}
+                  </span>
+                </div>
+                <div className="flex flex-col items-center">
+                  <span className="text-[8px] font-black text-blue-400 uppercase tracking-tighter">Closing</span>
+                  <span className="text-xs font-bold text-blue-600">{(movement.stocks_before ?? 0) + movement.qty}</span>
+                </div>
+              </div>
+            )}
+
             <div className="inline-flex items-center px-3 py-1 rounded-full bg-white border border-slate-100 shadow-sm">
                <TypeBadge type={movement.type} />
             </div>
@@ -261,7 +287,7 @@ function DetailDrawer({ movement, onClose }: DetailDrawerProps) {
              
              {/* Product Level */}
              <div className="relative pl-6 before:absolute before:left-[11px] before:top-8 before:bottom-0 before:w-0.5 before:bg-slate-100">
-                <div className="relative group">
+                <div className="relative group mb-4">
                    <div className="absolute -left-[19px] top-1.5 w-4 h-4 rounded-full border-2 border-blue-500 bg-white z-10" />
                    <div className="bg-blue-50/40 border border-blue-100 rounded-2xl p-4 transition-all hover:bg-blue-50 hover:shadow-md hover:shadow-blue-500/5">
                       <div className="flex items-center gap-2 text-blue-600 font-black text-[10px] uppercase tracking-widest mb-1">
@@ -277,7 +303,7 @@ function DetailDrawer({ movement, onClose }: DetailDrawerProps) {
 
                 {/* Variant Level */}
                 {movement.variant && (
-                   <div className="mt-4 relative group">
+                   <div className="relative group mb-4">
                       <div className="absolute -left-[19px] top-1.5 w-4 h-4 rounded-full border-2 border-violet-500 bg-white z-10" />
                       <div className="bg-violet-50/40 border border-violet-100 rounded-2xl p-4 ml-2 transition-all hover:bg-violet-50 hover:shadow-md hover:shadow-violet-500/5">
                          <div className="flex items-center gap-2 text-violet-600 font-black text-[10px] uppercase tracking-widest mb-1">
@@ -290,7 +316,7 @@ function DetailDrawer({ movement, onClose }: DetailDrawerProps) {
 
                 {/* Batch Level */}
                 {movement.batch && (
-                   <div className="mt-4 relative group">
+                   <div className="relative group mb-4">
                       <div className="absolute -left-[19px] top-1.5 w-4 h-4 rounded-full border-2 border-amber-500 bg-white z-10" />
                       <div className="bg-amber-50/40 border border-amber-100 rounded-2xl p-4 ml-4 transition-all hover:bg-amber-50 hover:shadow-md hover:shadow-amber-500/5">
                          <div className="flex items-center gap-2 text-amber-600 font-black text-[10px] uppercase tracking-widest mb-1">
@@ -332,7 +358,7 @@ function DetailDrawer({ movement, onClose }: DetailDrawerProps) {
 
                 {/* Serial Numbers Level */}
                 {movement.serial_numbers && movement.serial_numbers.length > 0 && (
-                   <div className="mt-4 relative group">
+                   <div className="relative group">
                       <div className="absolute -left-[19px] top-1.5 w-4 h-4 rounded-full border-2 border-emerald-500 bg-white z-10" />
                       <div className="bg-emerald-50/30 border border-emerald-100 rounded-2xl p-4 ml-6 transition-all hover:bg-emerald-50/50 hover:shadow-md hover:shadow-emerald-500/5">
                          <div className="flex items-center gap-2 text-emerald-600 font-black text-[10px] uppercase tracking-widest mb-3">
@@ -399,14 +425,15 @@ function DetailDrawer({ movement, onClose }: DetailDrawerProps) {
         <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/30 flex gap-3 sticky bottom-0">
            <button 
              onClick={onClose}
-             className="flex-1 h-10 rounded-xl bg-white border border-slate-200 text-slate-600 font-bold text-xs hover:bg-slate-50 transition-all shadow-sm"
+             className="flex-1 h-11 rounded-xl bg-white border border-slate-200 text-slate-600 font-bold text-xs hover:bg-slate-50 transition-all shadow-sm active:scale-95"
            >
              Close View
            </button>
         </div>
 
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
@@ -545,6 +572,7 @@ export default function StockMovementPage() {
                     sku: b.barcode || v.sku || prod.barcode || (a.id?.slice(0, 8) || ""),
                     type: "STOCK_ADJUSTMENT" as MovementType,
                     qty: isDecrement ? -Number(b.stocks || v.stocks || baseQty) : Number(b.stocks || v.stocks || baseQty),
+                    stocks_before: b.stocks_before ?? v.stocks_before ?? prod.stocks_before,
                     source: "Stock",
                     destination: "Adjusted",
                     ref: String(a.ui_id || a.id?.slice(0, 8).toUpperCase() || "REF"),
@@ -566,6 +594,7 @@ export default function StockMovementPage() {
                   sku: v.sku || prod.barcode || (a.id?.slice(0, 8) || ""),
                   type: "STOCK_ADJUSTMENT" as MovementType,
                   qty: isDecrement ? -Number(v.stocks || baseQty) : Number(v.stocks || baseQty),
+                  stocks_before: v.stocks_before ?? prod.stocks_before,
                   source: "Stock",
                   destination: "Adjusted",
                   ref: String(a.ui_id || a.id?.slice(0, 8).toUpperCase() || "REF"),
@@ -585,6 +614,7 @@ export default function StockMovementPage() {
               sku: prod.barcode || (a.id?.slice(0, 8) || ""),
               type: "STOCK_ADJUSTMENT" as MovementType,
               qty: isDecrement ? -baseQty : baseQty,
+              stocks_before: prod.stocks_before,
               source: "Stock",
               destination: "Adjusted",
               ref: String(a.ui_id || a.id?.slice(0, 8).toUpperCase() || "REF"),
@@ -833,13 +863,19 @@ export default function StockMovementPage() {
                         {m.qty > 0 ? `+${m.qty}` : m.qty}
                       </span>
                     </td>
-                    {selectedKeys.map(key => (
-                      <td key={key} className="px-6 py-4 whitespace-nowrap">
-                        <p className="text-[12px] font-bold text-slate-600 tracking-tight">
-                          {String(m[key as keyof Movement] ?? "—")}
-                        </p>
-                      </td>
-                    ))}
+                    {selectedKeys.map(key => {
+                      const value = m[key as keyof Movement];
+                      const displayValue = value === undefined || value === null ? "—" : 
+                                          typeof value === 'object' ? (Array.isArray(value) ? value.join(", ") : JSON.stringify(value)) : 
+                                          String(value);
+                      return (
+                        <td key={key} className="px-6 py-4 whitespace-nowrap">
+                          <p className="text-[12px] font-bold text-slate-600 tracking-tight">
+                            {displayValue}
+                          </p>
+                        </td>
+                      );
+                    })}
                     <td className="px-6 py-4 whitespace-nowrap">
                       <p className="text-[12px] font-bold text-slate-600">{fmt(m.date)}</p>
                     </td>

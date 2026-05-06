@@ -1,4 +1,5 @@
 import React, { useEffect } from "react";
+import { createPortal } from "react-dom";
 import { CircleArrowRight } from "lucide-react";
 import type { DrawerProps } from "../types";
 
@@ -13,7 +14,7 @@ const Drawer: React.FC<DrawerProps> = ({ isOpen, onClose, title, children }) => 
     return () => { document.body.style.overflow = 'unset'; };
   }, [isOpen]);
 
-  return (
+  return createPortal(
     <>
       {/* Backdrop */}
       <div
@@ -55,7 +56,8 @@ const Drawer: React.FC<DrawerProps> = ({ isOpen, onClose, title, children }) => 
           </div>
         </div>
       </div>
-    </>
+    </>,
+    document.body
   );
 };
 

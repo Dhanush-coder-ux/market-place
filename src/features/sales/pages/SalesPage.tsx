@@ -9,6 +9,9 @@ import {
   Smartphone,
 } from "lucide-react";
 import { StatsCard } from "@/components/common/StatsCard";
+import { useApi } from "@/context/ApiContext";
+import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
+import { OrderResponse, OrderItemResponse } from "@/features/order/types";
 
 /* ═══════════════════════════════════════════════════════════════
    TYPES
@@ -22,18 +25,8 @@ type ReturnType = "Full" | "Partial";
 type ReturnReason = "Damaged" | "Wrong Item" | "Customer Request" | "Size Issue" | "Other" | "";
 type SettlementMethod = "Cash" | "UPI" | "Card" | "Bank" | "Store Credit" | "";
 
-interface SaleRecord {
-  id: string;
-  invoiceNumber: string;
-  customerName: string;
-  origin: OriginType;
-  salesType: SalesType;
-  paymentMethod: PaymentMethod;
-  totalAmount: number;
-  itemsCount: number;
-  date: string;
-  status: SaleStatus;
-}
+// Use the backend response type directly
+type SaleRecord = OrderResponse;
 
 interface SaleItem {
   id: string;
@@ -94,20 +87,7 @@ const ITEM_COLORS = ["#dbeafe", "#dcfce7", "#fef3c7", "#fce7f3", "#ede9fe", "#ff
 const ITEM_NAMES = ["Classic White Tee", "Denim Jacket", "Canvas Sneakers", "Running Shorts", "Wool Sweater", "Cargo Pants", "Leather Belt", "Cotton Socks"];
 const ITEM_CATS = ["Tops", "Outerwear", "Footwear", "Bottoms", "Knitwear", "Bottoms", "Accessories", "Accessories"];
 
-const MOCK_SALES: SaleRecord[] = [
-  { id: "1", invoiceNumber: "INV-2024-0041", customerName: "Arjun Mehta", origin: "Sales", salesType: "Online", paymentMethod: "UPI", totalAmount: 4850, itemsCount: 3, date: "2024-04-22", status: "Completed" },
-  { id: "2", invoiceNumber: "INV-2024-0042", customerName: "Walk-in Customer", origin: "Sales", salesType: "Offline", paymentMethod: "Cash", totalAmount: 1200, itemsCount: 1, date: "2024-04-22", status: "Completed" },
-  { id: "3", invoiceNumber: "INV-2024-0043", customerName: "Priya Nair", origin: "Sales Return", salesType: "Online", paymentMethod: "Card", totalAmount: 9300, itemsCount: 5, date: "2024-04-21", status: "Pending" },
-  { id: "4", invoiceNumber: "INV-2024-0044", customerName: "Walk-in Customer", origin: "Sales", salesType: "Offline", paymentMethod: "Cash", totalAmount: 650, itemsCount: 2, date: "2024-04-21", status: "Completed" },
-  { id: "5", invoiceNumber: "INV-2024-0045", customerName: "Rohan Sharma", origin: "Sales Return", salesType: "Online", paymentMethod: "UPI", totalAmount: 2200, itemsCount: 2, date: "2024-04-20", status: "Cancelled" },
-  { id: "6", invoiceNumber: "INV-2024-0046", customerName: "Sneha Pillai", origin: "Sales", salesType: "Online", paymentMethod: "Card", totalAmount: 15400, itemsCount: 8, date: "2024-04-20", status: "Completed" },
-  { id: "7", invoiceNumber: "INV-2024-0047", customerName: "Walk-in Customer", origin: "Sales", salesType: "Offline", paymentMethod: "Cash", totalAmount: 480, itemsCount: 1, date: "2024-04-20", status: "Completed" },
-  { id: "8", invoiceNumber: "INV-2024-0048", customerName: "Vikram Iyer", origin: "Sales Return", salesType: "Online", paymentMethod: "UPI", totalAmount: 7700, itemsCount: 4, date: "2024-04-19", status: "Pending" },
-  { id: "9", invoiceNumber: "INV-2024-0049", customerName: "Meera Joshi", origin: "Sales", salesType: "Offline", paymentMethod: "Card", totalAmount: 3100, itemsCount: 3, date: "2024-04-19", status: "Completed" },
-  { id: "10", invoiceNumber: "INV-2024-0050", customerName: "Rahul Gupta", origin: "Sales Return", salesType: "Online", paymentMethod: "Card", totalAmount: 6200, itemsCount: 4, date: "2024-04-18", status: "Cancelled" },
-  { id: "11", invoiceNumber: "INV-2024-0051", customerName: "Walk-in Customer", origin: "Sales", salesType: "Offline", paymentMethod: "Cash", totalAmount: 950, itemsCount: 2, date: "2024-04-18", status: "Completed" },
-  { id: "12", invoiceNumber: "INV-2024-0052", customerName: "Divya Krishnan", origin: "Sales", salesType: "Online", paymentMethod: "UPI", totalAmount: 11200, itemsCount: 6, date: "2024-04-17", status: "Completed" },
-];
+const MOCK_SALES: SaleRecord[] = [];
 
 const EXCHANGE_PRODUCTS: ExchangeProduct[] = [
   { id: "ep-1", name: "Striped Linen Tee", sku: "SKU-2201", price: 850, imageColor: "#dbeafe", inStock: true },
@@ -122,19 +102,17 @@ const EXCHANGE_PRODUCTS: ExchangeProduct[] = [
    UTILS
 ═══════════════════════════════════════════════════════════════ */
 const generateItems = (sale: SaleRecord): SaleItem[] =>
-  Array.from({ length: sale.itemsCount }, (_, i) => ({
-    id: `item-${sale.id}-${i}`,
-    name: ITEM_NAMES[i % ITEM_NAMES.length],
-    sku: `SKU-${String(1000 + i * 13 + parseInt(sale.id, 10) * 7).slice(-4)}`,
-    category: ITEM_CATS[i % ITEM_CATS.length],
-    quantity: 1 + (i % 2),
-    unitPrice: Math.round(sale.totalAmount / sale.itemsCount / (1 + (i % 2))),
+  (sale.items || []).map((item, i) => ({
+    id: item.id,
+    name: `Item ${i + 1}`, // Backend doesn't provide item names in this schema, using placeholder
+    sku: item.barcode || item.inventory_id.slice(-6),
+    category: "General",
+    quantity: item.quantity,
+    unitPrice: item.sell_price,
     imageColor: ITEM_COLORS[i % ITEM_COLORS.length],
   }));
 
 const fmt = (n: number) => `₹${n.toLocaleString("en-IN")}`;
-
-
 
 /* ═══════════════════════════════════════════════════════════════
    BADGE CONFIGS
@@ -168,7 +146,12 @@ const STYLES = `
 
   *, *::before, *::after { box-sizing: border-box; }
 
-  .sr-root { font-family: 'DM Sans', sans-serif; }
+  .sr-root { 
+    font-family: 'DM Sans', sans-serif; 
+    overflow-x: hidden;
+    width: 100%;
+    position: relative;
+  }
   .sr-mono { font-family: 'DM Mono', monospace; }
 
   /* Table row hover */
@@ -262,7 +245,24 @@ const STYLES = `
   }
 
   /* Sidebar */
-  .sr-sidebar { transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1); }
+  .sr-sidebar { 
+    position: fixed;
+    top: 0;
+    right: 0;
+    height: 100vh;
+    width: 100%;
+    max-width: 400px;
+    background: white;
+    box-shadow: -10px 0 30px rgba(0,0,0,0.05);
+    z-index: 110;
+    transform: translateX(101%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    visibility: hidden;
+  }
+  .sr-sidebar.open { 
+    transform: translateX(0);
+    visibility: visible;
+  }
 
   /* Scrollbar */
   .sr-scroll::-webkit-scrollbar { width: 4px; }
@@ -694,7 +694,7 @@ const ReturnModal: React.FC<ReturnModalProps> = ({ sale, onClose }) => {
         </button>
 
         {/* Step Header */}
-        <StepHeader step={state.step} mode={state.mode} invoice={sale.invoiceNumber} />
+        <StepHeader step={state.step} mode={state.mode} invoice={`INV-${sale.ui_id}`} />
 
         {/* Content */}
         {!canReturn ? (
@@ -727,7 +727,7 @@ const ReturnModal: React.FC<ReturnModalProps> = ({ sale, onClose }) => {
                   <div className="space-y-3">
                     <p className="text-xs text-slate-500">
                       How would you like to handle this return for{" "}
-                      <span className="font-medium text-slate-700">{sale.customerName}</span>?
+                      <span className="font-medium text-slate-700">{sale.customer_id}</span>?
                     </p>
                     <div className="grid grid-cols-2 gap-3">
                       {([
@@ -755,7 +755,7 @@ const ReturnModal: React.FC<ReturnModalProps> = ({ sale, onClose }) => {
                     </p>
                     <div className="grid grid-cols-2 gap-3">
                       {([
-                        { id: "Full" as ReturnType, label: "Full Return", desc: `All ${sale.itemsCount} items`, icon: <RotateCcw size={16} /> },
+                        { id: "Full" as ReturnType, label: "Full Return", desc: `All ${sale.total_quantity} items`, icon: <RotateCcw size={16} /> },
                         { id: "Partial" as ReturnType, label: "Partial Return", desc: "Select specific items", icon: <Package size={16} /> },
                       ]).map(opt => (
                         <button key={opt.id}
@@ -771,7 +771,7 @@ const ReturnModal: React.FC<ReturnModalProps> = ({ sale, onClose }) => {
                     {state.returnType === "Full" && (
                       <div className="flex items-center gap-2 px-3 py-2.5 bg-blue-50 border border-blue-100 rounded-lg">
                         <Info size={12} className="text-blue-400 shrink-0" />
-                        <p className="text-[11px] text-blue-600">All {sale.itemsCount} items from this order will be returned.</p>
+                        <p className="text-[11px] text-blue-600">All {sale.total_quantity} items from this order will be returned.</p>
                       </div>
                     )}
                   </div>
@@ -995,7 +995,7 @@ const ReturnModal: React.FC<ReturnModalProps> = ({ sale, onClose }) => {
                       selectedItems={selectedItems}
                       totals={totals}
                       settlementMethod={state.settlementMethod}
-                      originalPayment={sale.paymentMethod}
+                      originalPayment={sale.payment_method as PaymentMethod}
                     />
 
                     <div>
@@ -1080,7 +1080,7 @@ const ReturnModal: React.FC<ReturnModalProps> = ({ sale, onClose }) => {
                     </div>
                     <div className="w-full bg-slate-50 border border-slate-100 rounded-xl overflow-hidden">
                       {[
-                        { label: "Invoice", value: sale.invoiceNumber },
+                        { label: "Invoice", value: `INV-${sale.ui_id}` },
                         { label: "Mode", value: state.mode === "refund" ? "Refund" : "Exchange" },
                         { label: "Reason", value: state.reason },
                         ...(state.mode === "refund" ? [{
@@ -1154,6 +1154,15 @@ interface SidebarProps {
 }
 
 const SaleDetailSidebar: React.FC<SidebarProps> = ({ sale, isOpen, onClose, onReturn }) => {
+  useEffect(() => {
+    if (isOpen && sale) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "unset";
+    }
+    return () => { document.body.style.overflow = "unset"; };
+  }, [isOpen, sale]);
+
   const canReturn = sale?.status === "Completed" && sale?.origin !== "Sales Return";
   const alreadyRet = sale?.origin === "Sales Return";
 
@@ -1162,15 +1171,14 @@ const SaleDetailSidebar: React.FC<SidebarProps> = ({ sale, isOpen, onClose, onRe
       {isOpen && (
         <div className="sr-backdrop-enter fixed inset-0 bg-black/10 z-[100]" onClick={onClose} />
       )}
-      <div className={`sr-sidebar fixed top-0 right-0 h-full w-full max-w-[400px] bg-white shadow-2xl z-[110] border-l border-slate-200 flex flex-col ${isOpen ? "translate-x-0" : "translate-x-full"
-        }`}>
+      <div className={`sr-sidebar flex flex-col ${isOpen && sale ? "open" : ""}`}>
         {sale && (
           <>
             {/* Header */}
             <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 shrink-0">
               <div>
                 <h2 className="text-sm font-semibold text-slate-800">Sale Details</h2>
-                <p className="text-[11px] text-slate-400 sr-mono mt-0.5">{sale.invoiceNumber}</p>
+                <p className="text-[11px] text-slate-400 sr-mono mt-0.5">INV-{sale.ui_id}</p>
               </div>
               <div className="flex items-center gap-2">
                 {alreadyRet && (
@@ -1179,7 +1187,7 @@ const SaleDetailSidebar: React.FC<SidebarProps> = ({ sale, isOpen, onClose, onRe
                   </span>
                 )}
                 <button onClick={onClose}
-                  className="w-7 h-7 flex items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 transition-colors">
+                  className="w-7 h-7 flex items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 transition-colors pointer-events-auto">
                   <X size={16} />
                 </button>
               </div>
@@ -1190,21 +1198,23 @@ const SaleDetailSidebar: React.FC<SidebarProps> = ({ sale, isOpen, onClose, onRe
               {/* Amount */}
               <div className="bg-slate-50 border border-slate-100 rounded-xl p-4 text-center">
                 <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 mb-1">Total Amount</p>
-                <p className="text-3xl font-light sr-mono text-slate-900">{fmt(sale.totalAmount)}</p>
+                <p className="text-3xl font-light sr-mono text-slate-900">{fmt(sale.total_sellprice)}</p>
                 <div className="mt-2.5">
-                  <Badge cls={STATUS_CFG[sale.status].cls} dot={STATUS_CFG[sale.status].dot} label={sale.status} />
+                  {(() => {
+                    const cfg = STATUS_CFG[sale.status as SaleStatus] || STATUS_CFG["Pending"];
+                    return <Badge cls={cfg.cls} dot={cfg.dot} label={sale.status} />;
+                  })()}
                 </div>
               </div>
 
               {/* Meta */}
               <div className="grid grid-cols-2 gap-2.5">
                 {[
-                  { icon: <User size={13} />, label: "Customer", value: sale.customerName },
-                  { icon: <Calendar size={13} />, label: "Date", value: sale.date },
-                  { icon: <CreditCard size={13} />, label: "Payment", value: sale.paymentMethod },
+                  { icon: <User size={13} />, label: "Customer", value: sale.customer_id },
+                  { icon: <Calendar size={13} />, label: "Date", value: sale.created_at.split("T")[0] },
+                  { icon: <CreditCard size={13} />, label: "Payment", value: sale.payment_method },
                   { icon: <RotateCcw size={13} />, label: "Origin", value: sale.origin },
-                  { icon: sale.salesType === "Online" ? <Wifi size={13} /> : <WifiOff size={13} />, label: "Channel", value: sale.salesType },
-                  { icon: <Package size={13} />, label: "Items", value: `${sale.itemsCount} item${sale.itemsCount !== 1 ? "s" : ""}` },
+                  { icon: <Package size={13} />, label: "Items", value: `${sale.total_quantity} item${sale.total_quantity !== 1 ? "s" : ""}` },
                 ].map(({ icon, label, value }) => (
                   <div key={label} className="bg-white border border-slate-100 rounded-xl p-3">
                     <div className="flex items-center gap-1.5 text-slate-400 mb-1.5">
@@ -1217,19 +1227,25 @@ const SaleDetailSidebar: React.FC<SidebarProps> = ({ sale, isOpen, onClose, onRe
               </div>
 
               {/* Items */}
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 mb-2">Order Items</p>
-                <div className="border border-slate-100 rounded-xl divide-y divide-slate-100 overflow-hidden">
+              <div className="space-y-2">
+                <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400">Order Items</p>
+                <div className="border border-slate-100 rounded-xl divide-y divide-slate-100 overflow-hidden shadow-sm">
                   {generateItems(sale).map((item, i) => (
-                    <div key={i} className="flex items-center gap-3 p-3.5 bg-white">
-                      <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: item.imageColor }}>
-                        <Package size={14} className="text-slate-400 opacity-60" />
+                    <div key={i} className="flex items-center gap-4 p-4 bg-white hover:bg-slate-50/50 transition-colors">
+                      <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border border-slate-100 shadow-sm" style={{ background: item.imageColor + '10' }}>
+                        <Package size={16} className="text-slate-500 opacity-60" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-xs font-medium text-slate-800">{item.name}</p>
-                        <p className="text-[10px] text-slate-400">qty {item.quantity} · <span className="sr-mono">{item.sku}</span></p>
+                        <p className="text-[13px] font-semibold text-slate-800 truncate">{item.name}</p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-[10px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded-md font-medium">QTY {item.quantity}</span>
+                          <span className="text-[10px] text-slate-400 sr-mono">{item.sku}</span>
+                        </div>
                       </div>
-                      <span className="text-xs font-semibold sr-mono text-slate-900">{fmt(item.unitPrice * item.quantity)}</span>
+                      <div className="text-right">
+                        <p className="text-sm font-bold sr-mono text-slate-900">{fmt(item.unitPrice * item.quantity)}</p>
+                        <p className="text-[9px] text-slate-400 mt-0.5">{fmt(item.unitPrice)} each</p>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -1237,7 +1253,7 @@ const SaleDetailSidebar: React.FC<SidebarProps> = ({ sale, isOpen, onClose, onRe
             </div>
 
             {/* Footer */}
-            <div className="shrink-0 p-4 border-t border-slate-100 bg-slate-50/50 grid grid-cols-3 gap-2">
+            <div className="shrink-0 p-4 border-t border-slate-100 bg-slate-50/50 grid grid-cols-3 gap-2 pointer-events-auto">
               <button className="sr-btn-ghost py-2.5 bg-white border border-slate-200 text-slate-600 rounded-lg text-[11px] font-semibold shadow-sm">
                 Download
               </button>
@@ -1318,12 +1334,26 @@ const FilterDropdown: React.FC<FilterDropdownProps> = ({ label, options, value, 
    MAIN PAGE
 ═══════════════════════════════════════════════════════════════ */
 const SalesListPage: React.FC = () => {
+  const api = useApi();
+  const [orders, setOrders] = useState<OrderResponse[]>([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filterOrigin, setFilterOrigin] = useState("");
-  const [filterType, setFilterType] = useState("");
   const [filterPayment, setFilterPayment] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
   const [filterDate, setFilterDate] = useState("");
+
+  const [isReturnSearchOpen, setIsReturnSearchOpen] = useState(false);
+  const [returnSearchQuery, setReturnSearchQuery] = useState("");
+
+  const searchSalesForReturn = useMemo(() => {
+    if (!returnSearchQuery) return [];
+    const q = returnSearchQuery.toLowerCase();
+    return orders.filter(s =>
+      s.ui_id.toString().includes(q) ||
+      s.customer_id.toLowerCase().includes(q)
+    ).slice(0, 5);
+  }, [returnSearchQuery, orders]);
 
   const [selectedSale, setSelectedSale] = useState<SaleRecord | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -1339,34 +1369,59 @@ const SalesListPage: React.FC = () => {
 
   const closeReturn = () => setReturnSale(null);
 
-  // Stats
-  const totalRevenue = MOCK_SALES.filter(s => s.status === "Completed").reduce((a, b) => a + b.totalAmount, 0);
-  const salesCount = MOCK_SALES.filter(s => s.origin === "Sales").length;
-  const salesReturnCount = MOCK_SALES.filter(s => s.origin === "Sales Return").length;
-  const todayRevenue = MOCK_SALES.filter(s => s.date === TODAY && s.status === "Completed").reduce((a, b) => a + b.totalAmount, 0);
+  const fetchOrders = async () => {
+    try {
+      setLoading(true);
+      const res = await api.getData(`${ENDPOINTS.ORDERS}/${SHOP_ID}`);
+      if (res && res.data) {
+        // Normalize status to Title Case (COMPLETED -> Completed)
+        const normalized = (res.data as any[]).map(s => ({
+          ...s,
+          status: s.status.charAt(0).toUpperCase() + s.status.slice(1).toLowerCase()
+        }));
+        setOrders(normalized);
+      }
+    } catch (err) {
+      console.error("Failed to fetch orders:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const filtered = useMemo(() => MOCK_SALES.filter(s => {
+  useEffect(() => {
+    fetchOrders();
+  }, []);
+
+  const filtered = useMemo(() => orders.filter(s => {
     const q = search.toLowerCase();
+    const dateStr = s.created_at.split("T")[0];
     return (
-      (!q || s.invoiceNumber.toLowerCase().includes(q) || s.customerName.toLowerCase().includes(q)) &&
+      (!q || s.ui_id.toString().includes(q) || s.customer_id.toLowerCase().includes(q)) &&
       (!filterOrigin || s.origin === filterOrigin) &&
-      (!filterType || s.salesType === filterType) &&
-      (!filterPayment || s.paymentMethod === filterPayment) &&
-      (!filterStatus || s.status === filterStatus) &&
-      (!filterDate || s.date === filterDate)
+      (!filterPayment || s.payment_method === filterPayment) &&
+      (!filterStatus || s.status.toLowerCase() === filterStatus.toLowerCase()) &&
+      (!filterDate || dateStr === filterDate)
     );
-  }), [search, filterOrigin, filterType, filterPayment, filterStatus, filterDate]);
+  }), [search, filterOrigin, filterPayment, filterStatus, filterDate, orders]);
 
-  const activeFilters = [filterOrigin, filterType, filterPayment, filterStatus, filterDate].filter(Boolean).length;
+  const totalRevenue = useMemo(() => orders.filter(s => s.status.toLowerCase() === "completed").reduce((a, b) => a + b.total_sellprice, 0), [orders]);
+  const salesCount = useMemo(() => orders.filter(s => s.origin === "Sales").length, [orders]);
+  const salesReturnCount = useMemo(() => orders.filter(s => s.origin === "Sales Return").length, [orders]);
+  const todayRevenue = useMemo(() => {
+    const today = new Date().toISOString().split("T")[0];
+    return orders.filter(s => s.created_at.startsWith(today) && s.status.toLowerCase() === "completed").reduce((a, b) => a + b.total_sellprice, 0);
+  }, [orders]);
+
+  const activeFilters = [filterOrigin, filterPayment, filterStatus, filterDate].filter(Boolean).length;
   const clearAll = () => {
-    setFilterOrigin(""); setFilterType(""); setFilterPayment("");
+    setFilterOrigin(""); setFilterPayment("");
     setFilterStatus(""); setFilterDate(""); setSearch("");
   };
 
   return (
     <>
       <style>{STYLES}</style>
-      <div className="sr-root min-h-screen bg-slate-50/50 p-2 sm:p-4 lg:p-6 space-y-3 sm:space-y-5">
+      <div className="sr-root w-full flex-1 min-h-screen bg-slate-50/50 p-2 sm:p-4 lg:p-6 space-y-3 sm:space-y-5">
 
         {/* Stats */}
         <div className="flex flex-nowrap overflow-x-auto custom-scrollbar gap-2.5 pb-2 -mx-2 px-2 sm:mx-0 sm:px-0 sm:grid sm:grid-cols-2 lg:grid-cols-4 sm:overflow-visible sm:pb-0 touch-pan-x">
@@ -1391,7 +1446,6 @@ const SalesListPage: React.FC = () => {
             className={`sr-drop-btn px-3 py-2 text-xs font-medium border rounded-lg outline-none cursor-pointer transition-all ${filterDate ? "bg-blue-50 border-blue-200 text-blue-700" : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
               }`} />
           <FilterDropdown label="Origin" options={["Sales", "Sales Return"]} value={filterOrigin} onChange={setFilterOrigin} />
-          <FilterDropdown label="Type" options={["Online", "Offline"]} value={filterType} onChange={setFilterType} />
           <FilterDropdown label="Payment" options={["Cash", "Card", "UPI"]} value={filterPayment} onChange={setFilterPayment} />
           <FilterDropdown label="Status" options={["Completed", "Pending", "Cancelled"]} value={filterStatus} onChange={setFilterStatus} />
           {activeFilters > 0 && (
@@ -1401,7 +1455,13 @@ const SalesListPage: React.FC = () => {
             </button>
           )}
           <div className="flex-1" />
-          <span className="text-xs font-medium text-slate-400 tabular-nums">{filtered.length} / {MOCK_SALES.length}</span>
+          <button
+            onClick={() => setIsReturnSearchOpen(true)}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg text-xs font-semibold flex items-center gap-2 hover:bg-blue-700 transition-all shadow-sm shadow-blue-200/50"
+          >
+            <RotateCcw size={14} /> Process Return
+          </button>
+          <span className="text-xs font-medium text-slate-400 tabular-nums">{filtered.length} / {orders.length}</span>
         </div>
 
         {/* Table */}
@@ -1410,7 +1470,7 @@ const SalesListPage: React.FC = () => {
             <table className="w-full text-sm border-collapse">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-100">
-                  {["Invoice", "Customer", "Type", "Origin", "Payment", "Date", "Items", "Amount", "Status", "Actions"].map((h, i) => (
+                  {["Invoice", "Customer", "Origin", "Payment", "Date", "Items", "Amount", "Status", "Actions"].map((h, i) => (
                     <th key={i} className="py-2 px-3 sm:py-3 sm:px-4 first:pl-3 sm:first:pl-5 last:pr-3 sm:last:pr-5 text-[10px] font-semibold uppercase tracking-widest text-slate-400 whitespace-nowrap text-left last:text-right">
                       {h}
                     </th>
@@ -1429,28 +1489,32 @@ const SalesListPage: React.FC = () => {
                     </td>
                   </tr>
                 ) : filtered.map(sale => {
-                  const oCfg = ORIGIN_CFG[sale.origin];
-                  const tCfg = SALES_TYPE_CFG[sale.salesType];
-                  const pCfg = PAYMENT_CFG[sale.paymentMethod];
-                  const sCfg = STATUS_CFG[sale.status];
+                  const oCfg = ORIGIN_CFG[sale.origin as OriginType] || ORIGIN_CFG["Sales"];
+                  const pCfg = PAYMENT_CFG[sale.payment_method as PaymentMethod] || PAYMENT_CFG["Cash"];
+                  const sCfg = STATUS_CFG[sale.status as SaleStatus] || STATUS_CFG["Pending"];
                   const returnable = sale.status === "Completed" && sale.origin !== "Sales Return";
+                  const dateStr = sale.created_at.split("T")[0];
                   return (
                     <tr key={sale.id} className="sr-row">
                       <td className="py-2.5 pl-3 sm:pl-5 pr-3 sm:pr-4">
-                        <span className="sr-mono text-[11px] font-medium text-slate-700">{sale.invoiceNumber}</span>
+                        <span className="sr-mono text-[11px] font-medium text-slate-700">INV-{sale.ui_id}</span>
                       </td>
                       <td className="py-2.5 px-3 sm:px-4">
-                        <p className="text-[11px] font-medium text-slate-800 whitespace-nowrap">{sale.customerName}</p>
+                        <p className="text-[11px] font-medium text-slate-800 whitespace-nowrap">{sale.customer_id}</p>
                       </td>
                       <td className="py-2.5 px-3 sm:px-4"><Badge cls={oCfg.cls} dot={oCfg.dot} label={sale.origin} /></td>
-                      <td className="py-2.5 px-3 sm:px-4"><Badge cls={tCfg.cls} dot={tCfg.dot} label={sale.salesType} /></td>
-                      <td className="py-2.5 px-3 sm:px-4"><Badge cls={pCfg.cls} dot={pCfg.dot} label={sale.paymentMethod} /></td>
-                      <td className="py-2.5 px-3 sm:px-4 text-[11px] text-slate-500 whitespace-nowrap tabular-nums">{sale.date}</td>
-                      <td className="py-2.5 px-3 sm:px-4 text-center text-[11px] font-medium text-slate-600 tabular-nums">{sale.itemsCount}</td>
+                      <td className="py-2.5 px-3 sm:px-4"><Badge cls={pCfg.cls} dot={pCfg.dot} label={sale.payment_method} /></td>
+                      <td className="py-2.5 px-3 sm:px-4 text-[11px] text-slate-500 whitespace-nowrap tabular-nums">{dateStr}</td>
+                      <td className="py-2.5 px-3 sm:px-4 text-center text-[11px] font-medium text-slate-600 tabular-nums">{sale.total_quantity}</td>
                       <td className="py-2.5 px-3 sm:px-4 text-right">
-                        <span className="sr-mono text-[11px] font-semibold text-slate-900">{fmt(sale.totalAmount)}</span>
+                        <span className="sr-mono text-[11px] font-semibold text-slate-900">{fmt(sale.total_sellprice)}</span>
                       </td>
-                      <td className="py-2.5 px-3 sm:px-4"><Badge cls={sCfg.cls} dot={sCfg.dot} label={sale.status} /></td>
+                      <td className="py-2.5 px-3 sm:px-4">
+                        {(() => {
+                          const cfg = STATUS_CFG[sale.status as SaleStatus] || STATUS_CFG["Pending"];
+                          return <Badge cls={cfg.cls} dot={cfg.dot} label={sale.status} />;
+                        })()}
+                      </td>
                       <td className="py-2.5 pl-3 sm:pl-4 pr-3 sm:pr-5">
                         <div className=" flex items-center justify-end gap-1">
                           <button onClick={() => openSidebar(sale)}
@@ -1480,12 +1544,12 @@ const SalesListPage: React.FC = () => {
             <div className="px-5 py-3 border-t border-slate-100 bg-slate-50/40 flex items-center justify-between">
               <p className="text-xs text-slate-400">
                 <span className="font-medium text-slate-600">{filtered.length}</span> of{" "}
-                <span className="font-medium text-slate-600">{MOCK_SALES.length}</span> records
+                <span className="font-medium text-slate-600">{orders.length}</span> records
               </p>
               <span className="text-xs text-slate-500">
                 Filtered revenue:{" "}
                 <span className="font-semibold text-slate-700 sr-mono">
-                  {fmt(filtered.filter(s => s.status === "Completed").reduce((a, b) => a + b.totalAmount, 0))}
+                  {fmt(filtered.filter(s => s.status === "Completed").reduce((a, b) => a + b.total_sellprice, 0))}
                 </span>
               </span>
             </div>
@@ -1503,6 +1567,77 @@ const SalesListPage: React.FC = () => {
 
       {/* Global Return Modal */}
       {returnSale && <ReturnModal sale={returnSale} onClose={closeReturn} />}
+
+      {/* Return Search Modal */}
+      {isReturnSearchOpen && (
+        <div className="fixed inset-0 z-[150] flex items-start justify-center pt-24 px-4">
+          <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => setIsReturnSearchOpen(false)} />
+          <div className="relative w-full max-w-lg bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+              <h3 className="text-sm font-bold text-slate-800">Process Return</h3>
+              <button onClick={() => setIsReturnSearchOpen(false)} className="text-slate-400 hover:text-slate-600 transition-colors">
+                <X size={18} />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="relative">
+                <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  autoFocus
+                  placeholder="Enter Invoice ID or Customer Name..."
+                  className="w-full h-12 pl-12 pr-4 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                  value={returnSearchQuery}
+                  onChange={e => setReturnSearchQuery(e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-2">
+                {searchSalesForReturn.length > 0 ? (
+                  searchSalesForReturn.map(sale => (
+                    <button
+                      key={sale.id}
+                      onClick={() => {
+                        openReturn(sale);
+                        setIsReturnSearchOpen(false);
+                        setReturnSearchQuery("");
+                      }}
+                      className="w-full flex items-center gap-4 p-4 bg-white border border-slate-100 rounded-xl hover:border-blue-200 hover:bg-blue-50/30 transition-all text-left group"
+                    >
+                      <div className="w-10 h-10 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-400 group-hover:bg-white group-hover:border-blue-100 group-hover:text-blue-500 transition-all">
+                        <Receipt size={18} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between mb-0.5">
+                          <p className="text-sm font-bold text-slate-800">INV-{sale.ui_id}</p>
+                          <span className="text-xs font-bold sr-mono text-slate-900">{fmt(sale.total_sellprice)}</span>
+                        </div>
+                        <p className="text-xs text-slate-500 truncate">{sale.customer_id} · {sale.created_at.split('T')[0]}</p>
+                      </div>
+                      <ChevronRight size={14} className="text-slate-300 group-hover:text-blue-400 transition-colors" />
+                    </button>
+                  ))
+                ) : returnSearchQuery ? (
+                  <div className="py-12 text-center">
+                    <div className="w-12 h-12 rounded-full bg-slate-50 flex items-center justify-center mx-auto mb-3">
+                      <Search size={20} className="text-slate-300" />
+                    </div>
+                    <p className="text-sm font-medium text-slate-500">No matching orders found</p>
+                    <p className="text-xs text-slate-400 mt-1">Try searching with a different invoice ID</p>
+                  </div>
+                ) : (
+                  <div className="py-12 text-center">
+                    <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center mx-auto mb-3 text-blue-500">
+                      <RotateCcw size={20} />
+                    </div>
+                    <p className="text-sm font-medium text-slate-500">Find an order to return</p>
+                    <p className="text-xs text-slate-400 mt-1">Search by Invoice Number or Customer Name</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };

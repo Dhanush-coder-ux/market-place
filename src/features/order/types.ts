@@ -10,7 +10,7 @@ export type OrderCardType = {
   customerName: string;
   phone: string
   totalAmount: number;
-  orderType: string;   
+  orderType: string;
   status: string
 };
 
@@ -24,5 +24,36 @@ export type OrdersHeaderProps = {
 
   status: string;
   setStatus: React.Dispatch<React.SetStateAction<string>>;
-   setIsDateFilterOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  setIsDateFilterOpen: React.Dispatch<React.SetStateAction<boolean>>;
 };
+
+// Backend response schemas
+export interface OrderItemResponse {
+  id: string;
+  inventory_id: string;
+  variant_id?: string | null;
+  batch_id?: string | null;
+  serialno_id?: string | null;
+  barcode?: string | null;
+  serial_numbers?: string[] | null;
+  buy_price: number;
+  sell_price: number;
+  gst?: string | null;
+  quantity: number;
+}
+
+export interface OrderResponse {
+  id: string;
+  ui_id: number;
+  shop_id: string;
+  customer_id: string;
+  status: string;
+  payment_method: string;
+  total_quantity: number;
+  total_buyprice: number;
+  total_sellprice: number;
+  origin: string;
+  items?: OrderItemResponse[];
+  created_at: string;
+  updated_at: string;
+}

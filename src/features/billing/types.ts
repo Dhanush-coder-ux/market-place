@@ -16,28 +16,41 @@ export interface ProductVariant {
   name: string;
   price: number;
   stock: number;
+  serialnoId?: string;
+  batchId?: string;
+  availableSerials?: string[];
 }
 
 export interface InventoryItem {
+  id: string;
   product_barcode: string;
   product_name: string;
-  category: "Electronics" | "Clothing" | "Other";
+  category: string;
   variants: ProductVariant[];
   requireSerial: boolean;
   batchTracking?: boolean;
   manufacturingDate?: string;
   expiryDate?: string;
+  price?: number;
+  stocks?: number;
+  batchId?: string;
+  serialnoId?: string;
+  availableSerials?: string[];
+  requireSerial?: boolean;
 }
 
 export interface BillingItem {
   id: string;
+  inventoryId?: string;
   code: string;
   name: string;
   qty: number;
   price: number;
   tprice: number;
-  serialNumber?: string; // For tracking specific items (e.g., Electronics)
-  variantId?: string; // For tracking selected variant
+  serialNumbers?: string[]; // Multiple serials support
+  variantId?: string | null;
+  batchId?: string;
+  serialnoId?: string;
   batchTracking?: boolean;
   manufacturingDate?: string;
   expiryDate?: string;
@@ -46,11 +59,11 @@ export interface BillingItem {
 // Alias for convenience if used in shopping cart contexts
 export type CartItem = BillingItem;
 
-export type SelectOption = {
+export interface SelectOption {
   value: string;
   label: string;
   payload: InventoryItem;
-};
+}
 
 export interface InvoicePayload {
   customer: CustomerData | null;
@@ -64,4 +77,22 @@ export interface InvoicePayload {
   includeGst: boolean;
   paymentMode: PaymentMode;
   date: string;
+}
+
+// ─── Backend Schema Interfaces ───────────────────────────────────────────────
+
+export interface BillingProductSchema {
+  id: string; // This usually refers to the inventory item ID
+  variant_id?: string;
+  batch_id?: string;
+  serialno_id?: string;
+  serial_numbers?: string[];
+  quantity: number;
+}
+
+export interface CreateBillingSchema {
+  products: BillingProductSchema[];
+  shop_id: string;
+  payment_method: string;
+  customer_id: string;
 }

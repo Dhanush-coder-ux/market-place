@@ -1,13 +1,15 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from "react";
-import { 
-  Trash2, IndianRupee, Package, Keyboard, Barcode, 
-  Clock, ShieldCheck, AlertTriangle, XCircle, 
+import {
+  Trash2, IndianRupee, Package, Keyboard, Barcode,
+  Clock, ShieldCheck, AlertTriangle, XCircle,
   Plus, RotateCcw, Tag
 } from "lucide-react";
 import { v4 as uuidv4 } from "uuid";
-import { BillingItem, InventoryItem, ProductVariant, SelectOption } from "../types";
-import { ReusableCombobox } from "@/components/ui/ReusableCombobox";
+import { BillingItem, InventoryItem, ProductVariant } from "../types";
+import { SearchSelect } from "@/components/inputbuilders/SearchSelect";
 import ProductSelectionModal from "../components/ProductSelectionModel";
+import { useApi } from "@/context/ApiContext";
+import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -16,43 +18,14 @@ interface BillingTableProps {
   onItemsChange: (items: BillingItem[]) => void;
 }
 
-// ─── Mock Inventory Data ──────────────────────────────────────────────────────
-
-const inventoryItems: InventoryItem[] = [
-  { 
-    product_barcode: "PRD001", product_name: "iPhone 15", category: "Electronics", requireSerial: true,
-    batchTracking: true, manufacturingDate: "2026-01-15", expiryDate: "2028-01-15",
-    variants: [
-      { id: "v1", name: "Blue 128GB", price: 79900, stock: 5 },
-      { id: "v2", name: "Black 256GB", price: 89900, stock: 2 }
-    ] 
-  },
-  { 
-    product_barcode: "PRD002", product_name: "Basic T-Shirt", category: "Clothing", requireSerial: false,
-    batchTracking: true, manufacturingDate: "2026-02-01", expiryDate: "2026-05-10",
-    variants: [
-      { id: "v3", name: "Medium / Navy", price: 499, stock: 20 },
-      { id: "v4", name: "Large / Navy", price: 499, stock: 0 }
-    ] 
-  },
-];
-
-const toOptions = (type: "code" | "name"): SelectOption[] =>
-  inventoryItems.map((item) => ({
-    value:   type === "code" ? item.product_barcode : item.product_name,
-    // Enhance Combobox display if it supports rendering raw strings:
-    label:   type === "code" ? item.product_barcode : `${item.product_name} • ${item.category}`,
-    payload: item,
-  }));
-
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 export const createEmptyRow = (): BillingItem => ({
-  id:     uuidv4(),
-  code:   "",
-  name:   "",
-  qty:    0,
-  price:  0,
+  id: uuidv4(),
+  code: "",
+  name: "",
+  qty: 0,
+  price: 0,
   tprice: 0,
 });
 
@@ -76,7 +49,7 @@ const BatchDetails = ({ mfg, exp }: { mfg?: string, exp?: string }) => {
   const expiry = new Date(exp);
   const diffMs = expiry.getTime() - now.getTime();
   const daysLeft = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-  
+
   let status = { label: `${daysLeft}d left`, color: 'text-emerald-700 bg-emerald-50 border-emerald-200', Icon: ShieldCheck };
   if (daysLeft < 0) status = { label: `Expired`, color: 'text-red-700 bg-red-50 border-red-200', Icon: XCircle };
   else if (daysLeft <= 30) status = { label: `${daysLeft}d left`, color: 'text-red-700 bg-red-50 border-red-200', Icon: AlertTriangle };
@@ -104,20 +77,19 @@ const ShortcutKbd = ({ keys, label }: { keys: string[]; label: string; }) => (
   </div>
 );
 
-const BillingRow = React.memo(({ 
-  item, index, isLast, codeOptions, nameOptions, hasSerial, 
-  handleProductSelectClick, updateItem, handleDeleteRow, handleAddRow 
+const BillingRow = React.memo(({
+  item, index, isLast, hasSerial,
+  handleProductSelectClick, updateItem, handleDeleteRow, handleAddRow, fetchInventory
 }: {
   item: BillingItem;
   index: number;
   isLast: boolean;
-  codeOptions: SelectOption[];
-  nameOptions: SelectOption[];
   hasSerial: boolean;
   handleProductSelectClick: any;
   updateItem: (id: string, updates: Partial<BillingItem>) => void;
   handleDeleteRow: (id: string) => void;
   handleAddRow: () => void;
+  fetchInventory: (q: string) => Promise<any[]>;
 }) => {
   const isFilled = !!item.name;
   const [baseName, variantName] = item.name ? item.name.split(' - ') : ["", ""];
@@ -132,38 +104,48 @@ const BillingRow = React.memo(({
 
       <td className={`px-3 py-4 min-w-[300px] align-top ${!isLast ? "border-b border-slate-100" : ""}`}>
         <div className="w-full max-w-lg">
-          <div className="flex gap-2">
-            <div className="w-2/5">
-              <ReusableCombobox
-                options={codeOptions}
-                value={item.code || ""} 
-                placeholder="Barcode..."
-                onChange={(selected) => handleProductSelectClick(selected, item.id, 'code')}
-              />
+          <div className="flex items-center gap-3">
+            <div className="w-1/4">
+              <div className="flex flex-col gap-1">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tight ml-1">Barcode</span>
+                <div className="h-10 px-3 flex items-center rounded-lg border border-slate-200 bg-slate-50/50 text-sm font-medium text-slate-600 truncate">
+                  {item.code || "—"}
+                </div>
+              </div>
             </div>
-            <div className="w-3/5">
-              <ReusableCombobox
-                options={nameOptions}
-                value={baseName} 
-                placeholder="Search product..."
-                onChange={(selected) => handleProductSelectClick(selected, item.id, 'name')}
-              />
+            <div className="w-3/4">
+              <div className="flex flex-col gap-1">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tight ml-1">Search Product</span>
+                <SearchSelect
+                  fetchOptions={fetchInventory}
+                  value={baseName}
+                  placeholder="Type to search..."
+                  labelKey="displayName"
+                  valueKey="displayName"
+                  onChange={(_, opt: any) => handleProductSelectClick(opt, item.id)}
+                  className="h-10 shadow-none border-slate-200 focus:border-blue-400"
+                />
+              </div>
             </div>
           </div>
-          
+
           {isFilled && (variantName || hasSerial) && (
             <div className="flex flex-wrap items-center gap-2 mt-2">
               {variantName && (
                 <span className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md">
-                  <Tag size={10} className="text-slate-400"/>
+                  <Tag size={10} className="text-slate-400" />
                   {variantName}
                 </span>
               )}
-              {hasSerial && (
-                <span className="inline-flex items-center gap-1 text-[11px] font-medium text-blue-700 bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-md">
-                  <Barcode size={12} className="text-blue-500" />
-                  SN: {item.serialNumber}
-                </span>
+              {hasSerial && item.serialNumbers && item.serialNumbers.length > 0 && (
+                <div className="flex flex-wrap gap-1 mt-1">
+                  {item.serialNumbers.map((s, idx) => (
+                    <span key={idx} className="inline-flex items-center gap-1 text-[10px] font-bold text-blue-700 bg-blue-50 border border-blue-100 px-1.5 py-0.5 rounded-md">
+                      <Barcode size={10} className="text-blue-500" />
+                      {s}
+                    </span>
+                  ))}
+                </div>
               )}
             </div>
           )}
@@ -177,15 +159,12 @@ const BillingRow = React.memo(({
       <td className={`px-3 py-4 align-top text-right ${!isLast ? "border-b border-slate-100" : ""}`}>
         <input
           type="number"
-          min="0"
+          min="1"
           value={item.qty || ""}
           placeholder="0"
-          disabled={hasSerial}
-          onChange={(e) => updateItem(item.id, { qty: Number(e.target.value) })}
+          onChange={(e) => updateItem(item.id, { qty: Math.max(1, Number(e.target.value)) })}
           onKeyDown={(e) => { if (e.key === "Enter") handleAddRow(); }}
-          className={`w-20 px-3 py-1.5 mt-0.5 rounded-lg border text-sm font-semibold text-right tabular-nums focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all ${
-              hasSerial ? "bg-slate-50 text-slate-400 border-slate-100 cursor-not-allowed" : "bg-white border-slate-200 text-slate-800 hover:border-slate-300 shadow-sm"
-          }`}
+          className="w-20 px-3 py-1.5 mt-0.5 rounded-lg border border-slate-200 bg-white text-sm font-semibold text-right tabular-nums text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 hover:border-slate-300 transition-all shadow-sm"
         />
       </td>
 
@@ -199,9 +178,16 @@ const BillingRow = React.memo(({
       </td>
 
       <td className={`px-5 py-4 align-top text-right ${!isLast ? "border-b border-slate-100" : ""}`}>
-        <div className={`inline-flex items-center justify-end gap-1 mt-1 font-bold text-base tabular-nums tracking-tight ${item.tprice > 0 ? "text-slate-900" : "text-slate-300"}`}>
-          <IndianRupee size={14} strokeWidth={2.5} className={item.tprice > 0 ? "text-slate-900" : "text-slate-300"} />
-          {item.tprice > 0 ? item.tprice.toLocaleString("en-IN", { minimumFractionDigits: 2 }) : "0.00"}
+        <div className="flex flex-col items-end">
+          <div className={`inline-flex items-center justify-end gap-1 mt-1 font-bold text-base tabular-nums tracking-tight ${item.tprice > 0 ? "text-slate-900" : "text-slate-300"}`}>
+            <IndianRupee size={14} strokeWidth={2.5} className={item.tprice > 0 ? "text-slate-900" : "text-slate-300"} />
+            {item.tprice > 0 ? item.tprice.toLocaleString("en-IN", { minimumFractionDigits: 2 }) : "0.00"}
+          </div>
+          {item.qty > 1 && item.price > 0 && (
+            <span className="text-[10px] text-slate-400 font-medium mt-0.5">
+              {item.price.toLocaleString("en-IN")} × {item.qty}
+            </span>
+          )}
         </div>
       </td>
 
@@ -220,12 +206,47 @@ const BillingRow = React.memo(({
 // ─── Component ────────────────────────────────────────────────────────────────
 
 const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => {
-  const nameOptions = useMemo(() => toOptions("name"), []);
-  const codeOptions = useMemo(() => toOptions("code"), []);
-
+  const { getData } = useApi();
   const [modalOpen, setModalOpen] = useState(false);
   const [pendingProduct, setPendingProduct] = useState<InventoryItem | null>(null);
   const [activeRowId, setActiveRowId] = useState<string | null>(null);
+
+  const fetchInventory = useCallback(async (q: string) => {
+    if (!q) return [];
+    try {
+      const res = await getData(ENDPOINTS.INVENTORIES, { limit: "10", offset: "1", q, shop_id: SHOP_ID });
+      const data = res?.data ? (Array.isArray(res.data) ? res.data : [res.data]) : [];
+      return data.map((p: any) => ({
+        ...p,
+        // Map backend fields based on provided JSON structure
+        product_name: p.name || "Unknown Product",
+        product_barcode: p.barcode || "N/A",
+        category: p.category || "Other",
+        displayName: `${p.name || "Unknown"} • ${p.category || 'Other'}`,
+        barcodeDisplay: p.barcode || 'N/A',
+        variants: (p.variants || []).map((v: any) => ({
+          ...v,
+          price: v.sell_price || 0,
+          stock: v.stocks || 0,
+          serialnoId: v.serial_numbers?.id || v.serial_number?.id || v.batches?.[0]?.serial_numbers?.id,
+          availableSerials: v.serial_numbers?.serial_numbers || v.serial_number?.serial_numbers || v.batches?.[0]?.serial_numbers?.serial_numbers || [],
+          batchId: v.batches?.[0]?.id,
+        })),
+        requireSerial: p.has_serialno || false,
+        batchTracking: p.has_batch || false,
+        manufacturingDate: p.batches?.[0]?.manufacturing_date, 
+        expiryDate: p.batches?.[0]?.expiry_date,
+        price: p.sell_price || 0,
+        stocks: p.stocks || 0,
+        serialnoId: p.serial_number?.id || p.batches?.[0]?.serial_numbers?.id,
+        availableSerials: p.serial_number?.serial_numbers || p.batches?.[0]?.serial_numbers?.serial_numbers || [],
+        batchId: p.batches?.[0]?.id,
+      }));
+    } catch (err) {
+      console.error("Failed to fetch inventory:", err);
+      return [];
+    }
+  }, [getData]);
 
   // ── Row mutations ───────────────────────────────────────────────────────────
 
@@ -248,7 +269,7 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
   }, [items, onItemsChange]);
 
   const itemsRef = useRef(items);
-  
+
   useEffect(() => {
     itemsRef.current = items;
   }, [items]);
@@ -265,40 +286,39 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
 
   // ── Modal Handlers ────────────────────────────────────────────────────────
 
-  const handleProductSelectClick = (selectedValue: string, rowId: string, searchBy: 'name' | 'code' = 'name') => {
-    let opt;
-    if (searchBy === 'name') {
-      // Strip out the category if appended in label formatting
-      const rawLabel = selectedValue.split(' • ')[0];
-      opt = nameOptions.find((o) => o.value === rawLabel);
-    } else {
-      opt = codeOptions.find((o) => o.value === selectedValue);
-    }
-    if (!opt) return;
-    
-    setPendingProduct(opt.payload);
+  const handleProductSelectClick = (selectedProduct: any, rowId: string) => {
+    if (!selectedProduct) return;
+
+    setPendingProduct(selectedProduct);
     setActiveRowId(rowId);
     setModalOpen(true);
   };
 
-  const handleModalSuccess = (variant: ProductVariant, serial?: string) => {
+  const handleModalSuccess = (variant: ProductVariant, serials?: string[]) => {
     if (!activeRowId || !pendingProduct) return;
 
-    if (serial && items.some(item => item.serialNumber === serial)) {
-       alert("This serial number has already been added to the bill.");
-       return;
+    if (serials && serials.length > 0) {
+      const alreadyAdded = serials.find(s => items.some(item => item.serialNumbers?.includes(s)));
+      if (alreadyAdded) {
+        alert(`Serial number ${alreadyAdded} has already been added to the bill.`);
+        return;
+      }
     }
 
     const updatedItems = items.map((item) => {
       if (item.id !== activeRowId) return item;
-      const merged = { 
-        ...item, 
+      const merged = {
+        ...item,
+        inventoryId: pendingProduct.id,
         code: pendingProduct.product_barcode,
-        name: `${pendingProduct.product_name} - ${variant.name}`,
+        name: variant.id === "default" ? pendingProduct.product_name : `${pendingProduct.product_name} - ${variant.name}`,
         price: variant.price,
-        qty: 1, 
-        serialNumber: serial,
-        variantId: variant.id,
+        qty: (serials && serials.length > 0) ? serials.length : 1,
+        serialNumbers: serials,
+        variantId: variant.id === "default" ? null : variant.id,
+        batchId: variant.batchId || pendingProduct.batchId,
+        serialnoId: variant.serialnoId || pendingProduct.serialnoId,
+        requireSerial: pendingProduct.requireSerial,
         batchTracking: pendingProduct.batchTracking,
         manufacturingDate: pendingProduct.manufacturingDate,
         expiryDate: pendingProduct.expiryDate,
@@ -307,7 +327,7 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
     });
 
     if (activeRowId === items[items.length - 1].id) {
-        updatedItems.push(createEmptyRow());
+      updatedItems.push(createEmptyRow());
     }
 
     onItemsChange(updatedItems);
@@ -336,10 +356,8 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
 
   // ── Derived values ────────────────────────────────────────────────────────
 
-  // ── Derived values ────────────────────────────────────────────────────────
-
   const grandTotal = useMemo(() => items.reduce((sum, item) => sum + item.tprice, 0), [items]);
-  const totalQty   = useMemo(() => items.reduce((sum, item) => sum + item.qty,    0), [items]);
+  const totalQty = useMemo(() => items.reduce((sum, item) => sum + item.qty, 0), [items]);
   const filledRows = useMemo(() => items.filter((i) => i.name).length, [items]);
 
   // ─── Render ───────────────────────────────────────────────────────────────
@@ -361,16 +379,16 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
               </p>
             </div>
           </div>
-          
+
           <div className="flex items-center gap-2 mt-4 sm:mt-0">
-            <button 
+            <button
               onClick={handleClearAll}
               className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium text-slate-500 hover:text-slate-800 hover:bg-slate-50 transition-all duration-150 active:scale-95"
             >
               <RotateCcw size={14} />
               Clear All
             </button>
-            <button 
+            <button
               onClick={handleAddRow}
               className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 transition-all duration-150 active:scale-95"
             >
@@ -381,7 +399,7 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
         </div>
 
         {/* Table Area */}
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto pf-scroll">
           <table className="min-w-full border-separate border-spacing-0">
             <thead>
               <tr>
@@ -407,13 +425,12 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
                   item={item}
                   index={index}
                   isLast={index === items.length - 1}
-                  codeOptions={codeOptions}
-                  nameOptions={nameOptions}
-                  hasSerial={!!item.serialNumber}
+                  hasSerial={item.requireSerial || !!(item.serialNumbers && item.serialNumbers.length > 0)}
                   handleProductSelectClick={handleProductSelectClick}
                   updateItem={updateItem}
                   handleDeleteRow={handleDeleteRow}
                   handleAddRow={handleAddRow}
+                  fetchInventory={fetchInventory}
                 />
               ))}
             </tbody>
@@ -422,7 +439,7 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
 
         {/* Footer Area */}
         <div className="border-t border-slate-100 px-6 py-5 bg-slate-50/50 flex items-center justify-between flex-wrap gap-4">
-          
+
           {/* Shortcuts Panel */}
           <div className="hidden sm:flex flex-col gap-2">
             <div className="flex items-center gap-1.5 mb-1 text-slate-400">
@@ -450,11 +467,11 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
       </div>
 
       {/* Product Selection Modal */}
-      <ProductSelectionModal 
-         isOpen={modalOpen} 
-         product={pendingProduct} 
-         onClose={() => setModalOpen(false)}
-         onSuccess={handleModalSuccess}
+      <ProductSelectionModal
+        isOpen={modalOpen}
+        product={pendingProduct}
+        onClose={() => setModalOpen(false)}
+        onSuccess={handleModalSuccess}
       />
     </div>
   );

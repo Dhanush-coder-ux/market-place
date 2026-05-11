@@ -1,5 +1,4 @@
 export const ENDPOINTS = {
-  PRODUCTS: "/products",
   SUPPLIERS: "/suppliers",
   EMPLOYEES: "/employees",
   CUSTOMERS: "/customers",
@@ -8,6 +7,7 @@ export const ENDPOINTS = {
   S_MOVEMENTS: "/inventories/s_movements",
   PURCHASES: "/inventories/purchases",
   ORDERS: "/orders",
+  BILLING: "/inventories/billing",
   SHOPS: "/shops",
   OFFERS: "/offers",
   COUPONS: "/coupons",

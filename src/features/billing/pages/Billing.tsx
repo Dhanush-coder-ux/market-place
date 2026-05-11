@@ -9,9 +9,11 @@ import BillingHeader from "../components/BillingHeader";
 import BillingDetailView from "../components/BillingDetailView";
 import Drawer from "@/components/common/Drawer";
 
-import { BillingItem, InvoicePayload } from "../types";
+import { BillingItem, InvoicePayload, CreateBillingSchema } from "../types";
 import { useApi } from "@/context/ApiContext";
 import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
+import { SearchSelect } from "@/components/inputbuilders/SearchSelect";
+import CustomerCreateModal from "../components/CustomerCreateModal";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 export interface CustomerData {
@@ -26,23 +28,9 @@ export interface CustomerData {
 const formatINR = (amount: number, decimals = 2) =>
   amount.toLocaleString("en-IN", { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
 
-// Mock customer lookup (replace with real API when customer-search endpoint is ready)
-const fetchCustomerByPhone = async (phone: string): Promise<CustomerData | null> => {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      const DB: Record<string, CustomerData> = {
-        "9988776655": { id: "3", name: "Rajapandi", phone: "9988776655", outstanding: 15000, creditLimit: 30000, totalSpent: 45000 },
-        "9988776656": { id: "4", name: "Suresh", phone: "9988776656", outstanding: 35000, creditLimit: 30000, totalSpent: 80000 },
-        "9988776657": { id: "5", name: "Priya", phone: "9988776657", outstanding: 0, creditLimit: 20000, totalSpent: 12000 },
-      };
-      resolve(DB[phone] ?? null);
-    }, 600);
-  });
-};
-
 // ─── Billing Page ─────────────────────────────────────────────────────────────
 const Billing = () => {
-  const { postData, loading: isSubmitting } = useApi();
+  const { postData, getData, loading: isSubmitting } = useApi();
 
   // ── Table State
   const [items, setItems] = useState<BillingItem[]>([createEmptyRow()]);
@@ -56,6 +44,12 @@ const Billing = () => {
   const [isLoadingCustomer, setIsLoadingCustomer] = useState(false);
   const [customerNotFound, setCustomerNotFound] = useState(false);
   const [wasAutofilled, setWasAutofilled] = useState(false);
+
+  // ── Create Customer Modal State
+  const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
+  const [newCustomerName, setNewCustomerName] = useState("");
+  const [isCreatingCustomer, setIsCreatingCustomer] = useState(false);
+  const [staticCustomers, setStaticCustomers] = useState<CustomerData[]>([]);
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -76,42 +70,80 @@ const Billing = () => {
     }
   }, [wasAutofilled]);
 
-  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const raw = e.target.value.replace(/\D/g, "").slice(0, 10);
-    setPhone(raw);
+  const fetchCustomers = useCallback(async (query: string) => {
+    if (!query) return [];
+    try {
+      const res = await getData(ENDPOINTS.CUSTOMERS, { search: query });
+      if (res && res.data) {
+        // Map backend customer to CustomerData interface
+        return res.data.map((c: any) => ({
+          id: c.id,
+          name: c.name,
+          phone: c.mobile_number || c.phone || c.mobilenum || "",
+          outstanding: c.outstanding || 0,
+          creditLimit: c.credit_limit || 0,
+          totalSpent: c.total_spent || 0,
+        }));
+      }
+      return [];
+    } catch (err) {
+      console.error("Failed to fetch customers:", err);
+      return [];
+    }
+  }, [getData]);
 
-    if (raw.length < 10) {
+  const handleCustomerChange = (val: any, customer: CustomerData | CustomerData[]) => {
+    if (!val) {
       resetCustomer();
-      if (debounceRef.current) clearTimeout(debounceRef.current);
+      setPhone("");
+      setCustomerName("");
       return;
     }
 
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(async () => {
-      setIsLoadingCustomer(true);
-      setCustomerNotFound(false);
-      try {
-        const data = await fetchCustomerByPhone(raw);
-        if (data) {
-          setCustomerData(data);
-          setCustomerName(data.name);
-          setWasAutofilled(true);
-          setCustomerNotFound(false);
-        } else {
-          setCustomerData(null);
-          setCustomerNotFound(true);
-        }
-      } catch {
-        console.error("Failed to fetch customer");
-      } finally {
-        setIsLoadingCustomer(false);
-      }
-    }, 0);
+    if (Array.isArray(customer)) return; // Single select only
+
+    setCustomerData(customer);
+    setCustomerName(customer.name);
+    setPhone(customer.phone);
+    setWasAutofilled(true);
+    setCustomerNotFound(false);
   };
 
-  useEffect(() => {
-    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
-  }, []);
+  const handleCreateCustomer = async (customerValues: any) => {
+    try {
+      setIsCreatingCustomer(true);
+      const res = await postData(ENDPOINTS.CUSTOMERS, {
+        ...customerValues,
+        shop_id: SHOP_ID,
+      });
+
+      // Backend structure: { detail: { success: true }, data: { ... } } or { detail: { success: true }, data: [{ ... }] }
+      const isSuccess = res?.success || res?.detail?.success;
+      const responseData = Array.isArray(res?.data) ? res.data[0] : res?.data;
+
+      if (isSuccess && responseData) {
+        // Automatically select the newly created customer
+        const newCustomer: CustomerData = {
+          id: responseData.id,
+          name: responseData.name,
+          phone: responseData.mobile_number || responseData.phone || "",
+          outstanding: responseData.outstanding || 0,
+          creditLimit: responseData.credit_limit || 0,
+          totalSpent: responseData.total_spent || 0,
+        };
+        
+        // Add to static list so SearchSelect can "see" it immediately
+        setStaticCustomers(prev => [newCustomer, ...prev]);
+        
+        handleCustomerChange(newCustomer.id, newCustomer);
+        setIsCustomerModalOpen(false);
+      }
+    } catch (err) {
+      console.error("Failed to create customer:", err);
+    } finally {
+      setIsCreatingCustomer(false);
+    }
+  };
 
   // ── Invoice ready → open drawer with payload (don't POST yet)
   const handleInvoiceReady = useCallback((payload: InvoicePayload) => {
@@ -119,33 +151,27 @@ const Billing = () => {
     setIsOpen(true);
   }, []);
 
-  // ── Confirm Order → POST to Orders API
+  // ── Confirm Order → POST to Billing API
   const handleConfirmOrder = useCallback(async () => {
     if (!pendingInvoice) return;
 
     const filledItems = pendingInvoice.items.filter(i => !!i.name);
 
-    const payload = {
+    const payload: CreateBillingSchema = {
       shop_id: SHOP_ID,
-      orders: filledItems.map(i => i.code || i.name),
-      customer_number: pendingInvoice.phone || "",
-      customer_name: pendingInvoice.customerName || "Walk-in",
-      status: "COMPLETED",
-      origin: "IN_STORE",
-      datas: {
-        items: filledItems,
-        total_qty: pendingInvoice.totalQty,
-        total_amount: pendingInvoice.totalAmount,
-        gst_amount: pendingInvoice.gstAmount,
-        final_amount: pendingInvoice.finalAmount,
-        include_gst: pendingInvoice.includeGst,
-        payment_mode: pendingInvoice.paymentMode,
-        customer_id: pendingInvoice.customer?.id ?? null,
-        date: pendingInvoice.date,
-      },
+      payment_method: pendingInvoice.paymentMode.toUpperCase(),
+      customer_id: pendingInvoice.customer?.id || "walk-in",
+      products: filledItems.map(i => ({
+        id: i.inventoryId || "",
+        variant_id: i.variantId || undefined,
+        batch_id: i.batchId,
+        serialno_id: i.serialnoId,
+        serial_numbers: i.serialNumbers || [],
+        quantity: i.qty
+      }))
     };
 
-    const res = await postData(ENDPOINTS.ORDERS, payload);
+    const res = await postData(ENDPOINTS.BILLING, payload);
     if (res) {
       // Success — reset billing state
       setIsOpen(false);
@@ -193,49 +219,34 @@ const Billing = () => {
             )}
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Phone Input */}
-            <div className="relative flex items-center rounded-xl border border-slate-200 focus-within:border-indigo-400 focus-within:ring-2 focus-within:ring-indigo-50 transition-all bg-white h-11">
-              <span className="pl-3 text-slate-400"><Phone size={16} /></span>
-              <input
-                type="tel"
-                maxLength={10}
-                placeholder="10-digit phone number"
-                value={phone}
-                onChange={handlePhoneChange}
-                className="flex-1 h-full px-3 text-sm text-slate-800 bg-transparent outline-none placeholder:text-slate-300"
-              />
-              <span className="pr-3 shrink-0">
-                {phone.length === 10 && !isLoadingCustomer && (
-                  customerData ? <CheckCircle2 size={16} className="text-emerald-500" />
-                    : customerNotFound ? <AlertCircle size={16} className="text-amber-400" />
-                      : null
+          <div className="flex flex-col gap-4">
+            {/* Customer SearchSelect */}
+            <div className="w-full">
+              <SearchSelect<CustomerData>
+                label="Search Customer (Name/Phone)"
+                placeholder="Start typing name or phone..."
+                fetchOptions={fetchCustomers}
+                options={staticCustomers}
+                labelKey="name"
+                valueKey="id"
+                onChange={handleCustomerChange}
+                value={customerData?.id}
+                allowClear
+                className="h-11"
+                onCreateNew={(name) => {
+                  setNewCustomerName(name);
+                  setIsCustomerModalOpen(true);
+                }}
+                renderOption={(opt) => (
+                  <div className="flex flex-col py-1">
+                    <span className="font-semibold text-slate-800">{opt.name}</span>
+                    <span className="text-[10px] text-slate-400 font-mono">{opt.phone}</span>
+                  </div>
                 )}
-              </span>
-            </div>
-
-            {/* Name Input */}
-            <div className="relative flex items-center rounded-xl border border-slate-200 focus-within:border-indigo-400 focus-within:ring-2 focus-within:ring-indigo-50 transition-all bg-white h-11">
-              <span className="pl-3 text-slate-400"><User size={16} /></span>
-              <input
-                type="text"
-                placeholder="Customer name"
-                value={customerName}
-                onChange={(e) => setCustomerName(e.target.value)}
-                disabled={!!customerData}
-                className="flex-1 h-full px-3 text-sm text-slate-800 bg-transparent outline-none placeholder:text-slate-300 disabled:opacity-60 disabled:bg-slate-50"
               />
             </div>
           </div>
 
-          {customerNotFound && (
-            <div className="flex items-center justify-between bg-amber-50 border border-amber-200 rounded-xl p-3">
-              <span className="text-[11px] text-amber-700 font-medium">No record found for this number.</span>
-              <button className="flex items-center gap-1 text-[11px] font-bold text-indigo-600 hover:text-indigo-700">
-                <PlusCircle size={12} strokeWidth={2.5} /> Add New
-              </button>
-            </div>
-          )}
         </div>
 
         {/* Right: Credit Summary */}
@@ -305,6 +316,15 @@ const Billing = () => {
           />
         </div>
       </div>
+
+      {/* Customer Creation Modal */}
+      <CustomerCreateModal 
+        isOpen={isCustomerModalOpen}
+        onClose={() => setIsCustomerModalOpen(false)}
+        onCreated={handleCreateCustomer}
+        initialName={newCustomerName}
+        isSubmitting={isCreatingCustomer}
+      />
 
       {/* Invoice Review Drawer */}
       <Drawer isOpen={isOpen} title="Review & Confirm Order" onClose={() => setIsOpen(false)}>

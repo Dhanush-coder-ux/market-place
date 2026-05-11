@@ -6,51 +6,49 @@ interface ProductSelectionModalProps {
   isOpen: boolean;
   product: InventoryItem | null;
   onClose: () => void;
-  onSuccess: (variant: ProductVariant, serial?: string) => void;
+  onSuccess: (variant: ProductVariant, serials?: string[]) => void;
 }
 
 const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({ isOpen, product, onClose, onSuccess }) => {
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null);
-  const [serial, setSerial] = useState("");
-  const [serialStatus, setSerialStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const [selectedSerials, setSelectedSerials] = useState<string[]>([]);
+  const [quantity, setQuantity] = useState(1);
 
   // Reset state when modal opens
   useEffect(() => {
-    if (isOpen) {
-      setSelectedVariant(null);
-      setSerial("");
-      setSerialStatus("idle");
-    }
-  }, [isOpen]);
-
-  // Simulate API fetch for serial number
-  useEffect(() => {
-    if (serial.length < 5) {
-      setSerialStatus("idle");
-      return;
-    }
-    
-    setSerialStatus("loading");
-    const timer = setTimeout(() => {
-      // Mock API logic: Serial ends in '0' = invalid, otherwise valid
-      if (serial.endsWith("0")) {
-        setSerialStatus("error");
+    if (isOpen && product) {
+      if (product.variants && product.variants.length > 0) {
+        setSelectedVariant(null);
       } else {
-        setSerialStatus("success");
-        // Auto-select first variant if valid and none selected
-        if (!selectedVariant && product?.variants.length) {
-          setSelectedVariant(product.variants[0]);
-        }
+        setSelectedVariant({
+          id: "default",
+          name: "Standard",
+          price: product.price || 0,
+          stock: product.stocks || 0,
+          serialnoId: product.serialnoId,
+          batchId: product.batchId,
+          availableSerials: product.availableSerials
+        });
       }
-    }, 400);
-
-    return () => clearTimeout(timer);
-  }, [serial, product, selectedVariant]);
+      setSelectedSerials([]);
+      setQuantity(1);
+    }
+  }, [isOpen, product]);
 
   if (!isOpen || !product) return null;
 
   const isElectronics = product.category === "Electronics" || product.requireSerial;
-  const canProceed = selectedVariant && (!isElectronics || serialStatus === "success");
+  const availableSerials = selectedVariant?.availableSerials || product.availableSerials || [];
+  
+  const canProceed = selectedVariant && (!isElectronics || (selectedSerials.length === quantity && quantity > 0));
+
+  const toggleSerial = (s: string) => {
+    setSelectedSerials(prev => {
+      if (prev.includes(s)) return prev.filter(x => x !== s);
+      if (prev.length < quantity) return [...prev, s];
+      return prev;
+    });
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/20 backdrop-blur-sm transition-opacity">
@@ -67,133 +65,126 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({ isOpen, p
           </button>
         </div>
 
-        <div className="p-5 space-y-6">
+        <div className="p-5 space-y-6 max-h-[70vh] overflow-y-auto pf-scroll">
           {/* Variant Selection */}
-          <div>
-            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-3">Select Variant</p>
-            <div className="grid grid-cols-2 gap-3">
-              {product.variants.map((variant) => {
-                const isSelected = selectedVariant?.id === variant.id;
-                const isOutOfStock = variant.stock === 0;
-
-                return (
-                  <button
-                    key={variant.id}
-                    disabled={isOutOfStock}
-                    onClick={() => setSelectedVariant(variant)}
-                    className={`flex flex-col items-start p-3 rounded-xl border text-left transition-all duration-200 ${
-                      isOutOfStock ? "opacity-50 cursor-not-allowed border-slate-100 bg-slate-50" :
-                      isSelected ? "border-blue-300 bg-blue-50 ring-1 ring-blue-100" : "border-slate-200 hover:border-blue-200 hover:bg-slate-50"
-                    }`}
-                  >
-                    <span className={`text-sm font-semibold ${isSelected ? "text-blue-700" : "text-slate-700"}`}>
-                      {variant.name}
-                    </span>
-                    <div className="flex items-center justify-between w-full mt-1">
-                      <span className="text-xs font-medium text-slate-500">₹{variant.price}</span>
-                      <span className={`text-[10px] font-bold ${isOutOfStock ? "text-red-400" : "text-emerald-500"}`}>
-                        {isOutOfStock ? "Out of Stock" : `${variant.stock} in stock`}
-                      </span>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Batch Tracking Info */}
-          {product.batchTracking && product.manufacturingDate && product.expiryDate && (() => {
-            const now = new Date();
-            const mfg = new Date(product.manufacturingDate!);
-            const exp = new Date(product.expiryDate!);
-            const diffMs = exp.getTime() - now.getTime();
-            const daysLeft = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-            const totalSpan = exp.getTime() - mfg.getTime();
-            const elapsed = now.getTime() - mfg.getTime();
-            const pct = totalSpan > 0 ? Math.min(Math.max((elapsed / totalSpan) * 100, 0), 100) : 0;
-
-            const isExpired = daysLeft < 0;
-            const isCritical = daysLeft >= 0 && daysLeft <= 30;
-            const isWarning = daysLeft > 30 && daysLeft <= 90;
-
-            const statusLabel = isExpired ? 'Expired' : isCritical ? 'Expiring Soon' : isWarning ? 'Nearing Expiry' : 'Active';
-            const statusColor = isExpired || isCritical ? 'text-red-600 bg-red-50 border-red-100' 
-              : isWarning ? 'text-amber-600 bg-amber-50 border-amber-100' 
-              : 'text-emerald-600 bg-emerald-50 border-emerald-100';
-            const barColor = isExpired || isCritical ? 'bg-red-400' : isWarning ? 'bg-amber-400' : 'bg-emerald-400';
-
-            const fmtDate = (d: string) => new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
-
-            return (
-              <div className="bg-slate-50/80 rounded-xl border border-slate-100 p-4">
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-1.5">
-                  <CalendarDays size={12} className="text-indigo-400" /> Batch Information
-                </p>
-                <div className="flex items-center gap-4 mb-3">
-                  <div className="flex-1">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Manufactured</span>
-                    <span className="text-xs font-semibold text-slate-700 bg-white px-2.5 py-1 rounded-md border border-slate-100 inline-block">
-                      {fmtDate(product.manufacturingDate!)}
-                    </span>
-                  </div>
-                  <div className="flex-1">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Expires</span>
-                    <span className={`text-xs font-semibold px-2.5 py-1 rounded-md border inline-block ${
-                      isExpired || isCritical ? 'text-red-700 bg-red-50 border-red-100' :
-                      isWarning ? 'text-amber-700 bg-amber-50 border-amber-100' :
-                      'text-slate-700 bg-white border-slate-100'
-                    }`}>
-                      {fmtDate(product.expiryDate!)}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Status</span>
-                    <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-md border ${statusColor}`}>
-                      {statusLabel}
-                    </span>
-                  </div>
-                </div>
-                {/* Lifecycle bar */}
-                <div className="flex items-center gap-2">
-                  <div className="flex-1 h-1.5 bg-slate-200/60 rounded-full overflow-hidden">
-                    <div className={`h-full rounded-full transition-all duration-500 ${barColor}`} style={{ width: `${pct}%` }} />
-                  </div>
-                  <span className="text-[10px] font-bold text-slate-400 tabular-nums">{pct.toFixed(0)}% elapsed</span>
-                </div>
-              </div>
-            );
-          })()}
-
-          {/* Conditional Serial Input */}
-          {isElectronics && (
+          {product.variants && product.variants.length > 0 && (
             <div>
-              <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-1.5">
-                <Barcode size={14} /> Serial Number (Required)
-              </p>
-              <div className="relative">
-                <input
-                  type="text"
-                  placeholder="Scan or enter serial number..."
-                  value={serial}
-                  onChange={(e) => setSerial(e.target.value.toUpperCase())}
-                  className={`w-full px-4 py-2.5 rounded-xl border text-sm focus:outline-none transition-colors ${
-                    serialStatus === "error" ? "border-red-300 bg-red-50 focus:border-red-400 focus:ring-2 focus:ring-red-100" :
-                    serialStatus === "success" ? "border-emerald-300 bg-emerald-50" :
-                    "border-slate-200 focus:border-blue-400 focus:ring-2 focus:ring-blue-50"
-                  }`}
-                />
-                <div className="absolute right-3 top-2.5">
-                  {serialStatus === "loading" && <Loader2 size={18} className="text-blue-400 animate-spin" />}
-                  {serialStatus === "success" && <CheckCircle2 size={18} className="text-emerald-500" />}
-                  {serialStatus === "error" && <AlertCircle size={18} className="text-red-500" />}
+              <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-3">Select Variant</p>
+              <div className="grid grid-cols-2 gap-3">
+                {product.variants.map((variant) => {
+                  const isSelected = selectedVariant?.id === variant.id;
+                  const isOutOfStock = variant.stock === 0;
+
+                  return (
+                    <button
+                      key={variant.id}
+                      disabled={isOutOfStock}
+                      onClick={() => {
+                        setSelectedVariant(variant);
+                        setSelectedSerials([]); // Reset serials when variant changes
+                      }}
+                      className={`flex flex-col items-start p-3 rounded-xl border text-left transition-all duration-200 ${
+                        isOutOfStock ? "opacity-50 cursor-not-allowed border-slate-100 bg-slate-50" :
+                        isSelected ? "border-blue-300 bg-blue-50 ring-1 ring-blue-100" : "border-slate-200 hover:border-blue-200 hover:bg-slate-50"
+                      }`}
+                    >
+                      <span className={`text-sm font-semibold ${isSelected ? "text-blue-700" : "text-slate-700"}`}>
+                        {variant.name}
+                      </span>
+                      <div className="flex items-center justify-between w-full mt-1">
+                        <span className="text-xs font-medium text-slate-500">₹{variant.price}</span>
+                        <span className={`text-[10px] font-bold ${isOutOfStock ? "text-red-400" : "text-emerald-500"}`}>
+                          {isOutOfStock ? "Out of Stock" : `${variant.stock} in stock`}
+                        </span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Quantity & Serial Selection */}
+          {isElectronics && (
+            <div className="space-y-4">
+              <div>
+                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2">Quantity to Bill</p>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="number"
+                    min="1"
+                    max={availableSerials.length || 1}
+                    value={quantity}
+                    onChange={(e) => {
+                      const val = Math.max(1, Number(e.target.value));
+                      setQuantity(val);
+                      setSelectedSerials([]); // Reset selection when quantity changes to avoid mismatch
+                    }}
+                    className="w-24 px-3 py-2 rounded-xl border border-slate-200 text-sm font-bold focus:border-blue-400 focus:ring-2 focus:ring-blue-50 outline-none transition-all"
+                  />
+                  <span className="text-[11px] font-medium text-slate-400">
+                    Max available: {availableSerials.length}
+                  </span>
                 </div>
               </div>
-              {serialStatus === "error" && (
-                <p className="text-[10px] text-red-500 mt-1.5 font-medium ml-1">Serial number not found or invalid.</p>
-              )}
-              {serialStatus === "success" && (
-                <p className="text-[10px] text-emerald-600 mt-1.5 font-medium ml-1">Serial verified.</p>
-              )}
+
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                    <Barcode size={14} /> Select {quantity} Serial{quantity !== 1 ? 's' : ''}
+                  </p>
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full transition-colors ${
+                    selectedSerials.length === quantity ? "bg-emerald-50 text-emerald-600" : "bg-blue-50 text-blue-600"
+                  }`}>
+                    {selectedSerials.length} / {quantity} Selected
+                  </span>
+                </div>
+                
+                {availableSerials.length > 0 ? (
+                  <div className="flex flex-wrap gap-2">
+                    {availableSerials.map((s) => {
+                      const isSelected = selectedSerials.includes(s);
+                      const isDisabled = !isSelected && selectedSerials.length >= quantity;
+
+                      return (
+                        <button
+                          key={s}
+                          disabled={isDisabled}
+                          onClick={() => toggleSerial(s)}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all duration-150 ${
+                            isSelected 
+                              ? "border-blue-400 bg-blue-50 text-blue-700 shadow-sm" 
+                              : isDisabled
+                                ? "border-slate-100 bg-slate-50 text-slate-300 cursor-not-allowed"
+                                : "border-slate-200 bg-white text-slate-600 hover:border-blue-200 hover:bg-slate-50"
+                          }`}
+                        >
+                          {isSelected && <CheckCircle2 size={10} className="inline mr-1 mb-0.5" />}
+                          {s}
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 p-3 rounded-xl border border-amber-100 bg-amber-50 text-amber-700">
+                    <AlertCircle size={16} />
+                    <span className="text-xs font-medium">No serial numbers available.</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Batch Tracking Info (Optional Display) */}
+          {product.batchTracking && (selectedVariant || product).batchId && (
+            <div className="bg-slate-50/80 rounded-xl border border-slate-100 p-4">
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 flex items-center gap-1.5">
+                <CalendarDays size={12} className="text-indigo-400" /> Batch Info
+              </p>
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-slate-700">Tracking Enabled</span>
+                <span className="text-[10px] font-medium text-slate-400">ID: {(selectedVariant as any)?.batchId || product.batchId}</span>
+              </div>
             </div>
           )}
         </div>
@@ -205,7 +196,7 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({ isOpen, p
           </button>
           <button
             disabled={!canProceed}
-            onClick={() => selectedVariant && onSuccess(selectedVariant, serial)}
+            onClick={() => selectedVariant && onSuccess(selectedVariant, selectedSerials)}
             className={`flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold text-white transition-all duration-200 ${
               canProceed ? "bg-blue-500 hover:bg-blue-600 shadow-sm shadow-blue-200" : "bg-slate-300 cursor-not-allowed"
             }`}

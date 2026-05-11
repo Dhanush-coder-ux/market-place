@@ -11,7 +11,7 @@ export type OrderCardType = {
   phone: string;
   totalAmount: number;
   orderType: string;   
-  status: string;
+  status: string
 };
 
 

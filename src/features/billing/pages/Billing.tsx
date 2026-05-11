@@ -32,8 +32,8 @@ const fetchCustomerByPhone = async (phone: string): Promise<CustomerData | null>
     setTimeout(() => {
       const DB: Record<string, CustomerData> = {
         "9988776655": { id: "3", name: "Rajapandi", phone: "9988776655", outstanding: 15000, creditLimit: 30000, totalSpent: 45000 },
-        "9988776656": { id: "4", name: "Suresh",    phone: "9988776656", outstanding: 35000, creditLimit: 30000, totalSpent: 80000 },
-        "9988776657": { id: "5", name: "Priya",     phone: "9988776657", outstanding: 0,     creditLimit: 20000, totalSpent: 12000 },
+        "9988776656": { id: "4", name: "Suresh", phone: "9988776656", outstanding: 35000, creditLimit: 30000, totalSpent: 80000 },
+        "9988776657": { id: "5", name: "Priya", phone: "9988776657", outstanding: 0, creditLimit: 20000, totalSpent: 12000 },
       };
       resolve(DB[phone] ?? null);
     }, 600);
@@ -61,7 +61,7 @@ const Billing = () => {
 
   // ── Derived Credit Info
   const isCreditExceeded = customerData ? customerData.outstanding >= customerData.creditLimit : false;
-  const creditRemaining  = customerData ? Math.max(0, customerData.creditLimit - customerData.outstanding) : 0;
+  const creditRemaining = customerData ? Math.max(0, customerData.creditLimit - customerData.outstanding) : 0;
 
   // ── Handlers
   const handleItemsChange = useCallback((next: BillingItem[]) => setItems(next), []);
@@ -126,22 +126,22 @@ const Billing = () => {
     const filledItems = pendingInvoice.items.filter(i => !!i.name);
 
     const payload = {
-      shop_id:         SHOP_ID,
-      orders:          filledItems.map(i => i.code || i.name),
-      customer_number: pendingInvoice.phone  || "",
-      customer_name:   pendingInvoice.customerName || "Walk-in",
-      status:          "COMPLETED",
-      origin:          "IN_STORE",
+      shop_id: SHOP_ID,
+      orders: filledItems.map(i => i.code || i.name),
+      customer_number: pendingInvoice.phone || "",
+      customer_name: pendingInvoice.customerName || "Walk-in",
+      status: "COMPLETED",
+      origin: "IN_STORE",
       datas: {
-        items:         filledItems,
-        total_qty:     pendingInvoice.totalQty,
-        total_amount:  pendingInvoice.totalAmount,
-        gst_amount:    pendingInvoice.gstAmount,
-        final_amount:  pendingInvoice.finalAmount,
-        include_gst:   pendingInvoice.includeGst,
-        payment_mode:  pendingInvoice.paymentMode,
-        customer_id:   pendingInvoice.customer?.id ?? null,
-        date:          pendingInvoice.date,
+        items: filledItems,
+        total_qty: pendingInvoice.totalQty,
+        total_amount: pendingInvoice.totalAmount,
+        gst_amount: pendingInvoice.gstAmount,
+        final_amount: pendingInvoice.finalAmount,
+        include_gst: pendingInvoice.includeGst,
+        payment_mode: pendingInvoice.paymentMode,
+        customer_id: pendingInvoice.customer?.id ?? null,
+        date: pendingInvoice.date,
       },
     };
 
@@ -208,8 +208,8 @@ const Billing = () => {
               <span className="pr-3 shrink-0">
                 {phone.length === 10 && !isLoadingCustomer && (
                   customerData ? <CheckCircle2 size={16} className="text-emerald-500" />
-                  : customerNotFound ? <AlertCircle size={16} className="text-amber-400" />
-                  : null
+                    : customerNotFound ? <AlertCircle size={16} className="text-amber-400" />
+                      : null
                 )}
               </span>
             </div>
@@ -241,9 +241,8 @@ const Billing = () => {
         {/* Right: Credit Summary */}
         <div className="w-full md:w-[320px] shrink-0">
           {customerData ? (
-            <div className={`h-full p-4 rounded-xl border flex flex-col justify-center ${
-              isCreditExceeded ? "bg-red-50/60 border-red-200" : "bg-slate-50 border-slate-200"
-            }`}>
+            <div className={`h-full p-4 rounded-xl border flex flex-col justify-center ${isCreditExceeded ? "bg-red-50/60 border-red-200" : "bg-slate-50 border-slate-200"
+              }`}>
               <div className="flex items-center justify-between mb-3">
                 <p className="text-[11px] font-bold text-slate-600 uppercase tracking-wider flex items-center gap-1.5">
                   <Wallet size={12} className="text-slate-400" /> Credit Summary

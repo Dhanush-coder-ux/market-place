@@ -1,5 +1,5 @@
 import { ToggleOption } from "@/components/common/ToggleSelect";
-import React from "react";
+import React from "react"
 
 export type OrderType = {
   orderType: string;
@@ -8,7 +8,7 @@ export type OrderType = {
 export type OrderCardType = {
   billNo: string;
   customerName: string;
-  phone: string;
+  phone: string
   totalAmount: number;
   orderType: string;   
   status: string

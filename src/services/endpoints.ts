@@ -8,6 +8,8 @@ export const ENDPOINTS = {
   PURCHASES: "/inventories/purchases",
   ORDERS: "/orders",
   BILLING: "/inventories/billing",
+  EXCHANGE: "/inventories/billing/exchange",
+  RETURN: "/inventories/billing/return",
   SHOPS: "/shops",
   OFFERS: "/offers",
   COUPONS: "/coupons",

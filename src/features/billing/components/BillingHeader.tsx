@@ -4,8 +4,7 @@ import {
   Wallet, Banknote, Smartphone, ScanBarcode,
   Clock, Trash2 // Added new icons
 } from "lucide-react";
-import { BillingItem, InvoicePayload } from "../types";
-import { CustomerData } from "../pages/Billing"; 
+import { BillingItem, InvoicePayload, CustomerData } from "../types"; 
 
 type PaymentMode = "cash" | "upi" | "credit";
 

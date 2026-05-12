@@ -40,6 +40,7 @@ export interface OrderItemResponse {
   sell_price: number;
   gst?: string | null;
   quantity: number;
+  status?: string;
 }
 
 export interface OrderResponse {
@@ -54,6 +55,11 @@ export interface OrderResponse {
   total_sellprice: number;
   origin: string;
   items?: OrderItemResponse[];
+  exchanged_items?: Array<{
+    exchange_id: string;
+    exchanged_item_id: string;
+    replacement_order: OrderResponse;
+  }>;
   created_at: string;
   updated_at: string;
 }

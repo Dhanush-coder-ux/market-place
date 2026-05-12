@@ -67,5 +67,15 @@ export const inventoryApi = {
     } catch {
       return [];
     }
+  },
+
+  exchangeOrder: async (data: any) => {
+    console.log("Exchange Payload:", data);
+    return await apiClient.post(ENDPOINTS.EXCHANGE, data);
+  },
+
+  returnOrderItem: async (data: { order_id: string; item_id: string }) => {
+    console.log("Return Payload:", data);
+    return await apiClient.post(ENDPOINTS.RETURN, data);
   }
 };

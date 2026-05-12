@@ -36,7 +36,7 @@ type ApiContextType = {
   /** Per-request loading state — use this to avoid full-app re-renders */
   isLoading: (key: string) => boolean;
   error: string | null;
-  getData: (endpoint: string, params?: Record<string, string>, cacheKey?: string) => Promise<any>;
+  getData: (endpoint: string, params?: Record<string, string>, options?: { signal?: AbortSignal; cacheKey?: string }) => Promise<any>;
   postData: (endpoint: string, body: unknown) => Promise<any>;
   putData: (endpoint: string, body: unknown) => Promise<any>;
   deleteData: (endpoint: string, body?: unknown) => Promise<any>;
@@ -165,7 +165,7 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
     return promise;
   }, [setKey]);
 
-  const getData = useCallback((e: string, p?: any, k?: string) => request("GET", e, undefined, p, { cacheKey: k }), [request]);
+  const getData = useCallback((e: string, p?: any, o?: { signal?: AbortSignal; cacheKey?: string }) => request("GET", e, undefined, p, o), [request]);
   const postData = useCallback((e: string, b: any) => request("POST", e, b), [request]);
   const putData = useCallback((e: string, b: any) => request("PUT", e, b), [request]);
   const deleteData = useCallback((e: string, b?: any) => request("DELETE", e, b), [request]);

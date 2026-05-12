@@ -1,7 +1,6 @@
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback } from "react";
 import {
-  Phone, User, Loader2,
-  CheckCircle2, AlertCircle, PlusCircle, Wallet,
+  User, Loader2, CheckCircle2, AlertCircle, Wallet,
 } from "lucide-react";
 
 import BillingTable, { createEmptyRow } from "../components/BillingTable";
@@ -9,21 +8,11 @@ import BillingHeader from "../components/BillingHeader";
 import BillingDetailView from "../components/BillingDetailView";
 import Drawer from "@/components/common/Drawer";
 
-import { BillingItem, InvoicePayload, CreateBillingSchema } from "../types";
+import { BillingItem, InvoicePayload, CreateBillingSchema, CustomerData } from "../types";
 import { useApi } from "@/context/ApiContext";
 import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 import { SearchSelect } from "@/components/inputbuilders/SearchSelect";
 import CustomerCreateModal from "../components/CustomerCreateModal";
-
-// ─── Types ───────────────────────────────────────────────────────────────────
-export interface CustomerData {
-  id: string;
-  name: string;
-  phone: string;
-  outstanding: number;
-  creditLimit: number;
-  totalSpent: number;
-}
 
 const formatINR = (amount: number, decimals = 2) =>
   amount.toLocaleString("en-IN", { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
@@ -42,7 +31,6 @@ const Billing = () => {
   const [customerName, setCustomerName] = useState("");
   const [customerData, setCustomerData] = useState<CustomerData | null>(null);
   const [isLoadingCustomer, setIsLoadingCustomer] = useState(false);
-  const [customerNotFound, setCustomerNotFound] = useState(false);
   const [wasAutofilled, setWasAutofilled] = useState(false);
 
   // ── Create Customer Modal State
@@ -50,8 +38,6 @@ const Billing = () => {
   const [newCustomerName, setNewCustomerName] = useState("");
   const [isCreatingCustomer, setIsCreatingCustomer] = useState(false);
   const [staticCustomers, setStaticCustomers] = useState<CustomerData[]>([]);
-
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ── Derived Credit Info
   const isCreditExceeded = customerData ? customerData.outstanding >= customerData.creditLimit : false;
@@ -62,7 +48,6 @@ const Billing = () => {
 
   const resetCustomer = useCallback(() => {
     setCustomerData(null);
-    setCustomerNotFound(false);
     setIsLoadingCustomer(false);
     if (wasAutofilled) {
       setCustomerName("");
@@ -70,10 +55,10 @@ const Billing = () => {
     }
   }, [wasAutofilled]);
 
-  const fetchCustomers = useCallback(async (query: string) => {
+  const fetchCustomers = useCallback(async (query: string, signal: AbortSignal) => {
     if (!query) return [];
     try {
-      const res = await getData(ENDPOINTS.CUSTOMERS, { search: query });
+      const res = await getData(ENDPOINTS.CUSTOMERS, { search: query }, { signal });
       if (res && res.data) {
         // Map backend customer to CustomerData interface
         return res.data.map((c: any) => ({
@@ -92,8 +77,8 @@ const Billing = () => {
     }
   }, [getData]);
 
-  const handleCustomerChange = (val: any, customer: CustomerData | CustomerData[]) => {
-    if (!val) {
+  const handleCustomerChange = (val: any, customer?: CustomerData | CustomerData[]) => {
+    if (!val || !customer) {
       resetCustomer();
       setPhone("");
       setCustomerName("");
@@ -106,7 +91,6 @@ const Billing = () => {
     setCustomerName(customer.name);
     setPhone(customer.phone);
     setWasAutofilled(true);
-    setCustomerNotFound(false);
   };
 
   const handleCreateCustomer = async (customerValues: any) => {
@@ -159,7 +143,7 @@ const Billing = () => {
 
     const payload: CreateBillingSchema = {
       shop_id: SHOP_ID,
-      payment_method: pendingInvoice.paymentMode.toUpperCase(),
+      payment_method: pendingInvoice.paymentMode.toLowerCase(),
       customer_id: pendingInvoice.customer?.id || "walk-in",
       products: filledItems.map(i => ({
         id: i.inventoryId || "",
@@ -180,7 +164,6 @@ const Billing = () => {
       setPhone("");
       setCustomerName("");
       setCustomerData(null);
-      setCustomerNotFound(false);
       setWasAutofilled(false);
     }
   }, [pendingInvoice, postData]);
@@ -190,8 +173,7 @@ const Billing = () => {
     setItems([createEmptyRow()]);
     setPhone("");
     setCustomerName("");
-    setCustomerData(null);
-    setCustomerNotFound(false);
+    setIsLoadingCustomer(false);
     setWasAutofilled(false);
   }, [items]);
 

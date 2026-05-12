@@ -819,6 +819,15 @@ export const InventoryItemsCard = ({
                             >
                               <Banknote size={8} /> ₹
                             </button>
+                            <button
+                              onClick={() => handleProductChange(index, "marginType", "sellingPrice")}
+                              className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-semibold transition-all ${product.marginType === "sellingPrice"
+                                ? "bg-white text-slate-700 shadow-sm"
+                                : "text-slate-400 hover:text-slate-600"
+                                }`}
+                            >
+                              <TrendingUp size={8} /> SP
+                            </button>
                           </div>
                         </div>
                         {product.marginType === "percent" ? (
@@ -829,7 +838,7 @@ export const InventoryItemsCard = ({
                             placeholder="e.g. 20"
                             leftIcon={<Percent size={12} />}
                           />
-                        ) : (
+                        ) : product.marginType === "amount" ? (
                           <Input
                             type="number"
                             value={product.marginAmount as any}
@@ -837,17 +846,35 @@ export const InventoryItemsCard = ({
                             placeholder="e.g. 50"
                             leftIcon={<Banknote size={12} />}
                           />
+                        ) : (
+                          <div className="h-10 px-3.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between">
+                            <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Fixed Price</span>
+                            <TrendingUp size={14} className="text-slate-300" />
+                          </div>
                         )}
                       </div>
 
                       {/* Step 3: Recommended Sell Price */}
                       <div className={`px-4 py-3 flex flex-col gap-1 ${computedSellPrice > 0 ? 'bg-emerald-50/50' : ''}`}>
                         <span className="text-[10px] font-medium text-slate-400 uppercase tracking-wider">Sell Price / unit</span>
-                        <span className={`text-base font-semibold tabular-nums ${computedSellPrice > 0 ? 'text-emerald-700' : 'text-slate-400'}`}>
-                          {computedSellPrice > 0
-                            ? `₹${computedSellPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-                            : '—'}
-                        </span>
+                        <div className="mt-1">
+                          {product.marginType === "sellingPrice" ? (
+                            <Input
+                              type="number"
+                              className="!h-8 !text-xs"
+                              value={product.sellingPrice as any}
+                              onChange={(e) => handleProductChange(index, "sellingPrice", e.target.value ? Number(e.target.value) : "")}
+                              placeholder="Set Sell Price"
+                              leftIcon={<Banknote size={12} className="text-emerald-500" />}
+                            />
+                          ) : (
+                            <span className={`text-base font-semibold tabular-nums ${computedSellPrice > 0 ? 'text-emerald-700' : 'text-slate-400'}`}>
+                              {computedSellPrice > 0
+                                ? `₹${computedSellPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                                : '—'}
+                            </span>
+                          )}
+                        </div>
                         {effectiveMarginPct && (
                           <span className="text-[10px] font-semibold text-emerald-600">
                             +{effectiveMarginPct}% margin

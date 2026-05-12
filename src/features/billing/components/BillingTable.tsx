@@ -89,7 +89,7 @@ const BillingRow = React.memo(({
   updateItem: (id: string, updates: Partial<BillingItem>) => void;
   handleDeleteRow: (id: string) => void;
   handleAddRow: () => void;
-  fetchInventory: (q: string) => Promise<any[]>;
+  fetchInventory: (q: string, signal: AbortSignal) => Promise<any[]>;
 }) => {
   const isFilled = !!item.name;
   const [baseName, variantName] = item.name ? item.name.split(' - ') : ["", ""];
@@ -162,7 +162,14 @@ const BillingRow = React.memo(({
           min="1"
           value={item.qty || ""}
           placeholder="0"
-          onChange={(e) => updateItem(item.id, { qty: Math.max(1, Number(e.target.value)) })}
+          onChange={(e) => {
+            const val = Math.max(1, Number(e.target.value));
+            if (item.requireSerial) {
+              handleProductSelectClick((item as any)._product, item.id);
+            } else {
+              updateItem(item.id, { qty: val });
+            }
+          }}
           onKeyDown={(e) => { if (e.key === "Enter") handleAddRow(); }}
           className="w-20 px-3 py-1.5 mt-0.5 rounded-lg border border-slate-200 bg-white text-sm font-semibold text-right tabular-nums text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 hover:border-slate-300 transition-all shadow-sm"
         />
@@ -211,10 +218,10 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
   const [pendingProduct, setPendingProduct] = useState<InventoryItem | null>(null);
   const [activeRowId, setActiveRowId] = useState<string | null>(null);
 
-  const fetchInventory = useCallback(async (q: string) => {
+  const fetchInventory = useCallback(async (q: string, signal: AbortSignal) => {
     if (!q) return [];
     try {
-      const res = await getData(ENDPOINTS.INVENTORIES, { limit: "10", offset: "1", q, shop_id: SHOP_ID });
+      const res = await getData(ENDPOINTS.INVENTORIES, { limit: "10", offset: "1", q, shop_id: SHOP_ID }, { signal });
       const data = res?.data ? (Array.isArray(res.data) ? res.data : [res.data]) : [];
       return data.map((p: any) => ({
         ...p,
@@ -298,36 +305,72 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
     if (!activeRowId || !pendingProduct) return;
 
     if (serials && serials.length > 0) {
-      const alreadyAdded = serials.find(s => items.some(item => item.serialNumbers?.includes(s)));
+      const alreadyAdded = serials.find(s => items.some(item => item.id !== activeRowId && item.serialNumbers?.includes(s)));
       if (alreadyAdded) {
         alert(`Serial number ${alreadyAdded} has already been added to the bill.`);
         return;
       }
     }
 
-    const updatedItems = items.map((item) => {
-      if (item.id !== activeRowId) return item;
-      const merged = {
-        ...item,
-        inventoryId: pendingProduct.id,
-        code: pendingProduct.product_barcode,
-        name: variant.id === "default" ? pendingProduct.product_name : `${pendingProduct.product_name} - ${variant.name}`,
-        price: variant.price,
-        qty: (serials && serials.length > 0) ? serials.length : 1,
-        serialNumbers: serials,
-        variantId: variant.id === "default" ? null : variant.id,
-        batchId: variant.batchId || pendingProduct.batchId,
-        serialnoId: variant.serialnoId || pendingProduct.serialnoId,
-        requireSerial: pendingProduct.requireSerial,
-        batchTracking: pendingProduct.batchTracking,
-        manufacturingDate: pendingProduct.manufacturingDate,
-        expiryDate: pendingProduct.expiryDate,
-      };
-      return { ...merged, tprice: (merged.qty || 0) * (merged.price || 0) };
-    });
+    const existingItemIndex = items.findIndex((item) => 
+      item.id !== activeRowId && 
+      item.inventoryId === pendingProduct.id && 
+      item.variantId === (variant.id === "default" ? null : variant.id) &&
+      item.batchId === (variant.batchId || pendingProduct.batchId)
+    );
 
-    if (activeRowId === items[items.length - 1].id) {
-      updatedItems.push(createEmptyRow());
+    let updatedItems: BillingItem[];
+
+    if (existingItemIndex !== -1) {
+      // Merge logic
+      updatedItems = items.map((item, idx) => {
+        if (idx === existingItemIndex) {
+          const newQty = item.qty + ((serials && serials.length > 0) ? serials.length : 1);
+          const newSerials = serials ? [...(item.serialNumbers || []), ...serials] : item.serialNumbers;
+          const merged = {
+            ...item,
+            qty: newQty,
+            serialNumbers: newSerials,
+          };
+          return { ...merged, tprice: (merged.qty || 0) * (merged.price || 0) };
+        }
+        return item;
+      });
+
+      // Remove the active row if it was just a temporary/empty row or if it's being merged away
+      updatedItems = updatedItems.filter(item => item.id !== activeRowId);
+      
+      // Ensure there's always one empty row at the bottom if we removed one
+      if (!updatedItems.some(item => !item.name)) {
+        updatedItems.push(createEmptyRow());
+      }
+    } else {
+      // Standard update logic
+      updatedItems = items.map((item) => {
+        if (item.id !== activeRowId) return item;
+        const merged = {
+          ...item,
+          inventoryId: pendingProduct.id,
+          code: pendingProduct.product_barcode,
+          name: variant.id === "default" ? pendingProduct.product_name : `${pendingProduct.product_name} - ${variant.name}`,
+          price: variant.price,
+          qty: (serials && serials.length > 0) ? serials.length : 1,
+          serialNumbers: serials,
+          variantId: variant.id === "default" ? null : variant.id,
+          batchId: variant.batchId || pendingProduct.batchId,
+          serialnoId: variant.serialnoId || pendingProduct.serialnoId,
+          requireSerial: pendingProduct.requireSerial,
+          batchTracking: pendingProduct.batchTracking,
+          manufacturingDate: pendingProduct.manufacturingDate,
+          expiryDate: pendingProduct.expiryDate,
+          _product: pendingProduct, // Store source for later edits
+        };
+        return { ...merged, tprice: (merged.qty || 0) * (merged.price || 0) };
+      });
+
+      if (activeRowId === items[items.length - 1].id) {
+        updatedItems.push(createEmptyRow());
+      }
     }
 
     onItemsChange(updatedItems);
@@ -470,8 +513,15 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
       <ProductSelectionModal
         isOpen={modalOpen}
         product={pendingProduct}
-        onClose={() => setModalOpen(false)}
+        onClose={() => {
+          setModalOpen(false);
+          setPendingProduct(null);
+          setActiveRowId(null);
+        }}
         onSuccess={handleModalSuccess}
+        initialQuantity={activeRowId ? items.find(i => i.id === activeRowId)?.qty : undefined}
+        initialSerials={activeRowId ? items.find(i => i.id === activeRowId)?.serialNumbers : undefined}
+        initialVariantId={activeRowId ? (items.find(i => i.id === activeRowId)?.variantId ?? undefined) : undefined}
       />
     </div>
   );

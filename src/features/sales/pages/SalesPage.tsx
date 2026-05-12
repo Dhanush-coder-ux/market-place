@@ -1,8 +1,8 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import {
-  Search, Eye, Wifi, WifiOff, ChevronDown, X, User, Calendar,
+  Search, Eye, ChevronDown, X, User, Calendar,
   CreditCard, Package, RotateCcw, Receipt, AlertCircle, CheckCircle2,
-  ChevronRight, Minus, Plus, Info, ArrowRight, RefreshCw, Banknote,
+  ChevronRight, Minus, Plus, ArrowRight, RefreshCw, Banknote,
   Gift, ArrowLeft, Check, Loader2,
   DollarSign,
   BarChart2,
@@ -11,17 +11,19 @@ import {
 import { StatsCard } from "@/components/common/StatsCard";
 import { useApi } from "@/context/ApiContext";
 import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
-import { OrderResponse, OrderItemResponse } from "@/features/order/types";
+import { OrderResponse } from "@/features/order/types";
+import { inventoryApi } from "@/services/api/inventory";
+import { useToast } from "@/context/ToastContext";
+import ProductSelectionModal from "../../billing/components/ProductSelectionModel";
+import { InventoryItem, ProductVariant } from "../../billing/types";
 
 /* ═══════════════════════════════════════════════════════════════
    TYPES
 ═══════════════════════════════════════════════════════════════ */
 type OriginType = "Sales" | "Sales Return";
-type SalesType = "Online" | "Offline";
 type PaymentMethod = "Cash" | "Card" | "UPI";
 type SaleStatus = "Completed" | "Pending" | "Cancelled";
 type ReturnMode = "refund" | "exchange";
-type ReturnType = "Full" | "Partial";
 type ReturnReason = "Damaged" | "Wrong Item" | "Customer Request" | "Size Issue" | "Other" | "";
 type SettlementMethod = "Cash" | "UPI" | "Card" | "Bank" | "Store Credit" | "";
 
@@ -35,21 +37,14 @@ interface SaleItem {
   category: string;
   quantity: number;
   unitPrice: number;
+  buyPrice: number;
   imageColor: string;
+  status?: string;
 }
 
 interface SelectedReturnItem extends SaleItem {
   returnQty: number;
   exchangeItemId?: string;
-}
-
-interface ExchangeProduct {
-  id: string;
-  name: string;
-  sku: string;
-  price: number;
-  imageColor: string;
-  inStock: boolean;
 }
 
 interface ReturnErrors {
@@ -58,15 +53,14 @@ interface ReturnErrors {
   settlement?: string;
 }
 
-// 6-step flow
-type ReturnStep = 1 | 2 | 3 | 4 | 5 | 6;
+// 5-step flow
+type ReturnStep = 1 | 2 | 3 | 4 | 5;
 
 interface ReturnState {
   step: ReturnStep;
   mode: ReturnMode;
-  returnType: ReturnType;
   returnItems: Record<string, number>;       // itemId → returnQty
-  exchangeMap: Record<string, string>;       // itemId → exchangeProductId
+  exchangeMap: Record<string, any>;          // itemId → full replacement product data
   reason: ReturnReason;
   notes: string;
   settlementMethod: SettlementMethod;
@@ -77,26 +71,11 @@ interface ReturnState {
 /* ═══════════════════════════════════════════════════════════════
    CONSTANTS & MOCK DATA
 ═══════════════════════════════════════════════════════════════ */
-const TODAY = "2024-04-22";
-
 const RETURN_REASONS: Exclude<ReturnReason, "">[] = [
   "Damaged", "Wrong Item", "Customer Request", "Size Issue", "Other",
 ];
 
 const ITEM_COLORS = ["#dbeafe", "#dcfce7", "#fef3c7", "#fce7f3", "#ede9fe", "#ffedd5", "#f0fdf4", "#ecfeff"];
-const ITEM_NAMES = ["Classic White Tee", "Denim Jacket", "Canvas Sneakers", "Running Shorts", "Wool Sweater", "Cargo Pants", "Leather Belt", "Cotton Socks"];
-const ITEM_CATS = ["Tops", "Outerwear", "Footwear", "Bottoms", "Knitwear", "Bottoms", "Accessories", "Accessories"];
-
-const MOCK_SALES: SaleRecord[] = [];
-
-const EXCHANGE_PRODUCTS: ExchangeProduct[] = [
-  { id: "ep-1", name: "Striped Linen Tee", sku: "SKU-2201", price: 850, imageColor: "#dbeafe", inStock: true },
-  { id: "ep-2", name: "Slim Chino Pants", sku: "SKU-2202", price: 1400, imageColor: "#dcfce7", inStock: true },
-  { id: "ep-3", name: "Leather Sneakers", sku: "SKU-2203", price: 2200, imageColor: "#fce7f3", inStock: false },
-  { id: "ep-4", name: "Oversized Hoodie", sku: "SKU-2204", price: 1800, imageColor: "#ede9fe", inStock: true },
-  { id: "ep-5", name: "Merino Crewneck", sku: "SKU-2205", price: 2600, imageColor: "#fef3c7", inStock: true },
-  { id: "ep-6", name: "Cargo Shorts", sku: "SKU-2206", price: 1100, imageColor: "#ffedd5", inStock: true },
-];
 
 /* ═══════════════════════════════════════════════════════════════
    UTILS
@@ -104,12 +83,19 @@ const EXCHANGE_PRODUCTS: ExchangeProduct[] = [
 const generateItems = (sale: SaleRecord): SaleItem[] =>
   (sale.items || []).map((item, i) => ({
     id: item.id,
-    name: `Item ${i + 1}`, // Backend doesn't provide item names in this schema, using placeholder
+    name: item.status === "REFUNDED" ? `(Refunded) Item ${i + 1}` : item.status === "EXCHANGED" ? `(Exchanged) Item ${i + 1}` : `Item ${i + 1}`,
     sku: item.barcode || item.inventory_id.slice(-6),
     category: "General",
     quantity: item.quantity,
     unitPrice: item.sell_price,
+    buyPrice: item.buy_price,
     imageColor: ITEM_COLORS[i % ITEM_COLORS.length],
+    status: item.status,
+    // Add additional properties needed for exchange/return
+    variant_id: item.variant_id,
+    batch_id: item.batch_id,
+    serialno_id: item.serialno_id,
+    serial_numbers: item.serial_numbers || [],
   }));
 
 const fmt = (n: number) => `₹${n.toLocaleString("en-IN")}`;
@@ -122,10 +108,6 @@ type BadgeConfig = { cls: string; dot: string };
 const ORIGIN_CFG: Record<OriginType, BadgeConfig> = {
   "Sales": { cls: "bg-blue-50 text-blue-700 border-blue-100", dot: "bg-blue-400" },
   "Sales Return": { cls: "bg-orange-50 text-orange-700 border-orange-100", dot: "bg-orange-400" },
-};
-const SALES_TYPE_CFG: Record<SalesType, BadgeConfig> = {
-  Online: { cls: "bg-blue-50 text-blue-700 border-blue-100", dot: "bg-blue-400" },
-  Offline: { cls: "bg-slate-100 text-slate-600 border-slate-200", dot: "bg-slate-400" },
 };
 const PAYMENT_CFG: Record<PaymentMethod, BadgeConfig> = {
   Cash: { cls: "bg-emerald-50 text-emerald-700 border-emerald-100", dot: "bg-emerald-400" },
@@ -318,11 +300,10 @@ const QuantityStepper: React.FC<QuantityStepperProps> = ({ value, min = 1, max, 
 ═══════════════════════════════════════════════════════════════ */
 const STEP_LABELS: Record<ReturnStep, string> = {
   1: "Mode",
-  2: "Type",
-  3: "Items",
-  4: "Reason",
-  5: "Review",
-  6: "Done",
+  2: "Items",
+  3: "Reason",
+  4: "Review",
+  5: "Done",
 };
 
 interface StepHeaderProps {
@@ -339,28 +320,27 @@ const StepHeader: React.FC<StepHeaderProps> = ({ step, mode, invoice }) => {
       <div className="flex items-center justify-between mb-3">
         <div>
           <p className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-0.5">
-            {step < 6 ? `Step ${step} of 5` : "Complete"}
+            {step < 5 ? `Step ${step} of 4` : "Complete"}
           </p>
           <p className="text-sm font-semibold text-slate-800">
             {step === 1 ? "Choose Return Mode"
-              : step === 2 ? "Return Type"
-                : step === 3 ? (mode === "refund" ? "Select Items for Refund" : "Select Items to Exchange")
-                  : step === 4 ? "Reason & Payment"
-                    : step === 5 ? "Review Summary"
-                      : "Return Processed"}
+              : step === 2 ? (mode === "refund" ? "Select Items for Refund" : "Select Items to Exchange")
+                : step === 3 ? "Reason & Payment"
+                  : step === 4 ? "Review Summary"
+                    : "Return Processed"}
           </p>
         </div>
         <span className="sr-mono text-[10px] text-slate-400 bg-slate-50 border border-slate-100 px-2 py-1 rounded-md">
           {invoice}
         </span>
       </div>
-      {step < 6 && (
+      {step < 5 && (
         <div className="relative">
           <div className="h-1 bg-slate-100 rounded-full overflow-hidden">
             <div className="sr-progress h-full bg-blue-500 rounded-full" style={{ width: `${progress}%` }} />
           </div>
           <div className="flex justify-between mt-2">
-            {([1, 2, 3, 4, 5] as ReturnStep[]).map(s => (
+            {([1, 2, 3, 4] as ReturnStep[]).map(s => (
               <div key={s} className="flex flex-col items-center gap-1">
                 <div className={`w-1.5 h-1.5 rounded-full transition-colors duration-300 ${s < step ? "bg-blue-500" : s === step ? "bg-blue-500" : "bg-slate-200"
                   }`} />
@@ -447,58 +427,103 @@ interface ItemSelectorProps {
   returnItems: Record<string, number>;
   onToggle: (id: string) => void;
   onQtyChange: (id: string, v: number) => void;
+  onSelectAll: (all: boolean) => void;
   error?: string;
 }
-const ItemSelector: React.FC<ItemSelectorProps> = ({ items, returnItems, onToggle, onQtyChange, error }) => (
-  <div>
-    <div className="space-y-2">
-      {items.map(item => {
-        const checked = returnItems[item.id] !== undefined;
-        const qty = returnItems[item.id] ?? 1;
-        return (
-          <div key={item.id}
-            className={`sr-item-row border rounded-xl p-3.5 ${checked ? "sel" : ""}`}
-            onClick={() => onToggle(item.id)}
-          >
-            <div className="flex items-center gap-3">
-              <input type="checkbox" className="sr-cb" checked={checked} readOnly onClick={e => e.stopPropagation()} />
-              <div
-                className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
-                style={{ background: item.imageColor }}
-              >
-                <Package size={14} className="text-slate-500 opacity-60" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <p className="text-xs font-medium text-slate-800">{item.name}</p>
-                    <p className="text-[10px] text-slate-400 sr-mono mt-0.5">{item.sku} · {item.category}</p>
-                  </div>
-                  <p className="text-xs font-semibold text-slate-700 sr-mono shrink-0">{fmt(item.unitPrice)}</p>
+const ItemSelector: React.FC<ItemSelectorProps> = ({ items, returnItems, onToggle, onQtyChange, onSelectAll, error }) => {
+  const [q, setQ] = useState("");
+  const filtered = items.filter(i => i.name.toLowerCase().includes(q.toLowerCase()) || i.sku.toLowerCase().includes(q.toLowerCase()));
+  
+  const selectableItems = filtered.filter(i => i.status !== "REFUNDED" && i.status !== "EXCHANGED");
+  const allSelected = selectableItems.length > 0 && selectableItems.every(i => returnItems[i.id] !== undefined);
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-3">
+        <div className="relative flex-1">
+          <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input
+            type="text"
+            placeholder="Search items in this order..."
+            value={q}
+            onChange={e => setQ(e.target.value)}
+            className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700 outline-none focus:bg-white focus:border-blue-300 transition-all"
+          />
+        </div>
+        <button
+          onClick={() => onSelectAll(!allSelected)}
+          className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-semibold border transition-all ${allSelected ? "bg-blue-600 border-blue-600 text-white" : "bg-white border-slate-200 text-slate-600 hover:border-slate-300"}`}
+        >
+          {allSelected ? <Check size={12} /> : <div className="w-3 h-3 rounded-sm border border-slate-300 bg-white" />}
+          Select All
+        </button>
+      </div>
+
+      <div className="space-y-2">
+        {filtered.map(item => {
+          const checked = returnItems[item.id] !== undefined;
+          const qty = returnItems[item.id] ?? 1;
+          const isProcessed = item.status === "REFUNDED" || item.status === "EXCHANGED";
+
+          return (
+            <div key={item.id}
+              className={`sr-item-row border rounded-xl p-3.5 ${checked ? "sel" : ""} ${isProcessed ? "opacity-60 cursor-not-allowed bg-slate-50" : ""}`}
+              onClick={() => !isProcessed && onToggle(item.id)}
+            >
+              <div className="flex items-center gap-3">
+                <input type="checkbox" className="sr-cb" checked={checked} disabled={isProcessed} readOnly onClick={e => e.stopPropagation()} />
+                <div
+                  className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
+                  style={{ background: item.imageColor }}
+                >
+                  <Package size={14} className="text-slate-500 opacity-60" />
                 </div>
-                {checked && (
-                  <div className="mt-2 flex items-center gap-2.5" onClick={e => e.stopPropagation()}>
-                    <span className="text-[10px] text-slate-400">Return qty</span>
-                    <QuantityStepper value={qty} max={item.quantity} onChange={v => onQtyChange(item.id, v)} />
-                    <span className="text-[10px] text-slate-400">of {item.quantity}</span>
-                    <span className="ml-auto text-[10px] font-semibold text-blue-600 sr-mono">
-                      {fmt(item.unitPrice * qty)}
-                    </span>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <p className="text-xs font-medium text-slate-800">{item.name}</p>
+                        {item.status && (
+                          <span className={`text-[8px] font-bold px-1 rounded uppercase ${
+                            item.status === "REFUNDED" ? "bg-red-50 text-red-600 border border-red-100" : "bg-blue-50 text-blue-600 border border-blue-100"
+                          }`}>
+                            {item.status}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[10px] text-slate-400 sr-mono mt-0.5">{item.sku} · {item.category}</p>
+                    </div>
+                    <p className="text-xs font-semibold text-slate-700 sr-mono shrink-0">{fmt(item.unitPrice)}</p>
                   </div>
-                )}
+                  {checked && (
+                    <div className="mt-2 flex items-center gap-2.5" onClick={e => e.stopPropagation()}>
+                      <span className="text-[10px] text-slate-400">Return qty</span>
+                      <QuantityStepper value={qty} max={item.quantity} onChange={v => onQtyChange(item.id, v)} />
+                      <span className="text-[10px] text-slate-400">of {item.quantity}</span>
+                      <span className="ml-auto text-[10px] font-semibold text-blue-600 sr-mono">
+                        {fmt(item.unitPrice * qty)}
+                      </span>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
+          );
+        })}
+        {filtered.length === 0 && (
+          <div className="py-10 text-center bg-slate-50 rounded-xl border border-dashed border-slate-200">
+            <p className="text-xs text-slate-400">No items match your search.</p>
           </div>
-        );
-      })}
+        )}
+      </div>
+      {error && (
+        <p className="mt-2 flex items-center gap-1.5 text-[11px] text-red-500">
+          <AlertCircle size={11} /> {error}
+        </p>
+      )}
     </div>
-    {error && (
-      <p className="mt-2 flex items-center gap-1.5 text-[11px] text-red-500">
-        <AlertCircle size={11} /> {error}
-      </p>
-    )}
-  </div>
-);
+  );
+};
 
 /* ═══════════════════════════════════════════════════════════════
    USE RETURN ORDER HOOK
@@ -506,7 +531,6 @@ const ItemSelector: React.FC<ItemSelectorProps> = ({ items, returnItems, onToggl
 const initialState = (): ReturnState => ({
   step: 1,
   mode: "refund",
-  returnType: "Partial",
   returnItems: {},
   exchangeMap: {},
   reason: "",
@@ -528,10 +552,11 @@ const useReturnModal = (sale: SaleRecord | null) => {
 
   const setStep = (step: ReturnStep) => setState(s => ({ ...s, step }));
   const setMode = (mode: ReturnMode) => setState(s => ({ ...s, mode, settlementMethod: mode === "refund" ? "Cash" : "" }));
-  const setReturnType = (returnType: ReturnType) => setState(s => ({ ...s, returnType, returnItems: {} }));
   const setReason = (reason: ReturnReason) => setState(s => ({ ...s, reason, errors: { ...s.errors, reason: undefined } }));
   const setNotes = (notes: string) => setState(s => ({ ...s, notes }));
   const setSettlementMethod = (settlementMethod: SettlementMethod) => setState(s => ({ ...s, settlementMethod, errors: { ...s.errors, settlement: undefined } }));
+
+  const { showToast } = useToast();
 
   const toggleItem = useCallback((itemId: string) => {
     setState(s => {
@@ -548,26 +573,34 @@ const useReturnModal = (sale: SaleRecord | null) => {
     });
   }, [saleItems]);
 
+  const selectAll = useCallback((all: boolean) => {
+    setState(s => {
+      if (!all) return { ...s, returnItems: {}, exchangeMap: {} };
+      const next: Record<string, number> = {};
+      saleItems.forEach(i => {
+        if (i.status !== "REFUNDED" && i.status !== "EXCHANGED") {
+          next[i.id] = i.quantity;
+        }
+      });
+      return { ...s, returnItems: next, errors: { ...s.errors, items: undefined } };
+    });
+  }, [saleItems]);
+
   const updateQty = useCallback((itemId: string, v: number) => {
     const item = saleItems.find(i => i.id === itemId);
     if (!item) return;
     setState(s => ({ ...s, returnItems: { ...s.returnItems, [itemId]: Math.min(Math.max(1, v), item.quantity) } }));
   }, [saleItems]);
 
-  const setExchangeProduct = useCallback((itemId: string, productId: string) => {
-    setState(s => ({ ...s, exchangeMap: { ...s.exchangeMap, [itemId]: productId } }));
+  const setExchangeProduct = useCallback((itemId: string, product: any) => {
+    setState(s => ({ ...s, exchangeMap: { ...s.exchangeMap, [itemId]: product } }));
   }, []);
 
   const selectedItems = useMemo<SelectedReturnItem[]>(() => {
-    if (state.returnType === "Full") {
-      return saleItems.map(i => ({
-        ...i, returnQty: i.quantity, exchangeItemId: state.exchangeMap[i.id],
-      }));
-    }
     return saleItems
       .filter(i => state.returnItems[i.id] !== undefined)
       .map(i => ({ ...i, returnQty: state.returnItems[i.id], exchangeItemId: state.exchangeMap[i.id] }));
-  }, [state.returnType, saleItems, state.returnItems, state.exchangeMap]);
+  }, [saleItems, state.returnItems, state.exchangeMap]);
 
   // Calculate values for exchanges and refunds
   const totals = useMemo(() => {
@@ -575,8 +608,8 @@ const useReturnModal = (sale: SaleRecord | null) => {
     const exchangeValue = state.mode === "exchange"
       ? selectedItems.reduce((s, i) => {
         if (!i.exchangeItemId) return s;
-        const ep = EXCHANGE_PRODUCTS.find(e => e.id === i.exchangeItemId);
-        return s + (ep?.price ?? 0);
+        const ep = i.exchangeItemId as any;
+        return s + (ep?.sell_price ?? 0);
       }, 0)
       : 0;
     return {
@@ -589,7 +622,7 @@ const useReturnModal = (sale: SaleRecord | null) => {
   const validate = useCallback((): boolean => {
     const errs: ReturnErrors = {};
     if (!state.reason) errs.reason = "Please select a reason.";
-    if (state.returnType === "Partial" && selectedItems.length === 0) {
+    if (selectedItems.length === 0) {
       errs.items = "Select at least one item.";
     }
 
@@ -601,10 +634,10 @@ const useReturnModal = (sale: SaleRecord | null) => {
 
     setState(s => ({ ...s, errors: errs }));
     return Object.keys(errs).length === 0;
-  }, [state.reason, state.returnType, state.mode, state.settlementMethod, selectedItems, totals]);
+  }, [state.reason, state.mode, state.settlementMethod, selectedItems, totals]);
 
   const goNext = useCallback(() => {
-    if (state.step === 4 && !validate()) return;
+    if (state.step === 3 && !validate()) return;
     setStep((state.step + 1) as ReturnStep);
   }, [state.step, validate]);
 
@@ -612,23 +645,60 @@ const useReturnModal = (sale: SaleRecord | null) => {
     if (state.step > 1) setStep((state.step - 1) as ReturnStep);
   }, [state.step]);
 
-  const confirm = useCallback(async () => {
+  const confirm = useCallback(async (onSuccess?: () => void) => {
     setState(s => ({ ...s, isSubmitting: true }));
-    await new Promise(r => setTimeout(r, 1400));
-    setState(s => ({ ...s, isSubmitting: false, step: 6 }));
-  }, []);
+    try {
+      if (state.mode === "refund") {
+        for (const item of selectedItems) {
+          await inventoryApi.returnOrderItem({
+            order_id: sale?.id || "",
+            item_id: item.id
+          });
+        }
+        showToast("Refund(s) processed successfully", "success");
+      } else {
+        // Exchange
+        for (const item of selectedItems) {
+          const replacement = state.exchangeMap[item.id];
+          if (!replacement) continue;
+
+          await inventoryApi.exchangeOrder({
+            shop_id: SHOP_ID,
+            customer_id: sale?.customer_id || "",
+            order_id: sale?.id || "",
+            item_id: item.id,
+            payment_method: state.settlementMethod || sale?.payment_method || "Cash",
+            product: {
+              id: replacement.id,
+              variant_id: replacement.variant_id || null,
+              batch_id: replacement.batch_id || null,
+              serialno_id: replacement.serialno_id || null,
+              serial_numbers: replacement.serial_numbers || [],
+              quantity: 1 // Exchange is usually 1:1 in this UI
+            }
+          });
+        }
+        showToast("Exchange(s) processed successfully", "success");
+      }
+      onSuccess?.();
+      setState(s => ({ ...s, isSubmitting: false, step: 5 }));
+    } catch (err) {
+      console.error("Return/Exchange failed:", err);
+      showToast("Operation failed. Please try again.", "error");
+      setState(s => ({ ...s, isSubmitting: false }));
+    }
+  }, [state, selectedItems, sale, showToast]);
 
   const canProceed = useMemo(() => {
-    if (state.step === 3) {
-      return state.returnType === "Full" || selectedItems.length > 0;
-    }
+    if (state.step === 2) return selectedItems.length > 0 && (state.mode === "refund" || selectedItems.every(i => !!i.exchangeItemId));
+    if (state.step === 3) return !!state.reason && (state.mode === "refund" || totals.diff === 0 || !!state.settlementMethod);
     return true;
-  }, [state.step, state.returnType, selectedItems.length]);
+  }, [state.step, state.mode, selectedItems, state.reason, totals.diff, state.settlementMethod]);
 
   return {
     state, saleItems, selectedItems, totals,
-    reset, setMode, setReturnType, setReason, setNotes, setSettlementMethod,
-    toggleItem, updateQty, setExchangeProduct,
+    reset, setMode, setReason, setNotes, setSettlementMethod,
+    toggleItem, selectAll, updateQty, setExchangeProduct,
     goNext, goBack, confirm, canProceed,
   };
 };
@@ -639,9 +709,10 @@ const useReturnModal = (sale: SaleRecord | null) => {
 interface ReturnModalProps {
   sale: SaleRecord;
   onClose: () => void;
+  onRefresh: () => void;
 }
 
-const ReturnModal: React.FC<ReturnModalProps> = ({ sale, onClose }) => {
+const ReturnModal: React.FC<ReturnModalProps> = ({ sale, onClose, onRefresh }) => {
   const m = useReturnModal(sale);
   const { state, saleItems, selectedItems, totals } = m;
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -650,12 +721,69 @@ const ReturnModal: React.FC<ReturnModalProps> = ({ sale, onClose }) => {
   const [exchSearch, setExchSearch] = useState("");
   const [activeReplaceId, setActiveReplaceId] = useState<string | null>(null);
 
-  const filteredExchProducts = useMemo(() => {
-    if (!exchSearch) return EXCHANGE_PRODUCTS;
-    const lowerQ = exchSearch.toLowerCase();
-    return EXCHANGE_PRODUCTS.filter(ep =>
-      ep.name.toLowerCase().includes(lowerQ) || ep.sku.toLowerCase().includes(lowerQ)
-    );
+  const [isProductModalOpen, setIsProductModalOpen] = useState(false);
+  const [pendingProduct, setPendingProduct] = useState<InventoryItem | null>(null);
+
+  const [exchProducts, setExchProducts] = useState<any[]>([]);
+  const [loadingExch, setLoadingExch] = useState(false);
+
+  const mapToInventoryItem = (p: any): InventoryItem => ({
+    id: p.id,
+    product_barcode: p.barcode || "N/A",
+    product_name: p.name || "Unknown Product",
+    category: p.category || "Other",
+    variants: (p.variants || []).map((v: any) => ({
+      ...v,
+      price: v.sell_price || 0,
+      stock: v.stocks || 0,
+      serialnoId: v.serial_numbers?.id || v.serial_number?.id || v.batches?.[0]?.serial_numbers?.id,
+      availableSerials: v.serial_numbers?.serial_numbers || v.serial_number?.serial_numbers || v.batches?.[0]?.serial_numbers?.serial_numbers || [],
+      batchId: v.batches?.[0]?.id,
+    })),
+    requireSerial: p.has_serialno || false,
+    batchTracking: p.has_batch || false,
+    manufacturingDate: p.batches?.[0]?.manufacturing_date,
+    expiryDate: p.batches?.[0]?.expiry_date,
+    price: p.sell_price || 0,
+    stocks: p.stocks || 0,
+    serialnoId: p.serial_number?.id || p.batches?.[0]?.serial_numbers?.id,
+    availableSerials: p.serial_number?.serial_numbers || p.batches?.[0]?.serial_numbers?.serial_numbers || [],
+    batchId: p.batches?.[0]?.id,
+  });
+
+  const handleExchangeClick = (ep: any) => {
+    setPendingProduct(mapToInventoryItem(ep));
+    setIsProductModalOpen(true);
+  };
+
+  const handleProductSelectSuccess = (variant: ProductVariant, serials?: string[]) => {
+    if (!activeReplaceId || !pendingProduct) return;
+
+    const exchangeData = {
+      id: pendingProduct.id,
+      name: variant.id === "default" ? pendingProduct.product_name : `${pendingProduct.product_name} - ${variant.name}`,
+      sell_price: variant.price,
+      variant_id: variant.id === "default" ? null : variant.id,
+      batch_id: variant.batchId || pendingProduct.batchId,
+      serialno_id: variant.serialnoId || pendingProduct.serialnoId,
+      serial_numbers: serials || [],
+    };
+
+    m.setExchangeProduct(activeReplaceId, exchangeData);
+    setIsProductModalOpen(false);
+    setPendingProduct(null);
+  };
+
+  useEffect(() => {
+    const fetchExch = async () => {
+      setLoadingExch(true);
+      const res = await inventoryApi.searchInventories(exchSearch);
+      setExchProducts(res);
+      setLoadingExch(false);
+    };
+
+    const timer = setTimeout(fetchExch, 300);
+    return () => clearTimeout(timer);
   }, [exchSearch]);
 
   // Keep the active replacement tab synced with selected items
@@ -747,67 +875,17 @@ const ReturnModal: React.FC<ReturnModalProps> = ({ sale, onClose }) => {
                   </div>
                 )}
 
-                {/* STEP 2: Return Type */}
+                {/* STEP 2: Items & Replacement Search */}
                 {state.step === 2 && (
-                  <div className="space-y-3">
-                    <p className="text-xs text-slate-500">
-                      Choose whether all items or specific items from this order are being returned.
-                    </p>
-                    <div className="grid grid-cols-2 gap-3">
-                      {([
-                        { id: "Full" as ReturnType, label: "Full Return", desc: `All ${sale.total_quantity} items`, icon: <RotateCcw size={16} /> },
-                        { id: "Partial" as ReturnType, label: "Partial Return", desc: "Select specific items", icon: <Package size={16} /> },
-                      ]).map(opt => (
-                        <button key={opt.id}
-                          onClick={() => m.setReturnType(opt.id)}
-                          className={`sr-mode-pill text-left p-4 border-2 rounded-xl transition-all ${state.returnType === opt.id ? "active" : "border-slate-100 text-slate-500 hover:border-slate-200"}`}
-                        >
-                          <div className={`mb-2 ${state.returnType === opt.id ? "text-blue-500" : "text-slate-400"}`}>{opt.icon}</div>
-                          <p className="text-sm font-semibold text-slate-800 mb-0.5">{opt.label}</p>
-                          <p className="text-[11px] text-slate-400">{opt.desc}</p>
-                        </button>
-                      ))}
-                    </div>
-                    {state.returnType === "Full" && (
-                      <div className="flex items-center gap-2 px-3 py-2.5 bg-blue-50 border border-blue-100 rounded-lg">
-                        <Info size={12} className="text-blue-400 shrink-0" />
-                        <p className="text-[11px] text-blue-600">All {sale.total_quantity} items from this order will be returned.</p>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* STEP 3: Items */}
-                {state.step === 3 && (
                   <div className="space-y-4">
-                    {state.returnType === "Partial" ? (
-                      <ItemSelector
-                        items={saleItems}
-                        returnItems={state.returnItems}
-                        onToggle={m.toggleItem}
-                        onQtyChange={m.updateQty}
-                        error={state.errors.items}
-                      />
-                    ) : (
-                      <div className="space-y-2">
-                        <p className="text-xs text-slate-500 mb-1">All items will be returned:</p>
-                        {saleItems.map(item => (
-                          <div key={item.id} className="flex items-center gap-3 border border-slate-100 rounded-xl p-3 bg-slate-50/50">
-                            <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: item.imageColor }}>
-                              <Package size={13} className="text-slate-400 opacity-60" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-xs font-medium text-slate-700">{item.name}</p>
-                              <p className="text-[10px] text-slate-400 sr-mono">{item.sku}</p>
-                            </div>
-                            <div className="text-right">
-                              <p className="text-xs font-semibold sr-mono text-slate-700">{fmt(item.unitPrice * item.quantity)}</p>
-                              <p className="text-[10px] text-slate-400">qty {item.quantity}</p>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                    <ItemSelector
+                      items={saleItems}
+                      returnItems={state.returnItems}
+                      onToggle={m.toggleItem}
+                      onQtyChange={m.updateQty}
+                      onSelectAll={m.selectAll}
+                      error={state.errors.items}
+                    />
 
                     {/* Exchange product picker with Tabs and Search Bar */}
                     {state.mode === "exchange" && selectedItems.length > 0 && (
@@ -867,33 +945,49 @@ const ReturnModal: React.FC<ReturnModalProps> = ({ sale, onClose }) => {
                               );
                             })()}
 
-                            {filteredExchProducts.length === 0 ? (
-                              <div className="text-center py-4 bg-slate-50 rounded-xl border border-slate-100">
-                                <p className="text-xs text-slate-400">No products found matching "{exchSearch}"</p>
+                            {loadingExch ? (
+                              <div className="text-center py-8">
+                                <Loader2 size={24} className="animate-spin text-blue-500 mx-auto opacity-50" />
+                                <p className="text-[10px] text-slate-400 mt-2 font-medium">Searching inventory...</p>
+                              </div>
+                            ) : exchProducts.length === 0 ? (
+                              <div className="text-center py-6 bg-slate-50 rounded-xl border border-slate-100">
+                                <p className="text-[10px] text-slate-400 font-medium">No products found matching "{exchSearch}"</p>
                               </div>
                             ) : (
-                              <div className="grid grid-cols-2 gap-2">
-                                {filteredExchProducts.map(ep => {
-                                  const selected = state.exchangeMap[activeReplaceId] === ep.id;
+                              <div className="grid grid-cols-1 gap-2 max-h-[300px] overflow-y-auto sr-scroll pr-1">
+                                {exchProducts.map(ep => {
+                                  const selected = state.exchangeMap[activeReplaceId]?.id === ep.id;
+                                  const inStock = (ep.stocks || 0) > 0;
+
                                   return (
                                     <div key={ep.id}
-                                      onClick={() => ep.inStock && m.setExchangeProduct(activeReplaceId, ep.id)}
-                                      className={`sr-exch-card border rounded-xl p-3 ${selected ? "selected" : ""} ${!ep.inStock ? "disabled" : ""}`}
+                                      onClick={() => inStock && handleExchangeClick(ep)}
+                                      className={`sr-exch-card border rounded-xl p-3 flex items-center gap-3 ${selected ? "selected" : ""} ${!inStock ? "disabled" : ""}`}
                                     >
-                                      <div className="flex items-center gap-2 mb-1.5">
-                                        <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0" style={{ background: ep.imageColor }}>
-                                          <Package size={12} className="text-slate-400 opacity-60" />
+                                      <div className="w-9 h-9 rounded-lg bg-slate-100 flex items-center justify-center shrink-0">
+                                        <Package size={14} className="text-slate-400 opacity-60" />
+                                      </div>
+                                      <div className="flex-1 min-w-0">
+                                        <p className="text-[11px] font-semibold text-slate-800 truncate">{ep.name}</p>
+                                        <div className="flex items-center gap-2 mt-0.5">
+                                          <span className="text-[9px] text-slate-400 sr-mono uppercase tracking-wider">{ep.barcode || ep.id.slice(-6)}</span>
+                                          {inStock ? (
+                                            <span className="text-[9px] text-emerald-500 font-bold">{ep.stocks} IN STOCK</span>
+                                          ) : (
+                                            <span className="text-[9px] text-red-400 font-bold">OUT OF STOCK</span>
+                                          )}
                                         </div>
+                                      </div>
+                                      <div className="text-right">
+                                        <p className="text-[11px] font-bold text-slate-900 sr-mono">{fmt(ep.sell_price)}</p>
                                         {selected && (
-                                          <div className="ml-auto w-4 h-4 rounded-full bg-blue-500 flex items-center justify-center">
-                                            <Check size={9} className="text-white" />
+                                          <div className="mt-1 flex justify-end">
+                                            <div className="w-4 h-4 rounded-full bg-blue-500 flex items-center justify-center shadow-sm shadow-blue-200">
+                                              <Check size={9} className="text-white" />
+                                            </div>
                                           </div>
                                         )}
-                                      </div>
-                                      <p className="text-[11px] font-medium text-slate-800 leading-snug">{ep.name}</p>
-                                      <div className="flex items-center justify-between mt-1">
-                                        <p className="text-[10px] sr-mono font-semibold text-slate-600">{fmt(ep.price)}</p>
-                                        {!ep.inStock && <span className="text-[9px] text-red-400 font-medium">Out of stock</span>}
                                       </div>
                                     </div>
                                   );
@@ -907,8 +1001,8 @@ const ReturnModal: React.FC<ReturnModalProps> = ({ sale, onClose }) => {
                   </div>
                 )}
 
-                {/* STEP 4: Reason & Payment/Refund Selection */}
-                {state.step === 4 && (
+                {/* STEP 3: Reason & Payment/Refund Selection */}
+                {state.step === 3 && (
                   <div className="space-y-5">
                     <div>
                       <label className="block text-[11px] font-semibold uppercase tracking-widest text-slate-400 mb-2">
@@ -987,8 +1081,8 @@ const ReturnModal: React.FC<ReturnModalProps> = ({ sale, onClose }) => {
                   </div>
                 )}
 
-                {/* STEP 5: Review */}
-                {state.step === 5 && (
+                {/* STEP 4: Review */}
+                {state.step === 4 && (
                   <div className="space-y-4">
                     <RefundSummary
                       mode={state.mode}
@@ -1004,7 +1098,6 @@ const ReturnModal: React.FC<ReturnModalProps> = ({ sale, onClose }) => {
                       </p>
                       <div className="border border-slate-100 rounded-xl divide-y divide-slate-100 overflow-hidden">
                         {selectedItems.map(item => {
-                          const exchProd = item.exchangeItemId ? EXCHANGE_PRODUCTS.find(e => e.id === item.exchangeItemId) : null;
                           return (
                             <div key={item.id} className="flex items-center gap-3 px-4 py-3 bg-white">
                               <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0" style={{ background: item.imageColor }}>
@@ -1012,10 +1105,19 @@ const ReturnModal: React.FC<ReturnModalProps> = ({ sale, onClose }) => {
                               </div>
                               <div className="flex-1 min-w-0">
                                 <p className="text-xs font-medium text-slate-800">{item.name}</p>
-                                <p className="text-[10px] text-slate-400 sr-mono">
+                                <div className="text-[10px] text-slate-400 sr-mono">
                                   {item.sku} · qty {item.returnQty}
-                                  {exchProd && <span className="text-blue-500"> → {exchProd.name}</span>}
-                                </p>
+                                  {item.exchangeItemId && (
+                                    <div className="mt-1 flex flex-col gap-0.5">
+                                      <span className="text-blue-500 font-medium">→ {(item.exchangeItemId as any).name}</span>
+                                      {(item.exchangeItemId as any).serial_numbers?.length > 0 && (
+                                        <span className="text-[9px] text-slate-400 bg-slate-100 px-1 rounded self-start">
+                                          SN: {(item.exchangeItemId as any).serial_numbers.join(", ")}
+                                        </span>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
                               </div>
                               <span className="text-xs font-semibold sr-mono text-slate-700">{fmt(item.unitPrice * item.returnQty)}</span>
                             </div>
@@ -1027,7 +1129,6 @@ const ReturnModal: React.FC<ReturnModalProps> = ({ sale, onClose }) => {
                     <div className="grid grid-cols-2 gap-2.5">
                       {[
                         { label: "Mode", value: state.mode === "refund" ? "Refund" : "Exchange" },
-                        { label: "Type", value: `${state.returnType} Return` },
                         { label: "Reason", value: state.reason },
                         ...((state.mode === "refund" || totals.diff !== 0) && state.settlementMethod
                           ? [{ label: totals.diff > 0 ? "Payment Via" : "Refund Via", value: state.settlementMethod }]
@@ -1058,8 +1159,8 @@ const ReturnModal: React.FC<ReturnModalProps> = ({ sale, onClose }) => {
                   </div>
                 )}
 
-                {/* STEP 6: Done */}
-                {state.step === 6 && (
+                {/* STEP 5: Done */}
+                {state.step === 5 && (
                   <div className="flex flex-col items-center text-center gap-5 py-6">
                     <div className="sr-done-pop w-16 h-16 rounded-full bg-emerald-50 border-2 border-emerald-100 flex items-center justify-center">
                       <CheckCircle2 size={28} className="text-emerald-500" />
@@ -1106,8 +1207,15 @@ const ReturnModal: React.FC<ReturnModalProps> = ({ sale, onClose }) => {
               </div>
             </div>
 
+            <ProductSelectionModal
+              isOpen={isProductModalOpen}
+              product={pendingProduct}
+              onClose={() => setIsProductModalOpen(false)}
+              onSuccess={handleProductSelectSuccess}
+            />
+
             {/* Footer */}
-            {state.step < 6 && (
+            {state.step < 5 && (
               <div className="shrink-0 px-5 py-4 border-t border-slate-100 bg-white flex items-center gap-2.5">
                 {state.step > 1 && (
                   <button onClick={m.goBack}
@@ -1116,7 +1224,7 @@ const ReturnModal: React.FC<ReturnModalProps> = ({ sale, onClose }) => {
                     Back
                   </button>
                 )}
-                {state.step < 5 ? (
+                {state.step < 4 ? (
                   <button onClick={m.goNext}
                     disabled={!m.canProceed}
                     className="sr-btn-primary flex-1 py-2.5 bg-blue-600 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-2">
@@ -1124,7 +1232,7 @@ const ReturnModal: React.FC<ReturnModalProps> = ({ sale, onClose }) => {
                     <ChevronRight size={14} />
                   </button>
                 ) : (
-                  <button onClick={m.confirm}
+                  <button onClick={() => m.confirm(onRefresh)}
                     disabled={state.isSubmitting}
                     className="sr-btn-primary flex-1 py-2.5 bg-blue-600 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-2">
                     {state.isSubmitting ? (
@@ -1151,9 +1259,10 @@ interface SidebarProps {
   isOpen: boolean;
   onClose: () => void;
   onReturn: (sale: SaleRecord) => void;
+  openSidebar: (sale: SaleRecord) => void;
 }
 
-const SaleDetailSidebar: React.FC<SidebarProps> = ({ sale, isOpen, onClose, onReturn }) => {
+const SaleDetailSidebar: React.FC<SidebarProps> = ({ sale, isOpen, onClose, onReturn, openSidebar }) => {
   useEffect(() => {
     if (isOpen && sale) {
       document.body.style.overflow = "hidden";
@@ -1230,26 +1339,81 @@ const SaleDetailSidebar: React.FC<SidebarProps> = ({ sale, isOpen, onClose, onRe
               <div className="space-y-2">
                 <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400">Order Items</p>
                 <div className="border border-slate-100 rounded-xl divide-y divide-slate-100 overflow-hidden shadow-sm">
-                  {generateItems(sale).map((item, i) => (
-                    <div key={i} className="flex items-center gap-4 p-4 bg-white hover:bg-slate-50/50 transition-colors">
-                      <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border border-slate-100 shadow-sm" style={{ background: item.imageColor + '10' }}>
-                        <Package size={16} className="text-slate-500 opacity-60" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[13px] font-semibold text-slate-800 truncate">{item.name}</p>
-                        <div className="flex items-center gap-2 mt-1">
-                          <span className="text-[10px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded-md font-medium">QTY {item.quantity}</span>
-                          <span className="text-[10px] text-slate-400 sr-mono">{item.sku}</span>
+                  {generateItems(sale).map((item, i) => {
+                    const exchangeInfo = sale.exchanged_items?.find(ex => ex.exchanged_item_id === item.id);
+                    return (
+                      <div key={i} className="flex flex-col border-b border-slate-100 last:border-0">
+                        <div className="flex items-center gap-4 p-4 bg-white hover:bg-slate-50/50 transition-colors">
+                          <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border border-slate-100 shadow-sm" style={{ background: item.imageColor + '10' }}>
+                            <Package size={16} className="text-slate-500 opacity-60" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[13px] font-semibold text-slate-800 truncate">{item.name}</p>
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className="text-[10px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded-md font-medium">QTY {item.quantity}</span>
+                              <span className="text-[10px] text-slate-400 sr-mono">{item.sku}</span>
+                              {item.status && (
+                                <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded uppercase ${item.status === "REFUNDED" ? "bg-red-50 text-red-600" : "bg-blue-50 text-blue-600"
+                                  }`}>
+                                  {item.status}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-sm font-bold sr-mono text-slate-900">{fmt(item.unitPrice * item.quantity)}</p>
+                            <div className="flex flex-col items-end gap-0.5 mt-1">
+                              <span className="text-[9px] text-slate-400">Sell: {fmt(item.unitPrice)}</span>
+                              <span className="text-[9px] text-slate-400">Buy: {fmt(item.buyPrice)}</span>
+                            </div>
+                          </div>
                         </div>
+                        {exchangeInfo && (
+                          <div className="px-4 pb-3 -mt-2">
+                            <div className="bg-blue-50/50 border border-blue-100 rounded-lg p-2 flex items-center justify-between">
+                              <p className="text-[10px] font-medium text-blue-700 flex items-center gap-1.5">
+                                <ArrowRight size={10} /> Exchanged for INV-{exchangeInfo.replacement_order.ui_id}
+                              </p>
+                              <button
+                                onClick={() => openSidebar(exchangeInfo.replacement_order)}
+                                className="text-[9px] font-bold text-blue-600 hover:underline">View Order</button>
+                            </div>
+                          </div>
+                        )}
                       </div>
-                      <div className="text-right">
-                        <p className="text-sm font-bold sr-mono text-slate-900">{fmt(item.unitPrice * item.quantity)}</p>
-                        <p className="text-[9px] text-slate-400 mt-0.5">{fmt(item.unitPrice)} each</p>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
+
+              {/* Exchange History Section */}
+              {sale.exchanged_items && sale.exchanged_items.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400">Exchange History</p>
+                  <div className="bg-white border border-slate-100 rounded-xl overflow-hidden shadow-sm divide-y divide-slate-100">
+                    {sale.exchanged_items.map((ex, idx) => (
+                      <div key={idx} className="p-4 flex items-start gap-3">
+                        <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center shrink-0">
+                          <RefreshCw size={14} className="text-blue-500" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-semibold text-slate-800">Exchange Processed</p>
+                          <p className="text-[10px] text-slate-500 mt-0.5">
+                            Original item was replaced with items from <span className="font-bold text-slate-700">INV-{ex.replacement_order.ui_id}</span>.
+                          </p>
+                          <div className="mt-2 flex items-center gap-2">
+                            <span className="text-[9px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">Success</span>
+                            <span className="text-[9px] text-slate-400 sr-mono">{ex.replacement_order.created_at.split("T")[0]}</span>
+                            <button
+                              onClick={() => openSidebar(ex.replacement_order)}
+                              className="text-[9px] font-bold text-blue-600 hover:underline ml-auto">View Order</button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Footer */}
@@ -1336,7 +1500,7 @@ const FilterDropdown: React.FC<FilterDropdownProps> = ({ label, options, value, 
 const SalesListPage: React.FC = () => {
   const api = useApi();
   const [orders, setOrders] = useState<OrderResponse[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
   const [filterOrigin, setFilterOrigin] = useState("");
   const [filterPayment, setFilterPayment] = useState("");
@@ -1478,7 +1642,16 @@ const SalesListPage: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {filtered.length === 0 ? (
+                {loading ? (
+                  <tr>
+                    <td colSpan={10} className="py-20 text-center">
+                      <div className="flex flex-col items-center gap-2 text-slate-400">
+                        <Loader2 size={26} className="animate-spin mb-1 text-blue-500" />
+                        <p className="text-sm font-medium text-slate-500">Fetching sales records...</p>
+                      </div>
+                    </td>
+                  </tr>
+                ) : filtered.length === 0 ? (
                   <tr>
                     <td colSpan={10} className="py-20 text-center">
                       <div className="flex flex-col items-center gap-2 text-slate-400">
@@ -1491,13 +1664,29 @@ const SalesListPage: React.FC = () => {
                 ) : filtered.map(sale => {
                   const oCfg = ORIGIN_CFG[sale.origin as OriginType] || ORIGIN_CFG["Sales"];
                   const pCfg = PAYMENT_CFG[sale.payment_method as PaymentMethod] || PAYMENT_CFG["Cash"];
-                  const sCfg = STATUS_CFG[sale.status as SaleStatus] || STATUS_CFG["Pending"];
                   const returnable = sale.status === "Completed" && sale.origin !== "Sales Return";
                   const dateStr = sale.created_at.split("T")[0];
                   return (
                     <tr key={sale.id} className="sr-row">
                       <td className="py-2.5 pl-3 sm:pl-5 pr-3 sm:pr-4">
-                        <span className="sr-mono text-[11px] font-medium text-slate-700">INV-{sale.ui_id}</span>
+                        <div className="flex flex-col gap-1">
+                          <span className="sr-mono text-[11px] font-medium text-slate-700">INV-{sale.ui_id}</span>
+                          {sale.origin === "Sales Return" && (
+                            <span className="text-[8px] font-bold text-red-500 uppercase tracking-tighter bg-red-50 px-1 rounded w-fit">Return</span>
+                          )}
+                          <div className="flex gap-1 flex-wrap">
+                            {(sale.items || []).filter(i => i.status === "REFUNDED").length > 0 && (
+                              <span className="text-[8px] font-bold text-orange-600 bg-orange-50 px-1 rounded w-fit">
+                                {sale.items?.filter(i => i.status === "REFUNDED").length} Refunded
+                              </span>
+                            )}
+                            {(sale.items || []).filter(i => i.status === "EXCHANGED").length > 0 && (
+                              <span className="text-[8px] font-bold text-blue-600 bg-blue-50 px-1 rounded w-fit">
+                                {sale.items?.filter(i => i.status === "EXCHANGED").length} Exchanged
+                              </span>
+                            )}
+                          </div>
+                        </div>
                       </td>
                       <td className="py-2.5 px-3 sm:px-4">
                         <p className="text-[11px] font-medium text-slate-800 whitespace-nowrap">{sale.customer_id}</p>
@@ -1563,10 +1752,11 @@ const SalesListPage: React.FC = () => {
         isOpen={isSidebarOpen}
         onClose={closeSidebar}
         onReturn={openReturn}
+        openSidebar={openSidebar}
       />
 
       {/* Global Return Modal */}
-      {returnSale && <ReturnModal sale={returnSale} onClose={closeReturn} />}
+      {returnSale && <ReturnModal sale={returnSale} onClose={closeReturn} onRefresh={fetchOrders} />}
 
       {/* Return Search Modal */}
       {isReturnSearchOpen && (

@@ -5,7 +5,7 @@ import { useSearchSelect } from "../../hooks/UseSearchSelect";
 import { HighlightText } from "./HighLightText";
 
 // Type constraint to ensure our generic T is an object
-export type BaseOption = Record<string, unknown>;
+export type BaseOption = object;
 
 export interface SearchSelectProps<T extends BaseOption> {
   value?: string | number | string[] | number[];

@@ -1,6 +1,6 @@
 import React, { useState } from "react";
-import { Modal, Input, Checkbox, Form, InputNumber, Switch } from "antd";
-import { User, Phone, Mail, CreditCard, ShieldCheck } from "lucide-react";
+import { Modal, Input, Form, InputNumber, Switch } from "antd";
+import { User, Phone, Mail, CreditCard } from "lucide-react";
 
 interface CustomerCreateModalProps {
   isOpen: boolean;
@@ -49,7 +49,7 @@ const CustomerCreateModal: React.FC<CustomerCreateModalProps> = ({
       width={450}
       styles={{
         mask: { backdropFilter: "blur(4px)", background: "rgba(15,23,42,0.3)" },
-        content: { borderRadius: "16px", padding: "24px" }
+        body: { borderRadius: "16px", padding: "24px" }
       }}
     >
       <Form

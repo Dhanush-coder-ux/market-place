@@ -36,7 +36,6 @@ export interface InventoryItem {
   batchId?: string;
   serialnoId?: string;
   availableSerials?: string[];
-  requireSerial?: boolean;
 }
 
 export interface BillingItem {
@@ -54,6 +53,7 @@ export interface BillingItem {
   batchTracking?: boolean;
   manufacturingDate?: string;
   expiryDate?: string;
+  requireSerial?: boolean;
 }
 
 // Alias for convenience if used in shopping cart contexts

@@ -21,7 +21,7 @@ import { InventoryItem, ProductVariant } from "../../billing/types";
    TYPES
 ═══════════════════════════════════════════════════════════════ */
 type OriginType = "Sales" | "Sales Return";
-type PaymentMethod = "Cash" | "Card" | "UPI";
+type PaymentMethod = "Cash" | "Card" | "UPI" | "G-Pay" | "PhonePe" | "Other";
 type SaleStatus = "Completed" | "Pending" | "Cancelled";
 type ReturnMode = "refund" | "exchange";
 type ReturnReason = "Damaged" | "Wrong Item" | "Customer Request" | "Size Issue" | "Other" | "";
@@ -83,15 +83,18 @@ const ITEM_COLORS = ["#dbeafe", "#dcfce7", "#fef3c7", "#fce7f3", "#ede9fe", "#ff
 const generateItems = (sale: SaleRecord): SaleItem[] =>
   (sale.items || []).map((item, i) => ({
     id: item.id,
-    name: item.status === "REFUNDED" ? `(Refunded) Item ${i + 1}` : item.status === "EXCHANGED" ? `(Exchanged) Item ${i + 1}` : `Item ${i + 1}`,
-    sku: item.barcode || item.inventory_id.slice(-6),
+    name: item.status === "REFUNDED" 
+      ? `(Refunded) ${item.barcode?.trim() || 'Item'}` 
+      : item.status === "EXCHANGED" 
+        ? `(Exchanged) ${item.barcode?.trim() || 'Item'}` 
+        : (item.barcode?.trim() || `Item ${i + 1}`),
+    sku: item.barcode?.trim() || item.inventory_id.slice(-6),
     category: "General",
     quantity: item.quantity,
     unitPrice: item.sell_price,
     buyPrice: item.buy_price,
     imageColor: ITEM_COLORS[i % ITEM_COLORS.length],
     status: item.status,
-    // Add additional properties needed for exchange/return
     variant_id: item.variant_id,
     batch_id: item.batch_id,
     serialno_id: item.serialno_id,
@@ -109,10 +112,13 @@ const ORIGIN_CFG: Record<OriginType, BadgeConfig> = {
   "Sales": { cls: "bg-blue-50 text-blue-700 border-blue-100", dot: "bg-blue-400" },
   "Sales Return": { cls: "bg-orange-50 text-orange-700 border-orange-100", dot: "bg-orange-400" },
 };
-const PAYMENT_CFG: Record<PaymentMethod, BadgeConfig> = {
+const PAYMENT_CFG: Record<string, BadgeConfig> = {
   Cash: { cls: "bg-emerald-50 text-emerald-700 border-emerald-100", dot: "bg-emerald-400" },
   Card: { cls: "bg-purple-50 text-purple-700 border-purple-100", dot: "bg-purple-400" },
   UPI: { cls: "bg-indigo-50 text-indigo-700 border-indigo-100", dot: "bg-indigo-400" },
+  "G-Pay": { cls: "bg-blue-50 text-blue-700 border-blue-100", dot: "bg-blue-400" },
+  PhonePe: { cls: "bg-purple-50 text-purple-700 border-purple-100", dot: "bg-purple-400" },
+  Other: { cls: "bg-slate-50 text-slate-700 border-slate-100", dot: "bg-slate-400" },
 };
 const STATUS_CFG: Record<SaleStatus, BadgeConfig> = {
   Completed: { cls: "bg-emerald-50 text-emerald-700 border-emerald-100", dot: "bg-emerald-500" },
@@ -649,35 +655,50 @@ const useReturnModal = (sale: SaleRecord | null) => {
     setState(s => ({ ...s, isSubmitting: true }));
     try {
       if (state.mode === "refund") {
-        for (const item of selectedItems) {
-          await inventoryApi.returnOrderItem({
-            order_id: sale?.id || "",
-            item_id: item.id
-          });
-        }
+        await inventoryApi.bulkReturnOrder({
+          order_id: sale?.id || "",
+          items_id: selectedItems.map(i => i.id)
+        });
         showToast("Refund(s) processed successfully", "success");
       } else {
-        // Exchange
-        for (const item of selectedItems) {
-          const replacement = state.exchangeMap[item.id];
-          if (!replacement) continue;
+        // Bulk Exchange - Merge identical products into single entries with summed quantity
+        const productsMap = new Map<string, any>();
 
-          await inventoryApi.exchangeOrder({
-            shop_id: SHOP_ID,
-            customer_id: sale?.customer_id || "",
-            order_id: sale?.id || "",
-            item_id: item.id,
-            payment_method: state.settlementMethod || sale?.payment_method || "Cash",
-            product: {
+        selectedItems.forEach(item => {
+          const replacement = state.exchangeMap[item.id];
+          if (!replacement) return;
+
+          // Create a unique key for merging: ID + variant + batch + serialno_id
+          const key = `${replacement.id}-${replacement.variant_id || "none"}-${replacement.batch_id || "none"}-${replacement.serialno_id || "none"}`;
+
+          if (productsMap.has(key)) {
+            const existing = productsMap.get(key);
+            existing.quantity += replacement.quantity || item.returnQty;
+            if (replacement.serial_numbers) {
+              existing.serial_numbers = [...existing.serial_numbers, ...replacement.serial_numbers];
+            }
+          } else {
+            productsMap.set(key, {
               id: replacement.id,
               variant_id: replacement.variant_id || null,
               batch_id: replacement.batch_id || null,
               serialno_id: replacement.serialno_id || null,
               serial_numbers: replacement.serial_numbers || [],
-              quantity: 1 // Exchange is usually 1:1 in this UI
-            }
-          });
-        }
+              quantity: replacement.quantity || item.returnQty,
+            });
+          }
+        });
+
+        const products = Array.from(productsMap.values());
+
+        await inventoryApi.bulkExchangeOrder({
+          shop_id: SHOP_ID,
+          customer_id: sale?.customer_id || "",
+          order_id: sale?.id || "",
+          items_id: selectedItems.map(i => i.id),
+          payment_method: state.settlementMethod || sale?.payment_method || "Cash",
+          products
+        });
         showToast("Exchange(s) processed successfully", "success");
       }
       onSuccess?.();
@@ -756,7 +777,7 @@ const ReturnModal: React.FC<ReturnModalProps> = ({ sale, onClose, onRefresh }) =
     setIsProductModalOpen(true);
   };
 
-  const handleProductSelectSuccess = (variant: ProductVariant, serials?: string[]) => {
+  const handleProductSelectSuccess = (variant: ProductVariant, quantity: number, serials?: string[]) => {
     if (!activeReplaceId || !pendingProduct) return;
 
     const exchangeData = {
@@ -767,6 +788,7 @@ const ReturnModal: React.FC<ReturnModalProps> = ({ sale, onClose, onRefresh }) =
       batch_id: variant.batchId || pendingProduct.batchId,
       serialno_id: variant.serialnoId || pendingProduct.serialnoId,
       serial_numbers: serials || [],
+      quantity: quantity,
     };
 
     m.setExchangeProduct(activeReplaceId, exchangeData);
@@ -1207,12 +1229,24 @@ const ReturnModal: React.FC<ReturnModalProps> = ({ sale, onClose, onRefresh }) =
               </div>
             </div>
 
-            <ProductSelectionModal
-              isOpen={isProductModalOpen}
-              product={pendingProduct}
-              onClose={() => setIsProductModalOpen(false)}
-              onSuccess={handleProductSelectSuccess}
-            />
+            {(() => {
+              const usedSerials = Object.entries(state.exchangeMap).reduce((acc: string[], [itemId, data]) => {
+                // Don't exclude serials belonging to the item we are CURRENTLY editing
+                if (itemId === activeReplaceId) return acc;
+                return [...acc, ...(data.serial_numbers || [])];
+              }, []);
+
+              return (
+                <ProductSelectionModal
+                  isOpen={isProductModalOpen}
+                  product={pendingProduct}
+                  onClose={() => setIsProductModalOpen(false)}
+                  onSuccess={handleProductSelectSuccess}
+                  excludedSerials={usedSerials}
+                  initialQuantity={selectedItems.find(i => i.id === activeReplaceId)?.returnQty}
+                />
+              );
+            })()}
 
             {/* Footer */}
             {state.step < 5 && (
@@ -1340,7 +1374,7 @@ const SaleDetailSidebar: React.FC<SidebarProps> = ({ sale, isOpen, onClose, onRe
                 <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400">Order Items</p>
                 <div className="border border-slate-100 rounded-xl divide-y divide-slate-100 overflow-hidden shadow-sm">
                   {generateItems(sale).map((item, i) => {
-                    const exchangeInfo = sale.exchanged_items?.find(ex => ex.exchanged_item_id === item.id);
+                    const exchangeInfo = sale.exchanged_items?.find(ex => ex.exchanged_items.includes(item.id));
                     return (
                       <div key={i} className="flex flex-col border-b border-slate-100 last:border-0">
                         <div className="flex items-center gap-4 p-4 bg-white hover:bg-slate-50/50 transition-colors">
@@ -1399,7 +1433,7 @@ const SaleDetailSidebar: React.FC<SidebarProps> = ({ sale, isOpen, onClose, onRe
                         <div className="flex-1 min-w-0">
                           <p className="text-xs font-semibold text-slate-800">Exchange Processed</p>
                           <p className="text-[10px] text-slate-500 mt-0.5">
-                            Original item was replaced with items from <span className="font-bold text-slate-700">INV-{ex.replacement_order.ui_id}</span>.
+                            Original item(s) replaced with items from <span className="font-bold text-slate-700">INV-{ex.replacement_order.ui_id}</span>.
                           </p>
                           <div className="mt-2 flex items-center gap-2">
                             <span className="text-[9px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">Success</span>
@@ -1538,11 +1572,21 @@ const SalesListPage: React.FC = () => {
       setLoading(true);
       const res = await api.getData(`${ENDPOINTS.ORDERS}/${SHOP_ID}`);
       if (res && res.data) {
-        // Normalize status to Title Case (COMPLETED -> Completed)
-        const normalized = (res.data as any[]).map(s => ({
-          ...s,
-          status: s.status.charAt(0).toUpperCase() + s.status.slice(1).toLowerCase()
-        }));
+        // Normalize data for UI consistency
+        const normalized = (res.data as any[]).map(s => {
+          const rawPm = (s.payment_method || "Other").toUpperCase();
+          const pm = rawPm === "CASH" ? "Cash" 
+                   : rawPm === "CARD" ? "Card" 
+                   : rawPm === "UPI" || rawPm === "G-PAY" || rawPm === "GPAY" ? "UPI"
+                   : rawPm === "PHONEPE" ? "PhonePe"
+                   : s.payment_method;
+
+          return {
+            ...s,
+            status: s.status.charAt(0).toUpperCase() + s.status.slice(1).toLowerCase(),
+            payment_method: pm
+          };
+        });
         setOrders(normalized);
       }
     } catch (err) {

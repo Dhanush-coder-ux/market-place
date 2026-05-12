@@ -6,15 +6,17 @@ interface ProductSelectionModalProps {
   isOpen: boolean;
   product: InventoryItem | null;
   onClose: () => void;
-  onSuccess: (variant: ProductVariant, serials?: string[]) => void;
+  onSuccess: (variant: ProductVariant, quantity: number, serials?: string[]) => void;
   initialQuantity?: number;
   initialSerials?: string[];
   initialVariantId?: string;
+  excludedSerials?: string[];
 }
 
 const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({ 
   isOpen, product, onClose, onSuccess,
-  initialQuantity, initialSerials, initialVariantId
+  initialQuantity, initialSerials, initialVariantId,
+  excludedSerials = []
 }) => {
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null);
   const [selectedSerials, setSelectedSerials] = useState<string[]>([]);
@@ -77,9 +79,14 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
     }
   }, [isOpen, product, initialQuantity, initialSerials, initialVariantId, isElectronics, steps]);
 
-  if (!isOpen || !product) return null;
+  const availableSerials = useMemo(() => {
+    if (!product) return [];
+    const raw = selectedVariant?.availableSerials || product.availableSerials || [];
+    // Filter out serials that are already used elsewhere, BUT keep those that were initially selected for THIS item (in case of editing)
+    return raw.filter(s => !excludedSerials.includes(s) || initialSerials?.includes(s));
+  }, [selectedVariant, product?.availableSerials, excludedSerials, initialSerials]);
 
-  const availableSerials = selectedVariant?.availableSerials || product.availableSerials || [];
+  if (!isOpen || !product) return null;
   
   const canGoNext = (() => {
     if (currentStep === "variant") return !!selectedVariant;
@@ -432,7 +439,7 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
             </button>
           ) : (
             <button
-              onClick={() => selectedVariant && onSuccess(selectedVariant, selectedSerials)}
+              onClick={() => selectedVariant && onSuccess(selectedVariant, quantity, selectedSerials)}
               className="flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-2xl text-sm font-bold text-white bg-emerald-500 hover:bg-emerald-600 shadow-lg shadow-emerald-200 transition-all duration-300"
             >
               Add to Bill

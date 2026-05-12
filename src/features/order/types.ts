@@ -43,6 +43,11 @@ export interface OrderItemResponse {
   status?: string;
 }
 
+export interface ExchangeInfo {
+  exchanged_items: string[];
+  replacement_order: OrderResponse;
+}
+
 export interface OrderResponse {
   id: string;
   ui_id: number;
@@ -54,12 +59,9 @@ export interface OrderResponse {
   total_buyprice: number;
   total_sellprice: number;
   origin: string;
+  type: string;
   items?: OrderItemResponse[];
-  exchanged_items?: Array<{
-    exchange_id: string;
-    exchanged_item_id: string;
-    replacement_order: OrderResponse;
-  }>;
+  exchanged_items?: ExchangeInfo[] | null;
   created_at: string;
   updated_at: string;
 }

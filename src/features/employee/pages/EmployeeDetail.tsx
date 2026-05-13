@@ -80,7 +80,7 @@ export default function EmployeeDetail() {
   const initials = name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
 
   return (
-    <div className="min-h-screen bg-slate-50/50 font-[Inter,sans-serif] animate-in fade-in duration-500">
+    <div className="min-h-screen bg-slate-50/50 font-sans animate-in fade-in duration-500">
       <div className="mx-auto  py-3 space-y-4">
 
         {/* Profile Header Card */}

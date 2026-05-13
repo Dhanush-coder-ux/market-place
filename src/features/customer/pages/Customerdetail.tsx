@@ -30,11 +30,11 @@ const CustomerSearch = () => {
   const fetchCustomers = async (q: string) => {
     if (!q) return [];
     try {
-      const res = await getData(ENDPOINTS.CUSTOMERS, { limit: "8", offset: "1", q });
+      const res = await getData(`${ENDPOINTS.CUSTOMERS}/by/shop/${SHOP_ID}`, { limit: "8", offset: "1", q });
       const data = res?.data ? (Array.isArray(res.data) ? res.data : [res.data]) : [];
       return data.map((c: any) => ({
         ...c,
-        displayName: String(c.datas?.name ?? c.datas?.full_name ?? c.datas?.customer_name ?? c.id)
+        displayName: String(c.name || c.datas?.name || c.datas?.full_name || c.datas?.customer_name || c.id)
       }));
     } catch (_error) {
       return [];
@@ -207,7 +207,7 @@ export default function CustomerDetail() {
         @keyframes slideIn { from { transform: translateX(400px); } to { transform: translateX(0); } }
       `}</style>
 
-      <div className="min-h-screen bg-slate-50/50 font-[Inter,sans-serif]">
+      <div className="min-h-screen bg-slate-50/50 font-sans">
         <div className="max-w-full mx-auto px-4 md:px-10 py-3 space-y-4">
 
           {/* Profile Header Card */}

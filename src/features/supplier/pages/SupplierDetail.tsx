@@ -30,7 +30,7 @@ const SupplierSearch = () => {
       const data = res?.data ? (Array.isArray(res.data) ? res.data : [res.data]) : [];
       return data.map((s: any) => ({
         ...s,
-        displayName: String(s.name || s.datas?.supplier_name || s.id)
+        displayName: String(s.name || s.datas?.supplier_name || s.datas?.name || s.supplier_name || s.id)
       }));
     } catch { return []; }
   };
@@ -49,7 +49,7 @@ const SupplierSearch = () => {
   );
 };
 
-const TABS = ["General Info", "Financials", "Purchase Orders", "Timeline"];
+const TABS = ["General Info", "Financials", "Purchase Orders"];
 
 export default function SupplierDetail() {
   const { id } = useParams<{ id: string }>();
@@ -116,7 +116,7 @@ export default function SupplierDetail() {
   const initials = name.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2);
 
   return (
-    <div className="min-h-screen bg-slate-50/50 font-[Inter,sans-serif] animate-in fade-in duration-500">
+    <div className="min-h-screen bg-slate-50/50 font-sans animate-in fade-in duration-500">
       <div className="mx-auto py-3 space-y-4">
 
         {/* Profile Header Card */}

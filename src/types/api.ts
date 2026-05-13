@@ -70,7 +70,7 @@ export interface CustomerRecord {
   shop_id: string;
   ui_id: number;
   name: string;
-  email: string;
+  email?: string;
   mobile_number: string;
   credit_limit: number;
   is_active: boolean;

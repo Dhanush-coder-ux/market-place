@@ -49,6 +49,8 @@ export interface ProductDatas {
   supplier?: string;
   brand?: string;
   gst?: string;
+  barcode?: string;
+  sku?: string;
   hsn?: string;
   mrp?: string;
   unit?: string;
@@ -253,7 +255,7 @@ const ProductRow = React.memo(({
               </div>
               <div className="flex items-center gap-2 sm:gap-3 text-[11px] sm:text-[12px] text-slate-500 font-medium flex-wrap">
                 <span className="font-mono text-slate-500 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-100">
-                  {item.barcode || "NO-BARCODE"}
+                  {item.barcode || datas.barcode || (item as any).sku || datas.sku || "NO-BARCODE"}
                 </span>
                 <span className="text-slate-300 hidden sm:inline">•</span>
                 <span className="text-slate-700">{datas.brand || item.brand || "Generic"}</span>
@@ -438,7 +440,7 @@ const InventoryPage = () => {
     if (!searchQuery) return inventory;
     const q = searchQuery.toLowerCase();
     return inventory.filter(item =>
-      item.barcode?.toLowerCase().includes(q) ||
+      (item.barcode || item.datas?.barcode || (item as any).sku || item.datas?.sku || "")?.toLowerCase().includes(q) ||
       (item.datas?.name || item.name || "").toLowerCase().includes(q) ||
       (item.datas?.brand || item.brand || "").toLowerCase().includes(q) ||
       (item.datas?.category || item.category || "").toLowerCase().includes(q)

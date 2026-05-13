@@ -351,7 +351,7 @@ const ProductionForm = () => {
 
 
   return (
-    <div className="min-h-screen bg-slate-50/50 p-4 md:p-6 lg:p-8 font-[Inter,sans-serif]">
+    <div className="min-h-screen bg-slate-50/50 p-4 md:p-6 lg:p-8 font-sans">
       
 
 

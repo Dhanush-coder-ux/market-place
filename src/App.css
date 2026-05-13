@@ -172,7 +172,7 @@
   }
 
   @theme {
-    --font-sans: "Poppins", sans-serif;
+    --font-sans: "Inter", "Poppins", sans-serif;
   }
 
   /* Global scroll lock utility */
@@ -353,7 +353,7 @@
 
 /* --- DASHBOARD FONTS & ANIMATIONS --- */
 .display-font {
-  font-family: 'Outfit', sans-serif;
+  font-family: 'Inter', sans-serif;
 }
 
 @keyframes fadeUp {

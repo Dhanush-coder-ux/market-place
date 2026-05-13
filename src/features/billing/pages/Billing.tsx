@@ -172,14 +172,15 @@ const Billing = () => {
   };
 
   // ── Confirm Order → POST to Billing API
-  const handleConfirmOrder = useCallback(async (paymentMode: string) => {
+  const handleConfirmOrder = useCallback(async (payments: { mode: string, amount: number }[]) => {
     const filledItems = items.filter(i => !!i.name);
     if (filledItems.length === 0) return;
 
     const payload: CreateBillingSchema = {
       shop_id: SHOP_ID,
-      payment_method: paymentMode.toLowerCase(),
+      payment_method: payments.map(p => p.mode).join(", "),
       customer_id: customerData?.id || "walk-in",
+      split_payments: payments,
       products: filledItems.map(i => ({
         id: i.inventoryId || "",
         variant_id: i.variantId || undefined,
@@ -192,7 +193,22 @@ const Billing = () => {
 
     const res = await postData(ENDPOINTS.BILLING, payload);
     if (res) {
-      // Success — reset billing state
+      // Calculate how much was paid via credit to update local customer state
+      const creditPaid = payments.filter(p => p.mode === "credit").reduce((s, p) => s + p.amount, 0);
+      
+      if (customerData && creditPaid > 0) {
+        setCustomerData(prev => prev ? {
+          ...prev,
+          outstanding: prev.outstanding + creditPaid,
+          // If the user literally wants to "reduce the amount from credit limit":
+          // creditLimit: prev.creditLimit - creditPaid 
+          // But usually we just update outstanding. I'll stick to updating outstanding 
+          // as it's the standard way to "use up" a credit limit.
+        } : null);
+      }
+
+      // Success — reset billing state (except maybe customer if we want to see the update, 
+      // but usually we clear the screen for next customer)
       setItems([createEmptyRow()]);
       setPhone("");
       setCustomerName("");

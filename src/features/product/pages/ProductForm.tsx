@@ -87,11 +87,9 @@ const uid = () => `id_${Math.random().toString(36).slice(2, 11)}`;
  • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • */
 
 const STYLES = `
-  @import url('https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap');
-
-  .pf-root { font-family: 'Instrument Sans', sans-serif; }
-  .pf-mono { font-family: 'JetBrains Mono', monospace; }
-  .pf-serif { font-family: 'Instrument Serif', serif; }
+  .pf-root { font-family: var(--font-sans); }
+  .pf-mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+  .pf-serif { font-family: Georgia, Cambria, "Times New Roman", Times, serif; }
 
   /* Card hover */
   .pf-card { transition: box-shadow 0.2s ease; }
@@ -571,7 +569,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
   return (
     <>
       <style>{STYLES}</style>
-      <div className="pf-root min-h-screen bg-slate-50/50 font-[Inter,sans-serif]">
+      <div className="pf-root min-h-screen bg-slate-50/50 font-sans">
         <form onSubmit={handleSubmit} className="max-w-7xl mx-auto space-y-5">
 
           <div className="grid grid-cols-1 lg:grid-cols-6 gap-5 items-start">

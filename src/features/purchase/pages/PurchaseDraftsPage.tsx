@@ -41,7 +41,7 @@ const PurchaseDraftsPage = () => {
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500 p-4 md:p-6 font-[Inter,sans-serif]">
+    <div className="space-y-8 animate-in fade-in duration-500 p-4 md:p-6 font-sans">
       
       {/* Notice */}
       <div className="bg-blue-50 border border-blue-100 rounded-2xl px-6 py-3 text-blue-700 flex items-center gap-3">

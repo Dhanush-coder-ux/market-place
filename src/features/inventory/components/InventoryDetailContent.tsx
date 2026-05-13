@@ -142,6 +142,40 @@ export const InventoryDetailContent = ({ item }: { item: InventoryRecord | null 
         </div>
       )}
 
+      {/* Product Variants Section */}
+      {item.has_variant && item.variants && item.variants.length > 0 && (
+        <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
+          <div className="p-4 border-b bg-amber-50/50 flex items-center gap-2">
+            <Layers size={18} className="text-amber-600" />
+            <h3 className="font-semibold text-amber-900">Product Variants</h3>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-gray-50/50 border-b border-gray-100">
+                  <th className="px-6 py-3 text-[11px] font-bold text-gray-400 uppercase tracking-wider">Variant</th>
+                  <th className="px-6 py-3 text-[11px] font-bold text-gray-400 uppercase tracking-wider">Buy Price</th>
+                  <th className="px-6 py-3 text-[11px] font-bold text-gray-400 uppercase tracking-wider">Sell Price</th>
+                  <th className="px-6 py-3 text-[11px] font-bold text-gray-400 uppercase tracking-wider text-right">Stock</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {item.variants.map((variant, idx) => (
+                  <tr key={idx} className="hover:bg-gray-50/50 transition-colors">
+                    <td className="px-6 py-4 text-sm font-medium text-gray-900">{variant.name || `Variant ${idx + 1}`}</td>
+                    <td className="px-6 py-4 text-sm text-gray-600 font-mono">₹{(variant.buy_price || 0).toFixed(2)}</td>
+                    <td className="px-6 py-4 text-sm text-green-600 font-bold font-mono">₹{(variant.sell_price || 0).toFixed(2)}</td>
+                    <td className="px-6 py-4 text-sm text-gray-700 text-right font-semibold">
+                      <span className={variant.stocks < 10 ? "text-red-500" : "text-slate-600"}>{variant.stocks || 0}</span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };

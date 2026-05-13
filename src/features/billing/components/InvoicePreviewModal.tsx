@@ -10,7 +10,7 @@ interface InvoicePreviewModalProps {
   items: BillingItem[];
   customerName: string;
   phone: string;
-  paymentMode: string;
+  payments: { mode: string; amount: number }[];
   includeGst: boolean;
   totalAmount: number;
   gstAmount: number;
@@ -31,7 +31,7 @@ const payMeta: Record<string, { label: string; icon: React.ReactNode }> = {
 
 const InvoicePreviewModal: React.FC<InvoicePreviewModalProps> = ({
   isOpen, onClose, items, customerName, phone,
-  paymentMode, includeGst, totalAmount, gstAmount, finalAmount,
+  payments, includeGst, totalAmount, gstAmount, finalAmount,
   isSubmitting, onConfirm,
 }) => {
   const [status, setStatus] = useState<BillStatus>("COMPLETED");
@@ -41,7 +41,9 @@ const InvoicePreviewModal: React.FC<InvoicePreviewModalProps> = ({
   const dateStr = today.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
   const timeStr = today.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
   const invoiceNo = `INV-${Date.now().toString(36).toUpperCase().slice(-6)}`;
-  const mode = payMeta[paymentMode] || payMeta.cash;
+  
+  const primaryPayment = payments[0] || { mode: "cash" };
+  const modeInfo = payMeta[primaryPayment.mode] || payMeta.cash;
 
 
   if (!isOpen) return null;
@@ -123,7 +125,7 @@ const InvoicePreviewModal: React.FC<InvoicePreviewModalProps> = ({
                   <div className="mt-2 space-y-0.5">
                     <p className="text-[10px] text-slate-400">{dateStr} · {timeStr}</p>
                     <div className="inline-flex items-center gap-1 text-[10px] font-medium text-slate-500 bg-slate-50 border border-slate-100 rounded px-1.5 py-0.5 mt-1 print:bg-white print:border-slate-200">
-                      {mode.icon} {mode.label}
+                      {modeInfo.icon} {payments.length > 1 ? "Split Payment" : modeInfo.label}
                     </div>
                   </div>
                 </div>
@@ -222,10 +224,12 @@ const InvoicePreviewModal: React.FC<InvoicePreviewModalProps> = ({
                       <span className="tabular-nums text-blue-600 print:text-blue-700">₹{formatINR(finalAmount)}</span>
                     </div>
                   </div>
-                  <div className="flex justify-between text-[11px] text-slate-500">
-                    <span>Paid ({mode.label})</span>
-                    <span className="tabular-nums">₹{formatINR(finalAmount)}</span>
-                  </div>
+                  {payments.map((p, idx) => (
+                    <div key={idx} className="flex justify-between text-[11px] text-slate-500">
+                      <span>Paid ({payMeta[p.mode]?.label || p.mode})</span>
+                      <span className="tabular-nums">₹{formatINR(p.amount)}</span>
+                    </div>
+                  ))}
                   <div className="flex justify-between text-[11px] font-medium text-emerald-600">
                     <span>Balance</span>
                     <span className="tabular-nums">₹0.00</span>

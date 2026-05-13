@@ -297,9 +297,8 @@ export default function AnnouncementsPage() {
   return (
     <>
       <style>{`
-        @import url('${FONT_URL}');
-        .ann-font { font-family: 'Geist', -apple-system, sans-serif; }
-        .ann-mono { font-family: 'Geist Mono', monospace; }
+        .ann-font { font-family: var(--font-sans); }
+        .ann-mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
         @keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
         @keyframes slideUp { from { opacity: 0; transform: translateY(8px) } to { opacity: 1; transform: translateY(0) } }
         @keyframes spin { to { transform: rotate(360deg) } }

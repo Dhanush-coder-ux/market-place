@@ -400,7 +400,7 @@ export default function StockAdjustmentPage() {
 
 
   return (
-    <div className="min-h-screen bg-slate-50/50 pb-24 md:pb-4 font-[Inter,sans-serif]">
+    <div className="min-h-screen bg-slate-50/50 pb-24 md:pb-4 font-sans">
       
       {/* --- IMPACT DETAILS POPUP --- */}
       <FloatingFormCard

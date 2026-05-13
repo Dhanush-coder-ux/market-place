@@ -195,7 +195,9 @@ const ProductRow = React.memo(({
                 </div>
               </div>
               <div className="flex items-center gap-2 sm:gap-3 text-[11px] sm:text-[12px] text-slate-500 font-medium flex-wrap">
-                <span className="font-mono text-slate-500 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-100">{p.barcode || "No SKU"}</span>
+                <span className="font-mono text-slate-500 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-100">
+                  {p.barcode || datas.barcode || (p as any).sku || datas.sku || "No SKU"}
+                </span>
                 <span className="text-slate-300 hidden sm:inline">•</span>
                 <span className="text-slate-700">{datas.brand || (p as any).brand || "N/A"}</span>
                 <span className="text-slate-300 hidden sm:inline">•</span>
@@ -298,7 +300,12 @@ const ProductRow = React.memo(({
           }
 
           const renderValue = () => {
-            if (value === undefined || value === null || value === "") return "—";
+            if (value === undefined || value === null) return "—";
+            if (value === "" && key !== "barcode") return "—";
+            if (value === "" && key === "barcode") {
+               const b = p.barcode || datas.barcode || (p as any).sku || datas.sku || "";
+               return b || "—";
+            }
             if (Array.isArray(value)) {
               if (value.length === 0) return "—";
               // Handle variant_types specifically
@@ -475,7 +482,7 @@ const ProductInfos = () => {
   const filteredProducts = useMemo(() => {
     return products.filter(p => {
       const name = String(p.name || "").toLowerCase();
-      const sku = String(p.barcode || "").toLowerCase();
+      const sku = String(p.barcode || p.datas?.barcode || (p as any).sku || p.datas?.sku || "").toLowerCase();
       const category = String(p.category || "").toLowerCase();
       return name.includes(searchTerm.toLowerCase()) || sku.includes(searchTerm.toLowerCase()) || category.includes(searchTerm.toLowerCase());
     });

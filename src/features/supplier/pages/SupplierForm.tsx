@@ -232,7 +232,7 @@ const SupplierForm = () => {
                   value={formData.supplier_name}
                   onChange={handleChange}
                   placeholder="e.g. Acme Manufacturing Ltd"
-                  className="h-12 font-bold text-slate-700"
+                  className="h-12  text-slate-700"
                 />
               </div>
               <Input

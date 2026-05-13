@@ -455,7 +455,7 @@ const PurchaseForm = () => {
 
   return (
     <>
-      <div className="min-h-screen bg-slate-50/50 p-4 md:p-6 lg:p-8 font-[Inter,sans-serif]">
+      <div className="min-h-screen bg-slate-50/50 p-4 md:p-6 lg:p-8 font-sans">
         <div className="max-w-[1600px] mx-auto">
           <div className="grid grid-cols-1 lg:grid-cols-7 gap-6 items-start">
 

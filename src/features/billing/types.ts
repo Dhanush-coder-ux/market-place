@@ -95,4 +95,5 @@ export interface CreateBillingSchema {
   shop_id: string;
   payment_method: string;
   customer_id: string;
+  split_payments?: { mode: string; amount: number }[];
 }

@@ -36,11 +36,12 @@ const CustomerList = () => {
       return data.map((c: any) => ({
         ...c,
         displayName: String(
-          c.datas?.first_name
+          c.name || c.datas?.name ||
+          (c.datas?.first_name
             ? `${c.datas.first_name} ${c.datas.last_name || ""}`.trim()
             : c.first_name
             ? `${c.first_name} ${c.last_name || ""}`.trim()
-            : c.datas?.company || c.company || c.id
+            : c.datas?.company || c.company || c.id)
         )
       }));
     } catch {

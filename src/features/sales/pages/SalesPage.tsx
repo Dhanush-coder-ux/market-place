@@ -135,17 +135,15 @@ const STATUS_CFG: Record<SaleStatus, BadgeConfig> = {
    GLOBAL STYLES
 ═══════════════════════════════════════════════════════════════ */
 const STYLES = `
-  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=DM+Mono:wght@400;500&display=swap');
-
   *, *::before, *::after { box-sizing: border-box; }
 
   .sr-root { 
-    font-family: 'DM Sans', sans-serif; 
+    font-family: var(--font-sans); 
     overflow-x: hidden;
     width: 100%;
     position: relative;
   }
-  .sr-mono { font-family: 'DM Mono', monospace; }
+  .sr-mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
 
   /* Table row hover */
   .sr-row { transition: background 0.1s; }
@@ -1419,12 +1417,18 @@ const SaleDetailSidebar: React.FC<SidebarProps> = ({
                             <span className="text-xs font-bold text-slate-700">{item.stocks_before ?? 0}</span>
                           </div>
                           <div className="bg-white p-3 flex flex-col items-center border-x border-slate-100">
-                            <span className="text-[8px] font-black text-rose-400 uppercase tracking-tighter">Received Stock</span>
-                            <span className="text-xs font-bold text-rose-600">-{item.quantity}</span>
+                            <span className={`text-[8px] font-black uppercase tracking-tighter ${sale.origin === "Sales Return" ? "text-emerald-400" : "text-rose-400"}`}>
+                              {sale.origin === "Sales Return" ? "Returned" : "Sold"}
+                            </span>
+                            <span className={`text-xs font-bold ${sale.origin === "Sales Return" ? "text-emerald-600" : "text-rose-600"}`}>
+                              {sale.origin === "Sales Return" ? "+" : "-"}{item.quantity}
+                            </span>
                           </div>
                           <div className="bg-white p-3 flex flex-col items-center">
-                            <span className="text-[8px] font-black text-blue-400 uppercase tracking-tighter">Ordered Stock</span>
-                            <span className="text-xs font-bold text-blue-600">{(item.stocks_before ?? 0) - item.quantity}</span>
+                            <span className="text-[8px] font-black text-blue-400 uppercase tracking-tighter">Balance</span>
+                            <span className="text-xs font-bold text-blue-600">
+                              {sale.origin === "Sales Return" ? (item.stocks_before ?? 0) + item.quantity : (item.stocks_before ?? 0) - item.quantity}
+                            </span>
                           </div>
                         </div>
                         {exchangeInfo && (

@@ -218,7 +218,7 @@ const EmployeeForm = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50/50 font-[Inter,sans-serif]">
+    <div className="min-h-screen bg-slate-50/50 font-sans">
       <div className="mx-auto space-y-4 relative">
         
 

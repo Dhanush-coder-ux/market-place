@@ -148,6 +148,36 @@ function purchaseToMovements(records: PurchaseRecord[], movType: MovementType): 
   });
 }
 
+function ordersToMovements(records: any[]): Movement[] {
+  return records.flatMap(order => {
+    const items = (order.items || []) as any[];
+    return items.map(item => {
+      let type: MovementType = "SALES";
+      if (order.origin === "Sales Return" || order.status === "RETURNED") {
+        type = "SALE_RETURN";
+      }
+      
+      return {
+        id: order.id.slice(0, 8).toUpperCase(),
+        product: item.barcode || item.name || "Product",
+        sku: item.barcode || item.inventory_id?.slice(-6) || "SKU",
+        type: type,
+        qty: type === "SALE_RETURN" ? Number(item.quantity || 0) : -Number(item.quantity || 0),
+        source: type === "SALE_RETURN" ? "Customer" : "Warehouse",
+        destination: type === "SALE_RETURN" ? "Warehouse" : "Customer",
+        ref: `INV-${order.ui_id || order.id.slice(0, 6).toUpperCase()}`,
+        date: order.created_at || new Date().toISOString(),
+        status: "Completed" as StatusType,
+        user: "System",
+        notes: `Customer ID: ${order.customer_id || "N/A"}`,
+        variant: item.variant_id || "",
+        batch: item.batch_id || "",
+        serial_numbers: Array.isArray(item.serial_numbers) ? item.serial_numbers : [],
+      } as Movement;
+    });
+  });
+}
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function fmt(dateStr: string) {
@@ -628,8 +658,17 @@ export default function StockMovementPage() {
           return results;
         });
       });
+      // 3. Fetch Sales (Orders)
+      const sRes = await getData(`${ENDPOINTS.ORDERS}/${SHOP_ID}`, { limit: "50", offset: "1" });
+      const sData = sRes?.data || (Array.isArray(sRes) ? sRes : []);
+      const sMovements = ordersToMovements(sData);
 
-      setMovements([...pMovements, ...adjMovements]);
+      // 4. Combine and Sort
+      const all = [...pMovements, ...adjMovements, ...sMovements].sort((a, b) => 
+        new Date(b.date).getTime() - new Date(a.date).getTime()
+      );
+      
+      setMovements(all);
     };
     load();
   }, [getData]);
@@ -691,10 +730,9 @@ export default function StockMovementPage() {
   );
 
   return (
-    <div className="min-h-screen text-slate-900" style={{ fontFamily: "'DM Sans', 'Segoe UI', sans-serif" }}>
+    <div className="min-h-screen text-slate-900 font-sans">
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500;600&display=swap');
-        .font-mono { font-family: 'DM Mono', monospace !important; }
+        .font-mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important; }
         @keyframes slideIn { from { transform: translateX(100%); opacity:0 } to { transform: translateX(0); opacity:1 } }
         ::-webkit-scrollbar { width:6px; height:6px; } 
         ::-webkit-scrollbar-track { background:#f4f7fb } 

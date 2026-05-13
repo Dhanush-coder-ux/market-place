@@ -390,7 +390,7 @@ const ProductDetail = () => {
                   </div>
 
                   <div className="bg-slate-50/30 rounded-2xl p-4 border border-slate-100">
-                    <VariantRows combinations={combinations} baseSellPrice={sellingPrice} />
+                    <VariantRows combinations={combinations} baseSellPrice={sellingPrice} baseBuyPrice={buyingPrice} />
                   </div>
                 </SectionCard>
               </div>

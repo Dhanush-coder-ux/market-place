@@ -118,8 +118,8 @@ const AnalyticsDashboard = () => {
                   key={r}
                   onClick={() => setActiveRange(r)}
                   className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${activeRange === r
-                      ? "bg-white text-blue-600 shadow-sm"
-                      : "text-slate-500 hover:text-slate-700"
+                    ? "bg-white text-blue-600 shadow-sm"
+                    : "text-slate-500 hover:text-slate-700"
                     }`}
                 >
                   {r}

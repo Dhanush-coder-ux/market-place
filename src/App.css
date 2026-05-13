@@ -251,9 +251,10 @@
   }
 
   /* Extreme WebView Performance: Skip rendering of off-screen list items */
-  .performance-list > * {
+  .performance-list>* {
     content-visibility: auto;
-    contain-intrinsic-size: 0 80px; /* Guessing average row height */
+    contain-intrinsic-size: 0 80px;
+    /* Guessing average row height */
   }
 }
 

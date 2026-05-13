@@ -86,7 +86,7 @@ const ProductDetail = () => {
     const hasInvTab = (product.has_variant === true && (product.variants ?? []).length > 0) || (product.has_batch === true && (product.batches ?? []).length > 0);
     const movIdx = hasInvTab ? 2 : 1;
     if (activeTab !== movIdx) return;
-    
+
     setMovLoading(true);
     // Load both adjustments and purchases for unified stock movements view
     Promise.all([
@@ -105,7 +105,7 @@ const ProductDetail = () => {
     const hasInvTab = (product.has_variant === true && (product.variants ?? []).length > 0) || (product.has_batch === true && (product.batches ?? []).length > 0);
     const purIdx = hasInvTab ? 3 : 2;
     if (activeTab !== purIdx) return;
-    
+
     setPurLoading(true);
     getData(`${ENDPOINTS.PURCHASES}/by/product/${SHOP_ID}/${id}`).then((res: any) => {
       setPurchases(res?.data ? (Array.isArray(res.data) ? res.data : [res.data]) : []);
@@ -153,7 +153,7 @@ const ProductDetail = () => {
   const combinations: any[] = product.variants ?? [];
   const variantTypes: any[] = datas.variant_types ?? datas.variantTypes ?? [];
   const batches: any[] = product.batches ?? [];
-  
+
   const extractSerials = (val: any): string[] => {
     if (!val) return [];
     if (Array.isArray(val)) return val;
@@ -179,7 +179,7 @@ const ProductDetail = () => {
       <ProfileHeaderCard
         name={name}
         initials={initials}
-        subText={`SKU: ${sku}`}
+        subText={`Barcode: ${sku}`}
         badges={[
           { text: category, variant: "primary" },
           { text: isActive ? "Active" : "Inactive", variant: isActive ? "success" : "danger", showPulse: true },
@@ -215,8 +215,8 @@ const ProductDetail = () => {
             key={tab}
             onClick={() => setActiveTab(i)}
             className={`px-4 py-1.5 text-[11px] font-bold rounded-lg transition-all ${activeTab === i
-                ? "bg-blue-600 text-white shadow-md shadow-blue-100"
-                : "text-slate-500 hover:bg-slate-50 hover:text-slate-700"
+              ? "bg-blue-600 text-white shadow-md shadow-blue-100"
+              : "text-slate-500 hover:bg-slate-50 hover:text-slate-700"
               }`}
           >
             {tab}
@@ -227,7 +227,7 @@ const ProductDetail = () => {
       {/* <div className="flex flex-wrap gap-2">
         <StatCard icon={Package} label="Current Stock" value={String(currentStock)}
           iconBg="bg-blue-50" iconColor="text-blue-600" className="flex-1 min-w-[140px]" />
-        <StatCard icon={Download} label="Buying Price" value={`₹${buyingPrice}`}
+        <StatCard icon={Download} label="Buy Price" value={`₹${buyingPrice}`}
           iconBg="bg-emerald-50" iconColor="text-emerald-600" className="flex-1 min-w-[140px]" />
         <StatCard icon={Upload} label="Selling Price" value={`₹${sellingPrice}`}
           iconBg="bg-rose-50" iconColor="text-rose-600" className="flex-1 min-w-[140px]" />
@@ -299,7 +299,7 @@ const ProductDetail = () => {
                   <h2 className="text-[10px] font-black text-slate-800 uppercase tracking-[0.15em]">Pricing & Compliance</h2>
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-y-6 gap-x-8">
-                  <DetailItem icon={Download} label="Buying Price" value={String(buyingPrice) !== "—" ? `₹${buyingPrice}` : "—"} onClick={click("Buying Price", `₹${buyingPrice}`)} />
+                  <DetailItem icon={Download} label="Buy Price" value={String(buyingPrice) !== "—" ? `₹${buyingPrice}` : "—"} onClick={click("Buy Price", `₹${buyingPrice}`)} />
                   <DetailItem icon={Upload} label="Selling Price" value={String(sellingPrice) !== "—" ? `₹${sellingPrice}` : "—"} onClick={click("Selling Price", `₹${sellingPrice}`)} />
                   <DetailItem icon={Tag} label="MRP" value={datas.mrp ? `₹${datas.mrp}` : "—"} onClick={click("MRP", datas.mrp ? `₹${datas.mrp}` : "—")} />
                   <DetailItem icon={BarChart2} label="GST Rate" value={String(datas.gst || "—")} onClick={click("GST Rate", String(datas.gst || "—"))} />
@@ -414,7 +414,7 @@ const ProductDetail = () => {
         {/* TAB — Stock Movements */}
         {TABS[activeTab] === "Stock Movements" && (() => {
           const rows: any[] = [];
-          
+
           movements.forEach((adj: any) => {
             (adj.products ?? []).forEach((prod: any) => {
               const isInc = prod.type === 'INCREMENT';
@@ -453,7 +453,7 @@ const ProductDetail = () => {
             const d = p.datas ?? {};
             const pd = d.purchaseDetails ?? {};
             const pType = p.type === 'DIRECT' ? 'Purchase' : (p.type?.includes('PO') ? 'PO Purchase' : 'Purchase');
-            
+
             (p.products ?? []).forEach((prod: any) => {
               const baseRow = {
                 id: p.id,
@@ -525,18 +525,16 @@ const ProductDetail = () => {
                             : '—';
 
                           return (
-                            <tr key={`${r.id}-${i}`} className={`hover:bg-slate-50/60 transition-colors ${
-                              r.source === 'purchase' ? 'border-l-2 border-indigo-300' : r.isInc ? 'border-l-2 border-emerald-300' : 'border-l-2 border-rose-300'
-                            }`}>
+                            <tr key={`${r.id}-${i}`} className={`hover:bg-slate-50/60 transition-colors ${r.source === 'purchase' ? 'border-l-2 border-indigo-300' : r.isInc ? 'border-l-2 border-emerald-300' : 'border-l-2 border-rose-300'
+                              }`}>
                               <td className="px-5 py-3 text-xs text-slate-500 font-medium">
                                 {r.date ? new Date(r.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
                               </td>
                               <td className="px-5 py-3">
-                                <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
-                                  r.source === 'purchase'
+                                <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${r.source === 'purchase'
                                     ? (r.displayType === 'PO Purchase' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-indigo-50 text-indigo-700 border-indigo-200')
                                     : r.isInc ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-rose-50 text-rose-700 border-rose-200'
-                                }`}>
+                                  }`}>
                                   {r.isInc ? <ArrowUp size={10} /> : <ArrowDown size={10} />}
                                   {r.displayType}
                                 </span>
@@ -585,12 +583,12 @@ const ProductDetail = () => {
         {/* TAB — Purchases */}
         {TABS[activeTab] === "Purchases" && (() => {
           const rows: any[] = [];
-          
+
           purchases.forEach((p: any) => {
             const d = p.datas ?? {};
             const pd = d.purchaseDetails ?? {};
             const pType = p.type === 'DIRECT' ? 'Purchase' : (p.type?.includes('PO') ? 'PO Purchase' : 'Purchase');
-            
+
             (p.products ?? []).forEach((prod: any) => {
               const baseRow = {
                 id: p.id,
@@ -670,11 +668,10 @@ const ProductDetail = () => {
                                 {r.date ? new Date(r.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
                               </td>
                               <td className="px-5 py-3">
-                                <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
-                                  r.displayType === 'PO Purchase'
+                                <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${r.displayType === 'PO Purchase'
                                     ? 'bg-blue-50 text-blue-700 border-blue-200'
                                     : 'bg-indigo-50 text-indigo-700 border-indigo-200'
-                                }`}>
+                                  }`}>
                                   <ArrowUp size={10} />
                                   {r.displayType}
                                 </span>

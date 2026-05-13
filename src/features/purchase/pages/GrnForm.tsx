@@ -128,12 +128,12 @@ const GrnForm = () => {
       subtotal += q * c;
     });
 
-    const transportCost  = Number(charges.transport) || 0;
-    const otherCost      = Number(charges.other) || 0;
-    const totalCharges   = transportCost + otherCost;
-    const grandTotal     = Math.round(subtotal + totalCharges);
-    const paid           = Number(payment.amountPaid) || 0;
-    const outstanding    = grandTotal - paid;
+    const transportCost = Number(charges.transport) || 0;
+    const otherCost = Number(charges.other) || 0;
+    const totalCharges = transportCost + otherCost;
+    const grandTotal = Math.round(subtotal + totalCharges);
+    const paid = Number(payment.amountPaid) || 0;
+    const outstanding = grandTotal - paid;
 
     const allocations = products.map(p => {
       const q = Number(p.quantity) || 0;
@@ -162,12 +162,12 @@ const GrnForm = () => {
         if (res?.data) {
           const data = res.data;
           setGrnDetails({
-            supplier:       data.supplier_name || "",
-            poReference:    data.po_reference || "",
-            invoiceNo:      data.invoice_no || "",
-            date:           data.date || new Date().toISOString().split("T")[0],
-            referenceNo:    data.reference_no || "",
-            status:         (data.status as GRNStatus) || "Pending",
+            supplier: data.supplier_name || "",
+            poReference: data.po_reference || "",
+            invoiceNo: data.invoice_no || "",
+            date: data.date || new Date().toISOString().split("T")[0],
+            referenceNo: data.reference_no || "",
+            status: (data.status as GRNStatus) || "Pending",
           });
           setProducts(data.products.map((p: any) => ({
             id: p.id || Math.random().toString(),
@@ -256,7 +256,7 @@ const GrnForm = () => {
 
   const handleSaveGRN = useCallback(async () => {
     if (!grnDetails.supplier && !supplierDetails?.id) { showToast("Please select a supplier.", "error"); return; }
-    if (!products[0]?.name)   { showToast("Please add at least one product.", "error"); return; }
+    if (!products[0]?.name) { showToast("Please add at least one product.", "error"); return; }
 
     const unselected = products.find(p => !p.inventory_id && p.name);
     if (unselected) {
@@ -267,9 +267,9 @@ const GrnForm = () => {
     setSubmitting(true);
     try {
       const transformedProducts = products.map(p => {
-        const q        = Math.floor(Number(p.quantity) || 0);
+        const q = Math.floor(Number(p.quantity) || 0);
         const baseCost = Number(p.costPrice) || 0;
-        let allocated  = 0;
+        let allocated = 0;
 
         if (costMethod === "By Unit" && stats.totalQty > 0) allocated = stats.totalCharges / stats.totalQty;
         else if (costMethod === "By Value" && stats.subtotal > 0) allocated = (baseCost / stats.subtotal) * stats.totalCharges;
@@ -278,8 +278,8 @@ const GrnForm = () => {
         const finalCost = baseCost + allocated;
         let finalSellPrice =
           p.marginType === "percent" ? finalCost * (1 + (Number(p.marginPercent) || 0) / 100) :
-          p.marginType === "amount"  ? finalCost + (Number(p.marginAmount) || 0) :
-                                       Number(p.sellingPrice) || 0;
+            p.marginType === "amount" ? finalCost + (Number(p.marginAmount) || 0) :
+              Number(p.sellingPrice) || 0;
 
         return {
           inventory_id: p.inventory_id || (p.id.length > 10 ? p.id : undefined),
@@ -309,12 +309,12 @@ const GrnForm = () => {
         type: "PO_CREATE",
         supplier_id: supplierDetails?.id || "",
         calculations: {
-           divided_by: costMethod === "By Unit" ? "BY_QUANTITY" : costMethod === "By Value" ? "BY_VALUE" : costMethod === "Equally" ? "BY_EQUAL" : "NONE",
-           gst: { type: "inclusive", value: 18, registered: true }
+          divided_by: costMethod === "By Unit" ? "BY_QUANTITY" : costMethod === "By Value" ? "BY_VALUE" : costMethod === "Equally" ? "BY_EQUAL" : "NONE",
+          gst: { type: "inclusive", value: 18, registered: true }
         },
         additional_charges: {
-           delivery_charge: Number(charges.transport) || 0,
-           other_charge: Number(charges.other) || 0
+          delivery_charge: Number(charges.transport) || 0,
+          other_charge: Number(charges.other) || 0
         },
         datas: {
           supplier_name: supplierDetails?.name || grnDetails.supplier,
@@ -445,7 +445,7 @@ const GrnForm = () => {
                     {supplierDetails && (
                       <div className="mt-1.5 px-3 py-2.5 bg-[#EFF6FF] border border-blue-100 rounded-xl text-xs text-[#64748B] space-y-0.5">
                         <p className="font-semibold text-[#0F172A]">{supplierDetails.name}</p>
-                        {supplierDetails.email         && <p>✉ {supplierDetails.email}</p>}
+                        {supplierDetails.email && <p>✉ {supplierDetails.email}</p>}
                         {supplierDetails.mobile_number && <p>📞 {supplierDetails.mobile_number}</p>}
                       </div>
                     )}
@@ -460,8 +460,8 @@ const GrnForm = () => {
                     <label className="text-xs font-medium text-[#64748B] uppercase tracking-wide">Status</label>
                     <ReusableSelect
                       options={[
-                        { value: "Pending",   label: "Pending Review"      },
-                        { value: "Partial",   label: "Partial Receipt"     },
+                        { value: "Pending", label: "Pending Review" },
+                        { value: "Partial", label: "Partial Receipt" },
                         { value: "Completed", label: "Completed (All Items)" },
                       ]}
                       value={grnDetails.status}
@@ -509,9 +509,9 @@ const GrnForm = () => {
 
                 <div className="p-5 space-y-4">
                   {[
-                    { label: "Items",     value: products.length },
-                    { label: "Total Qty", value: stats.totalQty  },
-                    { label: "Subtotal",  value: `₹${stats.subtotal.toLocaleString()}` },
+                    { label: "Items", value: products.length },
+                    { label: "Total Qty", value: stats.totalQty },
+                    { label: "Subtotal", value: `₹${stats.subtotal.toLocaleString()}` },
                   ].map(row => (
                     <div key={row.label} className="flex justify-between items-center">
                       <span className="text-[11px] font-medium uppercase tracking-wider text-[#64748B]">{row.label}</span>
@@ -553,19 +553,18 @@ const GrnForm = () => {
                 <div className="p-5 space-y-4">
                   <div className="grid grid-cols-4 gap-2">
                     {([
-                      { id: "Cash", icon: <Banknote  size={15} /> },
-                      { id: "UPI",  icon: <Smartphone size={15} /> },
+                      { id: "Cash", icon: <Banknote size={15} /> },
+                      { id: "UPI", icon: <Smartphone size={15} /> },
                       { id: "Card", icon: <CreditCard size={15} /> },
-                      { id: "Bank", icon: <Landmark   size={15} /> },
+                      { id: "Bank", icon: <Landmark size={15} /> },
                     ] as { id: PaymentMethod; icon: React.ReactNode }[]).map(m => (
                       <button
                         key={m.id}
                         onClick={() => setPayment(p => ({ ...p, method: m.id }))}
-                        className={`flex flex-col items-center gap-1 py-2.5 rounded-xl border text-[10px] font-semibold uppercase tracking-wide transition-all ${
-                          payment.method === m.id
+                        className={`flex flex-col items-center gap-1 py-2.5 rounded-xl border text-[10px] font-semibold uppercase tracking-wide transition-all ${payment.method === m.id
                             ? "border-[#2563EB] bg-[#EFF6FF] text-[#2563EB]"
                             : "border-[#E2E8F0] text-[#64748B] hover:border-blue-200 hover:bg-[#EFF6FF]/40"
-                        }`}
+                          }`}
                       >
                         {m.icon} {m.id}
                       </button>
@@ -582,11 +581,10 @@ const GrnForm = () => {
                   />
 
                   {stats.outstanding !== 0 && (
-                    <div className={`flex items-center justify-between px-3 py-2.5 rounded-xl border text-sm font-semibold ${
-                      stats.outstanding > 0
+                    <div className={`flex items-center justify-between px-3 py-2.5 rounded-xl border text-sm font-semibold ${stats.outstanding > 0
                         ? "bg-orange-50 border-orange-200 text-orange-700"
                         : "bg-emerald-50 border-emerald-200 text-emerald-700"
-                    }`}>
+                      }`}>
                       <span className="text-xs font-medium uppercase tracking-wide">Outstanding</span>
                       <span>₹{Math.abs(stats.outstanding).toLocaleString()}</span>
                     </div>

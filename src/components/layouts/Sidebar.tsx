@@ -1,7 +1,7 @@
 import { useState, useEffect, FC, useMemo, useCallback, memo } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, ChevronDown, ListMinus, Plus } from "lucide-react";
+import { ChevronLeft, ChevronDown, ListMinus, Plus, Printer, ArrowRight } from "lucide-react";
 import { usePurchaseSettings } from "@/context/PurchaseContext";
 import type { SidebarLink, SubItem, SubGroup, SubLink } from "@/utils/constants";
 
@@ -17,6 +17,7 @@ interface SidebarItemProps {
   sidebarOpen: boolean;
   collapseTrigger: number;
   onHover: (link: SidebarLink | null, top: number) => void;
+  onNavigate: (path: string, askNewTab?: boolean) => void;
 }
 
 interface SubGroupItemProps {
@@ -31,7 +32,31 @@ const Sidebar: FC<{ links: SidebarLink[] }> = ({ links }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [hoveredItem, setHoveredItem] = useState<{ link: SidebarLink; top: number } | null>(null);
   const [collapseTrigger, setCollapseTrigger] = useState(0);
+  const [promptData, setPromptData] = useState<{ path: string; open: boolean } | null>(null);
   const { settings } = usePurchaseSettings();
+
+  const handleNavigation = useCallback((path: string, askNewTab?: boolean) => {
+    if (askNewTab) {
+      setPromptData({ path, open: true });
+    } else {
+      // Normal navigation handled by NavLink usually, 
+      // but this allows programmatic fallback if needed
+    }
+  }, []);
+
+  const confirmNavigation = (newTab: boolean) => {
+    if (promptData) {
+      if (newTab) {
+        // Append mode=clean for new tab distraction-free POS
+        const cleanPath = `${promptData.path}?mode=clean`;
+        window.open(cleanPath, "_blank", "noopener,noreferrer");
+      } else {
+        // Standard navigation within the same tab
+        window.location.href = promptData.path;
+      }
+      setPromptData(null);
+    }
+  };
 
   /**
    * Filter logic lives here — outside JSX, scalable, type-safe.
@@ -143,9 +168,60 @@ const Sidebar: FC<{ links: SidebarLink[] }> = ({ links }) => {
             sidebarOpen={isOpen}
             collapseTrigger={collapseTrigger}
             onHover={handleHover}
+            onNavigate={handleNavigation}
           />
         ))}
       </nav>
+
+      {/* New Tab Prompt Modal */}
+      <AnimatePresence>
+        {promptData?.open && (
+          <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setPromptData(null)}
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              className="relative w-full max-w-[340px] bg-white rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.3)] overflow-hidden"
+            >
+              <div className="p-6">
+                <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center mb-4">
+                  <Printer size={24} className="text-blue-500" />
+                </div>
+                <h3 className="text-[17px] font-bold text-slate-800 mb-2">Open Billing Terminal</h3>
+                <p className="text-[13px] text-slate-500 leading-relaxed mb-6">
+                  Would you like to open the POS billing interface in a dedicated new tab for a distraction-free experience?
+                </p>
+
+                <div className="grid gap-3">
+                  <button
+                    onClick={() => confirmNavigation(true)}
+                    className="w-full py-3 rounded-xl bg-blue-600 text-white text-[14px] font-bold shadow-lg shadow-blue-600/20 hover:bg-blue-700 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+                  >
+                    Open in New Tab <ArrowRight size={16} />
+                  </button>
+                  <button
+                    onClick={() => confirmNavigation(false)}
+                    className="w-full py-3 rounded-xl bg-slate-50 text-slate-600 text-[14px] font-bold hover:bg-slate-100 active:scale-[0.98] transition-all"
+                  >
+                    Keep in same page
+                  </button>
+                </div>
+              </div>
+              <div className="px-6 py-4 bg-slate-50/50 border-t border-slate-100 flex items-center justify-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Recommended for POS</span>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Floating Hover Card (Portal-like Fixed Positioning) */}
       <AnimatePresence initial={false}>
@@ -217,7 +293,7 @@ const Sidebar: FC<{ links: SidebarLink[] }> = ({ links }) => {
 
 // ─── Top-level Sidebar Item ───────────────────────────────────────────────────
 
-const SidebarItem = memo(({ link, sidebarOpen, collapseTrigger, onHover }: SidebarItemProps) => {
+const SidebarItem = memo(({ link, sidebarOpen, collapseTrigger, onHover, onNavigate }: SidebarItemProps) => {
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const Icon = link.icon;
@@ -314,72 +390,108 @@ const SidebarItem = memo(({ link, sidebarOpen, collapseTrigger, onHover }: Sideb
           </button>
 
           {link.addPath && sidebarOpen && (
-            <button
+            <div
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                navigate(link.addPath!);
+                if (link.askNewTab) {
+                  onNavigate(link.addPath!, true);
+                } else {
+                  navigate(link.addPath!);
+                }
               }}
               className="absolute right-7 w-6 h-6 rounded-md flex items-center justify-center bg-white/10 text-white/50 hover:bg-white hover:text-blue-600 hover:scale-110 opacity-0 group-hover/sub:opacity-100 transition-all duration-200 shadow-[0_0_10px_rgba(255,255,255,0.1)] border border-white/10 active:scale-95"
             >
               <Plus size={12} strokeWidth={3.5} />
-            </button>
+            </div>
           )}
         </div>
       ) : (
         /* ── Plain NavLink ── */
         <div className="group/sub relative flex items-center w-full">
-          <NavLink
-            to={link.path!}
-            className={({ isActive }) =>
-              `${baseItemClasses} flex-1 ${getActiveClass(isActive)} ${sidebarOpen ? "justify-between" : "justify-center"
-              }`
-            }
-          >
-            {({ isActive }) => (
-              <>
-                {isActive && sidebarOpen && (
-                  <motion.div
-                    layoutId="activeIndicator"
-                    className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-[18px] bg-white/70 rounded-full"
-                  />
-                )}
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <Icon
-                    size={15}
-                    strokeWidth={1.75}
-                    className={`shrink-0 ${isActive ? "opacity-100" : "opacity-75"}`}
-                  />
-                  <AnimatePresence mode="wait">
-                    {sidebarOpen && (
-                      <motion.span
-                        key="label"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        transition={{ duration: 0.1 }}
-                        className="truncate"
-                      >
-                        {link.name}
-                      </motion.span>
-                    )}
-                  </AnimatePresence>
-                </div>
-                {!sidebarOpen && <Tooltip label={link.name} />}
-              </>
-            )}
-          </NavLink>
+          {link.askNewTab ? (
+            <div
+              onClick={() => onNavigate(link.path!, true)}
+              className={`${baseItemClasses} flex-1 ${getActiveClass(false)} ${sidebarOpen ? "justify-between" : "justify-center"}`}
+            >
+              <div className="flex items-center gap-2.5 min-w-0">
+                <Icon size={15} strokeWidth={1.75} className="shrink-0 opacity-75" />
+                <AnimatePresence mode="wait">
+                  {sidebarOpen && (
+                    <motion.span
+                      key="label"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.1 }}
+                      className="truncate"
+                    >
+                      {link.name}
+                    </motion.span>
+                  )}
+                </AnimatePresence>
+              </div>
+              {!sidebarOpen && <Tooltip label={link.name} />}
+            </div>
+          ) : (
+            <NavLink
+              to={link.path!}
+              target={link.newTab ? "_blank" : undefined}
+              rel={link.newTab ? "noopener noreferrer" : undefined}
+              className={({ isActive }) =>
+                `${baseItemClasses} flex-1 ${getActiveClass(isActive)} ${sidebarOpen ? "justify-between" : "justify-center"
+                }`
+              }
+            >
+              {({ isActive }) => (
+                <>
+                  {isActive && sidebarOpen && (
+                    <motion.div
+                      layoutId="activeIndicator"
+                      className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-[18px] bg-white/70 rounded-full"
+                    />
+                  )}
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <Icon
+                      size={15}
+                      strokeWidth={1.75}
+                      className={`shrink-0 ${isActive ? "opacity-100" : "opacity-75"}`}
+                    />
+                    <AnimatePresence mode="wait">
+                      {sidebarOpen && (
+                        <motion.span
+                          key="label"
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                          transition={{ duration: 0.1 }}
+                          className="truncate"
+                        >
+                          {link.name}
+                        </motion.span>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                  {!sidebarOpen && <Tooltip label={link.name} />}
+                </>
+              )}
+            </NavLink>
+          )}
           {link.addPath && sidebarOpen && (
-            <button
+            <div
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                navigate(link.addPath!);
+                if (link.askNewTab) {
+                  onNavigate(link.addPath!, true);
+                } else {
+                  navigate(link.addPath!);
+                }
               }}
               className="absolute right-2 w-6 h-6 rounded-md flex items-center justify-center bg-white/5 text-white/40 hover:bg-white/15 hover:text-white/90 opacity-0 group-hover/sub:opacity-100 transition-all duration-200 shadow-sm border border-white/5"
             >
               <Plus size={12} strokeWidth={3} />
-            </button>
+            </div>
           )}
         </div>
       )}
@@ -527,8 +639,8 @@ const FlatSubLink: FC<{ sub: SubLink; isPopup?: boolean }> = memo(({ sub, isPopu
             navigate(sub.addPath!);
           }}
           className={`absolute right-2 w-6 h-6 rounded-md flex items-center justify-center transition-all duration-200 ${isPopup
-              ? `bg-transparent text-white/50 hover:text-white ${active ? "opacity-100" : "opacity-0"}`
-              : "bg-white/10 text-white/50 hover:bg-white hover:text-blue-600 hover:scale-110 border border-white/10 opacity-0"
+            ? `bg-transparent text-white/50 hover:text-white ${active ? "opacity-100" : "opacity-0"}`
+            : "bg-white/10 text-white/50 hover:bg-white hover:text-blue-600 hover:scale-110 border border-white/10 opacity-0"
             } group-hover/sub:opacity-100 active:scale-95`}
           title={`Add New ${sub.name.replace(/s\sInfos|Infos|List/g, '')}`}
         >

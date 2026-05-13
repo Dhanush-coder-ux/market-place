@@ -45,21 +45,23 @@ export interface SidebarLink {
   badge?: string | number;
   /** Top-level subLinks: can be flat SubLinks OR SubGroups */
   subLinks?: SubItem[];
+  newTab?: boolean;
+  askNewTab?: boolean;
 }
 
 // ─── Data ────────────────────────────────────────────────────────────────────
 
 export const sidebarLinks: SidebarLink[] = [
   { name: "Dashboard", icon: LayoutDashboard, path: "/" },
-  { name: "Sales", icon: IndianRupee, path: "/sales", addPath: "/billing" },
+  { name: "Sales", icon: IndianRupee, path: "/sales", addPath: "/billing", newTab: false },
 
   {
     name: "Purchase",
     icon: Wallet,
     subLinks: [
-      
-  {icon:Plus, name: "Add Purchase", path: "/purchase/add" },
-  {icon:Bookmark, name: "Saved Drafts", path: "/purchase/drafts" },
+
+      { icon: Plus, name: "Add Purchase", path: "/purchase/add" },
+      { icon: Bookmark, name: "Saved Drafts", path: "/purchase/drafts" },
       // Purchase Orders group — gated by settings.poGrn
       {
         type: "group",
@@ -123,7 +125,7 @@ export const sidebarLinks: SidebarLink[] = [
   },
 
   { name: "Orders", icon: ShoppingCart, path: "/orders" },
-  { name: "Billing", icon: Printer, path: "/billing" },
+  { name: "Billing", icon: Printer, path: "/billing", askNewTab: true },
 
   {
     name: "Customers",

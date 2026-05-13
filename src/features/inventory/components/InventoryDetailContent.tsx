@@ -22,7 +22,7 @@ export const InventoryDetailContent = ({ item }: { item: InventoryRecord | null 
       icon: <Layers size={20} className={stocks < 15 ? "text-red-500" : "text-green-500"} />,
     },
     {
-      label: "Buying Price",
+      label: "Buy Price",
       value: `₹${buyPrice.toFixed(2)}`,
       icon: <IndianRupee size={20} className="text-gray-500" />,
     },

@@ -135,6 +135,80 @@ const StatusPill = ({ status }: { status: ReceiveStatus }) => {
   );
 };
 
+// ─── Bulk Serial Modal ────────────────────────────────────────────────────────
+
+const BulkSerialModal = ({
+  isOpen,
+  onClose,
+  onSave,
+  requiredQty,
+  productName,
+  currentSerials
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  onSave: (serials: string[]) => void;
+  requiredQty: number;
+  productName: string;
+  currentSerials: string[];
+}) => {
+  const [text, setText] = useState("");
+
+  useEffect(() => {
+    if (isOpen) {
+      setText(currentSerials.join("\n"));
+    }
+  }, [isOpen, currentSerials]);
+
+  const handleSave = () => {
+    const lines = text.split(/[\n, ]+/).map(s => s.trim()).filter(Boolean);
+    onSave(lines);
+    onClose();
+  };
+
+  if (!isOpen) return null;
+
+  return createPortal(
+    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
+      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col border border-slate-200 animate-in zoom-in-95 duration-200">
+        <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center bg-violet-50/30">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-violet-100 flex items-center justify-center text-violet-600 border border-violet-200">
+              <Zap size={18} />
+            </div>
+            <div>
+              <h3 className="font-bold text-slate-800 text-sm">Bulk Import Serials</h3>
+              <p className="text-[10px] text-slate-500 mt-0.5">{productName} (Required: {requiredQty})</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all">
+            <X size={18} />
+          </button>
+        </div>
+        <div className="p-6 space-y-4">
+          <p className="text-[11px] text-slate-500">Paste serial numbers separated by newlines, commas, or spaces.</p>
+          <textarea
+            className="w-full h-64 p-4 rounded-2xl border border-slate-200 bg-slate-50/50 text-xs font-mono focus:outline-none focus:ring-4 focus:ring-violet-50 focus:border-violet-300 resize-none"
+            placeholder="SN1001&#10;SN1002&#10;SN1003..."
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+          />
+          <div className="flex justify-between items-center">
+             <span className={`text-[10px] font-black px-3 py-1 rounded-lg border uppercase tracking-widest ${text.split(/[\n, ]+/).map(s => s.trim()).filter(Boolean).length === requiredQty ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-slate-50 text-slate-500 border-slate-100'}`}>
+                {text.split(/[\n, ]+/).map(s => s.trim()).filter(Boolean).length} / {requiredQty} detected
+              </span>
+            <div className="flex gap-3">
+              <button onClick={onClose} className="px-4 py-2 rounded-xl border border-slate-200 text-xs font-medium text-slate-600 hover:bg-slate-50 transition-all">Cancel</button>
+              <GradientButton onClick={handleSave} className="px-6 py-2 rounded-xl text-xs">Save Serials</GradientButton>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+};
+
 // ─── Progress Bar ─────────────────────────────────────────────────────────────
 
 const ProgressBar = ({ received, ordered }: { received: number; ordered: number }) => {
@@ -231,6 +305,14 @@ const ReceiveGoodForm = () => {
     variantName: string;
   }>({ isOpen: false, itemId: "", batches: [], productName: "", variantName: "" });
 
+  const [bulkSerialModal, setBulkSerialModal] = useState<{
+    isOpen: boolean;
+    itemId: string;
+    productName: string;
+    requiredQty: number;
+    currentSerials: string[];
+  }>({ isOpen: false, itemId: "", productName: "", requiredQty: 0, currentSerials: [] });
+
   useEffect(() => {
     if (batchModal.isOpen) {
       document.body.classList.add("no-scroll");
@@ -240,7 +322,7 @@ const ReceiveGoodForm = () => {
     return () => {
       document.body.classList.remove("no-scroll");
     };
-  }, [batchModal.isOpen]);
+  }, [batchModal.isOpen, bulkSerialModal.isOpen]);
 
   // Restore PO from URL
   useEffect(() => {
@@ -316,11 +398,15 @@ const ReceiveGoodForm = () => {
         if (!inv) return { ...m, existingSerials: [] };
         // Find batches: if variant, look inside that variant; else root batches
         let batches: any[] = [];
+        let serialno_id = m.serialno_id;
+
         if (m.variant_id && inv.variants) {
           const v = inv.variants.find((v: any) => v.id === m.variant_id);
           batches = v?.batches ?? [];
+          serialno_id = serialno_id || v?.serialno_id || v?.serial_number?.id || v?.datas?.serial_number?.id || v?.serial_numbers?.id || v?.datas?.serial_numbers?.id;
         } else {
           batches = inv.batches ?? [];
+          serialno_id = serialno_id || inv.serialno_id || inv.serial_number?.id || inv.datas?.serial_number?.id || inv.serial_numbers?.id || inv.datas?.serial_numbers?.id;
         }
 
         // Aggregate all existing serial numbers for this product/variant
@@ -332,7 +418,7 @@ const ReceiveGoodForm = () => {
           }
         });
 
-        return { ...m, availableBatches: batches, existingSerials };
+        return { ...m, availableBatches: batches, existingSerials, serialno_id };
       });
 
       setItems(enriched);
@@ -410,31 +496,41 @@ const ReceiveGoodForm = () => {
 
     setSubmitting(true);
     try {
-      const productLines = items.filter(p => Number(p.receivedQty) > 0).map(p => ({
-        inventory_id: p.product_id || p.id,
-        variant_id: p.variant_id || null,
-        barcode: p.sku,
-        name: p.name,
-        stocks: p.orderedQty,
-        received_stocks: Number(p.receivedQty),
-        buy_price: p.costPrice,
-        sell_price: p.sellPrice,
-        margin: 0,
-        // Batch: send batch_id if existing, or batch object if new
-        ...(p.has_batch ? (
-          p.batch_id && !p.isNewBatch
-            ? { batch_id: p.batch_id }
-            : {
-              batch: {
-                name: p.batchNum,
-                manufacturing_date: p.manufacturingDate || null,
-                expiry_date: p.expiryDate || null,
-              }
+      const productLines = items.filter(p => Number(p.receivedQty) > 0).map(p => {
+        const q = Number(p.receivedQty) || 0;
+        return {
+          inventory_id: p.product_id || p.id,
+          variant_id: p.variant_id || null,
+          batch_id: p.batch_id || null,
+          serialno_id: p.serialno_id || null,
+          barcode: p.sku,
+          name: p.name,
+          stocks: p.orderedQty,
+          received_stocks: q,
+          buy_price: p.costPrice,
+          sell_price: p.sellPrice,
+          margin: 0,
+          unit: p.unit || "pc",
+          gst: 18, // Default or pull from item if available
+          batch_tracking: p.has_batch,
+          serial_tracking: p.has_serialno,
+          variant: p.variant || "",
+          batch_number: p.batchNum,
+          manufacturing_date: p.manufacturingDate || null,
+          expiry_date: p.expiryDate || null,
+          // Batch: send batch object if new
+          ...(p.has_batch && !p.batch_id ? {
+            batches: {
+              batch_number: p.batchNum,
+              stocks: q,
+              manufacturing_date: p.manufacturingDate || null,
+              expiry_date: p.expiryDate || null,
             }
-        ) : {}),
-        // Serials: only if has_serialno and user entered some
-        ...(p.has_serialno && p.serialNumbers.length > 0 ? { serial_numbers: p.serialNumbers, serialno_id: p.serialno_id || undefined } : {}),
-      }));
+          } : {}),
+          // Serials
+          serial_numbers: p.serialNumbers || [],
+        };
+      });
 
       const payload = {
         shop_id: SHOP_ID,
@@ -454,7 +550,7 @@ const ReceiveGoodForm = () => {
           po_reference: poSummary.referenceNo,
           receipt_date: receiptDate,
           invoice_no: invoiceNo,
-          status: liveStatus,
+          status: liveStatus.toUpperCase(),
           warehouse: globalData.warehouse,
           notes: globalData.notes,
           received_by: globalData.received_by,
@@ -789,9 +885,24 @@ const ReceiveGoodForm = () => {
                                     <p className="text-[10px] text-violet-500 font-medium">Assign unique IDs to each unit</p>
                                   </div>
                                 </div>
-                                <span className={`text-[10px] font-black px-3 py-1 rounded-lg border uppercase tracking-widest ${item.serialNumbers.length === Number(item.receivedQty) ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-slate-50 text-slate-500 border-slate-100'}`}>
-                                  {item.serialNumbers.length} / {item.receivedQty || 0} Entered
-                                </span>
+                                <div className="flex items-center gap-2 ml-auto">
+                                  <button
+                                    type="button"
+                                    onClick={() => setBulkSerialModal({
+                                      isOpen: true,
+                                      itemId: item.id,
+                                      productName: item.name,
+                                      requiredQty: Number(item.receivedQty) || 0,
+                                      currentSerials: item.serialNumbers
+                                    })}
+                                    className="px-2.5 py-1 text-[10px] font-black bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-all uppercase tracking-tighter"
+                                  >
+                                    Bulk Import
+                                  </button>
+                                  <span className={`text-[10px] font-black px-3 py-1 rounded-lg border uppercase tracking-widest ${item.serialNumbers.length === Number(item.receivedQty) ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-slate-50 text-slate-500 border-slate-100'}`}>
+                                    {item.serialNumbers.length} / {item.receivedQty || 0} Entered
+                                  </span>
+                                </div>
                               </div>
 
                               <div className="space-y-4">
@@ -914,6 +1025,7 @@ const ReceiveGoodForm = () => {
               <div className="p-5 space-y-4">
                 <Input
                   label="Received By *"
+                  tooltip="The name of the staff member physically receiving and checking the stock."
                   value={globalData.received_by}
                   onChange={e => setGlobalData({ ...globalData, received_by: e.target.value })}
                 />
@@ -1057,6 +1169,14 @@ const ReceiveGoodForm = () => {
         </div>,
         document.body
       )}
+      <BulkSerialModal
+        isOpen={bulkSerialModal.isOpen}
+        onClose={() => setBulkSerialModal(prev => ({ ...prev, isOpen: false }))}
+        onSave={(serials) => updateItem(bulkSerialModal.itemId, { serialNumbers: serials })}
+        requiredQty={bulkSerialModal.requiredQty}
+        productName={bulkSerialModal.productName}
+        currentSerials={bulkSerialModal.currentSerials}
+      />
     </div>
   );
 };

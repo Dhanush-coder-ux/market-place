@@ -265,11 +265,11 @@ const PurchaseForm = () => {
       return;
     }
 
-    // 💡 Strict validation for GRN/Direct
-    if (purchaseType !== "PO_CREATE") {
+    // 💡 Strict validation for Direct Purchase only
+    if (purchaseType === "DIRECT") {
       const missingBatch = products.find(p => p.batchTracking && !p.batchNum);
       if (missingBatch) {
-        showToast(`Product "${missingBatch.name}" requires a batch number.`, "error");
+        showToast(`Product "${missingBatch.name}" requires a batch number for direct receipt.`, "error");
         return;
       }
 
@@ -279,7 +279,7 @@ const PurchaseForm = () => {
         return count < (Number(p.quantity) || 0);
       });
       if (missingSerials) {
-        showToast(`Product "${missingSerials.name}" requires ${missingSerials.quantity} serial numbers.`, "error");
+        showToast(`Product "${missingSerials.name}" requires ${missingSerials.quantity} serial numbers for direct receipt.`, "error");
         return;
       }
     }
@@ -500,12 +500,14 @@ const PurchaseForm = () => {
 
                   <Input
                     label="Supplier Invoice #"
+                    tooltip="Enter the invoice number provided by the supplier for this purchase."
                     placeholder="INV-2026-..."
                     value={purchaseDetails.invoiceNo}
                     onChange={(e) => setPurchaseDetails({ ...purchaseDetails, invoiceNo: e.target.value })}
                   />
                   <Input
                     label="Purchase Date"
+                    tooltip="The date on which the purchase was made."
                     required
                     type="date"
                     value={purchaseDetails.date}
@@ -595,6 +597,7 @@ const PurchaseForm = () => {
                     <div className="w-24">
                       <Input
                         type="number"
+                        tooltip="Delivery or transportation costs charged by the supplier."
                         placeholder="0"
                         className="!h-8 !text-right !text-xs !bg-slate-50/50"
                         value={charges.transport as any}

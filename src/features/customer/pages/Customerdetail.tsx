@@ -3,7 +3,9 @@ import { useParams, useNavigate } from "react-router-dom";
 import {
   DollarSign, AlertCircle, Package, Star,
   Banknote, Mail, Wallet, Pencil, User, Tag, MapPin, Phone, Trash2,
-  FileText, Database, CreditCard
+  FileText, Database, CreditCard,
+  ShoppingCart,
+  ArrowRight
 } from "lucide-react";
 import {
   fmt, StatusBadge, FormInput, FormSelect,
@@ -61,7 +63,7 @@ const CustomerSearch = () => {
 
 const INITIAL_PAYMENTS: PaymentEntry[] = [];
 const INITIAL_ACTIVITIES: ActivityEntry[] = [];
-const TABS = ["General Info", "Financials", "Purchases", "Timeline"];
+const TABS = ["General Info", "Purchases", "Credit History", "Timeline"];
 
 // ─── Helper Components ────────────────────────────────────────────────────────
 const DetailItem = ({ icon: Icon, label, value, onClick }: { icon: any, label: string, value: string, onClick?: () => void }) => (
@@ -108,6 +110,10 @@ export default function CustomerDetail() {
   const [payments, setPayments] = useState<PaymentEntry[]>(INITIAL_PAYMENTS);
   const [activities, setActivities] = useState<ActivityEntry[]>(INITIAL_ACTIVITIES);
   const [viewValue, setViewValue] = useState<{ label: string, value: string } | null>(null);
+  const [creditHistory, setCreditHistory] = useState<any[]>([]);
+  const [creditLoading, setCreditLoading] = useState(false);
+  const [customerOrders, setCustomerOrders] = useState<any[]>([]);
+  const [ordersLoading, setOrdersLoading] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -116,7 +122,31 @@ export default function CustomerDetail() {
       if (res) setCustomer(Array.isArray(res.data) ? res.data[0] : res.data);
       setRecordLoading(false);
     });
-  }, [id]);
+  }, [id, getData]);
+
+  useEffect(() => {
+    if (activeTab === 1 && id) { // Index 1 is Purchases
+      setOrdersLoading(true);
+      getData(`${ENDPOINTS.ORDERS}/by/customer/${SHOP_ID}/${id}`).then((res) => {
+        if (res && res.data) {
+          setCustomerOrders(res.data);
+        }
+        setOrdersLoading(false);
+      });
+    }
+  }, [activeTab, id, getData]);
+
+  useEffect(() => {
+    if (activeTab === 2 && id) { // Index 2 is Credit History
+      setCreditLoading(true);
+      getData(`${ENDPOINTS.CUSTOMERS}/credit/histories/${SHOP_ID}/${id}`).then((res) => {
+        if (res && res.data) {
+          setCreditHistory(res.data);
+        }
+        setCreditLoading(false);
+      });
+    }
+  }, [activeTab, id, getData]);
 
   function handleSavePayment() {
     const amt = parseFloat(paymentAmount);
@@ -400,101 +430,183 @@ export default function CustomerDetail() {
               </div>
             )}
 
-            {/* TAB 1 — Financials */}
+            {/* TAB 1 — Purchases */}
             {activeTab === 1 && (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <SectionCard className="rounded-[2rem]">
-                  <h2 className="text-sm font-bold text-slate-800 uppercase tracking-widest mb-8">Payment Timeline</h2>
-                  {payments.length === 0 ? (
-                    <div className="py-12 text-center">
-                      <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-300 mx-auto mb-4">
-                        <Banknote size={32} />
+              <SectionCard className="rounded-[2.5rem] p-8 border-none shadow-xl bg-white relative overflow-hidden">
+                <div className="absolute top-0 left-0 w-64 h-64 bg-blue-50/50 rounded-full -mr-32 -mt-32 blur-3xl -z-0" />
+                
+                <div className="relative z-10">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-[1.25rem] bg-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-100">
+                        <ShoppingCart size={24} />
                       </div>
-                      <p className="text-slate-400 font-medium">No payments recorded yet.</p>
+                      <div>
+                        <h2 className="text-lg font-black text-slate-800 uppercase tracking-wider">Purchase History</h2>
+                        <p className="text-xs text-slate-400 font-medium tracking-tight">Transactional record of all orders</p>
+                      </div>
                     </div>
-                  ) : (
-                    <div className="space-y-6">
-                      {payments.map((p, i) => (
-                        <div key={i} className="flex gap-4 group">
-                          <div className="flex flex-col items-center">
-                            <div className="w-3 h-3 rounded-full border-2 border-blue-500 bg-white z-10" />
-                            {i < payments.length - 1 && <div className="w-0.5 flex-1 bg-slate-100 -my-1" />}
-                          </div>
-                          <div className="flex-1 pb-6">
-                            <div className="flex justify-between items-start mb-1">
-                              <span className="text-sm font-bold text-slate-800">{p.title}</span>
-                              <span className="text-sm font-bold text-emerald-600">+{fmt(p.amount)}</span>
-                            </div>
-                            <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-2">{p.date}</div>
-                            <p className="text-xs text-slate-500">Via {p.method} • Ref: {p.invoice}</p>
-                          </div>
+                    
+                    <div className="flex items-center gap-4">
+                      <div className="px-4 py-2 bg-slate-50 rounded-2xl border border-slate-100 text-center">
+                        <p className="text-[9px] font-black text-slate-400 uppercase mb-0.5">Total Orders</p>
+                        <p className="text-sm font-black text-slate-700">{customerOrders.length}</p>
+                      </div>
+                      <div className="px-4 py-2 bg-blue-50 rounded-2xl border border-blue-100 text-center">
+                        <p className="text-[9px] font-black text-blue-400 uppercase mb-0.5">Total Spend</p>
+                        <p className="text-sm font-black text-blue-700">{fmt(customerOrders.reduce((acc, curr) => acc + Number(curr.total_sellprice || 0), 0))}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="overflow-x-auto -mx-8 px-8">
+                    {ordersLoading ? (
+                      <div className="py-24 flex justify-center"><Loader /></div>
+                    ) : customerOrders.length === 0 ? (
+                      <div className="py-24 text-center">
+                        <div className="w-20 h-20 bg-slate-50 rounded-3xl flex items-center justify-center text-slate-200 mx-auto mb-6">
+                          <Package size={40} />
                         </div>
-                      ))}
-                    </div>
-                  )}
-                </SectionCard>
+                        <h3 className="text-sm font-bold text-slate-800 uppercase tracking-widest">No Orders Yet</h3>
+                        <p className="text-xs text-slate-400 mt-2">When this customer makes a purchase, it will appear here.</p>
+                      </div>
+                    ) : (
+                      <table className="w-full text-left border-separate border-spacing-y-3">
+                        <thead>
+                          <tr className="text-slate-400 text-[10px] font-black uppercase tracking-[0.15em]">
+                            <th className="px-6 pb-2">Invoice Identity</th>
+                            <th className="px-6 pb-2">Order Date</th>
+                            <th className="px-6 pb-2">Volume</th>
+                            <th className="px-6 pb-2">Financials</th>
+                            <th className="px-6 pb-2 text-right">Status</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {customerOrders.map((order) => {
+                            const date = new Date(order.created_at || order.date).toLocaleDateString('en-IN', { 
+                              day: '2-digit', 
+                              month: 'short', 
+                              year: 'numeric' 
+                            });
+                            const total = Number(order.total_sellprice || order.grand_total || order.total_amount || 0);
+                            const products = order.items || order.products || [];
+                            const itemCount = order.total_quantity || products.length;
+                            const invoiceId = order.ui_id ? `INV-${order.ui_id}` : `#${order.id.slice(0, 8).toUpperCase()}`;
 
-                <div className="space-y-6">
-                  <SectionCard className="rounded-[2rem] bg-slate-900 text-white border-0 shadow-2xl shadow-blue-200">
-                    <h2 className="text-[10px] font-bold text-blue-400 uppercase tracking-widest mb-6">Current Balance</h2>
-                    <div className="space-y-1 mb-8">
-                      <div className="text-4xl font-black">{fmt(outstanding)}</div>
-                      <div className="text-xs text-slate-400 font-medium">Net outstanding across all invoices</div>
-                    </div>
-                    <button
-                      onClick={() => setShowPayment(true)}
-                      className="w-full py-4 bg-blue-600 hover:bg-blue-700 rounded-2xl font-bold text-sm transition-all shadow-lg shadow-blue-900/20"
-                    >
-                      Record New Payment
-                    </button>
-                  </SectionCard>
-                </div>
-              </div>
-            )}
-
-            {/* TAB 2 — Purchases */}
-            {activeTab === 2 && (
-              <SectionCard className="rounded-[2rem]">
-                <div className="flex justify-between items-center mb-8">
-                  <h2 className="text-sm font-bold text-slate-800 uppercase tracking-widest">Purchase History</h2>
-                  <div className="text-xs font-bold text-slate-400 uppercase tracking-widest">
-                    {String(datas.total_orders || 0)} Total Orders
+                            return (
+                              <tr key={order.id} className="group hover:scale-[1.01] transition-all duration-300">
+                                <td className="px-6 py-4 bg-white border-y border-l border-slate-100 rounded-l-2xl shadow-sm group-hover:border-blue-200 transition-colors">
+                                  <div className="flex items-center gap-3">
+                                    <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-blue-50 group-hover:text-blue-600 transition-colors">
+                                      <FileText size={14} />
+                                    </div>
+                                    <span className="text-sm font-black text-slate-700 font-mono tracking-tight group-hover:text-blue-700 transition-colors">{invoiceId}</span>
+                                  </div>
+                                </td>
+                                <td className="px-6 py-4 bg-white border-y border-slate-100 shadow-sm group-hover:border-blue-200 transition-colors">
+                                  <span className="text-xs font-bold text-slate-600">{date}</span>
+                                </td>
+                                <td className="px-6 py-4 bg-white border-y border-slate-100 shadow-sm group-hover:border-blue-200 transition-colors">
+                                  <div className="flex items-center gap-2">
+                                    <span className="px-2 py-1 rounded-md bg-slate-100 text-[10px] font-black text-slate-500 uppercase">{itemCount} {itemCount === 1 ? "Item" : "Units"}</span>
+                                  </div>
+                                </td>
+                                <td className="px-6 py-4 bg-white border-y border-slate-100 shadow-sm group-hover:border-blue-200 transition-colors">
+                                  <span className="text-sm font-black text-slate-800">{fmt(total)}</span>
+                                </td>
+                                <td className="px-6 py-4 bg-white border-y border-r border-slate-100 rounded-r-2xl shadow-sm text-right group-hover:border-blue-200 transition-colors">
+                                  <StatusBadge status={order.status || "Pending"} />
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    )}
                   </div>
                 </div>
+              </SectionCard>
+            )}
 
-                <div className="overflow-x-auto -mx-8">
-                  <table className="w-full text-left border-collapse">
-                    <thead>
-                      <tr className="bg-slate-50 text-slate-500 text-[10px] font-bold uppercase tracking-widest">
-                        <th className="px-8 py-4">Invoice ID</th>
-                        <th className="px-8 py-4">Date</th>
-                        <th className="px-8 py-4">Items</th>
-                        <th className="px-8 py-4">Total</th>
-                        <th className="px-8 py-4">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {[1, 2, 3].map((_, i) => (
-                        <tr key={i} className="hover:bg-blue-50/30 transition-colors group">
-                          <td className="px-8 py-4 font-mono text-xs text-slate-600 font-bold group-hover:text-blue-600 transition-colors">
-                            #INV-2024-{(9524 + i)}
-                          </td>
-                          <td className="px-8 py-4 text-sm text-slate-600 font-medium">
-                            {new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
-                          </td>
-                          <td className="px-8 py-4 text-sm text-slate-500 font-medium">
-                            Electronics & Accessories
-                          </td>
-                          <td className="px-8 py-4 text-sm font-bold text-slate-800">
-                            ₹{(12400 + (i * 2500)).toLocaleString()}
-                          </td>
-                          <td className="px-8 py-4">
-                            <StatusBadge status={i === 0 ? "Paid" : "Pending"} />
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+            {/* TAB 2 — Credit History */}
+            {activeTab === 2 && (
+              <SectionCard className="rounded-[2.5rem] p-8 border-none shadow-xl bg-white relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-blue-50/50 rounded-full -mr-32 -mt-32 blur-3xl -z-0" />
+                
+                <div className="relative z-10">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-10">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-[1.25rem] bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-100">
+                        <Database size={24} />
+                      </div>
+                      <div>
+                        <h2 className="text-lg font-black text-slate-800 uppercase tracking-wider">Credit Ledger</h2>
+                        <p className="text-xs text-slate-400 font-medium tracking-tight">System-wide credit adjustment logs</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 bg-slate-50 p-1 rounded-xl border border-slate-100 self-start md:self-center">
+                       <span className="px-3 py-1.5 text-[10px] font-black text-slate-500 uppercase tracking-widest">{creditHistory.length} Total Logs</span>
+                    </div>
+                  </div>
+
+                  {creditLoading ? (
+                    <div className="py-24 flex justify-center"><Loader /></div>
+                  ) : creditHistory.length === 0 ? (
+                    <div className="py-24 text-center">
+                      <div className="w-20 h-20 bg-slate-50 rounded-3xl flex items-center justify-center text-slate-200 mx-auto mb-6">
+                        <CreditCard size={40} />
+                      </div>
+                      <h3 className="text-sm font-bold text-slate-800 uppercase tracking-widest">No Ledger Entries</h3>
+                      <p className="text-xs text-slate-400 mt-2">Historical credit changes will appear here.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {creditHistory.map((item, i) => {
+                        const isPositive = (item.credit_after - item.credit_before) >= 0;
+                        const diff = item.credit_after - item.credit_before;
+                        const date = new Date(item.created_at).toLocaleString("en-IN", {
+                          day: "numeric",
+                          month: "short",
+                          year: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        });
+
+                        return (
+                          <div key={item.id} className="group relative bg-white border border-slate-100 rounded-2xl p-5 hover:border-blue-200 hover:shadow-lg hover:shadow-blue-500/5 transition-all animate-in fade-in slide-in-from-bottom-2 duration-300">
+                            <div className="flex items-center justify-between gap-6">
+                              <div className="flex items-center gap-5 min-w-0">
+                                <div className={`w-12 h-12 rounded-xl shrink-0 flex items-center justify-center transition-transform group-hover:scale-110 ${item.type === "SALES" ? "bg-amber-50 text-amber-600" : "bg-blue-50 text-blue-600"}`}>
+                                  {item.type === "SALES" ? <ShoppingCart size={20} /> : <Database size={20} />}
+                                </div>
+                                <div className="min-w-0">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <span className="text-sm font-black text-slate-800 uppercase tracking-tight">{item.type}</span>
+                                    <span className="w-1 h-1 rounded-full bg-slate-300" />
+                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{date}</span>
+                                  </div>
+                                  <div className="flex items-center gap-3 text-[11px] font-bold text-slate-400 uppercase">
+                                    <span>Before: <span className="text-slate-600">{fmt(item.credit_before)}</span></span>
+                                    <ArrowRight size={10} className="text-slate-300" />
+                                    <span>After: <span className="text-slate-800">{fmt(item.credit_after)}</span></span>
+                                  </div>
+                                </div>
+                              </div>
+                              
+                              <div className="text-right shrink-0">
+                                <div className={`text-lg font-black tracking-tight ${isPositive ? "text-emerald-600" : "text-rose-600"}`}>
+                                  {isPositive ? "+" : ""}{fmt(diff)}
+                                </div>
+                                <div className="px-2 py-0.5 rounded-md bg-slate-50 border border-slate-100 text-[9px] font-black text-slate-400 uppercase tracking-widest inline-block mt-1">
+                                   Balance Changed
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               </SectionCard>
             )}

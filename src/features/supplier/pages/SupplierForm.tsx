@@ -227,6 +227,7 @@ const SupplierForm = () => {
               <div className="md:col-span-2">
                 <Input
                   label="Supplier / Business Name"
+                  tooltip="The legal registered name of the supplier business."
                   name="supplier_name"
                   value={formData.supplier_name}
                   onChange={handleChange}
@@ -236,6 +237,7 @@ const SupplierForm = () => {
               </div>
               <Input
                 label="Contact Person Name"
+                tooltip="Name of the primary point of contact at this business."
                 name="contact_name"
                 value={formData.contact_name}
                 onChange={handleChange}
@@ -253,6 +255,7 @@ const SupplierForm = () => {
               />
               <Input
                 label="Contact Person Mobile"
+                tooltip="Mobile number of the primary contact person."
                 name="contact_mobile"
                 value={formData.contact_mobile}
                 onChange={handleChange}
@@ -300,6 +303,7 @@ const SupplierForm = () => {
               />
               <Input
                 label="Phone Number"
+                tooltip="Primary business phone number for general communication."
                 name="phone"
                 value={formData.phone}
                 onChange={handleChange}
@@ -358,6 +362,7 @@ const SupplierForm = () => {
             <div className="space-y-6">
               <Input
                 label="GSTIN / Tax ID"
+                tooltip="Goods and Services Tax Identification Number of the supplier."
                 name="gst_number"
                 value={formData.gst_number}
                 onChange={handleChange}

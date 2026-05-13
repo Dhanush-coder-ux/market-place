@@ -73,7 +73,7 @@ function purchaseToMovements(records: PurchaseRecord[], movType: MovementType): 
 
       const baseMovement = {
         id: p.id.slice(0, 8).toUpperCase(),
-        product: String(prod?.product_name ?? prod?.name ?? "—"),
+        product: String(prod?.product_name || prod?.name || "—"),
         sku: String(prod?.barcode ?? p.id.slice(0, 8)),
         type: finalType,
         source: "Supplier",
@@ -94,7 +94,7 @@ function purchaseToMovements(records: PurchaseRecord[], movType: MovementType): 
             variant.batches.forEach((batch: any) => {
               movements.push({
                 ...baseMovement,
-                qty: Number(batch.stocks ?? batch.quantity ?? 1),
+                qty: Number(batch.received_stocks ?? batch.received_qty ?? batch.stocks ?? batch.quantity ?? 1),
                 stocks_before: batch.stocks_before ?? variant.stocks_before ?? prod.stocks_before,
                 variant: variant.name || variant.variant_name || variant.id,
                 batch: batch.name || batch.batch_name || batch.id,
@@ -108,7 +108,7 @@ function purchaseToMovements(records: PurchaseRecord[], movType: MovementType): 
           } else {
             movements.push({
               ...baseMovement,
-              qty: Number(variant.stocks ?? variant.quantity ?? 1),
+              qty: Number(variant.received_stocks ?? variant.received_qty ?? variant.stocks ?? variant.quantity ?? 1),
               stocks_before: variant.stocks_before ?? prod.stocks_before,
               variant: variant.name || variant.variant_name || variant.id,
             });
@@ -120,7 +120,7 @@ function purchaseToMovements(records: PurchaseRecord[], movType: MovementType): 
         prod.batches.forEach((batch: any) => {
           movements.push({
             ...baseMovement,
-            qty: Number(batch.stocks ?? batch.quantity ?? 1),
+            qty: Number(batch.received_stocks ?? batch.received_qty ?? batch.stocks ?? batch.quantity ?? 1),
             stocks_before: batch.stocks_before ?? prod.stocks_before,
             batch: batch.name || batch.batch_name || batch.id,
             serial_numbers: Array.isArray(batch.serial_numbers?.serial_numbers) 
@@ -135,7 +135,7 @@ function purchaseToMovements(records: PurchaseRecord[], movType: MovementType): 
       else {
         movements.push({
           ...baseMovement,
-          qty: Number(prod?.quantity ?? prod?.qty ?? prod?.stocks ?? 1),
+          qty: Number(prod?.received_stocks ?? prod?.received_qty ?? prod?.quantity ?? prod?.qty ?? 1),
           stocks_before: prod.stocks_before,
           variant: prod.variant_name || prod.variant || prod.variant_id || prod.varient_id || "",
           batch: prod.batch_name || prod.batch_id || "",
@@ -264,13 +264,13 @@ function DetailDrawer({ movement, onClose }: DetailDrawerProps) {
                   <span className="text-xs font-bold text-slate-700">{movement.stocks_before}</span>
                 </div>
                 <div className="flex flex-col items-center border-x border-slate-100">
-                  <span className={`text-[8px] font-black uppercase tracking-tighter ${isPositive ? 'text-emerald-400' : 'text-rose-400'}`}>Change</span>
+                  <span className={`text-[8px] font-black uppercase tracking-tighter ${isPositive ? 'text-emerald-400' : 'text-rose-400'}`}>Received Stock</span>
                   <span className={`text-xs font-bold ${isPositive ? 'text-emerald-600' : 'text-rose-600'}`}>
                     {isPositive ? `+${movement.qty}` : movement.qty}
                   </span>
                 </div>
                 <div className="flex flex-col items-center">
-                  <span className="text-[8px] font-black text-blue-400 uppercase tracking-tighter">Closing</span>
+                  <span className="text-[8px] font-black text-blue-400 uppercase tracking-tighter">Ordered Stock</span>
                   <span className="text-xs font-bold text-blue-600">{(movement.stocks_before ?? 0) + movement.qty}</span>
                 </div>
               </div>
@@ -791,7 +791,7 @@ export default function StockMovementPage() {
                   <th className="px-6 py-5 whitespace-nowrap min-w-[200px]">Product Information</th>
                   <th className="px-6 py-5 whitespace-nowrap">Movement Type</th>
                   <th className="px-6 py-5 whitespace-nowrap text-center">
-                    <SortBtn field="qty" label="Quantity" />
+                    <SortBtn field="qty" label="Received Stock" />
                   </th>
                   {selectedKeys.map(key => (
                     <th key={key} className="px-6 py-5 capitalize whitespace-nowrap">{key.replace(/_/g, ' ')}</th>
@@ -817,7 +817,7 @@ export default function StockMovementPage() {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-3">
                         <div className={`w-10 h-10 rounded-xl bg-gradient-to-br flex items-center justify-center text-white text-xs font-bold shadow-lg shadow-blue-100 ${m.qty > 0 ? "from-emerald-600 to-emerald-400" : "from-rose-600 to-rose-400"}`}>
-                          {m.product[0].toUpperCase()}
+                          {m.product?.[0]?.toUpperCase() || "—"}
                         </div>
                         <div>
                           <p className="text-sm font-semibold text-slate-700 tracking-tight">{m.product}</p>

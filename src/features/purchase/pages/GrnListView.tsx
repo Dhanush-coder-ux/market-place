@@ -65,7 +65,9 @@ const toGrnShape = (p: PurchaseRecord) => {
   const rawProds = ((p as any).products ?? d?.grn_products ?? d?.purchase_products ?? d?.products ?? []) as any[];
   const products = rawProds.map((r: any) => ({
     name: String(r.product_name ?? r.name ?? "Item"),
-    quantity: Number(r.quantity ?? r.qty ?? r.stocks ?? 1),
+    ordered: Number(r.stocks ?? r.quantity ?? r.qty ?? 1),
+    received: Number(r.received_stocks ?? r.received_qty ?? 0),
+    quantity: Number(r.stocks ?? r.quantity ?? r.qty ?? 1) - Number(r.received_stocks ?? r.received_qty ?? 0),
     variants: Array.isArray(r.variants) ? r.variants.map((v: any) => ({
       id: v.id,
       name: v.name,
@@ -147,8 +149,13 @@ const GridCard = ({ row, onClick, onReceive }: { row: ReturnType<typeof toGrnSha
       <div className="max-h-[90px] overflow-y-auto pr-1 space-y-2">
         {row.products.map((p, i) => (
           <div key={i} className="flex items-center justify-between text-sm">
-            <span className="text-zinc-600 truncate pr-2">{p.name}</span>
-            <span className="shrink-0 text-xs font-semibold text-zinc-500 tabular-nums bg-white border border-zinc-100 px-2 py-0.5 rounded-md shadow-sm">×{p.quantity}</span>
+            <div className="flex flex-col min-w-0">
+              <span className="text-zinc-600 truncate pr-2">{p.name}</span>
+              <span className="text-[9px] text-zinc-400 font-medium italic">Ordered: {p.ordered} | Recv: {p.received}</span>
+            </div>
+            <span className={`shrink-0 text-xs font-semibold tabular-nums px-2 py-0.5 rounded-md shadow-sm border ${p.quantity > 0 ? 'text-blue-600 bg-blue-50 border-blue-100' : 'text-zinc-400 bg-white border-zinc-100'}`}>
+              {p.quantity} left
+            </span>
           </div>
         ))}
         {row.products.length === 0 && <p className="text-xs text-zinc-400">No items</p>}
@@ -161,8 +168,8 @@ const GridCard = ({ row, onClick, onReceive }: { row: ReturnType<typeof toGrnSha
           <p className="text-base font-semibold text-zinc-900 tabular-nums">₹{row.totalValue.toLocaleString()}</p>
         </div>
         <div>
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-400 mb-0.5">Total Qty</p>
-          <p className="text-base font-semibold text-zinc-700 tabular-nums">{row.itemsCount}</p>
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-400 mb-0.5">Remaining Qty</p>
+          <p className="text-base font-semibold text-blue-600 tabular-nums">{row.itemsCount}</p>
         </div>
       </div>
       <div className="flex items-center gap-1">
@@ -244,7 +251,7 @@ const GRNCardView = () => {
   const { getData, loading, error, clearError } = useApi();
   const [purchases, setPurchases] = useState<PurchaseRecord[]>([]);
   const [search, setSearch] = useState("");
-  const [viewMode, setViewMode] = useState<ViewMode>("grid");
+  const [viewMode, setViewMode] = useState<ViewMode>("vertical");
   const [selectedGRN, setSelectedGRN] = useState<ReturnType<typeof toGrnShape> | null>(null);
   const [refreshKey] = useState(0);
 
@@ -334,8 +341,8 @@ const GRNCardView = () => {
             <div>
               <div className="flex items-center gap-2 mb-3 border-b border-zinc-100 pb-2">
                 <Package size={16} className="text-zinc-400" />
-                <h3 className="heading-label text-zinc-800">Received Products</h3>
-                <span className="text-xs font-semibold text-zinc-500 bg-zinc-100 px-2 py-0.5 rounded-full ml-auto">{selectedGRN.itemsCount} Total Units</span>
+                <h3 className="heading-label text-zinc-800">Pending / Remaining Items</h3>
+                <span className="text-xs font-semibold text-zinc-500 bg-zinc-100 px-2 py-0.5 rounded-full ml-auto">{selectedGRN.itemsCount} Remaining Units</span>
               </div>
               <div className="space-y-2 max-h-[40vh] overflow-y-auto pr-2">
                 {selectedGRN.products.length === 0

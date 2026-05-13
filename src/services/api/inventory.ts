@@ -54,16 +54,21 @@ export const inventoryApi = {
       const response = await apiClient.get(`${ENDPOINTS.INVENTORIES}/by/shop/${SHOP_ID}?q=${query}`);
       const items = response?.data || (Array.isArray(response) ? response : []);
 
-      return items.map((i: any) => ({
-        ...i,
-        name: i.name || "Unknown Product",
-        stocks: i.stocks ?? 0,
-        buy_price: i.buy_price ?? 0,
-        sell_price: i.sell_price ?? 0,
-        barcode: i.barcode ?? "",
-        has_variants: i.has_variant || false,
-        combinations: i.variants || []
-      }));
+      return items.map((i: any) => {
+        const d = i.datas || {};
+        return {
+          ...i,
+          name: i.name || d.name || "Unknown Product",
+          stocks: i.stocks ?? d.stocks ?? 0,
+          buy_price: i.buy_price ?? d.buy_price ?? 0,
+          sell_price: i.sell_price ?? d.sell_price ?? 0,
+          barcode: i.barcode ?? d.barcode ?? "",
+          unit: i.unit || d.unit || "pc",
+          gst: i.gst || d.gst || "18%",
+          has_variants: i.has_variant ?? d.has_variant ?? false,
+          combinations: i.variants || d.variants || []
+        };
+      });
     } catch {
       return [];
     }

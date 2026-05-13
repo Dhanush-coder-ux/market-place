@@ -80,26 +80,29 @@ const ITEM_COLORS = ["#dbeafe", "#dcfce7", "#fef3c7", "#fce7f3", "#ede9fe", "#ff
 /* ═══════════════════════════════════════════════════════════════
    UTILS
 ═══════════════════════════════════════════════════════════════ */
-const generateItems = (sale: SaleRecord): SaleItem[] =>
-  (sale.items || []).map((item, i) => ({
-    id: item.id,
-    name: item.status === "REFUNDED" 
-      ? `(Refunded) ${item.barcode?.trim() || 'Item'}` 
-      : item.status === "EXCHANGED" 
-        ? `(Exchanged) ${item.barcode?.trim() || 'Item'}` 
-        : (item.barcode?.trim() || `Item ${i + 1}`),
-    sku: item.barcode?.trim() || item.inventory_id.slice(-6),
-    category: "General",
-    quantity: item.quantity,
-    unitPrice: item.sell_price,
-    buyPrice: item.buy_price,
-    imageColor: ITEM_COLORS[i % ITEM_COLORS.length],
-    status: item.status,
-    variant_id: item.variant_id,
-    batch_id: item.batch_id,
-    serialno_id: item.serialno_id,
-    serial_numbers: item.serial_numbers || [],
-  }));
+const generateItems = (sale: SaleRecord, productMap: Record<string, string> = {}): SaleItem[] =>
+  (sale.items || []).map((item, i) => {
+    const productName = productMap[item.inventory_id] || item.barcode || `Item ${i + 1}`;
+    return {
+      id: item.id,
+      name: item.status === "REFUNDED"
+        ? `(Refunded) ${productName}`
+        : item.status === "EXCHANGED"
+          ? `(Exchanged) ${productName}`
+          : productName,
+      sku: item.barcode?.trim() || item.inventory_id.slice(-6),
+      category: "General",
+      quantity: item.quantity,
+      unitPrice: item.sell_price,
+      buyPrice: item.buy_price,
+      imageColor: ITEM_COLORS[i % ITEM_COLORS.length],
+      status: item.status,
+      variant_id: item.variant_id,
+      batch_id: item.batch_id,
+      serialno_id: item.serialno_id,
+      serial_numbers: item.serial_numbers || [],
+    };
+  });
 
 const fmt = (n: number) => `₹${n.toLocaleString("en-IN")}`;
 
@@ -439,7 +442,7 @@ interface ItemSelectorProps {
 const ItemSelector: React.FC<ItemSelectorProps> = ({ items, returnItems, onToggle, onQtyChange, onSelectAll, error }) => {
   const [q, setQ] = useState("");
   const filtered = items.filter(i => i.name.toLowerCase().includes(q.toLowerCase()) || i.sku.toLowerCase().includes(q.toLowerCase()));
-  
+
   const selectableItems = filtered.filter(i => i.status !== "REFUNDED" && i.status !== "EXCHANGED");
   const allSelected = selectableItems.length > 0 && selectableItems.every(i => returnItems[i.id] !== undefined);
 
@@ -490,9 +493,8 @@ const ItemSelector: React.FC<ItemSelectorProps> = ({ items, returnItems, onToggl
                       <div className="flex items-center gap-2">
                         <p className="text-xs font-medium text-slate-800">{item.name}</p>
                         {item.status && (
-                          <span className={`text-[8px] font-bold px-1 rounded uppercase ${
-                            item.status === "REFUNDED" ? "bg-red-50 text-red-600 border border-red-100" : "bg-blue-50 text-blue-600 border border-blue-100"
-                          }`}>
+                          <span className={`text-[8px] font-bold px-1 rounded uppercase ${item.status === "REFUNDED" ? "bg-red-50 text-red-600 border border-red-100" : "bg-blue-50 text-blue-600 border border-blue-100"
+                            }`}>
                             {item.status}
                           </span>
                         )}
@@ -546,12 +548,12 @@ const initialState = (): ReturnState => ({
   isSubmitting: false,
 });
 
-const useReturnModal = (sale: SaleRecord | null) => {
+const useReturnModal = (sale: SaleRecord | null, productMap: Record<string, string> = {}) => {
   const [state, setState] = useState<ReturnState>(initialState());
 
   const saleItems = useMemo<SaleItem[]>(
-    () => (sale ? generateItems(sale) : []),
-    [sale?.id],
+    () => (sale ? generateItems(sale, productMap) : []),
+    [sale?.id, productMap],
   );
 
   const reset = useCallback(() => setState(initialState()), []);
@@ -731,10 +733,11 @@ interface ReturnModalProps {
   sale: SaleRecord;
   onClose: () => void;
   onRefresh: () => void;
+  productMap: Record<string, string>;
 }
 
-const ReturnModal: React.FC<ReturnModalProps> = ({ sale, onClose, onRefresh }) => {
-  const m = useReturnModal(sale);
+const ReturnModal: React.FC<ReturnModalProps> = ({ sale, onClose, onRefresh, productMap }) => {
+  const m = useReturnModal(sale, productMap);
   const { state, saleItems, selectedItems, totals } = m;
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -1294,9 +1297,13 @@ interface SidebarProps {
   onClose: () => void;
   onReturn: (sale: SaleRecord) => void;
   openSidebar: (sale: SaleRecord) => void;
+  customerMap: Record<string, string>;
+  productMap: Record<string, string>;
 }
 
-const SaleDetailSidebar: React.FC<SidebarProps> = ({ sale, isOpen, onClose, onReturn, openSidebar }) => {
+const SaleDetailSidebar: React.FC<SidebarProps> = ({
+  sale, isOpen, onClose, onReturn, openSidebar, customerMap, productMap
+}) => {
   useEffect(() => {
     if (isOpen && sale) {
       document.body.style.overflow = "hidden";
@@ -1353,7 +1360,7 @@ const SaleDetailSidebar: React.FC<SidebarProps> = ({ sale, isOpen, onClose, onRe
               {/* Meta */}
               <div className="grid grid-cols-2 gap-2.5">
                 {[
-                  { icon: <User size={13} />, label: "Customer", value: sale.customer_id },
+                  { icon: <User size={13} />, label: "Customer", value: customerMap[sale.customer_id] || sale.customer_id },
                   { icon: <Calendar size={13} />, label: "Date", value: sale.created_at.split("T")[0] },
                   { icon: <CreditCard size={13} />, label: "Payment", value: sale.payment_method },
                   { icon: <RotateCcw size={13} />, label: "Origin", value: sale.origin },
@@ -1369,11 +1376,10 @@ const SaleDetailSidebar: React.FC<SidebarProps> = ({ sale, isOpen, onClose, onRe
                 ))}
               </div>
 
-              {/* Items */}
               <div className="space-y-2">
                 <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400">Order Items</p>
                 <div className="border border-slate-100 rounded-xl divide-y divide-slate-100 overflow-hidden shadow-sm">
-                  {generateItems(sale).map((item, i) => {
+                  {generateItems(sale, productMap).map((item, i) => {
                     const exchangeInfo = sale.exchanged_items?.find(ex => ex.exchanged_items.includes(item.id));
                     return (
                       <div key={i} className="flex flex-col border-b border-slate-100 last:border-0">
@@ -1540,6 +1546,8 @@ const SalesListPage: React.FC = () => {
   const [filterPayment, setFilterPayment] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
   const [filterDate, setFilterDate] = useState("");
+  const [customerMap, setCustomerMap] = useState<Record<string, string>>({});
+  const [productMap, setProductMap] = useState<Record<string, string>>({});
 
   const [isReturnSearchOpen, setIsReturnSearchOpen] = useState(false);
   const [returnSearchQuery, setReturnSearchQuery] = useState("");
@@ -1572,14 +1580,15 @@ const SalesListPage: React.FC = () => {
       setLoading(true);
       const res = await api.getData(`${ENDPOINTS.ORDERS}/${SHOP_ID}`);
       if (res && res.data) {
+        const rawOrders = res.data as any[];
         // Normalize data for UI consistency
-        const normalized = (res.data as any[]).map(s => {
+        const normalized = rawOrders.map(s => {
           const rawPm = (s.payment_method || "Other").toUpperCase();
-          const pm = rawPm === "CASH" ? "Cash" 
-                   : rawPm === "CARD" ? "Card" 
-                   : rawPm === "UPI" || rawPm === "G-PAY" || rawPm === "GPAY" ? "UPI"
-                   : rawPm === "PHONEPE" ? "PhonePe"
-                   : s.payment_method;
+          const pm = rawPm === "CASH" ? "Cash"
+            : rawPm === "CARD" ? "Card"
+              : rawPm === "UPI" || rawPm === "G-PAY" || rawPm === "GPAY" ? "UPI"
+                : rawPm === "PHONEPE" ? "PhonePe"
+                  : s.payment_method;
 
           return {
             ...s,
@@ -1588,11 +1597,36 @@ const SalesListPage: React.FC = () => {
           };
         });
         setOrders(normalized);
+
+        // Fetch details after orders are loaded
+        fetchDetails(rawOrders);
       }
     } catch (err) {
       console.error("Failed to fetch orders:", err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchDetails = async (rawOrders: any[]) => {
+    try {
+      // Fetch All Customers for this shop
+      const custRes = await api.getData(`${ENDPOINTS.CUSTOMERS}/by/shop/${SHOP_ID}`);
+      if (custRes && custRes.data) {
+        const cMap: Record<string, string> = {};
+        custRes.data.forEach((c: any) => { cMap[c.id] = c.name; });
+        setCustomerMap(cMap);
+      }
+
+      // Fetch All Inventories (Products) for mapping
+      const invRes = await api.getData(ENDPOINTS.INVENTORIES);
+      if (invRes && invRes.data) {
+        const pMap: Record<string, string> = {};
+        invRes.data.forEach((p: any) => { pMap[p.id] = p.name; });
+        setProductMap(pMap);
+      }
+    } catch (err) {
+      console.error("Failed to fetch mapping details:", err);
     }
   };
 
@@ -1604,7 +1638,7 @@ const SalesListPage: React.FC = () => {
     const q = search.toLowerCase();
     const dateStr = s.created_at.split("T")[0];
     return (
-      (!q || s.ui_id.toString().includes(q) || s.customer_id.toLowerCase().includes(q)) &&
+      (!q || s.ui_id.toString().includes(q) || s.customer_id.toLowerCase().includes(q) || (customerMap[s.customer_id] || "").toLowerCase().includes(q)) &&
       (!filterOrigin || s.origin === filterOrigin) &&
       (!filterPayment || s.payment_method === filterPayment) &&
       (!filterStatus || s.status.toLowerCase() === filterStatus.toLowerCase()) &&
@@ -1733,7 +1767,7 @@ const SalesListPage: React.FC = () => {
                         </div>
                       </td>
                       <td className="py-2.5 px-3 sm:px-4">
-                        <p className="text-[11px] font-medium text-slate-800 whitespace-nowrap">{sale.customer_id}</p>
+                        <p className="text-[11px] font-medium text-slate-800 whitespace-nowrap">{customerMap[sale.customer_id] || sale.customer_id}</p>
                       </td>
                       <td className="py-2.5 px-3 sm:px-4"><Badge cls={oCfg.cls} dot={oCfg.dot} label={sale.origin} /></td>
                       <td className="py-2.5 px-3 sm:px-4"><Badge cls={pCfg.cls} dot={pCfg.dot} label={sale.payment_method} /></td>
@@ -1797,10 +1831,12 @@ const SalesListPage: React.FC = () => {
         onClose={closeSidebar}
         onReturn={openReturn}
         openSidebar={openSidebar}
+        customerMap={customerMap}
+        productMap={productMap}
       />
 
       {/* Global Return Modal */}
-      {returnSale && <ReturnModal sale={returnSale} onClose={closeReturn} onRefresh={fetchOrders} />}
+      {returnSale && <ReturnModal sale={returnSale} onClose={closeReturn} onRefresh={fetchOrders} productMap={productMap} />}
 
       {/* Return Search Modal */}
       {isReturnSearchOpen && (
@@ -1845,7 +1881,7 @@ const SalesListPage: React.FC = () => {
                           <p className="text-sm font-bold text-slate-800">INV-{sale.ui_id}</p>
                           <span className="text-xs font-bold sr-mono text-slate-900">{fmt(sale.total_sellprice)}</span>
                         </div>
-                        <p className="text-xs text-slate-500 truncate">{sale.customer_id} · {sale.created_at.split('T')[0]}</p>
+                        <p className="text-xs text-slate-500 truncate">{customerMap[sale.customer_id] || sale.customer_id} · {sale.created_at.split('T')[0]}</p>
                       </div>
                       <ChevronRight size={14} className="text-slate-300 group-hover:text-blue-400 transition-colors" />
                     </button>

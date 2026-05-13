@@ -37,8 +37,8 @@ const formatDate = (dateStr?: string) => {
 // ─── Reusable UI Subcomponents ────────────────────────────────────────────────
 
 const StatusBadge = ({ icon: Icon, text, className = "" }: { icon?: any, text: string, className?: string }) => (
-  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold tracking-wide uppercase border ${className}`}>
-    {Icon && <Icon size={10} />}
+  <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-medium tracking-wide uppercase border ${className}`}>
+    {Icon && <Icon size={9} />}
     {text}
   </span>
 );
@@ -50,30 +50,30 @@ const BatchDetails = ({ mfg, exp }: { mfg?: string, exp?: string }) => {
   const diffMs = expiry.getTime() - now.getTime();
   const daysLeft = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
 
-  let status = { label: `${daysLeft}d left`, color: 'text-emerald-700 bg-emerald-50 border-emerald-200', Icon: ShieldCheck };
-  if (daysLeft < 0) status = { label: `Expired`, color: 'text-red-700 bg-red-50 border-red-200', Icon: XCircle };
-  else if (daysLeft <= 30) status = { label: `${daysLeft}d left`, color: 'text-red-700 bg-red-50 border-red-200', Icon: AlertTriangle };
-  else if (daysLeft <= 90) status = { label: `${daysLeft}d left`, color: 'text-amber-700 bg-amber-50 border-amber-200', Icon: Clock };
+  let status = { label: `${daysLeft}d left`, color: 'text-emerald-600 bg-emerald-50/80 border-emerald-200/60', Icon: ShieldCheck };
+  if (daysLeft < 0) status = { label: `Expired`, color: 'text-red-600 bg-red-50/80 border-red-200/60', Icon: XCircle };
+  else if (daysLeft <= 30) status = { label: `${daysLeft}d left`, color: 'text-red-600 bg-red-50/80 border-red-200/60', Icon: AlertTriangle };
+  else if (daysLeft <= 90) status = { label: `${daysLeft}d left`, color: 'text-amber-600 bg-amber-50/80 border-amber-200/60', Icon: Clock };
 
   return (
-    <div className="flex flex-wrap items-center gap-1.5 mt-2">
-      {mfg && <StatusBadge text={`MFG: ${formatDate(mfg)}`} className="text-slate-500 bg-white border-slate-200 shadow-sm" />}
-      <StatusBadge text={`EXP: ${formatDate(exp)}`} className="text-slate-500 bg-white border-slate-200 shadow-sm" />
+    <div className="flex flex-wrap items-center gap-1 mt-1.5">
+      {mfg && <StatusBadge text={`MFG: ${formatDate(mfg)}`} className="text-slate-500 bg-white border-slate-200/60" />}
+      <StatusBadge text={`EXP: ${formatDate(exp)}`} className="text-slate-500 bg-white border-slate-200/60" />
       <StatusBadge icon={status.Icon} text={status.label} className={status.color} />
     </div>
   );
 };
 
 const ShortcutKbd = ({ keys, label }: { keys: string[]; label: string; }) => (
-  <div className="flex items-center gap-1.5">
+  <div className="flex items-center gap-1">
     <div className="flex gap-0.5">
       {keys.map((k, i) => (
-        <kbd key={i} className="px-1.5 py-0.5 rounded-md bg-white text-slate-500 border border-slate-200 shadow-sm font-sans text-[10px] font-medium">
+        <kbd key={i} className="px-1.5 py-0.5 rounded bg-white text-slate-500 border border-slate-200/80 font-sans text-[9px] font-medium shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
           {k}
         </kbd>
       ))}
     </div>
-    <span className="text-[11px] text-slate-400 font-medium ml-0.5">{label}</span>
+    <span className="text-[10px] text-slate-400 font-normal ml-0.5">{label}</span>
   </div>
 );
 
@@ -95,53 +95,57 @@ const BillingRow = React.memo(({
   const [baseName, variantName] = item.name ? item.name.split(' - ') : ["", ""];
 
   return (
-    <tr className={`group/row transition-colors duration-150 ${isFilled ? "hover:bg-slate-50/50" : "hover:bg-slate-50/30"}`}>
-      <td className={`hidden sm:table-cell px-5 py-4 align-top ${!isLast ? "border-b border-slate-100" : ""}`}>
-        <div className="w-6 h-6 mt-1 rounded flex items-center justify-center text-[11px] font-semibold text-slate-400">
+    <tr className={`group/row transition-colors duration-150 ${
+      isFilled ? "hover:bg-blue-50/30" : "hover:bg-slate-50/30"
+    } ${index % 2 === 0 ? "" : "bg-slate-50/30"}`}>
+      {/* Row Index */}
+      <td className={`hidden sm:table-cell pl-4 pr-2 py-3 align-top ${!isLast ? "border-b border-slate-100/60" : ""}`}>
+        <div className="w-5 h-5 mt-1 rounded flex items-center justify-center text-[10px] font-medium text-slate-400">
           {index + 1}
         </div>
       </td>
 
-      <td className={`px-3 py-4 min-w-[300px] align-top ${!isLast ? "border-b border-slate-100" : ""}`}>
+      {/* Product Details */}
+      <td className={`px-3 py-3 min-w-[280px] align-top ${!isLast ? "border-b border-slate-100/60" : ""}`}>
         <div className="w-full max-w-lg">
-          <div className="flex items-center gap-3">
-            <div className="w-1/4">
-              <div className="flex flex-col gap-1">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tight ml-1">Barcode</span>
-                <div className="h-10 px-3 flex items-center rounded-lg border border-slate-200 bg-slate-50/50 text-sm font-medium text-slate-600 truncate">
+          <div className="flex items-center gap-2.5">
+            <div className="w-[22%]">
+              <div className="flex flex-col gap-0.5">
+                <span className="text-[9px] font-medium text-slate-400 uppercase tracking-wider ml-0.5">Barcode</span>
+                <div className="h-[38px] px-2.5 flex items-center rounded-lg border border-slate-200/60 bg-slate-50/40 text-[12px] font-normal text-slate-600 truncate">
                   {item.code || "—"}
                 </div>
               </div>
             </div>
-            <div className="w-3/4">
-              <div className="flex flex-col gap-1">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tight ml-1">Search Product</span>
+            <div className="w-[78%]">
+              <div className="flex flex-col gap-0.5">
+                <span className="text-[9px] font-medium text-slate-400 uppercase tracking-wider ml-0.5">Product</span>
                 <SearchSelect
                   fetchOptions={fetchInventory}
                   value={baseName}
-                  placeholder="Type to search..."
+                  placeholder="Search products..."
                   labelKey="displayName"
                   valueKey="displayName"
                   onChange={(_, opt: any) => handleProductSelectClick(opt, item.id)}
-                  className="h-10 shadow-none border-slate-200 focus:border-blue-400"
+                  className="h-[38px] shadow-none border-slate-200/60 focus:border-blue-300 rounded-lg text-[13px]"
                 />
               </div>
             </div>
           </div>
 
           {isFilled && (variantName || hasSerial) && (
-            <div className="flex flex-wrap items-center gap-2 mt-2">
+            <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
               {variantName && (
-                <span className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md">
-                  <Tag size={10} className="text-slate-400" />
+                <span className="inline-flex items-center gap-1 text-[10px] font-normal text-slate-600 bg-slate-100/60 px-1.5 py-0.5 rounded">
+                  <Tag size={9} className="text-slate-400" />
                   {variantName}
                 </span>
               )}
               {hasSerial && item.serialNumbers && item.serialNumbers.length > 0 && (
-                <div className="flex flex-wrap gap-1 mt-1">
+                <div className="flex flex-wrap gap-1">
                   {item.serialNumbers.map((s, idx) => (
-                    <span key={idx} className="inline-flex items-center gap-1 text-[10px] font-bold text-blue-700 bg-blue-50 border border-blue-100 px-1.5 py-0.5 rounded-md">
-                      <Barcode size={10} className="text-blue-500" />
+                    <span key={idx} className="inline-flex items-center gap-1 text-[9px] font-medium text-blue-600 bg-blue-50/80 border border-blue-100/60 px-1.5 py-0.5 rounded">
+                      <Barcode size={9} className="text-blue-400" />
                       {s}
                     </span>
                   ))}
@@ -156,54 +160,60 @@ const BillingRow = React.memo(({
         </div>
       </td>
 
-      <td className={`px-3 py-4 align-top text-right ${!isLast ? "border-b border-slate-100" : ""}`}>
-        <input
-          type="number"
-          min="1"
-          value={item.qty || ""}
-          placeholder="0"
-          onChange={(e) => {
-            const val = Math.max(1, Number(e.target.value));
-            if (item.requireSerial) {
-              handleProductSelectClick((item as any)._product, item.id);
-            } else {
-              updateItem(item.id, { qty: val });
-            }
-          }}
-          onKeyDown={(e) => { if (e.key === "Enter") handleAddRow(); }}
-          className="w-20 px-3 py-1.5 mt-0.5 rounded-lg border border-slate-200 bg-white text-sm font-semibold text-right tabular-nums text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 hover:border-slate-300 transition-all shadow-sm"
-        />
+      {/* Quantity */}
+      <td className={`px-2 py-3 align-top text-right ${!isLast ? "border-b border-slate-100/60" : ""}`}>
+        <div 
+          onClick={() => isFilled && handleProductSelectClick((item as any)._product, item.id)}
+          className={`w-16 h-[38px] px-2 rounded-lg border border-slate-200/60 bg-white flex items-center justify-end cursor-pointer hover:border-blue-300/60 transition-colors duration-150 ${!isFilled ? "opacity-40 pointer-events-none" : ""}`}
+        >
+          <input
+            type="number"
+            readOnly
+            value={item.qty || ""}
+            placeholder="0"
+            className="w-full bg-transparent text-right outline-none cursor-pointer text-[13px] font-medium text-slate-700 tabular-nums"
+            onKeyDown={(e) => { 
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                isFilled && handleProductSelectClick((item as any)._product, item.id);
+              }
+            }}
+          />
+        </div>
       </td>
 
-      <td className={`px-3 py-4 align-top text-right ${!isLast ? "border-b border-slate-100" : ""}`}>
-        <div className="inline-flex items-center justify-end gap-1 px-3 py-1.5 mt-0.5 rounded-lg">
-          <IndianRupee size={12} strokeWidth={2.5} className="text-slate-400" />
-          <span className="text-sm font-medium text-slate-600 tabular-nums min-w-[48px]">
+      {/* Unit Price */}
+      <td className={`px-2 py-3 align-top text-right ${!isLast ? "border-b border-slate-100/60" : ""}`}>
+        <div className="h-[38px] flex items-center justify-end gap-0.5 px-1">
+          <IndianRupee size={11} strokeWidth={2} className="text-slate-400" />
+          <span className="text-[13px] font-normal text-slate-600 tabular-nums">
             {item.price > 0 ? item.price.toLocaleString("en-IN", { minimumFractionDigits: 2 }) : "0.00"}
           </span>
         </div>
       </td>
 
-      <td className={`px-5 py-4 align-top text-right ${!isLast ? "border-b border-slate-100" : ""}`}>
+      {/* Total */}
+      <td className={`px-3 py-3 align-top text-right ${!isLast ? "border-b border-slate-100/60" : ""}`}>
         <div className="flex flex-col items-end">
-          <div className={`inline-flex items-center justify-end gap-1 mt-1 font-bold text-base tabular-nums tracking-tight ${item.tprice > 0 ? "text-slate-900" : "text-slate-300"}`}>
-            <IndianRupee size={14} strokeWidth={2.5} className={item.tprice > 0 ? "text-slate-900" : "text-slate-300"} />
+          <div className={`h-[38px] flex items-center justify-end gap-0.5 font-medium text-[14px] tabular-nums tracking-tight ${item.tprice > 0 ? "text-slate-800" : "text-slate-300"}`}>
+            <IndianRupee size={12} strokeWidth={2} className={item.tprice > 0 ? "text-slate-600" : "text-slate-300"} />
             {item.tprice > 0 ? item.tprice.toLocaleString("en-IN", { minimumFractionDigits: 2 }) : "0.00"}
           </div>
           {item.qty > 1 && item.price > 0 && (
-            <span className="text-[10px] text-slate-400 font-medium mt-0.5">
+            <span className="text-[9px] text-slate-400 font-normal mt-0.5 tabular-nums">
               {item.price.toLocaleString("en-IN")} × {item.qty}
             </span>
           )}
         </div>
       </td>
 
-      <td className={`px-3 py-4 align-top text-center ${!isLast ? "border-b border-slate-100" : ""}`}>
+      {/* Delete */}
+      <td className={`px-2 py-3 align-top text-center ${!isLast ? "border-b border-slate-100/60" : ""}`}>
         <button
           onClick={() => handleDeleteRow(item.id)}
-          className="w-8 h-8 mt-0.5 rounded-lg flex items-center justify-center mx-auto text-slate-400 hover:text-red-600 hover:bg-red-50 transition-all duration-200"
+          className="w-7 h-7 mt-1 rounded-md flex items-center justify-center mx-auto text-slate-300 hover:text-red-500 hover:bg-red-50/60 transition-all duration-150"
         >
-          <Trash2 size={16} strokeWidth={2} />
+          <Trash2 size={14} strokeWidth={1.5} />
         </button>
       </td>
     </tr>
@@ -301,7 +311,7 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
     setModalOpen(true);
   };
 
-  const handleModalSuccess = (variant: ProductVariant, serials?: string[]) => {
+  const handleModalSuccess = (variant: ProductVariant, quantity: number, serials?: string[]) => {
     if (!activeRowId || !pendingProduct) return;
 
     if (serials && serials.length > 0) {
@@ -325,7 +335,7 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
       // Merge logic
       updatedItems = items.map((item, idx) => {
         if (idx === existingItemIndex) {
-          const newQty = item.qty + ((serials && serials.length > 0) ? serials.length : 1);
+          const newQty = item.qty + quantity;
           const newSerials = serials ? [...(item.serialNumbers || []), ...serials] : item.serialNumbers;
           const merged = {
             ...item,
@@ -354,7 +364,7 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
           code: pendingProduct.product_barcode,
           name: variant.id === "default" ? pendingProduct.product_name : `${pendingProduct.product_name} - ${variant.name}`,
           price: variant.price,
-          qty: (serials && serials.length > 0) ? serials.length : 1,
+          qty: quantity,
           serialNumbers: serials,
           variantId: variant.id === "default" ? null : variant.id,
           batchId: variant.batchId || pendingProduct.batchId,
@@ -407,52 +417,52 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
 
   return (
     <div className="w-full font-sans">
-      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-xl border border-slate-200/60 shadow-[0_1px_3px_rgba(0,0,0,0.04)] overflow-hidden">
 
-        {/* Dashboard Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between px-6 py-4 border-b border-slate-100 bg-white">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center">
-              <Package size={18} strokeWidth={2} className="text-slate-700" />
+        {/* Table Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between px-4 py-3 border-b border-slate-100/60 bg-white">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-slate-50 border border-slate-100/60 flex items-center justify-center">
+              <Package size={15} strokeWidth={1.5} className="text-slate-500" />
             </div>
             <div>
-              <h2 className="text-base text-slate-900 font-semibold leading-tight">Billing Items</h2>
-              <p className="text-[12px] text-slate-500 font-medium mt-0.5">
-                {filledRows} item{filledRows !== 1 ? "s" : ""} • {totalQty} qty total
+              <h2 className="text-[14px] text-slate-700 font-medium leading-tight">Line Items</h2>
+              <p className="text-[11px] text-slate-400 font-normal mt-0.5">
+                {filledRows} item{filledRows !== 1 ? "s" : ""} · {totalQty} units
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 mt-4 sm:mt-0">
+          <div className="flex items-center gap-1.5 mt-3 sm:mt-0">
             <button
               onClick={handleClearAll}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium text-slate-500 hover:text-slate-800 hover:bg-slate-50 transition-all duration-150 active:scale-95"
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[12px] font-normal text-slate-500 hover:text-slate-700 hover:bg-slate-50 transition-all duration-150"
             >
-              <RotateCcw size={14} />
-              Clear All
+              <RotateCcw size={12} />
+              Clear
             </button>
             <button
               onClick={handleAddRow}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 transition-all duration-150 active:scale-95"
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[12px] font-medium text-blue-600 bg-blue-50/60 hover:bg-blue-50 transition-all duration-150"
             >
-              <Plus size={16} />
+              <Plus size={13} />
               Add Row
             </button>
           </div>
         </div>
 
-        {/* Table Area */}
-        <div className="overflow-x-auto pf-scroll">
+        {/* Table */}
+        <div className="overflow-x-auto">
           <table className="min-w-full border-separate border-spacing-0">
             <thead>
               <tr>
-                {["#", "Product Details", "Qty", "Unit Price", "Total", ""].map((h, i) => (
+                {["#", "Product Details", "Qty", "Price", "Total", ""].map((h, i) => (
                   <th
                     key={h + i}
-                    className={`px-5 py-3 text-left text-[11px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-100 bg-slate-50/50 
-                      ${i === 0 ? "hidden sm:table-cell" : ""}
+                    className={`px-3 py-2 text-left text-[10px] font-medium text-slate-400 uppercase tracking-wider border-b border-slate-100/60 bg-slate-50/40
+                      ${i === 0 ? "hidden sm:table-cell pl-4 w-10" : ""}
                       ${i === 2 || i === 3 || i === 4 ? "text-right" : ""} 
-                      ${i === 5 ? "w-14" : ""}`
+                      ${i === 5 ? "w-10" : ""}`
                     }
                   >
                     {h}
@@ -480,27 +490,25 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
           </table>
         </div>
 
-        {/* Footer Area */}
-        <div className="border-t border-slate-100 px-6 py-5 bg-slate-50/50 flex items-center justify-between flex-wrap gap-4">
+        {/* Footer */}
+        <div className="border-t border-slate-100/60 px-4 py-3 bg-slate-50/30 flex items-center justify-between flex-wrap gap-3">
 
-          {/* Shortcuts Panel */}
-          <div className="hidden sm:flex flex-col gap-2">
-            <div className="flex items-center gap-1.5 mb-1 text-slate-400">
-              <Keyboard size={14} />
-              <span className="text-[11px] font-semibold uppercase tracking-wider">Shortcuts</span>
+          {/* Shortcuts */}
+          <div className="hidden sm:flex items-center gap-3">
+            <div className="flex items-center gap-1 text-slate-400 mr-1">
+              <Keyboard size={12} />
+              <span className="text-[9px] font-medium uppercase tracking-wider">Shortcuts</span>
             </div>
-            <div className="flex items-center gap-4">
-              <ShortcutKbd keys={["Alt", "A"]} label="Add Row" />
-              <ShortcutKbd keys={["Alt", "⌫"]} label="Delete Last" />
-            </div>
+            <ShortcutKbd keys={["Alt", "A"]} label="Add" />
+            <ShortcutKbd keys={["Alt", "⌫"]} label="Delete" />
           </div>
 
-          {/* Grand Total Panel */}
-          <div className="flex items-center gap-4 ml-auto bg-white border border-slate-200 shadow-sm rounded-xl py-3 px-5">
-            <span className="text-xs font-stretch-90% text-slate-400 uppercase tracking-widest mt-0.5">Grand Total</span>
-            <div className="flex items-center gap-1 text-blue-500">
-              <IndianRupee size={20} strokeWidth={3} />
-              <span className="text-3xl font-semibold tracking-tight tabular-nums">
+          {/* Grand Total */}
+          <div className="flex items-center gap-3 ml-auto bg-white border border-slate-200/60 shadow-[0_1px_2px_rgba(0,0,0,0.04)] rounded-lg py-2 px-4">
+            <span className="text-[10px] text-slate-400 uppercase tracking-wider font-medium">Total</span>
+            <div className="flex items-center gap-0.5 text-blue-500">
+              <IndianRupee size={16} strokeWidth={2} />
+              <span className="text-xl font-semibold tracking-tight tabular-nums">
                 {grandTotal.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
               </span>
             </div>

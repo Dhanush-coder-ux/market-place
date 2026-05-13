@@ -1,14 +1,13 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import {
   User, Loader2, CheckCircle2, AlertCircle, Wallet,
 } from "lucide-react";
 
 import BillingTable, { createEmptyRow } from "../components/BillingTable";
 import BillingHeader from "../components/BillingHeader";
-import BillingDetailView from "../components/BillingDetailView";
-import Drawer from "@/components/common/Drawer";
 
-import { BillingItem, InvoicePayload, CreateBillingSchema, CustomerData } from "../types";
+import { BillingItem, CreateBillingSchema, CustomerData } from "../types";
+import { useToast } from "@/context/ToastContext";
 import { useApi } from "@/context/ApiContext";
 import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 import { SearchSelect } from "@/components/inputbuilders/SearchSelect";
@@ -19,12 +18,11 @@ const formatINR = (amount: number, decimals = 2) =>
 
 // ─── Billing Page ─────────────────────────────────────────────────────────────
 const Billing = () => {
-  const { postData, getData, loading: isSubmitting } = useApi();
+  const { showToast } = useToast();
+  const { postData, getData, putData, loading: isSubmitting } = useApi();
 
   // ── Table State
   const [items, setItems] = useState<BillingItem[]>([createEmptyRow()]);
-  const [isOpen, setIsOpen] = useState(false);
-  const [pendingInvoice, setPendingInvoice] = useState<InvoicePayload | null>(null);
 
   // ── Customer State
   const [phone, setPhone] = useState("");
@@ -38,10 +36,15 @@ const Billing = () => {
   const [newCustomerName, setNewCustomerName] = useState("");
   const [isCreatingCustomer, setIsCreatingCustomer] = useState(false);
   const [staticCustomers, setStaticCustomers] = useState<CustomerData[]>([]);
+  const [newCreditLimit, setNewCreditLimit] = useState<string>("");
+  const [isUpdatingLimit, setIsUpdatingLimit] = useState(false);
 
   // ── Derived Credit Info
-  const isCreditExceeded = customerData ? customerData.outstanding >= customerData.creditLimit : false;
-  const creditRemaining = customerData ? Math.max(0, customerData.creditLimit - customerData.outstanding) : 0;
+  const currentBillTotal = items.reduce((s, i) => s + (i.tprice || 0), 0);
+  const projectedOutstanding = (customerData?.outstanding || 0) + currentBillTotal;
+  const isCreditExceeded = customerData ? projectedOutstanding > customerData.creditLimit : false;
+  const creditRemaining = customerData ? Math.max(0, customerData.creditLimit - projectedOutstanding) : 0;
+  const creditUsagePercent = customerData?.creditLimit ? Math.min(100, (projectedOutstanding / customerData.creditLimit) * 100) : 0;
 
   // ── Handlers
   const handleItemsChange = useCallback((next: BillingItem[]) => setItems(next), []);
@@ -55,10 +58,26 @@ const Billing = () => {
     }
   }, [wasAutofilled]);
 
+  // ── Prevent Accidental Tab/Browser Close
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      // Only prompt if there are items with content in the bill
+      const hasItems = items.some(i => i.name && i.qty > 0);
+      if (hasItems) {
+        const message = "You have a pending bill. Are you sure you want to leave?";
+        e.preventDefault();
+        e.returnValue = message; // Standard for most browsers
+        return message;          // Extra compatibility for some versions
+      }
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [items]);
+
   const fetchCustomers = useCallback(async (query: string, signal: AbortSignal) => {
     if (!query) return [];
     try {
-      const res = await getData(ENDPOINTS.CUSTOMERS, { search: query }, { signal });
+      const res = await getData(`${ENDPOINTS.CUSTOMERS}/by/shop/${SHOP_ID}`, { search: query }, { signal });
       if (res && res.data) {
         // Map backend customer to CustomerData interface
         return res.data.map((c: any) => ({
@@ -129,22 +148,38 @@ const Billing = () => {
     }
   };
 
-  // ── Invoice ready → open drawer with payload (don't POST yet)
-  const handleInvoiceReady = useCallback((payload: InvoicePayload) => {
-    setPendingInvoice(payload);
-    setIsOpen(true);
-  }, []);
+  const handleUpdateCreditLimit = async () => {
+    if (!customerData || !newCreditLimit) return;
+    try {
+      setIsUpdatingLimit(true);
+      const res = await putData(`${ENDPOINTS.CUSTOMERS}`, {
+        credit_limit: parseFloat(newCreditLimit),
+        id: customerData.id,
+        shop_id: SHOP_ID,
+      });
+
+      if (res) {
+        setCustomerData(prev => prev ? { ...prev, creditLimit: parseFloat(newCreditLimit) } : null);
+        setNewCreditLimit("");
+        showToast("Credit limit updated successfully", "success");
+      }
+    } catch (err) {
+      console.error("Failed to update credit limit:", err);
+      showToast("Failed to update limit", "error");
+    } finally {
+      setIsUpdatingLimit(false);
+    }
+  };
 
   // ── Confirm Order → POST to Billing API
-  const handleConfirmOrder = useCallback(async () => {
-    if (!pendingInvoice) return;
-
-    const filledItems = pendingInvoice.items.filter(i => !!i.name);
+  const handleConfirmOrder = useCallback(async (paymentMode: string, includeGst: boolean, status: string) => {
+    const filledItems = items.filter(i => !!i.name);
+    if (filledItems.length === 0) return;
 
     const payload: CreateBillingSchema = {
       shop_id: SHOP_ID,
-      payment_method: pendingInvoice.paymentMode.toLowerCase(),
-      customer_id: pendingInvoice.customer?.id || "walk-in",
+      payment_method: paymentMode.toLowerCase(),
+      customer_id: customerData?.id || "walk-in",
       products: filledItems.map(i => ({
         id: i.inventoryId || "",
         variant_id: i.variantId || undefined,
@@ -158,15 +193,14 @@ const Billing = () => {
     const res = await postData(ENDPOINTS.BILLING, payload);
     if (res) {
       // Success — reset billing state
-      setIsOpen(false);
-      setPendingInvoice(null);
       setItems([createEmptyRow()]);
       setPhone("");
       setCustomerName("");
       setCustomerData(null);
       setWasAutofilled(false);
+      showToast("Order confirmed successfully", "success");
     }
-  }, [pendingInvoice, postData]);
+  }, [items, customerData, postData, showToast]);
 
   const handleHoldBill = useCallback(() => {
     console.log("[Billing] Bill held:", items);
@@ -181,32 +215,46 @@ const Billing = () => {
     setItems([createEmptyRow()]);
   }, []);
 
+  const isCleanMode = new URLSearchParams(window.location.search).get("mode") === "clean";
+
   return (
-    <div className="flex flex-col lg:h-[calc(100vh-2rem)] gap-4">
+    <div className={`flex flex-col bg-neutral-50/80 overflow-hidden ${isCleanMode ? "h-screen" : "h-[calc(100vh-64px)]"}`}>
 
-      {/* Customer Details Section */}
-      <div className="shrink-0 bg-white rounded-2xl border border-slate-200 p-5 shadow-sm flex flex-col md:flex-row gap-6">
-
-        {/* Left: Inputs */}
-        <div className="flex-1 flex flex-col gap-4 justify-center">
-          <div className="flex items-center justify-between">
-            <h3 className="text-[11px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
-              <User size={15} /> Customer Details
-            </h3>
-            {isLoadingCustomer && <Loader2 size={14} className="text-indigo-400 animate-spin" />}
-            {customerData && !isLoadingCustomer && (
-              <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
-                <CheckCircle2 size={10} /> Verified
-              </span>
-            )}
+      {/* ── Top Bar ─────────────────────────────────────────────────── */}
+      <header className="shrink-0 h-[52px] flex items-center justify-between px-5 border-b border-slate-200/60 bg-white/90 backdrop-blur-sm">
+        <div className="flex items-center gap-3">
+          <div className="w-7 h-7 rounded-lg bg-blue-50 flex items-center justify-center">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="1" width="5" height="5" rx="1.5" fill="#3b82f6" fillOpacity="0.8"/><rect x="8" y="1" width="5" height="5" rx="1.5" fill="#3b82f6" fillOpacity="0.4"/><rect x="1" y="8" width="5" height="5" rx="1.5" fill="#3b82f6" fillOpacity="0.4"/><rect x="8" y="8" width="5" height="5" rx="1.5" fill="#3b82f6" fillOpacity="0.8"/></svg>
           </div>
+          <div>
+            <h1 className="text-[15px] font-semibold text-slate-800 leading-none tracking-[-0.01em]">Point of Sale</h1>
+            <p className="text-[11px] text-slate-400 font-normal mt-0.5">Billing Terminal</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2.5 text-[11px] text-slate-400 font-normal">
+          <span className="px-2.5 py-1 rounded-md bg-slate-50 border border-slate-100">
+            {new Date().toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" })}
+          </span>
+        </div>
+      </header>
 
-          <div className="flex flex-col gap-4">
-            {/* Customer SearchSelect */}
-            <div className="w-full">
+      {/* ── Customer Bar ──────────────────────────────────────────── */}
+      <div className="shrink-0 px-5 py-3 bg-white border-b border-slate-100/80">
+        <div className="flex flex-col md:flex-row gap-3 items-stretch">
+
+          {/* Customer Search */}
+          <div className="flex-1 flex items-center gap-3 min-w-0">
+            <div className="flex items-center gap-2 shrink-0">
+              <div className="w-8 h-8 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center">
+                <User size={14} strokeWidth={1.5} className="text-slate-400" />
+              </div>
+              <div className="hidden sm:block">
+                <p className="text-[11px] font-medium text-slate-400 uppercase tracking-wider leading-none">Customer</p>
+              </div>
+            </div>
+            <div className="flex-1 min-w-0">
               <SearchSelect<CustomerData>
-                label="Search Customer (Name/Phone)"
-                placeholder="Start typing name or phone..."
+                placeholder="Search by name or phone..."
                 fetchOptions={fetchCustomers}
                 options={staticCustomers}
                 labelKey="name"
@@ -214,89 +262,140 @@ const Billing = () => {
                 onChange={handleCustomerChange}
                 value={customerData?.id}
                 allowClear
-                className="h-11"
+                className="h-[38px] shadow-none border-slate-200/80 rounded-lg text-[13px]"
                 onCreateNew={(name) => {
                   setNewCustomerName(name);
                   setIsCustomerModalOpen(true);
                 }}
                 renderOption={(opt) => (
-                  <div className="flex flex-col py-1">
-                    <span className="font-semibold text-slate-800">{opt.name}</span>
-                    <span className="text-[10px] text-slate-400 font-mono">{opt.phone}</span>
+                  <div className="flex flex-col py-0.5">
+                    <span className="text-[13px] font-medium text-slate-700">{opt.name}</span>
+                    <span className="text-[10px] text-slate-400 font-mono tracking-wide">{opt.phone}</span>
                   </div>
                 )}
               />
             </div>
+            {isLoadingCustomer && <Loader2 size={14} className="text-blue-400 animate-spin shrink-0" />}
+            {customerData && !isLoadingCustomer && (
+              <span className="flex items-center gap-1 text-[10px] font-medium text-emerald-600 bg-emerald-50/80 border border-emerald-100 px-2 py-1 rounded-md shrink-0">
+                <CheckCircle2 size={10} /> Linked
+              </span>
+            )}
+          </div>
+
+          {/* Credit Summary – Compact Inline */}
+          <div className="w-full md:w-[300px] shrink-0">
+            {customerData ? (
+              <div className={`h-full px-3.5 py-2.5 rounded-lg border flex flex-col justify-center transition-colors duration-200 ${
+                isCreditExceeded
+                  ? "bg-red-50/40 border-red-200/60"
+                  : "bg-slate-50/60 border-slate-200/60"
+              }`}>
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-[10px] font-medium text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                    <Wallet size={11} className="text-slate-400" /> Credit
+                  </p>
+                  <span className="text-[9px] font-normal text-slate-400 tabular-nums">
+                    {customerData.id.slice(-8)}
+                  </span>
+                </div>
+
+                {/* Progress Bar */}
+                <div className="mb-2">
+                  <div className="h-1.5 rounded-full bg-slate-200/80 overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all duration-500 ease-out ${
+                        isCreditExceeded ? "bg-red-400" : "bg-emerald-400"
+                      }`}
+                      style={{ width: `${creditUsagePercent}%` }}
+                    />
+                  </div>
+                  <div className="flex justify-between mt-1 text-[10px] font-normal text-slate-500">
+                    <span className={currentBillTotal > 0 ? "text-slate-600" : ""}>
+                      ₹{formatINR(projectedOutstanding, 0)}
+                    </span>
+                    <span>Limit: ₹{formatINR(customerData.creditLimit, 0)}</span>
+                  </div>
+                </div>
+
+                {isCreditExceeded ? (
+                  <div className="space-y-1.5">
+                    <div className="flex items-start gap-1.5 text-red-600 bg-red-50 p-1.5 rounded-md">
+                      <AlertCircle size={12} className="mt-0.5 shrink-0" strokeWidth={2} />
+                      <p className="text-[10px] font-medium leading-tight">Limit exceeded. Update below.</p>
+                    </div>
+                    <div className="flex gap-1.5">
+                      <input
+                        type="number"
+                        placeholder="New limit"
+                        value={newCreditLimit}
+                        onChange={e => setNewCreditLimit(e.target.value)}
+                        className="flex-1 px-2 py-1 text-[11px] border border-red-200/80 rounded-md outline-none focus:border-red-300 bg-white transition-colors"
+                      />
+                      <button
+                        onClick={handleUpdateCreditLimit}
+                        disabled={isUpdatingLimit || !newCreditLimit}
+                        className="px-2.5 py-1 bg-red-500 text-white text-[10px] font-medium rounded-md hover:bg-red-600 transition-colors disabled:opacity-40"
+                      >
+                        {isUpdatingLimit ? "..." : "Update"}
+                      </button>
+                    </div>
+                    <p className="text-[9px] text-slate-400 font-normal text-center">Collect cash first</p>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between text-[11px] pt-1.5 border-t border-slate-200/40">
+                    <span className="text-slate-500 font-normal">Remaining</span>
+                    <span className="font-medium tabular-nums text-emerald-600">₹{formatINR(creditRemaining, 0)}</span>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="h-full rounded-lg border border-dashed border-slate-200 bg-slate-50/40 flex items-center justify-center px-4 py-3">
+                <p className="text-[11px] text-slate-400 font-normal text-center">Select a customer to view credit</p>
+              </div>
+            )}
           </div>
 
         </div>
-
-        {/* Right: Credit Summary */}
-        <div className="w-full md:w-[320px] shrink-0">
-          {customerData ? (
-            <div className={`h-full p-4 rounded-xl border flex flex-col justify-center ${isCreditExceeded ? "bg-red-50/60 border-red-200" : "bg-slate-50 border-slate-200"
-              }`}>
-              <div className="flex items-center justify-between mb-3">
-                <p className="text-[11px] font-bold text-slate-600 uppercase tracking-wider flex items-center gap-1.5">
-                  <Wallet size={12} className="text-slate-400" /> Credit Summary
-                </p>
-                <span className="text-[10px] font-bold text-slate-400">#{customerData.id}</span>
-              </div>
-
-              <div className="mb-3">
-                <div className="h-1.5 rounded-full bg-slate-200 overflow-hidden">
-                  <div
-                    className={`h-full rounded-full transition-all duration-500 ${isCreditExceeded ? "bg-red-500" : "bg-emerald-500"}`}
-                    style={{ width: `${Math.min(100, (customerData.outstanding / customerData.creditLimit) * 100)}%` }}
-                  />
-                </div>
-                <div className="flex justify-between mt-1.5 text-[10px] font-semibold text-slate-500">
-                  <span>Out: ₹{formatINR(customerData.outstanding, 0)}</span>
-                  <span>Limit: ₹{formatINR(customerData.creditLimit, 0)}</span>
-                </div>
-              </div>
-
-              {isCreditExceeded ? (
-                <div className="flex items-start gap-1.5 text-red-700 bg-red-100/60 p-2 rounded-lg">
-                  <AlertCircle size={14} className="mt-0.5 shrink-0" strokeWidth={2.5} />
-                  <p className="text-[10px] font-bold leading-tight">Credit limit exceeded. Clear dues to allow credit.</p>
-                </div>
-              ) : (
-                <div className="flex items-center justify-between text-xs pt-2 border-t border-slate-200/60">
-                  <span className="text-slate-600 font-bold">Remaining Credit</span>
-                  <span className="font-black tabular-nums text-emerald-600">₹{formatINR(creditRemaining, 0)}</span>
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="h-full rounded-xl border border-dashed border-slate-300 bg-slate-50 flex items-center justify-center p-4">
-              <p className="text-xs text-slate-400 font-medium text-center">Enter a valid phone number to view credit limits.</p>
-            </div>
-          )}
-        </div>
       </div>
 
-      {/* Main Split Content Area */}
-      <div className="flex flex-col lg:flex-row flex-1 lg:overflow-hidden gap-6 pb-4">
+      {/* ── Main Content ──────────────────────────────────────────── */}
+      <div className="flex flex-1 overflow-hidden">
 
-        {/* Left: Line-item table */}
-        <div className="flex-1 overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-sm">
-          <BillingTable items={items} onItemsChange={handleItemsChange} />
+        {/* Left: Billing Table */}
+        <div className="flex-1 overflow-y-auto">
+          <div className="p-4 pb-6">
+            <BillingTable items={items} onItemsChange={handleItemsChange} />
+          </div>
         </div>
 
-        {/* Right: Invoice Summary & Payment */}
-        <div className="w-full lg:w-[380px] shrink-0 lg:h-full overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+        {/* Right: Payment Summary Sidebar */}
+        <aside className="hidden lg:flex w-[340px] shrink-0 flex-col border-l border-slate-200/60 bg-white">
           <BillingHeader
             items={items}
             customerData={customerData}
             customerName={customerName}
             phone={phone}
-            onInvoiceReady={handleInvoiceReady}
-            setIsOpen={setIsOpen}
+            onConfirmOrder={handleConfirmOrder}
+            isSubmitting={isSubmitting}
             onHoldBill={handleHoldBill}
             onClearBill={handleClearBill}
           />
-        </div>
+        </aside>
+      </div>
+
+      {/* ── Mobile Payment Bar (lg:hidden) ────────────────────── */}
+      <div className="lg:hidden shrink-0 border-t border-slate-200/60 bg-white px-4 py-3">
+        <BillingHeader
+          items={items}
+          customerData={customerData}
+          customerName={customerName}
+          phone={phone}
+          onConfirmOrder={handleConfirmOrder}
+          isSubmitting={isSubmitting}
+          onHoldBill={handleHoldBill}
+          onClearBill={handleClearBill}
+        />
       </div>
 
       {/* Customer Creation Modal */}
@@ -307,15 +406,6 @@ const Billing = () => {
         initialName={newCustomerName}
         isSubmitting={isCreatingCustomer}
       />
-
-      {/* Invoice Review Drawer */}
-      <Drawer isOpen={isOpen} title="Review & Confirm Order" onClose={() => setIsOpen(false)}>
-        <BillingDetailView
-          invoice={pendingInvoice}
-          isSubmitting={isSubmitting}
-          onConfirm={handleConfirmOrder}
-        />
-      </Drawer>
     </div>
   );
 };

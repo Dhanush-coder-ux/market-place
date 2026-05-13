@@ -140,17 +140,16 @@ const Supplier = () => {
         />
       </div>
 
-      {/* Filter & Search Section */}
-      <div className="bg-white p-4 rounded-[1.5rem] border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-4">
+      <div className="bg-white p-4 rounded-[2rem] border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3 flex-1">
           <div className="relative w-full sm:w-80">
             <Input
               leftIcon={<Search size={14} className='text-gray-400' />}
               type="text"
-              placeholder="Filter by name..."
+              placeholder="Search supplier..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="h-10 text-sm"
+              className="h-10 text-sm rounded-xl"
             />
           </div>
           <ColumnPicker
@@ -159,20 +158,6 @@ const Supplier = () => {
             onApply={setSelectedKeys}
             storageKey="supplier_table_columns"
           />
-        </div>
-
-        <div className="flex items-center gap-3">
-          <Input
-            leftIcon={<Search size={14} className='text-gray-400' />}
-            type="text"
-            placeholder="Filter by name..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="h-11 text-sm w-48"
-          />
-          <button className="p-2.5 rounded-xl bg-slate-50 text-slate-400 border border-slate-100 md:hover:bg-slate-100 md:transition-all shadow-sm">
-            <Filter size={18} />
-          </button>
         </div>
       </div>
 
@@ -230,7 +215,12 @@ const Supplier = () => {
                       </td>
 
                       {selectedKeys.map(key => {
-                        let val: any = sup[key] ?? sup.contact_info?.[key] ?? sup.datas?.[key] ?? "—";
+                        let val: any = "—";
+                        if (key === "contact_person") {
+                          val = sup.contact_info?.name || "—";
+                        } else {
+                          val = sup[key] ?? sup.contact_info?.[key] ?? sup.datas?.[key] ?? "—";
+                        }
 
                         // Handle nested address object display
                         if (key === 'address' && typeof val === 'object' && val !== null) {

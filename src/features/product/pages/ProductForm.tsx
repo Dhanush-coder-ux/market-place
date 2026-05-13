@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import {
   Package, BarChart2, Save, Hash,
   Cpu, AlertCircle,
-  Layers, Zap, Bookmark, Plus
+  Layers, Zap, Bookmark, Plus, Info
 } from "lucide-react";
 import { GradientButton } from "@/components/ui/GradientButton";
 import { useApi } from "@/context/ApiContext";
@@ -163,12 +163,23 @@ const STYLES = `
   @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity: 0.5; } }
 `;
 
-interface LabelProps { text: string; required?: boolean; hint?: string; }
-const Label: React.FC<LabelProps> = ({ text, required, hint }) => (
-  <label className="block text-[11px] font-semibold uppercase tracking-widest text-slate-500 mb-1.5">
-    {text}{required && <span className="text-red-400 ml-0.5">*</span>}
-    {hint && <span className="ml-1.5 normal-case font-normal text-slate-400">({hint})</span>}
-  </label>
+interface LabelProps { text: string; required?: boolean; hint?: string; tooltip?: string; }
+const Label: React.FC<LabelProps> = ({ text, required, hint, tooltip }) => (
+  <div className="flex items-center gap-1.5 mb-1.5">
+    <label className="block text-[11px] font-semibold uppercase tracking-widest text-slate-500">
+      {text}{required && <span className="text-red-400 ml-0.5">*</span>}
+      {hint && <span className="ml-1.5 normal-case font-normal text-slate-400">({hint})</span>}
+    </label>
+    {tooltip && (
+      <div className="group relative flex items-center">
+        <Info size={11} className="text-slate-400 cursor-help hover:text-blue-500 transition-colors" />
+        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2 bg-slate-800 text-white text-[10px] rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-xl normal-case font-medium tracking-normal">
+          {tooltip}
+          <div className="absolute top-full left-1/2 -translate-x-1/2 border-8 border-transparent border-t-slate-800" />
+        </div>
+      </div>
+    )}
+  </div>
 );
 
 interface InputFieldProps extends React.InputHTMLAttributes<HTMLInputElement> {
@@ -177,10 +188,11 @@ interface InputFieldProps extends React.InputHTMLAttributes<HTMLInputElement> {
   hint?: string;
   leftEl?: React.ReactNode;
   error?: string;
+  tooltip?: string;
 }
-const InputField: React.FC<InputFieldProps> = ({ label, required, hint, leftEl, error, className = "", ...rest }) => (
+const InputField: React.FC<InputFieldProps> = ({ label, required, hint, leftEl, error, tooltip, className = "", ...rest }) => (
   <div>
-    {label && <Label text={label} required={required} hint={hint} />}
+    {label && <Label text={label} required={required} hint={hint} tooltip={tooltip} />}
     <div className="relative">
       {leftEl && <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">{leftEl}</span>}
       <input
@@ -195,11 +207,12 @@ const InputField: React.FC<InputFieldProps> = ({ label, required, hint, leftEl, 
 interface SelectFieldProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
   label?: string;
   required?: boolean;
+  tooltip?: string;
   options: { value: string; label: string }[];
 }
-const SelectField: React.FC<SelectFieldProps> = ({ label, required, options, className = "", ...rest }) => (
+const SelectField: React.FC<SelectFieldProps> = ({ label, required, tooltip, options, className = "", ...rest }) => (
   <div>
-    {label && <Label text={label} required={required} />}
+    {label && <Label text={label} required={required} tooltip={tooltip} />}
     <select
       {...rest}
       className={`pf-select pf-input w-full px-3 py-2.5 pr-8 text-sm border border-slate-200 rounded-lg bg-white text-slate-800 ${className}`}
@@ -575,25 +588,30 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                 </div>
                 <div className="p-6 space-y-5">
                   <InputField label="Product Name" name="name" required
+                    tooltip="Enter the full name of the product as it should appear in invoices and reports."
                     value={form.name} onChange={handleChange}
                     placeholder="e.g. Apple iPhone 15 Pro Max"
                   />
 
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <InputField label="Barcode / SKU" name="barcode" required
+                    <InputField label="Barcode" name="barcode" required
+                      tooltip="Unique identification code or Barcode for inventory identification."
                       value={form.barcode} onChange={handleChange}
-                      placeholder="SKU..."
+                      placeholder="Barcode..."
                     />
                     <InputField label="Brand" name="brand"
+                      tooltip="The manufacturer or brand name of the product."
                       value={form.brand} onChange={handleChange}
                       placeholder="e.g. Apple"
                     />
                     <SelectField label="Category" required
+                      tooltip="Organize your products into categories for easier filtering."
                       value={form.category}
                       onChange={e => handleCategoryChange(e.target.value)}
                       options={CATEGORIES.map(c => ({ value: c, label: c }))}
                     />
                     <SelectField label="Unit" name="unit" required
+                      tooltip="Base unit of measurement for this product."
                       value={form.unit} onChange={handleChange}
                       options={UNITS.map(u => ({ value: u, label: u }))}
                     />
@@ -613,8 +631,23 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
 
                   <div className="pt-2 border-t border-slate-50 mt-2">
                     <SelectField label="GST Rate" name="gst" required
+                      tooltip="Applicable GST tax rate for this product."
                       value={form.gst} onChange={handleChange}
                       options={GST_RATES.map(r => ({ value: r, label: r }))}
+                    />
+                  </div>
+                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <InputField label="Buy Price" name="cost_price" required
+                      tooltip="The price at which you purchase one unit of this product."
+                      value={form.cost_price} onChange={handleChange}
+                      placeholder="0.00"
+                      leftEl="₹"
+                    />
+                    <InputField label="Selling Price" name="selling_price" required
+                      tooltip="The price at which you sell one unit of this product."
+                      value={form.selling_price} onChange={handleChange}
+                      placeholder="0.00"
+                      leftEl="₹"
                     />
                   </div>
                 </div>
@@ -707,7 +740,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                 </div>
                 <div className="divide-y divide-slate-50 px-6">
                   {[
-                    { label: "SKU", value: form.barcode || "-" },
+                    { label: "Barcode", value: form.barcode || "-" },
                     { label: "Variants", value: form.has_variants ? `${combinations.length} combos` : "None" },
                   ].map(row => (
                     <div key={row.label} className="flex items-center justify-between py-2.5">

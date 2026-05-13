@@ -1,19 +1,18 @@
 import React, { useId } from "react";
-
-// Update your InputProps in ../types to include: 
-// label?: string;
-// required?: boolean;
+import { Info } from "lucide-react";
 
 interface CustomInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label?: string;
   required?: boolean;
   leftIcon?: React.ReactNode;
+  tooltip?: string;
 }
 
 const Input: React.FC<CustomInputProps> = ({
   label,
   required,
   leftIcon,
+  tooltip,
   className = "",
   id: manualId,
   ...props
@@ -24,13 +23,24 @@ const Input: React.FC<CustomInputProps> = ({
   return (
     <div className="flex flex-col gap-1.5 w-full">
       {label && (
-        <label
-          htmlFor={id}
-          className="text-xs font-semibold text-slate-600 ml-0.5"
-        >
-          {label}
-          {required && <span className="text-red-500 ml-1">*</span>}
-        </label>
+        <div className="flex items-center gap-1.5 ml-0.5">
+          <label
+            htmlFor={id}
+            className="text-xs font-semibold text-slate-600"
+          >
+            {label}
+            {required && <span className="text-red-500 ml-1">*</span>}
+          </label>
+          {tooltip && (
+            <div className="group relative">
+              <Info size={12} className="text-slate-400 cursor-help hover:text-blue-500 transition-colors" />
+              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2 bg-slate-800 text-white text-[10px] rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-xl">
+                {tooltip}
+                <div className="absolute top-full left-1/2 -translate-x-1/2 border-8 border-transparent border-t-slate-800" />
+              </div>
+            </div>
+          )}
+        </div>
       )}
 
       <div className="relative">

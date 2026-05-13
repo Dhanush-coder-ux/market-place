@@ -22,6 +22,7 @@ import type { PurchaseRecord } from "@/types/api";
 export interface ProductItem {
   name: string;
   quantity: number;
+  stocks?: number;
   stocks_before?: number;
   buy_price?: number;
   sell_price?: number;
@@ -106,7 +107,8 @@ function toDisplayData(p: PurchaseRecord): DirectPurchaseData {
     vendor: String(vendorName),
     products: (products ?? []).map((pr: any) => ({
       name: String(pr.name ?? pr.product_name ?? "Item"),
-      quantity: Number(pr.quantity ?? pr.qty ?? pr.stocks ?? 1),
+      quantity: Number(pr.received_stocks ?? pr.received_qty ?? pr.quantity ?? pr.qty ?? 1),
+      stocks: Number(pr.stocks ?? 0),
       stocks_before: pr.stocks_before,
       buy_price: pr.buy_price,
       sell_price: pr.sell_price,
@@ -183,12 +185,14 @@ const STYLES = `
 `;
 
 /* ================= SHARED HELPERS ================= */
-const fmt = (n: number) => `$${n.toLocaleString()}`;
+const fmt = (n: number) => `₹${n.toLocaleString()}`;
 
-const ProductPill = ({ name, qty }: { name: string; qty: number }) => (
+const ProductPill = ({ name, qty, stocks }: { name: string; qty: number; stocks?: number }) => (
   <span className="inline-flex items-center gap-1.5 text-xs font-medium text-zinc-600 bg-zinc-50 border border-zinc-100 px-2.5 py-1 rounded-full whitespace-nowrap">
     {name}
-    <span className="text-zinc-400 font-semibold tabular-nums">×{qty}</span>
+    <span className="text-zinc-400 font-semibold tabular-nums">
+      Received Stock: {qty} {stocks !== undefined && <span className="ml-1 text-blue-500 font-bold">Ordered Stock: {stocks}</span>}
+    </span>
   </span>
 );
 
@@ -261,11 +265,18 @@ const GridCard = ({ po, onClick }: { po: DirectPurchaseData; onClick: () => void
         </div>
         <div className="po-scrollbar max-h-[7.5rem] overflow-y-auto space-y-1.5 pr-1">
           {po.products.map((p, idx) => (
-            <div key={idx} className="flex items-center justify-between py-0.5 text-sm">
+            <div key={idx} className="flex items-center justify-between py-1 text-sm border-b border-zinc-50 last:border-0">
               <span className="text-zinc-600 truncate pr-3 group-hover:text-zinc-800 transition-colors">{p.name}</span>
-              <span className="shrink-0 text-xs font-semibold text-zinc-500 tabular-nums bg-zinc-50 border border-zinc-100 px-2 py-0.5 rounded-md">
-                ×{p.quantity}
-              </span>
+              <div className="shrink-0 flex flex-col items-end gap-0.5">
+                <span className="text-[10px] font-bold text-zinc-500 bg-zinc-50 border border-zinc-100 px-1.5 py-0.5 rounded">
+                  Received Stock: {p.quantity}
+                </span>
+                {p.stocks !== undefined && (
+                  <span className="text-[9px] font-bold text-blue-600 bg-blue-50 border border-blue-100 px-1.5 py-0.5 rounded">
+                    Ordered Stock: {p.stocks}
+                  </span>
+                )}
+              </div>
             </div>
           ))}
         </div>
@@ -354,7 +365,7 @@ const VerticalTable = ({ data, onClick }: { data: DirectPurchaseData[]; onClick:
                   <td className="px-5 py-4 align-middle hidden md:table-cell max-w-[280px]">
                     <div className="flex flex-wrap gap-1.5">
                       {po.products.slice(0, 2).map((p, idx) => (
-                        <ProductPill key={idx} name={p.name} qty={p.quantity} />
+                        <ProductPill key={idx} name={p.name} qty={p.quantity} stocks={p.stocks} />
                       ))}
                       {po.products.length > 2 && (
                         <span className="inline-flex items-center text-xs font-medium text-zinc-500 bg-zinc-100/80 px-2.5 py-1 rounded-full whitespace-nowrap">
@@ -431,7 +442,7 @@ const PurchaseHistory = () => {
   const { getData } = useApi();
   const [allPurchases, setAllPurchases] = useState<DirectPurchaseData[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [viewMode, setViewMode] = useState<ViewMode>("grid");
+  const [viewMode, setViewMode] = useState<ViewMode>("vertical");
   const [selectedPO, setSelectedPO] = useState<DirectPurchaseData | null>(null);
 
   useEffect(() => {
@@ -537,7 +548,7 @@ const PurchaseHistory = () => {
               </div>
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-1">Total Cost</p>
-                <p className="text-lg font-bold text-blue-600">${selectedPO.total_cost.toLocaleString()}</p>
+                <p className="text-lg font-bold text-blue-600">₹{selectedPO.total_cost.toLocaleString()}</p>
               </div>
             </div>
 
@@ -545,11 +556,11 @@ const PurchaseHistory = () => {
             <div className="grid grid-cols-2 gap-4">
                <div className="p-3 bg-zinc-50 rounded-lg border border-zinc-100">
                   <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-1">Transport Charges</p>
-                  <p className="text-sm font-semibold text-zinc-800">${selectedPO.charges?.transport.toLocaleString()}</p>
+                  <p className="text-sm font-semibold text-zinc-800">₹{selectedPO.charges?.transport.toLocaleString()}</p>
                </div>
                <div className="p-3 bg-zinc-50 rounded-lg border border-zinc-100">
                   <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-1">Other Charges</p>
-                  <p className="text-sm font-semibold text-zinc-800">${selectedPO.charges?.other.toLocaleString()}</p>
+                  <p className="text-sm font-semibold text-zinc-800">₹{selectedPO.charges?.other.toLocaleString()}</p>
                </div>
             </div>
 
@@ -598,7 +609,7 @@ const PurchaseHistory = () => {
                           </div>
                           <div className="w-px h-6 bg-zinc-200" />
                           <div className="flex flex-col">
-                            <span className="text-[8px] font-black text-blue-400 uppercase tracking-widest">Purchased</span>
+                            <span className="text-[8px] font-black text-blue-400 uppercase tracking-widest">Received Stock</span>
                             <span className="text-xs font-bold text-blue-600">+{product.quantity}</span>
                           </div>
                           <div className="w-px h-6 bg-zinc-200" />

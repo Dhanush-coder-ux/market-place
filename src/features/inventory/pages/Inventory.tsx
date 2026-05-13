@@ -133,7 +133,7 @@ const ProductRow = React.memo(({
   toggleExpand: (id: string) => void;
 }) => {
   const datas = item.datas || {};
-  
+
   const combinations = useMemo(() => {
     const raw = parseData(item.variants || datas.combinations || datas.variants);
     return raw.filter((v: any) => v && v.id !== null);
@@ -160,7 +160,7 @@ const ProductRow = React.memo(({
   const stockNumber = Number(item.stocks || 0);
   const reorderPoint = Number((item as any).reorder_point ?? datas.reorder_point ?? 0);
   const status = getStockStatus(stockNumber, reorderPoint);
-  
+
   const navigate = useNavigate();
 
   const { totalSerials, totalBatches } = useMemo(() => {
@@ -217,7 +217,7 @@ const ProductRow = React.memo(({
           {isExpanded && (
             <div className="absolute top-[50%] bottom-0 left-[27px] w-[1.5px] bg-blue-500/30 z-10" />
           )}
-          
+
           {isExpandable ? (
             <div className={`w-7 h-7 mx-auto rounded-md flex items-center justify-center md:transition-all shadow-sm ${isExpanded ? "bg-blue-600 text-white shadow-blue-500/20" : "bg-white border border-slate-200 text-slate-500 md:group-hover:bg-slate-50"}`}>
               {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
@@ -253,7 +253,7 @@ const ProductRow = React.memo(({
               </div>
               <div className="flex items-center gap-2 sm:gap-3 text-[11px] sm:text-[12px] text-slate-500 font-medium flex-wrap">
                 <span className="font-mono text-slate-500 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-100">
-                  {item.barcode || "NO-SKU"}
+                  {item.barcode || "NO-BARCODE"}
                 </span>
                 <span className="text-slate-300 hidden sm:inline">•</span>
                 <span className="text-slate-700">{datas.brand || item.brand || "Generic"}</span>
@@ -299,7 +299,7 @@ const ProductRow = React.memo(({
           <span className="text-[14px] font-black text-slate-800 tabular-nums">{stockNumber}</span>
         </td>
         <td className="px-6 py-4 text-center">
-           <span className="text-[12px] font-bold text-slate-400 bg-slate-50 px-2 py-1 rounded border border-slate-100">{reorderPoint !== undefined && reorderPoint !== null ? reorderPoint : "—"}</span>
+          <span className="text-[12px] font-bold text-slate-400 bg-slate-50 px-2 py-1 rounded border border-slate-100">{reorderPoint !== undefined && reorderPoint !== null ? reorderPoint : "—"}</span>
         </td>
         <td className="px-6 py-4 text-right">
           <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold border shadow-sm transition-all ${status.color}`}>
@@ -331,14 +331,14 @@ const ProductRow = React.memo(({
           <td colSpan={8} className="px-0 py-0 relative">
             {/* Vertical Route Indicator Line */}
             <div className="absolute top-0 bottom-0 left-[27px] w-[1.5px] bg-blue-500/30 z-10" />
-            
+
             <div className="md:pl-[84px] pl-10 pr-6 py-6 space-y-6">
               {/* Product Overview (Description & Units) */}
               {(datas.description || item.description || datas.unit) && (
                 <div className="bg-white rounded-xl border border-slate-100 p-4 shadow-sm relative">
-                   {/* Horizontal connecting line */}
+                  {/* Horizontal connecting line */}
                   <div className="absolute top-8 left-[-18px] md:left-[-57px] w-4 md:w-[57px] h-[1.5px] bg-blue-500/30" />
-                  
+
                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2">
                     <Info size={12} className="text-blue-400" /> Product Overview
                   </p>
@@ -394,9 +394,9 @@ const ProductRow = React.memo(({
 
               {/* Main Content Areas */}
               <div className="animate-in fade-in slide-in-from-top-4 duration-500 relative">
-                 {/* Horizontal connecting line for tree components */}
-                 <div className="absolute top-8 left-[-18px] md:left-[-57px] w-4 md:w-[57px] h-[1.5px] bg-blue-500/30" />
-                 
+                {/* Horizontal connecting line for tree components */}
+                <div className="absolute top-8 left-[-18px] md:left-[-57px] w-4 md:w-[57px] h-[1.5px] bg-blue-500/30" />
+
                 {hasVariants && (
                   <VariantRows
                     combinations={combinations}
@@ -426,7 +426,7 @@ const InventoryPage = () => {
   const [refreshKey] = useState(0);
 
   useEffect(() => {
-    getData(`${ENDPOINTS.INVENTORIES}/by/shop/${SHOP_ID}`, undefined, "inventory-list").then((res: any) => {
+    getData(`${ENDPOINTS.INVENTORIES}/by/shop/${SHOP_ID}`, undefined, { cacheKey: "inventory-list" }).then((res: any) => {
       if (res && res.data) {
         setInventory(res.data);
       }
@@ -497,7 +497,7 @@ const InventoryPage = () => {
         />
         <StatCard
           icon={Hash}
-          label="Total SKU Count"
+          label="Total Barcode Count"
           value={inventory.reduce((acc, curr) => acc + (curr.variants?.length || 1), 0).toString()}
           subValue="Unique Variants"
           iconBg="bg-violet-50" iconColor="text-violet-600"
@@ -505,26 +505,26 @@ const InventoryPage = () => {
         />
       </div>
       {/* Toolbar */}
-            <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex flex-wrap items-center justify-between">
-              <div className="flex items-center gap-3 flex-1 min-w-[300px]">
-                <div className="relative flex-1 max-w-md">
-                  <Input
-                    leftIcon={<Search size={16} className="text-slate-400" />}
-                    type="text"
-                    placeholder="Search products by name, SKU or category..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="h-10 text-sm rounded-lg border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
-                  />
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <button className="p-2.5 rounded-lg bg-white text-slate-500 border border-slate-200 md:hover:bg-slate-50 md:transition-all shadow-sm">
-                  <Filter size={16} />
-                </button>
-                
-              </div>
-            </div>
+      <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex flex-wrap items-center justify-between">
+        <div className="flex items-center gap-3 flex-1 min-w-[300px]">
+          <div className="relative flex-1 max-w-md">
+            <Input
+              leftIcon={<Search size={16} className="text-slate-400" />}
+              type="text"
+              placeholder="Search products by name, Barcode or category..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="h-10 text-sm rounded-lg border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
+            />
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          <button className="p-2.5 rounded-lg bg-white text-slate-500 border border-slate-200 md:hover:bg-slate-50 md:transition-all shadow-sm">
+            <Filter size={16} />
+          </button>
+
+        </div>
+      </div>
       {/* Error State */}
       {error && (
         <div className="flex items-center justify-between p-5 bg-rose-50 border border-rose-100 rounded-[1.5rem] text-rose-700 text-xs font-black uppercase tracking-widest shadow-sm animate-in fade-in slide-in-from-top-4">
@@ -541,7 +541,7 @@ const InventoryPage = () => {
 
       {/* Main Table Card - Modern & Refined */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-        
+
 
 
         {loading ? (
@@ -563,7 +563,7 @@ const InventoryPage = () => {
                   <th className="px-6 py-6 min-w-[300px]">Product Identity</th>
                   <th className="px-6 py-6">Classification</th>
                   <th className="px-6 py-6">Serial Tracking</th>
-                  <th className="px-6 py-6 text-right">Costing</th>
+                  <th className="px-6 py-6 text-right">Buy Price</th>
                   <th className="px-6 py-6 text-right">Selling</th>
                   <th className="px-6 py-6 text-right">Stock</th>
                   <th className="px-6 py-6 text-center">Reorder Pt</th>

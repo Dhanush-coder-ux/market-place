@@ -63,7 +63,7 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
           availableSerials: product.availableSerials
         });
       }
-      setSelectedSerials(initialSerials || []);
+      setSelectedSerials(Array.isArray(initialSerials) ? initialSerials : []);
       setQuantity(initialQuantity || 1);
       
       // If editing, skip to the relevant step
@@ -83,7 +83,9 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
     if (!product) return [];
     const raw = selectedVariant?.availableSerials || product.availableSerials || [];
     // Filter out serials that are already used elsewhere, BUT keep those that were initially selected for THIS item (in case of editing)
-    return raw.filter(s => !excludedSerials.includes(s) || initialSerials?.includes(s));
+    const initialS = Array.isArray(initialSerials) ? initialSerials : [];
+    const excludedS = Array.isArray(excludedSerials) ? excludedSerials : [];
+    return raw.filter(s => !excludedS.includes(s) || initialS.includes(s));
   }, [selectedVariant, product?.availableSerials, excludedSerials, initialSerials]);
 
   if (!isOpen || !product) return null;
@@ -95,18 +97,19 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
   })();
 
   const toggleSerial = (s: string) => {
-    const isInitial = initialSerials?.includes(s);
+    const isInitial = Array.isArray(initialSerials) && initialSerials.includes(s);
     
     // If increasing: lock initial ones
-    if (initialSerials && quantity > initialSerials.length && isInitial) return;
+    if (Array.isArray(initialSerials) && quantity > initialSerials.length && isInitial) return;
     
     // If decreasing: only allow toggling initial ones
-    if (initialSerials && quantity < initialSerials.length && !isInitial) return;
+    if (Array.isArray(initialSerials) && quantity < initialSerials.length && !isInitial) return;
 
     setSelectedSerials(prev => {
-      if (prev.includes(s)) return prev.filter(x => x !== s);
-      if (prev.length < quantity) return [...prev, s];
-      return prev;
+      const current = Array.isArray(prev) ? prev : [];
+      if (current.includes(s)) return current.filter(x => x !== s);
+      if (current.length < quantity) return [...current, s];
+      return current;
     });
   };
 
@@ -231,8 +234,9 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
                       onChange={(e) => {
                         const val = Math.max(1, Number(e.target.value));
                         setQuantity(val);
-                        if (selectedSerials.length > val) {
-                          setSelectedSerials(prev => prev.slice(0, val));
+                        const currentSerials = Array.isArray(selectedSerials) ? selectedSerials : [];
+                        if (currentSerials.length > val) {
+                          setSelectedSerials(currentSerials.slice(0, val));
                         }
                       }}
                       className="w-full bg-transparent text-xl font-bold text-slate-800 focus:outline-none"
@@ -245,11 +249,11 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
                   </div>
                 </div>
 
-                {selectedSerials.length > 0 && (
+                {Array.isArray(selectedSerials) && selectedSerials.length > 0 && (
                   <div className="flex flex-wrap gap-1.5 p-3 bg-blue-50/30 rounded-2xl border border-blue-100/50">
                     {selectedSerials.map(s => {
-                      const isInitial = initialSerials?.includes(s);
-                      const isLocked = initialSerials && quantity > initialSerials.length && isInitial;
+                      const isInitial = Array.isArray(initialSerials) && initialSerials.includes(s);
+                      const isLocked = Array.isArray(initialSerials) && quantity > initialSerials.length && isInitial;
 
                       return (
                         <span key={s} 
@@ -298,8 +302,8 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
                     {availableSerials
                       .filter(s => s.toLowerCase().includes(serialSearch.toLowerCase()))
                       .map((s) => {
-                      const isSelected = selectedSerials.includes(s);
-                      const isInitial = initialSerials?.includes(s);
+                      const isSelected = Array.isArray(selectedSerials) && selectedSerials.includes(s);
+                      const isInitial = Array.isArray(initialSerials) && initialSerials.includes(s);
                       
                       const isDisabled = (() => {
                         // Basic: reached quantity limit

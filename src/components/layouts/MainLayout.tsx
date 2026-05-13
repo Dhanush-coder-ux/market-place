@@ -235,24 +235,30 @@ const MainLayout = () => {
     location.pathname === "/digital-store" ||
     location.pathname === "/digital-store/profile" ||
     location.pathname === "/";
+  
+  const isBillingPage = location.pathname === "/billing";
+  const isCleanMode = isBillingPage && new URLSearchParams(location.search).get("mode") === "clean";
+  const hideNav = isCleanMode;
 
   // 3. Extract the current title info based on the URL
   const { title, subtitle, icon } = getPageHeaderInfo(location.pathname);
 
   return (
     <div className="h-screen w-full flex flex-col overflow-hidden bg-slate-50">
-      <Navbar />
+      {!hideNav && <Navbar />}
 
       <div className="flex flex-1 overflow-hidden">
         {/* Sidebar — hidden on mobile, visible on md+ */}
-        <div className="hidden md:flex">
-          <Sidebar links={sidebarLinks} />
-        </div>
+        {!hideNav && (
+          <div className="hidden md:flex">
+            <Sidebar links={sidebarLinks} />
+          </div>
+        )}
 
         <main className="flex-1 flex flex-col min-w-0 relative overflow-hidden">
-          <div className={`flex-1 overflow-y-auto custom-scrollbar mobile-scroll relative ${isStorePage ? "p-0 pb-20 md:pb-0" : "p-2 md:p-3 lg:p-4 pb-36 md:pb-0"} ${!bottomActions && "pb-20 md:pb-0"}`}>
+          <div className={`flex-1 overflow-y-auto custom-scrollbar mobile-scroll relative ${hideNav ? "p-0" : isStorePage ? "p-0 pb-20 md:pb-0" : "p-2 md:p-3 lg:p-4 pb-36 md:pb-0"} ${!bottomActions && "pb-20 md:pb-0"}`}>
 
-            {!isStorePage && (
+            {!isStorePage && !hideNav && (
               <div className="mb-2 sm:mb-4">
                 <Breadcrumb />
 
@@ -284,7 +290,7 @@ const MainLayout = () => {
       </div>
 
       {/* Mobile Bottom Navigation Bar */}
-      <MobileBottomBar />
+      {!hideNav && <MobileBottomBar />}
     </div>
   );
 };

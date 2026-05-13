@@ -425,6 +425,7 @@ const ProductDetail = () => {
                 displayType: isInc ? 'Adjustment (In)' : 'Adjustment (Out)',
                 isInc,
                 stocks: prod.stocks ?? 0,
+                receivedStocks: prod.received_stocks ?? prod.stocks ?? 0,
                 stocksBefore: prod.stocks_before ?? null,
                 source: 'adjustment' as const,
               };
@@ -462,6 +463,7 @@ const ProductDetail = () => {
                 displayType: pType,
                 isInc: true,
                 stocks: prod.stocks ?? 0,
+                receivedStocks: prod.received_stocks ?? prod.stocks ?? 0,
                 stocksBefore: prod.stocks_before ?? null,
                 uiId: p.ui_id,
                 source: 'purchase' as const,
@@ -513,17 +515,14 @@ const ProductDetail = () => {
                           <th className="px-5 py-3">Date</th>
                           <th className="px-5 py-3">Type</th>
                           <th className="px-5 py-3">Product / Variant / Batch</th>
-                          <th className="px-5 py-3">Change</th>
-                          <th className="px-5 py-3">Balance</th>
+                          <th className="px-5 py-3">Ordered Stock</th>
+                          <th className="px-5 py-3">Received Stock</th>
+                          <th className="px-5 py-3">Stock Overview</th>
                           <th className="px-5 py-3">Details</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-50">
                         {rows.map((r: any, i: number) => {
-                          const balanceStr = r.stocksBefore !== null && r.stocksBefore !== undefined
-                            ? `${r.stocksBefore} → ${r.stocksBefore + (r.isInc ? r.stocks : -r.stocks)}`
-                            : '—';
-
                           return (
                             <tr key={`${r.id}-${i}`} className={`hover:bg-slate-50/60 transition-colors ${r.source === 'purchase' ? 'border-l-2 border-indigo-300' : r.isInc ? 'border-l-2 border-emerald-300' : 'border-l-2 border-rose-300'
                               }`}>
@@ -556,14 +555,28 @@ const ProductDetail = () => {
                                 </div>
                               </td>
                               <td className="px-5 py-3">
-                                <span className={`font-black text-sm tabular-nums ${r.isInc ? 'text-emerald-600' : 'text-rose-600'}`}>
-                                  {r.isInc ? '+' : '-'}{r.stocks}
+                                <span className="font-black text-sm tabular-nums text-slate-700">
+                                  {r.stocks}
                                 </span>
                               </td>
                               <td className="px-5 py-3">
-                                <span className="text-xs font-bold text-slate-700 tabular-nums bg-slate-50 px-2 py-1 rounded-md border border-slate-100">
-                                  {balanceStr}
+                                <span className={`font-black text-sm tabular-nums ${r.isInc ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                  {r.isInc ? '+' : '-'}{r.receivedStocks}
                                 </span>
+                              </td>
+                              <td className="px-5 py-3">
+                                <div className="flex flex-col gap-1">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">Opening</span>
+                                    <span className="text-xs font-bold text-slate-700">{r.stocksBefore ?? '—'}</span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-[9px] font-black text-blue-400 uppercase tracking-tighter">Current</span>
+                                    <span className="text-xs font-bold text-blue-600">
+                                      {r.stocksBefore !== null ? (r.stocksBefore + (r.isInc ? r.receivedStocks : -r.receivedStocks)) : '—'}
+                                    </span>
+                                  </div>
+                                </div>
                               </td>
                               <td className="px-5 py-3 text-xs text-slate-500 max-w-[200px] truncate" title={r.description}>
                                 {r.description}
@@ -597,6 +610,7 @@ const ProductDetail = () => {
                 displayType: pType,
                 isInc: true, // Purchases always add stock
                 stocks: prod.stocks ?? 0,
+                receivedStocks: prod.received_stocks ?? prod.stocks ?? 0,
                 stocksBefore: prod.stocks_before ?? null,
                 uiId: p.ui_id,
               };
@@ -648,17 +662,14 @@ const ProductDetail = () => {
                           <th className="px-5 py-3">Date</th>
                           <th className="px-5 py-3">Type</th>
                           <th className="px-5 py-3">Product / Variant / Batch</th>
-                          <th className="px-5 py-3">Change</th>
-                          <th className="px-5 py-3">Balance</th>
+                          <th className="px-5 py-3">Ordered Stock</th>
+                          <th className="px-5 py-3">Received Stock</th>
+                          <th className="px-5 py-3">Stock Overview</th>
                           <th className="px-5 py-3">Details</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-50">
                         {rows.map((r: any, i: number) => {
-                          const balanceStr = r.stocksBefore !== null && r.stocksBefore !== undefined
-                            ? `${r.stocksBefore} → ${r.stocksBefore + (r.isInc ? r.stocks : -r.stocks)}`
-                            : '—';
-
                           return (
                             <tr key={`${r.id}-${i}`} className={`hover:bg-indigo-50/20 transition-colors border-l-2 border-indigo-200`}>
                               <td className="px-5 py-3">
@@ -693,14 +704,28 @@ const ProductDetail = () => {
                                 </div>
                               </td>
                               <td className="px-5 py-3">
-                                <span className={`font-black text-sm tabular-nums text-emerald-600`}>
-                                  +{r.stocks}
+                                <span className="font-black text-sm tabular-nums text-slate-700">
+                                  {r.stocks}
                                 </span>
                               </td>
                               <td className="px-5 py-3">
-                                <span className="text-xs font-bold text-slate-700 tabular-nums bg-slate-50 px-2 py-1 rounded-md border border-slate-100">
-                                  {balanceStr}
+                                <span className="font-black text-sm tabular-nums text-emerald-600">
+                                  +{r.receivedStocks}
                                 </span>
+                              </td>
+                              <td className="px-5 py-3">
+                                <div className="flex flex-col gap-1">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">Opening</span>
+                                    <span className="text-xs font-bold text-slate-700">{r.stocksBefore ?? '—'}</span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-[9px] font-black text-blue-400 uppercase tracking-tighter">Current</span>
+                                    <span className="text-xs font-bold text-blue-600">
+                                      {r.stocksBefore !== null ? (r.stocksBefore + r.receivedStocks) : '—'}
+                                    </span>
+                                  </div>
+                                </div>
                               </td>
                               <td className="px-5 py-3 text-xs text-slate-500 max-w-[200px] truncate" title={r.description}>
                                 {r.description}

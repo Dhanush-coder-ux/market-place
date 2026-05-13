@@ -79,16 +79,14 @@ const ShortcutKbd = ({ keys, label }: { keys: string[]; label: string; }) => (
 
 const BillingRow = React.memo(({
   item, index, isLast, hasSerial,
-  handleProductSelectClick, updateItem, handleDeleteRow, handleAddRow, fetchInventory
+  handleProductSelectClick, handleDeleteRow, fetchInventory
 }: {
   item: BillingItem;
   index: number;
   isLast: boolean;
   hasSerial: boolean;
   handleProductSelectClick: any;
-  updateItem: (id: string, updates: Partial<BillingItem>) => void;
   handleDeleteRow: (id: string) => void;
-  handleAddRow: () => void;
   fetchInventory: (q: string, signal: AbortSignal) => Promise<any[]>;
 }) => {
   const isFilled = !!item.name;
@@ -291,16 +289,6 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
     itemsRef.current = items;
   }, [items]);
 
-  const updateItem = useCallback((id: string, updates: Partial<BillingItem>) => {
-    onItemsChange(
-      itemsRef.current.map((item: BillingItem) => {
-        if (item.id !== id) return item;
-        const merged = { ...item, ...updates };
-        return { ...merged, tprice: (merged.qty || 0) * (merged.price || 0) };
-      })
-    );
-  }, [onItemsChange]);
-
   // ── Modal Handlers ────────────────────────────────────────────────────────
 
   const handleProductSelectClick = (selectedProduct: any, rowId: string) => {
@@ -480,9 +468,7 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
                   isLast={index === items.length - 1}
                   hasSerial={item.requireSerial || !!(item.serialNumbers && item.serialNumbers.length > 0)}
                   handleProductSelectClick={handleProductSelectClick}
-                  updateItem={updateItem}
                   handleDeleteRow={handleDeleteRow}
-                  handleAddRow={handleAddRow}
                   fetchInventory={fetchInventory}
                 />
               ))}

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Search, Trash2, X, Edit, Bookmark, Users, Building2, Phone, Filter, Eye } from "lucide-react";
+import { Search, Trash2, X, Edit, Bookmark, Users, Building2, Phone, Eye } from "lucide-react";
 import { GradientButton } from "@/components/ui/GradientButton";
 import Input from "@/components/ui/Input";
 import { useNavigate } from "react-router-dom";

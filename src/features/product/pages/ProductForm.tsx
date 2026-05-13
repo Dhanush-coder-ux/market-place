@@ -637,15 +637,15 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                     />
                   </div>
                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <InputField label="Buy Price" name="cost_price" required
+                    <InputField label="Buy Price" name="buy_price" required
                       tooltip="The price at which you purchase one unit of this product."
-                      value={form.cost_price} onChange={handleChange}
+                      value={form.buy_price} onChange={handleChange}
                       placeholder="0.00"
                       leftEl="₹"
                     />
-                    <InputField label="Selling Price" name="selling_price" required
+                    <InputField label="Selling Price" name="sell_price" required
                       tooltip="The price at which you sell one unit of this product."
-                      value={form.selling_price} onChange={handleChange}
+                      value={form.sell_price} onChange={handleChange}
                       placeholder="0.00"
                       leftEl="₹"
                     />

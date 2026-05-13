@@ -40,6 +40,7 @@ interface SaleItem {
   buyPrice: number;
   imageColor: string;
   status?: string;
+  stocks_before?: number;
 }
 
 interface SelectedReturnItem extends SaleItem {
@@ -101,6 +102,7 @@ const generateItems = (sale: SaleRecord, productMap: Record<string, string> = {}
       batch_id: item.batch_id,
       serialno_id: item.serialno_id,
       serial_numbers: item.serial_numbers || [],
+      stocks_before: (item as any).stocks_before,
     };
   });
 
@@ -249,6 +251,7 @@ const STYLES = `
     transform: translateX(101%);
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     visibility: hidden;
+    overscroll-behavior: contain;
   }
   .sr-sidebar.open { 
     transform: translateX(0);
@@ -1408,6 +1411,22 @@ const SaleDetailSidebar: React.FC<SidebarProps> = ({
                             </div>
                           </div>
                         </div>
+
+                        {/* Stock Tracking Grid */}
+                        <div className="grid grid-cols-3 gap-px bg-slate-100 border-t border-slate-100">
+                          <div className="bg-white p-3 flex flex-col items-center">
+                            <span className="text-[8px] font-black text-slate-400 uppercase tracking-tighter">Opening</span>
+                            <span className="text-xs font-bold text-slate-700">{item.stocks_before ?? 0}</span>
+                          </div>
+                          <div className="bg-white p-3 flex flex-col items-center border-x border-slate-100">
+                            <span className="text-[8px] font-black text-rose-400 uppercase tracking-tighter">Received Stock</span>
+                            <span className="text-xs font-bold text-rose-600">-{item.quantity}</span>
+                          </div>
+                          <div className="bg-white p-3 flex flex-col items-center">
+                            <span className="text-[8px] font-black text-blue-400 uppercase tracking-tighter">Ordered Stock</span>
+                            <span className="text-xs font-bold text-blue-600">{(item.stocks_before ?? 0) - item.quantity}</span>
+                          </div>
+                        </div>
                         {exchangeInfo && (
                           <div className="px-4 pb-3 -mt-2">
                             <div className="bg-blue-50/50 border border-blue-100 rounded-lg p-2 flex items-center justify-between">
@@ -1599,7 +1618,7 @@ const SalesListPage: React.FC = () => {
         setOrders(normalized);
 
         // Fetch details after orders are loaded
-        fetchDetails(rawOrders);
+        fetchDetails();
       }
     } catch (err) {
       console.error("Failed to fetch orders:", err);
@@ -1608,7 +1627,7 @@ const SalesListPage: React.FC = () => {
     }
   };
 
-  const fetchDetails = async (rawOrders: any[]) => {
+  const fetchDetails = async () => {
     try {
       // Fetch All Customers for this shop
       const custRes = await api.getData(`${ENDPOINTS.CUSTOMERS}/by/shop/${SHOP_ID}`);

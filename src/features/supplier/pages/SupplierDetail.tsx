@@ -302,6 +302,7 @@ export default function SupplierDetail() {
                   ...purchaseMeta, 
                   productName: prod.name || 'Unknown Product',
                   stocks: prod.stocks, 
+                  receivedStocks: prod.received_stocks ?? prod.stocks ?? 0,
                   buy_price: prod.buy_price, 
                   sell_price: prod.sell_price 
                 });
@@ -333,7 +334,8 @@ export default function SupplierDetail() {
                             <th className="px-5 py-3">#</th>
                             <th className="px-5 py-3">Type</th>
                             <th className="px-5 py-3">Product</th>
-                            <th className="px-5 py-3">Qty</th>
+                            <th className="px-5 py-3">Ordered Stock</th>
+                            <th className="px-5 py-3">Received Stock</th>
                             <th className="px-5 py-3">Buy Price</th>
                             <th className="px-5 py-3">Sell Price</th>
                             <th className="px-5 py-3">Payment</th>
@@ -360,7 +362,10 @@ export default function SupplierDetail() {
                               </td>
                               <td className="px-5 py-3 text-xs font-medium text-slate-700">{r.productName}</td>
                               <td className="px-5 py-3">
-                                <span className="font-black text-sm text-slate-800 tabular-nums">{r.stocks ?? '—'}</span>
+                                <span className="font-black text-sm text-slate-400 tabular-nums">{r.stocks ?? '—'}</span>
+                              </td>
+                              <td className="px-5 py-3">
+                                <span className="font-black text-sm text-emerald-600 tabular-nums">{r.receivedStocks ?? '—'}</span>
                               </td>
                               <td className="px-5 py-3">
                                 <span className="text-xs font-bold text-slate-700">₹{r.buy_price ?? '—'}</span>

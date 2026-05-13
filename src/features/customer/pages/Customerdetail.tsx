@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import {
   fmt, StatusBadge, FormInput, FormSelect,
-  FormTextarea, SectionCard, PaymentEntry, ActivityEntry,
+  FormTextarea, SectionCard, ActivityEntry,
 } from "./CustomerDetailComponents";
 import { Modal, ProfileHeaderCard } from "@/components/common/SuperUI";
 import { StatCard } from "@/components/common/StatsCard";
@@ -61,7 +61,6 @@ const CustomerSearch = () => {
 
 // ── Static payment / activity data (frontend-only feature) ──────────────────
 
-const INITIAL_PAYMENTS: PaymentEntry[] = [];
 const INITIAL_ACTIVITIES: ActivityEntry[] = [];
 const TABS = ["General Info", "Purchases", "Credit History", "Timeline"];
 
@@ -99,7 +98,6 @@ export default function CustomerDetail() {
   const [deleting, setDeleting] = useState(false);
 
   // Payment form
-  const [selectedInvoices, setSelectedInvoices] = useState<string[]>([]);
   const [paymentAmount, setPaymentAmount] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("UPI");
   const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split("T")[0]);
@@ -107,7 +105,6 @@ export default function CustomerDetail() {
   const [paymentNotes, setPaymentNotes] = useState("");
 
   const [outstanding, setOutstanding] = useState(0);
-  const [payments, setPayments] = useState<PaymentEntry[]>(INITIAL_PAYMENTS);
   const [activities, setActivities] = useState<ActivityEntry[]>(INITIAL_ACTIVITIES);
   const [viewValue, setViewValue] = useState<{ label: string, value: string } | null>(null);
   const [creditHistory, setCreditHistory] = useState<any[]>([]);
@@ -153,13 +150,12 @@ export default function CustomerDetail() {
     if (!amt || amt <= 0) { alert("Please enter a valid payment amount"); return; }
     const now = new Date().toLocaleString("en-IN", { month: "long", day: "numeric", year: "numeric", hour: "numeric", minute: "numeric", hour12: true });
     setOutstanding((o) => Math.max(0, o - amt));
-    setPayments((p) => [{ title: "Payment Received", amount: amt, date: now, invoice: selectedInvoices.join(", ") || "—", method: paymentMethod }, ...p]);
     setActivities((a) => [{
       icon: <Banknote className="w-5 h-5 text-emerald-600" />, iconBg: "bg-emerald-100",
       text: `<strong>Payment received</strong> of ₹${amt.toLocaleString()} via ${paymentMethod}`, time: now,
     }, ...a]);
     setShowPayment(false);
-    setPaymentAmount(""); setPaymentRef(""); setPaymentNotes(""); setSelectedInvoices([]);
+    setPaymentAmount(""); setPaymentRef(""); setPaymentNotes("");
     showToast(`Payment of ₹${amt.toLocaleString()} recorded successfully!`, "success");
   }
 
@@ -561,7 +557,7 @@ export default function CustomerDetail() {
                     </div>
                   ) : (
                     <div className="space-y-4">
-                      {creditHistory.map((item, i) => {
+                      {creditHistory.map((item, _i) => {
                         const isPositive = (item.credit_after - item.credit_before) >= 0;
                         const diff = item.credit_after - item.credit_before;
                         const date = new Date(item.created_at).toLocaleString("en-IN", {

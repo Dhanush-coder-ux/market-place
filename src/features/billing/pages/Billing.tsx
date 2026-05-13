@@ -172,7 +172,7 @@ const Billing = () => {
   };
 
   // ── Confirm Order → POST to Billing API
-  const handleConfirmOrder = useCallback(async (paymentMode: string, includeGst: boolean, status: string) => {
+  const handleConfirmOrder = useCallback(async (paymentMode: string) => {
     const filledItems = items.filter(i => !!i.name);
     if (filledItems.length === 0) return;
 

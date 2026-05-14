@@ -455,225 +455,226 @@ const PurchaseForm = () => {
 
   return (
     <>
-      <div className="min-h-screen bg-slate-50/50 p-4 md:p-6 lg:p-8 font-sans">
-        <div className="max-w-[1600px] mx-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-7 gap-6 items-start">
-
-            {/* LEFT COLUMN: Main Form (5 cols) */}
-            <div className="lg:col-span-5 space-y-6">
-
-              {/* 1. Purchase Details Card */}
-              <div className="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden transition-all hover:shadow-md">
-                <div className="px-8 py-5 bg-gradient-to-r from-blue-50/50 to-transparent border-b border-slate-100 flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-2xl bg-blue-100 flex items-center justify-center text-blue-600 border border-blue-200 shadow-sm">
+      <div className="min-h-screen bg-slate-50/50 font-sans">
+        <div className="mx-auto">
+          <div className="flex flex-col gap-6">
+            {/* 1. Purchase Details Card */}
+            <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-sm overflow-hidden transition-all hover:shadow-md">
+              <div className="px-8 py-5 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-600 border border-blue-100 shadow-sm">
                     <PackageOpen size={20} />
                   </div>
                   <div>
-                    <h2 className="text-sm font-black text-slate-800 uppercase tracking-widest">Purchase Details</h2>
-                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">Basic information & supplier</p>
+                    <h2 className="text-[13px] font-black text-slate-800">Purchase Details</h2>
+                    <p className="text-[10px] text-slate-400 font-bold mt-0.5">Basic information & supplier</p>
                   </div>
-
                 </div>
-
-                <div className="p-8 grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div className="flex flex-col gap-2">
-                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Supplier *</label>
-                    <SearchSelect
-                      labelKey="name"
-                      valueKey="id"
-                      fetchOptions={async (q) => await supplierApi.searchSuppliers(q)}
-                      options={supplierDetails ? [supplierDetails] : []}
-                      value={supplierDetails?.id || purchaseDetails.supplier}
-                      onChange={(val, opt: any) => {
-                        setPurchaseDetails({ ...purchaseDetails, supplier: val ? String(val) : "" });
-                        setSupplierDetails(opt || null);
-                      }}
-                      // 💡 Triggers the On-The-Fly Supplier Modal
-                      onCreateNew={(query) => openQuickCreate("SUPPLIER", (newSupplier: any) => {
-                        setPurchaseDetails(prev => ({ ...prev, supplier: String(newSupplier.id) }));
-                        setSupplierDetails(newSupplier);
-                      }, { name: query })}
-                      placeholder="Search Supplier..."
-                      className="w-full"
-                    />
-                  </div>
-
-                  <Input
-                    label="Supplier Invoice #"
-                    tooltip="Enter the invoice number provided by the supplier for this purchase."
-                    placeholder="INV-2026-..."
-                    value={purchaseDetails.invoiceNo}
-                    onChange={(e) => setPurchaseDetails({ ...purchaseDetails, invoiceNo: e.target.value })}
-                  />
-                  <Input
-                    label="Purchase Date"
-                    tooltip="The date on which the purchase was made."
-                    required
-                    type="date"
-                    value={purchaseDetails.date}
-                    onChange={(e) => setPurchaseDetails({ ...purchaseDetails, date: e.target.value })}
-                  />
-                </div>
-
-                {supplierDetails && (
-                  <div className="px-8 pb-6 animate-in fade-in slide-in-from-top-2 duration-500">
-                    <div className="p-3 bg-gradient-to-r from-blue-50/30 via-white to-blue-50/20 border border-blue-100 rounded-[1.5rem] shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center text-blue-600 border border-blue-200 shadow-inner">
-                          <User size={20} />
-                        </div>
-                        <div>
-                          <p className="text-[9px] font-black text-blue-400 uppercase tracking-widest leading-none mb-0.5">Supplier</p>
-                          <p className="text-base font-black text-slate-800 tracking-tight">{supplierDetails.name || supplierDetails.supplier_name}</p>
-                        </div>
-                      </div>
-
-                      <div className="flex flex-wrap items-center gap-2">
-                        <div className="flex items-center gap-2.5 px-3 py-1.5 bg-white rounded-xl border border-slate-100 transition-all hover:border-blue-200 group">
-                          <div className="w-6 h-6 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-blue-500 transition-colors">
-                            <Mail size={12} />
-                          </div>
-                          <div className="flex flex-col">
-                            <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none">Email</span>
-                            <span className="text-[10px] font-bold text-slate-600 truncate max-w-[150px]">
-                              {supplierDetails.email || "Missing"}
-                            </span>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-2.5 px-3 py-1.5 bg-white rounded-xl border border-slate-100 transition-all hover:border-emerald-200 group">
-                          <div className="w-6 h-6 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-emerald-500 transition-colors">
-                            <Smartphone size={12} />
-                          </div>
-                          <div className="flex flex-col">
-                            <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none">Phone</span>
-                            <span className="text-[10px] font-bold text-slate-600">
-                              {supplierDetails.phone || supplierDetails.mobile_number || "Missing"}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
+                {id && (
+                  <div className="flex items-center gap-2 px-3 py-1 bg-blue-50 border border-blue-100 rounded-full">
+                    <span className="text-[10px] font-black text-blue-600 uppercase tracking-wider">Editing Mode</span>
                   </div>
                 )}
               </div>
 
-              {/* 2. Items List Card */}
-              <InventoryItemsCard
-                products={products}
-                stats={stats}
-                costMethod={costMethod}
-                setCostMethod={setCostMethod}
-                handleProductChange={handleProductChange}
-                updateProductFields={updateProductFields}
-                setProducts={setProducts}
-                addProduct={addProduct}
-                removeProduct={removeProduct}
-                type="PURCHASE"
-                purchaseType={purchaseType}
-                onAddNewProduct={handleAddNewProduct}
-              />
-            </div>
-
-            {/* RIGHT COLUMN: Summary & Payment (2 cols) */}
-            <div className="lg:col-span-2 space-y-6">
-
-              {/* 3. Order Summary Card */}
-              <div className="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden transition-all hover:shadow-md">
-                <div className="px-6 py-4 bg-gradient-to-r from-emerald-50/50 to-transparent border-b border-slate-100 flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-xl bg-emerald-100 flex items-center justify-center text-emerald-600 border border-emerald-200 shadow-sm">
-                    <Banknote size={16} />
-                  </div>
-                  <h2 className="text-xs font-bold text-slate-800 uppercase tracking-widest">Order Summary</h2>
+              <div className="p-8 grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="flex flex-col gap-2">
+                  <label className="text-[11px] font-black text-slate-500 ml-1">Supplier *</label>
+                  <SearchSelect
+                    labelKey="name"
+                    valueKey="id"
+                    fetchOptions={async (q) => await supplierApi.searchSuppliers(q)}
+                    options={supplierDetails ? [supplierDetails] : []}
+                    value={supplierDetails?.id || purchaseDetails.supplier}
+                    onChange={(val, opt: any) => {
+                      setPurchaseDetails({ ...purchaseDetails, supplier: val ? String(val) : "" });
+                      setSupplierDetails(opt || null);
+                    }}
+                    onCreateNew={(query) => openQuickCreate("SUPPLIER", (newSupplier: any) => {
+                      setPurchaseDetails(prev => ({ ...prev, supplier: String(newSupplier.id) }));
+                      setSupplierDetails(newSupplier);
+                    }, { name: query })}
+                    placeholder="Search Supplier..."
+                    className="w-full !rounded-xl !border-slate-200"
+                  />
                 </div>
 
-                <div className="p-6 space-y-4">
-                  <div className="flex justify-between items-center text-slate-500">
-                    <span className="text-[11px] font-bold uppercase tracking-wider">Subtotal</span>
-                    <span className="text-sm font-black text-slate-800 tabular-nums">₹{stats.subtotal.toLocaleString()}</span>
+                <Input
+                  label="Supplier Invoice #"
+                  tooltip="Enter the invoice number provided by the supplier for this purchase."
+                  placeholder="INV-2026-..."
+                  value={purchaseDetails.invoiceNo}
+                  onChange={(e) => setPurchaseDetails({ ...purchaseDetails, invoiceNo: e.target.value })}
+                  className="!rounded-xl"
+                />
+                <Input
+                  label="Purchase Date"
+                  tooltip="The date on which the purchase was made."
+                  required
+                  type="date"
+                  value={purchaseDetails.date}
+                  onChange={(e) => setPurchaseDetails({ ...purchaseDetails, date: e.target.value })}
+                  className="!rounded-xl"
+                />
+              </div>
+
+              {supplierDetails && (
+                <div className="px-8 pb-8 animate-in fade-in slide-in-from-top-2 duration-500">
+                  <div className="p-4 bg-slate-50/50 border border-slate-100 rounded-[2rem] flex flex-col md:flex-row items-center justify-between gap-6">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-2xl bg-white flex items-center justify-center text-blue-600 border border-slate-100 shadow-sm">
+                        <User size={24} />
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-black text-slate-400 mb-0.5">Supplier Details</p>
+                        <p className="text-lg font-black text-slate-800 tracking-tight">{supplierDetails.name || supplierDetails.supplier_name}</p>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-3">
+                      <div className="flex items-center gap-3 px-4 py-2 bg-white rounded-2xl border border-slate-100 shadow-sm transition-all hover:border-blue-200">
+                        <div className="w-8 h-8 rounded-xl bg-blue-50 flex items-center justify-center text-blue-500">
+                          <Mail size={14} />
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-[9px] font-black text-slate-400">Email Address</span>
+                          <span className="text-[11px] font-bold text-slate-600 truncate max-w-[150px]">
+                            {supplierDetails.email || "N/A"}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-3 px-4 py-2 bg-white rounded-2xl border border-slate-100 shadow-sm transition-all hover:border-emerald-200">
+                        <div className="w-8 h-8 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-500">
+                          <Smartphone size={14} />
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-[9px] font-black text-slate-400">Contact Number</span>
+                          <span className="text-[11px] font-bold text-slate-600">
+                            {supplierDetails.phone || supplierDetails.mobile_number || "N/A"}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex justify-between items-center text-slate-500">
-                    <span className="text-[11px] font-bold uppercase tracking-wider">Transport</span>
-                    <div className="w-24">
+                </div>
+              )}
+            </div>
+
+            {/* 2. Items List Card */}
+            <InventoryItemsCard
+              products={products}
+              stats={stats}
+              costMethod={costMethod}
+              setCostMethod={setCostMethod}
+              handleProductChange={handleProductChange}
+              updateProductFields={updateProductFields}
+              setProducts={setProducts}
+              addProduct={addProduct}
+              removeProduct={removeProduct}
+              type="PURCHASE"
+              purchaseType={purchaseType}
+              onAddNewProduct={handleAddNewProduct}
+            />
+            {/* 3. Order Summary Card */}
+            <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-sm overflow-hidden transition-all hover:shadow-md">
+              <div className="px-6 py-4 bg-slate-50/50 border-b border-slate-100 flex items-center gap-3">
+                <div className="w-8 h-8 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600 border border-emerald-100 shadow-sm">
+                  <Banknote size={16} />
+                </div>
+                <h2 className="text-[12px] font-black text-slate-800">Order Summary</h2>
+              </div>
+
+              <div className="p-6 space-y-4">
+                <div className="flex justify-between items-center">
+                  <span className="text-[11px] font-black text-slate-400">Subtotal</span>
+                  <span className="text-[14px] font-black text-slate-800 tabular-nums">₹{stats.subtotal.toLocaleString()}</span>
+                </div>
+
+                <div className="space-y-3 pt-2">
+                  <div className="flex justify-between items-center gap-4">
+                    <span className="text-[11px] font-black text-slate-400 shrink-0">Transport</span>
+                    <div className="w-28">
                       <Input
                         type="number"
                         tooltip="Delivery or transportation costs charged by the supplier."
-                        placeholder="0"
-                        className="!h-8 !text-right !text-xs !bg-slate-50/50"
+                        placeholder="0.00"
+                        className="!h-9 !text-right !text-[12px] !font-black !bg-slate-50/50 !rounded-xl !border-transparent hover:!border-slate-200 focus:!bg-white"
                         value={charges.transport as any}
                         onChange={(e) => setCharges({ ...charges, transport: e.target.value ? Number(e.target.value) : "" })}
                       />
                     </div>
                   </div>
-                  <div className="flex justify-between items-center text-slate-500">
-                    <span className="text-[11px] font-bold uppercase tracking-wider">Other Charges</span>
-                    <div className="w-24">
+
+                  <div className="flex justify-between items-center gap-4">
+                    <span className="text-[11px] font-black text-slate-400 shrink-0">Other Charges</span>
+                    <div className="w-28">
                       <Input
                         type="number"
-                        placeholder="0"
-                        className="!h-8 !text-right !text-xs !bg-slate-50/50"
+                        placeholder="0.00"
+                        className="!h-9 !text-right !text-[12px] !font-black !bg-slate-50/50 !rounded-xl !border-transparent hover:!border-slate-200 focus:!bg-white"
                         value={charges.other as any}
                         onChange={(e) => setCharges({ ...charges, other: e.target.value ? Number(e.target.value) : "" })}
                       />
                     </div>
                   </div>
+                </div>
 
-                  <div className="pt-4 border-t border-slate-100 mt-2">
-                    <div className="flex flex-col gap-1">
-                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Grand Total</span>
-                      <span className="text-3xl font-black text-slate-900 tracking-tight">₹{stats.grandTotal.toLocaleString()}</span>
-                    </div>
+                <div className="pt-6 border-t border-slate-100 mt-2">
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Grand Total</span>
+                    <span className="text-[32px] font-black text-slate-900 tracking-tighter tabular-nums">₹{stats.grandTotal.toLocaleString()}</span>
                   </div>
                 </div>
               </div>
+            </div>
 
-              {/* 4. Payment Details Card */}
-              <div className="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden transition-all hover:shadow-md">
-                <div className="px-6 py-4 bg-gradient-to-r from-amber-50/50 to-transparent border-b border-slate-100 flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-xl bg-amber-100 flex items-center justify-center text-amber-600 border border-amber-200 shadow-sm">
-                    <CreditCard size={16} />
-                  </div>
-                  <h2 className="text-xs font-bold text-slate-800 uppercase tracking-widest">Payment Details</h2>
+            {/* 4. Payment Details Card */}
+            <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-sm overflow-hidden transition-all hover:shadow-md">
+              <div className="px-6 py-4 bg-slate-50/50 border-b border-slate-100 flex items-center gap-3">
+                <div className="w-8 h-8 rounded-xl bg-amber-50 flex items-center justify-center text-amber-600 border border-amber-100 shadow-sm">
+                  <CreditCard size={16} />
+                </div>
+                <h2 className="text-[12px] font-black text-slate-800">Payment Details</h2>
+              </div>
+
+              <div className="p-6 space-y-6">
+                <div className="grid grid-cols-4 gap-2">
+                  {[
+                    { id: "Cash", icon: <Banknote size={16} /> },
+                    { id: "UPI", icon: <Smartphone size={16} /> },
+                    { id: "Card", icon: <CreditCard size={16} /> },
+                    { id: "Bank", icon: <Landmark size={16} /> }
+                  ].map((m) => (
+                    <button
+                      key={m.id}
+                      onClick={() => setPayment({ ...payment, method: m.id as PaymentMethod })}
+                      className={`flex flex-col items-center justify-center py-4 rounded-2xl border transition-all ${payment.method === m.id
+                        ? "border-amber-500 bg-amber-50 text-amber-700 shadow-sm"
+                        : "border-slate-100 bg-slate-50/50 text-slate-400 hover:border-amber-200 hover:bg-white"
+                        }`}
+                    >
+                      <div className="mb-2">{m.icon}</div>
+                      <span className="text-[9px] font-black uppercase tracking-wider">{m.id}</span>
+                    </button>
+                  ))}
                 </div>
 
-                <div className="p-6 space-y-6">
-                  <div className="grid grid-cols-4 gap-2">
-                    {[
-                      { id: "Cash", icon: <Banknote size={16} /> },
-                      { id: "UPI", icon: <Smartphone size={16} /> },
-                      { id: "Card", icon: <CreditCard size={16} /> },
-                      { id: "Bank", icon: <Landmark size={16} /> }
-                    ].map((m) => (
-                      <button
-                        key={m.id}
-                        onClick={() => setPayment({ ...payment, method: m.id as PaymentMethod })}
-                        className={`flex flex-col items-center justify-center py-3 rounded-2xl border transition-all ${payment.method === m.id
-                          ? "border-amber-500 bg-amber-50 text-amber-700 shadow-sm"
-                          : "border-slate-100 bg-slate-50/50 text-slate-400 hover:border-amber-200"
-                          }`}
-                      >
-                        <div className="mb-1.5">{m.icon}</div>
-                        <span className="text-[9px] font-black uppercase tracking-widest">{m.id}</span>
-                      </button>
-                    ))}
-                  </div>
+                <div className="space-y-4 pt-2">
+                  <Input
+                    label="Amount Paid Now (₹)"
+                    type="number"
+                    className="!h-14 !text-xl !font-black !text-emerald-600 !rounded-2xl !bg-slate-50/50 focus:!bg-white"
+                    value={payment.amountPaid as any}
+                    onChange={(e) => setPayment({ ...payment, amountPaid: e.target.value ? Number(e.target.value) : "" })}
+                    placeholder={stats.grandTotal.toString()}
+                  />
 
-                  <div className="space-y-4 pt-2">
-                    <Input
-                      label="Amount Paid Now (₹)"
-                      type="number"
-                      className="!h-12 !text-lg !font-black !text-emerald-600"
-                      value={payment.amountPaid as any}
-                      onChange={(e) => setPayment({ ...payment, amountPaid: e.target.value ? Number(e.target.value) : "" })}
-                      placeholder={stats.grandTotal.toString()}
-                    />
-
-                    <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 flex flex-col gap-1">
-                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Outstanding Balance</span>
-                      <span className={`text-xl font-black ${stats.outstanding > 0 ? "text-rose-600" : "text-emerald-600"}`}>
-                        ₹{stats.outstanding.toLocaleString()}
-                      </span>
-                    </div>
+                  <div className="p-5 rounded-2xl bg-slate-50 border border-slate-100 flex flex-col gap-1">
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Remaining Balance</span>
+                    <span className={`text-[22px] font-black tabular-nums ${stats.outstanding > 0 ? "text-rose-600" : "text-emerald-600"}`}>
+                      ₹{stats.outstanding.toLocaleString()}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -681,7 +682,6 @@ const PurchaseForm = () => {
           </div>
         </div>
       </div>
-
     </>
   );
 };

@@ -185,21 +185,21 @@ const ProductRow = React.memo(({
   const badges = [];
   if (hasVariants) {
     badges.push(
-      <span key="var" className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider text-blue-600 bg-blue-50 border border-blue-100 whitespace-nowrap">
+      <span key="var" className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold text-blue-600 bg-blue-50 border border-blue-100 whitespace-nowrap">
         <Layers size={10} /> {combinations.length} Variants
       </span>
     );
   }
   if (totalBatches > 0) {
     badges.push(
-      <span key="batch" className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider text-indigo-600 bg-indigo-50 border border-indigo-100 whitespace-nowrap">
+      <span key="batch" className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold text-indigo-600 bg-indigo-50 border border-indigo-100 whitespace-nowrap">
         <Calendar size={10} /> {totalBatches} Batches
       </span>
     );
   }
   if (totalSerials > 0) {
     badges.push(
-      <span key="serial" className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider text-purple-600 bg-purple-50 border border-purple-100 whitespace-nowrap">
+      <span key="serial" className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold text-purple-600 bg-purple-50 border border-purple-100 whitespace-nowrap">
         <Hash size={10} /> {totalSerials} Serials
       </span>
     );
@@ -246,7 +246,7 @@ const ProductRow = React.memo(({
                   {!showAllBadges && remainingBadges > 0 && (
                     <button
                       onClick={(e) => { e.stopPropagation(); setShowAllBadges(true); }}
-                      className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-bold uppercase bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200 transition-colors"
+                      className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200 transition-colors"
                     >
                       +{remainingBadges}
                     </button>
@@ -254,7 +254,7 @@ const ProductRow = React.memo(({
                 </div>
               </div>
               <div className="flex items-center gap-2 sm:gap-3 text-[11px] sm:text-[12px] text-slate-500 font-medium flex-wrap">
-                <span className="font-mono text-slate-500 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-100">
+                <span className="font-mono text-slate-500 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-100 tabular-nums">
                   {item.barcode || datas.barcode || (item as any).sku || datas.sku || "NO-BARCODE"}
                 </span>
                 <span className="text-slate-300 hidden sm:inline">•</span>
@@ -282,7 +282,7 @@ const ProductRow = React.memo(({
               )}
             </div>
           ) : totalSerials > 0 ? (
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest bg-slate-50 px-2 py-1 rounded-md border border-slate-100">
+            <span className="text-[11px] font-bold text-slate-400 bg-slate-50 px-2 py-1 rounded-md border border-slate-100">
               See Variants
             </span>
           ) : (
@@ -291,10 +291,14 @@ const ProductRow = React.memo(({
         </td>
 
         <td className="px-6 py-4 text-right">
-          <span className="text-[13px] font-medium text-slate-400">{formatCurrency(item.buy_price)}</span>
+          <span className="text-[13px] font-medium text-slate-400">
+            {hasVariants ? "—" : formatCurrency(item.buy_price)}
+          </span>
         </td>
         <td className="px-6 py-4 text-right">
-          <span className="text-[14px] font-semibold text-slate-800">{formatCurrency(item.sell_price)}</span>
+          <span className="text-[14px] font-semibold text-slate-800">
+            {hasVariants ? "—" : formatCurrency(item.sell_price)}
+          </span>
         </td>
 
         <td className="px-6 py-4 text-right">
@@ -313,7 +317,7 @@ const ProductRow = React.memo(({
         <td className="px-6 py-4 text-right">
           <div className="flex flex-col items-end">
             <span className="text-[12px] font-medium text-slate-700">{formatDate(item.date || (item as any).updated_at)}</span>
-            <span className="text-[10px] text-slate-400 font-bold uppercase tracking-tight">System Entry</span>
+            <span className="text-[10px] text-slate-400 font-bold">System Entry</span>
           </div>
         </td>
 
@@ -330,7 +334,7 @@ const ProductRow = React.memo(({
 
       {isExpanded && isExpandable && (
         <tr className="bg-slate-50/20">
-          <td colSpan={8} className="px-0 py-0 relative">
+          <td colSpan={11} className="px-0 py-0 relative">
             {/* Vertical Route Indicator Line */}
             <div className="absolute top-0 bottom-0 left-[27px] w-[1.5px] bg-blue-500/30 z-10" />
 
@@ -341,19 +345,19 @@ const ProductRow = React.memo(({
                   {/* Horizontal connecting line */}
                   <div className="absolute top-8 left-[-18px] md:left-[-57px] w-4 md:w-[57px] h-[1.5px] bg-blue-500/30" />
 
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                  <p className="text-[10px] font-bold text-slate-400 mb-3 flex items-center gap-2">
                     <Info size={12} className="text-blue-400" /> Product Overview
                   </p>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {datas.unit && (
                       <div className="bg-slate-50 border border-slate-100 rounded-lg px-4 py-2">
-                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter leading-none mb-1">Stocking Unit</p>
+                        <p className="text-[9px] font-bold text-slate-400 leading-none mb-1">Stocking Unit</p>
                         <p className="text-xs font-bold text-slate-700">{datas.unit}</p>
                       </div>
                     )}
                     {(datas.description || item.description) && (
                       <div className="bg-slate-50 border border-slate-100 rounded-lg px-4 py-2">
-                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter leading-none mb-1">Description</p>
+                        <p className="text-[9px] font-bold text-slate-400 leading-none mb-1">Description</p>
                         <p className="text-xs font-medium text-slate-600 line-clamp-2">{datas.description || item.description}</p>
                       </div>
                     )}
@@ -367,13 +371,13 @@ const ProductRow = React.memo(({
                   {/* Horizontal connecting line */}
                   <div className="absolute top-8 left-[-18px] md:left-[-57px] w-4 md:w-[57px] h-[1.5px] bg-blue-500/30" />
 
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                  <p className="text-[10px] font-bold text-slate-400 mb-3 flex items-center gap-2">
                     <Layers size={12} className="text-blue-400" /> Configuration Matrix
                   </p>
                   <div className="flex flex-wrap gap-3">
                     {variantTypes.map((vt: any) => (
                       <div key={vt.id} className="bg-slate-50 border border-slate-100 rounded-lg px-4 py-2">
-                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter leading-none mb-1">{vt.name}</p>
+                        <p className="text-[9px] font-bold text-slate-400 leading-none mb-1">{vt.name}</p>
                         <p className="text-xs font-bold text-slate-700">{(vt.values as string[]).join(", ")}</p>
                       </div>
                     ))}
@@ -387,7 +391,7 @@ const ProductRow = React.memo(({
                   {/* Horizontal connecting line */}
                   <div className="absolute top-8 left-[-18px] md:left-[-57px] w-4 md:w-[57px] h-[1.5px] bg-blue-500/30" />
 
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                  <p className="text-[10px] font-bold text-slate-400 mb-3 flex items-center gap-2">
                     <Hash size={12} className="text-violet-400" /> Serial Number Tracking
                   </p>
                   <SerialBadgeList serials={serials} title={`Serials: ${datas.name || item.name}`} />
@@ -428,7 +432,7 @@ const InventoryPage = () => {
   const [refreshKey] = useState(0);
 
   useEffect(() => {
-    getData(`${ENDPOINTS.INVENTORIES}/by/shop/${SHOP_ID}`, undefined, { cacheKey: "inventory-list" }).then((res: any) => {
+    getData(`${ENDPOINTS.INVENTORIES}/by/shop/${SHOP_ID}`, { is_active: "true" }, { cacheKey: "inventory-list" }).then((res: any) => {
       if (res && res.data) {
         setInventory(res.data);
       }
@@ -529,7 +533,7 @@ const InventoryPage = () => {
       </div>
       {/* Error State */}
       {error && (
-        <div className="flex items-center justify-between p-5 bg-rose-50 border border-rose-100 rounded-[1.5rem] text-rose-700 text-xs font-black uppercase tracking-widest shadow-sm animate-in fade-in slide-in-from-top-4">
+        <div className="flex items-center justify-between p-5 bg-rose-50 border border-rose-100 rounded-[1.5rem] text-rose-700 text-xs font-black shadow-sm animate-in fade-in slide-in-from-top-4">
           <div className="flex items-center gap-3">
             <AlertCircle size={20} className="text-rose-500" />
             <span>{error}</span>
@@ -553,25 +557,25 @@ const InventoryPage = () => {
             <div className="w-20 h-20 bg-white border border-slate-100 rounded-[2.5rem] flex items-center justify-center text-slate-200 mb-6 shadow-sm">
               <Package size={40} />
             </div>
-            <h3 className="text-lg font-black text-slate-800 uppercase tracking-widest">No Inventory Records</h3>
-            <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest mt-2 max-w-[240px]">Start adding products to your catalog to track stock levels.</p>
+            <h3 className="text-lg font-black text-slate-800">No Inventory Records</h3>
+            <p className="text-[11px] text-slate-400 font-bold mt-2 max-w-[240px]">Start adding products to your catalog to track stock levels.</p>
           </div>
         ) : (
-          <div className="overflow-x-auto pf-scroll">
+          <div className="overflow-x-auto overflow-y-auto pf-scroll h-[calc(100vh-220px)]">
             <table className="w-full text-left border-collapse whitespace-nowrap">
-              <thead>
-                <tr className="bg-white border-b border-slate-200 text-slate-500 text-[11px] font-semibold uppercase tracking-wider">
-                  <th className="px-6 py-4 w-14 text-center"></th>
-                  <th className="px-6 py-6 min-w-[300px]">Product Identity</th>
-                  <th className="px-6 py-6">Classification</th>
-                  <th className="px-6 py-6">Serial Tracking</th>
-                  <th className="px-6 py-6 text-right">Buy Price</th>
-                  <th className="px-6 py-6 text-right">Selling</th>
-                  <th className="px-6 py-6 text-right">Stock</th>
-                  <th className="px-6 py-6 text-center">Reorder Pt</th>
-                  <th className="px-6 py-6 text-right">Status</th>
-                  <th className="px-6 py-6 text-right">Updated</th>
-                  <th className="px-8 py-6 w-12 text-center">Actions</th>
+              <thead className="sticky top-0 z-20 bg-slate-50/95 backdrop-blur-sm shadow-sm">
+                <tr className="border-b border-slate-200">
+                  <th className="px-6 py-5 w-14 text-center"></th>
+                  <th className="px-6 py-5 min-w-[320px] text-[11px] font-black text-slate-500">Product Identity</th>
+                  <th className="px-6 py-5 text-[11px] font-black text-slate-500">Classification</th>
+                  <th className="px-6 py-5 text-[11px] font-black text-slate-500">Serial Tracking</th>
+                  <th className="px-6 py-5 text-[11px] font-black text-slate-500 text-right">Buy Price</th>
+                  <th className="px-6 py-5 text-[11px] font-black text-slate-500 text-right">Selling Price</th>
+                  <th className="px-6 py-5 text-[11px] font-black text-slate-500 text-right">Stock</th>
+                  <th className="px-6 py-5 text-[11px] font-black text-slate-500 text-center">Reorder Pt</th>
+                  <th className="px-6 py-5 text-[11px] font-black text-slate-500 text-right">Status</th>
+                  <th className="px-6 py-5 text-[11px] font-black text-slate-500 text-right">Updated</th>
+                  <th className="px-8 py-5 w-12 text-center text-[11px] font-black text-slate-500">Actions</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-slate-100 performance-list">

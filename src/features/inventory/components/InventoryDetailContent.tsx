@@ -50,20 +50,21 @@ export const InventoryDetailContent = ({ item }: { item: InventoryRecord | null 
     <div className="space-y-6">
 
       {/* Header Stat Cards */}
+      {/* Header Stat Cards */}
       <div className="grid grid-cols-3 gap-4">
         <div className="p-4 bg-white rounded-xl border border-gray-100 shadow-sm">
-          <p className="text-xs text-gray-500 uppercase font-semibold">Profit Margin</p>
-          <p className={`text-xl font-bold ${profitMargin >= 0 ? "text-green-600" : "text-red-600"}`}>
-            ₹{profitMargin.toFixed(2)}
+          <p className="text-[10px] text-slate-400 font-black mb-1">Profit Margin</p>
+          <p className={`text-xl font-black tabular-nums ${profitMargin >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
+            ₹{profitMargin.toLocaleString(undefined, { minimumFractionDigits: 2 })}
           </p>
         </div>
         <div className="p-4 bg-white rounded-xl border border-gray-100 shadow-sm">
-          <p className="text-xs text-gray-500 uppercase font-semibold">Inventory Value</p>
-          <p className="text-xl font-bold text-blue-600">₹{inventoryValue.toLocaleString()}</p>
+          <p className="text-[10px] text-slate-400 font-black mb-1">Inventory Value</p>
+          <p className="text-xl font-black text-blue-600 tabular-nums">₹{inventoryValue.toLocaleString()}</p>
         </div>
         <div className="p-4 bg-white rounded-xl border border-gray-100 shadow-sm">
-          <p className="text-xs text-gray-500 uppercase font-semibold">Stock Status</p>
-          <p className={`text-sm font-semibold ${stocks === 0 ? "text-red-600" : stocks <= 15 ? "text-amber-600" : "text-green-600"}`}>
+          <p className="text-[10px] text-slate-400 font-black mb-1">Stock Status</p>
+          <p className={`text-[13px] font-black ${stocks === 0 ? "text-rose-600" : stocks <= 15 ? "text-amber-600" : "text-emerald-600"}`}>
             {stocks === 0 ? "Out of Stock" : stocks <= 15 ? "Low Stock" : "In Stock"}
           </p>
         </div>
@@ -71,16 +72,16 @@ export const InventoryDetailContent = ({ item }: { item: InventoryRecord | null 
 
       {/* Main Details List */}
       <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
-        <div className="p-4 border-b bg-gray-50/50">
-          <h3 className="font-semibold text-gray-700">General Information</h3>
+        <div className="p-4 border-b bg-slate-50/50">
+          <h3 className="text-xs font-black text-slate-600">General Information</h3>
         </div>
-        <div className="divide-y divide-gray-100">
+        <div className="divide-y divide-slate-50">
           {allSections.map((section, idx) => (
-            <div key={idx} className="flex items-center p-4 hover:bg-gray-50 transition-colors">
-              <div className="mr-4 p-2 bg-gray-100 rounded-lg shrink-0">{section.icon}</div>
+            <div key={idx} className="flex items-center p-4 hover:bg-slate-50 transition-colors">
+              <div className="mr-4 p-2 bg-slate-50 rounded-lg shrink-0">{section.icon}</div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm text-gray-500">{section.label}</p>
-                <p className="font-medium text-gray-900 truncate">{section.value}</p>
+                <p className="text-[10px] text-slate-400 font-black">{section.label}</p>
+                <p className="text-[13px] font-black text-slate-800 truncate tabular-nums">{section.value}</p>
               </div>
             </div>
           ))}
@@ -89,16 +90,16 @@ export const InventoryDetailContent = ({ item }: { item: InventoryRecord | null 
 
       {/* Description */}
       <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
-        <h3 className="font-semibold text-gray-700 mb-2">Product Description</h3>
-        <p className="text-gray-600 leading-relaxed text-sm">{description}</p>
+        <h3 className="text-xs font-black text-slate-600 mb-3">Product Description</h3>
+        <p className="text-slate-600 leading-relaxed text-sm font-medium">{description}</p>
       </div>
 
       {/* Tracking & Verification Section */}
       {(!!item.datas?.batch_tracking || !!item.datas?.serial_tracking) && (
         <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
-          <div className="p-4 border-b bg-indigo-50/50 flex items-center gap-2">
+          <div className="px-5 py-4 border-b bg-indigo-50/50 flex items-center gap-2">
             <ShieldCheck size={18} className="text-indigo-600" />
-            <h3 className="font-semibold text-indigo-900">Tracking & Verification</h3>
+            <h3 className="text-sm font-black text-indigo-900">Tracking & Verification</h3>
           </div>
           <div className="p-5 space-y-4">
             {!!item.datas?.batch_tracking && (
@@ -108,12 +109,12 @@ export const InventoryDetailContent = ({ item }: { item: InventoryRecord | null 
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center justify-between">
-                    <h4 className="text-sm font-bold text-blue-900 uppercase tracking-wider">Batch Tracking Enabled</h4>
+                    <h4 className="text-sm font-black text-blue-900">Batch Tracking Enabled</h4>
                     <div className="h-5 w-9 rounded-full bg-blue-600 relative cursor-not-allowed opacity-80">
                        <div className="absolute right-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow-sm" />
                     </div>
                   </div>
-                  <p className="text-xs text-blue-700/70 mt-1 font-medium">
+                  <p className="text-[11px] text-blue-700/70 mt-1 font-bold leading-relaxed">
                     You enabled batch tracking for this product. This allows tracking of manufacturing/expiry dates and batch numbers across your inventory.
                   </p>
                 </div>
@@ -127,12 +128,12 @@ export const InventoryDetailContent = ({ item }: { item: InventoryRecord | null 
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center justify-between">
-                    <h4 className="text-sm font-bold text-violet-900 uppercase tracking-wider">Serial Tracking Enabled</h4>
+                    <h4 className="text-sm font-black text-violet-900">Serial Tracking Enabled</h4>
                     <div className="h-5 w-9 rounded-full bg-violet-600 relative cursor-not-allowed opacity-80">
                        <div className="absolute right-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow-sm" />
                     </div>
                   </div>
-                  <p className="text-xs text-violet-700/70 mt-1 font-medium">
+                  <p className="text-[11px] text-violet-700/70 mt-1 font-bold leading-relaxed">
                     Serial number tracking is active for this item. Each unit has a unique identifier for precision inventory management.
                   </p>
                 </div>
@@ -145,28 +146,28 @@ export const InventoryDetailContent = ({ item }: { item: InventoryRecord | null 
       {/* Product Variants Section */}
       {item.has_variant && item.variants && item.variants.length > 0 && (
         <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
-          <div className="p-4 border-b bg-amber-50/50 flex items-center gap-2">
+          <div className="px-5 py-4 border-b bg-amber-50/50 flex items-center gap-2">
             <Layers size={18} className="text-amber-600" />
-            <h3 className="font-semibold text-amber-900">Product Variants</h3>
+            <h3 className="text-sm font-black text-amber-900">Product Variants</h3>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-gray-50/50 border-b border-gray-100">
-                  <th className="px-6 py-3 text-[11px] font-bold text-gray-400 uppercase tracking-wider">Variant</th>
-                  <th className="px-6 py-3 text-[11px] font-bold text-gray-400 uppercase tracking-wider">Buy Price</th>
-                  <th className="px-6 py-3 text-[11px] font-bold text-gray-400 uppercase tracking-wider">Sell Price</th>
-                  <th className="px-6 py-3 text-[11px] font-bold text-gray-400 uppercase tracking-wider text-right">Stock</th>
+                <tr className="bg-slate-50/50 border-b border-slate-100">
+                  <th className="px-6 py-4 text-[11px] font-black text-slate-500 tracking-tight">Variant</th>
+                  <th className="px-6 py-4 text-[11px] font-black text-slate-500 tracking-tight text-right">Buy Price</th>
+                  <th className="px-6 py-4 text-[11px] font-black text-slate-500 tracking-tight text-right">Sell Price</th>
+                  <th className="px-6 py-4 text-[11px] font-black text-slate-500 tracking-tight text-right">Stock</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-50">
+              <tbody className="divide-y divide-slate-50">
                 {item.variants.map((variant, idx) => (
-                  <tr key={idx} className="hover:bg-gray-50/50 transition-colors">
-                    <td className="px-6 py-4 text-sm font-medium text-gray-900">{variant.name || `Variant ${idx + 1}`}</td>
-                    <td className="px-6 py-4 text-sm text-gray-600 font-mono">₹{(variant.buy_price || 0).toFixed(2)}</td>
-                    <td className="px-6 py-4 text-sm text-green-600 font-bold font-mono">₹{(variant.sell_price || 0).toFixed(2)}</td>
-                    <td className="px-6 py-4 text-sm text-gray-700 text-right font-semibold">
-                      <span className={variant.stocks < 10 ? "text-red-500" : "text-slate-600"}>{variant.stocks || 0}</span>
+                  <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
+                    <td className="px-6 py-4 text-[13px] font-black text-slate-800">{variant.name || `Variant ${idx + 1}`}</td>
+                    <td className="px-6 py-4 text-[13px] text-slate-600 font-bold tabular-nums text-right">₹{(variant.buy_price || 0).toLocaleString()}</td>
+                    <td className="px-6 py-4 text-[13px] text-emerald-600 font-black tabular-nums text-right">₹{(variant.sell_price || 0).toLocaleString()}</td>
+                    <td className="px-6 py-4 text-[13px] text-right">
+                      <span className={`px-2.5 py-1 rounded-lg font-black tabular-nums ${variant.stocks < 10 ? "text-rose-600 bg-rose-50 border border-rose-100" : "text-slate-600 bg-slate-50 border border-slate-100"}`}>{variant.stocks || 0}</span>
                     </td>
                   </tr>
                 ))}

@@ -13,7 +13,7 @@ const FieldLabel = ({
 }) => {
   return (
     <div className="flex items-center gap-1">
-      <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-widest">
+      <span className="text-[11px] font-semibold text-gray-500  ">
         {label}
         {required && <Required />}
       </span>

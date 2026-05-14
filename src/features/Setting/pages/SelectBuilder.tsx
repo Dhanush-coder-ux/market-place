@@ -75,7 +75,7 @@ const SelectBuilder: React.FC<SelectBuilderProps> = ({ onSettingsChange }) => {
 
           {/* Category Input */}
           <div className="space-y-2">
-            <label htmlFor="category-name" className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+            <label htmlFor="category-name" className="text-[10px] font-black text-slate-400  ">
               Category Name
             </label>
             <input
@@ -94,7 +94,7 @@ const SelectBuilder: React.FC<SelectBuilderProps> = ({ onSettingsChange }) => {
           
           {/* Add Option Input Group */}
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+            <label className="text-[10px] font-black text-slate-400  ">
               New Option
             </label>
             <div className="flex gap-2">
@@ -129,7 +129,7 @@ const SelectBuilder: React.FC<SelectBuilderProps> = ({ onSettingsChange }) => {
               className="w-full flex items-center justify-between p-4 bg-slate-50/50 hover:bg-slate-100 transition-colors border-b border-slate-100"
             >
               <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-slate-700 uppercase tracking-wide">
+                <span className="text-xs font-bold text-slate-700  tracking-wide">
                   Current Options
                 </span>
                 <span className="inline-flex items-center justify-center px-2 py-0.5 text-[10px] font-black bg-blue-600 text-white rounded-full">

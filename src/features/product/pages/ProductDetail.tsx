@@ -164,7 +164,7 @@ const ProductDetail = () => {
   const rootSerials = extractSerials(product.serial_number);
   const hasVariants = product.has_variant === true && combinations.length > 0;
   const hasBatches = product.has_batch === true && batches.length > 0;
-  const isActive = datas.is_active !== false;
+  const isActive = product.is_active === true;
 
 
   const TABS = ["General Info", ...((hasVariants || hasBatches) ? ["Inventory & Variants"] : []), MOV_TAB_LABEL, PUR_TAB_LABEL];
@@ -261,7 +261,7 @@ const ProductDetail = () => {
                     <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-100">
                       <Package size={16} />
                     </div>
-                    <h2 className="text-[10px] font-black text-slate-800 uppercase tracking-[0.15em]">Product Information</h2>
+                    <h2 className="text-[10px] font-black text-slate-800  tracking-[0.15em]">Product Information</h2>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-y-6 gap-x-8">
                     <DetailItem icon={Package} label="Product Name" value={name} onClick={click("Product Name", name)} />
@@ -270,7 +270,7 @@ const ProductDetail = () => {
                     <DetailItem icon={Info} label="Unit" value={unit} onClick={click("Unit", unit)} />
                     <DetailItem icon={Hash} label="Barcode / SKU" value={sku} onClick={click("Barcode / SKU", sku)} />
                     <div className="lg:col-span-2">
-                      <p className="text-[10px] font-medium text-slate-400 uppercase tracking-[0.05em] mb-1.5 flex items-center gap-1.5">
+                      <p className="text-[10px] font-medium text-slate-400  tracking-[0.05em] mb-1.5 flex items-center gap-1.5">
                         <FileText size={12} className="text-blue-400" /> Serial Numbers
                       </p>
                       {rootSerials.length > 0 ? (
@@ -296,7 +296,7 @@ const ProductDetail = () => {
                   <div className="w-8 h-8 rounded-lg bg-emerald-600 flex items-center justify-center text-white shadow-lg shadow-emerald-100">
                     <DollarSign size={16} />
                   </div>
-                  <h2 className="text-[10px] font-black text-slate-800 uppercase tracking-[0.15em]">Pricing & Compliance</h2>
+                  <h2 className="text-[10px] font-black text-slate-800  tracking-[0.15em]">Pricing & Compliance</h2>
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-y-6 gap-x-8">
                   <DetailItem icon={Download} label="Buy Price" value={String(buyingPrice) !== "—" ? `₹${buyingPrice}` : "—"} onClick={click("Buy Price", `₹${buyingPrice}`)} />
@@ -316,7 +316,7 @@ const ProductDetail = () => {
                   <div className="w-8 h-8 rounded-lg bg-amber-500 flex items-center justify-center text-white shadow-lg shadow-amber-100">
                     <Tag size={16} />
                   </div>
-                  <h2 className="text-[10px] font-black text-slate-800 uppercase tracking-[0.15em]">Classification</h2>
+                  <h2 className="text-[10px] font-black text-slate-800  tracking-[0.15em]">Classification</h2>
                 </div>
                 <div className="divide-y divide-slate-50 space-y-0">
                   {[
@@ -326,7 +326,7 @@ const ProductDetail = () => {
                     { label: "VARIANTS", value: hasVariants ? `${combinations.length} combos` : "None" },
                   ].map(row => (
                     <div key={row.label} className="flex items-center justify-between py-2.5">
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{row.label}</span>
+                      <span className="text-[10px] font-bold text-slate-400  ">{row.label}</span>
                       {row.isStatus ? (
                         <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${isActive ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-600"}`}>
                           {row.value}
@@ -345,7 +345,7 @@ const ProductDetail = () => {
                     <div className="w-8 h-8 rounded-lg bg-slate-700 flex items-center justify-center text-white">
                       <FileText size={16} />
                     </div>
-                    <h2 className="text-[10px] font-black text-slate-800 uppercase tracking-[0.15em]">Description</h2>
+                    <h2 className="text-[10px] font-black text-slate-800  tracking-[0.15em]">Description</h2>
                   </div>
                   <p className="text-[12px] text-slate-600 leading-relaxed">{description}</p>
                 </SectionCard>
@@ -366,12 +366,12 @@ const ProductDetail = () => {
                       <div className="w-8 h-8 rounded-lg bg-violet-600 flex items-center justify-center text-white shadow-lg shadow-violet-100">
                         <Layers size={16} />
                       </div>
-                      <h2 className="text-[10px] font-black text-slate-800 uppercase tracking-[0.15em]">Variant Types</h2>
+                      <h2 className="text-[10px] font-black text-slate-800  tracking-[0.15em]">Variant Types</h2>
                     </div>
                     <div className="flex flex-wrap gap-3">
                       {variantTypes.map(vt => (
                         <div key={vt.id} className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3">
-                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">{vt.name}</p>
+                          <p className="text-[10px] font-bold text-slate-400   mb-1">{vt.name}</p>
                           <p className="text-sm font-bold text-slate-700">{(vt.values as string[]).join(", ")}</p>
                         </div>
                       ))}
@@ -384,7 +384,7 @@ const ProductDetail = () => {
                     <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-100">
                       <Tag size={16} />
                     </div>
-                    <h2 className="text-[10px] font-black text-slate-800 uppercase tracking-[0.15em]">
+                    <h2 className="text-[10px] font-black text-slate-800  tracking-[0.15em]">
                       Combinations ({combinations.length})
                     </h2>
                   </div>
@@ -403,7 +403,7 @@ const ProductDetail = () => {
                   <div className="w-8 h-8 rounded-lg bg-amber-600 flex items-center justify-center text-white shadow-lg shadow-amber-100">
                     <Tag size={16} />
                   </div>
-                  <h2 className="text-[10px] font-black text-slate-800 uppercase tracking-[0.15em]">Batch Tracking</h2>
+                  <h2 className="text-[10px] font-black text-slate-800  tracking-[0.15em]">Batch Tracking</h2>
                 </div>
                 <BatchCards batches={batches} />
               </SectionCard>
@@ -412,7 +412,7 @@ const ProductDetail = () => {
         )}
 
         {/* TAB — Stock Movements */}
-        {TABS[activeTab] === "Stock Movements" && (() => {
+        {TABS[activeTab] === MOV_TAB_LABEL && (() => {
           const rows: any[] = [];
 
           movements.forEach((adj: any) => {
@@ -495,7 +495,7 @@ const ProductDetail = () => {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-100"><Activity size={16} /></div>
-                  <h2 className="text-[10px] font-black text-slate-800 uppercase tracking-[0.15em]">Stock Movements</h2>
+                  <h2 className="text-[10px] font-black text-slate-800  tracking-[0.15em]">Stock Movements</h2>
                 </div>
                 {movLoading && <RefreshCcw size={14} className="text-slate-400 animate-spin" />}
               </div>
@@ -511,7 +511,7 @@ const ProductDetail = () => {
                   <div className="overflow-x-auto">
                     <table className="w-full text-left whitespace-nowrap">
                       <thead>
-                        <tr className="text-[10px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-100 bg-slate-50/50">
+                        <tr className="text-[10px] font-black   text-slate-400 border-b border-slate-100 bg-slate-50/50">
                           <th className="px-5 py-3">Date</th>
                           <th className="px-5 py-3">Type</th>
                           <th className="px-5 py-3">Product / Variant / Batch</th>
@@ -531,8 +531,8 @@ const ProductDetail = () => {
                               </td>
                               <td className="px-5 py-3">
                                 <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${r.source === 'purchase'
-                                    ? (r.displayType === 'PO Purchase' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-indigo-50 text-indigo-700 border-indigo-200')
-                                    : r.isInc ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-rose-50 text-rose-700 border-rose-200'
+                                  ? (r.displayType === 'PO Purchase' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-indigo-50 text-indigo-700 border-indigo-200')
+                                  : r.isInc ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-rose-50 text-rose-700 border-rose-200'
                                   }`}>
                                   {r.isInc ? <ArrowUp size={10} /> : <ArrowDown size={10} />}
                                   {r.displayType}
@@ -545,7 +545,7 @@ const ProductDetail = () => {
                                   {!r.variant && !r.batch && <span className="text-slate-300">—</span>}
                                   {r.serials?.length > 0 && (
                                     <div className="flex flex-wrap gap-1 mt-0.5 max-w-[150px]">
-                                      <span className="text-[9px] text-slate-400 font-bold uppercase">SN: </span>
+                                      <span className="text-[9px] text-slate-400 font-bold ">SN: </span>
                                       {r.serials.slice(0, 2).map((s: string, si: number) => (
                                         <span key={si} className="text-[9px] font-mono font-bold text-slate-500">{s}{si === 0 && r.serials.length > 1 ? ',' : ''}</span>
                                       ))}
@@ -567,11 +567,11 @@ const ProductDetail = () => {
                               <td className="px-5 py-3">
                                 <div className="flex flex-col gap-1">
                                   <div className="flex items-center gap-2">
-                                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">Opening</span>
+                                    <span className="text-[9px] font-black text-slate-400  tracking-tighter">Opening</span>
                                     <span className="text-xs font-bold text-slate-700">{r.stocksBefore ?? '—'}</span>
                                   </div>
                                   <div className="flex items-center gap-2">
-                                    <span className="text-[9px] font-black text-blue-400 uppercase tracking-tighter">Current</span>
+                                    <span className="text-[9px] font-black text-blue-400  tracking-tighter">Current</span>
                                     <span className="text-xs font-bold text-blue-600">
                                       {r.stocksBefore !== null ? (r.stocksBefore + (r.isInc ? r.receivedStocks : -r.receivedStocks)) : '—'}
                                     </span>
@@ -594,7 +594,7 @@ const ProductDetail = () => {
         })()}
 
         {/* TAB — Purchases */}
-        {TABS[activeTab] === "Purchases" && (() => {
+        {TABS[activeTab] === PUR_TAB_LABEL && (() => {
           const rows: any[] = [];
 
           purchases.forEach((p: any) => {
@@ -641,7 +641,7 @@ const ProductDetail = () => {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-100"><ShoppingCart size={16} /></div>
-                  <h2 className="text-[10px] font-black text-slate-800 uppercase tracking-[0.15em]">Purchase History</h2>
+                  <h2 className="text-[10px] font-black text-slate-800  tracking-[0.15em]">Purchase History</h2>
                 </div>
                 {purLoading && <RefreshCcw size={14} className="text-slate-400 animate-spin" />}
               </div>
@@ -657,7 +657,7 @@ const ProductDetail = () => {
                   <div className="overflow-x-auto">
                     <table className="w-full text-left whitespace-nowrap">
                       <thead>
-                        <tr className="text-[10px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-100 bg-slate-50/50">
+                        <tr className="text-[10px] font-black   text-slate-400 border-b border-slate-100 bg-slate-50/50">
                           <th className="px-5 py-3">#</th>
                           <th className="px-5 py-3">Date</th>
                           <th className="px-5 py-3">Type</th>
@@ -680,8 +680,8 @@ const ProductDetail = () => {
                               </td>
                               <td className="px-5 py-3">
                                 <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${r.displayType === 'PO Purchase'
-                                    ? 'bg-blue-50 text-blue-700 border-blue-200'
-                                    : 'bg-indigo-50 text-indigo-700 border-indigo-200'
+                                  ? 'bg-blue-50 text-blue-700 border-blue-200'
+                                  : 'bg-indigo-50 text-indigo-700 border-indigo-200'
                                   }`}>
                                   <ArrowUp size={10} />
                                   {r.displayType}
@@ -694,7 +694,7 @@ const ProductDetail = () => {
                                   {!r.variant && !r.batch && <span className="text-slate-300">—</span>}
                                   {r.serials?.length > 0 && (
                                     <div className="flex flex-wrap gap-1 mt-0.5 max-w-[150px]">
-                                      <span className="text-[9px] text-slate-400 font-bold uppercase">SN: </span>
+                                      <span className="text-[9px] text-slate-400 font-bold ">SN: </span>
                                       {r.serials.slice(0, 2).map((s: string, si: number) => (
                                         <span key={si} className="text-[9px] font-mono font-bold text-slate-500">{s}{si === 0 && r.serials.length > 1 ? ',' : ''}</span>
                                       ))}
@@ -716,11 +716,11 @@ const ProductDetail = () => {
                               <td className="px-5 py-3">
                                 <div className="flex flex-col gap-1">
                                   <div className="flex items-center gap-2">
-                                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">Opening</span>
+                                    <span className="text-[9px] font-black text-slate-400  tracking-tighter">Opening</span>
                                     <span className="text-xs font-bold text-slate-700">{r.stocksBefore ?? '—'}</span>
                                   </div>
                                   <div className="flex items-center gap-2">
-                                    <span className="text-[9px] font-black text-blue-400 uppercase tracking-tighter">Current</span>
+                                    <span className="text-[9px] font-black text-blue-400  tracking-tighter">Current</span>
                                     <span className="text-xs font-bold text-blue-600">
                                       {r.stocksBefore !== null ? (r.stocksBefore + r.receivedStocks) : '—'}
                                     </span>
@@ -755,7 +755,7 @@ const ProductDetail = () => {
             {viewValue?.value}
           </p>
         </div>
-        <p className="mt-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">
+        <p className="mt-4 text-[10px] font-bold text-slate-400   text-center">
           Double click the text to select and copy
         </p>
       </Modal>

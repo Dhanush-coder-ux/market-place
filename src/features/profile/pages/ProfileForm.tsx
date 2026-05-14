@@ -282,14 +282,14 @@ const ProfileForm: React.FC = () => {
                 <Store size={20} />
               </div>
               <div>
-                <h3 className="text-[10px] font-black text-slate-800 uppercase tracking-widest">Shop Identity</h3>
+                <h3 className="text-[10px] font-black text-slate-800  ">Shop Identity</h3>
                 <p className="text-[11px] font-bold text-slate-400">Brand and visual presence</p>
               </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="md:col-span-2 flex flex-col items-center justify-center py-4 bg-slate-50/50 rounded-3xl border border-dashed border-slate-200 gap-3">
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Shop Logo</span>
+                <span className="text-[10px] font-black text-slate-400  ">Shop Logo</span>
                 <ImageUpload label="Logo" value={logo} onChange={setLogo} />
               </div>
 
@@ -315,7 +315,7 @@ const ProfileForm: React.FC = () => {
               />
 
               <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Category</label>
+                <label className="text-[10px] font-black text-slate-400   ml-1">Category</label>
                 <ReusableSelect
                   value={formData.category}
                   onValueChange={(val) => setFormData(p => ({ ...p, category: val }))}
@@ -344,7 +344,7 @@ const ProfileForm: React.FC = () => {
                 <MapPin size={20} />
               </div>
               <div>
-                <h3 className="text-[10px] font-black text-slate-800 uppercase tracking-widest">Contact & Location</h3>
+                <h3 className="text-[10px] font-black text-slate-800  ">Contact & Location</h3>
                 <p className="text-[11px] font-bold text-slate-400">Physical and digital reach</p>
               </div>
             </div>
@@ -384,7 +384,7 @@ const ProfileForm: React.FC = () => {
                 leftIcon={<Hash size={16} className="text-slate-400" />}
               />
               <div className="md:col-span-2 space-y-1.5">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Street Address</label>
+                <label className="text-[10px] font-black text-slate-400   ml-1">Street Address</label>
                 <textarea
                   name="address"
                   value={formData.address}
@@ -404,7 +404,7 @@ const ProfileForm: React.FC = () => {
                 <Globe size={20} />
               </div>
               <div>
-                <h3 className="text-[10px] font-black text-slate-800 uppercase tracking-widest">Online Presence</h3>
+                <h3 className="text-[10px] font-black text-slate-800  ">Online Presence</h3>
                 <p className="text-[11px] font-bold text-slate-400">Social media and website links</p>
               </div>
             </div>
@@ -449,14 +449,14 @@ const ProfileForm: React.FC = () => {
                 <BadgeCheck size={20} />
               </div>
               <div>
-                <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-800">Business Details</h3>
+                <h3 className="text-[10px] font-black   text-slate-800">Business Details</h3>
                 <p className="text-[11px] font-bold text-slate-400">Operational configuration</p>
               </div>
             </div>
 
             <div className="space-y-6">
               <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Business Type</label>
+                <label className="text-[10px] font-black text-slate-400   ml-1">Business Type</label>
                 <ReusableSelect
                   value={formData.business_type}
                   onValueChange={(val) => setFormData(p => ({ ...p, business_type: val }))}
@@ -475,7 +475,7 @@ const ProfileForm: React.FC = () => {
               />
 
               <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Currency</label>
+                <label className="text-[10px] font-black text-slate-400   ml-1">Currency</label>
                 <ReusableSelect
                   value={formData.currency}
                   onValueChange={(val) => setFormData(p => ({ ...p, currency: val }))}
@@ -511,7 +511,7 @@ const ProfileForm: React.FC = () => {
               <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400">
                 <FileText size={16} />
               </div>
-              <h3 className="text-[10px] font-black text-slate-800 uppercase tracking-widest">Shop Description</h3>
+              <h3 className="text-[10px] font-black text-slate-800  ">Shop Description</h3>
             </div>
             <textarea
               name="description"

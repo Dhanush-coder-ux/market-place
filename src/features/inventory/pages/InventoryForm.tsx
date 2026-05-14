@@ -176,7 +176,7 @@ const InventoryForm = () => {
             <Settings size={20} />
           </div>
           <div>
-            <h3 className="text-[10px] font-black text-slate-800 uppercase tracking-widest">Tracking Configuration</h3>
+            <h3 className="text-[10px] font-black text-slate-800  ">Tracking Configuration</h3>
             <p className="text-[11px] font-bold text-slate-400">Enable advanced product features</p>
           </div>
         </div>
@@ -220,12 +220,12 @@ const InventoryForm = () => {
               <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600">
                 <ListPlus size={20} />
               </div>
-              <h3 className="text-[10px] font-black text-slate-800 uppercase tracking-widest">Variants Manager</h3>
+              <h3 className="text-[10px] font-black text-slate-800  ">Variants Manager</h3>
             </div>
             <button
               type="button"
               onClick={addVariant}
-              className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-700 md:transition-all shadow-md shadow-indigo-100"
+              className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl text-[10px] font-black   hover:bg-indigo-700 md:transition-all shadow-md shadow-indigo-100"
             >
               <Plus size={14} /> Add Variant
             </button>
@@ -235,7 +235,7 @@ const InventoryForm = () => {
             <table className="w-full">
               <thead>
                 <tr className="border-b border-slate-50">
-                  <th className="text-[10px] font-black text-slate-400 uppercase tracking-widest text-left pb-4 px-2">Variant Name</th>
+                  <th className="text-[10px] font-black text-slate-400   text-left pb-4 px-2">Variant Name</th>
                   <th className="pb-4 px-2 w-10"></th>
                 </tr>
               </thead>
@@ -279,7 +279,7 @@ const InventoryForm = () => {
               <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-slate-400">
                 <Layers size={20} />
               </div>
-              <h3 className="text-[10px] font-black text-slate-800 uppercase tracking-widest">Inventory Classification</h3>
+              <h3 className="text-[10px] font-black text-slate-800  ">Inventory Classification</h3>
             </div>
             <div className="grid grid-cols-1 gap-6">
               <div className="space-y-1.5">

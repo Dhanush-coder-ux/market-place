@@ -95,7 +95,7 @@ const HeaderCard: React.FC<LowStockCardProps> = ({
         {/* Left Side: Content */}
         <div className="flex flex-col gap-0.5 z-10">
           {/* CHANGED: text-xs instead of text-sm */}
-          <span className={`text-xs font-semibold tracking-wide uppercase ${t.subtext}`}>
+          <span className={`text-xs font-semibold tracking-wide  ${t.subtext}`}>
             {title}
           </span>
           

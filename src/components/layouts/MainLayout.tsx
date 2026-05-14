@@ -130,7 +130,7 @@ const getPageHeaderInfo = (pathname: string) => {
       subtitle: "Manage your clients and their details.",
     },
     "/customers-Summary": {
-      title: "Customer Balances",
+      title: "Customer balance",
       subtitle: "Track outstanding payments and customer ledgers.",
     },
     "/customers/add": {
@@ -223,7 +223,7 @@ const getPageHeaderInfo = (pathname: string) => {
   }
 
   return routes[pathname] || {
-    title: pathname.split("/").pop()?.replace("-", " ").toUpperCase() || "Home",
+    title: pathname.split("/").pop()?.replace(/-/g, " ").replace(/\b\w/g, l => l.toUpperCase()) || "Home",
     subtitle: ""
   };
 };
@@ -235,7 +235,7 @@ const MainLayout = () => {
     location.pathname === "/digital-store" ||
     location.pathname === "/digital-store/profile" ||
     location.pathname === "/";
-  
+
   const isBillingPage = location.pathname === "/billing";
   const isCleanMode = isBillingPage && new URLSearchParams(location.search).get("mode") === "clean";
   const hideNav = isCleanMode;

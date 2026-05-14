@@ -5,7 +5,9 @@ import {
   Banknote, Mail, Wallet, Pencil, User, Tag, MapPin, Phone, Trash2,
   FileText, Database, CreditCard,
   ShoppingCart,
-  ArrowRight
+  ArrowRight,
+  Loader2,
+  Plus
 } from "lucide-react";
 import {
   fmt, StatusBadge, FormInput, FormSelect,
@@ -74,7 +76,7 @@ const DetailItem = ({ icon: Icon, label, value, onClick }: { icon: any, label: s
       <Icon size={12} strokeWidth={2.5} />
     </div>
     <div className="min-w-0">
-      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.05em] mb-0.5">{label}</p>
+      <p className="text-[10px] font-bold text-slate-400  tracking-[0.05em] mb-0.5">{label}</p>
       <p className="text-[13px] font-bold text-slate-700 truncate tracking-tight">{value}</p>
     </div>
   </div>
@@ -84,7 +86,7 @@ const DetailItem = ({ icon: Icon, label, value, onClick }: { icon: any, label: s
 export default function CustomerDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { getData, deleteData } = useApi();
+  const { getData, deleteData, postData } = useApi();
   const { showToast } = useToast();
 
   const [customer, setCustomer] = useState<CustomerRecord | null>(null);
@@ -96,10 +98,12 @@ export default function CustomerDetail() {
   const [showInvoice, setShowInvoice] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [isClearing, setIsClearing] = useState(false);
 
   // Payment form
-  const [paymentAmount, setPaymentAmount] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState("UPI");
+  const [payments, setPayments] = useState<{ mode: string, amount: string }[]>([
+    { mode: "UPI", amount: "" }
+  ]);
   const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split("T")[0]);
   const [paymentRef, setPaymentRef] = useState("");
   const [paymentNotes, setPaymentNotes] = useState("");
@@ -107,8 +111,8 @@ export default function CustomerDetail() {
   const [outstanding, setOutstanding] = useState(0);
   const [activities, setActivities] = useState<ActivityEntry[]>(INITIAL_ACTIVITIES);
   const [viewValue, setViewValue] = useState<{ label: string, value: string } | null>(null);
-  const [creditHistory, setCreditHistory] = useState<any[]>([]);
-  const [creditLoading, setCreditLoading] = useState(false);
+  const [clearingHistory, setClearingHistory] = useState<any[]>([]);
+  const [clearingLoading, setClearingLoading] = useState(false);
   const [customerOrders, setCustomerOrders] = useState<any[]>([]);
   const [ordersLoading, setOrdersLoading] = useState(false);
 
@@ -134,29 +138,88 @@ export default function CustomerDetail() {
   }, [activeTab, id, getData]);
 
   useEffect(() => {
-    if (activeTab === 2 && id) { // Index 2 is Credit History
-      setCreditLoading(true);
-      getData(`${ENDPOINTS.CUSTOMERS}/credit/histories/${SHOP_ID}/${id}`).then((res) => {
+    if (activeTab === 2 && id) { // Index 2 is Clearing History
+      setClearingLoading(true);
+      getData(`${ENDPOINTS.CUSTOMERS}/outstanding/clear/${SHOP_ID}/${id}`).then((res) => {
         if (res && res.data) {
-          setCreditHistory(res.data);
+          setClearingHistory(Array.isArray(res.data) ? res.data : [res.data]);
         }
-        setCreditLoading(false);
+        setClearingLoading(false);
       });
     }
   }, [activeTab, id, getData]);
 
-  function handleSavePayment() {
-    const amt = parseFloat(paymentAmount);
-    if (!amt || amt <= 0) { alert("Please enter a valid payment amount"); return; }
-    const now = new Date().toLocaleString("en-IN", { month: "long", day: "numeric", year: "numeric", hour: "numeric", minute: "numeric", hour12: true });
-    setOutstanding((o) => Math.max(0, o - amt));
-    setActivities((a) => [{
-      icon: <Banknote className="w-5 h-5 text-emerald-600" />, iconBg: "bg-emerald-100",
-      text: `<strong>Payment received</strong> of ₹${amt.toLocaleString()} via ${paymentMethod}`, time: now,
-    }, ...a]);
-    setShowPayment(false);
-    setPaymentAmount(""); setPaymentRef(""); setPaymentNotes("");
-    showToast(`Payment of ₹${amt.toLocaleString()} recorded successfully!`, "success");
+  const addPaymentRow = () => {
+    if (payments.length >= 4) return;
+    setPayments([...payments, { mode: "Cash", amount: "" }]);
+  };
+
+  const removePaymentRow = (idx: number) => {
+    if (payments.length <= 1) return;
+    setPayments(payments.filter((_, i) => i !== idx));
+  };
+
+  const updatePayment = (idx: number, updates: Partial<{ mode: string, amount: string }>) => {
+    setPayments(payments.map((p, i) => i === idx ? { ...p, ...updates } : p));
+  };
+
+  async function handleSavePayment() {
+    const validPayments = payments.filter(p => parseFloat(p.amount) > 0);
+    if (validPayments.length === 0) { showToast("Please enter at least one payment amount", "error"); return; }
+    
+    setIsClearing(true);
+    
+    // Map UI payment method to Schema Enum
+    const methodMap: Record<string, string> = {
+      "UPI": "UPI",
+      "Cash": "CASH",
+      "Card": "CARD",
+      "Bank Transfer": "BANK",
+      "Cheque": "BANK"
+    };
+
+    const paymentDict: Record<string, number> = {};
+    let totalCleared = 0;
+
+    validPayments.forEach(p => {
+      const mode = methodMap[p.mode] || "CASH";
+      const amt = parseFloat(p.amount);
+      paymentDict[mode] = (paymentDict[mode] || 0) + amt;
+      totalCleared += amt;
+    });
+
+    const payload = {
+      shop_id: SHOP_ID,
+      customer_id: id,
+      payments: paymentDict,
+      cleared_amount: totalCleared
+    };
+
+    try {
+      const res = await postData(`${ENDPOINTS.CUSTOMERS}/outstanding/clear`, payload);
+      if (res) {
+        showToast(`Payment of ₹${totalCleared.toLocaleString()} recorded successfully!`, "success");
+        setShowPayment(false);
+        setPayments([{ mode: "UPI", amount: "" }]);
+        setPaymentRef(""); setPaymentNotes("");
+        
+        // Refresh customer data
+        const fresh = await getData(`${ENDPOINTS.CUSTOMERS}/by/${SHOP_ID}/${id}`);
+        if (fresh) setCustomer(Array.isArray(fresh.data) ? fresh.data[0] : fresh.data);
+        
+        // Add to local activity for immediate feedback
+        const now = new Date().toLocaleString("en-IN", { month: "long", day: "numeric", year: "numeric", hour: "numeric", minute: "numeric", hour12: true });
+        setActivities((a) => [{
+          icon: <Banknote className="w-5 h-5 text-emerald-600" />, iconBg: "bg-emerald-100",
+          text: `<strong>Payment recorded</strong> of ₹${totalCleared.toLocaleString()} via split modes`, time: now,
+        }, ...a]);
+      }
+    } catch (error) {
+      console.error("Payment error:", error);
+      showToast("Failed to record payment. Please try again.", "error");
+    } finally {
+      setIsClearing(false);
+    }
   }
 
   async function handleDelete() {
@@ -254,8 +317,8 @@ export default function CustomerDetail() {
           />
 
           {/* Tabs Navigation - Smaller */}
-          <div className="flex gap-0.5 bg-white p-1 rounded-xl border border-slate-200 w-fit">
-            {TABS.map((tab, i) => (
+          <div className="flex gap-2 p-1 bg-slate-100/50 w-fit rounded-xl border border-slate-200/50">
+            {["Overview", "Purchases", "Collection History"].map((tab, i) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(i)}
@@ -278,13 +341,15 @@ export default function CustomerDetail() {
               iconBg="bg-blue-50 text-blue-600"
               className="flex-1 min-w-[140px]"
             />
-            <StatCard
-              icon={AlertCircle}
-              label="Outstanding"
-              value={fmt(Number(datas.outstanding_balance) || outstanding || 0)}
-              iconBg="bg-rose-50 text-rose-600"
-              className="flex-1 min-w-[140px]"
-            />
+            <div className="flex-1 min-w-[140px] relative group/card">
+              <StatCard
+                icon={AlertCircle}
+                label="Customer balance"
+                value={fmt(Number(customer.outstanding ?? datas.outstanding_balance ?? outstanding ?? 0))}
+                iconBg="bg-rose-50 text-rose-600"
+                valueClassName={Number(customer.outstanding ?? datas.outstanding_balance ?? outstanding ?? 0) !== 0 ? "text-rose-600 font-black" : ""}
+              />
+            </div>
             <StatCard
               icon={Package}
               label="Total Orders"
@@ -316,7 +381,7 @@ export default function CustomerDetail() {
                         <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-100">
                           <User size={16} />
                         </div>
-                        <h2 className="text-[10px] font-black text-slate-800 uppercase tracking-[0.15em]">Primary & Dynamic Fields</h2>
+                        <h2 className="text-[10px] font-black text-slate-800  tracking-[0.15em]">Primary & Dynamic Fields</h2>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-y-6 gap-x-8">
                         {/* Always show key fields first */}
@@ -366,19 +431,19 @@ export default function CustomerDetail() {
                         <div className="w-8 h-8 rounded-lg bg-emerald-600 flex items-center justify-center text-white shadow-lg shadow-emerald-100">
                           <MapPin size={16} />
                         </div>
-                        <h2 className="text-[10px] font-black text-slate-800 uppercase tracking-[0.15em]">Registered Address</h2>
+                        <h2 className="text-[10px] font-black text-slate-800  tracking-[0.15em]">Registered Address</h2>
                       </div>
 
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div className="md:col-span-2">
-                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 text-xs font-semibold">Registered Address</p>
+                          <p className="text-[10px] font-bold text-slate-400   mb-1.5 text-xs font-semibold">Registered Address</p>
                           <p className="text-sm font-semibold text-slate-700 leading-relaxed bg-slate-50 p-3 rounded-xl border border-slate-100">
                             {String((datas.address as any)?.full_address || "No address provided.")}
                           </p>
                         </div>
                         <div className="space-y-4">
                           <div>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 text-xs font-semibold">Zip Code</p>
+                            <p className="text-[10px] font-bold text-slate-400   mb-1.5 text-xs font-semibold">Zip Code</p>
                             <p className="text-sm font-bold font-mono text-slate-700 tracking-tight bg-slate-50 p-3 rounded-xl border border-slate-100 flex items-center h-[46px]">
                               {String((datas.address as any)?.zip_code || "—")}
                             </p>
@@ -397,11 +462,11 @@ export default function CustomerDetail() {
                       <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-100">
                         <Tag size={16} />
                       </div>
-                      <h2 className="text-[10px] font-black text-slate-800 uppercase tracking-[0.15em]">Business Identity</h2>
+                      <h2 className="text-[10px] font-black text-slate-800  tracking-[0.15em]">Business Identity</h2>
                     </div>
                     <div className="space-y-3">
                       <div className="p-3.5 rounded-2xl bg-white border border-slate-100 shadow-sm flex justify-between items-center">
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Type</span>
+                        <span className="text-[10px] font-bold text-slate-400  ">Type</span>
                         <span className="text-[12px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md">{String(datas.customer_type || "Normal")}</span>
                       </div>
                     </div>
@@ -413,7 +478,7 @@ export default function CustomerDetail() {
                       <div className="w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center text-white shadow-lg shadow-slate-200">
                         <FileText size={16} />
                       </div>
-                      <h2 className="text-[10px] font-black text-slate-800 uppercase tracking-[0.15em]">Internal Notes</h2>
+                      <h2 className="text-[10px] font-black text-slate-800  tracking-[0.15em]">Internal Notes</h2>
                     </div>
                     <div className="relative">
                       <div className="absolute left-0 top-0 bottom-0 w-1 bg-slate-200 rounded-full" />
@@ -438,18 +503,18 @@ export default function CustomerDetail() {
                         <ShoppingCart size={24} />
                       </div>
                       <div>
-                        <h2 className="text-lg font-black text-slate-800 uppercase tracking-wider">Purchase History</h2>
+                        <h2 className="text-lg font-black text-slate-800  ">Purchase History</h2>
                         <p className="text-xs text-slate-400 font-medium tracking-tight">Transactional record of all orders</p>
                       </div>
                     </div>
                     
                     <div className="flex items-center gap-4">
                       <div className="px-4 py-2 bg-slate-50 rounded-2xl border border-slate-100 text-center">
-                        <p className="text-[9px] font-black text-slate-400 uppercase mb-0.5">Total Orders</p>
+                        <p className="text-[9px] font-black text-slate-400  mb-0.5">Total Orders</p>
                         <p className="text-sm font-black text-slate-700">{customerOrders.length}</p>
                       </div>
                       <div className="px-4 py-2 bg-blue-50 rounded-2xl border border-blue-100 text-center">
-                        <p className="text-[9px] font-black text-blue-400 uppercase mb-0.5">Total Spend</p>
+                        <p className="text-[9px] font-black text-blue-400  mb-0.5">Total Spend</p>
                         <p className="text-sm font-black text-blue-700">{fmt(customerOrders.reduce((acc, curr) => acc + Number(curr.total_sellprice || 0), 0))}</p>
                       </div>
                     </div>
@@ -463,17 +528,18 @@ export default function CustomerDetail() {
                         <div className="w-20 h-20 bg-slate-50 rounded-3xl flex items-center justify-center text-slate-200 mx-auto mb-6">
                           <Package size={40} />
                         </div>
-                        <h3 className="text-sm font-bold text-slate-800 uppercase tracking-widest">No Orders Yet</h3>
+                        <h3 className="text-sm font-bold text-slate-800  ">No Orders Yet</h3>
                         <p className="text-xs text-slate-400 mt-2">When this customer makes a purchase, it will appear here.</p>
                       </div>
                     ) : (
                       <table className="w-full text-left border-separate border-spacing-y-3">
                         <thead>
-                          <tr className="text-slate-400 text-[10px] font-black uppercase tracking-[0.15em]">
+                          <tr className="text-slate-400 text-[10px] font-black  tracking-[0.15em]">
                             <th className="px-6 pb-2">Invoice Identity</th>
                             <th className="px-6 pb-2">Order Date</th>
                             <th className="px-6 pb-2">Volume</th>
                             <th className="px-6 pb-2">Financials</th>
+                            <th className="px-6 pb-2">Payment Summary</th>
                             <th className="px-6 pb-2 text-right">Status</th>
                           </tr>
                         </thead>
@@ -496,7 +562,10 @@ export default function CustomerDetail() {
                                     <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-blue-50 group-hover:text-blue-600 transition-colors">
                                       <FileText size={14} />
                                     </div>
-                                    <span className="text-sm font-black text-slate-700 font-mono tracking-tight group-hover:text-blue-700 transition-colors">{invoiceId}</span>
+                                    <div className="flex flex-col">
+                                      <span className="text-sm font-black text-slate-700 font-mono tracking-tight group-hover:text-blue-700 transition-colors">{invoiceId}</span>
+                                      <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{order.type || "NORMAL"}</span>
+                                    </div>
                                   </div>
                                 </td>
                                 <td className="px-6 py-4 bg-white border-y border-slate-100 shadow-sm group-hover:border-blue-200 transition-colors">
@@ -504,11 +573,31 @@ export default function CustomerDetail() {
                                 </td>
                                 <td className="px-6 py-4 bg-white border-y border-slate-100 shadow-sm group-hover:border-blue-200 transition-colors">
                                   <div className="flex items-center gap-2">
-                                    <span className="px-2 py-1 rounded-md bg-slate-100 text-[10px] font-black text-slate-500 uppercase">{itemCount} {itemCount === 1 ? "Item" : "Units"}</span>
+                                    <span className="px-2 py-1 rounded-md bg-slate-100 text-[10px] font-black text-slate-500 ">{itemCount} {itemCount === 1 ? "Item" : "Units"}</span>
                                   </div>
                                 </td>
                                 <td className="px-6 py-4 bg-white border-y border-slate-100 shadow-sm group-hover:border-blue-200 transition-colors">
                                   <span className="text-sm font-black text-slate-800">{fmt(total)}</span>
+                                </td>
+                                <td className="px-6 py-4 bg-white border-y border-slate-100 shadow-sm group-hover:border-blue-200 transition-colors">
+                                  <div className="flex flex-wrap gap-1.5">
+                                    {order.payments && Object.entries(order.payments).map(([mode, amount]) => (
+                                      <div key={mode} className={`px-2 py-1 rounded-lg text-[9px] font-black border flex items-center gap-1.5 ${
+                                        mode.toUpperCase() === 'CREDIT' ? 'bg-blue-50 text-blue-600 border-blue-100' :
+                                        mode.toUpperCase() === 'CASH' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                                        'bg-violet-50 text-violet-600 border-violet-100'
+                                      }`}>
+                                        <div className={`w-1 h-1 rounded-full ${
+                                          mode.toUpperCase() === 'CREDIT' ? 'bg-blue-400' :
+                                          mode.toUpperCase() === 'CASH' ? 'bg-emerald-400' :
+                                          'bg-violet-400'
+                                        }`} />
+                                        {mode.toUpperCase()}
+                                        <span className="opacity-40">₹{Number(amount).toLocaleString()}</span>
+                                      </div>
+                                    ))}
+                                    {!order.payments && <span className="text-[10px] font-bold text-slate-300 italic">No payment record</span>}
+                                  </div>
                                 </td>
                                 <td className="px-6 py-4 bg-white border-y border-r border-slate-100 rounded-r-2xl shadow-sm text-right group-hover:border-blue-200 transition-colors">
                                   <StatusBadge status={order.status || "Pending"} />
@@ -524,117 +613,112 @@ export default function CustomerDetail() {
               </SectionCard>
             )}
 
-            {/* TAB 2 — Credit History */}
+            {/* TAB 2 — Collection History */}
             {activeTab === 2 && (
               <SectionCard className="rounded-[2.5rem] p-8 border-none shadow-xl bg-white relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-64 h-64 bg-blue-50/50 rounded-full -mr-32 -mt-32 blur-3xl -z-0" />
+                <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-50/50 rounded-full -mr-32 -mt-32 blur-3xl -z-0" />
                 
                 <div className="relative z-10">
                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-10">
                     <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-[1.25rem] bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-100">
-                        <Database size={24} />
+                      <div className="w-12 h-12 rounded-[1.25rem] bg-emerald-600 flex items-center justify-center text-white shadow-lg shadow-emerald-100">
+                        <Banknote size={24} />
                       </div>
                       <div>
-                        <h2 className="text-lg font-black text-slate-800 uppercase tracking-wider">Credit Ledger</h2>
-                        <p className="text-xs text-slate-400 font-medium tracking-tight">System-wide credit adjustment logs</p>
+                        <h2 className="text-lg font-black text-slate-800 tracking-tight">Collection History</h2>
+                        <p className="text-xs text-slate-400 font-medium tracking-tight">Detailed logs of debt recovery and payments</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 bg-slate-50 p-1 rounded-xl border border-slate-100 self-start md:self-center">
-                       <span className="px-3 py-1.5 text-[10px] font-black text-slate-500 uppercase tracking-widest">{creditHistory.length} Total Logs</span>
+                    <div className="flex items-center gap-3 self-start md:self-center">
+                      <div className="flex items-center gap-2 bg-slate-50 p-1 rounded-xl border border-slate-100">
+                        <span className="px-3 py-1.5 text-[10px] font-black text-slate-500">{clearingHistory.length} Recorded Payments</span>
+                      </div>
+                      <button 
+                        disabled={Number(customer.outstanding ?? datas.outstanding_balance ?? outstanding ?? 0) <= 0}
+                        onClick={() => {
+                          const bal = Number(customer.outstanding ?? datas.outstanding_balance ?? outstanding ?? 0);
+                          setPayments([{ mode: "UPI", amount: bal > 0 ? String(bal) : "" }]);
+                          setShowPayment(true);
+                        }}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black transition-all shadow-lg active:scale-95 ${
+                          Number(customer.outstanding ?? datas.outstanding_balance ?? outstanding ?? 0) > 0
+                            ? "bg-emerald-600 text-white hover:bg-emerald-700 shadow-emerald-100"
+                            : "bg-slate-100 text-slate-400 cursor-not-allowed shadow-none border border-slate-200"
+                        }`}
+                      >
+                        <Banknote size={14} />
+                        RECORD PAYMENT
+                      </button>
                     </div>
                   </div>
 
-                  {creditLoading ? (
-                    <div className="py-24 flex justify-center"><Loader /></div>
-                  ) : creditHistory.length === 0 ? (
+                  {clearingLoading ? (
+                    <div className="py-24 flex justify-center"><Loader2 className="w-8 h-8 animate-spin text-emerald-600" /></div>
+                  ) : clearingHistory.length === 0 ? (
                     <div className="py-24 text-center">
                       <div className="w-20 h-20 bg-slate-50 rounded-3xl flex items-center justify-center text-slate-200 mx-auto mb-6">
-                        <CreditCard size={40} />
+                        <Banknote size={40} />
                       </div>
-                      <h3 className="text-sm font-bold text-slate-800 uppercase tracking-widest">No Ledger Entries</h3>
-                      <p className="text-xs text-slate-400 mt-2">Historical credit changes will appear here.</p>
+                      <h3 className="text-sm font-bold text-slate-800">No Collections Yet</h3>
+                      <p className="text-xs text-slate-400 mt-2">When you record a payment for this customer, it will appear here.</p>
                     </div>
                   ) : (
-                    <div className="space-y-4">
-                      {creditHistory.map((item, _i) => {
-                        const isPositive = (item.credit_after - item.credit_before) >= 0;
-                        const diff = item.credit_after - item.credit_before;
-                        const date = new Date(item.created_at).toLocaleString("en-IN", {
-                          day: "numeric",
-                          month: "short",
-                          year: "numeric",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        });
-
-                        return (
-                          <div key={item.id} className="group relative bg-white border border-slate-100 rounded-2xl p-5 hover:border-blue-200 hover:shadow-lg hover:shadow-blue-500/5 transition-all animate-in fade-in slide-in-from-bottom-2 duration-300">
-                            <div className="flex items-center justify-between gap-6">
-                              <div className="flex items-center gap-5 min-w-0">
-                                <div className={`w-12 h-12 rounded-xl shrink-0 flex items-center justify-center transition-transform group-hover:scale-110 ${item.type === "SALES" ? "bg-amber-50 text-amber-600" : "bg-blue-50 text-blue-600"}`}>
-                                  {item.type === "SALES" ? <ShoppingCart size={20} /> : <Database size={20} />}
-                                </div>
-                                <div className="min-w-0">
-                                  <div className="flex items-center gap-2 mb-1">
-                                    <span className="text-sm font-black text-slate-800 uppercase tracking-tight">{item.type}</span>
-                                    <span className="w-1 h-1 rounded-full bg-slate-300" />
-                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{date}</span>
-                                  </div>
-                                  <div className="flex items-center gap-3 text-[11px] font-bold text-slate-400 uppercase">
-                                    <span>Before: <span className="text-slate-600">{fmt(item.credit_before)}</span></span>
-                                    <ArrowRight size={10} className="text-slate-300" />
-                                    <span>After: <span className="text-slate-800">{fmt(item.credit_after)}</span></span>
-                                  </div>
-                                </div>
+                    <div className="space-y-2">
+                      {clearingHistory.map((h, i) => (
+                        <div key={i} className="group bg-white border border-slate-100 rounded-2xl p-4 hover:bg-slate-50/50 transition-colors">
+                          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                            <div className="flex items-center gap-4">
+                              <div className="w-10 h-10 rounded-xl bg-slate-50 flex flex-col items-center justify-center border border-slate-100">
+                                <span className="text-[8px] font-bold text-slate-400 uppercase leading-none mb-0.5">Ref</span>
+                                <span className="text-[11px] font-bold text-slate-600">#{String(h.id).padStart(3, '0')}</span>
                               </div>
                               
-                              <div className="text-right shrink-0">
-                                <div className={`text-lg font-black tracking-tight ${isPositive ? "text-emerald-600" : "text-rose-600"}`}>
-                                  {isPositive ? "+" : ""}{fmt(diff)}
+                              <div>
+                                <div className="flex items-center gap-2 mb-0.5">
+                                  <span className="text-base font-bold text-slate-700 tracking-tight">₹{h.cleared_amount?.toLocaleString("en-IN")}</span>
+                                  <span className="text-[9px] font-medium text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-md">Cleared</span>
                                 </div>
-                                <div className="px-2 py-0.5 rounded-md bg-slate-50 border border-slate-100 text-[9px] font-black text-slate-400 uppercase tracking-widest inline-block mt-1">
-                                   Balance Changed
+                                <p className="text-[10px] font-medium text-slate-400">
+                                  {new Date(h.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="flex flex-wrap items-center gap-6">
+                              <div className="flex items-center gap-3 py-1.5 px-3 bg-slate-50 rounded-xl border border-slate-100/50">
+                                <div className="text-right">
+                                  <p className="text-[9px] font-medium text-slate-400 uppercase mb-0.5">Previous</p>
+                                  <p className="text-[11px] font-medium text-slate-500 line-through opacity-60">₹{h.outstanding_before}</p>
+                                </div>
+                                <ArrowRight className="w-3 h-3 text-slate-300" />
+                                <div>
+                                  <p className="text-[9px] font-medium text-slate-400 uppercase mb-0.5">Closing</p>
+                                  <p className="text-[11px] font-bold text-emerald-600">₹{h.outstanding_after}</p>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center gap-2">
+                                <p className="text-[9px] font-medium text-slate-400 uppercase tracking-tight">Via:</p>
+                                <div className="flex gap-2.5">
+                                  {Object.entries(h.payments || {}).map(([method, amount]) => (
+                                    <div key={method} className="text-[10px] font-medium flex items-center gap-1">
+                                      <span className="text-slate-400 font-bold uppercase">{method}:</span>
+                                      <span className="text-slate-600 font-bold">₹{String(amount)}</span>
+                                    </div>
+                                  ))}
                                 </div>
                               </div>
                             </div>
                           </div>
-                        );
-                      })}
+                        </div>
+                      ))}
                     </div>
                   )}
                 </div>
               </SectionCard>
             )}
 
-            {/* TAB 3 — Timeline */}
-            {activeTab === 3 && (
-              <SectionCard className="rounded-[2rem]">
-                <h2 className="text-sm font-bold text-slate-800 uppercase tracking-widest mb-8">Activity Timeline</h2>
-                {activities.length === 0 ? (
-                  <div className="py-12 text-center text-slate-400 font-medium">
-                    No recent activity detected.
-                  </div>
-                ) : (
-                  <div className="space-y-0">
-                    {activities.map((a, i) => (
-                      <div key={i} className="flex gap-6 group relative">
-                        <div className="flex flex-col items-center">
-                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${a.iconBg} z-10 transition-transform group-hover:scale-110`}>
-                            {a.icon}
-                          </div>
-                          {i < activities.length - 1 && <div className="w-0.5 flex-1 bg-slate-100 -my-2" />}
-                        </div>
-                        <div className="flex-1 pb-10">
-                          <div className="text-sm text-slate-800 mb-1" dangerouslySetInnerHTML={{ __html: a.text }} />
-                          <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{a.time}</div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </SectionCard>
-            )}
+
           </div>
         </div>
 
@@ -650,7 +734,7 @@ export default function CustomerDetail() {
               {viewValue?.value}
             </p>
           </div>
-          <p className="mt-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">
+          <p className="mt-4 text-[10px] font-bold text-slate-400   text-center">
             Double click the text to select and copy
           </p>
         </Modal>
@@ -665,24 +749,95 @@ export default function CustomerDetail() {
           ]}
         /> */}
 
-        {/* MODAL — Record Payment */}
         <Modal show={showPayment} onClose={() => setShowPayment(false)} title="Record Payment"
           footer={
-            <>
-              <button onClick={() => setShowPayment(false)} className="px-5 py-2.5 border border-slate-200 rounded-lg text-sm font-semibold text-slate-600 hover:bg-slate-50">Cancel</button>
-              <button onClick={handleSavePayment} className="flex items-center gap-2 px-5 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-sm font-semibold">
-                <Wallet className="w-4 h-4" /> Save Payment
+            <div className="flex justify-end gap-3 p-4 bg-slate-50/50 rounded-b-2xl border-t border-slate-100">
+              <button onClick={() => setShowPayment(false)} className="px-5 py-2.5 rounded-xl text-xs font-semibold text-slate-500 hover:bg-white border border-transparent hover:border-slate-200 transition-all">Cancel</button>
+              <button 
+                onClick={handleSavePayment} 
+                disabled={isClearing}
+                className="flex items-center gap-2 px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-lg shadow-emerald-100 disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-95"
+              >
+                {isClearing ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving...</> : <><Wallet className="w-4 h-4" /> Save Payment</>}
               </button>
-            </>
+            </div>
           }
         >
-          <div className="space-y-5">
-            <div className="grid grid-cols-2 gap-4">
-              <FormInput label="Payment Amount" type="number" value={paymentAmount} onChange={(e: any) => setPaymentAmount(e.target.value)} placeholder="₹0.00" />
-              <FormSelect label="Payment Method" options={["UPI", "Cash", "Bank Transfer", "Card", "Cheque"]} value={paymentMethod} onChange={(e: any) => setPaymentMethod(e.target.value)} />
+          <div className="space-y-6">
+            <div className="flex items-center justify-between px-1">
+              <div>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Customer balance</p>
+                <p className="text-lg font-bold text-rose-500 tabular-nums">
+                  ₹{Number(customer.outstanding ?? datas.outstanding_balance ?? 0).toLocaleString("en-IN")}
+                </p>
+              </div>
+              <button
+                onClick={addPaymentRow}
+                disabled={payments.length >= 4}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 text-blue-600 text-[10px] font-bold hover:bg-blue-100 transition-all disabled:opacity-30 border border-blue-100/50"
+              >
+                <Plus size={12} /> ADD MODE
+              </button>
             </div>
-            <FormInput label="Payment Date" type="date" value={paymentDate} onChange={(e: any) => setPaymentDate(e.target.value)} />
-            <FormInput label="Reference Number (Optional)" type="text" value={paymentRef} onChange={(e: any) => setPaymentRef(e.target.value)} placeholder="Transaction ID, Cheque #" />
+
+            <div className="space-y-4">
+              {payments.map((p, idx) => (
+                <div key={idx} className="grid grid-cols-[1fr,1.5fr,auto] gap-3 items-end animate-in fade-in slide-in-from-top-2 duration-200">
+                  <div className="space-y-1.5">
+                    <p className="text-[10px] font-semibold text-slate-400 ml-1">Payment Mode</p>
+                    <FormSelect
+                      options={["UPI", "Cash", "Bank Transfer", "Card", "Cheque"]} 
+                      value={p.mode} 
+                      onChange={(e: any) => updatePayment(idx, { mode: e.target.value })} 
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <p className="text-[10px] font-semibold text-slate-400 ml-1">Amount</p>
+                    <div className="relative group">
+                      <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 group-focus-within:text-blue-500 transition-colors">₹</span>
+                      <input
+                        type="number"
+                        value={p.amount}
+                        onChange={(e) => updatePayment(idx, { amount: e.target.value })}
+                        placeholder="0.00"
+                        className="w-full h-10 pl-7 pr-4 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-700 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-500/5 transition-all placeholder:text-slate-300"
+                      />
+                    </div>
+                  </div>
+                  {payments.length > 1 && (
+                    <button
+                      onClick={() => removePaymentRow(idx)}
+                      className="w-10 h-10 flex items-center justify-center text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all mb-[1px]"
+                      title="Remove mode"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            <div className="p-4 bg-slate-50/50 rounded-2xl border border-slate-100 relative overflow-hidden">
+              <div className="flex items-center justify-between mb-2.5">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Total Collection</span>
+                <span className="text-base font-bold text-slate-700 tabular-nums">
+                  ₹{payments.reduce((acc, curr) => acc + (parseFloat(curr.amount) || 0), 0).toLocaleString("en-IN")}
+                </span>
+              </div>
+              <div className="w-full h-1 bg-slate-100 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-emerald-500 transition-all duration-700 ease-out"
+                  style={{
+                    width: `${Math.min(100, (payments.reduce((acc, curr) => acc + (parseFloat(curr.amount) || 0), 0) / Number(customer.outstanding ?? datas.outstanding_balance ?? 1)) * 100)}%`
+                  }}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <FormInput label="Payment Date" type="date" value={paymentDate} onChange={(e: any) => setPaymentDate(e.target.value)} />
+              <FormInput label="Reference Number (Optional)" type="text" value={paymentRef} onChange={(e: any) => setPaymentRef(e.target.value)} placeholder="Txn ID, Cheque #" />
+            </div>
             <FormTextarea label="Notes (Optional)" value={paymentNotes} onChange={(e: any) => setPaymentNotes(e.target.value)} placeholder="Add any notes..." />
           </div>
         </Modal>

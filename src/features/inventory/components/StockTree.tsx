@@ -53,7 +53,7 @@ export const BatchBadge = ({ expDate, qty }: { expDate?: string; qty: number }) 
   const days = getDaysLeft(expDate);
   if (qty <= 0) {
     return (
-      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider border bg-slate-50 text-slate-400 border-slate-200">
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold   border bg-slate-50 text-slate-400 border-slate-200">
         Depleted
       </span>
     );
@@ -61,20 +61,20 @@ export const BatchBadge = ({ expDate, qty }: { expDate?: string; qty: number }) 
   if (days === null) return null;
   if (days < 0) {
     return (
-      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider border bg-rose-50 text-rose-600 border-rose-200">
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold   border bg-rose-50 text-rose-600 border-rose-200">
         Expired
       </span>
     );
   }
   if (days <= 90) {
     return (
-      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider border bg-amber-50 text-amber-600 border-amber-200">
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold   border bg-amber-50 text-amber-600 border-amber-200">
         <Clock size={10} /> {days}d left
       </span>
     );
   }
   return (
-    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider border bg-emerald-50 text-emerald-600 border-emerald-200">
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold   border bg-emerald-50 text-emerald-600 border-emerald-200">
       <span className="w-1 h-1 rounded-full bg-emerald-500 inline-block" /> {days}d left
     </span>
   );
@@ -115,7 +115,7 @@ export const SerialBadgeList = ({ serials, title = "Serial Numbers" }: { serials
         <div className="space-y-4">
           <div className="flex items-center justify-between bg-slate-50 p-4 rounded-xl border border-slate-100">
             <div>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Total Serials</p>
+              <p className="text-[10px] font-bold text-slate-400   mb-1">Total Serials</p>
               <p className="text-xl font-bold text-slate-800">{serials.length}</p>
             </div>
             <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center text-blue-600">
@@ -135,7 +135,7 @@ export const SerialBadgeList = ({ serials, title = "Serial Numbers" }: { serials
           <div className="pt-4 border-t border-slate-100 flex justify-end">
             <button 
               onClick={() => setShowModal(false)}
-              className="px-6 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-[11px] uppercase tracking-widest rounded-xl transition-all"
+              className="px-6 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-[11px]   rounded-xl transition-all"
             >
               Close
             </button>
@@ -199,7 +199,7 @@ export const BatchCards = ({ batches }: { batches: any | any[] }) => {
                 <span className="text-[12px] sm:text-[13px] font-bold text-slate-800 tracking-tight truncate mr-2">
                   {batch.name || batch.batch || `BATCH-${String(idx + 1).padStart(3, '0')}`}
                 </span>
-                <span className={`px-2 py-0.5 rounded text-[9px] sm:text-[10px] font-bold uppercase tracking-wider shrink-0 ${daysToExpiry !== null && daysToExpiry <= 0 ? "bg-rose-50 text-rose-600" : "bg-emerald-50 text-emerald-600"}`}>
+                <span className={`px-2 py-0.5 rounded text-[9px] sm:text-[10px] font-bold   shrink-0 ${daysToExpiry !== null && daysToExpiry <= 0 ? "bg-rose-50 text-rose-600" : "bg-emerald-50 text-emerald-600"}`}>
                   {daysToExpiry !== null && daysToExpiry <= 0 ? "Expired" : "Active"}
                 </span>
               </div>
@@ -231,7 +231,7 @@ export const BatchCards = ({ batches }: { batches: any | any[] }) => {
                 {serials.length > 0 && (
                   <div className="mt-3 pt-3 border-t border-slate-100">
                     <div className="flex items-center justify-between mb-2">
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Serial Numbers</p>
+                      <p className="text-[10px] font-bold text-slate-400  ">Serial Numbers</p>
                       <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">{serials.length}</span>
                     </div>
                     <SerialBadgeList serials={serials} title={`Batch Serials: ${batch.name || batch.batch}`} />
@@ -247,7 +247,7 @@ export const BatchCards = ({ batches }: { batches: any | any[] }) => {
         <div className="mt-4 flex justify-center">
           <button 
             onClick={() => setShowAll(true)}
-            className="flex items-center gap-2 px-6 py-2.5 bg-white border border-slate-200 text-slate-600 font-bold text-[11px] uppercase tracking-widest rounded-xl hover:bg-slate-50 hover:border-blue-200 transition-all shadow-sm"
+            className="flex items-center gap-2 px-6 py-2.5 bg-white border border-slate-200 text-slate-600 font-bold text-[11px]   rounded-xl hover:bg-slate-50 hover:border-blue-200 transition-all shadow-sm"
           >
             View All {batches.length} Batches
             <ChevronDown size={14} />
@@ -323,7 +323,7 @@ export const VariantRows = ({ combinations, baseSellPrice, baseBuyPrice }: { com
                       <div className="flex items-center gap-2 mt-0.5">
                         <span className="text-[10px] font-mono text-slate-400 font-medium">{comb.barcode || combDatas.barcode || "No SKU"}</span>
                         {hasBatches && (
-                          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-600 border border-indigo-100 uppercase tracking-tighter shrink-0">
+                          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-600 border border-indigo-100  tracking-tighter shrink-0">
                             {batches.length} {batches.length === 1 ? 'Batch' : 'Batches'}
                           </span>
                         )}
@@ -335,16 +335,16 @@ export const VariantRows = ({ combinations, baseSellPrice, baseBuyPrice }: { com
                   <div className="flex items-center justify-between sm:justify-end gap-6 md:gap-10 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-50">
                     <div className="flex items-center gap-6 sm:gap-8">
                       <div className="text-left sm:text-right min-w-[70px]">
-                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-1">Buy Price</p>
+                        <p className="text-[9px] font-bold text-slate-400   leading-none mb-1">Buy Price</p>
                         <p className="text-xs font-bold text-rose-500">{formatCurrency(buyPrice)}</p>
                       </div>
                       <div className="text-left sm:text-right min-w-[70px]">
-                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-1">Sell Price</p>
+                        <p className="text-[9px] font-bold text-slate-400   leading-none mb-1">Sell Price</p>
                         <p className="text-xs font-bold text-emerald-600">{formatCurrency(sellPrice)}</p>
                       </div>
                     </div>
                     <div className="text-right min-w-[90px]">
-                      <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-1.5">Status</p>
+                      <p className="text-[9px] font-bold text-slate-400   leading-none mb-1.5">Status</p>
                       <span className={`inline-flex px-2 py-0.5 rounded-lg text-[10px] font-bold border ${stockStatus.color}`}>
                         {stockStatus.label}
                       </span>
@@ -356,7 +356,7 @@ export const VariantRows = ({ combinations, baseSellPrice, baseBuyPrice }: { com
                 {hasSerials && (
                   <div className="px-5 pb-3 pt-2 border-t border-slate-50/50 bg-indigo-50/10">
                      <div className="flex items-center justify-between mb-1">
-                       <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1">
+                       <p className="text-[9px] font-bold text-slate-400   flex items-center gap-1">
                          <Hash size={10} className="text-indigo-400" /> Serial Numbers ({serials.length})
                        </p>
                      </div>

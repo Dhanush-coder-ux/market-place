@@ -213,7 +213,7 @@ const VariantBuilder: React.FC<VariantBuilderProps> = ({ variantTypes, onChange,
       {/* Suggested pills */}
       {unusedSuggestions.length > 0 && (
         <div>
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 mb-2">
+          <p className="text-[10px] font-semibold   text-slate-400 mb-2">
             <Zap size={9} className="inline mr-1 text-amber-400" />
             Suggested for this category
           </p>
@@ -422,7 +422,7 @@ const SerialManager: React.FC<SerialManagerProps> = ({ combo, serialLabel, onClo
 
         {showBulk && (
           <div className="px-5 py-3 bg-slate-50 border-b border-slate-100">
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 mb-1.5">
+            <p className="text-[10px] font-semibold   text-slate-400 mb-1.5">
               Paste serial numbers (comma, semicolon, or newline separated)
             </p>
             <textarea
@@ -458,7 +458,7 @@ const SerialManager: React.FC<SerialManagerProps> = ({ combo, serialLabel, onClo
             <>
               <div className="grid gap-3 px-5 py-2.5 border-b border-slate-100 bg-slate-50 sticky top-0" style={{ gridTemplateColumns: "1fr 130px 100px 110px 28px" }}>
                 {[serialLabel, "Purchase Date", "Warranty", "Status"].map((h) => (
-                  <p key={h} className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">{h}</p>
+                  <p key={h} className="text-[10px] font-semibold   text-slate-400">{h}</p>
                 ))}
                 <div />
               </div>
@@ -568,15 +568,15 @@ const VariantMatrixTable: React.FC<VariantMatrixTableProps> = ({
             <thead>
               <tr className="bg-slate-50 border-b border-slate-200">
                 {attrKeys.map((k) => (
-                  <th key={k} className="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-widest text-slate-400 whitespace-nowrap">{k}</th>
+                  <th key={k} className="px-4 py-3 text-left text-[10px] font-semibold   text-slate-400 whitespace-nowrap">{k}</th>
                 ))}
-                <th className="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-widest text-slate-400 whitespace-nowrap">SKU</th>
-                <th className="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-widest text-slate-400 whitespace-nowrap">Price (₹)</th>
-                <th className="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-widest text-slate-400 whitespace-nowrap">Stock</th>
+                <th className="px-4 py-3 text-left text-[10px] font-semibold   text-slate-400 whitespace-nowrap">SKU</th>
+                <th className="px-4 py-3 text-left text-[10px] font-semibold   text-slate-400 whitespace-nowrap">Price (₹)</th>
+                <th className="px-4 py-3 text-left text-[10px] font-semibold   text-slate-400 whitespace-nowrap">Stock</th>
                 {supportsSerials && (
-                  <th className="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-widest text-slate-400 whitespace-nowrap">{serialLabel}s</th>
+                  <th className="px-4 py-3 text-left text-[10px] font-semibold   text-slate-400 whitespace-nowrap">{serialLabel}s</th>
                 )}
-                <th className="px-4 py-3 text-center text-[10px] font-semibold uppercase tracking-widest text-slate-400">Active</th>
+                <th className="px-4 py-3 text-center text-[10px] font-semibold   text-slate-400">Active</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -731,7 +731,7 @@ export const ProductVariantsSection: React.FC<ProductVariantsSectionProps> = ({
         <div className="space-y-6">
           {/* Variant type builder */}
           <div className="border border-slate-100 rounded-xl p-4 bg-slate-50/40">
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 mb-4">
+            <p className="text-[10px] font-semibold   text-slate-400 mb-4">
               Define Variant Types
             </p>
             <VariantBuilder
@@ -746,7 +746,7 @@ export const ProductVariantsSection: React.FC<ProductVariantsSectionProps> = ({
             <div>
               <div className="flex items-center gap-2 mb-3">
                 <Cpu size={13} className="text-slate-400" />
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">
+                <p className="text-[10px] font-semibold   text-slate-400">
                   Variant Matrix
                 </p>
               </div>

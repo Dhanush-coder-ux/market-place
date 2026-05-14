@@ -118,7 +118,7 @@ const PurchaseHistory = () => {
 
         {/* Pagination Footer */}
         <div className="p-6 flex items-center justify-between border-t border-slate-100 bg-slate-50/30">
-          <p className="text-xs font-bold text-slate-400 uppercase tracking-tighter">
+          <p className="text-xs font-bold text-slate-400  tracking-tighter">
             Showing 1 to {PURCHASE_DATA.length} of {PURCHASE_DATA.length} entries
           </p>
           <div className="flex items-center gap-1">

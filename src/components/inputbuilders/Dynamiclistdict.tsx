@@ -84,7 +84,7 @@ export const DynamicListDict: React.FC<DynamicListDictProps> = ({
                 <th
                   key={key}
                   scope="col"
-                  className="px-4 py-3.5 text-left text-xs font-semibold text-slate-700 uppercase tracking-wide whitespace-nowrap"
+                  className="px-4 py-3.5 text-left text-xs font-semibold text-slate-700  tracking-wide whitespace-nowrap"
                 >
                   {f.label_name}
                   {f.required && <span className="text-red-500 ml-1">*</span>}

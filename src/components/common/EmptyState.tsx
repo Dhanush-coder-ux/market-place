@@ -25,14 +25,14 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
       </div>
       <div className="max-w-xs">
         <h3 className="text-lg font-black text-slate-800 tracking-tight">{title}</h3>
-        <p className="text-slate-400 text-xs font-bold mt-1 uppercase leading-relaxed tracking-wider">
+        <p className="text-slate-400 text-xs font-bold mt-1  leading-relaxed ">
           {description}
         </p>
       </div>
       {actionText && onAction && (
         <button 
           onClick={onAction}
-          className="mt-6 px-8 py-3 rounded-2xl bg-blue-600 text-white font-black text-xs uppercase tracking-[0.2em] shadow-xl shadow-blue-100 hover:bg-blue-700 hover:scale-105 transition-all active:scale-95"
+          className="mt-6 px-8 py-3 rounded-2xl bg-blue-600 text-white font-black text-xs  tracking-[0.2em] shadow-xl shadow-blue-100 hover:bg-blue-700 hover:scale-105 transition-all active:scale-95"
         >
           {actionText}
         </button>

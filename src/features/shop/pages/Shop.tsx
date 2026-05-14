@@ -133,7 +133,7 @@ export default function Shop() {
 
       {/* 1. HERO TEXT SECTION */}
       <div className="flex flex-col items-center text-center mb-12 max-w-3xl">
-        <div className="title-reveal inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/20 backdrop-blur-md border border-white/30 text-white text-xs font-bold uppercase tracking-widest mb-6">
+        <div className="title-reveal inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/20 backdrop-blur-md border border-white/30 text-white text-xs font-bold   mb-6">
           <Store size={14} /> Management Console
         </div>
 
@@ -168,7 +168,7 @@ export default function Shop() {
                   <div className="flex gap-1 justify-end">
                     {[...Array(5)].map((_, i) => <Star key={i} size={14} className="text-amber-400 fill-amber-400" />)}
                   </div>
-                  <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Verified Seller</span>
+                  <span className="text-[10px] text-slate-400 font-bold  ">Verified Seller</span>
                 </div>
               </div>
 

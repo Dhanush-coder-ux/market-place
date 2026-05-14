@@ -129,7 +129,7 @@ const AnalyticsDashboard = () => {
           </div>
         </div>
         {/* ── SALES PERFORMANCE LABEL ── */}
-        <h2 className="display-font text-base font-semibold text-slate-600 tracking-wide uppercase fade-up fade-up-2">
+        <h2 className="display-font text-base font-semibold text-slate-600 tracking-wide  fade-up fade-up-2">
           Sales Performance
         </h2>
 

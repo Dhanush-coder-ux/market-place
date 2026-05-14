@@ -414,7 +414,7 @@ export default function StockAdjustmentPage() {
             <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-100 hover:border-blue-200 transition-all">
               <div className="flex flex-col">
                 <span className="text-xs font-semibold text-slate-700">{stat.name}</span>
-                <span className="text-[9px] font-medium text-slate-400 uppercase tracking-wider mt-0.5">{stat.type === 'INCREMENT' ? 'Inbound' : 'Outbound'}</span>
+                <span className="text-[9px] font-medium text-slate-400   mt-0.5">{stat.type === 'INCREMENT' ? 'Inbound' : 'Outbound'}</span>
               </div>
               <span className={`text-sm font-bold tabular-nums ${stat.type === 'INCREMENT' ? 'text-emerald-600' : 'text-rose-600'}`}>
                 {stat.change > 0 ? '+' : ''}{stat.change}
@@ -468,11 +468,11 @@ export default function StockAdjustmentPage() {
 
                       <div>
                         <h4 className="font-semibold text-slate-800 text-sm pr-6">{variant.name}</h4>
-                        <p className="text-[9px] text-slate-400 mt-1 font-medium uppercase tracking-wider">SKU: {variant.sku}</p>
+                        <p className="text-[9px] text-slate-400 mt-1 font-medium  ">SKU: {variant.sku}</p>
                       </div>
                       
                       <div className="mt-2 flex flex-wrap gap-2">
-                        <span className={`inline-flex px-2 py-0.5 rounded-lg text-[9px] font-semibold uppercase tracking-wider ${
+                        <span className={`inline-flex px-2 py-0.5 rounded-lg text-[9px] font-semibold   ${
                             stockNum <= 0 ? 'bg-slate-200 text-slate-600' : 
                             isLowStock ? 'bg-orange-100 text-orange-700' : 
                             'bg-emerald-100 text-emerald-700'
@@ -480,7 +480,7 @@ export default function StockAdjustmentPage() {
                           Stock: {stockNum}
                         </span>
                         {batchCount > 0 && (
-                          <span className="inline-flex px-2 py-0.5 rounded-lg bg-indigo-50 text-indigo-700 text-[9px] font-bold border border-indigo-100 uppercase tracking-wider">
+                          <span className="inline-flex px-2 py-0.5 rounded-lg bg-indigo-50 text-indigo-700 text-[9px] font-bold border border-indigo-100  ">
                             {batchCount} {batchCount === 1 ? 'Batch' : 'Batches'}
                           </span>
                         )}
@@ -546,11 +546,11 @@ export default function StockAdjustmentPage() {
                     </div>
                     <div className="grid grid-cols-2 gap-y-2">
                       <div className="flex flex-col">
-                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Available Stock</span>
+                        <span className="text-[9px] font-bold text-slate-400  ">Available Stock</span>
                         <span className="text-xs font-bold text-emerald-600">{batch.stocks || batch.quantity || 0} Units</span>
                       </div>
                       <div className="flex flex-col">
-                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Expiry</span>
+                        <span className="text-[9px] font-bold text-slate-400  ">Expiry</span>
                         <span className="text-xs font-bold text-slate-600">{batch.expiry_date || batch.expiry || 'N/A'}</span>
                       </div>
                     </div>
@@ -641,7 +641,7 @@ export default function StockAdjustmentPage() {
                                 {index + 1}
                               </div>
                               <div>
-                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Item Specification</span>
+                                <span className="text-[10px] font-bold text-slate-400  ">Item Specification</span>
                                 {item.sku && <span className="ml-2 text-[9px] font-mono text-slate-400">#{item.sku}</span>}
                               </div>
                             </div>
@@ -662,7 +662,7 @@ export default function StockAdjustmentPage() {
                             {/* Product Selector */}
                             <div className="xl:col-span-5 space-y-3">
                               <div className="flex flex-col gap-1.5">
-                                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Product Details</label>
+                                <label className="text-[10px] font-bold text-slate-500   ml-1">Product Details</label>
                                   <SearchSelect 
                                     fetchOptions={async (q) => await inventoryApi.searchInventories(q)}
                                     value={item.product}
@@ -741,22 +741,22 @@ export default function StockAdjustmentPage() {
                                 <div className="flex flex-wrap gap-2 animate-in zoom-in-95 mt-[-4px]">
                                   {item.variant_name && (
                                     <div className="flex flex-col">
-                                      <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest ml-1 mb-0.5">Variation</span>
-                                      <div className="px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 text-[10px] font-bold border border-blue-100 uppercase tracking-widest shadow-sm">
+                                      <span className="text-[9px] font-bold text-slate-400   ml-1 mb-0.5">Variation</span>
+                                      <div className="px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 text-[10px] font-bold border border-blue-100   shadow-sm">
                                         {item.variant_name}
                                       </div>
                                     </div>
                                   )}
                                   {item.batch_name && (
                                     <div className="flex flex-col">
-                                      <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest ml-1 mb-0.5">Batch</span>
-                                      <div className="px-3 py-1.5 rounded-lg bg-amber-50 text-amber-700 text-[10px] font-bold border border-amber-100 uppercase tracking-widest shadow-sm">
+                                      <span className="text-[9px] font-bold text-slate-400   ml-1 mb-0.5">Batch</span>
+                                      <div className="px-3 py-1.5 rounded-lg bg-amber-50 text-amber-700 text-[10px] font-bold border border-amber-100   shadow-sm">
                                         {item.batch_name}
                                       </div>
                                     </div>
                                   )}
                                   <div className="flex flex-col">
-                                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest ml-1 mb-0.5">Stock Impact</span>
+                                    <span className="text-[9px] font-bold text-slate-400   ml-1 mb-0.5">Stock Impact</span>
                                     <div className="flex gap-2">
                                       <div className="px-3 py-1.5 rounded-lg bg-slate-100 text-slate-600 text-[10px] font-bold border border-slate-200">
                                         Prev: {item.currentStock}
@@ -827,7 +827,7 @@ export default function StockAdjustmentPage() {
                     <div className="pt-4 flex justify-center w-full">
                       <button 
                         onClick={handleAddItem}
-                        className="w-full group flex items-center justify-center gap-3 px-8 py-5 rounded-[2rem] border-2 border-dashed border-slate-200 text-slate-400 font-bold text-xs uppercase tracking-widest hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50/30 transition-all active:scale-95"
+                        className="w-full group flex items-center justify-center gap-3 px-8 py-5 rounded-[2rem] border-2 border-dashed border-slate-200 text-slate-400 font-bold text-xs   hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50/30 transition-all active:scale-95"
                       >
                         <Plus size={18} className="group-hover:rotate-90 transition-transform duration-300" />
                         Add Next Product
@@ -863,11 +863,11 @@ export default function StockAdjustmentPage() {
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 text-center">
-                    <span className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider block mb-0.5">Items</span>
+                    <span className="text-[9px] font-semibold text-slate-400   block mb-0.5">Items</span>
                     <span className="text-xl font-bold text-slate-800">{summary.validProductCount}</span>
                   </div>
                   <div className={`p-3 rounded-xl border text-center transition-colors ${summary.netChange > 0 ? 'bg-emerald-50 border-emerald-100' : summary.netChange < 0 ? 'bg-rose-50 border-rose-100' : 'bg-slate-50 border-slate-100'}`}>
-                    <span className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider block mb-0.5">Net</span>
+                    <span className="text-[9px] font-semibold text-slate-400   block mb-0.5">Net</span>
                     <span className={`text-xl font-bold ${summary.netChange > 0 ? 'text-emerald-600' : summary.netChange < 0 ? 'text-rose-600' : 'text-slate-800'}`}>
                       {summary.netChange > 0 ? '+' : ''}{summary.netChange}
                     </span>

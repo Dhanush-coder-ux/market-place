@@ -18,15 +18,15 @@
 }
 
 .table-head {
-  @apply bg-slate-50 text-slate-500 font-semibold text-sm uppercase tracking-wide;
+  @apply bg-slate-50/50 text-slate-500 font-black text-[11px] tracking-tight;
 }
 
 .table-data {
-  @apply px-6 py-3 border-b border-e-blue-950;
+  @apply px-6 py-5 border-b border-slate-100;
 }
 
 .table-cell {
-  @apply p-4 text-gray-700 text-sm border-b border-gray-300;
+  @apply p-5 text-slate-700 text-[13px] border-b border-slate-100;
 }
 
 .create-shop {

@@ -27,7 +27,7 @@ const PurchaseDetail = () => {
           <div>
             <div className="flex items-center gap-2 mb-2">
              
-              <span className="text-[11px] font-bold text-blue-600 bg-indigo-50/50 border border-indigo-100 px-2.5 py-0.5 rounded-full uppercase tracking-widest">
+              <span className="text-[11px] font-bold text-blue-600 bg-indigo-50/50 border border-indigo-100 px-2.5 py-0.5 rounded-full  ">
                 Purchase Order · INV-004
               </span>
             </div>
@@ -65,23 +65,23 @@ const PurchaseDetail = () => {
                   </div>
                   Order Items
                 </h2>
-                <span className="text-xs text-slate-400 font-bold uppercase tracking-wider">{purchaseItems.length} Item(s)</span>
+                <span className="text-xs text-slate-400 font-bold  ">{purchaseItems.length} Item(s)</span>
               </div>
 
               <div className="overflow-x-auto">
                <table className="w-full text-left border border-slate-200 rounded-xl overflow-hidden">
   <thead>
     <tr className="bg-slate-50 border-b border-slate-200">
-      <th className="px-8 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-r border-slate-200">
+      <th className="px-8 py-4 text-[10px] font-bold text-slate-500   border-r border-slate-200">
         Item Details
       </th>
-      <th className="px-4 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-r border-slate-200">
+      <th className="px-4 py-4 text-[10px] font-bold text-slate-500   border-r border-slate-200">
         Quantity
       </th>
-      <th className="px-4 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest text-right border-r border-slate-200">
+      <th className="px-4 py-4 text-[10px] font-bold text-slate-500   text-right border-r border-slate-200">
         Unit Price
       </th>
-      <th className="px-8 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest text-right">
+      <th className="px-8 py-4 text-[10px] font-bold text-slate-500   text-right">
         Total
       </th>
     </tr>
@@ -142,7 +142,7 @@ const PurchaseDetail = () => {
             
             {/* Payment Status Card */}
             <div className="bg-white p-6 ">
-              <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-6 text-center">Payment Status</h3>
+              <h3 className="text-[10px] font-bold text-slate-400  tracking-[0.2em] mb-6 text-center">Payment Status</h3>
               <div 
                 onClick={toggleStatus}
                 className={`flex flex-col items-center p-6 rounded-2xl border-2 border-dashed cursor-pointer transition-all hover:scale-[1.02] active:scale-95 group ${
@@ -157,13 +157,13 @@ const PurchaseDetail = () => {
                 <span className={`text-xl font-black tracking-tight ${status === 'Paid' ? 'text-emerald-700' : 'text-amber-700'}`}>
                   {status}
                 </span>
-                <p className="text-[10px] font-bold text-slate-400 mt-2 uppercase tracking-widest opacity-60 group-hover:opacity-100">Click to change</p>
+                <p className="text-[10px] font-bold text-slate-400 mt-2   opacity-60 group-hover:opacity-100">Click to change</p>
               </div>
             </div>
 
             {/* Supplier Information */}
             <div className="bg-white p-6 space-y-6">
-              <h3 className="heading-label text-slate-800 flex items-center gap-2.5 uppercase tracking-wider">
+              <h3 className="heading-label text-slate-800 flex items-center gap-2.5  ">
                 <User size={18} className="text-indigo-500" /> Supplier Details
               </h3>
               <div className="space-y-5">
@@ -171,7 +171,7 @@ const PurchaseDetail = () => {
                 <SidebarItem icon={Calendar} label="Purchase Date" value="April 20, 2024" />
                 <SidebarItem icon={FileText} label="Reference" value="INV-004 PU03TO-34" />
               </div>
-              <button className="w-full py-3.5 bg-slate-50 text-slate-500 rounded-xl text-[11px] font-black uppercase tracking-widest hover:bg-indigo-50 hover:text-indigo-600 transition-all border border-slate-100">
+              <button className="w-full py-3.5 bg-slate-50 text-slate-500 rounded-xl text-[11px] font-black   hover:bg-indigo-50 hover:text-indigo-600 transition-all border border-slate-100">
                 View All Vendor Orders
               </button>
             </div>
@@ -189,7 +189,7 @@ const SidebarItem = ({ icon: Icon, label, value }:{icon:LucideIcon,label:string,
       <Icon size={18} />
     </div>
     <div className="min-w-0">
-      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 leading-none">{label}</p>
+      <p className="text-[10px] font-bold text-slate-400   mb-1 leading-none">{label}</p>
       <p className="text-sm font-bold text-slate-700 truncate tracking-tight">{value}</p>
     </div>
   </div>

@@ -42,7 +42,7 @@ const Breadcrumb = () => {
             className="flex items-center gap-1 hover:text-blue-600 transition-colors bg-white px-2 py-0.5 rounded-md border border-slate-200 shadow-sm text-[10px] text-slate-500 font-bold"
           >
             <ChevronLeft size={10} />
-            BACK
+            Back
           </button>
           <ChevronRight size={10} className="shrink-0 opacity-40" />
         </>
@@ -56,7 +56,7 @@ const Breadcrumb = () => {
         return (
           <div key={href} className="flex items-center gap-2.5">
             {isLast ? (
-              <span className="text-blue-600 font-bold whitespace-nowrap uppercase tracking-wider">
+              <span className="text-blue-600 font-bold whitespace-nowrap  ">
                 {formatSegment(path)}
               </span>
             ) : (

@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from "react";
 import {
   IndianRupee, ShoppingBag, Percent,
-  Wallet, Banknote, Smartphone, ScanBarcode,
+  Wallet, Banknote, ScanBarcode,
   Clock, Trash2, CheckCircle2, ArrowRight,
   Plus, ChevronDown, CreditCard,
   AlertCircle, X
@@ -35,9 +35,9 @@ const PaymentModeDropdown: React.FC<{
   const [isOpen, setIsOpen] = useState(false);
   
   const options: { value: PaymentMode; label: string; icon: any; color: string; bgColor: string; borderColor: string; disabled?: boolean }[] = [
-    { value: "cash", label: "Cash", icon: <Banknote size={12} />, color: "text-emerald-600", bgColor: "bg-emerald-50/50", borderColor: "border-emerald-100" },
-    { value: "upi", label: "UPI/Card", icon: <CreditCard size={12} />, color: "text-violet-600", bgColor: "bg-violet-50/50", borderColor: "border-violet-100" },
-    { value: "credit", label: "Credit", icon: <Clock size={12} />, color: "text-blue-600", bgColor: "bg-blue-50/50", borderColor: "border-blue-100", disabled: !isCreditAllowed },
+    { value: "cash", label: "Cash", icon: <Banknote size={13} />, color: "text-emerald-600", bgColor: "bg-emerald-50/80", borderColor: "border-emerald-200/60" },
+    { value: "upi", label: "UPI/Card", icon: <CreditCard size={13} />, color: "text-violet-600", bgColor: "bg-violet-50/80", borderColor: "border-violet-200/60" },
+    { value: "credit", label: "Credit", icon: <Clock size={13} />, color: "text-blue-600", bgColor: "bg-blue-50/80", borderColor: "border-blue-200/60", disabled: !isCreditAllowed },
   ];
 
   const current = options.find(o => o.value === value) || options[0];
@@ -47,18 +47,18 @@ const PaymentModeDropdown: React.FC<{
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className={`flex items-center gap-2 ${current.bgColor} border ${current.borderColor} text-[11px] font-bold ${current.color} pl-2 pr-6 py-1.5 rounded-lg w-[100px] transition-all relative hover:brightness-95 active:scale-95`}
+        className={`flex items-center gap-1.5 ${current.bgColor} border ${current.borderColor} text-[10px] font-black ${current.color} pl-2 pr-6 py-2 rounded-xl w-[95px] transition-all relative hover:brightness-95 active:scale-95 shadow-sm`}
       >
-        <span>{current.icon}</span>
-        {current.label}
-        <ChevronDown size={10} className={`absolute right-2 top-1/2 -translate-y-1/2 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`} />
+        <span className="shrink-0 opacity-80">{current.icon}</span>
+        <span className="truncate">{current.label}</span>
+        <ChevronDown size={10} className={`absolute right-2 top-1/2 -translate-y-1/2 transition-transform duration-300 ${isOpen ? "rotate-180" : ""}`} />
       </button>
 
       {isOpen && (
         <>
           <div className="fixed inset-0 z-[100]" onClick={() => setIsOpen(false)} />
-          <div className="absolute top-full left-0 mt-1.5 w-[140px] bg-white border border-slate-200 rounded-xl shadow-2xl z-[101] py-1.5 animate-in fade-in zoom-in-95 duration-100 overflow-hidden">
-            <div className="px-2 pb-1.5 mb-1.5 border-b border-slate-50">
+          <div className="absolute top-full left-0 mt-2 w-[140px] bg-white border border-slate-200/60 rounded-xl shadow-2xl z-[101] py-2 animate-in fade-in slide-in-from-top-2 duration-200 overflow-hidden backdrop-blur-xl bg-white/95">
+            <div className="px-3 pb-2 mb-2 border-b border-slate-100">
               <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Select Mode</p>
             </div>
             {options.map((opt) => (
@@ -70,16 +70,20 @@ const PaymentModeDropdown: React.FC<{
                   onChange(opt.value);
                   setIsOpen(false);
                 }}
-                className={`w-full flex items-center gap-2.5 px-3 py-2 text-[11px] font-bold transition-all ${
-                  opt.disabled ? "opacity-30 cursor-not-allowed grayscale" : 
-                  value === opt.value ? "bg-blue-50 text-blue-600" : "text-slate-600 hover:bg-slate-50"
+                className={`w-full flex items-center gap-3 px-3 py-2.5 text-[11px] font-bold transition-all relative ${
+                  opt.disabled ? "opacity-30 cursor-not-allowed" : 
+                  value === opt.value ? "bg-blue-50/80 text-blue-700" : "text-slate-600 hover:bg-slate-50"
                 }`}
               >
-                <span className={value === opt.value ? "text-blue-600" : opt.color}>
+                <span className={`shrink-0 ${value === opt.value ? "text-blue-600" : opt.color}`}>
                   {opt.icon}
                 </span>
                 {opt.label}
-                {value === opt.value && <div className="ml-auto w-1 h-3 rounded-full bg-blue-500" />}
+                {value === opt.value && (
+                  <div className="ml-auto flex items-center">
+                    <div className="w-1.5 h-1.5 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]" />
+                  </div>
+                )}
               </button>
             ))}
           </div>
@@ -89,27 +93,7 @@ const PaymentModeDropdown: React.FC<{
   );
 };
 
-const PaymentButton: React.FC<{ mode: PaymentMode; active: boolean; disabled?: boolean; icon: React.ReactNode; label: string; onClick: () => void }> = ({ mode, active, disabled, icon, label, onClick }) => {
-  const activeStyles = {
-    cash: "bg-emerald-50/60 border-emerald-300/60 text-emerald-700",
-    upi: "bg-violet-50/60 border-violet-300/60 text-violet-700",
-    credit: "bg-blue-50/60 border-blue-300/60 text-blue-700",
-  };
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      className={`flex-1 flex flex-col items-center gap-1.5 py-2.5 px-2 rounded-lg border transition-all duration-200 text-[11px] font-medium ${
-        disabled ? "opacity-30 cursor-not-allowed pointer-events-none" :
-        active ? activeStyles[mode] : "bg-white border-slate-200/60 text-slate-400 hover:border-slate-300/80 hover:text-slate-500"
-      }`}
-    >
-      {icon}
-      {label}
-    </button>
-  );
-};
+
 
 const BillingHeader: React.FC<BillingHeaderProps> = ({
   items, customerData, customerName, phone,
@@ -120,6 +104,7 @@ const BillingHeader: React.FC<BillingHeaderProps> = ({
     { mode: "cash", amount: 0 }
   ]);
   const [showInvoice, setShowInvoice] = useState(false);
+  const [isSplitModalOpen, setIsSplitModalOpen] = useState(false);
 
   const totalQty = useMemo(() => items.reduce((s, i) => s + (i.qty || 0), 0), [items]);
   const totalAmount = useMemo(() => items.reduce((s, i) => s + (i.tprice || 0), 0), [items]);
@@ -209,16 +194,16 @@ const BillingHeader: React.FC<BillingHeaderProps> = ({
 
         {/* Summary Stats */}
         <div className="px-4 pt-4 pb-3 border-b border-slate-100/60">
-          <p className="text-[10px] font-medium text-slate-400 uppercase tracking-wider mb-2.5">Summary</p>
+          <p className="text-[10px] font-medium text-slate-400   mb-2.5">Summary</p>
           <div className="grid grid-cols-2 gap-2.5">
             <div className="rounded-lg bg-slate-50/60 border border-slate-100/60 p-2.5 flex flex-col gap-0.5">
-              <p className="text-[9px] font-medium text-slate-400 uppercase tracking-wider flex items-center gap-1">
+              <p className="text-[9px] font-medium text-slate-400   flex items-center gap-1">
                 <ShoppingBag size={9} className="text-blue-400" /> Items
               </p>
               <p className="text-lg font-semibold text-slate-700 tabular-nums">{totalQty}</p>
             </div>
             <div className="rounded-lg bg-slate-50/60 border border-slate-100/60 p-2.5 flex flex-col gap-0.5">
-              <p className="text-[9px] font-medium text-slate-400 uppercase tracking-wider flex items-center gap-1">
+              <p className="text-[9px] font-medium text-slate-400   flex items-center gap-1">
                 <IndianRupee size={9} className="text-blue-400" /> Subtotal
               </p>
               <p className="text-lg font-semibold text-slate-700 tabular-nums">{formatINR(totalAmount, 0)}</p>
@@ -254,7 +239,7 @@ const BillingHeader: React.FC<BillingHeaderProps> = ({
           <div className="rounded-xl bg-white p-4 flex flex-col gap-2 border border-slate-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
             <div className="flex justify-between items-start">
               <div className="flex flex-col">
-                <p className="text-[10px] font-medium text-slate-400 uppercase tracking-wider">Total Payable</p>
+                <p className="text-[10px] font-medium text-slate-400  ">Total Payable</p>
                 <div className="flex items-baseline mt-1">
                   <span className="text-[15px] font-medium text-slate-800 mr-0.5">₹</span>
                   <span className="text-[22px] font-semibold text-slate-800 tracking-tight tabular-nums">
@@ -271,173 +256,221 @@ const BillingHeader: React.FC<BillingHeaderProps> = ({
             </div>
             {includeGst && (
               <div className="pt-2 border-t border-slate-100/60 flex justify-between items-center">
-                <span className="text-[10px] font-medium uppercase tracking-wider text-slate-400">GST Amount</span>
+                <span className="text-[10px] font-medium   text-slate-400">GST Amount</span>
                 <span className="text-[12px] font-medium text-blue-600 tabular-nums">₹{formatINR(gstAmount)}</span>
               </div>
             )}
           </div>
 
-          {/* Payment Mode */}
-          <div className="flex flex-col gap-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Payment Split</p>
-                <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-slate-100 text-[8px] font-bold text-slate-500">
-                  <span className="w-1 h-1 rounded-full bg-blue-500 animate-pulse" />
-                  {payments.length} {payments.length === 1 ? 'MODE' : 'MODES'}
+          {/* Payment Overview Card */}
+          <div className="mt-1">
+            <div 
+              onClick={() => setIsSplitModalOpen(true)}
+              className={`group cursor-pointer rounded-xl border p-3.5 transition-all duration-300 relative overflow-hidden ${
+                Math.abs(balanceAmount) < 0.01 
+                  ? "bg-emerald-50/40 border-emerald-100 hover:bg-emerald-50/60" 
+                  : balanceAmount > 0 
+                    ? "bg-amber-50/40 border-amber-100 hover:bg-amber-50/60" 
+                    : "bg-blue-50/40 border-blue-100 hover:bg-blue-50/60"
+              }`}
+            >
+              <div className="flex items-center justify-between mb-3 relative z-10">
+                <div className="flex items-center gap-2">
+                  <div className={`w-2 h-2 rounded-full animate-pulse ${
+                    Math.abs(balanceAmount) < 0.01 ? "bg-emerald-500" : balanceAmount > 0 ? "bg-amber-500" : "bg-blue-500"
+                  }`} />
+                  <p className="text-[10px] font-black text-slate-500 tracking-wider">PAYMENT STATUS</p>
+                </div>
+                <button className="text-[9px] font-black text-blue-600 bg-white border border-blue-100 px-2 py-0.5 rounded-lg shadow-sm hover:bg-blue-50 transition-all">
+                  MANAGE
+                </button>
+              </div>
+
+              <div className="flex items-baseline justify-between relative z-10">
+                <div className="flex flex-col">
+                  <span className="text-[8px] font-black text-slate-400 uppercase tracking-wider">Paid</span>
+                  <span className="text-[18px] font-black text-slate-800 tabular-nums">₹{formatINR(paidAmount, 0)}</span>
+                </div>
+                <div className="flex flex-col items-end text-right">
+                  <span className={`text-[8px] font-black uppercase tracking-wider ${
+                    balanceAmount > 0 ? "text-amber-500" : balanceAmount < 0 ? "text-blue-500" : "text-emerald-500"
+                  }`}>
+                    {balanceAmount > 0 ? "Remaining" : balanceAmount < 0 ? "Change" : "Settled"}
+                  </span>
+                  <span className={`text-[18px] font-black tabular-nums ${
+                    balanceAmount > 0 ? "text-amber-600" : balanceAmount < 0 ? "text-blue-600" : "text-emerald-600"
+                  }`}>
+                    ₹{formatINR(Math.abs(balanceAmount), 0)}
+                  </span>
+                </div>
+              </div>
+
+              <div className="mt-3 w-full h-1 bg-slate-200/40 rounded-full overflow-hidden flex gap-0.5 shadow-inner">
+                {payments.map((p, i) => {
+                  const width = finalAmount > 0 ? (p.amount / finalAmount) * 100 : 0;
+                  if (width <= 0) return null;
+                  return (
+                    <div key={i} style={{ width: `${width}%` }} className={`h-full transition-all duration-700 ${p.mode === 'cash' ? 'bg-emerald-400' : p.mode === 'upi' ? 'bg-violet-400' : 'bg-blue-400'}`} />
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="px-4 py-4 border-t border-slate-100/60 bg-slate-50/30 shrink-0 flex flex-col gap-2.5">
+          <div className="flex gap-2">
+            <button onClick={handleHoldBill} disabled={totalQty === 0}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl border text-[11px] font-bold transition-all duration-200 ${
+                totalQty === 0 ? "bg-slate-50 border-slate-200/60 text-slate-300 cursor-not-allowed" : "bg-amber-50/40 border-amber-200/60 text-amber-600 hover:bg-amber-50/80 shadow-sm"
+              }`}
+            >
+              <Clock size={14} strokeWidth={2} /> HOLD BILL
+            </button>
+            <button onClick={handleClearBill} disabled={totalQty === 0}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl border text-[11px] font-bold transition-all duration-200 ${
+                totalQty === 0 ? "bg-slate-50 border-slate-200/60 text-slate-300 cursor-not-allowed" : "bg-red-50/40 border-red-200/60 text-red-500 hover:bg-red-50/80 shadow-sm"
+              }`}
+            >
+              <Trash2 size={14} strokeWidth={2} /> CLEAR
+            </button>
+          </div>
+          <button className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl border border-slate-200/60 bg-white text-[12px] font-bold text-slate-500 hover:bg-slate-50 transition-all duration-200 shadow-sm">
+            <ScanBarcode size={16} strokeWidth={2} /> SCAN PRODUCT
+          </button>
+          <button onClick={handleGenerateInvoice} disabled={totalQty === 0 || balanceAmount > 0.01}
+            className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-[14px] font-black text-white transition-all duration-300 ${
+              totalQty === 0 || balanceAmount > 0.01 ? "bg-slate-200 cursor-not-allowed text-slate-400" : "bg-blue-600 hover:bg-blue-700 shadow-[0_4px_12px_rgba(59,130,246,0.3)] active:scale-95"
+            }`}
+          >
+            {balanceAmount > 0.01 ? "PAY BALANCE TO PROCEED" : <>GENERATE INVOICE <ArrowRight size={16} strokeWidth={2} /></>}
+          </button>
+        </div>
+      </div>
+
+      {/* Payment Split Modal */}
+      {isSplitModalOpen && (
+        <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col animate-in zoom-in-95 duration-200 border border-slate-200">
+            <div className="px-5 pt-5 pb-4 border-b border-slate-50 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600 shadow-sm border border-blue-100">
+                  <Wallet size={18} />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-slate-800 tracking-tight">Payment Split</h3>
+                  <p className="text-[10px] text-slate-400 font-bold">Total: ₹{formatINR(finalAmount, 0)}</p>
                 </div>
               </div>
               <button 
-                onClick={addPayment}
-                disabled={payments.length >= 3}
-                className="text-[10px] font-bold text-blue-600 hover:text-blue-700 disabled:opacity-30 flex items-center gap-1 group transition-all"
+                onClick={() => setIsSplitModalOpen(false)}
+                className="w-8 h-8 rounded-full bg-slate-50 text-slate-400 hover:bg-slate-100 transition-all flex items-center justify-center shadow-inner"
               >
-                <div className="w-4 h-4 rounded-full bg-blue-50 flex items-center justify-center group-hover:bg-blue-100 transition-colors">
-                  <Plus size={10} />
-                </div>
-                Split
+                <X size={16} />
               </button>
             </div>
-            
-            <div className="space-y-3">
-              {payments.map((p, idx) => (
-                <div key={idx} className="group/row flex flex-col gap-2 p-3 bg-white border border-slate-200/80 rounded-2xl shadow-sm hover:shadow-md hover:border-blue-100 transition-all duration-200 relative animate-in slide-in-from-top-4">
-                  <div className="flex gap-2 items-center">
+
+            <div className="p-5 flex-1 overflow-y-auto min-h-[300px] flex flex-col gap-5">
+              <style>{`
+                input[type=number]::-webkit-inner-spin-button, 
+                input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+                input[type=number] { -moz-appearance: textfield; }
+              `}</style>
+
+              <div className="flex items-center justify-between">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Select Modes</p>
+                <button 
+                  onClick={addPayment}
+                  disabled={payments.length >= 3}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-50 text-blue-600 text-[10px] font-black hover:bg-blue-100 disabled:opacity-30 transition-all shadow-sm border border-blue-100"
+                >
+                  <Plus size={11} /> ADD MODE
+                </button>
+              </div>
+
+              <div className="space-y-3">
+                {payments.map((p, idx) => (
+                  <div key={idx} className="group/row bg-white border border-slate-200 rounded-2xl p-3 flex gap-3 items-center shadow-sm hover:border-blue-200 transition-all duration-200">
                     <PaymentModeDropdown
                       value={p.mode}
                       onChange={(mode) => updatePayment(idx, { mode })}
                       isCreditAllowed={isCreditAllowed}
                     />
-                    
-                    <div className="flex-1 flex items-center gap-2 bg-slate-50/50 rounded-lg px-2 py-1.5 border border-transparent focus-within:border-blue-200 focus-within:bg-white transition-all">
-                      <span className="text-slate-400 font-medium text-[11px]">₹</span>
+                    <div className="flex-1 min-w-0 flex items-center gap-1.5 bg-slate-50/50 rounded-xl px-3 py-2 border border-slate-100 focus-within:border-blue-200 focus-within:bg-white transition-all shadow-inner">
+                      <span className="text-slate-400 font-bold text-[11px]">₹</span>
                       <input 
-                        type="number"
+                        type="number" autoFocus={idx === payments.length - 1}
                         value={p.amount || ""}
                         onChange={(e) => updatePayment(idx, { amount: Number(e.target.value) })}
                         placeholder="0.00"
-                        className="flex-1 bg-transparent text-[14px] font-bold text-slate-800 outline-none placeholder:text-slate-300 tabular-nums"
+                        className="w-full bg-transparent text-[15px] font-black text-slate-800 outline-none tabular-nums"
                       />
                       {balanceAmount > 0 && (
                         <button 
-                          onClick={() => updatePayment(idx, { amount: p.amount + balanceAmount })}
-                          className="text-[8px] font-bold uppercase tracking-tighter bg-blue-500 text-white px-1.5 py-0.5 rounded-md hover:bg-blue-600 active:scale-95 transition-all"
+                          onClick={() => updatePayment(idx, { amount: round2(p.amount + balanceAmount) })}
+                          className="shrink-0 px-2 py-1 rounded-lg bg-blue-600 text-white text-[9px] font-black hover:bg-blue-700 shadow-md"
                         >
-                          Max
+                          MAX
                         </button>
                       )}
                     </div>
-
                     {payments.length > 1 && (
-                      <button 
-                        onClick={() => removePayment(idx)}
-                        className="w-7 h-7 rounded-full bg-slate-50 text-slate-400 hover:bg-red-50 hover:text-red-500 flex items-center justify-center transition-all"
-                      >
-                        <X size={12} />
+                      <button onClick={() => removePayment(idx)} className="w-9 h-9 rounded-xl bg-rose-50 text-rose-500 hover:bg-rose-100 flex items-center justify-center transition-all border border-rose-100 shadow-sm">
+                        <Trash2 size={14} />
                       </button>
                     )}
                   </div>
-
-                  {p.mode === "credit" && customerData && (
-                    <div className="flex items-center justify-between px-1">
-                      <div className="flex items-center gap-1.5">
-                        <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Credit Limit Balance</span>
-                      </div>
-                      <span className="text-[10px] font-bold text-blue-600 tabular-nums">
-                        ₹{formatINR(customerData.creditLimit - customerData.outstanding)}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-
-            {/* Payment Summary Box */}
-            <div className={`mt-2 p-3 rounded-2xl border transition-all duration-300 ${
-              Math.abs(balanceAmount) < 0.01 
-                ? "bg-emerald-50/50 border-emerald-100" 
-                : balanceAmount > 0 
-                  ? "bg-amber-50/50 border-amber-100" 
-                  : "bg-blue-50/50 border-blue-100"
-            }`}>
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2">
-                  <div className={`w-2 h-2 rounded-full ${Math.abs(balanceAmount) < 0.01 ? "bg-emerald-500" : balanceAmount > 0 ? "bg-amber-500" : "bg-blue-500"}`} />
-                  Payment Progress
-                </p>
-                <span className={`text-[10px] font-black tabular-nums ${Math.abs(balanceAmount) < 0.01 ? "text-emerald-600" : balanceAmount > 0 ? "text-amber-600" : "text-blue-600"}`}>
-                  {Math.min(100, Math.round((paidAmount / finalAmount) * 100))}%
-                </span>
-              </div>
-              
-              <div className="w-full h-1.5 bg-slate-200/50 rounded-full overflow-hidden flex gap-0.5">
-                {payments.map((p, i) => (
-                  <div 
-                    key={i}
-                    style={{ width: `${(p.amount / finalAmount) * 100}%` }}
-                    className={`h-full transition-all duration-500 ${
-                      p.mode === 'cash' ? 'bg-emerald-400' : p.mode === 'upi' ? 'bg-violet-400' : 'bg-blue-400'
-                    }`}
-                  />
                 ))}
               </div>
 
-              <div className="mt-3 flex justify-between items-center">
-                <div className="flex flex-col">
-                  <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Total Paid</span>
-                  <span className="text-[14px] font-black text-slate-700 tabular-nums">₹{formatINR(paidAmount)}</span>
+              <div className={`mt-auto p-4 rounded-2xl border transition-all duration-300 relative overflow-hidden ${
+                Math.abs(balanceAmount) < 0.01 ? "bg-emerald-50 border-emerald-100" : balanceAmount > 0 ? "bg-amber-50 border-amber-100" : "bg-blue-50 border-blue-100"
+              }`}>
+                <div className="flex items-center justify-between mb-3 relative z-10">
+                  <div className="flex items-center gap-1.5">
+                    <div className={`w-2 h-2 rounded-full ${Math.abs(balanceAmount) < 0.01 ? "bg-emerald-500" : balanceAmount > 0 ? "bg-amber-500" : "bg-blue-500"}`} />
+                    <p className="text-[10px] font-black text-slate-500 tracking-wider">PROGRESS</p>
+                  </div>
+                  <span className={`text-[12px] font-black tabular-nums ${Math.abs(balanceAmount) < 0.01 ? "text-emerald-600" : balanceAmount > 0 ? "text-amber-600" : "text-blue-600"}`}>
+                    {finalAmount > 0 ? Math.min(100, Math.round((paidAmount / finalAmount) * 100)) : 0}%
+                  </span>
                 </div>
-                <div className="flex flex-col items-end">
-                  <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">
-                    {balanceAmount > 0 ? "Remaining" : "Balance"}
-                  </span>
-                  <span className={`text-[14px] font-black tabular-nums ${balanceAmount > 0 ? "text-amber-600" : "text-emerald-600"}`}>
-                    ₹{formatINR(Math.abs(balanceAmount))}
-                  </span>
+                <div className="w-full h-1.5 bg-slate-200/40 rounded-full overflow-hidden flex gap-0.5 shadow-inner mb-4">
+                  {payments.map((p, i) => {
+                    const width = finalAmount > 0 ? (p.amount / finalAmount) * 100 : 0;
+                    if (width <= 0) return null;
+                    return <div key={i} style={{ width: `${width}%` }} className={`h-full transition-all duration-700 ${p.mode === 'cash' ? 'bg-emerald-400' : p.mode === 'upi' ? 'bg-violet-400' : 'bg-blue-400'}`} />;
+                  })}
+                </div>
+                <div className="grid grid-cols-2 gap-4 relative z-10">
+                  <div className="flex flex-col">
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">RECEIVED</span>
+                    <span className="text-[18px] font-black text-slate-800 tabular-nums">₹{formatINR(paidAmount, 0)}</span>
+                  </div>
+                  <div className="flex flex-col items-end text-right">
+                    <span className={`text-[10px] font-black uppercase tracking-tighter ${balanceAmount > 0 ? "text-amber-500" : balanceAmount < 0 ? "text-blue-500" : "text-emerald-500"}`}>
+                      {balanceAmount > 0 ? "REMAINING" : balanceAmount < 0 ? "CHANGE" : "SETTLED"}
+                    </span>
+                    <span className={`text-[18px] font-black tabular-nums ${balanceAmount > 0 ? "text-amber-600" : balanceAmount < 0 ? "text-blue-600" : "text-emerald-600"}`}>
+                      ₹{formatINR(Math.abs(balanceAmount), 0)}
+                    </span>
+                  </div>
                 </div>
               </div>
+            </div>
 
-              {balanceAmount > 0.01 && (
-                <div className="mt-2.5 pt-2.5 border-t border-amber-100 flex items-center gap-2">
-                  <AlertCircle size={12} className="text-amber-500" />
-                  <p className="text-[9px] font-bold text-amber-600 uppercase tracking-tight">Invoice cannot be generated until fully paid</p>
-                </div>
-              )}
+            <div className="p-5 bg-slate-50 border-t border-slate-100">
+              <button 
+                onClick={() => setIsSplitModalOpen(false)}
+                className="w-full py-3 bg-slate-800 text-white rounded-2xl text-[13px] font-black hover:bg-slate-900 shadow-lg transition-all active:scale-95"
+              >
+                DONE
+              </button>
             </div>
           </div>
         </div>
-
-        {/* Actions */}
-        <div className="px-4 py-3 border-t border-slate-100/60 bg-slate-50/30 shrink-0 flex flex-col gap-2">
-          <div className="flex gap-2">
-            <button onClick={handleHoldBill} disabled={totalQty === 0}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg border text-[11px] font-medium transition-all duration-200 ${
-                totalQty === 0 ? "bg-slate-50 border-slate-200/60 text-slate-300 cursor-not-allowed" : "bg-amber-50/40 border-amber-200/60 text-amber-600 hover:bg-amber-50/80"
-              }`}
-            >
-              <Clock size={13} strokeWidth={1.5} /> Hold
-            </button>
-            <button onClick={handleClearBill} disabled={totalQty === 0}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg border text-[11px] font-medium transition-all duration-200 ${
-                totalQty === 0 ? "bg-slate-50 border-slate-200/60 text-slate-300 cursor-not-allowed" : "bg-red-50/40 border-red-200/60 text-red-500 hover:bg-red-50/80"
-              }`}
-            >
-              <Trash2 size={13} strokeWidth={1.5} /> Clear
-            </button>
-          </div>
-          <button className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg border border-slate-200/60 bg-white text-[12px] font-normal text-slate-500 hover:bg-slate-50 transition-all duration-200">
-            <ScanBarcode size={14} strokeWidth={1.5} /> Scan Product
-          </button>
-          <button onClick={handleGenerateInvoice} disabled={totalQty === 0}
-            className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-[13px] font-medium text-white transition-all duration-200 ${
-              totalQty === 0 ? "bg-slate-200 cursor-not-allowed" : "bg-blue-500 hover:bg-blue-600 shadow-[0_1px_3px_rgba(59,130,246,0.3)]"
-            }`}
-          >
-            Generate Invoice <ArrowRight size={14} strokeWidth={1.5} />
-          </button>
-        </div>
-      </div>
+      )}
 
       {/* Invoice Preview Modal */}
       <InvoicePreviewModal

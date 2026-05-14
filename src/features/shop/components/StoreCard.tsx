@@ -187,7 +187,7 @@ const StoreCard = ({
               </div>
               <div className="sign-swing px-5 py-1.5 rounded-lg border-2 shadow-lg"
                    style={{ background:"linear-gradient(135deg,#fbbf24,#f59e0b,#fbbf24)", borderColor:"#b45309",  }}>
-                <span className="font-semibold  text-sm uppercase text-white whitespace-nowrap"
+                <span className="font-semibold  text-sm  text-white whitespace-nowrap"
                       >
                   {shopLabel.length > 15 ? shopLabel.slice(0,15)+"…" : shopLabel}
                 </span>
@@ -261,7 +261,7 @@ const StoreCard = ({
                     <div className="absolute inset-x-2 top-20 bottom-6 rounded border" style={{ borderColor:"rgba(255,255,255,0.1)" }} />
                     <div className="absolute right-2.5 top-1/2 w-3 h-3 rounded-full border-2"
                          style={{ background:"linear-gradient(135deg,#fde68a,#f59e0b)", borderColor:"#b45309", boxShadow:"0 1px 4px rgba(0,0,0,0.5)" }} />
-                    <div className="absolute bottom-7 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded text-[7px] font-black tracking-widest"
+                    <div className="absolute bottom-7 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded text-[7px] font-black "
                          style={{ background:"#16a34a", color:"white" }}>OPEN</div>
                   </div>
                 </div>
@@ -296,7 +296,7 @@ const StoreCard = ({
               {[...Array(7)].map((_,i) => (
                 <div key={i} className="flex-1 h-full border-r" style={{ borderColor:"rgba(255,255,255,0.05)" }} />
               ))}
-              <span className="absolute left-1/2 -translate-x-1/2 text-[9px] font-bold tracking-widest uppercase"
+              <span className="absolute left-1/2 -translate-x-1/2 text-[9px] font-bold  "
                     style={{ color:"rgba(255,255,255,0.3)" }}>
                 hover · click for info
               </span>

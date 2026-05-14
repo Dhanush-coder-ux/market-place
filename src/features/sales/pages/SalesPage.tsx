@@ -7,6 +7,7 @@ import {
   DollarSign,
   BarChart2,
   Smartphone,
+  Hash,
 } from "lucide-react";
 import { StatsCard } from "@/components/common/StatsCard";
 import { useApi } from "@/context/ApiContext";
@@ -41,17 +42,20 @@ interface SaleItem {
   imageColor: string;
   status?: string;
   stocks_before?: number;
+  serial_numbers?: string[];
 }
 
 interface SelectedReturnItem extends SaleItem {
   returnQty: number;
   exchangeItemId?: string;
+  selectedSerials?: string[];
 }
 
 interface ReturnErrors {
   reason?: string;
   items?: string;
   settlement?: string;
+  serials?: string;
 }
 
 // 5-step flow
@@ -62,6 +66,7 @@ interface ReturnState {
   mode: ReturnMode;
   returnItems: Record<string, number>;       // itemId → returnQty
   exchangeMap: Record<string, any>;          // itemId → full replacement product data
+  serialReturnMap: Record<string, string[]>; // itemId → selected serial numbers to return
   reason: ReturnReason;
   notes: string;
   settlementMethod: SettlementMethod;
@@ -329,7 +334,7 @@ const StepHeader: React.FC<StepHeaderProps> = ({ step, mode, invoice }) => {
     <div className="px-6 pt-5 pb-4 border-b border-slate-100">
       <div className="flex items-center justify-between mb-3">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-0.5">
+          <p className="text-xs font-semibold   text-slate-400 mb-0.5">
             {step < 5 ? `Step ${step} of 4` : "Complete"}
           </p>
           <p className="text-sm font-semibold text-slate-800">
@@ -386,7 +391,7 @@ const RefundSummary: React.FC<RefundSummaryProps> = ({
       <div className="bg-gradient-to-br from-blue-50 to-slate-50 border border-blue-100 rounded-xl p-4">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-blue-400 mb-0.5">
+            <p className="text-[10px] font-semibold   text-blue-400 mb-0.5">
               {isStoreCredit ? "Store Credit" : "Refund Amount"}
             </p>
             <p className="text-2xl font-light sr-mono text-blue-700">{fmt(returnValue)}</p>
@@ -417,7 +422,7 @@ const RefundSummary: React.FC<RefundSummaryProps> = ({
           <p className="text-sm font-semibold sr-mono text-slate-700">{fmt(exchangeValue)}</p>
         </div>
         <div>
-          <p className="text-[10px] font-semibold uppercase tracking-wide mb-0.5 text-[10px]" style={{ color: diff > 0 ? '#92400e' : diff < 0 ? '#065f46' : '#64748b' }}>
+          <p className="text-[10px] font-semibold  tracking-wide mb-0.5 text-[10px]" style={{ color: diff > 0 ? '#92400e' : diff < 0 ? '#065f46' : '#64748b' }}>
             {diff > 0 ? "Customer Pays" : diff < 0 ? "Shop Refunds" : "Settled"}
           </p>
           <p className={`text-sm font-semibold sr-mono ${diff > 0 ? "text-amber-700" : diff < 0 ? "text-emerald-700" : "text-slate-500"}`}>
@@ -430,17 +435,86 @@ const RefundSummary: React.FC<RefundSummaryProps> = ({
 };
 
 /* ═══════════════════════════════════════════════════════════════
+   SERIAL RETURN PICKER
+   Shows when a sale item has serial number tracking enabled.
+   User must select exactly `returnQty` serials.
+═══════════════════════════════════════════════════════════════ */
+interface SerialReturnPickerProps {
+  allSerials: string[];       // serials attached to this sale item
+  selected: string[];         // currently chosen serials
+  required: number;           // must select exactly this many
+  onChange: (serials: string[]) => void;
+}
+const SerialReturnPicker: React.FC<SerialReturnPickerProps> = ({ allSerials, selected, required, onChange }) => {
+  const toggleSerial = (sn: string) => {
+    if (selected.includes(sn)) {
+      onChange(selected.filter(s => s !== sn));
+    } else {
+      if (selected.length < required) {
+        onChange([...selected, sn]);
+      }
+    }
+  };
+  const isComplete = selected.length === required;
+
+  return (
+    <div className="mt-3 rounded-xl border border-violet-100 bg-violet-50/60 p-3" onClick={e => e.stopPropagation()}>
+      <div className="flex items-center justify-between mb-2">
+        <p className="text-[10px] font-bold text-violet-600 flex items-center gap-1.5">
+          <Hash size={11} />
+          Select Serial Numbers to Return
+        </p>
+        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${isComplete ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
+          }`}>
+          {selected.length} / {required} selected
+        </span>
+      </div>
+      <div className="flex flex-wrap gap-1.5">
+        {allSerials.map(sn => {
+          const isSelected = selected.includes(sn);
+          const isDisabled = !isSelected && selected.length >= required;
+          return (
+            <button
+              key={sn}
+              onClick={() => toggleSerial(sn)}
+              disabled={isDisabled}
+              className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-mono font-semibold border transition-all ${isSelected
+                  ? "bg-violet-600 text-white border-violet-600 shadow-sm"
+                  : isDisabled
+                    ? "bg-white text-slate-300 border-slate-100 cursor-not-allowed"
+                    : "bg-white text-violet-700 border-violet-200 hover:border-violet-400 hover:bg-violet-50"
+                }`}
+            >
+              {isSelected && <Check size={9} />}
+              {sn}
+            </button>
+          );
+        })}
+      </div>
+      {!isComplete && (
+        <p className="mt-2 text-[10px] text-amber-600 flex items-center gap-1">
+          <AlertCircle size={10} />
+          Select {required - selected.length} more serial{required - selected.length !== 1 ? "s" : ""} to proceed
+        </p>
+      )}
+    </div>
+  );
+};
+
+/* ═══════════════════════════════════════════════════════════════
    ITEM SELECTOR
 ═══════════════════════════════════════════════════════════════ */
 interface ItemSelectorProps {
   items: SaleItem[];
   returnItems: Record<string, number>;
+  serialReturnMap: Record<string, string[]>;
   onToggle: (id: string) => void;
   onQtyChange: (id: string, v: number) => void;
+  onSerialChange: (id: string, serials: string[]) => void;
   onSelectAll: (all: boolean) => void;
   error?: string;
 }
-const ItemSelector: React.FC<ItemSelectorProps> = ({ items, returnItems, onToggle, onQtyChange, onSelectAll, error }) => {
+const ItemSelector: React.FC<ItemSelectorProps> = ({ items, returnItems, serialReturnMap, onToggle, onQtyChange, onSerialChange, onSelectAll, error }) => {
   const [q, setQ] = useState("");
   const filtered = items.filter(i => i.name.toLowerCase().includes(q.toLowerCase()) || i.sku.toLowerCase().includes(q.toLowerCase()));
 
@@ -474,6 +548,8 @@ const ItemSelector: React.FC<ItemSelectorProps> = ({ items, returnItems, onToggl
           const checked = returnItems[item.id] !== undefined;
           const qty = returnItems[item.id] ?? 1;
           const isProcessed = item.status === "REFUNDED" || item.status === "EXCHANGED";
+          const hasSerials = item.serial_numbers && item.serial_numbers.length > 0;
+          const selectedSerials = serialReturnMap[item.id] ?? [];
 
           return (
             <div key={item.id}
@@ -494,9 +570,14 @@ const ItemSelector: React.FC<ItemSelectorProps> = ({ items, returnItems, onToggl
                       <div className="flex items-center gap-2">
                         <p className="text-xs font-medium text-slate-800">{item.name}</p>
                         {item.status && (
-                          <span className={`text-[8px] font-bold px-1 rounded uppercase ${item.status === "REFUNDED" ? "bg-red-50 text-red-600 border border-red-100" : "bg-blue-50 text-blue-600 border border-blue-100"
+                          <span className={`text-[8px] font-bold px-1 rounded  ${item.status === "REFUNDED" ? "bg-red-50 text-red-600 border border-red-100" : "bg-blue-50 text-blue-600 border border-blue-100"
                             }`}>
                             {item.status}
+                          </span>
+                        )}
+                        {hasSerials && (
+                          <span className="text-[8px] font-bold px-1.5 py-0.5 rounded bg-violet-50 text-violet-600 border border-violet-100 flex items-center gap-1">
+                            <Hash size={8} /> Serial Tracked
                           </span>
                         )}
                       </div>
@@ -504,15 +585,28 @@ const ItemSelector: React.FC<ItemSelectorProps> = ({ items, returnItems, onToggl
                     </div>
                     <p className="text-xs font-semibold text-slate-700 sr-mono shrink-0">{fmt(item.unitPrice)}</p>
                   </div>
+
                   {checked && (
-                    <div className="mt-2 flex items-center gap-2.5" onClick={e => e.stopPropagation()}>
-                      <span className="text-[10px] text-slate-400">Return qty</span>
-                      <QuantityStepper value={qty} max={item.quantity} onChange={v => onQtyChange(item.id, v)} />
-                      <span className="text-[10px] text-slate-400">of {item.quantity}</span>
-                      <span className="ml-auto text-[10px] font-semibold text-blue-600 sr-mono">
-                        {fmt(item.unitPrice * qty)}
-                      </span>
-                    </div>
+                    <>
+                      <div className="mt-2 flex items-center gap-2.5" onClick={e => e.stopPropagation()}>
+                        <span className="text-[10px] text-slate-400">Return qty</span>
+                        <QuantityStepper value={qty} max={item.quantity} onChange={v => onQtyChange(item.id, v)} />
+                        <span className="text-[10px] text-slate-400">of {item.quantity}</span>
+                        <span className="ml-auto text-[10px] font-semibold text-blue-600 sr-mono">
+                          {fmt(item.unitPrice * qty)}
+                        </span>
+                      </div>
+
+                      {/* ── Serial Picker (only when item has serial tracking) ── */}
+                      {hasSerials && (
+                        <SerialReturnPicker
+                          allSerials={item.serial_numbers as string[]}
+                          selected={selectedSerials}
+                          required={qty}
+                          onChange={serials => onSerialChange(item.id, serials)}
+                        />
+                      )}
+                    </>
                   )}
                 </div>
               </div>
@@ -542,6 +636,7 @@ const initialState = (): ReturnState => ({
   mode: "refund",
   returnItems: {},
   exchangeMap: {},
+  serialReturnMap: {},
   reason: "",
   notes: "",
   settlementMethod: "Cash",
@@ -571,16 +666,26 @@ const useReturnModal = (sale: SaleRecord | null, productMap: Record<string, stri
     setState(s => {
       const next = { ...s.returnItems };
       const nextEx = { ...s.exchangeMap };
+      const nextSer = { ...s.serialReturnMap };
       if (next[itemId] !== undefined) {
         delete next[itemId];
         delete nextEx[itemId];
+        delete nextSer[itemId];
       } else {
         const item = saleItems.find(i => i.id === itemId);
         next[itemId] = item?.quantity ?? 1;
+        // Pre-select all serials if tracking is on
+        if (item && item.serial_numbers && item.serial_numbers.length > 0) {
+          nextSer[itemId] = [...item.serial_numbers];
+        }
       }
-      return { ...s, returnItems: next, exchangeMap: nextEx, errors: { ...s.errors, items: undefined } };
+      return { ...s, returnItems: next, exchangeMap: nextEx, serialReturnMap: nextSer, errors: { ...s.errors, items: undefined } };
     });
   }, [saleItems]);
+
+  const setSerialReturns = useCallback((itemId: string, serials: string[]) => {
+    setState(s => ({ ...s, serialReturnMap: { ...s.serialReturnMap, [itemId]: serials } }));
+  }, []);
 
   const selectAll = useCallback((all: boolean) => {
     setState(s => {
@@ -608,8 +713,8 @@ const useReturnModal = (sale: SaleRecord | null, productMap: Record<string, stri
   const selectedItems = useMemo<SelectedReturnItem[]>(() => {
     return saleItems
       .filter(i => state.returnItems[i.id] !== undefined)
-      .map(i => ({ ...i, returnQty: state.returnItems[i.id], exchangeItemId: state.exchangeMap[i.id] }));
-  }, [saleItems, state.returnItems, state.exchangeMap]);
+      .map(i => ({ ...i, returnQty: state.returnItems[i.id], exchangeItemId: state.exchangeMap[i.id], selectedSerials: state.serialReturnMap[i.id] }));
+  }, [saleItems, state.returnItems, state.exchangeMap, state.serialReturnMap]);
 
   // Calculate values for exchanges and refunds
   const totals = useMemo(() => {
@@ -660,8 +765,11 @@ const useReturnModal = (sale: SaleRecord | null, productMap: Record<string, stri
       if (state.mode === "refund") {
         await inventoryApi.bulkReturnOrder({
           order_id: sale?.id || "",
-          items_id: selectedItems.map(i => i.id)
-        });
+          items_id: selectedItems.map(i => i.id),
+          serial_numbers: selectedItems
+            .filter(i => i.selectedSerials && i.selectedSerials.length > 0)
+            .flatMap(i => i.selectedSerials as string[]),
+        } as any);
         showToast("Refund(s) processed successfully", "success");
       } else {
         // Bulk Exchange - Merge identical products into single entries with summed quantity
@@ -714,7 +822,16 @@ const useReturnModal = (sale: SaleRecord | null, productMap: Record<string, stri
   }, [state, selectedItems, sale, showToast]);
 
   const canProceed = useMemo(() => {
-    if (state.step === 2) return selectedItems.length > 0 && (state.mode === "refund" || selectedItems.every(i => !!i.exchangeItemId));
+    if (state.step === 2) {
+      if (selectedItems.length === 0) return false;
+      // For serial-tracked items: must have exactly returnQty serials selected
+      const serialsOk = selectedItems.every(i => {
+        if (!i.serial_numbers || i.serial_numbers.length === 0) return true;
+        return (i.selectedSerials?.length ?? 0) === i.returnQty;
+      });
+      if (!serialsOk) return false;
+      return state.mode === "refund" || selectedItems.every(i => !!i.exchangeItemId);
+    }
     if (state.step === 3) return !!state.reason && (state.mode === "refund" || totals.diff === 0 || !!state.settlementMethod);
     return true;
   }, [state.step, state.mode, selectedItems, state.reason, totals.diff, state.settlementMethod]);
@@ -722,7 +839,7 @@ const useReturnModal = (sale: SaleRecord | null, productMap: Record<string, stri
   return {
     state, saleItems, selectedItems, totals,
     reset, setMode, setReason, setNotes, setSettlementMethod,
-    toggleItem, selectAll, updateQty, setExchangeProduct,
+    toggleItem, selectAll, updateQty, setExchangeProduct, setSerialReturns,
     goNext, goBack, confirm, canProceed,
   };
 };
@@ -907,8 +1024,10 @@ const ReturnModal: React.FC<ReturnModalProps> = ({ sale, onClose, onRefresh, pro
                     <ItemSelector
                       items={saleItems}
                       returnItems={state.returnItems}
+                      serialReturnMap={state.serialReturnMap}
                       onToggle={m.toggleItem}
                       onQtyChange={m.updateQty}
+                      onSerialChange={m.setSerialReturns}
                       onSelectAll={m.selectAll}
                       error={state.errors.items}
                     />
@@ -916,7 +1035,7 @@ const ReturnModal: React.FC<ReturnModalProps> = ({ sale, onClose, onRefresh, pro
                     {/* Exchange product picker with Tabs and Search Bar */}
                     {state.mode === "exchange" && selectedItems.length > 0 && (
                       <div className="pt-4 border-t border-slate-100 mt-4">
-                        <p className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-3">
+                        <p className="text-xs font-semibold   text-slate-400 mb-3">
                           Select Replacement Items
                         </p>
 
@@ -997,7 +1116,7 @@ const ReturnModal: React.FC<ReturnModalProps> = ({ sale, onClose, onRefresh, pro
                                       <div className="flex-1 min-w-0">
                                         <p className="text-[11px] font-semibold text-slate-800 truncate">{ep.name}</p>
                                         <div className="flex items-center gap-2 mt-0.5">
-                                          <span className="text-[9px] text-slate-400 sr-mono uppercase tracking-wider">{ep.barcode || ep.id.slice(-6)}</span>
+                                          <span className="text-[9px] text-slate-400 sr-mono  ">{ep.barcode || ep.id.slice(-6)}</span>
                                           {inStock ? (
                                             <span className="text-[9px] text-emerald-500 font-bold">{ep.stocks} IN STOCK</span>
                                           ) : (
@@ -1031,7 +1150,7 @@ const ReturnModal: React.FC<ReturnModalProps> = ({ sale, onClose, onRefresh, pro
                 {state.step === 3 && (
                   <div className="space-y-5">
                     <div>
-                      <label className="block text-[11px] font-semibold uppercase tracking-widest text-slate-400 mb-2">
+                      <label className="block text-[11px] font-semibold   text-slate-400 mb-2">
                         Return Reason <span className="text-red-400">*</span>
                       </label>
                       <select
@@ -1056,7 +1175,7 @@ const ReturnModal: React.FC<ReturnModalProps> = ({ sale, onClose, onRefresh, pro
                     {(state.mode === "refund" || totals.diff !== 0) && (
                       <div>
                         <div className="flex items-center justify-between mb-2">
-                          <label className="block text-[11px] font-semibold uppercase tracking-widest text-slate-400">
+                          <label className="block text-[11px] font-semibold   text-slate-400">
                             {state.mode === "refund" || totals.diff < 0 ? "Refund Via" : "Collect Balance Via"} <span className="text-red-400">*</span>
                           </label>
                           {totals.diff !== 0 && state.mode === "exchange" && (
@@ -1093,7 +1212,7 @@ const ReturnModal: React.FC<ReturnModalProps> = ({ sale, onClose, onRefresh, pro
                     )}
 
                     <div>
-                      <label className="block text-[11px] font-semibold uppercase tracking-widest text-slate-400 mb-2">
+                      <label className="block text-[11px] font-semibold   text-slate-400 mb-2">
                         Notes <span className="text-slate-300 normal-case font-normal">(optional)</span>
                       </label>
                       <textarea
@@ -1119,7 +1238,7 @@ const ReturnModal: React.FC<ReturnModalProps> = ({ sale, onClose, onRefresh, pro
                     />
 
                     <div>
-                      <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 mb-2">
+                      <p className="text-[11px] font-semibold   text-slate-400 mb-2">
                         Items
                       </p>
                       <div className="border border-slate-100 rounded-xl divide-y divide-slate-100 overflow-hidden">
@@ -1161,7 +1280,7 @@ const ReturnModal: React.FC<ReturnModalProps> = ({ sale, onClose, onRefresh, pro
                           : []),
                       ].map(row => (
                         <div key={row.label} className="bg-slate-50 border border-slate-100 rounded-xl p-3">
-                          <p className="text-[10px] text-slate-400 uppercase tracking-wide mb-0.5">{row.label}</p>
+                          <p className="text-[10px] text-slate-400  tracking-wide mb-0.5">{row.label}</p>
                           <p className="text-xs font-medium text-slate-700">{row.value}</p>
                         </div>
                       ))}
@@ -1169,7 +1288,7 @@ const ReturnModal: React.FC<ReturnModalProps> = ({ sale, onClose, onRefresh, pro
 
                     {state.notes && (
                       <div className="bg-slate-50 border border-slate-100 rounded-xl p-3">
-                        <p className="text-[10px] text-slate-400 uppercase tracking-wide mb-0.5">Notes</p>
+                        <p className="text-[10px] text-slate-400  tracking-wide mb-0.5">Notes</p>
                         <p className="text-xs text-slate-600 leading-relaxed">{state.notes}</p>
                       </div>
                     )}
@@ -1348,7 +1467,7 @@ const SaleDetailSidebar: React.FC<SidebarProps> = ({
             <div className="sr-scroll flex-1 overflow-y-auto p-5 space-y-5">
               {/* Amount */}
               <div className="bg-slate-50 border border-slate-100 rounded-xl p-4 text-center">
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 mb-1">Total Amount</p>
+                <p className="text-[10px] font-semibold   text-slate-400 mb-1">Total Amount</p>
                 <p className="text-3xl font-light sr-mono text-slate-900">{fmt(sale.total_sellprice)}</p>
                 <div className="mt-2.5">
                   {(() => {
@@ -1370,7 +1489,7 @@ const SaleDetailSidebar: React.FC<SidebarProps> = ({
                   <div key={label} className="bg-white border border-slate-100 rounded-xl p-3">
                     <div className="flex items-center gap-1.5 text-slate-400 mb-1.5">
                       {icon}
-                      <span className="text-[9px] font-semibold uppercase tracking-widest">{label}</span>
+                      <span className="text-[9px] font-semibold  ">{label}</span>
                     </div>
                     <p className="text-xs font-medium text-slate-800 truncate">{value}</p>
                   </div>
@@ -1378,7 +1497,7 @@ const SaleDetailSidebar: React.FC<SidebarProps> = ({
               </div>
 
               <div className="space-y-2">
-                <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400">Order Items</p>
+                <p className="text-[11px] font-semibold   text-slate-400">Order Items</p>
                 <div className="border border-slate-100 rounded-xl divide-y divide-slate-100 overflow-hidden shadow-sm">
                   {generateItems(sale, productMap).map((item, i) => {
                     const exchangeInfo = sale.exchanged_items?.find(ex => ex.exchanged_items.includes(item.id));
@@ -1394,7 +1513,7 @@ const SaleDetailSidebar: React.FC<SidebarProps> = ({
                               <span className="text-[10px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded-md font-medium">QTY {item.quantity}</span>
                               <span className="text-[10px] text-slate-400 sr-mono">{item.sku}</span>
                               {item.status && (
-                                <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded uppercase ${item.status === "REFUNDED" ? "bg-red-50 text-red-600" : "bg-blue-50 text-blue-600"
+                                <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded  ${item.status === "REFUNDED" ? "bg-red-50 text-red-600" : "bg-blue-50 text-blue-600"
                                   }`}>
                                   {item.status}
                                 </span>
@@ -1413,11 +1532,11 @@ const SaleDetailSidebar: React.FC<SidebarProps> = ({
                         {/* Stock Tracking Grid */}
                         <div className="grid grid-cols-3 gap-px bg-slate-100 border-t border-slate-100">
                           <div className="bg-white p-3 flex flex-col items-center">
-                            <span className="text-[8px] font-black text-slate-400 uppercase tracking-tighter">Opening</span>
+                            <span className="text-[8px] font-black text-slate-400  tracking-tighter">Opening</span>
                             <span className="text-xs font-bold text-slate-700">{item.stocks_before ?? 0}</span>
                           </div>
                           <div className="bg-white p-3 flex flex-col items-center border-x border-slate-100">
-                            <span className={`text-[8px] font-black uppercase tracking-tighter ${sale.origin === "Sales Return" ? "text-emerald-400" : "text-rose-400"}`}>
+                            <span className={`text-[8px] font-black  tracking-tighter ${sale.origin === "Sales Return" ? "text-emerald-400" : "text-rose-400"}`}>
                               {sale.origin === "Sales Return" ? "Returned" : "Sold"}
                             </span>
                             <span className={`text-xs font-bold ${sale.origin === "Sales Return" ? "text-emerald-600" : "text-rose-600"}`}>
@@ -1425,7 +1544,7 @@ const SaleDetailSidebar: React.FC<SidebarProps> = ({
                             </span>
                           </div>
                           <div className="bg-white p-3 flex flex-col items-center">
-                            <span className="text-[8px] font-black text-blue-400 uppercase tracking-tighter">Balance</span>
+                            <span className="text-[8px] font-black text-blue-400  tracking-tighter">Balance</span>
                             <span className="text-xs font-bold text-blue-600">
                               {sale.origin === "Sales Return" ? (item.stocks_before ?? 0) + item.quantity : (item.stocks_before ?? 0) - item.quantity}
                             </span>
@@ -1452,7 +1571,7 @@ const SaleDetailSidebar: React.FC<SidebarProps> = ({
               {/* Exchange History Section */}
               {sale.exchanged_items && sale.exchanged_items.length > 0 && (
                 <div className="space-y-2">
-                  <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400">Exchange History</p>
+                  <p className="text-[11px] font-semibold   text-slate-400">Exchange History</p>
                   <div className="bg-white border border-slate-100 rounded-xl overflow-hidden shadow-sm divide-y divide-slate-100">
                     {sale.exchanged_items.map((ex, idx) => (
                       <div key={idx} className="p-4 flex items-start gap-3">
@@ -1686,14 +1805,14 @@ const SalesListPage: React.FC = () => {
   return (
     <>
       <style>{STYLES}</style>
-      <div className="sr-root w-full flex-1 min-h-screen bg-slate-50/50 p-2 sm:p-4 lg:p-6 space-y-3 sm:space-y-5">
+      <div className="sr-root w-full flex-1 min-h-screen bg-slate-50/50  space-y-3 sm:space-y-5">
 
         {/* Stats */}
         <div className="flex flex-nowrap overflow-x-auto custom-scrollbar gap-2.5 pb-2 -mx-2 px-2 sm:mx-0 sm:px-0 sm:grid sm:grid-cols-2 lg:grid-cols-4 sm:overflow-visible sm:pb-0 touch-pan-x">
-          <StatsCard iconColor="text-green-500" iconBg="bg-green-50" label="Total Revenue" icon={DollarSign} value={fmt(totalRevenue)} />
-          <StatsCard iconColor="text-blue-500" iconBg="bg-blue-50" label="Total Sales" icon={BarChart2} value={salesCount} />
-          <StatsCard iconColor="text-red-500" iconBg="bg-red-50" label="Sales Returns" icon={RefreshCw} value={salesReturnCount} />
-          <StatsCard iconColor="text-yellow-500" iconBg="bg-yellow-50" label="Today's Revenue" icon={DollarSign} value={fmt(todayRevenue)} />
+          <StatsCard iconColor="text-green-500" iconBg="bg-green-50" label="Total revenue" icon={DollarSign} value={fmt(totalRevenue)} />
+          <StatsCard iconColor="text-blue-500" iconBg="bg-blue-50" label="Total sales" icon={BarChart2} value={salesCount} />
+          <StatsCard iconColor="text-red-500" iconBg="bg-red-50" label="Sales returns" icon={RefreshCw} value={salesReturnCount} />
+          <StatsCard iconColor="text-yellow-500" iconBg="bg-yellow-50" label="Today's revenue" icon={DollarSign} value={fmt(todayRevenue)} />
         </div>
 
         {/* Toolbar */}
@@ -1731,12 +1850,12 @@ const SalesListPage: React.FC = () => {
 
         {/* Table */}
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto overflow-y-auto h-[calc(100vh-220px)] pf-scroll">
             <table className="w-full text-sm border-collapse">
-              <thead>
-                <tr className="bg-slate-50 border-b border-slate-100">
+              <thead className="sticky top-0 z-20 bg-slate-50/95 backdrop-blur-sm shadow-sm">
+                <tr className="border-b border-slate-100">
                   {["Invoice", "Customer", "Origin", "Payment", "Date", "Items", "Amount", "Status", "Actions"].map((h, i) => (
-                    <th key={i} className="py-2 px-3 sm:py-3 sm:px-4 first:pl-3 sm:first:pl-5 last:pr-3 sm:last:pr-5 text-[10px] font-semibold uppercase tracking-widest text-slate-400 whitespace-nowrap text-left last:text-right">
+                    <th key={i} className="py-2 px-3 sm:py-3 sm:px-4 first:pl-3 sm:first:pl-5 last:pr-3 sm:last:pr-5 text-[10px] font-semibold   text-slate-400 whitespace-nowrap text-left last:text-right">
                       {h}
                     </th>
                   ))}
@@ -1773,7 +1892,7 @@ const SalesListPage: React.FC = () => {
                         <div className="flex flex-col gap-1">
                           <span className="sr-mono text-[11px] font-medium text-slate-700">INV-{sale.ui_id}</span>
                           {sale.origin === "Sales Return" && (
-                            <span className="text-[8px] font-bold text-red-500 uppercase tracking-tighter bg-red-50 px-1 rounded w-fit">Return</span>
+                            <span className="text-[8px] font-bold text-red-500  tracking-tighter bg-red-50 px-1 rounded w-fit">Return</span>
                           )}
                           <div className="flex gap-1 flex-wrap">
                             {(sale.items || []).filter(i => i.status === "REFUNDED").length > 0 && (

@@ -55,10 +55,10 @@ export const ColumnPicker: React.FC<ColumnPickerProps> = ({
       </PopoverTrigger>
       <PopoverContent className="w-64 p-0 rounded-2xl overflow-hidden shadow-2xl border border-slate-100 bg-white" align="end">
         <div className="p-3 border-b bg-slate-50/50">
-          <h3 className="font-black uppercase text-[9px] text-slate-400 tracking-widest">Columns Layout</h3>
+          <h3 className="font-black  text-[9px] text-slate-400 ">Columns Layout</h3>
         </div>
         
-        <div className="flex justify-between px-4 py-2 border-b border-slate-50 text-[10px] font-black uppercase tracking-wider">
+        <div className="flex justify-between px-4 py-2 border-b border-slate-50 text-[10px] font-black  ">
           <button 
             onClick={() => setTempSelectedKeys(orderedAvailableKeys)}
             className="text-blue-600 hover:text-blue-700"
@@ -113,7 +113,7 @@ export const ColumnPicker: React.FC<ColumnPickerProps> = ({
         <div className="p-3 bg-white border-t border-slate-100">
           <button 
             onClick={applyChanges}
-            className="w-full h-9 bg-blue-600 text-white font-black text-[11px] uppercase tracking-widest rounded-lg shadow-lg shadow-blue-100 hover:bg-blue-700 transition-all active:scale-95"
+            className="w-full h-9 bg-blue-600 text-white font-black text-[11px]   rounded-lg shadow-lg shadow-blue-100 hover:bg-blue-700 transition-all active:scale-95"
           >
             Apply & Save
           </button>

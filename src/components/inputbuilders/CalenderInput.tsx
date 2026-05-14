@@ -37,7 +37,7 @@ export const CustomDatePicker: React.FC<CustomDatePickerProps> = ({ name, value,
 
         .cdp-label {
           font-size: 12px; font-weight: 600;
-          letter-spacing: 0.07em; text-transform: uppercase;
+          letter-spacing: 0.07em; text-transform: ;
           color: #475569; margin-bottom: 7px;
           transition: color 0.18s ease; user-select: none;
         }
@@ -99,7 +99,7 @@ export const CustomDatePicker: React.FC<CustomDatePickerProps> = ({ name, value,
         }
         .cdp-portal .react-datepicker__day-name {
           font-size: 11px; font-weight: 600; color: #64748b;
-          letter-spacing: 0.06em; text-transform: uppercase; width: 32px; line-height: 28px;
+          letter-spacing: 0.06em; text-transform: ; width: 32px; line-height: 28px;
         }
         .cdp-portal .react-datepicker__day {
           width: 32px; height: 32px; line-height: 32px;

@@ -368,14 +368,14 @@ const ProductionForm = () => {
                   <Factory size={20} />
                 </div>
                 <div>
-                  <h2 className="text-sm font-black text-slate-800 uppercase tracking-widest">Production Setup</h2>
-                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">Batch information & workflow</p>
+                  <h2 className="text-sm font-black text-slate-800  ">Production Setup</h2>
+                  <p className="text-[10px] text-slate-400 font-bold   mt-0.5">Batch information & workflow</p>
                 </div>
               </div>
               
               <div className="p-8 grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="flex flex-col gap-2">
-                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Location / Floor *</label>
+                  <label className="text-[10px] font-black text-slate-500   ml-1">Location / Floor *</label>
                   <div className="relative group">
                     <MapPin size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-hover:text-blue-500 transition-colors z-10" />
                     <ReusableSelect
@@ -393,7 +393,7 @@ const ProductionForm = () => {
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Supervisor *</label>
+                  <label className="text-[10px] font-black text-slate-500   ml-1">Supervisor *</label>
                   <div className="relative group">
                     <User size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-hover:text-blue-500 transition-colors z-10" />
                     <ReusableSelect
@@ -425,7 +425,7 @@ const ProductionForm = () => {
                 />
 
                 <div className="flex flex-col gap-2">
-                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Process Status</label>
+                  <label className="text-[10px] font-black text-slate-500   ml-1">Process Status</label>
                   <div className="relative group">
                     <ClipboardList size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-hover:text-blue-500 transition-colors z-10" />
                     <ReusableSelect
@@ -476,8 +476,8 @@ const ProductionForm = () => {
                   <Banknote size={20} />
                 </div>
                 <div>
-                  <h2 className="text-sm font-black text-slate-800 uppercase tracking-widest">Production Costs</h2>
-                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">Labor, overhead & extra costs</p>
+                  <h2 className="text-sm font-black text-slate-800  ">Production Costs</h2>
+                  <p className="text-[10px] text-slate-400 font-bold   mt-0.5">Labor, overhead & extra costs</p>
                 </div>
               </div>
               
@@ -489,7 +489,7 @@ const ProductionForm = () => {
                 <Input label="Other Prod. Cost" type="number" placeholder="0.00" leftIcon={<Plus size={14} />} value={productionCosts.other as any} onChange={(e) => setProductionCosts({...productionCosts, other: e.target.value ? Number(e.target.value) : ""})} />
                 
                 <div className="pt-4 border-t border-slate-100">
-                  <div className="flex justify-between items-center text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Production Expenses</div>
+                  <div className="flex justify-between items-center text-[10px] font-black text-slate-400   mb-1">Total Production Expenses</div>
                   <div className="text-2xl font-black text-slate-800">₹{stats.totalProductionCosts.toLocaleString()}</div>
                 </div>
               </div>
@@ -500,7 +500,7 @@ const ProductionForm = () => {
               <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-3xl group-hover:bg-blue-500/10 transition-all duration-700" />
               <div className="relative z-10 space-y-8">
                 <div>
-                  <h3 className="text-xs font-black uppercase tracking-[0.3em] text-slate-400 mb-6 flex items-center gap-2">
+                  <h3 className="text-xs font-black  tracking-[0.3em] text-slate-400 mb-6 flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" /> Final Summary
                   </h3>
                   <div className="space-y-4">
@@ -516,7 +516,7 @@ const ProductionForm = () => {
                 </div>
 
                 <div className="flex flex-col gap-1">
-                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Grand Production Cost</span>
+                  <span className="text-[10px] font-black text-slate-400  ">Grand Production Cost</span>
                   <div className="text-[42px] font-black text-slate-900 leading-none tracking-tighter">₹{stats.grandTotal.toLocaleString()}</div>
                 </div>
               </div>

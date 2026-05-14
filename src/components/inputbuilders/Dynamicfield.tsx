@@ -19,7 +19,7 @@ const Label: React.FC<{ text: string; required?: boolean; hint?: string }> = ({
   required,
   hint,
 }) => (
-  <label className="flex items-center text-xs font-semibold text-slate-700 mb-1.5 uppercase tracking-wider">
+  <label className="flex items-center text-xs font-semibold text-slate-700 mb-1.5  ">
     {text}
     {required && <span className="text-red-500 ml-1">*</span>}
     {hint && (

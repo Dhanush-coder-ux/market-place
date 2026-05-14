@@ -72,7 +72,7 @@ export const SelectPickerModal = ({
                     <p className="text-sm font-bold text-slate-700 group-hover:text-indigo-600 transition-colors">
                       {opt.name}
                     </p>
-                    <p className="text-[10px] text-slate-400 font-medium uppercase mt-0.5">
+                    <p className="text-[10px] text-slate-400 font-medium  mt-0.5">
                       {opt.values.length} items: {opt.values.slice(0, 2).join(", ")}...
                     </p>
                   </div>
@@ -88,7 +88,7 @@ export const SelectPickerModal = ({
 
         {/* Footer */}
         <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end">
-          <button onClick={onClose} className="px-4 py-2 text-xs font-bold text-slate-500 hover:text-slate-800 uppercase tracking-wider">
+          <button onClick={onClose} className="px-4 py-2 text-xs font-bold text-slate-500 hover:text-slate-800  ">
             Cancel
           </button>
         </div>

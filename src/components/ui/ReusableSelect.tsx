@@ -25,7 +25,7 @@ export function ReusableSelect({
   return (
     <div className="space-y-2 w-full">
       {label && (
-        <label className="text-xs font-semibold text-gray-500 uppercase tracking-widest ml-1">
+        <label className="text-xs font-semibold text-gray-500   ml-1">
           {label}{required}
         </label>
       )}

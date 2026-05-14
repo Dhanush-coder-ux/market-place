@@ -33,7 +33,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
 
   return (
     <div className="flex flex-col items-center gap-2 w-[160px]">
-      <label className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest">
+      <label className="text-[10px] font-semibold text-gray-400  ">
         {label}
       </label>
 

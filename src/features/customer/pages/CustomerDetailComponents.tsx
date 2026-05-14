@@ -7,7 +7,7 @@ export interface Invoice {
   date: string;
   products: string;
   amount: number;
-  outstanding: number;
+  balance: number;
   status: "Paid" | "Partial" | "Pending";
 }
 
@@ -50,9 +50,8 @@ export function StatusBadge({ status }: { status: string }) {
   };
   return (
     <span
-      className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
-        colorMap[status] ?? "bg-slate-50 text-slate-500 border-slate-100"
-      }`}
+      className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold   border ${colorMap[status] ?? "bg-slate-50 text-slate-500 border-slate-100"
+        }`}
     >
       {status}
     </span>
@@ -65,19 +64,20 @@ export interface StatCardProps {
   label: string;
   value: string;
   iconBg: string;
+  valueClassName?: string;
 }
 
-export function StatCard({ icon: Icon, label, value, iconBg }: StatCardProps) {
+export function StatCard({ icon: Icon, label, value, iconBg, valueClassName }: StatCardProps) {
   return (
     <div className="bg-white rounded-[1.5rem] p-5 shadow-sm border border-slate-100 flex items-center gap-4 group hover:shadow-md transition-all">
       <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${iconBg} group-hover:scale-110 transition-transform`}>
         {typeof Icon === 'function' ? <Icon size={22} className="text-current" /> : Icon}
       </div>
       <div>
-        <div className="text-[10px] text-slate-400 uppercase font-bold tracking-widest mb-0.5">
+        <div className="text-[10px] text-slate-400  font-bold  mb-0.5">
           {label}
         </div>
-        <div className="text-xl font-bold text-slate-800 tracking-tight">{value}</div>
+        <div className={`text-xl font-bold tracking-tight ${valueClassName || "text-slate-800"}`}>{value}</div>
       </div>
     </div>
   );
@@ -166,15 +166,15 @@ export function Notification({ text, show, variant = "success" }: NotificationPr
     variant === "error"
       ? "border-red-500"
       : variant === "info"
-      ? "border-blue-500"
-      : "border-emerald-500";
+        ? "border-blue-500"
+        : "border-emerald-500";
 
   const iconColor =
     variant === "error"
       ? "text-red-500"
       : variant === "info"
-      ? "text-blue-500"
-      : "text-emerald-500";
+        ? "text-blue-500"
+        : "text-emerald-500";
 
   const icon = variant === "error" ? "✕" : variant === "info" ? "ℹ" : "✓";
 
@@ -193,7 +193,7 @@ const inputBase =
   "w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500 transition-colors";
 
 export interface FormInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
-  label: string;
+  label?: string;
 }
 
 /**
@@ -205,14 +205,14 @@ export interface FormInputProps extends React.InputHTMLAttributes<HTMLInputEleme
 export function FormInput({ label, ...props }: FormInputProps) {
   return (
     <div>
-      <label className="block text-sm font-semibold text-slate-700 mb-2">{label}</label>
+      {label && <label className="block text-sm font-semibold text-slate-700 mb-2">{label}</label>}
       <input className={inputBase} {...props} />
     </div>
   );
 }
 
 export interface FormSelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
-  label: string;
+  label?: string;
   options: string[];
 }
 
@@ -225,7 +225,7 @@ export interface FormSelectProps extends React.SelectHTMLAttributes<HTMLSelectEl
 export function FormSelect({ label, options, ...props }: FormSelectProps) {
   return (
     <div>
-      <label className="block text-sm font-semibold text-slate-700 mb-2">{label}</label>
+      {label && <label className="block text-sm font-semibold text-slate-700 mb-2">{label}</label>}
       <select className={`${inputBase} bg-white`} {...props}>
         {options.map((o) => (
           <option key={o}>{o}</option>
@@ -236,7 +236,7 @@ export function FormSelect({ label, options, ...props }: FormSelectProps) {
 }
 
 export interface FormTextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
-  label: string;
+  label?: string;
 }
 
 /**
@@ -248,7 +248,7 @@ export interface FormTextareaProps extends React.TextareaHTMLAttributes<HTMLText
 export function FormTextarea({ label, ...props }: FormTextareaProps) {
   return (
     <div>
-      <label className="block text-sm font-semibold text-slate-700 mb-2">{label}</label>
+      {label && <label className="block text-sm font-semibold text-slate-700 mb-2">{label}</label>}
       <textarea className={`${inputBase} resize-y min-h-[90px]`} {...props} />
     </div>
   );
@@ -371,9 +371,8 @@ export function BottomActionBar({ customerName, actions }: BottomActionBarProps)
           <button
             key={action.label}
             onClick={action.onClick}
-            className={`px-4 py-2.5 rounded-lg text-sm font-semibold flex items-center gap-2 transition-colors ${
-              variantClass[action.variant ?? "secondary"]
-            }`}
+            className={`px-4 py-2.5 rounded-lg text-sm font-semibold flex items-center gap-2 transition-colors ${variantClass[action.variant ?? "secondary"]
+              }`}
           >
             {action.icon} {action.label}
           </button>

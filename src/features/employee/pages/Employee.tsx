@@ -205,7 +205,7 @@ export default function Employee() {
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-slate-50/50 text-slate-400 text-[10px] font-bold uppercase tracking-[0.15em] border-b border-slate-100">
+              <tr className="bg-slate-50/50 text-slate-400 text-[10px] font-bold  tracking-[0.15em] border-b border-slate-100">
                 <th className="px-6 py-5 whitespace-nowrap min-w-[200px]">Employee Name</th>
                 <th className="px-6 py-5 whitespace-nowrap">Status</th>
                 {selectedKeys.map(key => (
@@ -242,16 +242,16 @@ export default function Employee() {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border shadow-sm bg-emerald-50 text-emerald-600 border-emerald-100`}>
+                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold   border shadow-sm bg-emerald-50 text-emerald-600 border-emerald-100`}>
                         <div className={`w-1.5 h-1.5 rounded-full bg-emerald-500`} />
                         Accepted
                       </span>
                     </td>
                     {selectedKeys.map(key => {
                       const value = (emp.datas as any)?.[key] ?? (emp as any)[key];
-                      const displayValue = value === undefined || value === null ? "—" : 
-                                          typeof value === 'object' ? (Array.isArray(value) ? value.join(", ") : JSON.stringify(value)) : 
-                                          String(value);
+                      const displayValue = value === undefined || value === null ? "—" :
+                        typeof value === 'object' ? (Array.isArray(value) ? value.join(", ") : JSON.stringify(value)) :
+                          String(value);
                       return (
                         <td key={key} className="px-6 py-4 whitespace-nowrap">
                           <p className={`text-[12px] font-semibold tracking-tight ${key === 'role' ? 'text-blue-600 bg-blue-50 w-fit px-2 py-0.5 rounded-md' : 'text-slate-600'}`}>

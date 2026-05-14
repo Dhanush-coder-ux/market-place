@@ -67,10 +67,10 @@ export default function EmployeeDetail() {
         <User size={40} />
       </div>
       <div className="space-y-2">
-        <h2 className="text-xl font-black text-slate-800 uppercase tracking-widest">Employee Not Found</h2>
-        <p className="text-slate-400 font-bold text-xs uppercase tracking-wider">The record might have been removed or the ID is incorrect.</p>
+        <h2 className="text-xl font-black text-slate-800  ">Employee Not Found</h2>
+        <p className="text-slate-400 font-bold text-xs  ">The record might have been removed or the ID is incorrect.</p>
       </div>
-      <button onClick={() => navigate("/employee/all")} className="px-6 py-3 bg-blue-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-blue-100 hover:bg-blue-700 transition-all active:scale-95">
+      <button onClick={() => navigate("/employee/all")} className="px-6 py-3 bg-blue-600 text-white rounded-2xl font-black text-xs   shadow-lg shadow-blue-100 hover:bg-blue-700 transition-all active:scale-95">
         Back to Directory
       </button>
     </div>
@@ -126,7 +126,7 @@ export default function EmployeeDetail() {
             <button
               key={tab}
               onClick={() => setActiveTab(i)}
-              className={`px-4 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === i
+              className={`px-4 py-1.5 rounded-lg text-[11px] font-black   transition-all whitespace-nowrap ${activeTab === i
                 ? "bg-blue-600 text-white shadow-lg shadow-blue-100"
                 : "text-slate-400 hover:text-slate-600 hover:bg-slate-50"
                 }`}
@@ -220,24 +220,24 @@ export default function EmployeeDetail() {
             {activeTab === 1 && (
               <div className="p-12 text-center bg-white rounded-[2rem] border border-slate-100 shadow-sm">
                 <Star size={40} className="mx-auto text-amber-200 mb-4" />
-                <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest">Performance Metrics</h3>
-                <p className="text-xs text-slate-400 font-bold mt-2 uppercase">No evaluation data available for this period.</p>
+                <h3 className="text-sm font-black text-slate-800  ">Performance Metrics</h3>
+                <p className="text-xs text-slate-400 font-bold mt-2 ">No evaluation data available for this period.</p>
               </div>
             )}
 
             {activeTab === 2 && (
               <div className="p-12 text-center bg-white rounded-[2rem] border border-slate-100 shadow-sm">
                 <Calendar size={40} className="mx-auto text-blue-200 mb-4" />
-                <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest">Shift Schedule</h3>
-                <p className="text-xs text-slate-400 font-bold mt-2 uppercase">No active rosters assigned to this member.</p>
+                <h3 className="text-sm font-black text-slate-800  ">Shift Schedule</h3>
+                <p className="text-xs text-slate-400 font-bold mt-2 ">No active rosters assigned to this member.</p>
               </div>
             )}
 
             {activeTab === 3 && (
               <div className="p-12 text-center bg-white rounded-[2rem] border border-slate-100 shadow-sm">
                 <Info size={40} className="mx-auto text-slate-200 mb-4" />
-                <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest">Activity Timeline</h3>
-                <p className="text-xs text-slate-400 font-bold mt-2 uppercase">No recent system activities tracked.</p>
+                <h3 className="text-sm font-black text-slate-800  ">Activity Timeline</h3>
+                <p className="text-xs text-slate-400 font-bold mt-2 ">No recent system activities tracked.</p>
               </div>
             )}
           </div>
@@ -265,7 +265,7 @@ export default function EmployeeDetail() {
               {viewValue?.value}
             </p>
           </div>
-          <p className="mt-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">
+          <p className="mt-4 text-[10px] font-bold text-slate-400   text-center">
             Double click the text to select and copy
           </p>
         </Modal>

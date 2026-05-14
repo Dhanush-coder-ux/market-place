@@ -190,7 +190,7 @@ function PreviewToast({ announcement, type }: { announcement: string; type: Anno
         <span className="flex items-center justify-center text-white">{cfg.emoji}</span>
       </div>
       <div>
-        <p className={`m-0 mb-0.5 text-[11px] font-bold ${cfg.text.replace('700','400')} tracking-[0.06em] uppercase text-${cfg.color.split('-')[1]}-400`}>
+        <p className={`m-0 mb-0.5 text-[11px] font-bold ${cfg.text.replace('700','400')} tracking-[0.06em]  text-${cfg.color.split('-')[1]}-400`}>
           {type}
         </p>
         <p className="m-0 text-[13px] font-medium text-slate-50 leading-snug">
@@ -466,7 +466,7 @@ export default function AnnouncementsPage() {
                   {/* AI Suggestions (when empty) */}
                   {!text && focused && (
                     <div className="px-4 pb-3.5 animate-[fadeIn_0.15s_ease]">
-                      <p className="m-0 mb-2 text-[10.5px] font-bold text-slate-400 tracking-[0.08em] uppercase flex items-center gap-1.5">
+                      <p className="m-0 mb-2 text-[10.5px] font-bold text-slate-400 tracking-[0.08em]  flex items-center gap-1.5">
                         <Sparkles size={12} strokeWidth={2.5} className="text-purple-400" /> Quick templates
                       </p>
                       <div className="flex flex-wrap gap-1.5">
@@ -636,7 +636,7 @@ export default function AnnouncementsPage() {
 
                 {/* Quick stats */}
                 <div className="bg-white rounded-[14px] border-[1.5px] border-slate-200 p-3.5 px-4">
-                  <p className="m-0 mb-3 text-[12px] font-bold text-slate-400 tracking-[0.06em] uppercase">Channel Stats</p>
+                  <p className="m-0 mb-3 text-[12px] font-bold text-slate-400 tracking-[0.06em] ">Channel Stats</p>
                   <div className="flex flex-col gap-2">
                     {[
                       { label: "Total published", value: history.filter(h => h.status === "Published").length, color: "text-emerald-500" },
@@ -691,7 +691,7 @@ export default function AnnouncementsPage() {
               {/* Table header */}
               <div className="grid grid-cols-[1fr_100px_110px_110px_80px_120px] gap-3 py-2.5 px-5 border-b border-slate-100 bg-slate-50/50">
                 {["Message", "Type", "Status", "Audience", "Views", "Actions"].map(h => (
-                  <span key={h} className="text-[11px] font-bold text-slate-400 tracking-[0.06em] uppercase">{h}</span>
+                  <span key={h} className="text-[11px] font-bold text-slate-400 tracking-[0.06em] ">{h}</span>
                 ))}
               </div>
 

@@ -120,7 +120,7 @@ const InvoicePreviewModal: React.FC<InvoicePreviewModalProps> = ({
 
                 {/* Invoice Meta */}
                 <div className="text-right">
-                  <p className="text-[9px] font-medium text-blue-500 uppercase tracking-widest mb-0.5 print:text-blue-600">Tax Invoice</p>
+                  <p className="text-[9px] font-medium text-blue-500   mb-0.5 print:text-blue-600">Tax Invoice</p>
                   <p className="text-[13px] font-semibold text-slate-800">{invoiceNo}</p>
                   <div className="mt-2 space-y-0.5">
                     <p className="text-[10px] text-slate-400">{dateStr} · {timeStr}</p>
@@ -135,7 +135,7 @@ const InvoicePreviewModal: React.FC<InvoicePreviewModalProps> = ({
             {/* ── Customer & Status ──────────────────────── */}
             <div className="px-6 py-3 border-b border-slate-100 flex items-center justify-between">
               <div>
-                <p className="text-[9px] font-medium text-slate-400 uppercase tracking-wider mb-0.5">Bill To</p>
+                <p className="text-[9px] font-medium text-slate-400   mb-0.5">Bill To</p>
                 <p className="text-[13px] font-medium text-slate-700">{customerName || "Walk-in Customer"}</p>
                 <p className="text-[10px] text-slate-400 font-mono">{phone || "—"}</p>
               </div>
@@ -158,7 +158,7 @@ const InvoicePreviewModal: React.FC<InvoicePreviewModalProps> = ({
               </div>
               {/* Print-only Status */}
               <div className="hidden print:block">
-                <span className={`text-[10px] font-bold tracking-widest uppercase ${status === "COMPLETED" ? "text-emerald-600" : status === "PENDING" ? "text-amber-600" : "text-red-600"
+                <span className={`text-[10px] font-bold   ${status === "COMPLETED" ? "text-emerald-600" : status === "PENDING" ? "text-amber-600" : "text-red-600"
                   }`}>
                   • {status}
                 </span>
@@ -170,12 +170,12 @@ const InvoicePreviewModal: React.FC<InvoicePreviewModalProps> = ({
               <table className="w-full">
                 <thead>
                   <tr className="bg-slate-50/60 border-b border-slate-100 print:bg-slate-50">
-                    <th className="text-left text-[9px] font-medium text-slate-400 uppercase tracking-wider pl-6 pr-2 py-2 w-8">#</th>
-                    <th className="text-left text-[9px] font-medium text-slate-400 uppercase tracking-wider px-2 py-2">Product</th>
-                    <th className="text-center text-[9px] font-medium text-slate-400 uppercase tracking-wider px-2 py-2 w-12">Qty</th>
-                    <th className="text-right text-[9px] font-medium text-slate-400 uppercase tracking-wider px-2 py-2 w-20">Price</th>
-                    {includeGst && <th className="text-right text-[9px] font-medium text-slate-400 uppercase tracking-wider px-2 py-2 w-14">GST</th>}
-                    <th className="text-right text-[9px] font-medium text-slate-400 uppercase tracking-wider pl-2 pr-6 py-2 w-24">Total</th>
+                    <th className="text-left text-[9px] font-medium text-slate-400   pl-6 pr-2 py-2 w-8">#</th>
+                    <th className="text-left text-[9px] font-medium text-slate-400   px-2 py-2">Product</th>
+                    <th className="text-center text-[9px] font-medium text-slate-400   px-2 py-2 w-12">Qty</th>
+                    <th className="text-right text-[9px] font-medium text-slate-400   px-2 py-2 w-20">Price</th>
+                    {includeGst && <th className="text-right text-[9px] font-medium text-slate-400   px-2 py-2 w-14">GST</th>}
+                    <th className="text-right text-[9px] font-medium text-slate-400   pl-2 pr-6 py-2 w-24">Total</th>
                   </tr>
                 </thead>
                 <tbody>

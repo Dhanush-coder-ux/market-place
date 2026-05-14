@@ -9,6 +9,7 @@ interface StatsCardProps {
   iconBg?: string;
   iconColor?: string;
   valueColor?: string;
+  valueClassName?: string;
   className?: string;
   onClick?: () => void;
 }
@@ -22,6 +23,7 @@ export const StatCard: React.FC<StatsCardProps> = React.memo(({
   iconBg = "bg-blue-50",
   iconColor = "text-blue-600",
   valueColor = "text-slate-800",
+  valueClassName = "",
   className = "",
   onClick,
 }) => {
@@ -40,15 +42,15 @@ export const StatCard: React.FC<StatsCardProps> = React.memo(({
         </div>
       )}
       <div className="flex flex-col justify-center py-0.5 min-w-0 flex-1">
-        <span className="text-[9px] text-slate-400 uppercase font-semibold tracking-widest leading-none mb-1.5 truncate">
+        <span className="text-[9px] text-slate-400  font-semibold  leading-none mb-1.5 truncate">
           {label}
         </span>
         <div className="flex items-center justify-between gap-2">
-          <span className={`text-base font-semibold tracking-tight leading-none truncate ${valueColor}`}>
+          <span className={`text-base font-semibold tracking-tight leading-none truncate ${valueColor} ${valueClassName}`}>
             {prefix}{value ?? 0}
           </span>
           {subValue && (
-            <span className="text-[10px] text-slate-400 font-bold uppercase truncate">{subValue}</span>
+            <span className="text-[10px] text-slate-400 font-bold  truncate">{subValue}</span>
           )}
         </div>
       </div>

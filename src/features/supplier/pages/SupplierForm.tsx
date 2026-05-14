@@ -204,7 +204,7 @@ const SupplierForm = () => {
   if (loading && id) return <div className="py-20 text-center"><Loader /></div>;
 
   return (
-    <div className="max-w-7xl mx-auto p-4 md:p-8 md:animate-in md:fade-in md:duration-500">
+    <div className="md:animate-in md:fade-in md:duration-500">
       <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
         
         {/* Left Column: Main Identity & Contact */}
@@ -218,7 +218,7 @@ const SupplierForm = () => {
                 <Building2 size={20} />
               </div>
               <div>
-                <h3 className="text-[10px] font-black text-slate-800 uppercase tracking-widest">Business Identity</h3>
+                <h3 className="text-[10px] font-black text-slate-800  ">Business Identity</h3>
                 <p className="text-[11px] font-bold text-slate-400">Core registration information</p>
               </div>
             </div>
@@ -263,7 +263,7 @@ const SupplierForm = () => {
                 leftIcon={<Phone size={16} className="text-slate-400" />}
               />
               <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Business Type</label>
+                <label className="text-[10px] font-black text-slate-400   ml-1">Business Type</label>
                 <ReusableSelect
                   value={formData.type}
                   onValueChange={(val) => setFormData(p => ({ ...p, type: val }))}
@@ -286,7 +286,7 @@ const SupplierForm = () => {
                 <Globe size={20} />
               </div>
               <div>
-                <h3 className="text-[10px] font-black text-slate-800 uppercase tracking-widest">Reach & Location</h3>
+                <h3 className="text-[10px] font-black text-slate-800  ">Reach & Location</h3>
                 <p className="text-[11px] font-bold text-slate-400">Communication and physical address</p>
               </div>
             </div>
@@ -329,7 +329,7 @@ const SupplierForm = () => {
                 />
               </div>
               <div className="md:col-span-2 space-y-1.5">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Street Address</label>
+                <label className="text-[10px] font-black text-slate-400   ml-1">Street Address</label>
                 <textarea
                   name="address"
                   value={formData.address}
@@ -354,7 +354,7 @@ const SupplierForm = () => {
                 <Tag size={20} />
               </div>
               <div>
-                <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-800">Tax Information</h3>
+                <h3 className="text-[10px] font-black   text-slate-800">Tax Information</h3>
                 <p className="text-[11px] font-bold text-slate-400">Compliance details</p>
               </div>
             </div>
@@ -371,7 +371,7 @@ const SupplierForm = () => {
               />
               <div className="p-4 rounded-2xl bg-blue-50 border border-blue-100 flex gap-3 items-start">
                 <div className="mt-1 w-2 h-2 rounded-full bg-blue-500 md:animate-pulse shrink-0" />
-                <p className="text-[10px] font-bold text-blue-600 leading-relaxed uppercase tracking-wider">
+                <p className="text-[10px] font-bold text-blue-600 leading-relaxed  ">
                   Ensure the Tax ID is valid for generating B2B invoices and claiming Input Tax Credit.
                 </p>
               </div>
@@ -384,7 +384,7 @@ const SupplierForm = () => {
               <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400">
                 <FileText size={16} />
               </div>
-              <h3 className="text-[10px] font-black text-slate-800 uppercase tracking-widest">Internal Notes</h3>
+              <h3 className="text-[10px] font-black text-slate-800  ">Internal Notes</h3>
             </div>
             <textarea
               name="notes"

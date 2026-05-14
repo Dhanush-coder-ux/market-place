@@ -93,9 +93,9 @@ const ProductRow = React.memo(({
     return (p.batches || []).filter((b: any) => b && b.id !== null);
   }, [p.batches]);
 
-  const hasVariants = (p.has_variant || (p as any).has_varients) && combinations.length > 0;
-  const hasBatches = (p.has_batch || batches.length > 0);
-  const hasSerials = (p.has_serialno || extractSerials(p.serial_number).length > 0);
+  const hasVariants = combinations.length > 0;
+  const hasBatches = batches.length > 0;
+  const hasSerials = extractSerials(p.serial_number).length > 0;
   const isExpandable = hasVariants || hasBatches || hasSerials;
 
   // --- Aggregation logic for badges ---
@@ -112,7 +112,7 @@ const ProductRow = React.memo(({
 
         const cBatches = c.batches || [];
         tb += cBatches.length;
-        
+
         cBatches.forEach((cb: any) => {
           const cbSerials = extractSerials(cb.serial_numbers || (cb.datas && cb.datas.serial_numbers));
           ts += cbSerials.length;
@@ -127,21 +127,21 @@ const ProductRow = React.memo(({
   const badges = [];
   if (hasVariants) {
     badges.push(
-      <span key="var" className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider text-blue-600 bg-blue-50 border border-blue-100 whitespace-nowrap">
+      <span key="var" className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold   text-blue-600 bg-blue-50 border border-blue-100 whitespace-nowrap">
         <Layers size={10} /> {combinations.length} Variants
       </span>
     );
   }
   if (totalBatches > 0) {
     badges.push(
-      <span key="batch" className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider text-indigo-600 bg-indigo-50 border border-indigo-100 whitespace-nowrap">
+      <span key="batch" className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold   text-indigo-600 bg-indigo-50 border border-indigo-100 whitespace-nowrap">
         <Calendar size={10} /> {totalBatches} Batches
       </span>
     );
   }
   if (totalSerials > 0) {
     badges.push(
-      <span key="serial" className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider text-purple-600 bg-purple-50 border border-purple-100 whitespace-nowrap">
+      <span key="serial" className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold   text-purple-600 bg-purple-50 border border-purple-100 whitespace-nowrap">
         <Hash size={10} /> {totalSerials} Serials
       </span>
     );
@@ -187,7 +187,7 @@ const ProductRow = React.memo(({
                   {!showAllBadges && remainingBadges > 0 && (
                     <button
                       onClick={(e) => { e.stopPropagation(); setShowAllBadges(true); }}
-                      className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-bold uppercase bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200 transition-colors"
+                      className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-bold  bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200 transition-colors"
                     >
                       +{remainingBadges}
                     </button>
@@ -214,7 +214,7 @@ const ProductRow = React.memo(({
             return (
               <td key={key} className="px-6 py-4 whitespace-nowrap">
                 <span className={`text-[13px] ${key === "sell_price" ? "font-semibold text-slate-800" : "font-medium text-slate-600"}`}>
-                  {formatCurrency(value)}
+                  {hasVariants ? "—" : formatCurrency(value)}
                 </span>
               </td>
             );
@@ -257,7 +257,7 @@ const ProductRow = React.memo(({
             if (sList.length === 0 && totalSerials > 0) {
               return (
                 <td key={key} className="px-6 py-4 whitespace-nowrap">
-                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest bg-slate-50 px-2 py-1 rounded-md border border-slate-100">
+                  <span className="text-[11px] font-bold text-slate-400   bg-slate-50 px-2 py-1 rounded-md border border-slate-100">
                     See Variants
                   </span>
                 </td>
@@ -303,8 +303,8 @@ const ProductRow = React.memo(({
             if (value === undefined || value === null) return "—";
             if (value === "" && key !== "barcode") return "—";
             if (value === "" && key === "barcode") {
-               const b = p.barcode || datas.barcode || (p as any).sku || datas.sku || "";
-               return b || "—";
+              const b = p.barcode || datas.barcode || (p as any).sku || datas.sku || "";
+              return b || "—";
             }
             if (Array.isArray(value)) {
               if (value.length === 0) return "—";
@@ -357,31 +357,31 @@ const ProductRow = React.memo(({
             <div className="md:pl-[84px] pl-10 pr-6 py-6 space-y-6">
               {!hasVariants && rootSerials.length > 0 && (
                 <div className="bg-white rounded-xl border border-slate-100 p-4 shadow-sm relative">
-                   {/* Horizontal connecting line */}
+                  {/* Horizontal connecting line */}
                   <div className="absolute top-8 left-[-18px] md:left-[-57px] w-4 md:w-[57px] h-[1.5px] bg-blue-500/30" />
-                  
+
                   <div className="flex items-center gap-2 mb-3">
                     <Hash size={12} className="text-violet-400" />
-                    <span className="text-[10px] font-bold uppercase text-slate-400 tracking-widest">Serial Number Tracking</span>
+                    <span className="text-[10px] font-bold  text-slate-400 ">Serial Number Tracking</span>
                   </div>
                   <SerialBadgeList serials={rootSerials} title={`Serials: ${p.name}`} />
                 </div>
               )}
 
               <div className="animate-in fade-in slide-in-from-top-4 duration-500 relative">
-                 {/* Horizontal connecting line for tree components */}
-                 <div className="absolute top-8 left-[-18px] md:left-[-57px] w-4 md:w-[57px] h-[1.5px] bg-blue-500/30" />
+                {/* Horizontal connecting line for tree components */}
+                <div className="absolute top-8 left-[-18px] md:left-[-57px] w-4 md:w-[57px] h-[1.5px] bg-blue-500/30" />
 
-                  {hasVariants && (
-                    <VariantRows
-                      combinations={combinations}
-                      baseSellPrice={datas.sell_price || (p as any).sell_price}
-                      baseBuyPrice={datas.buy_price || (p as any).buy_price}
-                    />
-                  )}
-                  {!hasVariants && hasBatches && (
-                    <BatchCards batches={batches} />
-                  )}
+                {hasVariants && (
+                  <VariantRows
+                    combinations={combinations}
+                    baseSellPrice={datas.sell_price || (p as any).sell_price}
+                    baseBuyPrice={datas.buy_price || (p as any).buy_price}
+                  />
+                )}
+                {!hasVariants && hasBatches && (
+                  <BatchCards batches={batches} />
+                )}
               </div>
             </div>
           </td>
@@ -583,10 +583,10 @@ const ProductInfos = () => {
 
       {/* Table */}
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto overflow-y-auto h-[calc(100vh-220px)] pf-scroll">
           <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-white border-b border-slate-200 text-slate-500 text-[11px] font-semibold uppercase tracking-wider">
+            <thead className="sticky top-0 z-20 bg-white/95 backdrop-blur-sm shadow-sm">
+              <tr className="border-b border-slate-200 text-slate-500 text-[11px] font-semibold  ">
                 <th className="px-6 py-4 w-14 text-center"></th>
                 <th className="px-6 py-4 whitespace-nowrap w-full min-w-[260px]">Product Details</th>
                 {selectedKeys.map(key => {

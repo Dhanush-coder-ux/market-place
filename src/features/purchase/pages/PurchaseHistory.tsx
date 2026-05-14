@@ -83,12 +83,12 @@ function toDisplayData(p: PurchaseRecord): DirectPurchaseData {
     PO_UPDATE: "PO Purchase",
     PRODUCTION: "Production",
   };
-  
+
   // Try to find the vendor name from various possible fields
   const vendorName = d2?.supplier_name ?? d2?.supplier ?? d2?.purchaseDetails?.supplier_name ?? "—";
-  
+
   let totalCost = Number(d2?.payment?.amountPaid ?? d2?.total_cost ?? d2?.grand_total ?? 0);
-  
+
   const otherCharge = Number(p.additional_charges?.other_charge ?? d2?.charges?.other ?? 0);
   const transportCharge = Number(p.additional_charges?.delivery_charge ?? d2?.charges?.transport ?? 0);
 
@@ -188,9 +188,9 @@ const STYLES = `
 const fmt = (n: number) => `₹${n.toLocaleString()}`;
 
 const ProductPill = ({ name, qty, stocks }: { name: string; qty: number; stocks?: number }) => (
-  <span className="inline-flex items-center gap-1.5 text-xs font-medium text-zinc-600 bg-zinc-50 border border-zinc-100 px-2.5 py-1 rounded-full whitespace-nowrap">
-    {name}
-    <span className="text-zinc-400 font-semibold tabular-nums">
+  <span className="inline-flex items-center gap-1.5 text-xs font-medium text-zinc-600 bg-zinc-50 border border-zinc-100 px-2.5 py-1 rounded-full">
+    <span className="truncate max-w-[150px]">{name}</span>
+    <span className="text-zinc-400 font-semibold tabular-nums shrink-0">
       Received Stock: {qty} {stocks !== undefined && <span className="ml-1 text-blue-500 font-bold">Ordered Stock: {stocks}</span>}
     </span>
   </span>
@@ -204,13 +204,13 @@ const ArrowBtn = () => (
 
 const PurchaseTypeBadge = ({ type }: { type: PurchaseType }) => {
   let colors = "bg-zinc-100 text-zinc-600 border-zinc-200"; // Fallback
-  
+
   if (type === "Purchase") colors = "bg-blue-50 text-blue-700 border-blue-100";
   if (type === "PO Purchase") colors = "bg-purple-50 text-purple-700 border-purple-100";
   if (type === "Production") colors = "bg-amber-50 text-amber-700 border-amber-100";
 
   return (
-    <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border whitespace-nowrap ${colors}`}>
+    <span className={`px-2 py-0.5 rounded text-[10px] font-bold   border whitespace-nowrap ${colors}`}>
       {type}
     </span>
   );
@@ -243,14 +243,14 @@ const GridCard = ({ po, onClick }: { po: DirectPurchaseData; onClick: () => void
         <div className="flex items-start gap-2.5">
           <Building2 size={14} className="text-zinc-400 mt-0.5 shrink-0" />
           <div className="min-w-0">
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-400 mb-0.5">Vendor</p>
+            <p className="text-[10px] font-semibold   text-zinc-400 mb-0.5">Vendor</p>
             <p className="text-sm font-medium text-zinc-700 truncate">{po.vendor}</p>
           </div>
         </div>
         <div className="flex items-start gap-2.5">
           <Calendar size={14} className="text-zinc-400 mt-0.5 shrink-0" />
           <div>
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-400 mb-0.5">Date</p>
+            <p className="text-[10px] font-semibold   text-zinc-400 mb-0.5">Date</p>
             <p className="text-sm font-medium text-zinc-700">{po.date}</p>
             <p className="text-[11px] text-zinc-400 mt-0.5">{po.time}</p>
           </div>
@@ -261,7 +261,7 @@ const GridCard = ({ po, onClick }: { po: DirectPurchaseData; onClick: () => void
       <div className="px-5 py-4 flex-grow flex flex-col">
         <div className="flex items-center gap-1.5 mb-3">
           <Package size={13} className="text-zinc-400" />
-          <span className="text-[10px] font-semibold uppercase tracking-widest text-zinc-400">Products Ordered</span>
+          <span className="text-[10px] font-semibold   text-zinc-400">Products Ordered</span>
         </div>
         <div className="po-scrollbar max-h-[7.5rem] overflow-y-auto space-y-1.5 pr-1">
           {po.products.map((p, idx) => (
@@ -285,12 +285,12 @@ const GridCard = ({ po, onClick }: { po: DirectPurchaseData; onClick: () => void
       {/* Footer */}
       <div className="po-footer px-5 py-4 border-t border-zinc-100 bg-zinc-50/60 flex items-center justify-between gap-4 mt-auto">
         <div>
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-400 mb-0.5">Total Amount</p>
+          <p className="text-[10px] font-semibold   text-zinc-400 mb-0.5">Total Amount</p>
           <p className="text-xl font-semibold text-zinc-900 tracking-tight tabular-nums">{fmt(po.total_cost)}</p>
         </div>
         <div className="flex items-center gap-4">
           <div className="text-right">
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-400 mb-0.5">Qty</p>
+            <p className="text-[10px] font-semibold   text-zinc-400 mb-0.5">Qty</p>
             <p className="text-sm font-semibold text-zinc-700 tabular-nums">{totalQty}</p>
           </div>
           <div className="w-8 h-8 rounded-full border border-zinc-200 bg-white flex items-center justify-center shadow-sm group-hover:border-blue-200 group-hover:bg-blue-50 transition-all">
@@ -307,17 +307,17 @@ const GridCard = ({ po, onClick }: { po: DirectPurchaseData; onClick: () => void
 const VerticalTable = ({ data, onClick }: { data: DirectPurchaseData[]; onClick: (po: DirectPurchaseData) => void }) => {
   return (
     <div className="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden">
-      <div className="overflow-x-auto">
-        <table className="w-full text-left border-collapse whitespace-nowrap">
-          <thead>
-            <tr className="bg-zinc-50/80 border-b border-zinc-200">
-              <th className="px-5 py-4 text-[10px] font-bold uppercase tracking-widest text-zinc-500">PO Details</th>
-              <th className="px-5 py-4 text-[10px] font-bold uppercase tracking-widest text-zinc-500">Vendor</th>
-              <th className="px-5 py-4 text-[10px] font-bold uppercase tracking-widest text-zinc-500">Date</th>
-              <th className="px-5 py-4 text-[10px] font-bold uppercase tracking-widest text-zinc-500 hidden md:table-cell">Products</th>
-              <th className="px-5 py-4 text-[10px] font-bold uppercase tracking-widest text-zinc-500 text-right">Qty</th>
-              <th className="px-5 py-4 text-[10px] font-bold uppercase tracking-widest text-zinc-500 text-right">Total</th>
-              <th className="px-5 py-4 text-[10px] font-bold uppercase tracking-widest text-zinc-500 w-14"></th>
+      <div className="overflow-x-auto overflow-y-auto h-[calc(100vh-220px)] pf-scroll">
+        <table className="w-full text-left border-collapse">
+          <thead className="sticky top-0 z-20 bg-zinc-50/95 backdrop-blur-sm shadow-sm">
+            <tr className="border-b border-zinc-200">
+              <th className="px-6 py-5 text-[11px] font-black text-zinc-500 whitespace-nowrap">PO Details</th>
+              <th className="px-6 py-5 text-[11px] font-black text-zinc-500 whitespace-nowrap">Vendor</th>
+              <th className="px-6 py-5 text-[11px] font-black text-zinc-500 whitespace-nowrap">Date</th>
+              <th className="px-6 py-5 text-[11px] font-black text-zinc-500 hidden md:table-cell">Products</th>
+              <th className="px-6 py-5 text-[11px] font-black text-zinc-500 text-right whitespace-nowrap">Qty</th>
+              <th className="px-6 py-5 text-[11px] font-black text-zinc-500 text-right whitespace-nowrap">Total</th>
+              <th className="px-6 py-5 text-[11px] font-black text-zinc-500 w-14"></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-zinc-100">
@@ -327,48 +327,48 @@ const VerticalTable = ({ data, onClick }: { data: DirectPurchaseData[]; onClick:
                 <tr
                   key={po.id}
                   onClick={() => onClick(po)}
-                  className="po-row group cursor-pointer transition-colors hover:bg-zinc-50/60"
+                  className="po-row group cursor-pointer transition-colors hover:bg-slate-50/60"
                 >
                   {/* PO Details */}
-                  <td className="px-5 py-4 align-middle">
+                  <td className="px-6 py-5 align-middle whitespace-nowrap">
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-md bg-blue-50 flex items-center justify-center shrink-0">
                         <ReceiptText size={14} className="text-blue-600" />
                       </div>
-                      <div className="flex flex-col gap-1.5">
-                        <span className="text-sm font-semibold text-zinc-800">{po.poNumber}</span>
+                      <div className="flex flex-col gap-1">
+                        <span className="text-[13px] font-black text-slate-800">{po.poNumber}</span>
                         <div className="w-fit"><PurchaseTypeBadge type={po.purchaseType} /></div>
                       </div>
                     </div>
                   </td>
 
                   {/* Vendor */}
-                  <td className="px-5 py-4 align-middle">
-                    <div className="flex items-center gap-2 text-sm font-medium text-zinc-700">
-                      <Building2 size={14} className="text-zinc-400 shrink-0" />
+                  <td className="px-6 py-5 align-middle">
+                    <div className="flex items-center gap-2 text-[13px] font-semibold text-slate-700 whitespace-nowrap">
+                      <Building2 size={14} className="text-slate-400 shrink-0" />
                       {po.vendor}
                     </div>
                   </td>
 
                   {/* Date */}
-                  <td className="px-5 py-4 align-middle">
+                  <td className="px-6 py-5 align-middle whitespace-nowrap">
                     <div className="flex flex-col gap-0.5">
-                      <div className="flex items-center gap-2 text-sm font-medium text-zinc-700">
-                        <Calendar size={14} className="text-zinc-400 shrink-0" />
+                      <div className="flex items-center gap-2 text-[13px] font-semibold text-slate-700">
+                        <Calendar size={14} className="text-slate-400 shrink-0" />
                         {po.date}
                       </div>
-                      <span className="text-xs text-zinc-400 pl-6">{po.time}</span>
+                      <span className="text-[11px] text-slate-400 pl-6 font-bold">{po.time}</span>
                     </div>
                   </td>
 
                   {/* Products */}
-                  <td className="px-5 py-4 align-middle hidden md:table-cell max-w-[280px]">
+                  <td className="px-6 py-5 align-middle hidden md:table-cell max-w-[320px]">
                     <div className="flex flex-wrap gap-1.5">
                       {po.products.slice(0, 2).map((p, idx) => (
                         <ProductPill key={idx} name={p.name} qty={p.quantity} stocks={p.stocks} />
                       ))}
                       {po.products.length > 2 && (
-                        <span className="inline-flex items-center text-xs font-medium text-zinc-500 bg-zinc-100/80 px-2.5 py-1 rounded-full whitespace-nowrap">
+                        <span className="inline-flex items-center text-[10px] font-black text-slate-500 bg-slate-100 px-2.5 py-1 rounded-full whitespace-nowrap border border-slate-200">
                           +{po.products.length - 2} more
                         </span>
                       )}
@@ -376,21 +376,21 @@ const VerticalTable = ({ data, onClick }: { data: DirectPurchaseData[]; onClick:
                   </td>
 
                   {/* Quantity */}
-                  <td className="px-5 py-4 align-middle text-right">
-                    <span className="text-sm font-semibold text-zinc-700 tabular-nums">
+                  <td className="px-6 py-5 align-middle text-right whitespace-nowrap">
+                    <span className="text-[13px] font-black text-slate-800 tabular-nums">
                       {totalQty}
                     </span>
                   </td>
 
                   {/* Total */}
-                  <td className="px-5 py-4 align-middle text-right">
-                    <span className="text-sm font-bold text-zinc-900 tabular-nums tracking-tight">
+                  <td className="px-6 py-5 align-middle text-right whitespace-nowrap">
+                    <span className="text-[15px] font-black text-blue-600 tabular-nums tracking-tight">
                       {fmt(po.total_cost)}
                     </span>
                   </td>
 
                   {/* Action */}
-                  <td className="px-5 py-4 align-middle text-right">
+                  <td className="px-6 py-5 align-middle text-right">
                     <ArrowBtn />
                   </td>
                 </tr>
@@ -413,8 +413,8 @@ const ViewToggle = ({
   onChange: (v: ViewMode) => void;
 }) => {
   const options: { mode: ViewMode; icon: React.ReactNode; label: string }[] = [
-    { mode: "grid",       icon: <LayoutGrid size={14} />,   label: "Grid view" },
-    { mode: "vertical",   icon: <List size={14} />,         label: "Vertical view" },
+    { mode: "grid", icon: <LayoutGrid size={14} />, label: "Grid view" },
+    { mode: "vertical", icon: <List size={14} />, label: "Vertical view" },
   ];
 
   return (
@@ -424,11 +424,10 @@ const ViewToggle = ({
           key={mode}
           onClick={() => onChange(mode)}
           title={label}
-          className={`flex items-center justify-center w-8 h-8 rounded-md transition-all ${
-            current === mode
-              ? "bg-white shadow-sm text-blue-600 border border-zinc-200"
-              : "text-zinc-400 hover:text-zinc-600"
-          }`}
+          className={`flex items-center justify-center w-8 h-8 rounded-md transition-all ${current === mode
+            ? "bg-white shadow-sm text-blue-600 border border-zinc-200"
+            : "text-zinc-400 hover:text-zinc-600"
+            }`}
         >
           {icon}
         </button>
@@ -523,45 +522,45 @@ const PurchaseHistory = () => {
         )}
       </div>
       <FloatingFormCard
-        isOpen={!!selectedPO} 
-        onClose={() => setSelectedPO(null)} 
+        isOpen={!!selectedPO}
+        onClose={() => setSelectedPO(null)}
         title={selectedPO ? `Purchase Details: ${selectedPO.poNumber}` : "Details"}
         maxWidth="max-w-2xl"
       >
         {selectedPO && (
           <div className="space-y-6">
-            
+
             {/* Meta Information Grid */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 bg-zinc-50 p-4 rounded-xl border border-zinc-100">
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-1">Vendor</p>
+                <p className="text-[10px] font-bold   text-zinc-400 mb-1">Vendor</p>
                 <p className="text-sm font-semibold text-zinc-800">{selectedPO.vendor}</p>
               </div>
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-1">Date</p>
+                <p className="text-[10px] font-bold   text-zinc-400 mb-1">Date</p>
                 <p className="text-sm font-semibold text-zinc-800">{selectedPO.date}</p>
                 <p className="text-[10px] text-zinc-500">{selectedPO.time}</p>
               </div>
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-1">Payment</p>
+                <p className="text-[10px] font-bold   text-zinc-400 mb-1">Payment</p>
                 <p className="text-sm font-semibold text-zinc-800">{selectedPO.paymentMethod}</p>
               </div>
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-1">Total Cost</p>
+                <p className="text-[10px] font-bold   text-zinc-400 mb-1">Total Cost</p>
                 <p className="text-lg font-bold text-blue-600">₹{selectedPO.total_cost.toLocaleString()}</p>
               </div>
             </div>
 
             {/* Charges Breakdown */}
             <div className="grid grid-cols-2 gap-4">
-               <div className="p-3 bg-zinc-50 rounded-lg border border-zinc-100">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-1">Transport Charges</p>
-                  <p className="text-sm font-semibold text-zinc-800">₹{selectedPO.charges?.transport.toLocaleString()}</p>
-               </div>
-               <div className="p-3 bg-zinc-50 rounded-lg border border-zinc-100">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-1">Other Charges</p>
-                  <p className="text-sm font-semibold text-zinc-800">₹{selectedPO.charges?.other.toLocaleString()}</p>
-               </div>
+              <div className="p-3 bg-zinc-50 rounded-lg border border-zinc-100">
+                <p className="text-[10px] font-bold   text-zinc-400 mb-1">Transport Charges</p>
+                <p className="text-sm font-semibold text-zinc-800">₹{selectedPO.charges?.transport.toLocaleString()}</p>
+              </div>
+              <div className="p-3 bg-zinc-50 rounded-lg border border-zinc-100">
+                <p className="text-[10px] font-bold   text-zinc-400 mb-1">Other Charges</p>
+                <p className="text-sm font-semibold text-zinc-800">₹{selectedPO.charges?.other.toLocaleString()}</p>
+              </div>
             </div>
 
             {/* Products List */}
@@ -573,11 +572,11 @@ const PurchaseHistory = () => {
                   {selectedPO.products.reduce((s, i) => s + i.quantity, 0)} Total Units
                 </span>
               </div>
-              
+
               <div className="space-y-2">
                 {selectedPO.products.map((product, idx) => (
                   <div key={idx} className="flex flex-col p-3 rounded-lg border border-zinc-200 bg-white shadow-sm hover:border-blue-200 transition-colors">
-                    
+
                     <div className="flex items-start justify-between mb-3 border-b border-zinc-50 pb-2">
                       <div>
                         <div className="flex items-center gap-2">
@@ -604,23 +603,23 @@ const PurchaseHistory = () => {
                       <div className="mb-3 p-2.5 bg-zinc-50 rounded-xl border border-zinc-100 flex items-center justify-between">
                         <div className="flex items-center gap-4">
                           <div className="flex flex-col">
-                            <span className="text-[8px] font-black text-zinc-400 uppercase tracking-widest">Opening Stock</span>
+                            <span className="text-[8px] font-black text-zinc-400  ">Opening Stock</span>
                             <span className="text-xs font-bold text-zinc-600">{product.stocks_before}</span>
                           </div>
                           <div className="w-px h-6 bg-zinc-200" />
                           <div className="flex flex-col">
-                            <span className="text-[8px] font-black text-blue-400 uppercase tracking-widest">Received Stock</span>
+                            <span className="text-[8px] font-black text-blue-400  ">Received Stock</span>
                             <span className="text-xs font-bold text-blue-600">+{product.quantity}</span>
                           </div>
                           <div className="w-px h-6 bg-zinc-200" />
                           <div className="flex flex-col">
-                            <span className="text-[8px] font-black text-emerald-400 uppercase tracking-widest">Closing Stock</span>
+                            <span className="text-[8px] font-black text-emerald-400  ">Closing Stock</span>
                             <span className="text-xs font-bold text-emerald-600">{(product.stocks_before ?? 0) + product.quantity}</span>
                           </div>
                         </div>
                         <div className="flex items-center gap-1.5 px-2 py-1 bg-emerald-100/50 rounded-lg border border-emerald-100">
                           <TrendingUp size={12} className="text-emerald-600" />
-                          <span className="text-[9px] font-black text-emerald-700 uppercase">Stock Updated</span>
+                          <span className="text-[9px] font-black text-emerald-700 ">Stock Updated</span>
                         </div>
                       </div>
                     )}
@@ -644,7 +643,7 @@ const PurchaseHistory = () => {
                                 )}
                               </div>
                             </div>
-                            
+
                             {/* Variant Batches */}
                             {variant.batches && variant.batches.length > 0 && (
                               <div className="grid grid-cols-1 gap-2 pl-4">
@@ -713,7 +712,7 @@ const PurchaseHistory = () => {
 
             {/* Action Buttons (Optional) */}
             <div className="flex justify-end gap-3 pt-4 border-t border-zinc-100">
-              <button 
+              <button
                 onClick={() => setSelectedPO(null)}
                 className="px-4 py-2 text-sm font-semibold text-zinc-600 bg-white border border-zinc-200 hover:bg-zinc-50 rounded-lg transition-colors"
               >
@@ -723,7 +722,7 @@ const PurchaseHistory = () => {
                 Print Invoice
               </button>
             </div>
-            
+
           </div>
         )}
       </FloatingFormCard>

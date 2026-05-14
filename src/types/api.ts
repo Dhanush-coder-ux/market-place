@@ -73,6 +73,7 @@ export interface CustomerRecord {
   email?: string;
   mobile_number: string;
   credit_limit: number;
+  outstanding?: number;
   is_active: boolean;
   datas?: {
     address?: {
@@ -157,6 +158,7 @@ export interface InventoryRecord {
   has_variant: boolean;
   has_batch: boolean;
   has_serialno: boolean;
+  is_active: boolean;
   variants?: any[];
   batches?: any[];
   batch?: InventoryBatch;
@@ -227,4 +229,18 @@ export interface ShopRecord {
   created_at: string;
   updated_at: string;
   [key: string]: unknown;
+}
+
+export enum CustomerOutstandingClearedPaymentMethods {
+  UPI = "UPI",
+  CASH = "CASH",
+  CARD = "CARD",
+  BANK = "BANK"
+}
+
+export interface OutstandingClearedCustomerSchema {
+  shop_id: string;
+  customer_id: string;
+  payments: Partial<Record<CustomerOutstandingClearedPaymentMethods, number>>;
+  cleared_amount: number;
 }

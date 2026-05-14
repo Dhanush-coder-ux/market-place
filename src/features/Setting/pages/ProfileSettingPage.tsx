@@ -116,7 +116,7 @@ export const ProfileSettingsPage = () => {
     <div className="flex flex-col md:flex-row gap-6 p-0">
       <aside className={`${isMobile ? "flex overflow-x-auto gap-2 pb-4 px-2 scrollbar-hide border-b border-slate-100 mb-4" : "w-72 space-y-1.5 shrink-0"}`}>
         {!isMobile && (
-          <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] px-4 mb-3">
+          <h2 className="text-[10px] font-black text-slate-400  tracking-[0.2em] px-4 mb-3">
             Configuration
           </h2>
         )}

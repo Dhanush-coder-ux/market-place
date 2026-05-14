@@ -145,7 +145,7 @@ const Sidebar: FC<{ links: SidebarLink[] }> = ({ links }) => {
             transition={{ duration: 0.15 }}
             className="px-4 pt-4 pb-1.5 flex items-center justify-between"
           >
-            <span className="text-[9.5px] font-bold tracking-[0.09em] uppercase text-white/30">
+            <span className="text-[9.5px] font-bold tracking-[0.09em]  text-white/30">
               Navigation
             </span>
             <button
@@ -216,7 +216,7 @@ const Sidebar: FC<{ links: SidebarLink[] }> = ({ links }) => {
               </div>
               <div className="px-6 py-4 bg-slate-50/50 border-t border-slate-100 flex items-center justify-center gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Recommended for POS</span>
+                <span className="text-[10px] font-bold text-slate-400  ">Recommended for POS</span>
               </div>
             </motion.div>
           </div>
@@ -238,7 +238,7 @@ const Sidebar: FC<{ links: SidebarLink[] }> = ({ links }) => {
           >
             <div className="bg-gradient-to-br from-blue-600/95 via-blue-700/95 to-blue-900/95 border border-white/20 rounded-xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] py-3 w-[220px] overflow-hidden backdrop-blur-xl">
               <div className="px-4 pb-2.5 mb-1.5 border-b border-white/5">
-                <span className="text-[10px] font-black uppercase tracking-widest text-white">{hoveredItem.link.name}</span>
+                <span className="text-[10px] font-black   text-white">{hoveredItem.link.name}</span>
               </div>
               <div className="px-1.5 py-0.5 flex flex-col gap-0.5">
                 {hoveredItem.link.subLinks!.map((item) => (

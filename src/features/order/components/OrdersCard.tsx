@@ -121,7 +121,7 @@ const OrdersCard: React.FC<OrdersCardProps> = ({ order, setIsOpen, viewMode = "g
         </div>
 
         <div className="mb-5">
-          <p className="text-[10px] font-medium text-slate-400 uppercase tracking-wider mb-1">Total Amount</p>
+          <p className="text-[10px] font-medium text-slate-400   mb-1">Total Amount</p>
           <div className="flex items-baseline gap-0.5">
             <IndianRupee size={20} className="text-slate-800" strokeWidth={2} />
             <span className="text-3xl font-medium text-slate-800 tracking-tight" style={{ fontVariantNumeric: "tabular-nums" }}>
@@ -134,13 +134,13 @@ const OrdersCard: React.FC<OrdersCardProps> = ({ order, setIsOpen, viewMode = "g
 
         <div className="flex gap-4 mb-5">
           <div className="flex-1 min-w-0">
-            <p className="text-[10px] font-medium text-slate-400 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+            <p className="text-[10px] font-medium text-slate-400   mb-1.5 flex items-center gap-1.5">
               <User size={12} strokeWidth={2} /> Customer
             </p>
             <p className="text-sm font-medium text-slate-800 truncate">{order.customerName}</p>
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-[10px] font-medium text-slate-400 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+            <p className="text-[10px] font-medium text-slate-400   mb-1.5 flex items-center gap-1.5">
               <Phone size={12} strokeWidth={2} /> Contact
             </p>
             <p className="text-sm font-medium text-slate-800 truncate">{order.phone}</p>

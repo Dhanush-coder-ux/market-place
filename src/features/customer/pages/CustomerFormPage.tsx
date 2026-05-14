@@ -53,7 +53,7 @@ const CustomerFormPage = () => {
   useEffect(() => {
     setActions(
       <div className="flex items-center gap-3 bg-white px-4 h-11 rounded-2xl border border-slate-200 shadow-sm scale-90 md:scale-100">
-        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Active</span>
+        <span className="text-[10px] font-bold text-slate-500  ">Active</span>
         <Switch
           checked={formData.is_active}
           onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_active: checked }))}
@@ -228,7 +228,7 @@ const CustomerFormPage = () => {
               <div className="w-8 h-8 rounded-xl bg-blue-100 flex items-center justify-center text-blue-600">
                 <User size={18} />
               </div>
-              <h2 className="text-xs font-bold text-slate-800 uppercase tracking-widest">Personal Identity</h2>
+              <h2 className="text-xs font-bold text-slate-800  ">Personal Identity</h2>
             </div>
             <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-6">
               <Input
@@ -274,11 +274,11 @@ const CustomerFormPage = () => {
               <div className="w-8 h-8 rounded-xl bg-amber-100 flex items-center justify-center text-amber-600">
                 <Tag size={18} />
               </div>
-              <h2 className="text-xs font-bold text-slate-800 uppercase tracking-widest">Classification</h2>
+              <h2 className="text-xs font-bold text-slate-800  ">Classification</h2>
             </div>
             <div className="p-8 space-y-6">
               <div className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 border border-slate-100">
-                <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Account Active</span>
+                <span className="text-xs font-bold text-slate-500  ">Account Active</span>
                 <Switch
                   checked={formData.is_active}
                   onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_active: checked }))}
@@ -305,7 +305,7 @@ const CustomerFormPage = () => {
               <div className="w-8 h-8 rounded-xl bg-emerald-100 flex items-center justify-center text-emerald-600">
                 <MapPin size={18} />
               </div>
-              <h2 className="text-xs font-bold text-slate-800 uppercase tracking-widest">Billing Address</h2>
+              <h2 className="text-xs font-bold text-slate-800  ">Billing Address</h2>
             </div>
             <div className="p-8 space-y-6">
               <Input
@@ -332,7 +332,7 @@ const CustomerFormPage = () => {
               <div className="w-8 h-8 rounded-xl bg-rose-100 flex items-center justify-center text-rose-600">
                 <CreditCard size={18} />
               </div>
-              <h2 className="text-xs font-bold text-slate-800 uppercase tracking-widest">Financial & Notes</h2>
+              <h2 className="text-xs font-bold text-slate-800  ">Financial & Notes</h2>
             </div>
             <div className="p-8 space-y-6 flex-1 flex flex-col">
                 <Input
@@ -360,7 +360,7 @@ const CustomerFormPage = () => {
                   placeholder="Select Terms"
                 />
               <div className="flex flex-col gap-1.5 w-full flex-1">
-                <label className="text-[11px] font-bold text-slate-500 ml-1 uppercase tracking-wider">
+                <label className="text-[11px] font-bold text-slate-500 ml-1  ">
                   Internal Remarks
                 </label>
                 <textarea

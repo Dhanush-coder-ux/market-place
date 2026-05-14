@@ -59,7 +59,7 @@ const CustomerCreateModal: React.FC<CustomerCreateModalProps> = ({
         className="mt-6"
       >
         <Form.Item
-          label={<span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Full Name</span>}
+          label={<span className="text-xs font-bold text-slate-500  ">Full Name</span>}
           name="name"
           rules={[{ required: true, message: "Please enter customer name" }]}
         >
@@ -71,7 +71,7 @@ const CustomerCreateModal: React.FC<CustomerCreateModalProps> = ({
         </Form.Item>
 
         <Form.Item
-          label={<span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Mobile Number</span>}
+          label={<span className="text-xs font-bold text-slate-500  ">Mobile Number</span>}
           name="mobile_number"
           rules={[{ required: true, message: "Please enter mobile number" }]}
         >
@@ -83,7 +83,7 @@ const CustomerCreateModal: React.FC<CustomerCreateModalProps> = ({
         </Form.Item>
 
         <Form.Item
-          label={<span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Email Address</span>}
+          label={<span className="text-xs font-bold text-slate-500  ">Email Address</span>}
           name="email"
         >
           <Input 
@@ -109,7 +109,7 @@ const CustomerCreateModal: React.FC<CustomerCreateModalProps> = ({
 
         {isActive && (
           <Form.Item
-            label={<span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Credit Limit (₹)</span>}
+            label={<span className="text-xs font-bold text-slate-500  ">Credit Limit (₹)</span>}
             name="credit_limit"
             className="animate-in fade-in slide-in-from-top-2 duration-300"
           >

@@ -44,7 +44,7 @@ const OrderDateFilter: React.FC<OrderDateFilterProps> = ({ onRangeChange }) => {
         <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg border border-slate-100">
           <CalendarIcon className="w-5 h-5 text-slate-400" />
           <div className="flex flex-col">
-            <span className="text-[10px] uppercase text-slate-400 font-bold leading-none">Selected Range</span>
+            <span className="text-[10px]  text-slate-400 font-bold leading-none">Selected Range</span>
             <span className="text-sm font-semibold text-slate-700">
               {dateRange?.from ? (
                 <>
@@ -64,7 +64,7 @@ const OrderDateFilter: React.FC<OrderDateFilterProps> = ({ onRangeChange }) => {
         
         {/* --- Section 1: Presets --- */}
         <section>
-          <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+          <h3 className="text-xs font-bold text-slate-400   mb-3 flex items-center gap-2">
             <Clock className="w-3.5 h-3.5" />
             Quick Select
           </h3>
@@ -92,7 +92,7 @@ const OrderDateFilter: React.FC<OrderDateFilterProps> = ({ onRangeChange }) => {
 
         {/* --- Section 2: Dual Calendars (Stacked) --- */}
         <section className="flex flex-col">
-  <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">
+  <h3 className="text-xs font-bold text-slate-400   mb-2">
     Custom Range
   </h3>
 

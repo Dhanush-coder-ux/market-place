@@ -136,7 +136,7 @@ export const Navbar = () => {
         </DropdownMenuTrigger>
 
         <DropdownMenuContent align="start" className="w-64 p-1.5 rounded-2xl shadow-xl border-slate-100">
-          <DropdownMenuLabel className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-2 py-1.5">
+          <DropdownMenuLabel className="text-[10px] font-bold text-slate-400   px-2 py-1.5">
             My Workspaces
           </DropdownMenuLabel>
 
@@ -198,7 +198,7 @@ export const Navbar = () => {
           <div className="absolute top-full mt-2 w-full bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden z-50">
             {filteredRoutes.length > 0 ? (
               <div className="p-1.5">
-                <p className="px-3 py-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                <p className="px-3 py-2 text-[10px] font-bold text-slate-400  ">
                   Quick Navigation
                 </p>
                 {filteredRoutes.map((route) => {

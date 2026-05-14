@@ -220,7 +220,7 @@ export default function SupplierDetail() {
 
                     {/* Dynamically render all other fields from datas */}
                     {Object.entries(datas).map(([key, val]) => {
-                      if (["internal_notes", "supplier_name","address"].includes(key)) return null;
+                      if (["internal_notes", "supplier_name", "address"].includes(key)) return null;
                       const label = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
                       return (
                         <DetailItem
@@ -234,7 +234,7 @@ export default function SupplierDetail() {
 
                 <SectionCard title="Business Address">
                   <div className="space-y-4">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest text-xs font-semibold">Street Address</p>
+                    <p className="text-[10px] font-bold text-slate-400   text-xs font-semibold">Street Address</p>
                     <p className="text-sm font-semibold text-slate-700 leading-relaxed bg-slate-50 p-4 rounded-xl border border-slate-100">
                       {String(datas.address?.full_address || "No specific address provided.")}
                     </p>
@@ -264,7 +264,7 @@ export default function SupplierDetail() {
                 </div>
               </SectionCard>
               <SectionCard className="bg-slate-900 text-white border-0 shadow-2xl shadow-blue-200">
-                <h2 className="text-[10px] font-bold text-blue-400 uppercase tracking-widest mb-6">Current Payable</h2>
+                <h2 className="text-[10px] font-bold text-blue-400   mb-6">Current Payable</h2>
                 <div className="space-y-1 mb-8">
                   <div className="text-4xl font-black">{fmt(Number(datas.pending_amount) || 0)}</div>
                   <div className="text-xs text-slate-400 font-medium">Net amount payable to this vendor</div>
@@ -298,13 +298,13 @@ export default function SupplierDetail() {
                 uiId: p.ui_id,
               };
               (p.products ?? []).forEach((prod: any) => {
-                rows.push({ 
-                  ...purchaseMeta, 
+                rows.push({
+                  ...purchaseMeta,
                   productName: prod.name || 'Unknown Product',
-                  stocks: prod.stocks, 
+                  stocks: prod.stocks,
                   receivedStocks: prod.received_stocks ?? prod.stocks ?? 0,
-                  buy_price: prod.buy_price, 
-                  sell_price: prod.sell_price 
+                  buy_price: prod.buy_price,
+                  sell_price: prod.sell_price
                 });
               });
             });
@@ -314,7 +314,7 @@ export default function SupplierDetail() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-100"><ShoppingCart size={16} /></div>
-                    <h2 className="text-[10px] font-black text-slate-800 uppercase tracking-[0.15em]">Purchase History</h2>
+                    <h2 className="text-[10px] font-black text-slate-800  tracking-[0.15em]">Purchase History</h2>
                   </div>
                   {purLoading && <RefreshCcw size={14} className="text-slate-400 animate-spin" />}
                 </div>
@@ -330,7 +330,7 @@ export default function SupplierDetail() {
                     <div className="overflow-x-auto">
                       <table className="w-full text-left whitespace-nowrap">
                         <thead>
-                          <tr className="text-[10px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-100 bg-slate-50/50">
+                          <tr className="text-[10px] font-black   text-slate-400 border-b border-slate-100 bg-slate-50/50">
                             <th className="px-5 py-3">#</th>
                             <th className="px-5 py-3">Type</th>
                             <th className="px-5 py-3">Product</th>
@@ -351,13 +351,12 @@ export default function SupplierDetail() {
                                 <span className="text-[10px] font-black text-slate-400 tabular-nums">#{r.uiId}</span>
                               </td>
                               <td className="px-5 py-3">
-                                <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
-                                  r.type === 'DIRECT' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
-                                  r.type?.includes('PO') ? 'bg-blue-50 text-blue-700 border-blue-200' :
-                                  'bg-slate-50 text-slate-600 border-slate-200'
-                                }`}>
+                                <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${r.type === 'DIRECT' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                                    r.type?.includes('PO') ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                                      'bg-slate-50 text-slate-600 border-slate-200'
+                                  }`}>
                                   <span className="w-1.5 h-1.5 rounded-full bg-current" />
-                                  {(r.type || '—').replace(/_/g, ' ')}
+                                  {r.type === 'DIRECT' ? 'Purchase' : (r.type || '—').replace(/_/g, ' ')}
                                 </span>
                               </td>
                               <td className="px-5 py-3 text-xs font-medium text-slate-700">{r.productName}</td>
@@ -375,11 +374,10 @@ export default function SupplierDetail() {
                               </td>
                               <td className="px-5 py-3">
                                 <div className="flex flex-col gap-0.5">
-                                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md w-fit ${
-                                    r.paymentMethod === 'Cash' ? 'bg-green-50 text-green-700' :
-                                    r.paymentMethod === 'UPI' ? 'bg-violet-50 text-violet-700' :
-                                    'bg-slate-50 text-slate-600'
-                                  }`}>{r.paymentMethod}</span>
+                                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md w-fit ${r.paymentMethod === 'Cash' ? 'bg-green-50 text-green-700' :
+                                      r.paymentMethod === 'UPI' ? 'bg-violet-50 text-violet-700' :
+                                        'bg-slate-50 text-slate-600'
+                                    }`}>{r.paymentMethod}</span>
                                   {r.amountPaid > 0 && (
                                     <span className="text-[9px] text-slate-400 font-bold">Paid: ₹{r.amountPaid}</span>
                                   )}
@@ -397,7 +395,7 @@ export default function SupplierDetail() {
                     </div>
                     {/* Charges footer summary */}
                     {rows.some(r => r.deliveryCharge > 0 || r.otherCharge > 0) && (
-                      <div className="px-5 py-3 border-t border-slate-100 bg-slate-50/50 flex flex-wrap gap-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                      <div className="px-5 py-3 border-t border-slate-100 bg-slate-50/50 flex flex-wrap gap-4 text-[10px] font-bold text-slate-500  ">
                         <span>Delivery charges may apply — check individual purchase records</span>
                       </div>
                     )}
@@ -420,7 +418,7 @@ export default function SupplierDetail() {
               {viewValue?.value}
             </p>
           </div>
-          <p className="mt-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">
+          <p className="mt-4 text-[10px] font-bold text-slate-400   text-center">
             Double click the text to select and copy
           </p>
         </Modal>

@@ -16,7 +16,7 @@ import {
   TrendingUp,
   Package
 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Fragment } from "react";
 import { createPortal } from "react-dom";
 import { SearchSelect } from "@/components/inputbuilders/SearchSelect";
 import { inventoryApi } from "@/services/api/inventory";
@@ -127,6 +127,13 @@ export const InventoryItemsCard = ({
       const targetIdx = variantModal.targetRowIndex;
 
       if (!variantItem) return prev;
+
+      // 💡 Prevent selecting same variant already in another row
+      const isDuplicate = prev.some((p, i) => i !== targetIdx && p.inventory_id === (baseOpt.id || baseOpt.inventory_id) && p.variant_id === variantItem.id);
+      if (isDuplicate) {
+        showToast(`${variantItem.name} is already added to the list.`, "error");
+        return prev;
+      }
 
       const hasBatchTracking = !!(baseOpt.batch_tracking || baseOpt.has_batch_tracking || baseOpt.has_batch || (baseOpt.datas && (baseOpt.datas.batch_tracking || baseOpt.datas.has_batch_tracking || baseOpt.datas.has_batch)));
       const hasSerialTracking = !!(baseOpt.serial_tracking || baseOpt.has_serialno_tracking || baseOpt.has_serialno || (baseOpt.datas && (baseOpt.datas.serial_tracking || baseOpt.datas.has_serialno_tracking || baseOpt.datas.has_serialno)));
@@ -247,7 +254,7 @@ export const InventoryItemsCard = ({
                       </div>
                       <h4 className="font-semibold text-slate-800 text-sm pr-6">{variant.name}</h4>
                       <div className="flex items-center gap-3 mt-1.5">
-                        <p className="text-[10px] text-slate-400 uppercase tracking-wider font-medium">Barcode: {variant.sku}</p>
+                        <p className="text-[10px] text-slate-400   font-medium">Barcode: {variant.sku}</p>
                         {variant.batchCount > 0 && (
                           <span className="flex items-center gap-1 text-[9px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-md border border-amber-100">
                             <Package size={8} /> {variant.batchCount} Batches
@@ -313,7 +320,7 @@ export const InventoryItemsCard = ({
                   className="w-full p-4 rounded-2xl border-2 border-dashed border-slate-200 text-slate-500 hover:border-amber-400 hover:text-amber-600 hover:bg-amber-50 transition-all flex flex-col items-center gap-1 group"
                 >
                   <Plus size={20} className="group-hover:scale-110 transition-transform" />
-                  <span className="text-xs font-bold uppercase tracking-widest">Create New Batch</span>
+                  <span className="text-xs font-bold  ">Create New Batch</span>
                 </button>
               )}
 
@@ -321,7 +328,7 @@ export const InventoryItemsCard = ({
                 <div className="absolute inset-0 flex items-center" aria-hidden="true">
                   <div className="w-full border-t border-slate-100"></div>
                 </div>
-                <div className="relative flex justify-center text-[10px] uppercase font-bold text-slate-300">
+                <div className="relative flex justify-center text-[10px]  font-bold text-slate-300">
                   <span className="bg-white px-2">Existing Batches</span>
                 </div>
               </div>
@@ -344,7 +351,7 @@ export const InventoryItemsCard = ({
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">In Stock</p>
+                        <p className="text-[10px] text-slate-400  font-bold ">In Stock</p>
                         <p className="text-xs font-black text-slate-700">{batch.stocks || 0} pcs</p>
                       </div>
                     </button>
@@ -399,699 +406,503 @@ export const InventoryItemsCard = ({
           </div>
         </div>
 
-        {/* Product List */}
-        <div className="p-4 space-y-3">
-          {products.map((product, index) => {
-            const q = Number(product.quantity) || 0;
-            const baseCost = Number(product.costPrice) || 0;
-            const rowTotal = q * baseCost;
-            const hasProduct = !!product.name;
+        {/* Product Table */}
+        <div className="overflow-x-auto pf-scroll">
+          <table className="w-full border-collapse whitespace-nowrap">
+            <thead>
+              <tr className="bg-slate-50/80 border-b border-slate-200">
+                <th className="py-4 px-6 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider w-14">#</th>
+                <th className="py-4 px-2 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider min-w-[320px]">Item Description</th>
+                <th className="py-4 px-2 text-center text-[10px] font-black text-slate-400 uppercase tracking-wider w-28">Qty / Unit</th>
+                <th className="py-4 px-2 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider w-36">{type === "PURCHASE" ? "Buy Price" : "Material Cost"}</th>
+                <th className="py-4 px-2 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider w-32">Subtotal</th>
+                <th className="py-4 px-2 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider w-24">Tax (GST)</th>
+                <th className="py-4 px-2 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider w-48">Pricing & Margin</th>
+                <th className="py-4 px-6 text-right text-[10px] font-black text-slate-400 uppercase tracking-wider w-24">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 bg-white">
+              {products.map((product, index) => {
+                const q = Number(product.quantity) || 0;
+                const baseCost = Number(product.costPrice) || 0;
+                const rowTotal = q * baseCost;
+                const hasProduct = !!product.name;
 
-            const allocTotal = stats.allocations[index]?.alloc || 0;
-            const allocPerUnit = q > 0 ? allocTotal / q : 0;
-            const netCostPerUnit = stats.allocations[index]?.netCostPerUnit || baseCost;
+                const allocTotal = stats.allocations[index]?.alloc || 0;
+                const allocPerUnit = q > 0 ? allocTotal / q : 0;
+                const netCostPerUnit = stats.allocations[index]?.netCostPerUnit || baseCost;
 
-            let computedSellPrice = Number(product.sellingPrice) || 0;
-            if (product.marginType === "percent" && Number(product.marginPercent) > 0) {
-              computedSellPrice = netCostPerUnit * (1 + Number(product.marginPercent) / 100);
-            } else if (product.marginType === "amount" && Number(product.marginAmount) > 0) {
-              computedSellPrice = netCostPerUnit + Number(product.marginAmount);
-            }
+                let computedSellPrice = Number(product.sellingPrice) || 0;
+                if (product.marginType === "percent" && Number(product.marginPercent) > 0) {
+                  computedSellPrice = netCostPerUnit * (1 + Number(product.marginPercent) / 100);
+                } else if (product.marginType === "amount" && Number(product.marginAmount) > 0) {
+                  computedSellPrice = netCostPerUnit + Number(product.marginAmount);
+                }
 
-            const effectiveMarginPct = netCostPerUnit > 0 && computedSellPrice > 0
-              ? (((computedSellPrice - netCostPerUnit) / netCostPerUnit) * 100).toFixed(1)
-              : null;
+                const effectiveMarginPct = netCostPerUnit > 0 && computedSellPrice > 0
+                  ? (((computedSellPrice - netCostPerUnit) / netCostPerUnit) * 100).toFixed(1)
+                  : null;
 
-            // Suggested values shown in chips even when user hasn't set margin yet
-            const DEFAULT_MARGIN_PCT = 10;
-            const suggestedSellPrice = netCostPerUnit > 0
-              ? (computedSellPrice > 0 ? computedSellPrice : netCostPerUnit * (1 + DEFAULT_MARGIN_PCT / 100))
-              : 0;
-            const suggestedMarginPct = netCostPerUnit > 0 && suggestedSellPrice > 0
-              ? (((suggestedSellPrice - netCostPerUnit) / netCostPerUnit) * 100).toFixed(1)
-              : null;
-            const isMarginUserSet = computedSellPrice > 0;
+                const isExpanded = expandedSettings.has(index) || expandedBreakdown.has(index) || (product.batchTracking && !collapsedProducts.has(index)) || (product.serialTracking && !collapsedProducts.has(index));
 
-            return (
-              <div
-                key={product.id}
-                className={`group relative rounded-2xl border transition-all duration-200 overflow-hidden ${hasProduct
-                  ? 'border-slate-200 bg-white shadow-sm'
-                  : 'border-dashed border-slate-200 bg-slate-50/40'
-                  }`}
-              >
-                {/* Row Header */}
-                <div className={`px-4 py-3 flex items-center gap-3 ${hasProduct ? 'border-b border-slate-100' : ''}`}>
-                  {/* Index badge */}
-                  <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-[11px] font-semibold shrink-0 ${hasProduct ? `bg-${themeColor}-600 text-white` : 'bg-slate-200 text-slate-500'
-                    }`}>
-                    {index + 1}
-                  </div>
-
-                  {/* Product search */}
-                  <div className="flex-1 min-w-0">
-                    <SearchSelect
-                      labelKey="name"
-                      valueKey="id"
-                      fetchOptions={async (q) => await inventoryApi.searchInventories(q)}
-                      options={product.inventory_id ? [{ id: product.inventory_id, name: product.name }] as any[] : []}
-                      value={product.inventory_id}
-                      // 💡 NEW: Passing the passed down prop directly to the SearchSelect trigger
-                      onCreateNew={onAddNewProduct}
-                      onChange={(val, opt: any) => {
-                        if (opt) {
-                          const d = opt.datas || {};
-                          const get = (key: string, fallback: any = "") => opt[key] ?? d[key] ?? fallback;
-
-                          const hasBatchTracking = !!(get("batch_tracking") || get("has_batch_tracking") || get("has_batch"));
-                          const hasSerialTracking = !!(get("serial_tracking") || get("has_serialno_tracking") || get("has_serialno"));
-
-                          const rawSerials = opt.serial_numbers || opt.serial_number || d.serial_numbers || d.serial_number;
-                          const existingSerials = Array.isArray(rawSerials) ? rawSerials : (rawSerials?.serial_numbers || rawSerials?.serial_number || []);
-                          const serialnoId = opt.serialno_id || d.serialno_id || rawSerials?.id || opt.serial_number?.id || d.serial_number?.id || opt.serial_numbers?.id || d.serial_numbers?.id;
-                          const combinations = opt.variants || opt.varients || d.combinations || d.varients || d.variants || [];
-
-                          if (opt.is_variant) {
-                            // Directly add the variant if picked from search
-                            updateProductFields(index, {
-                              inventory_id: opt.id,
-                              variant_id: opt.variant_id,
-                              name: (opt.name || "").split(" (")[0],
-                              variant: opt.variant_name,
-                              costPrice: get("buy_price"),
-                              sellingPrice: get("sell_price"),
-                              taxGst: parseInt(get("gst", "18")) || 18,
-                              sku: get("barcode", get("sku")),
-                              unit: get("unit", "pc"),
-                              category: get("category"),
-                              batchTracking: hasBatchTracking,
-                              serialTracking: hasSerialTracking,
-                              existingSerials: existingSerials,
-                              serialno_id: serialnoId,
-                              batch_id: opt.batch_id || d.batch_id || opt.id,
-                              // Store base variants for later modal access
-                              baseVariants: combinations
-                            });
-
-                            if (hasBatchTracking && (type !== "PURCHASE" || purchaseType === "DIRECT")) {
-                              const batches = opt.batches || d.batches || [];
-                              setBatchModal({
-                                isOpen: true,
-                                rowIndex: index,
-                                batches: Array.isArray(batches) ? batches : (typeof batches === 'string' ? JSON.parse(batches || "[]") : []),
-                                productName: opt.name.split(" (")[0],
-                                variantName: opt.variant_name,
-                                existingSerials: existingSerials,
-                                allowNewBatch: purchaseType !== 'PO_CREATE'
-                              });
-                            }
-                            return;
-                          }
-
-                          const hasVariants = get("has_variants", get("has_variant"));
-
-                          // 💡 PO_CREATE: Allow variant + existing batch only, no serial tracking
-                          if (purchaseType === 'PO_CREATE') {
-                            if (hasVariants && combinations.length > 0) {
-                              // Still open variant picker
-                              const mappedVariants = combinations.map((c: any) => ({
-                                id: c.id,
-                                name: c.name || Object.values(c.attributes || c.datas?.attributes || {}).join(" - ") || c.barcode || "Variant",
-                                sku: c.barcode || opt.barcode,
-                                stock: c.stocks || c.stock || opt.stocks || 0,
-                                batchCount: Array.isArray(c.batches) ? c.batches.length : 0,
-                              }));
-                              setVariantModal({ isOpen: true, baseProduct: opt.name || String(val), targetRowIndex: index, variants: mappedVariants, baseData: opt });
-                              setSelectedVariants(null);
-                            } else {
-                              updateProductFields(index, {
-                                inventory_id: opt.id,
-                                name: opt.name || d.name || String(val),
-                                costPrice: get("buy_price", get("costPrice")),
-                                sellingPrice: get("sell_price", get("sellingPrice")),
-                                taxGst: parseInt(get("gst", "18")) || 18,
-                                sku: get("barcode", get("sku")),
-                                unit: get("unit", "pc"),
-                                category: get("category"),
-                                batchTracking: hasBatchTracking,
-                                serialTracking: false,
-                                serialno_id: serialnoId,
-                                batch_id: opt.batch_id || d.batch_id || opt.id
-                              });
-                            }
-                            return;
-                          }
-
-                          if (hasVariants && combinations.length > 0) {
-                            const mappedVariants = combinations.map((c: any) => ({
-                              id: c.id,
-                              name: c.name || Object.values(c.attributes || c.datas?.attributes || {}).join(" - ") || c.barcode || "Variant",
-                              sku: c.barcode || opt.barcode,
-                              stock: c.stocks || c.stock || opt.stocks || 0,
-                              batchCount: Array.isArray(c.batches) ? c.batches.length : (c.batches ? (typeof c.batches === 'string' ? JSON.parse(c.batches).length : 0) : 0),
-                            }));
-                            setVariantModal({ isOpen: true, baseProduct: opt.name || String(val), targetRowIndex: index, variants: mappedVariants, baseData: opt });
-                            setSelectedVariants(null);
-                          } else {
-                            updateProductFields(index, {
-                              inventory_id: opt.id,
-                              variant_id: undefined,
-                              name: opt.name || d.name || String(val),
-                              costPrice: get("buy_price", get("costPrice")),
-                              sellingPrice: get("sell_price", get("sellingPrice")),
-                              taxGst: parseInt(get("gst", "18")) || 18,
-                              sku: get("barcode", get("sku")),
-                              unit: get("unit", "pc"),
-                              category: get("category"),
-                              batchTracking: hasBatchTracking,
-                              serialTracking: hasSerialTracking,
-                              existingSerials: existingSerials,
-                              serialno_id: serialnoId,
-                              hasVariants: false,
-                              baseVariants: combinations
-                            });
-
-                            if (hasBatchTracking && (type !== "PURCHASE" || purchaseType === "DIRECT")) {
-                              const batches = opt.batches || d.batches || [];
-                              setBatchModal({
-                                isOpen: true,
-                                rowIndex: index,
-                                batches: Array.isArray(batches) ? batches : (typeof batches === 'string' ? JSON.parse(batches || "[]") : []),
-                                productName: (opt.name || d.name || String(val || "")).split(" (")[0],
-                                variantName: "",
-                                existingSerials: existingSerials,
-                                allowNewBatch: purchaseType !== 'PO_CREATE'
-                              });
-                            }
-                          }
-                        } else {
-                          handleProductChange(index, "name", String(val));
-                        }
-                      }}
-                      placeholder={`Search product ${index + 1}...`}
-                    />
-                  </div>
-
-                  {/* Row total */}
-                  {hasProduct && (
-                    <div className="shrink-0 text-right hidden sm:block min-w-[80px]">
-                      <span className="text-[10px] text-slate-400 block">Total</span>
-                      <span className="text-sm font-semibold text-slate-800 tabular-nums">₹{rowTotal.toLocaleString()}</span>
-                    </div>
-                  )}
-
-                  {/* Action buttons */}
-                  <div className="flex items-center gap-1 shrink-0">
-                    <button
-                      onClick={() => toggleBreakdown(index)}
-                      className={`p-1.5 rounded-lg transition-all text-[11px] ${expandedBreakdown.has(index)
-                        ? 'bg-slate-800 text-white'
-                        : 'text-slate-400 hover:bg-slate-100 hover:text-slate-600'
-                        }`}
-                      title="Cost breakdown"
+                return (
+                  <Fragment key={product.id}>
+                    <tr
+                      className={`group transition-all hover:bg-slate-50/50 ${!hasProduct ? 'bg-slate-50/10' : ''}`}
                     >
-                      <Info size={14} />
-                    </button>
-                    <button
-                      onClick={() => toggleSettings(index)}
-                      className={`p-1.5 rounded-lg transition-all ${expandedSettings.has(index)
-                        ? `bg-${themeColor}-600 text-white`
-                        : `text-slate-400 hover:bg-slate-100 hover:text-slate-600`
-                        }`}
-                      title="Advanced settings"
-                    >
-                      <Settings size={14} />
-                    </button>
-                    <button
-                      onClick={() => toggleCollapse(index)}
-                      className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-all"
-                    >
-                      {collapsedProducts.has(index) ? <ChevronRight size={14} /> : <ChevronUp size={14} />}
-                    </button>
-                    <button
-                      onClick={() => removeProduct(index)}
-                      disabled={products.length === 1}
-                      className="p-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-rose-500 transition-all disabled:opacity-20 opacity-0 group-hover:opacity-100 ml-0.5"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                </div>
+                      {/* Index */}
+                      <td className="py-3 px-6 align-middle">
+                        <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-[11px] font-black ${hasProduct ? `bg-${themeColor}-600 text-white shadow-sm shadow-${themeColor}-200` : 'bg-slate-100 text-slate-400'}`}>
+                          {index + 1}
+                        </div>
+                      </td>
 
-                {/* Tags row */}
-                {hasProduct && !collapsedProducts.has(index) && (
-                  <div className="px-4 py-2 flex flex-wrap items-center gap-1.5 border-b border-slate-100">
+                      {/* Product search */}
+                      <td className="py-3 px-2 align-middle">
+                        <div className="flex flex-col gap-1.5">
+                          <SearchSelect
+                            labelKey="name"
+                            valueKey="id"
+                            fetchOptions={async (q) => await inventoryApi.searchInventories(q)}
+                            options={product.inventory_id ? [{ id: product.inventory_id, name: product.name }] as any[] : []}
+                            value={product.inventory_id}
+                            onCreateNew={onAddNewProduct}
+                            onChange={(val, opt: any) => {
+                              if (opt) {
+                                // 💡 Prevent selecting same product already in another row
+                                const isDuplicate = products.some((p, i) => i !== index && p.inventory_id === opt.id && !opt.is_variant);
+                                if (isDuplicate && !opt.is_variant) {
+                                  showToast(`${opt.name} is already added to the list.`, "error");
+                                  return;
+                                }
 
-                    {/* Variant */}
-                    {product.variant && (
-                      <span className={`inline-flex items-center gap-1 pl-1.5 pr-2 py-0.5 rounded-md bg-${themeColor}-50 border border-${themeColor}-100 text-[10px]`}>
-                        <span className={`text-${themeColor}-400 font-medium`}>Variant</span>
-                        <span className={`text-${themeColor}-700 font-semibold`}>{product.variant}</span>
-                      </span>
-                    )}
+                                const d = opt.datas || {};
+                                const get = (key: string, fallback: any = "") => opt[key] ?? d[key] ?? fallback;
 
-                    {/* Manual Variant Picker Trigger */}
-                    {purchaseType !== "PO_CREATE" && (product.baseVariants?.length > 0 || product.hasVariants) && (
-                      <button
-                        onClick={() => {
-                          const mappedVariants = (product.baseVariants || []).map((c: any) => ({
-                            id: c.id, name: Object.values(c.attributes || {}).join(" - "),
-                            sku: c.barcode || product.sku, stock: c.stock || 0,
-                          }));
-                          setVariantModal({
-                            isOpen: true,
-                            baseProduct: product.name,
-                            targetRowIndex: index,
-                            variants: mappedVariants,
-                            baseData: product
-                          });
-                        }}
-                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-50 border border-blue-200 text-[10px] text-blue-600 font-bold hover:bg-blue-100 transition-colors"
-                      >
-                        <Plus size={10} /> Select Variants
-                      </button>
-                    )}
+                                const hasBatchTracking = !!(get("batch_tracking") || get("has_batch_tracking") || get("has_batch"));
+                                const hasSerialTracking = !!(get("serial_tracking") || get("has_serialno_tracking") || get("has_serialno"));
 
-                    {/* Barcode */}
-                    {product.sku && (
-                      <span className="inline-flex items-center gap-1 pl-1.5 pr-2 py-0.5 rounded-md bg-slate-100 border border-slate-200 text-[10px]">
-                        <span className="text-slate-400 font-medium">Barcode</span>
-                        <span className="text-slate-600 font-semibold font-mono">{product.sku}</span>
-                      </span>
-                    )}
+                                const rawSerials = opt.serial_numbers || opt.serial_number || d.serial_numbers || d.serial_number;
+                                const existingSerials = Array.isArray(rawSerials) ? rawSerials : (rawSerials?.serial_numbers || rawSerials?.serial_number || []);
+                                const serialnoId = opt.serialno_id || d.serialno_id || rawSerials?.id || opt.serial_number?.id || d.serial_number?.id || opt.serial_numbers?.id || d.serial_numbers?.id;
+                                const combinations = opt.variants || opt.varients || d.combinations || d.varients || d.variants || [];
 
-                    {/* Alloc */}
-                    {stats.totalCharges > 0 && (
-                      <span className="inline-flex items-center gap-1 pl-1.5 pr-2 py-0.5 rounded-md bg-blue-50 border border-blue-100 text-[10px]">
-                        <span className="text-blue-400 font-medium">Alloc</span>
-                        <span className="text-blue-700 font-semibold tabular-nums">₹{allocPerUnit.toFixed(2)}</span>
-                      </span>
-                    )}
+                                if (opt.is_variant) {
+                                  updateProductFields(index, {
+                                    inventory_id: opt.id,
+                                    variant_id: opt.variant_id,
+                                    name: (opt.name || "").split(" (")[0],
+                                    variant: opt.variant_name,
+                                    costPrice: get("buy_price"),
+                                    sellingPrice: get("sell_price"),
+                                    taxGst: parseInt(get("gst", "18")) || 18,
+                                    sku: get("barcode", get("sku")),
+                                    unit: get("unit", "pc"),
+                                    category: get("category"),
+                                    batchTracking: hasBatchTracking,
+                                    serialTracking: hasSerialTracking,
+                                    existingSerials: existingSerials,
+                                    serialno_id: serialnoId,
+                                    batch_id: opt.batch_id || d.batch_id || opt.id,
+                                    baseVariants: combinations
+                                  });
 
-                    {/* Net Buy / Cost */}
-                    {stats.totalCharges > 0 && (
-                      <span className="inline-flex items-center gap-1 pl-1.5 pr-2 py-0.5 rounded-md bg-emerald-50 border border-emerald-100 text-[10px]">
-                        <span className="text-emerald-500 font-medium">Net {type === "PURCHASE" ? "Buy" : "Cost"}</span>
-                        <span className="text-emerald-700 font-semibold tabular-nums">₹{netCostPerUnit.toFixed(2)}</span>
-                      </span>
-                    )}
+                                  if (hasBatchTracking && (type !== "PURCHASE" || purchaseType === "DIRECT")) {
+                                    const batches = opt.batches || d.batches || [];
+                                    setBatchModal({
+                                      isOpen: true,
+                                      rowIndex: index,
+                                      batches: Array.isArray(batches) ? batches : (typeof batches === 'string' ? JSON.parse(batches || "[]") : []),
+                                      productName: opt.name.split(" (")[0],
+                                      variantName: opt.variant_name,
+                                      existingSerials: existingSerials,
+                                      allowNewBatch: purchaseType !== 'PO_CREATE'
+                                    });
+                                  }
+                                  return;
+                                }
 
-                    {/* Margin — always show suggestion when cost is set */}
-                    {suggestedMarginPct && (
-                      <span className={`inline-flex items-center gap-1 pl-1.5 pr-2 py-0.5 rounded-md text-[10px] border ${isMarginUserSet
-                        ? 'bg-violet-50 border-violet-100'
-                        : 'bg-slate-50 border-slate-200'
-                        }`}>
-                        <span className={`font-medium ${isMarginUserSet ? 'text-violet-400' : 'text-slate-400'}`}>Margin</span>
-                        <span className={`font-semibold ${isMarginUserSet ? 'text-violet-700' : 'text-slate-500'}`}>
-                          +{suggestedMarginPct}%
-                        </span>
-                        {!isMarginUserSet && (
-                          <span className="text-slate-400 italic">suggested</span>
-                        )}
-                      </span>
-                    )}
+                                const hasVariants = get("has_variants", get("has_variant"));
 
-                    {/* Sell Price — always show suggestion when cost is set */}
-                    {suggestedSellPrice > 0 && (
-                      <span className={`inline-flex items-center gap-1 pl-1.5 pr-2 py-0.5 rounded-md text-[10px] border ${isMarginUserSet
-                        ? 'bg-teal-50 border-teal-100'
-                        : 'bg-slate-50 border-slate-200'
-                        }`}>
-                        <span className={`font-medium ${isMarginUserSet ? 'text-teal-500' : 'text-slate-400'}`}>Sell Price</span>
-                        <span className={`font-semibold tabular-nums ${isMarginUserSet ? 'text-teal-700' : 'text-slate-500'}`}>
-                          ₹{suggestedSellPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </span>
-                        {!isMarginUserSet && (
-                          <span className="text-slate-400 italic">suggested</span>
-                        )}
-                      </span>
-                    )}
+                                if (purchaseType === 'PO_CREATE') {
+                                  if (hasVariants && combinations.length > 0) {
+                                    const mappedVariants = combinations.map((c: any) => ({
+                                      id: c.id,
+                                      name: c.name || Object.values(c.attributes || c.datas?.attributes || {}).join(" - ") || c.barcode || "Variant",
+                                      sku: c.barcode || opt.barcode,
+                                      stock: c.stocks || c.stock || opt.stocks || 0,
+                                      batchCount: Array.isArray(c.batches) ? c.batches.length : 0,
+                                    }));
+                                    setVariantModal({ isOpen: true, baseProduct: opt.name || String(val), targetRowIndex: index, variants: mappedVariants, baseData: opt });
+                                    setSelectedVariants(null);
+                                  } else {
+                                    updateProductFields(index, {
+                                      inventory_id: opt.id,
+                                      name: opt.name || d.name || String(val),
+                                      costPrice: get("buy_price", get("costPrice")),
+                                      sellingPrice: get("sell_price", get("sellingPrice")),
+                                      taxGst: parseInt(get("gst", "18")) || 18,
+                                      sku: get("barcode", get("sku")),
+                                      unit: get("unit", "pc"),
+                                      category: get("category"),
+                                      batchTracking: hasBatchTracking,
+                                      serialTracking: false,
+                                      serialno_id: serialnoId,
+                                      batch_id: opt.batch_id || d.batch_id || opt.id
+                                    });
+                                  }
+                                  return;
+                                }
 
-                  </div>
-                )}
+                                if (hasVariants && combinations.length > 0) {
+                                  const mappedVariants = combinations.map((c: any) => ({
+                                    id: c.id,
+                                    name: c.name || Object.values(c.attributes || c.datas?.attributes || {}).join(" - ") || c.barcode || "Variant",
+                                    sku: c.barcode || opt.barcode,
+                                    stock: c.stocks || c.stock || opt.stocks || 0,
+                                    batchCount: Array.isArray(c.batches) ? c.batches.length : (c.batches ? (typeof c.batches === 'string' ? JSON.parse(c.batches).length : 0) : 0),
+                                  }));
+                                  setVariantModal({ isOpen: true, baseProduct: opt.name || String(val), targetRowIndex: index, variants: mappedVariants, baseData: opt });
+                                  setSelectedVariants(null);
+                                } else {
+                                  updateProductFields(index, {
+                                    inventory_id: opt.id,
+                                    variant_id: undefined,
+                                    name: opt.name || d.name || String(val),
+                                    costPrice: get("buy_price", get("costPrice")),
+                                    sellingPrice: get("sell_price", get("sellingPrice")),
+                                    taxGst: parseInt(get("gst", "18")) || 18,
+                                    sku: get("barcode", get("sku")),
+                                    unit: get("unit", "pc"),
+                                    category: get("category"),
+                                    batchTracking: hasBatchTracking,
+                                    serialTracking: hasSerialTracking,
+                                    existingSerials: existingSerials,
+                                    serialno_id: serialnoId,
+                                    hasVariants: false,
+                                    baseVariants: combinations
+                                  });
 
-                {/* Main form body */}
-                {hasProduct && !collapsedProducts.has(index) && (
-                  <div className="px-4 pb-4 pt-4 space-y-4">
+                                  if (hasBatchTracking && (type !== "PURCHASE" || purchaseType === "DIRECT")) {
+                                    const batches = opt.batches || d.batches || [];
+                                    setBatchModal({
+                                      isOpen: true,
+                                      rowIndex: index,
+                                      batches: Array.isArray(batches) ? batches : (typeof batches === 'string' ? JSON.parse(batches || "[]") : []),
+                                      productName: (opt.name || d.name || String(val || "")).split(" (")[0],
+                                      variantName: "",
+                                      existingSerials: existingSerials,
+                                      allowNewBatch: purchaseType !== 'PO_CREATE'
+                                    });
+                                  }
+                                }
+                              } else {
+                                handleProductChange(index, "name", String(val));
+                              }
+                            }}
+                            placeholder="Find or add product..."
+                            className="!h-10 text-sm"
+                          />
+                          {hasProduct && (
+                            <div className="flex flex-wrap items-center gap-1.5 px-1">
+                              {product.variant && (
+                                <span className={`inline-flex items-center px-2 py-0.5 rounded bg-${themeColor}-50 text-${themeColor}-600 text-[9px] font-black border border-${themeColor}-100`}>
+                                  {product.variant}
+                                </span>
+                              )}
+                              {product.sku && (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded bg-slate-100 text-slate-500 text-[9px] font-mono border border-slate-200">
+                                  {product.sku}
+                                </span>
+                              )}
+                              {product.serialTracking && (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-blue-50 text-blue-600 text-[9px] font-black border border-blue-100">
+                                  <Check size={9} /> Serials
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </td>
 
-                    {/* Row 1: Quantity / Unit / Cost / Total */}
-                    <div className="grid grid-cols-12 gap-3">
-                      <div className="col-span-3">
+                      {/* Qty / Unit */}
+                      <td className="py-3 px-2 align-middle">
+                        <div className="flex flex-col items-center gap-1">
+                          <Input
+                            type="number"
+                            value={product.quantity as any}
+                            onChange={(e) => handleProductChange(index, "quantity", e.target.value ? Number(e.target.value) : "")}
+                            className="!h-9 !w-20 !text-xs text-center font-black rounded-lg border-slate-200 shadow-sm"
+                          />
+                          <span className="text-[9px] text-slate-400 font-bold uppercase">{product.unit || 'pc'}</span>
+                        </div>
+                      </td>
+
+                      {/* Buy Price */}
+                      <td className="py-3 px-2 align-middle">
                         <Input
-                          label="Quantity"
-                          required
-                          type="number"
-                          value={product.quantity as any}
-                          onChange={(e) => handleProductChange(index, "quantity", e.target.value ? Number(e.target.value) : "")}
-                        />
-                      </div>
-                      <div className="col-span-2">
-                        <Input
-                          label="Unit"
-                          disabled
-                          value={product.unit}
-                          onChange={() => { }}
-                        />
-                      </div>
-                      <div className="col-span-3">
-                        <Input
-                          label={type === "PURCHASE" ? "Buy Price" : "Material Cost"}
-                          required
                           type="number"
                           value={product.costPrice as any}
                           onChange={(e) => handleProductChange(index, "costPrice", e.target.value ? Number(e.target.value) : "")}
+                          className="!h-9 !text-xs font-black rounded-lg border-slate-200 shadow-sm"
+                          leftIcon={<span className="text-[10px] text-slate-400 font-black">₹</span>}
                         />
-                      </div>
-                      <div className="col-span-4">
-                        <label className="text-[11px] font-medium text-slate-500 block mb-1.5 ml-0.5">
-                          {type === "PURCHASE" ? "Total Buy Value" : "Total Base Cost"}
-                        </label>
-                        <div className="h-10 px-3.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between">
-                          <span className="text-xs text-slate-400 font-medium">{q} × ₹{baseCost}</span>
-                          <span className="text-sm font-semibold text-slate-800 tabular-nums">₹{rowTotal.toLocaleString()}</span>
-                        </div>
-                      </div>
-                    </div>
+                      </td>
 
-                    {/* Divider */}
-                    <div className="border-t border-slate-100" />
-
-                    {/* Per-unit pricing chain: Net Buy → + Margin → = Sell Price */}
-                    <div className="rounded-xl border border-slate-200 overflow-hidden">
-                      {/* Section label */}
-                      <div className="px-3.5 py-2 bg-slate-50 border-b border-slate-100 flex items-center gap-1.5">
-                        <TrendingUp size={12} className="text-slate-400" />
-                        <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Per Unit Pricing</span>
-                      </div>
-
-                      <div className="grid grid-cols-3 divide-x divide-slate-100">
-
-                        {/* Step 1: Net Buy Cost */}
-                        <div className="px-4 py-3 flex flex-col gap-1">
-                          <span className="text-[10px] font-medium text-slate-400 uppercase tracking-wider">Net Buy Cost</span>
-                          <span className="text-base font-semibold text-slate-800 tabular-nums">
-                            ₹{netCostPerUnit.toFixed(2)}
-                          </span>
+                      {/* Subtotal */}
+                      <td className="py-3 px-2 align-middle">
+                        <div className="flex flex-col">
+                          <span className="text-xs font-black text-slate-800 tabular-nums">₹{rowTotal.toLocaleString()}</span>
                           {allocPerUnit > 0 && (
-                            <span className="text-[10px] text-blue-500">
-                              incl. ₹{allocPerUnit.toFixed(2)} alloc.
-                            </span>
+                            <span className="text-[9px] text-blue-500 font-bold mt-0.5">+₹{allocTotal.toLocaleString()}</span>
                           )}
                         </div>
+                      </td>
 
-                        {/* Step 2: Margin input */}
-                        <div className="px-4 py-3 flex flex-col gap-1.5">
-                          <div className="flex items-center justify-between">
-                            <span className="text-[10px] font-medium text-slate-400 uppercase tracking-wider">Margin</span>
-                            {/* Inline type toggle */}
-                            <div className="flex items-center bg-slate-100 rounded p-0.5 gap-0.5">
+                      {/* Tax */}
+                      <td className="py-3 px-2 align-middle">
+                        <div className="w-20">
+                          <ReusableSelect
+                            options={[
+                              { value: '0', label: '0%' },
+                              { value: '5', label: '5%' },
+                              { value: '12', label: '12%' },
+                              { value: '18', label: '18%' },
+                              { value: '28', label: '28%' }
+                            ]}
+                            value={String(product.taxGst)}
+                            onValueChange={(val) => handleProductChange(index, "taxGst", Number(val))}
+                            placeholder="GST"
+                            className="!h-8 !text-[11px]"
+                          />
+                        </div>
+                      </td>
+
+                      {/* Pricing & Margin */}
+                      <td className="py-3 px-2 align-middle">
+                        <div className="w-44 flex flex-col gap-1.5">
+                          <div className="flex items-center gap-1">
+                            <div className="flex bg-slate-100 rounded-lg p-0.5 shrink-0">
                               <button
                                 onClick={() => handleProductChange(index, "marginType", "percent")}
-                                className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-semibold transition-all ${product.marginType === "percent"
-                                  ? "bg-white text-slate-700 shadow-sm"
-                                  : "text-slate-400 hover:text-slate-600"
-                                  }`}
+                                className={`w-6 h-6 flex items-center justify-center rounded-md text-[9px] font-bold transition-all ${product.marginType === "percent" ? "bg-white text-blue-600 shadow-sm" : "text-slate-400"}`}
                               >
-                                <Percent size={8} /> %
+                                %
                               </button>
                               <button
                                 onClick={() => handleProductChange(index, "marginType", "amount")}
-                                className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-semibold transition-all ${product.marginType === "amount"
-                                  ? "bg-white text-slate-700 shadow-sm"
-                                  : "text-slate-400 hover:text-slate-600"
-                                  }`}
+                                className={`w-6 h-6 flex items-center justify-center rounded-md text-[9px] font-bold transition-all ${product.marginType === "amount" ? "bg-white text-blue-600 shadow-sm" : "text-slate-400"}`}
                               >
-                                <Banknote size={8} /> ₹
+                                ₹
                               </button>
                               <button
                                 onClick={() => handleProductChange(index, "marginType", "sellingPrice")}
-                                className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-semibold transition-all ${product.marginType === "sellingPrice"
-                                  ? "bg-white text-slate-700 shadow-sm"
-                                  : "text-slate-400 hover:text-slate-600"
-                                  }`}
+                                className={`w-6 h-6 flex items-center justify-center rounded-md text-[9px] font-bold transition-all ${product.marginType === "sellingPrice" ? "bg-white text-blue-600 shadow-sm" : "text-slate-400"}`}
                               >
-                                <TrendingUp size={8} /> SP
+                                SP
                               </button>
                             </div>
-                          </div>
-                          {product.marginType === "percent" ? (
-                            <Input
-                              type="number"
-                              value={product.marginPercent as any}
-                              onChange={(e) => handleProductChange(index, "marginPercent", e.target.value ? Number(e.target.value) : "")}
-                              placeholder="e.g. 20"
-                              leftIcon={<Percent size={12} />}
-                            />
-                          ) : product.marginType === "amount" ? (
-                            <Input
-                              type="number"
-                              value={product.marginAmount as any}
-                              onChange={(e) => handleProductChange(index, "marginAmount", e.target.value ? Number(e.target.value) : "")}
-                              placeholder="e.g. 50"
-                              leftIcon={<Banknote size={12} />}
-                            />
-                          ) : (
-                            <div className="h-10 px-3.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between">
-                              <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Fixed Price</span>
-                              <TrendingUp size={14} className="text-slate-300" />
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Step 3: Recommended Sell Price */}
-                        <div className={`px-4 py-3 flex flex-col gap-1 ${computedSellPrice > 0 ? 'bg-emerald-50/50' : ''}`}>
-                          <span className="text-[10px] font-medium text-slate-400 uppercase tracking-wider">Sell Price / unit</span>
-                          <div className="mt-1">
-                            {product.marginType === "sellingPrice" ? (
+                            <div className="flex-1">
                               <Input
                                 type="number"
-                                className="!h-8 !text-xs"
-                                value={product.sellingPrice as any}
-                                onChange={(e) => handleProductChange(index, "sellingPrice", e.target.value ? Number(e.target.value) : "")}
-                                placeholder="Set Sell Price"
-                                leftIcon={<Banknote size={12} className="text-emerald-500" />}
+                                value={(product.marginType === "percent" ? product.marginPercent : product.marginType === "amount" ? product.marginAmount : product.sellingPrice) as any}
+                                onChange={(e) => handleProductChange(index, product.marginType === "percent" ? "marginPercent" : product.marginType === "amount" ? "marginAmount" : "sellingPrice", e.target.value ? Number(e.target.value) : "")}
+                                className="!h-7 !text-[11px] !font-bold"
+                                placeholder={product.marginType === "sellingPrice" ? "Price" : "Margin"}
                               />
-                            ) : (
-                              <span className={`text-base font-semibold tabular-nums ${computedSellPrice > 0 ? 'text-emerald-700' : 'text-slate-400'}`}>
-                                {computedSellPrice > 0
-                                  ? `₹${computedSellPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-                                  : '—'}
-                              </span>
-                            )}
+                            </div>
                           </div>
-                          {effectiveMarginPct && (
-                            <span className="text-[10px] font-semibold text-emerald-600">
-                              +{effectiveMarginPct}% margin
-                            </span>
-                          )}
-                        </div>
-
-                      </div>
-                    </div>
-
-                    {/* Batch tracking section */}
-                    {(type !== "PURCHASE" || purchaseType === "DIRECT") && product.batchTracking && (
-                      <div className="rounded-xl border border-amber-200 bg-amber-50/30 transition-all duration-200 overflow-hidden">
-                        <div className="flex items-center justify-between px-3.5 py-2.5 bg-amber-100/50 border-b border-amber-200">
-                          <div className="flex items-center gap-2">
-                            <Package size={13} className="text-amber-500" />
-                            <span className="text-[11px] font-bold text-amber-900 uppercase tracking-wider">
-                              Batch Tracking Active
+                          <div className="flex items-center justify-between px-2 py-0.5 bg-emerald-50/50 border border-emerald-100 rounded-md">
+                            <span className="text-[9px] font-black text-emerald-600 uppercase tracking-tighter">Final SP</span>
+                            <span className="text-[11px] font-black text-emerald-700 tabular-nums">
+                              ₹{computedSellPrice.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
                             </span>
                           </div>
-                          <div className="h-4 w-7 rounded-full bg-amber-500 relative cursor-not-allowed">
-                            <div className="absolute right-0.5 top-0.5 h-3 w-3 rounded-full bg-white shadow-sm" />
-                          </div>
                         </div>
+                      </td>
 
-                        <div className="px-3.5 pb-3.5 pt-3 grid grid-cols-3 gap-3 animate-in fade-in slide-in-from-top-1 duration-200">
-                          <div>
-                            <label className="text-[11px] font-medium text-slate-500 block mb-1.5 ml-0.5">Batch Number</label>
-                            <Input
-                              type="text"
-                              value={product.batchNum}
-                              onChange={(e) => handleProductChange(index, "batchNum", e.target.value)}
-                              disabled={product.batchNumReadOnly}
-                              placeholder="BATCH-001"
-                            />
-                          </div>
-                          <div>
-                            <label className="text-[11px] font-medium text-slate-500 block mb-1.5 ml-0.5">Mfg. Date</label>
-                            <div className="relative">
-                              <CalendarDays size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none z-10" />
-                              <Input
-                                type="date"
-                                value={product.manufacturingDate}
-                                onChange={(e) => handleProductChange(index, "manufacturingDate", e.target.value)}
-                                disabled={product.batchNumReadOnly}
-                                className="!pl-9"
-                              />
+                      {/* Actions */}
+                      <td className="py-3 px-6 align-middle text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          <button
+                            onClick={() => toggleBreakdown(index)}
+                            className={`p-1.5 rounded-lg transition-all ${expandedBreakdown.has(index) ? 'bg-slate-800 text-white' : 'text-slate-400 hover:bg-slate-100'}`}
+                            title="Cost breakdown"
+                          >
+                            <Info size={14} />
+                          </button>
+                          <button
+                            onClick={() => toggleSettings(index)}
+                            className={`p-1.5 rounded-lg transition-all ${expandedSettings.has(index) ? `bg-${themeColor}-600 text-white` : `text-slate-400 hover:bg-slate-100`}`}
+                            title="Settings"
+                          >
+                            <Settings size={14} />
+                          </button>
+                          <button
+                            onClick={() => removeProduct(index)}
+                            disabled={products.length === 1}
+                            className="p-1.5 rounded-lg text-slate-300 hover:text-rose-500 hover:bg-rose-50 disabled:opacity-20 transition-all"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+
+                    {/* Expanded Sub-row */}
+                    {isExpanded && (
+                      <tr className="bg-slate-50/50">
+                        <td colSpan={8} className="p-0 border-b border-slate-100">
+                          <div className="px-12 py-4 space-y-4 animate-in fade-in slide-in-from-top-1 duration-200">
+                            
+                            {/* Row 1: Batch & Serial Tracking */}
+                            <div className="flex gap-4">
+                              {/* Batch Section */}
+                              {(type !== "PURCHASE" || purchaseType === "DIRECT") && product.batchTracking && (
+                                <div className="flex-1 bg-white p-4 rounded-2xl border border-amber-200 shadow-sm">
+                                  <div className="flex items-center gap-2 mb-3">
+                                    <Package size={14} className="text-amber-500" />
+                                    <span className="text-xs font-bold text-amber-900">Batch Details</span>
+                                  </div>
+                                  <div className="grid grid-cols-3 gap-3">
+                                    <Input
+                                      label="Batch #"
+                                      value={product.batchNum}
+                                      onChange={(e) => handleProductChange(index, "batchNum", e.target.value)}
+                                      disabled={product.batchNumReadOnly}
+                                      className="!h-9 !text-xs"
+                                    />
+                                    <Input
+                                      label="Mfg Date"
+                                      type="date"
+                                      value={product.manufacturingDate}
+                                      onChange={(e) => handleProductChange(index, "manufacturingDate", e.target.value)}
+                                      disabled={product.batchNumReadOnly}
+                                      className="!h-9 !text-xs"
+                                    />
+                                    <Input
+                                      label="Expiry Date"
+                                      type="date"
+                                      value={product.expiryDate}
+                                      onChange={(e) => handleProductChange(index, "expiryDate", e.target.value)}
+                                      disabled={product.batchNumReadOnly}
+                                      className="!h-9 !text-xs"
+                                    />
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Serial Section */}
+                              {(type !== "PURCHASE" || purchaseType === "DIRECT") && product.serialTracking && (
+                                <div className="flex-1 bg-white p-4 rounded-2xl border border-blue-200 shadow-sm">
+                                  <div className="flex items-center gap-2 mb-3">
+                                    <Check size={14} className="text-blue-500" />
+                                    <span className="text-xs font-bold text-blue-900">Serial Numbers</span>
+                                  </div>
+                                  <InlineSerialManager
+                                    serials={(product.serialNumbers || "").split(',').filter(Boolean)}
+                                    serialLabel="Serial"
+                                    onUpdate={(next) => handleProductChange(index, "serialNumbers", next.join(','))}
+                                    limit={q}
+                                    existingSerials={product.existingSerials}
+                                    validationType="increase"
+                                    onValidationError={(msg) => showToast(msg, "error")}
+                                  />
+                                </div>
+                              )}
                             </div>
-                          </div>
-                          <div>
-                            <label className="text-[11px] font-medium text-slate-500 block mb-1.5 ml-0.5">Expiry Date</label>
-                            <div className="relative">
-                              <Clock size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-rose-400 pointer-events-none z-10" />
-                              <Input
-                                type="date"
-                                value={product.expiryDate}
-                                onChange={(e) => handleProductChange(index, "expiryDate", e.target.value)}
-                                disabled={product.batchNumReadOnly}
-                                className="!pl-9"
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    )}
 
-                    {/* Serial tracking fields */}
-                    {(type !== "PURCHASE" || purchaseType === "DIRECT") && product.serialTracking && (
-                      <div className="mt-3">
-                        <InlineSerialManager
-                          serials={(product.serialNumbers || "").split(',').filter(Boolean)}
-                          serialLabel="Serial"
-                          onUpdate={(next) => handleProductChange(index, "serialNumbers", next.join(','))}
-                          limit={q}
-                          existingSerials={product.existingSerials}
-                          validationType="increase"
-                          onValidationError={(msg) => showToast(msg, "error")}
-                        />
-                      </div>
-                    )}
+                            {/* Row 2: Settings & Breakdown */}
+                            <div className="flex gap-4">
+                              {expandedSettings.has(index) && (
+                                <div className="flex-1 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+                                  <div className="flex items-center gap-2 mb-3">
+                                    <Settings size={14} className="text-slate-500" />
+                                    <span className="text-xs font-bold text-slate-800">Additional Settings</span>
+                                  </div>
+                                  <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                      <label className="text-[10px] font-bold text-slate-400 ml-1 mb-1 block">Storage Location</label>
+                                      <ReusableSelect
+                                        options={[
+                                          { value: 'Warehouse A', label: 'Warehouse A' },
+                                          { value: 'Cold Storage', label: 'Cold Storage' },
+                                          { value: 'Main Rack', label: 'Main Rack' }
+                                        ]}
+                                        value={product.storageLoc}
+                                        onValueChange={(val) => handleProductChange(index, "storageLoc", val)}
+                                        className="!h-9"
+                                      />
+                                    </div>
+                                    <Input
+                                      label="Reorder Threshold"
+                                      type="number"
+                                      value={product.reorderPoint as any}
+                                      onChange={(e) => handleProductChange(index, "reorderPoint", e.target.value ? Number(e.target.value) : "")}
+                                      className="!h-9 !text-xs"
+                                    />
+                                  </div>
+                                </div>
+                              )}
 
-                    {/* Advanced settings panel */}
-                    {expandedSettings.has(index) && (
-                      <div className="rounded-xl border border-slate-200 overflow-hidden animate-in fade-in slide-in-from-top-1 duration-200">
-                        <div className="flex items-center gap-2 px-3.5 py-2.5 bg-slate-50 border-b border-slate-200">
-                          <Settings size={12} className="text-slate-400" />
-                          <span className="text-[11px] font-medium text-slate-500">Additional Settings</span>
-                        </div>
-                        <div className="px-3.5 pb-3.5 pt-3 grid grid-cols-1 md:grid-cols-3 gap-3">
-                          <div>
-                            <label className="text-[11px] font-medium text-slate-500 block mb-1.5 ml-0.5">Tax / GST</label>
-                            <ReusableSelect
-                              options={[
-                                { value: '0', label: 'GST 0%' },
-                                { value: '5', label: 'GST 5%' },
-                                { value: '12', label: 'GST 12%' },
-                                { value: '18', label: 'GST 18%' },
-                                { value: '28', label: 'GST 28%' }
-                              ]}
-                              value={String(product.taxGst)}
-                              onValueChange={(val) => handleProductChange(index, "taxGst", Number(val))}
-                              placeholder="Select GST"
-                            />
-                          </div>
-                          <div>
-                            <label className="text-[11px] font-medium text-slate-500 block mb-1.5 ml-0.5">Target Storage</label>
-                            <ReusableSelect
-                              options={[
-                                { value: 'Warehouse A', label: 'Warehouse A' },
-                                { value: 'Cold Storage', label: 'Cold Storage' },
-                                { value: 'Main Rack', label: 'Main Rack' }
-                              ]}
-                              value={product.storageLoc}
-                              onValueChange={(val) => handleProductChange(index, "storageLoc", val)}
-                              placeholder="Select location"
-                            />
-                          </div>
-                          <div>
-                            <label className="text-[11px] font-medium text-slate-500 block mb-1.5 ml-0.5">Reorder Threshold</label>
-                            <Input
-                              type="number"
-                              value={product.reorderPoint as any}
-                              onChange={(e) => handleProductChange(index, "reorderPoint", e.target.value ? Number(e.target.value) : "")}
-                              leftIcon={<AlertTriangle size={13} />}
-                              placeholder="Min stock qty"
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Cost breakdown panel — light, structured */}
-                    {expandedBreakdown.has(index) && (
-                      <div className="border border-slate-200 rounded-2xl overflow-hidden animate-in fade-in slide-in-from-top-1 duration-200">
-                        <div className="px-4 py-2.5 bg-slate-50 border-b border-slate-200 flex items-center gap-2">
-                          <Info size={13} className="text-slate-400" />
-                          <span className="text-[11px] font-semibold text-slate-600 uppercase tracking-wider">Cost Breakdown</span>
-                        </div>
-                        <div className="grid grid-cols-3 divide-x divide-slate-100">
-
-                          {/* Unit cost */}
-                          <div className="px-4 py-3 space-y-2">
-                            <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Per Unit</p>
-                            <div className="space-y-1.5">
-                              <div className="flex justify-between text-xs">
-                                <span className="text-slate-500">{type === "PURCHASE" ? "Buy Price" : "Base"}</span>
-                                <span className="font-medium text-slate-700 tabular-nums">₹{baseCost.toFixed(2)}</span>
-                              </div>
-                              <div className="flex justify-between text-xs">
-                                <span className="text-blue-500">Allocated</span>
-                                <span className="font-medium text-slate-700 tabular-nums">₹{allocPerUnit.toFixed(2)}</span>
-                              </div>
-                              <div className="flex justify-between text-xs pt-1.5 border-t border-slate-100">
-                                <span className="font-semibold text-slate-600">Net Cost</span>
-                                <span className="font-semibold text-emerald-600 tabular-nums">₹{netCostPerUnit.toFixed(2)}</span>
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Row totals */}
-                          <div className="px-4 py-3 space-y-2">
-                            <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Row Total</p>
-                            <div className="space-y-1.5">
-                              <div className="flex justify-between text-xs">
-                                <span className="text-slate-500">Subtotal</span>
-                                <span className="font-medium text-slate-700 tabular-nums">₹{rowTotal.toLocaleString()}</span>
-                              </div>
-                              <div className="flex justify-between text-xs">
-                                <span className="text-blue-500">Extra charges</span>
-                                <span className="font-medium text-slate-700 tabular-nums">₹{allocTotal.toLocaleString()}</span>
-                              </div>
-                              <div className="flex justify-between text-xs pt-1.5 border-t border-slate-100">
-                                <span className="font-semibold text-slate-600">Grand Total</span>
-                                <span className="font-semibold text-slate-800 tabular-nums">₹{(rowTotal + allocTotal).toLocaleString()}</span>
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Margin summary */}
-                          <div className="px-4 py-3 flex flex-col justify-between">
-                            <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Expected Margin</p>
-                            <div>
-                              {effectiveMarginPct ? (
-                                <>
-                                  <span className="text-2xl font-bold text-emerald-600">{effectiveMarginPct}%</span>
-                                  <p className="text-[10px] text-slate-400 mt-0.5">
-                                    ₹{(computedSellPrice - netCostPerUnit).toFixed(2)} per unit
-                                  </p>
-                                </>
-                              ) : (
-                                <span className="text-sm text-slate-400">Set margin above</span>
+                              {expandedBreakdown.has(index) && (
+                                <div className="flex-1 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+                                  <div className="flex items-center gap-2 mb-3">
+                                    <Info size={14} className="text-slate-500" />
+                                    <span className="text-xs font-bold text-slate-800">Cost Breakdown</span>
+                                  </div>
+                                  <div className="grid grid-cols-2 gap-6">
+                                    <div className="space-y-1.5">
+                                      <div className="flex justify-between text-[11px]">
+                                        <span className="text-slate-500">Unit Cost (Base)</span>
+                                        <span className="font-bold text-slate-700">₹{baseCost.toFixed(2)}</span>
+                                      </div>
+                                      <div className="flex justify-between text-[11px]">
+                                        <span className="text-blue-500">Allocated Cost</span>
+                                        <span className="font-bold text-blue-600">₹{allocPerUnit.toFixed(2)}</span>
+                                      </div>
+                                      <div className="flex justify-between text-xs pt-1.5 border-t border-slate-100">
+                                        <span className="font-bold text-slate-800">Net Cost / Unit</span>
+                                        <span className="font-black text-emerald-600">₹{netCostPerUnit.toFixed(2)}</span>
+                                      </div>
+                                    </div>
+                                    <div className="space-y-1.5">
+                                      <div className="flex justify-between text-[11px]">
+                                        <span className="text-slate-500">Row Subtotal</span>
+                                        <span className="font-bold text-slate-700">₹{rowTotal.toLocaleString()}</span>
+                                      </div>
+                                      <div className="flex justify-between text-[11px]">
+                                        <span className="text-emerald-500">Expected Margin</span>
+                                        <span className="font-bold text-emerald-600">{effectiveMarginPct || '0'}%</span>
+                                      </div>
+                                      <div className="flex justify-between text-xs pt-1.5 border-t border-slate-100">
+                                        <span className="font-bold text-slate-800">Profit / Unit</span>
+                                        <span className="font-black text-emerald-600">₹{(computedSellPrice - netCostPerUnit).toFixed(2)}</span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
                               )}
                             </div>
                           </div>
-
-                        </div>
-                      </div>
+                        </td>
+                      </tr>
                     )}
+                  </Fragment>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
 
-                  </div>
-                )}
-              </div>
-            );
-          })}
-
-          {/* Add another row */}
+        {/* Add another row */}
+        <div className="p-4 bg-slate-50/50 border-t border-slate-100">
           <button
             onClick={addProduct}
-            className="w-full group flex items-center justify-center gap-2 px-6 py-4 rounded-2xl border-2 border-dashed border-slate-200 text-slate-400 hover:border-slate-300 hover:text-slate-600 hover:bg-slate-50/50 transition-all duration-200"
+            className="w-full group flex items-center justify-center gap-2 px-6 py-3 rounded-xl border-2 border-dashed border-slate-200 text-slate-400 hover:border-slate-300 hover:text-slate-600 hover:bg-white transition-all duration-200"
           >
             <Plus size={15} className="group-hover:rotate-90 transition-transform duration-200" />
-            <span className="text-xs font-medium">Add Another Item</span>
+            <span className="text-xs font-bold">Add Another Item</span>
           </button>
         </div>
       </div>

@@ -61,7 +61,7 @@ const BillingDetailView = ({ invoice, isSubmitting, onConfirm }: BillingDetailVi
       <div className="relative overflow-hidden rounded-3xl border border-slate-200 bg-gradient-to-br from-blue-50 to-indigo-50 p-7 shadow-sm">
         <div className="flex flex-col md:flex-row justify-between gap-6">
           <div>
-            <p className="text-[11px] font-bold uppercase tracking-widest text-indigo-400 mb-1">Tax Invoice</p>
+            <p className="text-[11px] font-bold   text-indigo-400 mb-1">Tax Invoice</p>
             <h1 className="text-2xl font-semibold text-slate-900">
               {invoice ? "New Invoice" : "BILL-10245"}
             </h1>
@@ -87,7 +87,7 @@ const BillingDetailView = ({ invoice, isSubmitting, onConfirm }: BillingDetailVi
       {/* ── Amount Hero ──────────────────────────────────────────────── */}
       <div className="rounded-3xl bg-white shadow-sm border border-slate-200 p-7 flex flex-col md:flex-row justify-between items-center gap-6">
         <div>
-          <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-1">Total Payable</p>
+          <p className="text-[11px] font-bold text-slate-400   mb-1">Total Payable</p>
           <div className="flex items-start gap-1">
             <span className="text-xl font-bold text-slate-700 mt-1.5">₹</span>
             <span className="text-4xl font-semibold text-slate-900 tabular-nums tracking-tight">
@@ -159,7 +159,7 @@ const BillingDetailView = ({ invoice, isSubmitting, onConfirm }: BillingDetailVi
               {["#", "Product", "Qty", "Unit Price", "Total"].map((h, i) => (
                 <th
                   key={h}
-                  className={`px-5 py-3.5 text-xs font-bold text-slate-500 uppercase tracking-wider
+                  className={`px-5 py-3.5 text-xs font-bold text-slate-500  
                     ${i === 0 ? "text-left w-10" : i === 1 ? "text-left" : "text-right"}`}
                 >
                   {h}

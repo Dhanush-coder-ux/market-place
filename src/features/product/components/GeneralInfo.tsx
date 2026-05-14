@@ -10,7 +10,7 @@ const InfoItem = ({ label, value, icon: Icon }: { label: string; value: string; 
       </div>
     )}
     <div>
-      <p className="text-xs font-bold text-slate-400 uppercase tracking-tighter">{label}</p>
+      <p className="text-xs font-bold text-slate-400  tracking-tighter">{label}</p>
       <p className="text-slate-900 font-semibold">{value || "—"}</p>
     </div>
   </div>
@@ -38,7 +38,7 @@ const GeneralInfoTab = () => {
           <InfoItem label="GST Rate" value="Standard GST (12%)" />
           
           <div className="pt-4 border-t border-slate-50">
-            <p className="text-xs font-bold text-slate-400 uppercase mb-2">Description</p>
+            <p className="text-xs font-bold text-slate-400  mb-2">Description</p>
             <p className="text-slate-600 leading-relaxed text-sm font-medium">
               High-quality wireless over-ear headphones with noise-cancellation and Bluetooth connectivity. 
               Designed for ergonomic comfort during long sessions.
@@ -48,7 +48,7 @@ const GeneralInfoTab = () => {
 
         {/* Purchase Insights Box */}
         <div className="bg-slate-50/50 p-6 rounded-2xl border border-slate-100 space-y-6">
-          <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider">Purchase Insights</h3>
+          <h3 className="text-sm font-bold text-slate-800  ">Purchase Insights</h3>
           <div className="space-y-4">
             <div className="flex justify-between items-end">
               <div>

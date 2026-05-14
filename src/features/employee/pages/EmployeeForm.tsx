@@ -62,7 +62,7 @@ const EmployeeForm = () => {
   useEffect(() => {
     setActions(
         <div className="flex items-center gap-3 bg-white px-4 h-11 rounded-2xl border border-slate-200 shadow-sm scale-90 md:scale-100">
-          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Active</span>
+          <span className="text-[10px] font-bold text-slate-500  ">Active</span>
           <Switch 
             checked={formData.is_accepted} 
             onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_accepted: checked }))}
@@ -231,7 +231,7 @@ const EmployeeForm = () => {
               <div className="w-8 h-8 rounded-xl bg-blue-100 flex items-center justify-center text-blue-600">
                 <User size={18} />
               </div>
-              <h2 className="text-xs font-bold text-slate-800 uppercase tracking-widest">Personal Identity</h2>
+              <h2 className="text-xs font-bold text-slate-800  ">Personal Identity</h2>
             </div>
             <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-6">
               <Input
@@ -263,7 +263,7 @@ const EmployeeForm = () => {
                 leftIcon={<Phone size={16} className="text-slate-300" />}
               />
               <div className="space-y-1.5">
-                <label className="text-[11px] font-bold text-slate-500 ml-1 uppercase tracking-wider">System Role</label>
+                <label className="text-[11px] font-bold text-slate-500 ml-1  ">System Role</label>
                 <ReusableSelect 
                   options={roleOptions}
                   value={formData.role}
@@ -280,18 +280,18 @@ const EmployeeForm = () => {
               <div className="w-8 h-8 rounded-xl bg-amber-100 flex items-center justify-center text-amber-600">
                 <Shield size={18} />
               </div>
-              <h2 className="text-xs font-bold text-slate-800 uppercase tracking-widest">Classification</h2>
+              <h2 className="text-xs font-bold text-slate-800  ">Classification</h2>
             </div>
             <div className="p-8 space-y-6">
               <div className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 border border-slate-100">
-                <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Member Active</span>
+                <span className="text-xs font-bold text-slate-500  ">Member Active</span>
                 <Switch 
                   checked={formData.is_accepted} 
                   onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_accepted: checked }))}
                 />
               </div>
               <div className="space-y-1.5">
-                <label className="text-[11px] font-bold text-slate-500 ml-1 uppercase tracking-wider">Department</label>
+                <label className="text-[11px] font-bold text-slate-500 ml-1  ">Department</label>
                 <ReusableSelect
                   options={departmentOptions}
                   value={formData.department}
@@ -308,7 +308,7 @@ const EmployeeForm = () => {
               <div className="w-8 h-8 rounded-xl bg-emerald-100 flex items-center justify-center text-emerald-600">
                 <FileText size={18} />
               </div>
-              <h2 className="text-xs font-bold text-slate-800 uppercase tracking-widest">Financial Context</h2>
+              <h2 className="text-xs font-bold text-slate-800  ">Financial Context</h2>
             </div>
             <div className="p-8">
               <Input
@@ -328,7 +328,7 @@ const EmployeeForm = () => {
               <div className="w-8 h-8 rounded-xl bg-rose-100 flex items-center justify-center text-rose-600">
                 <Calendar size={18} />
               </div>
-              <h2 className="text-xs font-bold text-slate-800 uppercase tracking-widest">Lifecycle</h2>
+              <h2 className="text-xs font-bold text-slate-800  ">Lifecycle</h2>
             </div>
             <div className="p-8">
               <Input
@@ -348,7 +348,7 @@ const EmployeeForm = () => {
               <div className="w-8 h-8 rounded-xl bg-blue-100 flex items-center justify-center text-blue-600">
                 <MapPin size={18} />
               </div>
-              <h2 className="text-xs font-bold text-slate-800 uppercase tracking-widest">Residance & Work Location</h2>
+              <h2 className="text-xs font-bold text-slate-800  ">Residance & Work Location</h2>
             </div>
             <div className="p-8 grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="md:col-span-2">

@@ -127,7 +127,7 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-1.5">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Category</label>
+              <label className="text-[10px] font-black text-slate-400   ml-1">Category</label>
               <ReusableSelect
                 value={form.category}
                 onValueChange={(val) => setForm(p => ({ ...p, category: val }))}
@@ -135,7 +135,7 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
               />
             </div>
             <div className="space-y-1.5">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Unit</label>
+              <label className="text-[10px] font-black text-slate-400   ml-1">Unit</label>
               <ReusableSelect
                 value={form.unit}
                 onValueChange={(val) => setForm(p => ({ ...p, unit: val }))}
@@ -143,7 +143,7 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
               />
             </div>
             <div className="space-y-1.5">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">GST Rate</label>
+              <label className="text-[10px] font-black text-slate-400   ml-1">GST Rate</label>
               <ReusableSelect
                 value={form.gst}
                 onValueChange={(val) => setForm(p => ({ ...p, gst: val }))}
@@ -171,8 +171,8 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
                   <BarChart2 size={18} />
                 </div>
                 <div>
-                  <p className="text-xs font-black text-slate-800 uppercase tracking-tight">Batch Tracking</p>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Track expiry & manufacture</p>
+                  <p className="text-xs font-black text-slate-800  tracking-tight">Batch Tracking</p>
+                  <p className="text-[10px] font-bold text-slate-400  ">Track expiry & manufacture</p>
                 </div>
               </div>
               <Switch checked={form.batch_tracking} onCheckedChange={(val) => setForm(f => ({ ...f, batch_tracking: val }))} />
@@ -184,8 +184,8 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
                   <Layers size={18} />
                 </div>
                 <div>
-                  <p className="text-xs font-black text-slate-800 uppercase tracking-tight">Serial Tracking</p>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Track unique IDs / IMEIs</p>
+                  <p className="text-xs font-black text-slate-800  tracking-tight">Serial Tracking</p>
+                  <p className="text-[10px] font-bold text-slate-400  ">Track unique IDs / IMEIs</p>
                 </div>
               </div>
               <Switch checked={form.serial_tracking} onCheckedChange={(val) => setForm(f => ({ ...f, serial_tracking: val }))} />
@@ -206,8 +206,8 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
                 <Zap size={20} />
               </div>
               <div>
-                <p className="text-xs font-black text-indigo-900 uppercase tracking-tight">Enable Variants</p>
-                <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider">Multiple sizes, colors, etc.</p>
+                <p className="text-xs font-black text-indigo-900  tracking-tight">Enable Variants</p>
+                <p className="text-[10px] font-bold text-indigo-400  ">Multiple sizes, colors, etc.</p>
               </div>
             </div>
             <Switch checked={form.has_variants} onCheckedChange={(val) => setForm(f => ({ ...f, has_variants: val }))} />
@@ -242,8 +242,8 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
                 <Layers size={32} />
               </div>
               <div>
-                <p className="text-sm font-black text-slate-800 uppercase tracking-tight">No Variants Enabled</p>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider max-w-[200px]">
+                <p className="text-sm font-black text-slate-800  tracking-tight">No Variants Enabled</p>
+                <p className="text-[10px] font-bold text-slate-400   max-w-[200px]">
                   Enable variants to add multiple versions of this product
                 </p>
               </div>
@@ -262,30 +262,30 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
             <div className="flex items-start justify-between">
               <div>
                 <h4 className="text-lg md:text-2xl font-black text-slate-800 tracking-tight">{form.name || "Untitled Product"}</h4>
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">{form.category} • {form.brand || "No Brand"}</p>
+                <p className="text-xs font-bold text-slate-400   mt-1">{form.category} • {form.brand || "No Brand"}</p>
               </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 border-t border-slate-200/60">
               <div className="space-y-1">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tax (GST)</p>
+                <p className="text-[10px] font-black text-slate-400  ">Tax (GST)</p>
                 <p className="text-sm font-bold text-slate-700">{form.gst}</p>
               </div>
             </div>
 
             <div className="flex flex-wrap gap-2 pt-4">
               {form.has_variants && (
-                <span className="px-3 py-1 rounded-full bg-indigo-100 text-indigo-700 text-[9px] font-black uppercase tracking-widest">
+                <span className="px-3 py-1 rounded-full bg-indigo-100 text-indigo-700 text-[9px] font-black  ">
                   {combinations.length} Variants
                 </span>
               )}
               {form.batch_tracking && (
-                <span className="px-3 py-1 rounded-full bg-amber-100 text-amber-700 text-[9px] font-black uppercase tracking-widest">
+                <span className="px-3 py-1 rounded-full bg-amber-100 text-amber-700 text-[9px] font-black  ">
                   Batch Tracked
                 </span>
               )}
               {form.serial_tracking && (
-                <span className="px-3 py-1 rounded-full bg-violet-100 text-violet-700 text-[9px] font-black uppercase tracking-widest">
+                <span className="px-3 py-1 rounded-full bg-violet-100 text-violet-700 text-[9px] font-black  ">
                   Serial Tracked
                 </span>
               )}
@@ -295,7 +295,7 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
           {form.has_variants && combinations.filter(c => c.active).length > 0 && (
             <div className="bg-white rounded-[1.5rem] md:rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-700">
               <div className="px-6 py-4 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between">
-                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Active Variants Details</h3>
+                <h3 className="text-[10px] font-black text-slate-400  ">Active Variants Details</h3>
                 <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-100">
                   {combinations.filter(c => c.active).length} Active
                 </span>
@@ -308,11 +308,11 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
                         {idx + 1}
                       </div>
                       <div>
-                        <p className="text-xs font-black text-slate-800 uppercase tracking-tight">
+                        <p className="text-xs font-black text-slate-800  tracking-tight">
                           {Object.values(combo.attributes).join(" / ")}
                         </p>
                         <div className="flex items-center gap-2 mt-1">
-                          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">SKU: {combo.barcode || "N/A"}</span>
+                          <span className="text-[9px] font-bold text-slate-400  ">SKU: {combo.barcode || "N/A"}</span>
                         </div>
                       </div>
                     </div>
@@ -327,8 +327,8 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
               <CheckCircle2 size={20} />
             </div>
             <div className="space-y-1">
-              <p className="text-xs font-black text-blue-800 uppercase tracking-widest">Ready for Creation</p>
-              <p className="text-[10px] font-bold text-blue-600 leading-relaxed uppercase tracking-wider">
+              <p className="text-xs font-black text-blue-800  ">Ready for Creation</p>
+              <p className="text-[10px] font-bold text-blue-600 leading-relaxed  ">
                 Click complete below to finalize the registration of this product into your inventory.
               </p>
             </div>

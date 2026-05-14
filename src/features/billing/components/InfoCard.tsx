@@ -46,7 +46,7 @@ export const InfoCard: React.FC<InfoCardProps> = ({
         {icon}
       </div>
 
-      <h3 className={cn("text-xs font-black uppercase tracking-widest mb-4", titleStyles)}>
+      <h3 className={cn("text-xs font-black   mb-4", titleStyles)}>
         {title}
       </h3>
 

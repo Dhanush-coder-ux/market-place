@@ -37,7 +37,7 @@ const formatDate = (dateStr?: string) => {
 // ─── Reusable UI Subcomponents ────────────────────────────────────────────────
 
 const StatusBadge = ({ icon: Icon, text, className = "" }: { icon?: any, text: string, className?: string }) => (
-  <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-medium tracking-wide uppercase border ${className}`}>
+  <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-medium border ${className}`}>
     {Icon && <Icon size={9} />}
     {text}
   </span>
@@ -79,7 +79,7 @@ const ShortcutKbd = ({ keys, label }: { keys: string[]; label: string; }) => (
 
 const BillingRow = React.memo(({
   item, index, isLast, hasSerial,
-  handleProductSelectClick, handleDeleteRow, fetchInventory
+  handleProductSelectClick, handleDeleteRow, fetchInventory, onQtyChange
 }: {
   item: BillingItem;
   index: number;
@@ -88,9 +88,14 @@ const BillingRow = React.memo(({
   handleProductSelectClick: any;
   handleDeleteRow: (id: string) => void;
   fetchInventory: (q: string, signal: AbortSignal) => Promise<any[]>;
+  onQtyChange: (id: string, qty: number) => void;
 }) => {
   const isFilled = !!item.name;
   const [baseName, variantName] = item.name ? item.name.split(' - ') : ["", ""];
+  
+  // A "Simple" product has no serial tracking, no batch tracking, and no variant.
+  // In the billing logic, variantId is null if it's the "default" variant.
+  const isSimple = !item.requireSerial && !item.batchTracking && !item.variantId && isFilled;
 
   return (
     <tr className={`group/row transition-colors duration-150 ${
@@ -109,7 +114,7 @@ const BillingRow = React.memo(({
           <div className="flex items-center gap-2.5">
             <div className="w-[22%]">
               <div className="flex flex-col gap-0.5">
-                <span className="text-[9px] font-medium text-slate-400 uppercase tracking-wider ml-0.5">Barcode</span>
+                <span className="text-[9px] font-medium text-slate-400   ml-0.5">Barcode</span>
                 <div className="h-[38px] px-2.5 flex items-center rounded-lg border border-slate-200/60 bg-slate-50/40 text-[12px] font-normal text-slate-600 truncate">
                   {item.code || "—"}
                 </div>
@@ -117,7 +122,7 @@ const BillingRow = React.memo(({
             </div>
             <div className="w-[78%]">
               <div className="flex flex-col gap-0.5">
-                <span className="text-[9px] font-medium text-slate-400 uppercase tracking-wider ml-0.5">Product</span>
+                <span className="text-[9px] font-medium text-slate-400   ml-0.5">Product</span>
                 <SearchSelect
                   fetchOptions={fetchInventory}
                   value={baseName}
@@ -161,19 +166,31 @@ const BillingRow = React.memo(({
       {/* Quantity */}
       <td className={`px-2 py-3 align-top text-right ${!isLast ? "border-b border-slate-100/60" : ""}`}>
         <div 
-          onClick={() => isFilled && handleProductSelectClick((item as any)._product, item.id)}
-          className={`w-16 h-[38px] px-2 rounded-lg border border-slate-200/60 bg-white flex items-center justify-end cursor-pointer hover:border-blue-300/60 transition-colors duration-150 ${!isFilled ? "opacity-40 pointer-events-none" : ""}`}
+          onClick={() => !isSimple && isFilled && handleProductSelectClick((item as any)._product, item.id)}
+          className={`w-20 h-[38px] px-2 rounded-lg border transition-all duration-150 
+            ${isSimple 
+                ? "border-slate-200 bg-white focus-within:border-blue-400 focus-within:ring-1 focus-within:ring-blue-100" 
+                : "border-slate-200/60 bg-slate-50/30 cursor-pointer hover:border-blue-300/60"
+            } 
+            ${!isFilled ? "opacity-40 pointer-events-none" : ""} flex items-center justify-end`}
         >
           <input
             type="number"
-            readOnly
+            min="1"
+            readOnly={!isSimple}
             value={item.qty || ""}
             placeholder="0"
-            className="w-full bg-transparent text-right outline-none cursor-pointer text-[13px] font-medium text-slate-700 tabular-nums"
+            className={`w-full bg-transparent text-right outline-none text-[13px] font-black text-slate-700 tabular-nums
+              ${isSimple ? "cursor-text" : "cursor-pointer"}
+            `}
+            onChange={(e) => isSimple && onQtyChange(item.id, Number(e.target.value))}
+            onClick={(e) => isSimple && e.stopPropagation()} // Prevent modal from opening when clicking input
             onKeyDown={(e) => { 
               if (e.key === "Enter" || e.key === " ") {
-                e.preventDefault();
-                isFilled && handleProductSelectClick((item as any)._product, item.id);
+                if (!isSimple && isFilled) {
+                  e.preventDefault();
+                  handleProductSelectClick((item as any)._product, item.id);
+                }
               }
             }}
           />
@@ -264,6 +281,18 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
   }, [getData]);
 
   // ── Row mutations ───────────────────────────────────────────────────────────
+
+  const handleQtyChange = useCallback((id: string, qty: number) => {
+    onItemsChange(items.map(item => {
+      if (item.id !== id) return item;
+      const newQty = Math.max(0, qty);
+      return {
+        ...item,
+        qty: newQty,
+        tprice: newQty * item.price
+      };
+    }));
+  }, [items, onItemsChange]);
 
   const handleAddRow = useCallback(() => {
     onItemsChange([...items, createEmptyRow()]);
@@ -439,18 +468,18 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
           </div>
         </div>
 
-        {/* Table */}
-        <div className="overflow-x-auto">
+        {/* Table Container */}
+        <div className="overflow-x-auto overflow-y-auto h-[calc(100vh-220px)] pf-scroll">
           <table className="min-w-full border-separate border-spacing-0">
-            <thead>
+            <thead className="sticky top-0 z-20 bg-slate-50/95 backdrop-blur-sm shadow-sm">
               <tr>
                 {["#", "Product Details", "Qty", "Price", "Total", ""].map((h, i) => (
                   <th
                     key={h + i}
-                    className={`px-3 py-2 text-left text-[10px] font-medium text-slate-400 uppercase tracking-wider border-b border-slate-100/60 bg-slate-50/40
-                      ${i === 0 ? "hidden sm:table-cell pl-4 w-10" : ""}
+                    className={`px-4 py-3.5 text-left text-[11px] font-black text-slate-500 tracking-tight border-b border-slate-200
+                      ${i === 0 ? "hidden sm:table-cell pl-6 w-14" : ""}
                       ${i === 2 || i === 3 || i === 4 ? "text-right" : ""} 
-                      ${i === 5 ? "w-10" : ""}`
+                      ${i === 5 ? "w-12" : ""}`
                     }
                   >
                     {h}
@@ -470,6 +499,7 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
                   handleProductSelectClick={handleProductSelectClick}
                   handleDeleteRow={handleDeleteRow}
                   fetchInventory={fetchInventory}
+                  onQtyChange={handleQtyChange}
                 />
               ))}
             </tbody>
@@ -483,7 +513,7 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
           <div className="hidden sm:flex items-center gap-3">
             <div className="flex items-center gap-1 text-slate-400 mr-1">
               <Keyboard size={12} />
-              <span className="text-[9px] font-medium uppercase tracking-wider">Shortcuts</span>
+              <span className="text-[9px] font-medium  ">Shortcuts</span>
             </div>
             <ShortcutKbd keys={["Alt", "A"]} label="Add" />
             <ShortcutKbd keys={["Alt", "⌫"]} label="Delete" />
@@ -491,7 +521,7 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
 
           {/* Grand Total */}
           <div className="flex items-center gap-3 ml-auto bg-white border border-slate-200/60 shadow-[0_1px_2px_rgba(0,0,0,0.04)] rounded-lg py-2 px-4">
-            <span className="text-[10px] text-slate-400 uppercase tracking-wider font-medium">Total</span>
+            <span className="text-[10px] text-slate-400   font-medium">Total</span>
             <div className="flex items-center gap-0.5 text-blue-500">
               <IndianRupee size={16} strokeWidth={2} />
               <span className="text-xl font-semibold tracking-tight tabular-nums">

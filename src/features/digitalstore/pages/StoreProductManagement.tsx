@@ -89,7 +89,7 @@ const ProductDashboard = () => {
               <Box size={18} />
             </div>
             <div>
-              <p className="text-xs text-slate-500 font-medium uppercase tracking-wider mb-1">Total Products</p>
+              <p className="text-xs text-slate-500 font-medium   mb-1">Total Products</p>
               <p className="text-2xl font-medium text-slate-900 leading-none">{stats.total}</p>
             </div>
           </div>
@@ -98,7 +98,7 @@ const ProductDashboard = () => {
               <AlertCircle size={18} />
             </div>
             <div>
-              <p className="text-xs text-slate-500 font-medium uppercase tracking-wider mb-1">Low Stock</p>
+              <p className="text-xs text-slate-500 font-medium   mb-1">Low Stock</p>
               <p className="text-2xl font-medium text-slate-900 leading-none">{stats.lowStockCount}</p>
             </div>
           </div>
@@ -107,7 +107,7 @@ const ProductDashboard = () => {
               <Wallet size={18} />
             </div>
             <div>
-              <p className="text-xs text-slate-500 font-medium uppercase tracking-wider mb-1">Inventory Value</p>
+              <p className="text-xs text-slate-500 font-medium   mb-1">Inventory Value</p>
               <p className="text-2xl font-medium text-slate-900 leading-none">₹ {stats.totalInventoryValue.toLocaleString()}</p>
             </div>
           </div>
@@ -160,12 +160,12 @@ const ProductDashboard = () => {
                     className="w-4 h-4 rounded border-slate-300 text-slate-900 focus:ring-slate-900 cursor-pointer"
                   />
                </ th>
-                <th className="px-6 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Product</th>
-                <th className="px-6 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Category</th>
-                <th className="px-6 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Price</th>
-                <th className="px-6 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Stock</th>
-                <th className="px-6 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Status</th>
-                <th className="px-6 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider text-right">Actions</th>
+                <th className="px-6 py-3 text-xs font-medium text-slate-500  ">Product</th>
+                <th className="px-6 py-3 text-xs font-medium text-slate-500  ">Category</th>
+                <th className="px-6 py-3 text-xs font-medium text-slate-500  ">Price</th>
+                <th className="px-6 py-3 text-xs font-medium text-slate-500  ">Stock</th>
+                <th className="px-6 py-3 text-xs font-medium text-slate-500  ">Status</th>
+                <th className="px-6 py-3 text-xs font-medium text-slate-500   text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">

@@ -93,7 +93,7 @@ export default function StoreSetupForm({ existingData }: StoreSetupProps) {
             
                <div className="flex flex-col items-center">
                   <ImageIcon size={48} className="opacity-20 mb-2" />
-                  <span className="text-xs font-bold uppercase tracking-wider opacity-60">Upload Store Banner</span>
+                  <span className="text-xs font-bold   opacity-60">Upload Store Banner</span>
                   <span className="text-[10px] opacity-40 mt-1">Click to browse files</span>
                </div>
            
@@ -159,7 +159,7 @@ export default function StoreSetupForm({ existingData }: StoreSetupProps) {
           <div className="space-y-5">
             <div>
               <div className="flex items-center gap-2 mb-1.5">
-                <label className="text-xs font-bold uppercase text-slate-500">Store Name <span className="text-red-500">*</span></label>
+                <label className="text-xs font-bold  text-slate-500">Store Name <span className="text-red-500">*</span></label>
                 {/* Tooltip for Store Name */}
                 <Tooltip message="This will appear on your storefront and invoices. Keep it unique!">
                   <Info size={12} className="text-slate-400 cursor-help" />
@@ -177,7 +177,7 @@ export default function StoreSetupForm({ existingData }: StoreSetupProps) {
 
             <div>
               <div className="flex items-center gap-2 mb-1.5">
-                <label className="text-xs font-bold uppercase text-slate-500">Tagline</label>
+                <label className="text-xs font-bold  text-slate-500">Tagline</label>
                 {/* Tooltip for Tagline */}
                 <Tooltip message="A short, catchy phrase that appears below your logo (e.g. 'Quality you can trust').">
                   <Info size={12} className="text-slate-400 cursor-help" />
@@ -193,7 +193,7 @@ export default function StoreSetupForm({ existingData }: StoreSetupProps) {
             </div>
 
             <div>
-              <label className="block text-xs font-bold uppercase text-slate-500 mb-1.5">Description</label>
+              <label className="block text-xs font-bold  text-slate-500 mb-1.5">Description</label>
               <textarea 
                 name="description" 
                 value={form.description} 
@@ -208,7 +208,7 @@ export default function StoreSetupForm({ existingData }: StoreSetupProps) {
           {/* Right Column */}
           <div className="space-y-5">
             <div>
-              <label className="block text-xs font-bold uppercase text-slate-500 mb-1.5">Business Address</label>
+              <label className="block text-xs font-bold  text-slate-500 mb-1.5">Business Address</label>
               <div className="relative">
                 <input 
                   name="address" 
@@ -223,7 +223,7 @@ export default function StoreSetupForm({ existingData }: StoreSetupProps) {
 
             <div>
               <div className="flex items-center gap-2 mb-1.5">
-                <label className="text-xs font-bold uppercase text-slate-500">Contact Email / Phone</label>
+                <label className="text-xs font-bold  text-slate-500">Contact Email / Phone</label>
                  {/* Tooltip for Contact */}
                  <Tooltip message="Used for order notifications and customer support inquiries.">
                   <Info size={12} className="text-slate-400 cursor-help" />

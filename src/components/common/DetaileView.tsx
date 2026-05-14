@@ -49,7 +49,7 @@ const DetailView: React.FC<DetailViewProps> = ({
           <div key={idx} className="group">
             <div className="flex items-center gap-2 mb-4">
               <div className="h-5 w-1 bg-blue-500 rounded-full"></div>
-              <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest">
+              <h3 className="text-sm font-bold text-gray-400  ">
                 {section.title}
               </h3>
             </div>
@@ -73,7 +73,7 @@ const DetailView: React.FC<DetailViewProps> = ({
                   )}
 
                   <div className="flex-grow min-w-0">
-                    <p className="text-xs font-medium text-gray-400 mb-0.5 truncate uppercase tracking-tighter">
+                    <p className="text-xs font-medium text-gray-400 mb-0.5 truncate  tracking-tighter">
                       {field.label}
                     </p>
                     <div className="text-base font-semibold text-gray-800 break-words leading-tight">

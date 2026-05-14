@@ -220,7 +220,7 @@ const NavigationDialog = ({
             <div className="flex-1 overflow-y-auto px-4 pb-10 space-y-6 bg-slate-50/30">
               {filteredGroups.map((group) => (
                 <div key={group.label} className="space-y-2">
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.15em] mb-2 px-1">
+                  <p className="text-[10px] font-bold text-slate-400  tracking-[0.15em] mb-2 px-1">
                     {group.label}
                   </p>
                   <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm overflow-hidden divide-y divide-slate-100">
@@ -228,7 +228,7 @@ const NavigationDialog = ({
                       if (item.type === "sub-header") {
                         return (
                           <div key={idx} className="bg-slate-50/80 px-4 py-2 border-y border-slate-100/50">
-                            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-[0.1em]">
+                            <span className="text-[9px] font-bold text-slate-400  tracking-[0.1em]">
                               {item.label}
                             </span>
                           </div>

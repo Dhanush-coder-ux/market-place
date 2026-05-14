@@ -98,8 +98,8 @@ function purchaseToMovements(records: PurchaseRecord[], movType: MovementType): 
                 stocks_before: batch.stocks_before ?? variant.stocks_before ?? prod.stocks_before,
                 variant: variant.name || variant.variant_name || variant.id,
                 batch: batch.name || batch.batch_name || batch.id,
-                serial_numbers: Array.isArray(batch.serial_numbers?.serial_numbers) 
-                  ? batch.serial_numbers.serial_numbers 
+                serial_numbers: Array.isArray(batch.serial_numbers?.serial_numbers)
+                  ? batch.serial_numbers.serial_numbers
                   : (Array.isArray(batch.serial_numbers) ? batch.serial_numbers : []),
                 expiry_date: batch.expiry_date,
                 manufacturing_date: batch.manufacturing_date,
@@ -114,7 +114,7 @@ function purchaseToMovements(records: PurchaseRecord[], movType: MovementType): 
             });
           }
         });
-      } 
+      }
       // Else if it has nested batches array directly
       else if (Array.isArray(prod.batches) && prod.batches.length > 0) {
         prod.batches.forEach((batch: any) => {
@@ -123,14 +123,14 @@ function purchaseToMovements(records: PurchaseRecord[], movType: MovementType): 
             qty: Number(batch.received_stocks ?? batch.received_qty ?? batch.stocks ?? batch.quantity ?? 1),
             stocks_before: batch.stocks_before ?? prod.stocks_before,
             batch: batch.name || batch.batch_name || batch.id,
-            serial_numbers: Array.isArray(batch.serial_numbers?.serial_numbers) 
-              ? batch.serial_numbers.serial_numbers 
+            serial_numbers: Array.isArray(batch.serial_numbers?.serial_numbers)
+              ? batch.serial_numbers.serial_numbers
               : (Array.isArray(batch.serial_numbers) ? batch.serial_numbers : []),
             expiry_date: batch.expiry_date,
             manufacturing_date: batch.manufacturing_date,
           });
         });
-      } 
+      }
       // Base case (no nested arrays, use direct properties if any)
       else {
         movements.push({
@@ -156,20 +156,20 @@ function ordersToMovements(records: any[]): Movement[] {
       if (order.origin === "Sales Return" || order.status === "RETURNED") {
         type = "SALE_RETURN";
       }
-      
+
       return {
         id: order.id.slice(0, 8).toUpperCase(),
         product: item.barcode || item.name || "Product",
         sku: item.barcode || item.inventory_id?.slice(-6) || "SKU",
         type: type,
         qty: type === "SALE_RETURN" ? Number(item.quantity || 0) : -Number(item.quantity || 0),
-        source: type === "SALE_RETURN" ? "Customer" : "Warehouse",
-        destination: type === "SALE_RETURN" ? "Warehouse" : "Customer",
+        source: type === "SALE_RETURN" ? (order.customer_name || order.datas?.customer_name || "Customer") : "Warehouse",
+        destination: type === "SALE_RETURN" ? "Warehouse" : (order.customer_name || order.datas?.customer_name || "Customer"),
         ref: `INV-${order.ui_id || order.id.slice(0, 6).toUpperCase()}`,
         date: order.created_at || new Date().toISOString(),
         status: "Completed" as StatusType,
         user: "System",
-        notes: `Customer ID: ${order.customer_id || "N/A"}`,
+        notes: `Customer: ${order.customer_name || order.datas?.customer_name || order.customer_id || "N/A"}`,
         variant: item.variant_id || "",
         batch: item.batch_id || "",
         serial_numbers: Array.isArray(item.serial_numbers) ? item.serial_numbers : [],
@@ -259,13 +259,13 @@ function DetailDrawer({ movement, onClose }: DetailDrawerProps) {
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-white/80 sticky top-0 z-20 backdrop-blur-md">
           <div className="flex items-center gap-3">
-             <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-lg ${isPositive ? 'bg-emerald-500 shadow-emerald-200' : 'bg-rose-500 shadow-rose-200'}`}>
-                {isPositive ? <TrendingUp size={20} /> : <TrendingDown size={20} />}
-             </div>
-             <div>
-                <h3 className="text-sm font-bold text-slate-800 uppercase tracking-tight">Movement Detail</h3>
-                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">REF: {movement.ref}</p>
-             </div>
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-lg ${isPositive ? 'bg-emerald-500 shadow-emerald-200' : 'bg-rose-500 shadow-rose-200'}`}>
+              {isPositive ? <TrendingUp size={20} /> : <TrendingDown size={20} />}
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-slate-800  tracking-tight">Movement Detail</h3>
+              <p className="text-[10px] text-slate-400 font-bold  ">REF: {movement.ref}</p>
+            </div>
           </div>
           <button onClick={onClose} className="p-2 rounded-xl hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-all border border-transparent hover:border-slate-200">
             <X className="w-5 h-5" />
@@ -274,11 +274,11 @@ function DetailDrawer({ movement, onClose }: DetailDrawerProps) {
 
         {/* Content */}
         <div className="flex-1 p-6 space-y-8">
-          
+
           {/* Main Impact Hero */}
           <div className={`rounded-3xl border-2 p-6 text-center space-y-4 shadow-sm transition-all ${isPositive ? 'bg-emerald-50/50 border-emerald-100/50' : 'bg-rose-50/50 border-rose-100/50'}`}>
             <div className="space-y-1">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Net Stock Impact</p>
+              <p className="text-[10px] font-black text-slate-400  tracking-[0.2em]">Net Stock Impact</p>
               <div className="flex items-center justify-center gap-3">
                 <span className={`text-4xl font-black tabular-nums ${isPositive ? 'text-emerald-600' : 'text-rose-600'}`}>
                   {isPositive ? `+${movement.qty}` : movement.qty}
@@ -290,133 +290,133 @@ function DetailDrawer({ movement, onClose }: DetailDrawerProps) {
             {movement.stocks_before !== undefined && (
               <div className="grid grid-cols-3 gap-2 bg-white/80 p-3 rounded-2xl border border-white shadow-sm">
                 <div className="flex flex-col items-center">
-                  <span className="text-[8px] font-black text-slate-400 uppercase tracking-tighter">Opening</span>
+                  <span className="text-[8px] font-black text-slate-400  tracking-tighter">Opening</span>
                   <span className="text-xs font-bold text-slate-700">{movement.stocks_before}</span>
                 </div>
                 <div className="flex flex-col items-center border-x border-slate-100">
-                  <span className={`text-[8px] font-black uppercase tracking-tighter ${isPositive ? 'text-emerald-400' : 'text-rose-400'}`}>Received Stock</span>
+                  <span className={`text-[8px] font-black  tracking-tighter ${isPositive ? 'text-emerald-400' : 'text-rose-400'}`}>Received Stock</span>
                   <span className={`text-xs font-bold ${isPositive ? 'text-emerald-600' : 'text-rose-600'}`}>
                     {isPositive ? `+${movement.qty}` : movement.qty}
                   </span>
                 </div>
                 <div className="flex flex-col items-center">
-                  <span className="text-[8px] font-black text-blue-400 uppercase tracking-tighter">Ordered Stock</span>
+                  <span className="text-[8px] font-black text-blue-400  tracking-tighter">Ordered Stock</span>
                   <span className="text-xs font-bold text-blue-600">{(movement.stocks_before ?? 0) + movement.qty}</span>
                 </div>
               </div>
             )}
 
             <div className="inline-flex items-center px-3 py-1 rounded-full bg-white border border-slate-100 shadow-sm">
-               <TypeBadge type={movement.type} />
+              <TypeBadge type={movement.type} />
             </div>
           </div>
 
           {/* Structured Inventory Path */}
           <div className="space-y-4">
-             <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] px-1">Inventory Specification Path</h4>
-             
-             {/* Product Level */}
-             <div className="relative pl-6 before:absolute before:left-[11px] before:top-8 before:bottom-0 before:w-0.5 before:bg-slate-100">
-                <div className="relative group mb-4">
-                   <div className="absolute -left-[19px] top-1.5 w-4 h-4 rounded-full border-2 border-blue-500 bg-white z-10" />
-                   <div className="bg-blue-50/40 border border-blue-100 rounded-2xl p-4 transition-all hover:bg-blue-50 hover:shadow-md hover:shadow-blue-500/5">
-                      <div className="flex items-center gap-2 text-blue-600 font-black text-[10px] uppercase tracking-widest mb-1">
-                         <Layers size={12} /> Product Root
-                      </div>
-                      <p className="text-slate-800 font-bold text-base leading-tight">{movement.product}</p>
-                      <div className="flex items-center gap-2 mt-2">
-                         <span className="text-[10px] font-mono text-slate-400 bg-white px-2 py-0.5 rounded border border-slate-100">SKU: {movement.sku}</span>
-                         <button onClick={(e) => copyToClipboard(e, movement.id)} className="text-[9px] font-bold text-blue-500 hover:underline">Copy ID</button>
-                      </div>
-                   </div>
+            <h4 className="text-[10px] font-black text-slate-400  tracking-[0.2em] px-1">Inventory Specification Path</h4>
+
+            {/* Product Level */}
+            <div className="relative pl-6 before:absolute before:left-[11px] before:top-8 before:bottom-0 before:w-0.5 before:bg-slate-100">
+              <div className="relative group mb-4">
+                <div className="absolute -left-[19px] top-1.5 w-4 h-4 rounded-full border-2 border-blue-500 bg-white z-10" />
+                <div className="bg-blue-50/40 border border-blue-100 rounded-2xl p-4 transition-all hover:bg-blue-50 hover:shadow-md hover:shadow-blue-500/5">
+                  <div className="flex items-center gap-2 text-blue-600 font-black text-[10px]   mb-1">
+                    <Layers size={12} /> Product Root
+                  </div>
+                  <p className="text-slate-800 font-bold text-base leading-tight">{movement.product}</p>
+                  <div className="flex items-center gap-2 mt-2">
+                    <span className="text-[10px] font-mono text-slate-400 bg-white px-2 py-0.5 rounded border border-slate-100">SKU: {movement.sku}</span>
+                    <button onClick={(e) => copyToClipboard(e, movement.id)} className="text-[9px] font-bold text-blue-500 hover:underline">Copy ID</button>
+                  </div>
                 </div>
+              </div>
 
-                {/* Variant Level */}
-                {movement.variant && (
-                   <div className="relative group mb-4">
-                      <div className="absolute -left-[19px] top-1.5 w-4 h-4 rounded-full border-2 border-violet-500 bg-white z-10" />
-                      <div className="bg-violet-50/40 border border-violet-100 rounded-2xl p-4 ml-2 transition-all hover:bg-violet-50 hover:shadow-md hover:shadow-violet-500/5">
-                         <div className="flex items-center gap-2 text-violet-600 font-black text-[10px] uppercase tracking-widest mb-1">
-                            <Activity size={12} /> Variant Configuration
-                         </div>
-                         <p className="text-slate-800 font-bold text-sm">{movement.variant}</p>
-                      </div>
-                   </div>
-                )}
+              {/* Variant Level */}
+              {movement.variant && (
+                <div className="relative group mb-4">
+                  <div className="absolute -left-[19px] top-1.5 w-4 h-4 rounded-full border-2 border-violet-500 bg-white z-10" />
+                  <div className="bg-violet-50/40 border border-violet-100 rounded-2xl p-4 ml-2 transition-all hover:bg-violet-50 hover:shadow-md hover:shadow-violet-500/5">
+                    <div className="flex items-center gap-2 text-violet-600 font-black text-[10px]   mb-1">
+                      <Activity size={12} /> Variant Configuration
+                    </div>
+                    <p className="text-slate-800 font-bold text-sm">{movement.variant}</p>
+                  </div>
+                </div>
+              )}
 
-                {/* Batch Level */}
-                {movement.batch && (
-                   <div className="relative group mb-4">
-                      <div className="absolute -left-[19px] top-1.5 w-4 h-4 rounded-full border-2 border-amber-500 bg-white z-10" />
-                      <div className="bg-amber-50/40 border border-amber-100 rounded-2xl p-4 ml-4 transition-all hover:bg-amber-50 hover:shadow-md hover:shadow-amber-500/5">
-                         <div className="flex items-center gap-2 text-amber-600 font-black text-[10px] uppercase tracking-widest mb-1">
-                            <Hash size={12} /> Batch Identifier
-                         </div>
-                         <p className="text-slate-800 font-bold text-sm mb-2">{movement.batch}</p>
-                         
-                         {(movement.expiry_date || movement.manufacturing_date) && (
-                            <div className="space-y-1.5 border-t border-amber-100 pt-2 mt-2">
-                               {movement.manufacturing_date && (
-                                  <div className="flex justify-between items-center text-[10px]">
-                                     <span className="text-amber-600/70 font-bold uppercase tracking-tight">MFG Date</span>
-                                     <span className="text-slate-700 font-bold">{fmtDate(movement.manufacturing_date)}</span>
-                                  </div>
-                               )}
-                               {movement.expiry_date && (
-                                  <>
-                                     <div className="flex justify-between items-center text-[10px]">
-                                        <span className="text-amber-600/70 font-bold uppercase tracking-tight">EXP Date</span>
-                                        <span className="text-slate-700 font-bold">{fmtDate(movement.expiry_date)}</span>
-                                     </div>
-                                     <div className="flex justify-between items-center bg-white/50 rounded-lg px-2 py-1 mt-1">
-                                        <span className="text-[9px] font-black text-rose-500 uppercase tracking-widest">Remaining</span>
-                                        <span className="text-[10px] font-black text-rose-600 tabular-nums">
-                                           {(() => {
-                                              const diff = new Date(movement.expiry_date).getTime() - new Date().getTime();
-                                              const days = Math.ceil(diff / (1000 * 3600 * 24));
-                                              return days > 0 ? `${days} Days` : "Expired";
-                                           })()}
-                                        </span>
-                                     </div>
-                                  </>
-                               )}
+              {/* Batch Level */}
+              {movement.batch && (
+                <div className="relative group mb-4">
+                  <div className="absolute -left-[19px] top-1.5 w-4 h-4 rounded-full border-2 border-amber-500 bg-white z-10" />
+                  <div className="bg-amber-50/40 border border-amber-100 rounded-2xl p-4 ml-4 transition-all hover:bg-amber-50 hover:shadow-md hover:shadow-amber-500/5">
+                    <div className="flex items-center gap-2 text-amber-600 font-black text-[10px]   mb-1">
+                      <Hash size={12} /> Batch Identifier
+                    </div>
+                    <p className="text-slate-800 font-bold text-sm mb-2">{movement.batch}</p>
+
+                    {(movement.expiry_date || movement.manufacturing_date) && (
+                      <div className="space-y-1.5 border-t border-amber-100 pt-2 mt-2">
+                        {movement.manufacturing_date && (
+                          <div className="flex justify-between items-center text-[10px]">
+                            <span className="text-amber-600/70 font-bold  tracking-tight">MFG Date</span>
+                            <span className="text-slate-700 font-bold">{fmtDate(movement.manufacturing_date)}</span>
+                          </div>
+                        )}
+                        {movement.expiry_date && (
+                          <>
+                            <div className="flex justify-between items-center text-[10px]">
+                              <span className="text-amber-600/70 font-bold  tracking-tight">EXP Date</span>
+                              <span className="text-slate-700 font-bold">{fmtDate(movement.expiry_date)}</span>
                             </div>
-                         )}
+                            <div className="flex justify-between items-center bg-white/50 rounded-lg px-2 py-1 mt-1">
+                              <span className="text-[9px] font-black text-rose-500  ">Remaining</span>
+                              <span className="text-[10px] font-black text-rose-600 tabular-nums">
+                                {(() => {
+                                  const diff = new Date(movement.expiry_date).getTime() - new Date().getTime();
+                                  const days = Math.ceil(diff / (1000 * 3600 * 24));
+                                  return days > 0 ? `${days} Days` : "Expired";
+                                })()}
+                              </span>
+                            </div>
+                          </>
+                        )}
                       </div>
-                   </div>
-                )}
+                    )}
+                  </div>
+                </div>
+              )}
 
-                {/* Serial Numbers Level */}
-                {movement.serial_numbers && movement.serial_numbers.length > 0 && (
-                   <div className="relative group">
-                      <div className="absolute -left-[19px] top-1.5 w-4 h-4 rounded-full border-2 border-emerald-500 bg-white z-10" />
-                      <div className="bg-emerald-50/30 border border-emerald-100 rounded-2xl p-4 ml-6 transition-all hover:bg-emerald-50/50 hover:shadow-md hover:shadow-emerald-500/5">
-                         <div className="flex items-center gap-2 text-emerald-600 font-black text-[10px] uppercase tracking-widest mb-3">
-                            <Zap size={12} fill="currentColor" /> Unique Serials ({movement.serial_numbers.length})
-                         </div>
-                         <div className="flex flex-wrap gap-1.5 max-h-[120px] overflow-y-auto custom-scrollbar pr-1">
-                            {movement.serial_numbers.map((sn, i) => (
-                               <span key={i} className="px-2 py-1 rounded-lg bg-white border border-emerald-100 text-emerald-700 font-mono text-[10px] font-bold shadow-sm">
-                                  {sn}
-                               </span>
-                            ))}
-                         </div>
-                      </div>
-                   </div>
-                )}
-             </div>
+              {/* Serial Numbers Level */}
+              {movement.serial_numbers && movement.serial_numbers.length > 0 && (
+                <div className="relative group">
+                  <div className="absolute -left-[19px] top-1.5 w-4 h-4 rounded-full border-2 border-emerald-500 bg-white z-10" />
+                  <div className="bg-emerald-50/30 border border-emerald-100 rounded-2xl p-4 ml-6 transition-all hover:bg-emerald-50/50 hover:shadow-md hover:shadow-emerald-500/5">
+                    <div className="flex items-center gap-2 text-emerald-600 font-black text-[10px]   mb-3">
+                      <Zap size={12} fill="currentColor" /> Unique Serials ({movement.serial_numbers.length})
+                    </div>
+                    <div className="flex flex-wrap gap-1.5 max-h-[120px] overflow-y-auto custom-scrollbar pr-1">
+                      {movement.serial_numbers.map((sn, i) => (
+                        <span key={i} className="px-2 py-1 rounded-lg bg-white border border-emerald-100 text-emerald-700 font-mono text-[10px] font-bold shadow-sm">
+                          {sn}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Context Details */}
           <div className="grid grid-cols-2 gap-3 pt-4 border-t border-slate-100">
-             <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100">
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Source</p>
-                <p className="text-slate-900 font-bold text-xs">{movement.source}</p>
-             </div>
-             <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100">
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Destination</p>
-                <p className="text-slate-900 font-bold text-xs">{movement.destination}</p>
-             </div>
+            <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100">
+              <p className="text-[10px] font-bold text-slate-400   mb-1.5">Source</p>
+              <p className="text-slate-900 font-bold text-xs">{movement.source}</p>
+            </div>
+            <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100">
+              <p className="text-[10px] font-bold text-slate-400   mb-1.5">Destination</p>
+              <p className="text-slate-900 font-bold text-xs">{movement.destination}</p>
+            </div>
           </div>
 
           {/* Timeline & Metadata */}
@@ -424,17 +424,17 @@ function DetailDrawer({ movement, onClose }: DetailDrawerProps) {
             <div className="flex items-center gap-3 text-xs text-slate-600 bg-slate-50 rounded-2xl p-4 border border-slate-100">
               <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center shadow-sm text-slate-400 border border-slate-200">🕐</div>
               <div>
-                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">Processed At</p>
-                 <span className="font-bold text-slate-700">{fmt(movement.date)}</span>
+                <p className="text-[10px] font-bold text-slate-400  tracking-tight">Processed At</p>
+                <span className="font-bold text-slate-700">{fmt(movement.date)}</span>
               </div>
             </div>
             <div className="flex items-center gap-3 text-xs text-slate-600 bg-slate-50 rounded-2xl p-4 border border-slate-100">
               <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center shadow-sm text-slate-400 border border-slate-200">
-                 <User size={16} />
+                <User size={16} />
               </div>
               <div>
-                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">Executed By</p>
-                 <span className="font-bold text-slate-700">{movement.user}</span>
+                <p className="text-[10px] font-bold text-slate-400  tracking-tight">Executed By</p>
+                <span className="font-bold text-slate-700">{movement.user}</span>
               </div>
             </div>
           </div>
@@ -442,8 +442,8 @@ function DetailDrawer({ movement, onClose }: DetailDrawerProps) {
           {/* Notes Card */}
           {movement.notes && (
             <div className="bg-blue-50/50 rounded-2xl p-4 border border-blue-100/50">
-              <div className="flex items-center gap-2 text-blue-600 font-bold text-[10px] uppercase tracking-widest mb-2">
-                 <FileText size={14} /> Description / Reason
+              <div className="flex items-center gap-2 text-blue-600 font-bold text-[10px]   mb-2">
+                <FileText size={14} /> Description / Reason
               </div>
               <p className="text-slate-700 text-xs leading-relaxed font-medium">{movement.notes}</p>
             </div>
@@ -453,12 +453,12 @@ function DetailDrawer({ movement, onClose }: DetailDrawerProps) {
 
         {/* Footer actions */}
         <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/30 flex gap-3 sticky bottom-0">
-           <button 
-             onClick={onClose}
-             className="flex-1 h-11 rounded-xl bg-white border border-slate-200 text-slate-600 font-bold text-xs hover:bg-slate-50 transition-all shadow-sm active:scale-95"
-           >
-             Close View
-           </button>
+          <button
+            onClick={onClose}
+            className="flex-1 h-11 rounded-xl bg-white border border-slate-200 text-slate-600 font-bold text-xs hover:bg-slate-50 transition-all shadow-sm active:scale-95"
+          >
+            Close View
+          </button>
         </div>
 
       </div>
@@ -492,7 +492,7 @@ function AddMovementModal({ onClose }: { onClose: () => void }) {
             ["Notes", "textarea", "Optional remarks"]
           ].map(([label, type, placeholder]) => (
             <div key={label as string}>
-              <label className="block text-xs text-slate-500 font-semibold uppercase tracking-widest mb-1.5">{label as string}</label>
+              <label className="block text-xs text-slate-500 font-semibold   mb-1.5">{label as string}</label>
               {type === "select" ? (
                 <select className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2.5 text-slate-900 text-sm font-medium focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 shadow-sm transition-all">
                   {(placeholder as string[]).map(o => <option value={o} key={o}>{o.replace('_', ' ')}</option>)}
@@ -582,7 +582,7 @@ export default function StockMovementPage() {
       // 2. Fetch Stock Adjustments
       const adjRes = await getData(`${ENDPOINTS.S_ADJUSTMENTS}/by/shop/${SHOP_ID}`, { view: "STOCKADJUSTMENT_VIEW", shop_id: SHOP_ID, limit: "50", offset: "1" });
       const aData = adjRes?.data || adjRes?.datas || (Array.isArray(adjRes) ? adjRes : []);
-      
+
       const adjMovements: Movement[] = aData.flatMap((a: any) => {
         const products = (a.products || []) as any[];
         const dateStr = String(a.adjusted_date || a.created_at || new Date().toISOString());
@@ -664,10 +664,10 @@ export default function StockMovementPage() {
       const sMovements = ordersToMovements(sData);
 
       // 4. Combine and Sort
-      const all = [...pMovements, ...adjMovements, ...sMovements].sort((a, b) => 
+      const all = [...pMovements, ...adjMovements, ...sMovements].sort((a, b) =>
         new Date(b.date).getTime() - new Date(a.date).getTime()
       );
-      
+
       setMovements(all);
     };
     load();
@@ -774,7 +774,7 @@ export default function StockMovementPage() {
               />
               <button
                 onClick={resetFilters}
-                className="h-11 px-4 rounded-xl bg-slate-50 border border-slate-200 text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-all flex items-center gap-2 text-xs font-semibold uppercase tracking-widest"
+                className="h-11 px-4 rounded-xl bg-slate-50 border border-slate-200 text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-all flex items-center gap-2 text-xs font-semibold  "
               >
                 <RotateCcw size={14} />
                 Reset
@@ -806,14 +806,14 @@ export default function StockMovementPage() {
                   type="date"
                   value={dateFrom}
                   onChange={e => { setDateFrom(e.target.value); setPage(1); }}
-                  className="bg-transparent border-none text-[10px] font-bold text-slate-600 focus:ring-0 px-2 uppercase tracking-wider w-full"
+                  className="bg-transparent border-none text-[10px] font-bold text-slate-600 focus:ring-0 px-2   w-full"
                 />
                 <div className="w-px h-4 bg-slate-200 shrink-0" />
                 <input
                   type="date"
                   value={dateTo}
                   onChange={e => { setDateTo(e.target.value); setPage(1); }}
-                  className="bg-transparent border-none text-[10px] font-black text-slate-600 focus:ring-0 px-2 uppercase tracking-wider w-full"
+                  className="bg-transparent border-none text-[10px] font-black text-slate-600 focus:ring-0 px-2   w-full"
                 />
               </div>
             </div>
@@ -822,10 +822,10 @@ export default function StockMovementPage() {
 
         {/* ── Table Section ── */}
         <div className="bg-white border border-slate-200 rounded-[2rem] shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto overflow-y-auto h-[calc(100vh-220px)] pf-scroll">
             <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-slate-50/50 text-slate-400 text-[10px] font-bold uppercase tracking-[0.15em] border-b border-slate-100">
+              <thead className="sticky top-0 z-20 bg-slate-50/95 backdrop-blur-sm shadow-sm">
+                <tr className="text-slate-400 text-[10px] font-bold  tracking-[0.15em] border-b border-slate-100">
                   <th className="px-6 py-5 whitespace-nowrap min-w-[200px]">Product Information</th>
                   <th className="px-6 py-5 whitespace-nowrap">Movement Type</th>
                   <th className="px-6 py-5 whitespace-nowrap text-center">
@@ -903,9 +903,9 @@ export default function StockMovementPage() {
                     </td>
                     {selectedKeys.map(key => {
                       const value = m[key as keyof Movement];
-                      const displayValue = value === undefined || value === null ? "—" : 
-                                          typeof value === 'object' ? (Array.isArray(value) ? value.join(", ") : JSON.stringify(value)) : 
-                                          String(value);
+                      const displayValue = value === undefined || value === null ? "—" :
+                        typeof value === 'object' ? (Array.isArray(value) ? value.join(", ") : JSON.stringify(value)) :
+                          String(value);
                       return (
                         <td key={key} className="px-6 py-4 whitespace-nowrap">
                           <p className="text-[12px] font-bold text-slate-600 tracking-tight">

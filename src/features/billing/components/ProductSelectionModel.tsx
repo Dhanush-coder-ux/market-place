@@ -158,7 +158,7 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
           {currentStep === "variant" && (
             <div className="space-y-4 animate-in slide-in-from-right-4 duration-300">
               <div className="flex items-center justify-between">
-                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Choose Variant</p>
+                <p className="text-[11px] font-bold text-slate-400  ">Choose Variant</p>
                 <span className="text-[10px] font-bold text-blue-500 bg-blue-50 px-2 py-0.5 rounded-full">Required</span>
               </div>
 
@@ -222,10 +222,10 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
           {currentStep === "serial" && (
             <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
               <div>
-                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-3">Quantity & Serials</p>
+                <p className="text-[11px] font-bold text-slate-400   mb-3">Quantity & Serials</p>
                 <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100">
                   <div className="flex-1">
-                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Enter Quantity</label>
+                    <label className="block text-[10px] font-bold text-slate-400  mb-1">Enter Quantity</label>
                     <input
                       type="number"
                       min="1"
@@ -244,7 +244,7 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
                   </div>
                   <div className="w-px h-10 bg-slate-200" />
                   <div className="flex-1 text-right">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase block mb-1">In Stock</span>
+                    <span className="text-[10px] font-bold text-slate-400  block mb-1">In Stock</span>
                     <span className="text-lg font-bold text-emerald-500">{availableSerials.length}</span>
                   </div>
                 </div>
@@ -275,7 +275,7 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
 
               <div>
                 <div className="flex items-center justify-between mb-3">
-                  <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                  <p className="text-[11px] font-bold text-slate-400   flex items-center gap-1.5">
                     <Barcode size={14} /> Select {quantity} Serial{quantity !== 1 ? 's' : ''}
                   </p>
                   <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full transition-colors ${
@@ -362,12 +362,12 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
           {/* STEP: SUMMARY */}
           {currentStep === "summary" && (
             <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
-              <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Review Selection</p>
+              <p className="text-[11px] font-bold text-slate-400  ">Review Selection</p>
               
               <div className="space-y-3">
                 <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex items-center justify-between">
                   <div>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase mb-0.5">Selected Variant</p>
+                    <p className="text-[10px] font-bold text-slate-400  mb-0.5">Selected Variant</p>
                     <p className="text-sm font-bold text-slate-800">{selectedVariant?.name}</p>
                   </div>
                   <p className="text-sm font-bold text-slate-700">{fmt(selectedVariant?.price || 0)}</p>
@@ -375,11 +375,11 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
 
                 <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex items-center justify-between">
                   <div>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase mb-0.5">Quantity</p>
+                    <p className="text-[10px] font-bold text-slate-400  mb-0.5">Quantity</p>
                     <p className="text-sm font-bold text-slate-800">{quantity} Units</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase mb-0.5">Total</p>
+                    <p className="text-[10px] font-bold text-slate-400  mb-0.5">Total</p>
                     <p className="text-sm font-bold text-blue-600">{fmt((selectedVariant?.price || 0) * quantity)}</p>
                   </div>
                 </div>
@@ -388,7 +388,7 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
                   <div className="p-4 bg-indigo-50/50 rounded-2xl border border-indigo-100 flex items-center gap-3">
                     <CalendarDays size={18} className="text-indigo-400" />
                     <div className="flex-1">
-                      <p className="text-[10px] font-bold text-indigo-400 uppercase mb-0.5">Batch Tracking</p>
+                      <p className="text-[10px] font-bold text-indigo-400  mb-0.5">Batch Tracking</p>
                       <p className="text-xs font-bold text-indigo-900">ID: {selectedVariant?.batchId || product.batchId}</p>
                     </div>
                   </div>
@@ -396,7 +396,7 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
 
                 {selectedSerials.length > 0 && (
                   <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase mb-2">Serial Numbers</p>
+                    <p className="text-[10px] font-bold text-slate-400  mb-2">Serial Numbers</p>
                     <div className="flex flex-wrap gap-1.5">
                       {selectedSerials.map(s => (
                         <span key={s} className="px-2 py-1 rounded-md bg-white border border-slate-200 text-[10px] font-bold text-slate-600 font-mono">

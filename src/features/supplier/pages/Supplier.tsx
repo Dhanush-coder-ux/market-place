@@ -32,7 +32,7 @@ const Supplier = () => {
   const [availableKeys, setAvailableKeys] = useState<string[]>([]);
   const [selectedKeys, setSelectedKeys] = useState<string[]>(() => {
     const saved = localStorage.getItem('supplier_table_columns');
-    return saved ? JSON.parse(saved) : ["contact_person", "email", "phone", "city"];
+    return saved ? JSON.parse(saved) : ["contact_person", "email", "mobile_number", "city"];
   });
 
   useEffect(() => {
@@ -67,28 +67,27 @@ const Supplier = () => {
 
         // Detect unique keys from both root and datas field
         const keys = new Set<string>();
-        data.forEach((s: SupplierRecord) => {
+        data.forEach((s: any) => {
           if (!s) return;
-          // Root level keys
-          Object.keys(s).forEach(k => {
-            if (!["datas", "name", "id", "shop_id", "ui_id", "created_at", "updated_at", "contact_info"].includes(k)) {
-              keys.add(k);
-            }
-          });
-          // Nested contact_info keys
-          if (s.contact_info) {
-            Object.keys(s.contact_info).forEach(k => {
-              if (k !== "type") keys.add(k); // type is usually special
-            });
+          // Root level keys that we want in column picker
+          const standardKeys = ["email", "mobile_number", "gst_no"];
+          standardKeys.forEach(k => keys.add(k));
+
+          // Map contact_info
+          if (s.contact_info?.name) keys.add("contact_person");
+          if (s.contact_info?.mobile_number) keys.add("contact_mobile");
+
+          // Flatten address
+          if (s.datas?.address) {
+            if (s.datas.address.city) keys.add("city");
+            if (s.datas.address.zipcode) keys.add("zipcode");
+            if (s.datas.address.full_address) keys.add("address");
           }
-          // Nested datas keys
+
+          // Other data fields
           if (s.datas) {
             Object.keys(s.datas).forEach(k => {
-              if (k === "address") {
-                if (s.datas?.address?.full_address) keys.add("address");
-              } else {
-                keys.add(k);
-              }
+              if (k !== "address" && k !== "internal_notes") keys.add(k);
             });
           }
         });
@@ -173,10 +172,10 @@ const Supplier = () => {
 
       {/* Table Section */}
       <div className="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden md:transition-all md:duration-300">
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto overflow-y-auto h-[calc(100vh-220px)] pf-scroll">
           <table className="w-full text-left border-separate border-spacing-0">
-            <thead>
-              <tr className="bg-slate-50/50 text-slate-400 text-[10px] font-bold uppercase tracking-[0.15em] border-b border-slate-100">
+            <thead className="sticky top-0 z-20 bg-slate-50/95 backdrop-blur-sm shadow-sm">
+              <tr className="text-slate-400 text-[10px] font-bold  tracking-[0.15em] border-b border-slate-100">
                 <th className="px-6 py-5 whitespace-nowrap min-w-[200px]">Supplier Details</th>
                 {selectedKeys.map(key => (
                   <th key={key} className="px-6 py-5 capitalize whitespace-nowrap">{key.replace(/_/g, ' ')}</th>
@@ -216,19 +215,19 @@ const Supplier = () => {
 
                       {selectedKeys.map(key => {
                         let val: any = "—";
-                        if (key === "contact_person") {
-                          val = sup.contact_info?.name || "—";
-                        } else {
+
+                        // Handle Specific Column Mappings
+                        if (key === "contact_person") val = sup.contact_info?.name;
+                        else if (key === "contact_mobile") val = sup.contact_info?.mobile_number;
+                        else if (key === "city") val = sup.datas?.address?.city;
+                        else if (key === "zipcode") val = sup.datas?.address?.zipcode;
+                        else if (key === "address") val = sup.datas?.address?.full_address;
+                        else {
                           val = sup[key] ?? sup.contact_info?.[key] ?? sup.datas?.[key] ?? "—";
                         }
 
-                        // Handle nested address object display
-                        if (key === 'address' && typeof val === 'object' && val !== null) {
-                          val = val.full_address || val.address || "—";
-                        }
-
                         // Final safety check for any remaining objects
-                        const displayVal = typeof val === 'object' ? JSON.stringify(val) : String(val);
+                        const displayVal = (val === null || val === undefined) ? "—" : (typeof val === 'object' ? JSON.stringify(val) : String(val));
 
                         return (
                           <td key={key} className="px-6 py-4 whitespace-nowrap">

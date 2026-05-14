@@ -3,7 +3,7 @@ import { ScanLine, Copy, X, Plus, AlertCircle } from "lucide-react";
 
 interface LabelProps { text: string; required?: boolean; hint?: string; }
 const LocalLabel: React.FC<LabelProps> = ({ text, required, hint }) => (
-  <label className="block text-[11px] font-semibold uppercase tracking-widest text-slate-500 mb-1.5">
+  <label className="block text-[11px] font-semibold   text-slate-500 mb-1.5">
     {text}{required && <span className="text-red-400 ml-0.5">*</span>}
     {hint && <span className="ml-1.5 normal-case font-normal text-slate-400">({hint})</span>}
   </label>
@@ -110,7 +110,7 @@ export const InlineSerialManager: React.FC<InlineSerialManagerProps> = ({
           <div className="w-6 h-6 rounded-lg bg-violet-100 flex items-center justify-center text-violet-600">
             <ScanLine size={12} />
           </div>
-          <span className="text-[11px] font-black text-slate-800 uppercase tracking-widest">{serialLabel}s Management</span>
+          <span className="text-[11px] font-black text-slate-800  ">{serialLabel}s Management</span>
         </div>
         <div className="flex items-center gap-2">
           {limit !== undefined && (
@@ -128,7 +128,7 @@ export const InlineSerialManager: React.FC<InlineSerialManagerProps> = ({
             type="button"
             onClick={() => setShowBulk(!showBulk)}
             disabled={(limit !== undefined && serials.length >= limit && !showBulk) || limit === 0}
-            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[9px] font-black uppercase transition-all ${
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[9px] font-black  transition-all ${
               showBulk 
                 ? "bg-violet-600 text-white shadow-sm" 
                 : (limit !== undefined && serials.length >= limit) || limit === 0
@@ -145,7 +145,7 @@ export const InlineSerialManager: React.FC<InlineSerialManagerProps> = ({
       {existingSerials.length > 0 && !showBulk && (
         <div className="mb-4 animate-in fade-in slide-in-from-top-2 duration-300">
           <div className="flex items-center justify-between mb-2 px-1">
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">
+            <p className="text-[10px] font-black text-slate-400  tracking-tighter">
               {validationType === 'decrease' ? 'Available in Inventory (Click to select)' : 'Currently in Stock (Locked)'}
             </p>
             {existingSerials.length > 8 && (
@@ -167,7 +167,7 @@ export const InlineSerialManager: React.FC<InlineSerialManagerProps> = ({
                   key={i}
                   type="button"
                   onClick={() => validationType === 'decrease' && !isAdded && handleAdd(s)}
-                  className={`px-2.5 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all border ${
+                  className={`px-2.5 py-1.5 rounded-lg text-[9px] font-black   transition-all border ${
                     isAdded 
                       ? 'bg-slate-200 text-slate-400 border-slate-200 cursor-default opacity-50' 
                       : validationType === 'decrease'
@@ -195,7 +195,7 @@ export const InlineSerialManager: React.FC<InlineSerialManagerProps> = ({
             autoFocus
           />
           <div className="mt-3 flex items-center justify-between">
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+            <span className="text-[10px] font-bold text-slate-400  ">
               {/* Note: Bulk preview count doesn't re-calculate validation but handleBulkImport does */}
               {bulkInput.trim() ? "Reviewing serials..." : "No serials detected"}
             </span>

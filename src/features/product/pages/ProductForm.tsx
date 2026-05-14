@@ -41,8 +41,6 @@ type FormData = {
   unit: string;
   description: string;
   is_active: boolean;
-  buy_price: string;
-  sell_price: string;
   mrp: string;
   gst: string;
   hsn: string;
@@ -164,7 +162,7 @@ const STYLES = `
 interface LabelProps { text: string; required?: boolean; hint?: string; tooltip?: string; }
 const Label: React.FC<LabelProps> = ({ text, required, hint, tooltip }) => (
   <div className="flex items-center gap-1.5 mb-1.5">
-    <label className="block text-[11px] font-semibold uppercase tracking-widest text-slate-500">
+    <label className="block text-[11px] font-semibold   text-slate-500">
       {text}{required && <span className="text-red-400 ml-0.5">*</span>}
       {hint && <span className="ml-1.5 normal-case font-normal text-slate-400">({hint})</span>}
     </label>
@@ -259,8 +257,6 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
     unit: (propInitialData.unit as string) || "Piece (pcs)",
     description: (propInitialData.description as string) || "",
     is_active: (propInitialData.is_active as boolean) ?? true,
-    buy_price: (propInitialData.cost_price as string) || "",
-    sell_price: (propInitialData.selling_price as string) || "",
     mrp: (propInitialData.mrp as string) || "",
     gst: (propInitialData.gst as string) || "18%",
     hsn: "",
@@ -285,7 +281,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
   useEffect(() => {
     setActions(
       <div className="flex items-center gap-3 bg-white px-4 h-11 rounded-2xl border border-slate-200 shadow-sm scale-90 md:scale-100">
-        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Active</span>
+        <span className="text-[10px] font-bold text-slate-500  ">Active</span>
         <Switch
           checked={form.is_active}
           onCheckedChange={(checked) => setForm(prev => ({ ...prev, is_active: checked }))}
@@ -341,8 +337,6 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
             unit: datas.unit || "Piece (pcs)",
             description: prod.description || datas.description || "",
             is_active: prod.is_active ?? datas.is_active ?? true,
-            buy_price: String(prod.buy_price || datas.buy_price || ""),
-            sell_price: String(prod.sell_price || datas.sell_price || ""),
             mrp: String(datas.mrp || ""),
             gst: String(datas.gst || "18%"),
             hsn: String(datas.hsn || ""),
@@ -582,10 +576,10 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                   <div className="w-8 h-8 rounded-xl bg-blue-100 flex items-center justify-center text-blue-600">
                     <Package size={16} />
                   </div>
-                  <h2 className="text-xs font-bold text-slate-800 uppercase tracking-widest">Product Identity</h2>
+                  <h2 className="text-xs font-bold text-slate-800  ">Product identity</h2>
                 </div>
                 <div className="p-6 space-y-5">
-                  <InputField label="Product Name" name="name" required
+                  <InputField label="Product name" name="name" required
                     tooltip="Enter the full name of the product as it should appear in invoices and reports."
                     value={form.name} onChange={handleChange}
                     placeholder="e.g. Apple iPhone 15 Pro Max"
@@ -634,60 +628,9 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                       options={GST_RATES.map(r => ({ value: r, label: r }))}
                     />
                   </div>
-                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <InputField label="Buy Price" name="buy_price" required
-                      tooltip="The price at which you purchase one unit of this product."
-                      value={form.buy_price} onChange={handleChange}
-                      placeholder="0.00"
-                      leftEl="₹"
-                    />
-                    <InputField label="Selling Price" name="sell_price" required
-                      tooltip="The price at which you sell one unit of this product."
-                      value={form.sell_price} onChange={handleChange}
-                      placeholder="0.00"
-                      leftEl="₹"
-                    />
-                  </div>
                 </div>
               </div>
 
-              {/* SECTION 2: CLASSIFICATION */}
-              <div className="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden hover:shadow-md transition-all">
-                <div className="px-6 py-4 bg-gradient-to-r from-amber-50/50 to-transparent border-b border-slate-100 flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-xl bg-amber-100 flex items-center justify-center text-amber-600">
-                    <Hash size={16} />
-                  </div>
-                  <h2 className="text-xs font-bold text-slate-800 uppercase tracking-widest">Classification & Status</h2>
-                </div>
-                <div className="p-6 space-y-5">
-                  {/* <div className="flex flex-col gap-1.5">
-                    <Label text="Supplier" hint="optional" />
-                    <SearchSelect
-                      labelKey="name"
-                      valueKey="id"
-                      fetchOptions={async (q) => await supplierApi.searchSuppliers(q)}
-                      value={supplierDetails?.id || form.supplier}
-                      onChange={(val, opt: any) => {
-                        setForm(p => ({ ...p, supplier: String(val) }));
-                        if (opt) setSupplierDetails(opt);
-                      }}
-                      onCreateNew={(query) => setModalState({ type: "Supplier", query })}
-                      placeholder="Search Supplier..."
-                    />
-                  </div> */}
-
-                  <div className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 border border-slate-100 mt-2">
-                    <div>
-                      <span className="text-[11px] font-black text-slate-800 uppercase tracking-widest block">Active Product</span>
-                      <span className="text-[10px] text-slate-400 font-medium">Visible in POS and Inventory lists</span>
-                    </div>
-                    <Switch
-                      checked={form.is_active}
-                      onCheckedChange={(checked) => setForm(p => ({ ...p, is_active: checked }))}
-                    />
-                  </div>
-                </div>
-              </div>
 
               {/* SECTION 3: INVENTORY TRACKING SETTINGS */}
               <div className="space-y-4">
@@ -695,8 +638,8 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                   <div className="flex items-start gap-4 p-5 rounded-[2rem] bg-white border border-slate-200 shadow-sm hover:shadow-md transition-all">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
-                        <h3 className="text-[11px] font-black text-slate-800 uppercase tracking-widest">Batch Tracking</h3>
-                        {!id && <span className="px-1.5 py-0.5 rounded-md bg-blue-100 text-blue-700 text-[8px] font-black uppercase">Purchase</span>}
+                        <h3 className="text-[11px] font-black text-slate-800  ">Batch tracking</h3>
+                        {!id && <span className="px-1.5 py-0.5 rounded-md bg-blue-100 text-blue-700 text-[8px] font-black ">Purchase</span>}
                       </div>
                       <p className="text-[10px] text-slate-400 leading-relaxed font-medium">Track manufacturing and expiry dates per batch.</p>
                     </div>
@@ -709,8 +652,8 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                   <div className="flex items-start gap-4 p-5 rounded-[2rem] bg-white border border-slate-200 shadow-sm hover:shadow-md transition-all">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
-                        <h3 className="text-[11px] font-black text-slate-800 uppercase tracking-widest">Serial Tracking</h3>
-                        {!id && <span className="px-1.5 py-0.5 rounded-md bg-violet-100 text-violet-700 text-[8px] font-black uppercase">Unique</span>}
+                        <h3 className="text-[11px] font-black text-slate-800  ">Serial tracking</h3>
+                        {!id && <span className="px-1.5 py-0.5 rounded-md bg-violet-100 text-violet-700 text-[8px] font-black ">Unique</span>}
                       </div>
                       <p className="text-[10px] text-slate-400 leading-relaxed font-medium">Track unique identification for each individual unit.</p>
                     </div>
@@ -734,7 +677,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
             <div className="space-y-6">
               <div className="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden">
                 <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
-                  <h2 className="text-xs font-bold text-slate-800 uppercase tracking-widest">Live Summary</h2>
+                  <h2 className="text-xs font-bold text-slate-800  ">Live summary</h2>
                 </div>
                 <div className="divide-y divide-slate-50 px-6">
                   {[
@@ -754,7 +697,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                   <div className="w-8 h-8 rounded-xl bg-amber-100 flex items-center justify-center text-amber-600">
                     <BarChart2 size={16} />
                   </div>
-                  <h2 className="text-xs font-bold text-slate-800 uppercase tracking-widest">Stock & Inventory</h2>
+                  <h2 className="text-xs font-bold text-slate-800  ">Stock & inventory</h2>
                 </div>
                 <div className="p-6 grid grid-cols-1 gap-5">
                   <InputField label="Reorder Point" name="reorder_point" required
@@ -775,8 +718,8 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                   <Layers size={20} />
                 </div>
                 <div>
-                  <h2 className="text-sm font-black text-slate-800 uppercase tracking-widest">Product Variants</h2>
-                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">Manage Configurations</p>
+                  <h2 className="text-sm font-black text-slate-800  ">Product variants</h2>
+                  <p className="text-[10px] text-slate-400 font-bold   mt-0.5">Manage configurations</p>
                 </div>
               </div>
               <Switch
@@ -791,7 +734,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
             {form.has_variants ? (
               <div className="p-6 space-y-5 pf-section-enter">
                 <div className="border border-slate-100 rounded-2xl p-5 bg-slate-50/40">
-                  <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 mb-4">Define Variant Types</p>
+                  <p className="text-[11px] font-semibold   text-slate-400 mb-4">Define Variant Types</p>
                   <VariantBuilder
                     variantTypes={variantTypes}
                     onChange={setVariantTypes}
@@ -802,7 +745,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                   <div>
                     <div className="flex items-center gap-2 mb-3">
                       <Cpu size={13} className="text-slate-400" />
-                      <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400">
+                      <p className="text-[11px] font-semibold   text-slate-400">
                         Variant Matrix ({combinations.length} combinations)
                       </p>
                     </div>

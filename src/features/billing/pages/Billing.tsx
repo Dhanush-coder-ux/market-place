@@ -134,10 +134,10 @@ const Billing = () => {
           creditLimit: responseData.credit_limit || 0,
           totalSpent: responseData.total_spent || 0,
         };
-        
+
         // Add to static list so SearchSelect can "see" it immediately
         setStaticCustomers(prev => [newCustomer, ...prev]);
-        
+
         handleCustomerChange(newCustomer.id, newCustomer);
         setIsCustomerModalOpen(false);
       }
@@ -176,11 +176,17 @@ const Billing = () => {
     const filledItems = items.filter(i => !!i.name);
     if (filledItems.length === 0) return;
 
+    const paymentDict: Record<string, number> = {};
+    payments.forEach(p => {
+      const key = p.mode.toUpperCase();
+      paymentDict[key] = (paymentDict[key] || 0) + p.amount;
+    });
+
     const payload: CreateBillingSchema = {
       shop_id: SHOP_ID,
       payment_method: payments.map(p => p.mode).join(", "),
       customer_id: customerData?.id || "walk-in",
-      split_payments: payments,
+      payments: paymentDict,
       products: filledItems.map(i => ({
         id: i.inventoryId || "",
         variant_id: i.variantId || undefined,
@@ -195,15 +201,28 @@ const Billing = () => {
     if (res) {
       // Calculate how much was paid via credit to update local customer state
       const creditPaid = payments.filter(p => p.mode === "credit").reduce((s, p) => s + p.amount, 0);
-      
+
       if (customerData && creditPaid > 0) {
+        const nextLimit = Math.max(0, customerData.creditLimit - creditPaid);
+
+        // Persist the new credit limit to the backend
+        try {
+          await putData(`${ENDPOINTS.CUSTOMERS}`, {
+            credit_limit: nextLimit,
+            id: customerData.id,
+            shop_id: SHOP_ID,
+          });
+        } catch (err) {
+          console.error("Failed to persist updated credit limit:", err);
+          showToast("Order confirmed, but failed to update credit limit on server", "warning");
+        }
+
         setCustomerData(prev => prev ? {
           ...prev,
+          creditLimit: nextLimit,
+          // We also update outstanding to reflect the debt if the backend handles it this way,
+          // but based on user request, we are primarily focusing on reducing the limit.
           outstanding: prev.outstanding + creditPaid,
-          // If the user literally wants to "reduce the amount from credit limit":
-          // creditLimit: prev.creditLimit - creditPaid 
-          // But usually we just update outstanding. I'll stick to updating outstanding 
-          // as it's the standard way to "use up" a credit limit.
         } : null);
       }
 
@@ -240,7 +259,7 @@ const Billing = () => {
       <header className="shrink-0 h-[52px] flex items-center justify-between px-5 border-b border-slate-200/60 bg-white/90 backdrop-blur-sm">
         <div className="flex items-center gap-3">
           <div className="w-7 h-7 rounded-lg bg-blue-50 flex items-center justify-center">
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="1" width="5" height="5" rx="1.5" fill="#3b82f6" fillOpacity="0.8"/><rect x="8" y="1" width="5" height="5" rx="1.5" fill="#3b82f6" fillOpacity="0.4"/><rect x="1" y="8" width="5" height="5" rx="1.5" fill="#3b82f6" fillOpacity="0.4"/><rect x="8" y="8" width="5" height="5" rx="1.5" fill="#3b82f6" fillOpacity="0.8"/></svg>
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="1" width="5" height="5" rx="1.5" fill="#3b82f6" fillOpacity="0.8" /><rect x="8" y="1" width="5" height="5" rx="1.5" fill="#3b82f6" fillOpacity="0.4" /><rect x="1" y="8" width="5" height="5" rx="1.5" fill="#3b82f6" fillOpacity="0.4" /><rect x="8" y="8" width="5" height="5" rx="1.5" fill="#3b82f6" fillOpacity="0.8" /></svg>
           </div>
           <div>
             <h1 className="text-[15px] font-semibold text-slate-800 leading-none tracking-[-0.01em]">Point of Sale</h1>
@@ -265,7 +284,7 @@ const Billing = () => {
                 <User size={14} strokeWidth={1.5} className="text-slate-400" />
               </div>
               <div className="hidden sm:block">
-                <p className="text-[11px] font-medium text-slate-400 uppercase tracking-wider leading-none">Customer</p>
+                <p className="text-[11px] font-medium text-slate-400   leading-none">Customer</p>
               </div>
             </div>
             <div className="flex-1 min-w-0">
@@ -302,13 +321,12 @@ const Billing = () => {
           {/* Credit Summary – Compact Inline */}
           <div className="w-full md:w-[300px] shrink-0">
             {customerData ? (
-              <div className={`h-full px-3.5 py-2.5 rounded-lg border flex flex-col justify-center transition-colors duration-200 ${
-                isCreditExceeded
+              <div className={`h-full px-3.5 py-2.5 rounded-lg border flex flex-col justify-center transition-colors duration-200 ${isCreditExceeded
                   ? "bg-red-50/40 border-red-200/60"
                   : "bg-slate-50/60 border-slate-200/60"
-              }`}>
+                }`}>
                 <div className="flex items-center justify-between mb-2">
-                  <p className="text-[10px] font-medium text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                  <p className="text-[10px] font-medium text-slate-500   flex items-center gap-1.5">
                     <Wallet size={11} className="text-slate-400" /> Credit
                   </p>
                   <span className="text-[9px] font-normal text-slate-400 tabular-nums">
@@ -320,9 +338,8 @@ const Billing = () => {
                 <div className="mb-2">
                   <div className="h-1.5 rounded-full bg-slate-200/80 overflow-hidden">
                     <div
-                      className={`h-full rounded-full transition-all duration-500 ease-out ${
-                        isCreditExceeded ? "bg-red-400" : "bg-emerald-400"
-                      }`}
+                      className={`h-full rounded-full transition-all duration-500 ease-out ${isCreditExceeded ? "bg-red-400" : "bg-emerald-400"
+                        }`}
                       style={{ width: `${creditUsagePercent}%` }}
                     />
                   </div>
@@ -379,7 +396,7 @@ const Billing = () => {
       <div className="flex flex-1 overflow-hidden">
 
         {/* Left: Billing Table */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
           <div className="p-4 pb-6">
             <BillingTable items={items} onItemsChange={handleItemsChange} />
           </div>
@@ -415,7 +432,7 @@ const Billing = () => {
       </div>
 
       {/* Customer Creation Modal */}
-      <CustomerCreateModal 
+      <CustomerCreateModal
         isOpen={isCustomerModalOpen}
         onClose={() => setIsCustomerModalOpen(false)}
         onCreated={handleCreateCustomer}

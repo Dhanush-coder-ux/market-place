@@ -83,7 +83,7 @@ export const QuickCreateModal: React.FC<QuickCreateModalProps> = ({
         <div className="px-5 md:px-6 py-3 md:py-4 flex items-center justify-between border-b border-slate-100 bg-slate-50/50">
           <div className="flex items-center gap-2">
             <div className="w-1 h-5 bg-blue-600 rounded-full" />
-            <h2 className="text-[12px] font-black text-slate-800 uppercase tracking-widest">
+            <h2 className="text-[12px] font-black text-slate-800  ">
               {title}
             </h2>
           </div>
@@ -115,7 +115,7 @@ export const QuickCreateModal: React.FC<QuickCreateModalProps> = ({
                   {isPassed ? <CheckCircle2 size={14} className="md:w-4 md:h-4" /> : step.id}
                 </div>
                 <span
-                  className={`text-[7px] md:text-[8px] font-black uppercase tracking-[0.05em] md:tracking-[0.1em] ${
+                  className={`text-[7px] md:text-[8px] font-black  tracking-[0.05em] md:tracking-[0.1em] ${
                     isActive ? "text-blue-600" : "text-slate-400"
                   }`}
                 >
@@ -140,7 +140,7 @@ export const QuickCreateModal: React.FC<QuickCreateModalProps> = ({
                 <h3 className="text-base md:text-lg font-black text-slate-800 tracking-tight">
                   {steps[currentStep].title}
                 </h3>
-                <p className="text-[9px] md:text-[10px] font-bold text-slate-400 mt-0.5 uppercase tracking-wider">
+                <p className="text-[9px] md:text-[10px] font-bold text-slate-400 mt-0.5  ">
                   {steps[currentStep].subtitle}
                 </p>
               </div>
@@ -154,21 +154,21 @@ export const QuickCreateModal: React.FC<QuickCreateModalProps> = ({
           <button
             onClick={handleBack}
             disabled={currentStep === 0}
-            className="px-3 md:px-6 py-2.5 text-[10px] md:text-xs font-black text-slate-500 hover:text-slate-800 disabled:opacity-30 flex items-center gap-1 md:gap-2 transition-all uppercase tracking-widest"
+            className="px-3 md:px-6 py-2.5 text-[10px] md:text-xs font-black text-slate-500 hover:text-slate-800 disabled:opacity-30 flex items-center gap-1 md:gap-2 transition-all  "
           >
             <ChevronLeft size={16} className="md:w-[18px] md:h-[18px]" /> Back
           </button>
 
           <div className="flex items-center gap-4">
             <div className="hidden md:block text-right mr-2">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Step</p>
+              <p className="text-[10px] font-black text-slate-400  ">Step</p>
               <p className="text-xs font-black text-slate-800">{currentStep + 1} of {steps.length}</p>
             </div>
 
             <GradientButton
               onClick={handleNext}
               disabled={isSubmitting || (steps[currentStep].isValid === false)}
-              className="rounded-xl px-5 md:px-8 h-9 md:h-10 text-[9px] md:text-[10px] font-black uppercase tracking-widest shadow-lg shadow-blue-100 flex items-center gap-1 md:gap-2"
+              className="rounded-xl px-5 md:px-8 h-9 md:h-10 text-[9px] md:text-[10px] font-black   shadow-lg shadow-blue-100 flex items-center gap-1 md:gap-2"
             >
               {isSubmitting ? (
                 "Wait..."

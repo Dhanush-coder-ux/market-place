@@ -136,7 +136,7 @@ const dropdownOptions = selectedCategory
       case "boolean":
         return (
           <div className="flex items-center gap-3 px-3 py-1.5 bg-slate-50 rounded-lg h-10">
-            <span className="text-[10px] font-bold text-slate-400 w-10 uppercase">
+            <span className="text-[10px] font-bold text-slate-400 w-10 ">
               {setting.value ? "True" : "False"}
             </span>
             <button
@@ -235,7 +235,7 @@ const dropdownOptions = selectedCategory
             >
               <div className="flex-[0.8]">
                 <div className="flex items-center justify-between mb-1.5 md:hidden">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Config Key</span>
+                  <span className="text-[10px] font-bold text-slate-400  ">Config Key</span>
                 </div>
                 <input
                   type="text"
@@ -254,7 +254,7 @@ const dropdownOptions = selectedCategory
 
               <div className="flex-1">
                 <div className="flex items-center justify-between mb-1.5 md:hidden">
-                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Value ({setting.type})</span>
+                  <span className="text-[10px] font-black text-slate-400  ">Value ({setting.type})</span>
                 </div>
                 {renderValueInput(setting)}
               </div>
@@ -263,7 +263,7 @@ const dropdownOptions = selectedCategory
                 <DropDown
                   triggerIcon={
                     <div className="flex items-center gap-2 px-3 py-1.5 md:p-0 rounded-lg bg-slate-50 md:bg-transparent">
-                      <span className="text-[10px] font-semibold text-slate-500 md:hidden uppercase">Settings</span>
+                      <span className="text-[10px] font-semibold text-slate-500 md:hidden ">Settings</span>
                       <MoreVertical
                         size={18}
                         className="text-slate-400 group-hover:text-slate-600"

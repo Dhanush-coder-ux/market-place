@@ -58,7 +58,7 @@ const OperatingHours = () => {
           {/* Global time setter */}
           <div className="flex flex-wrap items-end gap-3 bg-slate-50 border border-slate-200 rounded-xl p-4">
             <div>
-              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Opens</label>
+              <label className="text-[10px] font-bold text-slate-500  ">Opens</label>
               <input
                 type="time"
                 value={globalOpen}
@@ -68,7 +68,7 @@ const OperatingHours = () => {
             </div>
             <span className="text-slate-300 font-black text-lg mb-2.5">→</span>
             <div>
-              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Closes</label>
+              <label className="text-[10px] font-bold text-slate-500  ">Closes</label>
               <input
                 type="time"
                 value={globalClose}
@@ -91,7 +91,7 @@ const OperatingHours = () => {
 
         {/* Days grid */}
         <div className="p-5">
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-1.5">
+          <p className="text-[10px] font-bold text-slate-400   mb-3 flex items-center gap-1.5">
             <span className="w-3 h-px bg-slate-300 inline-block" />
             Click to toggle · Adjust individual times
             <span className="w-3 h-px bg-slate-300 inline-block" />
@@ -123,7 +123,7 @@ const OperatingHours = () => {
                         <span className="hidden sm:inline font-semibold text-slate-400"> · {day.slice(3)}</span>
                       </span>
                     </div>
-                    <span className={`text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full ${isOpen ? "bg-emerald-100 text-emerald-700":"bg-slate-100 text-slate-400"}`}>
+                    <span className={`text-[10px] font-bold  tracking-wide px-2 py-0.5 rounded-full ${isOpen ? "bg-emerald-100 text-emerald-700":"bg-slate-100 text-slate-400"}`}>
                       {isOpen ? "Open" : "Closed"}
                     </span>
                   </div>

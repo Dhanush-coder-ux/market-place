@@ -83,7 +83,7 @@ function CalendarGrid({ year, month, startDate, endDate, hoverDate, onDayClick, 
     <div>
       <div className="grid grid-cols-7 mb-2">
         {DAYS.map(d => (
-          <div key={d} className="text-center text-[10px] font-bold text-slate-400 uppercase tracking-wider py-1">{d}</div>
+          <div key={d} className="text-center text-[10px] font-bold text-slate-400   py-1">{d}</div>
         ))}
       </div>
       <div className="grid grid-cols-7 gap-y-0.5">
@@ -198,7 +198,7 @@ export function DateFilter({ onApply, onClose, isOpen }: DateFilterProps) {
       <div className="flex">
         {/* Presets */}
         <div className="w-40 border-r border-slate-100 p-3 flex-shrink-0">
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 px-2 flex items-center gap-1.5">
+          <p className="text-[10px] font-bold text-slate-400   mb-2 px-2 flex items-center gap-1.5">
             <Zap size={9} strokeWidth={3} /> Quick
           </p>
           <div className="flex flex-col gap-1">
@@ -215,14 +215,14 @@ export function DateFilter({ onApply, onClose, isOpen }: DateFilterProps) {
         <div className="flex-1 p-4 min-w-0">
           <div className="flex items-center gap-2 mb-4 bg-slate-50 rounded-xl px-4 py-2.5">
             <div className="flex-1 text-center">
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Start</p>
+              <p className="text-[10px] font-bold text-slate-400   mb-0.5">Start</p>
               <p className={`text-sm font-black tracking-tight ${startDate ? "text-indigo-600" : "text-slate-300"}`}>
                 {startDate ? formatDate(startDate) : "Not selected"}
               </p>
             </div>
             <ArrowRight size={14} strokeWidth={2.5} className="text-slate-300 flex-shrink-0" />
             <div className="flex-1 text-center">
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">End</p>
+              <p className="text-[10px] font-bold text-slate-400   mb-0.5">End</p>
               <p className={`text-sm font-black tracking-tight ${endDate ? "text-indigo-600" : "text-slate-300"}`}>
                 {endDate ? formatDate(endDate) : "Not selected"}
               </p>

@@ -16,7 +16,7 @@ export function StatusBadge({ status }: { status: string }) {
   };
   return (
     <span
-      className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border shadow-sm ${
+      className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-black   border shadow-sm ${
         colorMap[status] ?? "bg-slate-50 text-slate-500 border-slate-100"
       }`}
     >
@@ -43,7 +43,7 @@ export function SectionCard({ children, className = "", title, icon: Icon }: Sec
               <Icon size={16} />
             </div>
           )}
-          <h2 className="text-[10px] font-black text-slate-800 uppercase tracking-[0.15em]">{title}</h2>
+          <h2 className="text-[10px] font-black text-slate-800  tracking-[0.15em]">{title}</h2>
         </div>
       )}
       <div className="relative z-10">
@@ -63,7 +63,7 @@ export const DetailItem = ({ icon: Icon, label, value, onClick }: { icon: any, l
       <Icon size={12} strokeWidth={2.5} />
     </div>
     <div className="min-w-0">
-      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.05em] mb-0.5">{label}</p>
+      <p className="text-[10px] font-bold text-slate-400  tracking-[0.05em] mb-0.5">{label}</p>
       <p className="text-[13px] font-bold text-slate-700 truncate tracking-tight">{value}</p>
     </div>
   </div>

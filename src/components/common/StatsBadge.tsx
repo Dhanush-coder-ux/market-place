@@ -120,7 +120,7 @@ const StatusBadge: React.FC<StatusBadgeProps> = ({
         disabled={!isEditable}
         onClick={() => setIsOpen(!isOpen)}
         className={`
-          flex items-center gap-1.5 px-3 py-1 rounded-full border text-[11px] font-bold uppercase tracking-wider
+          flex items-center gap-1.5 px-3 py-1 rounded-full border text-[11px] font-bold  
           transition-all duration-200
           ${current.color}
           ${isEditable ? "hover:shadow-md cursor-pointer" : "cursor-default"}

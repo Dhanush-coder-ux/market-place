@@ -102,7 +102,7 @@ const Table: React.FC<TableProps> = ({
                   key={col.key}
                   className={`
                     px-3 py-2.5 sm:px-5 sm:py-3.5 text-left border-b border-slate-100 bg-slate-50
-                    text-[11px] font-semibold text-slate-500 uppercase tracking-widest
+                    text-[11px] font-semibold text-slate-500  
                     ${!onSelectionChange && i === 0 ? "rounded-tl-2xl" : ""}
                     ${i === columns.length - 1 ? "rounded-tr-2xl" : ""}
                     ${col.className ?? ""}
@@ -198,7 +198,7 @@ const Table: React.FC<TableProps> = ({
         <div className="flex items-center gap-3">
           {onSelectionChange && selectedIds.length > 0 && (
             <div className="flex items-center gap-2 bg-blue-50 px-3 py-1.5 rounded-full border border-blue-100">
-              <span className="text-[11px] font-bold text-blue-700 uppercase tracking-tight">
+              <span className="text-[11px] font-bold text-blue-700  tracking-tight">
                 {selectedIds.length} Selected
               </span>
               <button

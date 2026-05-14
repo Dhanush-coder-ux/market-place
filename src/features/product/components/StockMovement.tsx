@@ -28,7 +28,7 @@ const MOVEMENT_COLUMNS = [
     key: "type",
     label: "Type",
     render: (value: string) => (
-      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-lg text-[10px] font-bold uppercase tracking-tight border ${
+      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-lg text-[10px] font-bold  tracking-tight border ${
         value === 'Added' 
         ? 'bg-emerald-50 text-emerald-600 border-emerald-100' 
         : 'bg-orange-50 text-orange-600 border-orange-100'
@@ -98,7 +98,7 @@ const StockMovementTab = () => {
 
       {/* 3. Footer Pagination */}
       <div className="p-4 border-t border-slate-100 flex items-center justify-between bg-white">
-        <p className="text-[11px] text-slate-400 font-bold uppercase tracking-tighter">
+        <p className="text-[11px] text-slate-400 font-bold  tracking-tighter">
           Showing 1 to {movementData.length} of {movementData.length} entries
         </p>
         <div className="flex gap-1">

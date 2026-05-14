@@ -4,7 +4,7 @@ import {
   Wallet, Banknote, ScanBarcode,
   Clock, Trash2, CheckCircle2, ArrowRight,
   Plus, ChevronDown, CreditCard,
-  AlertCircle, X
+  X
 } from "lucide-react";
 import { BillingItem, CustomerData } from "../types";
 import InvoicePreviewModal from "./InvoicePreviewModal";

@@ -2,18 +2,12 @@ import {
   Plus,
   Trash2,
   Settings,
-  ChevronUp,
-  ChevronRight,
   Info,
   Check,
   PackageOpen,
-  Banknote,
-  Percent,
-  AlertTriangle,
   CalendarDays,
   Clock,
   X,
-  TrendingUp,
   Package
 } from "lucide-react";
 import { useState, useEffect, Fragment } from "react";
@@ -58,7 +52,7 @@ export const InventoryItemsCard = ({
 }: InventoryItemsCardProps) => {
   const [expandedBreakdown, setExpandedBreakdown] = useState<Set<number>>(new Set());
   const [expandedSettings, setExpandedSettings] = useState<Set<number>>(new Set());
-  const [collapsedProducts, setCollapsedProducts] = useState<Set<number>>(new Set());
+
   const { showToast } = useToast();
 
   const [variantModal, setVariantModal] = useState<{
@@ -106,12 +100,7 @@ export const InventoryItemsCard = ({
     setExpandedSettings(next);
   };
 
-  const toggleCollapse = (index: number) => {
-    const next = new Set(collapsedProducts);
-    if (next.has(index)) next.delete(index);
-    else next.add(index);
-    setCollapsedProducts(next);
-  };
+
 
   const confirmVariants = () => {
     if (!selectedVariants) {
@@ -443,7 +432,7 @@ export const InventoryItemsCard = ({
                   ? (((computedSellPrice - netCostPerUnit) / netCostPerUnit) * 100).toFixed(1)
                   : null;
 
-                const isExpanded = expandedSettings.has(index) || expandedBreakdown.has(index) || (product.batchTracking && !collapsedProducts.has(index)) || (product.serialTracking && !collapsedProducts.has(index));
+                const isExpanded = expandedSettings.has(index) || expandedBreakdown.has(index) || product.batchTracking || product.serialTracking;
 
                 return (
                   <Fragment key={product.id}>

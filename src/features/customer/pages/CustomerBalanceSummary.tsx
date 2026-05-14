@@ -16,7 +16,7 @@ import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { ColumnPicker } from "@/components/common/ColumnPicker";
 import { useEffect, useMemo, useState } from "react";
 import { Modal } from "@/components/common/SuperUI";
-import { FormInput, FormSelect } from "./CustomerDetailComponents";
+
 
 export default function CustomerBalanceSummary() {
   const navigate = useNavigate();

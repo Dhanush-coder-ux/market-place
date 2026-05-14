@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import {
   Save,
@@ -13,10 +13,10 @@ import {
   CheckCircle2,
   User,
   Mail,
-  PackageOpen
+
 } from "lucide-react"
 
-import { ReusableSelect } from "@/components/ui/ReusableSelect";
+
 import Input from "@/components/ui/Input";
 import { GradientButton } from "@/components/ui/GradientButton";
 import { useApi } from "@/context/ApiContext";
@@ -304,24 +304,7 @@ const GrnForm = () => {
     return () => setBottomActions(null);
   }, [setBottomActions, submitting, id, handleSaveDraft, handleSaveGRN]);
 
-  const handleAddNewProduct = useCallback((query: string) => {
-    openQuickCreate("PRODUCT", (newProduct: any) => {
-      const emptyIndex = products.findIndex(p => !p.name && !p.inventory_id);
-      const productData = {
-        inventory_id: newProduct.id,
-        name: newProduct.name,
-        costPrice: newProduct.buy_price,
-        sellingPrice: newProduct.sell_price,
-        sku: newProduct.barcode,
-        unit: newProduct.datas?.unit || "pc",
-        taxGst: parseInt(newProduct.datas?.gst) || 18,
-        batchTracking: !!newProduct.has_batch || !!(newProduct.datas && newProduct.datas.has_batch),
-        serialTracking: !!newProduct.has_serialno || !!(newProduct.datas && newProduct.datas.has_serialno)
-      };
-      if (emptyIndex >= 0) updateProductFields(emptyIndex, productData);
-      else setProducts(prev => [...prev, { ...defaultProductRow, ...productData, id: crypto.randomUUID(), quantity: 1 }]);
-    }, { name: query });
-  }, [openQuickCreate, products, updateProductFields, defaultProductRow]);
+
 
   return (
     <>

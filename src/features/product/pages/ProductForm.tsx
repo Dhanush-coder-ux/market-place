@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import {
-  Package, BarChart2, Save, Hash,
+  Package, BarChart2, Save,
   Cpu, AlertCircle,
   Layers, Zap, Bookmark, Plus, Info
 } from "lucide-react";

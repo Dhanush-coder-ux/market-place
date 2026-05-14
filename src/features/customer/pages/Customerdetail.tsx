@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import {
   fmt, StatusBadge, FormInput, FormSelect,
-  FormTextarea, SectionCard, ActivityEntry,
+  FormTextarea, SectionCard,
 } from "./CustomerDetailComponents";
 import { Modal, ProfileHeaderCard } from "@/components/common/SuperUI";
 import { StatCard } from "@/components/common/StatsCard";
@@ -63,8 +63,8 @@ const CustomerSearch = () => {
 
 // ── Static payment / activity data (frontend-only feature) ──────────────────
 
-const INITIAL_ACTIVITIES: ActivityEntry[] = [];
-const TABS = ["General Info", "Purchases", "Credit History", "Timeline"];
+
+
 
 // ─── Helper Components ────────────────────────────────────────────────────────
 const DetailItem = ({ icon: Icon, label, value, onClick }: { icon: any, label: string, value: string, onClick?: () => void }) => (
@@ -108,8 +108,8 @@ export default function CustomerDetail() {
   const [paymentRef, setPaymentRef] = useState("");
   const [paymentNotes, setPaymentNotes] = useState("");
 
-  const [outstanding, setOutstanding] = useState(0);
-  const [activities, setActivities] = useState<ActivityEntry[]>(INITIAL_ACTIVITIES);
+  const [outstanding] = useState(0);
+
   const [viewValue, setViewValue] = useState<{ label: string, value: string } | null>(null);
   const [clearingHistory, setClearingHistory] = useState<any[]>([]);
   const [clearingLoading, setClearingLoading] = useState(false);
@@ -207,12 +207,7 @@ export default function CustomerDetail() {
         const fresh = await getData(`${ENDPOINTS.CUSTOMERS}/by/${SHOP_ID}/${id}`);
         if (fresh) setCustomer(Array.isArray(fresh.data) ? fresh.data[0] : fresh.data);
         
-        // Add to local activity for immediate feedback
-        const now = new Date().toLocaleString("en-IN", { month: "long", day: "numeric", year: "numeric", hour: "numeric", minute: "numeric", hour12: true });
-        setActivities((a) => [{
-          icon: <Banknote className="w-5 h-5 text-emerald-600" />, iconBg: "bg-emerald-100",
-          text: `<strong>Payment recorded</strong> of ₹${totalCleared.toLocaleString()} via split modes`, time: now,
-        }, ...a]);
+
       }
     } catch (error) {
       console.error("Payment error:", error);

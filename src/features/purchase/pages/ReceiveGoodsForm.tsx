@@ -4,7 +4,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   Search, AlertCircle, Save,
   Plus, Minus, Clock,
-  CheckCircle2, BarChart3, RefreshCw, Truck,
+  CheckCircle2, RefreshCw, Truck,
   PackageCheck,
   Zap,
   X,
@@ -786,7 +786,7 @@ const ReceiveGoodForm = () => {
                       {items.map(item => {
                         const remaining = Math.max(0, item.orderedQty - item.previouslyReceivedQty);
                         const totalRecv = item.previouslyReceivedQty + (Number(item.receivedQty) || 0);
-                        const isFull = totalRecv >= item.orderedQty;
+
 
                         const recvQty = Number(item.receivedQty) || 0;
                         const needsBatch = item.has_batch && recvQty > 0 && !((item.batch_id && !item.isNewBatch) || (item.isNewBatch && item.batchNum.trim().length > 0));

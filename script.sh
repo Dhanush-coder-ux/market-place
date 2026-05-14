@@ -18,7 +18,7 @@ git commit -m "$message"
 
 echo ""
 echo "⬆️ Pushing to GitHub..."
-git push
+git push origin HEAD:main --force
 
 echo ""
 echo "🌐 Starting Vite Development Server..."

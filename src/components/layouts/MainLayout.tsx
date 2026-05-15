@@ -11,135 +11,135 @@ const getPageHeaderInfo = (pathname: string) => {
   const routes: Record<string, { title: string; subtitle?: string; icon?: any }> = {
     "/": {
       title: "Analytics Dashboard",
-      subtitle: "Overview of your key business metrics and performance.",
+      subtitle: "Insights into your key business performance and metrics.",
     },
     "/sales": {
       title: "Sales Management",
-      subtitle: "Manage and track your sales invoices.",
+      subtitle: "Comprehensive tracking and management of sales invoices.",
     },
     "/product": {
-      title: "Product Inventory",
-      subtitle: "Manage and track your warehouse stock.",
+      title: "Inventory Catalog",
+      subtitle: "Oversee product specifications, variants, and stock.",
     },
     "/product/detail": {
       title: "Product Details",
-      subtitle: "View complete product information and history.",
+      subtitle: "In-depth overview of product history and performance.",
     },
     "/product/add": {
       title: "Create Product",
-      subtitle: "Add a new product to your inventory.",
+      subtitle: "Register new inventory items into the system.",
     },
     "/product/all": {
-      title: "Product Inventory",
-      subtitle: "Full catalog of your products, variants and stock levels.",
+      title: "Unified Inventory",
+      subtitle: "Complete view of products across all locations.",
     },
     "/product/drafts": {
       title: "Product Drafts",
-      subtitle: "Manage your locally saved progress.",
+      subtitle: "Review and finalize pending product entries.",
     },
     "/purchase-order/add": {
-      title: "Create Purchase Order",
-      subtitle: "Generate a new purchase order for suppliers.",
+      title: "Purchase Order",
+      subtitle: "Generate official procurement requests for vendors.",
     },
     "/po-grn": {
-      title: "Goods Receipt Notes",
-      subtitle: "Manage and review all received goods.",
+      title: "Goods Receiving",
+      subtitle: "Manage and verify Goods Receipt Notes (GRN).",
     },
     "/po-grn/add": {
-      title: "Create GRN",
-      subtitle: "Record new goods receipt against purchase orders.",
+      title: "Record Receipt",
+      subtitle: "Acknowledge and process incoming shipments.",
     },
     "/po-grn/update": {
-      title: "Update GRN",
-      subtitle: "Update existing goods receipt notes.",
+      title: "Edit Receipt",
+      subtitle: "Update existing goods receipt documentation.",
     },
     "/purchase-history": {
       title: "Purchase History",
-      subtitle: "View all past purchase transactions.",
+      subtitle: "Archival record of all procurement transactions.",
     },
     "/production-entry/add": {
       title: "Production Entry",
-      subtitle: "Record completed manufacturing batches.",
+      subtitle: "Log completed manufacturing and assembly batches.",
     },
     "/purchase/detail": {
       title: "Purchase Details",
-      subtitle: "View complete purchase order information.",
+      subtitle: "Review transaction specifics and itemized costs.",
     },
     "/purchase/add": {
       title: "Direct Purchase",
-      subtitle: "Record direct purchase without PO.",
+      subtitle: "Execute immediate procurement without a purchase order.",
     },
     "/supplier": {
-      title: "Supplier Master",
-      subtitle: "Manage your permanent vendor relationships and accounts.",
+      title: "Vendor Directory",
+      subtitle: "Manage supplier relationships and contact information.",
     },
     "/supplier/detail": {
-      title: "Supplier Details",
-      subtitle: "View complete supplier information and ledger.",
+      title: "Vendor Profile",
+      subtitle: "Detailed ledger and transaction history for this vendor.",
     },
     "/supplier/add": {
-      title: "Add Supplier",
-      subtitle: "Register a new vendor in the system.",
+      title: "Register Vendor",
+      subtitle: "Onboard a new supplier to your procurement network.",
     },
     "/employee": {
-      title: "Employee Management",
-      subtitle: "Manage your staff, roles, and payroll.",
+      title: "Employee Directory",
+      subtitle: "Manage staff profiles, roles, and permissions.",
     },
     "/employee/add": {
-      title: "Add Employee",
-      subtitle: "Register a new employee in the system.",
+      title: "New Employee",
+      subtitle: "Register a new staff member to the organization.",
     },
     "/inventory": {
       title: "Inventory Master",
-      subtitle: "Overall view of your current stock levels.",
+      subtitle: "Strategic overview of stock levels and valuations.",
     },
     "/stock-movement": {
-      title: "Stock Movement History",
-      subtitle: "Track all inward and outward material flow.",
+      title: "Stock Movement",
+      subtitle: "Audit trail of all material transfers and adjustments.",
     },
     "/stock-adjustment": {
       title: "Stock Adjustment",
-      subtitle: "Adjust inventory quantities and values manually.",
+      subtitle: "Reconcile system inventory with physical counts.",
     },
     "/billing": {
-      title: "Point of Sale (POS)",
-      subtitle: "Quick retail billing and invoicing.",
+      title: "Point of Sale",
+      subtitle: "Process retail transactions and generate invoices.",
     },
     "/orders": {
       title: "Order Management",
-      subtitle: "Track and fulfill customer orders.",
+      subtitle: "Track, fulfill, and manage customer orders.",
     },
     "/profile": {
-      title: "Profile Settings",
-      subtitle: "Manage your personal and business profile.",
+      title: "User Settings",
+      subtitle: "Manage your account preferences and security.",
     },
     "/profile/add": {
       title: "Edit Profile",
-      subtitle: "Update your profile details.",
+      subtitle: "Update your personal and professional information.",
     },
     "/create-digital-store": {
-      title: "Digital Store Setup",
-      subtitle: "Configure your online storefront.",
+      title: "Storefront Setup",
+      subtitle: "Configure your digital sales and brand presence.",
     },
     "/digital-store/profile": {
-      title: "Digital Store",
-      subtitle: "Your online storefront overview.",
+      title: "Digital Storefront",
+      subtitle: "Overview of your online business operations.",
     },
     "/customers": {
       title: "Customer Directory",
-      subtitle: "Manage your clients and their details.",
+      subtitle: "Centralized database of your client relationships.",
     },
     "/customers-Summary": {
-      title: "Customer balance",
-      subtitle: "Track outstanding payments and customer ledgers.",
+      title: "Customer Details",
+      subtitle: "Monitor outstanding receivables and credit status.",
     },
     "/customers/add": {
       title: "Add Customer",
-      subtitle: "Register a new customer in the system.",
+      subtitle: "Register a new client profile in the directory.",
     },
     "/customers/drafts": {
       title: "Customer Drafts",
-      subtitle: "Manage your locally saved progress.",
+      subtitle: "Manage partially completed customer registrations.",
     },
   };
 
@@ -178,7 +178,7 @@ const getPageHeaderInfo = (pathname: string) => {
   // Dynamic match for Supplier Profile
   if (pathname.match(/^\/supplier\/[^/]+$/)) {
     return {
-      title: "Supplier Profile",
+      title: "Vendor Profile",
       subtitle: "View complete supplier information and history.",
     };
   }
@@ -186,7 +186,7 @@ const getPageHeaderInfo = (pathname: string) => {
   // Dynamic match for Edit Supplier
   if (pathname.match(/^\/supplier\/[^/]+\/edit$/)) {
     return {
-      title: "Update Supplier",
+      title: "Update Vendor",
       subtitle: "Modify existing supplier details.",
     };
   }
@@ -194,7 +194,7 @@ const getPageHeaderInfo = (pathname: string) => {
   // Dynamic match for Product Profile
   if (pathname.match(/^\/product\/[^/]+$/)) {
     return {
-      title: "Product Profile",
+      title: "Product Details",
       subtitle: "View complete product information, variants and history.",
     };
   }
@@ -210,7 +210,7 @@ const getPageHeaderInfo = (pathname: string) => {
   // Drafts Pages
   if (pathname === "/supplier/drafts") {
     return {
-      title: "Supplier Drafts",
+      title: "Vendor Drafts",
       subtitle: "Manage your locally saved vendor registrations.",
     };
   }

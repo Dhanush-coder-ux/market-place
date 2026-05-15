@@ -40,8 +40,8 @@ const CustomerList = () => {
           (c.datas?.first_name
             ? `${c.datas.first_name} ${c.datas.last_name || ""}`.trim()
             : c.first_name
-            ? `${c.first_name} ${c.last_name || ""}`.trim()
-            : c.datas?.company || c.company || c.id)
+              ? `${c.first_name} ${c.last_name || ""}`.trim()
+              : c.datas?.company || c.company || c.id)
         )
       }));
     } catch {

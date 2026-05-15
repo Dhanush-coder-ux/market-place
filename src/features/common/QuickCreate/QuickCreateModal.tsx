@@ -72,26 +72,26 @@ export const QuickCreateModal: React.FC<QuickCreateModalProps> = ({
   }[size];
 
   return createPortal(
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-md p-4 animate-in fade-in duration-300">
+    <div className="fixed inset-0 z-[100] flex flex-col items-center p-4 md:p-12 overflow-y-auto bg-slate-900/40 backdrop-blur-md custom-scrollbar animate-in fade-in duration-300">
       <motion.div
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 20 }}
-        className={`w-full ${maxWidthClass} bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col border border-white/20`}
+        className={`w-full ${maxWidthClass} bg-white rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col border border-white/20 my-auto shadow-blue-200/20`}
       >
         {/* Header */}
-        <div className="px-5 md:px-6 py-3 md:py-4 flex items-center justify-between border-b border-slate-100 bg-slate-50/50">
-          <div className="flex items-center gap-2">
-            <div className="w-1 h-5 bg-blue-600 rounded-full" />
-            <h2 className="text-[12px] font-black text-slate-800  ">
+        <div className="px-8 py-5 flex items-center justify-between border-b border-slate-100 bg-slate-50/50">
+          <div className="flex items-center gap-3">
+            <div className="w-1.5 h-6 bg-blue-600 rounded-full" />
+            <h2 className="text-[14px] font-black text-slate-800 uppercase tracking-tight">
               {title}
             </h2>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-xl hover:bg-slate-200 text-slate-400 transition-all hover:rotate-90"
+            className="p-2 rounded-xl hover:bg-slate-200 text-slate-400 transition-all hover:rotate-90"
           >
-            <X size={18} />
+            <X size={20} />
           </button>
         </div>
 
@@ -136,11 +136,11 @@ export const QuickCreateModal: React.FC<QuickCreateModalProps> = ({
               exit={{ opacity: 0, x: -20 }}
               transition={{ duration: 0.2 }}
             >
-              <div className="mb-4 md:mb-6">
-                <h3 className="text-base md:text-lg font-black text-slate-800 tracking-tight">
+              <div className="mb-8">
+                <h3 className="text-xl md:text-2xl font-black text-slate-800 tracking-tight leading-tight">
                   {steps[currentStep].title}
                 </h3>
-                <p className="text-[9px] md:text-[10px] font-bold text-slate-400 mt-0.5  ">
+                <p className="text-[11px] font-bold text-slate-400 mt-1 uppercase tracking-wider">
                   {steps[currentStep].subtitle}
                 </p>
               </div>

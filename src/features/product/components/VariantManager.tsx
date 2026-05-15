@@ -121,8 +121,8 @@ export const VariantBuilder: React.FC<VariantBuilderProps> = ({ variantTypes, on
     <div className="space-y-4">
       {unusedSuggestions.length > 0 && (
         <div>
-          <p className="text-[10px] font-semibold   text-slate-400 mb-2">
-            <Zap size={9} className="inline mr-1 text-amber-400" />
+          <p className="text-[10px] font-black text-slate-400 mb-2 uppercase tracking-wider">
+            <Zap size={10} className="inline mr-1 text-amber-500" />
             Suggested for this category
           </p>
           <div className="flex flex-wrap gap-2">
@@ -145,8 +145,8 @@ export const VariantBuilder: React.FC<VariantBuilderProps> = ({ variantTypes, on
           <div key={vt.id} className="border border-slate-200 rounded-[1.5rem] p-5 bg-slate-50/50 animate-in slide-in-from-top-2">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
-                <div className="w-1.5 h-6 bg-blue-500 rounded-full" />
-                <span className="text-sm font-black text-slate-800  tracking-tight">{vt.name}</span>
+                <div className="w-1.5 h-6 bg-blue-600 rounded-full" />
+                <span className="text-sm font-black text-slate-800 tracking-tight uppercase">{vt.name}</span>
                 <span className="text-[10px] font-bold text-slate-400 bg-white px-2 py-0.5 rounded-full border border-slate-100">
                   {vt.values.length} value{vt.values.length !== 1 ? "s" : ""}
                 </span>
@@ -174,13 +174,13 @@ export const VariantBuilder: React.FC<VariantBuilderProps> = ({ variantTypes, on
                 onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addValue(vt.id, inputVal); } }}
               />
               <button type="button" onClick={() => addValue(vt.id, inputVal)}
-                className="px-4 h-10 text-xs font-black   bg-blue-50 text-blue-600 border border-blue-100 rounded-xl hover:bg-blue-100 transition-colors">
+                className="px-5 h-10 text-[10px] font-black uppercase tracking-wider bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all shadow-md shadow-blue-100">
                 Add
               </button>
               {presets.length > 0 && (
-                <button type="button"
+                  <button type="button"
                   onClick={() => setShowPresets(p => ({ ...p, [vt.id]: !p[vt.id] }))}
-                  className="px-4 h-10 text-xs font-black   bg-slate-100 text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-200 transition-colors flex items-center gap-2">
+                  className="px-4 h-10 text-[10px] font-black uppercase tracking-wider bg-slate-100 text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-200 transition-colors flex items-center gap-2">
                   <ChevronDown size={14} className={`transition-transform duration-300 ${showPresets[vt.id] ? "rotate-180" : ""}`} />
                   Presets
                 </button>
@@ -191,7 +191,7 @@ export const VariantBuilder: React.FC<VariantBuilderProps> = ({ variantTypes, on
               <div className="mt-4 p-4 bg-white rounded-xl border border-slate-100 flex flex-wrap gap-2 animate-in fade-in duration-200">
                 {unusedPresets.map(p => (
                   <button key={p} type="button" onClick={() => addPresetValue(vt.id, p)}
-                    className="px-3 py-1.5 text-[10px] font-bold border border-dashed border-slate-200 rounded-full text-slate-500 hover:border-blue-300 hover:text-blue-600 hover:bg-blue-50 transition-all  ">
+                    className="px-3 py-1.5 text-[10px] font-black border border-dashed border-slate-200 rounded-full text-slate-500 hover:border-blue-400 hover:text-blue-700 hover:bg-blue-50 transition-all uppercase">
                     +{p}
                   </button>
                 ))}
@@ -263,7 +263,7 @@ export const VariantMatrixTable: React.FC<VariantMatrixTableProps> = ({
       <div className="flex items-center justify-between gap-4 flex-wrap bg-slate-50/50 p-4 rounded-2xl border border-slate-100">
         <div className="flex items-center gap-3">
           <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-          <span className="text-[11px] font-black text-slate-500  tracking-[0.1em]">
+          <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.1em]">
             {combinations.length} combination{combinations.length !== 1 ? "s" : ""} generated
           </span>
         </div>
@@ -276,20 +276,20 @@ export const VariantMatrixTable: React.FC<VariantMatrixTableProps> = ({
               value={barcodeBase}
               onChange={e => setbarcodeBase(e.target.value)}
             />
-            <button type="button" onClick={() => regenAllbarcodes(barcodeBase)}
+              <button type="button" onClick={() => regenAllbarcodes(barcodeBase)}
               disabled={!barcodeBase}
-              className="flex items-center gap-2 h-9 px-4 text-[10px] font-black   text-slate-600 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-all disabled:opacity-40">
-              <RefreshCw size={12} /> Auto barcode
+              className="flex items-center gap-2 h-9 px-4 text-[10px] font-black uppercase tracking-wider text-slate-600 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-all disabled:opacity-40">
+              <RefreshCw size={12} /> Auto Generate
             </button>
           </div>
           <div className="h-6 w-[1px] bg-slate-200 mx-1" />
           <button type="button" onClick={() => bulkToggleAll(true)}
-            className="h-9 px-4 text-[10px] font-black   text-emerald-600 bg-white border border-emerald-100 rounded-xl hover:bg-emerald-50 transition-all">
+            className="h-9 px-4 text-[10px] font-black uppercase tracking-wider text-emerald-600 bg-emerald-50 border border-emerald-100 rounded-xl hover:bg-emerald-100 transition-all">
             All On
           </button>
           <button type="button" onClick={() => bulkToggleAll(false)}
             disabled={combinations.length <= 1}
-            className="h-9 px-4 text-[10px] font-black   text-slate-500 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-all disabled:opacity-30 disabled:cursor-not-allowed">
+            className="h-9 px-4 text-[10px] font-black uppercase tracking-wider text-slate-500 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-all disabled:opacity-30 disabled:cursor-not-allowed">
             All Off
           </button>
         </div>
@@ -302,12 +302,12 @@ export const VariantMatrixTable: React.FC<VariantMatrixTableProps> = ({
             <thead>
               <tr className="bg-slate-50 border-b border-slate-100">
                 {attrKeys.map(k => (
-                  <th key={k} className="px-5 py-4 text-[10px] font-black   text-slate-400 whitespace-nowrap">
+                  <th key={k} className="px-5 py-4 text-[10px] font-black uppercase text-slate-400 whitespace-nowrap">
                     {k}
                   </th>
                 ))}
-                <th className="px-5 py-4 text-[10px] font-black   text-slate-400 whitespace-nowrap">barcode</th>
-                <th className="px-5 py-4 text-center text-[10px] font-black   text-slate-400">Status</th>
+                <th className="px-5 py-4 text-[10px] font-black uppercase text-slate-400 whitespace-nowrap">Barcode</th>
+                <th className="px-5 py-4 text-center text-[10px] font-black uppercase text-slate-400">Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">

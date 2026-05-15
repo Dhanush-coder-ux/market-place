@@ -97,7 +97,7 @@ export const QuickCreateSupplierModal: React.FC<QuickCreateSupplierModalProps> =
               leftIcon={<Phone size={16} className="text-slate-400" />}
             />
             <div className="space-y-1.5">
-              <label className="text-[10px] font-black text-slate-400   ml-1">
+              <label className="text-[10px] font-black text-slate-400 ml-1">
                 Business Type
               </label>
               <ReusableSelect
@@ -150,7 +150,7 @@ export const QuickCreateSupplierModal: React.FC<QuickCreateSupplierModalProps> =
             leftIcon={<MapPin size={16} className="text-slate-400" />}
           />
           <div className="space-y-1.5">
-            <label className="text-[10px] font-black text-slate-400   ml-1">
+            <label className="text-[10px] font-black text-slate-400 ml-1">
               Street Address
             </label>
             <textarea
@@ -176,8 +176,8 @@ export const QuickCreateSupplierModal: React.FC<QuickCreateSupplierModalProps> =
               <Tag size={20} />
             </div>
             <div className="space-y-1">
-              <p className="text-xs font-black text-blue-800  ">Tax Identity</p>
-              <p className="text-[10px] font-bold text-blue-600 leading-relaxed  ">
+              <p className="text-xs font-black text-blue-800 tracking-tight">Tax Identity</p>
+              <p className="text-[10px] font-bold text-blue-600 leading-relaxed uppercase tracking-wider">
                 Ensure the Tax ID is valid for generating B2B invoices and claiming ITC.
               </p>
             </div>
@@ -193,7 +193,7 @@ export const QuickCreateSupplierModal: React.FC<QuickCreateSupplierModalProps> =
           <div className="space-y-1.5">
             <div className="flex items-center gap-2 mb-1">
               <FileText size={14} className="text-slate-400" />
-              <label className="text-[10px] font-black text-slate-400  ">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider">
                 Internal Notes
               </label>
             </div>
@@ -219,11 +219,11 @@ export const QuickCreateSupplierModal: React.FC<QuickCreateSupplierModalProps> =
             <div className="flex items-start justify-between">
               <div>
                 <h4 className="text-lg md:text-2xl font-black text-slate-800 tracking-tight">{form.supplier_name || "Untitled Supplier"}</h4>
-                <p className="text-xs font-bold text-slate-400   mt-1">{form.type} • {form.city || "No City"}</p>
+                <p className="text-xs font-bold text-slate-400 mt-1 uppercase tracking-wider">{form.type} • {form.city || "No City"}</p>
               </div>
               <div className="text-right">
-                <p className="text-[10px] font-black text-slate-400  ">Tax ID</p>
-                <p className="text-sm font-black text-blue-600">{form.gst_number || "NOT PROVIDED"}</p>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider leading-none">Tax ID</p>
+                <p className="text-sm font-black text-blue-600 mt-1">{form.gst_number || "NOT PROVIDED"}</p>
               </div>
             </div>
 
@@ -264,8 +264,8 @@ export const QuickCreateSupplierModal: React.FC<QuickCreateSupplierModalProps> =
                     <MapPin size={14} />
                   </div>
                   <div>
-                    <p className="text-[10px] font-black text-slate-400   leading-none">Location</p>
-                    <p className="text-xs font-bold text-slate-700 mt-1 truncate max-w-[150px]">{form.address || "-"}</p>
+                    <p className="text-[10px] font-black text-slate-400 leading-none">Location</p>
+                    <p className="text-xs font-bold text-slate-700 mt-1 truncate max-w-[150px] uppercase tracking-tight">{form.address || "-"}</p>
                   </div>
                 </div>
               </div>

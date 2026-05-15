@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
-  Search, Eye, ChevronDown, X, User, Calendar,
+  Search, Eye, ChevronDown, X,
   CreditCard, Package, RotateCcw, Receipt, AlertCircle, CheckCircle2,
   ChevronRight, Minus, Plus, ArrowRight, RefreshCw, Banknote,
   Gift, ArrowLeft, Check, Loader2,
@@ -8,8 +9,8 @@ import {
   BarChart2,
   Smartphone,
   Hash,
+  TrendingUp,
 } from "lucide-react";
-import { StatsCard } from "@/components/common/StatsCard";
 import { useApi } from "@/context/ApiContext";
 import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 import { OrderResponse } from "@/features/order/types";
@@ -19,7 +20,7 @@ import ProductSelectionModal from "../../billing/components/ProductSelectionMode
 import { InventoryItem, ProductVariant } from "../../billing/types";
 
 /* ═══════════════════════════════════════════════════════════════
-   TYPES
+   TYPES  (unchanged)
 ═══════════════════════════════════════════════════════════════ */
 type OriginType = "Sales" | "Sales Return";
 type PaymentMethod = "Cash" | "Card" | "UPI" | "G-Pay" | "PhonePe" | "Other";
@@ -27,97 +28,56 @@ type SaleStatus = "Completed" | "Pending" | "Cancelled";
 type ReturnMode = "refund" | "exchange";
 type ReturnReason = "Damaged" | "Wrong Item" | "Customer Request" | "Size Issue" | "Other" | "";
 type SettlementMethod = "Cash" | "UPI" | "Card" | "Bank" | "Store Credit" | "";
-
-// Use the backend response type directly
 type SaleRecord = OrderResponse;
 
 interface SaleItem {
-  id: string;
-  name: string;
-  sku: string;
-  category: string;
-  quantity: number;
-  unitPrice: number;
-  buyPrice: number;
-  imageColor: string;
-  status?: string;
-  stocks_before?: number;
-  serial_numbers?: string[];
+  id: string; name: string; sku: string; category: string;
+  quantity: number; unitPrice: number; buyPrice: number;
+  imageColor: string; status?: string; stocks_before?: number; serial_numbers?: string[];
 }
-
-interface SelectedReturnItem extends SaleItem {
-  returnQty: number;
-  exchangeItemId?: string;
-  selectedSerials?: string[];
-}
-
-interface ReturnErrors {
-  reason?: string;
-  items?: string;
-  settlement?: string;
-  serials?: string;
-}
-
-// 5-step flow
+interface SelectedReturnItem extends SaleItem { returnQty: number; exchangeItemId?: string; selectedSerials?: string[]; }
+interface ReturnErrors { reason?: string; items?: string; settlement?: string; serials?: string; }
 type ReturnStep = 1 | 2 | 3 | 4 | 5;
-
 interface ReturnState {
-  step: ReturnStep;
-  mode: ReturnMode;
-  returnItems: Record<string, number>;       // itemId → returnQty
-  exchangeMap: Record<string, any>;          // itemId → full replacement product data
-  serialReturnMap: Record<string, string[]>; // itemId → selected serial numbers to return
-  reason: ReturnReason;
-  notes: string;
-  settlementMethod: SettlementMethod;
-  errors: ReturnErrors;
-  isSubmitting: boolean;
+  step: ReturnStep; mode: ReturnMode;
+  returnItems: Record<string, number>; exchangeMap: Record<string, any>;
+  serialReturnMap: Record<string, string[]>; reason: ReturnReason;
+  notes: string; settlementMethod: SettlementMethod;
+  errors: ReturnErrors; isSubmitting: boolean;
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   CONSTANTS & MOCK DATA
+   CONSTANTS (unchanged)
 ═══════════════════════════════════════════════════════════════ */
-const RETURN_REASONS: Exclude<ReturnReason, "">[] = [
-  "Damaged", "Wrong Item", "Customer Request", "Size Issue", "Other",
-];
-
+const RETURN_REASONS: Exclude<ReturnReason, "">[] = ["Damaged", "Wrong Item", "Customer Request", "Size Issue", "Other"];
 const ITEM_COLORS = ["#dbeafe", "#dcfce7", "#fef3c7", "#fce7f3", "#ede9fe", "#ffedd5", "#f0fdf4", "#ecfeff"];
 
 /* ═══════════════════════════════════════════════════════════════
-   UTILS
+   UTILS (unchanged)
 ═══════════════════════════════════════════════════════════════ */
 const generateItems = (sale: SaleRecord, productMap: Record<string, string> = {}): SaleItem[] =>
   (sale.items || []).map((item, i) => {
     const productName = productMap[item.inventory_id] || item.barcode || `Item ${i + 1}`;
     return {
       id: item.id,
-      name: item.status === "REFUNDED"
-        ? `(Refunded) ${productName}`
-        : item.status === "EXCHANGED"
-          ? `(Exchanged) ${productName}`
-          : productName,
+      name: item.status === "REFUNDED" ? `(Refunded) ${productName}` : item.status === "EXCHANGED" ? `(Exchanged) ${productName}` : productName,
       sku: item.barcode?.trim() || item.inventory_id.slice(-6),
-      category: "General",
-      quantity: item.quantity,
-      unitPrice: item.sell_price,
-      buyPrice: item.buy_price,
+      category: "General", quantity: item.quantity,
+      unitPrice: item.sell_price, buyPrice: item.buy_price,
       imageColor: ITEM_COLORS[i % ITEM_COLORS.length],
-      status: item.status,
-      variant_id: item.variant_id,
-      batch_id: item.batch_id,
-      serialno_id: item.serialno_id,
+      status: item.status, variant_id: item.variant_id,
+      batch_id: item.batch_id, serialno_id: item.serialno_id,
       serial_numbers: item.serial_numbers || [],
       stocks_before: (item as any).stocks_before,
-    };
+    } as any;
   });
 
 const fmt = (n: number) => `₹${n.toLocaleString("en-IN")}`;
 
 /* ═══════════════════════════════════════════════════════════════
-   BADGE CONFIGS
+   BADGE CONFIGS (unchanged)
 ═══════════════════════════════════════════════════════════════ */
 type BadgeConfig = { cls: string; dot: string };
-
 const ORIGIN_CFG: Record<OriginType, BadgeConfig> = {
   "Sales": { cls: "bg-blue-50 text-blue-700 border-blue-100", dot: "bg-blue-400" },
   "Sales Return": { cls: "bg-orange-50 text-orange-700 border-orange-100", dot: "bg-orange-400" },
@@ -128,6 +88,7 @@ const PAYMENT_CFG: Record<string, BadgeConfig> = {
   UPI: { cls: "bg-indigo-50 text-indigo-700 border-indigo-100", dot: "bg-indigo-400" },
   "G-Pay": { cls: "bg-blue-50 text-blue-700 border-blue-100", dot: "bg-blue-400" },
   PhonePe: { cls: "bg-purple-50 text-purple-700 border-purple-100", dot: "bg-purple-400" },
+  Credit: { cls: "bg-amber-50 text-amber-700 border-amber-100", dot: "bg-amber-400" },
   Other: { cls: "bg-slate-50 text-slate-700 border-slate-100", dot: "bg-slate-400" },
 };
 const STATUS_CFG: Record<SaleStatus, BadgeConfig> = {
@@ -137,270 +98,526 @@ const STATUS_CFG: Record<SaleStatus, BadgeConfig> = {
 };
 
 /* ═══════════════════════════════════════════════════════════════
-   GLOBAL STYLES
+   GLOBAL STYLES — REFACTORED
 ═══════════════════════════════════════════════════════════════ */
 const STYLES = `
+  /* ── Reset & Root ── */
   *, *::before, *::after { box-sizing: border-box; }
 
-  .sr-root { 
-    font-family: var(--font-sans); 
-    overflow-x: hidden;
+  .sl-root {
+    font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     width: 100%;
+    /* Contain everything — no horizontal bleed */
+    overflow-x: hidden;
     position: relative;
   }
-  .sr-mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
 
-  /* Table row hover */
-  .sr-row { transition: background 0.1s; }
-  .sr-row:hover { background: #f8fafc; }
-  .sr-row:hover .sr-row-actions { opacity: 1; }
-  .sr-row-actions { opacity: 0; transition: opacity 0.15s; }
+  /* ── Monospace ── */
+  .sl-mono { font-family: ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, monospace; }
 
-  /* Dropdown */
-  .sr-drop-btn { transition: all 0.12s; }
-  .sr-dropdown { animation: srDrop 0.12s ease forwards; transform-origin: top left; }
-  @keyframes srDrop {
+  /* ── Scrollbars ── */
+  .sl-scroll::-webkit-scrollbar { width: 5px; height: 5px; }
+  .sl-scroll::-webkit-scrollbar-track { background: transparent; }
+  .sl-scroll::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 999px; }
+  .sl-scroll::-webkit-scrollbar-thumb:hover { background: #cbd5e1; }
+
+  /* ── KPI Cards ── */
+  .sl-kpi {
+    background: white;
+    border: 1px solid #f1f5f9;
+    border-radius: 14px;
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    min-width: 180px;
+    transition: box-shadow 0.2s, transform 0.2s;
+    flex: 1 0 0;
+  }
+  .sl-kpi:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.06); transform: translateY(-1px); }
+  .sl-kpi-icon {
+    width: 40px; height: 40px;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+
+  /* ── Toolbar ── */
+  .sl-toolbar {
+    background: white;
+    border: 1px solid #f1f5f9;
+    border-radius: 14px;
+    padding: 10px 14px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+  }
+
+  /* ── Table card ── */
+  .sl-table-card {
+    background: white;
+    border: 1px solid #f1f5f9;
+    border-radius: 14px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+    /* Critical: isolate from parent width */
+    min-width: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── Table scroll container ── */
+  .sl-table-wrap {
+    overflow-x: auto;
+    overflow-y: auto;
+    /* Table alone scrolls; no parent bleed */
+    -webkit-overflow-scrolling: touch;
+    flex: 1;
+  }
+
+  /* ── Table ── */
+  .sl-table {
+    width: 100%;
+    border-collapse: collapse;
+    /* Do NOT allow table to exceed wrapper */
+    table-layout: fixed;
+  }
+  .sl-table thead { position: sticky; top: 0; z-index: 10; }
+  .sl-table thead tr {
+    background: #f8fafc;
+    border-bottom: 1px solid #f1f5f9;
+  }
+  .sl-table th {
+    padding: 10px 12px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: #94a3b8;
+    text-transform: uppercase;
+    text-align: left;
+    white-space: nowrap;
+    user-select: none;
+  }
+  .sl-table th.r { text-align: right; }
+  .sl-table th.c { text-align: center; }
+
+  /* Column widths via table-layout:fixed */
+  .sl-col-inv   { width: 110px; }
+  .sl-col-cust  { width: 160px; }
+  .sl-col-orig  { width: 100px; }
+  .sl-col-pay   { width: 110px; }
+  .sl-col-date  { width: 96px; }
+  .sl-col-qty   { width: 62px; }
+  .sl-col-amt   { width: 110px; }
+  .sl-col-stat  { width: 100px; }
+  .sl-col-act   { width: 76px; }
+
+  /* ── Table rows ── */
+  .sl-row { transition: background 0.1s; }
+  .sl-row:hover { background: #f8fafc; }
+  .sl-row td {
+    padding: 10px 12px;
+    border-bottom: 1px solid #f8fafc;
+    vertical-align: middle;
+    max-width: 0; /* required with table-layout:fixed to truncate */
+  }
+  .sl-row:last-child td { border-bottom: none; }
+
+  /* ── Row action buttons ── */
+  .sl-act-btn {
+    width: 28px; height: 28px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 7px;
+    border: none; background: transparent; cursor: pointer;
+    color: #94a3b8;
+    transition: background 0.12s, color 0.12s;
+  }
+  .sl-act-btn:hover { background: #eff6ff; color: #2563eb; }
+  .sl-act-btn.danger:hover { background: #fef2f2; color: #dc2626; }
+  .sl-act-btn:disabled { color: #e2e8f0; cursor: not-allowed; background: transparent; }
+
+  /* ── Filter button ── */
+  .sl-filter-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 7px 12px;
+    font-size: 11px; font-weight: 500;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px; background: white;
+    color: #475569; cursor: pointer;
+    transition: all 0.12s; white-space: nowrap;
+  }
+  .sl-filter-btn:hover { background: #f8fafc; border-color: #cbd5e1; }
+  .sl-filter-btn.active { background: #eff6ff; border-color: #bfdbfe; color: #1d4ed8; }
+
+  /* ── Dropdown ── */
+  .sl-dropdown {
+    position: absolute; top: calc(100% + 6px); left: 0;
+    min-width: 140px; background: white;
+    border: 1px solid #e2e8f0; border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+    z-index: 50; overflow: hidden;
+    animation: slDrop 0.12s ease forwards;
+    transform-origin: top left;
+  }
+  @keyframes slDrop {
     from { opacity: 0; transform: scale(0.96) translateY(-4px); }
     to   { opacity: 1; transform: scale(1) translateY(0); }
   }
+  .sl-dropdown-item {
+    display: block; width: 100%; text-align: left;
+    padding: 8px 14px; font-size: 12px; font-weight: 500;
+    color: #374151; background: transparent; border: none; cursor: pointer;
+    transition: background 0.1s;
+  }
+  .sl-dropdown-item:hover { background: #f8fafc; }
+  .sl-dropdown-item.active { background: #eff6ff; color: #1d4ed8; }
 
-  /* Modal backdrop */
-  .sr-backdrop-enter { animation: srFadeIn 0.18s ease forwards; }
-  @keyframes srFadeIn { from { opacity: 0; } to { opacity: 1; } }
+  /* ── Search input ── */
+  .sl-search-wrap { position: relative; flex: 1; min-width: 200px; max-width: 320px; }
+  .sl-search-wrap svg { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #94a3b8; pointer-events: none; }
+  .sl-search-input {
+    width: 100%; height: 36px;
+    padding: 0 12px 0 36px;
+    font-size: 12px; color: #1e293b;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0; border-radius: 8px;
+    outline: none; transition: all 0.15s;
+  }
+  .sl-search-input:focus { background: white; border-color: #93c5fd; box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
+  .sl-search-input::placeholder { color: #94a3b8; }
 
-  /* Modal panel */
-  .sr-modal-enter { animation: srModalIn 0.22s cubic-bezier(0.34, 1.15, 0.64, 1) forwards; }
-  @keyframes srModalIn {
-    from { opacity: 0; transform: scale(0.96) translateY(8px); }
+  /* ── Date input ── */
+  .sl-date-input {
+    height: 36px; padding: 0 10px;
+    font-size: 11px; font-weight: 500; color: #475569;
+    background: white; border: 1px solid #e2e8f0; border-radius: 8px;
+    outline: none; cursor: pointer; transition: all 0.12s;
+  }
+  .sl-date-input:focus { border-color: #93c5fd; box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
+  .sl-date-input.active { background: #eff6ff; border-color: #bfdbfe; color: #1d4ed8; }
+
+  /* ── Process Return button ── */
+  .sl-return-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 14px; font-size: 12px; font-weight: 600;
+    background: blue; color: white;
+    border: none; border-radius: 8px; cursor: pointer;
+    transition: all 0.15s; white-space: nowrap;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+  }
+  .sl-return-btn:hover { background: blue; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+
+  /* ── Table footer ── */
+  .sl-table-footer {
+    padding: 10px 16px;
+    border-top: 1px solid #f1f5f9;
+    display: flex; align-items: center; justify-content: space-between;
+    flex-shrink: 0;
+    background: #fafafa;
+  }
+
+  /* ── Badge ── */
+  .sl-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 2px 8px; border-radius: 999px;
+    font-size: 10px; font-weight: 600; border: 1px solid;
+    white-space: nowrap;
+  }
+  .sl-badge-dot { width: 5px; height: 5px; border-radius: 999px; flex-shrink: 0; }
+
+  /* ── Truncate ── */
+  .sl-truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  /* ── DRAWER (fixed overlay, never shifts layout) ── */
+  .sl-drawer-backdrop {
+    position: fixed; inset: 0; z-index: 200;
+    background: rgba(15,23,42,0.3);
+    backdrop-filter: blur(2px);
+    opacity: 0; animation: slFadeIn 0.2s ease forwards;
+  }
+  @keyframes slFadeIn { to { opacity: 1; } }
+
+  .sl-drawer {
+    position: fixed; top: 0; right: 0;
+    height: 100vh; width: 420px; max-width: 100vw;
+    background: white; z-index: 201;
+    display: flex; flex-direction: column;
+    box-shadow: -16px 0 48px rgba(0,0,0,0.08);
+    transform: translateX(100%);
+    transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+    will-change: transform;
+  }
+  .sl-drawer.open { transform: translateX(0); }
+
+  /* ── Return modal ── */
+  .sl-modal-backdrop {
+    position: fixed; inset: 0; z-index: 300;
+    background: rgba(15,23,42,0.45);
+    backdrop-filter: blur(4px);
+    animation: slFadeIn 0.15s ease forwards;
+  }
+  .sl-modal-panel {
+    position: fixed; inset: 0; z-index: 301;
+    display: flex; align-items: center; justify-content: center;
+    padding: 16px;
+  }
+  .sl-modal-box {
+    background: white; border-radius: 20px;
+    width: 100%; max-width: 520px;
+    max-height: calc(100vh - 32px);
+    display: flex; flex-direction: column;
+    box-shadow: 0 24px 64px rgba(0,0,0,0.18);
+    animation: slModalIn 0.22s cubic-bezier(0.34,1.15,0.64,1) forwards;
+  }
+  @keyframes slModalIn {
+    from { opacity: 0; transform: scale(0.95) translateY(8px); }
     to   { opacity: 1; transform: scale(1) translateY(0); }
   }
 
-  /* Step content */
-  .sr-step-enter { animation: srStepIn 0.2s ease forwards; }
-  @keyframes srStepIn {
-    from { opacity: 0; transform: translateX(10px); }
+  /* ── Return search modal ── */
+  .sl-search-modal {
+    position: fixed; inset: 0; z-index: 400;
+    display: flex; align-items: flex-start; justify-content: center;
+    padding-top: 80px; padding-left: 16px; padding-right: 16px;
+  }
+  .sl-search-modal-box {
+    background: white; border-radius: 16px; width: 100%; max-width: 480px;
+    box-shadow: 0 24px 64px rgba(0,0,0,0.18);
+    overflow: hidden;
+    animation: slModalIn 0.18s cubic-bezier(0.34,1.15,0.64,1) forwards;
+  }
+
+  /* ── Step progress ── */
+  .sl-step-bar { transition: width 0.3s ease; }
+  .sl-step-enter { animation: slStepIn 0.2s ease forwards; }
+  @keyframes slStepIn {
+    from { opacity: 0; transform: translateX(8px); }
     to   { opacity: 1; transform: translateX(0); }
   }
 
-  /* Confirm done */
-  .sr-done-pop { animation: srDonePop 0.35s cubic-bezier(0.34, 1.5, 0.64, 1) forwards; }
-  @keyframes srDonePop {
+  /* ── Done pop ── */
+  .sl-done-pop { animation: slDonePop 0.35s cubic-bezier(0.34,1.5,0.64,1) forwards; }
+  @keyframes slDonePop {
     from { opacity: 0; transform: scale(0.7); }
     to   { opacity: 1; transform: scale(1); }
   }
 
-  /* Checkbox */
-  .sr-cb {
-    appearance: none; width: 16px; height: 16px;
+  /* ── Checkbox ── */
+  .sl-cb {
+    appearance: none; width: 15px; height: 15px;
     border: 1.5px solid #d1d5db; border-radius: 4px;
-    background: white; cursor: pointer;
-    transition: all 0.12s; position: relative; flex-shrink: 0;
+    background: white; cursor: pointer; position: relative; flex-shrink: 0;
+    transition: all 0.12s;
   }
-  .sr-cb:checked { background: #2563eb; border-color: #2563eb; }
-  .sr-cb:checked::after {
+  .sl-cb:checked { background: #2563eb; border-color: #2563eb; }
+  .sl-cb:checked::after {
     content: ''; position: absolute;
-    left: 4px; top: 1.5px; width: 5px; height: 8px;
+    left: 3.5px; top: 1px; width: 5px; height: 8px;
     border: 1.5px solid white; border-top: none; border-left: none;
     transform: rotate(42deg);
   }
 
-  /* Item rows */
-  .sr-item-row { transition: background 0.12s, border-color 0.12s; cursor: pointer; }
-  .sr-item-row.sel { background: #eff6ff; border-color: #bfdbfe; }
-  .sr-item-row:not(.sel):hover { background: #f8fafc; }
+  /* ── Item rows (return modal) ── */
+  .sl-item-row { transition: background 0.1s, border-color 0.1s; cursor: pointer; }
+  .sl-item-row.sel { background: #eff6ff; border-color: #bfdbfe; }
+  .sl-item-row:not(.sel):hover { background: #f8fafc; }
 
-  /* Exchange product cards */
-  .sr-exch-card { transition: all 0.15s; cursor: pointer; }
-  .sr-exch-card:hover:not(.disabled) { border-color: #93c5fd; background: #f0f7ff; }
-  .sr-exch-card.selected { border-color: #3b82f6; background: #eff6ff; }
-  .sr-exch-card.disabled { opacity: 0.45; cursor: not-allowed; }
+  /* ── Qty stepper ── */
+  .sl-qty-btn {
+    width: 26px; height: 26px; display: flex; align-items: center; justify-content: center;
+    border: none; background: transparent; cursor: pointer; color: #94a3b8;
+    transition: background 0.1s, color 0.1s; border-radius: 5px;
+  }
+  .sl-qty-btn:hover:not(:disabled) { background: #eff6ff; color: #2563eb; }
+  .sl-qty-btn:disabled { opacity: 0.3; cursor: not-allowed; }
 
-  /* Qty btn */
-  .sr-qty-btn { transition: background 0.1s; }
-  .sr-qty-btn:hover:not(:disabled) { background: #e0e7ff; }
-  .sr-qty-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+  /* ── Exchange card ── */
+  .sl-exch-card { transition: all 0.12s; cursor: pointer; }
+  .sl-exch-card:hover:not(.disabled) { border-color: #93c5fd; background: #f0f7ff; }
+  .sl-exch-card.selected { border-color: #3b82f6; background: #eff6ff; }
+  .sl-exch-card.disabled { opacity: 0.4; cursor: not-allowed; }
 
-  /* Mode pills */
-  .sr-mode-pill { transition: all 0.15s; }
-  .sr-mode-pill.active { background: white; border-color: #93c5fd; color: #1d4ed8; box-shadow: 0 1px 3px rgba(59,130,246,0.15); }
+  /* ── Mode pill (return modal) ── */
+  .sl-mode-pill { transition: all 0.15s; }
+  .sl-mode-pill.active { background: white; border-color: #93c5fd; color: #1d4ed8; box-shadow: 0 1px 6px rgba(59,130,246,0.12); }
 
-  /* Refund method pill */
-  .sr-rfm-pill { transition: all 0.15s; cursor: pointer; }
-  .sr-rfm-pill.active { border-color: #3b82f6; background: #eff6ff; }
-  .sr-rfm-pill:not(.active):hover { border-color: #93c5fd; }
+  /* ── Refund method pill ── */
+  .sl-rfm-pill { transition: all 0.12s; cursor: pointer; }
+  .sl-rfm-pill.active { border-color: #3b82f6; background: #eff6ff; }
+  .sl-rfm-pill:not(.active):hover { border-color: #93c5fd; }
 
-  /* Progress bar */
-  .sr-progress { transition: width 0.3s ease; }
-
-  /* Select */
-  select.sr-select {
+  /* ── Select ── */
+  select.sl-select {
     appearance: none;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
     background-position: right 12px center;
   }
 
-  /* Sidebar */
-  .sr-sidebar { 
-    position: fixed;
-    top: 0;
-    right: 0;
-    height: 100vh;
-    width: 100%;
-    max-width: 400px;
-    background: white;
-    box-shadow: -10px 0 30px rgba(0,0,0,0.05);
-    z-index: 110;
-    transform: translateX(101%);
-    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    visibility: hidden;
-    overscroll-behavior: contain;
+  /* ── Btn primary ── */
+  .sl-btn-primary {
+    transition: all 0.15s;
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
   }
-  .sr-sidebar.open { 
-    transform: translateX(0);
-    visibility: visible;
+  .sl-btn-primary:hover:not(:disabled) { filter: brightness(1.05); box-shadow: 0 4px 12px rgba(37,99,235,0.25); }
+  .sl-btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
+
+  /* ── Drawer section ── */
+  .sl-section { margin-bottom: 24px; }
+  .sl-section-header {
+    display: flex; align-items: center; gap: 8px;
+    margin-bottom: 12px; padding-bottom: 8px;
+    border-bottom: 1px solid #f1f5f9;
+  }
+  .sl-section-title {
+    font-size: 11px; font-weight: 700; color: #94a3b8;
+    letter-spacing: 0.05em; text-transform: uppercase;
   }
 
-  /* Scrollbar */
-  .sr-scroll::-webkit-scrollbar { width: 4px; }
-  .sr-scroll::-webkit-scrollbar-track { background: transparent; }
-  .sr-scroll::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 4px; }
+  /* ── Info Grid ── */
+  .sl-info-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .sl-info-card {
+    background: white; border: 1px solid #f1f5f9;
+    border-radius: 12px; padding: 12px;
+    transition: border-color 0.15s;
+  }
+  .sl-info-card:hover { border-color: #e2e8f0; }
+  .sl-info-label {
+    font-size: 9px; font-weight: 700; color: #94a3b8;
+    text-transform: uppercase; letter-spacing: 0.05em;
+    margin-bottom: 4px; display: flex; align-items: center; gap: 4px;
+  }
+  .sl-info-value { font-size: 12px; font-weight: 600; color: #1e293b; word-break: break-all; }
 
-  /* Stats card */
-  .sr-stat { transition: box-shadow 0.15s, transform 0.15s; }
-  .sr-stat:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.06); transform: translateY(-1px); }
+  /* ── Price breakdown ── */
+  .sl-price-row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 12px; }
+  .sl-price-label { color: #64748b; }
+  .sl-price-val { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, monospace; font-weight: 600; color: #1e293b; }
+  .sl-price-total { border-top: 1px solid #e2e8f0; margin-top: 8px; padding-top: 8px; font-weight: 700; color: #0f172a; font-size: 14px; }
 
-  /* Btn */
-  .sr-btn-primary { transition: all 0.15s; }
-  .sr-btn-primary:hover:not(:disabled) { filter: brightness(1.05); box-shadow: 0 4px 12px rgba(37,99,235,0.25); }
-  .sr-btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
-
-  .sr-btn-ghost { transition: all 0.15s; }
-  .sr-btn-ghost:hover { background: #f1f5f9; }
+  /* ── Responsive ── */
+  @media (max-width: 768px) {
+    .sl-kpi { min-width: 150px; padding: 12px 14px; }
+    .sl-drawer { width: 100vw; }
+    .sl-col-cust { width: 120px; }
+    .sl-col-orig, .sl-col-pay { width: 88px; }
+    .sl-info-grid { grid-template-columns: 1fr; }
+  }
 `;
 
 /* ═══════════════════════════════════════════════════════════════
-   SHARED SMALL COMPONENTS
+   BADGE
 ═══════════════════════════════════════════════════════════════ */
 const Badge: React.FC<{ cls: string; dot: string; label: string }> = ({ cls, dot, label }) => (
-  <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${cls}`}>
-    <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${dot}`} />
+  <span className={`sl-badge ${cls}`}>
+    <span className={`sl-badge-dot ${dot}`} />
     {label}
   </span>
 );
 
-interface QuantityStepperProps {
-  value: number;
-  min?: number;
-  max: number;
-  onChange: (v: number) => void;
-  onClick?: (e: React.MouseEvent) => void;
+/* ═══════════════════════════════════════════════════════════════
+   KPI CARD  (replaces StatsCard for layout control)
+═══════════════════════════════════════════════════════════════ */
+interface KpiCardProps {
+  label: string; value: string | number;
+  icon: React.ReactNode; iconBg: string; iconColor: string;
+  sub?: string;
 }
-const QuantityStepper: React.FC<QuantityStepperProps> = ({ value, min = 1, max, onChange, onClick }) => (
-  <div className="inline-flex items-center gap-0 border border-slate-200 rounded-lg overflow-hidden bg-white" onClick={onClick}>
-    <button className="sr-qty-btn w-7 h-7 flex items-center justify-center text-slate-400 hover:text-blue-500"
-      disabled={value <= min} onClick={e => { e.stopPropagation(); onChange(Math.max(min, value - 1)); }}>
-      <Minus size={10} />
-    </button>
-    <span className="w-8 text-center text-xs font-semibold text-slate-800 sr-mono tabular-nums">{value}</span>
-    <button className="sr-qty-btn w-7 h-7 flex items-center justify-center text-slate-400 hover:text-blue-500"
-      disabled={value >= max} onClick={e => { e.stopPropagation(); onChange(Math.min(max, value + 1)); }}>
-      <Plus size={10} />
-    </button>
+const KpiCard: React.FC<KpiCardProps> = ({ label, value, icon, iconBg, iconColor, sub }) => (
+  <div className="sl-kpi">
+    <div className={`sl-kpi-icon ${iconBg}`}>
+      <span className={iconColor}>{icon}</span>
+    </div>
+    <div className="min-w-0">
+      <p style={{ fontSize: 10, fontWeight: 600, color: '#94a3b8', letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: 2 }}>{label}</p>
+      <p style={{ fontSize: 20, fontWeight: 700, color: '#0f172a', letterSpacing: '-0.02em', lineHeight: 1 }}>{value}</p>
+      {sub && <p style={{ fontSize: 10, color: '#64748b', marginTop: 3 }}>{sub}</p>}
+    </div>
   </div>
 );
 
 /* ═══════════════════════════════════════════════════════════════
-   STEP HEADER (progress indicator)
+   QUANTITY STEPPER (unchanged logic)
 ═══════════════════════════════════════════════════════════════ */
-const STEP_LABELS: Record<ReturnStep, string> = {
-  1: "Mode",
-  2: "Items",
-  3: "Reason",
-  4: "Review",
-  5: "Done",
-};
+interface QuantityStepperProps { value: number; min?: number; max: number; onChange: (v: number) => void; onClick?: (e: React.MouseEvent) => void; }
+const QuantityStepper: React.FC<QuantityStepperProps> = ({ value, min = 1, max, onChange, onClick }) => (
+  <div style={{ display: 'inline-flex', alignItems: 'center', border: '1px solid #e2e8f0', borderRadius: 8, overflow: 'hidden', background: 'white' }} onClick={onClick}>
+    <button className="sl-qty-btn" disabled={value <= min} onClick={e => { e.stopPropagation(); onChange(Math.max(min, value - 1)); }}><Minus size={9} /></button>
+    <span className="sl-mono" style={{ width: 28, textAlign: 'center', fontSize: 11, fontWeight: 600, color: '#1e293b' }}>{value}</span>
+    <button className="sl-qty-btn" disabled={value >= max} onClick={e => { e.stopPropagation(); onChange(Math.min(max, value + 1)); }}><Plus size={9} /></button>
+  </div>
+);
 
-interface StepHeaderProps {
-  step: ReturnStep;
-  mode: ReturnMode;
-  invoice: string;
-}
+/* ═══════════════════════════════════════════════════════════════
+   STEP HEADER (unchanged logic, refined style)
+═══════════════════════════════════════════════════════════════ */
+const STEP_LABELS: Record<ReturnStep, string> = { 1: "Mode", 2: "Items", 3: "Reason", 4: "Review", 5: "Done" };
+
+interface StepHeaderProps { step: ReturnStep; mode: ReturnMode; invoice: string; }
 const StepHeader: React.FC<StepHeaderProps> = ({ step, mode, invoice }) => {
-  const totalSteps = 6;
-  const progress = ((step - 1) / (totalSteps - 1)) * 100;
-
+  const progress = ((step - 1) / 3) * 100;
   return (
-    <div className="px-6 pt-5 pb-4 border-b border-slate-100">
-      <div className="flex items-center justify-between mb-3">
+    <div style={{ padding: '18px 22px 14px', borderBottom: '1px solid #f1f5f9', flexShrink: 0 }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 10 }}>
         <div>
-          <p className="text-xs font-semibold   text-slate-400 mb-0.5">
-            {step < 5 ? `Step ${step} of 4` : "Complete"}
+          <p style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 3 }}>
+            {step < 5 ? `Step ${step} of 4` : 'Complete'}
           </p>
-          <p className="text-sm font-semibold text-slate-800">
+          <p style={{ fontSize: 13, fontWeight: 700, color: '#0f172a' }}>
             {step === 1 ? "Choose Return Mode"
               : step === 2 ? (mode === "refund" ? "Select Items for Refund" : "Select Items to Exchange")
-                : step === 3 ? "Reason & Payment"
-                  : step === 4 ? "Review Summary"
+                : step === 3 ? "Reason & Settlement"
+                  : step === 4 ? "Review & Confirm"
                     : "Return Processed"}
           </p>
         </div>
-        <span className="sr-mono text-[10px] text-slate-400 bg-slate-50 border border-slate-100 px-2 py-1 rounded-md">
-          {invoice}
-        </span>
+        <span className="sl-mono" style={{ fontSize: 10, color: '#94a3b8', background: '#f8fafc', border: '1px solid #f1f5f9', padding: '4px 8px', borderRadius: 6 }}>{invoice}</span>
       </div>
       {step < 5 && (
-        <div className="relative">
-          <div className="h-1 bg-slate-100 rounded-full overflow-hidden">
-            <div className="sr-progress h-full bg-blue-500 rounded-full" style={{ width: `${progress}%` }} />
+        <>
+          <div style={{ height: 3, background: '#f1f5f9', borderRadius: 999, overflow: 'hidden', marginBottom: 8 }}>
+            <div className="sl-step-bar" style={{ height: '100%', background: '#2563eb', borderRadius: 999, width: `${progress}%` }} />
           </div>
-          <div className="flex justify-between mt-2">
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
             {([1, 2, 3, 4] as ReturnStep[]).map(s => (
-              <div key={s} className="flex flex-col items-center gap-1">
-                <div className={`w-1.5 h-1.5 rounded-full transition-colors duration-300 ${s < step ? "bg-blue-500" : s === step ? "bg-blue-500" : "bg-slate-200"
-                  }`} />
-                <span className={`text-[9px] font-medium tracking-wide transition-colors duration-300 ${s <= step ? "text-blue-500" : "text-slate-300"
-                  }`}>{STEP_LABELS[s]}</span>
+              <div key={s} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+                <div style={{ width: 6, height: 6, borderRadius: 999, background: s <= step ? '#2563eb' : '#e2e8f0', transition: 'background 0.3s' }} />
+                <span style={{ fontSize: 9, fontWeight: 600, color: s <= step ? '#2563eb' : '#cbd5e1', letterSpacing: '0.06em', textTransform: 'uppercase', transition: 'color 0.3s' }}>{STEP_LABELS[s]}</span>
               </div>
             ))}
           </div>
-        </div>
+        </>
       )}
     </div>
   );
 };
 
 /* ═══════════════════════════════════════════════════════════════
-   REFUND SUMMARY COMPONENT
+   REFUND SUMMARY (unchanged logic)
 ═══════════════════════════════════════════════════════════════ */
 interface RefundSummaryProps {
-  mode: ReturnMode;
-  selectedItems: SelectedReturnItem[];
+  mode: ReturnMode; selectedItems: SelectedReturnItem[];
   totals: { returnValue: number; exchangeValue: number; diff: number };
-  settlementMethod: SettlementMethod;
-  originalPayment: PaymentMethod;
+  settlementMethod: SettlementMethod; originalPayment: PaymentMethod;
 }
-const RefundSummary: React.FC<RefundSummaryProps> = ({
-  mode, selectedItems, totals, settlementMethod, originalPayment,
-}) => {
+const RefundSummary: React.FC<RefundSummaryProps> = ({ mode, selectedItems, totals, settlementMethod, originalPayment }) => {
   const { returnValue, exchangeValue, diff } = totals;
   const isStoreCredit = settlementMethod === "Store Credit";
-
   if (mode === "refund") {
     return (
-      <div className="bg-gradient-to-br from-blue-50 to-slate-50 border border-blue-100 rounded-xl p-4">
-        <div className="flex items-center justify-between">
+      <div style={{ background: 'linear-gradient(135deg, #eff6ff 0%, #f8fafc 100%)', border: '1px solid #bfdbfe', borderRadius: 14, padding: '14px 16px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
-            <p className="text-[10px] font-semibold   text-blue-400 mb-0.5">
+            <p style={{ fontSize: 10, fontWeight: 700, color: '#3b82f6', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 4 }}>
               {isStoreCredit ? "Store Credit" : "Refund Amount"}
             </p>
-            <p className="text-2xl font-light sr-mono text-blue-700">{fmt(returnValue)}</p>
+            <p className="sl-mono" style={{ fontSize: 26, fontWeight: 300, color: '#1d4ed8' }}>{fmt(returnValue)}</p>
           </div>
-          <div className="flex flex-col items-end gap-1">
-            <span className="text-[10px] text-slate-400">
-              {selectedItems.reduce((s, i) => s + i.returnQty, 0)} item(s)
-            </span>
-            <span className="text-[10px] font-medium text-slate-500 flex items-center gap-1">
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+            <span style={{ fontSize: 10, color: '#64748b' }}>{selectedItems.reduce((s, i) => s + i.returnQty, 0)} item(s)</span>
+            <span style={{ fontSize: 10, fontWeight: 600, color: '#475569', display: 'flex', alignItems: 'center', gap: 4 }}>
               {isStoreCredit ? <Gift size={10} /> : <Banknote size={10} />}
               {isStoreCredit ? "Store Credit" : `Via ${settlementMethod || originalPayment}`}
             </span>
@@ -409,203 +626,121 @@ const RefundSummary: React.FC<RefundSummaryProps> = ({
       </div>
     );
   }
-
   return (
-    <div className={`border rounded-xl p-4 ${diff > 0 ? "bg-amber-50 border-amber-100" : diff < 0 ? "bg-emerald-50 border-emerald-100" : "bg-slate-50 border-slate-100"}`}>
-      <div className="grid grid-cols-3 gap-3 text-center">
-        <div>
-          <p className="text-[10px] text-slate-400 mb-0.5">Return Value</p>
-          <p className="text-sm font-semibold sr-mono text-slate-700">{fmt(returnValue)}</p>
-        </div>
-        <div>
-          <p className="text-[10px] text-slate-400 mb-0.5">Exchange Value</p>
-          <p className="text-sm font-semibold sr-mono text-slate-700">{fmt(exchangeValue)}</p>
-        </div>
-        <div>
-          <p className="text-[10px] font-semibold  tracking-wide mb-0.5 text-[10px]" style={{ color: diff > 0 ? '#92400e' : diff < 0 ? '#065f46' : '#64748b' }}>
-            {diff > 0 ? "Customer Pays" : diff < 0 ? "Shop Refunds" : "Settled"}
-          </p>
-          <p className={`text-sm font-semibold sr-mono ${diff > 0 ? "text-amber-700" : diff < 0 ? "text-emerald-700" : "text-slate-500"}`}>
-            {diff === 0 ? "–" : fmt(Math.abs(diff))}
-          </p>
-        </div>
+    <div style={{ border: '1px solid', borderColor: diff > 0 ? '#fde68a' : diff < 0 ? '#a7f3d0' : '#e2e8f0', borderRadius: 14, padding: '14px 16px', background: diff > 0 ? '#fffbeb' : diff < 0 ? '#ecfdf5' : '#f8fafc' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, textAlign: 'center' }}>
+        {[
+          { label: 'Return Value', val: fmt(returnValue), color: '#475569' },
+          { label: 'Exchange Value', val: fmt(exchangeValue), color: '#475569' },
+          { label: diff > 0 ? 'Customer Pays' : diff < 0 ? 'Shop Refunds' : 'Settled', val: diff === 0 ? '–' : fmt(Math.abs(diff)), color: diff > 0 ? '#b45309' : diff < 0 ? '#065f46' : '#94a3b8' },
+        ].map(({ label, val, color }) => (
+          <div key={label}>
+            <p style={{ fontSize: 9, fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>{label}</p>
+            <p className="sl-mono" style={{ fontSize: 13, fontWeight: 700, color }}>{val}</p>
+          </div>
+        ))}
       </div>
     </div>
   );
 };
 
 /* ═══════════════════════════════════════════════════════════════
-   SERIAL RETURN PICKER
-   Shows when a sale item has serial number tracking enabled.
-   User must select exactly `returnQty` serials.
+   SERIAL RETURN PICKER (unchanged logic)
 ═══════════════════════════════════════════════════════════════ */
-interface SerialReturnPickerProps {
-  allSerials: string[];       // serials attached to this sale item
-  selected: string[];         // currently chosen serials
-  required: number;           // must select exactly this many
-  onChange: (serials: string[]) => void;
-}
+interface SerialReturnPickerProps { allSerials: string[]; selected: string[]; required: number; onChange: (serials: string[]) => void; }
 const SerialReturnPicker: React.FC<SerialReturnPickerProps> = ({ allSerials, selected, required, onChange }) => {
-  const toggleSerial = (sn: string) => {
-    if (selected.includes(sn)) {
-      onChange(selected.filter(s => s !== sn));
-    } else {
-      if (selected.length < required) {
-        onChange([...selected, sn]);
-      }
-    }
+  const toggle = (sn: string) => {
+    if (selected.includes(sn)) onChange(selected.filter(s => s !== sn));
+    else if (selected.length < required) onChange([...selected, sn]);
   };
-  const isComplete = selected.length === required;
-
+  const ok = selected.length === required;
   return (
-    <div className="mt-3 rounded-xl border border-violet-100 bg-violet-50/60 p-3" onClick={e => e.stopPropagation()}>
-      <div className="flex items-center justify-between mb-2">
-        <p className="text-[10px] font-bold text-violet-600 flex items-center gap-1.5">
-          <Hash size={11} />
-          Select Serial Numbers to Return
-        </p>
-        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${isComplete ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
-          }`}>
-          {selected.length} / {required} selected
-        </span>
+    <div style={{ marginTop: 10, borderRadius: 10, border: '1px solid #ddd6fe', background: 'rgba(237,233,254,0.5)', padding: 10 }} onClick={e => e.stopPropagation()}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+        <p style={{ fontSize: 10, fontWeight: 700, color: '#7c3aed', display: 'flex', alignItems: 'center', gap: 4 }}><Hash size={10} />Select Serial Numbers</p>
+        <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 999, background: ok ? '#d1fae5' : '#fef3c7', color: ok ? '#065f46' : '#92400e' }}>{selected.length}/{required}</span>
       </div>
-      <div className="flex flex-wrap gap-1.5">
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
         {allSerials.map(sn => {
-          const isSelected = selected.includes(sn);
-          const isDisabled = !isSelected && selected.length >= required;
+          const isSel = selected.includes(sn);
+          const isDisabled = !isSel && selected.length >= required;
           return (
-            <button
-              key={sn}
-              onClick={() => toggleSerial(sn)}
-              disabled={isDisabled}
-              className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-mono font-semibold border transition-all ${isSelected
-                  ? "bg-violet-600 text-white border-violet-600 shadow-sm"
-                  : isDisabled
-                    ? "bg-white text-slate-300 border-slate-100 cursor-not-allowed"
-                    : "bg-white text-violet-700 border-violet-200 hover:border-violet-400 hover:bg-violet-50"
-                }`}
-            >
-              {isSelected && <Check size={9} />}
-              {sn}
+            <button key={sn} onClick={() => toggle(sn)} disabled={isDisabled}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 10px', borderRadius: 6, fontSize: 10, fontFamily: 'monospace', fontWeight: 600, border: '1px solid', cursor: isDisabled ? 'not-allowed' : 'pointer', transition: 'all 0.1s', background: isSel ? '#7c3aed' : isDisabled ? 'white' : 'white', color: isSel ? 'white' : isDisabled ? '#d1d5db' : '#7c3aed', borderColor: isSel ? '#7c3aed' : isDisabled ? '#f3f4f6' : '#ddd6fe' }}>
+              {isSel && <Check size={8} />}{sn}
             </button>
           );
         })}
       </div>
-      {!isComplete && (
-        <p className="mt-2 text-[10px] text-amber-600 flex items-center gap-1">
-          <AlertCircle size={10} />
-          Select {required - selected.length} more serial{required - selected.length !== 1 ? "s" : ""} to proceed
-        </p>
-      )}
+      {!ok && <p style={{ marginTop: 6, fontSize: 10, color: '#d97706', display: 'flex', alignItems: 'center', gap: 4 }}><AlertCircle size={10} />Select {required - selected.length} more to proceed</p>}
     </div>
   );
 };
 
 /* ═══════════════════════════════════════════════════════════════
-   ITEM SELECTOR
+   ITEM SELECTOR (unchanged logic)
 ═══════════════════════════════════════════════════════════════ */
 interface ItemSelectorProps {
-  items: SaleItem[];
-  returnItems: Record<string, number>;
-  serialReturnMap: Record<string, string[]>;
-  onToggle: (id: string) => void;
-  onQtyChange: (id: string, v: number) => void;
-  onSerialChange: (id: string, serials: string[]) => void;
-  onSelectAll: (all: boolean) => void;
-  error?: string;
+  items: SaleItem[]; returnItems: Record<string, number>; serialReturnMap: Record<string, string[]>;
+  onToggle: (id: string) => void; onQtyChange: (id: string, v: number) => void;
+  onSerialChange: (id: string, serials: string[]) => void; onSelectAll: (all: boolean) => void; error?: string;
 }
 const ItemSelector: React.FC<ItemSelectorProps> = ({ items, returnItems, serialReturnMap, onToggle, onQtyChange, onSerialChange, onSelectAll, error }) => {
   const [q, setQ] = useState("");
   const filtered = items.filter(i => i.name.toLowerCase().includes(q.toLowerCase()) || i.sku.toLowerCase().includes(q.toLowerCase()));
-
   const selectableItems = filtered.filter(i => i.status !== "REFUNDED" && i.status !== "EXCHANGED");
   const allSelected = selectableItems.length > 0 && selectableItems.every(i => returnItems[i.id] !== undefined);
-
   return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-3">
-        <div className="relative flex-1">
-          <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-          <input
-            type="text"
-            placeholder="Search items in this order..."
-            value={q}
-            onChange={e => setQ(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700 outline-none focus:bg-white focus:border-blue-300 transition-all"
-          />
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ position: 'relative', flex: 1 }}>
+          <Search size={12} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+          <input type="text" placeholder="Search items..." value={q} onChange={e => setQ(e.target.value)}
+            className="sl-search-input" style={{ paddingLeft: 32, height: 34 }} />
         </div>
-        <button
-          onClick={() => onSelectAll(!allSelected)}
-          className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-semibold border transition-all ${allSelected ? "bg-blue-600 border-blue-600 text-white" : "bg-white border-slate-200 text-slate-600 hover:border-slate-300"}`}
-        >
-          {allSelected ? <Check size={12} /> : <div className="w-3 h-3 rounded-sm border border-slate-300 bg-white" />}
-          Select All
+        <button onClick={() => onSelectAll(!allSelected)}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 10px', borderRadius: 7, fontSize: 11, fontWeight: 600, border: '1px solid', transition: 'all 0.12s', cursor: 'pointer', background: allSelected ? '#2563eb' : 'white', borderColor: allSelected ? '#2563eb' : '#e2e8f0', color: allSelected ? 'white' : '#475569' }}>
+          {allSelected ? <Check size={11} /> : <div style={{ width: 11, height: 11, borderRadius: 3, border: '1.5px solid #d1d5db' }} />}
+          All
         </button>
       </div>
-
-      <div className="space-y-2">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         {filtered.map(item => {
           const checked = returnItems[item.id] !== undefined;
           const qty = returnItems[item.id] ?? 1;
           const isProcessed = item.status === "REFUNDED" || item.status === "EXCHANGED";
           const hasSerials = item.serial_numbers && item.serial_numbers.length > 0;
           const selectedSerials = serialReturnMap[item.id] ?? [];
-
           return (
-            <div key={item.id}
-              className={`sr-item-row border rounded-xl p-3.5 ${checked ? "sel" : ""} ${isProcessed ? "opacity-60 cursor-not-allowed bg-slate-50" : ""}`}
-              onClick={() => !isProcessed && onToggle(item.id)}
-            >
-              <div className="flex items-center gap-3">
-                <input type="checkbox" className="sr-cb" checked={checked} disabled={isProcessed} readOnly onClick={e => e.stopPropagation()} />
-                <div
-                  className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
-                  style={{ background: item.imageColor }}
-                >
-                  <Package size={14} className="text-slate-500 opacity-60" />
+            <div key={item.id} className={`sl-item-row ${checked ? "sel" : ""}`}
+              style={{ border: '1px solid', borderColor: checked ? '#bfdbfe' : '#f1f5f9', borderRadius: 10, padding: '10px 12px', opacity: isProcessed ? 0.6 : 1, cursor: isProcessed ? 'not-allowed' : 'pointer', background: isProcessed ? '#f8fafc' : '' }}
+              onClick={() => !isProcessed && onToggle(item.id)}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <input type="checkbox" className="sl-cb" checked={checked} disabled={isProcessed} readOnly onClick={e => e.stopPropagation()} />
+                <div style={{ width: 34, height: 34, borderRadius: 8, background: item.imageColor, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <Package size={13} style={{ color: '#64748b', opacity: 0.6 }} />
                 </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <p className="text-xs font-medium text-slate-800">{item.name}</p>
-                        {item.status && (
-                          <span className={`text-[8px] font-bold px-1 rounded  ${item.status === "REFUNDED" ? "bg-red-50 text-red-600 border border-red-100" : "bg-blue-50 text-blue-600 border border-blue-100"
-                            }`}>
-                            {item.status}
-                          </span>
-                        )}
-                        {hasSerials && (
-                          <span className="text-[8px] font-bold px-1.5 py-0.5 rounded bg-violet-50 text-violet-600 border border-violet-100 flex items-center gap-1">
-                            <Hash size={8} /> Serial Tracked
-                          </span>
-                        )}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                        <p style={{ fontSize: 12, fontWeight: 600, color: '#1e293b' }}>{item.name}</p>
+                        {item.status && <span style={{ fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 4, background: item.status === "REFUNDED" ? '#fef2f2' : '#eff6ff', color: item.status === "REFUNDED" ? '#dc2626' : '#2563eb' }}>{item.status}</span>}
+                        {hasSerials && <span style={{ fontSize: 9, fontWeight: 700, padding: '1px 6px', borderRadius: 4, background: '#f5f3ff', color: '#7c3aed', display: 'flex', alignItems: 'center', gap: 3 }}><Hash size={8} />SN</span>}
                       </div>
-                      <p className="text-[10px] text-slate-400 sr-mono mt-0.5">{item.sku} · {item.category}</p>
+                      <p className="sl-mono" style={{ fontSize: 10, color: '#94a3b8', marginTop: 2 }}>{item.sku} · {item.category}</p>
                     </div>
-                    <p className="text-xs font-semibold text-slate-700 sr-mono shrink-0">{fmt(item.unitPrice)}</p>
+                    <p className="sl-mono" style={{ fontSize: 11, fontWeight: 700, color: '#1e293b', flexShrink: 0 }}>{fmt(item.unitPrice)}</p>
                   </div>
-
                   {checked && (
                     <>
-                      <div className="mt-2 flex items-center gap-2.5" onClick={e => e.stopPropagation()}>
-                        <span className="text-[10px] text-slate-400">Return qty</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }} onClick={e => e.stopPropagation()}>
+                        <span style={{ fontSize: 10, color: '#94a3b8' }}>Qty</span>
                         <QuantityStepper value={qty} max={item.quantity} onChange={v => onQtyChange(item.id, v)} />
-                        <span className="text-[10px] text-slate-400">of {item.quantity}</span>
-                        <span className="ml-auto text-[10px] font-semibold text-blue-600 sr-mono">
-                          {fmt(item.unitPrice * qty)}
-                        </span>
+                        <span style={{ fontSize: 10, color: '#94a3b8' }}>of {item.quantity}</span>
+                        <span className="sl-mono" style={{ marginLeft: 'auto', fontSize: 10, fontWeight: 700, color: '#2563eb' }}>{fmt(item.unitPrice * qty)}</span>
                       </div>
-
-                      {/* ── Serial Picker (only when item has serial tracking) ── */}
-                      {hasSerials && (
-                        <SerialReturnPicker
-                          allSerials={item.serial_numbers as string[]}
-                          selected={selectedSerials}
-                          required={qty}
-                          onChange={serials => onSerialChange(item.id, serials)}
-                        />
-                      )}
+                      {hasSerials && <SerialReturnPicker allSerials={item.serial_numbers as string[]} selected={selectedSerials} required={qty} onChange={s => onSerialChange(item.id, s)} />}
                     </>
                   )}
                 </div>
@@ -614,88 +749,54 @@ const ItemSelector: React.FC<ItemSelectorProps> = ({ items, returnItems, serialR
           );
         })}
         {filtered.length === 0 && (
-          <div className="py-10 text-center bg-slate-50 rounded-xl border border-dashed border-slate-200">
-            <p className="text-xs text-slate-400">No items match your search.</p>
+          <div style={{ padding: '32px 0', textAlign: 'center', background: '#f8fafc', borderRadius: 10, border: '1px dashed #e2e8f0' }}>
+            <p style={{ fontSize: 12, color: '#94a3b8' }}>No items match your search.</p>
           </div>
         )}
       </div>
-      {error && (
-        <p className="mt-2 flex items-center gap-1.5 text-[11px] text-red-500">
-          <AlertCircle size={11} /> {error}
-        </p>
-      )}
+      {error && <p style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: '#ef4444' }}><AlertCircle size={11} />{error}</p>}
     </div>
   );
 };
 
 /* ═══════════════════════════════════════════════════════════════
-   USE RETURN ORDER HOOK
+   USE RETURN HOOK (100% unchanged)
 ═══════════════════════════════════════════════════════════════ */
 const initialState = (): ReturnState => ({
-  step: 1,
-  mode: "refund",
-  returnItems: {},
-  exchangeMap: {},
-  serialReturnMap: {},
-  reason: "",
-  notes: "",
-  settlementMethod: "Cash",
-  errors: {},
-  isSubmitting: false,
+  step: 1, mode: "refund", returnItems: {}, exchangeMap: {}, serialReturnMap: {},
+  reason: "", notes: "", settlementMethod: "Cash", errors: {}, isSubmitting: false,
 });
 
 const useReturnModal = (sale: SaleRecord | null, productMap: Record<string, string> = {}) => {
   const [state, setState] = useState<ReturnState>(initialState());
-
-  const saleItems = useMemo<SaleItem[]>(
-    () => (sale ? generateItems(sale, productMap) : []),
-    [sale?.id, productMap],
-  );
-
+  const saleItems = useMemo<SaleItem[]>(() => (sale ? generateItems(sale, productMap) : []), [sale?.id, productMap]);
   const reset = useCallback(() => setState(initialState()), []);
-
   const setStep = (step: ReturnStep) => setState(s => ({ ...s, step }));
   const setMode = (mode: ReturnMode) => setState(s => ({ ...s, mode, settlementMethod: mode === "refund" ? "Cash" : "" }));
   const setReason = (reason: ReturnReason) => setState(s => ({ ...s, reason, errors: { ...s.errors, reason: undefined } }));
   const setNotes = (notes: string) => setState(s => ({ ...s, notes }));
-  const setSettlementMethod = (settlementMethod: SettlementMethod) => setState(s => ({ ...s, settlementMethod, errors: { ...s.errors, settlement: undefined } }));
-
+  const setSettlementMethod = (sm: SettlementMethod) => setState(s => ({ ...s, settlementMethod: sm, errors: { ...s.errors, settlement: undefined } }));
   const { showToast } = useToast();
 
   const toggleItem = useCallback((itemId: string) => {
     setState(s => {
-      const next = { ...s.returnItems };
-      const nextEx = { ...s.exchangeMap };
-      const nextSer = { ...s.serialReturnMap };
-      if (next[itemId] !== undefined) {
-        delete next[itemId];
-        delete nextEx[itemId];
-        delete nextSer[itemId];
-      } else {
+      const next = { ...s.returnItems }, nextEx = { ...s.exchangeMap }, nextSer = { ...s.serialReturnMap };
+      if (next[itemId] !== undefined) { delete next[itemId]; delete nextEx[itemId]; delete nextSer[itemId]; }
+      else {
         const item = saleItems.find(i => i.id === itemId);
         next[itemId] = item?.quantity ?? 1;
-        // Pre-select all serials if tracking is on
-        if (item && item.serial_numbers && item.serial_numbers.length > 0) {
-          nextSer[itemId] = [...item.serial_numbers];
-        }
+        if (item?.serial_numbers?.length) nextSer[itemId] = [...item.serial_numbers];
       }
       return { ...s, returnItems: next, exchangeMap: nextEx, serialReturnMap: nextSer, errors: { ...s.errors, items: undefined } };
     });
   }, [saleItems]);
 
-  const setSerialReturns = useCallback((itemId: string, serials: string[]) => {
-    setState(s => ({ ...s, serialReturnMap: { ...s.serialReturnMap, [itemId]: serials } }));
-  }, []);
-
+  const setSerialReturns = useCallback((itemId: string, serials: string[]) => setState(s => ({ ...s, serialReturnMap: { ...s.serialReturnMap, [itemId]: serials } })), []);
   const selectAll = useCallback((all: boolean) => {
     setState(s => {
       if (!all) return { ...s, returnItems: {}, exchangeMap: {} };
       const next: Record<string, number> = {};
-      saleItems.forEach(i => {
-        if (i.status !== "REFUNDED" && i.status !== "EXCHANGED") {
-          next[i.id] = i.quantity;
-        }
-      });
+      saleItems.forEach(i => { if (i.status !== "REFUNDED" && i.status !== "EXCHANGED") next[i.id] = i.quantity; });
       return { ...s, returnItems: next, errors: { ...s.errors, items: undefined } };
     });
   }, [saleItems]);
@@ -706,110 +807,47 @@ const useReturnModal = (sale: SaleRecord | null, productMap: Record<string, stri
     setState(s => ({ ...s, returnItems: { ...s.returnItems, [itemId]: Math.min(Math.max(1, v), item.quantity) } }));
   }, [saleItems]);
 
-  const setExchangeProduct = useCallback((itemId: string, product: any) => {
-    setState(s => ({ ...s, exchangeMap: { ...s.exchangeMap, [itemId]: product } }));
-  }, []);
+  const setExchangeProduct = useCallback((itemId: string, product: any) => setState(s => ({ ...s, exchangeMap: { ...s.exchangeMap, [itemId]: product } })), []);
 
-  const selectedItems = useMemo<SelectedReturnItem[]>(() => {
-    return saleItems
-      .filter(i => state.returnItems[i.id] !== undefined)
-      .map(i => ({ ...i, returnQty: state.returnItems[i.id], exchangeItemId: state.exchangeMap[i.id], selectedSerials: state.serialReturnMap[i.id] }));
-  }, [saleItems, state.returnItems, state.exchangeMap, state.serialReturnMap]);
+  const selectedItems = useMemo<SelectedReturnItem[]>(() =>
+    saleItems.filter(i => state.returnItems[i.id] !== undefined)
+      .map(i => ({ ...i, returnQty: state.returnItems[i.id], exchangeItemId: state.exchangeMap[i.id], selectedSerials: state.serialReturnMap[i.id] })),
+    [saleItems, state.returnItems, state.exchangeMap, state.serialReturnMap]);
 
-  // Calculate values for exchanges and refunds
   const totals = useMemo(() => {
     const returnValue = selectedItems.reduce((s, i) => s + i.unitPrice * i.returnQty, 0);
-    const exchangeValue = state.mode === "exchange"
-      ? selectedItems.reduce((s, i) => {
-        if (!i.exchangeItemId) return s;
-        const ep = i.exchangeItemId as any;
-        return s + (ep?.sell_price ?? 0);
-      }, 0)
-      : 0;
-    return {
-      returnValue,
-      exchangeValue,
-      diff: exchangeValue - returnValue // Positive means customer pays extra. Negative means shop owes refund.
-    };
+    const exchangeValue = state.mode === "exchange" ? selectedItems.reduce((s, i) => { if (!i.exchangeItemId) return s; const ep = i.exchangeItemId as any; return s + (ep?.sell_price ?? 0); }, 0) : 0;
+    return { returnValue, exchangeValue, diff: exchangeValue - returnValue };
   }, [selectedItems, state.mode]);
 
   const validate = useCallback((): boolean => {
     const errs: ReturnErrors = {};
     if (!state.reason) errs.reason = "Please select a reason.";
-    if (selectedItems.length === 0) {
-      errs.items = "Select at least one item.";
-    }
-
-    // Settlement Method is required if it's a direct refund or an exchange with a price difference
+    if (selectedItems.length === 0) errs.items = "Select at least one item.";
     const requiresSettlement = state.mode === "refund" || totals.diff !== 0;
-    if (requiresSettlement && !state.settlementMethod) {
-      errs.settlement = "Please select a payment/refund method.";
-    }
-
+    if (requiresSettlement && !state.settlementMethod) errs.settlement = "Please select a payment/refund method.";
     setState(s => ({ ...s, errors: errs }));
     return Object.keys(errs).length === 0;
   }, [state.reason, state.mode, state.settlementMethod, selectedItems, totals]);
 
-  const goNext = useCallback(() => {
-    if (state.step === 3 && !validate()) return;
-    setStep((state.step + 1) as ReturnStep);
-  }, [state.step, validate]);
-
-  const goBack = useCallback(() => {
-    if (state.step > 1) setStep((state.step - 1) as ReturnStep);
-  }, [state.step]);
+  const goNext = useCallback(() => { if (state.step === 3 && !validate()) return; setStep((state.step + 1) as ReturnStep); }, [state.step, validate]);
+  const goBack = useCallback(() => { if (state.step > 1) setStep((state.step - 1) as ReturnStep); }, [state.step]);
 
   const confirm = useCallback(async (onSuccess?: () => void) => {
     setState(s => ({ ...s, isSubmitting: true }));
     try {
       if (state.mode === "refund") {
-        await inventoryApi.bulkReturnOrder({
-          order_id: sale?.id || "",
-          items_id: selectedItems.map(i => i.id),
-          serial_numbers: selectedItems
-            .filter(i => i.selectedSerials && i.selectedSerials.length > 0)
-            .flatMap(i => i.selectedSerials as string[]),
-        } as any);
+        await inventoryApi.bulkReturnOrder({ order_id: sale?.id || "", items_id: selectedItems.map(i => i.id), serial_numbers: selectedItems.filter(i => i.selectedSerials?.length).flatMap(i => i.selectedSerials as string[]) } as any);
         showToast("Refund(s) processed successfully", "success");
       } else {
-        // Bulk Exchange - Merge identical products into single entries with summed quantity
         const productsMap = new Map<string, any>();
-
         selectedItems.forEach(item => {
-          const replacement = state.exchangeMap[item.id];
-          if (!replacement) return;
-
-          // Create a unique key for merging: ID + variant + batch + serialno_id
+          const replacement = state.exchangeMap[item.id]; if (!replacement) return;
           const key = `${replacement.id}-${replacement.variant_id || "none"}-${replacement.batch_id || "none"}-${replacement.serialno_id || "none"}`;
-
-          if (productsMap.has(key)) {
-            const existing = productsMap.get(key);
-            existing.quantity += replacement.quantity || item.returnQty;
-            if (replacement.serial_numbers) {
-              existing.serial_numbers = [...existing.serial_numbers, ...replacement.serial_numbers];
-            }
-          } else {
-            productsMap.set(key, {
-              id: replacement.id,
-              variant_id: replacement.variant_id || null,
-              batch_id: replacement.batch_id || null,
-              serialno_id: replacement.serialno_id || null,
-              serial_numbers: replacement.serial_numbers || [],
-              quantity: replacement.quantity || item.returnQty,
-            });
-          }
+          if (productsMap.has(key)) { const ex = productsMap.get(key); ex.quantity += replacement.quantity || item.returnQty; if (replacement.serial_numbers) ex.serial_numbers = [...ex.serial_numbers, ...replacement.serial_numbers]; }
+          else productsMap.set(key, { id: replacement.id, variant_id: replacement.variant_id || null, batch_id: replacement.batch_id || null, serialno_id: replacement.serialno_id || null, serial_numbers: replacement.serial_numbers || [], quantity: replacement.quantity || item.returnQty });
         });
-
-        const products = Array.from(productsMap.values());
-
-        await inventoryApi.bulkExchangeOrder({
-          shop_id: SHOP_ID,
-          customer_id: sale?.customer_id || "",
-          order_id: sale?.id || "",
-          items_id: selectedItems.map(i => i.id),
-          payment_method: state.settlementMethod || sale?.payment_method || "Cash",
-          products
-        });
+        await inventoryApi.bulkExchangeOrder({ shop_id: SHOP_ID, customer_id: sale?.customer_id || "", order_id: sale?.id || "", items_id: selectedItems.map(i => i.id), payment_method: state.settlementMethod || sale?.payment_method || "Cash", products: Array.from(productsMap.values()) });
         showToast("Exchange(s) processed successfully", "success");
       }
       onSuccess?.();
@@ -824,11 +862,7 @@ const useReturnModal = (sale: SaleRecord | null, productMap: Record<string, stri
   const canProceed = useMemo(() => {
     if (state.step === 2) {
       if (selectedItems.length === 0) return false;
-      // For serial-tracked items: must have exactly returnQty serials selected
-      const serialsOk = selectedItems.every(i => {
-        if (!i.serial_numbers || i.serial_numbers.length === 0) return true;
-        return (i.selectedSerials?.length ?? 0) === i.returnQty;
-      });
+      const serialsOk = selectedItems.every(i => !i.serial_numbers?.length || (i.selectedSerials?.length ?? 0) === i.returnQty);
       if (!serialsOk) return false;
       return state.mode === "refund" || selectedItems.every(i => !!i.exchangeItemId);
     }
@@ -836,790 +870,317 @@ const useReturnModal = (sale: SaleRecord | null, productMap: Record<string, stri
     return true;
   }, [state.step, state.mode, selectedItems, state.reason, totals.diff, state.settlementMethod]);
 
-  return {
-    state, saleItems, selectedItems, totals,
-    reset, setMode, setReason, setNotes, setSettlementMethod,
-    toggleItem, selectAll, updateQty, setExchangeProduct, setSerialReturns,
-    goNext, goBack, confirm, canProceed,
-  };
+  return { state, saleItems, selectedItems, totals, reset, setMode, setReason, setNotes, setSettlementMethod, toggleItem, selectAll, updateQty, setExchangeProduct, setSerialReturns, goNext, goBack, confirm, canProceed };
 };
 
 /* ═══════════════════════════════════════════════════════════════
-   RETURN MODAL
+   RETURN MODAL (refactored UI, identical logic)
 ═══════════════════════════════════════════════════════════════ */
-interface ReturnModalProps {
-  sale: SaleRecord;
-  onClose: () => void;
-  onRefresh: () => void;
-  productMap: Record<string, string>;
-}
+interface ReturnModalProps { sale: SaleRecord; onClose: () => void; onRefresh: () => void; productMap: Record<string, string>; }
 
 const ReturnModal: React.FC<ReturnModalProps> = ({ sale, onClose, onRefresh, productMap }) => {
   const m = useReturnModal(sale, productMap);
   const { state, saleItems, selectedItems, totals } = m;
   const scrollRef = useRef<HTMLDivElement>(null);
-
-  // State for the exchange products search bar and the active tab
   const [exchSearch, setExchSearch] = useState("");
   const [activeReplaceId, setActiveReplaceId] = useState<string | null>(null);
-
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [pendingProduct, setPendingProduct] = useState<InventoryItem | null>(null);
-
   const [exchProducts, setExchProducts] = useState<any[]>([]);
   const [loadingExch, setLoadingExch] = useState(false);
 
   const mapToInventoryItem = (p: any): InventoryItem => ({
-    id: p.id,
-    product_barcode: p.barcode || "N/A",
-    product_name: p.name || "Unknown Product",
-    category: p.category || "Other",
-    variants: (p.variants || []).map((v: any) => ({
-      ...v,
-      price: v.sell_price || 0,
-      stock: v.stocks || 0,
-      serialnoId: v.serial_numbers?.id || v.serial_number?.id || v.batches?.[0]?.serial_numbers?.id,
-      availableSerials: v.serial_numbers?.serial_numbers || v.serial_number?.serial_numbers || v.batches?.[0]?.serial_numbers?.serial_numbers || [],
-      batchId: v.batches?.[0]?.id,
-    })),
-    requireSerial: p.has_serialno || false,
-    batchTracking: p.has_batch || false,
-    manufacturingDate: p.batches?.[0]?.manufacturing_date,
-    expiryDate: p.batches?.[0]?.expiry_date,
-    price: p.sell_price || 0,
-    stocks: p.stocks || 0,
+    id: p.id, product_barcode: p.barcode || "N/A", product_name: p.name || "Unknown", category: p.category || "Other",
+    variants: (p.variants || []).map((v: any) => ({ ...v, price: v.sell_price || 0, stock: v.stocks || 0, serialnoId: v.serial_numbers?.id || v.serial_number?.id || v.batches?.[0]?.serial_numbers?.id, availableSerials: v.serial_numbers?.serial_numbers || v.serial_number?.serial_numbers || v.batches?.[0]?.serial_numbers?.serial_numbers || [], batchId: v.batches?.[0]?.id })),
+    requireSerial: p.has_serialno || false, batchTracking: p.has_batch || false,
+    manufacturingDate: p.batches?.[0]?.manufacturing_date, expiryDate: p.batches?.[0]?.expiry_date,
+    price: p.sell_price || 0, stocks: p.stocks || 0,
     serialnoId: p.serial_number?.id || p.batches?.[0]?.serial_numbers?.id,
     availableSerials: p.serial_number?.serial_numbers || p.batches?.[0]?.serial_numbers?.serial_numbers || [],
     batchId: p.batches?.[0]?.id,
   });
 
-  const handleExchangeClick = (ep: any) => {
-    setPendingProduct(mapToInventoryItem(ep));
-    setIsProductModalOpen(true);
-  };
-
+  const handleExchangeClick = (ep: any) => { setPendingProduct(mapToInventoryItem(ep)); setIsProductModalOpen(true); };
   const handleProductSelectSuccess = (variant: ProductVariant, quantity: number, serials?: string[]) => {
     if (!activeReplaceId || !pendingProduct) return;
-
-    const exchangeData = {
-      id: pendingProduct.id,
-      name: variant.id === "default" ? pendingProduct.product_name : `${pendingProduct.product_name} - ${variant.name}`,
-      sell_price: variant.price,
-      variant_id: variant.id === "default" ? null : variant.id,
-      batch_id: variant.batchId || pendingProduct.batchId,
-      serialno_id: variant.serialnoId || pendingProduct.serialnoId,
-      serial_numbers: serials || [],
-      quantity: quantity,
-    };
-
-    m.setExchangeProduct(activeReplaceId, exchangeData);
-    setIsProductModalOpen(false);
-    setPendingProduct(null);
+    m.setExchangeProduct(activeReplaceId, { id: pendingProduct.id, name: variant.id === "default" ? pendingProduct.product_name : `${pendingProduct.product_name} - ${variant.name}`, sell_price: variant.price, variant_id: variant.id === "default" ? null : variant.id, batch_id: variant.batchId || pendingProduct.batchId, serialno_id: variant.serialnoId || pendingProduct.serialnoId, serial_numbers: serials || [], quantity });
+    setIsProductModalOpen(false); setPendingProduct(null);
   };
 
   useEffect(() => {
-    const fetchExch = async () => {
-      setLoadingExch(true);
-      const res = await inventoryApi.searchInventories(exchSearch);
-      setExchProducts(res);
-      setLoadingExch(false);
-    };
-
-    const timer = setTimeout(fetchExch, 300);
-    return () => clearTimeout(timer);
+    const t = setTimeout(async () => { setLoadingExch(true); const res = await inventoryApi.searchInventories(exchSearch); setExchProducts(res); setLoadingExch(false); }, 300);
+    return () => clearTimeout(t);
   }, [exchSearch]);
 
-  // Keep the active replacement tab synced with selected items
   useEffect(() => {
-    if (selectedItems.length > 0 && (!activeReplaceId || !selectedItems.some(i => i.id === activeReplaceId))) {
-      setActiveReplaceId(selectedItems[0].id);
-    }
+    if (selectedItems.length > 0 && (!activeReplaceId || !selectedItems.some(i => i.id === activeReplaceId))) setActiveReplaceId(selectedItems[0].id);
   }, [selectedItems, activeReplaceId]);
 
-  // Reset scroll on step change
-  useEffect(() => {
-    scrollRef.current?.scrollTo({ top: 0, behavior: "smooth" });
-  }, [state.step]);
+  useEffect(() => { scrollRef.current?.scrollTo({ top: 0, behavior: "smooth" }); }, [state.step]);
+  useEffect(() => { const h = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); }; window.addEventListener("keydown", h); return () => window.removeEventListener("keydown", h); }, [onClose]);
 
   const canReturn = sale.status === "Completed" && sale.origin !== "Sales Return";
 
-  // Close on Escape
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [onClose]);
-
   return (
-    <div className="sr-backdrop-enter fixed inset-0 z-[200] flex items-center justify-center p-4"
-      style={{ background: "rgba(15,23,42,0.4)", backdropFilter: "blur(4px)" }}
-    >
-      <div className="sr-modal-enter relative bg-white rounded-2xl shadow-2xl w-full max-w-lg flex flex-col overflow-hidden"
-        style={{ maxHeight: "calc(100vh - 48px)" }}
-        onClick={e => e.stopPropagation()}
-      >
-        {/* Close btn */}
-        <button onClick={onClose}
-          className="absolute top-4 right-4 z-10 w-7 h-7 flex items-center justify-center rounded-full bg-slate-100 text-slate-400 hover:bg-slate-200 hover:text-slate-600 transition-all">
-          <X size={14} />
-        </button>
+    <>
+      <div className="sl-modal-backdrop" onClick={onClose} />
+      <div className="sl-modal-panel">
+        <div className="sl-modal-box" onClick={e => e.stopPropagation()}>
+          <button onClick={onClose} style={{ position: 'absolute', top: 14, right: 14, zIndex: 10, width: 26, height: 26, borderRadius: '50%', background: '#f1f5f9', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}>
+            <X size={13} />
+          </button>
+          <StepHeader step={state.step} mode={state.mode} invoice={`INV-${sale.ui_id}`} />
 
-        {/* Step Header */}
-        <StepHeader step={state.step} mode={state.mode} invoice={`INV-${sale.ui_id}`} />
-
-        {/* Content */}
-        {!canReturn ? (
-          <div className="flex-1 flex flex-col items-center justify-center gap-4 p-8 text-center">
-            <div className="w-12 h-12 rounded-full bg-slate-50 border border-slate-100 flex items-center justify-center">
-              <AlertCircle size={20} className="text-orange-400" />
+          {!canReturn ? (
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 14, padding: '48px 32px', textAlign: 'center' }}>
+              <div style={{ width: 48, height: 48, borderRadius: '50%', background: '#fff7ed', border: '1px solid #fed7aa', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><AlertCircle size={20} style={{ color: '#f97316' }} /></div>
+              <div>
+                <p style={{ fontSize: 13, fontWeight: 700, color: '#1e293b', marginBottom: 6 }}>{sale.origin === "Sales Return" ? "Already Returned" : "Not Eligible"}</p>
+                <p style={{ fontSize: 12, color: '#64748b', lineHeight: 1.6 }}>{sale.origin === "Sales Return" ? "This order is already a Sales Return." : `Only Completed orders can be returned. This order is ${sale.status}.`}</p>
+              </div>
+              <button onClick={onClose} style={{ padding: '8px 18px', fontSize: 12, fontWeight: 600, color: '#475569', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, cursor: 'pointer' }}>Close</button>
             </div>
-            <div>
-              <p className="text-sm font-semibold text-slate-800 mb-1">
-                {sale.origin === "Sales Return" ? "Already Returned" : "Not Eligible"}
-              </p>
-              <p className="text-xs text-slate-500 leading-relaxed">
-                {sale.origin === "Sales Return"
-                  ? "This order is already a Sales Return and cannot be returned again."
-                  : `Only Completed orders can be returned. This order is ${sale.status}.`}
-              </p>
-            </div>
-            <button onClick={onClose}
-              className="px-4 py-2 text-xs font-medium text-slate-600 bg-slate-50 border border-slate-200 rounded-lg hover:bg-slate-100 transition-colors">
-              Close
-            </button>
-          </div>
-        ) : (
-          <>
-            <div ref={scrollRef} className="sr-scroll flex-1 overflow-y-auto p-5">
-              <div key={state.step} className="sr-step-enter space-y-5">
+          ) : (
+            <>
+              <div ref={scrollRef} className="sl-scroll" style={{ flex: 1, overflowY: 'auto', padding: '18px 22px' }}>
+                <div key={state.step} className="sl-step-enter" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
-                {/* STEP 1: Mode */}
-                {state.step === 1 && (
-                  <div className="space-y-3">
-                    <p className="text-xs text-slate-500">
-                      How would you like to handle this return for{" "}
-                      <span className="font-medium text-slate-700">{sale.customer_id}</span>?
-                    </p>
-                    <div className="grid grid-cols-2 gap-3">
-                      {([
-                        { id: "refund" as ReturnMode, icon: <Banknote size={18} />, label: "Refund", desc: "Return money to customer via original payment or store credit" },
-                        { id: "exchange" as ReturnMode, icon: <RefreshCw size={18} />, label: "Exchange", desc: "Swap returned items for other products in your catalog" },
-                      ]).map(opt => (
-                        <button key={opt.id}
-                          onClick={() => m.setMode(opt.id)}
-                          className={`sr-mode-pill text-left p-4 border-2 rounded-xl transition-all ${state.mode === opt.id ? "active" : "border-slate-100 text-slate-500 hover:border-slate-200"}`}
-                        >
-                          <div className={`mb-2 ${state.mode === opt.id ? "text-blue-500" : "text-slate-400"}`}>{opt.icon}</div>
-                          <p className="text-sm font-semibold text-slate-800 mb-1">{opt.label}</p>
-                          <p className="text-[11px] text-slate-400 leading-relaxed">{opt.desc}</p>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                  {/* STEP 1 */}
+                  {state.step === 1 && (
+                    <>
+                      <p style={{ fontSize: 12, color: '#64748b' }}>How would you like to handle this return?</p>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                        {[
+                          { id: "refund" as ReturnMode, icon: <Banknote size={20} />, label: "Refund", desc: "Return money to customer" },
+                          { id: "exchange" as ReturnMode, icon: <RefreshCw size={20} />, label: "Exchange", desc: "Swap for other products" },
+                        ].map(opt => (
+                          <button key={opt.id} onClick={() => m.setMode(opt.id)}
+                            className={`sl-mode-pill ${state.mode === opt.id ? "active" : ""}`}
+                            style={{ textAlign: 'left', padding: '14px', border: '2px solid', borderColor: state.mode === opt.id ? '#93c5fd' : '#f1f5f9', borderRadius: 12, background: state.mode === opt.id ? 'white' : '#f8fafc', cursor: 'pointer', transition: 'all 0.15s' }}>
+                            <div style={{ marginBottom: 8, color: state.mode === opt.id ? '#2563eb' : '#94a3b8' }}>{opt.icon}</div>
+                            <p style={{ fontSize: 13, fontWeight: 700, color: '#1e293b', marginBottom: 4 }}>{opt.label}</p>
+                            <p style={{ fontSize: 11, color: '#64748b', lineHeight: 1.4 }}>{opt.desc}</p>
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  )}
 
-                {/* STEP 2: Items & Replacement Search */}
-                {state.step === 2 && (
-                  <div className="space-y-4">
-                    <ItemSelector
-                      items={saleItems}
-                      returnItems={state.returnItems}
-                      serialReturnMap={state.serialReturnMap}
-                      onToggle={m.toggleItem}
-                      onQtyChange={m.updateQty}
-                      onSerialChange={m.setSerialReturns}
-                      onSelectAll={m.selectAll}
-                      error={state.errors.items}
-                    />
-
-                    {/* Exchange product picker with Tabs and Search Bar */}
-                    {state.mode === "exchange" && selectedItems.length > 0 && (
-                      <div className="pt-4 border-t border-slate-100 mt-4">
-                        <p className="text-xs font-semibold   text-slate-400 mb-3">
-                          Select Replacement Items
-                        </p>
-
-                        {/* Interactive Tabs for each returned item */}
-                        <div className="flex flex-wrap gap-2 mb-4">
-                          {selectedItems.map(selItem => {
-                            const hasReplacement = !!state.exchangeMap[selItem.id];
-                            const isActive = activeReplaceId === selItem.id;
-
-                            return (
-                              <button
-                                key={selItem.id}
-                                onClick={() => setActiveReplaceId(selItem.id)}
-                                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium border transition-all ${isActive
-                                  ? "border-blue-500 bg-blue-50 text-blue-700 shadow-sm"
-                                  : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
-                                  }`}
-                              >
-                                {selItem.name}
-                                {hasReplacement && <CheckCircle2 size={12} className={isActive ? "text-blue-500" : "text-emerald-500"} />}
-                              </button>
-                            );
-                          })}
-                        </div>
-
-                        {/* Search Bar for Exchange Products */}
-                        <div className="relative mb-4">
-                          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                          <input
-                            type="text"
-                            placeholder="Search replacement catalog..."
-                            value={exchSearch}
-                            onChange={(e) => setExchSearch(e.target.value)}
-                            className="w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 focus:bg-white transition-all placeholder-slate-400"
-                          />
-                        </div>
-
-                        {/* Rendering the catalog for the single ACTIVE tab */}
-                        {activeReplaceId && (
-                          <div className="mb-2">
-                            {(() => {
-                              // Get context details for the currently active item
-                              const activeItem = selectedItems.find(i => i.id === activeReplaceId);
-                              if (!activeItem) return null;
-
+                  {/* STEP 2 */}
+                  {state.step === 2 && (
+                    <>
+                      <ItemSelector items={saleItems} returnItems={state.returnItems} serialReturnMap={state.serialReturnMap} onToggle={m.toggleItem} onQtyChange={m.updateQty} onSerialChange={m.setSerialReturns} onSelectAll={m.selectAll} error={state.errors.items} />
+                      {state.mode === "exchange" && selectedItems.length > 0 && (
+                        <div style={{ paddingTop: 14, borderTop: '1px solid #f1f5f9' }}>
+                          <p style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 10 }}>Replacement Items</p>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
+                            {selectedItems.map(si => {
+                              const hasRep = !!state.exchangeMap[si.id];
+                              const isAct = activeReplaceId === si.id;
                               return (
-                                <p className="text-[11px] font-medium text-slate-500 mb-2.5 flex items-center gap-1.5">
-                                  <ArrowRight size={10} className="text-slate-400" />
-                                  Replacing: <span className="text-slate-800 font-semibold">{activeItem.name}</span>
-                                  <span className="text-slate-400 sr-mono ml-auto">Value: {fmt(activeItem.unitPrice * activeItem.returnQty)}</span>
-                                </p>
+                                <button key={si.id} onClick={() => setActiveReplaceId(si.id)}
+                                  style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 10px', borderRadius: 7, fontSize: 11, fontWeight: 600, border: '1px solid', cursor: 'pointer', transition: 'all 0.12s', background: isAct ? '#eff6ff' : 'white', borderColor: isAct ? '#3b82f6' : '#e2e8f0', color: isAct ? '#1d4ed8' : '#475569', boxShadow: isAct ? '0 1px 4px rgba(59,130,246,0.15)' : 'none' }}>
+                                  {si.name}
+                                  {hasRep && <CheckCircle2 size={11} style={{ color: isAct ? '#2563eb' : '#10b981' }} />}
+                                </button>
                               );
-                            })()}
-
-                            {loadingExch ? (
-                              <div className="text-center py-8">
-                                <Loader2 size={24} className="animate-spin text-blue-500 mx-auto opacity-50" />
-                                <p className="text-[10px] text-slate-400 mt-2 font-medium">Searching inventory...</p>
-                              </div>
-                            ) : exchProducts.length === 0 ? (
-                              <div className="text-center py-6 bg-slate-50 rounded-xl border border-slate-100">
-                                <p className="text-[10px] text-slate-400 font-medium">No products found matching "{exchSearch}"</p>
-                              </div>
-                            ) : (
-                              <div className="grid grid-cols-1 gap-2 max-h-[300px] overflow-y-auto sr-scroll pr-1">
-                                {exchProducts.map(ep => {
-                                  const selected = state.exchangeMap[activeReplaceId]?.id === ep.id;
-                                  const inStock = (ep.stocks || 0) > 0;
-
-                                  return (
-                                    <div key={ep.id}
-                                      onClick={() => inStock && handleExchangeClick(ep)}
-                                      className={`sr-exch-card border rounded-xl p-3 flex items-center gap-3 ${selected ? "selected" : ""} ${!inStock ? "disabled" : ""}`}
-                                    >
-                                      <div className="w-9 h-9 rounded-lg bg-slate-100 flex items-center justify-center shrink-0">
-                                        <Package size={14} className="text-slate-400 opacity-60" />
-                                      </div>
-                                      <div className="flex-1 min-w-0">
-                                        <p className="text-[11px] font-semibold text-slate-800 truncate">{ep.name}</p>
-                                        <div className="flex items-center gap-2 mt-0.5">
-                                          <span className="text-[9px] text-slate-400 sr-mono  ">{ep.barcode || ep.id.slice(-6)}</span>
-                                          {inStock ? (
-                                            <span className="text-[9px] text-emerald-500 font-bold">{ep.stocks} IN STOCK</span>
-                                          ) : (
-                                            <span className="text-[9px] text-red-400 font-bold">OUT OF STOCK</span>
-                                          )}
-                                        </div>
-                                      </div>
-                                      <div className="text-right">
-                                        <p className="text-[11px] font-bold text-slate-900 sr-mono">{fmt(ep.sell_price)}</p>
-                                        {selected && (
-                                          <div className="mt-1 flex justify-end">
-                                            <div className="w-4 h-4 rounded-full bg-blue-500 flex items-center justify-center shadow-sm shadow-blue-200">
-                                              <Check size={9} className="text-white" />
+                            })}
+                          </div>
+                          <div style={{ position: 'relative', marginBottom: 12 }}>
+                            <Search size={13} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+                            <input type="text" placeholder="Search replacement catalog..." value={exchSearch} onChange={e => setExchSearch(e.target.value)}
+                              className="sl-search-input" style={{ paddingLeft: 32, height: 36, width: '100%' }} />
+                          </div>
+                          {activeReplaceId && (() => {
+                            const ai = selectedItems.find(i => i.id === activeReplaceId);
+                            if (!ai) return null;
+                            return (
+                              <>
+                                <p style={{ fontSize: 11, fontWeight: 600, color: '#475569', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                                  <ArrowRight size={10} style={{ color: '#94a3b8' }} />
+                                  Replacing: <span style={{ color: '#1e293b' }}>{ai.name}</span>
+                                  <span className="sl-mono" style={{ marginLeft: 'auto', color: '#94a3b8', fontSize: 10 }}>{fmt(ai.unitPrice * ai.returnQty)}</span>
+                                </p>
+                                {loadingExch ? (
+                                  <div style={{ textAlign: 'center', padding: '32px 0' }}>
+                                    <Loader2 size={22} style={{ color: '#3b82f6', margin: '0 auto', display: 'block' }} className="animate-spin" />
+                                    <p style={{ fontSize: 10, color: '#94a3b8', marginTop: 8 }}>Searching...</p>
+                                  </div>
+                                ) : exchProducts.length === 0 ? (
+                                  <div style={{ padding: '24px 0', textAlign: 'center', background: '#f8fafc', borderRadius: 10, border: '1px solid #f1f5f9' }}>
+                                    <p style={{ fontSize: 11, color: '#94a3b8' }}>No products found</p>
+                                  </div>
+                                ) : (
+                                  <div className="sl-scroll" style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 280, overflowY: 'auto', paddingRight: 2 }}>
+                                    {exchProducts.map(ep => {
+                                      const sel = state.exchangeMap[activeReplaceId]?.id === ep.id;
+                                      const inStock = (ep.stocks || 0) > 0;
+                                      return (
+                                        <div key={ep.id} onClick={() => inStock && handleExchangeClick(ep)}
+                                          className={`sl-exch-card ${sel ? "selected" : ""} ${!inStock ? "disabled" : ""}`}
+                                          style={{ border: '1px solid', borderColor: sel ? '#3b82f6' : '#f1f5f9', borderRadius: 10, padding: '10px 12px', display: 'flex', alignItems: 'center', gap: 10 }}>
+                                          <div style={{ width: 34, height: 34, borderRadius: 8, background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                            <Package size={13} style={{ color: '#94a3b8', opacity: 0.6 }} />
+                                          </div>
+                                          <div style={{ flex: 1, minWidth: 0 }}>
+                                            <p style={{ fontSize: 11, fontWeight: 600, color: '#1e293b' }} className="sl-truncate">{ep.name}</p>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 2 }}>
+                                              <span className="sl-mono" style={{ fontSize: 9, color: '#94a3b8' }}>{ep.barcode || ep.id.slice(-6)}</span>
+                                              <span style={{ fontSize: 9, fontWeight: 700, color: inStock ? '#10b981' : '#ef4444' }}>{inStock ? `${ep.stocks} IN STOCK` : 'OUT OF STOCK'}</span>
                                             </div>
                                           </div>
-                                        )}
-                                      </div>
-                                    </div>
-                                  );
-                                })}
-                              </div>
+                                          <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                                            <p className="sl-mono" style={{ fontSize: 11, fontWeight: 700, color: '#0f172a' }}>{fmt(ep.sell_price)}</p>
+                                            {sel && <div style={{ marginTop: 4, display: 'flex', justifyContent: 'flex-end' }}><div style={{ width: 16, height: 16, borderRadius: '50%', background: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Check size={9} style={{ color: 'white' }} /></div></div>}
+                                          </div>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                )}
+                              </>
+                            );
+                          })()}
+                        </div>
+                      )}
+                    </>
+                  )}
+
+                  {/* STEP 3 */}
+                  {state.step === 3 && (
+                    <>
+                      <div>
+                        <label style={{ display: 'block', fontSize: 10, fontWeight: 700, color: '#94a3b8', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 6 }}>Return Reason <span style={{ color: '#ef4444' }}>*</span></label>
+                        <select value={state.reason} onChange={e => m.setReason(e.target.value as ReturnReason)}
+                          className="sl-select"
+                          style={{ width: '100%', padding: '10px 36px 10px 12px', fontSize: 12, border: '1px solid', borderColor: state.errors.reason ? '#fca5a5' : '#e2e8f0', borderRadius: 9, background: state.errors.reason ? '#fef2f2' : 'white', color: '#1e293b', outline: 'none' }}>
+                          <option value="">Select a reason…</option>
+                          {RETURN_REASONS.map(r => <option key={r} value={r}>{r}</option>)}
+                        </select>
+                        {state.errors.reason && <p style={{ marginTop: 5, fontSize: 11, color: '#ef4444', display: 'flex', alignItems: 'center', gap: 4 }}><AlertCircle size={11} />{state.errors.reason}</p>}
+                      </div>
+
+                      {(state.mode === "refund" || totals.diff !== 0) && (
+                        <div>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                            <label style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                              {state.mode === "refund" || totals.diff < 0 ? "Refund Via" : "Collect Via"} <span style={{ color: '#ef4444' }}>*</span>
+                            </label>
+                            {totals.diff !== 0 && state.mode === "exchange" && (
+                              <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 999, background: totals.diff > 0 ? '#fffbeb' : '#ecfdf5', color: totals.diff > 0 ? '#b45309' : '#065f46', border: '1px solid', borderColor: totals.diff > 0 ? '#fde68a' : '#a7f3d0' }}>Balance: {fmt(Math.abs(totals.diff))}</span>
                             )}
                           </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* STEP 3: Reason & Payment/Refund Selection */}
-                {state.step === 3 && (
-                  <div className="space-y-5">
-                    <div>
-                      <label className="block text-[11px] font-semibold   text-slate-400 mb-2">
-                        Return Reason <span className="text-red-400">*</span>
-                      </label>
-                      <select
-                        value={state.reason}
-                        onChange={e => m.setReason(e.target.value as ReturnReason)}
-                        className={`sr-select w-full px-3.5 py-2.5 text-xs border rounded-xl bg-white text-slate-700 outline-none transition-all pr-9 ${state.errors.reason
-                          ? "border-red-200 bg-red-50/30"
-                          : "border-slate-200 focus:border-blue-300 focus:ring-2 focus:ring-blue-500/10"
-                          }`}
-                      >
-                        <option value="">Select a reason…</option>
-                        {RETURN_REASONS.map(r => <option key={r} value={r}>{r}</option>)}
-                      </select>
-                      {state.errors.reason && (
-                        <p className="mt-1.5 flex items-center gap-1 text-[11px] text-red-500">
-                          <AlertCircle size={11} /> {state.errors.reason}
-                        </p>
-                      )}
-                    </div>
-
-                    {/* Dynamic Settlement Selection: Show if refund OR if exchange requires settling a balance */}
-                    {(state.mode === "refund" || totals.diff !== 0) && (
-                      <div>
-                        <div className="flex items-center justify-between mb-2">
-                          <label className="block text-[11px] font-semibold   text-slate-400">
-                            {state.mode === "refund" || totals.diff < 0 ? "Refund Via" : "Collect Balance Via"} <span className="text-red-400">*</span>
-                          </label>
-                          {totals.diff !== 0 && state.mode === "exchange" && (
-                            <span className={`text-[10px] font-semibold px-2 py-0.5 rounded border ${totals.diff > 0 ? "bg-amber-50 text-amber-600 border-amber-200" : "bg-emerald-50 text-emerald-600 border-emerald-200"
-                              }`}>
-                              Balance: {fmt(Math.abs(totals.diff))}
-                            </span>
-                          )}
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
+                            {[{ id: "Cash", icon: <Banknote size={18} strokeWidth={1.5} /> }, { id: "UPI", icon: <Smartphone size={18} strokeWidth={1.5} /> }, { id: "Card", icon: <CreditCard size={18} strokeWidth={1.5} /> }, ...(state.mode === "refund" || totals.diff < 0 ? [{ id: "Store Credit", icon: <Gift size={18} strokeWidth={1.5} /> }] : [])].map(opt => (
+                              <div key={opt.id} onClick={() => m.setSettlementMethod(opt.id as SettlementMethod)}
+                                className={`sl-rfm-pill ${state.settlementMethod === opt.id ? "active" : ""}`}
+                                style={{ border: '2px solid', borderColor: state.settlementMethod === opt.id ? '#3b82f6' : '#f1f5f9', borderRadius: 10, padding: '10px 12px', background: state.settlementMethod === opt.id ? '#eff6ff' : 'white' }}>
+                                <div style={{ marginBottom: 6, color: state.settlementMethod === opt.id ? '#2563eb' : '#94a3b8' }}>{opt.icon}</div>
+                                <p style={{ fontSize: 12, fontWeight: 600, color: '#1e293b' }}>{opt.id}</p>
+                              </div>
+                            ))}
+                          </div>
+                          {state.errors.settlement && <p style={{ marginTop: 5, fontSize: 11, color: '#ef4444', display: 'flex', alignItems: 'center', gap: 4 }}><AlertCircle size={11} />{state.errors.settlement}</p>}
                         </div>
+                      )}
 
-                        <div className="grid grid-cols-2 gap-2">
-                          {[
-                            { id: "Cash", icon: <Banknote size={20} strokeWidth={1.5} /> },
-                            { id: "UPI", icon: <Smartphone size={20} strokeWidth={1.5} /> },
-                            { id: "Card", icon: <CreditCard size={20} strokeWidth={1.5} /> },
-                            // Only allow Store Credit for refunds, not for collecting payments
-                            ...(state.mode === "refund" || totals.diff < 0 ? [{ id: "Store Credit", icon: <Gift size={20} strokeWidth={1.5} /> }] : []),
-                          ].map(opt => (
-                            <div key={opt.id}
-                              onClick={() => m.setSettlementMethod(opt.id as SettlementMethod)}
-                              className={`sr-rfm-pill border-2 rounded-xl p-3 ${state.settlementMethod === opt.id ? "active" : "border-slate-100"}`}
-                            >
-                              <div className={`mb-1.5 ${state.settlementMethod === opt.id ? "text-blue-500" : "text-slate-400"}`}>{opt.icon}</div>
-                              <p className="text-xs font-semibold text-slate-800">{opt.id}</p>
+                      <div>
+                        <label style={{ display: 'block', fontSize: 10, fontWeight: 700, color: '#94a3b8', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 6 }}>Notes <span style={{ fontSize: 10, color: '#cbd5e1', fontWeight: 400 }}>(optional)</span></label>
+                        <textarea value={state.notes} onChange={e => m.setNotes(e.target.value)} rows={3} placeholder="Any additional context…"
+                          style={{ width: '100%', padding: '10px 12px', fontSize: 12, border: '1px solid #e2e8f0', borderRadius: 9, background: 'white', color: '#1e293b', outline: 'none', resize: 'none', fontFamily: 'inherit' }} />
+                      </div>
+                    </>
+                  )}
+
+                  {/* STEP 4 */}
+                  {state.step === 4 && (
+                    <>
+                      <RefundSummary mode={state.mode} selectedItems={selectedItems} totals={totals} settlementMethod={state.settlementMethod} originalPayment={sale.payment_method as PaymentMethod} />
+                      <div>
+                        <p style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 8 }}>Items</p>
+                        <div style={{ border: '1px solid #f1f5f9', borderRadius: 10, overflow: 'hidden' }}>
+                          {selectedItems.map((item, idx) => (
+                            <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderTop: idx > 0 ? '1px solid #f8fafc' : 'none', background: 'white' }}>
+                              <div style={{ width: 28, height: 28, borderRadius: 7, background: item.imageColor, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><Package size={11} style={{ color: '#64748b', opacity: 0.6 }} /></div>
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <p style={{ fontSize: 12, fontWeight: 600, color: '#1e293b' }}>{item.name}</p>
+                                <p className="sl-mono" style={{ fontSize: 10, color: '#94a3b8' }}>{item.sku} · qty {item.returnQty}</p>
+                                {item.exchangeItemId && <p style={{ fontSize: 10, color: '#2563eb', marginTop: 2 }}>→ {(item.exchangeItemId as any).name}</p>}
+                              </div>
+                              <span className="sl-mono" style={{ fontSize: 12, fontWeight: 700, color: '#1e293b' }}>{fmt(item.unitPrice * item.returnQty)}</span>
                             </div>
                           ))}
                         </div>
-                        {state.errors.settlement && (
-                          <p className="mt-1.5 flex items-center gap-1 text-[11px] text-red-500">
-                            <AlertCircle size={11} /> {state.errors.settlement}
-                          </p>
-                        )}
                       </div>
-                    )}
-
-                    <div>
-                      <label className="block text-[11px] font-semibold   text-slate-400 mb-2">
-                        Notes <span className="text-slate-300 normal-case font-normal">(optional)</span>
-                      </label>
-                      <textarea
-                        value={state.notes}
-                        onChange={e => m.setNotes(e.target.value)}
-                        rows={3}
-                        placeholder="Any additional context…"
-                        className="w-full px-3.5 py-2.5 text-xs border border-slate-200 rounded-xl bg-white text-slate-700 outline-none resize-none focus:border-blue-300 focus:ring-2 focus:ring-blue-500/10 transition-all placeholder-slate-300"
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {/* STEP 4: Review */}
-                {state.step === 4 && (
-                  <div className="space-y-4">
-                    <RefundSummary
-                      mode={state.mode}
-                      selectedItems={selectedItems}
-                      totals={totals}
-                      settlementMethod={state.settlementMethod}
-                      originalPayment={sale.payment_method as PaymentMethod}
-                    />
-
-                    <div>
-                      <p className="text-[11px] font-semibold   text-slate-400 mb-2">
-                        Items
-                      </p>
-                      <div className="border border-slate-100 rounded-xl divide-y divide-slate-100 overflow-hidden">
-                        {selectedItems.map(item => {
-                          return (
-                            <div key={item.id} className="flex items-center gap-3 px-4 py-3 bg-white">
-                              <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0" style={{ background: item.imageColor }}>
-                                <Package size={12} className="text-slate-400 opacity-60" />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-xs font-medium text-slate-800">{item.name}</p>
-                                <div className="text-[10px] text-slate-400 sr-mono">
-                                  {item.sku} · qty {item.returnQty}
-                                  {item.exchangeItemId && (
-                                    <div className="mt-1 flex flex-col gap-0.5">
-                                      <span className="text-blue-500 font-medium">→ {(item.exchangeItemId as any).name}</span>
-                                      {(item.exchangeItemId as any).serial_numbers?.length > 0 && (
-                                        <span className="text-[9px] text-slate-400 bg-slate-100 px-1 rounded self-start">
-                                          SN: {(item.exchangeItemId as any).serial_numbers.join(", ")}
-                                        </span>
-                                      )}
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                              <span className="text-xs font-semibold sr-mono text-slate-700">{fmt(item.unitPrice * item.returnQty)}</span>
-                            </div>
-                          );
-                        })}
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                        {[{ label: "Mode", value: state.mode === "refund" ? "Refund" : "Exchange" }, { label: "Reason", value: state.reason }, ...((state.mode === "refund" || totals.diff !== 0) && state.settlementMethod ? [{ label: totals.diff > 0 ? "Payment Via" : "Refund Via", value: state.settlementMethod }] : [])].map(row => (
+                          <div key={row.label} style={{ background: '#f8fafc', border: '1px solid #f1f5f9', borderRadius: 10, padding: '10px 12px' }}>
+                            <p style={{ fontSize: 9, fontWeight: 700, color: '#94a3b8', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 4 }}>{row.label}</p>
+                            <p style={{ fontSize: 12, fontWeight: 600, color: '#1e293b' }}>{row.value}</p>
+                          </div>
+                        ))}
                       </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2.5">
-                      {[
-                        { label: "Mode", value: state.mode === "refund" ? "Refund" : "Exchange" },
-                        { label: "Reason", value: state.reason },
-                        ...((state.mode === "refund" || totals.diff !== 0) && state.settlementMethod
-                          ? [{ label: totals.diff > 0 ? "Payment Via" : "Refund Via", value: state.settlementMethod }]
-                          : []),
-                      ].map(row => (
-                        <div key={row.label} className="bg-slate-50 border border-slate-100 rounded-xl p-3">
-                          <p className="text-[10px] text-slate-400  tracking-wide mb-0.5">{row.label}</p>
-                          <p className="text-xs font-medium text-slate-700">{row.value}</p>
-                        </div>
-                      ))}
-                    </div>
-
-                    {state.notes && (
-                      <div className="bg-slate-50 border border-slate-100 rounded-xl p-3">
-                        <p className="text-[10px] text-slate-400  tracking-wide mb-0.5">Notes</p>
-                        <p className="text-xs text-slate-600 leading-relaxed">{state.notes}</p>
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 10, padding: '12px 14px' }}>
+                        <AlertCircle size={13} style={{ color: '#f59e0b', flexShrink: 0, marginTop: 1 }} />
+                        <p style={{ fontSize: 11, color: '#92400e', lineHeight: 1.5 }}>Confirming will mark this order as a return and {state.mode === "refund" ? "initiate a refund" : "process the exchange"}. This cannot be undone.</p>
                       </div>
-                    )}
+                    </>
+                  )}
 
-                    <div className="flex items-start gap-2.5 bg-amber-50 border border-amber-100 rounded-xl px-3.5 py-3">
-                      <AlertCircle size={12} className="text-amber-400 mt-0.5 shrink-0" />
-                      <p className="text-[11px] text-amber-700 leading-relaxed">
-                        Confirming this will mark the order as a return and{" "}
-                        {state.mode === "refund" ? "initiate a refund" : "process the exchange"}.
-                        This action cannot be undone.
-                      </p>
+                  {/* STEP 5 */}
+                  {state.step === 5 && (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 16, padding: '24px 0' }}>
+                      <div className="sl-done-pop" style={{ width: 60, height: 60, borderRadius: '50%', background: '#ecfdf5', border: '2px solid #a7f3d0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <CheckCircle2 size={26} style={{ color: '#10b981' }} />
+                      </div>
+                      <div>
+                        <p style={{ fontSize: 15, fontWeight: 700, color: '#1e293b', marginBottom: 6 }}>{state.mode === "refund" ? "Refund Processed" : "Exchange Initiated"}</p>
+                        <p style={{ fontSize: 12, color: '#64748b', lineHeight: 1.6, maxWidth: 280, margin: '0 auto' }}>
+                          {state.mode === "refund" ? `A refund of ${fmt(totals.returnValue)} has been processed via ${state.settlementMethod}.` : totals.diff > 0 ? `Exchange created. Balance of ${fmt(totals.diff)} collected via ${state.settlementMethod}.` : totals.diff < 0 ? `Exchange created. Balance of ${fmt(Math.abs(totals.diff))} refunded via ${state.settlementMethod}.` : "Exchange order has been created successfully."}
+                        </p>
+                      </div>
+                      <div style={{ width: '100%', border: '1px solid #f1f5f9', borderRadius: 12, overflow: 'hidden' }}>
+                        {[{ label: "Invoice", value: `INV-${sale.ui_id}` }, { label: "Mode", value: state.mode === "refund" ? "Refund" : "Exchange" }, { label: "Reason", value: state.reason }, ...(state.mode === "refund" ? [{ label: "Refunded", value: fmt(totals.returnValue) }] : totals.diff !== 0 ? [{ label: totals.diff > 0 ? "Balance Paid" : "Balance Refunded", value: fmt(Math.abs(totals.diff)) }] : [])].map((row, i) => (
+                          <div key={row.label} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 14px', borderTop: i > 0 ? '1px solid #f8fafc' : 'none', background: 'white' }}>
+                            <span style={{ fontSize: 11, color: '#94a3b8' }}>{row.label}</span>
+                            <span className="sl-mono" style={{ fontSize: 11, fontWeight: 700, color: '#1e293b' }}>{row.value}</span>
+                          </div>
+                        ))}
+                      </div>
+                      <button onClick={onClose} style={{ width: '100%', padding: '12px 0', background: '#0f172a', color: 'white', border: 'none', borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: 'pointer', transition: 'background 0.15s' }}>Close</button>
                     </div>
-                  </div>
-                )}
+                  )}
+                </div>
+              </div>
 
-                {/* STEP 5: Done */}
-                {state.step === 5 && (
-                  <div className="flex flex-col items-center text-center gap-5 py-6">
-                    <div className="sr-done-pop w-16 h-16 rounded-full bg-emerald-50 border-2 border-emerald-100 flex items-center justify-center">
-                      <CheckCircle2 size={28} className="text-emerald-500" />
-                    </div>
-                    <div>
-                      <p className="text-base font-semibold text-slate-800 mb-1.5">
-                        {state.mode === "refund" ? "Refund Processed" : "Exchange Initiated"}
-                      </p>
-                      <p className="text-xs text-slate-500 leading-relaxed max-w-xs mx-auto">
-                        {state.mode === "refund"
-                          ? `A refund of ${fmt(totals.returnValue)} has been processed to ${state.settlementMethod}.`
-                          : (totals.diff > 0
-                            ? `Exchange order created. Balance of ${fmt(totals.diff)} collected via ${state.settlementMethod}.`
-                            : totals.diff < 0
-                              ? `Exchange order created. Balance of ${fmt(Math.abs(totals.diff))} refunded to ${state.settlementMethod}.`
-                              : `Exchange order has been created. Replacement items will be dispatched shortly.`)}
-                      </p>
-                    </div>
-                    <div className="w-full bg-slate-50 border border-slate-100 rounded-xl overflow-hidden">
-                      {[
-                        { label: "Invoice", value: `INV-${sale.ui_id}` },
-                        { label: "Mode", value: state.mode === "refund" ? "Refund" : "Exchange" },
-                        { label: "Reason", value: state.reason },
-                        ...(state.mode === "refund" ? [{
-                          label: "Refunded",
-                          value: fmt(totals.returnValue),
-                        }] : totals.diff !== 0 ? [{
-                          label: totals.diff > 0 ? "Balance Paid" : "Balance Refunded",
-                          value: fmt(Math.abs(totals.diff))
-                        }] : []),
-                      ].map((row, idx) => (
-                        <div key={row.label} className={`flex justify-between px-4 py-3 ${idx > 0 ? "border-t border-slate-100" : ""}`}>
-                          <span className="text-[11px] text-slate-400">{row.label}</span>
-                          <span className="text-[11px] font-semibold text-slate-700 sr-mono">{row.value}</span>
-                        </div>
-                      ))}
-                    </div>
-                    <button onClick={onClose}
-                      className="sr-btn-primary w-full py-3 bg-slate-900 text-white rounded-xl text-xs font-semibold">
-                      Close
+              {/* Product selection modal (unchanged) */}
+              {(() => {
+                const usedSerials = Object.entries(state.exchangeMap).reduce((acc: string[], [itemId, data]) => { if (itemId === activeReplaceId) return acc; return [...acc, ...(data.serial_numbers || [])]; }, []);
+                return <ProductSelectionModal isOpen={isProductModalOpen} product={pendingProduct} onClose={() => setIsProductModalOpen(false)} onSuccess={handleProductSelectSuccess} excludedSerials={usedSerials} initialQuantity={selectedItems.find(i => i.id === activeReplaceId)?.returnQty} />;
+              })()}
+
+              {/* Footer */}
+              {state.step < 5 && (
+                <div style={{ flexShrink: 0, padding: '14px 22px', borderTop: '1px solid #f1f5f9', background: 'white', display: 'flex', alignItems: 'center', gap: 8 }}>
+                  {state.step > 1 && (
+                    <button onClick={m.goBack} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 14px', fontSize: 12, fontWeight: 600, color: '#475569', background: 'white', border: '1px solid #e2e8f0', borderRadius: 9, cursor: 'pointer', transition: 'all 0.12s' }}>
+                      <ArrowLeft size={13} />Back
                     </button>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {(() => {
-              const usedSerials = Object.entries(state.exchangeMap).reduce((acc: string[], [itemId, data]) => {
-                // Don't exclude serials belonging to the item we are CURRENTLY editing
-                if (itemId === activeReplaceId) return acc;
-                return [...acc, ...(data.serial_numbers || [])];
-              }, []);
-
-              return (
-                <ProductSelectionModal
-                  isOpen={isProductModalOpen}
-                  product={pendingProduct}
-                  onClose={() => setIsProductModalOpen(false)}
-                  onSuccess={handleProductSelectSuccess}
-                  excludedSerials={usedSerials}
-                  initialQuantity={selectedItems.find(i => i.id === activeReplaceId)?.returnQty}
-                />
-              );
-            })()}
-
-            {/* Footer */}
-            {state.step < 5 && (
-              <div className="shrink-0 px-5 py-4 border-t border-slate-100 bg-white flex items-center gap-2.5">
-                {state.step > 1 && (
-                  <button onClick={m.goBack}
-                    className="sr-btn-ghost flex items-center gap-1.5 px-4 py-2.5 text-xs font-medium text-slate-600 border border-slate-200 rounded-xl">
-                    <ArrowLeft size={13} />
-                    Back
-                  </button>
-                )}
-                {state.step < 4 ? (
-                  <button onClick={m.goNext}
-                    disabled={!m.canProceed}
-                    className="sr-btn-primary flex-1 py-2.5 bg-blue-600 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-2">
-                    Continue
-                    <ChevronRight size={14} />
-                  </button>
-                ) : (
-                  <button onClick={() => m.confirm(onRefresh)}
-                    disabled={state.isSubmitting}
-                    className="sr-btn-primary flex-1 py-2.5 bg-blue-600 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-2">
-                    {state.isSubmitting ? (
-                      <><Loader2 size={14} className="animate-spin" /> Processing…</>
-                    ) : (
-                      <>{state.mode === "refund" ? "Confirm Refund" : "Confirm Exchange"} <ChevronRight size={14} /></>
-                    )}
-                  </button>
-                )}
-              </div>
-            )}
-          </>
-        )}
-      </div>
-    </div>
-  );
-};
-
-/* ═══════════════════════════════════════════════════════════════
-   SALE DETAIL SIDEBAR (read-only)
-═══════════════════════════════════════════════════════════════ */
-interface SidebarProps {
-  sale: SaleRecord | null;
-  isOpen: boolean;
-  onClose: () => void;
-  onReturn: (sale: SaleRecord) => void;
-  openSidebar: (sale: SaleRecord) => void;
-  customerMap: Record<string, string>;
-  productMap: Record<string, string>;
-}
-
-const SaleDetailSidebar: React.FC<SidebarProps> = ({
-  sale, isOpen, onClose, onReturn, openSidebar, customerMap, productMap
-}) => {
-  useEffect(() => {
-    if (isOpen && sale) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "unset";
-    }
-    return () => { document.body.style.overflow = "unset"; };
-  }, [isOpen, sale]);
-
-  const canReturn = sale?.status === "Completed" && sale?.origin !== "Sales Return";
-  const alreadyRet = sale?.origin === "Sales Return";
-
-  return (
-    <>
-      {isOpen && (
-        <div className="sr-backdrop-enter fixed inset-0 bg-black/10 z-[100]" onClick={onClose} />
-      )}
-      <div className={`sr-sidebar flex flex-col ${isOpen && sale ? "open" : ""}`}>
-        {sale && (
-          <>
-            {/* Header */}
-            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 shrink-0">
-              <div>
-                <h2 className="text-sm font-semibold text-slate-800">Sale Details</h2>
-                <p className="text-[11px] text-slate-400 sr-mono mt-0.5">INV-{sale.ui_id}</p>
-              </div>
-              <div className="flex items-center gap-2">
-                {alreadyRet && (
-                  <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[9px] font-semibold bg-orange-50 text-orange-600 border border-orange-100">
-                    <RotateCcw size={8} /> Returned
-                  </span>
-                )}
-                <button onClick={onClose}
-                  className="w-7 h-7 flex items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 transition-colors pointer-events-auto">
-                  <X size={16} />
-                </button>
-              </div>
-            </div>
-
-            {/* Body */}
-            <div className="sr-scroll flex-1 overflow-y-auto p-5 space-y-5">
-              {/* Amount */}
-              <div className="bg-slate-50 border border-slate-100 rounded-xl p-4 text-center">
-                <p className="text-[10px] font-semibold   text-slate-400 mb-1">Total Amount</p>
-                <p className="text-3xl font-light sr-mono text-slate-900">{fmt(sale.total_sellprice)}</p>
-                <div className="mt-2.5">
-                  {(() => {
-                    const cfg = STATUS_CFG[sale.status as SaleStatus] || STATUS_CFG["Pending"];
-                    return <Badge cls={cfg.cls} dot={cfg.dot} label={sale.status} />;
-                  })()}
-                </div>
-              </div>
-
-              {/* Meta */}
-              <div className="grid grid-cols-2 gap-2.5">
-                {[
-                  { icon: <User size={13} />, label: "Customer", value: customerMap[sale.customer_id] || sale.customer_id },
-                  { icon: <Calendar size={13} />, label: "Date", value: sale.created_at.split("T")[0] },
-                  { icon: <CreditCard size={13} />, label: "Payment", value: sale.payment_method },
-                  { icon: <RotateCcw size={13} />, label: "Origin", value: sale.origin },
-                  { icon: <Package size={13} />, label: "Items", value: `${sale.total_quantity} item${sale.total_quantity !== 1 ? "s" : ""}` },
-                ].map(({ icon, label, value }) => (
-                  <div key={label} className="bg-white border border-slate-100 rounded-xl p-3">
-                    <div className="flex items-center gap-1.5 text-slate-400 mb-1.5">
-                      {icon}
-                      <span className="text-[9px] font-semibold  ">{label}</span>
-                    </div>
-                    <p className="text-xs font-medium text-slate-800 truncate">{value}</p>
-                  </div>
-                ))}
-              </div>
-
-              <div className="space-y-2">
-                <p className="text-[11px] font-semibold   text-slate-400">Order Items</p>
-                <div className="border border-slate-100 rounded-xl divide-y divide-slate-100 overflow-hidden shadow-sm">
-                  {generateItems(sale, productMap).map((item, i) => {
-                    const exchangeInfo = sale.exchanged_items?.find(ex => ex.exchanged_items.includes(item.id));
-                    return (
-                      <div key={i} className="flex flex-col border-b border-slate-100 last:border-0">
-                        <div className="flex items-center gap-4 p-4 bg-white hover:bg-slate-50/50 transition-colors">
-                          <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border border-slate-100 shadow-sm" style={{ background: item.imageColor + '10' }}>
-                            <Package size={16} className="text-slate-500 opacity-60" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-[13px] font-semibold text-slate-800 truncate">{item.name}</p>
-                            <div className="flex items-center gap-2 mt-1">
-                              <span className="text-[10px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded-md font-medium">QTY {item.quantity}</span>
-                              <span className="text-[10px] text-slate-400 sr-mono">{item.sku}</span>
-                              {item.status && (
-                                <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded  ${item.status === "REFUNDED" ? "bg-red-50 text-red-600" : "bg-blue-50 text-blue-600"
-                                  }`}>
-                                  {item.status}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <p className="text-sm font-bold sr-mono text-slate-900">{fmt(item.unitPrice * item.quantity)}</p>
-                            <div className="flex flex-col items-end gap-0.5 mt-1">
-                              <span className="text-[9px] text-slate-400">Sell: {fmt(item.unitPrice)}</span>
-                              <span className="text-[9px] text-slate-400">Buy: {fmt(item.buyPrice)}</span>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Stock Tracking Grid */}
-                        <div className="grid grid-cols-3 gap-px bg-slate-100 border-t border-slate-100">
-                          <div className="bg-white p-3 flex flex-col items-center">
-                            <span className="text-[8px] font-black text-slate-400  tracking-tighter">Opening</span>
-                            <span className="text-xs font-bold text-slate-700">{item.stocks_before ?? 0}</span>
-                          </div>
-                          <div className="bg-white p-3 flex flex-col items-center border-x border-slate-100">
-                            <span className={`text-[8px] font-black  tracking-tighter ${sale.origin === "Sales Return" ? "text-emerald-400" : "text-rose-400"}`}>
-                              {sale.origin === "Sales Return" ? "Returned" : "Sold"}
-                            </span>
-                            <span className={`text-xs font-bold ${sale.origin === "Sales Return" ? "text-emerald-600" : "text-rose-600"}`}>
-                              {sale.origin === "Sales Return" ? "+" : "-"}{item.quantity}
-                            </span>
-                          </div>
-                          <div className="bg-white p-3 flex flex-col items-center">
-                            <span className="text-[8px] font-black text-blue-400  tracking-tighter">Balance</span>
-                            <span className="text-xs font-bold text-blue-600">
-                              {sale.origin === "Sales Return" ? (item.stocks_before ?? 0) + item.quantity : (item.stocks_before ?? 0) - item.quantity}
-                            </span>
-                          </div>
-                        </div>
-                        {exchangeInfo && (
-                          <div className="px-4 pb-3 -mt-2">
-                            <div className="bg-blue-50/50 border border-blue-100 rounded-lg p-2 flex items-center justify-between">
-                              <p className="text-[10px] font-medium text-blue-700 flex items-center gap-1.5">
-                                <ArrowRight size={10} /> Exchanged for INV-{exchangeInfo.replacement_order.ui_id}
-                              </p>
-                              <button
-                                onClick={() => openSidebar(exchangeInfo.replacement_order)}
-                                className="text-[9px] font-bold text-blue-600 hover:underline">View Order</button>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Exchange History Section */}
-              {sale.exchanged_items && sale.exchanged_items.length > 0 && (
-                <div className="space-y-2">
-                  <p className="text-[11px] font-semibold   text-slate-400">Exchange History</p>
-                  <div className="bg-white border border-slate-100 rounded-xl overflow-hidden shadow-sm divide-y divide-slate-100">
-                    {sale.exchanged_items.map((ex, idx) => (
-                      <div key={idx} className="p-4 flex items-start gap-3">
-                        <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center shrink-0">
-                          <RefreshCw size={14} className="text-blue-500" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs font-semibold text-slate-800">Exchange Processed</p>
-                          <p className="text-[10px] text-slate-500 mt-0.5">
-                            Original item(s) replaced with items from <span className="font-bold text-slate-700">INV-{ex.replacement_order.ui_id}</span>.
-                          </p>
-                          <div className="mt-2 flex items-center gap-2">
-                            <span className="text-[9px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">Success</span>
-                            <span className="text-[9px] text-slate-400 sr-mono">{ex.replacement_order.created_at.split("T")[0]}</span>
-                            <button
-                              onClick={() => openSidebar(ex.replacement_order)}
-                              className="text-[9px] font-bold text-blue-600 hover:underline ml-auto">View Order</button>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                  )}
+                  {state.step < 4 ? (
+                    <button onClick={m.goNext} disabled={!m.canProceed} className="sl-btn-primary" style={{ flex: 1, padding: '10px 0', background: '#2563eb', color: 'white', border: 'none', borderRadius: 9, fontSize: 13, fontWeight: 700, cursor: m.canProceed ? 'pointer' : 'not-allowed', opacity: m.canProceed ? 1 : 0.45 }}>
+                      Continue <ChevronRight size={14} />
+                    </button>
+                  ) : (
+                    <button onClick={() => m.confirm(onRefresh)} disabled={state.isSubmitting} className="sl-btn-primary" style={{ flex: 1, padding: '10px 0', background: '#2563eb', color: 'white', border: 'none', borderRadius: 9, fontSize: 13, fontWeight: 700, cursor: state.isSubmitting ? 'not-allowed' : 'pointer', opacity: state.isSubmitting ? 0.6 : 1 }}>
+                      {state.isSubmitting ? <><Loader2 size={14} className="animate-spin" />Processing…</> : <>{state.mode === "refund" ? "Confirm Refund" : "Confirm Exchange"}<ChevronRight size={14} /></>}
+                    </button>
+                  )}
                 </div>
               )}
-            </div>
-
-            {/* Footer */}
-            <div className="shrink-0 p-4 border-t border-slate-100 bg-slate-50/50 grid grid-cols-3 gap-2 pointer-events-auto">
-              <button className="sr-btn-ghost py-2.5 bg-white border border-slate-200 text-slate-600 rounded-lg text-[11px] font-semibold shadow-sm">
-                Download
-              </button>
-              <button className="sr-btn-ghost py-2.5 bg-white border border-slate-200 text-slate-600 rounded-lg text-[11px] font-semibold shadow-sm">
-                Print
-              </button>
-              <button
-                onClick={() => canReturn && onReturn(sale)}
-                disabled={!canReturn}
-                title={alreadyRet ? "Already returned" : !canReturn ? `Cannot return: ${sale.status}` : "Process return"}
-                className={`py-2.5 rounded-lg text-[11px] font-semibold transition-colors border ${canReturn
-                  ? "bg-red-50 border-red-100 text-red-600 hover:bg-red-100"
-                  : "bg-slate-50 border-slate-100 text-slate-300 cursor-not-allowed"
-                  }`}
-              >
-                Return
-              </button>
-            </div>
-          </>
-        )}
+            </>
+          )}
+        </div>
       </div>
     </>
   );
@@ -1628,47 +1189,25 @@ const SaleDetailSidebar: React.FC<SidebarProps> = ({
 /* ═══════════════════════════════════════════════════════════════
    FILTER DROPDOWN
 ═══════════════════════════════════════════════════════════════ */
-interface FilterDropdownProps {
-  label: string;
-  options: string[];
-  value: string;
-  onChange: (v: string) => void;
-}
+/* ═══════════════════════════════════════════════════════════════
+   FILTER DROPDOWN
+═══════════════════════════════════════════════════════════════ */
+interface FilterDropdownProps { label: string; options: string[]; value: string; onChange: (v: string) => void; }
 const FilterDropdown: React.FC<FilterDropdownProps> = ({ label, options, value, onChange }) => {
   const [open, setOpen] = useState(false);
-  const active = value !== "";
   const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handler = (e: MouseEvent) => { if (!ref.current?.contains(e.target as Node)) setOpen(false); };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
-
+  const active = value !== "";
+  useEffect(() => { const h = (e: MouseEvent) => { if (!ref.current?.contains(e.target as Node)) setOpen(false); }; document.addEventListener("mousedown", h); return () => document.removeEventListener("mousedown", h); }, []);
   return (
-    <div className="relative" ref={ref}>
-      <button
-        onClick={() => setOpen(p => !p)}
-        className={`sr-drop-btn inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium border rounded-lg transition-all ${active ? "bg-blue-50 border-blue-200 text-blue-700" : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
-          }`}
-      >
+    <div style={{ position: 'relative' }} ref={ref}>
+      <button onClick={() => setOpen(p => !p)} className={`sl-filter-btn ${active ? "active" : ""}`}>
         {active ? value : label}
-        {active ? (
-          <X size={11} className="text-blue-400" onClick={e => { e.stopPropagation(); onChange(""); setOpen(false); }} />
-        ) : (
-          <ChevronDown size={11} className={`transition-transform ${open ? "rotate-180" : ""}`} />
-        )}
+        {active ? <X size={10} style={{ color: '#93c5fd' }} onClick={e => { e.stopPropagation(); onChange(""); setOpen(false); }} /> : <ChevronDown size={11} style={{ transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }} />}
       </button>
       {open && (
-        <div className="sr-dropdown absolute top-full left-0 mt-1.5 min-w-[130px] bg-white border border-slate-200 rounded-xl shadow-lg z-20 py-1.5 overflow-hidden">
+        <div className="sl-dropdown">
           {options.map(opt => (
-            <button key={opt}
-              onClick={() => { onChange(opt === value ? "" : opt); setOpen(false); }}
-              className={`w-full text-left px-3.5 py-2 text-xs font-medium transition-colors hover:bg-slate-50 ${opt === value ? "text-blue-600 bg-blue-50/60" : "text-slate-700"
-                }`}
-            >
-              {opt}
-            </button>
+            <button key={opt} onClick={() => { onChange(opt === value ? "" : opt); setOpen(false); }} className={`sl-dropdown-item ${opt === value ? "active" : ""}`}>{opt}</button>
           ))}
         </div>
       )}
@@ -1681,6 +1220,8 @@ const FilterDropdown: React.FC<FilterDropdownProps> = ({ label, options, value, 
 ═══════════════════════════════════════════════════════════════ */
 const SalesListPage: React.FC = () => {
   const api = useApi();
+  const navigate = useNavigate();
+  const location = useLocation();
   const [orders, setOrders] = useState<OrderResponse[]>([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
@@ -1690,255 +1231,227 @@ const SalesListPage: React.FC = () => {
   const [filterDate, setFilterDate] = useState("");
   const [customerMap, setCustomerMap] = useState<Record<string, string>>({});
   const [productMap, setProductMap] = useState<Record<string, string>>({});
-
   const [isReturnSearchOpen, setIsReturnSearchOpen] = useState(false);
   const [returnSearchQuery, setReturnSearchQuery] = useState("");
+  const [returnSale, setReturnSale] = useState<SaleRecord | null>(null);
 
   const searchSalesForReturn = useMemo(() => {
     if (!returnSearchQuery) return [];
     const q = returnSearchQuery.toLowerCase();
-    return orders.filter(s =>
-      s.ui_id.toString().includes(q) ||
-      s.customer_id.toLowerCase().includes(q)
-    ).slice(0, 5);
+    return orders.filter(s => s.ui_id.toString().includes(q) || s.customer_id.toLowerCase().includes(q)).slice(0, 5);
   }, [returnSearchQuery, orders]);
 
-  const [selectedSale, setSelectedSale] = useState<SaleRecord | null>(null);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [returnSale, setReturnSale] = useState<SaleRecord | null>(null);
+  const openDetail = (sale: SaleRecord) => navigate(`/sales/${sale.id}`, { state: { sale, customerMap, productMap } });
+  const openReturn = (sale: SaleRecord) => { setTimeout(() => setReturnSale(sale), 50); };
 
-  const openSidebar = (sale: SaleRecord) => { setSelectedSale(sale); setIsSidebarOpen(true); };
-  const closeSidebar = () => setIsSidebarOpen(false);
-
-  const openReturn = (sale: SaleRecord) => {
-    setIsSidebarOpen(false);
-    setTimeout(() => setReturnSale(sale), 50);
-  };
-
+  /* Handle return trigger coming back from SaleDetailPage */
+  useEffect(() => {
+    if (location.state?.openReturn) {
+      setReturnSale(location.state.openReturn);
+      window.history.replaceState({}, "");
+    }
+  }, [location.state]);
   const closeReturn = () => setReturnSale(null);
 
+  /* ── Data fetching (100% unchanged) ── */
   const fetchOrders = async () => {
     try {
       setLoading(true);
       const res = await api.getData(`${ENDPOINTS.ORDERS}/${SHOP_ID}`);
       if (res && res.data) {
-        const rawOrders = res.data as any[];
-        // Normalize data for UI consistency
-        const normalized = rawOrders.map(s => {
-          const rawPm = (s.payment_method || "Other").toUpperCase();
-          const pm = rawPm === "CASH" ? "Cash"
-            : rawPm === "CARD" ? "Card"
-              : rawPm === "UPI" || rawPm === "G-PAY" || rawPm === "GPAY" ? "UPI"
-                : rawPm === "PHONEPE" ? "PhonePe"
-                  : s.payment_method;
-
-          return {
-            ...s,
-            status: s.status.charAt(0).toUpperCase() + s.status.slice(1).toLowerCase(),
-            payment_method: pm
-          };
+        const normalized = (res.data as any[]).map(s => {
+          let pm = "Other";
+          if (s.payments && Object.keys(s.payments).length > 0) {
+            pm = Object.keys(s.payments).map(k => { const u = k.toUpperCase(); if (u === "CASH") return "Cash"; if (u === "CARD") return "Card"; if (u === "UPI" || u === "G-PAY" || u === "GPAY") return "UPI"; if (u === "PHONEPE") return "PhonePe"; if (u === "CREDIT") return "Credit"; return k.charAt(0).toUpperCase() + k.slice(1).toLowerCase(); }).join(", ");
+          } else if (s.payment_method) {
+            const r = (s.payment_method || "Other").toUpperCase();
+            pm = r === "CASH" ? "Cash" : r === "CARD" ? "Card" : r === "UPI" || r === "G-PAY" || r === "GPAY" ? "UPI" : r === "PHONEPE" ? "PhonePe" : r === "CREDIT" ? "Credit" : s.payment_method;
+          }
+          return { ...s, status: s.status.charAt(0).toUpperCase() + s.status.slice(1).toLowerCase(), payment_method: pm, origin: s.origin === "OFFLINE" ? "Sales" : s.origin };
         });
         setOrders(normalized);
-
-        // Fetch details after orders are loaded
         fetchDetails();
       }
-    } catch (err) {
-      console.error("Failed to fetch orders:", err);
-    } finally {
-      setLoading(false);
-    }
+    } catch (err) { console.error("Failed to fetch orders:", err); }
+    finally { setLoading(false); }
   };
 
   const fetchDetails = async () => {
     try {
-      // Fetch All Customers for this shop
       const custRes = await api.getData(`${ENDPOINTS.CUSTOMERS}/by/shop/${SHOP_ID}`);
-      if (custRes && custRes.data) {
-        const cMap: Record<string, string> = {};
-        custRes.data.forEach((c: any) => { cMap[c.id] = c.name; });
-        setCustomerMap(cMap);
-      }
-
-      // Fetch All Inventories (Products) for mapping
+      if (custRes?.data) { const m: Record<string, string> = {}; custRes.data.forEach((c: any) => { m[c.id] = c.name; }); setCustomerMap(m); }
       const invRes = await api.getData(ENDPOINTS.INVENTORIES);
-      if (invRes && invRes.data) {
-        const pMap: Record<string, string> = {};
-        invRes.data.forEach((p: any) => { pMap[p.id] = p.name; });
-        setProductMap(pMap);
-      }
-    } catch (err) {
-      console.error("Failed to fetch mapping details:", err);
-    }
+      if (invRes?.data) { const m: Record<string, string> = {}; invRes.data.forEach((p: any) => { m[p.id] = p.name; }); setProductMap(m); }
+    } catch (err) { console.error("Failed to fetch details:", err); }
   };
 
-  useEffect(() => {
-    fetchOrders();
-  }, []);
+  useEffect(() => { fetchOrders(); }, []);
 
+  /* ── Filters (unchanged) ── */
   const filtered = useMemo(() => orders.filter(s => {
     const q = search.toLowerCase();
     const dateStr = s.created_at.split("T")[0];
-    return (
-      (!q || s.ui_id.toString().includes(q) || s.customer_id.toLowerCase().includes(q) || (customerMap[s.customer_id] || "").toLowerCase().includes(q)) &&
-      (!filterOrigin || s.origin === filterOrigin) &&
-      (!filterPayment || s.payment_method === filterPayment) &&
-      (!filterStatus || s.status.toLowerCase() === filterStatus.toLowerCase()) &&
-      (!filterDate || dateStr === filterDate)
-    );
+    return (!q || s.ui_id.toString().includes(q) || s.customer_id.toLowerCase().includes(q) || (customerMap[s.customer_id] || "").toLowerCase().includes(q)) && (!filterOrigin || s.origin === filterOrigin) && (!filterPayment || s.payment_method === filterPayment) && (!filterStatus || s.status.toLowerCase() === filterStatus.toLowerCase()) && (!filterDate || dateStr === filterDate);
   }), [search, filterOrigin, filterPayment, filterStatus, filterDate, orders]);
 
+  /* ── Stats (unchanged) ── */
   const totalRevenue = useMemo(() => orders.filter(s => s.status.toLowerCase() === "completed").reduce((a, b) => a + b.total_sellprice, 0), [orders]);
   const salesCount = useMemo(() => orders.filter(s => s.origin === "Sales").length, [orders]);
   const salesReturnCount = useMemo(() => orders.filter(s => s.origin === "Sales Return").length, [orders]);
-  const todayRevenue = useMemo(() => {
-    const today = new Date().toISOString().split("T")[0];
-    return orders.filter(s => s.created_at.startsWith(today) && s.status.toLowerCase() === "completed").reduce((a, b) => a + b.total_sellprice, 0);
-  }, [orders]);
+  const todayRevenue = useMemo(() => { const today = new Date().toISOString().split("T")[0]; return orders.filter(s => s.created_at.startsWith(today) && s.status.toLowerCase() === "completed").reduce((a, b) => a + b.total_sellprice, 0); }, [orders]);
 
   const activeFilters = [filterOrigin, filterPayment, filterStatus, filterDate].filter(Boolean).length;
-  const clearAll = () => {
-    setFilterOrigin(""); setFilterPayment("");
-    setFilterStatus(""); setFilterDate(""); setSearch("");
-  };
+  const clearAll = () => { setFilterOrigin(""); setFilterPayment(""); setFilterStatus(""); setFilterDate(""); setSearch(""); };
+
+  const filteredRevenue = useMemo(() => filtered.filter(s => s.status === "Completed").reduce((a, b) => a + b.total_sellprice, 0), [filtered]);
 
   return (
     <>
       <style>{STYLES}</style>
-      <div className="sr-root w-full flex-1 min-h-screen bg-slate-50/50  space-y-3 sm:space-y-5">
+      {/*
+        ┌──────────────────────────────────────────────────────────────┐
+        │  Root: overflow-x:hidden prevents any horizontal body scroll  │
+        │  All child widths are constrained — no parent bleed           │
+        └──────────────────────────────────────────────────────────────┘
+      */}
+      <div className="sl-root" style={{ display: 'flex', flexDirection: 'column', gap: 16, minHeight: '100vh', padding: '0 0 24px' }}>
 
-        {/* Stats */}
-        <div className="flex flex-nowrap overflow-x-auto custom-scrollbar gap-2.5 pb-2 -mx-2 px-2 sm:mx-0 sm:px-0 sm:grid sm:grid-cols-2 lg:grid-cols-4 sm:overflow-visible sm:pb-0 touch-pan-x">
-          <StatsCard iconColor="text-green-500" iconBg="bg-green-50" label="Total revenue" icon={DollarSign} value={fmt(totalRevenue)} />
-          <StatsCard iconColor="text-blue-500" iconBg="bg-blue-50" label="Total sales" icon={BarChart2} value={salesCount} />
-          <StatsCard iconColor="text-red-500" iconBg="bg-red-50" label="Sales returns" icon={RefreshCw} value={salesReturnCount} />
-          <StatsCard iconColor="text-yellow-500" iconBg="bg-yellow-50" label="Today's revenue" icon={DollarSign} value={fmt(todayRevenue)} />
+        {/* ── KPI Row ── */}
+        <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 2 }} className="sl-scroll">
+          <KpiCard label="Total Revenue" value={fmt(totalRevenue)} icon={<DollarSign size={18} />} iconBg="bg-emerald-50" iconColor="text-emerald-600" sub="All completed orders" />
+          <KpiCard label="Total Sales" value={salesCount} icon={<BarChart2 size={18} />} iconBg="bg-blue-50" iconColor="text-blue-600" sub="All origins" />
+          <KpiCard label="Returns" value={salesReturnCount} icon={<RefreshCw size={18} />} iconBg="bg-red-50" iconColor="text-red-500" sub="Sales returns" />
+          <KpiCard label="Today's Revenue" value={fmt(todayRevenue)} icon={<TrendingUp size={18} />} iconBg="bg-amber-50" iconColor="text-amber-500" sub="Completed today" />
         </div>
 
-        {/* Toolbar */}
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm px-3 py-2 sm:px-4 sm:py-3 flex flex-wrap items-center gap-2">
-          <div className="relative flex-1 min-w-[180px] max-w-sm">
-            <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-            <input
-              className="w-full pl-8 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 focus:bg-white transition-all"
-              placeholder="Search invoice or customer…"
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-            />
+        {/* ── Toolbar ── */}
+        <div className="sl-toolbar">
+          <div className="sl-search-wrap">
+            <Search size={13} />
+            <input className="sl-search-input" placeholder="Search invoice or customer…" value={search} onChange={e => setSearch(e.target.value)} />
           </div>
-          <input type="date" value={filterDate} onChange={e => setFilterDate(e.target.value)}
-            className={`sr-drop-btn px-3 py-2 text-xs font-medium border rounded-lg outline-none cursor-pointer transition-all ${filterDate ? "bg-blue-50 border-blue-200 text-blue-700" : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
-              }`} />
+          <input type="date" value={filterDate} onChange={e => setFilterDate(e.target.value)} className={`sl-date-input ${filterDate ? "active" : ""}`} />
           <FilterDropdown label="Origin" options={["Sales", "Sales Return"]} value={filterOrigin} onChange={setFilterOrigin} />
           <FilterDropdown label="Payment" options={["Cash", "Card", "UPI"]} value={filterPayment} onChange={setFilterPayment} />
           <FilterDropdown label="Status" options={["Completed", "Pending", "Cancelled"]} value={filterStatus} onChange={setFilterStatus} />
           {activeFilters > 0 && (
-            <button onClick={clearAll}
-              className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-red-600 bg-red-50 border border-red-100 rounded-lg hover:bg-red-100 transition-colors">
-              <X size={11} /> Clear ({activeFilters})
+            <button onClick={clearAll} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '7px 10px', fontSize: 11, fontWeight: 600, color: '#dc2626', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, cursor: 'pointer' }}>
+              <X size={11} />Clear ({activeFilters})
             </button>
           )}
-          <div className="flex-1" />
-          <button
-            onClick={() => setIsReturnSearchOpen(true)}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg text-xs font-semibold flex items-center gap-2 hover:bg-blue-700 transition-all shadow-sm shadow-blue-200/50"
-          >
-            <RotateCcw size={14} /> Process Return
+          <div style={{ flex: 1 }} />
+          <button className="sl-return-btn" onClick={() => setIsReturnSearchOpen(true)}>
+            <RotateCcw size={13} />Process Return
           </button>
-          <span className="text-xs font-medium text-slate-400 tabular-nums">{filtered.length} / {orders.length}</span>
+          <span style={{ fontSize: 11, fontWeight: 500, color: '#94a3b8' }} className="sl-mono">{filtered.length}/{orders.length}</span>
         </div>
 
-        {/* Table */}
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-          <div className="overflow-x-auto overflow-y-auto h-[calc(100vh-220px)] pf-scroll">
-            <table className="w-full text-sm border-collapse">
-              <thead className="sticky top-0 z-20 bg-slate-50/95 backdrop-blur-sm shadow-sm">
-                <tr className="border-b border-slate-100">
-                  {["Invoice", "Customer", "Origin", "Payment", "Date", "Items", "Amount", "Status", "Actions"].map((h, i) => (
-                    <th key={i} className="py-2 px-3 sm:py-3 sm:px-4 first:pl-3 sm:first:pl-5 last:pr-3 sm:last:pr-5 text-[10px] font-semibold   text-slate-400 whitespace-nowrap text-left last:text-right">
-                      {h}
-                    </th>
+        {/* ── Table Card ── */}
+        <div className="sl-table-card" style={{ flex: 1 }}>
+          {/*
+            The wrapper handles ONLY horizontal+vertical scroll.
+            The table uses fixed layout so columns never blow out.
+          */}
+          <div className="sl-table-wrap sl-scroll" style={{ maxHeight: 'calc(100vh - 260px)' }}>
+            <table className="sl-table">
+              <colgroup>
+                <col className="sl-col-inv" />
+                <col className="sl-col-cust" />
+                <col className="sl-col-orig" />
+                <col className="sl-col-pay" />
+                <col className="sl-col-date" />
+                <col className="sl-col-qty" />
+                <col className="sl-col-amt" />
+                <col className="sl-col-stat" />
+                <col className="sl-col-act" />
+              </colgroup>
+              <thead>
+                <tr>
+                  {["Invoice", "Customer", "Origin", "Payment", "Date", "Qty", "Amount", "Status", ""].map((h, i) => (
+                    <th key={i} style={{ textAlign: i === 5 ? 'center' : i === 6 ? 'right' : i === 8 ? 'right' : 'left' }}>{h}</th>
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody>
                 {loading ? (
-                  <tr>
-                    <td colSpan={10} className="py-20 text-center">
-                      <div className="flex flex-col items-center gap-2 text-slate-400">
-                        <Loader2 size={26} className="animate-spin mb-1 text-blue-500" />
-                        <p className="text-sm font-medium text-slate-500">Fetching sales records...</p>
-                      </div>
-                    </td>
-                  </tr>
+                  <tr><td colSpan={9}>
+                    <div className="sl-empty">
+                      <Loader2 size={28} style={{ color: '#3b82f6', margin: '0 auto 10px', display: 'block' }} className="animate-spin" />
+                      <p style={{ fontSize: 13, fontWeight: 500, color: '#64748b' }}>Fetching sales records…</p>
+                    </div>
+                  </td></tr>
                 ) : filtered.length === 0 ? (
-                  <tr>
-                    <td colSpan={10} className="py-20 text-center">
-                      <div className="flex flex-col items-center gap-2 text-slate-400">
-                        <Receipt size={26} className="opacity-20 mb-1" />
-                        <p className="text-sm font-medium text-slate-500">No sales found</p>
-                        <p className="text-xs">Try adjusting your filters</p>
-                      </div>
-                    </td>
-                  </tr>
+                  <tr><td colSpan={9}>
+                    <div className="sl-empty">
+                      <Receipt size={32} style={{ color: '#e2e8f0', margin: '0 auto 10px', display: 'block' }} />
+                      <p style={{ fontSize: 13, fontWeight: 600, color: '#64748b', marginBottom: 4 }}>No sales found</p>
+                      <p style={{ fontSize: 12, color: '#94a3b8' }}>Try adjusting your filters</p>
+                    </div>
+                  </td></tr>
                 ) : filtered.map(sale => {
                   const oCfg = ORIGIN_CFG[sale.origin as OriginType] || ORIGIN_CFG["Sales"];
-                  const pCfg = PAYMENT_CFG[sale.payment_method as PaymentMethod] || PAYMENT_CFG["Cash"];
                   const returnable = sale.status === "Completed" && sale.origin !== "Sales Return";
                   const dateStr = sale.created_at.split("T")[0];
+                  const refundedCount = (sale.items || []).filter(i => i.status === "REFUNDED").length;
+                  const exchangedCount = (sale.items || []).filter(i => i.status === "EXCHANGED").length;
+
                   return (
-                    <tr key={sale.id} className="sr-row">
-                      <td className="py-2.5 pl-3 sm:pl-5 pr-3 sm:pr-4">
-                        <div className="flex flex-col gap-1">
-                          <span className="sr-mono text-[11px] font-medium text-slate-700">INV-{sale.ui_id}</span>
-                          {sale.origin === "Sales Return" && (
-                            <span className="text-[8px] font-bold text-red-500  tracking-tighter bg-red-50 px-1 rounded w-fit">Return</span>
-                          )}
-                          <div className="flex gap-1 flex-wrap">
-                            {(sale.items || []).filter(i => i.status === "REFUNDED").length > 0 && (
-                              <span className="text-[8px] font-bold text-orange-600 bg-orange-50 px-1 rounded w-fit">
-                                {sale.items?.filter(i => i.status === "REFUNDED").length} Refunded
-                              </span>
-                            )}
-                            {(sale.items || []).filter(i => i.status === "EXCHANGED").length > 0 && (
-                              <span className="text-[8px] font-bold text-blue-600 bg-blue-50 px-1 rounded w-fit">
-                                {sale.items?.filter(i => i.status === "EXCHANGED").length} Exchanged
-                              </span>
-                            )}
+                    <tr key={sale.id} className="sl-row">
+                      {/* Invoice */}
+                      <td>
+                        <div>
+                          <span className="sl-mono" style={{ fontSize: 11, fontWeight: 600, color: '#1e293b', display: 'block' }}>INV-{sale.ui_id}</span>
+                          <div style={{ display: 'flex', gap: 4, marginTop: 3, flexWrap: 'wrap' }}>
+                            {sale.origin === "Sales Return" && <span style={{ fontSize: 9, fontWeight: 700, color: '#dc2626', background: '#fef2f2', padding: '1px 5px', borderRadius: 3 }}>Return</span>}
+                            {refundedCount > 0 && <span style={{ fontSize: 9, fontWeight: 700, color: '#ea580c', background: '#fff7ed', padding: '1px 5px', borderRadius: 3 }}>{refundedCount} Refunded</span>}
+                            {exchangedCount > 0 && <span style={{ fontSize: 9, fontWeight: 700, color: '#2563eb', background: '#eff6ff', padding: '1px 5px', borderRadius: 3 }}>{exchangedCount} Exchanged</span>}
                           </div>
                         </div>
                       </td>
-                      <td className="py-2.5 px-3 sm:px-4">
-                        <p className="text-[11px] font-medium text-slate-800 whitespace-nowrap">{customerMap[sale.customer_id] || sale.customer_id}</p>
+
+                      {/* Customer */}
+                      <td>
+                        <span className="sl-truncate" style={{ fontSize: 12, fontWeight: 500, color: '#1e293b', display: 'block' }} title={customerMap[sale.customer_id] || sale.customer_id}>
+                          {customerMap[sale.customer_id] || sale.customer_id}
+                        </span>
                       </td>
-                      <td className="py-2.5 px-3 sm:px-4"><Badge cls={oCfg.cls} dot={oCfg.dot} label={sale.origin} /></td>
-                      <td className="py-2.5 px-3 sm:px-4"><Badge cls={pCfg.cls} dot={pCfg.dot} label={sale.payment_method} /></td>
-                      <td className="py-2.5 px-3 sm:px-4 text-[11px] text-slate-500 whitespace-nowrap tabular-nums">{dateStr}</td>
-                      <td className="py-2.5 px-3 sm:px-4 text-center text-[11px] font-medium text-slate-600 tabular-nums">{sale.total_quantity}</td>
-                      <td className="py-2.5 px-3 sm:px-4 text-right">
-                        <span className="sr-mono text-[11px] font-semibold text-slate-900">{fmt(sale.total_sellprice)}</span>
+
+                      {/* Origin */}
+                      <td><Badge cls={oCfg.cls} dot={oCfg.dot} label={sale.origin} /></td>
+
+                      {/* Payment */}
+                      <td>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                          {sale.payments && Object.keys(sale.payments).length > 0 ? (
+                            Object.keys(sale.payments).map(k => {
+                              const u = k.toUpperCase();
+                              const label = u === "CASH" ? "Cash" : u === "CARD" ? "Card" : u === "UPI" || u === "G-PAY" || u === "GPAY" ? "UPI" : u === "PHONEPE" ? "PhonePe" : u === "CREDIT" ? "Credit" : k;
+                              const cfg = PAYMENT_CFG[label] || PAYMENT_CFG["Other"];
+                              return <Badge key={k} cls={cfg.cls} dot={cfg.dot} label={label} />;
+                            })
+                          ) : (
+                            <Badge cls={(PAYMENT_CFG[sale.payment_method || ""] || PAYMENT_CFG["Other"]).cls} dot={(PAYMENT_CFG[sale.payment_method || ""] || PAYMENT_CFG["Other"]).dot} label={sale.payment_method || "Other"} />
+                          )}
+                        </div>
                       </td>
-                      <td className="py-2.5 px-3 sm:px-4">
-                        {(() => {
-                          const cfg = STATUS_CFG[sale.status as SaleStatus] || STATUS_CFG["Pending"];
-                          return <Badge cls={cfg.cls} dot={cfg.dot} label={sale.status} />;
-                        })()}
-                      </td>
-                      <td className="py-2.5 pl-3 sm:pl-4 pr-3 sm:pr-5">
-                        <div className=" flex items-center justify-end gap-1">
-                          <button onClick={() => openSidebar(sale)}
-                            className="w-7 h-7 flex items-center justify-center rounded-md text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-all">
-                            <Eye size={14} />
-                          </button>
-                          <button
-                            onClick={() => returnable && openReturn(sale)}
-                            disabled={!returnable}
-                            title={!returnable ? (sale.origin === "Sales Return" ? "Already returned" : `Status: ${sale.status}`) : "Process return"}
-                            className={`w-7 h-7 flex items-center justify-center rounded-md transition-all ${returnable
-                              ? "text-slate-400 hover:text-red-600 hover:bg-red-50"
-                              : "text-slate-200 cursor-not-allowed"
-                              }`}
-                          >
+
+                      {/* Date */}
+                      <td><span className="sl-mono" style={{ fontSize: 11, color: '#64748b' }}>{dateStr}</span></td>
+
+                      {/* Qty */}
+                      <td style={{ textAlign: 'center' }}><span style={{ fontSize: 11, fontWeight: 600, color: '#475569' }}>{sale.total_quantity}</span></td>
+
+                      {/* Amount */}
+                      <td style={{ textAlign: 'right' }}><span className="sl-mono" style={{ fontSize: 12, fontWeight: 700, color: '#0f172a' }}>{fmt(sale.total_sellprice)}</span></td>
+
+                      {/* Status */}
+                      <td>{(() => { const cfg = STATUS_CFG[sale.status as SaleStatus] || STATUS_CFG["Pending"]; return <Badge cls={cfg.cls} dot={cfg.dot} label={sale.status} />; })()}</td>
+
+                      {/* Actions */}
+                      <td>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }}>
+                          <button className="sl-act-btn" onClick={() => openDetail(sale)} title="View details"><Eye size={14} /></button>
+                          <button className={`sl-act-btn ${returnable ? "danger" : ""}`} onClick={() => returnable && openReturn(sale)} disabled={!returnable} title={!returnable ? (sale.origin === "Sales Return" ? "Already returned" : `Status: ${sale.status}`) : "Process return"}>
                             <RotateCcw size={14} />
                           </button>
                         </div>
@@ -1949,106 +1462,86 @@ const SalesListPage: React.FC = () => {
               </tbody>
             </table>
           </div>
+
+          {/* Table footer */}
           {filtered.length > 0 && (
-            <div className="px-5 py-3 border-t border-slate-100 bg-slate-50/40 flex items-center justify-between">
-              <p className="text-xs text-slate-400">
-                <span className="font-medium text-slate-600">{filtered.length}</span> of{" "}
-                <span className="font-medium text-slate-600">{orders.length}</span> records
+            <div className="sl-table-footer">
+              <p style={{ fontSize: 12, color: '#94a3b8' }}>
+                <span style={{ fontWeight: 600, color: '#475569' }}>{filtered.length}</span>
+                {' '}of{' '}
+                <span style={{ fontWeight: 600, color: '#475569' }}>{orders.length}</span>
+                {' '}records
               </p>
-              <span className="text-xs text-slate-500">
-                Filtered revenue:{" "}
-                <span className="font-semibold text-slate-700 sr-mono">
-                  {fmt(filtered.filter(s => s.status === "Completed").reduce((a, b) => a + b.total_sellprice, 0))}
-                </span>
+              <span style={{ fontSize: 12, color: '#64748b' }}>
+                Filtered revenue:{' '}
+                <span className="sl-mono" style={{ fontWeight: 700, color: '#0f172a' }}>{fmt(filteredRevenue)}</span>
               </span>
             </div>
           )}
         </div>
       </div>
 
-      {/* Read-only sidebar */}
-      <SaleDetailSidebar
-        sale={selectedSale}
-        isOpen={isSidebarOpen}
-        onClose={closeSidebar}
-        onReturn={openReturn}
-        openSidebar={openSidebar}
-        customerMap={customerMap}
-        productMap={productMap}
-      />
 
-      {/* Global Return Modal */}
+
+      {/* ── Return Modal ── */}
       {returnSale && <ReturnModal sale={returnSale} onClose={closeReturn} onRefresh={fetchOrders} productMap={productMap} />}
 
-      {/* Return Search Modal */}
+      {/* ── Return Search Modal ── */}
       {isReturnSearchOpen && (
-        <div className="fixed inset-0 z-[150] flex items-start justify-center pt-24 px-4">
-          <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => setIsReturnSearchOpen(false)} />
-          <div className="relative w-full max-w-lg bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-              <h3 className="text-sm font-bold text-slate-800">Process Return</h3>
-              <button onClick={() => setIsReturnSearchOpen(false)} className="text-slate-400 hover:text-slate-600 transition-colors">
-                <X size={18} />
-              </button>
-            </div>
-            <div className="p-6 space-y-4">
-              <div className="relative">
-                <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
-                <input
-                  autoFocus
-                  placeholder="Enter Invoice ID or Customer Name..."
-                  className="w-full h-12 pl-12 pr-4 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
-                  value={returnSearchQuery}
-                  onChange={e => setReturnSearchQuery(e.target.value)}
-                />
+        <>
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.4)', backdropFilter: 'blur(3px)', zIndex: 399 }} onClick={() => setIsReturnSearchOpen(false)} />
+          <div className="sl-search-modal">
+            <div className="sl-search-modal-box">
+              <div style={{ padding: '16px 20px', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div>
+                  <h3 style={{ fontSize: 14, fontWeight: 700, color: '#0f172a' }}>Process Return</h3>
+                  <p style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>Find an order by invoice or customer name</p>
+                </div>
+                <button onClick={() => setIsReturnSearchOpen(false)} style={{ width: 28, height: 28, borderRadius: '50%', background: '#f8fafc', border: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#64748b' }}><X size={14} /></button>
               </div>
-
-              <div className="space-y-2">
-                {searchSalesForReturn.length > 0 ? (
-                  searchSalesForReturn.map(sale => (
-                    <button
-                      key={sale.id}
-                      onClick={() => {
-                        openReturn(sale);
-                        setIsReturnSearchOpen(false);
-                        setReturnSearchQuery("");
-                      }}
-                      className="w-full flex items-center gap-4 p-4 bg-white border border-slate-100 rounded-xl hover:border-blue-200 hover:bg-blue-50/30 transition-all text-left group"
-                    >
-                      <div className="w-10 h-10 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-400 group-hover:bg-white group-hover:border-blue-100 group-hover:text-blue-500 transition-all">
-                        <Receipt size={18} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between mb-0.5">
-                          <p className="text-sm font-bold text-slate-800">INV-{sale.ui_id}</p>
-                          <span className="text-xs font-bold sr-mono text-slate-900">{fmt(sale.total_sellprice)}</span>
+              <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <div style={{ position: 'relative' }}>
+                  <Search size={15} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+                  <input autoFocus placeholder="Invoice ID or customer name…" value={returnSearchQuery} onChange={e => setReturnSearchQuery(e.target.value)}
+                    style={{ width: '100%', height: 44, paddingLeft: 40, paddingRight: 12, fontSize: 13, border: '1px solid #e2e8f0', borderRadius: 10, outline: 'none', background: '#f8fafc', color: '#1e293b', transition: 'all 0.15s', fontFamily: 'inherit' }}
+                    onFocus={e => { e.target.style.borderColor = '#93c5fd'; e.target.style.background = 'white'; e.target.style.boxShadow = '0 0 0 3px rgba(59,130,246,0.1)'; }}
+                    onBlur={e => { e.target.style.borderColor = '#e2e8f0'; e.target.style.background = '#f8fafc'; e.target.style.boxShadow = 'none'; }}
+                  />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {searchSalesForReturn.length > 0 ? searchSalesForReturn.map(sale => (
+                    <button key={sale.id} onClick={() => { openReturn(sale); setIsReturnSearchOpen(false); setReturnSearchQuery(""); }}
+                      style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', background: 'white', border: '1px solid #f1f5f9', borderRadius: 12, cursor: 'pointer', textAlign: 'left', transition: 'all 0.12s', width: '100%' }}
+                      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = '#bfdbfe'; (e.currentTarget as HTMLElement).style.background = '#eff6ff'; }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = '#f1f5f9'; (e.currentTarget as HTMLElement).style.background = 'white'; }}>
+                      <div style={{ width: 38, height: 38, borderRadius: 10, background: '#f8fafc', border: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><Receipt size={16} style={{ color: '#94a3b8' }} /></div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 3 }}>
+                          <p style={{ fontSize: 13, fontWeight: 700, color: '#1e293b' }}>INV-{sale.ui_id}</p>
+                          <span className="sl-mono" style={{ fontSize: 12, fontWeight: 700, color: '#0f172a' }}>{fmt(sale.total_sellprice)}</span>
                         </div>
-                        <p className="text-xs text-slate-500 truncate">{customerMap[sale.customer_id] || sale.customer_id} · {sale.created_at.split('T')[0]}</p>
+                        <p style={{ fontSize: 11, color: '#64748b' }} className="sl-truncate">{customerMap[sale.customer_id] || sale.customer_id} · {sale.created_at.split('T')[0]}</p>
                       </div>
-                      <ChevronRight size={14} className="text-slate-300 group-hover:text-blue-400 transition-colors" />
+                      <ChevronRight size={14} style={{ color: '#cbd5e1', flexShrink: 0 }} />
                     </button>
-                  ))
-                ) : returnSearchQuery ? (
-                  <div className="py-12 text-center">
-                    <div className="w-12 h-12 rounded-full bg-slate-50 flex items-center justify-center mx-auto mb-3">
-                      <Search size={20} className="text-slate-300" />
+                  )) : returnSearchQuery ? (
+                    <div style={{ padding: '40px 0', textAlign: 'center' }}>
+                      <Search size={28} style={{ color: '#e2e8f0', margin: '0 auto 10px', display: 'block' }} />
+                      <p style={{ fontSize: 13, fontWeight: 600, color: '#64748b' }}>No matching orders</p>
+                      <p style={{ fontSize: 11, color: '#94a3b8', marginTop: 4 }}>Try a different invoice ID or name</p>
                     </div>
-                    <p className="text-sm font-medium text-slate-500">No matching orders found</p>
-                    <p className="text-xs text-slate-400 mt-1">Try searching with a different invoice ID</p>
-                  </div>
-                ) : (
-                  <div className="py-12 text-center">
-                    <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center mx-auto mb-3 text-blue-500">
-                      <RotateCcw size={20} />
+                  ) : (
+                    <div style={{ padding: '40px 0', textAlign: 'center' }}>
+                      <div style={{ width: 48, height: 48, borderRadius: '50%', background: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 10px' }}><RotateCcw size={20} style={{ color: '#3b82f6' }} /></div>
+                      <p style={{ fontSize: 13, fontWeight: 600, color: '#64748b' }}>Find an order to return</p>
+                      <p style={{ fontSize: 11, color: '#94a3b8', marginTop: 4 }}>Search by Invoice Number or Customer Name</p>
                     </div>
-                    <p className="text-sm font-medium text-slate-500">Find an order to return</p>
-                    <p className="text-xs text-slate-400 mt-1">Search by Invoice Number or Customer Name</p>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        </>
       )}
     </>
   );

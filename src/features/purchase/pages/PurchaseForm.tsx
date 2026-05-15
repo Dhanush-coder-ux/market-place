@@ -456,8 +456,8 @@ const PurchaseForm = () => {
   return (
     <>
       <div className="min-h-screen bg-slate-50/50 font-sans">
-        <div className="mx-auto">
-          <div className="flex flex-col gap-6">
+        <div className="mx-auto p-4 md:p-8">
+          <div className="flex flex-col gap-8">
             {/* 1. Purchase Details Card */}
             <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-sm overflow-hidden transition-all hover:shadow-md">
               <div className="px-8 py-5 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between">
@@ -576,105 +576,114 @@ const PurchaseForm = () => {
               purchaseType={purchaseType}
               onAddNewProduct={handleAddNewProduct}
             />
-            {/* 3. Order Summary Card */}
-            <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-sm overflow-hidden transition-all hover:shadow-md">
-              <div className="px-6 py-4 bg-slate-50/50 border-b border-slate-100 flex items-center gap-3">
-                <div className="w-8 h-8 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600 border border-emerald-100 shadow-sm">
-                  <Banknote size={16} />
+            {/* 3. Bottom Sections Grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              {/* Order Summary Card */}
+              <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-sm overflow-hidden flex flex-col transition-all hover:shadow-md">
+                <div className="px-8 py-5 bg-slate-50/50 border-b border-slate-100 flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-600 border border-emerald-100 shadow-sm">
+                    <Banknote size={20} />
+                  </div>
+                  <div>
+                    <h2 className="text-[13px] font-black text-slate-800">Order Summary</h2>
+                    <p className="text-[10px] text-slate-400 font-bold mt-0.5">Total breakdown & charges</p>
+                  </div>
                 </div>
-                <h2 className="text-[12px] font-black text-slate-800">Order Summary</h2>
-              </div>
 
-              <div className="p-6 space-y-4">
-                <div className="flex justify-between items-center">
-                  <span className="text-[11px] font-black text-slate-400">Subtotal</span>
-                  <span className="text-[14px] font-black text-slate-800 tabular-nums">₹{stats.subtotal.toLocaleString()}</span>
-                </div>
+                <div className="p-8 space-y-6 flex-1">
+                  <div className="flex justify-between items-center px-2">
+                    <span className="text-[11px] font-black text-slate-400 uppercase">Subtotal</span>
+                    <span className="text-[16px] font-black text-slate-800 tabular-nums">₹{stats.subtotal.toLocaleString()}</span>
+                  </div>
 
-                <div className="space-y-3 pt-2">
-                  <div className="flex justify-between items-center gap-4">
-                    <span className="text-[11px] font-black text-slate-400 shrink-0">Transport</span>
-                    <div className="w-28">
-                      <Input
-                        type="number"
-                        tooltip="Delivery or transportation costs charged by the supplier."
-                        placeholder="0.00"
-                        className="!h-9 !text-right !text-[12px] !font-black !bg-slate-50/50 !rounded-xl !border-transparent hover:!border-slate-200 focus:!bg-white"
-                        value={charges.transport as any}
-                        onChange={(e) => setCharges({ ...charges, transport: e.target.value ? Number(e.target.value) : "" })}
-                      />
+                  <div className="space-y-4 pt-2">
+                    <div className="flex justify-between items-center gap-6">
+                      <span className="text-[11px] font-black text-slate-400 shrink-0 uppercase">Transport</span>
+                      <div className="w-32">
+                        <Input
+                          type="number"
+                          tooltip="Delivery or transportation costs charged by the supplier."
+                          placeholder="0.00"
+                          className="!h-10 !text-right !text-[13px] !font-black !bg-slate-50/50 !rounded-xl !border-transparent hover:!border-slate-200 focus:!bg-white"
+                          value={charges.transport as any}
+                          onChange={(e) => setCharges({ ...charges, transport: e.target.value ? Number(e.target.value) : "" })}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex justify-between items-center gap-6">
+                      <span className="text-[11px] font-black text-slate-400 shrink-0 uppercase">Other Charges</span>
+                      <div className="w-32">
+                        <Input
+                          type="number"
+                          placeholder="0.00"
+                          className="!h-10 !text-right !text-[13px] !font-black !bg-slate-50/50 !rounded-xl !border-transparent hover:!border-slate-200 focus:!bg-white"
+                          value={charges.other as any}
+                          onChange={(e) => setCharges({ ...charges, other: e.target.value ? Number(e.target.value) : "" })}
+                        />
+                      </div>
                     </div>
                   </div>
 
-                  <div className="flex justify-between items-center gap-4">
-                    <span className="text-[11px] font-black text-slate-400 shrink-0">Other Charges</span>
-                    <div className="w-28">
-                      <Input
-                        type="number"
-                        placeholder="0.00"
-                        className="!h-9 !text-right !text-[12px] !font-black !bg-slate-50/50 !rounded-xl !border-transparent hover:!border-slate-200 focus:!bg-white"
-                        value={charges.other as any}
-                        onChange={(e) => setCharges({ ...charges, other: e.target.value ? Number(e.target.value) : "" })}
-                      />
+                  <div className="pt-8 border-t border-slate-100 mt-4">
+                    <div className="flex flex-col gap-1">
+                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Grand Total</span>
+                      <span className="text-[36px] font-black text-slate-900 tracking-tighter tabular-nums leading-none">₹{stats.grandTotal.toLocaleString()}</span>
                     </div>
                   </div>
                 </div>
+              </div>
 
-                <div className="pt-6 border-t border-slate-100 mt-2">
-                  <div className="flex flex-col gap-1">
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Grand Total</span>
-                    <span className="text-[32px] font-black text-slate-900 tracking-tighter tabular-nums">₹{stats.grandTotal.toLocaleString()}</span>
+              {/* 4. Payment Details Card */}
+              <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-sm overflow-hidden flex flex-col transition-all hover:shadow-md">
+                <div className="px-8 py-5 bg-slate-50/50 border-b border-slate-100 flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-amber-50 flex items-center justify-center text-amber-600 border border-amber-100 shadow-sm">
+                    <CreditCard size={20} />
+                  </div>
+                  <div>
+                    <h2 className="text-[13px] font-black text-slate-800">Payment Details</h2>
+                    <p className="text-[10px] text-slate-400 font-bold mt-0.5">Method & settlement</p>
                   </div>
                 </div>
-              </div>
-            </div>
 
-            {/* 4. Payment Details Card */}
-            <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-sm overflow-hidden transition-all hover:shadow-md">
-              <div className="px-6 py-4 bg-slate-50/50 border-b border-slate-100 flex items-center gap-3">
-                <div className="w-8 h-8 rounded-xl bg-amber-50 flex items-center justify-center text-amber-600 border border-amber-100 shadow-sm">
-                  <CreditCard size={16} />
-                </div>
-                <h2 className="text-[12px] font-black text-slate-800">Payment Details</h2>
-              </div>
+                <div className="p-8 space-y-6 flex-1">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    {[
+                      { id: "Cash", icon: <Banknote size={18} /> },
+                      { id: "UPI", icon: <Smartphone size={18} /> },
+                      { id: "Card", icon: <CreditCard size={18} /> },
+                      { id: "Bank", icon: <Landmark size={18} /> }
+                    ].map((m) => (
+                      <button
+                        key={m.id}
+                        onClick={() => setPayment({ ...payment, method: m.id as PaymentMethod })}
+                        className={`flex flex-col items-center justify-center py-4 rounded-2xl border-2 transition-all ${payment.method === m.id
+                          ? "border-amber-500 bg-amber-50 text-amber-700 shadow-sm scale-[1.02]"
+                          : "border-slate-100 bg-slate-50/50 text-slate-400 hover:border-amber-200 hover:bg-white"
+                          }`}
+                      >
+                        <div className={`mb-2 ${payment.method === m.id ? 'text-amber-600' : ''}`}>{m.icon}</div>
+                        <span className="text-[10px] font-black uppercase tracking-wider">{m.id}</span>
+                      </button>
+                    ))}
+                  </div>
 
-              <div className="p-6 space-y-6">
-                <div className="grid grid-cols-4 gap-2">
-                  {[
-                    { id: "Cash", icon: <Banknote size={16} /> },
-                    { id: "UPI", icon: <Smartphone size={16} /> },
-                    { id: "Card", icon: <CreditCard size={16} /> },
-                    { id: "Bank", icon: <Landmark size={16} /> }
-                  ].map((m) => (
-                    <button
-                      key={m.id}
-                      onClick={() => setPayment({ ...payment, method: m.id as PaymentMethod })}
-                      className={`flex flex-col items-center justify-center py-4 rounded-2xl border transition-all ${payment.method === m.id
-                        ? "border-amber-500 bg-amber-50 text-amber-700 shadow-sm"
-                        : "border-slate-100 bg-slate-50/50 text-slate-400 hover:border-amber-200 hover:bg-white"
-                        }`}
-                    >
-                      <div className="mb-2">{m.icon}</div>
-                      <span className="text-[9px] font-black uppercase tracking-wider">{m.id}</span>
-                    </button>
-                  ))}
-                </div>
+                  <div className="space-y-4 pt-2">
+                    <Input
+                      label="Amount Paid Now (₹)"
+                      type="number"
+                      className="!h-16 !text-2xl !font-black !text-emerald-600 !rounded-2xl !bg-slate-50/50 focus:!bg-white border-2 border-transparent focus:!border-emerald-200 shadow-inner"
+                      value={payment.amountPaid as any}
+                      onChange={(e) => setPayment({ ...payment, amountPaid: e.target.value ? Number(e.target.value) : "" })}
+                      placeholder={stats.grandTotal.toString()}
+                    />
 
-                <div className="space-y-4 pt-2">
-                  <Input
-                    label="Amount Paid Now (₹)"
-                    type="number"
-                    className="!h-14 !text-xl !font-black !text-emerald-600 !rounded-2xl !bg-slate-50/50 focus:!bg-white"
-                    value={payment.amountPaid as any}
-                    onChange={(e) => setPayment({ ...payment, amountPaid: e.target.value ? Number(e.target.value) : "" })}
-                    placeholder={stats.grandTotal.toString()}
-                  />
-
-                  <div className="p-5 rounded-2xl bg-slate-50 border border-slate-100 flex flex-col gap-1">
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Remaining Balance</span>
-                    <span className={`text-[22px] font-black tabular-nums ${stats.outstanding > 0 ? "text-rose-600" : "text-emerald-600"}`}>
-                      ₹{stats.outstanding.toLocaleString()}
-                    </span>
+                    <div className="p-6 rounded-[2rem] bg-slate-50 border border-slate-100 flex flex-col gap-1 items-center justify-center text-center">
+                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Remaining Balance</span>
+                      <span className={`text-[28px] font-black tabular-nums tracking-tight ${stats.outstanding > 0 ? "text-rose-600" : "text-emerald-600"}`}>
+                        ₹{stats.outstanding.toLocaleString()}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>

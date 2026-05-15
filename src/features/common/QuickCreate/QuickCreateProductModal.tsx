@@ -127,7 +127,7 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-1.5">
-              <label className="text-[10px] font-black text-slate-400   ml-1">Category</label>
+              <label className="text-[10px] font-black text-slate-400 ml-1">Category</label>
               <ReusableSelect
                 value={form.category}
                 onValueChange={(val) => setForm(p => ({ ...p, category: val }))}
@@ -135,7 +135,7 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
               />
             </div>
             <div className="space-y-1.5">
-              <label className="text-[10px] font-black text-slate-400   ml-1">Unit</label>
+              <label className="text-[10px] font-black text-slate-400 ml-1">Unit</label>
               <ReusableSelect
                 value={form.unit}
                 onValueChange={(val) => setForm(p => ({ ...p, unit: val }))}
@@ -143,7 +143,7 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
               />
             </div>
             <div className="space-y-1.5">
-              <label className="text-[10px] font-black text-slate-400   ml-1">GST Rate</label>
+              <label className="text-[10px] font-black text-slate-400 ml-1">GST Rate</label>
               <ReusableSelect
                 value={form.gst}
                 onValueChange={(val) => setForm(p => ({ ...p, gst: val }))}
@@ -171,8 +171,8 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
                   <BarChart2 size={18} />
                 </div>
                 <div>
-                  <p className="text-xs font-black text-slate-800  tracking-tight">Batch Tracking</p>
-                  <p className="text-[10px] font-bold text-slate-400  ">Track expiry & manufacture</p>
+                  <p className="text-xs font-black text-slate-800 tracking-tight">Batch Tracking</p>
+                  <p className="text-[10px] font-bold text-slate-400">Track expiry & manufacture</p>
                 </div>
               </div>
               <Switch checked={form.batch_tracking} onCheckedChange={(val) => setForm(f => ({ ...f, batch_tracking: val }))} />
@@ -184,8 +184,8 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
                   <Layers size={18} />
                 </div>
                 <div>
-                  <p className="text-xs font-black text-slate-800  tracking-tight">Serial Tracking</p>
-                  <p className="text-[10px] font-bold text-slate-400  ">Track unique IDs / IMEIs</p>
+                  <p className="text-xs font-black text-slate-800 tracking-tight">Serial Tracking</p>
+                  <p className="text-[10px] font-bold text-slate-400">Track unique IDs / IMEIs</p>
                 </div>
               </div>
               <Switch checked={form.serial_tracking} onCheckedChange={(val) => setForm(f => ({ ...f, serial_tracking: val }))} />
@@ -200,14 +200,14 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
       subtitle: "Product attributes & combinations",
       content: (
         <div className="space-y-6">
-          <div className="flex items-center justify-between p-4 md:p-5 rounded-[1.5rem] bg-indigo-50 border border-indigo-100 mb-4">
+          <div className="flex items-center justify-between p-4 md:p-5 rounded-2xl bg-indigo-50 border border-indigo-100 mb-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-indigo-600 shadow-sm border border-indigo-50">
                 <Zap size={20} />
               </div>
               <div>
-                <p className="text-xs font-black text-indigo-900  tracking-tight">Enable Variants</p>
-                <p className="text-[10px] font-bold text-indigo-400  ">Multiple sizes, colors, etc.</p>
+                <p className="text-xs font-black text-indigo-900 tracking-tight">Enable Variants</p>
+                <p className="text-[10px] font-bold text-indigo-400">Multiple sizes, colors, etc.</p>
               </div>
             </div>
             <Switch checked={form.has_variants} onCheckedChange={(val) => setForm(f => ({ ...f, has_variants: val }))} />
@@ -237,13 +237,13 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
           )}
 
           {!form.has_variants && (
-            <div className="py-20 flex flex-col items-center justify-center text-center space-y-4 opacity-50 bg-slate-50/50 rounded-[2.5rem] border border-dashed border-slate-200">
-              <div className="w-16 h-16 rounded-[2rem] bg-slate-100 flex items-center justify-center text-slate-300">
+            <div className="py-20 flex flex-col items-center justify-center text-center space-y-4 opacity-50 bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
+              <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-300">
                 <Layers size={32} />
               </div>
               <div>
-                <p className="text-sm font-black text-slate-800  tracking-tight">No Variants Enabled</p>
-                <p className="text-[10px] font-bold text-slate-400   max-w-[200px]">
+                <p className="text-sm font-black text-slate-800 tracking-tight">No Variants Enabled</p>
+                <p className="text-[10px] font-bold text-slate-400 max-w-[200px]">
                   Enable variants to add multiple versions of this product
                 </p>
               </div>
@@ -258,17 +258,17 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
       subtitle: "Review details before creating",
       content: (
         <div className="space-y-6">
-          <div className="bg-slate-50 rounded-[1.5rem] md:rounded-[2rem] p-4 md:p-6 border border-slate-100 space-y-6">
+          <div className="bg-slate-50 rounded-2xl p-4 md:p-6 border border-slate-100 space-y-6">
             <div className="flex items-start justify-between">
               <div>
                 <h4 className="text-lg md:text-2xl font-black text-slate-800 tracking-tight">{form.name || "Untitled Product"}</h4>
-                <p className="text-xs font-bold text-slate-400   mt-1">{form.category} • {form.brand || "No Brand"}</p>
+                <p className="text-xs font-bold text-slate-400 mt-1">{form.category} • {form.brand || "No Brand"}</p>
               </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 border-t border-slate-200/60">
               <div className="space-y-1">
-                <p className="text-[10px] font-black text-slate-400  ">Tax (GST)</p>
+                <p className="text-[10px] font-black text-slate-400">Tax (GST)</p>
                 <p className="text-sm font-bold text-slate-700">{form.gst}</p>
               </div>
             </div>

@@ -208,9 +208,9 @@ export const InventoryItemsCard = ({
     <>
       {/* Variant Modal — rendered outside the card to avoid overflow clipping */}
       {variantModal.isOpen && createPortal(
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/30 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col border border-slate-200">
-            <div className="px-8 py-5 border-b border-slate-100 flex justify-between items-center">
+        <div className="fixed inset-0 z-[100] flex flex-col items-center p-4 md:p-12 overflow-y-auto bg-slate-900/40 backdrop-blur-sm custom-scrollbar animate-in fade-in duration-300">
+          <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col border border-slate-200 my-auto shadow-indigo-200/20">
+            <div className="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
               <div className="flex items-center gap-3">
                 <div className={`w-10 h-10 rounded-2xl bg-${themeColor}-50 flex items-center justify-center text-${themeColor}-600 border border-${themeColor}-100`}>
                   <PackageOpen size={20} />
@@ -228,24 +228,24 @@ export const InventoryItemsCard = ({
               </button>
             </div>
 
-            <div className="p-6 max-h-[50vh] overflow-y-auto modal-content bg-slate-50/50">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="p-8 max-h-[50vh] overflow-y-auto modal-content bg-white">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {variantModal.variants.map((variant) => {
                   const isSelected = selectedVariants === variant.id;
                   return (
                     <div
                       key={variant.id}
                       onClick={() => setSelectedVariants(variant.id)}
-                      className={`relative p-4 rounded-2xl border-2 transition-all cursor-pointer ${isSelected ? 'border-indigo-500 bg-indigo-50/40' : 'border-slate-200 bg-white hover:border-indigo-200'}`}
+                      className={`relative p-5 rounded-[2rem] border-2 transition-all cursor-pointer group ${isSelected ? 'border-indigo-600 bg-indigo-50/50 shadow-md shadow-indigo-100' : 'border-slate-100 bg-white hover:border-indigo-200 hover:bg-slate-50/30'}`}
                     >
-                      <div className={`absolute top-4 right-4 h-5 w-5 rounded-full border-2 flex items-center justify-center transition-all ${isSelected ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-slate-300'}`}>
-                        {isSelected && <Check size={11} strokeWidth={3} />}
+                      <div className={`absolute top-5 right-5 h-6 w-6 rounded-full border-2 flex items-center justify-center transition-all ${isSelected ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-slate-200 group-hover:border-indigo-300'}`}>
+                        {isSelected && <Check size={12} strokeWidth={4} />}
                       </div>
-                      <h4 className="font-semibold text-slate-800 text-sm pr-6">{variant.name}</h4>
-                      <div className="flex items-center gap-3 mt-1.5">
-                        <p className="text-[10px] text-slate-400   font-medium">Barcode: {variant.sku}</p>
+                      <h4 className="font-black text-slate-800 text-sm pr-8 tracking-tight">{variant.name}</h4>
+                      <div className="flex flex-wrap items-center gap-2 mt-2">
+                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">SKU: {variant.sku}</p>
                         {variant.batchCount > 0 && (
-                          <span className="flex items-center gap-1 text-[9px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-md border border-amber-100">
+                          <span className="flex items-center gap-1 text-[9px] font-black text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-100">
                             <Package size={8} /> {variant.batchCount} Batches
                           </span>
                         )}
@@ -277,9 +277,9 @@ export const InventoryItemsCard = ({
 
       {/* Batch Modal — rendered outside the card to avoid overflow clipping */}
       {batchModal.isOpen && createPortal(
-        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col border border-slate-200 animate-in zoom-in-95 duration-200">
-            <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center bg-amber-50/30">
+        <div className="fixed inset-0 z-[110] flex flex-col items-center p-4 md:p-12 overflow-y-auto bg-slate-900/40 backdrop-blur-sm custom-scrollbar animate-in fade-in duration-300">
+          <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-lg overflow-hidden flex flex-col border border-slate-200 my-auto animate-in zoom-in-95 duration-200">
+            <div className="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-amber-50/30">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-xl bg-amber-100 flex items-center justify-center text-amber-600 border border-amber-200">
                   <Package size={18} />
@@ -396,18 +396,18 @@ export const InventoryItemsCard = ({
         </div>
 
         {/* Product Table */}
-        <div className="overflow-x-auto pf-scroll">
-          <table className="w-full border-collapse whitespace-nowrap">
+        <div className="overflow-x-auto custom-scrollbar w-full" style={{ position: 'relative', minHeight: '300px' }}>
+          <table className="min-w-[1000px] w-full border-collapse whitespace-nowrap" style={{ tableLayout: 'fixed' }}>
             <thead>
-              <tr className="bg-slate-50/80 border-b border-slate-200">
-                <th className="py-4 px-6 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider w-14">#</th>
-                <th className="py-4 px-2 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider min-w-[320px]">Item Description</th>
-                <th className="py-4 px-2 text-center text-[10px] font-black text-slate-400 uppercase tracking-wider w-28">Qty / Unit</th>
-                <th className="py-4 px-2 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider w-36">{type === "PURCHASE" ? "Buy Price" : "Material Cost"}</th>
-                <th className="py-4 px-2 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider w-32">Subtotal</th>
-                <th className="py-4 px-2 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider w-24">Tax (GST)</th>
-                <th className="py-4 px-2 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider w-48">Pricing & Margin</th>
-                <th className="py-4 px-6 text-right text-[10px] font-black text-slate-400 uppercase tracking-wider w-24">Actions</th>
+              <tr className="bg-slate-50/80 border-b border-slate-200 sticky top-0 z-10">
+                <th className="py-4 px-6 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '60px' }}>#</th>
+                <th className="py-4 px-4 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '300px' }}>Item Description</th>
+                <th className="py-4 px-2 text-center text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '100px' }}>Qty / Unit</th>
+                <th className="py-4 px-4 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '140px' }}>{type === "PURCHASE" ? "Buy Price" : "Material Cost"}</th>
+                <th className="py-4 px-2 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '120px' }}>Subtotal</th>
+                <th className="py-4 px-2 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '100px' }}>Tax (GST)</th>
+                <th className="py-4 px-4 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '220px' }}>Pricing & Margin</th>
+                <th className="py-4 px-6 text-right text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '120px' }}>Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 bg-white">
@@ -669,34 +669,25 @@ export const InventoryItemsCard = ({
 
                       {/* Pricing & Margin */}
                       <td className="py-3 px-2 align-middle">
-                        <div className="w-44 flex flex-col gap-1.5">
+                        <div className="flex flex-col gap-1.5">
                           <div className="flex items-center gap-1">
                             <div className="flex bg-slate-100 rounded-lg p-0.5 shrink-0">
-                              <button
-                                onClick={() => handleProductChange(index, "marginType", "percent")}
-                                className={`w-6 h-6 flex items-center justify-center rounded-md text-[9px] font-bold transition-all ${product.marginType === "percent" ? "bg-white text-blue-600 shadow-sm" : "text-slate-400"}`}
-                              >
-                                %
-                              </button>
-                              <button
-                                onClick={() => handleProductChange(index, "marginType", "amount")}
-                                className={`w-6 h-6 flex items-center justify-center rounded-md text-[9px] font-bold transition-all ${product.marginType === "amount" ? "bg-white text-blue-600 shadow-sm" : "text-slate-400"}`}
-                              >
-                                ₹
-                              </button>
-                              <button
-                                onClick={() => handleProductChange(index, "marginType", "sellingPrice")}
-                                className={`w-6 h-6 flex items-center justify-center rounded-md text-[9px] font-bold transition-all ${product.marginType === "sellingPrice" ? "bg-white text-blue-600 shadow-sm" : "text-slate-400"}`}
-                              >
-                                SP
-                              </button>
+                              {["percent", "amount", "sellingPrice"].map((m) => (
+                                <button
+                                  key={m}
+                                  onClick={() => handleProductChange(index, "marginType", m)}
+                                  className={`w-6 h-6 flex items-center justify-center rounded-md text-[9px] font-black transition-all ${product.marginType === m ? "bg-white text-blue-600 shadow-sm" : "text-slate-400 hover:text-slate-600"}`}
+                                >
+                                  {m === "percent" ? "%" : m === "amount" ? "₹" : "SP"}
+                                </button>
+                              ))}
                             </div>
-                            <div className="flex-1">
+                            <div className="flex-1 min-w-0">
                               <Input
                                 type="number"
                                 value={(product.marginType === "percent" ? product.marginPercent : product.marginType === "amount" ? product.marginAmount : product.sellingPrice) as any}
                                 onChange={(e) => handleProductChange(index, product.marginType === "percent" ? "marginPercent" : product.marginType === "amount" ? "marginAmount" : "sellingPrice", e.target.value ? Number(e.target.value) : "")}
-                                className="!h-7 !text-[11px] !font-bold"
+                                className="!h-7 !text-[11px] !font-bold !w-full"
                                 placeholder={product.marginType === "sellingPrice" ? "Price" : "Margin"}
                               />
                             </div>
@@ -743,7 +734,7 @@ export const InventoryItemsCard = ({
                       <tr className="bg-slate-50/50">
                         <td colSpan={8} className="p-0 border-b border-slate-100">
                           <div className="px-12 py-4 space-y-4 animate-in fade-in slide-in-from-top-1 duration-200">
-                            
+
                             {/* Row 1: Batch & Serial Tracking */}
                             <div className="flex gap-4">
                               {/* Batch Section */}

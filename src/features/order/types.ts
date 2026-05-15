@@ -54,7 +54,8 @@ export interface OrderResponse {
   shop_id: string;
   customer_id: string;
   status: string;
-  payment_method: string;
+  payment_method?: string;
+  payments?: Record<string, number>;
   total_quantity: number;
   total_buyprice: number;
   total_sellprice: number;

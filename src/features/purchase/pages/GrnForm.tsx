@@ -13,9 +13,8 @@ import {
   CheckCircle2,
   User,
   Mail,
-
-} from "lucide-react"
-
+  ChevronDown,
+} from "lucide-react";
 
 import Input from "@/components/ui/Input";
 import { GradientButton } from "@/components/ui/GradientButton";
@@ -60,20 +59,240 @@ export interface ProductItem {
   remarks?: string;
 }
 
+// ─── Field Label ─────────────────────────────────────────────────────────────
+const FieldLabel = ({ children, required }: { children: React.ReactNode; required?: boolean }) => (
+  <label className="block text-[11px] font-medium text-slate-400 mb-1.5 tracking-wide uppercase">
+    {children}
+    {required && <span className="text-rose-400 ml-0.5">*</span>}
+  </label>
+);
+
+// ─── Section Card ─────────────────────────────────────────────────────────────
+const SectionCard = ({
+  icon,
+  title,
+  subtitle,
+  accentColor = "slate",
+  children,
+  badge,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  subtitle: string;
+  accentColor?: string;
+  children: React.ReactNode;
+  badge?: React.ReactNode;
+}) => (
+  <div className="bg-white rounded-lg border border-slate-100 shadow-[0_1px_4px_rgba(0,0,0,0.04)] overflow-hidden">
+    <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+      <div className="flex items-center gap-3">
+        <div className={`w-8 h-8 rounded-lg bg-${accentColor}-50 flex items-center justify-center text-${accentColor}-400`}>
+          {icon}
+        </div>
+        <div>
+          <p className="text-[13px] font-medium text-slate-700">{title}</p>
+          <p className="text-[11px] text-slate-400 mt-0.5">{subtitle}</p>
+        </div>
+      </div>
+      {badge}
+    </div>
+    <div className="p-6">{children}</div>
+  </div>
+);
+
+// ─── Summary Row ─────────────────────────────────────────────────────────────
+const SummaryRow = ({
+  label,
+  value,
+  muted,
+  large,
+}: {
+  label: string;
+  value: string;
+  muted?: boolean;
+  large?: boolean;
+}) => (
+  <div className={`flex items-center justify-between ${large ? "pt-4 border-t border-slate-100 mt-2" : ""}`}>
+    <span className={`text-[12px] ${muted ? "text-slate-400" : "text-slate-500"}`}>{label}</span>
+    <span
+      className={
+        large
+          ? "text-[22px] font-semibold text-slate-800 tabular-nums tracking-tight"
+          : "text-[13px] font-medium text-slate-700 tabular-nums"
+      }
+    >
+      {value}
+    </span>
+  </div>
+);
+
+// ─── Payment Method Button ────────────────────────────────────────────────────
+const PaymentBtn = ({
+  icon,
+  label,
+  active,
+  onClick,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  active: boolean;
+  onClick: () => void;
+}) => (
+  <button
+    onClick={onClick}
+    className={`flex flex-col items-center justify-center gap-1.5 py-3 rounded-lg border transition-all text-[11px] font-medium tracking-wide ${
+      active
+        ? "border-slate-300 bg-slate-50 text-slate-700"
+        : "border-slate-100 bg-white text-slate-400 hover:border-slate-200 hover:text-slate-500"
+    }`}
+  >
+    <span className={active ? "text-slate-600" : "text-slate-300"}>{icon}</span>
+    {label}
+  </button>
+);
+
 const StatusBadge = ({ status }: { status: GRNStatus }) => {
   const config = {
-    Pending: { icon: <Clock size={11} />, bg: "bg-amber-50", border: "border-amber-200", text: "text-amber-700" },
-    Partial: { icon: <AlertCircle size={11} />, bg: "bg-blue-50", border: "border-blue-200", text: "text-blue-700" },
-    Completed: { icon: <CheckCircle2 size={11} />, bg: "bg-emerald-50", border: "border-emerald-200", text: "text-emerald-700" },
+    Pending: { icon: <Clock size={11} />, bg: "bg-amber-50", border: "border-amber-100", text: "text-amber-600" },
+    Partial: { icon: <AlertCircle size={11} />, bg: "bg-blue-50", border: "border-blue-100", text: "text-blue-600" },
+    Completed: { icon: <CheckCircle2 size={11} />, bg: "bg-emerald-50", border: "border-emerald-100", text: "text-emerald-600" },
   }[status];
 
   return (
-    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-[11px] font-semibold ${config.bg} ${config.border} ${config.text}`}>
+    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-[10px] font-bold uppercase tracking-wider ${config.bg} ${config.border} ${config.text}`}>
       {config.icon} {status}
     </span>
   );
 };
 
+// ─── Header Overview ─────────────────────────────────────────────────────────
+const HeaderOverview = ({
+  title,
+  reference,
+  stats,
+  payment,
+  show,
+  onToggle,
+  id,
+  status,
+}: {
+  title: string;
+  reference: string;
+  stats: any;
+  payment: any;
+  show: boolean;
+  onToggle: () => void;
+  id?: string;
+  status?: GRNStatus;
+}) => (
+  <div className="bg-white border-b border-slate-100 overflow-hidden transition-all duration-300 ease-in-out">
+    {/* Main Bar (Always Visible) */}
+    <div className="px-6 md:px-8 py-4 flex items-center justify-between gap-6 flex-wrap lg:flex-nowrap">
+      <div className="flex-1 min-w-[200px]">
+        <div className="flex items-center gap-3">
+          <h1 className="text-[17px] font-bold text-slate-800 tracking-tight">{title}</h1>
+          <div className="flex items-center gap-2">
+            {status && <StatusBadge status={status} />}
+            {id && (
+              <span className="text-[10px] font-bold text-indigo-500 bg-indigo-50 px-2 py-0.5 rounded-full uppercase tracking-wider">
+                Editing
+              </span>
+            )}
+          </div>
+        </div>
+        <p className="text-[12px] text-slate-400 mt-0.5 font-medium">{reference}</p>
+      </div>
+
+      <div className="flex items-center gap-8 lg:gap-12">
+        <div className="text-center">
+          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1">Items</p>
+          <p className="text-[15px] font-bold text-slate-700">{stats.totalQty}</p>
+        </div>
+        <div className="text-center">
+          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1">Total</p>
+          <p className="text-[15px] font-bold text-slate-800">₹{stats.grandTotal.toLocaleString()}</p>
+        </div>
+        <div className="text-center">
+          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1">Balance</p>
+          <p className={`text-[15px] font-bold ${stats.outstanding > 0 ? "text-rose-500" : "text-emerald-500"}`}>
+            ₹{stats.outstanding.toLocaleString()}
+          </p>
+        </div>
+      </div>
+
+      <button
+        onClick={onToggle}
+        className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
+          show ? "bg-white text-slate-800 shadow-lg" : "bg-slate-50 text-slate-400 hover:bg-slate-100"
+        }`}
+      >
+        <ChevronDown size={18} className={`transition-transform duration-300 ${show ? "rotate-180" : ""}`} />
+      </button>
+    </div>
+
+    {/* Expandable Section */}
+    <div
+      className={`overflow-hidden transition-all duration-300 ease-in-out ${
+        show ? "max-h-[400px] border-t border-slate-50 opacity-100" : "max-h-0 opacity-0"
+      }`}
+    >
+      <div className="px-8 py-6 bg-slate-50/30 grid grid-cols-1 md:grid-cols-4 gap-8">
+        <div>
+          <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest mb-3">Breakdown</p>
+          <div className="space-y-2">
+            <div className="flex justify-between text-[13px]">
+              <span className="text-slate-500">Subtotal</span>
+              <span className="font-semibold text-slate-700">₹{stats.subtotal.toLocaleString()}</span>
+            </div>
+            <div className="flex justify-between text-[13px]">
+              <span className="text-slate-500">Charges</span>
+              <span className="font-semibold text-slate-700">₹{stats.totalCharges.toLocaleString()}</span>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest mb-3">Payment</p>
+          <div className="space-y-2">
+            <div className="flex justify-between text-[13px]">
+              <span className="text-slate-500">Method</span>
+              <span className="font-semibold text-slate-700">{payment.method}</span>
+            </div>
+            <div className="flex justify-between text-[13px]">
+              <span className="text-slate-500">Paid</span>
+              <span className="font-semibold text-slate-700">₹{(Number(payment.amountPaid) || 0).toLocaleString()}</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="md:col-span-2 bg-white rounded-lg p-4 border border-slate-100/50 shadow-sm flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${
+              stats.outstanding > 0 ? "bg-rose-50 text-rose-500" : "bg-emerald-50 text-emerald-500"
+            }`}>
+              <Banknote size={24} />
+            </div>
+            <div>
+              <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest">Calculated Balance</p>
+              <p className={`text-[20px] font-extrabold ${
+                stats.outstanding > 0 ? "text-rose-500" : "text-emerald-500"
+              }`}>
+                ₹{Math.abs(stats.outstanding).toLocaleString()}
+              </p>
+            </div>
+          </div>
+          {stats.outstanding > 0 && (
+            <span className="text-[11px] font-bold text-rose-400 px-3 py-1 bg-rose-50 rounded-lg">
+              Pending Payment
+            </span>
+          )}
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
+// ─── Main Component ───────────────────────────────────────────────────────────
 const GrnForm = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -83,6 +302,7 @@ const GrnForm = () => {
   const { showToast } = useToast();
   const [submitting, setSubmitting] = useState(false);
   const { openQuickCreate } = useQuickCreate();
+  const [showOverview, setShowOverview] = useState(false);
 
   const [grnDetails, setGrnDetails] = useState({
     supplier: "",
@@ -94,12 +314,27 @@ const GrnForm = () => {
   });
 
   const defaultProductRow: ProductItem = {
-    id: crypto.randomUUID(), name: "", quantity: "", costPrice: "", sellingPrice: "",
-    marginPercent: "", marginAmount: "", marginType: "percent",
-    unit: "pc", taxGst: 18, storageLoc: "", reorderPoint: "",
-    expiryDate: "", manufacturingDate: "", batchTracking: false,
-    serialTracking: false, serialNumbers: "",
-    batchNum: "", sku: "", variant: "", size: "",
+    id: crypto.randomUUID(),
+    name: "",
+    quantity: "",
+    costPrice: "",
+    sellingPrice: "",
+    marginPercent: "",
+    marginAmount: "",
+    marginType: "percent",
+    unit: "pc",
+    taxGst: 18,
+    storageLoc: "",
+    reorderPoint: "",
+    expiryDate: "",
+    manufacturingDate: "",
+    batchTracking: false,
+    serialTracking: false,
+    serialNumbers: "",
+    batchNum: "",
+    sku: "",
+    variant: "",
+    size: "",
   };
 
   const [products, setProducts] = useState<ProductItem[]>([defaultProductRow]);
@@ -111,7 +346,7 @@ const GrnForm = () => {
   const stats = useMemo(() => {
     let totalQty = 0;
     let subtotal = 0;
-    products.forEach(p => {
+    products.forEach((p) => {
       const q = Number(p.quantity) || 0;
       const c = Number(p.costPrice) || 0;
       totalQty += q;
@@ -123,7 +358,7 @@ const GrnForm = () => {
     const grandTotal = Math.round(subtotal + totalCharges);
     const paid = Number(payment.amountPaid) || 0;
     const outstanding = grandTotal - paid;
-    const allocations = products.map(p => {
+    const allocations = products.map((p) => {
       const q = Number(p.quantity) || 0;
       const c = Number(p.costPrice) || 0;
       let alloc = 0;
@@ -150,27 +385,29 @@ const GrnForm = () => {
             referenceNo: data.reference_no || "",
             status: (data.status as GRNStatus) || "Pending",
           });
-          setProducts(data.products.map((p: any) => ({
-            id: p.id || Math.random().toString(),
-            name: p.name,
-            quantity: p.quantity,
-            costPrice: p.buy_price,
-            sellingPrice: p.sell_price,
-            marginPercent: "",
-            marginAmount: "",
-            marginType: "sellingPrice" as const,
-            unit: p.unit || "pc",
-            taxGst: p.gst || 18,
-            sku: p.barcode,
-            variant: p.variant || "",
-            batchTracking: p.batch_tracking || false,
-            batchNum: p.batch_number || "",
-            manufacturingDate: p.manufacturing_date || "",
-            expiryDate: p.expiry_date || "",
-            storageLoc: "",
-            reorderPoint: "",
-            size: "",
-          })));
+          setProducts(
+            data.products.map((p: any) => ({
+              id: p.id || Math.random().toString(),
+              name: p.name,
+              quantity: p.quantity,
+              costPrice: p.buy_price,
+              sellingPrice: p.sell_price,
+              marginPercent: "",
+              marginAmount: "",
+              marginType: "sellingPrice" as const,
+              unit: p.unit || "pc",
+              taxGst: p.gst || 18,
+              sku: p.barcode,
+              variant: p.variant || "",
+              batchTracking: p.batch_tracking || false,
+              batchNum: p.batch_number || "",
+              manufacturingDate: p.manufacturing_date || "",
+              expiryDate: p.expiry_date || "",
+              storageLoc: "",
+              reorderPoint: "",
+              size: "",
+            }))
+          );
           setCharges(data.charges || { transport: 0, other: 0 });
           setPayment(data.payment || { method: "Cash", amountPaid: 0 });
         }
@@ -193,7 +430,7 @@ const GrnForm = () => {
   }, [id, getData, searchParams]);
 
   const handleProductChange = useCallback((index: number, field: string, value: any) => {
-    setProducts(prev => {
+    setProducts((prev) => {
       const next = [...prev];
       (next[index] as any)[field] = value;
       return next;
@@ -201,15 +438,17 @@ const GrnForm = () => {
   }, []);
 
   const updateProductFields = useCallback((index: number, updates: Partial<ProductItem>) => {
-    setProducts(prev => {
+    setProducts((prev) => {
       const next = [...prev];
       next[index] = { ...next[index], ...updates };
       return next;
     });
   }, []);
 
-  const addProduct = () => setProducts(prev => [...prev, { ...defaultProductRow, id: crypto.randomUUID() }]);
-  const removeProduct = (index: number) => { if (products.length > 1) setProducts(prev => prev.filter((_, i) => i !== index)); };
+  const addProduct = () => setProducts((prev) => [...prev, { ...defaultProductRow, id: crypto.randomUUID() }]);
+  const removeProduct = (index: number) => {
+    if (products.length > 1) setProducts((prev) => prev.filter((_, i) => i !== index));
+  };
 
   const handleSaveDraft = useCallback(() => {
     const savedDrafts = JSON.parse(localStorage.getItem("purchase_drafts") || "[]");
@@ -225,27 +464,43 @@ const GrnForm = () => {
     if (existingIndex > -1) savedDrafts[existingIndex] = newDraft;
     else savedDrafts.push(newDraft);
     localStorage.setItem("purchase_drafts", JSON.stringify(savedDrafts));
-    showToast("GRN progress saved as draft", "info");
+    showToast("Draft saved", "info");
     if (!searchParams.get("draftId")) navigate(`?draftId=${draftId}`, { replace: true });
   }, [grnDetails, products, charges, payment, supplierDetails, searchParams, navigate, showToast]);
 
   const handleSaveGRN = useCallback(async () => {
-    if (!grnDetails.supplier && !supplierDetails?.id) { showToast("Please select a supplier.", "error"); return; }
-    if (!products[0]?.name) { showToast("Please add at least one product.", "error"); return; }
-    const unselected = products.find(p => !p.inventory_id && p.name);
-    if (unselected) { showToast(`Product "${unselected.name}" was not selected from inventory.`, "error"); return; }
+    if (!grnDetails.supplier && !supplierDetails?.id) {
+      showToast("Please select a supplier.", "error");
+      return;
+    }
+    if (!products[0]?.name) {
+      showToast("Please add at least one product.", "error");
+      return;
+    }
+    const unselected = products.find((p) => !p.inventory_id && p.name);
+    if (unselected) {
+      showToast(`"${unselected.name}" was not selected from inventory.`, "error");
+      return;
+    }
 
     setSubmitting(true);
     try {
-      const transformedProducts = products.map(p => {
+      const transformedProducts = products.map((p) => {
         const q = Math.floor(Number(p.quantity) || 0);
         const baseCost = Number(p.costPrice) || 0;
         let allocated = 0;
         if (costMethod === "By Unit" && stats.totalQty > 0) allocated = stats.totalCharges / stats.totalQty;
-        else if (costMethod === "By Value" && stats.subtotal > 0) allocated = (baseCost / stats.subtotal) * stats.totalCharges;
-        else if (costMethod === "Equally" && products.length > 0) allocated = (stats.totalCharges / products.length) / (q > 0 ? q : 1);
+        else if (costMethod === "By Value" && stats.subtotal > 0)
+          allocated = (baseCost / stats.subtotal) * stats.totalCharges;
+        else if (costMethod === "Equally" && products.length > 0)
+          allocated = stats.totalCharges / products.length / (q > 0 ? q : 1);
         const finalCost = baseCost + allocated;
-        let finalSellPrice = p.marginType === "percent" ? finalCost * (1 + (Number(p.marginPercent) || 0) / 100) : p.marginType === "amount" ? finalCost + (Number(p.marginAmount) || 0) : Number(p.sellingPrice) || 0;
+        let finalSellPrice =
+          p.marginType === "percent"
+            ? finalCost * (1 + (Number(p.marginPercent) || 0) / 100)
+            : p.marginType === "amount"
+            ? finalCost + (Number(p.marginAmount) || 0)
+            : Number(p.sellingPrice) || 0;
         return {
           inventory_id: p.inventory_id,
           variant_id: p.variant_id,
@@ -263,8 +518,18 @@ const GrnForm = () => {
           batch_number: p.batchNum,
           manufacturing_date: p.manufacturingDate,
           expiry_date: p.expiryDate,
-          batches: { batch_number: p.batchNum, stocks: q, manufacturing_date: p.manufacturingDate, expiry_date: p.expiryDate },
-          serial_numbers: p.serialNumbers ? p.serialNumbers.split(",").map(s => s.trim()).filter(Boolean) : [],
+          batches: {
+            batch_number: p.batchNum,
+            stocks: q,
+            manufacturing_date: p.manufacturingDate,
+            expiry_date: p.expiryDate,
+          },
+          serial_numbers: p.serialNumbers
+            ? p.serialNumbers
+                .split(",")
+                .map((s) => s.trim())
+                .filter(Boolean)
+            : [],
           variant: p.variant,
         };
       });
@@ -273,226 +538,329 @@ const GrnForm = () => {
         shop_id: SHOP_ID,
         type: "PO_CREATE",
         supplier_id: supplierDetails?.id || "",
-        calculations: { divided_by: costMethod === "By Unit" ? "BY_QUANTITY" : costMethod === "By Value" ? "BY_VALUE" : costMethod === "Equally" ? "BY_EQUAL" : "NONE", gst: { type: "inclusive", value: 18, registered: true } },
-        additional_charges: { delivery_charge: Number(charges.transport) || 0, other_charge: Number(charges.other) || 0 },
-        datas: { supplier_name: supplierDetails?.name || grnDetails.supplier, purchaseDetails: { invoiceNo: grnDetails.invoiceNo, date: grnDetails.date, referenceNo: grnDetails.referenceNo, poReference: grnDetails.poReference }, payment: { method: payment.method, amountPaid: Number(payment.amountPaid) || 0 }, },
+        calculations: {
+          divided_by:
+            costMethod === "By Unit"
+              ? "BY_QUANTITY"
+              : costMethod === "By Value"
+              ? "BY_VALUE"
+              : costMethod === "Equally"
+              ? "BY_EQUAL"
+              : "NONE",
+          gst: { type: "inclusive", value: 18, registered: true },
+        },
+        additional_charges: {
+          delivery_charge: Number(charges.transport) || 0,
+          other_charge: Number(charges.other) || 0,
+        },
+        datas: {
+          supplier_name: supplierDetails?.name || grnDetails.supplier,
+          purchaseDetails: {
+            invoiceNo: grnDetails.invoiceNo,
+            date: grnDetails.date,
+            referenceNo: grnDetails.referenceNo,
+            poReference: grnDetails.poReference,
+          },
+          payment: { method: payment.method, amountPaid: Number(payment.amountPaid) || 0 },
+        },
         products: transformedProducts,
       };
 
-      const res = id ? await putData(`${ENDPOINTS.PURCHASES}/${id}`, payload) : await postData(ENDPOINTS.PURCHASES, payload);
+      const res = id
+        ? await putData(`${ENDPOINTS.PURCHASES}/${id}`, payload)
+        : await postData(ENDPOINTS.PURCHASES, payload);
       if (res) {
-        showToast(id ? "GRN updated successfully" : "GRN created successfully", "success");
+        showToast(id ? "GRN updated" : "GRN created", "success");
         navigate("/po-grn");
       }
-    } catch (error: any) { showToast(error.message || "Failed to save GRN", "error"); } finally { setSubmitting(false); }
-  }, [grnDetails, products, charges, payment, supplierDetails, costMethod, stats, id, postData, putData, navigate, showToast]);
+    } catch (error: any) {
+      showToast(error.message || "Failed to save GRN", "error");
+    } finally {
+      setSubmitting(false);
+    }
+  }, [
+    grnDetails,
+    products,
+    charges,
+    payment,
+    supplierDetails,
+    costMethod,
+    stats,
+    id,
+    postData,
+    putData,
+    navigate,
+    showToast,
+  ]);
 
   useEffect(() => {
     setBottomActions(
-      <div className="flex items-center gap-3 animate-in fade-in slide-in-from-right-4 duration-300">
+      <div className="flex items-center gap-2.5">
         {!id && (
-          <button type="button" onClick={handleSaveDraft} className="px-4 h-8 rounded-xl border border-blue-100 text-blue-600 font-bold text-xs bg-blue-50/50 hover:bg-blue-100 transition-all flex items-center gap-2">
-            <Bookmark size={14} />
-            <span>Save Draft</span>
+          <button
+            type="button"
+            onClick={handleSaveDraft}
+            className="px-4 h-8 rounded-lg border border-slate-200 text-slate-500 text-[12px] font-medium bg-white hover:bg-slate-50 transition-colors flex items-center gap-1.5"
+          >
+            <Bookmark size={13} />
+            Save draft
           </button>
         )}
-        <GradientButton icon={submitting ? <Loader className="h-4 w-4" /> : <Save size={16} />} onClick={handleSaveGRN} disabled={submitting} className="rounded-xl shadow-md text-xs px-8 h-8">
-          {submitting ? "Processing..." : (id ? "Update GRN" : "Confirm GRN")}
+        <GradientButton
+          icon={submitting ? <Loader className="h-4 w-4" /> : <Save size={14} />}
+          onClick={handleSaveGRN}
+          disabled={submitting}
+          className="rounded-lg shadow-sm text-[12px] px-6 h-8 flex items-center font-medium"
+        >
+          {submitting ? "Processing…" : id ? "Update GRN" : "Confirm GRN"}
         </GradientButton>
       </div>
     );
     return () => setBottomActions(null);
   }, [setBottomActions, submitting, id, handleSaveDraft, handleSaveGRN]);
 
-
-
   return (
-    <>
-      <div className="min-h-screen bg-slate-50/50 font-sans">
-        <div className="mx-auto p-4 md:p-8">
-          <div className="flex flex-col gap-8">
-            <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-sm overflow-hidden transition-all hover:shadow-md">
-              <div className="px-8 py-5 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-600 border border-blue-100 shadow-sm">
-                    <Truck size={20} />
+    <div className="min-h-screen bg-[#f8f8f7]">
+      <div className="">
+        {/* Full-Width Sticky Header Overview Section */}
+        <div className="sticky -top-2 md:-top-3 lg:-top-4 z-30 bg-white -mx-2 md:-mx-3 lg:-mx-4 shadow-sm mb-6">
+          <HeaderOverview
+            title={id ? "Edit Goods Receipt" : "New Goods Receipt"}
+            reference={grnDetails.referenceNo}
+            stats={stats}
+            payment={payment}
+            show={showOverview}
+            onToggle={() => setShowOverview(!showOverview)}
+            id={id}
+            status={grnDetails.status}
+          />
+        </div>
+
+        <div className="flex flex-col gap-5">
+          {/* ── 1. GRN Details ── */}
+          <SectionCard
+            icon={<Truck size={16} />}
+            title="GRN details"
+            subtitle="Supplier and receipt info"
+            accentColor="slate"
+          >
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+              <div>
+                <FieldLabel required>Supplier</FieldLabel>
+                <SearchSelect
+                  labelKey="name"
+                  valueKey="id"
+                  fetchOptions={async (q) => await supplierApi.searchSuppliers(q)}
+                  options={supplierDetails ? [supplierDetails] : []}
+                  value={supplierDetails?.id || grnDetails.supplier}
+                  onChange={(val, opt: any) => {
+                    setGrnDetails((d) => ({ ...d, supplier: String(val) }));
+                    if (opt) setSupplierDetails(opt);
+                  }}
+                  onCreateNew={(query) =>
+                    openQuickCreate(
+                      "SUPPLIER",
+                      (sup: any) => {
+                        setSupplierDetails(sup);
+                        setGrnDetails((d) => ({ ...d, supplier: sup.id }));
+                      },
+                      { name: query }
+                    )
+                  }
+                  placeholder="Search supplier…"
+                  className="w-full !rounded-lg !border-slate-200 !text-[13px]"
+                />
+              </div>
+
+              <div>
+                <FieldLabel>Invoice number</FieldLabel>
+                <Input
+                  placeholder="INV-..."
+                  value={grnDetails.invoiceNo}
+                  onChange={(e) => setGrnDetails((d) => ({ ...d, invoiceNo: e.target.value }))}
+                  className="!rounded-lg !border-slate-200 !text-[13px]"
+                />
+              </div>
+
+              <div>
+                <FieldLabel required>Receipt date</FieldLabel>
+                <Input
+                  type="date"
+                  value={grnDetails.date}
+                  onChange={(e) => setGrnDetails((d) => ({ ...d, date: e.target.value }))}
+                  className="!rounded-lg !border-slate-200 !text-[13px]"
+                />
+              </div>
+            </div>
+
+            {/* Supplier info strip */}
+            {supplierDetails && (
+              <div className="mt-5 p-4 bg-slate-50 rounded-lg border border-slate-100 flex flex-col sm:flex-row sm:items-center gap-4">
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                  <div className="w-9 h-9 rounded-full bg-slate-200 flex items-center justify-center text-slate-500 shrink-0">
+                    <User size={16} />
                   </div>
-                  <div>
-                    <h2 className="text-[13px] font-black text-slate-800">Goods Receipt Note (GRN)</h2>
-                    <p className="text-[10px] text-slate-400 font-bold mt-0.5">Receive products & update inventory</p>
+                  <div className="min-w-0">
+                    <p className="text-[13px] font-medium text-slate-700 truncate">
+                      {supplierDetails.name}
+                    </p>
+                    <p className="text-[11px] text-slate-400 mt-0.5">Supplier</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <StatusBadge status={grnDetails.status} />
-                  {id && (
-                    <div className="px-3 py-1 bg-blue-50 border border-blue-100 rounded-full">
-                      <span className="text-[10px] font-black text-blue-600 uppercase tracking-wider">Edit Mode</span>
+                <div className="flex items-center gap-4">
+                  {supplierDetails.email && (
+                    <div className="flex items-center gap-2 text-[12px] text-slate-500">
+                      <Mail size={13} className="text-slate-400" />
+                      <span className="truncate max-w-[160px]">{supplierDetails.email}</span>
+                    </div>
+                  )}
+                  {(supplierDetails.mobile_number || supplierDetails.phone) && (
+                    <div className="flex items-center gap-2 text-[12px] text-slate-500">
+                      <Smartphone size={13} className="text-slate-400" />
+                      <span>{supplierDetails.mobile_number || supplierDetails.phone}</span>
                     </div>
                   )}
                 </div>
               </div>
+            )}
+          </SectionCard>
 
-              <div className="p-8 grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="flex flex-col gap-2">
-                  <label className="text-[11px] font-black text-slate-500 ml-1">Supplier *</label>
-                  <SearchSelect
-                    labelKey="name" valueKey="id"
-                    fetchOptions={async (q) => await supplierApi.searchSuppliers(q)}
-                    options={supplierDetails ? [supplierDetails] : []}
-                    value={supplierDetails?.id || grnDetails.supplier}
-                    onChange={(val, opt: any) => { setGrnDetails(d => ({ ...d, supplier: String(val) })); if (opt) setSupplierDetails(opt); }}
-                    onCreateNew={(query) => openQuickCreate("SUPPLIER", (sup: any) => { setSupplierDetails(sup); setGrnDetails(d => ({ ...d, supplier: sup.id })); }, { name: query })}
-                    placeholder="Search Supplier..."
-                    className="w-full !rounded-xl !border-slate-200"
-                  />
-                </div>
-                <Input label="Supplier Invoice #" placeholder="INV-..." value={grnDetails.invoiceNo} onChange={(e) => setGrnDetails(d => ({ ...d, invoiceNo: e.target.value }))} className="!rounded-xl" />
-                <Input label="Receipt Date" required type="date" value={grnDetails.date} onChange={(e) => setGrnDetails(d => ({ ...d, date: e.target.value }))} className="!rounded-xl" />
-              </div>
+          {/* ── 2. Items ── */}
+          <InventoryItemsCard
+            products={products}
+            stats={stats}
+            costMethod={costMethod}
+            setCostMethod={setCostMethod}
+            handleProductChange={handleProductChange}
+            updateProductFields={updateProductFields}
+            setProducts={setProducts}
+            addProduct={addProduct}
+            removeProduct={removeProduct}
+            type="PURCHASE"
+          />
 
-              {supplierDetails && (
-                <div className="px-8 pb-8 animate-in fade-in slide-in-from-top-2 duration-500">
-                  <div className="p-4 bg-slate-50/50 border border-slate-100 rounded-[2rem] flex flex-col md:flex-row items-center justify-between gap-6">
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-2xl bg-white flex items-center justify-center text-blue-600 border border-slate-100 shadow-sm">
-                        <User size={24} />
+          {/* ── 3. Summary + Payment ── */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            {/* Receipt Summary */}
+            <SectionCard
+              icon={<Banknote size={16} />}
+              title="Receipt summary"
+              subtitle="Costs and charges"
+              accentColor="slate"
+            >
+              <div className="space-y-3">
+                <SummaryRow label="Subtotal" value={`₹${stats.subtotal.toLocaleString()}`} />
+
+                {/* Charge inputs */}
+                <div className="pt-2 space-y-2.5">
+                  {[
+                    { key: "transport" as const, label: "Transport" },
+                    { key: "other" as const, label: "Other charges" },
+                  ].map(({ key, label }) => (
+                    <div key={key} className="flex items-center justify-between gap-4">
+                      <span className="text-[12px] text-slate-400">{label}</span>
+                      <div className="relative w-32">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[12px] text-slate-400">
+                          ₹
+                        </span>
+                        <input
+                          type="number"
+                          placeholder="0.00"
+                          value={charges[key] as any}
+                          onChange={(e) =>
+                            setCharges((c) => ({
+                              ...c,
+                              [key]: e.target.value ? Number(e.target.value) : "",
+                            }))
+                          }
+                          className="w-full pl-7 pr-3 h-9 text-right text-[13px] font-medium text-slate-700 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-slate-300 focus:bg-white transition"
+                        />
                       </div>
-                      <div>
-                        <p className="text-[10px] font-black text-slate-400 mb-0.5">Supplier Details</p>
-                        <p className="text-lg font-black text-slate-800 tracking-tight">{supplierDetails.name}</p>
-                      </div>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-3">
-                      <div className="flex items-center gap-3 px-4 py-2 bg-white rounded-2xl border border-slate-100 shadow-sm transition-all hover:border-blue-200">
-                        <div className="w-8 h-8 rounded-xl bg-blue-50 flex items-center justify-center text-blue-500"><Mail size={14} /></div>
-                        <div className="flex flex-col"><span className="text-[9px] font-black text-slate-400">Email</span><span className="text-[11px] font-bold text-slate-600 truncate max-w-[150px]">{supplierDetails.email || "N/A"}</span></div>
-                      </div>
-                      <div className="flex items-center gap-3 px-4 py-2 bg-white rounded-2xl border border-slate-100 shadow-sm transition-all hover:border-emerald-200">
-                        <div className="w-8 h-8 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-500"><Smartphone size={14} /></div>
-                        <div className="flex flex-col"><span className="text-[9px] font-black text-slate-400">Contact</span><span className="text-[11px] font-bold text-slate-600">{supplierDetails.mobile_number || supplierDetails.phone || "N/A"}</span></div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <InventoryItemsCard
-              products={products} stats={stats} costMethod={costMethod} setCostMethod={setCostMethod}
-              handleProductChange={handleProductChange} updateProductFields={updateProductFields}
-              setProducts={setProducts} addProduct={addProduct} removeProduct={removeProduct}
-            />
-
-
-            {/* 3. Bottom Sections Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              {/* Receipt Summary Card */}
-              <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-sm overflow-hidden flex flex-col transition-all hover:shadow-md">
-                <div className="px-8 py-5 bg-slate-50/50 border-b border-slate-100 flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-600 border border-emerald-100 shadow-sm">
-                    <Banknote size={20} />
-                  </div>
-                  <div>
-                    <h2 className="text-[13px] font-black text-slate-800">Receipt Summary</h2>
-                    <p className="text-[10px] text-slate-400 font-bold mt-0.5">Inventory reception summary</p>
-                  </div>
-                </div>
-
-                <div className="p-8 space-y-4 flex-1">
-                  {[{ label: "Total Items", value: products.length }, { label: "Total Quantity", value: stats.totalQty }, { label: "Subtotal Value", value: `₹${stats.subtotal.toLocaleString()}` }].map(row => (
-                    <div key={row.label} className="flex justify-between items-center px-1">
-                      <span className="text-[11px] font-black text-slate-400 uppercase">{row.label}</span>
-                      <span className="text-[14px] font-black text-slate-800 tabular-nums">{row.value}</span>
                     </div>
                   ))}
-                  <div className="pt-6 border-t border-slate-100 space-y-4">
-                    <div className="flex justify-between items-center gap-6">
-                      <span className="text-[11px] font-black text-slate-400 shrink-0 uppercase">Transport</span>
-                      <div className="w-32">
-                        <Input 
-                          type="number" 
-                          placeholder="0.00" 
-                          className="!h-10 !text-right !text-[13px] !font-black !bg-slate-50/50 !rounded-xl !border-transparent hover:!border-slate-200" 
-                          value={charges.transport as any} 
-                          onChange={(e) => setCharges(c => ({ ...c, transport: e.target.value ? Number(e.target.value) : "" }))} 
-                        />
-                      </div>
-                    </div>
-                    <div className="flex justify-between items-center gap-6">
-                      <span className="text-[11px] font-black text-slate-400 shrink-0 uppercase">Other Charges</span>
-                      <div className="w-32">
-                        <Input 
-                          type="number" 
-                          placeholder="0.00" 
-                          className="!h-10 !text-right !text-[13px] !font-black !bg-slate-50/50 !rounded-xl !border-transparent hover:!border-slate-200" 
-                          value={charges.other as any} 
-                          onChange={(e) => setCharges(c => ({ ...c, other: e.target.value ? Number(e.target.value) : "" }))} 
-                        />
-                      </div>
-                    </div>
-                  </div>
-                  <div className="pt-8 border-t border-slate-100 mt-4">
-                    <div className="flex flex-col gap-1">
-                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Grand Total</span>
-                      <span className="text-[36px] font-black text-slate-900 tracking-tighter tabular-nums leading-none">₹{stats.grandTotal.toLocaleString()}</span>
-                    </div>
-                  </div>
+                </div>
+
+                <div className="pt-3 border-t border-slate-100 mt-3">
+                  <SummaryRow
+                    label="Grand total"
+                    value={`₹${stats.grandTotal.toLocaleString()}`}
+                    large
+                  />
                 </div>
               </div>
+            </SectionCard>
 
-              {/* 4. Payment Card */}
-              <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-sm overflow-hidden flex flex-col transition-all hover:shadow-md">
-                <div className="px-8 py-5 bg-slate-50/50 border-b border-slate-100 flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-2xl bg-amber-50 flex items-center justify-center text-amber-600 border border-amber-100 shadow-sm">
-                    <CreditCard size={20} />
-                  </div>
-                  <div>
-                    <h2 className="text-[13px] font-black text-slate-800">Payment Details</h2>
-                    <p className="text-[10px] text-slate-400 font-bold mt-0.5">Method & settlement</p>
-                  </div>
-                </div>
-
-                <div className="p-8 space-y-6 flex-1">
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    {[
-                      { id: "Cash", icon: <Banknote size={18} /> }, 
-                      { id: "UPI", icon: <Smartphone size={18} /> }, 
-                      { id: "Card", icon: <CreditCard size={18} /> }, 
-                      { id: "Bank", icon: <Landmark size={18} /> }
-                    ].map(m => (
-                      <button 
-                        key={m.id} 
-                        onClick={() => setPayment(p => ({ ...p, method: m.id as PaymentMethod }))} 
-                        className={`flex flex-col items-center justify-center py-4 rounded-2xl border-2 transition-all ${payment.method === m.id ? "border-amber-500 bg-amber-50 text-amber-700 shadow-sm scale-[1.02]" : "border-slate-100 bg-slate-50/50 text-slate-400 hover:border-amber-200 hover:bg-white"}`}
-                      >
-                        <div className={`mb-2 ${payment.method === m.id ? 'text-amber-600' : ''}`}>{m.icon}</div>
-                        <span className="text-[10px] font-black uppercase tracking-wider">{m.id}</span>
-                      </button>
-                    ))}
-                  </div>
-
-                  <div className="space-y-4 pt-2">
-                    <Input 
-                      label="Paid Now (₹)" 
-                      type="number" 
-                      className="!h-16 !text-2xl !font-black !text-emerald-600 !rounded-2xl !bg-slate-50/50 border-2 border-transparent focus:!border-emerald-200 shadow-inner" 
-                      value={payment.amountPaid as any} 
-                      onChange={(e) => setPayment(p => ({ ...p, amountPaid: e.target.value ? Number(e.target.value) : "" }))} 
-                      placeholder={stats.grandTotal.toString()} 
+            {/* Payment Details */}
+            <SectionCard
+              icon={<CreditCard size={16} />}
+              title="Payment"
+              subtitle="Method and amount"
+              accentColor="slate"
+            >
+              <div className="space-y-4">
+                {/* Method selector */}
+                <div className="grid grid-cols-4 gap-2">
+                  {[
+                    { id: "Cash", icon: <Banknote size={16} />, label: "Cash" },
+                    { id: "UPI", icon: <Smartphone size={16} />, label: "UPI" },
+                    { id: "Card", icon: <CreditCard size={16} />, label: "Card" },
+                    { id: "Bank", icon: <Landmark size={16} />, label: "Bank" },
+                  ].map((m) => (
+                    <PaymentBtn
+                      key={m.id}
+                      icon={m.icon}
+                      label={m.label}
+                      active={payment.method === m.id}
+                      onClick={() => setPayment((p) => ({ ...p, method: m.id as PaymentMethod }))}
                     />
-                    <div className="p-6 rounded-[2rem] bg-slate-50 border border-slate-100 flex flex-col gap-1 items-center justify-center text-center">
-                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Balance</span>
-                      <span className={`text-[28px] font-black tabular-nums tracking-tight ${stats.outstanding > 0 ? "text-rose-600" : "text-emerald-600"}`}>₹{Math.abs(stats.outstanding).toLocaleString()}</span>
-                    </div>
+                  ))}
+                </div>
+
+                {/* Amount paid */}
+                <div>
+                  <FieldLabel>Amount paid (₹)</FieldLabel>
+                  <div className="relative">
+                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[14px] text-slate-400">
+                      ₹
+                    </span>
+                    <input
+                      type="number"
+                      placeholder={stats.grandTotal.toString()}
+                      value={payment.amountPaid as any}
+                      onChange={(e) =>
+                        setPayment((p) => ({
+                          ...p,
+                          amountPaid: e.target.value ? Number(e.target.value) : "",
+                        }))
+                      }
+                      className="w-full pl-8 pr-4 h-11 text-[15px] font-medium text-slate-700 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-slate-300 transition"
+                    />
                   </div>
                 </div>
+
+                {/* Balance */}
+                <div
+                  className={`p-4 rounded-lg border flex items-center justify-between ${
+                    stats.outstanding > 0 ? "bg-rose-50/60 border-rose-100" : "bg-emerald-50/60 border-emerald-100"
+                  }`}
+                >
+                  <span className="text-[12px] text-slate-500">Balance due</span>
+                  <span
+                    className={`text-[18px] font-semibold tabular-nums tracking-tight ${
+                      stats.outstanding > 0 ? "text-rose-500" : "text-emerald-500"
+                    }`}
+                  >
+                    ₹{Math.abs(stats.outstanding).toLocaleString()}
+                  </span>
+                </div>
               </div>
-            </div>
+            </SectionCard>
           </div>
         </div>
       </div>
-    </>
+    </div>
   );
 };
 
 export default GrnForm;
+

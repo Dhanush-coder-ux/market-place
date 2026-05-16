@@ -341,7 +341,7 @@ const ProductRow = React.memo(({
             <div className="md:pl-[84px] pl-10 pr-6 py-6 space-y-6">
               {/* Product Overview (Description & Units) */}
               {(datas.description || item.description || datas.unit) && (
-                <div className="bg-white rounded-xl border border-slate-100 p-4 shadow-sm relative">
+                <div className="bg-white rounded-lg border border-slate-100 p-4 shadow-sm relative">
                   {/* Horizontal connecting line */}
                   <div className="absolute top-8 left-[-18px] md:left-[-57px] w-4 md:w-[57px] h-[1.5px] bg-blue-500/30" />
 
@@ -367,7 +367,7 @@ const ProductRow = React.memo(({
 
               {/* Variant Configuration (if any) */}
               {hasVariants && variantTypes.length > 0 && (
-                <div className="bg-white rounded-xl border border-slate-100 p-4 shadow-sm relative">
+                <div className="bg-white rounded-lg border border-slate-100 p-4 shadow-sm relative">
                   {/* Horizontal connecting line */}
                   <div className="absolute top-8 left-[-18px] md:left-[-57px] w-4 md:w-[57px] h-[1.5px] bg-blue-500/30" />
 
@@ -387,7 +387,7 @@ const ProductRow = React.memo(({
 
               {/* Root Serial Numbers (if any) */}
               {!hasVariants && !hasBatches && hasSerials && (
-                <div className="bg-white rounded-xl border border-slate-100 p-4 shadow-sm relative">
+                <div className="bg-white rounded-lg border border-slate-100 p-4 shadow-sm relative">
                   {/* Horizontal connecting line */}
                   <div className="absolute top-8 left-[-18px] md:left-[-57px] w-4 md:w-[57px] h-[1.5px] bg-blue-500/30" />
 
@@ -483,7 +483,7 @@ const InventoryPage = () => {
           value={stats.total.toString()}
           subValue="Total Items"
           iconBg="bg-blue-50" iconColor="text-blue-600"
-          className="rounded-xl border-slate-200 shadow-sm"
+          className="rounded-lg border-slate-200 shadow-sm"
         />
         <StatCard
           icon={AlertCircle}
@@ -491,7 +491,7 @@ const InventoryPage = () => {
           value={stats.lowStock.toString()}
           subValue="Priority Items"
           iconBg="bg-amber-50" iconColor="text-amber-600"
-          className="rounded-xl border-slate-200 shadow-sm"
+          className="rounded-lg border-slate-200 shadow-sm"
         />
         <StatCard
           icon={Tag}
@@ -499,7 +499,7 @@ const InventoryPage = () => {
           value={new Set(inventory.map(i => i.datas?.category || i.category)).size.toString()}
           subValue="Active Tags"
           iconBg="bg-emerald-50" iconColor="text-emerald-600"
-          className="rounded-xl border-slate-200 shadow-sm"
+          className="rounded-lg border-slate-200 shadow-sm"
         />
         <StatCard
           icon={Hash}
@@ -507,11 +507,11 @@ const InventoryPage = () => {
           value={inventory.reduce((acc, curr) => acc + (curr.variants?.length || 1), 0).toString()}
           subValue="Unique Variants"
           iconBg="bg-violet-50" iconColor="text-violet-600"
-          className="rounded-xl border-slate-200 shadow-sm"
+          className="rounded-lg border-slate-200 shadow-sm"
         />
       </div>
       {/* Toolbar */}
-      <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex flex-wrap items-center justify-between">
+      <div className="bg-white p-3 rounded-lg border border-slate-200 shadow-sm flex flex-wrap items-center justify-between">
         <div className="flex items-center gap-3 flex-1 min-w-[300px]">
           <div className="relative flex-1 max-w-md">
             <Input
@@ -533,12 +533,12 @@ const InventoryPage = () => {
       </div>
       {/* Error State */}
       {error && (
-        <div className="flex items-center justify-between p-5 bg-rose-50 border border-rose-100 rounded-[1.5rem] text-rose-700 text-xs font-black shadow-sm animate-in fade-in slide-in-from-top-4">
+        <div className="flex items-center justify-between p-5 bg-rose-50 border border-rose-100 rounded-lg text-rose-700 text-xs font-black shadow-sm animate-in fade-in slide-in-from-top-4">
           <div className="flex items-center gap-3">
             <AlertCircle size={20} className="text-rose-500" />
             <span>{error}</span>
           </div>
-          <button onClick={clearError} className="text-rose-400 hover:text-rose-700 transition-colors p-2 hover:bg-white rounded-xl shadow-sm">
+          <button onClick={clearError} className="text-rose-400 hover:text-rose-700 transition-colors p-2 hover:bg-white rounded-lg shadow-sm">
             <X size={18} />
           </button>
         </div>
@@ -546,7 +546,7 @@ const InventoryPage = () => {
 
 
       {/* Main Table Card - Modern & Refined */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+      <div className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden">
 
 
 
@@ -554,7 +554,7 @@ const InventoryPage = () => {
           <div className="p-20 flex justify-center"><Loader /></div>
         ) : inventory.length === 0 ? (
           <div className="p-32 text-center flex flex-col items-center justify-center bg-slate-50/20">
-            <div className="w-20 h-20 bg-white border border-slate-100 rounded-[2.5rem] flex items-center justify-center text-slate-200 mb-6 shadow-sm">
+            <div className="w-20 h-20 bg-white border border-slate-100 rounded-lg flex items-center justify-center text-slate-200 mb-6 shadow-sm">
               <Package size={40} />
             </div>
             <h3 className="text-lg font-black text-slate-800">No Inventory Records</h3>

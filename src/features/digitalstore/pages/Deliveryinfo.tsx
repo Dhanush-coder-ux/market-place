@@ -49,7 +49,7 @@ function SettingsCard({
   const c = COLOR_MAP[color];
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200 shadow-sm transition-all duration-200 hover:shadow-md">
+    <div className="bg-white rounded-lg border border-slate-200 shadow-sm transition-all duration-200 hover:shadow-md">
       <div className="p-6">
         {/* Header Row */}
         <div className="flex items-center justify-between">
@@ -143,7 +143,7 @@ function DeliveryFields({ data, setData }: { data: DeliveryConfig; setData: (d: 
           <button
             key={key}
             onClick={() => setData({ ...data, [key]: !data[key] })}
-            className={`group flex items-start gap-3 p-4 rounded-xl border text-left transition-all duration-200 ${
+            className={`group flex items-start gap-3 p-4 rounded-lg border text-left transition-all duration-200 ${
               data[key] 
                 ? "border-slate-400 bg-slate-50 shadow-sm" 
                 : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/50"
@@ -182,7 +182,7 @@ export default function DeliveryPreferences() {
       </div>
 
       {/* ── Pickup Only Banner ── */}
-      <div className="rounded-xl border border-amber-200/60 bg-amber-50/50 p-5">
+      <div className="rounded-lg border border-amber-200/60 bg-amber-50/50 p-5">
         <div className="flex items-start gap-4">
           <MapPin size={20} className="text-amber-600 shrink-0 mt-0.5" />
           <div className="flex-1 min-w-0">
@@ -243,3 +243,4 @@ export default function DeliveryPreferences() {
     </div>
   );
 }
+

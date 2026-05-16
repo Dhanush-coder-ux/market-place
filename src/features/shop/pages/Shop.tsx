@@ -156,12 +156,12 @@ export default function Shop() {
 
         {/* The Fly-out Info Panel */}
         {showInfo && (
-          <div className="title-reveal flex flex-col overflow-hidden bg-white border border-white/10 rounded-3xl md:rounded-r-3xl md:rounded-l-none shadow-2xl"
+          <div className="title-reveal flex flex-col overflow-hidden bg-white border border-white/10 rounded-lg md:rounded-r-3xl md:rounded-l-none shadow-2xl"
                style={{ width: 340, height: 520, animationDelay: "0.1s" }}>
             
             <div className="p-8">
               <div className="flex justify-between items-start mb-6">
-                <div className="w-14 h-14 rounded-2xl bg-blue-600 flex items-center justify-center text-2xl font-black text-white">
+                <div className="w-14 h-14 rounded-lg bg-blue-600 flex items-center justify-center text-2xl font-black text-white">
                   {shopInfo.shopName[0]}
                 </div>
                 <div className="text-right">
@@ -188,7 +188,7 @@ export default function Shop() {
             </div>
 
             <div className="mt-auto p-8 border-t border-white/5">
-               <button className="w-full py-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold transition-all transform active:scale-95 shadow-lg shadow-blue-900/40">
+               <button className="w-full py-4 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold transition-all transform active:scale-95 shadow-lg shadow-blue-900/40">
                  Enter Dashboard
                </button>
             </div>
@@ -198,3 +198,4 @@ export default function Shop() {
     </SkyLayout>
   );
 }
+

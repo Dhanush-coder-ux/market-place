@@ -72,7 +72,7 @@ const PurchaseHistory = () => {
 
   return (
     <div className="p-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
-      <div className="bg-white rounded-3xl border border-slate-200/60 shadow-xl overflow-hidden">
+      <div className="bg-white rounded-lg border border-slate-200/60 shadow-xl overflow-hidden">
         {/* Table Header / Search Area */}
         <div className="p-6 space-y-6">
           <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
@@ -81,10 +81,10 @@ const PurchaseHistory = () => {
               <input
                 type="text"
                 placeholder="Search by invoice, supplier or date..."
-                className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
               />
             </div>
-            <button className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors">
+            <button className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors">
               <Filter size={16} /> Filter
             </button>
           </div>

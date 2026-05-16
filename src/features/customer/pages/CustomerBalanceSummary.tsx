@@ -51,7 +51,7 @@ export default function CustomerBalanceSummary() {
       <div className="flex items-center gap-2">
         <button
           onClick={() => navigate("/customers/drafts")}
-          className="px-4 h-10 rounded-xl border border-blue-100 text-blue-600 font-semibold text-[13px] bg-blue-50/50 hover:bg-blue-100 transition-all flex items-center gap-2"
+          className="px-4 h-10 rounded-lg border border-blue-100 text-blue-600 font-semibold text-[13px] bg-blue-50/50 hover:bg-blue-100 transition-all flex items-center gap-2"
         >
           <Bookmark size={16} />
           Saved Drafts
@@ -252,7 +252,7 @@ export default function CustomerBalanceSummary() {
                   >
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-blue-400 flex items-center justify-center text-white text-sm font-bold shadow-lg shadow-blue-100">
+                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-600 to-blue-400 flex items-center justify-center text-white text-sm font-bold shadow-lg shadow-blue-100">
                           {String(c.name || "?")[0].toUpperCase()}
                         </div>
                         <div>
@@ -284,26 +284,26 @@ export default function CustomerBalanceSummary() {
                             setPayments([{ mode: "UPI", amount: balance > 0 ? String(balance) : "" }]);
                             setShowPaymentModal(true);
                           }}
-                          className={`p-2 rounded-xl transition-all shadow-sm active:scale-95 text-emerald-500 hover:text-emerald-600 hover:bg-emerald-50`}
+                          className={`p-2 rounded-lg transition-all shadow-sm active:scale-95 text-emerald-500 hover:text-emerald-600 hover:bg-emerald-50`}
                           title="Record Payment"
                         >
                           <Banknote size={16} />
                         </button>
                         <button
                           onClick={(e) => { e.stopPropagation(); navigate(`/customers/${c.id}`); }}
-                          className="p-2 text-slate-400 hover:text-blue-600 hover:bg-white rounded-xl transition-all shadow-sm active:scale-95"
+                          className="p-2 text-slate-400 hover:text-blue-600 hover:bg-white rounded-lg transition-all shadow-sm active:scale-95"
                         >
                           <Eye size={16} />
                         </button>
                         <button
                           onClick={(e) => { e.stopPropagation(); navigate(`/customers/${c.id}/edit`); }}
-                          className="p-2 text-slate-400 hover:text-blue-600 hover:bg-white rounded-xl transition-all shadow-sm active:scale-95"
+                          className="p-2 text-slate-400 hover:text-blue-600 hover:bg-white rounded-lg transition-all shadow-sm active:scale-95"
                         >
                           <Edit3 size={16} />
                         </button>
                         <button
                           onClick={(e) => { e.stopPropagation(); setCustomerToDelete(c); setIsDeleteDialogOpen(true); }}
-                          className="p-2 text-slate-400 hover:text-rose-600 hover:bg-white rounded-xl transition-all shadow-sm active:scale-95"
+                          className="p-2 text-slate-400 hover:text-rose-600 hover:bg-white rounded-lg transition-all shadow-sm active:scale-95"
                         >
                           <Trash2 size={16} />
                         </button>
@@ -336,14 +336,14 @@ export default function CustomerBalanceSummary() {
           <div className="flex justify-end gap-2 p-4 bg-slate-50/50 rounded-b-2xl border-t border-slate-100">
             <button
               onClick={() => setShowPaymentModal(false)}
-              className="px-5 py-2.5 rounded-xl text-xs font-semibold text-slate-500 hover:bg-white border border-transparent hover:border-slate-200 transition-all"
+              className="px-5 py-2.5 rounded-lg text-xs font-semibold text-slate-500 hover:bg-white border border-transparent hover:border-slate-200 transition-all"
             >
               Cancel
             </button>
             <button
               onClick={handleSavePayment}
               disabled={isClearing}
-              className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shadow-md shadow-blue-200 disabled:opacity-50 transition-all active:scale-95"
+              className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-md shadow-blue-200 disabled:opacity-50 transition-all active:scale-95"
             >
               {isClearing ? <><Loader2 className="w-4 h-4 animate-spin" /> Processing...</> : <><Wallet className="w-4 h-4" /> Confirm Collection</>}
             </button>
@@ -392,14 +392,14 @@ export default function CustomerBalanceSummary() {
                       value={p.amount}
                       onChange={(e) => updatePayment(idx, { amount: e.target.value })}
                       placeholder="0.00"
-                      className="w-full h-10 pl-7 pr-4 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-700 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-500/5 transition-all placeholder:text-slate-300"
+                      className="w-full h-10 pl-7 pr-4 bg-white border border-slate-200 rounded-lg text-sm font-semibold text-slate-700 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-500/5 transition-all placeholder:text-slate-300"
                     />
                   </div>
                 </div>
                 {payments.length > 1 && (
                   <button
                     onClick={() => removePaymentRow(idx)}
-                    className="w-10 h-10 flex items-center justify-center text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all mb-[1px]"
+                    className="w-10 h-10 flex items-center justify-center text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-all mb-[1px]"
                     title="Remove mode"
                   >
                     <Trash2 size={16} />
@@ -409,7 +409,7 @@ export default function CustomerBalanceSummary() {
             ))}
           </div>
 
-          <div className="p-4 bg-slate-50/50 rounded-2xl border border-slate-100 relative overflow-hidden">
+          <div className="p-4 bg-slate-50/50 rounded-lg border border-slate-100 relative overflow-hidden">
             <div className="flex items-center justify-between mb-2.5">
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Total Collection</span>
               <span className="text-base font-bold text-slate-700 tabular-nums">
@@ -430,3 +430,4 @@ export default function CustomerBalanceSummary() {
     </div>
   );
 }
+

@@ -116,7 +116,7 @@ export default function StoreSetupForm({ existingData }: StoreSetupProps) {
                <div 
                  onClick={() => logoInputRef.current?.click()}
                  className={`
-                   h-24 w-24 rounded-2xl border-4 border-white shadow-lg flex items-center justify-center overflow-hidden cursor-pointer transition-all
+                   h-24 w-24 rounded-lg border-4 border-white shadow-lg flex items-center justify-center overflow-hidden cursor-pointer transition-all
                    ${form.logoPreview ? 'bg-white' : 'bg-slate-100 hover:bg-slate-200'}
                  `}
                >
@@ -253,7 +253,7 @@ export default function StoreSetupForm({ existingData }: StoreSetupProps) {
           <button
             disabled={!isFormValid}
             className={`
-              px-8 py-3 rounded-xl font-bold text-sm transition-all shadow-lg
+              px-8 py-3 rounded-lg font-bold text-sm transition-all shadow-lg
               ${isFormValid 
                 ? "bg-blue-600 text-white hover:bg-blue-700 shadow-blue-200 hover:-translate-y-0.5" 
                 : "bg-slate-100 text-slate-400 cursor-not-allowed shadow-none"}
@@ -279,3 +279,4 @@ export default function StoreSetupForm({ existingData }: StoreSetupProps) {
     </div>
   );
 }
+

@@ -165,9 +165,9 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
           </div>
           
           <div className="space-y-4 pt-2">
-            <div className="flex items-center justify-between p-3 md:p-4 rounded-2xl border border-slate-100 bg-slate-50/50">
+            <div className="flex items-center justify-between p-3 md:p-4 rounded-lg border border-slate-100 bg-slate-50/50">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-blue-600 shadow-sm border border-slate-100">
+                <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center text-blue-600 shadow-sm border border-slate-100">
                   <BarChart2 size={18} />
                 </div>
                 <div>
@@ -178,9 +178,9 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
               <Switch checked={form.batch_tracking} onCheckedChange={(val) => setForm(f => ({ ...f, batch_tracking: val }))} />
             </div>
 
-            <div className="flex items-center justify-between p-3 md:p-4 rounded-2xl border border-slate-100 bg-slate-50/50">
+            <div className="flex items-center justify-between p-3 md:p-4 rounded-lg border border-slate-100 bg-slate-50/50">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-violet-600 shadow-sm border border-slate-100">
+                <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center text-violet-600 shadow-sm border border-slate-100">
                   <Layers size={18} />
                 </div>
                 <div>
@@ -200,9 +200,9 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
       subtitle: "Product attributes & combinations",
       content: (
         <div className="space-y-6">
-          <div className="flex items-center justify-between p-4 md:p-5 rounded-2xl bg-indigo-50 border border-indigo-100 mb-4">
+          <div className="flex items-center justify-between p-4 md:p-5 rounded-lg bg-indigo-50 border border-indigo-100 mb-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-indigo-600 shadow-sm border border-indigo-50">
+              <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center text-indigo-600 shadow-sm border border-indigo-50">
                 <Zap size={20} />
               </div>
               <div>
@@ -237,8 +237,8 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
           )}
 
           {!form.has_variants && (
-            <div className="py-20 flex flex-col items-center justify-center text-center space-y-4 opacity-50 bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
-              <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-300">
+            <div className="py-20 flex flex-col items-center justify-center text-center space-y-4 opacity-50 bg-slate-50/50 rounded-lg border border-dashed border-slate-200">
+              <div className="w-16 h-16 rounded-lg bg-slate-100 flex items-center justify-center text-slate-300">
                 <Layers size={32} />
               </div>
               <div>
@@ -258,7 +258,7 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
       subtitle: "Review details before creating",
       content: (
         <div className="space-y-6">
-          <div className="bg-slate-50 rounded-2xl p-4 md:p-6 border border-slate-100 space-y-6">
+          <div className="bg-slate-50 rounded-lg p-4 md:p-6 border border-slate-100 space-y-6">
             <div className="flex items-start justify-between">
               <div>
                 <h4 className="text-lg md:text-2xl font-black text-slate-800 tracking-tight">{form.name || "Untitled Product"}</h4>
@@ -293,7 +293,7 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
           </div>
 
           {form.has_variants && combinations.filter(c => c.active).length > 0 && (
-            <div className="bg-white rounded-[1.5rem] md:rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-700">
+            <div className="bg-white rounded-lg md:rounded-lg border border-slate-200 shadow-sm overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-700">
               <div className="px-6 py-4 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between">
                 <h3 className="text-[10px] font-black text-slate-400  ">Active Variants Details</h3>
                 <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-100">
@@ -322,8 +322,8 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
             </div>
           )}
 
-          <div className="p-4 md:p-6 rounded-[1.5rem] md:rounded-[2rem] bg-blue-50/50 border border-blue-100 flex gap-3 md:gap-4 items-start">
-            <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-blue-600 shadow-sm shrink-0">
+          <div className="p-4 md:p-6 rounded-lg md:rounded-lg bg-blue-50/50 border border-blue-100 flex gap-3 md:gap-4 items-start">
+            <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center text-blue-600 shadow-sm shrink-0">
               <CheckCircle2 size={20} />
             </div>
             <div className="space-y-1">
@@ -418,3 +418,4 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
     />
   );
 };
+

@@ -140,14 +140,14 @@ export default function SupplierDetail() {
             <div className="flex items-center gap-2">
               <button
                 onClick={() => navigate(`/supplier/${id}/edit`)}
-                className="w-10 h-10 flex items-center justify-center bg-white border border-slate-200 text-slate-400 hover:text-blue-600 rounded-xl transition-all shadow-sm active:scale-95"
+                className="w-10 h-10 flex items-center justify-center bg-white border border-slate-200 text-slate-400 hover:text-blue-600 rounded-lg transition-all shadow-sm active:scale-95"
                 title="Edit Supplier"
               >
                 <Pencil size={18} />
               </button>
               <button
                 onClick={() => setShowDeleteModal(true)}
-                className="w-10 h-10 flex items-center justify-center bg-white border border-slate-200 text-slate-300 rounded-xl hover:text-rose-600 transition-all shadow-sm active:scale-95"
+                className="w-10 h-10 flex items-center justify-center bg-white border border-slate-200 text-slate-300 rounded-lg hover:text-rose-600 transition-all shadow-sm active:scale-95"
                 title="Delete Supplier"
               >
                 <Trash2 size={18} />
@@ -157,7 +157,7 @@ export default function SupplierDetail() {
         />
 
         {/* Tabs Navigation */}
-        <div className="flex gap-0.5 bg-white p-1 rounded-xl border border-slate-200 w-fit">
+        <div className="flex gap-0.5 bg-white p-1 rounded-lg border border-slate-200 w-fit">
           {TABS.map((tab, i) => (
             <button
               key={tab}
@@ -235,7 +235,7 @@ export default function SupplierDetail() {
                 <SectionCard title="Business Address">
                   <div className="space-y-4">
                     <p className="text-[10px] font-bold text-slate-400   text-xs font-semibold">Street Address</p>
-                    <p className="text-sm font-semibold text-slate-700 leading-relaxed bg-slate-50 p-4 rounded-xl border border-slate-100">
+                    <p className="text-sm font-semibold text-slate-700 leading-relaxed bg-slate-50 p-4 rounded-lg border border-slate-100">
                       {String(datas.address?.full_address || "No specific address provided.")}
                     </p>
                   </div>
@@ -257,7 +257,7 @@ export default function SupplierDetail() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <SectionCard title="Payment Status">
                 <div className="flex flex-col items-center py-12 text-center space-y-4">
-                  <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-300 mx-auto">
+                  <div className="w-16 h-16 bg-slate-50 rounded-lg flex items-center justify-center text-slate-300 mx-auto">
                     <CreditCard size={32} />
                   </div>
                   <p className="text-slate-400 font-medium">Financial records module loading...</p>
@@ -269,7 +269,7 @@ export default function SupplierDetail() {
                   <div className="text-4xl font-black">{fmt(Number(datas.pending_amount) || 0)}</div>
                   <div className="text-xs text-slate-400 font-medium">Net amount payable to this vendor</div>
                 </div>
-                <button className="w-full py-4 bg-blue-600 hover:bg-blue-700 rounded-2xl font-bold text-sm transition-all shadow-lg shadow-blue-900/20">
+                <button className="w-full py-4 bg-blue-600 hover:bg-blue-700 rounded-lg font-bold text-sm transition-all shadow-lg shadow-blue-900/20">
                   Record Payment
                 </button>
               </SectionCard>
@@ -326,7 +326,7 @@ export default function SupplierDetail() {
                     <p className="text-sm font-bold text-slate-400">No purchases found for this supplier</p>
                   </div>
                 ) : (
-                  <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                  <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
                     <div className="overflow-x-auto">
                       <table className="w-full text-left whitespace-nowrap">
                         <thead>
@@ -413,7 +413,7 @@ export default function SupplierDetail() {
           title={viewValue?.label || "Field Detail"}
           className="max-w-md"
         >
-          <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+          <div className="p-4 bg-slate-50 rounded-lg border border-slate-100">
             <p className="text-sm font-bold text-slate-700 break-words leading-relaxed select-all">
               {viewValue?.value}
             </p>
@@ -438,4 +438,5 @@ export default function SupplierDetail() {
     </div>
   );
 }
+
 

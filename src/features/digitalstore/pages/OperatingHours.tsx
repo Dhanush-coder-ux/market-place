@@ -39,12 +39,12 @@ const OperatingHours = () => {
 
   return (
     <div>
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+          <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
         {/* Header */}
         <div className="h-1 w-full bg-blue-300" />
         <div className="p-5 border-b border-slate-100">
           <div className="flex items-center gap-3 mb-5">
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-blue-50 ring-1 ring-blue-200">
+            <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-blue-50 ring-1 ring-blue-200">
               <Clock size={18} strokeWidth={2.5} className="text-blue-600" />
             </div>
             <div>
@@ -56,14 +56,14 @@ const OperatingHours = () => {
           </div>
 
           {/* Global time setter */}
-          <div className="flex flex-wrap items-end gap-3 bg-slate-50 border border-slate-200 rounded-xl p-4">
+          <div className="flex flex-wrap items-end gap-3 bg-slate-50 border border-slate-200 rounded-lg p-4">
             <div>
               <label className="text-[10px] font-bold text-slate-500  ">Opens</label>
               <input
                 type="time"
                 value={globalOpen}
                 onChange={(e) => setGlobalOpen(e.target.value)}
-                className="mt-1.5 block px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-[14px] font-bold text-slate-700 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none shadow-sm transition-all"
+                className="mt-1.5 block px-3 py-2.5 bg-white border border-slate-200 rounded-lg text-[14px] font-bold text-slate-700 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none shadow-sm transition-all"
               />
             </div>
             <span className="text-slate-300 font-black text-lg mb-2.5">→</span>
@@ -73,12 +73,12 @@ const OperatingHours = () => {
                 type="time"
                 value={globalClose}
                 onChange={(e) => setGlobalClose(e.target.value)}
-                className="mt-1.5 block px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-[14px] font-bold text-slate-700 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none shadow-sm transition-all"
+                className="mt-1.5 block px-3 py-2.5 bg-white border border-slate-200 rounded-lg text-[14px] font-bold text-slate-700 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none shadow-sm transition-all"
               />
             </div>
             <button
               onClick={applyToAll}
-              className={`ml-auto flex items-center gap-2 px-4 py-2.5 rounded-xl text-[13px]  transition-all duration-200 shadow-sm ${
+              className={`ml-auto flex items-center gap-2 px-4 py-2.5 rounded-lg text-[13px]  transition-all duration-200 shadow-sm ${
                 applied
                   ? "bg-emerald-500 text-white shadow-emerald-200"
                   : "bg-blue-500 hover:bg-blue-500 text-white shadow-blue-200 hover:shadow-blue-300"
@@ -102,7 +102,7 @@ const OperatingHours = () => {
               return (
                 <div
                   key={day}
-                  className={`rounded-xl border-2 overflow-hidden transition-all duration-200 ${
+                  className={`rounded-lg border-2 overflow-hidden transition-all duration-200 ${
                     isOpen ? "border-blue-200 bg-blue-50/30" : "border-slate-100 bg-slate-50/50"
                   }`}
                 >
@@ -160,3 +160,4 @@ const OperatingHours = () => {
 }
 
 export default OperatingHours
+

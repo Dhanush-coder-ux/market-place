@@ -147,8 +147,8 @@ function TypeBadge({ type }: { type: AnnouncementType }) {
 function DeleteModal({ item, onConfirm, onCancel }: { item: AnnouncementItem; onConfirm: () => void; onCancel: () => void }) {
   return (
     <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center animate-[fadeIn_0.15s_ease]">
-      <div className="bg-white rounded-2xl p-8 pb-7 w-[420px] max-w-[90vw] shadow-[0_25px_60px_rgba(0,0,0,0.15)] animate-[slideUp_0.2s_ease]">
-        <div className="w-12 h-12 rounded-xl bg-red-100 flex items-center justify-center mb-5">
+      <div className="bg-white rounded-lg p-8 pb-7 w-[420px] max-w-[90vw] shadow-[0_25px_60px_rgba(0,0,0,0.15)] animate-[slideUp_0.2s_ease]">
+        <div className="w-12 h-12 rounded-lg bg-red-100 flex items-center justify-center mb-5">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2.5"><polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" /><path d="M10 11v6M14 11v6" /><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2" /></svg>
         </div>
         <h3 className="text-[17px] font-bold text-slate-900 m-0 mb-2">Delete Announcement</h3>
@@ -156,8 +156,8 @@ function DeleteModal({ item, onConfirm, onCancel }: { item: AnnouncementItem; on
           This will permanently delete "<strong className="text-slate-700 font-semibold">{item.text.slice(0, 48)}…</strong>". This action cannot be undone.
         </p>
         <div className="flex gap-2.5 justify-end">
-          <button onClick={onCancel} className="px-5 py-2 rounded-xl border-[1.5px] border-slate-200 bg-white text-[13.5px] font-semibold text-slate-600 hover:bg-slate-50 transition-colors">Cancel</button>
-          <button onClick={onConfirm} className="px-5 py-2 rounded-xl border-none bg-red-500 text-[13.5px] font-bold text-white hover:bg-red-600 transition-colors">Delete</button>
+          <button onClick={onCancel} className="px-5 py-2 rounded-lg border-[1.5px] border-slate-200 bg-white text-[13.5px] font-semibold text-slate-600 hover:bg-slate-50 transition-colors">Cancel</button>
+          <button onClick={onConfirm} className="px-5 py-2 rounded-lg border-none bg-red-500 text-[13.5px] font-bold text-white hover:bg-red-600 transition-colors">Delete</button>
         </div>
       </div>
     </div>
@@ -167,7 +167,7 @@ function DeleteModal({ item, onConfirm, onCancel }: { item: AnnouncementItem; on
 function PreviewBanner({ announcement, type, cta }: { announcement: string; type: AnnouncementType; cta: { label: string; url: string } }) {
   const cfg = TYPE_CONFIG[type];
   return (
-    <div className={`w-full rounded-xl bg-gradient-to-br ${cfg.gradientFrom} ${cfg.gradientTo} border-[1.5px] ${cfg.border} p-3 px-4 flex items-center gap-3 animate-[fadeIn_0.2s_ease]`}>
+    <div className={`w-full rounded-lg bg-gradient-to-br ${cfg.gradientFrom} ${cfg.gradientTo} border-[1.5px] ${cfg.border} p-3 px-4 flex items-center gap-3 animate-[fadeIn_0.2s_ease]`}>
       <span className="flex items-center justify-center text-current">{cfg.emoji}</span>
       <p className="flex-1 text-[13px] font-medium text-slate-800 m-0">
         {announcement || "Your announcement will appear here…"}
@@ -184,7 +184,7 @@ function PreviewBanner({ announcement, type, cta }: { announcement: string; type
 function PreviewToast({ announcement, type }: { announcement: string; type: AnnouncementType }) {
   const cfg = TYPE_CONFIG[type];
   return (
-    <div className="inline-flex items-start gap-2.5 bg-slate-800 rounded-xl p-3.5 px-4 shadow-[0_12px_32px_rgba(0,0,0,0.25)] max-w-[340px] animate-[slideUp_0.25s_ease]">
+    <div className="inline-flex items-start gap-2.5 bg-slate-800 rounded-lg p-3.5 px-4 shadow-[0_12px_32px_rgba(0,0,0,0.25)] max-w-[340px] animate-[slideUp_0.25s_ease]">
       <div className={`w-8 h-8 rounded-lg ${cfg.color} flex items-center justify-center shrink-0`}>
         <span className="flex items-center justify-center text-white">{cfg.emoji}</span>
       </div>
@@ -313,7 +313,7 @@ export default function AnnouncementsPage() {
             <div className="flex items-end justify-between mb-5">
               <div>
                 <div className="flex items-center gap-2.5 mb-1.5">
-                  <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-blue-400 flex items-center justify-center text-white">
+                  <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-blue-500 to-blue-400 flex items-center justify-center text-white">
                     <Megaphone size={18} strokeWidth={2.5} />
                   </div>
                   <h1 className="m-0 text-[22px] font-extrabold text-slate-900 tracking-tight">Announcements</h1>
@@ -325,7 +325,7 @@ export default function AnnouncementsPage() {
               <div className="flex gap-2 pb-5">
                 <button
                   onClick={() => setActiveTab("history")}
-                  className="bg-transparent border-[1.5px] border-slate-200 rounded-xl py-2 px-3.5 text-[12.5px] font-semibold text-slate-600 flex items-center gap-1.5 transition-colors hover:border-slate-300 hover:bg-slate-50 hover:text-slate-800"
+                  className="bg-transparent border-[1.5px] border-slate-200 rounded-lg py-2 px-3.5 text-[12.5px] font-semibold text-slate-600 flex items-center gap-1.5 transition-colors hover:border-slate-300 hover:bg-slate-50 hover:text-slate-800"
                 >
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M3 3v5h5" /><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8" /><polyline points="12 7 12 12 16 14" /></svg>
                   History
@@ -333,7 +333,7 @@ export default function AnnouncementsPage() {
                 </button>
                 <button
                   onClick={() => setActiveTab("editor")}
-                  className="inline-flex items-center gap-2 py-2 px-4 rounded-xl border-none bg-gradient-to-br from-blue-500 to-blue-400 text-white text-[13.5px] font-bold cursor-pointer shadow-[0_4px_14px_rgba(99,102,241,0.3)] hover:opacity-90 transition-opacity"
+                  className="inline-flex items-center gap-2 py-2 px-4 rounded-lg border-none bg-gradient-to-br from-blue-500 to-blue-400 text-white text-[13.5px] font-bold cursor-pointer shadow-[0_4px_14px_rgba(99,102,241,0.3)] hover:opacity-90 transition-opacity"
                 >
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
                   New Announcement
@@ -342,7 +342,7 @@ export default function AnnouncementsPage() {
             </div>
 
             {/* Tabs */}
-            <div className="flex gap-2 bg-slate-100 rounded-xl p-1 w-fit">
+            <div className="flex gap-2 bg-slate-100 rounded-lg p-1 w-fit">
               {(["editor", "history"] as const).map(tab => (
                 <button
                   key={tab}
@@ -367,7 +367,7 @@ export default function AnnouncementsPage() {
               <div className="flex flex-col gap-4">
 
                 {/* Editor Card */}
-                <div className={`bg-white rounded-[18px] border-[1.5px] transition-all duration-200 overflow-hidden ${focused ? "border-blue-500 shadow-[0_0_0_4px_rgba(99,102,241,0.05),0_8px_24px_rgba(99,102,241,0.08)]" : "border-slate-200 shadow-[0_2px_12px_rgba(0,0,0,0.04)]"}`}>
+                <div className={`bg-white rounded-lg border-[1.5px] transition-all duration-200 overflow-hidden ${focused ? "border-blue-500 shadow-[0_0_0_4px_rgba(99,102,241,0.05),0_8px_24px_rgba(99,102,241,0.08)]" : "border-slate-200 shadow-[0_2px_12px_rgba(0,0,0,0.04)]"}`}>
                   
                   {/* Colored top bar */}
                   <div className={`h-[3px] bg-gradient-to-r ${cfg.gradientFrom.replace('/10', '')} to-transparent transition-colors duration-300 ${cfg.color}`} />
@@ -380,7 +380,7 @@ export default function AnnouncementsPage() {
                       value={type}
                       onChange={e => setType(e.target.value as AnnouncementType)}
                       style={{ backgroundImage: caretSvg }}
-                      className={`appearance-none rounded-xl py-1.5 pl-2.5 pr-7 text-[12.5px] font-semibold cursor-pointer outline-none bg-no-repeat bg-[right_8px_center] border-[1.5px] transition-colors focus:ring-4 focus:ring-blue-500/10 ${cfg.bg} ${cfg.text} ${cfg.border}`}
+                      className={`appearance-none rounded-lg py-1.5 pl-2.5 pr-7 text-[12.5px] font-semibold cursor-pointer outline-none bg-no-repeat bg-[right_8px_center] border-[1.5px] transition-colors focus:ring-4 focus:ring-blue-500/10 ${cfg.bg} ${cfg.text} ${cfg.border}`}
                     >
                       {(Object.keys(TYPE_CONFIG) as AnnouncementType[]).map(t => (
                         <option key={t} value={t}>{t}</option>
@@ -392,7 +392,7 @@ export default function AnnouncementsPage() {
                       value={status}
                       onChange={e => setStatus(e.target.value as StatusType)}
                       style={{ backgroundImage: caretSvg }}
-                      className="appearance-none bg-slate-50 border-[1.5px] border-slate-200 rounded-xl py-1.5 pl-2.5 pr-7 text-[12.5px] font-semibold text-slate-700 cursor-pointer outline-none bg-no-repeat bg-[right_8px_center] transition-colors focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
+                      className="appearance-none bg-slate-50 border-[1.5px] border-slate-200 rounded-lg py-1.5 pl-2.5 pr-7 text-[12.5px] font-semibold text-slate-700 cursor-pointer outline-none bg-no-repeat bg-[right_8px_center] transition-colors focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
                     >
                       {(Object.keys(STATUS_CONFIG) as StatusType[]).map(s => <option key={s} value={s}>{s}</option>)}
                     </select>
@@ -402,7 +402,7 @@ export default function AnnouncementsPage() {
                       value={audience}
                       onChange={e => setAudience(e.target.value)}
                       style={{ backgroundImage: caretSvg }}
-                      className="appearance-none bg-slate-50 border-[1.5px] border-slate-200 rounded-xl py-1.5 pl-2.5 pr-7 text-[12.5px] font-semibold text-slate-700 cursor-pointer outline-none bg-no-repeat bg-[right_8px_center] transition-colors focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
+                      className="appearance-none bg-slate-50 border-[1.5px] border-slate-200 rounded-lg py-1.5 pl-2.5 pr-7 text-[12.5px] font-semibold text-slate-700 cursor-pointer outline-none bg-no-repeat bg-[right_8px_center] transition-colors focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
                     >
                       {AUDIENCE_OPTIONS.map(a => <option key={a.value} value={a.value}>{a.label}</option>)}
                     </select>
@@ -413,12 +413,12 @@ export default function AnnouncementsPage() {
                     <div className="relative">
                       <button
                         onClick={() => setShowEmoji(p => !p)}
-                        className="p-1.5 px-2.5 rounded-xl border-[1.5px] border-slate-200 bg-transparent text-slate-600 hover:bg-slate-50 hover:border-slate-300 transition-colors flex items-center justify-center"
+                        className="p-1.5 px-2.5 rounded-lg border-[1.5px] border-slate-200 bg-transparent text-slate-600 hover:bg-slate-50 hover:border-slate-300 transition-colors flex items-center justify-center"
                       >
                         <Smile size={18} strokeWidth={2.5} />
                       </button>
                       {showEmoji && (
-                        <div className="absolute right-0 top-[calc(100%+6px)] z-50 bg-white border-[1.5px] border-slate-200 rounded-2xl p-2.5 grid grid-cols-6 gap-1 shadow-[0_10px_30px_rgba(0,0,0,0.1)] animate-[slideUp_0.15s_ease]">
+                        <div className="absolute right-0 top-[calc(100%+6px)] z-50 bg-white border-[1.5px] border-slate-200 rounded-lg p-2.5 grid grid-cols-6 gap-1 shadow-[0_10px_30px_rgba(0,0,0,0.1)] animate-[slideUp_0.15s_ease]">
                           {EMOJI_LIST.map(e => (
                             <button
                               key={e}
@@ -436,7 +436,7 @@ export default function AnnouncementsPage() {
                     <button
                       disabled={aiLoading}
                       onClick={handleAI}
-                      className={`inline-flex items-center gap-1.5 py-1.5 px-3 rounded-xl border-[1.5px] text-[12.5px] font-semibold cursor-pointer transition-colors ${aiLoading ? "bg-purple-50 border-purple-200 text-purple-400" : "bg-purple-50 border-purple-200 text-purple-700 hover:bg-purple-100 hover:border-purple-300"}`}
+                      className={`inline-flex items-center gap-1.5 py-1.5 px-3 rounded-lg border-[1.5px] text-[12.5px] font-semibold cursor-pointer transition-colors ${aiLoading ? "bg-purple-50 border-purple-200 text-purple-400" : "bg-purple-50 border-purple-200 text-purple-700 hover:bg-purple-100 hover:border-purple-300"}`}
                     >
                       {aiLoading ? (
                         <span className="w-3 h-3 border-2 border-purple-200 border-t-purple-600 rounded-full inline-block animate-[spin_0.7s_linear_infinite]" />
@@ -511,7 +511,7 @@ export default function AnnouncementsPage() {
                       <button
                         onClick={() => { setStatus("Draft"); setSent(false); }}
                         disabled={!text.trim()}
-                        className={`px-4 py-2 rounded-xl border-[1.5px] border-slate-200 bg-white text-[13px] font-semibold text-slate-600 transition-all duration-150 whitespace-nowrap overflow-hidden flex items-center justify-center ${text.trim() ? "cursor-pointer hover:bg-slate-50" : "cursor-not-allowed opacity-40"}`}
+                        className={`px-4 py-2 rounded-lg border-[1.5px] border-slate-200 bg-white text-[13px] font-semibold text-slate-600 transition-all duration-150 whitespace-nowrap overflow-hidden flex items-center justify-center ${text.trim() ? "cursor-pointer hover:bg-slate-50" : "cursor-not-allowed opacity-40"}`}
                       >
                         <span className="truncate">Save Draft</span>
                       </button>
@@ -519,7 +519,7 @@ export default function AnnouncementsPage() {
                       <button
                         onClick={handlePublish}
                         disabled={!text.trim() || sent}
-                        className={`px-5 py-2 rounded-xl border-none text-[13.5px] font-bold inline-flex items-center gap-2 transition-all duration-200 ${sent ? "bg-emerald-500 text-white scale-[0.97]" : !text.trim() ? "bg-slate-200 text-slate-400 cursor-not-allowed" : "bg-gradient-to-br from-blue-500 to-blue-400 text-white cursor-pointer shadow-[0_4px_14px_rgba(99,102,241,0.3)] hover:opacity-90"}`}
+                        className={`px-5 py-2 rounded-lg border-none text-[13.5px] font-bold inline-flex items-center gap-2 transition-all duration-200 ${sent ? "bg-emerald-500 text-white scale-[0.97]" : !text.trim() ? "bg-slate-200 text-slate-400 cursor-not-allowed" : "bg-gradient-to-br from-blue-500 to-blue-400 text-white cursor-pointer shadow-[0_4px_14px_rgba(99,102,241,0.3)] hover:opacity-90"}`}
                       >
                         {sent ? (
                           <>
@@ -577,7 +577,7 @@ export default function AnnouncementsPage() {
 
               {/* Right — Live Preview */}
               <div className="flex flex-col gap-4 sticky top-6">
-                <div className="bg-white rounded-[18px] border-[1.5px] border-slate-200 overflow-hidden">
+                <div className="bg-white rounded-lg border-[1.5px] border-slate-200 overflow-hidden">
                   <div className="p-3.5 px-4 border-b border-slate-100 flex items-center justify-between">
                     <p className="m-0 text-[12.5px] font-bold text-slate-800">Live Preview</p>
                     <div className="flex gap-1 bg-slate-100 rounded-lg p-[3px]">
@@ -594,7 +594,7 @@ export default function AnnouncementsPage() {
                   </div>
 
                   <div className="p-4">
-                    <div className={`bg-slate-50 rounded-xl p-5 flex min-h-[100px] ${previewMode === "toast" ? "items-start justify-start" : "items-center justify-stretch"}`}>
+                    <div className={`bg-slate-50 rounded-lg p-5 flex min-h-[100px] ${previewMode === "toast" ? "items-start justify-start" : "items-center justify-stretch"}`}>
                       {previewMode === "banner"
                         ? <PreviewBanner announcement={text} type={type} cta={{ label: ctaLabel, url: ctaUrl }} />
                         : <PreviewToast announcement={text} type={type} />}
@@ -655,7 +655,7 @@ export default function AnnouncementsPage() {
 
           {/* ═══ HISTORY TAB ══════════════════════════════════════ */}
           {activeTab === "history" && (
-            <div className="bg-white rounded-[18px] border-[1.5px] border-slate-200 overflow-hidden">
+            <div className="bg-white rounded-lg border-[1.5px] border-slate-200 overflow-hidden">
 
               {/* Filters */}
               <div className="p-4 px-5 border-b border-slate-100 flex items-center gap-2.5 flex-wrap">
@@ -665,7 +665,7 @@ export default function AnnouncementsPage() {
                   value={filterType}
                   onChange={e => setFilterType(e.target.value as AnnouncementType | "All")}
                   style={{ backgroundImage: caretSvg }}
-                  className="appearance-none bg-slate-50 border-[1.5px] border-slate-200 rounded-xl py-1.5 pl-2.5 pr-7 text-[12.5px] font-semibold text-slate-700 cursor-pointer outline-none bg-no-repeat bg-[right_8px_center] transition-colors focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
+                  className="appearance-none bg-slate-50 border-[1.5px] border-slate-200 rounded-lg py-1.5 pl-2.5 pr-7 text-[12.5px] font-semibold text-slate-700 cursor-pointer outline-none bg-no-repeat bg-[right_8px_center] transition-colors focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
                 >
                   <option value="All">All Types</option>
                   {(Object.keys(TYPE_CONFIG) as AnnouncementType[]).map(t => <option key={t} value={t}>{t}</option>)}
@@ -675,7 +675,7 @@ export default function AnnouncementsPage() {
                   value={filterStatus}
                   onChange={e => setFilterStatus(e.target.value as StatusType | "All")}
                   style={{ backgroundImage: caretSvg }}
-                  className="appearance-none bg-slate-50 border-[1.5px] border-slate-200 rounded-xl py-1.5 pl-2.5 pr-7 text-[12.5px] font-semibold text-slate-700 cursor-pointer outline-none bg-no-repeat bg-[right_8px_center] transition-colors focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
+                  className="appearance-none bg-slate-50 border-[1.5px] border-slate-200 rounded-lg py-1.5 pl-2.5 pr-7 text-[12.5px] font-semibold text-slate-700 cursor-pointer outline-none bg-no-repeat bg-[right_8px_center] transition-colors focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
                 >
                   <option value="All">All Statuses</option>
                   {(Object.keys(STATUS_CONFIG) as StatusType[]).map(s => <option key={s} value={s}>{s}</option>)}
@@ -752,3 +752,4 @@ export default function AnnouncementsPage() {
     </>
   );
 }
+

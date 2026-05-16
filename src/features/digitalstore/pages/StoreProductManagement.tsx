@@ -84,7 +84,7 @@ const ProductDashboard = () => {
 
         {/* ── STATS OVERVIEW ── */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
-          <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm flex items-center gap-4 transition-shadow hover:shadow-md">
+          <div className="bg-white border border-slate-200 rounded-lg p-5 shadow-sm flex items-center gap-4 transition-shadow hover:shadow-md">
             <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 shrink-0">
               <Box size={18} />
             </div>
@@ -93,7 +93,7 @@ const ProductDashboard = () => {
               <p className="text-2xl font-medium text-slate-900 leading-none">{stats.total}</p>
             </div>
           </div>
-          <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm flex items-center gap-4 transition-shadow hover:shadow-md">
+          <div className="bg-white border border-slate-200 rounded-lg p-5 shadow-sm flex items-center gap-4 transition-shadow hover:shadow-md">
             <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 shrink-0">
               <AlertCircle size={18} />
             </div>
@@ -102,7 +102,7 @@ const ProductDashboard = () => {
               <p className="text-2xl font-medium text-slate-900 leading-none">{stats.lowStockCount}</p>
             </div>
           </div>
-          <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm flex items-center gap-4 transition-shadow hover:shadow-md">
+          <div className="bg-white border border-slate-200 rounded-lg p-5 shadow-sm flex items-center gap-4 transition-shadow hover:shadow-md">
             <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 shrink-0">
               <Wallet size={18} />
             </div>
@@ -148,7 +148,7 @@ const ProductDashboard = () => {
         </div>
 
         {/* ── PRODUCT TABLE ── */}
-        <div className="bg-white border border-slate-200 rounded-xl overflow-x-auto shadow-sm">
+        <div className="bg-white border border-slate-200 rounded-lg overflow-x-auto shadow-sm">
           <table className="w-full text-left border-collapse min-w-[800px]">
             <thead>
               <tr className="border-b border-slate-200 bg-slate-50/50">
@@ -237,3 +237,4 @@ const ProductDashboard = () => {
 };
 
 export default ProductDashboard;
+

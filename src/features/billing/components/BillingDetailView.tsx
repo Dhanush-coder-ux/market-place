@@ -58,7 +58,7 @@ const BillingDetailView = ({ invoice, isSubmitting, onConfirm }: BillingDetailVi
     <div className="max-w-7xl mx-auto space-y-6">
 
       {/* ── Invoice Header ───────────────────────────────────────────── */}
-      <div className="relative overflow-hidden rounded-3xl border border-slate-200 bg-gradient-to-br from-blue-50 to-indigo-50 p-7 shadow-sm">
+      <div className="relative overflow-hidden rounded-lg border border-slate-200 bg-gradient-to-br from-blue-50 to-indigo-50 p-7 shadow-sm">
         <div className="flex flex-col md:flex-row justify-between gap-6">
           <div>
             <p className="text-[11px] font-bold   text-indigo-400 mb-1">Tax Invoice</p>
@@ -85,7 +85,7 @@ const BillingDetailView = ({ invoice, isSubmitting, onConfirm }: BillingDetailVi
       </div>
 
       {/* ── Amount Hero ──────────────────────────────────────────────── */}
-      <div className="rounded-3xl bg-white shadow-sm border border-slate-200 p-7 flex flex-col md:flex-row justify-between items-center gap-6">
+      <div className="rounded-lg bg-white shadow-sm border border-slate-200 p-7 flex flex-col md:flex-row justify-between items-center gap-6">
         <div>
           <p className="text-[11px] font-bold text-slate-400   mb-1">Total Payable</p>
           <div className="flex items-start gap-1">
@@ -112,7 +112,7 @@ const BillingDetailView = ({ invoice, isSubmitting, onConfirm }: BillingDetailVi
             <button
               onClick={onConfirm}
               disabled={isSubmitting}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-blue-500 to-blue-600 hover:shadow-md disabled:opacity-50 transition-all"
+              className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-bold text-white bg-gradient-to-r from-blue-500 to-blue-600 hover:shadow-md disabled:opacity-50 transition-all"
             >
               {isSubmitting
                 ? <><Loader2 size={16} className="animate-spin" /> Saving…</>
@@ -152,7 +152,7 @@ const BillingDetailView = ({ invoice, isSubmitting, onConfirm }: BillingDetailVi
       </div>
 
       {/* ── Items Table ──────────────────────────────────────────────── */}
-      <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
+      <div className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden">
         <table className="w-full">
           <thead className="bg-slate-50 border-b border-slate-100">
             <tr>
@@ -214,3 +214,4 @@ const BillingDetailView = ({ invoice, isSubmitting, onConfirm }: BillingDetailVi
 };
 
 export default BillingDetailView;
+

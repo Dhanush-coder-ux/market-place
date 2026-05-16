@@ -33,7 +33,7 @@ export function ReusableSelect({
       <Select value={value} onValueChange={onValueChange}>
         <SelectTrigger 
           className={cn(
-            "w-full h-10 rounded-xl border-gray-200 bg-white px-4 py-5 shadow-sm transition-all hover:border-blue-400 focus:ring-4 focus:ring-blue-500/10 outline-none",
+            "w-full h-10 rounded-lg border-gray-200 bg-white px-4 py-5 shadow-sm transition-all hover:border-blue-400 focus:ring-4 focus:ring-blue-500/10 outline-none",
             error && "border-red-500 focus:ring-red-500/10",
             className
           )}
@@ -41,7 +41,7 @@ export function ReusableSelect({
           <SelectValue placeholder={placeholder} />
         </SelectTrigger>
         <SelectPortal>
-        <SelectContent className="z-[9999] rounded-2xl shadow-2xl border-gray-100 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+        <SelectContent className="z-[9999] rounded-lg shadow-2xl border-gray-100 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
           {options.map((option) => (
             <SelectItem 
               key={option.value} 
@@ -67,3 +67,4 @@ export function ReusableSelect({
     </div>
   )
 }
+

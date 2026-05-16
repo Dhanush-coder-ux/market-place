@@ -27,7 +27,7 @@ const Profile = () => {
       <Title icon={<UserCheck2 size={30} />} title="Profile Info" />
 
       <div >
-        <div className="bg-white rounded-2xl shadow-sm border border-blue-200 p-4 md:p-5 max-w-4xl mx-auto">
+        <div className="bg-white rounded-lg shadow-sm border border-blue-200 p-4 md:p-5 max-w-4xl mx-auto">
 
           {/* Header */}
           <div className="flex items-start justify-between gap-4 mb-4">
@@ -37,7 +37,7 @@ const Profile = () => {
 
               {/* Static Image Box */}
               <div className="relative">
-                <div className="w-16 h-16 md:w-20 md:h-20 bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl border-2 border-gray-200 flex items-center justify-center overflow-hidden">
+                <div className="w-16 h-16 md:w-20 md:h-20 bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg border-2 border-gray-200 flex items-center justify-center overflow-hidden">
                   <div className="flex flex-col items-center text-gray-300">
                     <Store size={24} className="md:w-6 md:h-6" />
                     <p className="text-[10px] mt-1">No Image</p>
@@ -202,7 +202,7 @@ const Profile = () => {
         </div>
 
         {/* Bulk Data Upload Box */}
-        {/* <div className="bg-white rounded-2xl shadow-sm border border-blue-200 p-4 md:p-5 max-w-4xl mx-auto mt-5">
+        {/* <div className="bg-white rounded-lg shadow-sm border border-blue-200 p-4 md:p-5 max-w-4xl mx-auto mt-5">
           <BulkDataUI />
         </div> */}
       </div>
@@ -211,3 +211,4 @@ const Profile = () => {
 };
 
 export default Profile;
+

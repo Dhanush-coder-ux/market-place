@@ -100,13 +100,13 @@ const PurchaseHistoryTab = () => {
       <PurchaseHeader />
 
       {error && (
-        <div className="flex items-center justify-between gap-2 p-3 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm">
+        <div className="flex items-center justify-between gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
           <span>{error}</span>
           <button onClick={clearError}><X size={14} /></button>
         </div>
       )}
 
-      <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+      <div className="bg-white rounded-lg shadow-sm border border-slate-100 overflow-hidden">
         <div className="p-4 border-b border-slate-50 bg-slate-50/30">
           <h3 className="heading-label text-slate-700">Direct Purchase Orders</h3>
         </div>
@@ -146,3 +146,4 @@ const PurchaseHistoryTab = () => {
 };
 
 export default PurchaseHistoryTab;
+

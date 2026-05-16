@@ -55,14 +55,14 @@ export const ProfileSettingsPage = () => {
       case "purchasetypes":
         return (
           <div className="animate-in fade-in slide-in-from-right-4 duration-300">
-            <div className="bg-white md:rounded-2xl border-y md:border border-slate-200 shadow-sm overflow-hidden">
+            <div className="bg-white md:rounded-lg border-y md:border border-slate-200 shadow-sm overflow-hidden">
               <div className="px-6 py-5 border-b border-slate-100 bg-slate-50/50">
                 <h3 className="text-lg font-bold text-slate-900">Purchase Type Configurations</h3>
                 <p className="text-[13.5px] text-slate-500 mt-1">Enable or disable specific purchase flows across your system.</p>
               </div>
               
               <div className="p-6 space-y-4 max-w-2xl">
-                <div className="flex items-center justify-between p-4 rounded-xl border border-slate-100 bg-white hover:border-slate-200 hover:shadow-[0_2px_8px_rgba(0,0,0,0.02)] transition-all">
+                <div className="flex items-center justify-between p-4 rounded-lg border border-slate-100 bg-white hover:border-slate-200 hover:shadow-[0_2px_8px_rgba(0,0,0,0.02)] transition-all">
                   <div className="space-y-0.5 pr-4">
                     <label className="text-[14.5px] font-semibold text-slate-800 cursor-pointer" onClick={() => toggleSetting('poGrn')}>
                       PO-GRN (Goods Receipt Note)
@@ -75,7 +75,7 @@ export const ProfileSettingsPage = () => {
                   />
                 </div>
 
-                <div className="flex items-center justify-between p-4 rounded-xl border border-slate-100 bg-white hover:border-slate-200 hover:shadow-[0_2px_8px_rgba(0,0,0,0.02)] transition-all">
+                <div className="flex items-center justify-between p-4 rounded-lg border border-slate-100 bg-white hover:border-slate-200 hover:shadow-[0_2px_8px_rgba(0,0,0,0.02)] transition-all">
                   <div className="space-y-0.5 pr-4">
                     <label className="text-[14.5px] font-semibold text-slate-800 cursor-pointer" onClick={() => toggleSetting('productionEntry')}>
                       Production Entry
@@ -95,8 +95,8 @@ export const ProfileSettingsPage = () => {
       default:
         const activeItem = MENU_ITEMS.find(i => i.id === activeTab);
         return (
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8 h-[500px] flex flex-col items-center justify-center text-center animate-in fade-in zoom-in-95 duration-300">
-            <div className="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center mb-5 shadow-inner">
+          <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-8 h-[500px] flex flex-col items-center justify-center text-center animate-in fade-in zoom-in-95 duration-300">
+            <div className="w-16 h-16 bg-blue-50 rounded-lg flex items-center justify-center mb-5 shadow-inner">
               <div className="text-blue-600">
                 {activeItem?.icon}
               </div>
@@ -129,11 +129,11 @@ export const ProfileSettingsPage = () => {
               onClick={() => setActiveTab(item.id)}
               className={`flex-shrink-0 transition-all duration-200 group text-left ${
                 isMobile
-                  ? `px-4 py-2 rounded-xl border flex items-center gap-2.5 ${isActive ? "bg-blue-600 border-blue-500 text-white shadow-md shadow-blue-100" : "bg-white border-slate-200 text-slate-600"}`
-                  : `w-full flex items-center gap-3.5 px-4 py-3 rounded-2xl ${isActive ? "bg-white shadow-[0_2px_12px_rgba(0,0,0,0.06)] border border-slate-200/80" : "border border-transparent hover:bg-white/50 hover:border-slate-100"}`
+                  ? `px-4 py-2 rounded-lg border flex items-center gap-2.5 ${isActive ? "bg-blue-600 border-blue-500 text-white shadow-md shadow-blue-100" : "bg-white border-slate-200 text-slate-600"}`
+                  : `w-full flex items-center gap-3.5 px-4 py-3 rounded-lg ${isActive ? "bg-white shadow-[0_2px_12px_rgba(0,0,0,0.06)] border border-slate-200/80" : "border border-transparent hover:bg-white/50 hover:border-slate-100"}`
               }`}
             >
-              <div className={`p-2 rounded-xl transition-colors ${
+              <div className={`p-2 rounded-lg transition-colors ${
                 isMobile
                   ? ""
                   : isActive ? "bg-blue-50 text-blue-600" : "bg-white text-slate-400 border border-slate-100 shadow-sm group-hover:text-slate-600"
@@ -159,3 +159,4 @@ export const ProfileSettingsPage = () => {
     </div>
   );
 };
+

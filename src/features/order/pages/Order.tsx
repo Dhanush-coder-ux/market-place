@@ -62,7 +62,7 @@ const Order = () => {
         </div>
 
         {error && (
-          <div className="flex items-center justify-between gap-2 p-3 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm">
+          <div className="flex items-center justify-between gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
             <span>{error}</span>
             <button onClick={clearError} className="shrink-0 text-red-400 hover:text-red-600"><X size={14} /></button>
           </div>
@@ -73,7 +73,7 @@ const Order = () => {
           setStatus={setStatus}
           setIsDateFilterOpen={setOpen}
           orderType=""
-          setOrderType={() => {}}
+          setOrderType={() => { }}
           orderTypeOptions={[]}
         />
 
@@ -112,8 +112,8 @@ const Order = () => {
             ))}
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center bg-white rounded-xl border border-slate-200 shadow-sm py-20 gap-3">
-            <div className="w-14 h-14 rounded-xl bg-slate-50 flex items-center justify-center text-slate-300">
+          <div className="flex flex-col items-center justify-center bg-white rounded-lg border border-slate-200 shadow-sm py-20 gap-3">
+            <div className="w-14 h-14 rounded-lg bg-slate-50 flex items-center justify-center text-slate-300">
               <Inbox size={28} strokeWidth={2} />
             </div>
             <p className="text-sm font-bold text-slate-600">No orders found</p>
@@ -139,3 +139,4 @@ const Order = () => {
 };
 
 export default Order;
+

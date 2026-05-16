@@ -356,7 +356,7 @@ const ProductRow = React.memo(({
 
             <div className="md:pl-[84px] pl-10 pr-6 py-6 space-y-6">
               {!hasVariants && rootSerials.length > 0 && (
-                <div className="bg-white rounded-xl border border-slate-100 p-4 shadow-sm relative">
+                <div className="bg-white rounded-lg border border-slate-100 p-4 shadow-sm relative">
                   {/* Horizontal connecting line */}
                   <div className="absolute top-8 left-[-18px] md:left-[-57px] w-4 md:w-[57px] h-[1.5px] bg-blue-500/30" />
 
@@ -418,7 +418,7 @@ const ProductInfos = () => {
       <div className="flex items-center gap-3">
         <button
           onClick={() => navigate("/product/drafts")}
-          className="px-4 h-10 rounded-xl border border-blue-100 text-blue-600 font-semibold text-[13px] bg-blue-50/50 md:hover:bg-blue-100 md:transition-all flex items-center gap-2"
+          className="px-4 h-10 rounded-lg border border-blue-100 text-blue-600 font-semibold text-[13px] bg-blue-50/50 md:hover:bg-blue-100 md:transition-all flex items-center gap-2"
         >
           <Bookmark size={16} />
           Saved Drafts
@@ -510,7 +510,7 @@ const ProductInfos = () => {
           label="Total Products"
           value={products.length.toString()}
           icon={Package}
-          className="rounded-xl border-slate-200 shadow-sm"
+          className="rounded-lg border-slate-200 shadow-sm"
         />
         <StatCard
           label="Total Stock"
@@ -518,7 +518,7 @@ const ProductInfos = () => {
           icon={Layers}
           iconBg="bg-blue-50"
           iconColor="text-blue-600"
-          className="rounded-xl border-slate-200 shadow-sm"
+          className="rounded-lg border-slate-200 shadow-sm"
         />
         <StatCard
           label="Low Stock Items"
@@ -526,12 +526,12 @@ const ProductInfos = () => {
           icon={AlertTriangle}
           iconBg="bg-rose-50"
           iconColor="text-rose-600"
-          className="rounded-xl border-slate-200 shadow-sm"
+          className="rounded-lg border-slate-200 shadow-sm"
         />
       </div>
 
       {/* Toolbar */}
-      <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-4">
+      <div className="bg-white p-3 rounded-lg border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3 flex-1 min-w-[300px]">
           <div className="relative flex-1 max-w-md">
             <Input
@@ -570,7 +570,7 @@ const ProductInfos = () => {
       </div>
 
       {error && (
-        <div className="p-4 bg-rose-50 border border-rose-200 rounded-xl flex items-center justify-between md:animate-in md:fade-in">
+        <div className="p-4 bg-rose-50 border border-rose-200 rounded-lg flex items-center justify-between md:animate-in md:fade-in">
           <div className="flex items-center gap-3 text-rose-700">
             <AlertCircle size={20} />
             <p className="text-sm font-medium">{error}</p>
@@ -582,7 +582,7 @@ const ProductInfos = () => {
       )}
 
       {/* Table */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
         <div className="overflow-x-auto overflow-y-auto h-[calc(100vh-220px)] pf-scroll">
           <table className="w-full text-left border-collapse">
             <thead className="sticky top-0 z-20 bg-white/95 backdrop-blur-sm shadow-sm">
@@ -638,3 +638,4 @@ const ProductInfos = () => {
 };
 
 export default ProductInfos;
+

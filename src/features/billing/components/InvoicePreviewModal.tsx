@@ -1,4 +1,5 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { X, Loader2, CheckCircle2, Banknote, Smartphone, Wallet } from "lucide-react";
 import { BillingItem } from "../types";
 
@@ -45,11 +46,17 @@ const InvoicePreviewModal: React.FC<InvoicePreviewModalProps> = ({
   const primaryPayment = payments[0] || { mode: "cash" };
   const modeInfo = payMeta[primaryPayment.mode] || payMeta.cash;
 
+  // Body Scroll Lock
+  useEffect(() => {
+    if (isOpen) document.body.classList.add("no-scroll");
+    else document.body.classList.remove("no-scroll");
+    return () => document.body.classList.remove("no-scroll");
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
-  return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 print:p-0">
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center p-4 print:p-0 pointer-events-none">
       {/* Styles for Printing */}
       <style dangerouslySetInnerHTML={{
         __html: `
@@ -81,10 +88,10 @@ const InvoicePreviewModal: React.FC<InvoicePreviewModalProps> = ({
       `}} />
 
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/40 no-print" onClick={onClose} />
+      <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm no-print pointer-events-auto" onClick={onClose} />
 
       {/* Modal Container */}
-      <div className="relative bg-slate-100 rounded-2xl shadow-[0_25px_80px_rgba(0,0,0,0.2)] w-full max-w-[640px] max-h-[85vh] flex flex-col overflow-hidden print:max-h-none print:bg-white print:rounded-none print:shadow-none print:w-full print:max-w-none">
+      <div className="relative bg-slate-100 rounded-lg shadow-[0_24px_80px_rgba(0,0,0,0.3)] w-full max-w-[640px] max-h-[85vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-300 print:max-h-none print:bg-white print:rounded-none print:shadow-none print:w-full print:max-w-none pointer-events-auto">
 
         {/* Modal Header */}
         <div className="flex items-center justify-between px-5 py-3 bg-white border-b border-slate-200/60 shrink-0 no-print">
@@ -95,8 +102,8 @@ const InvoicePreviewModal: React.FC<InvoicePreviewModalProps> = ({
         </div>
 
         {/* Scrollable Invoice Paper */}
-        <div className="flex-1 overflow-y-auto p-5 print:p-0 print:overflow-visible">
-          <div ref={invoiceRef} className="print-area bg-white rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.06)] border border-slate-200/40 mx-auto max-w-[560px] print:max-w-none print:border-none print:shadow-none print:rounded-none">
+        <div className="flex-1 overflow-y-auto p-5 print:p-0 print:overflow-visible custom-scrollbar">
+          <div ref={invoiceRef} className="print-area bg-white rounded-lg shadow-[0_2px_8px_rgba(0,0,0,0.06)] border border-slate-200/40 mx-auto max-w-[560px] print:max-w-none print:border-none print:shadow-none print:rounded-none">
 
             {/* ── Invoice Header ─────────────────────────── */}
             <div className="px-6 pt-6 pb-4 border-b border-slate-100">
@@ -120,7 +127,7 @@ const InvoicePreviewModal: React.FC<InvoicePreviewModalProps> = ({
 
                 {/* Invoice Meta */}
                 <div className="text-right">
-                  <p className="text-[9px] font-medium text-blue-500   mb-0.5 print:text-blue-600">Tax Invoice</p>
+                  <p className="text-[9px] font-medium text-blue-500 mb-0.5 print:text-blue-600">Tax Invoice</p>
                   <p className="text-[13px] font-semibold text-slate-800">{invoiceNo}</p>
                   <div className="mt-2 space-y-0.5">
                     <p className="text-[10px] text-slate-400">{dateStr} · {timeStr}</p>
@@ -135,7 +142,7 @@ const InvoicePreviewModal: React.FC<InvoicePreviewModalProps> = ({
             {/* ── Customer & Status ──────────────────────── */}
             <div className="px-6 py-3 border-b border-slate-100 flex items-center justify-between">
               <div>
-                <p className="text-[9px] font-medium text-slate-400   mb-0.5">Bill To</p>
+                <p className="text-[9px] font-medium text-slate-400 mb-0.5">Bill To</p>
                 <p className="text-[13px] font-medium text-slate-700">{customerName || "Walk-in Customer"}</p>
                 <p className="text-[10px] text-slate-400 font-mono">{phone || "—"}</p>
               </div>
@@ -158,7 +165,7 @@ const InvoicePreviewModal: React.FC<InvoicePreviewModalProps> = ({
               </div>
               {/* Print-only Status */}
               <div className="hidden print:block">
-                <span className={`text-[10px] font-bold   ${status === "COMPLETED" ? "text-emerald-600" : status === "PENDING" ? "text-amber-600" : "text-red-600"
+                <span className={`text-[10px] font-bold ${status === "COMPLETED" ? "text-emerald-600" : status === "PENDING" ? "text-amber-600" : "text-red-600"
                   }`}>
                   • {status}
                 </span>
@@ -170,12 +177,12 @@ const InvoicePreviewModal: React.FC<InvoicePreviewModalProps> = ({
               <table className="w-full">
                 <thead>
                   <tr className="bg-slate-50/60 border-b border-slate-100 print:bg-slate-50">
-                    <th className="text-left text-[9px] font-medium text-slate-400   pl-6 pr-2 py-2 w-8">#</th>
-                    <th className="text-left text-[9px] font-medium text-slate-400   px-2 py-2">Product</th>
-                    <th className="text-center text-[9px] font-medium text-slate-400   px-2 py-2 w-12">Qty</th>
-                    <th className="text-right text-[9px] font-medium text-slate-400   px-2 py-2 w-20">Price</th>
-                    {includeGst && <th className="text-right text-[9px] font-medium text-slate-400   px-2 py-2 w-14">GST</th>}
-                    <th className="text-right text-[9px] font-medium text-slate-400   pl-2 pr-6 py-2 w-24">Total</th>
+                    <th className="text-left text-[9px] font-medium text-slate-400 pl-6 pr-2 py-2 w-8">#</th>
+                    <th className="text-left text-[9px] font-medium text-slate-400 px-2 py-2">Product</th>
+                    <th className="text-center text-[9px] font-medium text-slate-400 px-2 py-2 w-12">Qty</th>
+                    <th className="text-right text-[9px] font-medium text-slate-400 px-2 py-2 w-20">Price</th>
+                    {includeGst && <th className="text-right text-[9px] font-medium text-slate-400 px-2 py-2 w-14">GST</th>}
+                    <th className="text-right text-[9px] font-medium text-slate-400 pl-2 pr-6 py-2 w-24">Total</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -274,7 +281,8 @@ const InvoicePreviewModal: React.FC<InvoicePreviewModalProps> = ({
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

@@ -40,7 +40,7 @@ export default function Employee() {
       <div className="flex items-center gap-2">
         <button
           onClick={() => navigate("/employee/drafts")}
-          className="px-4 h-10 rounded-xl border border-blue-100 text-blue-600 font-semibold text-[13px] bg-blue-50/50 hover:bg-blue-100 transition-all flex items-center gap-2"
+          className="px-4 h-10 rounded-lg border border-blue-100 text-blue-600 font-semibold text-[13px] bg-blue-50/50 hover:bg-blue-100 transition-all flex items-center gap-2"
         >
           <Bookmark size={16} />
           Saved Drafts
@@ -145,7 +145,7 @@ export default function Employee() {
       </div>
 
       {/* Filter Section */}
-      <div className="bg-white p-4 rounded-[1.5rem] border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-4">
+      <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3 flex-1">
           <div className="relative w-full sm:w-80">
             <Input
@@ -174,7 +174,7 @@ export default function Employee() {
             onChange={(e) => setSearchTerm(e.target.value)}
             className="h-11 text-sm w-48"
           />
-          <button className="p-2.5 rounded-xl bg-slate-50 text-slate-400 border border-slate-100 hover:bg-slate-100 transition-all shadow-sm">
+          <button className="p-2.5 rounded-lg bg-slate-50 text-slate-400 border border-slate-100 hover:bg-slate-100 transition-all shadow-sm">
             <Filter size={18} />
           </button>
           <ReusableSelect
@@ -189,7 +189,7 @@ export default function Employee() {
 
       {/* Error State */}
       {error && (
-        <div className="p-4 bg-rose-50 border border-rose-100 rounded-2xl flex items-center justify-between animate-in fade-in slide-in-from-top-2">
+        <div className="p-4 bg-rose-50 border border-rose-100 rounded-lg flex items-center justify-between animate-in fade-in slide-in-from-top-2">
           <div className="flex items-center gap-3 text-rose-600">
             <AlertCircle size={20} />
             <p className="text-sm font-semibold">{error}</p>
@@ -201,7 +201,7 @@ export default function Employee() {
       )}
 
       {/* Table Section */}
-      <div className="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
@@ -232,7 +232,7 @@ export default function Employee() {
                   >
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-blue-400 flex items-center justify-center text-white text-sm font-bold shadow-lg shadow-blue-100">
+                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-600 to-blue-400 flex items-center justify-center text-white text-sm font-bold shadow-lg shadow-blue-100">
                           {emp.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
                         </div>
                         <div>
@@ -264,19 +264,19 @@ export default function Employee() {
                       <div className="flex items-center justify-end gap-1">
                         <button
                           onClick={(e) => { e.stopPropagation(); navigate(`/employee/${emp.id}`); }}
-                          className="p-2 text-slate-400 hover:text-blue-600 hover:bg-white rounded-xl transition-all shadow-sm active:scale-95"
+                          className="p-2 text-slate-400 hover:text-blue-600 hover:bg-white rounded-lg transition-all shadow-sm active:scale-95"
                         >
                           <Eye size={16} />
                         </button>
                         <button
                           onClick={(e) => { e.stopPropagation(); navigate(`/employee/${emp.id}/edit`); }}
-                          className="p-2 text-slate-400 hover:text-blue-600 hover:bg-white rounded-xl transition-all shadow-sm active:scale-95"
+                          className="p-2 text-slate-400 hover:text-blue-600 hover:bg-white rounded-lg transition-all shadow-sm active:scale-95"
                         >
                           <Edit3 size={16} />
                         </button>
                         <button
                           onClick={(e) => { e.stopPropagation(); setEmployeeToDelete(emp); setIsDeleteDialogOpen(true); }}
-                          className="p-2 text-slate-400 hover:text-rose-600 hover:bg-white rounded-xl transition-all shadow-sm active:scale-95"
+                          className="p-2 text-slate-400 hover:text-rose-600 hover:bg-white rounded-lg transition-all shadow-sm active:scale-95"
                         >
                           <Trash2 size={16} />
                         </button>
@@ -302,3 +302,4 @@ export default function Employee() {
     </div>
   );
 }
+

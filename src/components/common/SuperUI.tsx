@@ -36,7 +36,7 @@ export interface SectionCardProps {
 
 export function SectionCard({ children, title, className = "" }: SectionCardProps) {
   return (
-    <div className={`bg-white rounded-[1.5rem] border border-slate-200 p-3 sm:p-5 shadow-sm overflow-hidden relative ${className}`}>
+    <div className={`bg-white rounded-lg border border-slate-200 p-3 sm:p-5 shadow-sm overflow-hidden relative ${className}`}>
       {title && (
         <div className="flex items-center gap-2.5 mb-4 sm:mb-5 border-b border-slate-100 pb-2 sm:pb-3">
           <h2 className="text-[10px] font-semibold text-slate-500  tracking-[0.12em]">{title}</h2>
@@ -113,7 +113,7 @@ export function Modal({ show, onClose, title, children, footer, className }: Mod
       className="fixed inset-0 bg-black/50 z-[1000] flex items-center justify-center"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className={`bg-white rounded-2xl w-[90%] max-h-[90vh] overflow-y-auto modal-content shadow-2xl animate-[slideUp_0.3s_ease] ${className || "max-w-xl"}`}>
+      <div className={`bg-white rounded-lg w-[90%] max-h-[90vh] overflow-y-auto modal-content shadow-2xl animate-[slideUp_0.3s_ease] ${className || "max-w-xl"}`}>
         {/* Header */}
         <div className="px-6 py-5 border-b border-slate-200 flex justify-between items-center">
           <h2 className="text-xl font-semibold text-slate-700">{title}</h2>
@@ -161,7 +161,7 @@ export function AlertBanner({
   const titleColor = variant === "warning" ? "text-amber-900" : "text-red-800";
 
   return (
-    <div className={`border rounded-xl p-3 flex items-center gap-4 ${styles}`}>
+    <div className={`border rounded-lg p-3 flex items-center gap-4 ${styles}`}>
       <div className="text-3xl shrink-0 flex items-center justify-center">
         {typeof Icon === "string" ? Icon : <Icon size={30} />}
       </div>
@@ -202,7 +202,7 @@ export function BottomActionBar({ label, actions }: BottomActionBarProps) {
           <button
             key={action.label}
             onClick={action.onClick}
-            className={`px-5 py-2.5 rounded-xl text-xs font-semibold   flex items-center gap-2 transition-all active:scale-95 shadow-sm ${variantClass[action.variant ?? "secondary"]
+            className={`px-5 py-2.5 rounded-lg text-xs font-semibold   flex items-center gap-2 transition-all active:scale-95 shadow-sm ${variantClass[action.variant ?? "secondary"]
               }`}
           >
             {typeof action.icon === 'function' ? <action.icon size={14} /> : action.icon}
@@ -246,11 +246,11 @@ export function ProfileHeaderCard({
   className = ""
 }: ProfileHeaderCardProps) {
   return (
-    <div className={`bg-white rounded-[1.5rem] p-4 border border-slate-200 shadow-sm relative overflow-hidden group ${className}`}>
+    <div className={`bg-white rounded-lg p-4 border border-slate-200 shadow-sm relative overflow-hidden group ${className}`}>
       <div className="absolute top-0 right-0 w-48 h-48 bg-blue-500/5 rounded-full -mr-24 -mt-24 blur-3xl" />
 
       <div className="relative flex flex-col md:flex-row items-start md:items-center gap-4">
-        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-600 to-blue-400 flex items-center justify-center text-xl font-bold text-white shadow-lg shadow-blue-200 ring-2 ring-white">
+        <div className="w-16 h-16 rounded-lg bg-gradient-to-br from-blue-600 to-blue-400 flex items-center justify-center text-xl font-bold text-white shadow-lg shadow-blue-200 ring-2 ring-white">
           {initials}
         </div>
 
@@ -309,6 +309,7 @@ export function ProfileHeaderCard({
     </div>
   );
 }
+
 
 
 

@@ -46,7 +46,7 @@ const ImportExportFloatingCard: FC<ImportExportFloatingCardProps> = ({
 
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-md transition-all">
-      <div className="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-black/5">
+      <div className="w-full max-w-md overflow-hidden rounded-lg bg-white shadow-2xl ring-1 ring-black/5">
         
         {/* Header */}
         <div className="flex items-center justify-between border-b border-gray-100 bg-gray-50/50 px-6 py-4">
@@ -71,7 +71,7 @@ const ImportExportFloatingCard: FC<ImportExportFloatingCardProps> = ({
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}
               onClick={() => fileInputRef.current?.click()}
-              className={`group cursor-pointer rounded-xl border-2 border-dashed transition-all duration-200 ${
+              className={`group cursor-pointer rounded-lg border-2 border-dashed transition-all duration-200 ${
                 isDragging 
                 ? "border-blue-500 bg-blue-50" 
                 : "border-gray-200 bg-gray-50 hover:border-blue-400 hover:bg-blue-50/30"
@@ -100,7 +100,7 @@ const ImportExportFloatingCard: FC<ImportExportFloatingCardProps> = ({
             <div className="grid grid-cols-2 gap-3">
               <button
                 onClick={() => onExport?.("xlsx")}
-                className="group flex flex-col items-center gap-2 rounded-xl border border-gray-200 p-4 transition-all hover:border-green-200 hover:bg-green-50"
+                className="group flex flex-col items-center gap-2 rounded-lg border border-gray-200 p-4 transition-all hover:border-green-200 hover:bg-green-50"
               >
                 <div className="rounded-lg bg-green-100 p-2 text-green-600 group-hover:bg-green-200">
                   <FileSpreadsheet size={20} />
@@ -110,7 +110,7 @@ const ImportExportFloatingCard: FC<ImportExportFloatingCardProps> = ({
 
               <button
                 onClick={() => onExport?.("docx")}
-                className="group flex flex-col items-center gap-2 rounded-xl border border-gray-200 p-4 transition-all hover:border-blue-200 hover:bg-blue-50"
+                className="group flex flex-col items-center gap-2 rounded-lg border border-gray-200 p-4 transition-all hover:border-blue-200 hover:bg-blue-50"
               >
                 <div className="rounded-lg bg-blue-100 p-2 text-blue-600 group-hover:bg-blue-200">
                   <FileText size={20} />
@@ -121,7 +121,7 @@ const ImportExportFloatingCard: FC<ImportExportFloatingCardProps> = ({
           </section>
 
           {/* Template Info */}
-          <footer className="flex items-start gap-3 rounded-xl bg-amber-50 p-4">
+          <footer className="flex items-start gap-3 rounded-lg bg-amber-50 p-4">
             <AlertCircle className="mt-0.5 h-4 w-4 text-amber-600" />
             <div>
               <p className="text-xs font-medium text-amber-900">Using a template?</p>
@@ -140,3 +140,4 @@ const ImportExportFloatingCard: FC<ImportExportFloatingCardProps> = ({
 };
 
 export default ImportExportFloatingCard;
+

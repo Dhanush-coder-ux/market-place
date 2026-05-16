@@ -44,7 +44,7 @@ const ProductDraftsPage = () => {
     <div className="space-y-8 animate-in fade-in duration-500">
       
       {/* Notice */}
-      <div className="bg-blue-50 border border-blue-100 rounded-2xl px-6 py-3 text-blue-700 flex items-center gap-3">
+      <div className="bg-blue-50 border border-blue-100 rounded-lg px-6 py-3 text-blue-700 flex items-center gap-3">
         <Bookmark size={16} className="text-blue-500 shrink-0" />
         <p className="text-sm font-semibold">
           <span className="font-semibold mr-2  text-[10px] bg-blue-100 px-1.5 py-0.5 rounded ">Notice:</span>
@@ -89,3 +89,4 @@ const ProductDraftsPage = () => {
 };
 
 export default ProductDraftsPage;
+

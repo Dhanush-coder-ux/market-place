@@ -280,7 +280,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
 
   useEffect(() => {
     setActions(
-      <div className="flex items-center gap-3 bg-white px-4 h-11 rounded-2xl border border-slate-200 shadow-sm scale-90 md:scale-100">
+      <div className="flex items-center gap-3 bg-white px-4 h-11 rounded-lg border border-slate-200 shadow-sm scale-90 md:scale-100">
         <span className="text-[10px] font-bold text-slate-500  ">Active</span>
         <Switch
           checked={form.is_active}
@@ -299,7 +299,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
           <button
             type="button"
             onClick={handleSaveDraft}
-            className="px-4 h-8 rounded-xl border border-blue-100 text-blue-600 font-bold text-xs bg-blue-50/50 hover:bg-blue-100 transition-all flex items-center gap-2 overflow-hidden"
+            className="px-4 h-8 rounded-lg border border-blue-100 text-blue-600 font-bold text-xs bg-blue-50/50 hover:bg-blue-100 transition-all flex items-center gap-2 overflow-hidden"
           >
             <Bookmark size={14} className="shrink-0" />
             <span className="truncate">Save Draft</span>
@@ -309,7 +309,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
           icon={<Save size={16} />}
           onClick={handleSubmit}
           disabled={isLoading}
-          className="rounded-xl shadow-md text-xs px-8 h-8 flex items-center"
+          className="rounded-lg shadow-md text-xs px-8 h-8 flex items-center"
         >
           {isLoading ? "..." : (id ? "Save Changes" : "Create Product")}
         </GradientButton>
@@ -571,9 +571,9 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
             <div className="lg:col-span-4 space-y-6">
               
               {/* SECTION 1: IDENTITY */}
-              <div className="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden hover:shadow-md transition-all">
+              <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden hover:shadow-md transition-all">
                 <div className="px-6 py-4 bg-gradient-to-r from-blue-50/50 to-transparent border-b border-slate-100 flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-xl bg-blue-100 flex items-center justify-center text-blue-600">
+                  <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600">
                     <Package size={16} />
                   </div>
                   <h2 className="text-xs font-bold text-slate-800  ">Product identity</h2>
@@ -616,7 +616,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                       value={form.description}
                       onChange={handleChange}
                       rows={1}
-                      className="pf-input w-full px-4 py-3 text-sm border border-slate-200 rounded-2xl bg-white text-slate-800 resize-none placeholder-slate-300 min-h-[50px]"
+                      className="pf-input w-full px-4 py-3 text-sm border border-slate-200 rounded-lg bg-white text-slate-800 resize-none placeholder-slate-300 min-h-[50px]"
                       placeholder="Key features, materials, dimensions"
                     />
                   </div>
@@ -635,7 +635,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
               {/* SECTION 3: INVENTORY TRACKING SETTINGS */}
               <div className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="flex items-start gap-4 p-5 rounded-[2rem] bg-white border border-slate-200 shadow-sm hover:shadow-md transition-all">
+                  <div className="flex items-start gap-4 p-5 rounded-lg bg-white border border-slate-200 shadow-sm hover:shadow-md transition-all">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
                         <h3 className="text-[11px] font-black text-slate-800  ">Batch tracking</h3>
@@ -649,7 +649,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                     />
                   </div>
 
-                  <div className="flex items-start gap-4 p-5 rounded-[2rem] bg-white border border-slate-200 shadow-sm hover:shadow-md transition-all">
+                  <div className="flex items-start gap-4 p-5 rounded-lg bg-white border border-slate-200 shadow-sm hover:shadow-md transition-all">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
                         <h3 className="text-[11px] font-black text-slate-800  ">Serial tracking</h3>
@@ -675,7 +675,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
 
             {/* BOX 4: Live Summary + Stock */}
             <div className="space-y-6">
-              <div className="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden">
+              <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
                 <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
                   <h2 className="text-xs font-bold text-slate-800  ">Live summary</h2>
                 </div>
@@ -692,9 +692,9 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                 </div>
               </div>
 
-              <div className="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden hover:shadow-md transition-all pf-section-enter">
+              <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden hover:shadow-md transition-all pf-section-enter">
                 <div className="px-6 py-4 bg-gradient-to-r from-amber-50/50 to-transparent border-b border-slate-100 flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-xl bg-amber-100 flex items-center justify-center text-amber-600">
+                  <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center text-amber-600">
                     <BarChart2 size={16} />
                   </div>
                   <h2 className="text-xs font-bold text-slate-800  ">Stock & inventory</h2>
@@ -711,10 +711,10 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
         </div>
 
           {/* BOTTOM SECTION: VARIANTS */}
-          <div className="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden hover:shadow-md transition-all">
+          <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden hover:shadow-md transition-all">
             <div className="px-6 py-5 bg-gradient-to-r from-violet-50/50 to-transparent border-b border-slate-100 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-violet-100 flex items-center justify-center text-violet-600 shadow-sm">
+                <div className="w-10 h-10 rounded-lg bg-violet-100 flex items-center justify-center text-violet-600 shadow-sm">
                   <Layers size={20} />
                 </div>
                 <div>
@@ -733,7 +733,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
 
             {form.has_variants ? (
               <div className="p-6 space-y-5 pf-section-enter">
-                <div className="border border-slate-100 rounded-2xl p-5 bg-slate-50/40">
+                <div className="border border-slate-100 rounded-lg p-5 bg-slate-50/40">
                   <p className="text-[11px] font-semibold   text-slate-400 mb-4">Define Variant Types</p>
                   <VariantBuilder
                     variantTypes={variantTypes}
@@ -760,13 +760,13 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                   </div>
                 )}
                 {variantTypes.length === 0 && (
-                  <div className="text-center py-10 text-slate-400 border-2 border-dashed border-slate-200 rounded-2xl">
+                  <div className="text-center py-10 text-slate-400 border-2 border-dashed border-slate-200 rounded-lg">
                     <Plus size={24} className="mx-auto mb-2 opacity-30" />
                     <p className="text-sm">Add your first variant type above to begin</p>
                   </div>
                 )}
                 {variantTypes.length > 0 && combinations.length === 0 && (
-                  <div className="text-center py-10 text-slate-400 border-2 border-dashed border-slate-200 rounded-2xl">
+                  <div className="text-center py-10 text-slate-400 border-2 border-dashed border-slate-200 rounded-lg">
                     <Layers size={24} className="mx-auto mb-2 opacity-30" />
                     <p className="text-sm">Add values to your variant types to generate combinations</p>
                   </div>

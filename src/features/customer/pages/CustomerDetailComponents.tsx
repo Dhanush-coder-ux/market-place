@@ -69,8 +69,8 @@ export interface StatCardProps {
 
 export function StatCard({ icon: Icon, label, value, iconBg, valueClassName }: StatCardProps) {
   return (
-    <div className="bg-white rounded-[1.5rem] p-5 shadow-sm border border-slate-100 flex items-center gap-4 group hover:shadow-md transition-all">
-      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${iconBg} group-hover:scale-110 transition-transform`}>
+    <div className="bg-white rounded-lg p-5 shadow-sm border border-slate-100 flex items-center gap-4 group hover:shadow-md transition-all">
+      <div className={`w-12 h-12 rounded-lg flex items-center justify-center shrink-0 ${iconBg} group-hover:scale-110 transition-transform`}>
         {typeof Icon === 'function' ? <Icon size={22} className="text-current" /> : Icon}
       </div>
       <div>
@@ -120,7 +120,7 @@ export function Modal({ show, onClose, title, children, footer, className }: Mod
       className="fixed inset-0 bg-black/50 z-[1000] flex items-center justify-center"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className={`bg-white rounded-2xl w-[90%] max-h-[90vh] overflow-y-auto modal-content shadow-2xl animate-[slideUp_0.3s_ease] ${className || "max-w-xl"}`}>
+      <div className={`bg-white rounded-lg w-[90%] max-h-[90vh] overflow-y-auto modal-content shadow-2xl animate-[slideUp_0.3s_ease] ${className || "max-w-xl"}`}>
         {/* Header */}
         <div className="px-6 py-5 border-b border-slate-200 flex justify-between items-center">
           <h2 className="text-xl font-semibold text-slate-700">{title}</h2>
@@ -180,7 +180,7 @@ export function Notification({ text, show, variant = "success" }: NotificationPr
 
   return (
     <div
-      className={`fixed top-6 right-6 z-[2000] bg-white px-5 py-4 rounded-xl shadow-xl flex items-center gap-3 border-l-4 ${borderColor} animate-[slideIn_0.3s_ease]`}
+      className={`fixed top-6 right-6 z-[2000] bg-white px-5 py-4 rounded-lg shadow-xl flex items-center gap-3 border-l-4 ${borderColor} animate-[slideIn_0.3s_ease]`}
     >
       <span className={`text-2xl font-semibold ${iconColor}`}>{icon}</span>
       <span className="text-sm font-semibold text-slate-700">{text}</span>
@@ -291,7 +291,7 @@ export interface SectionCardProps {
  */
 export function SectionCard({ children, className = "" }: SectionCardProps) {
   return (
-    <div className={`bg-white rounded-xl p-8 shadow-sm border border-slate-100 ${className}`}>
+    <div className={`bg-white rounded-lg p-8 shadow-sm border border-slate-100 ${className}`}>
       {children}
     </div>
   );
@@ -324,7 +324,7 @@ export function AlertBanner({
   const titleColor = variant === "warning" ? "text-amber-900" : "text-red-800";
 
   return (
-    <div className={`border rounded-xl p-3 flex items-center gap-4 ${styles}`}>
+    <div className={`border rounded-lg p-3 flex items-center gap-4 ${styles}`}>
       <div className="text-3xl shrink-0 flex items-center justify-center">
         {typeof Icon === "string" ? Icon : <Icon size={30} />}
       </div>
@@ -381,3 +381,4 @@ export function BottomActionBar({ customerName, actions }: BottomActionBarProps)
     </div>
   );
 }
+

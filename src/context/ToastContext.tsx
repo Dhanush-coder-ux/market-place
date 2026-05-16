@@ -45,14 +45,14 @@ export const ToastProvider = ({ children }: { children: ReactNode }) => {
               className="pointer-events-auto"
             >
               <div className={`
-                flex items-center gap-3 px-5 py-3 rounded-2xl shadow-2xl border min-w-[300px] max-w-md
+                flex items-center gap-3 px-5 py-3 rounded-lg shadow-2xl border min-w-[300px] max-w-md
                 ${toast.type === "success" ? "bg-white border-emerald-100 text-emerald-900" : ""}
                 ${toast.type === "error" ? "bg-white border-rose-100 text-rose-900" : ""}
                 ${toast.type === "info" ? "bg-white border-blue-100 text-blue-900" : ""}
                 ${toast.type === "warning" ? "bg-white border-amber-100 text-amber-900" : ""}
               `}>
                 <div className={`
-                  w-10 h-10 rounded-xl flex items-center justify-center shrink-0
+                  w-10 h-10 rounded-lg flex items-center justify-center shrink-0
                   ${toast.type === "success" ? "bg-emerald-50 text-emerald-600" : ""}
                   ${toast.type === "error" ? "bg-rose-50 text-rose-600" : ""}
                   ${toast.type === "info" ? "bg-blue-50 text-blue-600" : ""}

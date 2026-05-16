@@ -19,10 +19,10 @@ interface InlineSerialManagerProps {
   onValidationError?: (msg: string) => void;
 }
 
-export const InlineSerialManager: React.FC<InlineSerialManagerProps> = ({ 
-  serials, 
-  serialLabel, 
-  onUpdate, 
+export const InlineSerialManager: React.FC<InlineSerialManagerProps> = ({
+  serials,
+  serialLabel,
+  onUpdate,
   limit,
   existingSerials = [],
   validationType,
@@ -36,7 +36,7 @@ export const InlineSerialManager: React.FC<InlineSerialManagerProps> = ({
   const validateSerial = (val: string): boolean => {
     const trimmed = val.trim();
     if (!trimmed) return false;
-    
+
     if (serials.includes(trimmed)) {
       onValidationError?.(`${serialLabel} "${trimmed}" is already added.`);
       return false;
@@ -74,7 +74,7 @@ export const InlineSerialManager: React.FC<InlineSerialManagerProps> = ({
       .split(/[\n,;]/)
       .map(s => s.trim())
       .filter(Boolean);
-    
+
     const uniqueIncoming = Array.from(new Set(incoming));
     let toAdd = uniqueIncoming.filter(s => !serials.includes(s));
 
@@ -86,13 +86,13 @@ export const InlineSerialManager: React.FC<InlineSerialManagerProps> = ({
         return true;
       });
     }
-    
+
     if (limit !== undefined) {
       const remaining = limit - serials.length;
       if (remaining <= 0) return;
       if (toAdd.length > remaining) toAdd = toAdd.slice(0, remaining);
     }
-    
+
     if (toAdd.length > 0) onUpdate([...serials, ...toAdd]);
     setBulkInput("");
     setShowBulk(false);
@@ -104,7 +104,7 @@ export const InlineSerialManager: React.FC<InlineSerialManagerProps> = ({
   }, [existingSerials, filterQuery]);
 
   return (
-    <div className={`bg-slate-50/80 border rounded-2xl p-4 transition-all duration-300 ${limit !== undefined && serials.length === limit ? 'border-emerald-200' : 'border-slate-200'}`}>
+    <div className={`bg-slate-50/80 border rounded-lg p-4 transition-all duration-300 ${limit !== undefined && serials.length === limit ? 'border-emerald-200' : 'border-slate-200'}`}>
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <div className="w-6 h-6 rounded-lg bg-violet-100 flex items-center justify-center text-violet-600">
@@ -114,27 +114,25 @@ export const InlineSerialManager: React.FC<InlineSerialManagerProps> = ({
         </div>
         <div className="flex items-center gap-2">
           {limit !== undefined && (
-            <div className={`px-2.5 py-1 rounded-xl text-[10px] font-black tabular-nums border transition-all duration-300 ${
-              serials.length === limit && limit > 0
-                ? "bg-emerald-600 text-white border-emerald-600 shadow-sm" 
-                : limit === 0 
+            <div className={`px-2.5 py-1 rounded-lg text-[10px] font-black tabular-nums border transition-all duration-300 ${serials.length === limit && limit > 0
+                ? "bg-emerald-600 text-white border-emerald-600 shadow-sm"
+                : limit === 0
                   ? "bg-slate-200 text-slate-500 border-slate-300"
                   : "bg-white text-slate-700 border-slate-200 shadow-inner"
-            }`}>
+              }`}>
               {serials.length} / {limit}
             </div>
           )}
-          <button 
+          <button
             type="button"
             onClick={() => setShowBulk(!showBulk)}
             disabled={(limit !== undefined && serials.length >= limit && !showBulk) || limit === 0}
-            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[9px] font-black  transition-all ${
-              showBulk 
-                ? "bg-violet-600 text-white shadow-sm" 
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[9px] font-black  transition-all ${showBulk
+                ? "bg-violet-600 text-white shadow-sm"
                 : (limit !== undefined && serials.length >= limit) || limit === 0
                   ? "bg-slate-100 text-slate-300 border border-slate-200 cursor-not-allowed"
                   : "bg-white text-slate-500 border border-slate-200 hover:border-violet-300 hover:text-violet-600"
-            }`}
+              }`}
           >
             <Copy size={10} /> Bulk Import
           </button>
@@ -149,8 +147,8 @@ export const InlineSerialManager: React.FC<InlineSerialManagerProps> = ({
               {validationType === 'decrease' ? 'Available in Inventory (Click to select)' : 'Currently in Stock (Locked)'}
             </p>
             {existingSerials.length > 8 && (
-              <input 
-                type="text" 
+              <input
+                type="text"
                 placeholder="Filter existing..."
                 value={filterQuery}
                 onChange={e => setFilterQuery(e.target.value)}
@@ -158,7 +156,7 @@ export const InlineSerialManager: React.FC<InlineSerialManagerProps> = ({
               />
             )}
           </div>
-          <div className="max-h-[100px] overflow-y-auto pr-2 custom-scrollbar bg-slate-100/50 rounded-xl p-2 border border-slate-200/60 flex flex-wrap gap-2 shadow-inner">
+          <div className="max-h-[100px] overflow-y-auto pr-2 custom-scrollbar bg-slate-100/50 rounded-lg p-2 border border-slate-200/60 flex flex-wrap gap-2 shadow-inner">
             {filteredExisting.length === 0 && <p className="text-[9px] text-slate-400 p-2 italic w-full text-center">No matching serials found</p>}
             {filteredExisting.map((s, i) => {
               const isAdded = serials.includes(s);
@@ -167,13 +165,12 @@ export const InlineSerialManager: React.FC<InlineSerialManagerProps> = ({
                   key={i}
                   type="button"
                   onClick={() => validationType === 'decrease' && !isAdded && handleAdd(s)}
-                  className={`px-2.5 py-1.5 rounded-lg text-[9px] font-black   transition-all border ${
-                    isAdded 
-                      ? 'bg-slate-200 text-slate-400 border-slate-200 cursor-default opacity-50' 
+                  className={`px-2.5 py-1.5 rounded-lg text-[9px] font-black   transition-all border ${isAdded
+                      ? 'bg-slate-200 text-slate-400 border-slate-200 cursor-default opacity-50'
                       : validationType === 'decrease'
                         ? 'bg-white text-blue-600 border-blue-100 hover:border-blue-400 hover:bg-blue-50 shadow-sm active:scale-95'
                         : 'bg-rose-50 text-rose-500 border-rose-100 cursor-not-allowed opacity-80'
-                  }`}
+                    }`}
                   title={isAdded ? "Already Selected" : validationType === 'decrease' ? "Click to add" : "In Stock - Cannot add for Increment"}
                 >
                   {s}
@@ -185,7 +182,7 @@ export const InlineSerialManager: React.FC<InlineSerialManagerProps> = ({
       )}
 
       {showBulk ? (
-        <div className="pf-section-enter bg-white border border-violet-200 rounded-xl p-3 shadow-inner mb-3">
+        <div className="pf-section-enter bg-white border border-violet-200 rounded-lg p-3 shadow-inner mb-3">
           <LocalLabel text={`Paste multiple ${serialLabel.toLowerCase()}s`} hint={`Limit: ${limit ?? 'Unlimited'}`} />
           <textarea
             value={bulkInput}
@@ -206,11 +203,10 @@ export const InlineSerialManager: React.FC<InlineSerialManagerProps> = ({
           </div>
         </div>
       ) : (
-        <div className={`flex flex-wrap gap-2 p-2.5 border rounded-xl transition-all duration-300 min-h-[48px] shadow-sm mobile-scroll custom-scrollbar ${
-          limit !== undefined && serials.length >= limit 
-            ? "bg-slate-50 border-slate-200 cursor-not-allowed" 
+        <div className={`flex flex-wrap gap-2 p-2.5 border rounded-lg transition-all duration-300 min-h-[48px] shadow-sm mobile-scroll custom-scrollbar ${limit !== undefined && serials.length >= limit
+            ? "bg-slate-50 border-slate-200 cursor-not-allowed"
             : "bg-white border-slate-200 focus-within:border-violet-300 focus-within:ring-2 focus-within:ring-violet-100"
-        }`}>
+          }`}>
           {serials.map((s, i) => (
             <span key={i} className="px-2.5 py-1.5 bg-violet-50 text-violet-700 text-[10px] font-bold rounded-lg border border-violet-100 flex items-center gap-1.5 animate-in zoom-in-95 duration-150 group">
               {s}
@@ -239,16 +235,16 @@ export const InlineSerialManager: React.FC<InlineSerialManagerProps> = ({
           />
         </div>
       )}
-      
+
       {limit !== undefined && limit > serials.length && !showBulk && (
-        <div className="mt-2.5 px-3 py-2 rounded-xl bg-amber-50 border border-amber-100 text-[10px] text-amber-700 font-bold flex items-center gap-2 animate-in slide-in-from-top-1">
+        <div className="mt-2.5 px-3 py-2 rounded-lg bg-amber-50 border border-amber-100 text-[10px] text-amber-700 font-bold flex items-center gap-2 animate-in slide-in-from-top-1">
           <AlertCircle size={12} className="text-amber-500" />
           <span>Requirement: Register {limit - serials.length} more {serialLabel.toLowerCase()}{limit - serials.length === 1 ? "" : "s"}</span>
         </div>
       )}
 
       {limit !== undefined && limit > 0 && serials.length === limit && !showBulk && (
-        <div className="mt-2.5 px-3 py-2 rounded-xl bg-emerald-50 border border-emerald-100 text-[10px] text-emerald-700 font-bold flex items-center gap-2 animate-in slide-in-from-top-1">
+        <div className="mt-2.5 px-3 py-2 rounded-lg bg-emerald-50 border border-emerald-100 text-[10px] text-emerald-700 font-bold flex items-center gap-2 animate-in slide-in-from-top-1">
           <Plus size={12} className="text-emerald-500 rotate-45" />
           <span>Perfect: Full quantity registered for this item.</span>
         </div>
@@ -257,3 +253,4 @@ export const InlineSerialManager: React.FC<InlineSerialManagerProps> = ({
   );
 };
 ;
+

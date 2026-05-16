@@ -185,7 +185,7 @@ export function DateFilter({ onApply, onClose, isOpen }: DateFilterProps) {
     >
       <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-indigo-600 flex items-center justify-center shadow-sm">
+          <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center shadow-sm">
             <Calendar size={15} strokeWidth={2.5} className="text-white" />
           </div>
           <div>
@@ -204,7 +204,7 @@ export function DateFilter({ onApply, onClose, isOpen }: DateFilterProps) {
           <div className="flex flex-col gap-1">
             {PRESETS.map((preset, i) => (
               <button key={preset.label} onClick={() => handlePreset(preset, i)}
-                className={`px-3 py-2 rounded-xl text-left text-[12px] font-semibold transition-all duration-150 w-full ${activePreset === i ? "bg-indigo-600 text-white shadow-sm" : "text-slate-600 hover:bg-slate-50 hover:text-indigo-600"}`}>
+                className={`px-3 py-2 rounded-lg text-left text-[12px] font-semibold transition-all duration-150 w-full ${activePreset === i ? "bg-indigo-600 text-white shadow-sm" : "text-slate-600 hover:bg-slate-50 hover:text-indigo-600"}`}>
                 {preset.label}
               </button>
             ))}
@@ -213,7 +213,7 @@ export function DateFilter({ onApply, onClose, isOpen }: DateFilterProps) {
 
         {/* Calendars */}
         <div className="flex-1 p-4 min-w-0">
-          <div className="flex items-center gap-2 mb-4 bg-slate-50 rounded-xl px-4 py-2.5">
+          <div className="flex items-center gap-2 mb-4 bg-slate-50 rounded-lg px-4 py-2.5">
             <div className="flex-1 text-center">
               <p className="text-[10px] font-bold text-slate-400   mb-0.5">Start</p>
               <p className={`text-sm font-black tracking-tight ${startDate ? "text-indigo-600" : "text-slate-300"}`}>
@@ -264,7 +264,7 @@ export function DateFilter({ onApply, onClose, isOpen }: DateFilterProps) {
           <button
             onClick={() => canApply && onApply?.({ startDate, endDate })}
             disabled={!canApply}
-            className={`px-5 py-2 rounded-xl text-[13px] font-bold tracking-wide transition-all duration-200 ${canApply ? "bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm shadow-indigo-200" : "bg-slate-100 text-slate-300 cursor-not-allowed"}`}>
+            className={`px-5 py-2 rounded-lg text-[13px] font-bold tracking-wide transition-all duration-200 ${canApply ? "bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm shadow-indigo-200" : "bg-slate-100 text-slate-300 cursor-not-allowed"}`}>
             Apply Filter
           </button>
         </div>
@@ -280,7 +280,7 @@ export default function App() {
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col items-center justify-center p-6 gap-4">
       {applied && (
-        <div className="bg-white rounded-xl px-5 py-3 shadow-sm border border-slate-100 text-sm font-semibold text-slate-700">
+        <div className="bg-white rounded-lg px-5 py-3 shadow-sm border border-slate-100 text-sm font-semibold text-slate-700">
           ✅ Applied: <span className="text-indigo-600">{formatDate(applied.startDate)}</span> → <span className="text-indigo-600">{formatDate(applied.endDate)}</span>
         </div>
       )}
@@ -295,3 +295,4 @@ export default function App() {
     </div>
   );
 }
+

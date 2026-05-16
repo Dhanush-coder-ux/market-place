@@ -211,7 +211,7 @@ const NavigationDialog = ({
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   autoFocus
-                  className="w-full pl-9 pr-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 text-slate-700 placeholder:text-slate-400"
+                  className="w-full pl-9 pr-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 text-slate-700 placeholder:text-slate-400"
                 />
               </div>
             </div>
@@ -223,7 +223,7 @@ const NavigationDialog = ({
                   <p className="text-[10px] font-bold text-slate-400  tracking-[0.15em] mb-2 px-1">
                     {group.label}
                   </p>
-                  <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm overflow-hidden divide-y divide-slate-100">
+                  <div className="bg-white rounded-lg border border-slate-200/60 shadow-sm overflow-hidden divide-y divide-slate-100">
                     {group.items.map((item, idx) => {
                       if (item.type === "sub-header") {
                         return (
@@ -249,7 +249,7 @@ const NavigationDialog = ({
                         >
                           <div className="flex items-center gap-3.5">
                             <div
-                              className={`w-9 h-9 rounded-xl flex items-center justify-center transition-colors ${
+                              className={`w-9 h-9 rounded-lg flex items-center justify-center transition-colors ${
                                 isActive
                                   ? "bg-blue-600 text-white shadow-md shadow-blue-200"
                                   : "bg-slate-100 text-slate-500"
@@ -349,13 +349,13 @@ const MobileBottomBar = () => {
                       navigate(item.path!);
                     }
                   }}
-                  className="relative flex flex-col items-center gap-0.5 px-3 py-1 rounded-xl transition-colors"
+                  className="relative flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg transition-colors"
                 >
                   {/* Active pill indicator */}
                   {isActive && (
                     <motion.div
                       layoutId="bottomBarIndicator"
-                      className="absolute inset-0 bg-blue-50 rounded-xl"
+                      className="absolute inset-0 bg-blue-50 rounded-lg"
                       transition={{ duration: 0.2 }}
                     />
                   )}
@@ -400,3 +400,4 @@ const MobileBottomBar = () => {
 };
 
 export default MobileBottomBar;
+

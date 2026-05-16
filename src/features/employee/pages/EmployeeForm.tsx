@@ -61,7 +61,7 @@ const EmployeeForm = () => {
   // Header Actions
   useEffect(() => {
     setActions(
-        <div className="flex items-center gap-3 bg-white px-4 h-11 rounded-2xl border border-slate-200 shadow-sm scale-90 md:scale-100">
+        <div className="flex items-center gap-3 bg-white px-4 h-11 rounded-lg border border-slate-200 shadow-sm scale-90 md:scale-100">
           <span className="text-[10px] font-bold text-slate-500  ">Active</span>
           <Switch 
             checked={formData.is_accepted} 
@@ -79,7 +79,7 @@ const EmployeeForm = () => {
           <button 
             type="button"
             onClick={handleSaveDraft}
-            className="px-4 h-8 rounded-xl border border-blue-100 text-blue-600 font-bold text-xs bg-blue-50/50 hover:bg-blue-100 transition-all flex items-center gap-2 whitespace-nowrap overflow-hidden"
+            className="px-4 h-8 rounded-lg border border-blue-100 text-blue-600 font-bold text-xs bg-blue-50/50 hover:bg-blue-100 transition-all flex items-center gap-2 whitespace-nowrap overflow-hidden"
           >
             <Bookmark size={14} className="shrink-0" />
             <span className="truncate">Save Draft</span>
@@ -89,7 +89,7 @@ const EmployeeForm = () => {
           icon={<Save size={16} />} 
           onClick={handleSubmit} 
           disabled={submitting}
-          className="rounded-xl shadow-md text-xs px-8 h-8 flex items-center"
+          className="rounded-lg shadow-md text-xs px-8 h-8 flex items-center"
         >
           {submitting ? "..." : (id ? "Save Changes" : "Create Member")}
         </GradientButton>
@@ -226,9 +226,9 @@ const EmployeeForm = () => {
         <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-6 gap-6 items-start">
           
           {/* BOX 1: IDENTITY (Spans 4 cols) */}
-          <div className="lg:col-span-4 bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden transition-all hover:shadow-md h-full">
+          <div className="lg:col-span-4 bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden transition-all hover:shadow-md h-full">
             <div className="px-6 py-4 bg-gradient-to-r from-blue-50/50 to-transparent border-b border-slate-100 flex items-center gap-3">
-              <div className="w-8 h-8 rounded-xl bg-blue-100 flex items-center justify-center text-blue-600">
+              <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600">
                 <User size={18} />
               </div>
               <h2 className="text-xs font-bold text-slate-800  ">Personal Identity</h2>
@@ -275,15 +275,15 @@ const EmployeeForm = () => {
           </div>
 
           {/* BOX 2: CLASSIFICATION (Spans 2 cols) */}
-          <div className="lg:col-span-2 bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden transition-all hover:shadow-md h-full">
+          <div className="lg:col-span-2 bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden transition-all hover:shadow-md h-full">
             <div className="px-6 py-4 bg-gradient-to-r from-amber-50/50 to-transparent border-b border-slate-100 flex items-center gap-3">
-              <div className="w-8 h-8 rounded-xl bg-amber-100 flex items-center justify-center text-amber-600">
+              <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center text-amber-600">
                 <Shield size={18} />
               </div>
               <h2 className="text-xs font-bold text-slate-800  ">Classification</h2>
             </div>
             <div className="p-8 space-y-6">
-              <div className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 border border-slate-100">
+              <div className="flex items-center justify-between p-4 rounded-lg bg-slate-50 border border-slate-100">
                 <span className="text-xs font-bold text-slate-500  ">Member Active</span>
                 <Switch 
                   checked={formData.is_accepted} 
@@ -303,9 +303,9 @@ const EmployeeForm = () => {
           </div>
 
           {/* BOX 4: FINANCIALS (Spans 3 cols) */}
-          <div className="lg:col-span-3 bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden transition-all hover:shadow-md h-full">
+          <div className="lg:col-span-3 bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden transition-all hover:shadow-md h-full">
             <div className="px-6 py-4 bg-gradient-to-r from-emerald-50/50 to-transparent border-b border-slate-100 flex items-center gap-3">
-              <div className="w-8 h-8 rounded-xl bg-emerald-100 flex items-center justify-center text-emerald-600">
+              <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-600">
                 <FileText size={18} />
               </div>
               <h2 className="text-xs font-bold text-slate-800  ">Financial Context</h2>
@@ -323,9 +323,9 @@ const EmployeeForm = () => {
           </div>
 
           {/* BOX 5: DATE (Spans 3 cols) */}
-          <div className="lg:col-span-3 bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden transition-all hover:shadow-md h-full">
+          <div className="lg:col-span-3 bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden transition-all hover:shadow-md h-full">
             <div className="px-6 py-4 bg-gradient-to-r from-rose-50/50 to-transparent border-b border-slate-100 flex items-center gap-3">
-              <div className="w-8 h-8 rounded-xl bg-rose-100 flex items-center justify-center text-rose-600">
+              <div className="w-8 h-8 rounded-lg bg-rose-100 flex items-center justify-center text-rose-600">
                 <Calendar size={18} />
               </div>
               <h2 className="text-xs font-bold text-slate-800  ">Lifecycle</h2>
@@ -343,9 +343,9 @@ const EmployeeForm = () => {
           </div>
 
           {/* BOX 6: ADDRESS (Spans 6 cols) */}
-          <div className="lg:col-span-6 bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden transition-all hover:shadow-md">
+          <div className="lg:col-span-6 bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden transition-all hover:shadow-md">
             <div className="px-6 py-4 bg-gradient-to-r from-blue-50/50 to-transparent border-b border-slate-100 flex items-center gap-3">
-              <div className="w-8 h-8 rounded-xl bg-blue-100 flex items-center justify-center text-blue-600">
+              <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600">
                 <MapPin size={18} />
               </div>
               <h2 className="text-xs font-bold text-slate-800  ">Residance & Work Location</h2>
@@ -379,3 +379,4 @@ const EmployeeForm = () => {
 };
 
 export default EmployeeForm;
+

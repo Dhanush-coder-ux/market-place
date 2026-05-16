@@ -80,9 +80,9 @@ const HeaderCard: React.FC<LowStockCardProps> = ({
   return (
     <div
       onClick={onClick}
-      // CHANGED: reduced padding (p-2 on mobile, p-3 on sm+), reduced rounded (rounded-xl)
+      // CHANGED: reduced padding (p-2 on mobile, p-3 on sm+), reduced rounded (rounded-lg)
       className={`
-        group relative w-full overflow-hidden rounded-xl border ${t.border} ${t.bg}
+        group relative w-full overflow-hidden rounded-lg border ${t.border} ${t.bg}
         p-2 sm:p-3 transition-all duration-300 ease-in-out
         hover:-translate-y-1 hover:shadow-lg hover:shadow-${theme}-500/10 cursor-pointer
         active:scale-[0.98] active:shadow-sm z-0
@@ -148,3 +148,4 @@ const HeaderCard: React.FC<LowStockCardProps> = ({
 };
 
 export default HeaderCard;
+

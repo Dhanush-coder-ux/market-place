@@ -259,7 +259,7 @@ function DetailDrawer({ movement, onClose }: DetailDrawerProps) {
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-white/80 sticky top-0 z-20 backdrop-blur-md">
           <div className="flex items-center gap-3">
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-lg ${isPositive ? 'bg-emerald-500 shadow-emerald-200' : 'bg-rose-500 shadow-rose-200'}`}>
+            <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-white shadow-lg ${isPositive ? 'bg-emerald-500 shadow-emerald-200' : 'bg-rose-500 shadow-rose-200'}`}>
               {isPositive ? <TrendingUp size={20} /> : <TrendingDown size={20} />}
             </div>
             <div>
@@ -267,7 +267,7 @@ function DetailDrawer({ movement, onClose }: DetailDrawerProps) {
               <p className="text-[10px] text-slate-400 font-bold  ">REF: {movement.ref}</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-2 rounded-xl hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-all border border-transparent hover:border-slate-200">
+          <button onClick={onClose} className="p-2 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-all border border-transparent hover:border-slate-200">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -276,7 +276,7 @@ function DetailDrawer({ movement, onClose }: DetailDrawerProps) {
         <div className="flex-1 p-6 space-y-8">
 
           {/* Main Impact Hero */}
-          <div className={`rounded-3xl border-2 p-6 text-center space-y-4 shadow-sm transition-all ${isPositive ? 'bg-emerald-50/50 border-emerald-100/50' : 'bg-rose-50/50 border-rose-100/50'}`}>
+          <div className={`rounded-lg border-2 p-6 text-center space-y-4 shadow-sm transition-all ${isPositive ? 'bg-emerald-50/50 border-emerald-100/50' : 'bg-rose-50/50 border-rose-100/50'}`}>
             <div className="space-y-1">
               <p className="text-[10px] font-black text-slate-400  tracking-[0.2em]">Net Stock Impact</p>
               <div className="flex items-center justify-center gap-3">
@@ -288,7 +288,7 @@ function DetailDrawer({ movement, onClose }: DetailDrawerProps) {
             </div>
 
             {movement.stocks_before !== undefined && (
-              <div className="grid grid-cols-3 gap-2 bg-white/80 p-3 rounded-2xl border border-white shadow-sm">
+              <div className="grid grid-cols-3 gap-2 bg-white/80 p-3 rounded-lg border border-white shadow-sm">
                 <div className="flex flex-col items-center">
                   <span className="text-[8px] font-black text-slate-400  tracking-tighter">Opening</span>
                   <span className="text-xs font-bold text-slate-700">{movement.stocks_before}</span>
@@ -319,7 +319,7 @@ function DetailDrawer({ movement, onClose }: DetailDrawerProps) {
             <div className="relative pl-6 before:absolute before:left-[11px] before:top-8 before:bottom-0 before:w-0.5 before:bg-slate-100">
               <div className="relative group mb-4">
                 <div className="absolute -left-[19px] top-1.5 w-4 h-4 rounded-full border-2 border-blue-500 bg-white z-10" />
-                <div className="bg-blue-50/40 border border-blue-100 rounded-2xl p-4 transition-all hover:bg-blue-50 hover:shadow-md hover:shadow-blue-500/5">
+                <div className="bg-blue-50/40 border border-blue-100 rounded-lg p-4 transition-all hover:bg-blue-50 hover:shadow-md hover:shadow-blue-500/5">
                   <div className="flex items-center gap-2 text-blue-600 font-black text-[10px]   mb-1">
                     <Layers size={12} /> Product Root
                   </div>
@@ -335,7 +335,7 @@ function DetailDrawer({ movement, onClose }: DetailDrawerProps) {
               {movement.variant && (
                 <div className="relative group mb-4">
                   <div className="absolute -left-[19px] top-1.5 w-4 h-4 rounded-full border-2 border-violet-500 bg-white z-10" />
-                  <div className="bg-violet-50/40 border border-violet-100 rounded-2xl p-4 ml-2 transition-all hover:bg-violet-50 hover:shadow-md hover:shadow-violet-500/5">
+                  <div className="bg-violet-50/40 border border-violet-100 rounded-lg p-4 ml-2 transition-all hover:bg-violet-50 hover:shadow-md hover:shadow-violet-500/5">
                     <div className="flex items-center gap-2 text-violet-600 font-black text-[10px]   mb-1">
                       <Activity size={12} /> Variant Configuration
                     </div>
@@ -348,7 +348,7 @@ function DetailDrawer({ movement, onClose }: DetailDrawerProps) {
               {movement.batch && (
                 <div className="relative group mb-4">
                   <div className="absolute -left-[19px] top-1.5 w-4 h-4 rounded-full border-2 border-amber-500 bg-white z-10" />
-                  <div className="bg-amber-50/40 border border-amber-100 rounded-2xl p-4 ml-4 transition-all hover:bg-amber-50 hover:shadow-md hover:shadow-amber-500/5">
+                  <div className="bg-amber-50/40 border border-amber-100 rounded-lg p-4 ml-4 transition-all hover:bg-amber-50 hover:shadow-md hover:shadow-amber-500/5">
                     <div className="flex items-center gap-2 text-amber-600 font-black text-[10px]   mb-1">
                       <Hash size={12} /> Batch Identifier
                     </div>
@@ -390,7 +390,7 @@ function DetailDrawer({ movement, onClose }: DetailDrawerProps) {
               {movement.serial_numbers && movement.serial_numbers.length > 0 && (
                 <div className="relative group">
                   <div className="absolute -left-[19px] top-1.5 w-4 h-4 rounded-full border-2 border-emerald-500 bg-white z-10" />
-                  <div className="bg-emerald-50/30 border border-emerald-100 rounded-2xl p-4 ml-6 transition-all hover:bg-emerald-50/50 hover:shadow-md hover:shadow-emerald-500/5">
+                  <div className="bg-emerald-50/30 border border-emerald-100 rounded-lg p-4 ml-6 transition-all hover:bg-emerald-50/50 hover:shadow-md hover:shadow-emerald-500/5">
                     <div className="flex items-center gap-2 text-emerald-600 font-black text-[10px]   mb-3">
                       <Zap size={12} fill="currentColor" /> Unique Serials ({movement.serial_numbers.length})
                     </div>
@@ -409,11 +409,11 @@ function DetailDrawer({ movement, onClose }: DetailDrawerProps) {
 
           {/* Context Details */}
           <div className="grid grid-cols-2 gap-3 pt-4 border-t border-slate-100">
-            <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100">
+            <div className="bg-slate-50 rounded-lg p-4 border border-slate-100">
               <p className="text-[10px] font-bold text-slate-400   mb-1.5">Source</p>
               <p className="text-slate-900 font-bold text-xs">{movement.source}</p>
             </div>
-            <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100">
+            <div className="bg-slate-50 rounded-lg p-4 border border-slate-100">
               <p className="text-[10px] font-bold text-slate-400   mb-1.5">Destination</p>
               <p className="text-slate-900 font-bold text-xs">{movement.destination}</p>
             </div>
@@ -421,14 +421,14 @@ function DetailDrawer({ movement, onClose }: DetailDrawerProps) {
 
           {/* Timeline & Metadata */}
           <div className="space-y-3 pt-2">
-            <div className="flex items-center gap-3 text-xs text-slate-600 bg-slate-50 rounded-2xl p-4 border border-slate-100">
+            <div className="flex items-center gap-3 text-xs text-slate-600 bg-slate-50 rounded-lg p-4 border border-slate-100">
               <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center shadow-sm text-slate-400 border border-slate-200">🕐</div>
               <div>
                 <p className="text-[10px] font-bold text-slate-400  tracking-tight">Processed At</p>
                 <span className="font-bold text-slate-700">{fmt(movement.date)}</span>
               </div>
             </div>
-            <div className="flex items-center gap-3 text-xs text-slate-600 bg-slate-50 rounded-2xl p-4 border border-slate-100">
+            <div className="flex items-center gap-3 text-xs text-slate-600 bg-slate-50 rounded-lg p-4 border border-slate-100">
               <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center shadow-sm text-slate-400 border border-slate-200">
                 <User size={16} />
               </div>
@@ -441,7 +441,7 @@ function DetailDrawer({ movement, onClose }: DetailDrawerProps) {
 
           {/* Notes Card */}
           {movement.notes && (
-            <div className="bg-blue-50/50 rounded-2xl p-4 border border-blue-100/50">
+            <div className="bg-blue-50/50 rounded-lg p-4 border border-blue-100/50">
               <div className="flex items-center gap-2 text-blue-600 font-bold text-[10px]   mb-2">
                 <FileText size={14} /> Description / Reason
               </div>
@@ -455,7 +455,7 @@ function DetailDrawer({ movement, onClose }: DetailDrawerProps) {
         <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/30 flex gap-3 sticky bottom-0">
           <button
             onClick={onClose}
-            className="flex-1 h-11 rounded-xl bg-white border border-slate-200 text-slate-600 font-bold text-xs hover:bg-slate-50 transition-all shadow-sm active:scale-95"
+            className="flex-1 h-11 rounded-lg bg-white border border-slate-200 text-slate-600 font-bold text-xs hover:bg-slate-50 transition-all shadow-sm active:scale-95"
           >
             Close View
           </button>
@@ -474,7 +474,7 @@ function AddMovementModal({ onClose }: { onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={onClose}>
       <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" />
-      <div className="relative bg-white border border-slate-200 rounded-2xl shadow-2xl w-full max-w-lg mx-4 p-6" onClick={e => e.stopPropagation()}>
+      <div className="relative bg-white border border-slate-200 rounded-lg shadow-2xl w-full max-w-lg mx-4 p-6" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-semibold text-slate-900">Add Stock Movement</h2>
           <button onClick={onClose} className="p-2 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors">
@@ -494,20 +494,20 @@ function AddMovementModal({ onClose }: { onClose: () => void }) {
             <div key={label as string}>
               <label className="block text-xs text-slate-500 font-semibold   mb-1.5">{label as string}</label>
               {type === "select" ? (
-                <select className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2.5 text-slate-900 text-sm font-medium focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 shadow-sm transition-all">
+                <select className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2.5 text-slate-900 text-sm font-medium focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 shadow-sm transition-all">
                   {(placeholder as string[]).map(o => <option value={o} key={o}>{o.replace('_', ' ')}</option>)}
                 </select>
               ) : type === "textarea" ? (
-                <textarea rows={2} className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2.5 text-slate-900 text-sm font-medium placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 resize-none shadow-sm transition-all" placeholder={placeholder as string} />
+                <textarea rows={2} className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2.5 text-slate-900 text-sm font-medium placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 resize-none shadow-sm transition-all" placeholder={placeholder as string} />
               ) : (
-                <input type={type as string} className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2.5 text-slate-900 text-sm font-medium placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 shadow-sm transition-all" placeholder={placeholder as string} />
+                <input type={type as string} className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2.5 text-slate-900 text-sm font-medium placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 shadow-sm transition-all" placeholder={placeholder as string} />
               )}
             </div>
           ))}
         </div>
         <div className="flex gap-3 mt-8">
-          <button onClick={onClose} className="flex-1 py-2.5 rounded-xl bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-sm font-medium transition-colors shadow-sm">Cancel</button>
-          <button onClick={onClose} className="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition-colors shadow-md shadow-blue-500/20">Save Movement</button>
+          <button onClick={onClose} className="flex-1 py-2.5 rounded-lg bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-sm font-medium transition-colors shadow-sm">Cancel</button>
+          <button onClick={onClose} className="flex-1 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition-colors shadow-md shadow-blue-500/20">Save Movement</button>
         </div>
       </div>
     </div>
@@ -555,7 +555,7 @@ export default function StockMovementPage() {
       <div className="flex items-center gap-3 animate-in fade-in slide-in-from-right-4">
         <button
           onClick={() => navigate("/stock-adjustment/drafts")}
-          className="px-5 h-11 rounded-xl border border-blue-100 text-blue-600 font-semibold text-[14px] bg-blue-50/50 hover:bg-blue-100 transition-all flex items-center gap-2"
+          className="px-5 h-11 rounded-lg border border-blue-100 text-blue-600 font-semibold text-[14px] bg-blue-50/50 hover:bg-blue-100 transition-all flex items-center gap-2"
         >
           <Bookmark size={18} />
           Saved Drafts
@@ -751,7 +751,7 @@ export default function StockMovementPage() {
         </div>
 
         {/* ── Filter & Search Section ── */}
-        <div className="bg-white p-5 rounded-[1.5rem] border border-slate-200 shadow-sm mb-6 animate-in fade-in slide-in-from-top-4 duration-700 delay-200">
+        <div className="bg-white p-5 rounded-lg border border-slate-200 shadow-sm mb-6 animate-in fade-in slide-in-from-top-4 duration-700 delay-200">
           <div className="flex flex-col lg:flex-row lg:items-center gap-4">
 
             {/* Left Side: Search & Primary Tools */}
@@ -763,7 +763,7 @@ export default function StockMovementPage() {
                   value={search}
                   onChange={e => { setSearch(e.target.value); setPage(1); }}
                   placeholder="Search by product, SKU, or movement ID…"
-                  className="w-full pl-10 pr-4 h-11 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 placeholder:text-slate-400 font-medium focus:outline-none focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100 transition-all"
+                  className="w-full pl-10 pr-4 h-11 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-900 placeholder:text-slate-400 font-medium focus:outline-none focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100 transition-all"
                 />
               </div>
               <ColumnPicker
@@ -774,7 +774,7 @@ export default function StockMovementPage() {
               />
               <button
                 onClick={resetFilters}
-                className="h-11 px-4 rounded-xl bg-slate-50 border border-slate-200 text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-all flex items-center gap-2 text-xs font-semibold  "
+                className="h-11 px-4 rounded-lg bg-slate-50 border border-slate-200 text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-all flex items-center gap-2 text-xs font-semibold  "
               >
                 <RotateCcw size={14} />
                 Reset
@@ -801,7 +801,7 @@ export default function StockMovementPage() {
                   className="w-full sm:w-44 h-11"
                 />
               </div>
-              <div className="flex items-center gap-2 bg-slate-50 p-1.5 rounded-xl border border-slate-200 h-11 w-full sm:w-auto">
+              <div className="flex items-center gap-2 bg-slate-50 p-1.5 rounded-lg border border-slate-200 h-11 w-full sm:w-auto">
                 <input
                   type="date"
                   value={dateFrom}
@@ -821,7 +821,7 @@ export default function StockMovementPage() {
         </div>
 
         {/* ── Table Section ── */}
-        <div className="bg-white border border-slate-200 rounded-[2rem] shadow-sm overflow-hidden">
+        <div className="bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden">
           <div className="overflow-x-auto overflow-y-auto h-[calc(100vh-220px)] pf-scroll">
             <table className="w-full text-left border-collapse">
               <thead className="sticky top-0 z-20 bg-slate-50/95 backdrop-blur-sm shadow-sm">
@@ -854,7 +854,7 @@ export default function StockMovementPage() {
                   >
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-3">
-                        <div className={`w-10 h-10 rounded-xl bg-gradient-to-br flex items-center justify-center text-white text-xs font-bold shadow-lg shadow-blue-100 ${m.qty > 0 ? "from-emerald-600 to-emerald-400" : "from-rose-600 to-rose-400"}`}>
+                        <div className={`w-10 h-10 rounded-lg bg-gradient-to-br flex items-center justify-center text-white text-xs font-bold shadow-lg shadow-blue-100 ${m.qty > 0 ? "from-emerald-600 to-emerald-400" : "from-rose-600 to-rose-400"}`}>
                           {m.product?.[0]?.toUpperCase() || "—"}
                         </div>
                         <div>
@@ -918,7 +918,7 @@ export default function StockMovementPage() {
                       <p className="text-[12px] font-bold text-slate-600">{fmt(m.date)}</p>
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <button onClick={() => setSelected(m)} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-white rounded-xl transition-all shadow-sm active:scale-95">
+                      <button onClick={() => setSelected(m)} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-white rounded-lg transition-all shadow-sm active:scale-95">
                         <Eye size={16} />
                       </button>
                     </td>
@@ -953,3 +953,4 @@ export default function StockMovementPage() {
     </div>
   );
 }
+

@@ -30,7 +30,7 @@ export const StatCard: React.FC<StatsCardProps> = React.memo(({
   return (
     <div
       onClick={onClick}
-      className={`bg-white rounded-xl p-2.5 pr-4 shadow-sm border border-slate-100 flex items-center gap-3 group hover:shadow-md hover:border-slate-200 transition-all cursor-pointer min-w-[160px] sm:min-w-0 sm:flex-1 shrink-0 ${className}`}
+      className={`bg-white rounded-lg p-2.5 pr-4 shadow-sm border border-slate-100 flex items-center gap-3 group hover:shadow-md hover:border-slate-200 transition-all cursor-pointer min-w-[160px] sm:min-w-0 sm:flex-1 shrink-0 ${className}`}
     >
       {Icon && (
         <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${iconBg} group-hover:scale-105 transition-transform ${iconColor}`}>
@@ -59,3 +59,4 @@ export const StatCard: React.FC<StatsCardProps> = React.memo(({
 });
 
 export const StatsCard = StatCard;
+

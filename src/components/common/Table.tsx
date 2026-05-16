@@ -74,7 +74,7 @@ const Table: React.FC<TableProps> = ({
 
   return (
     <div
-      className={`flex flex-col bg-white rounded-2xl border border-slate-100 shadow-sm ${className}`}
+      className={`flex flex-col bg-white rounded-lg border border-slate-100 shadow-sm ${className}`}
     >
       <div className="overflow-x-auto">
         <table className="min-w-full border-separate border-spacing-0">
@@ -273,3 +273,4 @@ const Table: React.FC<TableProps> = ({
 };
 
 export default Table;
+

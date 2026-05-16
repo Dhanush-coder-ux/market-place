@@ -109,7 +109,7 @@ const toGrnShape = (p: PurchaseRecord) => {
 
 /* ================= GRID CARD ================= */
 const GridCard = ({ row, onClick, onReceive }: { row: ReturnType<typeof toGrnShape>; onClick: () => void; onReceive: (e: React.MouseEvent) => void }) => (
-  <div onClick={onClick} className="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden flex flex-col cursor-pointer hover:-translate-y-0.5 hover:shadow-md transition-all">
+  <div onClick={onClick} className="bg-white rounded-lg border border-zinc-200 shadow-sm overflow-hidden flex flex-col cursor-pointer hover:-translate-y-0.5 hover:shadow-md transition-all">
     <div className="px-4 py-3.5 border-b border-zinc-100 bg-zinc-50/50 flex items-center justify-between gap-3">
       <div className="flex items-center gap-2 min-w-0">
         <div className="w-7 h-7 rounded-md bg-blue-50 flex items-center justify-center shrink-0">
@@ -192,7 +192,7 @@ const GridCard = ({ row, onClick, onReceive }: { row: ReturnType<typeof toGrnSha
 
 /* ================= VERTICAL TABLE ================= */
 const VerticalTable = ({ data, onClick, onReceive }: { data: ReturnType<typeof toGrnShape>[]; onClick: (row: any) => void; onReceive: (id: string) => void }) => (
-  <div className="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden">
+  <div className="bg-white rounded-lg border border-zinc-200 shadow-sm overflow-hidden">
     <div className="overflow-x-auto pf-scroll">
       <table className="w-full text-left border-collapse whitespace-nowrap">
         <thead>
@@ -279,13 +279,13 @@ const GRNCardView = () => {
         <GrnHeader />
 
         {error && (
-          <div className="flex items-center justify-between gap-2 p-3 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm">
+          <div className="flex items-center justify-between gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
             <span>{error}</span>
             <button onClick={clearError}><X size={14} /></button>
           </div>
         )}
 
-        <div className="bg-white px-4 py-3.5 rounded-xl border border-zinc-200 shadow-sm flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+        <div className="bg-white px-4 py-3.5 rounded-lg border border-zinc-200 shadow-sm flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
           <div className="relative flex-1 max-w-sm">
             <Input leftIcon={<Search size={14} className="text-zinc-400" />} placeholder="Search PO, supplier, product…" value={search} onChange={(e) => setSearch(e.target.value)} />
           </div>
@@ -306,7 +306,7 @@ const GRNCardView = () => {
         {loading ? (
           <div className="py-12"><Loader /></div>
         ) : filtered.length === 0 ? (
-          <div className="py-20 text-center bg-white border border-dashed border-zinc-200 rounded-xl">
+          <div className="py-20 text-center bg-white border border-dashed border-zinc-200 rounded-lg">
             <Search size={28} className="mx-auto mb-3 text-zinc-300" />
             <p className="text-sm font-medium text-zinc-600">No GRN records found</p>
           </div>
@@ -333,7 +333,7 @@ const GRNCardView = () => {
       <FloatingFormCard isOpen={!!selectedGRN} onClose={() => setSelectedGRN(null)} title={selectedGRN ? `GRN Details: ${selectedGRN.poReference}` : "Details"} maxWidth="max-w-2xl">
         {selectedGRN && (
           <div className="space-y-6">
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 bg-zinc-50 p-4 rounded-xl border border-zinc-100">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 bg-zinc-50 p-4 rounded-lg border border-zinc-100">
               {[["Supplier", selectedGRN.supplier], ["Date", selectedGRN.date], ["Status", selectedGRN.status], ["Total Value", `₹${selectedGRN.totalValue.toLocaleString()}`]].map(([label, value]) => (
                 <div key={label}><p className="text-[10px] font-bold   text-zinc-400 mb-1">{label}</p><p className="text-sm font-semibold text-zinc-800">{value}</p></div>
               ))}

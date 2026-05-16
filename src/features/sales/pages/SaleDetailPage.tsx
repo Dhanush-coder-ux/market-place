@@ -4,11 +4,16 @@ import {
   ArrowLeft, Package, User, Hash,
   RotateCcw, Calendar, CreditCard, CheckCircle2, Clock,
   XCircle, AlertCircle, Banknote, Smartphone,
-  TrendingUp, FileText,
+  TrendingUp, Tag, 
+  Database,
+  Search
 } from "lucide-react";
 import { useApi } from "@/context/ApiContext";
 import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 import { OrderResponse } from "@/features/order/types";
+import { ProfileHeaderCard, SectionCard, DetailItem, InfoRow } from "@/components/common/SuperUI";
+import { StatCard } from "@/components/common/StatsCard";
+import { ReturnFlow } from "../components/ReturnOrderFlow";
 
 /* ── helpers ── */
 const fmt = (n: number) => `₹${n.toLocaleString("en-IN")}`;
@@ -41,7 +46,7 @@ const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
   };
   const c = cfg[status] || cfg["Pending"];
   return (
-    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border font-bold text-xs ${c.bg} ${c.color}`}>
+    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border font-bold text-[10px] uppercase tracking-wider ${c.bg} ${c.color}`}>
       {c.icon}{status}
     </span>
   );
@@ -60,26 +65,27 @@ const SaleDetailPage: React.FC = () => {
   const [customerMap, setCustomerMap] = useState<Record<string, string>>(location.state?.customerMap || {});
   const [productMap, setProductMap] = useState<Record<string, string>>(location.state?.productMap || {});
   const [loading, setLoading] = useState(!sale);
+  const [activeTab, setActiveTab] = useState(0);
+
+  const fetchSaleDetail = async () => {
+    try {
+      setLoading(true);
+      const [ordRes, custRes, invRes] = await Promise.all([
+        api.getData(`${ENDPOINTS.ORDERS}/${SHOP_ID}`),
+        api.getData(`${ENDPOINTS.CUSTOMERS}/by/shop/${SHOP_ID}`),
+        api.getData(ENDPOINTS.INVENTORIES),
+      ]);
+      if (ordRes?.data) {
+        const found = (ordRes.data as any[]).find(o => o.id === id);
+        if (found) setSale({ ...found, status: found.status.charAt(0).toUpperCase() + found.status.slice(1).toLowerCase(), origin: found.origin === "OFFLINE" ? "Sales" : found.origin });
+      }
+      if (custRes?.data) { const m: Record<string, string> = {}; custRes.data.forEach((c: any) => m[c.id] = c.name); setCustomerMap(m); }
+      if (invRes?.data) { const m: Record<string, string> = {}; invRes.data.forEach((p: any) => m[p.id] = p.name); setProductMap(m); }
+    } finally { setLoading(false); }
+  };
 
   useEffect(() => {
-    if (sale) return;
-    const load = async () => {
-      try {
-        setLoading(true);
-        const [ordRes, custRes, invRes] = await Promise.all([
-          api.getData(`${ENDPOINTS.ORDERS}/${SHOP_ID}`),
-          api.getData(`${ENDPOINTS.CUSTOMERS}/by/shop/${SHOP_ID}`),
-          api.getData(ENDPOINTS.INVENTORIES),
-        ]);
-        if (ordRes?.data) {
-          const found = (ordRes.data as any[]).find(o => o.id === id);
-          if (found) setSale({ ...found, status: found.status.charAt(0).toUpperCase() + found.status.slice(1).toLowerCase(), origin: found.origin === "OFFLINE" ? "Sales" : found.origin });
-        }
-        if (custRes?.data) { const m: Record<string, string> = {}; custRes.data.forEach((c: any) => m[c.id] = c.name); setCustomerMap(m); }
-        if (invRes?.data) { const m: Record<string, string> = {}; invRes.data.forEach((p: any) => m[p.id] = p.name); setProductMap(m); }
-      } finally { setLoading(false); }
-    };
-    load();
+    if (!sale) fetchSaleDetail();
   }, [id, api, sale]);
 
   if (loading) return (
@@ -95,7 +101,7 @@ const SaleDetailPage: React.FC = () => {
     <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center gap-4 font-sans">
       <AlertCircle size={48} className="text-slate-300" />
       <p className="text-lg font-bold text-slate-800">Sale not found</p>
-      <button 
+      <button
         onClick={() => navigate("/sales")}
         className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-semibold text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors shadow-sm"
       >
@@ -124,249 +130,246 @@ const SaleDetailPage: React.FC = () => {
     : [{ label: sale.payment_method || "Other", amount: sale.total_sellprice }];
 
   return (
-    <div className="min-h-screen bg-slate-50 font-sans text-slate-900 pb-12">
-      {/* Sticky Header */}
-    
+    <div className="min-h-screen bg-slate-50/50 font-sans text-slate-900 pb-12">
+      <div className="max-w-full mx-auto px-4 md:px-10 py-3 space-y-4">
+        
+        {/* Profile Header Card */}
+        <ProfileHeaderCard
+          name={`Invoice INV-${sale.ui_id}`}
+          initials="INV"
+          subText={`ID: ${sale.id}`}
+          badges={[
+            { text: sale.status, variant: sale.status === "Completed" ? "success" : sale.status === "Cancelled" ? "danger" : "warning", showPulse: sale.status === "Pending" },
+            { text: sale.origin, variant: "primary" }
+          ]}
+          infoItems={[
+            { icon: Calendar, text: `${dateStr} ${timeStr && `at ${timeStr}`}` },
+            { icon: User, text: customerName }
+          ]}
+          actions={
+            <button
+              onClick={() => navigate("/sales")}
+              className="w-8 h-8 flex items-center justify-center bg-white border border-slate-200 text-slate-600 rounded-lg hover:text-blue-600 hover:border-blue-100 transition-all shadow-sm active:scale-95"
+              title="Back to Sales"
+            >
+              <ArrowLeft size={14} />
+            </button>
+          }
+        />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-8 pt-8">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        {/* Tabs Navigation */}
+        <div className="flex gap-2 p-1 bg-slate-100/50 w-fit rounded-lg border border-slate-200/50">
+          {["Overview", "Items", "Customer & Payments", "Return"].map((tab, i) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(i)}
+              className={`px-4 py-1.5 text-[11px] font-bold rounded-lg transition-all ${activeTab === i
+                ? "bg-blue-600 text-white shadow-md shadow-blue-100"
+                : "text-slate-500 hover:bg-slate-50 hover:text-slate-700"
+                }`}
+            >
+              {tab}
+            </button>
+          ))}
+        </div>
+
+        {/* Tab Panels */}
+        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
           
-          {/* ══════ LEFT COLUMN (8 cols) ══════ */}
-          <div className="lg:col-span-8 flex flex-col gap-6">
-
-            {/* Hero Card */}
-            <div className="bg-white border border-slate-200 rounded-2xl p-6 sm:p-8 shadow-sm relative overflow-hidden">
-              <div className="flex flex-col sm:flex-row justify-between items-start gap-4 mb-8">
-                <div>
-                  <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5">Invoice</p>
-                  <p className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight font-mono mb-2">INV-{sale.ui_id}</p>
-                  <div className="flex items-center gap-2.5 text-sm font-medium text-slate-500">
-                    <span className="flex items-center gap-1.5">
-                      <Calendar size={14} /> {dateStr} {timeStr && `at ${timeStr}`}
-                    </span>
-                    <span className="w-1 h-1 rounded-full bg-slate-300" />
-                    <span>{sale.origin}</span>
-                  </div>
-                </div>
-                <div className="flex flex-wrap items-center gap-3">
-                  <StatusBadge status={sale.status} />
-                  {sale.origin === "Sales Return" && (
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-orange-50 border border-orange-200 text-orange-600 text-xs font-bold shadow-sm">
-                      <RotateCcw size={12} /> Return Order
-                    </span>
-                  )}
-                </div>
+          {/* TAB 0 — Overview */}
+          {activeTab === 0 && (
+            <div className="space-y-4">
+              {/* Quick Stats */}
+              <div className="flex flex-wrap gap-2">
+                <StatCard
+                  icon={Banknote}
+                  label="Grand Total"
+                  value={fmt(sale.total_sellprice)}
+                  iconBg="bg-blue-50 text-blue-600"
+                  className="flex-1 min-w-[140px]"
+                />
+                <StatCard
+                  icon={Package}
+                  label="Total Items"
+                  value={String(sale.total_quantity)}
+                  iconBg="bg-indigo-50 text-indigo-600"
+                  className="flex-1 min-w-[140px]"
+                />
+                <StatCard
+                  icon={Tag}
+                  label="Discount"
+                  value={fmt(totalDiscount)}
+                  iconBg="bg-rose-50 text-rose-600"
+                  valueClassName="text-rose-600"
+                  className="flex-1 min-w-[140px]"
+                />
+                <StatCard
+                  icon={TrendingUp}
+                  label="Status"
+                  value={sale.status}
+                  iconBg="bg-emerald-50 text-emerald-600"
+                  className="flex-1 min-w-[140px]"
+                />
               </div>
 
-              <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between pt-6 border-t border-slate-100 gap-6">
-                <div>
-                  <p className="text-xs font-bold text-slate-500 mb-1">Grand Total</p>
-                  <p className="text-3xl sm:text-4xl font-extrabold text-blue-600 tracking-tight">{fmt(sale.total_sellprice)}</p>
-                </div>
-                <div className="sm:text-right w-full sm:w-auto bg-slate-50 sm:bg-transparent p-4 sm:p-0 rounded-xl">
-                  <p className="text-xs font-bold text-slate-500 mb-2">Payment Details</p>
-                  <div className="flex flex-col gap-1.5 sm:items-end">
-                    {paymentsDetail.map((p, idx) => (
-                      <div key={idx} className="flex items-center gap-2">
-                        <CreditCard size={14} className="text-slate-400" />
-                        <span className="text-sm font-bold text-slate-800">{p.label}: {fmt(p.amount)}</span>
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+                {/* Financial Summary */}
+                <div className="lg:col-span-8">
+                  <SectionCard title="Financial Summary">
+                    <div className="space-y-1">
+                      <InfoRow label="Subtotal" value={fmt(subtotal)} />
+                      {totalDiscount > 0 && <InfoRow label="Discount" value={<span className="text-red-500">-{fmt(totalDiscount)}</span>} />}
+                      {totalTax > 0 && <InfoRow label="Tax" value={<span className="text-slate-700">+{fmt(totalTax)}</span>} />}
+                      <div className="mt-4 pt-4 border-t-2 border-slate-100 border-dashed flex justify-between items-center">
+                        <span className="text-sm font-black text-slate-800 uppercase tracking-wider">Grand Total</span>
+                        <span className="text-xl font-black text-blue-600 tabular-nums">{fmt(sale.total_sellprice)}</span>
                       </div>
-                    ))}
-                  </div>
-                  <p className="text-xs font-medium text-slate-400 mt-2">{sale.total_quantity} item(s)</p>
+                    </div>
+                  </SectionCard>
+                </div>
+
+                {/* Status & Actions */}
+                <div className="lg:col-span-4 space-y-4">
+                  <SectionCard title="Status Overview">
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center">
+                        <span className="text-[11px] font-medium text-slate-400 uppercase tracking-tight">Status</span>
+                        <StatusBadge status={sale.status} />
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-[11px] font-medium text-slate-400 uppercase tracking-tight">Origin</span>
+                        <span className="text-xs font-bold text-slate-700">{sale.origin}</span>
+                      </div>
+                      {refunded > 0 && <InfoRow label="Refunded Items" value={<span className="text-red-600 bg-red-50 px-2 py-0.5 rounded-md text-[10px] font-black">{refunded}</span>} />}
+                      {exchanged > 0 && <InfoRow label="Exchanged Items" value={<span className="text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md text-[10px] font-black">{exchanged}</span>} />}
+                    </div>
+                  </SectionCard>
+
+                  <SectionCard title="Actions">
+                    <button
+                      disabled={!canReturn}
+                      onClick={() => setActiveTab(3)}
+                      className={`flex items-center justify-center gap-2 w-full py-2.5 rounded-lg text-[11px] font-black transition-all shadow-sm ${canReturn
+                          ? "bg-red-50 text-red-600 hover:bg-red-100 border border-red-100 hover:border-red-200 shadow-red-50 active:scale-[0.98]"
+                          : "bg-slate-50 text-slate-300 border border-slate-100 cursor-not-allowed opacity-70"
+                        }`}
+                    >
+                      <RotateCcw size={14} />
+                      {sale.origin === "Sales Return" ? "RETURN ORDER" : canReturn ? "PROCESS RETURN" : `RETURN UNAVAILABLE`}
+                    </button>
+                  </SectionCard>
                 </div>
               </div>
-
-              {(refunded > 0 || exchanged > 0) && (
-                <div className="flex flex-wrap gap-2 mt-6 pt-6 border-t border-slate-100">
-                  {refunded > 0 && <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold bg-red-50 text-red-600 border border-red-100">{refunded} Refunded</span>}
-                  {exchanged > 0 && <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold bg-blue-50 text-blue-600 border border-blue-100">{exchanged} Exchanged</span>}
-                </div>
-              )}
             </div>
+          )}
 
-            {/* Items Table Card */}
-            <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden flex flex-col">
-              <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50/50">
-                <div className="flex items-center gap-2">
-                  <Package size={18} className="text-slate-400" />
-                  <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide">Order Items</h3>
-                </div>
-                <span className="text-xs font-semibold text-slate-400">{items.length} product(s)</span>
-              </div>
-              
+          {/* TAB 1 — Items */}
+          {activeTab === 1 && (
+            <SectionCard title="Order Items" className="p-0 overflow-hidden">
               <div className="overflow-x-auto">
-                <div className="min-w-[600px]">
-                  {/* Table Header */}
-                  <div className="grid grid-cols-[1fr_80px_110px_110px] gap-4 px-6 py-3 bg-slate-50 border-b border-slate-100">
-                    {["Product", "Qty", "Unit Price", "Total"].map((h, i) => (
-                      <span key={h} className={`text-xs font-bold text-slate-400 uppercase tracking-wider ${i > 1 ? "text-right" : "text-left"}`}>{h}</span>
-                    ))}
-                  </div>
-                  {/* Table Body */}
-                  <div className="divide-y divide-slate-50">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-slate-50/50 border-b border-slate-100">
+                      <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em]">Product Details</th>
+                      <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-center">Qty</th>
+                      <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-right">Unit Price</th>
+                      <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-right">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-50">
                     {items.map((item) => (
-                      <div key={item.id} className="grid grid-cols-[1fr_80px_110px_110px] gap-4 px-6 py-4 hover:bg-slate-50/50 transition-colors items-center">
-                        <div className="flex items-center gap-3 min-w-0">
-                          <div 
-                            className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border"
-                            style={{ backgroundColor: item.imageColor + "33", borderColor: item.imageColor + "66" }}
-                          >
-                            <Package size={16} className="text-slate-500" />
-                          </div>
-                          <div className="min-w-0">
-                            <p className="text-sm font-bold text-slate-800 truncate">{item.name}</p>
-                            <div className="flex items-center gap-2 mt-0.5">
-                              <span className="text-xs font-mono text-slate-400">{item.sku}</span>
-                              {item.status && (
-                                <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide ${item.status === "REFUNDED" ? "bg-red-50 text-red-600" : "bg-blue-50 text-blue-600"}`}>
-                                  {item.status}
-                                </span>
+                      <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            <div
+                              className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0 border"
+                              style={{ backgroundColor: item.imageColor + "33", borderColor: item.imageColor + "66" }}
+                            >
+                              <Package size={16} className="text-slate-500" />
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-sm font-bold text-slate-800 truncate">{item.name}</p>
+                              <div className="flex items-center gap-2 mt-0.5">
+                                <span className="text-[10px] font-mono font-bold text-slate-400">{item.sku}</span>
+                                {item.status && (
+                                  <span className={`px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wide ${item.status === "REFUNDED" ? "bg-red-50 text-red-600" : "bg-blue-50 text-blue-600"}`}>
+                                    {item.status}
+                                  </span>
+                                )}
+                              </div>
+                              {item.serial_numbers && item.serial_numbers.length > 0 && (
+                                <div className="flex items-center gap-1 mt-1.5 flex-wrap">
+                                  <Hash size={10} className="text-indigo-400" />
+                                  {item.serial_numbers.map(sn => (
+                                    <span key={sn} className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-600 border border-indigo-100">{sn}</span>
+                                  ))}
+                                </div>
                               )}
                             </div>
-                            {item.serial_numbers && item.serial_numbers.length > 0 && (
-                              <div className="flex items-center gap-1 mt-1.5 flex-wrap">
-                                <Hash size={10} className="text-indigo-400" />
-                                {item.serial_numbers.map(sn => (
-                                  <span key={sn} className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-600 border border-indigo-100">{sn}</span>
-                                ))}
-                              </div>
-                            )}
                           </div>
-                        </div>
-                        <span className="text-sm font-semibold text-slate-600">{item.quantity}</span>
-                        <span className="text-sm font-medium text-slate-500 font-mono text-right">{fmt(item.unitPrice)}</span>
-                        <span className="text-sm font-bold text-slate-800 font-mono text-right">{fmt(item.unitPrice * item.quantity)}</span>
-                      </div>
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          <span className="text-xs font-black text-slate-600">{item.quantity}</span>
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <span className="text-xs font-bold text-slate-500 tabular-nums">{fmt(item.unitPrice)}</span>
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <span className="text-sm font-black text-slate-800 tabular-nums">{fmt(item.unitPrice * item.quantity)}</span>
+                        </td>
+                      </tr>
                     ))}
-                  </div>
-                </div>
+                  </tbody>
+                </table>
               </div>
-            </div>
+            </SectionCard>
+          )}
 
-            {/* Customer & Order Info Card */}
-            <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
-              <div className="flex items-center gap-2 px-6 py-4 border-b border-slate-100 bg-slate-50/50">
-                <User size={18} className="text-slate-400" />
-                <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide">Customer & Order Info</h3>
-              </div>
-              <div className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
-                  <p className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-1">Customer</p>
-                  <p className="text-sm font-bold text-slate-800">{customerName}</p>
-                  <p className="text-xs font-mono text-slate-400 mt-0.5 truncate">{sale.customer_id}</p>
+          {/* TAB 2 — Customer & Payments */}
+          {activeTab === 2 && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <SectionCard title="Customer Information">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-6 gap-x-8">
+                  <DetailItem icon={User} label="Customer Name" value={customerName} />
+                  <DetailItem icon={Database} label="Customer ID" value={sale.customer_id} />
+                  <DetailItem icon={Calendar} label="Order Date" value={dateStr} />
+                  <DetailItem icon={Clock} label="Order Time" value={timeStr || "—"} />
+                  <DetailItem icon={Search} label="Origin" value={sale.origin} />
                 </div>
-                <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
-                  <p className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-1">Order Date</p>
-                  <p className="text-sm font-bold text-slate-800">{dateStr}</p>
-                  {timeStr && <p className="text-xs font-medium text-slate-500 mt-0.5">at {timeStr}</p>}
-                </div>
-                <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
-                  <p className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-1">Origin</p>
-                  <p className="text-sm font-bold text-slate-800">{sale.origin}</p>
-                </div>
-                <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
-                  <p className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">Payment Methods</p>
-                  <div className="flex flex-col gap-1.5">
+              </SectionCard>
+
+              <SectionCard title="Payment Breakdown">
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {paymentsDetail.map((p, idx) => (
-                      <div key={idx} className="flex items-center gap-2">
-                        {p.label.includes("UPI") || p.label.includes("PhonePe") ? <Smartphone size={14} className="text-indigo-500" /> : p.label.includes("Card") ? <CreditCard size={14} className="text-purple-500" /> : <Banknote size={14} className="text-emerald-500" />}
-                        <p className="text-sm font-bold text-slate-800">{p.label}: <span className="font-mono">{fmt(p.amount)}</span></p>
+                      <div key={idx} className="bg-slate-50 rounded-lg p-4 border border-slate-100 flex flex-col gap-2">
+                        <div className="flex items-center gap-2">
+                          {p.label.includes("UPI") || p.label.includes("PhonePe") ? <Smartphone size={16} className="text-indigo-500" /> : p.label.includes("Card") ? <CreditCard size={16} className="text-purple-500" /> : <Banknote size={16} className="text-emerald-500" />}
+                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">{p.label}</p>
+                        </div>
+                        <p className="text-lg font-black text-slate-800 tabular-nums">{fmt(p.amount)}</p>
                       </div>
                     ))}
                   </div>
                 </div>
-              </div>
+              </SectionCard>
             </div>
-          </div>
+          )}
 
-          {/* ══════ RIGHT COLUMN (4 cols) ══════ */}
-          <div className="lg:col-span-4 flex flex-col gap-6">
-
-            {/* Financial Breakdown */}
-            <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
-              <div className="flex items-center gap-2 px-6 py-4 border-b border-slate-100 bg-slate-50/50">
-                <TrendingUp size={18} className="text-slate-400" />
-                <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide">Financial Summary</h3>
-              </div>
-              <div className="p-6">
-                <div className="flex justify-between items-center py-2">
-                  <span className="text-sm font-medium text-slate-500">Subtotal ({sale.total_quantity} items)</span>
-                  <span className="text-sm font-semibold text-slate-800 font-mono">{fmt(subtotal)}</span>
-                </div>
-                {totalDiscount > 0 && (
-                  <div className="flex justify-between items-center py-2">
-                    <span className="text-sm font-medium text-slate-500">Discount</span>
-                    <span className="text-sm font-semibold text-red-500 font-mono">-{fmt(totalDiscount)}</span>
-                  </div>
-                )}
-                {totalTax > 0 && (
-                  <div className="flex justify-between items-center py-2">
-                    <span className="text-sm font-medium text-slate-500">Tax</span>
-                    <span className="text-sm font-semibold text-slate-800 font-mono">+{fmt(totalTax)}</span>
-                  </div>
-                )}
-                <div className="mt-4 pt-4 border-t-2 border-slate-100 border-dashed flex justify-between items-center">
-                  <span className="text-base font-extrabold text-slate-900">Grand Total</span>
-                  <span className="text-xl font-extrabold text-blue-600 font-mono">{fmt(sale.total_sellprice)}</span>
-                </div>
-              </div>
+          {/* TAB 3 — Return */}
+          {activeTab === 3 && sale && (
+            <div className="mx-auto bg-white rounded-lg shadow-sm border border-slate-100 overflow-hidden">
+              <ReturnFlow 
+                sale={sale} 
+                onClose={() => setActiveTab(0)} 
+                onRefresh={fetchSaleDetail} 
+                productMap={productMap} 
+                isInline={true}
+              />
             </div>
-
-            {/* Order Status Card */}
-            <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
-              <div className="flex items-center gap-2 px-6 py-4 border-b border-slate-100 bg-slate-50/50">
-                <FileText size={18} className="text-slate-400" />
-                <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide">Status Overview</h3>
-              </div>
-              <div className="p-6 flex flex-col gap-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium text-slate-500">Current Status</span>
-                  <StatusBadge status={sale.status} />
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium text-slate-500">Total Items Qty</span>
-                  <span className="text-sm font-bold text-slate-800">{sale.total_quantity}</span>
-                </div>
-                {refunded > 0 && (
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium text-slate-500">Refunded Items</span>
-                    <span className="text-sm font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded">{refunded}</span>
-                  </div>
-                )}
-                {exchanged > 0 && (
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium text-slate-500">Exchanged Items</span>
-                    <span className="text-sm font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded">{exchanged}</span>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Actions */}
-            <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
-              <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
-                <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide">Actions</h3>
-              </div>
-              <div className="p-6 flex flex-col gap-3">
-                <button
-                  disabled={!canReturn}
-                  onClick={() => navigate("/sales", { state: { openReturn: sale } })}
-                  title={!canReturn ? (sale.origin === "Sales Return" ? "Already a return order" : `Cannot return: ${sale.status}`) : "Process a return for this order"}
-                  className={`flex items-center justify-center gap-2 w-full py-3 px-4 rounded-xl text-sm font-bold transition-all ${
-                    canReturn 
-                      ? "bg-red-50 text-red-600 hover:bg-red-100 border border-red-100 hover:border-red-200 shadow-sm" 
-                      : "bg-slate-50 text-slate-400 border border-slate-100 cursor-not-allowed opacity-70"
-                  }`}
-                >
-                  <RotateCcw size={16} />
-                  {sale.origin === "Sales Return" ? "Return Order" : canReturn ? "Process Return" : `Return Unavailable (${sale.status})`}
-                </button>
-              </div>
-            </div>
-
-          </div>
+          )}
         </div>
+        
       </div>
     </div>
   );

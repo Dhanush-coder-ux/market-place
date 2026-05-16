@@ -239,7 +239,7 @@ const VariantBuilder: React.FC<VariantBuilderProps> = ({ variantTypes, onChange,
         const inputVal = valueInputs[vt.id] ?? "";
 
         return (
-          <div key={vt.id} className="border border-slate-200 rounded-xl p-4 bg-slate-50/50">
+          <div key={vt.id} className="border border-slate-200 rounded-lg p-4 bg-slate-50/50">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <div className="w-1.5 h-6 bg-blue-400 rounded-full" />
@@ -313,7 +313,7 @@ const VariantBuilder: React.FC<VariantBuilderProps> = ({ variantTypes, onChange,
       {/* Add new type input */}
       <div className="flex gap-2">
         <input
-          className="flex-1 rounded-xl border border-dashed border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all"
+          className="flex-1 rounded-lg border border-dashed border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all"
           placeholder="New variant type (e.g. Storage, Color)…"
           value={newTypeName}
           onChange={(e) => setNewTypeName(e.target.value)}
@@ -323,7 +323,7 @@ const VariantBuilder: React.FC<VariantBuilderProps> = ({ variantTypes, onChange,
           type="button"
           onClick={() => addType(newTypeName)}
           disabled={!newTypeName.trim()}
-          className="px-4 py-2.5 text-sm font-medium bg-slate-900 text-white rounded-xl disabled:opacity-40 hover:bg-slate-800 transition-colors"
+          className="px-4 py-2.5 text-sm font-medium bg-slate-900 text-white rounded-lg disabled:opacity-40 hover:bg-slate-800 transition-colors"
         >
           <Plus size={16} />
         </button>
@@ -389,7 +389,7 @@ const SerialManager: React.FC<SerialManagerProps> = ({ combo, serialLabel, onClo
       onClick={onClose}
     >
       <div
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col overflow-hidden"
+        className="bg-white rounded-lg shadow-2xl w-full max-w-2xl flex flex-col overflow-hidden"
         style={{ maxHeight: "85vh" }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -483,12 +483,12 @@ const SerialManager: React.FC<SerialManagerProps> = ({ combo, serialLabel, onClo
         </div>
 
         <div className="shrink-0 px-5 py-4 border-t border-slate-100 flex items-center justify-between bg-white">
-          <button type="button" onClick={addSerial} className="flex items-center gap-2 px-4 py-2.5 text-xs font-medium border border-dashed border-slate-300 rounded-xl text-slate-600 hover:border-blue-300 hover:text-blue-600 hover:bg-blue-50 transition-all">
+          <button type="button" onClick={addSerial} className="flex items-center gap-2 px-4 py-2.5 text-xs font-medium border border-dashed border-slate-300 rounded-lg text-slate-600 hover:border-blue-300 hover:text-blue-600 hover:bg-blue-50 transition-all">
             <Plus size={13} /> Add {serialLabel}
           </button>
           <div className="flex items-center gap-2.5">
             <span className="text-[11px] text-slate-400">{serials.filter((s) => s.serial).length} units</span>
-            <button type="button" onClick={save} className="px-5 py-2.5 text-xs font-semibold bg-slate-900 text-white rounded-xl hover:bg-slate-800 transition-colors">Save</button>
+            <button type="button" onClick={save} className="px-5 py-2.5 text-xs font-semibold bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors">Save</button>
           </div>
         </div>
       </div>
@@ -562,7 +562,7 @@ const VariantMatrixTable: React.FC<VariantMatrixTableProps> = ({
       </div>
 
       {/* Table */}
-      <div className="border border-slate-200 rounded-xl overflow-hidden">
+      <div className="border border-slate-200 rounded-lg overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm border-collapse min-w-[680px]">
             <thead>
@@ -730,7 +730,7 @@ export const ProductVariantsSection: React.FC<ProductVariantsSectionProps> = ({
       {hasVariants && (
         <div className="space-y-6">
           {/* Variant type builder */}
-          <div className="border border-slate-100 rounded-xl p-4 bg-slate-50/40">
+          <div className="border border-slate-100 rounded-lg p-4 bg-slate-50/40">
             <p className="text-[10px] font-semibold   text-slate-400 mb-4">
               Define Variant Types
             </p>
@@ -762,13 +762,13 @@ export const ProductVariantsSection: React.FC<ProductVariantsSectionProps> = ({
 
           {/* Empty states */}
           {variantTypes.length > 0 && combinations.length === 0 && (
-            <div className="text-center py-8 text-slate-400 border-2 border-dashed border-slate-200 rounded-xl">
+            <div className="text-center py-8 text-slate-400 border-2 border-dashed border-slate-200 rounded-lg">
               <Layers size={24} className="mx-auto mb-2 opacity-30" />
               <p className="text-sm">Add values to your variant types to generate combinations</p>
             </div>
           )}
           {variantTypes.length === 0 && (
-            <div className="text-center py-8 text-slate-400 border-2 border-dashed border-slate-200 rounded-xl">
+            <div className="text-center py-8 text-slate-400 border-2 border-dashed border-slate-200 rounded-lg">
               <Plus size={24} className="mx-auto mb-2 opacity-30" />
               <p className="text-sm">Add your first variant type above to get started</p>
               {categoryConfig.suggestedVariantTypes.length > 0 && (
@@ -785,3 +785,4 @@ export const ProductVariantsSection: React.FC<ProductVariantsSectionProps> = ({
 };
 
 export default ProductVariantsSection;
+

@@ -200,11 +200,11 @@ const dropdownOptions = selectedCategory
         />
       )}
 
-      <div className="w-full bg-white md:rounded-2xl border-y md:border border-slate-200 shadow-sm overflow-hidden mb-20 md:mb-0">
+      <div className="w-full bg-white md:rounded-lg border-y md:border border-slate-200 shadow-sm overflow-hidden mb-20 md:mb-0">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100 bg-slate-50/30">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-100 rounded-xl text-blue-600">
+            <div className="p-2 bg-blue-100 rounded-lg text-blue-600">
               <Settings2 size={20} />
             </div>
             <div>
@@ -221,7 +221,7 @@ const dropdownOptions = selectedCategory
           </Button>
           <button
             onClick={addSetting}
-            className="w-9 h-9 flex items-center justify-center bg-blue-50 text-blue-600 rounded-xl md:hidden"
+            className="w-9 h-9 flex items-center justify-center bg-blue-50 text-blue-600 rounded-lg md:hidden"
           >
             <Plus size={18} />
           </button>
@@ -231,7 +231,7 @@ const dropdownOptions = selectedCategory
           {settings.map((setting) => (
             <div
               key={setting.id}
-              className="flex flex-col md:flex-row md:items-center gap-3 p-3 md:p-2 rounded-xl border border-slate-100 md:border-transparent md:hover:border-slate-100 md:hover:bg-slate-50/50 transition-all group"
+              className="flex flex-col md:flex-row md:items-center gap-3 p-3 md:p-2 rounded-lg border border-slate-100 md:border-transparent md:hover:border-slate-100 md:hover:bg-slate-50/50 transition-all group"
             >
               <div className="flex-[0.8]">
                 <div className="flex items-center justify-between mb-1.5 md:hidden">
@@ -286,7 +286,7 @@ const dropdownOptions = selectedCategory
 
           {settings.length === 0 && (
             <div className="py-12 flex flex-col items-center justify-center text-center">
-              <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center mb-4 border border-slate-100">
+              <div className="w-16 h-16 bg-slate-50 rounded-lg flex items-center justify-center mb-4 border border-slate-100">
                 <Settings2 size={32} className="text-slate-300" />
               </div>
               <p className="text-sm font-semibold text-slate-900">No settings defined</p>
@@ -312,7 +312,7 @@ const dropdownOptions = selectedCategory
         <div className="fixed bottom-[72px] left-0 right-0 px-4 pt-4 pb-4 bg-white/95 backdrop-blur-3xl border-t border-slate-200 z-[100] flex gap-3 shadow-[0_-15px_45px_rgba(0,0,0,0.12)]">
           <Button
             onClick={() => onSave?.(settings)}
-            className="flex-1 bg-blue-600 hover:bg-blue-700 text-white h-12 rounded-2xl font-bold shadow-lg shadow-blue-200 flex items-center justify-center gap-2"
+            className="flex-1 bg-blue-600 hover:bg-blue-700 text-white h-12 rounded-lg font-bold shadow-lg shadow-blue-200 flex items-center justify-center gap-2"
           >
             <Save size={18} /> Save Settings
           </Button>
@@ -321,3 +321,4 @@ const dropdownOptions = selectedCategory
     </>
   );
 };
+

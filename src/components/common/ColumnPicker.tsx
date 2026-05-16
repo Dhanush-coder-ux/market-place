@@ -48,12 +48,12 @@ export const ColumnPicker: React.FC<ColumnPickerProps> = ({
   return (
     <Popover open={isColumnPickerOpen} onOpenChange={setIsColumnPickerOpen}>
       <PopoverTrigger asChild>
-        <button className="flex items-center gap-1.5 px-3 h-9 rounded-xl border border-slate-200 text-slate-600 font-bold text-[13px] hover:bg-slate-50 transition-all shrink-0">
+        <button className="flex items-center gap-1.5 px-3 h-9 rounded-lg border border-slate-200 text-slate-600 font-bold text-[13px] hover:bg-slate-50 transition-all shrink-0">
           <Columns size={14} className="text-slate-400" />
           <span>Columns</span>
         </button>
       </PopoverTrigger>
-      <PopoverContent className="w-64 p-0 rounded-2xl overflow-hidden shadow-2xl border border-slate-100 bg-white" align="end">
+      <PopoverContent className="w-64 p-0 rounded-lg overflow-hidden shadow-2xl border border-slate-100 bg-white" align="end">
         <div className="p-3 border-b bg-slate-50/50">
           <h3 className="font-black  text-[9px] text-slate-400 ">Columns Layout</h3>
         </div>
@@ -122,3 +122,4 @@ export const ColumnPicker: React.FC<ColumnPickerProps> = ({
     </Popover>
   );
 };
+

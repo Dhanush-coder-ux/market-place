@@ -222,7 +222,7 @@ const GridCard = ({ po, onClick }: { po: DirectPurchaseData; onClick: () => void
   return (
     <div
       onClick={onClick}
-      className="po-card group bg-white rounded-xl border border-zinc-200 shadow-sm cursor-pointer flex flex-col overflow-hidden"
+      className="po-card group bg-white rounded-lg border border-zinc-200 shadow-sm cursor-pointer flex flex-col overflow-hidden"
     >
       {/* Header */}
       <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-100 bg-zinc-50/50">
@@ -306,7 +306,7 @@ const GridCard = ({ po, onClick }: { po: DirectPurchaseData; onClick: () => void
 /* ================= VERTICAL TABLE VIEW ================= */
 const VerticalTable = ({ data, onClick }: { data: DirectPurchaseData[]; onClick: (po: DirectPurchaseData) => void }) => {
   return (
-    <div className="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden">
+    <div className="bg-white rounded-lg border border-zinc-200 shadow-sm overflow-hidden">
       <div className="overflow-x-auto overflow-y-auto h-[calc(100vh-220px)] pf-scroll">
         <table className="w-full text-left border-collapse">
           <thead className="sticky top-0 z-20 bg-zinc-50/95 backdrop-blur-sm shadow-sm">
@@ -531,7 +531,7 @@ const PurchaseHistory = () => {
           <div className="space-y-6">
 
             {/* Meta Information Grid */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 bg-zinc-50 p-4 rounded-xl border border-zinc-100">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 bg-zinc-50 p-4 rounded-lg border border-zinc-100">
               <div>
                 <p className="text-[10px] font-bold   text-zinc-400 mb-1">Vendor</p>
                 <p className="text-sm font-semibold text-zinc-800">{selectedPO.vendor}</p>
@@ -600,7 +600,7 @@ const PurchaseHistory = () => {
 
                     {/* Stock Movement Tracking */}
                     {product.stocks_before !== undefined && (
-                      <div className="mb-3 p-2.5 bg-zinc-50 rounded-xl border border-zinc-100 flex items-center justify-between">
+                      <div className="mb-3 p-2.5 bg-zinc-50 rounded-lg border border-zinc-100 flex items-center justify-between">
                         <div className="flex items-center gap-4">
                           <div className="flex flex-col">
                             <span className="text-[8px] font-black text-zinc-400  ">Opening Stock</span>
@@ -731,3 +731,4 @@ const PurchaseHistory = () => {
 };
 
 export default PurchaseHistory;
+

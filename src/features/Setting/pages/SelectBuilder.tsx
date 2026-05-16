@@ -59,12 +59,12 @@ const SelectBuilder: React.FC<SelectBuilderProps> = ({ onSettingsChange }) => {
   return (
     <div className="w-full">
       {/* Main Card Container */}
-      <div className="bg-white md:rounded-2xl border-y md:border border-slate-200 shadow-sm overflow-hidden">
+      <div className="bg-white md:rounded-lg border-y md:border border-slate-200 shadow-sm overflow-hidden">
         
         {/* Header Section */}
         <div className="p-6 border-b border-slate-100 bg-slate-50/30">
           <div className="flex items-center gap-3 mb-6">
-            <div className="p-2.5 bg-blue-50 border border-blue-100 rounded-xl shadow-sm">
+            <div className="p-2.5 bg-blue-50 border border-blue-100 rounded-lg shadow-sm">
               <ListTree className="w-5 h-5 text-blue-600" />
             </div>
             <div>
@@ -123,7 +123,7 @@ const SelectBuilder: React.FC<SelectBuilderProps> = ({ onSettingsChange }) => {
           </div>
 
           {/* Options List */}
-          <div className="border border-slate-100 rounded-xl overflow-hidden bg-white shadow-sm">
+          <div className="border border-slate-100 rounded-lg overflow-hidden bg-white shadow-sm">
             <button 
               onClick={() => setIsExpanded(!isExpanded)}
               className="w-full flex items-center justify-between p-4 bg-slate-50/50 hover:bg-slate-100 transition-colors border-b border-slate-100"
@@ -150,7 +150,7 @@ const SelectBuilder: React.FC<SelectBuilderProps> = ({ onSettingsChange }) => {
                 <div className="p-2 space-y-1">
                   {options.length === 0 ? (
                     <div className="py-12 text-center flex flex-col items-center justify-center gap-2">
-                      <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center border border-slate-100 mb-2">
+                      <div className="w-12 h-12 bg-slate-50 rounded-lg flex items-center justify-center border border-slate-100 mb-2">
                         <Tag className="w-6 h-6 text-slate-200" />
                       </div>
                       <p className="text-[13px] font-semibold text-slate-400">No options added yet</p>
@@ -184,3 +184,4 @@ const SelectBuilder: React.FC<SelectBuilderProps> = ({ onSettingsChange }) => {
 };
 
 export default SelectBuilder;
+

@@ -63,14 +63,14 @@ export default function EmployeeDetail() {
   if (recordLoading) return <div className="p-20"><Loader /></div>;
   if (!employee) return (
     <div className="p-20 text-center space-y-6">
-      <div className="w-20 h-20 bg-rose-50 text-rose-500 rounded-3xl flex items-center justify-center mx-auto shadow-xl shadow-rose-100">
+      <div className="w-20 h-20 bg-rose-50 text-rose-500 rounded-lg flex items-center justify-center mx-auto shadow-xl shadow-rose-100">
         <User size={40} />
       </div>
       <div className="space-y-2">
         <h2 className="text-xl font-black text-slate-800  ">Employee Not Found</h2>
         <p className="text-slate-400 font-bold text-xs  ">The record might have been removed or the ID is incorrect.</p>
       </div>
-      <button onClick={() => navigate("/employee/all")} className="px-6 py-3 bg-blue-600 text-white rounded-2xl font-black text-xs   shadow-lg shadow-blue-100 hover:bg-blue-700 transition-all active:scale-95">
+      <button onClick={() => navigate("/employee/all")} className="px-6 py-3 bg-blue-600 text-white rounded-lg font-black text-xs   shadow-lg shadow-blue-100 hover:bg-blue-700 transition-all active:scale-95">
         Back to Directory
       </button>
     </div>
@@ -104,14 +104,14 @@ export default function EmployeeDetail() {
             <div className="flex items-center gap-2">
               <button
                 onClick={() => navigate(`/employee/${id}/edit`)}
-                className="w-10 h-10 flex items-center justify-center bg-white border border-slate-200 text-slate-400 hover:text-blue-600 rounded-xl transition-all shadow-sm active:scale-95"
+                className="w-10 h-10 flex items-center justify-center bg-white border border-slate-200 text-slate-400 hover:text-blue-600 rounded-lg transition-all shadow-sm active:scale-95"
                 title="Edit Member"
               >
                 <Pencil size={18} />
               </button>
               <button
                 onClick={() => setShowDeleteModal(true)}
-                className="w-10 h-10 flex items-center justify-center bg-white border border-slate-200 text-slate-300 rounded-xl hover:text-rose-600 rounded-xl transition-all shadow-sm active:scale-95"
+                className="w-10 h-10 flex items-center justify-center bg-white border border-slate-200 text-slate-300 rounded-lg hover:text-rose-600 rounded-lg transition-all shadow-sm active:scale-95"
                 title="Remove Member"
               >
                 <Trash2 size={18} />
@@ -121,7 +121,7 @@ export default function EmployeeDetail() {
         />
 
         {/* Tabs Navigation */}
-        <div className="flex gap-0.5 bg-white p-1 rounded-xl border border-slate-200 w-fit overflow-x-auto">
+        <div className="flex gap-0.5 bg-white p-1 rounded-lg border border-slate-200 w-fit overflow-x-auto">
           {TABS.map((tab, i) => (
             <button
               key={tab}
@@ -218,7 +218,7 @@ export default function EmployeeDetail() {
             )}
 
             {activeTab === 1 && (
-              <div className="p-12 text-center bg-white rounded-[2rem] border border-slate-100 shadow-sm">
+              <div className="p-12 text-center bg-white rounded-lg border border-slate-100 shadow-sm">
                 <Star size={40} className="mx-auto text-amber-200 mb-4" />
                 <h3 className="text-sm font-black text-slate-800  ">Performance Metrics</h3>
                 <p className="text-xs text-slate-400 font-bold mt-2 ">No evaluation data available for this period.</p>
@@ -226,7 +226,7 @@ export default function EmployeeDetail() {
             )}
 
             {activeTab === 2 && (
-              <div className="p-12 text-center bg-white rounded-[2rem] border border-slate-100 shadow-sm">
+              <div className="p-12 text-center bg-white rounded-lg border border-slate-100 shadow-sm">
                 <Calendar size={40} className="mx-auto text-blue-200 mb-4" />
                 <h3 className="text-sm font-black text-slate-800  ">Shift Schedule</h3>
                 <p className="text-xs text-slate-400 font-bold mt-2 ">No active rosters assigned to this member.</p>
@@ -234,7 +234,7 @@ export default function EmployeeDetail() {
             )}
 
             {activeTab === 3 && (
-              <div className="p-12 text-center bg-white rounded-[2rem] border border-slate-100 shadow-sm">
+              <div className="p-12 text-center bg-white rounded-lg border border-slate-100 shadow-sm">
                 <Info size={40} className="mx-auto text-slate-200 mb-4" />
                 <h3 className="text-sm font-black text-slate-800  ">Activity Timeline</h3>
                 <p className="text-xs text-slate-400 font-bold mt-2 ">No recent system activities tracked.</p>
@@ -260,7 +260,7 @@ export default function EmployeeDetail() {
           title={viewValue?.label || "Field Detail"}
           className="max-w-md"
         >
-          <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+          <div className="p-4 bg-slate-50 rounded-lg border border-slate-100">
             <p className="text-sm font-bold text-slate-700 break-words leading-relaxed select-all">
               {viewValue?.value}
             </p>
@@ -284,3 +284,4 @@ export default function EmployeeDetail() {
     </div>
   );
 }
+

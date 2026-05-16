@@ -57,7 +57,7 @@ const DigitalMain = () => {
       <div className="mx-auto space-y-6">
 
         {/* ── PROFILE HEADER CARD ── */}
-        <div className="bg-white border border-slate-200 shadow-sm rounded-2xl overflow-hidden">
+        <div className="bg-white border border-slate-200 shadow-sm rounded-lg overflow-hidden">
           
           {/* Cover Banner */}
           <div className="h-40 relative bg-gradient-to-b from-slate-100 to-slate-200/50">
@@ -131,7 +131,7 @@ const DigitalMain = () => {
               {storeProfile.stats.map((s) => (
                 <div 
                   key={s.label} 
-                  className="bg-white border border-slate-200 rounded-xl px-5 py-3 min-w-[110px] hover:border-slate-300 transition-colors duration-200"
+                  className="bg-white border border-slate-200 rounded-lg px-5 py-3 min-w-[110px] hover:border-slate-300 transition-colors duration-200"
                 >
                   <div className="font-semibold text-lg text-slate-900">{s.value}</div>
                   <div className="text-[12px] text-slate-500 font-medium mt-0.5">{s.label}</div>
@@ -142,11 +142,11 @@ const DigitalMain = () => {
         </div>
 
         {/* ── TABS + CONTENT CONTAINER ── */}
-        <div className="bg-white border border-slate-200 shadow-sm rounded-2xl overflow-hidden">
+        <div className="bg-white border border-slate-200 shadow-sm rounded-lg overflow-hidden">
           
           {/* Segmented Tab Navigation */}
           <div className="p-4 border-b border-slate-100 bg-slate-50/50">
-            <div className="inline-flex flex-wrap gap-1 bg-slate-100/80 p-1 rounded-xl">
+            <div className="inline-flex flex-wrap gap-1 bg-slate-100/80 p-1 rounded-lg">
               {tabs.map((tab) => (
                 <button
                   key={tab}
@@ -182,3 +182,4 @@ const DigitalMain = () => {
 };
 
 export default DigitalMain;
+

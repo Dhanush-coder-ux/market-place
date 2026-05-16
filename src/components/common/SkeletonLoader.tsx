@@ -24,9 +24,9 @@ const Bone: FC<{ className?: string }> = ({ className = "" }) => (
 const FormSkeleton = () => (
   <div className="space-y-6 p-4">
     {/* Card header */}
-    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+    <div className="bg-white rounded-lg border border-slate-100 shadow-sm overflow-hidden">
       <div className="px-6 py-4 border-b border-slate-100 flex items-center gap-3">
-        <Bone className="w-9 h-9 rounded-xl" />
+        <Bone className="w-9 h-9 rounded-lg" />
         <div className="space-y-1.5">
           <Bone className="h-4 w-40" />
           <Bone className="h-3 w-56" />
@@ -43,20 +43,20 @@ const FormSkeleton = () => (
     </div>
 
     {/* Items card */}
-    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+    <div className="bg-white rounded-lg border border-slate-100 shadow-sm overflow-hidden">
       <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Bone className="w-9 h-9 rounded-xl" />
+          <Bone className="w-9 h-9 rounded-lg" />
           <div className="space-y-1.5">
             <Bone className="h-4 w-32" />
             <Bone className="h-3 w-44" />
           </div>
         </div>
-        <Bone className="h-9 w-24 rounded-xl" />
+        <Bone className="h-9 w-24 rounded-lg" />
       </div>
       <div className="p-4 space-y-3">
         {Array.from({ length: 2 }).map((_, i) => (
-          <div key={i} className="rounded-2xl border border-slate-100 p-4 space-y-3">
+          <div key={i} className="rounded-lg border border-slate-100 p-4 space-y-3">
             <div className="flex items-center gap-3">
               <Bone className="w-7 h-7 rounded-lg" />
               <Bone className="h-10 flex-1" />
@@ -80,13 +80,13 @@ const ListSkeleton: FC<{ rows: number }> = ({ rows }) => (
     {/* Search/filter bar */}
     <div className="flex items-center gap-3 mb-4">
       <Bone className="h-10 flex-1 max-w-sm" />
-      <Bone className="h-10 w-28 rounded-xl" />
+      <Bone className="h-10 w-28 rounded-lg" />
     </div>
     {/* Rows */}
-    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+    <div className="bg-white rounded-lg border border-slate-100 shadow-sm overflow-hidden">
       {Array.from({ length: rows }).map((_, i) => (
         <div key={i} className="flex items-center gap-4 px-5 py-4 border-b border-slate-50 last:border-0">
-          <Bone className="w-10 h-10 rounded-xl shrink-0" />
+          <Bone className="w-10 h-10 rounded-lg shrink-0" />
           <div className="flex-1 space-y-2">
             <Bone className="h-4 w-1/3" />
             <Bone className="h-3 w-1/2" />
@@ -102,9 +102,9 @@ const ListSkeleton: FC<{ rows: number }> = ({ rows }) => (
 const CardSkeleton: FC<{ rows: number }> = ({ rows }) => (
   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
     {Array.from({ length: rows }).map((_, i) => (
-      <div key={i} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 space-y-4">
+      <div key={i} className="bg-white rounded-lg border border-slate-100 shadow-sm p-5 space-y-4">
         <div className="flex items-center gap-3">
-          <Bone className="w-10 h-10 rounded-xl shrink-0" />
+          <Bone className="w-10 h-10 rounded-lg shrink-0" />
           <div className="flex-1 space-y-2">
             <Bone className="h-4 w-3/4" />
             <Bone className="h-3 w-1/2" />
@@ -118,14 +118,14 @@ const CardSkeleton: FC<{ rows: number }> = ({ rows }) => (
             </div>
           ))}
         </div>
-        <Bone className="h-9 w-full rounded-xl" />
+        <Bone className="h-9 w-full rounded-lg" />
       </div>
     ))}
   </div>
 );
 
 const TableSkeleton: FC<{ rows: number }> = ({ rows }) => (
-  <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+  <div className="bg-white rounded-lg border border-slate-100 shadow-sm overflow-hidden">
     {/* Header */}
     <div className="flex items-center gap-4 px-5 py-3 bg-slate-50 border-b border-slate-100">
       {Array.from({ length: 5 }).map((_, i) => (
@@ -146,8 +146,8 @@ const TableSkeleton: FC<{ rows: number }> = ({ rows }) => (
 const DetailSkeleton = () => (
   <div className="space-y-5">
     {/* Hero card */}
-    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 flex items-start gap-5">
-      <Bone className="w-16 h-16 rounded-2xl shrink-0" />
+    <div className="bg-white rounded-lg border border-slate-100 shadow-sm p-6 flex items-start gap-5">
+      <Bone className="w-16 h-16 rounded-lg shrink-0" />
       <div className="flex-1 space-y-2">
         <Bone className="h-6 w-1/3" />
         <Bone className="h-4 w-1/4" />
@@ -160,7 +160,7 @@ const DetailSkeleton = () => (
     {/* Stats row */}
     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
       {Array.from({ length: 4 }).map((_, i) => (
-        <div key={i} className="bg-white rounded-2xl border border-slate-100 p-4 space-y-2">
+        <div key={i} className="bg-white rounded-lg border border-slate-100 p-4 space-y-2">
           <Bone className="h-3 w-16" />
           <Bone className="h-7 w-24" />
         </div>
@@ -203,3 +203,4 @@ const SkeletonLoader: FC<SkeletonLoaderProps> = ({
 };
 
 export default SkeletonLoader;
+

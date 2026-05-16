@@ -17,7 +17,7 @@ const CustomerList = () => {
       <div className="flex items-center gap-3">
         <button
           onClick={() => navigate("/customers/drafts")}
-          className="px-5 h-11 rounded-xl border border-blue-100 text-blue-600 font-bold text-[14px] bg-blue-50/50 hover:bg-blue-100 transition-all flex items-center gap-2"
+          className="px-5 h-11 rounded-lg border border-blue-100 text-blue-600 font-bold text-[14px] bg-blue-50/50 hover:bg-blue-100 transition-all flex items-center gap-2"
         >
           <Bookmark size={18} />
           Saved Drafts
@@ -53,7 +53,7 @@ const CustomerList = () => {
     <div className="min-h-[40vh] flex flex-col items-center justify-center px-4 animate-in fade-in duration-500">
       <div className="w-full max-w-2xl space-y-8">
         <div className="text-center space-y-3">
-          <div className="w-20 h-20 bg-blue-600 rounded-[2.5rem] flex items-center justify-center text-white mx-auto shadow-2xl shadow-blue-200 mb-6">
+          <div className="w-20 h-20 bg-blue-600 rounded-lg flex items-center justify-center text-white mx-auto shadow-2xl shadow-blue-200 mb-6">
             <Users size={40} />
           </div>
           <h1 className="text-4xl font-black text-slate-800 tracking-tight">Customer Directory</h1>
@@ -62,7 +62,7 @@ const CustomerList = () => {
 
         <div className="relative group">
           <div className="absolute bg-gradient-to-r from-blue-100 to-indigo-200 blur opacity-25 group-hover:opacity-40 transition duration-1000 group-hover:duration-200"></div>
-          <div className="relative bg-white shadow-md rounded-2xl">
+          <div className="relative bg-white shadow-md rounded-lg">
             <SearchSelect
               labelKey="displayName"
               valueKey="id"
@@ -79,3 +79,4 @@ const CustomerList = () => {
 };
 
 export default CustomerList;
+

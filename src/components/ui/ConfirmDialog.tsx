@@ -47,11 +47,11 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={isDesktop ? { opacity: 0, scale: 0.95, y: 20 } : { opacity: 0, y: 10 }}
             transition={{ duration: 0.2, ease: "easeOut" }}
-            className="relative bg-white rounded-[2.5rem] shadow-2xl border border-slate-200 w-full max-w-[420px] overflow-hidden"
+            className="relative bg-white rounded-lg shadow-2xl border border-slate-200 w-full max-w-[420px] overflow-hidden"
           >
             <div className="p-8 space-y-6">
               <div className="flex items-center justify-between">
-                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ${variant === "danger" ? "bg-rose-50 text-rose-600" : "bg-blue-50 text-blue-600"}`}>
+                <div className={`w-14 h-14 rounded-lg flex items-center justify-center ${variant === "danger" ? "bg-rose-50 text-rose-600" : "bg-blue-50 text-blue-600"}`}>
                   <AlertTriangle size={28} />
                 </div>
                 <button onClick={onClose} className="text-slate-400 md:hover:text-slate-600 transition-colors">
@@ -67,7 +67,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
               <div className="flex items-center gap-3 pt-2">
                 <button
                   onClick={onClose}
-                  className="flex-1 h-12 rounded-2xl border border-slate-200 text-slate-600 font-bold md:hover:bg-slate-50 md:transition-all md:active:scale-95"
+                  className="flex-1 h-12 rounded-lg border border-slate-200 text-slate-600 font-bold md:hover:bg-slate-50 md:transition-all md:active:scale-95"
                 >
                   {cancelText}
                 </button>
@@ -76,7 +76,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
                     onConfirm();
                     onClose();
                   }}
-                  className={`flex-1 h-12 rounded-2xl text-white font-bold md:transition-all shadow-lg md:active:scale-95 ${
+                  className={`flex-1 h-12 rounded-lg text-white font-bold md:transition-all shadow-lg md:active:scale-95 ${
                     variant === "danger" 
                       ? "bg-rose-600 shadow-rose-100 md:hover:bg-rose-700" 
                       : "bg-blue-600 shadow-blue-100 md:hover:bg-blue-700"
@@ -93,3 +93,4 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
     document.body
   );
 };
+

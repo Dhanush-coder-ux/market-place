@@ -24,7 +24,7 @@ const DetailView: React.FC<DetailViewProps> = ({
           {onEdit && (
             <button
               onClick={onEdit}
-              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-white border border-gray-200 text-gray-700 font-medium hover:bg-gray-50 hover:border-blue-300 hover:text-blue-600 transition-all shadow-sm active:scale-95"
+              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-white border border-gray-200 text-gray-700 font-medium hover:bg-gray-50 hover:border-blue-300 hover:text-blue-600 transition-all shadow-sm active:scale-95"
             >
               <Pencil size={18} />
               <span>Edit Details</span>
@@ -34,7 +34,7 @@ const DetailView: React.FC<DetailViewProps> = ({
           {onDelete && (
             <button
               onClick={onDelete}
-              className="inline-flex items-center justify-center p-2.5 rounded-xl bg-red-50 text-red-600 hover:bg-red-100 transition-all active:scale-95"
+              className="inline-flex items-center justify-center p-2.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-all active:scale-95"
               title="Delete Record"
             >
               <Trash2 size={20} />
@@ -58,7 +58,7 @@ const DetailView: React.FC<DetailViewProps> = ({
               {section.fields.map((field, index) => (
                 <div
                   key={index}
-                  className="relative overflow-hidden flex items-start gap-4 p-4 rounded-2xl bg-white border border-gray-100 shadow-sm hover:shadow-md hover:border-blue-100 transition-all group/card"
+                  className="relative overflow-hidden flex items-start gap-4 p-4 rounded-lg bg-white border border-gray-100 shadow-sm hover:shadow-md hover:border-blue-100 transition-all group/card"
                 >
                  
                   <div className="absolute top-0 right-0 p-1 opacity-0 group-hover/card:opacity-100 transition-opacity">
@@ -67,7 +67,7 @@ const DetailView: React.FC<DetailViewProps> = ({
 
                  
                   {field.icon && (
-                    <div className="flex-shrink-0 flex items-center justify-center w-10 h-10 rounded-xl bg-blue-50 text-blue-600">
+                    <div className="flex-shrink-0 flex items-center justify-center w-10 h-10 rounded-lg bg-blue-50 text-blue-600">
                       {field.icon}
                     </div>
                   )}
@@ -91,3 +91,4 @@ const DetailView: React.FC<DetailViewProps> = ({
 };
 
 export default DetailView;
+

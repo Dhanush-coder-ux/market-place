@@ -26,7 +26,7 @@ const OrdersCard: React.FC<OrdersCardProps> = ({ order, setIsOpen, viewMode = "g
   // ─── HORIZONTAL LIST VIEW ──────────────────────────────────────────────────
   if (viewMode === "list") {
     return (
-      <div className="w-full bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all duration-200 group font-sans flex flex-col md:flex-row md:items-center justify-between p-4 gap-4">
+      <div className="w-full bg-white rounded-lg border border-slate-200 shadow-sm hover:shadow-md transition-all duration-200 group font-sans flex flex-col md:flex-row md:items-center justify-between p-4 gap-4">
         
         {/* Left Section */}
         <div className="flex items-center gap-6 min-w-[240px]">
@@ -103,7 +103,7 @@ const OrdersCard: React.FC<OrdersCardProps> = ({ order, setIsOpen, viewMode = "g
 
   // ─── VERTICAL GRID VIEW ────────────────────────────────────────────────────
   return (
-    <div className="w-full bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all duration-200 group font-sans">
+    <div className="w-full bg-white rounded-lg border border-slate-200 shadow-sm hover:shadow-md transition-all duration-200 group font-sans">
       <div className="p-5">
         <div className="flex items-start justify-between mb-5">
           <div className="flex items-center gap-2.5">
@@ -175,3 +175,4 @@ const OrdersCard: React.FC<OrdersCardProps> = ({ order, setIsOpen, viewMode = "g
 };
 
 export default OrdersCard;
+

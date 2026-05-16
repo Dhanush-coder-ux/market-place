@@ -145,14 +145,14 @@ const InventoryForm = () => {
         <button
           type="button"
           onClick={() => navigate("/inventory")}
-          className="px-6 h-11 rounded-xl border border-slate-200 text-slate-500 font-bold text-xs hover:bg-slate-50 transition-all"
+          className="px-6 h-11 rounded-lg border border-slate-200 text-slate-500 font-bold text-xs hover:bg-slate-50 transition-all"
         >
           Discard Draft
         </button>
         <GradientButton 
           onClick={handleSubmit}
           disabled={submitting}
-          className="rounded-xl shadow-md text-xs px-8 h-11 flex items-center"
+          className="rounded-lg shadow-md text-xs px-8 h-11 flex items-center"
         >
           {submitting ? "Saving…" : "Confirm & Save Product"}
         </GradientButton>
@@ -165,14 +165,14 @@ const InventoryForm = () => {
     <form className="mx-auto space-y-10 p-6 bg-white" onSubmit={handleSubmit}>
 
       {error && (
-        <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm">{error}</div>
+        <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">{error}</div>
       )}
 
       {/* SECTION 2: TRACKING & VARIANTS CONFIGURATION */}
-      <section className="bg-slate-50/50 p-8 rounded-[2rem] border border-slate-100 space-y-8 relative overflow-hidden">
+      <section className="bg-slate-50/50 p-8 rounded-lg border border-slate-100 space-y-8 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-50/50 rounded-full -mr-16 -mt-16" />
         <div className="flex items-center gap-3 border-b border-slate-100 pb-6 relative z-10">
-          <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600">
+          <div className="w-10 h-10 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600">
             <Settings size={20} />
           </div>
           <div>
@@ -191,13 +191,13 @@ const InventoryForm = () => {
               key={feature.id}
               type="button"
               onClick={() => setFormData(p => ({ ...p, [feature.id]: !p[feature.id as keyof typeof p] }))}
-              className={`flex items-start gap-4 p-5 rounded-2xl border md:transition-all text-left ${
+              className={`flex items-start gap-4 p-5 rounded-lg border md:transition-all text-left ${
                 formData[feature.id as keyof typeof formData] 
                   ? "bg-white border-indigo-200 shadow-sm ring-4 ring-indigo-50" 
                   : "bg-white/50 border-slate-100 hover:border-slate-200"
               }`}
             >
-              <div className={`p-2.5 rounded-xl ${formData[feature.id as keyof typeof formData] ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-400"}`}>
+              <div className={`p-2.5 rounded-lg ${formData[feature.id as keyof typeof formData] ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-400"}`}>
                 <feature.icon size={18} />
               </div>
               <div>
@@ -214,10 +214,10 @@ const InventoryForm = () => {
 
       {/* SECTION 4: VARIANTS OR BASIC LOGISTICS */}
       {formData.has_variant ? (
-        <section className="bg-white rounded-[2rem] border border-slate-200 p-8 shadow-sm space-y-8">
+        <section className="bg-white rounded-lg border border-slate-200 p-8 shadow-sm space-y-8">
           <div className="flex items-center justify-between border-b border-slate-50 pb-6">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600">
+              <div className="w-10 h-10 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600">
                 <ListPlus size={20} />
               </div>
               <h3 className="text-[10px] font-black text-slate-800  ">Variants Manager</h3>
@@ -225,7 +225,7 @@ const InventoryForm = () => {
             <button
               type="button"
               onClick={addVariant}
-              className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl text-[10px] font-black   hover:bg-indigo-700 md:transition-all shadow-md shadow-indigo-100"
+              className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg text-[10px] font-black   hover:bg-indigo-700 md:transition-all shadow-md shadow-indigo-100"
             >
               <Plus size={14} /> Add Variant
             </button>
@@ -274,9 +274,9 @@ const InventoryForm = () => {
         </section>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <section className="bg-slate-50/50 p-8 rounded-[2rem] border border-slate-100 space-y-6 w-full">
+          <section className="bg-slate-50/50 p-8 rounded-lg border border-slate-100 space-y-6 w-full">
             <div className="flex items-center gap-3 border-b border-slate-100 pb-6">
-              <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-slate-400">
+              <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center text-slate-400">
                 <Layers size={20} />
               </div>
               <h3 className="text-[10px] font-black text-slate-800  ">Inventory Classification</h3>

@@ -23,7 +23,7 @@ const SubmitBar: React.FC<{ label?: string }> = ({ label = "Save" }) => (
   <div className="flex justify-end pt-2">
     <button
       type="submit"
-      className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-semibold shadow-sm hover:bg-blue-700 transition-colors"
+      className="inline-flex items-center gap-2 px-6 py-2.5 rounded-lg bg-blue-600 text-white text-sm font-semibold shadow-sm hover:bg-blue-700 transition-colors"
     >
       <Save size={15} />
       {label}
@@ -312,3 +312,4 @@ const LoadingSpinner: React.FC = () => (
     <span className="text-sm font-medium">Loading form…</span>
   </div>
 );
+

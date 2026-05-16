@@ -164,7 +164,7 @@ const ProfileForm: React.FC = () => {
           <button 
             type="button"
             onClick={handleSaveDraft}
-            className="px-4 h-8 rounded-xl border border-blue-100 text-blue-600 font-bold text-xs bg-blue-50/50 md:hover:bg-blue-100 md:transition-all flex items-center gap-2 whitespace-nowrap overflow-hidden"
+            className="px-4 h-8 rounded-lg border border-blue-100 text-blue-600 font-bold text-xs bg-blue-50/50 md:hover:bg-blue-100 md:transition-all flex items-center gap-2 whitespace-nowrap overflow-hidden"
           >
             <Bookmark size={14} className="shrink-0" />
             <span className="truncate">Save Draft</span>
@@ -174,7 +174,7 @@ const ProfileForm: React.FC = () => {
           icon={<Save size={16} />} 
           onClick={() => handleSubmit()} 
           disabled={submitting}
-          className="rounded-xl shadow-md text-xs px-8 h-8 flex items-center"
+          className="rounded-lg shadow-md text-xs px-8 h-8 flex items-center"
         >
           {submitting ? "..." : (id ? "Save Changes" : "Create Shop")}
         </GradientButton>
@@ -275,10 +275,10 @@ const ProfileForm: React.FC = () => {
         <div className="md:col-span-8 space-y-8">
           
           {/* Shop Identity Box */}
-          <div className="bg-white rounded-[2rem] border border-slate-200 p-8 shadow-sm space-y-8 relative overflow-hidden">
+          <div className="bg-white rounded-lg border border-slate-200 p-8 shadow-sm space-y-8 relative overflow-hidden">
             <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50/50 rounded-full -mr-16 -mt-16" />
             <div className="flex items-center gap-3 border-b border-slate-50 pb-6">
-              <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600">
+              <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600">
                 <Store size={20} />
               </div>
               <div>
@@ -288,7 +288,7 @@ const ProfileForm: React.FC = () => {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="md:col-span-2 flex flex-col items-center justify-center py-4 bg-slate-50/50 rounded-3xl border border-dashed border-slate-200 gap-3">
+              <div className="md:col-span-2 flex flex-col items-center justify-center py-4 bg-slate-50/50 rounded-lg border border-dashed border-slate-200 gap-3">
                 <span className="text-[10px] font-black text-slate-400  ">Shop Logo</span>
                 <ImageUpload label="Logo" value={logo} onChange={setLogo} />
               </div>
@@ -338,9 +338,9 @@ const ProfileForm: React.FC = () => {
           </div>
 
           {/* Contact & Location Box */}
-          <div className="bg-white rounded-[2rem] border border-slate-200 p-8 shadow-sm space-y-8">
+          <div className="bg-white rounded-lg border border-slate-200 p-8 shadow-sm space-y-8">
             <div className="flex items-center gap-3 border-b border-slate-50 pb-6">
-              <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600">
+              <div className="w-10 h-10 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600">
                 <MapPin size={20} />
               </div>
               <div>
@@ -390,7 +390,7 @@ const ProfileForm: React.FC = () => {
                   value={formData.address}
                   onChange={handleChange}
                   rows={3}
-                  className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-4 py-3 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-blue-100 md:transition-all placeholder:text-slate-300 resize-none outline-none"
+                  className="w-full bg-slate-50 border border-slate-100 rounded-lg px-4 py-3 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-blue-100 md:transition-all placeholder:text-slate-300 resize-none outline-none"
                   placeholder="House No, Street, Area"
                 />
               </div>
@@ -398,9 +398,9 @@ const ProfileForm: React.FC = () => {
           </div>
 
           {/* Online Presence Box */}
-          <div className="bg-white rounded-[2rem] border border-slate-200 p-8 shadow-sm space-y-8">
+          <div className="bg-white rounded-lg border border-slate-200 p-8 shadow-sm space-y-8">
             <div className="flex items-center gap-3 border-b border-slate-50 pb-6">
-              <div className="w-10 h-10 rounded-xl bg-purple-50 flex items-center justify-center text-purple-600">
+              <div className="w-10 h-10 rounded-lg bg-purple-50 flex items-center justify-center text-purple-600">
                 <Globe size={20} />
               </div>
               <div>
@@ -442,10 +442,10 @@ const ProfileForm: React.FC = () => {
         <div className="md:col-span-4 space-y-8">
           
           {/* Business Details Box */}
-          <div className="bg-white rounded-[2rem] border border-slate-200 p-8 shadow-sm space-y-8 relative overflow-hidden">
+          <div className="bg-white rounded-lg border border-slate-200 p-8 shadow-sm space-y-8 relative overflow-hidden">
             <div className="absolute bottom-0 right-0 w-24 h-24 bg-blue-50 rounded-full -mr-8 -mb-8 blur-2xl" />
             <div className="flex items-center gap-3 border-b border-slate-50 pb-6">
-              <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-blue-600">
+              <div className="w-10 h-10 rounded-lg bg-slate-50 flex items-center justify-center text-blue-600">
                 <BadgeCheck size={20} />
               </div>
               <div>
@@ -506,7 +506,7 @@ const ProfileForm: React.FC = () => {
           </div>
 
           {/* Shop Description Box */}
-          <div className="bg-white rounded-[2rem] border border-slate-200 p-8 shadow-sm space-y-6">
+          <div className="bg-white rounded-lg border border-slate-200 p-8 shadow-sm space-y-6">
             <div className="flex items-center gap-3 border-b border-slate-50 pb-4">
               <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400">
                 <FileText size={16} />
@@ -518,7 +518,7 @@ const ProfileForm: React.FC = () => {
               value={formData.description}
               onChange={handleChange}
               rows={5}
-              className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-4 py-3 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-blue-100 md:transition-all placeholder:text-slate-300 resize-none outline-none"
+              className="w-full bg-slate-50 border border-slate-100 rounded-lg px-4 py-3 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-blue-100 md:transition-all placeholder:text-slate-300 resize-none outline-none"
               placeholder="Tell customers what makes your shop special..."
             />
           </div>
@@ -530,3 +530,4 @@ const ProfileForm: React.FC = () => {
 };
 
 export default ProfileForm;
+

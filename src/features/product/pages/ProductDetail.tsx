@@ -209,7 +209,7 @@ const ProductDetail = () => {
       />
 
       {/* ── Tabs + Stats ─────────────────────────────────────── */}
-      <div className="flex gap-0.5 bg-white p-1 rounded-xl border border-slate-200 w-fit">
+      <div className="flex gap-0.5 bg-white p-1 rounded-lg border border-slate-200 w-fit">
         {TABS.map((tab, i) => (
           <button
             key={tab}
@@ -254,7 +254,7 @@ const ProductDetail = () => {
             <div className="xl:col-span-3 space-y-4">
 
               {/* Primary Fields */}
-              <SectionCard className="rounded-[1.5rem] border-slate-200 shadow-sm p-4 overflow-hidden relative">
+              <SectionCard className="rounded-lg border-slate-200 shadow-sm p-4 overflow-hidden relative">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50/50 rounded-full -mr-16 -mt-16 blur-3xl -z-0" />
                 <div className="relative z-10">
                   <div className="flex items-center gap-2 mb-4">
@@ -276,7 +276,7 @@ const ProductDetail = () => {
                       {rootSerials.length > 0 ? (
                         <SerialBadgeList serials={rootSerials} />
                       ) : hasVariants ? (
-                        <div className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 border border-indigo-100 rounded-xl w-fit">
+                        <div className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 border border-indigo-100 rounded-lg w-fit">
                           <Layers size={12} className="text-indigo-500" />
                           <span className="text-[11px] font-bold text-indigo-600">Available in Inventory tab</span>
                         </div>
@@ -291,7 +291,7 @@ const ProductDetail = () => {
               </SectionCard>
 
               {/* Pricing Section */}
-              <SectionCard className="rounded-[1.5rem] border-slate-200 shadow-sm p-4">
+              <SectionCard className="rounded-lg border-slate-200 shadow-sm p-4">
                 <div className="flex items-center gap-2 mb-4">
                   <div className="w-8 h-8 rounded-lg bg-emerald-600 flex items-center justify-center text-white shadow-lg shadow-emerald-100">
                     <DollarSign size={16} />
@@ -311,7 +311,7 @@ const ProductDetail = () => {
 
             {/* Sidebar — 1 col */}
             <div className="xl:col-span-1 space-y-4">
-              <SectionCard className="rounded-[1.5rem] border-slate-200 shadow-sm p-4">
+              <SectionCard className="rounded-lg border-slate-200 shadow-sm p-4">
                 <div className="flex items-center gap-2 mb-4">
                   <div className="w-8 h-8 rounded-lg bg-amber-500 flex items-center justify-center text-white shadow-lg shadow-amber-100">
                     <Tag size={16} />
@@ -340,7 +340,7 @@ const ProductDetail = () => {
               </SectionCard>
 
               {description && description !== "—" && (
-                <SectionCard className="rounded-[1.5rem] border-slate-200 shadow-sm p-4">
+                <SectionCard className="rounded-lg border-slate-200 shadow-sm p-4">
                   <div className="flex items-center gap-2 mb-3">
                     <div className="w-8 h-8 rounded-lg bg-slate-700 flex items-center justify-center text-white">
                       <FileText size={16} />
@@ -361,7 +361,7 @@ const ProductDetail = () => {
             {hasVariants && (
               <div className="space-y-4">
                 {variantTypes.length > 0 && (
-                  <SectionCard className="rounded-[1.5rem] p-4">
+                  <SectionCard className="rounded-lg p-4">
                     <div className="flex items-center gap-2 mb-4">
                       <div className="w-8 h-8 rounded-lg bg-violet-600 flex items-center justify-center text-white shadow-lg shadow-violet-100">
                         <Layers size={16} />
@@ -370,7 +370,7 @@ const ProductDetail = () => {
                     </div>
                     <div className="flex flex-wrap gap-3">
                       {variantTypes.map(vt => (
-                        <div key={vt.id} className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3">
+                        <div key={vt.id} className="bg-slate-50 border border-slate-200 rounded-lg px-4 py-3">
                           <p className="text-[10px] font-bold text-slate-400   mb-1">{vt.name}</p>
                           <p className="text-sm font-bold text-slate-700">{(vt.values as string[]).join(", ")}</p>
                         </div>
@@ -379,7 +379,7 @@ const ProductDetail = () => {
                   </SectionCard>
                 )}
 
-                <SectionCard className="rounded-[1.5rem] p-4">
+                <SectionCard className="rounded-lg p-4">
                   <div className="flex items-center gap-2 mb-4">
                     <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-100">
                       <Tag size={16} />
@@ -389,7 +389,7 @@ const ProductDetail = () => {
                     </h2>
                   </div>
 
-                  <div className="bg-slate-50/30 rounded-2xl p-4 border border-slate-100">
+                  <div className="bg-slate-50/30 rounded-lg p-4 border border-slate-100">
                     <VariantRows combinations={combinations} baseSellPrice={sellingPrice} baseBuyPrice={buyingPrice} />
                   </div>
                 </SectionCard>
@@ -398,7 +398,7 @@ const ProductDetail = () => {
 
             {/* Root Batches Section (if no variants but has batches) */}
             {!hasVariants && hasBatches && (
-              <SectionCard className="rounded-[1.5rem] p-4">
+              <SectionCard className="rounded-lg p-4">
                 <div className="flex items-center gap-2 mb-4">
                   <div className="w-8 h-8 rounded-lg bg-amber-600 flex items-center justify-center text-white shadow-lg shadow-amber-100">
                     <Tag size={16} />
@@ -507,7 +507,7 @@ const ProductDetail = () => {
                   <p className="text-sm font-bold text-slate-400">No stock movements found</p>
                 </div>
               ) : (
-                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
                   <div className="overflow-x-auto">
                     <table className="w-full text-left whitespace-nowrap">
                       <thead>
@@ -653,7 +653,7 @@ const ProductDetail = () => {
                   <p className="text-sm font-bold text-slate-400">No purchases found for this product</p>
                 </div>
               ) : (
-                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
                   <div className="overflow-x-auto">
                     <table className="w-full text-left whitespace-nowrap">
                       <thead>
@@ -750,7 +750,7 @@ const ProductDetail = () => {
         title={viewValue?.label || "Field Detail"}
         className="max-w-md"
       >
-        <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+        <div className="p-4 bg-slate-50 rounded-lg border border-slate-100">
           <p className="text-sm font-bold text-slate-700 break-words leading-relaxed select-all">
             {viewValue?.value}
           </p>
@@ -777,3 +777,4 @@ const ProductDetail = () => {
 };
 
 export default ProductDetail;
+

@@ -99,7 +99,7 @@ const StoreCard = ({
       >
         <div className="absolute -bottom-5 left-1/2 -translate-x-1/2 w-72 h-5 bg-black/25 blur-xl rounded-full z-0" />
 
-        <div className="flex flex-col rounded-2xl overflow-hidden shadow-2xl border border-blue-900/20 relative z-10"
+        <div className="flex flex-col rounded-lg overflow-hidden shadow-2xl border border-blue-900/20 relative z-10"
              style={{ height:520 }}>
 
           
@@ -255,7 +255,7 @@ const StoreCard = ({
                        style={{ position:"absolute", inset:0, borderRadius:"10px 10px 0 0",
                                 background:"linear-gradient(180deg,#1e3a8a 0%,#1e40af 40%,#1d4ed8 100%)",
                                 transformOrigin:"left center", zIndex:10 }}>
-                    <div className="absolute inset-x-2 top-2 h-16 rounded-xl border-2" style={{ borderColor:"rgba(251,191,36,0.3)" }}>
+                    <div className="absolute inset-x-2 top-2 h-16 rounded-lg border-2" style={{ borderColor:"rgba(251,191,36,0.3)" }}>
                       <div className="glass-pane absolute inset-1 rounded-lg" />
                     </div>
                     <div className="absolute inset-x-2 top-20 bottom-6 rounded border" style={{ borderColor:"rgba(255,255,255,0.1)" }} />
@@ -319,3 +319,4 @@ export default function App({
     </div>
   );
 }
+

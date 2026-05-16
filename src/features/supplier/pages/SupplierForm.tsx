@@ -70,7 +70,7 @@ const SupplierForm = () => {
           <button 
             type="button"
             onClick={handleSaveDraft}
-            className="px-4 h-8 rounded-xl border border-blue-100 text-blue-600 font-bold text-xs bg-blue-50/50 md:hover:bg-blue-100 md:transition-all flex items-center gap-2 whitespace-nowrap overflow-hidden"
+            className="px-4 h-8 rounded-lg border border-blue-100 text-blue-600 font-bold text-xs bg-blue-50/50 md:hover:bg-blue-100 md:transition-all flex items-center gap-2 whitespace-nowrap overflow-hidden"
           >
             <Bookmark size={14} className="shrink-0" />
             <span className="truncate">Save Draft</span>
@@ -80,7 +80,7 @@ const SupplierForm = () => {
           icon={<Save size={16} />} 
           onClick={handleSubmit} 
           disabled={submitting}
-          className="rounded-xl shadow-md text-xs px-8 h-8 flex items-center"
+          className="rounded-lg shadow-md text-xs px-8 h-8 flex items-center"
         >
           {submitting ? "..." : (id ? "Save Changes" : "Register Supplier")}
         </GradientButton>
@@ -211,10 +211,10 @@ const SupplierForm = () => {
         <div className="md:col-span-8 space-y-8">
           
           {/* Identity Box */}
-          <div className="bg-white rounded-[2rem] border border-slate-200 p-8 shadow-sm space-y-8 relative overflow-hidden">
+          <div className="bg-white rounded-lg border border-slate-200 p-8 shadow-sm space-y-8 relative overflow-hidden">
             <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50/50 rounded-full -mr-16 -mt-16" />
             <div className="flex items-center gap-3 border-b border-slate-50 pb-6">
-              <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600">
+              <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600">
                 <Building2 size={20} />
               </div>
               <div>
@@ -280,9 +280,9 @@ const SupplierForm = () => {
           </div>
 
           {/* Contact & Location Box */}
-          <div className="bg-white rounded-[2rem] border border-slate-200 p-8 shadow-sm space-y-8">
+          <div className="bg-white rounded-lg border border-slate-200 p-8 shadow-sm space-y-8">
             <div className="flex items-center gap-3 border-b border-slate-50 pb-6">
-              <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600">
+              <div className="w-10 h-10 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600">
                 <Globe size={20} />
               </div>
               <div>
@@ -335,7 +335,7 @@ const SupplierForm = () => {
                   value={formData.address}
                   onChange={handleChange}
                   rows={3}
-                  className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-4 py-3 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-blue-100 md:transition-all placeholder:text-slate-300 resize-none"
+                  className="w-full bg-slate-50 border border-slate-100 rounded-lg px-4 py-3 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-blue-100 md:transition-all placeholder:text-slate-300 resize-none"
                   placeholder="Enter full address details..."
                 />
               </div>
@@ -347,10 +347,10 @@ const SupplierForm = () => {
         <div className="md:col-span-4 space-y-8">
           
           {/* Tax Info Box */}
-          <div className="bg-white rounded-[2rem] border border-slate-200 p-8 shadow-sm space-y-8 relative overflow-hidden">
+          <div className="bg-white rounded-lg border border-slate-200 p-8 shadow-sm space-y-8 relative overflow-hidden">
             <div className="absolute bottom-0 right-0 w-24 h-24 bg-blue-50 rounded-full -mr-8 -mb-8 blur-2xl" />
             <div className="flex items-center gap-3 border-b border-slate-50 pb-6">
-              <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-blue-600">
+              <div className="w-10 h-10 rounded-lg bg-slate-50 flex items-center justify-center text-blue-600">
                 <Tag size={20} />
               </div>
               <div>
@@ -369,7 +369,7 @@ const SupplierForm = () => {
                 placeholder="22AAAAA0000A1Z5"
                 className="bg-slate-50 border-slate-100 text-slate-800 placeholder:text-slate-300 h-12"
               />
-              <div className="p-4 rounded-2xl bg-blue-50 border border-blue-100 flex gap-3 items-start">
+              <div className="p-4 rounded-lg bg-blue-50 border border-blue-100 flex gap-3 items-start">
                 <div className="mt-1 w-2 h-2 rounded-full bg-blue-500 md:animate-pulse shrink-0" />
                 <p className="text-[10px] font-bold text-blue-600 leading-relaxed  ">
                   Ensure the Tax ID is valid for generating B2B invoices and claiming Input Tax Credit.
@@ -379,7 +379,7 @@ const SupplierForm = () => {
           </div>
 
           {/* Notes Box */}
-          <div className="bg-white rounded-[2rem] border border-slate-200 p-8 shadow-sm space-y-6">
+          <div className="bg-white rounded-lg border border-slate-200 p-8 shadow-sm space-y-6">
             <div className="flex items-center gap-3 border-b border-slate-50 pb-4">
               <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400">
                 <FileText size={16} />
@@ -391,7 +391,7 @@ const SupplierForm = () => {
               value={formData.notes}
               onChange={handleChange}
               rows={5}
-              className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-4 py-3 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-blue-100 md:transition-all placeholder:text-slate-300 resize-none"
+              className="w-full bg-slate-50 border border-slate-100 rounded-lg px-4 py-3 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-blue-100 md:transition-all placeholder:text-slate-300 resize-none"
               placeholder="Additional comments about this partner..."
             />
           </div>
@@ -404,3 +404,4 @@ const SupplierForm = () => {
 };
 
 export default SupplierForm;
+

@@ -52,17 +52,17 @@ export const InventoryDetailContent = ({ item }: { item: InventoryRecord | null 
       {/* Header Stat Cards */}
       {/* Header Stat Cards */}
       <div className="grid grid-cols-3 gap-4">
-        <div className="p-4 bg-white rounded-xl border border-gray-100 shadow-sm">
+        <div className="p-4 bg-white rounded-lg border border-gray-100 shadow-sm">
           <p className="text-[10px] text-slate-400 font-black mb-1">Profit Margin</p>
           <p className={`text-xl font-black tabular-nums ${profitMargin >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
             ₹{profitMargin.toLocaleString(undefined, { minimumFractionDigits: 2 })}
           </p>
         </div>
-        <div className="p-4 bg-white rounded-xl border border-gray-100 shadow-sm">
+        <div className="p-4 bg-white rounded-lg border border-gray-100 shadow-sm">
           <p className="text-[10px] text-slate-400 font-black mb-1">Inventory Value</p>
           <p className="text-xl font-black text-blue-600 tabular-nums">₹{inventoryValue.toLocaleString()}</p>
         </div>
-        <div className="p-4 bg-white rounded-xl border border-gray-100 shadow-sm">
+        <div className="p-4 bg-white rounded-lg border border-gray-100 shadow-sm">
           <p className="text-[10px] text-slate-400 font-black mb-1">Stock Status</p>
           <p className={`text-[13px] font-black ${stocks === 0 ? "text-rose-600" : stocks <= 15 ? "text-amber-600" : "text-emerald-600"}`}>
             {stocks === 0 ? "Out of Stock" : stocks <= 15 ? "Low Stock" : "In Stock"}
@@ -71,7 +71,7 @@ export const InventoryDetailContent = ({ item }: { item: InventoryRecord | null 
       </div>
 
       {/* Main Details List */}
-      <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
+      <div className="bg-white rounded-lg border border-gray-100 overflow-hidden shadow-sm">
         <div className="p-4 border-b bg-slate-50/50">
           <h3 className="text-xs font-black text-slate-600">General Information</h3>
         </div>
@@ -89,22 +89,22 @@ export const InventoryDetailContent = ({ item }: { item: InventoryRecord | null 
       </div>
 
       {/* Description */}
-      <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+      <div className="bg-white rounded-lg border border-gray-100 p-5 shadow-sm">
         <h3 className="text-xs font-black text-slate-600 mb-3">Product Description</h3>
         <p className="text-slate-600 leading-relaxed text-sm font-medium">{description}</p>
       </div>
 
       {/* Tracking & Verification Section */}
       {(!!item.datas?.batch_tracking || !!item.datas?.serial_tracking) && (
-        <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
+        <div className="bg-white rounded-lg border border-gray-100 overflow-hidden shadow-sm">
           <div className="px-5 py-4 border-b bg-indigo-50/50 flex items-center gap-2">
             <ShieldCheck size={18} className="text-indigo-600" />
             <h3 className="text-sm font-black text-indigo-900">Tracking & Verification</h3>
           </div>
           <div className="p-5 space-y-4">
             {!!item.datas?.batch_tracking && (
-              <div className="flex items-start gap-4 p-4 rounded-xl bg-blue-50/50 border border-blue-100">
-                <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center text-blue-600 shrink-0">
+              <div className="flex items-start gap-4 p-4 rounded-lg bg-blue-50/50 border border-blue-100">
+                <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600 shrink-0">
                   <Package size={20} />
                 </div>
                 <div className="flex-1">
@@ -122,8 +122,8 @@ export const InventoryDetailContent = ({ item }: { item: InventoryRecord | null 
             )}
 
             {!!item.datas?.serial_tracking && (
-              <div className="flex items-start gap-4 p-4 rounded-xl bg-violet-50/50 border border-violet-100">
-                <div className="w-10 h-10 rounded-xl bg-violet-100 flex items-center justify-center text-violet-600 shrink-0">
+              <div className="flex items-start gap-4 p-4 rounded-lg bg-violet-50/50 border border-violet-100">
+                <div className="w-10 h-10 rounded-lg bg-violet-100 flex items-center justify-center text-violet-600 shrink-0">
                   <Zap size={20} />
                 </div>
                 <div className="flex-1">
@@ -145,7 +145,7 @@ export const InventoryDetailContent = ({ item }: { item: InventoryRecord | null 
 
       {/* Product Variants Section */}
       {item.has_variant && item.variants && item.variants.length > 0 && (
-        <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
+        <div className="bg-white rounded-lg border border-gray-100 overflow-hidden shadow-sm">
           <div className="px-5 py-4 border-b bg-amber-50/50 flex items-center gap-2">
             <Layers size={18} className="text-amber-600" />
             <h3 className="text-sm font-black text-amber-900">Product Variants</h3>
@@ -180,3 +180,4 @@ export const InventoryDetailContent = ({ item }: { item: InventoryRecord | null 
     </div>
   );
 };
+

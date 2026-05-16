@@ -6,10 +6,10 @@ export const StatCard = ({
   title: string; value: string; change: string; positive: boolean;
   subtitle: string; icon: React.ReactNode; accent: string;
 }) => (
-  <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm hover:shadow-md transition-all duration-200 group min-w-[160px] flex-shrink-0 sm:min-w-0 sm:flex-1">
+  <div className="bg-white rounded-lg p-5 border border-slate-100 shadow-sm hover:shadow-md transition-all duration-200 group min-w-[160px] flex-shrink-0 sm:min-w-0 sm:flex-1">
     <div className="flex items-start justify-between mb-3">
       <p className="text-slate-500 text-sm font-medium">{title}</p>
-      <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-lg ${accent}`}>
+      <div className={`w-9 h-9 rounded-lg flex items-center justify-center text-lg ${accent}`}>
         {icon}
       </div>
     </div>
@@ -22,3 +22,4 @@ export const StatCard = ({
     <p className="text-xs text-slate-400">{subtitle}</p>
   </div>
 );
+

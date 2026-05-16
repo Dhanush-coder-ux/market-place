@@ -36,17 +36,17 @@ export const SelectPickerModal = ({
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200"
       onMouseDown={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="relative w-full max-w-sm bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden animate-in zoom-in-95 duration-200">
+      <div className="relative w-full max-w-sm bg-white rounded-lg shadow-2xl border border-slate-200 overflow-hidden animate-in zoom-in-95 duration-200">
         
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-5 bg-slate-50 border-b border-slate-100">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-indigo-100 rounded-xl text-indigo-600">
+            <div className="p-2 bg-indigo-100 rounded-lg text-indigo-600">
               <List size={18} />
             </div>
             <h3 className="text-base font-bold text-slate-800">{title}</h3>
           </div>
-          <button onClick={onClose} className="p-2 rounded-xl text-slate-400 hover:bg-slate-200 hover:text-slate-600 transition-colors">
+          <button onClick={onClose} className="p-2 rounded-lg text-slate-400 hover:bg-slate-200 hover:text-slate-600 transition-colors">
             <X size={18} />
           </button>
         </div>
@@ -96,3 +96,4 @@ export const SelectPickerModal = ({
     </div>
   );
 };
+

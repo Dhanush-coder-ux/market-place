@@ -176,7 +176,7 @@ const ProductionForm = () => {
           <button 
             type="button"
             onClick={handleSaveDraft}
-            className="px-4 h-8 rounded-xl border border-blue-100 text-blue-600 font-bold text-xs bg-blue-50/50 hover:bg-blue-100 transition-all flex items-center gap-2 whitespace-nowrap overflow-hidden"
+            className="px-4 h-8 rounded-lg border border-blue-100 text-blue-600 font-bold text-xs bg-blue-50/50 hover:bg-blue-100 transition-all flex items-center gap-2 whitespace-nowrap overflow-hidden"
           >
             <Bookmark size={14} className="shrink-0" />
             <span className="truncate">Save Draft</span>
@@ -186,7 +186,7 @@ const ProductionForm = () => {
           icon={submitting ? <Loader className="h-4 w-4" /> : <Save size={16} />} 
           onClick={handleSaveProduction} 
           disabled={submitting}
-          className="rounded-xl shadow-md text-xs px-8 h-8 flex items-center"
+          className="rounded-lg shadow-md text-xs px-8 h-8 flex items-center"
         >
           {submitting ? "Processing..." : (id ? "Update Production" : "Confirm Production")}
         </GradientButton>
@@ -362,9 +362,9 @@ const ProductionForm = () => {
           <div className="lg:col-span-5 space-y-6">
             
             {/* 1. Production Header Details Card */}
-            <div className="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden transition-all hover:shadow-md">
+            <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden transition-all hover:shadow-md">
               <div className="px-8 py-5 bg-gradient-to-r from-blue-50/50 to-transparent border-b border-slate-100 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-blue-100 flex items-center justify-center text-blue-600 border border-blue-200 shadow-sm">
+                <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600 border border-blue-200 shadow-sm">
                   <Factory size={20} />
                 </div>
                 <div>
@@ -470,9 +470,9 @@ const ProductionForm = () => {
           <div className="lg:col-span-2 space-y-6">
             
             {/* Production Costs Sidebar Card */}
-            <div className="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden transition-all hover:shadow-md">
+            <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden transition-all hover:shadow-md">
               <div className="px-8 py-5 bg-gradient-to-r from-emerald-50/50 to-transparent border-b border-slate-100 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-emerald-100 flex items-center justify-center text-emerald-600 border border-emerald-200 shadow-sm">
+                <div className="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-600 border border-emerald-200 shadow-sm">
                   <Banknote size={20} />
                 </div>
                 <div>
@@ -496,7 +496,7 @@ const ProductionForm = () => {
             </div>
 
             {/* Logistics & Summary Card */}
-            <div className="bg-white rounded-[2.5rem] p-8 border border-slate-200 shadow-sm relative overflow-hidden group">
+            <div className="bg-white rounded-lg p-8 border border-slate-200 shadow-sm relative overflow-hidden group">
               <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-3xl group-hover:bg-blue-500/10 transition-all duration-700" />
               <div className="relative z-10 space-y-8">
                 <div>
@@ -566,3 +566,4 @@ const ProductionForm = () => {
 };
 
 export default ProductionForm;
+

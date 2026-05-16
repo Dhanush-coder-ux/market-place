@@ -77,7 +77,7 @@ export const QuickCreateModal: React.FC<QuickCreateModalProps> = ({
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 20 }}
-        className={`w-full ${maxWidthClass} bg-white rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col border border-white/20 my-auto shadow-blue-200/20`}
+        className={`w-full ${maxWidthClass} bg-white rounded-lg shadow-2xl overflow-hidden flex flex-col border border-white/20 my-auto shadow-blue-200/20`}
       >
         {/* Header */}
         <div className="px-8 py-5 flex items-center justify-between border-b border-slate-100 bg-slate-50/50">
@@ -89,7 +89,7 @@ export const QuickCreateModal: React.FC<QuickCreateModalProps> = ({
           </div>
           <button
             onClick={onClose}
-            className="p-2 rounded-xl hover:bg-slate-200 text-slate-400 transition-all hover:rotate-90"
+            className="p-2 rounded-lg hover:bg-slate-200 text-slate-400 transition-all hover:rotate-90"
           >
             <X size={20} />
           </button>
@@ -104,7 +104,7 @@ export const QuickCreateModal: React.FC<QuickCreateModalProps> = ({
             return (
               <div key={step.id} className="flex flex-col items-center gap-1.5 md:gap-2 bg-white px-1 md:px-3 relative z-10 shrink-0">
                 <div
-                  className={`w-7 h-7 md:w-9 md:h-9 rounded-lg md:rounded-xl flex items-center justify-center text-[10px] md:text-xs font-black transition-all duration-300 ${
+                  className={`w-7 h-7 md:w-9 md:h-9 rounded-lg md:rounded-lg flex items-center justify-center text-[10px] md:text-xs font-black transition-all duration-300 ${
                     isActive
                       ? "bg-blue-600 text-white shadow-lg shadow-blue-200 scale-110"
                       : isPassed
@@ -168,7 +168,7 @@ export const QuickCreateModal: React.FC<QuickCreateModalProps> = ({
             <GradientButton
               onClick={handleNext}
               disabled={isSubmitting || (steps[currentStep].isValid === false)}
-              className="rounded-xl px-5 md:px-8 h-9 md:h-10 text-[9px] md:text-[10px] font-black   shadow-lg shadow-blue-100 flex items-center gap-1 md:gap-2"
+              className="rounded-lg px-5 md:px-8 h-9 md:h-10 text-[9px] md:text-[10px] font-black   shadow-lg shadow-blue-100 flex items-center gap-1 md:gap-2"
             >
               {isSubmitting ? (
                 "Wait..."
@@ -187,3 +187,4 @@ export const QuickCreateModal: React.FC<QuickCreateModalProps> = ({
     document.body
   );
 };
+

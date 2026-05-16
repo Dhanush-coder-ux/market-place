@@ -47,7 +47,7 @@ const GeneralInfoTab = () => {
         </div>
 
         {/* Purchase Insights Box */}
-        <div className="bg-slate-50/50 p-6 rounded-2xl border border-slate-100 space-y-6">
+        <div className="bg-slate-50/50 p-6 rounded-lg border border-slate-100 space-y-6">
           <h3 className="text-sm font-bold text-slate-800  ">Purchase Insights</h3>
           <div className="space-y-4">
             <div className="flex justify-between items-end">
@@ -65,7 +65,7 @@ const GeneralInfoTab = () => {
               </div>
             </div>
             
-            <div className="p-4 bg-white rounded-xl border border-slate-200 shadow-sm space-y-2">
+            <div className="p-4 bg-white rounded-lg border border-slate-200 shadow-sm space-y-2">
               <div className="flex justify-between items-center text-xs font-medium">
                 <span className="text-slate-500">Last Source:</span>
                 <span className="text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded font-bold">XYZ Wholesalers</span>
@@ -87,3 +87,4 @@ const GeneralInfoTab = () => {
 };
 
 export default GeneralInfoTab;
+

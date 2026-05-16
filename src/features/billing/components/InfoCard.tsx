@@ -37,7 +37,7 @@ export const InfoCard: React.FC<InfoCardProps> = ({
   return (
     <div
       className={cn(
-        "relative group p-6 rounded-[24px] border transition-all",
+        "relative group p-6 rounded-lg border transition-all",
         containerStyles,
         className
       )}
@@ -56,3 +56,4 @@ export const InfoCard: React.FC<InfoCardProps> = ({
     </div>
   );
 };
+

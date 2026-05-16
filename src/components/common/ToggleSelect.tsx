@@ -26,7 +26,7 @@ const ToggleSelect: React.FC<ToggleSelectProps> = ({
   return (
     <div
       className={cn(
-        "flex bg-gray-100 p-1.5 rounded-2xl w-fit",
+        "flex bg-gray-100 p-1.5 rounded-lg w-fit",
         className
       )}
     >
@@ -38,7 +38,7 @@ const ToggleSelect: React.FC<ToggleSelectProps> = ({
             key={opt.value}
             onClick={() => onChange(opt.value)}
             className={cn(
-              "flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all",
+              "flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-bold transition-all",
               isActive
                 ? "bg-white text-gray-900 shadow-md"
                 : "text-gray-500 hover:text-gray-700"
@@ -61,3 +61,4 @@ const ToggleSelect: React.FC<ToggleSelectProps> = ({
 };
 
 export default ToggleSelect;
+

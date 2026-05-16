@@ -69,7 +69,7 @@ const PurchaseDetail = () => {
               </div>
 
               <div className="overflow-x-auto">
-               <table className="w-full text-left border border-slate-200 rounded-xl overflow-hidden">
+               <table className="w-full text-left border border-slate-200 rounded-lg overflow-hidden">
   <thead>
     <tr className="bg-slate-50 border-b border-slate-200">
       <th className="px-8 py-4 text-[10px] font-bold text-slate-500   border-r border-slate-200">
@@ -145,7 +145,7 @@ const PurchaseDetail = () => {
               <h3 className="text-[10px] font-bold text-slate-400  tracking-[0.2em] mb-6 text-center">Payment Status</h3>
               <div 
                 onClick={toggleStatus}
-                className={`flex flex-col items-center p-6 rounded-2xl border-2 border-dashed cursor-pointer transition-all hover:scale-[1.02] active:scale-95 group ${
+                className={`flex flex-col items-center p-6 rounded-lg border-2 border-dashed cursor-pointer transition-all hover:scale-[1.02] active:scale-95 group ${
                   status === 'Paid' ? 'bg-emerald-50/50 border-emerald-100' : 'bg-amber-50/50 border-amber-100'
                 }`}
               >
@@ -171,7 +171,7 @@ const PurchaseDetail = () => {
                 <SidebarItem icon={Calendar} label="Purchase Date" value="April 20, 2024" />
                 <SidebarItem icon={FileText} label="Reference" value="INV-004 PU03TO-34" />
               </div>
-              <button className="w-full py-3.5 bg-slate-50 text-slate-500 rounded-xl text-[11px] font-black   hover:bg-indigo-50 hover:text-indigo-600 transition-all border border-slate-100">
+              <button className="w-full py-3.5 bg-slate-50 text-slate-500 rounded-lg text-[11px] font-black   hover:bg-indigo-50 hover:text-indigo-600 transition-all border border-slate-100">
                 View All Vendor Orders
               </button>
             </div>
@@ -185,7 +185,7 @@ const PurchaseDetail = () => {
 
 const SidebarItem = ({ icon: Icon, label, value }:{icon:LucideIcon,label:string,value:string}) => (
   <div className="flex gap-4 group">
-    <div className="p-2.5 bg-slate-50 rounded-xl text-slate-400 shrink-0 group-hover:bg-indigo-50 group-hover:text-indigo-500 transition-colors">
+    <div className="p-2.5 bg-slate-50 rounded-lg text-slate-400 shrink-0 group-hover:bg-indigo-50 group-hover:text-indigo-500 transition-colors">
       <Icon size={18} />
     </div>
     <div className="min-w-0">
@@ -196,3 +196,4 @@ const SidebarItem = ({ icon: Icon, label, value }:{icon:LucideIcon,label:string,
 );
 
 export default PurchaseDetail;
+

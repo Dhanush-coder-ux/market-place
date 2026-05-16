@@ -112,7 +112,7 @@ const AnalyticsDashboard = () => {
             </div>
 
             {/* Range Selector */}
-            <div className="flex items-center gap-1 bg-slate-100 rounded-xl p-1">
+            <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-1">
               {ranges.map((r) => (
                 <button
                   key={r}
@@ -204,7 +204,7 @@ const AnalyticsDashboard = () => {
 
             <SectionCard title="Growth">
               <div className="px-5 pb-5 flex items-center gap-4">
-                <div className="w-12 h-12 bg-emerald-50 rounded-xl flex items-center justify-center">
+                <div className="w-12 h-12 bg-emerald-50 rounded-lg flex items-center justify-center">
                   <BarChart2 className="w-6 h-6 text-emerald-600" />
                 </div>
                 <div>
@@ -318,7 +318,7 @@ const AnalyticsDashboard = () => {
           {/* Digital Store Insights */}
           <SectionCard title="Digital Store Insights">
             <div className="px-5 pb-5 space-y-4">
-              <div className="flex items-center justify-between p-3 bg-blue-50 rounded-xl">
+              <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center text-white">
                     <Globe className="w-4 h-4" />
@@ -358,7 +358,7 @@ const AnalyticsDashboard = () => {
               <div className="px-5 pb-5">
                 <div className="space-y-2">
                   {topProducts.map((p, i) => (
-                    <div key={p.name} className="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 transition-colors group">
+                    <div key={p.name} className="flex items-center gap-3 p-3 rounded-lg hover:bg-slate-50 transition-colors group">
                       <span className="w-7 h-7 flex items-center justify-center bg-slate-100 rounded-lg text-base shrink-0">{p.icon}</span>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-semibold text-slate-700 truncate">{p.name}</p>
@@ -384,7 +384,7 @@ const AnalyticsDashboard = () => {
                     { label: "Online Share", value: "2.5%", icon: <Globe className="w-5 h-5 mx-auto text-slate-500" /> },
                     { label: "Avg Rating", value: "4.9 ★", icon: <Star className="w-5 h-5 mx-auto text-amber-500" /> },
                   ].map((s) => (
-                    <div key={s.label} className="text-center p-2.5 bg-slate-50 rounded-xl">
+                    <div key={s.label} className="text-center p-2.5 bg-slate-50 rounded-lg">
                       <div className="mb-1.5 flex justify-center">{s.icon}</div>
                       <p className="display-font text-sm font-bold text-slate-700">{s.value}</p>
                       <p className="text-xs text-slate-400">{s.label}</p>
@@ -402,3 +402,4 @@ const AnalyticsDashboard = () => {
 };
 
 export default AnalyticsDashboard;
+

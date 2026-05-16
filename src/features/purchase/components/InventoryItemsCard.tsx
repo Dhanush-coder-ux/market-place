@@ -209,10 +209,10 @@ export const InventoryItemsCard = ({
       {/* Variant Modal — rendered outside the card to avoid overflow clipping */}
       {variantModal.isOpen && createPortal(
         <div className="fixed inset-0 z-[100] flex flex-col items-center p-4 md:p-12 overflow-y-auto bg-slate-900/40 backdrop-blur-sm custom-scrollbar animate-in fade-in duration-300">
-          <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col border border-slate-200 my-auto shadow-indigo-200/20">
+          <div className="bg-white rounded-lg shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col border border-slate-200 my-auto shadow-indigo-200/20">
             <div className="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
               <div className="flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-2xl bg-${themeColor}-50 flex items-center justify-center text-${themeColor}-600 border border-${themeColor}-100`}>
+                <div className={`w-10 h-10 rounded-lg bg-${themeColor}-50 flex items-center justify-center text-${themeColor}-600 border border-${themeColor}-100`}>
                   <PackageOpen size={20} />
                 </div>
                 <div>
@@ -222,7 +222,7 @@ export const InventoryItemsCard = ({
               </div>
               <button
                 onClick={() => setVariantModal({ isOpen: false, baseProduct: "", targetRowIndex: -1, variants: [], baseData: null })}
-                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all"
+                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-all"
               >
                 <X size={18} />
               </button>
@@ -236,7 +236,7 @@ export const InventoryItemsCard = ({
                     <div
                       key={variant.id}
                       onClick={() => setSelectedVariants(variant.id)}
-                      className={`relative p-5 rounded-[2rem] border-2 transition-all cursor-pointer group ${isSelected ? 'border-indigo-600 bg-indigo-50/50 shadow-md shadow-indigo-100' : 'border-slate-100 bg-white hover:border-indigo-200 hover:bg-slate-50/30'}`}
+                      className={`relative p-5 rounded-lg border-2 transition-all cursor-pointer group ${isSelected ? 'border-indigo-600 bg-indigo-50/50 shadow-md shadow-indigo-100' : 'border-slate-100 bg-white hover:border-indigo-200 hover:bg-slate-50/30'}`}
                     >
                       <div className={`absolute top-5 right-5 h-6 w-6 rounded-full border-2 flex items-center justify-center transition-all ${isSelected ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-slate-200 group-hover:border-indigo-300'}`}>
                         {isSelected && <Check size={12} strokeWidth={4} />}
@@ -261,11 +261,11 @@ export const InventoryItemsCard = ({
               <div className="flex gap-3">
                 <button
                   onClick={() => setVariantModal({ isOpen: false, baseProduct: "", targetRowIndex: -1, variants: [], baseData: null })}
-                  className="px-5 h-9 rounded-xl border border-slate-200 text-slate-600 font-medium text-xs hover:bg-slate-50 transition-all"
+                  className="px-5 h-9 rounded-lg border border-slate-200 text-slate-600 font-medium text-xs hover:bg-slate-50 transition-all"
                 >
                   Cancel
                 </button>
-                <GradientButton onClick={confirmVariants} disabled={!selectedVariants} className="rounded-xl px-6 h-9 text-xs">
+                <GradientButton onClick={confirmVariants} disabled={!selectedVariants} className="rounded-lg px-6 h-9 text-xs">
                   Continue
                 </GradientButton>
               </div>
@@ -278,10 +278,10 @@ export const InventoryItemsCard = ({
       {/* Batch Modal — rendered outside the card to avoid overflow clipping */}
       {batchModal.isOpen && createPortal(
         <div className="fixed inset-0 z-[110] flex flex-col items-center p-4 md:p-12 overflow-y-auto bg-slate-900/40 backdrop-blur-sm custom-scrollbar animate-in fade-in duration-300">
-          <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-lg overflow-hidden flex flex-col border border-slate-200 my-auto animate-in zoom-in-95 duration-200">
+          <div className="bg-white rounded-lg shadow-2xl w-full max-w-lg overflow-hidden flex flex-col border border-slate-200 my-auto animate-in zoom-in-95 duration-200">
             <div className="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-amber-50/30">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-amber-100 flex items-center justify-center text-amber-600 border border-amber-200">
+                <div className="w-9 h-9 rounded-lg bg-amber-100 flex items-center justify-center text-amber-600 border border-amber-200">
                   <Package size={18} />
                 </div>
                 <div>
@@ -293,7 +293,7 @@ export const InventoryItemsCard = ({
               </div>
               <button
                 onClick={() => setBatchModal({ isOpen: false, rowIndex: -1, batches: [], productName: "", variantName: "", existingSerials: [], allowNewBatch: true })}
-                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all"
+                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-all"
               >
                 <X size={18} />
               </button>
@@ -306,7 +306,7 @@ export const InventoryItemsCard = ({
                     updateProductFields(batchModal.rowIndex, { batch_id: undefined, batchNum: "", batchNumReadOnly: false });
                     setBatchModal({ isOpen: false, rowIndex: -1, batches: [], productName: "", variantName: "", existingSerials: [], allowNewBatch: true });
                   }}
-                  className="w-full p-4 rounded-2xl border-2 border-dashed border-slate-200 text-slate-500 hover:border-amber-400 hover:text-amber-600 hover:bg-amber-50 transition-all flex flex-col items-center gap-1 group"
+                  className="w-full p-4 rounded-lg border-2 border-dashed border-slate-200 text-slate-500 hover:border-amber-400 hover:text-amber-600 hover:bg-amber-50 transition-all flex flex-col items-center gap-1 group"
                 >
                   <Plus size={20} className="group-hover:scale-110 transition-transform" />
                   <span className="text-xs font-bold  ">Create New Batch</span>
@@ -328,7 +328,7 @@ export const InventoryItemsCard = ({
                     <button
                       key={i}
                       onClick={() => selectBatch(batchModal.rowIndex, batch)}
-                      className="flex items-center justify-between p-4 rounded-2xl border border-slate-200 bg-white hover:border-amber-300 hover:shadow-md transition-all text-left group"
+                      className="flex items-center justify-between p-4 rounded-lg border border-slate-200 bg-white hover:border-amber-300 hover:shadow-md transition-all text-left group"
                     >
                       <div className="space-y-1">
                         <p className="text-sm font-bold text-slate-800 group-hover:text-amber-700 transition-colors">
@@ -357,11 +357,11 @@ export const InventoryItemsCard = ({
         document.body
       )}
 
-      <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
         {/* Card Header */}
         <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className={`w-9 h-9 rounded-xl bg-${themeColor}-50 flex items-center justify-center text-${themeColor}-600 border border-${themeColor}-100`}>
+            <div className={`w-9 h-9 rounded-lg bg-${themeColor}-50 flex items-center justify-center text-${themeColor}-600 border border-${themeColor}-100`}>
               <Package size={17} />
             </div>
             <div>
@@ -387,7 +387,7 @@ export const InventoryItemsCard = ({
             </div>
             <button
               onClick={addProduct}
-              className={`flex items-center gap-1.5 px-3.5 h-9 rounded-xl bg-${themeColor}-600 text-white text-[11px] font-medium shadow-sm hover:bg-${themeColor}-700 transition-all active:scale-95`}
+              className={`flex items-center gap-1.5 px-3.5 h-9 rounded-lg bg-${themeColor}-600 text-white text-[11px] font-medium shadow-sm hover:bg-${themeColor}-700 transition-all active:scale-95`}
             >
               <Plus size={14} />
               Add Item
@@ -739,7 +739,7 @@ export const InventoryItemsCard = ({
                             <div className="flex gap-4">
                               {/* Batch Section */}
                               {(type !== "PURCHASE" || purchaseType === "DIRECT") && product.batchTracking && (
-                                <div className="flex-1 bg-white p-4 rounded-2xl border border-amber-200 shadow-sm">
+                                <div className="flex-1 bg-white p-4 rounded-lg border border-amber-200 shadow-sm">
                                   <div className="flex items-center gap-2 mb-3">
                                     <Package size={14} className="text-amber-500" />
                                     <span className="text-xs font-bold text-amber-900">Batch Details</span>
@@ -774,7 +774,7 @@ export const InventoryItemsCard = ({
 
                               {/* Serial Section */}
                               {(type !== "PURCHASE" || purchaseType === "DIRECT") && product.serialTracking && (
-                                <div className="flex-1 bg-white p-4 rounded-2xl border border-blue-200 shadow-sm">
+                                <div className="flex-1 bg-white p-4 rounded-lg border border-blue-200 shadow-sm">
                                   <div className="flex items-center gap-2 mb-3">
                                     <Check size={14} className="text-blue-500" />
                                     <span className="text-xs font-bold text-blue-900">Serial Numbers</span>
@@ -795,7 +795,7 @@ export const InventoryItemsCard = ({
                             {/* Row 2: Settings & Breakdown */}
                             <div className="flex gap-4">
                               {expandedSettings.has(index) && (
-                                <div className="flex-1 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+                                <div className="flex-1 bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
                                   <div className="flex items-center gap-2 mb-3">
                                     <Settings size={14} className="text-slate-500" />
                                     <span className="text-xs font-bold text-slate-800">Additional Settings</span>
@@ -826,7 +826,7 @@ export const InventoryItemsCard = ({
                               )}
 
                               {expandedBreakdown.has(index) && (
-                                <div className="flex-1 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+                                <div className="flex-1 bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
                                   <div className="flex items-center gap-2 mb-3">
                                     <Info size={14} className="text-slate-500" />
                                     <span className="text-xs font-bold text-slate-800">Cost Breakdown</span>
@@ -879,7 +879,7 @@ export const InventoryItemsCard = ({
         <div className="p-4 bg-slate-50/50 border-t border-slate-100">
           <button
             onClick={addProduct}
-            className="w-full group flex items-center justify-center gap-2 px-6 py-3 rounded-xl border-2 border-dashed border-slate-200 text-slate-400 hover:border-slate-300 hover:text-slate-600 hover:bg-white transition-all duration-200"
+            className="w-full group flex items-center justify-center gap-2 px-6 py-3 rounded-lg border-2 border-dashed border-slate-200 text-slate-400 hover:border-slate-300 hover:text-slate-600 hover:bg-white transition-all duration-200"
           >
             <Plus size={15} className="group-hover:rotate-90 transition-transform duration-200" />
             <span className="text-xs font-bold">Add Another Item</span>
@@ -889,3 +889,4 @@ export const InventoryItemsCard = ({
     </>
   );
 };
+

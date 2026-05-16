@@ -40,14 +40,14 @@ export const DraftCard: React.FC<DraftCardProps> = ({
   }).toUpperCase();
 
   return (
-    <div className="group bg-white rounded-[2rem] border border-slate-200 p-6 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 relative">
+    <div className="group bg-white rounded-lg border border-slate-200 p-6 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 relative">
       <div className="flex justify-between items-start mb-6">
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-blue-50/80 flex items-center justify-center text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-all duration-300 shadow-sm shadow-blue-100/50">
+          <div className="w-12 h-12 rounded-lg bg-blue-50/80 flex items-center justify-center text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-all duration-300 shadow-sm shadow-blue-100/50">
             <Icon size={24} strokeWidth={2} />
           </div>
           {typeTag && (
-            <span className="px-3 py-1.5 rounded-xl bg-blue-600 text-white text-[9px] font-bold   shadow-lg shadow-blue-100 animate-in fade-in zoom-in duration-300">
+            <span className="px-3 py-1.5 rounded-lg bg-blue-600 text-white text-[9px] font-bold   shadow-lg shadow-blue-100 animate-in fade-in zoom-in duration-300">
               {typeTag}
             </span>
           )}
@@ -96,3 +96,4 @@ export const DraftCard: React.FC<DraftCardProps> = ({
 };
 
 export default DraftCard;
+

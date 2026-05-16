@@ -8,7 +8,7 @@ export const SettingsCard = ({
   children,
 }: any) => {
   return (
-    <section className="rounded-xl border bg-white shadow-sm overflow-hidden">
+    <section className="rounded-lg border bg-white shadow-sm overflow-hidden">
       <div
         className={`flex items-center justify-between px-6 py-4 border-b bg-${color}-50`}
       >
@@ -36,3 +36,4 @@ export const SettingsCard = ({
     </section>
   );
 };
+

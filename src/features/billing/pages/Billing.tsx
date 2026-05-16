@@ -322,8 +322,8 @@ const Billing = () => {
           <div className="w-full md:w-[300px] shrink-0">
             {customerData ? (
               <div className={`h-full px-3.5 py-2.5 rounded-lg border flex flex-col justify-center transition-colors duration-200 ${isCreditExceeded
-                  ? "bg-red-50/40 border-red-200/60"
-                  : "bg-slate-50/60 border-slate-200/60"
+                ? "bg-red-50/40 border-red-200/60"
+                : "bg-slate-50/60 border-slate-200/60"
                 }`}>
                 <div className="flex items-center justify-between mb-2">
                   <p className="text-[10px] font-medium text-slate-500   flex items-center gap-1.5">

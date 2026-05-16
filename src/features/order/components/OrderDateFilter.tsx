@@ -76,7 +76,7 @@ const OrderDateFilter: React.FC<OrderDateFilterProps> = ({ onRangeChange }) => {
                   key={preset.label}
                   onClick={() => handleSelect(preset.range)}
                   className={cn(
-                    "flex items-center justify-between px-3 py-2.5 text-xs font-medium rounded-xl border transition-all",
+                    "flex items-center justify-between px-3 py-2.5 text-xs font-medium rounded-lg border transition-all",
                     isActive 
                       ? "bg-blue-50 border-blue-200 text-blue-700 ring-1 ring-blue-200" 
                       : "bg-white border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50"
@@ -96,7 +96,7 @@ const OrderDateFilter: React.FC<OrderDateFilterProps> = ({ onRangeChange }) => {
     Custom Range
   </h3>
 
-  <div className="bg-white rounded-xl border border-slate-200 p-2">
+  <div className="bg-white rounded-lg border border-slate-200 p-2">
   <Calendar
   mode="range"
   selected={dateRange}
@@ -123,7 +123,7 @@ const OrderDateFilter: React.FC<OrderDateFilterProps> = ({ onRangeChange }) => {
       {/* --- Sticky Footer --- */}
       <div className="sticky bottom-0 bg-white border-t p-4 shadow-[0_-4px_10px_rgba(0,0,0,0.03)]">
         <button 
-          className="w-full bg-slate-900 hover:bg-slate-800 text-white py-3 rounded-xl font-bold transition-all active:scale-[0.98]"
+          className="w-full bg-slate-900 hover:bg-slate-800 text-white py-3 rounded-lg font-bold transition-all active:scale-[0.98]"
           onClick={() => {/* Trigger parent filter function */}}
         >
           Apply Filters
@@ -134,3 +134,4 @@ const OrderDateFilter: React.FC<OrderDateFilterProps> = ({ onRangeChange }) => {
 };
 
 export default OrderDateFilter;
+

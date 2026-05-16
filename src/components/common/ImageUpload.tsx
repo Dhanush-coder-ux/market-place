@@ -39,7 +39,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
 
       <div
         onClick={() => fileInputRef.current?.click()}
-        className="relative w-full aspect-square rounded-2xl border-2 border-dashed border-gray-300 bg-gray-50 hover:border-blue-400 hover:bg-blue-50 transition cursor-pointer overflow-hidden group"
+        className="relative w-full aspect-square rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 hover:border-blue-400 hover:bg-blue-50 transition cursor-pointer overflow-hidden group"
       >
         {preview ? (
           <>
@@ -77,3 +77,4 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
 };
 
 export default ImageUpload;
+

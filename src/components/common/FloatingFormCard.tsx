@@ -41,7 +41,7 @@ export const FloatingFormCard: React.FC<FloatingFormCardProps> = ({
       {/* 2. The Card Container */}
       <div 
         className={`
-          bg-white w-full ${maxWidth} rounded-xl sm:rounded-2xl shadow-2xl relative flex flex-col 
+          bg-white w-full ${maxWidth} rounded-lg sm:rounded-lg shadow-2xl relative flex flex-col 
           max-h-[90vh] animate-in zoom-in-95 slide-in-from-bottom-2 duration-200
           ${className}
         `}
@@ -71,3 +71,4 @@ export const FloatingFormCard: React.FC<FloatingFormCardProps> = ({
     document.body
   );
 };
+

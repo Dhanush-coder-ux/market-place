@@ -119,7 +119,7 @@ export const Navbar = () => {
       {/* LEFT - Store Selector */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <button className="flex items-center gap-3 py-1.5 px-2 md:hover:bg-slate-100 rounded-xl md:transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500/20 group">
+          <button className="flex items-center gap-3 py-1.5 px-2 md:hover:bg-slate-100 rounded-lg md:transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500/20 group">
             <div className="w-9 h-9 flex items-center justify-center bg-blue-50 rounded-lg text-blue-600 border border-blue-100 md:group-hover:bg-blue-100 md:transition-colors">
               <Store className="w-4 h-4" />
             </div>
@@ -135,7 +135,7 @@ export const Navbar = () => {
           </button>
         </DropdownMenuTrigger>
 
-        <DropdownMenuContent align="start" className="w-64 p-1.5 rounded-2xl shadow-xl border-slate-100">
+        <DropdownMenuContent align="start" className="w-64 p-1.5 rounded-lg shadow-xl border-slate-100">
           <DropdownMenuLabel className="text-[10px] font-bold text-slate-400   px-2 py-1.5">
             My Workspaces
           </DropdownMenuLabel>
@@ -144,7 +144,7 @@ export const Navbar = () => {
             <DropdownMenuItem
               key={store.id}
               onClick={() => setSelectedStore(store)}
-              className={`flex items-center justify-between cursor-pointer rounded-xl px-2.5 py-2 my-0.5 md:transition-colors ${selectedStore.id === store.id ? "bg-blue-50 text-blue-700" : "md:hover:bg-slate-50 text-slate-700"
+              className={`flex items-center justify-between cursor-pointer rounded-lg px-2.5 py-2 my-0.5 md:transition-colors ${selectedStore.id === store.id ? "bg-blue-50 text-blue-700" : "md:hover:bg-slate-50 text-slate-700"
                 }`}
             >
               <div className="flex items-center gap-3">
@@ -161,7 +161,7 @@ export const Navbar = () => {
           <DropdownMenuSeparator className="bg-slate-100 my-1.5" />
 
           <Link to="/profile/add">
-            <DropdownMenuItem className="cursor-pointer text-blue-600 rounded-xl px-2.5 py-2 hover:bg-blue-50 font-medium">
+            <DropdownMenuItem className="cursor-pointer text-blue-600 rounded-lg px-2.5 py-2 hover:bg-blue-50 font-medium">
               <PlusCircle className="w-4 h-4 mr-2" />
               Create New Store
             </DropdownMenuItem>
@@ -195,7 +195,7 @@ export const Navbar = () => {
 
         {/* Search Results Dropdown */}
         {isSearchOpen && searchQuery && (
-          <div className="absolute top-full mt-2 w-full bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden z-50">
+          <div className="absolute top-full mt-2 w-full bg-white border border-slate-200 rounded-lg shadow-xl overflow-hidden z-50">
             {filteredRoutes.length > 0 ? (
               <div className="p-1.5">
                 <p className="px-3 py-2 text-[10px] font-bold text-slate-400  ">
@@ -207,7 +207,7 @@ export const Navbar = () => {
                     <button
                       key={route.path}
                       onClick={() => handleNavigate(route.path)}
-                      className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl md:hover:bg-blue-50 text-sm group md:transition-colors"
+                      className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg md:hover:bg-blue-50 text-sm group md:transition-colors"
                     >
                       <div className="flex items-center gap-3">
                         <div className="p-1.5 rounded-md bg-slate-100 md:group-hover:bg-white md:group-hover:text-blue-600 md:group-hover:shadow-sm md:transition-all">
@@ -281,3 +281,4 @@ export const Navbar = () => {
     </div>
   );
 };
+

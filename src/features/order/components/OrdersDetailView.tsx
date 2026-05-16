@@ -34,7 +34,7 @@ const OrderDetailView: React.FC<{ order: OrderDetailType }> = ({ order }) => {
       </div>
 
       {/* CUSTOMER DETAILS */}
-      <div className="bg-white rounded-xl shadow border p-5 space-y-4">
+      <div className="bg-white rounded-lg shadow border p-5 space-y-4">
         <h3 className="text-sm font-bold text-gray-400  ">
           Customer Details
         </h3>
@@ -53,7 +53,7 @@ const OrderDetailView: React.FC<{ order: OrderDetailType }> = ({ order }) => {
       </div>
 
       {/* ORDER SUMMARY */}
-      <div className="bg-white rounded-xl shadow border p-5 space-y-3">
+      <div className="bg-white rounded-lg shadow border p-5 space-y-3">
         <h3 className="text-sm font-bold text-gray-400  ">
           Order Summary
         </h3>
@@ -67,7 +67,7 @@ const OrderDetailView: React.FC<{ order: OrderDetailType }> = ({ order }) => {
       </div>
 
       {/* ORDER ITEMS */}
-      <div className="bg-white rounded-xl shadow border p-5">
+      <div className="bg-white rounded-lg shadow border p-5">
         <div className="flex items-center gap-2 mb-4">
           <ShoppingBag className="text-blue-500" size={18} />
           <h3 className="text-sm font-bold text-gray-400  ">
@@ -100,7 +100,7 @@ const OrderDetailView: React.FC<{ order: OrderDetailType }> = ({ order }) => {
       </div>
 
       {/* GRAND TOTAL */}
-      <div className="bg-white rounded-xl shadow border p-5">
+      <div className="bg-white rounded-lg shadow border p-5">
         <h3 className="text-sm font-bold text-gray-400   mb-2">
           Grand Total
         </h3>
@@ -118,3 +118,4 @@ const OrderDetailView: React.FC<{ order: OrderDetailType }> = ({ order }) => {
 };
 
 export default OrderDetailView;
+

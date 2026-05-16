@@ -40,7 +40,7 @@ export function ReusableCombobox({
           role="combobox"
           aria-expanded={open}
           className={cn(
-            "w-full justify-between rounded-xl border-gray-200 h-12 px-4 hover:bg-gray-50 hover:border-blue-400 transition-all shadow-sm font-medium",
+            "w-full justify-between rounded-lg border-gray-200 h-12 px-4 hover:bg-gray-50 hover:border-blue-400 transition-all shadow-sm font-medium",
             className
           )}
         >
@@ -56,9 +56,9 @@ export function ReusableCombobox({
       <PopoverContent 
         align="start"
        
-        className="w-[--radix-popover-trigger-width] p-0 rounded-2xl shadow-2xl border-gray-100 overflow-hidden animate-in fade-in zoom-in-95 duration-200"
+        className="w-[--radix-popover-trigger-width] p-0 rounded-lg shadow-2xl border-gray-100 overflow-hidden animate-in fade-in zoom-in-95 duration-200"
       >
-        <Command className="rounded-2xl">
+        <Command className="rounded-lg">
           <div className="flex items-center  px-3 bg-white">
             <CommandInput 
                 placeholder={searchPlaceholder} 
@@ -98,3 +98,4 @@ export function ReusableCombobox({
     </Popover>
   )
 }
+

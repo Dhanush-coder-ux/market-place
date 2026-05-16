@@ -188,10 +188,10 @@ const Sidebar: FC<{ links: SidebarLink[] }> = ({ links }) => {
               initial={{ opacity: 0, scale: 0.95, y: 10 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 10 }}
-              className="relative w-full max-w-[340px] bg-white rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.3)] overflow-hidden"
+              className="relative w-full max-w-[340px] bg-white rounded-lg shadow-[0_20px_50px_rgba(0,0,0,0.3)] overflow-hidden"
             >
               <div className="p-6">
-                <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center mb-4">
+                <div className="w-12 h-12 rounded-lg bg-blue-50 flex items-center justify-center mb-4">
                   <Printer size={24} className="text-blue-500" />
                 </div>
                 <h3 className="text-[17px] font-bold text-slate-800 mb-2">Open Billing Terminal</h3>
@@ -202,13 +202,13 @@ const Sidebar: FC<{ links: SidebarLink[] }> = ({ links }) => {
                 <div className="grid gap-3">
                   <button
                     onClick={() => confirmNavigation(true)}
-                    className="w-full py-3 rounded-xl bg-blue-600 text-white text-[14px] font-bold shadow-lg shadow-blue-600/20 hover:bg-blue-700 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+                    className="w-full py-3 rounded-lg bg-blue-600 text-white text-[14px] font-bold shadow-lg shadow-blue-600/20 hover:bg-blue-700 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
                   >
                     Open in New Tab <ArrowRight size={16} />
                   </button>
                   <button
                     onClick={() => confirmNavigation(false)}
-                    className="w-full py-3 rounded-xl bg-slate-50 text-slate-600 text-[14px] font-bold hover:bg-slate-100 active:scale-[0.98] transition-all"
+                    className="w-full py-3 rounded-lg bg-slate-50 text-slate-600 text-[14px] font-bold hover:bg-slate-100 active:scale-[0.98] transition-all"
                   >
                     Keep in same page
                   </button>
@@ -236,7 +236,7 @@ const Sidebar: FC<{ links: SidebarLink[] }> = ({ links }) => {
             onMouseLeave={() => setHoveredItem(null)}
             className="z-[9999] pl-2"
           >
-            <div className="bg-gradient-to-br from-blue-600/95 via-blue-700/95 to-blue-900/95 border border-white/20 rounded-xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] py-3 w-[220px] overflow-hidden backdrop-blur-xl">
+            <div className="bg-gradient-to-br from-blue-600/95 via-blue-700/95 to-blue-900/95 border border-white/20 rounded-lg shadow-[0_20px_50px_rgba(0,0,0,0.5)] py-3 w-[220px] overflow-hidden backdrop-blur-xl">
               <div className="px-4 pb-2.5 mb-1.5 border-b border-white/5">
                 <span className="text-[10px] font-black   text-white">{hoveredItem.link.name}</span>
               </div>
@@ -660,3 +660,4 @@ const Tooltip: FC<{ label: string }> = ({ label }) => (
 );
 
 export default Sidebar;
+

@@ -35,7 +35,7 @@ export interface SectionCardProps {
 
 export function SectionCard({ children, className = "", title, icon: Icon }: SectionCardProps) {
   return (
-    <div className={`bg-white rounded-[1.5rem] p-6 shadow-sm border border-slate-100 relative overflow-hidden ${className}`}>
+    <div className={`bg-white rounded-lg p-6 shadow-sm border border-slate-100 relative overflow-hidden ${className}`}>
       {title && (
         <div className="flex items-center gap-2 mb-6">
           {Icon && (
@@ -68,3 +68,4 @@ export const DetailItem = ({ icon: Icon, label, value, onClick }: { icon: any, l
     </div>
   </div>
 );
+

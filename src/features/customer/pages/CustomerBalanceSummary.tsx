@@ -1,8 +1,8 @@
 import {
   Users, Search, Filter, Trash2, Edit3,
-  Eye, Bookmark, Banknote, Loader2, Wallet, Plus
+  Eye, Bookmark, Banknote, Loader2, Wallet, Plus, ExternalLink
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useHeader } from "@/context/HeaderContext";
 import { StatCard } from "@/components/common/StatsCard";
 import { ReusableSelect } from "@/components/ui/ReusableSelect";
@@ -20,6 +20,13 @@ import { Modal } from "@/components/common/SuperUI";
 
 export default function CustomerBalanceSummary() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const isCleanMode = new URLSearchParams(location.search).get("mode") === "clean";
+
+  const handleOpenNewTab = () => {
+    window.open(`${window.location.pathname}?mode=clean`, "_blank", "noopener,noreferrer");
+  };
+
   const { setActions } = useHeader();
   const { getData, deleteData, postData, loading } = useApi();
   const { showToast } = useToast();
@@ -196,42 +203,44 @@ export default function CustomerBalanceSummary() {
   return (
     <div className="space-y-6">
       {/* Stats Section */}
-      <div className="flex flex-nowrap overflow-x-auto custom-scrollbar gap-3 pb-2 -mx-2 px-2 sm:grid sm:grid-cols-2 lg:grid-cols-4 sm:overflow-visible sm:pb-0 sm:mx-0 sm:px-0 touch-pan-x">
-        <StatCard
-          label="Total Customers"
-          value={customers.length}
-          icon={Users}
-          iconBg="bg-blue-50"
-          iconColor="text-blue-600"
-          className="flex-1"
-        />
-        <StatCard
-          label="Active Customers"
-          value={stats.active}
-          icon={Users}
-          iconBg="bg-emerald-50"
-          iconColor="text-emerald-600"
-          className="flex-1"
-        />
-        <StatCard
-          label="Outstanding Balance"
-          value={stats.outstanding.toLocaleString("en-IN")}
-          prefix="₹"
-          icon={Banknote}
-          iconBg="bg-rose-50"
-          iconColor="text-rose-500"
-          className="flex-1"
-        />
-        <StatCard
-          label="Total Credit Limit"
-          value={stats.credit.toLocaleString("en-IN")}
-          prefix="₹"
-          icon={Wallet}
-          iconBg="bg-indigo-50"
-          iconColor="text-indigo-600"
-          className="flex-1"
-        />
-      </div>
+      {!isCleanMode && (
+        <div className="flex flex-nowrap overflow-x-auto custom-scrollbar gap-3 pb-2 -mx-2 px-2 sm:grid sm:grid-cols-2 lg:grid-cols-4 sm:overflow-visible sm:pb-0 sm:mx-0 sm:px-0 touch-pan-x">
+          <StatCard
+            label="Total Customers"
+            value={customers.length}
+            icon={Users}
+            iconBg="bg-blue-50"
+            iconColor="text-blue-600"
+            className="flex-1"
+          />
+          <StatCard
+            label="Active Customers"
+            value={stats.active}
+            icon={Users}
+            iconBg="bg-emerald-50"
+            iconColor="text-emerald-600"
+            className="flex-1"
+          />
+          <StatCard
+            label="Outstanding Balance"
+            value={stats.outstanding.toLocaleString("en-IN")}
+            prefix="₹"
+            icon={Banknote}
+            iconBg="bg-rose-50"
+            iconColor="text-rose-500"
+            className="flex-1"
+          />
+          <StatCard
+            label="Total Credit Limit"
+            value={stats.credit.toLocaleString("en-IN")}
+            prefix="₹"
+            icon={Wallet}
+            iconBg="bg-indigo-50"
+            iconColor="text-indigo-600"
+            className="flex-1"
+          />
+        </div>
+      )}
 
       <div className="bg-white p-3 rounded-t-xl border-b border-gray-200 flex flex-col sm:flex-row gap-3 justify-between items-center mt-6">
         <div className="flex items-center gap-2 w-full sm:w-auto">
@@ -251,6 +260,16 @@ export default function CustomerBalanceSummary() {
             onApply={setSelectedKeys}
             storageKey="customer_table_columns"
           />
+          
+          {!isCleanMode && (
+            <button 
+              type="button"
+              className="h-10 px-3 flex items-center justify-center gap-1.5 rounded-lg border border-slate-200 text-slate-600 bg-white hover:text-slate-850 hover:border-slate-300 active:scale-95 transition-all text-xs font-semibold shadow-sm shrink-0"
+              onClick={handleOpenNewTab}
+            >
+              <ExternalLink size={13} />Open in New Tab
+            </button>
+          )}
         </div>
         <div className="flex items-center gap-1.5 ml-auto shrink-0">
           <Filter className="text-slate-400" size={14} />
@@ -268,7 +287,7 @@ export default function CustomerBalanceSummary() {
       </div>
 
       <div className="bg-white rounded-b-xl border border-gray-200 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto overflow-y-auto h-[calc(100vh-220px)] pf-scroll">
+        <div className={`overflow-x-auto overflow-y-auto ${isCleanMode ? "h-[calc(100vh-140px)]" : "h-[calc(100vh-220px)]"} pf-scroll`}>
           <table className="w-full text-left border-collapse">
             <thead className="sticky top-0 z-20 bg-slate-50/95 backdrop-blur-sm shadow-sm">
               <tr className="text-slate-400 text-[10px] font-bold border-b border-slate-100">

@@ -13,14 +13,15 @@ import {
   Search,
   AlertCircle,
   Tag,
-  AlertTriangle
+  AlertTriangle,
+  ExternalLink,
 } from "lucide-react";
 import { VariantRows, BatchCards, SerialBadgeList } from "../components/StockTree";
 import { useApi, useApiLoading } from "@/context/ApiContext";
 import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 import Loader from "@/components/common/Loader";
 import { StatCard } from "@/components/common/StatsCard";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 
 // --- Types (unchanged) ---
 export interface VariantAttribute {
@@ -556,6 +557,13 @@ const ProductRow = React.memo(
 // --- Main Component ---
 const InventoryPage = () => {
   const { getData, error, clearError } = useApi();
+  const location = useLocation();
+  const isCleanMode = new URLSearchParams(location.search).get("mode") === "clean";
+
+  const handleOpenNewTab = () => {
+    window.open(`${window.location.pathname}?mode=clean`, "_blank", "noopener,noreferrer");
+  };
+
   const loading = useApiLoading("inventory-list");
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -624,40 +632,42 @@ const InventoryPage = () => {
     <div className="flex flex-col gap-3 bg-[#f8f9fa] min-h-screen p-3 sm:p-4">
 
       {/* Metric bar */}
-      <div className="flex flex-nowrap overflow-x-auto gap-2 pb-1 -mx-1 px-1 sm:grid sm:grid-cols-2 lg:grid-cols-4 sm:overflow-visible sm:pb-0 sm:mx-0 sm:px-0 touch-pan-x">
-        <StatCard
-          icon={Package}
-          label="Catalog"
-          value={stats.total.toString()}
-          subValue="items"
-          iconBg="bg-slate-50"
-          iconColor="text-slate-500"
-        />
-        <StatCard
-          icon={AlertCircle}
-          label="Restock alerts"
-          value={stats.lowStock.toString()}
-          subValue="priority"
-          iconBg="bg-amber-50"
-          iconColor="text-amber-600"
-        />
-        <StatCard
-          icon={Tag}
-          label="Categories"
-          value={stats.categories.toString()}
-          subValue="active"
-          iconBg="bg-emerald-50"
-          iconColor="text-emerald-600"
-        />
-        <StatCard
-          icon={Hash}
-          label="Barcodes"
-          value={stats.barcodes.toString()}
-          subValue="unique"
-          iconBg="bg-violet-50"
-          iconColor="text-violet-600"
-        />
-      </div>
+      {!isCleanMode && (
+        <div className="flex flex-nowrap overflow-x-auto gap-2 pb-1 -mx-1 px-1 sm:grid sm:grid-cols-2 lg:grid-cols-4 sm:overflow-visible sm:pb-0 sm:mx-0 sm:px-0 touch-pan-x">
+          <StatCard
+            icon={Package}
+            label="Catalog"
+            value={stats.total.toString()}
+            subValue="items"
+            iconBg="bg-slate-50"
+            iconColor="text-slate-500"
+          />
+          <StatCard
+            icon={AlertCircle}
+            label="Restock alerts"
+            value={stats.lowStock.toString()}
+            subValue="priority"
+            iconBg="bg-amber-50"
+            iconColor="text-amber-600"
+          />
+          <StatCard
+            icon={Tag}
+            label="Categories"
+            value={stats.categories.toString()}
+            subValue="active"
+            iconBg="bg-emerald-50"
+            iconColor="text-emerald-600"
+          />
+          <StatCard
+            icon={Hash}
+            label="Barcodes"
+            value={stats.barcodes.toString()}
+            subValue="unique"
+            iconBg="bg-violet-50"
+            iconColor="text-violet-600"
+          />
+        </div>
+      )}
 
       {/* Error banner */}
       {error && (
@@ -696,6 +706,17 @@ const InventoryPage = () => {
           <button className="h-8 w-8 flex items-center justify-center rounded-md border border-slate-100 text-slate-400 hover:text-slate-600 hover:border-slate-200 transition-colors">
             <Filter size={13} />
           </button>
+          
+          {!isCleanMode && (
+            <button 
+              type="button"
+              className="h-8 px-2.5 flex items-center justify-center gap-1.5 rounded-md border border-slate-200 text-slate-600 bg-white hover:text-slate-850 hover:border-slate-300 active:scale-95 transition-all text-xs font-semibold shadow-sm shrink-0"
+              onClick={handleOpenNewTab}
+            >
+              <ExternalLink size={13} />Open in New Tab
+            </button>
+          )}
+
           {searchQuery && (
             <span className="text-[11px] text-slate-400 font-medium ml-1 shrink-0">
               {filteredInventory.length} result
@@ -724,7 +745,7 @@ const InventoryPage = () => {
             </div>
           </div>
         ) : (
-          <div className="overflow-x-auto overflow-y-auto h-[calc(100vh-210px)]">
+          <div className={`overflow-x-auto overflow-y-auto ${isCleanMode ? "h-[calc(100vh-130px)]" : "h-[calc(100vh-210px)]"}`}>
             <table className="w-full text-left border-collapse whitespace-nowrap text-sm">
 
               {/* Sticky header */}

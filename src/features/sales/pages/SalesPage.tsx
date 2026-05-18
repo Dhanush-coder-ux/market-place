@@ -6,6 +6,7 @@ import {
   RotateCcw, Receipt,
   ChevronRight,
   DollarSign, RefreshCw, TrendingUp, Loader2,
+  ExternalLink,
 } from "lucide-react";
 import { useApi } from "@/context/ApiContext";
 import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
@@ -107,6 +108,12 @@ const SalesListPage: React.FC = () => {
   const api = useApi();
   const navigate = useNavigate();
   const location = useLocation();
+  const isCleanMode = new URLSearchParams(location.search).get("mode") === "clean";
+
+  const handleOpenNewTab = () => {
+    window.open(`${window.location.pathname}?mode=clean`, "_blank", "noopener,noreferrer");
+  };
+
   const [orders, setOrders] = useState<OrderResponse[]>([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
@@ -194,42 +201,44 @@ const SalesListPage: React.FC = () => {
     <div className="flex flex-col gap-4 min-h-screen pb-6 font-sans w-full overflow-x-hidden relative">
 
       {/* ── KPI Row ── */}
-      <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-none">
-        <StatCard
-          label="Total Revenue"
-          value={totalRevenue.toLocaleString()}
-          prefix="₹"
-          icon={<DollarSign size={18} />}
-          iconBg="bg-emerald-50"
-          iconColor="text-emerald-600"
-          subValue="Completed"
-        />
-        <StatCard
-          label="Today's Sales"
-          value={todayRevenue.toLocaleString()}
-          prefix="₹"
-          icon={<TrendingUp size={18} />}
-          iconBg="bg-blue-50"
-          iconColor="text-blue-600"
-          subValue="Today"
-        />
-        <StatCard
-          label="Returns"
-          value={salesReturnCount}
-          icon={<RefreshCw size={18} />}
-          iconBg="bg-rose-50"
-          iconColor="text-rose-500"
-          subValue="Total"
-        />
-        <StatCard
-          label="Pending Orders"
-          value={pendingCount}
-          icon={<Loader2 size={18} className="animate-spin-slow" />}
-          iconBg="bg-amber-50"
-          iconColor="text-amber-500"
-          subValue="In Queue"
-        />
-      </div>
+      {!isCleanMode && (
+        <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-none">
+          <StatCard
+            label="Total Revenue"
+            value={totalRevenue.toLocaleString()}
+            prefix="₹"
+            icon={<DollarSign size={18} />}
+            iconBg="bg-emerald-50"
+            iconColor="text-emerald-600"
+            subValue="Completed"
+          />
+          <StatCard
+            label="Today's Sales"
+            value={todayRevenue.toLocaleString()}
+            prefix="₹"
+            icon={<TrendingUp size={18} />}
+            iconBg="bg-blue-50"
+            iconColor="text-blue-600"
+            subValue="Today"
+          />
+          <StatCard
+            label="Returns"
+            value={salesReturnCount}
+            icon={<RefreshCw size={18} />}
+            iconBg="bg-rose-50"
+            iconColor="text-rose-500"
+            subValue="Total"
+          />
+          <StatCard
+            label="Pending Orders"
+            value={pendingCount}
+            icon={<Loader2 size={18} className="animate-spin-slow" />}
+            iconBg="bg-amber-50"
+            iconColor="text-amber-500"
+            subValue="In Queue"
+          />
+        </div>
+      )}
 
       {/* ── Toolbar ── */}
       <div className="bg-white border border-slate-100 rounded-lg p-2.5 px-3.5 flex flex-wrap items-center gap-2 shadow-sm">
@@ -258,6 +267,17 @@ const SalesListPage: React.FC = () => {
           </button>
         )}
         <div className="flex-1" />
+        
+        {!isCleanMode && (
+          <button 
+            type="button"
+            className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold bg-white text-slate-700 border border-slate-200 rounded-lg cursor-pointer transition-all hover:bg-slate-50 hover:border-slate-300 active:scale-95 whitespace-nowrap shadow-sm" 
+            onClick={handleOpenNewTab}
+          >
+            <ExternalLink size={13} />Open in New Tab
+          </button>
+        )}
+
         <button className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold bg-blue-600 text-white border-none rounded-lg cursor-pointer transition-all hover:bg-blue-700 hover:shadow-lg shadow-blue-500/20 active:scale-95 whitespace-nowrap" onClick={() => setIsReturnSearchOpen(true)}>
           <RotateCcw size={13} />Process Return
         </button>
@@ -265,7 +285,9 @@ const SalesListPage: React.FC = () => {
       </div>
 
       {/* ── Table Card ── */}
-      <div className="bg-white border border-slate-100 rounded-lg shadow-sm min-w-0 overflow-hidden flex flex-col flex-1  h-[calc(100vh-360px)]">
+      <div className={`bg-white border border-slate-100 rounded-lg shadow-sm min-w-0 overflow-hidden flex flex-col flex-1 ${
+        isCleanMode ? "h-[calc(100vh-140px)]" : "h-[calc(100vh-360px)]"
+      }`}>
         <div className="overflow-auto flex-1 scrollbar-thin scrollbar-thumb-slate-100 "  >
           <table className="w-full border-collapse table-fixed">
             <thead className="sticky top-0 z-10 bg-slate-50 border-b border-slate-100">

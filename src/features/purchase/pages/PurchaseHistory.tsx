@@ -10,7 +10,9 @@ import {
   LayoutGrid,
   List,
   TrendingUp,
+  ExternalLink
 } from "lucide-react";
+import { useLocation } from "react-router-dom";
 import DirectHeader from "../components/DirectHeader";
 import { FloatingFormCard } from "@/components/common/FloatingFormCard";
 import { useApi } from "@/context/ApiContext";
@@ -439,6 +441,13 @@ const ViewToggle = ({
 /* ================= MAIN COMPONENT ================= */
 const PurchaseHistory = () => {
   const { getData } = useApi();
+  const location = useLocation();
+  const isCleanMode = new URLSearchParams(location.search).get("mode") === "clean";
+
+  const handleOpenNewTab = () => {
+    window.open(`${window.location.pathname}?mode=clean`, "_blank", "noopener,noreferrer");
+  };
+
   const [allPurchases, setAllPurchases] = useState<DirectPurchaseData[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [viewMode, setViewMode] = useState<ViewMode>("vertical");
@@ -470,8 +479,8 @@ const PurchaseHistory = () => {
     <>
       <style>{STYLES}</style>
 
-      <div className="flex flex-col gap-6 h-[calc(100vh-5rem)] pb-2 overflow-x-hidden relative">
-        <div className="flex-none"><DirectHeader /></div>
+      <div className={`flex flex-col gap-6 ${isCleanMode ? "h-[calc(100vh-2rem)]" : "h-[calc(100vh-5rem)]"} pb-2 overflow-x-hidden relative`}>
+        {!isCleanMode && <div className="flex-none"><DirectHeader /></div>}
 
         {/* ── Toolbar ── */}
         <div className="flex-none flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
@@ -492,6 +501,17 @@ const PurchaseHistory = () => {
             <SlidersHorizontal size={14} className="text-zinc-400" />
             Filters
           </button>
+
+          {!isCleanMode && (
+            <button 
+              type="button"
+              className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-zinc-650 bg-white border border-zinc-200 rounded-lg hover:bg-zinc-50 hover:border-zinc-300 transition-all shadow-sm whitespace-nowrap active:scale-95 shrink-0"
+              onClick={handleOpenNewTab}
+            >
+              <ExternalLink size={14} className="text-zinc-400" />
+              Open in New Tab
+            </button>
+          )}
 
           {searchTerm && (
             <span className="self-center text-xs text-zinc-400 font-medium px-3 py-1 bg-zinc-100 rounded-full whitespace-nowrap">

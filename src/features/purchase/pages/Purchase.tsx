@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import type { ReactNode } from "react";
-import { useNavigate } from "react-router-dom";
-import { Filter, Search, X } from "lucide-react";
+import { useNavigate, useLocation } from "react-router-dom";
+import { Filter, Search, X, ExternalLink } from "lucide-react";
 
 import Table from "@/components/common/Table";
 import PurchaseHeader from "@/features/purchase/components/PurchaseHeader";
@@ -77,6 +77,13 @@ const PURCHASE_COLUMNS: Column[] = [
 
 const PurchaseHistoryTab = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const isCleanMode = new URLSearchParams(location.search).get("mode") === "clean";
+
+  const handleOpenNewTab = () => {
+    window.open(`${window.location.pathname}?mode=clean`, "_blank", "noopener,noreferrer");
+  };
+
   const { getData, loading, error, clearError } = useApi();
   const [purchases, setPurchases] = useState<PurchaseRecord[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -97,7 +104,7 @@ const PurchaseHistoryTab = () => {
 
   return (
     <div className="space-y-6">
-      <PurchaseHeader />
+      {!isCleanMode && <PurchaseHeader />}
 
       {error && (
         <div className="flex items-center justify-between gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
@@ -106,12 +113,12 @@ const PurchaseHistoryTab = () => {
         </div>
       )}
 
-      <div className="bg-white rounded-lg shadow-sm border border-slate-100 overflow-hidden">
-        <div className="p-4 border-b border-slate-50 bg-slate-50/30">
+      <div className={`bg-white rounded-lg shadow-sm border border-slate-100 overflow-hidden flex flex-col flex-1 min-h-0 ${isCleanMode ? "h-[calc(100vh-140px)]" : "h-[calc(100vh-270px)]"}`}>
+        <div className="p-4 border-b border-slate-50 bg-slate-50/30 flex-none">
           <h3 className="heading-label text-slate-700">Direct Purchase Orders</h3>
         </div>
 
-        <div className="p-4 border-b border-gray-100 flex flex-col md:flex-row items-center justify-between gap-4">
+        <div className="p-4 border-b border-gray-100 flex flex-col md:flex-row items-center justify-between gap-4 flex-none">
           <div className="relative w-full md:w-96">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
             <input
@@ -121,25 +128,38 @@ const PurchaseHistoryTab = () => {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          <button className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-gray-600 border rounded-lg hover:bg-gray-50 transition-colors">
-            <Filter size={16} /> Filter
-          </button>
+          <div className="flex items-center gap-2">
+            {!isCleanMode && (
+              <button 
+                type="button"
+                className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-gray-605 border rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-all shadow-sm active:scale-95 shrink-0"
+                onClick={handleOpenNewTab}
+              >
+                <ExternalLink size={15} /> Open in New Tab
+              </button>
+            )}
+            <button className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-gray-600 border rounded-lg hover:bg-gray-50 transition-colors">
+              <Filter size={16} /> Filter
+            </button>
+          </div>
         </div>
 
-        {loading ? (
-          <div className="p-8"><Loader /></div>
-        ) : (
-          <Table
-            columns={PURCHASE_COLUMNS}
-            data={purchases}
-            rowKey="id"
-            onRowClick={() => navigate("/purchase/detail")}
-          />
-        )}
+        <div className="flex-1 overflow-auto pf-scroll">
+          {loading ? (
+            <div className="p-8"><Loader /></div>
+          ) : (
+            <Table
+              columns={PURCHASE_COLUMNS}
+              data={purchases}
+              rowKey="id"
+              onRowClick={() => navigate("/purchase/detail")}
+            />
+          )}
 
-        {!loading && purchases.length === 0 && !error && (
-          <div className="text-center py-12 text-slate-500 text-sm">No direct purchases found.</div>
-        )}
+          {!loading && purchases.length === 0 && !error && (
+            <div className="text-center py-12 text-slate-500 text-sm">No direct purchases found.</div>
+          )}
+        </div>
       </div>
     </div>
   );

@@ -4,7 +4,7 @@ import {
   X, RotateCcw, AlertTriangle, ArrowUp, ArrowDown,
   User, TrendingUp, TrendingDown, Activity,
   Bookmark, Plus,
-  FileText, Layers, Hash, Zap, Copy
+  FileText, Layers, Hash, Zap, Copy, ExternalLink
 } from "lucide-react";
 
 import { GradientButton } from "@/components/ui/GradientButton";
@@ -14,7 +14,7 @@ import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 import type { PurchaseRecord } from "@/types/api";
 import { useHeader } from "@/context/HeaderContext";
 import { ColumnPicker } from "@/components/common/ColumnPicker";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { ReusableSelect } from "@/components/ui/ReusableSelect";
 import { useToast } from "@/context/ToastContext";
 import { createPortal } from "react-dom";
@@ -518,6 +518,13 @@ function AddMovementModal({ onClose }: { onClose: () => void }) {
 
 export default function StockMovementPage() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const isCleanMode = new URLSearchParams(location.search).get("mode") === "clean";
+
+  const handleOpenNewTab = () => {
+    window.open(`${window.location.pathname}?mode=clean`, "_blank", "noopener,noreferrer");
+  };
+
   const { setActions } = useHeader();
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("All");
@@ -743,12 +750,14 @@ export default function StockMovementPage() {
       <div className="mx-auto w-full flex flex-col flex-1 min-h-0">
 
         {/* ── Summary Cards ── */}
-        <div className="flex flex-nowrap overflow-x-auto custom-scrollbar gap-3 pb-2 -mx-2 px-2 sm:grid sm:grid-cols-2 lg:grid-cols-4 sm:overflow-visible sm:pb-0 sm:mx-0 sm:px-0 touch-pan-x mb-4">
-          <StatCard label="Total Stock In" value={`+${totalIn}`} icon={TrendingUp} iconBg="bg-emerald-50" iconColor="text-emerald-600" className="flex-1" />
-          <StatCard label="Total Stock Out" value={`-${totalOut}`} icon={TrendingDown} iconBg="bg-rose-50" iconColor="text-rose-600" className="flex-1" />
-          <StatCard label="Net Movement" value={netMov >= 0 ? `+${netMov}` : `${netMov}`} icon={Activity} iconBg="bg-blue-50" iconColor="text-blue-600" className="flex-1" />
-          <StatCard label="Low Stock Alerts" value={lowStockAlerts} icon={AlertTriangle} iconBg="bg-amber-50" iconColor="text-amber-600" className="flex-1" />
-        </div>
+        {!isCleanMode && (
+          <div className="flex flex-nowrap overflow-x-auto custom-scrollbar gap-3 pb-2 -mx-2 px-2 sm:grid sm:grid-cols-2 lg:grid-cols-4 sm:overflow-visible sm:pb-0 sm:mx-0 sm:px-0 touch-pan-x mb-4">
+            <StatCard label="Total Stock In" value={`+${totalIn}`} icon={TrendingUp} iconBg="bg-emerald-50" iconColor="text-emerald-600" className="flex-1" />
+            <StatCard label="Total Stock Out" value={`-${totalOut}`} icon={TrendingDown} iconBg="bg-rose-50" iconColor="text-rose-600" className="flex-1" />
+            <StatCard label="Net Movement" value={netMov >= 0 ? `+${netMov}` : `${netMov}`} icon={Activity} iconBg="bg-blue-50" iconColor="text-blue-600" className="flex-1" />
+            <StatCard label="Low Stock Alerts" value={lowStockAlerts} icon={AlertTriangle} iconBg="bg-amber-50" iconColor="text-amber-600" className="flex-1" />
+          </div>
+        )}
 
         {/* ── Filter & Search Section ── */}
         <div className="bg-white p-2.5 px-3 rounded-xl border border-slate-200/80 shadow-sm mb-4 flex items-center justify-between gap-3 overflow-x-auto scrollbar-none">
@@ -809,9 +818,20 @@ export default function StockMovementPage() {
               onApply={setSelectedKeys}
               storageKey="stock_movement_columns"
             />
+            
+            {!isCleanMode && (
+              <button 
+                type="button"
+                className="h-9 px-3 rounded-lg bg-white border border-slate-200 text-slate-600 hover:text-slate-850 hover:border-slate-300 active:scale-95 transition-all flex items-center gap-1.5 text-xs font-semibold shadow-sm shrink-0"
+                onClick={handleOpenNewTab}
+              >
+                <ExternalLink size={13} />Open in New Tab
+              </button>
+            )}
+
             <button
               onClick={resetFilters}
-              className="h-9 px-3 rounded-lg bg-slate-50 border border-slate-200 text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-all flex items-center gap-1.5 text-xs font-bold shadow-sm active:scale-95"
+              className="h-9 px-3 rounded-lg bg-slate-50 border border-slate-200 text-slate-500 hover:text-slate-850 hover:bg-slate-100 transition-all flex items-center gap-1.5 text-xs font-bold shadow-sm active:scale-95"
             >
               <RotateCcw size={12} />
               Reset
@@ -820,7 +840,7 @@ export default function StockMovementPage() {
         </div>
 
         {/* ── Table Section ── */}
-        <div className="bg-white border border-slate-200/80 rounded-2xl shadow-sm overflow-hidden flex flex-col flex-1 min-h-0 h-[calc(100vh-270px)]">
+        <div className={`bg-white border border-slate-200/80 rounded-2xl shadow-sm overflow-hidden flex flex-col flex-1 min-h-0 ${isCleanMode ? "h-[calc(100vh-140px)]" : "h-[calc(100vh-270px)]"}`}>
           <div className="overflow-auto flex-1 scrollbar-thin scrollbar-thumb-slate-200">
             <table className="w-full text-left border-collapse table-fixed">
               <thead className="sticky top-0 z-20 bg-slate-50 border-b border-slate-200">

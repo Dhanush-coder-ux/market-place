@@ -1,5 +1,5 @@
-import { Search, Filter, Users, Trash2, Bookmark, Eye, Edit3, X, AlertCircle } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { Search, Filter, Users, Trash2, Bookmark, Eye, Edit3, X, AlertCircle, ExternalLink } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { StatCard } from '@/components/common/StatsCard';
 import { ReusableSelect } from '@/components/ui/ReusableSelect';
 import Input from '@/components/ui/Input';
@@ -19,6 +19,13 @@ export default function Employee() {
   const { getData, deleteData, loading, error, clearError } = useApi();
   const { showToast } = useToast();
   const navigate = useNavigate();
+  const location = useLocation();
+  const isCleanMode = new URLSearchParams(location.search).get("mode") === "clean";
+
+  const handleOpenNewTab = () => {
+    window.open(`${window.location.pathname}?mode=clean`, "_blank", "noopener,noreferrer");
+  };
+
   const { setActions } = useHeader();
 
   const [employees, setEmployees] = useState<EmployeeRecord[]>([]);
@@ -122,27 +129,29 @@ export default function Employee() {
   return (
     <div className="space-y-6">
       {/* Stats Section */}
-      <div className="flex flex-nowrap overflow-x-auto custom-scrollbar gap-3 pb-2 -mx-2 px-2 sm:grid sm:grid-cols-2 lg:grid-cols-3 sm:overflow-visible sm:pb-0 sm:mx-0 sm:px-0 touch-pan-x">
-        <StatCard
-          icon={Users}
-          label="Total Employees"
-          value={employees.length.toString()}
-          className='flex-1'
-        />
-        <StatCard
-          label="Departments"
-          value={new Set(employees.filter(Boolean).map(e => e.department)).size.toString()}
-          iconBg="bg-emerald-50" iconColor="text-emerald-600"
-          className='flex-1'
-        />
-        <StatCard
-          icon={Bookmark}
-          label="Active Roles"
-          value={new Set(employees.filter(Boolean).map(e => e.role)).size.toString()}
-          iconBg="bg-amber-50" iconColor="text-amber-600"
-          className='flex-1'
-        />
-      </div>
+      {!isCleanMode && (
+        <div className="flex flex-nowrap overflow-x-auto custom-scrollbar gap-3 pb-2 -mx-2 px-2 sm:grid sm:grid-cols-2 lg:grid-cols-3 sm:overflow-visible sm:pb-0 sm:mx-0 sm:px-0 touch-pan-x">
+          <StatCard
+            icon={Users}
+            label="Total Employees"
+            value={employees.length.toString()}
+            className='flex-1'
+          />
+          <StatCard
+            label="Departments"
+            value={new Set(employees.filter(Boolean).map(e => e.department)).size.toString()}
+            iconBg="bg-emerald-50" iconColor="text-emerald-600"
+            className='flex-1'
+          />
+          <StatCard
+            icon={Bookmark}
+            label="Active Roles"
+            value={new Set(employees.filter(Boolean).map(e => e.role)).size.toString()}
+            iconBg="bg-amber-50" iconColor="text-amber-600"
+            className='flex-1'
+          />
+        </div>
+      )}
 
       {/* Filter Section */}
       <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-4">
@@ -163,17 +172,19 @@ export default function Employee() {
             onApply={setSelectedKeys}
             storageKey="employee_table_columns"
           />
+          
+          {!isCleanMode && (
+            <button 
+              type="button"
+              className="h-10 px-3 flex items-center justify-center gap-1.5 rounded-lg border border-slate-200 text-slate-600 bg-white hover:text-slate-850 hover:border-slate-300 active:scale-95 transition-all text-xs font-semibold shadow-sm shrink-0"
+              onClick={handleOpenNewTab}
+            >
+              <ExternalLink size={13} />Open in New Tab
+            </button>
+          )}
         </div>
 
         <div className="flex items-center gap-3">
-          <Input
-            leftIcon={<Search size={14} className='text-gray-400' />}
-            type="text"
-            placeholder="Filter by name..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="h-11 text-sm w-48"
-          />
           <button className="p-2.5 rounded-lg bg-slate-50 text-slate-400 border border-slate-100 hover:bg-slate-100 transition-all shadow-sm">
             <Filter size={18} />
           </button>
@@ -202,7 +213,7 @@ export default function Employee() {
 
       {/* Table Section */}
       <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
+        <div className={`overflow-x-auto ${isCleanMode ? "h-[calc(100vh-140px)]" : "h-[calc(100vh-250px)]"}`}>
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-slate-50/50 text-slate-400 text-[10px] font-bold  tracking-[0.15em] border-b border-slate-100">

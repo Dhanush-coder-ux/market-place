@@ -169,6 +169,7 @@ export function SearchSelect<T extends BaseOption>({
         mode={mode}
         showSearch
         allowClear={allowClear}
+        getPopupContainer={(triggerNode) => triggerNode.parentNode}
         value={value}
         placeholder={placeholder}
         disabled={disabled}

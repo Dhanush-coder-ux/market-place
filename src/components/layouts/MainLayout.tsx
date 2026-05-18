@@ -237,7 +237,7 @@ const MainLayout = () => {
     location.pathname === "/";
 
   const isBillingPage = location.pathname === "/billing";
-  const isCleanMode = isBillingPage && new URLSearchParams(location.search).get("mode") === "clean";
+  const isCleanMode = new URLSearchParams(location.search).get("mode") === "clean";
   const hideNav = isCleanMode;
 
   // 3. Extract the current title info based on the URL
@@ -256,7 +256,7 @@ const MainLayout = () => {
         )}
 
         <main className="flex-1 flex flex-col min-w-0 relative overflow-hidden">
-          <div className={`flex-1 overflow-y-auto custom-scrollbar mobile-scroll relative ${hideNav ? "p-0" : isStorePage ? "p-0 pb-20 md:pb-0" : "p-2 md:p-3 lg:p-4 pb-36 md:pb-0"} ${!bottomActions && "pb-20 md:pb-0"}`}>
+          <div className={`flex-1 overflow-y-auto custom-scrollbar mobile-scroll relative ${hideNav ? (isBillingPage ? "p-0" : "p-4 md:p-6") : isStorePage ? "p-0 pb-20 md:pb-0" : "p-2 md:p-3 lg:p-4 pb-36 md:pb-0"} ${!bottomActions && "pb-20 md:pb-0"}`}>
 
             {!isStorePage && !hideNav && (
               <div className="mb-2 sm:mb-4">

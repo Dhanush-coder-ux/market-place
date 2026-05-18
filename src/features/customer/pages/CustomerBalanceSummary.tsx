@@ -168,6 +168,18 @@ export default function CustomerBalanceSummary() {
     }
   };
 
+  const stats = useMemo(() => {
+    let active = 0;
+    let outstanding = 0;
+    let credit = 0;
+    customers.forEach(c => {
+      if (c.is_active ?? c.datas?.is_active ?? true) active++;
+      outstanding += Number(c.outstanding ?? c.datas?.outstanding_balance ?? 0);
+      credit += Number(c.credit_limit ?? c.datas?.credit_limit ?? 0);
+    });
+    return { active, outstanding, credit };
+  }, [customers]);
+
   const filteredCustomers = useMemo(() => {
     return customers.filter(c => {
       if (!c) return false;
@@ -185,7 +197,40 @@ export default function CustomerBalanceSummary() {
     <div className="space-y-6">
       {/* Stats Section */}
       <div className="flex flex-nowrap overflow-x-auto custom-scrollbar gap-3 pb-2 -mx-2 px-2 sm:grid sm:grid-cols-2 lg:grid-cols-4 sm:overflow-visible sm:pb-0 sm:mx-0 sm:px-0 touch-pan-x">
-        <StatCard label="Total Customers" value={customers.length} icon={Users} className="flex-1" />
+        <StatCard
+          label="Total Customers"
+          value={customers.length}
+          icon={Users}
+          iconBg="bg-blue-50"
+          iconColor="text-blue-600"
+          className="flex-1"
+        />
+        <StatCard
+          label="Active Customers"
+          value={stats.active}
+          icon={Users}
+          iconBg="bg-emerald-50"
+          iconColor="text-emerald-600"
+          className="flex-1"
+        />
+        <StatCard
+          label="Outstanding Balance"
+          value={stats.outstanding.toLocaleString("en-IN")}
+          prefix="₹"
+          icon={Banknote}
+          iconBg="bg-rose-50"
+          iconColor="text-rose-500"
+          className="flex-1"
+        />
+        <StatCard
+          label="Total Credit Limit"
+          value={stats.credit.toLocaleString("en-IN")}
+          prefix="₹"
+          icon={Wallet}
+          iconBg="bg-indigo-50"
+          iconColor="text-indigo-600"
+          className="flex-1"
+        />
       </div>
 
       <div className="bg-white p-3 rounded-t-xl border-b border-gray-200 flex flex-col sm:flex-row gap-3 justify-between items-center mt-6">

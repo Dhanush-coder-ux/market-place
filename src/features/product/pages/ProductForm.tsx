@@ -564,7 +564,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
     <>
       <style>{STYLES}</style>
       <div className="pf-root min-h-screen bg-slate-50/50 font-sans">
-        <form onSubmit={handleSubmit} className="max-w-7xl mx-auto space-y-5">
+        <form onSubmit={handleSubmit} className=" mx-auto space-y-5">
 
           <div className="grid grid-cols-1 lg:grid-cols-6 gap-5 items-start">
 

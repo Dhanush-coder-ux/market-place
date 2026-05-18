@@ -306,31 +306,31 @@ const GridCard = ({ po, onClick }: { po: DirectPurchaseData; onClick: () => void
 /* ================= VERTICAL TABLE VIEW ================= */
 const VerticalTable = ({ data, onClick }: { data: DirectPurchaseData[]; onClick: (po: DirectPurchaseData) => void }) => {
   return (
-    <div className="bg-white rounded-lg border border-zinc-200 shadow-sm overflow-hidden">
-      <div className="overflow-x-auto overflow-y-auto h-[calc(100vh-220px)] pf-scroll">
-        <table className="w-full text-left border-collapse">
-          <thead className="sticky top-0 z-20 bg-zinc-50/95 backdrop-blur-sm shadow-sm">
-            <tr className="border-b border-zinc-200">
-              <th className="px-6 py-5 text-[11px] font-black text-zinc-500 whitespace-nowrap">PO Details</th>
-              <th className="px-6 py-5 text-[11px] font-black text-zinc-500 whitespace-nowrap">Vendor</th>
-              <th className="px-6 py-5 text-[11px] font-black text-zinc-500 whitespace-nowrap">Date</th>
-              <th className="px-6 py-5 text-[11px] font-black text-zinc-500 hidden md:table-cell">Products</th>
-              <th className="px-6 py-5 text-[11px] font-black text-zinc-500 text-right whitespace-nowrap">Qty</th>
-              <th className="px-6 py-5 text-[11px] font-black text-zinc-500 text-right whitespace-nowrap">Total</th>
-              <th className="px-6 py-5 text-[11px] font-black text-zinc-500 w-14"></th>
+    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col flex-1 min-h-0">
+      <div className="overflow-auto flex-1 scrollbar-thin scrollbar-thumb-slate-200">
+        <table className="min-w-full text-left border-collapse">
+          <thead className="sticky top-0 z-20 bg-slate-50 border-b border-slate-200">
+            <tr>
+              <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap border-r border-slate-100 last:border-r-0">PO Details</th>
+              <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap border-r border-slate-100 last:border-r-0">Vendor</th>
+              <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap border-r border-slate-100 last:border-r-0">Date</th>
+              <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500 hidden md:table-cell border-r border-slate-100 last:border-r-0">Products</th>
+              <th className="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap border-r border-slate-100 last:border-r-0">Qty</th>
+              <th className="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap border-r border-slate-100 last:border-r-0">Total</th>
+              <th className="px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-slate-500 w-14 border-r border-slate-100 last:border-r-0"></th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-zinc-100">
+          <tbody className="bg-white">
             {data.map((po) => {
               const totalQty = po.products.reduce((s, i) => s + i.quantity, 0);
               return (
                 <tr
                   key={po.id}
                   onClick={() => onClick(po)}
-                  className="po-row group cursor-pointer transition-colors hover:bg-slate-50/60"
+                  className="po-row group cursor-pointer transition-colors duration-100 border-b border-slate-100 last:border-b-0 hover:bg-blue-50/50 bg-white even:bg-slate-50/40"
                 >
                   {/* PO Details */}
-                  <td className="px-6 py-5 align-middle whitespace-nowrap">
+                  <td className="px-4 py-3 align-middle whitespace-nowrap border-r border-slate-100 last:border-r-0">
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-md bg-blue-50 flex items-center justify-center shrink-0">
                         <ReceiptText size={14} className="text-blue-600" />
@@ -343,7 +343,7 @@ const VerticalTable = ({ data, onClick }: { data: DirectPurchaseData[]; onClick:
                   </td>
 
                   {/* Vendor */}
-                  <td className="px-6 py-5 align-middle">
+                  <td className="px-4 py-3 align-middle border-r border-slate-100 last:border-r-0">
                     <div className="flex items-center gap-2 text-[13px] font-semibold text-slate-700 whitespace-nowrap">
                       <Building2 size={14} className="text-slate-400 shrink-0" />
                       {po.vendor}
@@ -351,7 +351,7 @@ const VerticalTable = ({ data, onClick }: { data: DirectPurchaseData[]; onClick:
                   </td>
 
                   {/* Date */}
-                  <td className="px-6 py-5 align-middle whitespace-nowrap">
+                  <td className="px-4 py-3 align-middle whitespace-nowrap border-r border-slate-100 last:border-r-0">
                     <div className="flex flex-col gap-0.5">
                       <div className="flex items-center gap-2 text-[13px] font-semibold text-slate-700">
                         <Calendar size={14} className="text-slate-400 shrink-0" />
@@ -362,7 +362,7 @@ const VerticalTable = ({ data, onClick }: { data: DirectPurchaseData[]; onClick:
                   </td>
 
                   {/* Products */}
-                  <td className="px-6 py-5 align-middle hidden md:table-cell max-w-[320px]">
+                  <td className="px-4 py-3 align-middle hidden md:table-cell max-w-[320px] border-r border-slate-100 last:border-r-0">
                     <div className="flex flex-wrap gap-1.5">
                       {po.products.slice(0, 2).map((p, idx) => (
                         <ProductPill key={idx} name={p.name} qty={p.quantity} stocks={p.stocks} />
@@ -376,21 +376,21 @@ const VerticalTable = ({ data, onClick }: { data: DirectPurchaseData[]; onClick:
                   </td>
 
                   {/* Quantity */}
-                  <td className="px-6 py-5 align-middle text-right whitespace-nowrap">
+                  <td className="px-4 py-3 align-middle text-right whitespace-nowrap border-r border-slate-100 last:border-r-0">
                     <span className="text-[13px] font-black text-slate-800 tabular-nums">
                       {totalQty}
                     </span>
                   </td>
 
                   {/* Total */}
-                  <td className="px-6 py-5 align-middle text-right whitespace-nowrap">
+                  <td className="px-4 py-3 align-middle text-right whitespace-nowrap border-r border-slate-100 last:border-r-0">
                     <span className="text-[15px] font-black text-blue-600 tabular-nums tracking-tight">
                       {fmt(po.total_cost)}
                     </span>
                   </td>
 
                   {/* Action */}
-                  <td className="px-6 py-5 align-middle text-right">
+                  <td className="px-4 py-3 align-middle text-right border-r border-slate-100 last:border-r-0">
                     <ArrowBtn />
                   </td>
                 </tr>
@@ -470,11 +470,11 @@ const PurchaseHistory = () => {
     <>
       <style>{STYLES}</style>
 
-      <div className="space-y-6 pb-12">
-        <DirectHeader />
+      <div className="flex flex-col gap-6 h-[calc(100vh-5rem)] pb-2 overflow-x-hidden relative">
+        <div className="flex-none"><DirectHeader /></div>
 
         {/* ── Toolbar ── */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+        <div className="flex-none flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
           <div className="relative flex-1 max-w-sm">
             <Search
               size={15}

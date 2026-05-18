@@ -70,11 +70,10 @@ const FilterDropdown: React.FC<FilterDropdownProps> = ({ label, options, value, 
   useEffect(() => { const h = (e: MouseEvent) => { if (!ref.current?.contains(e.target as Node)) setOpen(false); }; document.addEventListener("mousedown", h); return () => document.removeEventListener("mousedown", h); }, []);
   return (
     <div className="relative" ref={ref}>
-      <button 
-        onClick={() => setOpen(p => !p)} 
-        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium border transition-all duration-150 cursor-pointer whitespace-nowrap ${
-          active ? "bg-blue-50 border-blue-200 text-blue-700" : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300"
-        }`}
+      <button
+        onClick={() => setOpen(p => !p)}
+        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium border transition-all duration-150 cursor-pointer whitespace-nowrap ${active ? "bg-blue-50 border-blue-200 text-blue-700" : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300"
+          }`}
       >
         {active ? value : label}
         {active ? (
@@ -86,12 +85,11 @@ const FilterDropdown: React.FC<FilterDropdownProps> = ({ label, options, value, 
       {open && (
         <div className="absolute top-[calc(100%+6px)] left-0 min-w-[140px] bg-white border border-slate-200 rounded-lg shadow-xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-100 origin-top-left">
           {options.map(opt => (
-            <button 
-              key={opt} 
-              onClick={() => { onChange(opt === value ? "" : opt); setOpen(false); }} 
-              className={`block w-full text-left px-3.5 py-2 text-xs font-medium transition-colors ${
-                opt === value ? "bg-blue-50 text-blue-700" : "text-slate-700 hover:bg-slate-50"
-              }`}
+            <button
+              key={opt}
+              onClick={() => { onChange(opt === value ? "" : opt); setOpen(false); }}
+              className={`block w-full text-left px-3.5 py-2 text-xs font-medium transition-colors ${opt === value ? "bg-blue-50 text-blue-700" : "text-slate-700 hover:bg-slate-50"
+                }`}
             >
               {opt}
             </button>
@@ -194,42 +192,42 @@ const SalesListPage: React.FC = () => {
 
   return (
     <div className="flex flex-col gap-4 min-h-screen pb-6 font-sans w-full overflow-x-hidden relative">
-      
+
       {/* ── KPI Row ── */}
       <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-none">
-        <StatCard 
-          label="Total Revenue" 
-          value={totalRevenue.toLocaleString()} 
+        <StatCard
+          label="Total Revenue"
+          value={totalRevenue.toLocaleString()}
           prefix="₹"
-          icon={<DollarSign size={18} />} 
-          iconBg="bg-emerald-50" 
-          iconColor="text-emerald-600" 
-          subValue="Completed" 
+          icon={<DollarSign size={18} />}
+          iconBg="bg-emerald-50"
+          iconColor="text-emerald-600"
+          subValue="Completed"
         />
-        <StatCard 
-          label="Today's Sales" 
-          value={todayRevenue.toLocaleString()} 
+        <StatCard
+          label="Today's Sales"
+          value={todayRevenue.toLocaleString()}
           prefix="₹"
-          icon={<TrendingUp size={18} />} 
-          iconBg="bg-blue-50" 
-          iconColor="text-blue-600" 
-          subValue="Today" 
+          icon={<TrendingUp size={18} />}
+          iconBg="bg-blue-50"
+          iconColor="text-blue-600"
+          subValue="Today"
         />
-        <StatCard 
-          label="Returns" 
-          value={salesReturnCount} 
-          icon={<RefreshCw size={18} />} 
-          iconBg="bg-rose-50" 
-          iconColor="text-rose-500" 
-          subValue="Total" 
+        <StatCard
+          label="Returns"
+          value={salesReturnCount}
+          icon={<RefreshCw size={18} />}
+          iconBg="bg-rose-50"
+          iconColor="text-rose-500"
+          subValue="Total"
         />
-        <StatCard 
-          label="Pending Orders" 
-          value={pendingCount} 
-          icon={<Loader2 size={18} className="animate-spin-slow" />} 
-          iconBg="bg-amber-50" 
-          iconColor="text-amber-500" 
-          subValue="In Queue" 
+        <StatCard
+          label="Pending Orders"
+          value={pendingCount}
+          icon={<Loader2 size={18} className="animate-spin-slow" />}
+          iconBg="bg-amber-50"
+          iconColor="text-amber-500"
+          subValue="In Queue"
         />
       </div>
 
@@ -237,20 +235,19 @@ const SalesListPage: React.FC = () => {
       <div className="bg-white border border-slate-100 rounded-lg p-2.5 px-3.5 flex flex-wrap items-center gap-2 shadow-sm">
         <div className="relative flex-1 min-w-[200px] max-w-[320px]">
           <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-          <input 
-            className="w-full h-9 px-3 pl-9 text-xs text-slate-800 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:bg-white focus:border-blue-300 focus:ring-4 focus:ring-blue-500/10 transition-all placeholder:text-slate-400" 
-            placeholder="Search invoice or customer…" 
-            value={search} 
-            onChange={e => setSearch(e.target.value)} 
+          <input
+            className="w-full h-9 px-3 pl-9 text-xs text-slate-800 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:bg-white focus:border-blue-300 focus:ring-4 focus:ring-blue-500/10 transition-all placeholder:text-slate-400"
+            placeholder="Search invoice or customer…"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
           />
         </div>
-        <input 
-          type="date" 
-          value={filterDate} 
-          onChange={e => setFilterDate(e.target.value)} 
-          className={`h-9 px-2.5 text-[11px] font-medium border rounded-lg outline-none cursor-pointer transition-all ${
-            filterDate ? "bg-blue-50 border-blue-200 text-blue-700" : "bg-white border-slate-200 text-slate-600 focus:border-blue-300 focus:ring-4 focus:ring-blue-500/10"
-          }`} 
+        <input
+          type="date"
+          value={filterDate}
+          onChange={e => setFilterDate(e.target.value)}
+          className={`h-9 px-2.5 text-[11px] font-medium border rounded-lg outline-none cursor-pointer transition-all ${filterDate ? "bg-blue-50 border-blue-200 text-blue-700" : "bg-white border-slate-200 text-slate-600 focus:border-blue-300 focus:ring-4 focus:ring-blue-500/10"
+            }`}
         />
         <FilterDropdown label="Origin" options={["Sales", "Sales Return"]} value={filterOrigin} onChange={setFilterOrigin} />
         <FilterDropdown label="Payment" options={["Cash", "Card", "UPI"]} value={filterPayment} onChange={setFilterPayment} />
@@ -268,8 +265,8 @@ const SalesListPage: React.FC = () => {
       </div>
 
       {/* ── Table Card ── */}
-      <div className="bg-white border border-slate-100 rounded-lg shadow-sm min-w-0 overflow-hidden flex flex-col flex-1">
-        <div className="overflow-auto flex-1 scrollbar-thin scrollbar-thumb-slate-100" style={{ maxHeight: 'calc(100vh - 260px)' }}>
+      <div className="bg-white border border-slate-100 rounded-lg shadow-sm min-w-0 overflow-hidden flex flex-col flex-1  h-[calc(100vh-360px)]">
+        <div className="overflow-auto flex-1 scrollbar-thin scrollbar-thumb-slate-100 "  >
           <table className="w-full border-collapse table-fixed">
             <thead className="sticky top-0 z-10 bg-slate-50 border-b border-slate-100">
               <tr>
@@ -379,8 +376,8 @@ const SalesListPage: React.FC = () => {
       {returnSale && <ReturnModal sale={returnSale} onClose={closeReturn} onRefresh={fetchOrders} productMap={productMap} />}
 
       {/* ── Return Search Modal ── */}
-      <ReturnSearchPortal 
-        isOpen={isReturnSearchOpen} 
+      <ReturnSearchPortal
+        isOpen={isReturnSearchOpen}
         onClose={() => setIsReturnSearchOpen(false)}
         searchQuery={returnSearchQuery}
         setSearchQuery={setReturnSearchQuery}
@@ -420,11 +417,11 @@ const ReturnSearchPortal: React.FC<ReturnSearchPortalProps> = ({ isOpen, onClose
   return createPortal(
     <div className="fixed inset-0 z-[1001] overflow-y-auto overflow-x-hidden scrollbar-none flex flex-col items-center justify-center">
       {/* Backdrop */}
-      <div 
-        className="fixed inset-0 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-300" 
-        onClick={onClose} 
+      <div
+        className="fixed inset-0 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-300"
+        onClick={onClose}
       />
-      
+
       {/* Centering Wrapper */}
       <div className="relative w-full h-full flex items-center justify-center p-4 pointer-events-none">
         <div className="relative w-full max-w-[500px] bg-white rounded-lg shadow-[0_24px_80px_rgba(0,0,0,0.3)] overflow-hidden animate-in zoom-in-95 slide-in-from-bottom-4 duration-300 ease-out pointer-events-auto">
@@ -438,10 +435,10 @@ const ReturnSearchPortal: React.FC<ReturnSearchPortalProps> = ({ isOpen, onClose
           <div className="p-5 px-6 flex flex-col gap-4">
             <div className="relative group">
               <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
-              <input 
-                autoFocus 
-                placeholder="Invoice ID or customer name…" 
-                value={searchQuery} 
+              <input
+                autoFocus
+                placeholder="Invoice ID or customer name…"
+                value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
                 className="w-full h-12 pl-11 pr-4 text-[13px] border-2 border-slate-100 rounded-lg outline-none bg-slate-50/50 text-slate-800 transition-all focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/5 placeholder:text-slate-400 font-bold"
               />

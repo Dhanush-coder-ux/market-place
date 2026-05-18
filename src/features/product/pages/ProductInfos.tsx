@@ -9,387 +9,505 @@ import { VariantRows, BatchCards, SerialBadgeList } from "../../inventory/compon
 import { useHeader } from "@/context/HeaderContext";
 import { useApi, useApiLoading } from "@/context/ApiContext";
 import { useToast } from "@/context/ToastContext";
-import { StatCard } from "@/components/common/StatsCard";
 import { ColumnPicker } from "@/components/common/ColumnPicker";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { GradientButton } from "@/components/ui/GradientButton";
 import { ReusableSelect } from "@/components/ui/ReusableSelect";
-import Input from "@/components/ui/Input";
+import { StatCard } from "@/components/common/StatsCard";
 import Loader from "@/components/common/Loader";
 import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 import type { InventoryRecord } from "@/types/api";
 
+// --- Helpers (logic unchanged) ---
 const formatCurrency = (amount?: any) => {
-  if (amount === undefined || amount === null || amount === "—") return "N/A";
+  if (amount === undefined || amount === null || amount === "—") return "—";
   const num = Number(amount);
   if (isNaN(num)) return amount;
-  return `₹${num.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  return `₹${num.toLocaleString("en-IN", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
 };
 
 const columnLabels: Record<string, string> = {
   barcode: "SKU / Barcode",
-  buy_price: "Buy Price",
-  sell_price: "Sell Price",
+  buy_price: "Buy",
+  sell_price: "Sell",
   stocks: "Stock",
   category: "Category",
   unit: "Unit",
   brand: "Brand",
   supplier: "Supplier",
-  serial_number: "Serial Number",
-  reorder_point: "Reorder Pt",
-  status: "Stock Status",
+  serial_number: "Serials",
+  reorder_point: "ROP",
+  status: "Status",
 };
 
 const getColumnLabel = (key: string) => {
   if (columnLabels[key]) return columnLabels[key];
-  return key.split("_").map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(" ");
+  return key
+    .split("_")
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
 };
 
 const getStockStatus = (stock: number, reorderPoint?: number) => {
   const s = Number(stock) || 0;
   const rp = Number(reorderPoint) || 10;
-  if (s <= 0) return { label: "Out of Stock", color: "text-rose-600 bg-rose-50 border-rose-200", icon: AlertCircle };
-  if (s <= rp) return { label: "Low Stock", color: "text-amber-600 bg-amber-50 border-amber-200", icon: AlertTriangle };
-  return { label: "In Stock", color: "text-emerald-600 bg-emerald-50 border-emerald-200", icon: Package };
+  if (s <= 0)
+    return {
+      label: "Out of stock",
+      color: "text-red-600 bg-red-50 border-red-100",
+      dot: "bg-red-500",
+    };
+  if (s <= rp)
+    return {
+      label: "Low stock",
+      color: "text-amber-600 bg-amber-50 border-amber-100",
+      dot: "bg-amber-400",
+    };
+  return {
+    label: "In stock",
+    color: "text-emerald-700 bg-emerald-50 border-emerald-100",
+    dot: "bg-emerald-500",
+  };
 };
 
-/* ─── Product Row Component ────────────────────────────────────────────────── */
-const ProductRow = React.memo(({
-  p,
-  isExpanded,
-  toggleExpand,
-  selectedKeys,
-  formatCurrency,
-  navigate,
-  setProductToDelete,
-  setIsDeleteDialogOpen
+
+
+// --- Compact pill ---
+const Pill = ({
+  children,
+  variant = "default",
 }: {
-  p: InventoryRecord;
-  isExpanded: boolean;
-  toggleExpand: (id: string) => void;
-  selectedKeys: string[];
-  formatCurrency: (amount?: number | string) => string;
-  navigate: any;
-  setProductToDelete: (p: InventoryRecord) => void;
-  setIsDeleteDialogOpen: (val: boolean) => void;
+  children: React.ReactNode;
+  variant?: "default" | "blue" | "purple" | "indigo";
 }) => {
-  const datas = (p.datas as any) || {};
-
-  const extractSerials = (val: any): string[] => {
-    if (!val) return [];
-    if (Array.isArray(val)) return val;
-    if (val && typeof val === 'object') {
-      if (Array.isArray(val.serial_numbers)) return val.serial_numbers;
-    }
-    return [];
+  const styles: Record<string, string> = {
+    default: "text-slate-500 bg-slate-50 border-slate-100",
+    blue: "text-blue-600 bg-blue-50 border-blue-100",
+    purple: "text-purple-600 bg-purple-50 border-purple-100",
+    indigo: "text-indigo-600 bg-indigo-50 border-indigo-100",
   };
-
-
-  const combinations = useMemo(() => {
-    return (p.variants || []).filter((v: any) => v && v.id !== null);
-  }, [p.variants]);
-
-  const batches = useMemo(() => {
-    return (p.batches || []).filter((b: any) => b && b.id !== null);
-  }, [p.batches]);
-
-  const hasVariants = combinations.length > 0;
-  const hasBatches = batches.length > 0;
-  const hasSerials = extractSerials(p.serial_number).length > 0;
-  const isExpandable = hasVariants || hasBatches || hasSerials;
-
-  // --- Aggregation logic for badges ---
-  const rootSerials = extractSerials(p.serial_number);
-  const { totalSerials, totalBatches } = useMemo(() => {
-    let ts = rootSerials.length;
-    let tb = batches.length;
-
-    if (hasVariants) {
-      combinations.forEach((c: any) => {
-        const cDatas = c.datas || {};
-        const cSerials = extractSerials(c.serial_numbers || cDatas.serial_numbers || (cDatas.datas && cDatas.datas.serial_numbers));
-        ts += cSerials.length;
-
-        const cBatches = c.batches || [];
-        tb += cBatches.length;
-
-        cBatches.forEach((cb: any) => {
-          const cbSerials = extractSerials(cb.serial_numbers || (cb.datas && cb.datas.serial_numbers));
-          ts += cbSerials.length;
-        });
-      });
-    }
-    return { totalSerials: ts, totalBatches: tb };
-  }, [rootSerials, batches, hasVariants, combinations]);
-
-  const [showAllBadges, setShowAllBadges] = useState(false);
-
-  const badges = [];
-  if (hasVariants) {
-    badges.push(
-      <span key="var" className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold   text-blue-600 bg-blue-50 border border-blue-100 whitespace-nowrap">
-        <Layers size={10} /> {combinations.length} Variants
-      </span>
-    );
-  }
-  if (totalBatches > 0) {
-    badges.push(
-      <span key="batch" className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold   text-indigo-600 bg-indigo-50 border border-indigo-100 whitespace-nowrap">
-        <Calendar size={10} /> {totalBatches} Batches
-      </span>
-    );
-  }
-  if (totalSerials > 0) {
-    badges.push(
-      <span key="serial" className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold   text-purple-600 bg-purple-50 border border-purple-100 whitespace-nowrap">
-        <Hash size={10} /> {totalSerials} Serials
-      </span>
-    );
-  }
-
-  const visibleBadges = showAllBadges ? badges : badges.slice(0, 2);
-  const remainingBadges = badges.length - 2;
-
   return (
-    <Fragment key={p.id}>
-      <tr
-        className={`group md:transition-colors ${isExpanded ? "bg-slate-50/50" : "md:hover:bg-slate-50"}`}
-        onClick={() => isExpandable ? toggleExpand(p.id) : navigate(`/product/${p.id}`)}
-        style={{ cursor: "pointer" }}
-      >
-        <td className="px-4 py-4 text-center relative w-14">
-          {/* Vertical Indicator Line */}
-          {isExpanded && (
-            <div className="absolute top-[50%] bottom-0 left-[27px] w-[1.5px] bg-blue-500/30 z-10" />
-          )}
+    <span
+      className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium border leading-none ${styles[variant]}`}
+    >
+      {children}
+    </span>
+  );
+};
 
-          {isExpandable ? (
-            <div className={`w-7 h-7 mx-auto rounded-md flex items-center justify-center md:transition-all shadow-sm ${isExpanded ? "bg-blue-600 text-white shadow-blue-500/20" : "bg-white border border-slate-200 text-slate-500 md:group-hover:bg-slate-50"}`}>
-              {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-            </div>
-          ) : (
-            <div className="w-7 h-7 mx-auto rounded-md flex items-center justify-center">
-              <Package size={16} className="text-slate-300" />
-            </div>
-          )}
-        </td>
+/* ─── Product Row ────────────────────────────────────────────────────────── */
+const ProductRow = React.memo(
+  ({
+    p,
+    isExpanded,
+    toggleExpand,
+    selectedKeys,
+    navigate,
+    setProductToDelete,
+    setIsDeleteDialogOpen,
+  }: {
+    p: InventoryRecord;
+    isExpanded: boolean;
+    toggleExpand: (id: string) => void;
+    selectedKeys: string[];
+    navigate: any;
+    setProductToDelete: (p: InventoryRecord) => void;
+    setIsDeleteDialogOpen: (val: boolean) => void;
+  }) => {
+    const datas = (p.datas as any) || {};
 
-        <td className="px-6 py-4 whitespace-nowrap">
-          <div className="flex items-center gap-4">
-            <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white text-base font-semibold shadow-sm shrink-0">
-              {String(datas.name || (p as any).name || "?")[0].toUpperCase()}
-            </div>
-            <div className="flex flex-col gap-1 min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                <p className="text-[14px] sm:text-[15px] font-semibold text-slate-800 truncate">{p.name || "N/A"}</p>
+    const extractSerials = (val: any): string[] => {
+      if (!val) return [];
+      if (Array.isArray(val)) return val;
+      if (val && typeof val === "object") {
+        if (Array.isArray(val.serial_numbers)) return val.serial_numbers;
+      }
+      return [];
+    };
+
+    const combinations = useMemo(
+      () => (p.variants || []).filter((v: any) => v && v.id !== null),
+      [p.variants]
+    );
+
+    const batches = useMemo(
+      () => (p.batches || []).filter((b: any) => b && b.id !== null),
+      [p.batches]
+    );
+
+    const hasVariants = combinations.length > 0;
+    const hasBatches = batches.length > 0;
+    const hasSerials = extractSerials(p.serial_number).length > 0;
+    const isExpandable = hasVariants || hasBatches || hasSerials;
+
+    const rootSerials = extractSerials(p.serial_number);
+
+    const { totalSerials, totalBatches } = useMemo(() => {
+      let ts = rootSerials.length;
+      let tb = batches.length;
+      if (hasVariants) {
+        combinations.forEach((c: any) => {
+          const cDatas = c.datas || {};
+          const cSerials = extractSerials(
+            c.serial_numbers ||
+              cDatas.serial_numbers ||
+              (cDatas.datas && cDatas.datas.serial_numbers)
+          );
+          ts += cSerials.length;
+          const cBatches = c.batches || [];
+          tb += cBatches.length;
+          cBatches.forEach((cb: any) => {
+            ts += extractSerials(
+              cb.serial_numbers || (cb.datas && cb.datas.serial_numbers)
+            ).length;
+          });
+        });
+      }
+      return { totalSerials: ts, totalBatches: tb };
+    }, [rootSerials, batches, hasVariants, combinations]);
+
+    const [showAllBadges, setShowAllBadges] = useState(false);
+
+    const badges: React.ReactNode[] = [];
+    if (hasVariants)
+      badges.push(
+        <Pill key="var" variant="blue">
+          <Layers size={9} /> {combinations.length} var
+        </Pill>
+      );
+    if (totalBatches > 0)
+      badges.push(
+        <Pill key="batch" variant="indigo">
+          <Calendar size={9} /> {totalBatches} batch
+        </Pill>
+      );
+    if (totalSerials > 0)
+      badges.push(
+        <Pill key="serial" variant="purple">
+          <Hash size={9} /> {totalSerials} serial
+        </Pill>
+      );
+
+    const visibleBadges = showAllBadges ? badges : badges.slice(0, 2);
+    const remainingBadges = badges.length - 2;
+
+    const productName = p.name || "N/A";
+    const initial = String(productName[0]).toUpperCase();
+
+    return (
+      <Fragment key={p.id}>
+        <tr
+          className={`group border-b border-slate-50 transition-colors cursor-pointer ${
+            isExpanded ? "bg-slate-50/70" : "hover:bg-slate-50/60"
+          }`}
+          onClick={() =>
+            isExpandable
+              ? toggleExpand(p.id)
+              : navigate(`/product/${p.id}`)
+          }
+        >
+          {/* Expand toggle */}
+          <td className="px-3 py-2.5 text-center w-10">
+            {isExpandable ? (
+              <div
+                className={`w-5 h-5 mx-auto rounded flex items-center justify-center transition-colors ${
+                  isExpanded
+                    ? "bg-blue-600 text-white"
+                    : "text-blue-300 group-hover:text-blue-500"
+                }`}
+              >
+                {isExpanded ? (
+                  <ChevronDown size={12} />
+                ) : (
+                  <ChevronRight size={12} />
+                )}
+              </div>
+            ) : (
+              <div className="w-5 h-5 mx-auto flex items-center justify-center">
+                <div className="w-1 h-1 rounded-full bg-slate-200" />
+              </div>
+            )}
+          </td>
+
+          {/* Product identity */}
+          <td className="px-3 py-2.5">
+            <div className="flex items-center gap-2.5">
+              <div className="w-7 h-7 rounded-md bg-slate-100 flex items-center justify-center text-slate-600 text-[11px] font-semibold shrink-0 select-none">
+                {initial}
+              </div>
+              <div className="flex flex-col gap-0.5 min-w-0">
                 <div className="flex items-center gap-1.5 flex-wrap">
-                  {visibleBadges}
-                  {!showAllBadges && remainingBadges > 0 && (
-                    <button
-                      onClick={(e) => { e.stopPropagation(); setShowAllBadges(true); }}
-                      className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-bold  bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200 transition-colors"
-                    >
-                      +{remainingBadges}
-                    </button>
+                  <span className="text-[13px] font-medium text-slate-800 truncate leading-none">
+                    {productName}
+                  </span>
+                  <div className="flex items-center gap-1 flex-wrap">
+                    {visibleBadges}
+                    {!showAllBadges && remainingBadges > 0 && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setShowAllBadges(true);
+                        }}
+                        className="text-[10px] font-medium text-slate-400 hover:text-slate-600 transition-colors"
+                      >
+                        +{remainingBadges}
+                      </button>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 text-[11px] text-slate-400 font-medium leading-none">
+                  <span className="font-mono tabular-nums">
+                    {p.barcode ||
+                      datas.barcode ||
+                      (p as any).sku ||
+                      datas.sku ||
+                      "—"}
+                  </span>
+                  <span className="text-slate-200">·</span>
+                  <span>{datas.brand || (p as any).brand || "Generic"}</span>
+                  {(datas.gst || (p as any).gst) && (
+                    <>
+                      <span className="text-slate-200">·</span>
+                      <span>GST {datas.gst || (p as any).gst}</span>
+                    </>
                   )}
                 </div>
               </div>
-              <div className="flex items-center gap-2 sm:gap-3 text-[11px] sm:text-[12px] text-slate-500 font-medium flex-wrap">
-                <span className="font-mono text-slate-500 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-100">
-                  {p.barcode || datas.barcode || (p as any).sku || datas.sku || "No SKU"}
-                </span>
-                <span className="text-slate-300 hidden sm:inline">•</span>
-                <span className="text-slate-700">{datas.brand || (p as any).brand || "N/A"}</span>
-                <span className="text-slate-300 hidden sm:inline">•</span>
-                <span className="text-slate-700">GST: {datas.gst || (p as any).gst || "N/A"}</span>
-              </div>
             </div>
-          </div>
-        </td>
+          </td>
 
-        {selectedKeys.map(key => {
-          const value = (datas[key] !== undefined && datas[key] !== null) ? datas[key] : (p as any)[key];
+          {/* Dynamic columns */}
+          {selectedKeys.map((key) => {
+            const value =
+              datas[key] !== undefined && datas[key] !== null
+                ? datas[key]
+                : (p as any)[key];
 
-          if (key === "buy_price" || key === "sell_price" || key === "price") {
-            return (
-              <td key={key} className="px-6 py-4 whitespace-nowrap">
-                <span className={`text-[13px] ${key === "sell_price" ? "font-semibold text-slate-800" : "font-medium text-slate-600"}`}>
-                  {hasVariants ? "—" : formatCurrency(value)}
-                </span>
-              </td>
-            );
-          }
-
-          if (key === "stocks" || key === "quantity") {
-            return (
-              <td key={key} className="px-6 py-4 whitespace-nowrap">
-                <span className="text-[14px] font-black text-slate-800 tabular-nums">{value}</span>
-              </td>
-            );
-          }
-
-          if (key === "reorder_point") {
-            return (
-              <td key={key} className="px-6 py-4 whitespace-nowrap">
-                <span className="text-[12px] font-bold text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-100">
-                  {value !== undefined && value !== null ? value : "—"}
-                </span>
-              </td>
-            );
-          }
-
-          if (key === "status") {
-            const stocks = datas.stocks !== undefined ? datas.stocks : (p as any).stocks;
-            const reorderPoint = Number((p as any).reorder_point ?? datas.reorder_point ?? 0);
-            const status = getStockStatus(stocks, reorderPoint);
-            return (
-              <td key={key} className="px-6 py-4 whitespace-nowrap">
-                <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold border shadow-sm w-fit ${status.color}`}>
-                  <status.icon size={12} />
-                  {status.label}
-                </span>
-              </td>
-            );
-          }
-
-          if (key === "serial_number") {
-            const sList = extractSerials(p.serial_number);
-            if (sList.length === 0 && totalSerials > 0) {
+            if (key === "buy_price" || key === "sell_price" || key === "price") {
               return (
-                <td key={key} className="px-6 py-4 whitespace-nowrap">
-                  <span className="text-[11px] font-bold text-slate-400   bg-slate-50 px-2 py-1 rounded-md border border-slate-100">
-                    See Variants
+                <td key={key} className="px-3 py-2.5 whitespace-nowrap">
+                  <span
+                    className={`tabular-nums ${
+                      key === "sell_price"
+                        ? "text-[13px] font-semibold text-slate-700"
+                        : "text-[12px] font-medium text-slate-400"
+                    }`}
+                  >
+                    {hasVariants ? "—" : formatCurrency(value)}
                   </span>
                 </td>
               );
             }
-            return (
-              <td key={key} className="px-6 py-4 whitespace-nowrap">
-                {sList.length > 0 ? (
-                  <div className="flex items-center gap-1.5">
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-mono font-bold bg-purple-50 text-purple-600 border border-purple-100">
-                      {sList[0]}
-                    </span>
-                    {sList.length > 1 && (
-                      <span className="text-[10px] font-bold text-purple-400">+{sList.length - 1}</span>
-                    )}
-                  </div>
-                ) : <span className="text-slate-300">—</span>}
-              </td>
-            );
-          }
 
-          if (key === "category" || key === "supplier") {
-            if (key === "category" && selectedKeys.includes("supplier")) {
+            if (key === "stocks" || key === "quantity") {
               return (
-                <td key="cat_sup" className="px-6 py-4">
-                  <div className="flex flex-col gap-0.5">
-                    <span className="text-[14px] font-medium text-slate-800">{datas.category || (p as any).category || "N/A"}</span>
-                    <span className="text-[12px] text-slate-500 font-medium">{datas.supplier || (p as any).supplier || "N/A"}</span>
-                  </div>
+                <td key={key} className="px-3 py-2.5 whitespace-nowrap text-right">
+                  <span className="text-[13px] font-semibold text-slate-800 tabular-nums">
+                    {value}
+                  </span>
                 </td>
               );
             }
-            if (key === "supplier" && selectedKeys.includes("category")) return null;
+
+            if (key === "reorder_point") {
+              return (
+                <td key={key} className="px-3 py-2.5 whitespace-nowrap text-center">
+                  <span className="text-[11px] font-medium text-slate-400 tabular-nums">
+                    {value !== undefined && value !== null ? value : "—"}
+                  </span>
+                </td>
+              );
+            }
+
+            if (key === "status") {
+              const stocks =
+                datas.stocks !== undefined ? datas.stocks : (p as any).stocks;
+              const reorderPoint = Number(
+                (p as any).reorder_point ?? datas.reorder_point ?? 0
+              );
+              const status = getStockStatus(stocks, reorderPoint);
+              return (
+                <td key={key} className="px-3 py-2.5 whitespace-nowrap">
+                  <span
+                    className={`inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-medium border leading-none ${status.color}`}
+                  >
+                    <span className={`w-1.5 h-1.5 rounded-full ${status.dot}`} />
+                    {status.label}
+                  </span>
+                </td>
+              );
+            }
+
+            if (key === "serial_number") {
+              const sList = extractSerials(p.serial_number);
+              if (sList.length === 0 && totalSerials > 0) {
+                return (
+                  <td key={key} className="px-3 py-2.5 whitespace-nowrap">
+                    <span className="text-[11px] text-slate-400">
+                      See variants
+                    </span>
+                  </td>
+                );
+              }
+              return (
+                <td key={key} className="px-3 py-2.5 whitespace-nowrap">
+                  {sList.length > 0 ? (
+                    <div className="flex items-center gap-1">
+                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono font-medium bg-violet-50 text-violet-600 border border-violet-100 leading-none">
+                        {sList[0]}
+                      </span>
+                      {sList.length > 1 && (
+                        <span className="text-[10px] text-slate-400 font-medium">
+                          +{sList.length - 1}
+                        </span>
+                      )}
+                    </div>
+                  ) : (
+                    <span className="text-slate-200 text-sm">—</span>
+                  )}
+                </td>
+              );
+            }
+
+            if (key === "category" || key === "supplier") {
+              if (
+                key === "category" &&
+                selectedKeys.includes("supplier")
+              ) {
+                return (
+                  <td key="cat_sup" className="px-3 py-2.5">
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-[12px] font-medium text-slate-700 leading-none">
+                        {datas.category ||
+                          (p as any).category ||
+                          "Uncategorized"}
+                      </span>
+                      <span className="text-[11px] text-slate-400 leading-none">
+                        {datas.supplier ||
+                          (p as any).supplier ||
+                          "No supplier"}
+                      </span>
+                    </div>
+                  </td>
+                );
+              }
+              if (
+                key === "supplier" &&
+                selectedKeys.includes("category")
+              )
+                return null;
+              return (
+                <td key={key} className="px-3 py-2.5 whitespace-nowrap">
+                  <span className="text-[12px] font-medium text-slate-600">
+                    {value || "—"}
+                  </span>
+                </td>
+              );
+            }
+
+            const renderValue = () => {
+              if (value === undefined || value === null) return "—";
+              if (value === "" && key !== "barcode") return "—";
+              if (value === "" && key === "barcode") {
+                return (
+                  p.barcode ||
+                  datas.barcode ||
+                  (p as any).sku ||
+                  datas.sku ||
+                  "—"
+                );
+              }
+              if (Array.isArray(value)) {
+                if (value.length === 0) return "—";
+                if (typeof value[0] === "object" && value[0].name)
+                  return value.map((v: any) => v.name).join(", ");
+                return value.join(", ");
+              }
+              if (typeof value === "object") return JSON.stringify(value);
+              return String(value);
+            };
 
             return (
-              <td key={key} className="px-6 py-4 whitespace-nowrap">
-                <span className="text-[13px] font-medium text-slate-600">{value || "—"}</span>
+              <td key={key} className="px-3 py-2.5 whitespace-nowrap">
+                <span className="text-[12px] font-medium text-slate-600">
+                  {renderValue()}
+                </span>
               </td>
             );
-          }
+          })}
 
-          const renderValue = () => {
-            if (value === undefined || value === null) return "—";
-            if (value === "" && key !== "barcode") return "—";
-            if (value === "" && key === "barcode") {
-              const b = p.barcode || datas.barcode || (p as any).sku || datas.sku || "";
-              return b || "—";
-            }
-            if (Array.isArray(value)) {
-              if (value.length === 0) return "—";
-              // Handle variant_types specifically
-              if (typeof value[0] === 'object' && value[0].name) {
-                return value.map((v: any) => v.name).join(", ");
-              }
-              return value.join(", ");
-            }
-            if (typeof value === 'object') {
-              return JSON.stringify(value);
-            }
-            return String(value);
-          };
-
-          return (
-            <td key={key} className="px-6 py-4 whitespace-nowrap">
-              <span className="text-[13px] font-medium text-slate-600">{renderValue()}</span>
-            </td>
-          );
-        })}
-
-        <td className="px-6 py-4 text-right whitespace-nowrap">
-          <div className="flex items-center justify-end gap-1.5">
-            <button
-              onClick={(e) => { e.stopPropagation(); navigate(`/product/${p.id}`); }}
-              className="p-2 text-slate-400 md:hover:text-blue-600 md:hover:bg-blue-50 rounded-lg md:transition-colors border border-transparent md:hover:border-blue-100"
-              title="View Detail"
-            >
-              <Eye size={16} />
-            </button>
-            <button
-              onClick={(e) => { e.stopPropagation(); setProductToDelete(p); setIsDeleteDialogOpen(true); }}
-              className="p-2 text-slate-400 md:hover:text-rose-600 md:hover:bg-rose-50 rounded-lg md:transition-colors border border-transparent md:hover:border-rose-100"
-              title="Delete Product"
-            >
-              <Trash2 size={16} />
-            </button>
-          </div>
-        </td>
-      </tr>
-
-      {/* EXPANDED TREE AREA */}
-      {isExpanded && (
-        <tr key={`${p.id}-expand`} className="bg-slate-50/20">
-          <td colSpan={selectedKeys.length + 3} className="px-0 py-0 border-b border-slate-100 relative">
-            {/* Vertical Route Indicator Line */}
-            <div className="absolute top-0 bottom-0 left-[27px] w-[1.5px] bg-blue-500/30 z-10" />
-
-            <div className="md:pl-[84px] pl-10 pr-6 py-6 space-y-6">
-              {!hasVariants && rootSerials.length > 0 && (
-                <div className="bg-white rounded-lg border border-slate-100 p-4 shadow-sm relative">
-                  {/* Horizontal connecting line */}
-                  <div className="absolute top-8 left-[-18px] md:left-[-57px] w-4 md:w-[57px] h-[1.5px] bg-blue-500/30" />
-
-                  <div className="flex items-center gap-2 mb-3">
-                    <Hash size={12} className="text-violet-400" />
-                    <span className="text-[10px] font-bold  text-slate-400 ">Serial Number Tracking</span>
-                  </div>
-                  <SerialBadgeList serials={rootSerials} title={`Serials: ${p.name}`} />
-                </div>
-              )}
-
-              <div className="animate-in fade-in slide-in-from-top-4 duration-500 relative">
-                {/* Horizontal connecting line for tree components */}
-                <div className="absolute top-8 left-[-18px] md:left-[-57px] w-4 md:w-[57px] h-[1.5px] bg-blue-500/30" />
-
-                {hasVariants && (
-                  <VariantRows
-                    combinations={combinations}
-                    baseSellPrice={datas.sell_price || (p as any).sell_price}
-                    baseBuyPrice={datas.buy_price || (p as any).buy_price}
-                  />
-                )}
-                {!hasVariants && hasBatches && (
-                  <BatchCards batches={batches} />
-                )}
-              </div>
+          {/* Actions */}
+          <td className="px-3 py-2.5 text-right whitespace-nowrap">
+            <div className="flex items-center justify-end gap-0.5">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigate(`/product/${p.id}`);
+                }}
+                className="p-1.5 text-slate-300 hover:text-slate-600 hover:bg-slate-100 rounded transition-colors"
+                title="View details"
+              >
+                <Eye size={14} />
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setProductToDelete(p);
+                  setIsDeleteDialogOpen(true);
+                }}
+                className="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
+                title="Delete product"
+              >
+                <Trash2 size={14} />
+              </button>
             </div>
           </td>
         </tr>
-      )}
-    </Fragment>
-  );
-});
+
+        {/* Expanded tree area */}
+        {isExpanded && (
+          <tr key={`${p.id}-expand`} className="bg-slate-50/40">
+            <td
+              colSpan={selectedKeys.length + 3}
+              className="px-0 py-0 border-b border-slate-50"
+            >
+              <div className="ml-10 mr-4 my-3 space-y-3 border-l border-slate-100 pl-6">
+                {!hasVariants && rootSerials.length > 0 && (
+                  <div className="bg-white border border-slate-100 rounded-lg p-3">
+                    <p className="text-[10px] font-semibold text-slate-400 mb-2 flex items-center gap-1.5 uppercase tracking-wide">
+                      <Hash size={10} className="text-slate-400" />
+                      Serial numbers
+                    </p>
+                    <SerialBadgeList
+                      serials={rootSerials}
+                      title={`Serials: ${p.name}`}
+                    />
+                  </div>
+                )}
+
+                <div className="animate-in fade-in duration-300">
+                  {hasVariants && (
+                    <VariantRows
+                      combinations={combinations}
+                      baseSellPrice={datas.sell_price || (p as any).sell_price}
+                      baseBuyPrice={datas.buy_price || (p as any).buy_price}
+                    />
+                  )}
+                  {!hasVariants && hasBatches && (
+                    <BatchCards batches={batches} />
+                  )}
+                </div>
+              </div>
+            </td>
+          </tr>
+        )}
+      </Fragment>
+    );
+  }
+);
 
 /* ─── Main ProductInfos ───────────────────────────────────────────────────── */
 const ProductInfos = () => {
@@ -410,21 +528,26 @@ const ProductInfos = () => {
   const [availableKeys, setAvailableKeys] = useState<string[]>([]);
   const [selectedKeys, setSelectedKeys] = useState<string[]>(() => {
     const saved = localStorage.getItem("product_table_columns");
-    return saved ? JSON.parse(saved) : ["category", "sell_price", "stocks", "reorder_point", "status"];
+    return saved
+      ? JSON.parse(saved)
+      : ["category", "sell_price", "stocks", "reorder_point", "status"];
   });
 
   useEffect(() => {
     setActions(
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2">
         <button
           onClick={() => navigate("/product/drafts")}
-          className="px-4 h-10 rounded-lg border border-blue-100 text-blue-600 font-semibold text-[13px] bg-blue-50/50 md:hover:bg-blue-100 md:transition-all flex items-center gap-2"
+          className="h-8 px-3 rounded-md border border-slate-200 text-slate-600 font-medium text-[12px] bg-white hover:bg-slate-50 transition-colors flex items-center gap-1.5"
         >
-          <Bookmark size={16} />
-          Saved Drafts
+          <Bookmark size={13} />
+          Drafts
         </button>
-        <GradientButton path="/product/add" className="h-10 flex items-center px-5 text-sm shadow-sm rounded-lg">
-          + Add Product
+        <GradientButton
+          path="/product/add"
+          className="h-8 flex items-center px-4 text-[12px] rounded-md"
+        >
+          + Add product
         </GradientButton>
       </div>
     );
@@ -432,37 +555,47 @@ const ProductInfos = () => {
   }, [setActions, navigate]);
 
   useEffect(() => {
-    const params: Record<string, string> = { shop_id: SHOP_ID, limit: "100", offset: "1" };
+    const params: Record<string, string> = {
+      shop_id: SHOP_ID,
+      limit: "100",
+      offset: "1",
+    };
     if (searchTerm) params.q = searchTerm;
 
-    getData(`${ENDPOINTS.INVENTORIES}/by/shop/${SHOP_ID}`, params).then((res) => {
-      if (res) {
-        const data: InventoryRecord[] = Array.isArray(res.data) ? res.data : [res.data];
-        setProducts(data);
+    getData(`${ENDPOINTS.INVENTORIES}/by/shop/${SHOP_ID}`, params).then(
+      (res) => {
+        if (res) {
+          const data: InventoryRecord[] = Array.isArray(res.data)
+            ? res.data
+            : [res.data];
+          setProducts(data);
 
-        const keys = new Set<string>();
-        data.forEach((p: InventoryRecord) => {
-          if (p.datas) {
-            Object.keys(p.datas).forEach(k => {
-              if (!["name", "id", "shop_id", "variantTypes", "is_active"].includes(k)) keys.add(k);
-            });
-          }
-          keys.add("category");
-          keys.add("sell_price");
-          keys.add("buy_price");
-          keys.add("stocks");
-          keys.add("reorder_point");
-          keys.add("status");
-        });
-        setAvailableKeys(Array.from(keys).sort());
+          const keys = new Set<string>();
+          data.forEach((p: InventoryRecord) => {
+            if (p.datas) {
+              Object.keys(p.datas).forEach((k) => {
+                if (
+                  !["name", "id", "shop_id", "variantTypes", "is_active"].includes(k)
+                )
+                  keys.add(k);
+              });
+            }
+            ["category", "sell_price", "buy_price", "stocks", "reorder_point", "status"].forEach((k) =>
+              keys.add(k)
+            );
+          });
+          setAvailableKeys(Array.from(keys).sort());
+        }
       }
-    });
+    );
   }, [refreshKey, searchTerm]);
 
   const handleDelete = async () => {
     if (!productToDelete) return;
     try {
-      await deleteData(`${ENDPOINTS.INVENTORIES}/${SHOP_ID}/${productToDelete.id}`);
+      await deleteData(
+        `${ENDPOINTS.INVENTORIES}/${SHOP_ID}/${productToDelete.id}`
+      );
       showToast("Product deleted successfully", "success");
       setRefreshKey((prev: number) => prev + 1);
     } catch {
@@ -475,135 +608,235 @@ const ProductInfos = () => {
 
   const toggleExpand = (id: string) => {
     const n = new Set(expandedRows);
-    if (n.has(id)) n.delete(id); else n.add(id);
+    if (n.has(id)) n.delete(id);
+    else n.add(id);
     setExpandedRows(n);
   };
 
   const filteredProducts = useMemo(() => {
-    return products.filter(p => {
+    return products.filter((p) => {
       const name = String(p.name || "").toLowerCase();
-      const sku = String(p.barcode || p.datas?.barcode || (p as any).sku || p.datas?.sku || "").toLowerCase();
+      const sku = String(
+        p.barcode ||
+          p.datas?.barcode ||
+          (p as any).sku ||
+          p.datas?.sku ||
+          ""
+      ).toLowerCase();
       const category = String(p.category || "").toLowerCase();
-      return name.includes(searchTerm.toLowerCase()) || sku.includes(searchTerm.toLowerCase()) || category.includes(searchTerm.toLowerCase());
+      const q = searchTerm.toLowerCase();
+      return name.includes(q) || sku.includes(q) || category.includes(q);
     });
   }, [products, searchTerm]);
 
-  const totalStock = useMemo(() =>
-    products.reduce((acc, p) => acc + Number(p.stocks || 0), 0),
+  const totalStock = useMemo(
+    () => products.reduce((acc, p) => acc + Number(p.stocks || 0), 0),
     [products]
   );
 
-  const lowStockCount = useMemo(() =>
-    products.filter(p => {
-      const stock = Number(p.stocks || 0);
-      const rp = Number((p as any).reorder_point ?? p.datas?.reorder_point ?? 10);
-      return stock <= rp;
-    }).length,
+  const lowStockCount = useMemo(
+    () =>
+      products.filter((p) => {
+        const stock = Number(p.stocks || 0);
+        const rp = Number(
+          (p as any).reorder_point ?? p.datas?.reorder_point ?? 10
+        );
+        return stock <= rp;
+      }).length,
     [products]
   );
 
   return (
-    <div className="space-y-6 md:animate-in md:fade-in md:duration-500">
-      {/* Stats */}
-      <div className="flex flex-nowrap overflow-x-auto custom-scrollbar gap-3 pb-2 -mx-2 px-2 sm:grid sm:grid-cols-2 lg:grid-cols-4 sm:overflow-visible sm:pb-0 sm:mx-0 sm:px-0 touch-pan-x">
+    <div className="flex flex-col gap-3 bg-[#f8f9fa] min-h-screen p-3 sm:p-4">
+
+      {/* Metric bar */}
+      <div className="flex flex-nowrap overflow-x-auto gap-2 pb-1 -mx-1 px-1 sm:grid sm:grid-cols-3 sm:overflow-visible sm:pb-0 sm:mx-0 sm:px-0 touch-pan-x">
         <StatCard
-          label="Total Products"
-          value={products.length.toString()}
           icon={Package}
-          className="rounded-lg border-slate-200 shadow-sm"
+          label="Total products"
+          value={products.length.toString()}
+          subValue="items"
+          iconBg="bg-slate-50"
+          iconColor="text-slate-500"
         />
         <StatCard
-          label="Total Stock"
-          value={totalStock.toString()}
           icon={Layers}
+          label="Total stock"
+          value={totalStock.toString()}
+          subValue="units"
           iconBg="bg-blue-50"
           iconColor="text-blue-600"
-          className="rounded-lg border-slate-200 shadow-sm"
         />
         <StatCard
-          label="Low Stock Items"
-          value={lowStockCount.toString()}
           icon={AlertTriangle}
+          label="Low stock"
+          value={lowStockCount.toString()}
+          subValue="items"
           iconBg="bg-rose-50"
-          iconColor="text-rose-600"
-          className="rounded-lg border-slate-200 shadow-sm"
+          iconColor="text-rose-500"
         />
       </div>
 
-      {/* Toolbar */}
-      <div className="bg-white p-3 rounded-lg border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center gap-3 flex-1 min-w-[300px]">
-          <div className="relative flex-1 max-w-md">
-            <Input
-              leftIcon={<Search size={16} className="text-slate-400" />}
+      {/* Error banner */}
+      {error && (
+        <div className="flex items-center justify-between px-4 py-2.5 bg-red-50 border border-red-100 rounded-lg text-red-600 text-[12px] font-medium">
+          <div className="flex items-center gap-2">
+            <AlertCircle size={14} className="text-red-400 shrink-0" />
+            <span>{error}</span>
+          </div>
+          <button
+            onClick={clearError}
+            className="text-red-300 hover:text-red-500 transition-colors p-1 rounded"
+          >
+            <X size={14} />
+          </button>
+        </div>
+      )}
+
+      {/* Main table card */}
+      <div className="bg-white rounded-lg border border-slate-100 overflow-hidden flex flex-col flex-1">
+
+        {/* Toolbar */}
+        <div className="flex items-center gap-2 px-3 py-2.5 border-b border-slate-100">
+          <div className="relative flex-1 max-w-sm">
+            <Search
+              size={13}
+              className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+            />
+            <input
               type="text"
-              placeholder="Search products by name, SKU or category..."
+              placeholder="Search by name, SKU, category…"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="h-10 text-sm rounded-lg border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
+              className="w-full h-8 pl-8 pr-3 text-[12px] font-medium text-slate-700 bg-slate-50 border border-slate-100 rounded-md placeholder:text-slate-400 focus:outline-none focus:border-slate-300 focus:bg-white transition-colors"
             />
           </div>
+
           <ColumnPicker
             availableKeys={availableKeys}
             selectedKeys={selectedKeys}
             onApply={setSelectedKeys}
             storageKey="product_table_columns"
           />
-        </div>
-        <div className="flex items-center gap-3">
-          <button className="p-2.5 rounded-lg bg-white text-slate-500 border border-slate-200 md:hover:bg-slate-50 md:transition-all shadow-sm">
-            <Filter size={16} />
+
+          <button className="h-8 w-8 flex items-center justify-center rounded-md border border-slate-100 text-slate-400 hover:text-slate-600 hover:border-slate-200 transition-colors">
+            <Filter size={13} />
           </button>
+
           <ReusableSelect
             value={statusFilter}
             onValueChange={(val) => setStatusFilter(val)}
             options={[
-              { label: "All Stock Levels", value: "All" },
-              { label: "In Stock", value: "In Stock" },
-              { label: "Low Stock", value: "Low Stock" },
-              { label: "Out of Stock", value: "Out of Stock" },
+              { label: "All levels", value: "All" },
+              { label: "In stock", value: "In Stock" },
+              { label: "Low stock", value: "Low Stock" },
+              { label: "Out of stock", value: "Out of Stock" },
             ]}
-            placeholder="Filter"
-            className="w-48 h-10 text-sm rounded-lg"
+            placeholder="Status"
+            className="h-8 text-[12px] rounded-md min-w-[120px]"
           />
-        </div>
-      </div>
 
-      {error && (
-        <div className="p-4 bg-rose-50 border border-rose-200 rounded-lg flex items-center justify-between md:animate-in md:fade-in">
-          <div className="flex items-center gap-3 text-rose-700">
-            <AlertCircle size={20} />
-            <p className="text-sm font-medium">{error}</p>
-          </div>
-          <button onClick={clearError} className="p-1 md:hover:bg-rose-100 rounded-lg md:transition-colors text-rose-500">
-            <X size={18} />
-          </button>
+          {searchTerm && (
+            <span className="text-[11px] text-slate-400 font-medium shrink-0">
+              {filteredProducts.length} result
+              {filteredProducts.length !== 1 ? "s" : ""}
+            </span>
+          )}
         </div>
-      )}
 
-      {/* Table */}
-      <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto overflow-y-auto h-[calc(100vh-220px)] pf-scroll">
-          <table className="w-full text-left border-collapse">
-            <thead className="sticky top-0 z-20 bg-white/95 backdrop-blur-sm shadow-sm">
-              <tr className="border-b border-slate-200 text-slate-500 text-[11px] font-semibold  ">
-                <th className="px-6 py-4 w-14 text-center"></th>
-                <th className="px-6 py-4 whitespace-nowrap w-full min-w-[260px]">Product Details</th>
-                {selectedKeys.map(key => {
-                  if (key === "category" && selectedKeys.includes("supplier")) {
-                    return <th key="cat_sup" className="px-6 py-4 whitespace-nowrap">Category & Supplier</th>;
+        {/* Table */}
+        <div className="overflow-x-auto overflow-y-auto h-[calc(100vh-210px)]">
+          <table className="w-full text-left border-collapse whitespace-nowrap text-sm">
+
+            {/* Sticky header */}
+            <thead className="sticky top-0 z-20 bg-white border-b border-slate-100">
+              <tr>
+                <th className="px-3 py-2.5 w-10" />
+                <th className="px-3 py-2.5 min-w-[260px] text-[10px] font-semibold text-slate-400 uppercase tracking-wide">
+                  Product
+                </th>
+                {selectedKeys.map((key) => {
+                  if (
+                    key === "category" &&
+                    selectedKeys.includes("supplier")
+                  ) {
+                    return (
+                      <th
+                        key="cat_sup"
+                        className="px-3 py-2.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wide"
+                      >
+                        Category
+                      </th>
+                    );
                   }
-                  if (key === "supplier" && selectedKeys.includes("category")) return null;
-                  return <th key={key} className="px-6 py-4 whitespace-nowrap">{getColumnLabel(key)}</th>;
+                  if (
+                    key === "supplier" &&
+                    selectedKeys.includes("category")
+                  )
+                    return null;
+                  return (
+                    <th
+                      key={key}
+                      className={`px-3 py-2.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wide ${
+                        key === "stocks" || key === "sell_price" || key === "buy_price"
+                          ? "text-right"
+                          : key === "reorder_point"
+                          ? "text-center"
+                          : ""
+                      }`}
+                    >
+                      {getColumnLabel(key)}
+                    </th>
+                  );
                 })}
-                <th className="px-6 py-4 text-right whitespace-nowrap">Actions</th>
+                <th className="px-3 py-2.5 w-16 text-right text-[10px] font-semibold text-slate-400 uppercase tracking-wide">
+                </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 performance-list">
+
+            <tbody className="divide-y-0">
               {loading ? (
-                <tr><td colSpan={selectedKeys.length + 3} className="py-16 text-center"><Loader /></td></tr>
+                <tr>
+                  <td
+                    colSpan={selectedKeys.length + 3}
+                    className="py-20 text-center"
+                  >
+                    <Loader />
+                  </td>
+                </tr>
               ) : filteredProducts.length === 0 ? (
-                <tr><td colSpan={selectedKeys.length + 3} className="py-16 text-center text-slate-500 text-sm">No products matching your search.</td></tr>
+                <tr>
+                  <td
+                    colSpan={selectedKeys.length + 3}
+                    className="py-20 text-center"
+                  >
+                    <div className="flex flex-col items-center gap-2">
+                      {searchTerm ? (
+                        <>
+                          <Search size={18} className="text-slate-300" />
+                          <p className="text-[12px] font-medium text-slate-400">
+                            No results for{" "}
+                            <span className="text-slate-600">
+                              "{searchTerm}"
+                            </span>
+                          </p>
+                        </>
+                      ) : (
+                        <>
+                          <div className="w-10 h-10 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center">
+                            <Package size={18} className="text-slate-300" />
+                          </div>
+                          <p className="text-[12px] font-medium text-slate-500">
+                            No products found
+                          </p>
+                          <p className="text-[11px] text-slate-400 max-w-[180px] leading-relaxed text-center">
+                            Add your first product to get started.
+                          </p>
+                        </>
+                      )}
+                    </div>
+                  </td>
+                </tr>
               ) : (
                 filteredProducts.map((p) => (
                   <ProductRow
@@ -612,7 +845,6 @@ const ProductInfos = () => {
                     isExpanded={expandedRows.has(p.id)}
                     toggleExpand={toggleExpand}
                     selectedKeys={selectedKeys}
-                    formatCurrency={formatCurrency}
                     navigate={navigate}
                     setProductToDelete={setProductToDelete}
                     setIsDeleteDialogOpen={setIsDeleteDialogOpen}
@@ -622,15 +854,28 @@ const ProductInfos = () => {
             </tbody>
           </table>
         </div>
+
+        {/* Footer */}
+        {!loading && products.length > 0 && (
+          <div className="border-t border-slate-50 px-4 py-2 flex items-center justify-between">
+            <span className="text-[11px] text-slate-400 font-medium">
+              {filteredProducts.length} of {products.length} product
+              {products.length !== 1 ? "s" : ""}
+            </span>
+            <span className="text-[11px] text-slate-300 font-medium">
+              {expandedRows.size > 0 && `${expandedRows.size} expanded`}
+            </span>
+          </div>
+        )}
       </div>
 
       <ConfirmDialog
         isOpen={isDeleteDialogOpen}
         onClose={() => setIsDeleteDialogOpen(false)}
         onConfirm={handleDelete}
-        title="Remove Product"
-        description={`This action cannot be undone. This will permanently remove the product and all associated data.`}
-        confirmText="Remove Product"
+        title="Remove product"
+        description="This action cannot be undone. This will permanently remove the product and all associated data."
+        confirmText="Remove product"
         type="danger"
       />
     </div>
@@ -638,4 +883,3 @@ const ProductInfos = () => {
 };
 
 export default ProductInfos;
-

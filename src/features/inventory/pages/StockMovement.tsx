@@ -225,8 +225,8 @@ function TypeBadge({ type }: { type: MovementType }) {
   const formattedType = type.replace('_', ' ');
 
   return (
-    <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium border ${s.bg}`}>
-      <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
+    <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-extrabold border leading-none shadow-sm uppercase tracking-wider ${s.bg}`}>
+      <span className={`w-1 h-1 rounded-full ${s.dot}`} />
       {formattedType}
     </span>
   );
@@ -720,9 +720,9 @@ export default function StockMovementPage() {
 
 
 
-  const SortBtn = ({ field, label }: { field: "date" | "qty", label: string }) => (
-    <button onClick={() => toggleSort(field)} className="flex items-center gap-1 text-slate-500 hover:text-blue-600 transition-colors font-semibold group">
-      {label}
+  const SortBtn = ({ field, label, align = "left" }: { field: "date" | "qty", label: string, align?: "left" | "right" }) => (
+    <button onClick={() => toggleSort(field)} className={`flex items-center gap-1 text-slate-500 hover:text-blue-600 transition-colors font-semibold group w-full ${align === "right" ? "justify-end" : "justify-start"}`}>
+      <span>{label}</span>
       <span className={`transition-opacity ${sortField === field ? "opacity-100 text-blue-600" : "opacity-0 group-hover:opacity-40"}`}>
         {sortDir === "asc" && sortField === field ? <ArrowUp className="w-3.5 h-3.5" /> : <ArrowDown className="w-3.5 h-3.5" />}
       </span>
@@ -730,7 +730,7 @@ export default function StockMovementPage() {
   );
 
   return (
-    <div className="min-h-screen text-slate-900 font-sans">
+    <div className="min-h-screen text-slate-900 font-sans flex flex-col flex-1 min-h-0">
       <style>{`
         .font-mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important; }
         @keyframes slideIn { from { transform: translateX(100%); opacity:0 } to { transform: translateX(0); opacity:1 } }
@@ -740,10 +740,10 @@ export default function StockMovementPage() {
         ::-webkit-scrollbar-thumb:hover { background:#94a3b8; }
       `}</style>
 
-      <div className="mx-auto">
+      <div className="mx-auto w-full flex flex-col flex-1 min-h-0">
 
         {/* ── Summary Cards ── */}
-        <div className="flex flex-nowrap overflow-x-auto custom-scrollbar gap-3 pb-2 -mx-2 px-2 sm:grid sm:grid-cols-2 lg:grid-cols-4 sm:overflow-visible sm:pb-0 sm:mx-0 sm:px-0 touch-pan-x mb-6">
+        <div className="flex flex-nowrap overflow-x-auto custom-scrollbar gap-3 pb-2 -mx-2 px-2 sm:grid sm:grid-cols-2 lg:grid-cols-4 sm:overflow-visible sm:pb-0 sm:mx-0 sm:px-0 touch-pan-x mb-4">
           <StatCard label="Total Stock In" value={`+${totalIn}`} icon={TrendingUp} iconBg="bg-emerald-50" iconColor="text-emerald-600" className="flex-1" />
           <StatCard label="Total Stock Out" value={`-${totalOut}`} icon={TrendingDown} iconBg="bg-rose-50" iconColor="text-rose-600" className="flex-1" />
           <StatCard label="Net Movement" value={netMov >= 0 ? `+${netMov}` : `${netMov}`} icon={Activity} iconBg="bg-blue-50" iconColor="text-blue-600" className="flex-1" />
@@ -751,153 +751,159 @@ export default function StockMovementPage() {
         </div>
 
         {/* ── Filter & Search Section ── */}
-        <div className="bg-white p-5 rounded-lg border border-slate-200 shadow-sm mb-6 animate-in fade-in slide-in-from-top-4 duration-700 delay-200">
-          <div className="flex flex-col lg:flex-row lg:items-center gap-4">
-
-            {/* Left Side: Search & Primary Tools */}
-            <div className="flex items-center gap-3 flex-1">
-              <div className="relative flex-1 group">
-                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-blue-500 transition-colors pointer-events-none" />
-                <input
-                  type="text"
-                  value={search}
-                  onChange={e => { setSearch(e.target.value); setPage(1); }}
-                  placeholder="Search by product, SKU, or movement ID…"
-                  className="w-full pl-10 pr-4 h-11 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-900 placeholder:text-slate-400 font-medium focus:outline-none focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100 transition-all"
-                />
-              </div>
-              <ColumnPicker
-                availableKeys={availableKeys}
-                selectedKeys={selectedKeys}
-                onApply={setSelectedKeys}
-                storageKey="stock_movement_columns"
+        <div className="bg-white p-2.5 px-3 rounded-xl border border-slate-200/80 shadow-sm mb-4 flex items-center justify-between gap-3 overflow-x-auto scrollbar-none">
+          <div className="flex items-center gap-3 shrink-0 flex-1 min-w-0">
+            {/* Search */}
+            <div className="relative w-full max-w-[280px] group shrink-0">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-blue-500 transition-colors pointer-events-none" />
+              <input
+                type="text"
+                value={search}
+                onChange={e => { setSearch(e.target.value); setPage(1); }}
+                placeholder="Search product, SKU, movement ID…"
+                className="w-full pl-9 pr-4 h-9 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-blue-300 focus:bg-white focus:ring-4 focus:ring-blue-500/5 transition-all"
               />
-              <button
-                onClick={resetFilters}
-                className="h-11 px-4 rounded-lg bg-slate-50 border border-slate-200 text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-all flex items-center gap-2 text-xs font-semibold  "
-              >
-                <RotateCcw size={14} />
-                Reset
-              </button>
             </div>
 
-            {/* Right Side: Specific Filters */}
-            <div className="flex flex-wrap items-center gap-3 lg:justify-end">
-              <div className="w-full sm:w-auto">
-                <ReusableSelect
-                  options={MOVEMENT_TYPES.map(t => ({ label: t.replace('_', ' '), value: t }))}
-                  value={typeFilter}
-                  onValueChange={(val) => { setTypeFilter(val); setPage(1); }}
-                  placeholder="Type"
-                  className="w-full sm:w-36 h-11"
-                />
-              </div>
-              <div className="w-full sm:w-auto">
-                <ReusableSelect
-                  options={WAREHOUSES.map(w => ({ label: w, value: w }))}
-                  value={warehouseFilter}
-                  onValueChange={(val) => { setWH(val); setPage(1); }}
-                  placeholder="Location"
-                  className="w-full sm:w-44 h-11"
-                />
-              </div>
-              <div className="flex items-center gap-2 bg-slate-50 p-1.5 rounded-lg border border-slate-200 h-11 w-full sm:w-auto">
-                <input
-                  type="date"
-                  value={dateFrom}
-                  onChange={e => { setDateFrom(e.target.value); setPage(1); }}
-                  className="bg-transparent border-none text-[10px] font-bold text-slate-600 focus:ring-0 px-2   w-full"
-                />
-                <div className="w-px h-4 bg-slate-200 shrink-0" />
-                <input
-                  type="date"
-                  value={dateTo}
-                  onChange={e => { setDateTo(e.target.value); setPage(1); }}
-                  className="bg-transparent border-none text-[10px] font-black text-slate-600 focus:ring-0 px-2   w-full"
-                />
-              </div>
+            {/* Location Select */}
+            <ReusableSelect
+              options={WAREHOUSES.map(w => ({ label: w, value: w }))}
+              value={warehouseFilter}
+              onValueChange={(val) => { setWH(val); setPage(1); }}
+              placeholder="Location"
+              className="h-9 w-40 text-xs font-semibold shrink-0"
+            />
+
+            {/* Type Select */}
+            <ReusableSelect
+              options={MOVEMENT_TYPES.map(t => ({ label: t.replace('_', ' '), value: t }))}
+              value={typeFilter}
+              onValueChange={(val) => { setTypeFilter(val); setPage(1); }}
+              placeholder="Type"
+              className="h-9 w-32 text-xs font-semibold shrink-0"
+            />
+
+            {/* Date Range Inputs */}
+            <div className="flex items-center gap-2 bg-slate-50 px-2 py-1 rounded-lg border border-slate-200 h-9 shrink-0">
+              <input
+                type="date"
+                value={dateFrom}
+                onChange={e => { setDateFrom(e.target.value); setPage(1); }}
+                className="bg-transparent border-none text-[10px] font-bold text-slate-500 focus:ring-0 w-24 p-0 cursor-pointer"
+              />
+              <span className="text-[10px] font-bold text-slate-300">to</span>
+              <input
+                type="date"
+                value={dateTo}
+                onChange={e => { setDateTo(e.target.value); setPage(1); }}
+                className="bg-transparent border-none text-[10px] font-bold text-slate-500 focus:ring-0 w-24 p-0 cursor-pointer"
+              />
             </div>
+          </div>
+
+          {/* Column Picker & Reset */}
+          <div className="flex items-center gap-2 shrink-0">
+            <ColumnPicker
+              availableKeys={availableKeys}
+              selectedKeys={selectedKeys}
+              onApply={setSelectedKeys}
+              storageKey="stock_movement_columns"
+            />
+            <button
+              onClick={resetFilters}
+              className="h-9 px-3 rounded-lg bg-slate-50 border border-slate-200 text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-all flex items-center gap-1.5 text-xs font-bold shadow-sm active:scale-95"
+            >
+              <RotateCcw size={12} />
+              Reset
+            </button>
           </div>
         </div>
 
         {/* ── Table Section ── */}
-        <div className="bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden">
-          <div className="overflow-x-auto overflow-y-auto h-[calc(100vh-220px)] pf-scroll">
-            <table className="w-full text-left border-collapse">
-              <thead className="sticky top-0 z-20 bg-slate-50/95 backdrop-blur-sm shadow-sm">
-                <tr className="text-slate-400 text-[10px] font-bold  tracking-[0.15em] border-b border-slate-100">
-                  <th className="px-6 py-5 whitespace-nowrap min-w-[200px]">Product Information</th>
-                  <th className="px-6 py-5 whitespace-nowrap">Movement Type</th>
-                  <th className="px-6 py-5 whitespace-nowrap text-center">
-                    <SortBtn field="qty" label="Received Stock" />
+        <div className="bg-white border border-slate-200/80 rounded-2xl shadow-sm overflow-hidden flex flex-col flex-1 min-h-0 h-[calc(100vh-270px)]">
+          <div className="overflow-auto flex-1 scrollbar-thin scrollbar-thumb-slate-200">
+            <table className="w-full text-left border-collapse table-fixed">
+              <thead className="sticky top-0 z-20 bg-slate-50 border-b border-slate-200">
+                <tr className="text-slate-400 text-[10px] font-bold tracking-[0.15em]">
+                  <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500 border-r border-slate-100 last:border-r-0 w-[25%] min-w-[260px]">Product Information</th>
+                  <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500 border-r border-slate-100 last:border-r-0 w-[12%] min-w-[125px]">Movement Type</th>
+                  <th className="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wider text-slate-500 border-r border-slate-100 last:border-r-0 w-[12%] min-w-[110px]">
+                    <SortBtn field="qty" label="Qty Impact" align="right" />
                   </th>
-                  {selectedKeys.map(key => (
-                    <th key={key} className="px-6 py-5 capitalize whitespace-nowrap">{key.replace(/_/g, ' ')}</th>
-                  ))}
-                  <th className="px-6 py-5 whitespace-nowrap">
+                  {selectedKeys.map(key => {
+                    let width = "w-[12%] min-w-[120px]";
+                    if (key === "notes") width = "w-[20%] min-w-[180px]";
+                    if (key === "user") width = "w-[10%] min-w-[100px]";
+                    return (
+                      <th key={key} className={`px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500 border-r border-slate-100 last:border-r-0 ${width}`}>{key.replace(/_/g, ' ')}</th>
+                    );
+                  })}
+                  <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500 border-r border-slate-100 last:border-r-0 w-[15%] min-w-[150px]">
                     <SortBtn field="date" label="Date & Time" />
                   </th>
-                  <th className="px-6 py-5 text-right whitespace-nowrap">Actions</th>
+                  <th className="px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-slate-500 w-14">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-50 text-sm">
+              <tbody className="divide-y divide-slate-100 text-sm bg-white">
                 {pageData.length === 0 ? (
                   <tr>
-                    <td colSpan={selectedKeys.length + 5} className="py-20 text-center text-slate-400 font-medium italic">
+                    <td colSpan={selectedKeys.length + 5} className="py-20 text-center text-slate-400 font-medium italic bg-white">
                       No movements found matching your filters.
                     </td>
                   </tr>
                 ) : pageData.map((m, idx) => (
                   <tr key={`${m.id}-${idx}`}
-                    className="group hover:bg-blue-50/30 transition-all cursor-pointer"
+                    className="group hover:bg-blue-50/30 transition-all cursor-pointer border-b border-slate-100 last:border-b-0 even:bg-slate-50/20"
                     onClick={() => setSelected(m)}
                   >
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center gap-3">
-                        <div className={`w-10 h-10 rounded-lg bg-gradient-to-br flex items-center justify-center text-white text-xs font-bold shadow-lg shadow-blue-100 ${m.qty > 0 ? "from-emerald-600 to-emerald-400" : "from-rose-600 to-rose-400"}`}>
+                    <td className="px-4 py-3 align-middle border-r border-slate-100 last:border-r-0">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className={`w-8 h-8 rounded-md bg-gradient-to-br flex items-center justify-center text-white text-xs font-black shrink-0 shadow-sm ${m.qty > 0 ? "from-emerald-500 to-emerald-400 shadow-emerald-50" : "from-rose-500 to-rose-400 shadow-rose-50"}`}>
                           {m.product?.[0]?.toUpperCase() || "—"}
                         </div>
-                        <div>
-                          <p className="text-sm font-semibold text-slate-700 tracking-tight">{m.product}</p>
-                          <div className="flex items-center flex-wrap gap-2 mt-0.5">
+                        <div className="flex flex-col min-w-0 gap-0.5">
+                          <span className="text-[13px] font-semibold text-slate-800 truncate leading-tight">{m.product}</span>
+                          <div className="flex items-center flex-wrap gap-1.5 mt-0.5">
                             <button
                               onClick={(e) => copyToClipboard(e, m.id)}
-                              className="group flex items-center gap-1.5 text-[9px] font-bold text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-100 hover:bg-slate-100 hover:text-slate-600 transition-all"
+                              className="group flex items-center gap-1 text-[9px] font-extrabold text-slate-400 bg-slate-50 px-1 py-0.2 rounded border border-slate-100 hover:bg-slate-100 hover:text-slate-600 transition-all leading-none"
                             >
                               ID: {m.id}
-                              <Copy size={10} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+                              <Copy size={8} className="opacity-0 group-hover:opacity-100 transition-opacity" />
                             </button>
                             <span className="text-[9px] font-medium text-slate-400 font-mono">SKU: {m.sku}</span>
                             {m.variant && (
                               <button
                                 onClick={(e) => copyToClipboard(e, m.variant || "")}
-                                className="group flex items-center gap-0.5 text-[9px] font-bold text-violet-500 bg-violet-50 px-1.5 py-0.5 rounded-md border border-violet-100 hover:bg-violet-100 transition-all"
+                                className="group flex items-center gap-0.5 text-[9px] font-extrabold text-violet-600 bg-violet-50/50 px-1 py-0.2 rounded border border-violet-100 hover:bg-violet-100 transition-all leading-none"
                               >
-                                <Layers size={10} /> {truncateId(m.variant)}
-                                <Copy size={8} className="opacity-0 group-hover:opacity-100 transition-opacity ml-0.5" />
+                                <Layers size={8} /> {truncateId(m.variant)}
+                                <Copy size={7} className="opacity-0 group-hover:opacity-100 transition-opacity" />
                               </button>
                             )}
                             {m.batch && (
                               <button
                                 onClick={(e) => copyToClipboard(e, m.batch || "")}
-                                className="group flex items-center gap-0.5 text-[9px] font-bold text-amber-500 bg-amber-50 px-1.5 py-0.5 rounded-md border border-amber-100 hover:bg-amber-100 transition-all"
+                                className="group flex items-center gap-0.5 text-[9px] font-extrabold text-amber-600 bg-amber-50/50 px-1 py-0.2 rounded border border-amber-100 hover:bg-amber-100 transition-all leading-none"
                               >
-                                <Hash size={10} /> {truncateId(m.batch)}
-                                <Copy size={8} className="opacity-0 group-hover:opacity-100 transition-opacity ml-0.5" />
+                                <Hash size={8} /> {truncateId(m.batch)}
+                                <Copy size={7} className="opacity-0 group-hover:opacity-100 transition-opacity" />
                               </button>
                             )}
                             {m.serial_numbers && m.serial_numbers.length > 0 && (
-                              <span className="flex items-center gap-0.5 text-[9px] font-bold text-emerald-500 bg-emerald-50 px-1.5 py-0.5 rounded-md border border-emerald-100">
-                                <Zap size={10} fill="currentColor" /> {m.serial_numbers.length} Serials
+                              <span className="inline-flex items-center gap-0.5 text-[9px] font-extrabold text-emerald-600 bg-emerald-50/50 px-1 py-0.2 rounded border border-emerald-100 leading-none">
+                                <Zap size={8} fill="currentColor" /> {m.serial_numbers.length} Serials
                               </span>
                             )}
                           </div>
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap"><TypeBadge type={m.type} /></td>
-                    <td className="px-6 py-4 text-center whitespace-nowrap">
-                      <span className={`text-base font-bold tabular-nums ${m.qty > 0 ? "text-emerald-600" : "text-rose-600"}`}>
+                    <td className="px-4 py-3 align-middle border-r border-slate-100 last:border-r-0">
+                      <TypeBadge type={m.type} />
+                    </td>
+                    <td className="px-4 py-3 text-right align-middle border-r border-slate-100 last:border-r-0">
+                      <span className={`text-[13px] font-black tabular-nums ${m.qty > 0 ? "text-emerald-600" : "text-rose-600"}`}>
                         {m.qty > 0 ? `+${m.qty}` : m.qty}
                       </span>
                     </td>
@@ -907,19 +913,29 @@ export default function StockMovementPage() {
                         typeof value === 'object' ? (Array.isArray(value) ? value.join(", ") : JSON.stringify(value)) :
                           String(value);
                       return (
-                        <td key={key} className="px-6 py-4 whitespace-nowrap">
+                        <td key={key} className="px-4 py-3 align-middle border-r border-slate-100 last:border-r-0 truncate">
                           <p className="text-[12px] font-bold text-slate-600 tracking-tight">
                             {displayValue}
                           </p>
                         </td>
                       );
                     })}
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <p className="text-[12px] font-bold text-slate-600">{fmt(m.date)}</p>
+                    <td className="px-4 py-3 align-middle border-r border-slate-100 last:border-r-0">
+                      <div className="flex flex-col gap-0.5">
+                        <span className="text-[13px] font-semibold text-slate-700">
+                          {new Date(m.date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
+                        </span>
+                        <span className="text-[11px] text-slate-400 font-bold">
+                          {new Date(m.date).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}
+                        </span>
+                      </div>
                     </td>
-                    <td className="px-6 py-4 text-right">
-                      <button onClick={() => setSelected(m)} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-white rounded-lg transition-all shadow-sm active:scale-95">
-                        <Eye size={16} />
+                    <td className="px-4 py-3 text-center align-middle w-14">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setSelected(m); }}
+                        className="p-1.5 text-slate-300 hover:text-blue-600 hover:bg-blue-50/50 rounded-lg transition-all active:scale-95"
+                      >
+                        <Eye size={15} />
                       </button>
                     </td>
                   </tr>

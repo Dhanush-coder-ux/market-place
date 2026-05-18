@@ -411,12 +411,12 @@ export default function StockAdjustmentPage() {
       >
         <div className="space-y-2">
           {summary.impactList.map((stat, i) => (
-            <div key={i} className="flex items-center justify-between p-3 rounded-lg bg-slate-50 border border-slate-100 hover:border-blue-200 transition-all">
+            <div key={i} className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50/50 border border-slate-150/60 hover:border-blue-200 hover:bg-white transition-all shadow-sm">
               <div className="flex flex-col">
                 <span className="text-xs font-semibold text-slate-700">{stat.name}</span>
-                <span className="text-[9px] font-medium text-slate-400   mt-0.5">{stat.type === 'INCREMENT' ? 'Inbound' : 'Outbound'}</span>
+                <span className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400 mt-0.5">{stat.type === 'INCREMENT' ? 'Inbound' : 'Outbound'}</span>
               </div>
-              <span className={`text-sm font-bold tabular-nums ${stat.type === 'INCREMENT' ? 'text-emerald-600' : 'text-rose-600'}`}>
+              <span className={`text-sm font-black tabular-nums ${stat.type === 'INCREMENT' ? 'text-emerald-600' : 'text-rose-600'}`}>
                 {stat.change > 0 ? '+' : ''}{stat.change}
               </span>
             </div>
@@ -427,23 +427,23 @@ export default function StockAdjustmentPage() {
       {/* --- DYNAMIC VARIANT SELECTION MODAL --- */}
       {variantModal.isOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-lg shadow-2xl w-full max-w-2xl max-h-[80vh] overflow-hidden flex flex-col border border-slate-200/60 animate-in fade-in zoom-in-95 duration-200">
-            <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-white shrink-0">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[80vh] overflow-hidden flex flex-col border border-slate-200/60 animate-in fade-in zoom-in-95 duration-200">
+            <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50 shrink-0">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-amber-50 flex items-center justify-center text-amber-600 border border-amber-100">
-                  <PackageOpen size={20} />
+                <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center text-amber-600 border border-amber-100 shrink-0 shadow-sm">
+                  <PackageOpen size={18} />
                 </div>
                 <div>
-                  <h3 className="font-bold text-slate-800 text-base">Select Variants</h3>
-                  <p className="text-xs text-slate-500 font-medium">{variantModal.baseProduct}</p>
+                  <h3 className="font-black text-slate-800 text-sm tracking-tight">Select Variants</h3>
+                  <p className="text-[11px] text-slate-500 font-semibold">{variantModal.baseProduct}</p>
                 </div>
               </div>
-              <button onClick={() => setVariantModal({ isOpen: false, baseProduct: "", targetRowIndex: -1, variants: [], baseData: null })} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-lg transition-all">
-                <X size={20} />
+              <button onClick={() => setVariantModal({ isOpen: false, baseProduct: "", targetRowIndex: -1, variants: [], baseData: null })} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-all">
+                <X size={16} />
               </button>
             </div>
 
-            <div className="p-6 overflow-y-auto flex-1 bg-slate-50/30 modal-content">
+            <div className="p-5 overflow-y-auto flex-1 bg-slate-50/30 modal-content">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {variantModal.variants.map((variant) => {
                   const stockNum = Number(variant.stock) || 0;
@@ -455,32 +455,32 @@ export default function StockAdjustmentPage() {
                     <div
                       key={variant.id}
                       onClick={() => setSelectedVariant(variant.id)}
-                      className={`relative p-4 rounded-lg border-2 transition-all duration-200 cursor-pointer
+                      className={`relative p-4 rounded-xl border-2 transition-all duration-200 cursor-pointer flex flex-col justify-between h-32
                         ${isSelected
-                            ? 'border-blue-500 bg-blue-50/40 shadow-lg'
-                            : 'border-slate-200 hover:border-blue-300 hover:shadow-md bg-white'
+                            ? 'border-blue-500 bg-blue-50/40 shadow-md shadow-blue-100/30'
+                            : 'border-slate-200/80 hover:border-blue-300 hover:shadow-md bg-white'
                         }
                       `}
                     >
-                      <div className={`absolute top-3 right-3 h-5 w-5 rounded-full border-2 flex items-center justify-center transition-all ${isSelected ? 'bg-blue-600 border-blue-600 text-white' : 'border-slate-300'}`}>
-                        {isSelected && <Check size={12} strokeWidth={3} />}
+                      <div className={`absolute top-3 right-3 h-5 w-5 rounded-full border-2 flex items-center justify-center transition-all ${isSelected ? 'bg-blue-600 border-blue-600 text-white shadow-sm' : 'border-slate-350 bg-white'}`}>
+                        {isSelected && <Check size={11} strokeWidth={3.5} />}
                       </div>
 
-                      <div>
-                        <h4 className="font-semibold text-slate-800 text-sm pr-6">{variant.name}</h4>
-                        <p className="text-[9px] text-slate-400 mt-1 font-medium  ">SKU: {variant.sku}</p>
+                      <div className="pr-6">
+                        <h4 className="font-bold text-slate-800 text-[13px] leading-tight line-clamp-2">{variant.name}</h4>
+                        <p className="text-[9px] text-slate-400 mt-1 font-mono">SKU: {variant.sku}</p>
                       </div>
                       
-                      <div className="mt-2 flex flex-wrap gap-2">
-                        <span className={`inline-flex px-2 py-0.5 rounded-lg text-[9px] font-semibold   ${
-                            stockNum <= 0 ? 'bg-slate-200 text-slate-600' : 
-                            isLowStock ? 'bg-orange-100 text-orange-700' : 
-                            'bg-emerald-100 text-emerald-700'
+                      <div className="flex flex-wrap gap-1.5 mt-2">
+                        <span className={`inline-flex px-2 py-0.5 rounded text-[9px] font-extrabold uppercase tracking-wide border leading-none ${
+                            stockNum <= 0 ? 'bg-slate-100 text-slate-550 border-slate-200' : 
+                            isLowStock ? 'bg-amber-50 text-amber-700 border-amber-200' : 
+                            'bg-emerald-50 text-emerald-700 border-emerald-250'
                           }`}>
                           Stock: {stockNum}
                         </span>
                         {batchCount > 0 && (
-                          <span className="inline-flex px-2 py-0.5 rounded-lg bg-indigo-50 text-indigo-700 text-[9px] font-bold border border-indigo-100  ">
+                          <span className="inline-flex px-2 py-0.5 rounded bg-violet-50 text-violet-700 text-[9px] font-extrabold border border-violet-100 leading-none">
                             {batchCount} {batchCount === 1 ? 'Batch' : 'Batches'}
                           </span>
                         )}
@@ -492,17 +492,17 @@ export default function StockAdjustmentPage() {
             </div>
 
             <div className="p-4 border-t border-slate-100 bg-white flex justify-between items-center shrink-0">
-              <span className="text-xs font-semibold text-slate-500">
+              <span className="text-[11px] font-bold text-slate-500">
                 {selectedVariant ? <span className="text-blue-600">1 variant selected</span> : "Please pick a variant"}
               </span>
-              <div className="flex gap-3">
+              <div className="flex gap-2.5">
                 <button 
                   onClick={() => setVariantModal({ isOpen: false, baseProduct: "", targetRowIndex: -1, variants: [], baseData: null })}
-                  className="px-5 h-10 rounded-lg border border-slate-200 text-slate-600 font-semibold text-xs hover:bg-slate-50 transition-all"
+                  className="px-4 h-9 rounded-lg border border-slate-200 text-slate-600 font-bold text-xs hover:bg-slate-50 transition-all shadow-sm"
                 >
                   Cancel
                 </button>
-                <GradientButton variant="primary" onClick={confirmVariant} disabled={!selectedVariant} className="rounded-lg px-6 h-10 text-xs">
+                <GradientButton variant="primary" onClick={confirmVariant} disabled={!selectedVariant} className="rounded-lg px-5 h-9 text-xs shadow-md">
                   Continue
                 </GradientButton>
               </div>
@@ -514,44 +514,44 @@ export default function StockAdjustmentPage() {
       {/* --- BATCH SELECTION MODAL --- */}
       {batchModal.isOpen && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-lg shadow-2xl w-full max-w-lg overflow-hidden flex flex-col border border-slate-200 animate-in zoom-in-95 duration-200">
-            <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center bg-amber-50/30">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col border border-slate-200 animate-in zoom-in-95 duration-200">
+            <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-white shadow-sm flex items-center justify-center text-amber-600 border border-amber-100">
-                  <PackageOpen size={20} />
+                <div className="w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center text-amber-600 border border-amber-100">
+                  <PackageOpen size={18} />
                 </div>
                 <div>
-                  <h3 className="font-bold text-slate-800 text-base">Select Batch</h3>
-                  <p className="text-xs text-slate-500 font-medium">{batchModal.variantName}</p>
+                  <h3 className="font-black text-slate-800 text-sm tracking-tight">Select Batch</h3>
+                  <p className="text-[11px] text-slate-500 font-semibold">{batchModal.variantName}</p>
                 </div>
               </div>
-              <button onClick={() => setBatchModal({ ...batchModal, isOpen: false })} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-white rounded-lg transition-all shadow-sm">
-                <X size={20} />
+              <button onClick={() => setBatchModal({ ...batchModal, isOpen: false })} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-white rounded-lg transition-all">
+                <X size={16} />
               </button>
             </div>
 
-            <div className="p-6 overflow-y-auto max-h-[60vh] bg-white modal-content">
+            <div className="p-5 overflow-y-auto max-h-[60vh] bg-slate-50/30 modal-content">
               <div className="grid grid-cols-1 gap-3">
                 {parseBatches(batchModal.batches).map((batch: any) => (
                   <div
                     key={batch.id}
                     onClick={() => confirmBatch(batch)}
-                    className="group relative p-4 rounded-lg border border-slate-100 bg-slate-50/50 hover:bg-white hover:border-blue-200 hover:shadow-lg hover:shadow-blue-500/5 transition-all cursor-pointer"
+                    className="group relative p-4 rounded-xl border border-slate-200/80 bg-white hover:border-blue-400 hover:shadow-lg hover:shadow-blue-500/5 transition-all cursor-pointer"
                   >
                     <div className="flex items-center justify-between mb-2">
-                      <h4 className="font-bold text-slate-800 text-sm">{batch.name || batch.batch}</h4>
-                      <div className="w-6 h-6 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Check size={14} />
+                      <h4 className="font-extrabold text-slate-800 text-[13px]">{batch.name || batch.batch}</h4>
+                      <div className="w-5 h-5 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Check size={12} strokeWidth={2.5} />
                       </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-y-2">
+                    <div className="grid grid-cols-2 gap-y-2 mt-3 pt-2.5 border-t border-slate-100/80">
                       <div className="flex flex-col">
-                        <span className="text-[9px] font-bold text-slate-400  ">Available Stock</span>
-                        <span className="text-xs font-bold text-emerald-600">{batch.stocks || batch.quantity || 0} Units</span>
+                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Available Stock</span>
+                        <span className="text-xs font-extrabold text-emerald-600 mt-0.5">{batch.stocks || batch.quantity || 0} Units</span>
                       </div>
                       <div className="flex flex-col">
-                        <span className="text-[9px] font-bold text-slate-400  ">Expiry</span>
-                        <span className="text-xs font-bold text-slate-600">{batch.expiry_date || batch.expiry || 'N/A'}</span>
+                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Expiry</span>
+                        <span className="text-xs font-bold text-slate-600 mt-0.5">{batch.expiry_date || batch.expiry || 'N/A'}</span>
                       </div>
                     </div>
                   </div>
@@ -559,10 +559,10 @@ export default function StockAdjustmentPage() {
               </div>
             </div>
 
-            <div className="p-4 border-t border-slate-100 bg-slate-50/50 flex justify-end shrink-0">
+            <div className="p-4 border-t border-slate-100 bg-white flex justify-end shrink-0">
               <button 
                 onClick={() => setBatchModal({ ...batchModal, isOpen: false })}
-                className="px-6 h-10 rounded-lg bg-white border border-slate-200 text-slate-600 font-bold text-xs hover:bg-slate-100 transition-all shadow-sm"
+                className="px-5 h-9 rounded-lg bg-white border border-slate-200 text-slate-600 font-bold text-xs hover:bg-slate-50 transition-all shadow-sm"
               >
                 Back to Variants
               </button>
@@ -574,57 +574,58 @@ export default function StockAdjustmentPage() {
       <div className="max-w-7xl mx-auto p-3 md:p-4 space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
         
         {/* Header Info Banner */}
-        <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50/50 p-3 text-xs text-amber-800">
-          <AlertTriangle size={14} className="shrink-0 mt-0.5 text-amber-600" />
+        <div className="flex items-start gap-2.5 rounded-xl border border-amber-200/60 bg-amber-50/30 p-3 text-[11px] text-amber-800 shadow-sm leading-relaxed">
+          <AlertTriangle size={15} className="shrink-0 mt-0.5 text-amber-600" />
           <div>
-            <strong className="font-semibold">Physical Check:</strong> Stock adjustments update counts but not history. Use for damage, loss, or expiry.
+            <span className="font-extrabold uppercase tracking-wide text-[9px] mr-1 bg-amber-100 px-1.5 py-0.5 rounded">Physical Check</span>
+            Stock adjustments immediately update inventory counts but do not overwrite previous ledger histories. Use strictly for loss, physical correction, damage, or item expiry.
           </div>
         </div>
 
 
         {/* Main Content Area */}
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 items-start">
           
           {/* Items List */}
           <div className="lg:col-span-4">
-            <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
+            <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
               
               {/* Header */}
-              <div className="px-4 py-3 bg-gradient-to-r from-indigo-50/50 to-transparent border-b border-slate-100 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-indigo-100 flex items-center justify-center text-indigo-600">
-                    <Package size={16} />
+              <div className="px-4 py-3.5 bg-gradient-to-r from-indigo-50/30 to-transparent border-b border-slate-100 flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
+                    <Package size={15} />
                   </div>
-                  <h2 className="text-sm font-bold text-slate-800">Inventory Items</h2>
+                  <h2 className="text-sm font-extrabold text-slate-800 tracking-tight">Inventory Items</h2>
                 </div>
                 <button 
                   onClick={handleAddItem}
-                  className="flex items-center gap-1.5 px-4 h-8 rounded-lg bg-blue-600 text-white text-xs font-semibold hover:bg-blue-700 transition-all"
+                  className="flex items-center gap-1 px-3 h-8 rounded-lg bg-blue-600 text-white text-xs font-bold hover:bg-blue-700 transition-all shadow-sm shadow-blue-500/10 active:scale-95"
                 >
                   <Plus size={14} />
-                  Add
+                  Add Product
                 </button>
               </div>
 
               {/* Items Content */}
               <div className="p-4">
                 {items.length === 0 ? (
-                  <div className="rounded-lg border-2 border-dashed border-slate-200 bg-slate-50/50 py-12 flex flex-col items-center justify-center gap-4">
-                    <div className="w-16 h-16 rounded-lg bg-white shadow-md flex items-center justify-center text-slate-300">
-                      <Package size={32} />
+                  <div className="rounded-2xl border-2 border-dashed border-slate-250 bg-slate-50/50 py-16 flex flex-col items-center justify-center gap-4">
+                    <div className="w-14 h-14 rounded-2xl bg-white shadow-md flex items-center justify-center text-slate-300 border border-slate-100">
+                      <Package size={24} />
                     </div>
                     <div className="text-center">
-                      <h3 className="text-base font-bold text-slate-800">No Products Added</h3>
-                      <p className="text-xs text-slate-400 mt-1">Add products to begin stock adjustment.</p>
+                      <h3 className="text-sm font-bold text-slate-800">No Products Added</h3>
+                      <p className="text-xs text-slate-450 mt-1">Select and add a product below to begin stock adjustment.</p>
                     </div>
                     <button 
                       onClick={handleAddItem}
-                      className="px-6 h-10 rounded-lg bg-white border border-slate-200 text-slate-700 font-semibold text-xs hover:bg-blue-600 hover:text-white hover:border-blue-600 transition-all"
+                      className="px-5 h-9 rounded-lg bg-white border border-slate-200 text-slate-700 font-extrabold text-xs hover:bg-blue-600 hover:text-white hover:border-blue-600 transition-all shadow-sm active:scale-95"
                     >
                       Start Adding
                     </button>
                   </div>
-                                ) : (
+                ) : (
                   <div className="space-y-4">
                     {items.map((item, index) => {
                       const qtyNum = Number(item.stocks) || 0;
@@ -633,28 +634,28 @@ export default function StockAdjustmentPage() {
                         : 0;
 
                       return (
-                        <div key={item.id} className="group relative rounded-lg border border-slate-200 bg-white p-4 md:p-6 transition-all hover:shadow-xl hover:shadow-slate-200/40 pf-combo-appear">
+                        <div key={item.id} className="group relative rounded-2xl border border-slate-200/90 bg-white p-4 md:p-5 transition-all hover:shadow-lg hover:shadow-slate-100/50 pf-combo-appear">
                           
                           <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
                             <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white text-xs font-bold shadow-sm">
+                              <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white text-[11px] font-black shadow-md shadow-blue-100">
                                 {index + 1}
                               </div>
                               <div>
-                                <span className="text-[10px] font-bold text-slate-400  ">Item Specification</span>
-                                {item.sku && <span className="ml-2 text-[9px] font-mono text-slate-400">#{item.sku}</span>}
+                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Item Specification</span>
+                                {item.sku && <span className="ml-2 text-[10px] font-mono font-bold text-slate-505 bg-slate-50 border border-slate-100 px-1.5 py-0.5 rounded">#{item.sku}</span>}
                               </div>
                             </div>
                             <button 
                               onClick={() => handleRemoveItem(item.id)}
                               disabled={items.length === 1}
-                              className={`w-9 h-9 rounded-lg flex items-center justify-center transition-all border
+                              className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all border
                                 ${items.length === 1 
                                   ? 'bg-slate-50 text-slate-300 border-slate-100 cursor-not-allowed' 
-                                  : 'bg-rose-50 text-rose-500 border-rose-100 hover:bg-rose-500 hover:text-white'}
+                                  : 'bg-rose-50 text-rose-500 border-rose-100 hover:bg-rose-500 hover:text-white hover:shadow-sm'}
                               `}
                             >
-                              <Trash2 size={16} />
+                              <Trash2 size={14} />
                             </button>
                           </div>
 
@@ -662,7 +663,7 @@ export default function StockAdjustmentPage() {
                             {/* Product Selector */}
                             <div className="xl:col-span-5 space-y-3">
                               <div className="flex flex-col gap-1.5">
-                                <label className="text-[10px] font-bold text-slate-500   ml-1">Product Details</label>
+                                <label className="text-[10px] font-bold text-slate-500 ml-1 uppercase tracking-wider">Product Details</label>
                                   <SearchSelect 
                                     fetchOptions={async (q) => await inventoryApi.searchInventories(q)}
                                     value={item.product}
@@ -741,27 +742,27 @@ export default function StockAdjustmentPage() {
                                 <div className="flex flex-wrap gap-2 animate-in zoom-in-95 mt-[-4px]">
                                   {item.variant_name && (
                                     <div className="flex flex-col">
-                                      <span className="text-[9px] font-bold text-slate-400   ml-1 mb-0.5">Variation</span>
-                                      <div className="px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 text-[10px] font-bold border border-blue-100   shadow-sm">
+                                      <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider ml-1 mb-0.5">Variation</span>
+                                      <div className="px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 text-[10px] font-extrabold border border-blue-100 shadow-sm leading-none">
                                         {item.variant_name}
                                       </div>
                                     </div>
                                   )}
                                   {item.batch_name && (
                                     <div className="flex flex-col">
-                                      <span className="text-[9px] font-bold text-slate-400   ml-1 mb-0.5">Batch</span>
-                                      <div className="px-3 py-1.5 rounded-lg bg-amber-50 text-amber-700 text-[10px] font-bold border border-amber-100   shadow-sm">
+                                      <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider ml-1 mb-0.5">Batch</span>
+                                      <div className="px-2.5 py-1 rounded-lg bg-amber-50 text-amber-700 text-[10px] font-extrabold border border-amber-100 shadow-sm leading-none">
                                         {item.batch_name}
                                       </div>
                                     </div>
                                   )}
                                   <div className="flex flex-col">
-                                    <span className="text-[9px] font-bold text-slate-400   ml-1 mb-0.5">Stock Impact</span>
+                                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider ml-1 mb-0.5">Stock Impact</span>
                                     <div className="flex gap-2">
-                                      <div className="px-3 py-1.5 rounded-lg bg-slate-100 text-slate-600 text-[10px] font-bold border border-slate-200">
+                                      <div className="px-2.5 py-1 rounded-lg bg-slate-50 text-slate-550 text-[10px] font-bold border border-slate-150 leading-none">
                                         Prev: {item.currentStock}
                                       </div>
-                                      <div className={`px-3 py-1.5 rounded-lg text-[10px] font-bold border shadow-sm ${item.type === 'INCREMENT' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-rose-50 text-rose-700 border-rose-100'}`}>
+                                      <div className={`px-2.5 py-1 rounded-lg text-[10px] font-black border shadow-sm leading-none ${item.type === 'INCREMENT' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-rose-50 text-rose-700 border-rose-100'}`}>
                                         New: {newStock}
                                       </div>
                                     </div>
@@ -782,7 +783,7 @@ export default function StockAdjustmentPage() {
                                   } 
                                   value={item.type}
                                   onValueChange={(val) => updateItem(item.id, 'type', val)}
-                                  className={item.type === 'INCREMENT' ? 'border-emerald-200 bg-emerald-50/30' : 'border-rose-200 bg-rose-50/30'}
+                                  className={`text-xs font-semibold ${item.type === 'INCREMENT' ? 'border-emerald-200 bg-emerald-50/20' : 'border-rose-200 bg-rose-50/20'}`}
                                 />
                                 <Input 
                                   label="Quantity" 
@@ -790,12 +791,14 @@ export default function StockAdjustmentPage() {
                                   value={item.stocks}
                                   onChange={(e) => updateItem(item.id, 'stocks', e.target.value)}
                                   placeholder="0"
+                                  className="text-xs font-semibold"
                                 />
                                 <ReusableSelect 
                                   label="Correction Reason" 
                                   options={reasonOptions} 
                                   value={item.reason}
                                   onValueChange={(val) => updateItem(item.id, 'reason', val)}
+                                  className="text-xs font-semibold"
                                 />
                                 <Input 
                                   label="Internal Note" 
@@ -803,6 +806,7 @@ export default function StockAdjustmentPage() {
                                   placeholder="Reason for adjustment..."
                                   value={item.internalNote}
                                   onChange={(e) => updateItem(item.id, 'internalNote', e.target.value)}
+                                  className="text-xs font-semibold"
                                 />
                               </div>
                             </div>
@@ -827,9 +831,9 @@ export default function StockAdjustmentPage() {
                     <div className="pt-4 flex justify-center w-full">
                       <button 
                         onClick={handleAddItem}
-                        className="w-full group flex items-center justify-center gap-3 px-8 py-5 rounded-lg border-2 border-dashed border-slate-200 text-slate-400 font-bold text-xs   hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50/30 transition-all active:scale-95"
+                        className="w-full group flex items-center justify-center gap-3 px-8 py-4 rounded-xl border-2 border-dashed border-slate-200 text-slate-400 font-extrabold text-xs hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50/30 transition-all active:scale-95 shadow-sm"
                       >
-                        <Plus size={18} className="group-hover:rotate-90 transition-transform duration-300" />
+                        <Plus size={16} className="group-hover:rotate-90 transition-transform duration-350" />
                         Add Next Product
                       </button>
                     </div>
@@ -841,34 +845,34 @@ export default function StockAdjustmentPage() {
 
           {/* Summary Panel - Desktop */}
           <div className="hidden lg:block lg:col-span-1">
-            <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden sticky top-4">
-              <div className="px-4 py-3 bg-gradient-to-r from-emerald-50/50 to-transparent border-b border-slate-100 flex items-center gap-2">
-                <div className="w-7 h-7 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-600">
+            <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden sticky top-4">
+              <div className="px-4 py-3 bg-gradient-to-r from-emerald-50/30 to-transparent border-b border-slate-100 flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600">
                   <History size={14} />
                 </div>
-                <h2 className="text-xs font-bold text-slate-800">Summary</h2>
+                <h2 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Summary</h2>
               </div>
               
-              <div className="p-4 space-y-3">
-                <div className="pt-2 space-y-3 border-t border-slate-100">
+              <div className="p-4 space-y-3.5">
+                <div className="space-y-3">
                   <Input 
                     label="Date" 
                     type="date" 
                     value={adjustmentDate} 
                     required 
                     onChange={(e) => setAdjustmentDate(e.target.value)} 
-                    leftIcon={<Calendar size={14} className="text-slate-400" />}
-                    className="text-xs"
+                    leftIcon={<Calendar size={13} className="text-slate-400" />}
+                    className="text-xs font-semibold"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-2">
-                  <div className="p-3 rounded-lg bg-slate-50 border border-slate-100 text-center">
-                    <span className="text-[9px] font-semibold text-slate-400   block mb-0.5">Items</span>
-                    <span className="text-xl font-bold text-slate-800">{summary.validProductCount}</span>
+                  <div className="p-3 rounded-xl bg-slate-50 border border-slate-150/60 text-center">
+                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">Items</span>
+                    <span className="text-lg font-black text-slate-850">{summary.validProductCount}</span>
                   </div>
-                  <div className={`p-3 rounded-lg border text-center transition-colors ${summary.netChange > 0 ? 'bg-emerald-50 border-emerald-100' : summary.netChange < 0 ? 'bg-rose-50 border-rose-100' : 'bg-slate-50 border-slate-100'}`}>
-                    <span className="text-[9px] font-semibold text-slate-400   block mb-0.5">Net</span>
-                    <span className={`text-xl font-bold ${summary.netChange > 0 ? 'text-emerald-600' : summary.netChange < 0 ? 'text-rose-600' : 'text-slate-800'}`}>
+                  <div className={`p-3 rounded-xl border text-center transition-colors ${summary.netChange > 0 ? 'bg-emerald-50 border-emerald-100/80' : summary.netChange < 0 ? 'bg-rose-50 border-rose-100/80' : 'bg-slate-50 border-slate-150/60'}`}>
+                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">Net</span>
+                    <span className={`text-lg font-black ${summary.netChange > 0 ? 'text-emerald-600' : summary.netChange < 0 ? 'text-rose-600' : 'text-slate-800'}`}>
                       {summary.netChange > 0 ? '+' : ''}{summary.netChange}
                     </span>
                   </div>
@@ -877,23 +881,21 @@ export default function StockAdjustmentPage() {
                 {summary.impactList.length > 0 && (
                   <button 
                     onClick={() => setIsImpactModalOpen(true)}
-                    className="w-full flex items-center justify-between p-3 rounded-lg bg-blue-50/50 border border-blue-100 hover:bg-blue-100/50 transition-all text-left"
+                    className="w-full flex items-center justify-between p-3 rounded-xl bg-blue-50/50 border border-blue-100/80 hover:bg-blue-100/50 transition-all text-left shadow-sm"
                   >
-                    <div className="flex flex-col overflow-hidden">
-                      <span className="text-[10px] font-semibold text-blue-700 truncate">
+                    <div className="flex flex-col overflow-hidden gap-0.5">
+                      <span className="text-[10px] font-extrabold text-blue-700 truncate pr-2">
                         {summary.impactList[0].name}
                       </span>
                       {summary.impactList.length > 1 && (
-                        <span className="text-[9px] font-semibold text-blue-400">
-                          +{summary.impactList.length - 1} more
+                        <span className="text-[9px] font-extrabold text-blue-400 uppercase tracking-wider leading-none">
+                          +{summary.impactList.length - 1} more items
                         </span>
                       )}
                     </div>
                     <ChevronDown size={14} className="text-blue-600 shrink-0" />
                   </button>
                 )}
-
-                
               </div>
             </div>
           </div>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Search, Trash2, X, Edit, Bookmark, Users, Building2, Phone, Eye } from "lucide-react";
 import { GradientButton } from "@/components/ui/GradientButton";
 import Input from "@/components/ui/Input";
@@ -111,6 +111,17 @@ const Supplier = () => {
     }
   };
 
+  const stats = useMemo(() => {
+    let active = 0;
+    let contacts = 0;
+    suppliers.forEach(s => {
+      if (!s) return;
+      if (s.is_active ?? s.datas?.is_active ?? true) active++;
+      if (s.mobile_number || s.contact_info?.mobile_number || s.datas?.phone || s.email) contacts++;
+    });
+    return { active, contacts };
+  }, [suppliers]);
+
   return (
     <div className="space-y-6 md:animate-in md:fade-in md:duration-500 custom-scrollbar">
 
@@ -126,14 +137,14 @@ const Supplier = () => {
         <StatCard
           icon={Users}
           label="Active Partners"
-          value={suppliers.length.toString()}
+          value={stats.active.toString()}
           iconBg="bg-emerald-50 text-emerald-600"
           className="flex-1"
         />
         <StatCard
           icon={Phone}
           label="Support Contacts"
-          value={suppliers.filter(s => s && s.datas?.phone).length.toString()}
+          value={stats.contacts.toString()}
           iconBg="bg-amber-50 text-amber-600"
           className="flex-1"
         />

@@ -1,6 +1,6 @@
 import React, { useCallback, useMemo, useState } from "react";
 import { Select, Spin, Empty } from "antd";
-import { Plus } from "lucide-react"; 
+import { Plus } from "lucide-react";
 import { useSearchSelect } from "../../hooks/UseSearchSelect";
 import { HighlightText } from "./HighLightText";
 
@@ -31,7 +31,7 @@ export interface SearchSelectProps<T extends BaseOption> {
 
   // Custom rendering
   renderOption?: (option: T, searchValue: string) => React.ReactNode;
-  
+
   // NEW: Callback to trigger creation modal
   onCreateNew?: (searchValue: string) => void;
 }
@@ -96,7 +96,7 @@ export function SearchSelect<T extends BaseOption>({
 
   // Check if an exact match exists so we hide the "Create" button if it does
   const exactMatchExists = useMemo(() => {
-    if (!searchValue) return true; 
+    if (!searchValue) return true;
     return options.some(
       (opt) => String(opt[labelKey]).toLowerCase() === searchValue.toLowerCase().trim()
     );
@@ -179,9 +179,9 @@ export function SearchSelect<T extends BaseOption>({
           isAsync
             ? false
             : (input, option) =>
-                String(option?.label ?? "")
-                  .toLowerCase()
-                  .includes(input.toLowerCase())
+              String(option?.label ?? "")
+                .toLowerCase()
+                .includes(input.toLowerCase())
         }
         notFoundContent={
           loading ? (

@@ -23,13 +23,7 @@ export function useSearchSelect<T>(
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
       if (abortControllerRef.current) abortControllerRef.current.abort();
 
-      if (!query.trim()) {
-        setAsyncOptions([]); 
-        setLoading(false);
-        return;
-      }
-
-      timeoutRef.current = setTimeout(async () => {
+      const runFetch = async () => {
         abortControllerRef.current = new AbortController();
         setLoading(true);
 
@@ -48,7 +42,15 @@ export function useSearchSelect<T>(
         } finally {
           setLoading(false);
         }
-      }, debounceMs);
+      };
+
+      if (!query.trim()) {
+        // Fetch immediately for empty query to make clicking super fast and snappy
+        runFetch();
+      } else {
+        // Debounce active searches to save backend resources
+        timeoutRef.current = setTimeout(runFetch, debounceMs);
+      }
     },
     [fetchOptions, debounceMs]
   );

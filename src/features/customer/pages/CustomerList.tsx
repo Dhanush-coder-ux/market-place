@@ -14,22 +14,22 @@ const CustomerList = () => {
 
   useEffect(() => {
     setActions(
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2">
         <button
           onClick={() => navigate("/customers/drafts")}
-          className="px-5 h-11 rounded-lg border border-blue-100 text-blue-600 font-bold text-[14px] bg-blue-50/50 hover:bg-blue-100 transition-all flex items-center gap-2"
+          className="h-8 px-3 rounded-md border border-slate-200 text-slate-650 font-medium text-[12px] bg-white hover:bg-slate-50 transition-colors flex items-center gap-1.5"
         >
-          <Bookmark size={18} />
-          Saved Drafts
+          <Bookmark size={13} />
+          Drafts
         </button>
-        <GradientButton path="/customers/add" className="h-11 flex items-center px-6 text-[14px] shadow-lg shadow-blue-200">+ Add Customer</GradientButton>
+        <GradientButton path="/customers/add" className="h-8 flex items-center px-4 text-[12px] rounded-md">+ Add Customer</GradientButton>
       </div>
     );
     return () => setActions(null);
   }, [setActions, navigate]);
 
   const fetchCustomers = async (q: string) => {
-    if (!q) return [];
+
     try {
       const res = await getData(`${ENDPOINTS.CUSTOMERS}/by/shop/${SHOP_ID}`, { limit: "10", offset: "1", q });
       const data = res?.data ? (Array.isArray(res.data) ? res.data : [res.data]) : [];

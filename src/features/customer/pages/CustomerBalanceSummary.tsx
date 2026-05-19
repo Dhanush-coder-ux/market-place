@@ -7,13 +7,13 @@ import { useHeader } from "@/context/HeaderContext";
 import { StatCard } from "@/components/common/StatsCard";
 import { ReusableSelect } from "@/components/ui/ReusableSelect";
 import { GradientButton } from "@/components/ui/GradientButton";
-import Input from "@/components/ui/Input";
 import { useApi } from "@/context/ApiContext";
 import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 import type { CustomerRecord } from "@/types/api";
 import { useToast } from "@/context/ToastContext";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { ColumnPicker } from "@/components/common/ColumnPicker";
+import { RightSidebarFilter } from "@/components/common/RightSidebarFilter";
 import { useEffect, useMemo, useState } from "react";
 import { Modal } from "@/components/common/SuperUI";
 
@@ -34,6 +34,7 @@ export default function CustomerBalanceSummary() {
   const [customers, setCustomers] = useState<CustomerRecord[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [customerToDelete, setCustomerToDelete] = useState<CustomerRecord | null>(null);
@@ -56,18 +57,29 @@ export default function CustomerBalanceSummary() {
   useEffect(() => {
     setActions(
       <div className="flex items-center gap-2">
+        {!isCleanMode && (
+          <button
+            onClick={handleOpenNewTab}
+            className="h-8 w-8 flex items-center justify-center rounded-md border border-slate-200 text-slate-600 bg-white hover:bg-slate-50 active:scale-95 transition-all shadow-sm shrink-0"
+            title="Open in New Tab"
+          >
+            <ExternalLink size={13} />
+          </button>
+        )}
         <button
           onClick={() => navigate("/customers/drafts")}
-          className="px-4 h-10 rounded-lg border border-blue-100 text-blue-600 font-semibold text-[13px] bg-blue-50/50 hover:bg-blue-100 transition-all flex items-center gap-2"
+          className="h-8 px-3 rounded-md border border-slate-200 text-slate-600 font-medium text-[12px] bg-white hover:bg-slate-50 transition-colors flex items-center gap-1.5"
         >
-          <Bookmark size={16} />
-          Saved Drafts
+          <Bookmark size={13} />
+          Drafts
         </button>
-        <GradientButton path="/customers/add" className="h-10 flex items-center px-4 text-[13px]">+ Add Customer</GradientButton>
+        <GradientButton path="/customers/add" className="h-8 flex items-center px-4 text-[12px] rounded-md">
+          + Add Customer
+        </GradientButton>
       </div>
     );
     return () => setActions(null);
-  }, [setActions, navigate]);
+  }, [setActions, navigate, isCleanMode]);
 
   useEffect(() => {
     const params: Record<string, string> = { limit: "100", offset: "1" };
@@ -201,10 +213,10 @@ export default function CustomerBalanceSummary() {
   }, [customers, searchTerm]);
 
   return (
-    <div className="space-y-6">
+    <div className="flex-1 flex flex-col min-h-0 font-sans w-full overflow-hidden relative">
       {/* Stats Section */}
       {!isCleanMode && (
-        <div className="flex flex-nowrap overflow-x-auto custom-scrollbar gap-3 pb-2 -mx-2 px-2 sm:grid sm:grid-cols-2 lg:grid-cols-4 sm:overflow-visible sm:pb-0 sm:mx-0 sm:px-0 touch-pan-x">
+        <div className="flex flex-nowrap overflow-x-auto custom-scrollbar gap-3 pb-1 -mx-2 px-2 sm:grid sm:grid-cols-2 lg:grid-cols-4 sm:overflow-visible sm:pb-0 sm:mx-0 sm:px-0 touch-pan-x">
           <StatCard
             label="Total Customers"
             value={customers.length}
@@ -242,52 +254,70 @@ export default function CustomerBalanceSummary() {
         </div>
       )}
 
-      <div className="bg-white p-3 rounded-t-xl border-b border-gray-200 flex flex-col sm:flex-row gap-3 justify-between items-center mt-6">
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-          <div className="relative w-full sm:w-80">
-            <Input
-              leftIcon={<Search size={14} className='text-gray-400' />}
-              type="text"
-              placeholder="Search customer..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="h-10 text-sm"
-            />
-          </div>
-          <ColumnPicker
-            availableKeys={availableKeys}
-            selectedKeys={selectedKeys}
-            onApply={setSelectedKeys}
-            storageKey="customer_table_columns"
+      <div className="bg-white border border-slate-100 rounded-lg p-2.5 px-3.5 flex flex-nowrap items-center gap-2 shadow-sm overflow-x-auto scrollbar-none mt-2">
+        <div className="relative w-80 shrink-0">
+          <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+          <input
+            type="text"
+            placeholder="Search customer…"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full h-8 pl-8 pr-3 text-[12px] font-medium text-slate-700 bg-slate-50 border border-slate-200 rounded-md placeholder:text-slate-400 focus:outline-none focus:border-slate-300 focus:bg-white transition-colors"
           />
-          
-          {!isCleanMode && (
-            <button 
-              type="button"
-              className="h-10 px-3 flex items-center justify-center gap-1.5 rounded-lg border border-slate-200 text-slate-600 bg-white hover:text-slate-850 hover:border-slate-300 active:scale-95 transition-all text-xs font-semibold shadow-sm shrink-0"
-              onClick={handleOpenNewTab}
-            >
-              <ExternalLink size={13} />Open in New Tab
-            </button>
-          )}
         </div>
-        <div className="flex items-center gap-1.5 ml-auto shrink-0">
-          <Filter className="text-slate-400" size={14} />
-          <div className="scale-75 origin-right -mr-2">
+        
+
+        <button
+          type="button"
+          onClick={() => setIsFilterOpen(true)}
+          className={`h-8 px-3 rounded-md border text-xs font-semibold flex items-center gap-1.5 active:scale-95 transition-all shadow-sm shrink-0 ${
+            statusFilter !== "All"
+              ? "border-slate-200 text-slate-650 bg-white hover:bg-slate-50"
+              : "border-slate-200 text-slate-650 bg-white hover:bg-slate-50"
+          }`}
+          title="Filters"
+        >
+          <Filter size={13} />
+          {statusFilter !== "All" && (
+            <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+          )}
+        </button>
+
+        <ColumnPicker
+          availableKeys={availableKeys}
+          selectedKeys={selectedKeys}
+          onApply={setSelectedKeys}
+          storageKey="customer_table_columns"
+          className="h-8 px-3 rounded-md border border-slate-200 text-slate-650 bg-white hover:bg-slate-50 active:scale-95 transition-all text-xs font-semibold shadow-sm shrink-0 flex items-center justify-center gap-1.5"
+        />
+
+        <div className="flex-1" />
+      </div>
+
+      <RightSidebarFilter
+        isOpen={isFilterOpen}
+        onClose={() => setIsFilterOpen(false)}
+        onApply={() => {}}
+        onClear={() => setStatusFilter("All")}
+        title="Customer Filters"
+      >
+        <div className="space-y-4">
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Status</label>
             <ReusableSelect
               value={statusFilter}
               onValueChange={(val) => setStatusFilter(val)}
               options={[
                 { label: "All Statuses", value: "All" },
               ]}
-              placeholder="Filter"
+              placeholder="Status"
             />
           </div>
         </div>
-      </div>
+      </RightSidebarFilter>
 
-      <div className="bg-white rounded-b-xl border border-gray-200 shadow-sm overflow-hidden">
-        <div className={`overflow-x-auto overflow-y-auto ${isCleanMode ? "h-[calc(100vh-140px)]" : "h-[calc(100vh-220px)]"} pf-scroll`}>
+      <div className="bg-white rounded-b-xl border border-gray-200 shadow-sm overflow-hidden flex flex-col flex-1 min-h-0 mt-2">
+        <div className="overflow-x-auto overflow-y-auto flex-1 min-h-0 pf-scroll">
           <table className="w-full text-left border-collapse">
             <thead className="sticky top-0 z-20 bg-slate-50/95 backdrop-blur-sm shadow-sm">
               <tr className="text-slate-400 text-[10px] font-bold border-b border-slate-100">

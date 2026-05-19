@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   ChevronDown,
@@ -425,7 +426,7 @@ export default function StockAdjustmentPage() {
       </FloatingFormCard>
 
       {/* --- DYNAMIC VARIANT SELECTION MODAL --- */}
-      {variantModal.isOpen && (
+      {variantModal.isOpen && createPortal(
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[80vh] overflow-hidden flex flex-col border border-slate-200/60 animate-in fade-in zoom-in-95 duration-200">
             <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50 shrink-0">
@@ -508,11 +509,12 @@ export default function StockAdjustmentPage() {
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* --- BATCH SELECTION MODAL --- */}
-      {batchModal.isOpen && (
+      {batchModal.isOpen && createPortal(
         <div className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col border border-slate-200 animate-in zoom-in-95 duration-200">
             <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
@@ -568,27 +570,28 @@ export default function StockAdjustmentPage() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
-      <div className="max-w-7xl mx-auto p-3 md:p-4 space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="w-full px-4 md:px-6 lg:px-8 space-y-5 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-[2000px] mx-auto pb-12 pt-2">
         
         {/* Header Info Banner */}
-        <div className="flex items-start gap-2.5 rounded-xl border border-amber-200/60 bg-amber-50/30 p-3 text-[11px] text-amber-800 shadow-sm leading-relaxed">
-          <AlertTriangle size={15} className="shrink-0 mt-0.5 text-amber-600" />
+        <div className="flex items-start gap-3 rounded-2xl border border-amber-200/80 bg-gradient-to-r from-amber-50/80 to-amber-50/30 p-4 text-[12px] text-amber-900 shadow-sm leading-relaxed">
+          <AlertTriangle size={18} className="shrink-0 mt-0.5 text-amber-600" />
           <div>
-            <span className="font-extrabold uppercase tracking-wide text-[9px] mr-1 bg-amber-100 px-1.5 py-0.5 rounded">Physical Check</span>
-            Stock adjustments immediately update inventory counts but do not overwrite previous ledger histories. Use strictly for loss, physical correction, damage, or item expiry.
+            <span className="font-black uppercase tracking-wider text-[10px] mr-2 bg-amber-100/80 text-amber-700 border border-amber-200 px-2 py-0.5 rounded-md shadow-[0_1px_2px_rgba(0,0,0,0.05)]">Physical Check</span>
+            <span className="font-medium">Stock adjustments immediately update inventory counts but do not overwrite previous ledger histories. Use strictly for loss, physical correction, damage, or item expiry.</span>
           </div>
         </div>
 
 
         {/* Main Content Area */}
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 xl:gap-8 items-start">
           
           {/* Items List */}
-          <div className="lg:col-span-4">
-            <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+          <div className="lg:col-span-3">
+            <div className="bg-white rounded-3xl border border-slate-200/80 shadow-lg shadow-slate-100/50 overflow-hidden">
               
               {/* Header */}
               <div className="px-4 py-3.5 bg-gradient-to-r from-indigo-50/30 to-transparent border-b border-slate-100 flex items-center justify-between">
@@ -845,12 +848,12 @@ export default function StockAdjustmentPage() {
 
           {/* Summary Panel - Desktop */}
           <div className="hidden lg:block lg:col-span-1">
-            <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden sticky top-4">
-              <div className="px-4 py-3 bg-gradient-to-r from-emerald-50/30 to-transparent border-b border-slate-100 flex items-center gap-2">
-                <div className="w-7 h-7 rounded-lg bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600">
-                  <History size={14} />
+            <div className="bg-white rounded-3xl border border-slate-200/80 shadow-lg shadow-slate-100/50 overflow-hidden sticky top-4">
+              <div className="px-5 py-4 bg-gradient-to-r from-emerald-50/40 to-transparent border-b border-slate-100 flex items-center gap-3">
+                <div className="w-8 h-8 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 shadow-sm">
+                  <History size={16} />
                 </div>
-                <h2 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Summary</h2>
+                <h2 className="text-[13px] font-black text-slate-800 uppercase tracking-wider">Summary</h2>
               </div>
               
               <div className="p-4 space-y-3.5">

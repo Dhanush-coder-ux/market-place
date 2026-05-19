@@ -1,8 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
-import { Search, Trash2, X, Edit, Bookmark, Users, Building2, Phone, Eye } from "lucide-react";
+import { Search, Trash2, X, Edit, Bookmark, Users, Building2, Phone, Eye, ExternalLink } from "lucide-react";
 import { GradientButton } from "@/components/ui/GradientButton";
-import Input from "@/components/ui/Input";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import Loader from "@/components/common/Loader";
 import { useApi } from "@/context/ApiContext";
 import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
@@ -17,10 +16,17 @@ import { useQuickCreate } from "@/features/common/QuickCreate/QuickCreateContext
 
 const Supplier = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const isCleanMode = new URLSearchParams(location.search).get("mode") === "clean";
+
   const { getData, deleteData, loading, error, clearError } = useApi();
   const { setActions } = useHeader();
   const { showToast } = useToast();
   const { openQuickCreate } = useQuickCreate();
+
+  const handleOpenNewTab = () => {
+    window.open(`${window.location.pathname}?mode=clean`, "_blank", "noopener,noreferrer");
+  };
 
   const [suppliers, setSuppliers] = useState<SupplierRecord[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -37,24 +43,33 @@ const Supplier = () => {
 
   useEffect(() => {
     setActions(
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2">
+        {!isCleanMode && (
+          <button
+            onClick={handleOpenNewTab}
+            className="h-8 w-8 flex items-center justify-center rounded-md border border-slate-200 text-slate-650 bg-white hover:bg-slate-50 active:scale-95 transition-all shadow-sm shrink-0"
+            title="Open in New Tab"
+          >
+            <ExternalLink size={13} />
+          </button>
+        )}
         <button
           onClick={() => navigate("/supplier/drafts")}
-          className="px-5 h-11 rounded-lg border border-blue-100 text-blue-600 font-semibold text-[14px] bg-blue-50/50 md:hover:bg-blue-100 md:transition-all flex items-center gap-2"
+          className="h-8 px-3 rounded-md border border-slate-200 text-slate-650 font-medium text-[12px] bg-white hover:bg-slate-50 transition-colors flex items-center gap-1.5"
         >
-          <Bookmark size={18} />
-          Saved Drafts
+          <Bookmark size={13} />
+          Drafts
         </button>
         <GradientButton
           onClick={() => navigate("/supplier/add")}
-          className="h-11 flex items-center shadow-lg shadow-blue-100"
+          className="h-8 flex items-center px-4 text-[12px] rounded-md"
         >
           + Add Supplier
         </GradientButton>
       </div>
     );
     return () => setActions(null);
-  }, [setActions, navigate, openQuickCreate]);
+  }, [setActions, navigate, openQuickCreate, isCleanMode]);
 
   useEffect(() => {
     const params: Record<string, string> = { limit: "50", offset: "1" };
@@ -123,52 +138,54 @@ const Supplier = () => {
   }, [suppliers]);
 
   return (
-    <div className="space-y-6 md:animate-in md:fade-in md:duration-500 custom-scrollbar">
+    <div className="flex-1 flex flex-col min-h-0 font-sans w-full overflow-hidden relative">
 
       {/* Stats Section */}
-      <div className="flex flex-nowrap overflow-x-auto custom-scrollbar gap-3 pb-2 -mx-2 px-2 sm:grid sm:grid-cols-2 lg:grid-cols-3 sm:overflow-visible sm:pb-0 sm:mx-0 sm:px-0 touch-pan-x">
-        <StatCard
-          icon={Building2}
-          label="Total Suppliers"
-          value={suppliers.length.toString()}
-          iconBg="bg-blue-50 text-blue-600"
-          className="flex-1"
-        />
-        <StatCard
-          icon={Users}
-          label="Active Partners"
-          value={stats.active.toString()}
-          iconBg="bg-emerald-50 text-emerald-600"
-          className="flex-1"
-        />
-        <StatCard
-          icon={Phone}
-          label="Support Contacts"
-          value={stats.contacts.toString()}
-          iconBg="bg-amber-50 text-amber-600"
-          className="flex-1"
-        />
-      </div>
-
-      <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center gap-3 flex-1">
-          <div className="relative w-full sm:w-80">
-            <Input
-              leftIcon={<Search size={14} className='text-gray-400' />}
-              type="text"
-              placeholder="Search supplier..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="h-10 text-sm rounded-lg"
-            />
-          </div>
-          <ColumnPicker
-            availableKeys={availableKeys}
-            selectedKeys={selectedKeys}
-            onApply={setSelectedKeys}
-            storageKey="supplier_table_columns"
+      {!isCleanMode && (
+        <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-none">
+          <StatCard
+            icon={Building2}
+            label="Total Suppliers"
+            value={suppliers.length.toString()}
+            iconBg="bg-blue-50 text-blue-600"
+          />
+          <StatCard
+            icon={Users}
+            label="Active Partners"
+            value={stats.active.toString()}
+            iconBg="bg-emerald-50 text-emerald-600"
+          />
+          <StatCard
+            icon={Phone}
+            label="Support Contacts"
+            value={stats.contacts.toString()}
+            iconBg="bg-amber-50 text-amber-600"
           />
         </div>
+      )}
+
+      {/* Toolbar */}
+      <div className="bg-white border border-slate-100 rounded-lg p-2.5 px-3.5 flex flex-nowrap items-center gap-2 shadow-sm overflow-x-auto scrollbar-none mt-2">
+        <div className="relative w-80 shrink-0">
+          <Search
+            size={13}
+            className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+          />
+          <input
+            type="text"
+            placeholder="Search supplier…"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full h-8 pl-8 pr-3 text-[12px] font-medium text-slate-700 bg-slate-50 border border-slate-200 rounded-md placeholder:text-slate-400 focus:outline-none focus:border-slate-300 focus:bg-white transition-colors"
+          />
+        </div>
+        <ColumnPicker
+          availableKeys={availableKeys}
+          selectedKeys={selectedKeys}
+          onApply={setSelectedKeys}
+          storageKey="supplier_table_columns"
+          className="h-8 px-3 rounded-md border border-slate-200 text-slate-650 bg-white hover:bg-slate-50 active:scale-95 transition-all text-xs font-semibold shadow-sm shrink-0 flex items-center justify-center gap-1.5"
+        />
       </div>
 
       {/* Error State */}
@@ -182,8 +199,8 @@ const Supplier = () => {
       )}
 
       {/* Table Section */}
-      <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden md:transition-all md:duration-300">
-        <div className="overflow-x-auto overflow-y-auto h-[calc(100vh-220px)] pf-scroll">
+      <div className="bg-white border border-slate-100 rounded-lg shadow-sm min-w-0 overflow-hidden flex flex-col flex-1 min-h-0 mt-2">
+        <div className="overflow-x-auto overflow-y-auto flex-1 pf-scroll">
           <table className="w-full text-left border-separate border-spacing-0">
             <thead className="sticky top-0 z-20 bg-slate-50/95 backdrop-blur-sm shadow-sm">
               <tr className="text-slate-400 text-[10px] font-bold  tracking-[0.15em] border-b border-slate-100">

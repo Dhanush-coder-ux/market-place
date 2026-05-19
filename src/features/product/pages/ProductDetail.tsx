@@ -4,7 +4,6 @@ import {
   Package, Edit3, Trash2, DollarSign, Download, Upload,
   Tag, Layers, Info, BarChart2,
   Hash, ShoppingCart, MapPin, FileText,
-  ArrowUp, ArrowDown, TrendingUp, Activity, RefreshCcw,
 } from "lucide-react";
 import { useApi } from "@/context/ApiContext";
 import { useToast } from "@/context/ToastContext";
@@ -15,6 +14,7 @@ import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { SearchSelect } from "@/components/inputbuilders/SearchSelect";
 import { VariantRows, SerialBadgeList, BatchCards } from "../../inventory/components/StockTree";
 import type { InventoryRecord } from "@/types/api";
+import { StockMovementsTable, ProductPurchasesTable } from "@/components/common/HistoryTables";
 
 // ── Search bar ───────────────────────────────────────────────────────────────
 const ProductSearchSelect = () => {
@@ -22,7 +22,7 @@ const ProductSearchSelect = () => {
   const { getData } = useApi();
 
   const fetchProducts = async (q: string) => {
-    if (!q) return [];
+
     try {
       const res = await getData(ENDPOINTS.INVENTORIES, { q, limit: "8", shop_id: SHOP_ID });
       const data = res?.data ? (Array.isArray(res.data) ? res.data : [res.data]) : [];
@@ -168,84 +168,70 @@ const ProductDetail = () => {
 
 
   const TABS = ["General Info", ...((hasVariants || hasBatches) ? ["Inventory & Variants"] : []), MOV_TAB_LABEL, PUR_TAB_LABEL];
+  const isTableTab = TABS[activeTab] === MOV_TAB_LABEL || TABS[activeTab] === PUR_TAB_LABEL;
 
   // Clickable field definition
   const click = (label: string, value: string) => () => setViewValue({ label, value });
 
   return (
-    <div className="space-y-4 animate-in fade-in duration-500">
-
+    <div className="flex-1 flex flex-col min-h-0 h-full bg-slate-50/50 font-sans overflow-hidden relative">
+      
       {/* ── Profile Header Card ──────────────────────────────── */}
-      <ProfileHeaderCard
-        name={name}
-        initials={initials}
-        subText={`Barcode: ${sku}`}
-        badges={[
-          { text: category, variant: "primary" },
-          { text: isActive ? "Active" : "Inactive", variant: isActive ? "success" : "danger", showPulse: true },
-        ]}
-        infoItems={[
-          { icon: Tag, text: `Unit: ${unit}` },
-          { icon: ShoppingCart, text: `Stock: ${currentStock}` },
-        ]}
-        actions={
-          <div className="flex items-center gap-1.5">
-            <button
-              onClick={() => navigate(`/product/${id}/edit`)}
-              className="w-8 h-8 flex items-center justify-center bg-white border border-slate-200 text-slate-600 rounded-lg hover:text-blue-600 hover:border-blue-100 transition-all shadow-sm active:scale-95"
-              title="Edit Product"
-            >
-              <Edit3 size={14} />
-            </button>
-            <button
-              onClick={() => setShowDeleteModal(true)}
-              className="w-8 h-8 flex items-center justify-center bg-white border border-slate-200 text-slate-300 rounded-lg hover:text-rose-600 hover:border-rose-100 transition-all shadow-sm active:scale-95"
-              title="Delete Product"
-            >
-              <Trash2 size={14} />
-            </button>
-          </div>
-        }
-      />
-
-      {/* ── Tabs + Stats ─────────────────────────────────────── */}
-      <div className="flex gap-0.5 bg-white p-1 rounded-lg border border-slate-200 w-fit">
-        {TABS.map((tab, i) => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(i)}
-            className={`px-4 py-1.5 text-[11px] font-bold rounded-lg transition-all ${activeTab === i
-              ? "bg-blue-600 text-white shadow-md shadow-blue-100"
-              : "text-slate-500 hover:bg-slate-50 hover:text-slate-700"
-              }`}
-          >
-            {tab}
-          </button>
-        ))}
+      <div className="flex-none p-1 pb-0 animate-in fade-in duration-500">
+        <ProfileHeaderCard
+          name={name}
+          initials={initials}
+          subText={`Barcode: ${sku}`}
+          badges={[
+            { text: category, variant: "primary" },
+            { text: isActive ? "Active" : "Inactive", variant: isActive ? "success" : "danger", showPulse: true },
+          ]}
+          infoItems={[
+            { icon: Tag, text: `Unit: ${unit}` },
+            { icon: ShoppingCart, text: `Stock: ${currentStock}` },
+          ]}
+          actions={
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={() => navigate(`/product/${id}/edit`)}
+                className="w-8 h-8 flex items-center justify-center bg-white border border-slate-200 text-slate-600 rounded-lg hover:text-blue-600 hover:border-blue-100 transition-all shadow-sm active:scale-95"
+                title="Edit Product"
+              >
+                <Edit3 size={14} />
+              </button>
+              <button
+                onClick={() => setShowDeleteModal(true)}
+                className="w-8 h-8 flex items-center justify-center bg-white border border-slate-200 text-slate-300 rounded-lg hover:text-rose-600 hover:border-rose-100 transition-all shadow-sm active:scale-95"
+                title="Delete Product"
+              >
+                <Trash2 size={14} />
+              </button>
+            </div>
+          }
+        />
       </div>
 
-      {/* <div className="flex flex-wrap gap-2">
-        <StatCard icon={Package} label="Current Stock" value={String(currentStock)}
-          iconBg="bg-blue-50" iconColor="text-blue-600" className="flex-1 min-w-[140px]" />
-        <StatCard icon={Download} label="Buy Price" value={`₹${buyingPrice}`}
-          iconBg="bg-emerald-50" iconColor="text-emerald-600" className="flex-1 min-w-[140px]" />
-        <StatCard icon={Upload} label="Selling Price" value={`₹${sellingPrice}`}
-          iconBg="bg-rose-50" iconColor="text-rose-600" className="flex-1 min-w-[140px]" />
-        <StatCard
-          icon={DollarSign}
-          label="Stock Value"
-          value={
-            String(currentStock) !== "—" && String(buyingPrice) !== "—"
-              ? `₹${(Number(currentStock) * Number(buyingPrice)).toLocaleString()}`
-              : "—"
-          }
-          iconBg="bg-indigo-50" iconColor="text-indigo-600"
-          className="flex-1 min-w-[140px]"
-        />
-      </div> */}
+      {/* ── Tabs + Stats ─────────────────────────────────────── */}
+      <div className="flex-none px-1 py-2">
+        <div className="flex gap-0.5 bg-white p-1 rounded-lg border border-slate-200 w-fit">
+          {TABS.map((tab, i) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(i)}
+              className={`px-4 py-1.5 text-[11px] font-bold rounded-lg transition-all ${activeTab === i
+                ? "bg-blue-600 text-white shadow-md shadow-blue-100"
+                : "text-slate-500 hover:bg-slate-50 hover:text-slate-700"
+                }`}
+            >
+              {tab}
+            </button>
+          ))}
+        </div>
+      </div>
 
-      {/* ── Tab Panels ───────────────────────────────────────── */}
-      <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+      {/* ── Tab Panels (scrollable or flex-locked depending on active tab) ──────────────────────────── */}
+      <div className={`flex-1 min-h-0 ${isTableTab ? "flex flex-col overflow-hidden" : "overflow-y-auto custom-scrollbar"} px-1 pb-6`}>
+        <div className={`animate-in fade-in slide-in-from-bottom-4 duration-500 ${isTableTab ? "flex flex-col flex-1 min-h-0 h-full" : ""}`}>
 
         {/* TAB 0 — General Info */}
         {activeTab === 0 && (
@@ -491,105 +477,10 @@ const ProductDetail = () => {
           rows.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
           return (
-            <div className="space-y-4 animate-in fade-in slide-in-from-top-4 duration-500">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-100"><Activity size={16} /></div>
-                  <h2 className="text-[10px] font-black text-slate-800  tracking-[0.15em]">Stock Movements</h2>
-                </div>
-                {movLoading && <RefreshCcw size={14} className="text-slate-400 animate-spin" />}
-              </div>
-              {movLoading ? (
-                <div className="py-16 flex justify-center"><RefreshCcw size={24} className="text-blue-400 animate-spin" /></div>
-              ) : rows.length === 0 ? (
-                <div className="py-16 text-center">
-                  <TrendingUp size={32} className="mx-auto text-slate-200 mb-3" />
-                  <p className="text-sm font-bold text-slate-400">No stock movements found</p>
-                </div>
-              ) : (
-                <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left whitespace-nowrap">
-                      <thead>
-                        <tr className="text-[10px] font-black   text-slate-400 border-b border-slate-100 bg-slate-50/50">
-                          <th className="px-5 py-3">Date</th>
-                          <th className="px-5 py-3">Type</th>
-                          <th className="px-5 py-3">Product / Variant / Batch</th>
-                          <th className="px-5 py-3">Ordered Stock</th>
-                          <th className="px-5 py-3">Received Stock</th>
-                          <th className="px-5 py-3">Stock Overview</th>
-                          <th className="px-5 py-3">Details</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-50">
-                        {rows.map((r: any, i: number) => {
-                          return (
-                            <tr key={`${r.id}-${i}`} className={`hover:bg-slate-50/60 transition-colors ${r.source === 'purchase' ? 'border-l-2 border-indigo-300' : r.isInc ? 'border-l-2 border-emerald-300' : 'border-l-2 border-rose-300'
-                              }`}>
-                              <td className="px-5 py-3 text-xs text-slate-500 font-medium">
-                                {r.date ? new Date(r.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
-                              </td>
-                              <td className="px-5 py-3">
-                                <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${r.source === 'purchase'
-                                  ? (r.displayType === 'PO Purchase' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-indigo-50 text-indigo-700 border-indigo-200')
-                                  : r.isInc ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-rose-50 text-rose-700 border-rose-200'
-                                  }`}>
-                                  {r.isInc ? <ArrowUp size={10} /> : <ArrowDown size={10} />}
-                                  {r.displayType}
-                                </span>
-                              </td>
-                              <td className="px-5 py-3">
-                                <div className="flex flex-col gap-1">
-                                  {r.variant && <span className="w-fit px-2 py-0.5 rounded-md text-[10px] font-bold bg-violet-50 text-violet-700 border border-violet-100">V: {r.variant}</span>}
-                                  {r.batch && <span className="w-fit px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-100">B: {r.batch}</span>}
-                                  {!r.variant && !r.batch && <span className="text-slate-300">—</span>}
-                                  {r.serials?.length > 0 && (
-                                    <div className="flex flex-wrap gap-1 mt-0.5 max-w-[150px]">
-                                      <span className="text-[9px] text-slate-400 font-bold ">SN: </span>
-                                      {r.serials.slice(0, 2).map((s: string, si: number) => (
-                                        <span key={si} className="text-[9px] font-mono font-bold text-slate-500">{s}{si === 0 && r.serials.length > 1 ? ',' : ''}</span>
-                                      ))}
-                                      {r.serials.length > 2 && <span className="text-[9px] font-bold text-slate-400">+{r.serials.length - 2}</span>}
-                                    </div>
-                                  )}
-                                </div>
-                              </td>
-                              <td className="px-5 py-3">
-                                <span className="font-black text-sm tabular-nums text-slate-700">
-                                  {r.stocks}
-                                </span>
-                              </td>
-                              <td className="px-5 py-3">
-                                <span className={`font-black text-sm tabular-nums ${r.isInc ? 'text-emerald-600' : 'text-rose-600'}`}>
-                                  {r.isInc ? '+' : '-'}{r.receivedStocks}
-                                </span>
-                              </td>
-                              <td className="px-5 py-3">
-                                <div className="flex flex-col gap-1">
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-[9px] font-black text-slate-400  tracking-tighter">Opening</span>
-                                    <span className="text-xs font-bold text-slate-700">{r.stocksBefore ?? '—'}</span>
-                                  </div>
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-[9px] font-black text-blue-400  tracking-tighter">Current</span>
-                                    <span className="text-xs font-bold text-blue-600">
-                                      {r.stocksBefore !== null ? (r.stocksBefore + (r.isInc ? r.receivedStocks : -r.receivedStocks)) : '—'}
-                                    </span>
-                                  </div>
-                                </div>
-                              </td>
-                              <td className="px-5 py-3 text-xs text-slate-500 max-w-[200px] truncate" title={r.description}>
-                                {r.description}
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
-            </div>
+            <StockMovementsTable
+              rows={rows}
+              loading={movLoading}
+            />
           );
         })()}
 
@@ -637,108 +528,10 @@ const ProductDetail = () => {
           rows.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
           return (
-            <div className="space-y-4 animate-in fade-in slide-in-from-top-4 duration-500">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-100"><ShoppingCart size={16} /></div>
-                  <h2 className="text-[10px] font-black text-slate-800  tracking-[0.15em]">Purchase History</h2>
-                </div>
-                {purLoading && <RefreshCcw size={14} className="text-slate-400 animate-spin" />}
-              </div>
-              {purLoading ? (
-                <div className="py-16 flex justify-center"><RefreshCcw size={24} className="text-indigo-400 animate-spin" /></div>
-              ) : rows.length === 0 ? (
-                <div className="py-16 text-center">
-                  <ShoppingCart size={32} className="mx-auto text-slate-200 mb-3" />
-                  <p className="text-sm font-bold text-slate-400">No purchases found for this product</p>
-                </div>
-              ) : (
-                <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left whitespace-nowrap">
-                      <thead>
-                        <tr className="text-[10px] font-black   text-slate-400 border-b border-slate-100 bg-slate-50/50">
-                          <th className="px-5 py-3">#</th>
-                          <th className="px-5 py-3">Date</th>
-                          <th className="px-5 py-3">Type</th>
-                          <th className="px-5 py-3">Product / Variant / Batch</th>
-                          <th className="px-5 py-3">Ordered Stock</th>
-                          <th className="px-5 py-3">Received Stock</th>
-                          <th className="px-5 py-3">Stock Overview</th>
-                          <th className="px-5 py-3">Details</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-50">
-                        {rows.map((r: any, i: number) => {
-                          return (
-                            <tr key={`${r.id}-${i}`} className={`hover:bg-indigo-50/20 transition-colors border-l-2 border-indigo-200`}>
-                              <td className="px-5 py-3">
-                                <span className="text-[10px] font-black text-slate-400 tabular-nums">#{r.uiId}</span>
-                              </td>
-                              <td className="px-5 py-3 text-xs text-slate-500 font-medium">
-                                {r.date ? new Date(r.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
-                              </td>
-                              <td className="px-5 py-3">
-                                <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${r.displayType === 'PO Purchase'
-                                  ? 'bg-blue-50 text-blue-700 border-blue-200'
-                                  : 'bg-indigo-50 text-indigo-700 border-indigo-200'
-                                  }`}>
-                                  <ArrowUp size={10} />
-                                  {r.displayType}
-                                </span>
-                              </td>
-                              <td className="px-5 py-3">
-                                <div className="flex flex-col gap-1">
-                                  {r.variant && <span className="w-fit px-2 py-0.5 rounded-md text-[10px] font-bold bg-violet-50 text-violet-700 border border-violet-100">V: {r.variant}</span>}
-                                  {r.batch && <span className="w-fit px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-100">B: {r.batch}</span>}
-                                  {!r.variant && !r.batch && <span className="text-slate-300">—</span>}
-                                  {r.serials?.length > 0 && (
-                                    <div className="flex flex-wrap gap-1 mt-0.5 max-w-[150px]">
-                                      <span className="text-[9px] text-slate-400 font-bold ">SN: </span>
-                                      {r.serials.slice(0, 2).map((s: string, si: number) => (
-                                        <span key={si} className="text-[9px] font-mono font-bold text-slate-500">{s}{si === 0 && r.serials.length > 1 ? ',' : ''}</span>
-                                      ))}
-                                      {r.serials.length > 2 && <span className="text-[9px] font-bold text-slate-400">+{r.serials.length - 2}</span>}
-                                    </div>
-                                  )}
-                                </div>
-                              </td>
-                              <td className="px-5 py-3">
-                                <span className="font-black text-sm tabular-nums text-slate-700">
-                                  {r.stocks}
-                                </span>
-                              </td>
-                              <td className="px-5 py-3">
-                                <span className="font-black text-sm tabular-nums text-emerald-600">
-                                  +{r.receivedStocks}
-                                </span>
-                              </td>
-                              <td className="px-5 py-3">
-                                <div className="flex flex-col gap-1">
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-[9px] font-black text-slate-400  tracking-tighter">Opening</span>
-                                    <span className="text-xs font-bold text-slate-700">{r.stocksBefore ?? '—'}</span>
-                                  </div>
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-[9px] font-black text-blue-400  tracking-tighter">Current</span>
-                                    <span className="text-xs font-bold text-blue-600">
-                                      {r.stocksBefore !== null ? (r.stocksBefore + r.receivedStocks) : '—'}
-                                    </span>
-                                  </div>
-                                </div>
-                              </td>
-                              <td className="px-5 py-3 text-xs text-slate-500 max-w-[200px] truncate" title={r.description}>
-                                {r.description}
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
-            </div>
+            <ProductPurchasesTable
+              rows={rows}
+              loading={purLoading}
+            />
           );
         })()}
       </div>
@@ -772,6 +565,7 @@ const ProductDetail = () => {
         type="danger"
         icon={Trash2}
       />
+    </div>
     </div>
   );
 };

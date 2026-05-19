@@ -184,6 +184,16 @@
   .no-scroll .overflow-y-auto:not(.modal-content) {
     overflow-y: hidden !important;
   }
+
+  /* Hide spinners/arrows from all number inputs globally to prevent accidental clicks */
+  input[type="number"]::-webkit-outer-spin-button,
+  input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  input[type="number"] {
+    -moz-appearance: textfield;
+  }
 }
 
 /* ─── WebView / Mobile Scroll Performance ────────────────────────────────────

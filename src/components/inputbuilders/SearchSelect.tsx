@@ -77,7 +77,18 @@ export function SearchSelect<T extends BaseOption>({
 
   // Map generic objects to Ant Design Option format
   const formattedOptions = useMemo(() => {
-    return options.map((opt) => {
+    const seen = new Set<string | number>();
+    const uniqueOptions: T[] = [];
+    
+    options.forEach((opt) => {
+      const val = opt[valueKey] as string | number;
+      if (val !== undefined && val !== null && !seen.has(val)) {
+        seen.add(val);
+        uniqueOptions.push(opt);
+      }
+    });
+
+    return uniqueOptions.map((opt) => {
       const labelStr = String(opt[labelKey]);
       const val = opt[valueKey] as string | number;
 
@@ -163,7 +174,12 @@ export function SearchSelect<T extends BaseOption>({
       <Select
         ref={selectRef}
         open={open}
-        onDropdownVisibleChange={(visible) => setOpen(visible)}
+        onDropdownVisibleChange={(visible) => {
+          setOpen(visible);
+          if (visible) {
+            handleSearch(searchValue);
+          }
+        }}
         id={id}
         className={className}
         mode={mode}

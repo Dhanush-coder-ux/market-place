@@ -17,6 +17,7 @@ import { StatCard } from "@/components/common/StatsCard";
 import Loader from "@/components/common/Loader";
 import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 import type { InventoryRecord } from "@/types/api";
+import { RightSidebarFilter } from "@/components/common/RightSidebarFilter";
 
 // --- Helpers (logic unchanged) ---
 const formatCurrency = (amount?: any) => {
@@ -527,6 +528,7 @@ const ProductInfos = () => {
   const [products, setProducts] = useState<InventoryRecord[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [productToDelete, setProductToDelete] = useState<InventoryRecord | null>(null);
@@ -543,6 +545,15 @@ const ProductInfos = () => {
   useEffect(() => {
     setActions(
       <div className="flex items-center gap-2">
+        {!isCleanMode && (
+          <button
+            onClick={handleOpenNewTab}
+            className="h-8 w-8 flex items-center justify-center rounded-md border border-slate-200 text-slate-600 bg-white hover:bg-slate-50 active:scale-95 transition-all shadow-sm shrink-0"
+            title="Open in New Tab"
+          >
+            <ExternalLink size={13} />
+          </button>
+        )}
         <button
           onClick={() => navigate("/product/drafts")}
           className="h-8 px-3 rounded-md border border-slate-200 text-slate-600 font-medium text-[12px] bg-white hover:bg-slate-50 transition-colors flex items-center gap-1.5"
@@ -559,7 +570,7 @@ const ProductInfos = () => {
       </div>
     );
     return () => setActions(null);
-  }, [setActions, navigate]);
+  }, [setActions, navigate, isCleanMode]);
 
   useEffect(() => {
     const params: Record<string, string> = {
@@ -654,11 +665,11 @@ const ProductInfos = () => {
   );
 
   return (
-    <div className="flex flex-col gap-3 bg-[#f8f9fa] min-h-screen p-3 sm:p-4">
+    <div className="flex-1 flex flex-col min-h-0 font-sans w-full overflow-hidden relative">
 
       {/* Metric bar */}
       {!isCleanMode && (
-        <div className="flex flex-nowrap overflow-x-auto gap-2 pb-1 -mx-1 px-1 sm:grid sm:grid-cols-3 sm:overflow-visible sm:pb-0 sm:mx-0 sm:px-0 touch-pan-x">
+        <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-none">
           <StatCard
             icon={Package}
             label="Total products"
@@ -702,69 +713,86 @@ const ProductInfos = () => {
         </div>
       )}
 
-      {/* Main table card */}
-      <div className="bg-white rounded-lg border border-slate-100 overflow-hidden flex flex-col flex-1">
-
-        {/* Toolbar */}
-        <div className="flex items-center gap-2 px-3 py-2.5 border-b border-slate-100">
-          <div className="relative flex-1 max-w-sm">
-            <Search
-              size={13}
-              className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
-            />
-            <input
-              type="text"
-              placeholder="Search by name, SKU, category…"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full h-8 pl-8 pr-3 text-[12px] font-medium text-slate-700 bg-slate-50 border border-slate-100 rounded-md placeholder:text-slate-400 focus:outline-none focus:border-slate-300 focus:bg-white transition-colors"
-            />
-          </div>
-
-          <ColumnPicker
-            availableKeys={availableKeys}
-            selectedKeys={selectedKeys}
-            onApply={setSelectedKeys}
-            storageKey="product_table_columns"
+      {/* Toolbar */}
+      <div className="mt-2 bg-white border border-slate-100 rounded-lg p-2.5 px-3.5 flex flex-nowrap items-center gap-2 shadow-sm overflow-x-auto scrollbar-none">
+        <div className="relative w-80 shrink-0">
+          <Search
+            size={13}
+            className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
           />
-
-          <button className="h-8 w-8 flex items-center justify-center rounded-md border border-slate-100 text-slate-400 hover:text-slate-600 hover:border-slate-200 transition-colors">
-            <Filter size={13} />
-          </button>
-
-          <ReusableSelect
-            value={statusFilter}
-            onValueChange={(val) => setStatusFilter(val)}
-            options={[
-              { label: "All levels", value: "All" },
-              { label: "In stock", value: "In Stock" },
-              { label: "Low stock", value: "Low Stock" },
-              { label: "Out of stock", value: "Out of Stock" },
-            ]}
-            placeholder="Status"
-            className="h-8 text-[12px] rounded-md min-w-[120px]"
+          <input
+            type="text"
+            placeholder="Search by name, SKU, category…"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full h-8 pl-8 pr-3 text-[12px] font-medium text-slate-700 bg-slate-50 border border-slate-200 rounded-md placeholder:text-slate-400 focus:outline-none focus:border-slate-300 focus:bg-white transition-colors"
           />
-
-          {!isCleanMode && (
-            <button 
-              type="button"
-              className="h-8 px-2.5 flex items-center justify-center gap-1.5 rounded-md border border-slate-200 text-slate-600 bg-white hover:text-slate-850 hover:border-slate-300 active:scale-95 transition-all text-xs font-semibold shadow-sm shrink-0"
-              onClick={handleOpenNewTab}
-            >
-              <ExternalLink size={13} />Open in New Tab
-            </button>
-          )}
-
-          {searchTerm && (
-            <span className="text-[11px] text-slate-400 font-medium shrink-0">
-              {filteredProducts.length} result
-              {filteredProducts.length !== 1 ? "s" : ""}
-            </span>
-          )}
         </div>
 
+        
+
+        <button
+          type="button"
+          onClick={() => setIsFilterOpen(true)}
+          className={`h-8 px-3 rounded-md border text-xs font-semibold flex items-center gap-1.5 active:scale-95 transition-all shadow-sm shrink-0 ${
+            statusFilter !== "All"
+              ? "border-blue-200 text-blue-600 bg-blue-50/50"
+              : "border-slate-200 text-slate-650 bg-white hover:bg-slate-50"
+          }`}
+          title="Filters"
+        >
+          <Filter size={13} />
+          {statusFilter !== "All" && (
+            <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+          )}
+        </button>
+          <ColumnPicker
+          availableKeys={availableKeys}
+          selectedKeys={selectedKeys}
+          onApply={setSelectedKeys}
+          storageKey="product_table_columns"
+          className="h-8 px-3 rounded-md border border-slate-200 text-slate-650 bg-white hover:bg-slate-50 active:scale-95 transition-all text-xs font-semibold shadow-sm shrink-0 flex items-center justify-center gap-1.5"
+        />
+        <div className="flex-1" />
+
+        {searchTerm && (
+          <span className="text-[11px] text-slate-400 font-medium shrink-0">
+            {filteredProducts.length} result
+            {filteredProducts.length !== 1 ? "s" : ""}
+          </span>
+        )}
+      </div>
+
+      <RightSidebarFilter
+        isOpen={isFilterOpen}
+        onClose={() => setIsFilterOpen(false)}
+        onApply={() => {}}
+        onClear={() => setStatusFilter("All")}
+        title="Product Filters"
+      >
+        <div className="space-y-4">
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Stock Status</label>
+            <ReusableSelect
+              value={statusFilter}
+              onValueChange={(val) => setStatusFilter(val)}
+              options={[
+                { label: "All levels", value: "All" },
+                { label: "In stock", value: "In Stock" },
+                { label: "Low stock", value: "Low Stock" },
+                { label: "Out of stock", value: "Out of Stock" },
+              ]}
+              placeholder="Status"
+            />
+          </div>
+        </div>
+      </RightSidebarFilter>
+
+      {/* Main table card */}
+      <div className="bg-white border border-slate-100 rounded-lg shadow-sm min-w-0 overflow-hidden flex flex-col flex-1 min-h-0 mt-2">
+
         {/* Table */}
-        <div className={`overflow-x-auto overflow-y-auto ${isCleanMode ? "h-[calc(100vh-130px)]" : "h-[calc(100vh-210px)]"}`}>
+        <div className="overflow-x-auto overflow-y-auto flex-1">
           <table className="w-full text-left border-collapse whitespace-nowrap text-sm">
 
             {/* Sticky header */}

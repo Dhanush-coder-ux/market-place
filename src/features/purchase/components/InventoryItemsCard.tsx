@@ -52,8 +52,28 @@ export const InventoryItemsCard = ({
 }: InventoryItemsCardProps) => {
   const [expandedBreakdown, setExpandedBreakdown] = useState<Set<number>>(new Set());
   const [expandedSettings, setExpandedSettings] = useState<Set<number>>(new Set());
+  const [autoExpanded, setAutoExpanded] = useState<Set<string>>(new Set());
 
   const { showToast } = useToast();
+
+  useEffect(() => {
+    products.forEach((p, idx) => {
+      if (!p.id) return;
+      const needsDetails = p.batchTracking || p.serialTracking;
+      if (needsDetails && !autoExpanded.has(p.id)) {
+        setExpandedSettings(prev => {
+          const next = new Set(prev);
+          next.add(idx);
+          return next;
+        });
+        setAutoExpanded(prev => {
+          const next = new Set(prev);
+          next.add(p.id);
+          return next;
+        });
+      }
+    });
+  }, [products, autoExpanded]);
 
   const [variantModal, setVariantModal] = useState<{
     isOpen: boolean;
@@ -117,15 +137,17 @@ export const InventoryItemsCard = ({
 
       if (!variantItem) return prev;
 
-      // 💡 Prevent selecting same variant already in another row
-      const isDuplicate = prev.some((p, i) => i !== targetIdx && p.inventory_id === (baseOpt.id || baseOpt.inventory_id) && p.variant_id === variantItem.id);
-      if (isDuplicate) {
-        showToast(`${variantItem.name} is already added to the list.`, "error");
-        return prev;
-      }
-
       const hasBatchTracking = !!(baseOpt.batch_tracking || baseOpt.has_batch_tracking || baseOpt.has_batch || (baseOpt.datas && (baseOpt.datas.batch_tracking || baseOpt.datas.has_batch_tracking || baseOpt.datas.has_batch)));
       const hasSerialTracking = !!(baseOpt.serial_tracking || baseOpt.has_serialno_tracking || baseOpt.has_serialno || (baseOpt.datas && (baseOpt.datas.serial_tracking || baseOpt.datas.has_serialno_tracking || baseOpt.datas.has_serialno)));
+
+      // 💡 Prevent selecting same variant already in another row, UNLESS it has batch or serial tracking
+      if (!hasBatchTracking && !hasSerialTracking) {
+        const isDuplicate = prev.some((p, i) => i !== targetIdx && p.inventory_id === (baseOpt.id || baseOpt.inventory_id) && p.variant_id === variantItem.id);
+        if (isDuplicate) {
+          showToast(`${variantItem.name} is already added to the list.`, "error");
+          return prev;
+        }
+      }
 
       const d = baseOpt.datas || baseOpt;
       const allVariants = baseOpt.variants || baseOpt.varients || d.combinations || d.varients || d.variants || [];
@@ -397,7 +419,7 @@ export const InventoryItemsCard = ({
 
         {/* Product Table */}
         <div className="overflow-x-auto custom-scrollbar w-full" style={{ position: 'relative', minHeight: '300px' }}>
-          <table className="min-w-[1000px] w-full border-collapse whitespace-nowrap" style={{ tableLayout: 'fixed' }}>
+          <table className="min-w-[1110px] w-full border-collapse whitespace-nowrap" style={{ tableLayout: 'fixed' }}>
             <thead>
               <tr className="bg-slate-50/80 border-b border-slate-200 sticky top-0 z-10">
                 <th className="py-4 px-6 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '60px' }}>#</th>
@@ -405,6 +427,7 @@ export const InventoryItemsCard = ({
                 <th className="py-4 px-2 text-center text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '100px' }}>Qty / Unit</th>
                 <th className="py-4 px-4 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '140px' }}>{type === "PURCHASE" ? "Buy Price" : "Material Cost"}</th>
                 <th className="py-4 px-2 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '120px' }}>Subtotal</th>
+                <th className="py-4 px-2 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '110px' }}>Allocated</th>
                 <th className="py-4 px-2 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '100px' }}>Tax (GST)</th>
                 <th className="py-4 px-4 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '220px' }}>Pricing & Margin</th>
                 <th className="py-4 px-6 text-right text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '120px' }}>Actions</th>
@@ -458,23 +481,27 @@ export const InventoryItemsCard = ({
                             onCreateNew={onAddNewProduct}
                             onChange={(val, opt: any) => {
                               if (opt) {
-                                // 💡 Prevent selecting same product already in another row
-                                const isDuplicate = products.some((p, i) => i !== index && p.inventory_id === opt.id && !opt.is_variant);
-                                if (isDuplicate && !opt.is_variant) {
-                                  showToast(`${opt.name} is already added to the list.`, "error");
-                                  return;
-                                }
-
                                 const d = opt.datas || {};
                                 const get = (key: string, fallback: any = "") => opt[key] ?? d[key] ?? fallback;
 
                                 const hasBatchTracking = !!(get("batch_tracking") || get("has_batch_tracking") || get("has_batch"));
                                 const hasSerialTracking = !!(get("serial_tracking") || get("has_serialno_tracking") || get("has_serialno"));
+                                const combinations = opt.variants || opt.varients || d.combinations || d.varients || d.variants || [];
+                                const hasVariants = !!(get("has_variants", get("has_variant")) || combinations.length > 0 || opt.is_variant);
+
+                                // 💡 Prevent selecting same product already in another row, UNLESS it has variant, batch or serial tracking
+                                if (!hasVariants && !hasBatchTracking && !hasSerialTracking) {
+                                  const isDuplicate = products.some((p, i) => i !== index && p.inventory_id === opt.id);
+                                  if (isDuplicate) {
+                                    showToast(`${opt.name} is already added to the list.`, "error");
+                                    return;
+                                  }
+                                }
 
                                 const rawSerials = opt.serial_numbers || opt.serial_number || d.serial_numbers || d.serial_number;
                                 const existingSerials = Array.isArray(rawSerials) ? rawSerials : (rawSerials?.serial_numbers || rawSerials?.serial_number || []);
                                 const serialnoId = opt.serialno_id || d.serialno_id || rawSerials?.id || opt.serial_number?.id || d.serial_number?.id || opt.serial_numbers?.id || d.serial_numbers?.id;
-                                const combinations = opt.variants || opt.varients || d.combinations || d.varients || d.variants || [];
+
 
                                 if (opt.is_variant) {
                                   updateProductFields(index, {
@@ -511,7 +538,7 @@ export const InventoryItemsCard = ({
                                   return;
                                 }
 
-                                const hasVariants = get("has_variants", get("has_variant"));
+
 
                                 if (purchaseType === 'PO_CREATE') {
                                   if (hasVariants && combinations.length > 0) {
@@ -604,9 +631,26 @@ export const InventoryItemsCard = ({
                                   {product.sku}
                                 </span>
                               )}
+                              {product.batchTracking && (
+                                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-black border transition-all ${
+                                  product.batchNum 
+                                    ? "bg-amber-50 text-amber-700 border-amber-200" 
+                                    : "bg-rose-50/50 text-rose-600 border-rose-100/60 animate-pulse"
+                                }`}>
+                                  <Package size={9} /> {product.batchNum ? `Batch: ${product.batchNum}` : "Batch Details Required"}
+                                </span>
+                              )}
                               {product.serialTracking && (
-                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-blue-50 text-blue-600 text-[9px] font-black border border-blue-100">
-                                  <Check size={9} /> Serials
+                                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-black border transition-all ${
+                                  (product.serialNumbers?.split(",").filter(Boolean).length || 0) >= (Number(product.quantity) || 0)
+                                    ? "bg-blue-50 text-blue-700 border-blue-200" 
+                                    : "bg-rose-50/50 text-rose-600 border-rose-100/60 animate-pulse"
+                                }`}>
+                                  <Check size={9} /> {
+                                    (product.serialNumbers?.split(",").filter(Boolean).length || 0) >= (Number(product.quantity) || 0)
+                                      ? `${product.serialNumbers?.split(",").filter(Boolean).length} Serials Set` 
+                                      : "Serials Required"
+                                  }
                                 </span>
                               )}
                             </div>
@@ -616,7 +660,7 @@ export const InventoryItemsCard = ({
 
                       {/* Qty / Unit */}
                       <td className="py-3 px-2 align-middle">
-                        <div className="flex flex-col items-center gap-1">
+                        <div className="flex flex-col items-center gap-1.5">
                           <Input
                             type="number"
                             value={product.quantity as any}
@@ -629,21 +673,37 @@ export const InventoryItemsCard = ({
 
                       {/* Buy Price */}
                       <td className="py-3 px-2 align-middle">
-                        <Input
-                          type="number"
-                          value={product.costPrice as any}
-                          onChange={(e) => handleProductChange(index, "costPrice", e.target.value ? Number(e.target.value) : "")}
-                          className="!h-9 !text-xs font-black rounded-lg border-slate-200 shadow-sm"
-                          leftIcon={<span className="text-[10px] text-slate-400 font-black">₹</span>}
-                        />
+                        <div className="flex flex-col gap-1">
+                          <Input
+                            type="number"
+                            value={product.costPrice as any}
+                            onChange={(e) => handleProductChange(index, "costPrice", e.target.value ? Number(e.target.value) : "")}
+                            className="!h-9 !text-xs font-black rounded-lg border-slate-200 shadow-sm"
+                            leftIcon={<span className="text-[10px] text-slate-400 font-black">₹</span>}
+                          />
+                          <span className="text-[9px] text-slate-400 font-bold text-center">
+                            per {product.unit || 'pc'}
+                          </span>
+                        </div>
                       </td>
 
                       {/* Subtotal */}
                       <td className="py-3 px-2 align-middle">
                         <div className="flex flex-col">
                           <span className="text-xs font-black text-slate-800 tabular-nums">₹{rowTotal.toLocaleString()}</span>
+                        </div>
+                      </td>
+
+                      {/* Allocated */}
+                      <td className="py-3 px-2 align-middle">
+                        <div className="flex flex-col">
+                          <span className="text-xs font-black text-slate-800 tabular-nums">
+                            ₹{allocTotal > 0 ? allocTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00"}
+                          </span>
                           {allocPerUnit > 0 && (
-                            <span className="text-[9px] text-blue-500 font-bold mt-0.5">+₹{allocTotal.toLocaleString()}</span>
+                            <span className="text-[9px] text-blue-500 font-bold mt-0.5">
+                              (₹{allocPerUnit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/unit)
+                            </span>
                           )}
                         </div>
                       </td>
@@ -732,7 +792,7 @@ export const InventoryItemsCard = ({
                     {/* Expanded Sub-row */}
                     {isExpanded && (
                       <tr className="bg-slate-50/50">
-                        <td colSpan={8} className="p-0 border-b border-slate-100">
+                        <td colSpan={9} className="p-0 border-b border-slate-100">
                           <div className="px-12 py-4 space-y-4 animate-in fade-in slide-in-from-top-1 duration-200">
 
                             {/* Row 1: Batch & Serial Tracking */}

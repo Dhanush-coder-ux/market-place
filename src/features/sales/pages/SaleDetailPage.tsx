@@ -13,7 +13,7 @@ import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 import { OrderResponse } from "@/features/order/types";
 import { ProfileHeaderCard, SectionCard, DetailItem, InfoRow } from "@/components/common/SuperUI";
 import { StatCard } from "@/components/common/StatsCard";
-import { ReturnFlow } from "../components/ReturnOrderFlow";
+import { ReturnModal } from "../components/ReturnOrderFlow";
 
 /* ── helpers ── */
 const fmt = (n: number) => `₹${n.toLocaleString("en-IN")}`;
@@ -66,6 +66,7 @@ const SaleDetailPage: React.FC = () => {
   const [productMap, setProductMap] = useState<Record<string, string>>(location.state?.productMap || {});
   const [loading, setLoading] = useState(!sale);
   const [activeTab, setActiveTab] = useState(0);
+  const [isReturnOpen, setIsReturnOpen] = useState(false);
 
   const fetchSaleDetail = async () => {
     try {
@@ -130,10 +131,10 @@ const SaleDetailPage: React.FC = () => {
     : [{ label: sale.payment_method || "Other", amount: sale.total_sellprice }];
 
   return (
-    <div className="min-h-screen bg-slate-50/50 font-sans text-slate-900 pb-12">
-      <div className="max-w-full mx-auto px-4 md:px-10 py-3 space-y-4">
-        
-        {/* Profile Header Card */}
+    <div className="flex-1 flex flex-col min-h-0 h-full bg-slate-50/50 font-sans text-slate-900 overflow-hidden relative">
+      
+      {/* Profile Header Card */}
+      <div className="flex-none p-1 pb-0">
         <ProfileHeaderCard
           name={`Invoice INV-${sale.ui_id}`}
           initials="INV"
@@ -147,19 +148,33 @@ const SaleDetailPage: React.FC = () => {
             { icon: User, text: customerName }
           ]}
           actions={
-            <button
-              onClick={() => navigate("/sales")}
-              className="w-8 h-8 flex items-center justify-center bg-white border border-slate-200 text-slate-600 rounded-lg hover:text-blue-600 hover:border-blue-100 transition-all shadow-sm active:scale-95"
-              title="Back to Sales"
-            >
-              <ArrowLeft size={14} />
-            </button>
+            <div className="flex items-center gap-2">
+              {canReturn && (
+                <button
+                  onClick={() => setIsReturnOpen(true)}
+                  className="h-8 px-3 rounded-lg border border-red-200 text-red-600 bg-red-50 hover:bg-red-100 hover:text-red-700 font-bold text-[11px] uppercase tracking-wider transition-all shadow-sm shrink-0 flex items-center gap-1.5 active:scale-95"
+                  title="Process Return"
+                >
+                  <RotateCcw size={13} />
+                  <span>Return</span>
+                </button>
+              )}
+              <button
+                onClick={() => navigate("/sales")}
+                className="w-8 h-8 flex items-center justify-center bg-white border border-slate-200 text-slate-650 rounded-lg hover:text-blue-600 hover:border-blue-100 transition-all shadow-sm active:scale-95"
+                title="Back to Sales"
+              >
+                <ArrowLeft size={14} />
+              </button>
+            </div>
           }
         />
+      </div>
 
-        {/* Tabs Navigation */}
+      {/* Tabs Navigation */}
+      <div className="flex-none px-1 py-2">
         <div className="flex gap-2 p-1 bg-slate-100/50 w-fit rounded-lg border border-slate-200/50">
-          {["Overview", "Items", "Customer & Payments", "Return"].map((tab, i) => (
+          {["Overview", "Items", "Customer & Payments"].map((tab, i) => (
             <button
               key={tab}
               onClick={() => setActiveTab(i)}
@@ -172,8 +187,10 @@ const SaleDetailPage: React.FC = () => {
             </button>
           ))}
         </div>
+      </div>
 
-        {/* Tab Panels */}
+      {/* Tab Panels */}
+      <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar px-1 pb-6">
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
           
           {/* TAB 0 — Overview */}
@@ -248,7 +265,7 @@ const SaleDetailPage: React.FC = () => {
                   <SectionCard title="Actions">
                     <button
                       disabled={!canReturn}
-                      onClick={() => setActiveTab(3)}
+                      onClick={() => setIsReturnOpen(true)}
                       className={`flex items-center justify-center gap-2 w-full py-2.5 rounded-lg text-[11px] font-black transition-all shadow-sm ${canReturn
                           ? "bg-red-50 text-red-600 hover:bg-red-100 border border-red-100 hover:border-red-200 shadow-red-50 active:scale-[0.98]"
                           : "bg-slate-50 text-slate-300 border border-slate-100 cursor-not-allowed opacity-70"
@@ -356,21 +373,17 @@ const SaleDetailPage: React.FC = () => {
             </div>
           )}
 
-          {/* TAB 3 — Return */}
-          {activeTab === 3 && sale && (
-            <div className="mx-auto bg-white rounded-lg shadow-sm border border-slate-100 overflow-hidden">
-              <ReturnFlow 
-                sale={sale} 
-                onClose={() => setActiveTab(0)} 
-                onRefresh={fetchSaleDetail} 
-                productMap={productMap} 
-                isInline={true}
-              />
-            </div>
-          )}
         </div>
-        
       </div>
+
+      {isReturnOpen && sale && (
+        <ReturnModal
+          sale={sale}
+          onClose={() => setIsReturnOpen(false)}
+          onRefresh={fetchSaleDetail}
+          productMap={productMap}
+        />
+      )}
     </div>
   );
 };

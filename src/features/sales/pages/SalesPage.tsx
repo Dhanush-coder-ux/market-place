@@ -1,18 +1,21 @@
-import React, { useState, useMemo, useEffect, useRef } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
-  Search, Eye, ChevronDown, X,
+  Search, Eye, X,
   RotateCcw, Receipt,
-  ChevronRight,
+  ChevronRight, Filter,
   DollarSign, RefreshCw, TrendingUp, Loader2,
   ExternalLink,
 } from "lucide-react";
 import { useApi } from "@/context/ApiContext";
+import { useHeader } from "@/context/HeaderContext";
 import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 import { OrderResponse } from "@/features/order/types";
 import { ReturnModal } from "../components/ReturnOrderFlow";
 import { StatCard } from "@/components/common/StatsCard";
+import { RightSidebarFilter } from "@/components/common/RightSidebarFilter";
+import { ReusableSelect } from "@/components/ui/ReusableSelect";
 
 /* ═══════════════════════════════════════════════════════════════
    TYPES
@@ -63,43 +66,7 @@ const Badge: React.FC<{ cls: string; dot: string; label: string }> = ({ cls, dot
 /* ═══════════════════════════════════════════════════════════════
    FILTER DROPDOWN
 ═══════════════════════════════════════════════════════════════ */
-interface FilterDropdownProps { label: string; options: string[]; value: string; onChange: (v: string) => void; }
-const FilterDropdown: React.FC<FilterDropdownProps> = ({ label, options, value, onChange }) => {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-  const active = value !== "";
-  useEffect(() => { const h = (e: MouseEvent) => { if (!ref.current?.contains(e.target as Node)) setOpen(false); }; document.addEventListener("mousedown", h); return () => document.removeEventListener("mousedown", h); }, []);
-  return (
-    <div className="relative" ref={ref}>
-      <button
-        onClick={() => setOpen(p => !p)}
-        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium border transition-all duration-150 cursor-pointer whitespace-nowrap ${active ? "bg-blue-50 border-blue-200 text-blue-700" : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300"
-          }`}
-      >
-        {active ? value : label}
-        {active ? (
-          <X size={10} className="text-blue-300 hover:text-blue-500 transition-colors" onClick={e => { e.stopPropagation(); onChange(""); setOpen(false); }} />
-        ) : (
-          <ChevronDown size={11} className={`transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
-        )}
-      </button>
-      {open && (
-        <div className="absolute top-[calc(100%+6px)] left-0 min-w-[140px] bg-white border border-slate-200 rounded-lg shadow-xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-100 origin-top-left">
-          {options.map(opt => (
-            <button
-              key={opt}
-              onClick={() => { onChange(opt === value ? "" : opt); setOpen(false); }}
-              className={`block w-full text-left px-3.5 py-2 text-xs font-medium transition-colors ${opt === value ? "bg-blue-50 text-blue-700" : "text-slate-700 hover:bg-slate-50"
-                }`}
-            >
-              {opt}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-};
+
 
 /* ═══════════════════════════════════════════════════════════════
    MAIN PAGE
@@ -109,10 +76,28 @@ const SalesListPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const isCleanMode = new URLSearchParams(location.search).get("mode") === "clean";
+  const { setActions } = useHeader();
 
   const handleOpenNewTab = () => {
     window.open(`${window.location.pathname}?mode=clean`, "_blank", "noopener,noreferrer");
   };
+
+  useEffect(() => {
+    setActions(
+      <div className="flex items-center gap-2">
+        {!isCleanMode && (
+          <button
+            onClick={handleOpenNewTab}
+            className="h-8 w-8 flex items-center justify-center rounded-md border border-slate-200 text-slate-600 bg-white hover:bg-slate-50 active:scale-95 transition-all shadow-sm shrink-0"
+            title="Open in New Tab"
+          >
+            <ExternalLink size={13} />
+          </button>
+        )}
+      </div>
+    );
+    return () => setActions(null);
+  }, [setActions, isCleanMode]);
 
   const [orders, setOrders] = useState<OrderResponse[]>([]);
   const [loading, setLoading] = useState(false);
@@ -121,6 +106,7 @@ const SalesListPage: React.FC = () => {
   const [filterPayment, setFilterPayment] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
   const [filterDate, setFilterDate] = useState("");
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [customerMap, setCustomerMap] = useState<Record<string, string>>({});
   const [productMap, setProductMap] = useState<Record<string, string>>({});
   const [isReturnSearchOpen, setIsReturnSearchOpen] = useState(false);
@@ -177,7 +163,11 @@ const SalesListPage: React.FC = () => {
     } catch (err) { console.error("Failed to fetch details:", err); }
   };
 
-  useEffect(() => { fetchOrders(); }, []);
+  useEffect(() => {
+    fetchOrders();
+    window.addEventListener("focus", fetchOrders);
+    return () => window.removeEventListener("focus", fetchOrders);
+  }, []);
 
   /* ── Filters ── */
   const filtered = useMemo(() => orders.filter(s => {
@@ -198,11 +188,11 @@ const SalesListPage: React.FC = () => {
   const filteredRevenue = useMemo(() => filtered.filter(s => s.status === "Completed").reduce((a, b) => a + b.total_sellprice, 0), [filtered]);
 
   return (
-    <div className="flex flex-col gap-4 min-h-screen pb-6 font-sans w-full overflow-x-hidden relative">
+    <div className="flex-1 flex flex-col min-h-0 font-sans w-full overflow-hidden relative">
 
       {/* ── KPI Row ── */}
       {!isCleanMode && (
-        <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-none">
+        <div className="flex gap-3 pb-1 overflow-x-auto scrollbar-none">
           <StatCard
             label="Total Revenue"
             value={totalRevenue.toLocaleString()}
@@ -241,54 +231,108 @@ const SalesListPage: React.FC = () => {
       )}
 
       {/* ── Toolbar ── */}
-      <div className="bg-white border border-slate-100 rounded-lg p-2.5 px-3.5 flex flex-wrap items-center gap-2 shadow-sm">
-        <div className="relative flex-1 min-w-[200px] max-w-[320px]">
-          <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+      <div className="bg-white border border-slate-100 rounded-lg p-1.5 px-2.5 flex flex-nowrap items-center gap-1.5 shadow-sm overflow-x-auto scrollbar-none mt-2">
+        <div className="relative w-80 shrink-0">
+          <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
           <input
-            className="w-full h-9 px-3 pl-9 text-xs text-slate-800 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:bg-white focus:border-blue-300 focus:ring-4 focus:ring-blue-500/10 transition-all placeholder:text-slate-400"
+            className="w-full h-8 pl-8 pr-3 text-[12px] font-medium text-slate-700 bg-slate-50 border border-slate-200 rounded-md placeholder:text-slate-400 focus:outline-none focus:border-slate-300 focus:bg-white transition-colors"
             placeholder="Search invoice or customer…"
             value={search}
             onChange={e => setSearch(e.target.value)}
           />
         </div>
-        <input
-          type="date"
-          value={filterDate}
-          onChange={e => setFilterDate(e.target.value)}
-          className={`h-9 px-2.5 text-[11px] font-medium border rounded-lg outline-none cursor-pointer transition-all ${filterDate ? "bg-blue-50 border-blue-200 text-blue-700" : "bg-white border-slate-200 text-slate-600 focus:border-blue-300 focus:ring-4 focus:ring-blue-500/10"
-            }`}
-        />
-        <FilterDropdown label="Origin" options={["Sales", "Sales Return"]} value={filterOrigin} onChange={setFilterOrigin} />
-        <FilterDropdown label="Payment" options={["Cash", "Card", "UPI"]} value={filterPayment} onChange={setFilterPayment} />
-        <FilterDropdown label="Status" options={["Completed", "Pending", "Cancelled"]} value={filterStatus} onChange={setFilterStatus} />
-        {activeFilters > 0 && (
-          <button onClick={clearAll} className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold text-red-600 bg-red-50 border border-red-100 hover:bg-red-100 transition-colors cursor-pointer">
-            <X size={11} />Clear ({activeFilters})
-          </button>
-        )}
+
+        <button
+          type="button"
+          onClick={() => setIsFilterOpen(true)}
+          className={`h-8 px-3 rounded-md border text-xs font-semibold flex items-center gap-1.5 active:scale-95 transition-all shadow-sm shrink-0 ${
+            activeFilters > 0
+              ? "border-blue-200 text-blue-600 bg-blue-50/50"
+              : "border-slate-200 text-slate-650 bg-white hover:bg-slate-50"
+          }`}
+          title="Filters"
+        >
+          <Filter size={13} />
+          {activeFilters > 0 && (
+            <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+          )}
+        </button>
+
         <div className="flex-1" />
         
-        {!isCleanMode && (
-          <button 
-            type="button"
-            className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold bg-white text-slate-700 border border-slate-200 rounded-lg cursor-pointer transition-all hover:bg-slate-50 hover:border-slate-300 active:scale-95 whitespace-nowrap shadow-sm" 
-            onClick={handleOpenNewTab}
-          >
-            <ExternalLink size={13} />Open in New Tab
-          </button>
-        )}
-
-        <button className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold bg-blue-600 text-white border-none rounded-lg cursor-pointer transition-all hover:bg-blue-700 hover:shadow-lg shadow-blue-500/20 active:scale-95 whitespace-nowrap" onClick={() => setIsReturnSearchOpen(true)}>
+        <button className="inline-flex items-center gap-1.5 h-8 px-3.5 text-xs font-bold bg-blue-600 text-white border-none rounded-md cursor-pointer transition-all hover:bg-blue-700 hover:shadow-lg shadow-blue-500/20 active:scale-95 whitespace-nowrap shrink-0" onClick={() => setIsReturnSearchOpen(true)}>
           <RotateCcw size={13} />Process Return
         </button>
-        <span className="font-mono text-[11px] font-medium text-slate-400">{filtered.length}/{orders.length}</span>
+        <span className="font-mono text-[11px] font-medium text-slate-400 shrink-0">{filtered.length}/{orders.length}</span>
       </div>
 
+      <RightSidebarFilter
+        isOpen={isFilterOpen}
+        onClose={() => setIsFilterOpen(false)}
+        onApply={() => {}}
+        onClear={clearAll}
+        title="Sales Filters"
+      >
+        <div className="space-y-4">
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Origin</label>
+            <ReusableSelect
+              options={[
+                { label: "All Origins", value: "" },
+                { label: "Sales", value: "Sales" },
+                { label: "Sales Return", value: "Sales Return" }
+              ]}
+              value={filterOrigin}
+              onValueChange={setFilterOrigin}
+              placeholder="Origin"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Payment Method</label>
+            <ReusableSelect
+              options={[
+                { label: "All Payment Methods", value: "" },
+                { label: "Cash", value: "Cash" },
+                { label: "Card", value: "Card" },
+                { label: "UPI", value: "UPI" }
+              ]}
+              value={filterPayment}
+              onValueChange={setFilterPayment}
+              placeholder="Payment Method"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Status</label>
+            <ReusableSelect
+              options={[
+                { label: "All Statuses", value: "" },
+                { label: "Completed", value: "Completed" },
+                { label: "Pending", value: "Pending" },
+                { label: "Cancelled", value: "Cancelled" }
+              ]}
+              value={filterStatus}
+              onValueChange={setFilterStatus}
+              placeholder="Status"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Date</label>
+            <input
+              type="date"
+              value={filterDate}
+              onChange={e => setFilterDate(e.target.value)}
+              className="w-full h-9 px-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-750 focus:outline-none focus:border-slate-300 focus:bg-white transition-colors"
+            />
+          </div>
+        </div>
+      </RightSidebarFilter>
+
       {/* ── Table Card ── */}
-      <div className={`bg-white border border-slate-100 rounded-lg shadow-sm min-w-0 overflow-hidden flex flex-col flex-1 ${
-        isCleanMode ? "h-[calc(100vh-140px)]" : "h-[calc(100vh-360px)]"
-      }`}>
-        <div className="overflow-auto flex-1 scrollbar-thin scrollbar-thumb-slate-100 "  >
+      <div className="bg-white border border-slate-100 rounded-lg shadow-sm min-w-0 overflow-hidden flex flex-col flex-1 min-h-0 mt-2">
+        <div className="overflow-auto flex-1 scrollbar-thin scrollbar-thumb-slate-100 ">
           <table className="w-full border-collapse table-fixed">
             <thead className="sticky top-0 z-10 bg-slate-50 border-b border-slate-100">
               <tr>

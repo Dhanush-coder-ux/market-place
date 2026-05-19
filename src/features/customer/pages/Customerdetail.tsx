@@ -4,13 +4,11 @@ import {
   DollarSign, AlertCircle, Package, Star,
   Banknote, Mail, Wallet, Pencil, User, Tag, MapPin, Phone, Trash2,
   FileText, Database, CreditCard,
-  ShoppingCart,
-  ArrowRight,
   Loader2,
   Plus
 } from "lucide-react";
 import {
-  fmt, StatusBadge, FormInput, FormSelect,
+  fmt, FormInput, FormSelect,
   FormTextarea, SectionCard,
 } from "./CustomerDetailComponents";
 import { Modal, ProfileHeaderCard } from "@/components/common/SuperUI";
@@ -23,6 +21,7 @@ import Loader from "@/components/common/Loader";
 import type { CustomerRecord } from "@/types/api";
 import { SearchSelect } from "@/components/inputbuilders/SearchSelect";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
+import { CustomerPurchasesTable, CustomerCollectionsTable } from "@/components/common/HistoryTables";
 
 // ── Search bar ──────────────────────────────────────────────────────────────
 const CustomerSearch = () => {
@@ -30,7 +29,7 @@ const CustomerSearch = () => {
   const { getData } = useApi();
 
   const fetchCustomers = async (q: string) => {
-    if (!q) return [];
+
     try {
       const res = await getData(`${ENDPOINTS.CUSTOMERS}/by/shop/${SHOP_ID}`, { limit: "8", offset: "1", q });
       const data = res?.data ? (Array.isArray(res.data) ? res.data : [res.data]) : [];
@@ -265,10 +264,10 @@ export default function CustomerDetail() {
         @keyframes slideIn { from { transform: translateX(400px); } to { transform: translateX(0); } }
       `}</style>
 
-      <div className="min-h-screen bg-slate-50/50 font-sans">
-        <div className="max-w-full mx-auto px-4 md:px-10 py-3 space-y-4">
-
-          {/* Profile Header Card */}
+      <div className="flex-1 flex flex-col min-h-0 h-full bg-slate-50/50 font-sans overflow-hidden relative">
+        
+        {/* Profile Header Card */}
+        <div className="flex-none p-1 pb-0">
           <ProfileHeaderCard
             name={name}
             initials={initials}
@@ -310,8 +309,10 @@ export default function CustomerDetail() {
               </div>
             }
           />
+        </div>
 
-          {/* Tabs Navigation - Smaller */}
+        {/* Tabs Navigation & Quick Stats Grid (pinned) */}
+        <div className="flex-none px-1 py-2 space-y-2">
           <div className="flex gap-2 p-1 bg-slate-100/50 w-fit rounded-lg border border-slate-200/50">
             {["Overview", "Purchases", "Collection History"].map((tab, i) => (
               <button
@@ -327,7 +328,6 @@ export default function CustomerDetail() {
             ))}
           </div>
 
-          {/* Quick Stats Grid */}
           <div className="flex flex-wrap gap-2">
             <StatCard
               icon={DollarSign}
@@ -360,9 +360,11 @@ export default function CustomerDetail() {
               className="flex-1 min-w-[140px]"
             />
           </div>
+        </div>
 
-          {/* Tab Panels */}
-          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+        {/* Tab Panels (scrollable or flex-locked depending on active tab) */}
+        <div className={`flex-1 min-h-0 ${activeTab === 1 || activeTab === 2 ? "flex flex-col overflow-hidden" : "overflow-y-auto custom-scrollbar"} px-1 pb-6`}>
+          <div className={`animate-in fade-in slide-in-from-bottom-4 duration-500 ${activeTab === 1 || activeTab === 2 ? "flex flex-col flex-1 min-h-0 h-full" : ""}`}>
             {/* TAB 0 — General Info */}
             {activeTab === 0 && (
               <div className="grid grid-cols-1 xl:grid-cols-4 gap-4">
@@ -488,229 +490,45 @@ export default function CustomerDetail() {
 
             {/* TAB 1 — Purchases */}
             {activeTab === 1 && (
-              <SectionCard className="rounded-lg p-8 border-none shadow-xl bg-white relative overflow-hidden">
-                <div className="absolute top-0 left-0 w-64 h-64 bg-blue-50/50 rounded-full -mr-32 -mt-32 blur-3xl -z-0" />
-                
-                <div className="relative z-10">
-                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-[1.25rem] bg-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-100">
-                        <ShoppingCart size={24} />
-                      </div>
-                      <div>
-                        <h2 className="text-lg font-black text-slate-800  ">Purchase History</h2>
-                        <p className="text-xs text-slate-400 font-medium tracking-tight">Transactional record of all orders</p>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center gap-4">
-                      <div className="px-4 py-2 bg-slate-50 rounded-lg border border-slate-100 text-center">
-                        <p className="text-[9px] font-black text-slate-400  mb-0.5">Total Orders</p>
-                        <p className="text-sm font-black text-slate-700">{customerOrders.length}</p>
-                      </div>
-                      <div className="px-4 py-2 bg-blue-50 rounded-lg border border-blue-100 text-center">
-                        <p className="text-[9px] font-black text-blue-400  mb-0.5">Total Spend</p>
-                        <p className="text-sm font-black text-blue-700">{fmt(customerOrders.reduce((acc, curr) => acc + Number(curr.total_sellprice || 0), 0))}</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="overflow-x-auto -mx-8 px-8">
-                    {ordersLoading ? (
-                      <div className="py-24 flex justify-center"><Loader /></div>
-                    ) : customerOrders.length === 0 ? (
-                      <div className="py-24 text-center">
-                        <div className="w-20 h-20 bg-slate-50 rounded-lg flex items-center justify-center text-slate-200 mx-auto mb-6">
-                          <Package size={40} />
-                        </div>
-                        <h3 className="text-sm font-bold text-slate-800  ">No Orders Yet</h3>
-                        <p className="text-xs text-slate-400 mt-2">When this customer makes a purchase, it will appear here.</p>
-                      </div>
-                    ) : (
-                      <table className="w-full text-left border-separate border-spacing-y-3">
-                        <thead>
-                          <tr className="text-slate-400 text-[10px] font-black  tracking-[0.15em]">
-                            <th className="px-6 pb-2">Invoice Identity</th>
-                            <th className="px-6 pb-2">Order Date</th>
-                            <th className="px-6 pb-2">Volume</th>
-                            <th className="px-6 pb-2">Financials</th>
-                            <th className="px-6 pb-2">Payment Summary</th>
-                            <th className="px-6 pb-2 text-right">Status</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {customerOrders.map((order) => {
-                            const date = new Date(order.created_at || order.date).toLocaleDateString('en-IN', { 
-                              day: '2-digit', 
-                              month: 'short', 
-                              year: 'numeric' 
-                            });
-                            const total = Number(order.total_sellprice || order.grand_total || order.total_amount || 0);
-                            const products = order.items || order.products || [];
-                            const itemCount = order.total_quantity || products.length;
-                            const invoiceId = order.ui_id ? `INV-${order.ui_id}` : `#${order.id.slice(0, 8).toUpperCase()}`;
-
-                            return (
-                              <tr key={order.id} className="group hover:scale-[1.01] transition-all duration-300">
-                                <td className="px-6 py-4 bg-white border-y border-l border-slate-100 rounded-l-2xl shadow-sm group-hover:border-blue-200 transition-colors">
-                                  <div className="flex items-center gap-3">
-                                    <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-blue-50 group-hover:text-blue-600 transition-colors">
-                                      <FileText size={14} />
-                                    </div>
-                                    <div className="flex flex-col">
-                                      <span className="text-sm font-black text-slate-700 font-mono tracking-tight group-hover:text-blue-700 transition-colors">{invoiceId}</span>
-                                      <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{order.type || "NORMAL"}</span>
-                                    </div>
-                                  </div>
-                                </td>
-                                <td className="px-6 py-4 bg-white border-y border-slate-100 shadow-sm group-hover:border-blue-200 transition-colors">
-                                  <span className="text-xs font-bold text-slate-600">{date}</span>
-                                </td>
-                                <td className="px-6 py-4 bg-white border-y border-slate-100 shadow-sm group-hover:border-blue-200 transition-colors">
-                                  <div className="flex items-center gap-2">
-                                    <span className="px-2 py-1 rounded-md bg-slate-100 text-[10px] font-black text-slate-500 ">{itemCount} {itemCount === 1 ? "Item" : "Units"}</span>
-                                  </div>
-                                </td>
-                                <td className="px-6 py-4 bg-white border-y border-slate-100 shadow-sm group-hover:border-blue-200 transition-colors">
-                                  <span className="text-sm font-black text-slate-800">{fmt(total)}</span>
-                                </td>
-                                <td className="px-6 py-4 bg-white border-y border-slate-100 shadow-sm group-hover:border-blue-200 transition-colors">
-                                  <div className="flex flex-wrap gap-1.5">
-                                    {order.payments && Object.entries(order.payments).map(([mode, amount]) => (
-                                      <div key={mode} className={`px-2 py-1 rounded-lg text-[9px] font-black border flex items-center gap-1.5 ${
-                                        mode.toUpperCase() === 'CREDIT' ? 'bg-blue-50 text-blue-600 border-blue-100' :
-                                        mode.toUpperCase() === 'CASH' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
-                                        'bg-violet-50 text-violet-600 border-violet-100'
-                                      }`}>
-                                        <div className={`w-1 h-1 rounded-full ${
-                                          mode.toUpperCase() === 'CREDIT' ? 'bg-blue-400' :
-                                          mode.toUpperCase() === 'CASH' ? 'bg-emerald-400' :
-                                          'bg-violet-400'
-                                        }`} />
-                                        {mode.toUpperCase()}
-                                        <span className="opacity-40">₹{Number(amount).toLocaleString()}</span>
-                                      </div>
-                                    ))}
-                                    {!order.payments && <span className="text-[10px] font-bold text-slate-300 italic">No payment record</span>}
-                                  </div>
-                                </td>
-                                <td className="px-6 py-4 bg-white border-y border-r border-slate-100 rounded-r-2xl shadow-sm text-right group-hover:border-blue-200 transition-colors">
-                                  <StatusBadge status={order.status || "Pending"} />
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    )}
-                  </div>
-                </div>
-              </SectionCard>
+              <CustomerPurchasesTable
+                rows={customerOrders}
+                loading={ordersLoading}
+              />
             )}
 
             {/* TAB 2 — Collection History */}
             {activeTab === 2 && (
-              <SectionCard className="rounded-lg p-8 border-none shadow-xl bg-white relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-50/50 rounded-full -mr-32 -mt-32 blur-3xl -z-0" />
-                
-                <div className="relative z-10">
-                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-10">
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-[1.25rem] bg-emerald-600 flex items-center justify-center text-white shadow-lg shadow-emerald-100">
-                        <Banknote size={24} />
-                      </div>
-                      <div>
-                        <h2 className="text-lg font-black text-slate-800 tracking-tight">Collection History</h2>
-                        <p className="text-xs text-slate-400 font-medium tracking-tight">Detailed logs of debt recovery and payments</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3 self-start md:self-center">
-                      <div className="flex items-center gap-2 bg-slate-50 p-1 rounded-lg border border-slate-100">
-                        <span className="px-3 py-1.5 text-[10px] font-black text-slate-500">{clearingHistory.length} Recorded Payments</span>
-                      </div>
-                      <button 
-                        disabled={Number(customer.outstanding ?? datas.outstanding_balance ?? outstanding ?? 0) <= 0}
-                        onClick={() => {
-                          const bal = Number(customer.outstanding ?? datas.outstanding_balance ?? outstanding ?? 0);
-                          setPayments([{ mode: "UPI", amount: bal > 0 ? String(bal) : "" }]);
-                          setShowPayment(true);
-                        }}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-lg text-[11px] font-black transition-all shadow-lg active:scale-95 ${
-                          Number(customer.outstanding ?? datas.outstanding_balance ?? outstanding ?? 0) > 0
-                            ? "bg-emerald-600 text-white hover:bg-emerald-700 shadow-emerald-100"
-                            : "bg-slate-100 text-slate-400 cursor-not-allowed shadow-none border border-slate-200"
-                        }`}
-                      >
-                        <Banknote size={14} />
-                        RECORD PAYMENT
-                      </button>
-                    </div>
+              <div className="flex flex-col flex-1 min-h-0 h-full gap-3">
+                {/* Action Row */}
+                <div className="flex justify-between items-center bg-white p-3 rounded-lg border border-slate-100 shadow-sm">
+                  <div className="flex items-center gap-2">
+                    <span className="px-2.5 py-1 bg-slate-50 border border-slate-100 rounded-md text-[10px] font-black text-slate-500">
+                      {clearingHistory.length} Recorded Payments
+                    </span>
                   </div>
-
-                  {clearingLoading ? (
-                    <div className="py-24 flex justify-center"><Loader2 className="w-8 h-8 animate-spin text-emerald-600" /></div>
-                  ) : clearingHistory.length === 0 ? (
-                    <div className="py-24 text-center">
-                      <div className="w-20 h-20 bg-slate-50 rounded-lg flex items-center justify-center text-slate-200 mx-auto mb-6">
-                        <Banknote size={40} />
-                      </div>
-                      <h3 className="text-sm font-bold text-slate-800">No Collections Yet</h3>
-                      <p className="text-xs text-slate-400 mt-2">When you record a payment for this customer, it will appear here.</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      {clearingHistory.map((h, i) => (
-                        <div key={i} className="group bg-white border border-slate-100 rounded-lg p-4 hover:bg-slate-50/50 transition-colors">
-                          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                            <div className="flex items-center gap-4">
-                              <div className="w-10 h-10 rounded-lg bg-slate-50 flex flex-col items-center justify-center border border-slate-100">
-                                <span className="text-[8px] font-bold text-slate-400 uppercase leading-none mb-0.5">Ref</span>
-                                <span className="text-[11px] font-bold text-slate-600">#{String(h.id).padStart(3, '0')}</span>
-                              </div>
-                              
-                              <div>
-                                <div className="flex items-center gap-2 mb-0.5">
-                                  <span className="text-base font-bold text-slate-700 tracking-tight">₹{h.cleared_amount?.toLocaleString("en-IN")}</span>
-                                  <span className="text-[9px] font-medium text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-md">Cleared</span>
-                                </div>
-                                <p className="text-[10px] font-medium text-slate-400">
-                                  {new Date(h.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
-                                </p>
-                              </div>
-                            </div>
-
-                            <div className="flex flex-wrap items-center gap-6">
-                              <div className="flex items-center gap-3 py-1.5 px-3 bg-slate-50 rounded-lg border border-slate-100/50">
-                                <div className="text-right">
-                                  <p className="text-[9px] font-medium text-slate-400 uppercase mb-0.5">Previous</p>
-                                  <p className="text-[11px] font-medium text-slate-500 line-through opacity-60">₹{h.outstanding_before}</p>
-                                </div>
-                                <ArrowRight className="w-3 h-3 text-slate-300" />
-                                <div>
-                                  <p className="text-[9px] font-medium text-slate-400 uppercase mb-0.5">Closing</p>
-                                  <p className="text-[11px] font-bold text-emerald-600">₹{h.outstanding_after}</p>
-                                </div>
-                              </div>
-
-                              <div className="flex items-center gap-2">
-                                <p className="text-[9px] font-medium text-slate-400 uppercase tracking-tight">Via:</p>
-                                <div className="flex gap-2.5">
-                                  {Object.entries(h.payments || {}).map(([method, amount]) => (
-                                    <div key={method} className="text-[10px] font-medium flex items-center gap-1">
-                                      <span className="text-slate-400 font-bold uppercase">{method}:</span>
-                                      <span className="text-slate-600 font-bold">₹{String(amount)}</span>
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                  <button 
+                    disabled={Number(customer.outstanding ?? datas.outstanding_balance ?? outstanding ?? 0) <= 0}
+                    onClick={() => {
+                      const bal = Number(customer.outstanding ?? datas.outstanding_balance ?? outstanding ?? 0);
+                      setPayments([{ mode: "UPI", amount: bal > 0 ? String(bal) : "" }]);
+                      setShowPayment(true);
+                    }}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black transition-all shadow-md active:scale-95 ${
+                      Number(customer.outstanding ?? datas.outstanding_balance ?? outstanding ?? 0) > 0
+                        ? "bg-emerald-600 text-white hover:bg-emerald-700 shadow-emerald-100"
+                        : "bg-slate-50 text-slate-400 cursor-not-allowed border border-slate-200 shadow-none"
+                    }`}
+                  >
+                    <Banknote size={12} />
+                    RECORD PAYMENT
+                  </button>
                 </div>
-              </SectionCard>
+
+                <CustomerCollectionsTable
+                  rows={clearingHistory}
+                  loading={clearingLoading}
+                />
+              </div>
             )}
 
 

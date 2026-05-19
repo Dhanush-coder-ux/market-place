@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { VariantRows, BatchCards, SerialBadgeList } from "../components/StockTree";
 import { useApi, useApiLoading } from "@/context/ApiContext";
+import { useHeader } from "@/context/HeaderContext";
 import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 import Loader from "@/components/common/Loader";
 import { StatCard } from "@/components/common/StatsCard";
@@ -559,10 +560,28 @@ const InventoryPage = () => {
   const { getData, error, clearError } = useApi();
   const location = useLocation();
   const isCleanMode = new URLSearchParams(location.search).get("mode") === "clean";
+  const { setActions } = useHeader();
 
   const handleOpenNewTab = () => {
     window.open(`${window.location.pathname}?mode=clean`, "_blank", "noopener,noreferrer");
   };
+
+  useEffect(() => {
+    setActions(
+      <div className="flex items-center gap-2">
+        {!isCleanMode && (
+          <button
+            onClick={handleOpenNewTab}
+            className="h-8 w-8 flex items-center justify-center rounded-md border border-slate-200 text-slate-600 bg-white hover:bg-slate-50 active:scale-95 transition-all shadow-sm shrink-0"
+            title="Open in New Tab"
+          >
+            <ExternalLink size={13} />
+          </button>
+        )}
+      </div>
+    );
+    return () => setActions(null);
+  }, [setActions, isCleanMode]);
 
   const loading = useApiLoading("inventory-list");
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
@@ -629,11 +648,11 @@ const InventoryPage = () => {
   }, []);
 
   return (
-    <div className="flex flex-col gap-3 bg-[#f8f9fa] min-h-screen p-3 sm:p-4">
+    <div className="flex-1 flex flex-col min-h-0 font-sans w-full overflow-hidden relative">
 
       {/* Metric bar */}
       {!isCleanMode && (
-        <div className="flex flex-nowrap overflow-x-auto gap-2 pb-1 -mx-1 px-1 sm:grid sm:grid-cols-2 lg:grid-cols-4 sm:overflow-visible sm:pb-0 sm:mx-0 sm:px-0 touch-pan-x">
+        <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-none mt-2">
           <StatCard
             icon={Package}
             label="Catalog"
@@ -685,45 +704,37 @@ const InventoryPage = () => {
         </div>
       )}
 
-      {/* Main table card */}
-      <div className="bg-white rounded-lg border border-slate-100 overflow-hidden flex flex-col flex-1">
-
-        {/* Toolbar */}
-        <div className="flex items-center gap-2 px-3 py-2.5 border-b border-slate-100">
-          <div className="relative flex-1 max-w-sm">
-            <Search
-              size={13}
-              className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
-            />
-            <input
-              type="text"
-              placeholder="Search by name, barcode, category…"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full h-8 pl-8 pr-3 text-[12px] font-medium text-slate-700 bg-slate-50 border border-slate-100 rounded-md placeholder:text-slate-400 focus:outline-none focus:border-slate-300 focus:bg-white transition-colors"
-            />
-          </div>
-          <button className="h-8 w-8 flex items-center justify-center rounded-md border border-slate-100 text-slate-400 hover:text-slate-600 hover:border-slate-200 transition-colors">
-            <Filter size={13} />
-          </button>
-          
-          {!isCleanMode && (
-            <button 
-              type="button"
-              className="h-8 px-2.5 flex items-center justify-center gap-1.5 rounded-md border border-slate-200 text-slate-600 bg-white hover:text-slate-850 hover:border-slate-300 active:scale-95 transition-all text-xs font-semibold shadow-sm shrink-0"
-              onClick={handleOpenNewTab}
-            >
-              <ExternalLink size={13} />Open in New Tab
-            </button>
-          )}
-
-          {searchQuery && (
-            <span className="text-[11px] text-slate-400 font-medium ml-1 shrink-0">
-              {filteredInventory.length} result
-              {filteredInventory.length !== 1 ? "s" : ""}
-            </span>
-          )}
+      {/* Toolbar */}
+      <div className="bg-white border border-slate-100 rounded-lg p-2.5 px-3.5 flex flex-wrap items-center gap-2 shadow-sm mt-2">
+        <div className="relative w-80 shrink-0">
+          <Search
+            size={13}
+            className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+          />
+          <input
+            type="text"
+            placeholder="Search by name, barcode, category…"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full h-8 pl-8 pr-3 text-[12px] font-medium text-slate-700 bg-slate-50 border border-slate-200 rounded-md placeholder:text-slate-400 focus:outline-none focus:border-slate-300 focus:bg-white transition-colors"
+          />
         </div>
+        <button className="h-8 px-3 rounded-md border text-xs font-semibold flex items-center gap-1.5 active:scale-95 transition-all shadow-sm shrink-0">
+          <Filter size={13} />
+        </button>
+        
+
+
+        {searchQuery && (
+          <span className="text-[11px] text-slate-400 font-medium ml-1 shrink-0">
+            {filteredInventory.length} result
+            {filteredInventory.length !== 1 ? "s" : ""}
+          </span>
+        )}
+      </div>
+
+      {/* Main table card */}
+      <div className="bg-white border border-slate-100 rounded-lg shadow-sm min-w-0 overflow-hidden flex flex-col flex-1 min-h-0 mt-2">
 
         {/* Table */}
         {loading ? (
@@ -745,7 +756,7 @@ const InventoryPage = () => {
             </div>
           </div>
         ) : (
-          <div className={`overflow-x-auto overflow-y-auto ${isCleanMode ? "h-[calc(100vh-130px)]" : "h-[calc(100vh-210px)]"}`}>
+          <div className="overflow-x-auto overflow-y-auto flex-1">
             <table className="w-full text-left border-collapse whitespace-nowrap text-sm">
 
               {/* Sticky header */}

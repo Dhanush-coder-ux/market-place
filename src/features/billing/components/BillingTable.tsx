@@ -1,8 +1,7 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import {
   Trash2, IndianRupee, Package, Keyboard, Barcode,
-  Clock, ShieldCheck, AlertTriangle, XCircle,
-  Plus, RotateCcw, Tag
+  Plus, RotateCcw, Minus
 } from "lucide-react";
 import { v4 as uuidv4 } from "uuid";
 import { BillingItem, InventoryItem, ProductVariant } from "../types";
@@ -36,33 +35,8 @@ const formatDate = (dateStr?: string) => {
 
 // ─── Reusable UI Subcomponents ────────────────────────────────────────────────
 
-const StatusBadge = ({ icon: Icon, text, className = "" }: { icon?: any, text: string, className?: string }) => (
-  <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-medium border ${className}`}>
-    {Icon && <Icon size={9} />}
-    {text}
-  </span>
-);
 
-const BatchDetails = ({ mfg, exp }: { mfg?: string, exp?: string }) => {
-  if (!exp) return null;
-  const now = new Date();
-  const expiry = new Date(exp);
-  const diffMs = expiry.getTime() - now.getTime();
-  const daysLeft = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
 
-  let status = { label: `${daysLeft}d left`, color: 'text-emerald-600 bg-emerald-50/80 border-emerald-200/60', Icon: ShieldCheck };
-  if (daysLeft < 0) status = { label: `Expired`, color: 'text-red-600 bg-red-50/80 border-red-200/60', Icon: XCircle };
-  else if (daysLeft <= 30) status = { label: `${daysLeft}d left`, color: 'text-red-600 bg-red-50/80 border-red-200/60', Icon: AlertTriangle };
-  else if (daysLeft <= 90) status = { label: `${daysLeft}d left`, color: 'text-amber-600 bg-amber-50/80 border-amber-200/60', Icon: Clock };
-
-  return (
-    <div className="flex flex-wrap items-center gap-1 mt-1.5">
-      {mfg && <StatusBadge text={`MFG: ${formatDate(mfg)}`} className="text-slate-500 bg-white border-slate-200/60" />}
-      <StatusBadge text={`EXP: ${formatDate(exp)}`} className="text-slate-500 bg-white border-slate-200/60" />
-      <StatusBadge icon={status.Icon} text={status.label} className={status.color} />
-    </div>
-  );
-};
 
 const ShortcutKbd = ({ keys, label }: { keys: string[]; label: string; }) => (
   <div className="flex items-center gap-1">
@@ -76,6 +50,51 @@ const ShortcutKbd = ({ keys, label }: { keys: string[]; label: string; }) => (
     <span className="text-[10px] text-slate-400 font-normal ml-0.5">{label}</span>
   </div>
 );
+
+const QtyAdjuster = ({ 
+  value, 
+  onChange, 
+  disabled,
+  isEditable
+}: { 
+  value: number; 
+  onChange: (v: number) => void; 
+  disabled: boolean;
+  isEditable: boolean;
+}) => {
+  if (!isEditable) {
+    return (
+      <span className="text-[12px] font-bold text-slate-500 tabular-nums px-2.5 py-1 bg-slate-100/70 border border-slate-200/40 rounded-md">
+        {value}
+      </span>
+    );
+  }
+  return (
+    <div className={`inline-flex items-center border border-slate-250 rounded-lg overflow-hidden bg-white h-[32px] w-24 shrink-0 shadow-sm ${disabled ? "opacity-40 pointer-events-none" : ""}`}>
+      <button 
+        type="button"
+        className="w-7 h-full flex items-center justify-center border-none bg-transparent cursor-pointer text-slate-400 hover:bg-slate-50 hover:text-slate-600 transition-colors active:scale-90"
+        onClick={() => onChange(Math.max(1, value - 1))}
+      >
+        <Minus size={10} />
+      </button>
+      <input
+        type="number"
+        min="1"
+        value={value || ""}
+        onChange={(e) => onChange(Math.max(1, Number(e.target.value)))}
+        className="w-10 bg-transparent text-center outline-none text-[12px] font-bold text-slate-700 tabular-nums border-x border-slate-100 h-full p-0 flex items-center justify-center"
+      />
+      <button 
+        type="button"
+        className="w-7 h-full flex items-center justify-center border-none bg-transparent cursor-pointer text-slate-400 hover:bg-slate-50 hover:text-slate-600 transition-colors active:scale-90"
+        onClick={() => onChange(value + 1)}
+      >
+        <Plus size={10} />
+      </button>
+    </div>
+  );
+};
 
 const BillingRow = React.memo(({
   item, index, isLast, hasSerial,
@@ -94,111 +113,111 @@ const BillingRow = React.memo(({
   const [baseName, variantName] = item.name ? item.name.split(' - ') : ["", ""];
   
   // A "Simple" product has no serial tracking, no batch tracking, and no variant.
-  // In the billing logic, variantId is null if it's the "default" variant.
-  const isSimple = !item.requireSerial && !item.batchTracking && !item.variantId && isFilled;
+  const isQtyEditable = !item.requireSerial && isFilled;
 
   return (
     <tr className={`group/row transition-colors duration-150 ${
-      isFilled ? "hover:bg-blue-50/30" : "hover:bg-slate-50/30"
-    } ${index % 2 === 0 ? "" : "bg-slate-50/30"}`}>
+      isFilled ? "hover:bg-blue-50/10" : "hover:bg-slate-50/30"
+    } ${index % 2 === 0 ? "" : "bg-slate-50/15"}`}>
       {/* Row Index */}
-      <td className={`hidden sm:table-cell pl-4 pr-2 py-3 align-top ${!isLast ? "border-b border-slate-100/60" : ""}`}>
-        <div className="w-5 h-5 mt-1 rounded flex items-center justify-center text-[10px] font-medium text-slate-400">
+      <td className={`hidden sm:table-cell pl-4 pr-2 py-3 align-middle ${!isLast ? "border-b border-slate-100/60" : ""}`}>
+        <div className="w-5 h-5 rounded flex items-center justify-center text-[10px] font-bold text-slate-400">
           {index + 1}
         </div>
       </td>
 
       {/* Product Details */}
-      <td className={`px-3 py-3 min-w-[280px] align-top ${!isLast ? "border-b border-slate-100/60" : ""}`}>
+      <td className={`px-3 py-3 min-w-[320px] align-middle ${!isLast ? "border-b border-slate-100/60" : ""}`}>
         <div className="w-full max-w-lg">
-          <div className="flex items-center gap-2.5">
-            <div className="w-[22%]">
-              <div className="flex flex-col gap-0.5">
-                <span className="text-[9px] font-medium text-slate-400   ml-0.5">Barcode</span>
-                <div className="h-[38px] px-2.5 flex items-center rounded-lg border border-slate-200/60 bg-slate-50/40 text-[12px] font-normal text-slate-600 truncate">
-                  {item.code || "—"}
-                </div>
+          {isFilled ? (
+            <div className="flex items-center gap-3 py-1">
+              <div className="w-9 h-9 rounded-lg bg-blue-50/80 border border-blue-100 flex items-center justify-center shrink-0 shadow-sm">
+                <Package size={15} className="text-blue-600" />
               </div>
-            </div>
-            <div className="w-[78%]">
-              <div className="flex flex-col gap-0.5">
-                <span className="text-[9px] font-medium text-slate-400   ml-0.5">Product</span>
-                <SearchSelect
-                  fetchOptions={fetchInventory}
-                  value={baseName}
-                  placeholder="Search products..."
-                  labelKey="displayName"
-                  valueKey="displayName"
-                  onChange={(_, opt: any) => handleProductSelectClick(opt, item.id)}
-                  className="h-[38px] shadow-none border-slate-200/60 focus:border-blue-300 rounded-lg text-[13px]"
-                />
-              </div>
-            </div>
-          </div>
-
-          {isFilled && (variantName || hasSerial) && (
-            <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
-              {variantName && (
-                <span className="inline-flex items-center gap-1 text-[10px] font-normal text-slate-600 bg-slate-100/60 px-1.5 py-0.5 rounded">
-                  <Tag size={9} className="text-slate-400" />
-                  {variantName}
-                </span>
-              )}
-              {hasSerial && item.serialNumbers && item.serialNumbers.length > 0 && (
-                <div className="flex flex-wrap gap-1">
-                  {item.serialNumbers.map((s, idx) => (
-                    <span key={idx} className="inline-flex items-center gap-1 text-[9px] font-medium text-blue-600 bg-blue-50/80 border border-blue-100/60 px-1.5 py-0.5 rounded">
-                      <Barcode size={9} className="text-blue-400" />
-                      {s}
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <p className="text-[13px] font-bold text-slate-800 truncate">{baseName}</p>
+                  {variantName && (
+                    <span className="inline-flex items-center gap-1 text-[9px] font-bold text-indigo-600 bg-indigo-50/60 border border-indigo-100/60 px-1.5 py-0.5 rounded">
+                      {variantName}
                     </span>
-                  ))}
+                  )}
                 </div>
-              )}
+                <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                  {item.code && (
+                    <span className="inline-flex items-center gap-1 text-[9px] font-mono font-bold text-slate-400 bg-slate-50 border border-slate-100 px-1.5 py-0.5 rounded">
+                      {item.code}
+                    </span>
+                  )}
+                  {item.batchTracking && item.expiryDate && (
+                    <span className="inline-flex items-center gap-1 text-[9px] font-semibold text-emerald-600 bg-emerald-50 border border-emerald-100 px-1.5 py-0.5 rounded">
+                      EXP: {formatDate(item.expiryDate)}
+                    </span>
+                  )}
+                </div>
+                {hasSerial && item.serialNumbers && item.serialNumbers.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-1.5">
+                    {item.serialNumbers.map((s, idx) => (
+                      <span key={idx} className="inline-flex items-center gap-1 text-[9px] font-medium text-blue-650 bg-blue-50/80 border border-blue-100/60 px-1.5 py-0.5 rounded">
+                        <Barcode size={8} className="text-blue-400" />
+                        {s}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+              {/* Options Button visible on hover */}
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); handleProductSelectClick((item as any)._product, item.id); }}
+                className="text-[10px] font-bold text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100/80 border border-blue-100 px-2.5 py-1 rounded-md transition-all opacity-0 group-hover/row:opacity-100 active:scale-95 shadow-sm"
+              >
+                Options
+              </button>
             </div>
-          )}
-
-          {isFilled && item.batchTracking && (
-            <BatchDetails mfg={item.manufacturingDate} exp={item.expiryDate} />
+          ) : (
+            <div className="flex items-center gap-2.5">
+              <div className="w-[20%] shrink-0">
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-[9px] font-semibold text-slate-400 ml-0.5">Barcode</span>
+                  <div className="h-[38px] px-2.5 flex items-center rounded-lg border border-slate-200/60 bg-slate-50/40 text-[12px] font-normal text-slate-400 truncate">
+                    —
+                  </div>
+                </div>
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-[9px] font-semibold text-slate-400 ml-0.5">Search Product</span>
+                  <SearchSelect
+                    fetchOptions={fetchInventory}
+                    value=""
+                    placeholder="Search product..."
+                    labelKey="displayName"
+                    valueKey="displayName"
+                    onChange={(_, opt: any) => handleProductSelectClick(opt, item.id)}
+                    className="h-[38px] shadow-none border-slate-200/60 focus:border-blue-300 rounded-lg text-[13px]"
+                  />
+                </div>
+              </div>
+            </div>
           )}
         </div>
       </td>
 
       {/* Quantity */}
-      <td className={`px-2 py-3 align-top text-right ${!isLast ? "border-b border-slate-100/60" : ""}`}>
-        <div 
-          onClick={() => !isSimple && isFilled && handleProductSelectClick((item as any)._product, item.id)}
-          className={`w-20 h-[38px] px-2 rounded-lg border transition-all duration-150 
-            ${isSimple 
-                ? "border-slate-200 bg-white focus-within:border-blue-400 focus-within:ring-1 focus-within:ring-blue-100" 
-                : "border-slate-200/60 bg-slate-50/30 cursor-pointer hover:border-blue-300/60"
-            } 
-            ${!isFilled ? "opacity-40 pointer-events-none" : ""} flex items-center justify-end`}
-        >
-          <input
-            type="number"
-            min="1"
-            readOnly={!isSimple}
-            value={item.qty || ""}
-            placeholder="0"
-            className={`w-full bg-transparent text-right outline-none text-[13px] font-black text-slate-700 tabular-nums
-              ${isSimple ? "cursor-text" : "cursor-pointer"}
-            `}
-            onChange={(e) => isSimple && onQtyChange(item.id, Number(e.target.value))}
-            onClick={(e) => isSimple && e.stopPropagation()} // Prevent modal from opening when clicking input
-            onKeyDown={(e) => { 
-              if (e.key === "Enter" || e.key === " ") {
-                if (!isSimple && isFilled) {
-                  e.preventDefault();
-                  handleProductSelectClick((item as any)._product, item.id);
-                }
-              }
-            }}
+      <td className={`px-2 py-3 align-middle text-right ${!isLast ? "border-b border-slate-100/60" : ""}`}>
+        <div className="flex items-center justify-end">
+          <QtyAdjuster 
+            value={item.qty}
+            onChange={(qty) => onQtyChange(item.id, qty)}
+            disabled={!isQtyEditable}
+            isEditable={isQtyEditable}
           />
         </div>
       </td>
 
       {/* Unit Price */}
-      <td className={`px-2 py-3 align-top text-right ${!isLast ? "border-b border-slate-100/60" : ""}`}>
+      <td className={`px-2 py-3 align-middle text-right ${!isLast ? "border-b border-slate-100/60" : ""}`}>
         <div className="h-[38px] flex items-center justify-end gap-0.5 px-1">
           <IndianRupee size={11} strokeWidth={2} className="text-slate-400" />
           <span className="text-[13px] font-normal text-slate-600 tabular-nums">
@@ -208,10 +227,10 @@ const BillingRow = React.memo(({
       </td>
 
       {/* Total */}
-      <td className={`px-3 py-3 align-top text-right ${!isLast ? "border-b border-slate-100/60" : ""}`}>
+      <td className={`px-3 py-3 align-middle text-right ${!isLast ? "border-b border-slate-100/60" : ""}`}>
         <div className="flex flex-col items-end">
           <div className={`h-[38px] flex items-center justify-end gap-0.5 font-medium text-[14px] tabular-nums tracking-tight ${item.tprice > 0 ? "text-slate-800" : "text-slate-300"}`}>
-            <IndianRupee size={12} strokeWidth={2} className={item.tprice > 0 ? "text-slate-600" : "text-slate-300"} />
+            <IndianRupee size={12} strokeWidth={2} className={item.tprice > 0 ? "text-slate-650" : "text-slate-300"} />
             {item.tprice > 0 ? item.tprice.toLocaleString("en-IN", { minimumFractionDigits: 2 }) : "0.00"}
           </div>
           {item.qty > 1 && item.price > 0 && (
@@ -223,10 +242,10 @@ const BillingRow = React.memo(({
       </td>
 
       {/* Delete */}
-      <td className={`px-2 py-3 align-top text-center ${!isLast ? "border-b border-slate-100/60" : ""}`}>
+      <td className={`px-2 py-3 align-middle text-center ${!isLast ? "border-b border-slate-100/60" : ""}`}>
         <button
           onClick={() => handleDeleteRow(item.id)}
-          className="w-7 h-7 mt-1 rounded-md flex items-center justify-center mx-auto text-slate-300 hover:text-red-500 hover:bg-red-50/60 transition-all duration-150"
+          className="w-7 h-7 rounded-md flex items-center justify-center mx-auto text-slate-350 hover:text-red-500 hover:bg-red-50/60 transition-all duration-150 active:scale-95"
         >
           <Trash2 size={14} strokeWidth={1.5} />
         </button>
@@ -244,7 +263,7 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
   const [activeRowId, setActiveRowId] = useState<string | null>(null);
 
   const fetchInventory = useCallback(async (q: string, signal: AbortSignal) => {
-    if (!q) return [];
+
     try {
       const res = await getData(ENDPOINTS.INVENTORIES, { limit: "10", offset: "1", q, shop_id: SHOP_ID }, { signal });
       const data = res?.data ? (Array.isArray(res.data) ? res.data : [res.data]) : [];
@@ -433,8 +452,8 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
   // ─── Render ───────────────────────────────────────────────────────────────
 
   return (
-    <div className="w-full font-sans">
-      <div className="bg-white rounded-lg border border-slate-200/60 shadow-[0_1px_3px_rgba(0,0,0,0.04)] overflow-hidden">
+    <div className="w-full h-full flex flex-col min-h-0 font-sans">
+      <div className="bg-white rounded-lg border border-slate-200/60 shadow-[0_1px_3px_rgba(0,0,0,0.04)] overflow-hidden flex flex-col flex-1 min-h-0">
 
         {/* Table Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between px-4 py-3 border-b border-slate-100/60 bg-white">
@@ -469,7 +488,7 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
         </div>
 
         {/* Table Container */}
-        <div className="overflow-x-auto overflow-y-auto h-[calc(100vh-220px)] pf-scroll">
+        <div className="overflow-x-auto overflow-y-auto flex-1 min-h-0 pf-scroll">
           <table className="min-w-full border-separate border-spacing-0">
             <thead className="sticky top-0 z-20 bg-slate-50/95 backdrop-blur-sm shadow-sm">
               <tr>

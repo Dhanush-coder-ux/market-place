@@ -14,12 +14,12 @@ import { Switch } from "@/components/ui/switch";
 
 import { supplierApi } from "@/services/api/supplier";
 import { QuickCreateSupplierModal } from "@/features/common/QuickCreate/QuickCreateSupplierModal";
-import { 
-  VariantType, 
-  VariantCombination, 
-  VariantBuilder, 
-  VariantMatrixTable, 
-  generateCombinations 
+import {
+  VariantType,
+  VariantCombination,
+  VariantBuilder,
+  VariantMatrixTable,
+  generateCombinations
 } from "../components/VariantManager";
 
 /*   • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • •
@@ -240,7 +240,6 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { postData, putData, getData, loading } = useApi();
-  const { setActions } = useHeader();
   const { showToast } = useToast();
   const isLoading = externalLoading || loading;
 
@@ -278,18 +277,18 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
   const [baseSerials, setBaseSerials] = useState<string[]>([]);
   const [supplierDetails, setSupplierDetails] = useState<any>(null);
 
-  useEffect(() => {
-    setActions(
-      <div className="flex items-center gap-3 bg-white px-4 h-11 rounded-lg border border-slate-200 shadow-sm scale-90 md:scale-100">
-        <span className="text-[10px] font-bold text-slate-500  ">Active</span>
-        <Switch
-          checked={form.is_active}
-          onCheckedChange={(checked) => setForm(prev => ({ ...prev, is_active: checked }))}
-        />
-      </div>
-    );
-    return () => setActions(null);
-  }, [setActions, form.is_active]);
+  // useEffect(() => {
+  //   setActions(
+  //     <div className="flex items-center gap-3 bg-white px-4 h-11 rounded-lg border border-slate-200 shadow-sm scale-90 md:scale-100">
+  //       <span className="text-[10px] font-bold text-slate-500  ">Active</span>
+  //       <Switch
+  //         checked={form.is_active}
+  //         onCheckedChange={(checked) => setForm(prev => ({ ...prev, is_active: checked }))}
+  //       />
+  //     </div>
+  //   );
+  //   return () => setActions(null);
+  // }, [setActions, form.is_active]);
 
   const { setBottomActions } = useHeader();
   useEffect(() => {
@@ -523,7 +522,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
         gst: form.gst,
         supplier: form.supplier,
         opening_stock: 0,
-        
+
         storage_location: form.location,
         is_active: form.is_active,
         variant_types: variantTypes,
@@ -569,7 +568,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
           <div className="grid grid-cols-1 lg:grid-cols-6 gap-5 items-start">
 
             <div className="lg:col-span-4 space-y-6">
-              
+
               {/* SECTION 1: IDENTITY */}
               <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden hover:shadow-md transition-all">
                 <div className="px-6 py-4 bg-gradient-to-r from-blue-50/50 to-transparent border-b border-slate-100 flex items-center gap-3">
@@ -669,46 +668,46 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
               </div>
             </div>
             {/* --- RIGHT COLUMN: SIDEBAR --- */}
-            <div className="lg:col-span-2 space-y-6 lg:sticky lg:top-6">
-            {/* BOX 3: Pricing */}
-            {/* Pricing section removed as per request */}
+            <div className="lg:col-span-2 space-y-6 lg:sticky lg:top-1">
+              {/* BOX 3: Pricing */}
+              {/* Pricing section removed as per request */}
 
-            {/* BOX 4: Live Summary + Stock */}
-            <div className="space-y-6">
-              <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
-                <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
-                  <h2 className="text-xs font-bold text-slate-800  ">Live summary</h2>
-                </div>
-                <div className="divide-y divide-slate-50 px-6">
-                  {[
-                    { label: "Barcode", value: form.barcode || "-" },
-                    { label: "Variants", value: form.has_variants ? `${combinations.length} combos` : "None" },
-                  ].map(row => (
-                    <div key={row.label} className="flex items-center justify-between py-2.5">
-                      <span className="text-[11px] text-slate-400 font-medium">{row.label}</span>
-                      <span className={`text-[11px] font-bold font-mono text-slate-800`}>{row.value}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden hover:shadow-md transition-all pf-section-enter">
-                <div className="px-6 py-4 bg-gradient-to-r from-amber-50/50 to-transparent border-b border-slate-100 flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center text-amber-600">
-                    <BarChart2 size={16} />
+              {/* BOX 4: Live Summary + Stock */}
+              <div className="space-y-4">
+                <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
+                  <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
+                    <h2 className="text-xs font-bold text-slate-800  ">Live summary</h2>
                   </div>
-                  <h2 className="text-xs font-bold text-slate-800  ">Stock & inventory</h2>
+                  <div className="divide-y divide-slate-50 px-6">
+                    {[
+                      { label: "Barcode", value: form.barcode || "-" },
+                      { label: "Variants", value: form.has_variants ? `${combinations.length} combos` : "None" },
+                    ].map(row => (
+                      <div key={row.label} className="flex items-center justify-between py-2.5">
+                        <span className="text-[11px] text-slate-400 font-medium">{row.label}</span>
+                        <span className={`text-[11px] font-bold font-mono text-slate-800`}>{row.value}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-                <div className="p-6 grid grid-cols-1 gap-5">
-                  <InputField label="Reorder Point" name="reorder_point" required
-                    type="number" value={form.reorder_point} onChange={handleChange}
-                    placeholder="5"
-                  />
+
+                <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden hover:shadow-md transition-all pf-section-enter">
+                  <div className="px-6 py-4 bg-gradient-to-r from-amber-50/50 to-transparent border-b border-slate-100 flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center text-amber-600">
+                      <BarChart2 size={16} />
+                    </div>
+                    <h2 className="text-xs font-bold text-slate-800  ">Stock & inventory</h2>
+                  </div>
+                  <div className="p-6 grid grid-cols-1 gap-5">
+                    <InputField label="Reorder Point" name="reorder_point" required
+                      type="number" value={form.reorder_point} onChange={handleChange}
+                      placeholder="5"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
 
           {/* BOTTOM SECTION: VARIANTS */}
           <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden hover:shadow-md transition-all">

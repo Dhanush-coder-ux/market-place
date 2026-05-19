@@ -3,7 +3,6 @@ import { useParams, useNavigate } from "react-router-dom";
 import {
   AlertCircle, Package, Mail, Pencil, User, MapPin, Phone, Trash2,
   Store, Database, ShoppingBag, History, CreditCard,
-  RefreshCcw, ShoppingCart
 } from "lucide-react";
 import {
   fmt, SectionCard, DetailItem, InfoRow, Modal,
@@ -17,6 +16,7 @@ import Loader from "@/components/common/Loader";
 import type { SupplierRecord } from "@/types/api";
 import { SearchSelect } from "@/components/inputbuilders/SearchSelect";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
+import { SupplierPurchasesTable } from "@/components/common/HistoryTables";
 
 
 const SupplierSearch = () => {
@@ -24,7 +24,7 @@ const SupplierSearch = () => {
   const { getData } = useApi();
 
   const fetchSuppliers = async (q: string) => {
-    if (!q) return [];
+
     try {
       const res = await getData(`${ENDPOINTS.SUPPLIERS}/by/shop/${SHOP_ID}`, { limit: "8", offset: "1", q });
       const data = res?.data ? (Array.isArray(res.data) ? res.data : [res.data]) : [];
@@ -116,10 +116,10 @@ export default function SupplierDetail() {
   const initials = name.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2);
 
   return (
-    <div className="min-h-screen bg-slate-50/50 font-sans animate-in fade-in duration-500">
-      <div className="mx-auto py-3 space-y-4">
-
-        {/* Profile Header Card */}
+    <div className="flex-1 flex flex-col min-h-0 h-full bg-slate-50/50 font-sans overflow-hidden relative">
+      
+      {/* Profile Header Card */}
+      <div className="flex-none p-1 pb-0 animate-in fade-in duration-500">
         <ProfileHeaderCard
           name={name}
           initials={initials}
@@ -155,8 +155,10 @@ export default function SupplierDetail() {
             </div>
           }
         />
+      </div>
 
-        {/* Tabs Navigation */}
+      {/* Tabs Navigation & Quick Stats Grid (pinned) */}
+      <div className="flex-none px-1 py-2 space-y-2">
         <div className="flex gap-0.5 bg-white p-1 rounded-lg border border-slate-200 w-fit">
           {TABS.map((tab, i) => (
             <button
@@ -170,16 +172,17 @@ export default function SupplierDetail() {
           ))}
         </div>
 
-        {/* Quick Stats Grid */}
         <div className="flex flex-wrap gap-2">
           <StatCard icon={ShoppingBag} label="Total Purchases" value={datas.total_purchases ? `₹${datas.total_purchases}` : "₹0"} iconBg="bg-blue-50 text-blue-600" className="flex-1 min-w-[140px]" />
           <StatCard icon={AlertCircle} label="Outstanding" value={fmt(Number(datas.pending_amount) || 0)} iconBg="bg-rose-50 text-rose-600" className="flex-1 min-w-[140px]" />
           <StatCard icon={Package} label="Total Items" value={String(datas.total_items_bought || "0")} iconBg="bg-blue-50 text-blue-600" className="flex-1 min-w-[140px]" />
           <StatCard icon={History} label="Last Order" value={String(datas.last_order_date || "N/A")} iconBg="bg-amber-50 text-amber-600" className="flex-1 min-w-[140px]" />
         </div>
+      </div>
 
-        {/* Tab Panels */}
-        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+      {/* Tab Panels (scrollable or flex-locked depending on active tab) */}
+      <div className={`flex-1 min-h-0 ${activeTab === 2 ? "flex flex-col overflow-hidden" : "overflow-y-auto custom-scrollbar"} px-1 pb-6`}>
+        <div className={`animate-in fade-in slide-in-from-bottom-4 duration-500 ${activeTab === 2 ? "flex flex-col flex-1 min-h-0 h-full" : ""}`}>
           {activeTab === 0 && (
             <div className="grid grid-cols-1 xl:grid-cols-4 gap-4">
               <div className="xl:col-span-3 space-y-4">
@@ -310,98 +313,10 @@ export default function SupplierDetail() {
             });
 
             return (
-              <div className="space-y-4 animate-in fade-in slide-in-from-top-4 duration-500">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-100"><ShoppingCart size={16} /></div>
-                    <h2 className="text-[10px] font-black text-slate-800  tracking-[0.15em]">Purchase History</h2>
-                  </div>
-                  {purLoading && <RefreshCcw size={14} className="text-slate-400 animate-spin" />}
-                </div>
-                {purLoading ? (
-                  <div className="py-16 flex justify-center"><RefreshCcw size={24} className="text-indigo-400 animate-spin" /></div>
-                ) : rows.length === 0 ? (
-                  <div className="py-16 text-center">
-                    <ShoppingCart size={32} className="mx-auto text-slate-200 mb-3" />
-                    <p className="text-sm font-bold text-slate-400">No purchases found for this supplier</p>
-                  </div>
-                ) : (
-                  <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-left whitespace-nowrap">
-                        <thead>
-                          <tr className="text-[10px] font-black   text-slate-400 border-b border-slate-100 bg-slate-50/50">
-                            <th className="px-5 py-3">#</th>
-                            <th className="px-5 py-3">Type</th>
-                            <th className="px-5 py-3">Product</th>
-                            <th className="px-5 py-3">Ordered Stock</th>
-                            <th className="px-5 py-3">Received Stock</th>
-                            <th className="px-5 py-3">Buy Price</th>
-                            <th className="px-5 py-3">Sell Price</th>
-                            <th className="px-5 py-3">Payment</th>
-                            <th className="px-5 py-3">Invoice</th>
-                            <th className="px-5 py-3">Reference</th>
-                            <th className="px-5 py-3">Date</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-50">
-                          {rows.map((r: any, i: number) => (
-                            <tr key={`${r.purchaseId}-${i}`} className="hover:bg-indigo-50/20 transition-colors border-l-2 border-indigo-200">
-                              <td className="px-5 py-3">
-                                <span className="text-[10px] font-black text-slate-400 tabular-nums">#{r.uiId}</span>
-                              </td>
-                              <td className="px-5 py-3">
-                                <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${r.type === 'DIRECT' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
-                                    r.type?.includes('PO') ? 'bg-blue-50 text-blue-700 border-blue-200' :
-                                      'bg-slate-50 text-slate-600 border-slate-200'
-                                  }`}>
-                                  <span className="w-1.5 h-1.5 rounded-full bg-current" />
-                                  {r.type === 'DIRECT' ? 'Purchase' : (r.type || '—').replace(/_/g, ' ')}
-                                </span>
-                              </td>
-                              <td className="px-5 py-3 text-xs font-medium text-slate-700">{r.productName}</td>
-                              <td className="px-5 py-3">
-                                <span className="font-black text-sm text-slate-400 tabular-nums">{r.stocks ?? '—'}</span>
-                              </td>
-                              <td className="px-5 py-3">
-                                <span className="font-black text-sm text-emerald-600 tabular-nums">{r.receivedStocks ?? '—'}</span>
-                              </td>
-                              <td className="px-5 py-3">
-                                <span className="text-xs font-bold text-slate-700">₹{r.buy_price ?? '—'}</span>
-                              </td>
-                              <td className="px-5 py-3">
-                                <span className="text-xs font-bold text-emerald-700">₹{r.sell_price ?? '—'}</span>
-                              </td>
-                              <td className="px-5 py-3">
-                                <div className="flex flex-col gap-0.5">
-                                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md w-fit ${r.paymentMethod === 'Cash' ? 'bg-green-50 text-green-700' :
-                                      r.paymentMethod === 'UPI' ? 'bg-violet-50 text-violet-700' :
-                                        'bg-slate-50 text-slate-600'
-                                    }`}>{r.paymentMethod}</span>
-                                  {r.amountPaid > 0 && (
-                                    <span className="text-[9px] text-slate-400 font-bold">Paid: ₹{r.amountPaid}</span>
-                                  )}
-                                </div>
-                              </td>
-                              <td className="px-5 py-3 text-xs font-mono text-slate-500">{r.invoiceNo}</td>
-                              <td className="px-5 py-3 text-xs font-mono text-slate-400">{r.referenceNo}</td>
-                              <td className="px-5 py-3 text-xs text-slate-500 whitespace-nowrap">
-                                {r.purchaseDate ? new Date(r.purchaseDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                    {/* Charges footer summary */}
-                    {rows.some(r => r.deliveryCharge > 0 || r.otherCharge > 0) && (
-                      <div className="px-5 py-3 border-t border-slate-100 bg-slate-50/50 flex flex-wrap gap-4 text-[10px] font-bold text-slate-500  ">
-                        <span>Delivery charges may apply — check individual purchase records</span>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
+              <SupplierPurchasesTable
+                rows={rows}
+                loading={purLoading}
+              />
             );
           })()}
         </div>

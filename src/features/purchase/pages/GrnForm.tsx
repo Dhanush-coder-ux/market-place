@@ -593,6 +593,44 @@ const GrnForm = () => {
     showToast,
   ]);
 
+  const handleAddNewProduct = useCallback(
+    (query: string) => {
+      openQuickCreate(
+        "PRODUCT",
+        (newProduct: any) => {
+          const emptyIndex = products.findIndex((p) => !p.name && !p.inventory_id);
+          const hasBatchTracking =
+            !!newProduct.has_batch || !!(newProduct.datas && newProduct.datas.has_batch);
+          const hasSerialTracking =
+            !!newProduct.has_serialno || !!(newProduct.datas && newProduct.datas.has_serialno);
+          const fields = {
+            inventory_id: newProduct.id,
+            name: newProduct.name,
+            costPrice: newProduct.buy_price,
+            sellingPrice: newProduct.sell_price,
+            sku: newProduct.barcode,
+            unit: newProduct.datas?.unit || "pc",
+            taxGst: parseInt(newProduct.datas?.gst) || 18,
+            batchTracking: hasBatchTracking,
+            serialTracking: hasSerialTracking,
+          };
+          if (emptyIndex >= 0) updateProductFields(emptyIndex, fields);
+          else
+            setProducts((prev) => [
+              ...prev,
+              {
+                ...defaultProductRow,
+                id: crypto.randomUUID(),
+                ...fields,
+              },
+            ]);
+        },
+        { name: query }
+      );
+    },
+    [products, defaultProductRow, openQuickCreate, updateProductFields]
+  );
+
   useEffect(() => {
     setBottomActions(
       <div className="flex items-center gap-2.5">
@@ -736,6 +774,7 @@ const GrnForm = () => {
             setProducts={setProducts}
             addProduct={addProduct}
             removeProduct={removeProduct}
+            onAddNewProduct={handleAddNewProduct}
             type="PURCHASE"
           />
 

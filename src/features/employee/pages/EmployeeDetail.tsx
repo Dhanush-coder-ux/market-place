@@ -80,10 +80,10 @@ export default function EmployeeDetail() {
   const initials = name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
 
   return (
-    <div className="min-h-screen bg-slate-50/50 font-sans animate-in fade-in duration-500">
-      <div className="mx-auto  py-3 space-y-4">
-
-        {/* Profile Header Card */}
+    <div className="flex-1 flex flex-col min-h-0 h-full bg-slate-50/50 font-sans overflow-hidden relative">
+      
+      {/* Profile Header Card */}
+      <div className="flex-none p-1 pb-0 animate-in fade-in duration-500">
         <ProfileHeaderCard
           name={name}
           initials={initials}
@@ -119,8 +119,10 @@ export default function EmployeeDetail() {
             </div>
           }
         />
+      </div>
 
-        {/* Tabs Navigation */}
+      {/* Tabs Navigation & Quick Stats Grid (pinned) */}
+      <div className="flex-none px-1 py-2 space-y-2">
         <div className="flex gap-0.5 bg-white p-1 rounded-lg border border-slate-200 w-fit overflow-x-auto">
           {TABS.map((tab, i) => (
             <button
@@ -136,7 +138,6 @@ export default function EmployeeDetail() {
           ))}
         </div>
 
-        {/* Quick Stats Grid */}
         <div className="flex gap-2">
           <StatCard
             icon={Briefcase}
@@ -153,6 +154,10 @@ export default function EmployeeDetail() {
             className="min-w-[140px]"
           />
         </div>
+      </div>
+
+      {/* Tab Panels (scrollable) */}
+      <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar px-1 pb-6">
 
         {/* Content Area */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">

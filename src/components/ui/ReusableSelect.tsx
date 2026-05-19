@@ -21,7 +21,14 @@ export function ReusableSelect({
   error,
   required
 }: ReusableSelectProps) {
-  console.log(`ReusableSelect [${label}]: value =`, value);
+  const mappedValue = value === "" ? "__EMPTY__" : value;
+
+  const handleValueChange = (val: string) => {
+    if (onValueChange) {
+      onValueChange(val === "__EMPTY__" ? "" : val);
+    }
+  };
+
   return (
     <div className="space-y-2 w-full">
       {label && (
@@ -30,7 +37,7 @@ export function ReusableSelect({
         </label>
       )}
       
-      <Select value={value} onValueChange={onValueChange}>
+      <Select value={mappedValue} onValueChange={handleValueChange}>
         <SelectTrigger 
           className={cn(
             "w-full h-10 rounded-lg border-gray-200 bg-white px-4 py-5 shadow-sm transition-all hover:border-blue-400 focus:ring-4 focus:ring-blue-500/10 outline-none",
@@ -44,8 +51,8 @@ export function ReusableSelect({
         <SelectContent className="z-[9999] rounded-lg shadow-2xl border-gray-100 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
           {options.map((option) => (
             <SelectItem 
-              key={option.value} 
-              value={option.value}
+              key={option.value || "__EMPTY__"} 
+              value={option.value === "" ? "__EMPTY__" : option.value}
               className="px-3 py-2.5 rounded-lg cursor-pointer transition-colors focus:bg-blue-50 focus:text-blue-600"
             >
               <div className="flex items-center gap-3">

@@ -75,7 +75,7 @@ const Billing = () => {
   }, [items]);
 
   const fetchCustomers = useCallback(async (query: string, signal: AbortSignal) => {
-    if (!query) return [];
+
     try {
       const res = await getData(`${ENDPOINTS.CUSTOMERS}/by/shop/${SHOP_ID}`, { search: query }, { signal });
       if (res && res.data) {
@@ -250,10 +250,8 @@ const Billing = () => {
     setItems([createEmptyRow()]);
   }, []);
 
-  const isCleanMode = new URLSearchParams(window.location.search).get("mode") === "clean";
-
   return (
-    <div className={`flex flex-col bg-neutral-50/80 overflow-hidden ${isCleanMode ? "h-screen" : "h-[calc(100vh-64px)]"}`}>
+    <div className="flex-1 flex flex-col min-h-0 bg-neutral-50/80 overflow-hidden h-full">
 
       {/* ── Top Bar ─────────────────────────────────────────────────── */}
       <header className="shrink-0 h-[52px] flex items-center justify-between px-5 border-b border-slate-200/60 bg-white/90 backdrop-blur-sm">
@@ -396,10 +394,8 @@ const Billing = () => {
       <div className="flex flex-1 overflow-hidden">
 
         {/* Left: Billing Table */}
-        <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-          <div className="p-4 pb-6">
-            <BillingTable items={items} onItemsChange={handleItemsChange} />
-          </div>
+        <div className="flex-1 flex flex-col min-h-0 overflow-hidden p-4">
+          <BillingTable items={items} onItemsChange={handleItemsChange} />
         </div>
 
         {/* Right: Payment Summary Sidebar */}

@@ -8,13 +8,15 @@ interface ColumnPickerProps {
   selectedKeys: string[];
   onApply: (keys: string[]) => void;
   storageKey?: string;
+  className?: string;
 }
 
 export const ColumnPicker: React.FC<ColumnPickerProps> = ({ 
   availableKeys, 
   selectedKeys, 
   onApply,
-  storageKey 
+  storageKey,
+  className
 }) => {
   const [tempSelectedKeys, setTempSelectedKeys] = useState<string[]>(selectedKeys);
   const [isColumnPickerOpen, setIsColumnPickerOpen] = useState(false);
@@ -48,8 +50,8 @@ export const ColumnPicker: React.FC<ColumnPickerProps> = ({
   return (
     <Popover open={isColumnPickerOpen} onOpenChange={setIsColumnPickerOpen}>
       <PopoverTrigger asChild>
-        <button className="flex items-center gap-1.5 px-3 h-9 rounded-lg border border-slate-200 text-slate-600 font-bold text-[13px] hover:bg-slate-50 transition-all shrink-0">
-          <Columns size={14} className="text-slate-400" />
+        <button className={className || "w-56 h-8 px-3 rounded-md border border-slate-200 text-slate-650 bg-white hover:bg-slate-50 active:scale-95 transition-all text-xs font-semibold shadow-sm shrink-0 flex items-center justify-center gap-1.5"}>
+          <Columns size={13} className="text-slate-400 pointer-events-none" />
           <span>Columns</span>
         </button>
       </PopoverTrigger>

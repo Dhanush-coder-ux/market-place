@@ -29,7 +29,7 @@ const SupplierSearch = () => {
   }, [setActions, navigate]);
 
   const fetchSuppliers = async (q: string) => {
-    if (!q) return [];
+
     try {
       const res = await getData(`${ENDPOINTS.SUPPLIERS}/by/shop/${SHOP_ID}`, { limit: "10", offset: "1", q });
       const data = res?.data ? (Array.isArray(res.data) ? res.data : [res.data]) : [];

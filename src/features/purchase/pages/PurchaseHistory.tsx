@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Search,
   Calendar,
@@ -6,17 +6,20 @@ import {
   Package,
   ChevronRight,
   ReceiptText,
-  SlidersHorizontal,
   LayoutGrid,
   List,
   TrendingUp,
-  ExternalLink
+  ExternalLink,
+  Filter
 } from "lucide-react";
 import { useLocation } from "react-router-dom";
+import { useHeader } from "@/context/HeaderContext";
 import DirectHeader from "../components/DirectHeader";
 import { FloatingFormCard } from "@/components/common/FloatingFormCard";
 import { useApi } from "@/context/ApiContext";
 import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
+import { RightSidebarFilter } from "@/components/common/RightSidebarFilter";
+import { ReusableSelect } from "@/components/ui/ReusableSelect";
 import type { PurchaseRecord } from "@/types/api";
 
 
@@ -198,11 +201,7 @@ const ProductPill = ({ name, qty, stocks }: { name: string; qty: number; stocks?
   </span>
 );
 
-const ArrowBtn = () => (
-  <div className="w-7 h-7 rounded-full border border-zinc-200 bg-white flex items-center justify-center group-hover:border-blue-200 group-hover:bg-blue-50 transition-all shadow-sm shrink-0">
-    <ChevronRight size={14} className="po-arrow text-zinc-400 group-hover:text-blue-600" />
-  </div>
-);
+
 
 const PurchaseTypeBadge = ({ type }: { type: PurchaseType }) => {
   let colors = "bg-zinc-100 text-zinc-600 border-zinc-200"; // Fallback
@@ -305,72 +304,71 @@ const GridCard = ({ po, onClick }: { po: DirectPurchaseData; onClick: () => void
 };
 
 
-/* ================= VERTICAL TABLE VIEW ================= */
-const VerticalTable = ({ data, onClick }: { data: DirectPurchaseData[]; onClick: (po: DirectPurchaseData) => void }) => {
+const VerticalTable = ({ data, onClick, totalCount }: { data: DirectPurchaseData[]; onClick: (po: DirectPurchaseData) => void; totalCount: number }) => {
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col flex-1 min-h-0">
-      <div className="overflow-auto flex-1 scrollbar-thin scrollbar-thumb-slate-200">
-        <table className="min-w-full text-left border-collapse">
-          <thead className="sticky top-0 z-20 bg-slate-50 border-b border-slate-200">
+    <div className="bg-white border border-slate-100 rounded-lg shadow-sm overflow-hidden flex flex-col flex-1 min-h-0">
+      <div className="overflow-x-auto overflow-y-auto flex-1 scrollbar-thin scrollbar-thumb-slate-200">
+        <table className="w-full text-left border-collapse whitespace-nowrap text-sm">
+          <thead className="sticky top-0 z-20 bg-slate-50 border-b border-slate-100">
             <tr>
-              <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap border-r border-slate-100 last:border-r-0">PO Details</th>
-              <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap border-r border-slate-100 last:border-r-0">Vendor</th>
-              <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap border-r border-slate-100 last:border-r-0">Date</th>
-              <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500 hidden md:table-cell border-r border-slate-100 last:border-r-0">Products</th>
-              <th className="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap border-r border-slate-100 last:border-r-0">Qty</th>
-              <th className="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap border-r border-slate-100 last:border-r-0">Total</th>
-              <th className="px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-slate-500 w-14 border-r border-slate-100 last:border-r-0"></th>
+              <th className="px-3 py-2.5 text-[10px] font-bold tracking-wider text-slate-400 uppercase text-left">PO Details</th>
+              <th className="px-3 py-2.5 text-[10px] font-bold tracking-wider text-slate-400 uppercase text-left">Vendor</th>
+              <th className="px-3 py-2.5 text-[10px] font-bold tracking-wider text-slate-400 uppercase text-left">Date</th>
+              <th className="px-3 py-2.5 text-[10px] font-bold tracking-wider text-slate-400 uppercase text-left hidden md:table-cell">Products</th>
+              <th className="px-3 py-2.5 text-[10px] font-bold tracking-wider text-slate-400 uppercase text-right">Qty</th>
+              <th className="px-3 py-2.5 text-[10px] font-bold tracking-wider text-slate-400 uppercase text-right">Total</th>
+              <th className="px-3 py-2.5 w-16 text-right"></th>
             </tr>
           </thead>
-          <tbody className="bg-white">
+          <tbody>
             {data.map((po) => {
               const totalQty = po.products.reduce((s, i) => s + i.quantity, 0);
               return (
                 <tr
                   key={po.id}
                   onClick={() => onClick(po)}
-                  className="po-row group cursor-pointer transition-colors duration-100 border-b border-slate-100 last:border-b-0 hover:bg-blue-50/50 bg-white even:bg-slate-50/40"
+                  className="group cursor-pointer transition-colors border-b border-slate-50 hover:bg-slate-50/60"
                 >
                   {/* PO Details */}
-                  <td className="px-4 py-3 align-middle whitespace-nowrap border-r border-slate-100 last:border-r-0">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-md bg-blue-50 flex items-center justify-center shrink-0">
-                        <ReceiptText size={14} className="text-blue-600" />
+                  <td className="p-2.5 px-3">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-7 h-7 rounded-md bg-blue-50 flex items-center justify-center shrink-0">
+                        <ReceiptText size={13} className="text-blue-600" />
                       </div>
-                      <div className="flex flex-col gap-1">
-                        <span className="text-[13px] font-black text-slate-800">{po.poNumber}</span>
+                      <div className="flex flex-col gap-0.5">
+                        <span className="font-mono text-[11px] font-semibold text-slate-800">{po.poNumber}</span>
                         <div className="w-fit"><PurchaseTypeBadge type={po.purchaseType} /></div>
                       </div>
                     </div>
                   </td>
 
                   {/* Vendor */}
-                  <td className="px-4 py-3 align-middle border-r border-slate-100 last:border-r-0">
-                    <div className="flex items-center gap-2 text-[13px] font-semibold text-slate-700 whitespace-nowrap">
-                      <Building2 size={14} className="text-slate-400 shrink-0" />
+                  <td className="p-2.5 px-3">
+                    <div className="flex items-center gap-2 text-xs font-medium text-slate-700">
+                      <Building2 size={13} className="text-slate-400 shrink-0" />
                       {po.vendor}
                     </div>
                   </td>
 
                   {/* Date */}
-                  <td className="px-4 py-3 align-middle whitespace-nowrap border-r border-slate-100 last:border-r-0">
+                  <td className="p-2.5 px-3">
                     <div className="flex flex-col gap-0.5">
-                      <div className="flex items-center gap-2 text-[13px] font-semibold text-slate-700">
-                        <Calendar size={14} className="text-slate-400 shrink-0" />
+                      <div className="flex items-center gap-2 text-xs font-medium text-slate-700">
+                        <Calendar size={13} className="text-slate-400 shrink-0" />
                         {po.date}
                       </div>
-                      <span className="text-[11px] text-slate-400 pl-6 font-bold">{po.time}</span>
+                      <span className="text-[10px] text-slate-400 pl-5 font-medium">{po.time}</span>
                     </div>
                   </td>
 
                   {/* Products */}
-                  <td className="px-4 py-3 align-middle hidden md:table-cell max-w-[320px] border-r border-slate-100 last:border-r-0">
+                  <td className="p-2.5 px-3 hidden md:table-cell max-w-[320px]">
                     <div className="flex flex-wrap gap-1.5">
                       {po.products.slice(0, 2).map((p, idx) => (
                         <ProductPill key={idx} name={p.name} qty={p.quantity} stocks={p.stocks} />
                       ))}
                       {po.products.length > 2 && (
-                        <span className="inline-flex items-center text-[10px] font-black text-slate-500 bg-slate-100 px-2.5 py-1 rounded-full whitespace-nowrap border border-slate-200">
+                        <span className="inline-flex items-center text-[9px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200">
                           +{po.products.length - 2} more
                         </span>
                       )}
@@ -378,28 +376,39 @@ const VerticalTable = ({ data, onClick }: { data: DirectPurchaseData[]; onClick:
                   </td>
 
                   {/* Quantity */}
-                  <td className="px-4 py-3 align-middle text-right whitespace-nowrap border-r border-slate-100 last:border-r-0">
-                    <span className="text-[13px] font-black text-slate-800 tabular-nums">
+                  <td className="p-2.5 px-3 text-right">
+                    <span className="text-[11px] font-semibold text-slate-600 tabular-nums">
                       {totalQty}
                     </span>
                   </td>
 
                   {/* Total */}
-                  <td className="px-4 py-3 align-middle text-right whitespace-nowrap border-r border-slate-100 last:border-r-0">
-                    <span className="text-[15px] font-black text-blue-600 tabular-nums tracking-tight">
+                  <td className="p-2.5 px-3 text-right">
+                    <span className="font-mono text-xs font-bold text-slate-900 tabular-nums">
                       {fmt(po.total_cost)}
                     </span>
                   </td>
 
                   {/* Action */}
-                  <td className="px-4 py-3 align-middle text-right border-r border-slate-100 last:border-r-0">
-                    <ArrowBtn />
+                  <td className="p-2.5 px-3 text-right">
+                    <div className="flex items-center justify-end">
+                      <div className="w-7 h-7 flex items-center justify-center rounded-lg bg-transparent text-slate-400 group-hover:bg-blue-50 group-hover:text-blue-600 transition-colors">
+                        <ChevronRight size={14} />
+                      </div>
+                    </div>
                   </td>
                 </tr>
               );
             })}
           </tbody>
         </table>
+      </div>
+
+      {/* Footer */}
+      <div className="border-t border-slate-50 px-4 py-2 flex items-center justify-between bg-white shrink-0">
+        <span className="text-[11px] text-slate-400 font-medium">
+          {data.length} of {totalCount} purchase{totalCount !== 1 ? "s" : ""}
+        </span>
       </div>
     </div>
   );
@@ -443,15 +452,45 @@ const PurchaseHistory = () => {
   const { getData } = useApi();
   const location = useLocation();
   const isCleanMode = new URLSearchParams(location.search).get("mode") === "clean";
+  const { setActions } = useHeader();
 
   const handleOpenNewTab = () => {
     window.open(`${window.location.pathname}?mode=clean`, "_blank", "noopener,noreferrer");
   };
 
+  useEffect(() => {
+    setActions(
+      <div className="flex items-center gap-2">
+        {!isCleanMode && (
+          <button
+            onClick={handleOpenNewTab}
+            className="h-8 w-8 flex items-center justify-center rounded-md border border-slate-200 text-slate-600 bg-white hover:bg-slate-50 active:scale-95 transition-all shadow-sm shrink-0"
+            title="Open in New Tab"
+          >
+            <ExternalLink size={13} />
+          </button>
+        )}
+      </div>
+    );
+    return () => setActions(null);
+  }, [setActions, isCleanMode]);
+
   const [allPurchases, setAllPurchases] = useState<DirectPurchaseData[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [viewMode, setViewMode] = useState<ViewMode>("vertical");
   const [selectedPO, setSelectedPO] = useState<DirectPurchaseData | null>(null);
+
+  const [filterType, setFilterType] = useState("");
+  const [filterVendor, setFilterVendor] = useState("");
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+
+  const vendorsList = useMemo(() => Array.from(new Set(allPurchases.map(p => p.vendor))), [allPurchases]);
+  const activeFiltersCount = [filterType, filterVendor].filter(Boolean).length;
+  
+  const resetFilters = () => {
+    setFilterType("");
+    setFilterVendor("");
+  };
 
   useEffect(() => {
     const load = async () => {
@@ -469,52 +508,54 @@ const PurchaseHistory = () => {
     setSelectedPO(po);
   };
 
-  const filtered = allPurchases.filter(
-    (po) =>
-      po.poNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      po.vendor.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filtered = allPurchases.filter((po) => {
+    const matchesSearch = po.poNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      po.vendor.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesType = !filterType || po.purchaseType === filterType;
+    const matchesVendor = !filterVendor || po.vendor === filterVendor;
+    return matchesSearch && matchesType && matchesVendor;
+  });
 
   return (
     <>
       <style>{STYLES}</style>
 
-      <div className={`flex flex-col gap-6 ${isCleanMode ? "h-[calc(100vh-2rem)]" : "h-[calc(100vh-5rem)]"} pb-2 overflow-x-hidden relative`}>
+      <div className="flex-1 flex flex-col min-h-0 gap-2.5 font-sans w-full overflow-hidden relative">
         {!isCleanMode && <div className="flex-none"><DirectHeader /></div>}
 
         {/* ── Toolbar ── */}
-        <div className="flex-none flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-          <div className="relative flex-1 max-w-sm">
+        <div className="bg-white border border-slate-100 rounded-lg p-1.5 px-2.5 flex flex-nowrap items-center gap-1.5 shadow-sm overflow-x-auto scrollbar-none">
+          <div className="relative w-80 shrink-0">
             <Search
-              size={15}
-              className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none"
+              size={13}
+              className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
             />
             <input
-              className="w-full pl-9 pr-4 py-2.5 bg-white border border-zinc-200 rounded-lg text-sm text-zinc-800 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all shadow-sm"
+              className="w-full h-8 pl-8 pr-3 text-[12px] font-medium text-slate-700 bg-slate-50 border border-slate-200 rounded-md placeholder:text-slate-400 focus:outline-none focus:border-slate-300 focus:bg-white transition-colors"
               placeholder="Search PO number or vendor…"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
 
-          <button className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-zinc-600 bg-white border border-zinc-200 rounded-lg hover:bg-zinc-50 hover:border-zinc-300 transition-all shadow-sm whitespace-nowrap">
-            <SlidersHorizontal size={14} className="text-zinc-400" />
-            Filters
+          <button
+            type="button"
+            onClick={() => setIsFilterOpen(true)}
+            className={`h-8 px-3 rounded-md border text-xs font-semibold flex items-center gap-1.5 active:scale-95 transition-all shadow-sm shrink-0 ${
+              activeFiltersCount > 0
+                ? "border-blue-200 text-blue-600 bg-blue-50/50"
+                : "border-slate-200 text-slate-650 bg-white hover:bg-slate-50"
+            }`}
+            title="Filters"
+          >
+            <Filter size={13} />
+            {activeFiltersCount > 0 && (
+              <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+            )}
           </button>
 
-          {!isCleanMode && (
-            <button 
-              type="button"
-              className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-zinc-650 bg-white border border-zinc-200 rounded-lg hover:bg-zinc-50 hover:border-zinc-300 transition-all shadow-sm whitespace-nowrap active:scale-95 shrink-0"
-              onClick={handleOpenNewTab}
-            >
-              <ExternalLink size={14} className="text-zinc-400" />
-              Open in New Tab
-            </button>
-          )}
-
           {searchTerm && (
-            <span className="self-center text-xs text-zinc-400 font-medium px-3 py-1 bg-zinc-100 rounded-full whitespace-nowrap">
+            <span className="text-[11px] text-slate-400 font-medium ml-1 shrink-0">
               {filtered.length} {filtered.length === 1 ? "result" : "results"}
             </span>
           )}
@@ -524,6 +565,43 @@ const PurchaseHistory = () => {
           <ViewToggle current={viewMode} onChange={setViewMode} />
         </div>
 
+        <RightSidebarFilter
+          isOpen={isFilterOpen}
+          onClose={() => setIsFilterOpen(false)}
+          onApply={() => {}}
+          onClear={resetFilters}
+          title="Purchase Order Filters"
+        >
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Purchase Type</label>
+              <ReusableSelect
+                options={[
+                  { label: "All Types", value: "" },
+                  { label: "Direct Purchase", value: "Direct" },
+                  { label: "LPO (Local PO)", value: "LPO" }
+                ]}
+                value={filterType}
+                onValueChange={setFilterType}
+                placeholder="Type"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Vendor</label>
+              <ReusableSelect
+                options={[
+                  { label: "All Vendors", value: "" },
+                  ...vendorsList.map(vendor => ({ label: vendor, value: vendor }))
+                ]}
+                value={filterVendor}
+                onValueChange={setFilterVendor}
+                placeholder="Vendor"
+              />
+            </div>
+          </div>
+        </RightSidebarFilter>
+
         {/* ── Content ── */}
         {filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-zinc-400">
@@ -532,13 +610,15 @@ const PurchaseHistory = () => {
             <p className="text-xs mt-1">Try adjusting your search term</p>
           </div>
         ) : viewMode === "grid" ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-            {filtered.map((po) => (
-              <GridCard key={po.id} po={po} onClick={() => handleCardClick(po)} />
-            ))}
+          <div className="overflow-x-auto overflow-y-auto bg-white border border-slate-100 rounded-lg shadow-sm p-4 flex-1 min-h-0">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+              {filtered.map((po) => (
+                <GridCard key={po.id} po={po} onClick={() => handleCardClick(po)} />
+              ))}
+            </div>
           </div>
         ) : (
-          <VerticalTable data={filtered} onClick={handleCardClick} />
+          <VerticalTable data={filtered} onClick={handleCardClick} totalCount={allPurchases.length} />
         )}
       </div>
       <FloatingFormCard

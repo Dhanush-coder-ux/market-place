@@ -62,16 +62,21 @@ export const ProfileSettingsPage = () => {
               </div>
               
               <div className="p-6 space-y-4 max-w-2xl">
-                <div className="flex items-center justify-between p-4 rounded-lg border border-slate-100 bg-white hover:border-slate-200 hover:shadow-[0_2px_8px_rgba(0,0,0,0.02)] transition-all">
+                <div className="flex items-center justify-between p-4 rounded-lg border border-slate-100 bg-slate-50/50 opacity-75 cursor-not-allowed transition-all">
                   <div className="space-y-0.5 pr-4">
-                    <label className="text-[14.5px] font-semibold text-slate-800 cursor-pointer" onClick={() => toggleSetting('poGrn')}>
-                      PO-GRN (Goods Receipt Note)
-                    </label>
-                    <p className="text-[13px] text-slate-500">Enable standard Purchase Order to Goods Receipt Note processing workflow.</p>
+                    <div className="flex items-center gap-2">
+                      <label className="text-[14.5px] font-semibold text-slate-500 cursor-not-allowed">
+                        PO-GRN (Goods Receipt Note)
+                      </label>
+                      <span className="px-2 py-0.5 text-[10px] font-bold text-amber-600 bg-amber-50 border border-amber-200/60 rounded-full uppercase tracking-wider">
+                        Coming Soon
+                      </span>
+                    </div>
+                    <p className="text-[13px] text-slate-400">Enable standard Purchase Order to Goods Receipt Note processing workflow.</p>
                   </div>
                   <Switch 
-                    checked={settings.poGrn} 
-                    onCheckedChange={() => toggleSetting('poGrn')} 
+                    checked={false} 
+                    disabled={true}
                   />
                 </div>
 

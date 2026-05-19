@@ -29,7 +29,7 @@ const ProductSearch = () => {
   }, [setActions, navigate]);
 
   const fetchProducts = async (q: string) => {
-    if (!q) return [];
+
     try {
       const res = await getData(ENDPOINTS.INVENTORIES, { limit: "10", offset: "1", q, shop_id: SHOP_ID });
       const data = res?.data ? (Array.isArray(res.data) ? res.data : [res.data]) : [];

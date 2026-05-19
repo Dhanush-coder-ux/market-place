@@ -29,7 +29,7 @@ const EmployeeSearch = () => {
   }, [setActions, navigate]);
 
   const fetchEmployees = async (q: string) => {
-    if (!q) return [];
+
     try {
       const res = await getData(`${ENDPOINTS.EMPLOYEES}/by/shop/${SHOP_ID}`, { limit: "10", offset: "1", q});
       const data = res?.data ? (Array.isArray(res.data) ? res.data : [res.data]) : [];
@@ -58,7 +58,7 @@ const EmployeeSearch = () => {
           <div className="relative bg-white shadow-md rounded-lg">
             <SearchSelect
               labelKey="displayName"
-              valueKey="employee_id"
+              valueKey="id"
               fetchOptions={fetchEmployees}
               placeholder="Search and select an employee..."
               className="w-full h-16 border-none text-lg font-medium"

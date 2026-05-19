@@ -18,8 +18,8 @@ const getPageHeaderInfo = (pathname: string) => {
       subtitle: "Comprehensive tracking and management of sales invoices.",
     },
     "/product": {
-      title: "Inventory Catalog",
-      subtitle: "Oversee product specifications, variants, and stock.",
+      title: "Products Directory",
+      subtitle: "Browse and manage your entire product catalog.",
     },
     "/product/detail": {
       title: "Product Details",
@@ -27,10 +27,10 @@ const getPageHeaderInfo = (pathname: string) => {
     },
     "/product/add": {
       title: "Create Product",
-      subtitle: "Register new inventory items into the system.",
+      subtitle: "Register and onboard a new product to your inventory.",
     },
     "/product/all": {
-      title: "Unified Inventory",
+      title: "Products List",
       subtitle: "Complete view of products across all locations.",
     },
     "/product/drafts": {
@@ -50,7 +50,7 @@ const getPageHeaderInfo = (pathname: string) => {
       subtitle: "Acknowledge and process incoming shipments.",
     },
     "/po-grn/update": {
-      title: "Edit Receipt",
+      title: "Update Receipt",
       subtitle: "Update existing goods receipt documentation.",
     },
     "/purchase-history": {
@@ -61,33 +61,45 @@ const getPageHeaderInfo = (pathname: string) => {
       title: "Production Entry",
       subtitle: "Log completed manufacturing and assembly batches.",
     },
+    "/purchase": {
+      title: "Purchase Management",
+      subtitle: "Monitor supplier invoices, and payment statuses.",
+    },
     "/purchase/detail": {
       title: "Purchase Details",
       subtitle: "Review transaction specifics and itemized costs.",
     },
     "/purchase/add": {
-      title: "Direct Purchase",
+      title: "Create Purchase",
       subtitle: "Execute immediate procurement without a purchase order.",
     },
+    "/supplier/all": {
+      title: "Suppliers List",
+      subtitle: "Browse and manage your vendor relationships.",
+    },
     "/supplier": {
-      title: "Vendor Directory",
-      subtitle: "Manage supplier relationships and contact information.",
+      title: "Suppliers Directory",
+      subtitle: "Browse and manage your entire supplier catalog.",
     },
     "/supplier/detail": {
-      title: "Vendor Profile",
+      title: "Supplier Details",
       subtitle: "Detailed ledger and transaction history for this vendor.",
     },
     "/supplier/add": {
-      title: "Register Vendor",
-      subtitle: "Onboard a new supplier to your procurement network.",
+      title: "Create Supplier",
+      subtitle: "Register and onboard a new supplier to your procurement network.",
     },
     "/employee": {
-      title: "Employee Directory",
-      subtitle: "Manage staff profiles, roles, and permissions.",
+      title: "Employees Diectory",
+      subtitle: "Browse and manage your staff directory.",
+    },
+    "/employee/all": {
+      title: "Employees List",
+      subtitle: "Browse and manage your entire staff catalog.",
     },
     "/employee/add": {
-      title: "New Employee",
-      subtitle: "Register a new staff member to the organization.",
+      title: "Create Employee",
+      subtitle: "Onboard and register a new staff member to the organization.",
     },
     "/inventory": {
       title: "Inventory Master",
@@ -114,7 +126,7 @@ const getPageHeaderInfo = (pathname: string) => {
       subtitle: "Manage your account preferences and security.",
     },
     "/profile/add": {
-      title: "Edit Profile",
+      title: "Update Profile",
       subtitle: "Update your personal and professional information.",
     },
     "/create-digital-store": {
@@ -130,12 +142,12 @@ const getPageHeaderInfo = (pathname: string) => {
       subtitle: "Centralized database of your client relationships.",
     },
     "/customers-Summary": {
-      title: "Customer Details",
-      subtitle: "Monitor outstanding receivables and credit status.",
+      title: "Customers List",
+      subtitle: "Browse customer balances, credit limits, and outstanding receivables.",
     },
     "/customers/add": {
-      title: "Add Customer",
-      subtitle: "Register a new client profile in the directory.",
+      title: "Create Customer",
+      subtitle: "Register and onboard a new customer profile in the directory.",
     },
     "/customers/drafts": {
       title: "Customer Drafts",
@@ -143,51 +155,59 @@ const getPageHeaderInfo = (pathname: string) => {
     },
   };
 
+  if (routes[pathname]) return routes[pathname];
+
   // Dynamic match for Customer Profile
   if (pathname.match(/^\/customers\/[^/]+$/)) {
     return {
-      title: "Customer Profile",
-      subtitle: "View complete customer information and history.",
+      title: "Customer Details",
+      subtitle: "Comprehensive view of customer ledger, balance history, and info.",
     };
   }
 
+  if (pathname.match(/^\/sales\/[^/]+$/)) {
+    return {
+      title: "Customer Details",
+      subtitle: "Comprehensive view of customer ledger, balance history, and info.",
+    };
+  }
   // Dynamic match for Edit Customer
   if (pathname.match(/^\/customers\/[^/]+\/edit$/)) {
     return {
-      title: "Update Customer",
-      subtitle: "Modify existing customer details.",
+      title: "Edit Customer",
+      subtitle: "Modify and update customer profile details.",
     };
   }
 
   // Dynamic match for Employee Profile
   if (pathname.match(/^\/employee\/[^/]+$/)) {
     return {
-      title: "Employee Profile",
-      subtitle: "View complete staff information and status.",
+      title: "Employee Details",
+      subtitle: "Comprehensive view of staff credentials, history, and status.",
     };
   }
 
   // Dynamic match for Edit Employee
   if (pathname.match(/^\/employee\/[^/]+\/edit$/)) {
     return {
-      title: "Update Employee",
-      subtitle: "Modify existing staff details.",
+      title: "Edit Employee",
+      subtitle: "Modify and update staff settings.",
     };
   }
 
   // Dynamic match for Supplier Profile
   if (pathname.match(/^\/supplier\/[^/]+$/)) {
     return {
-      title: "Vendor Profile",
-      subtitle: "View complete supplier information and history.",
+      title: "Supplier Details",
+      subtitle: "Comprehensive view of supplier ledger, purchases, and logs.",
     };
   }
 
   // Dynamic match for Edit Supplier
   if (pathname.match(/^\/supplier\/[^/]+\/edit$/)) {
     return {
-      title: "Update Vendor",
-      subtitle: "Modify existing supplier details.",
+      title: "Edit Supplier",
+      subtitle: "Modify and update existing vendor details.",
     };
   }
 
@@ -195,15 +215,15 @@ const getPageHeaderInfo = (pathname: string) => {
   if (pathname.match(/^\/product\/[^/]+$/)) {
     return {
       title: "Product Details",
-      subtitle: "View complete product information, variants and history.",
+      subtitle: "Comprehensive view of product specifications, variants, and logs.",
     };
   }
 
   // Dynamic match for Edit Product
   if (pathname.match(/^\/product\/[^/]+\/edit$/)) {
     return {
-      title: "Update Product",
-      subtitle: "Modify existing product details.",
+      title: "Edit Product",
+      subtitle: "Modify and update existing product details.",
     };
   }
 
@@ -228,6 +248,19 @@ const getPageHeaderInfo = (pathname: string) => {
   };
 };
 
+const isDetailsRoute = (pathname: string) => {
+  const parts = pathname.split("/").filter(Boolean);
+  if (parts.length === 2) {
+    const [entity, id] = parts;
+    const standardActions = ["add", "drafts", "all", "history"];
+    if (["customers", "employee", "supplier", "product", "sales"].includes(entity)) {
+      return !standardActions.includes(id);
+    }
+  }
+  const staticDetails = ["/purchase/detail", "/product/detail", "/supplier/detail"];
+  return staticDetails.includes(pathname);
+};
+
 const MainLayout = () => {
   const location = useLocation();
   const { actions, bottomActions } = useHeader();
@@ -240,7 +273,26 @@ const MainLayout = () => {
   const isCleanMode = new URLSearchParams(location.search).get("mode") === "clean";
   const hideNav = isCleanMode;
 
-  // 3. Extract the current title info based on the URL
+  const listPaths = [
+    "/billing",
+    "/sales",
+    "/purchase-history",
+    "/purchase",
+    "/supplier",
+    "/supplier/all",
+    "/employee",
+    "/employee/all",
+    "/inventory",
+    "/stock-movement",
+    "/customers-Summary",
+    "/product",
+    "/product/all",
+    "/orders",
+    "/po-grn"
+  ];
+  const isListPage = listPaths.includes(location.pathname);
+
+  const isDetails = isDetailsRoute(location.pathname);
   const { title, subtitle, icon } = getPageHeaderInfo(location.pathname);
 
   return (
@@ -256,19 +308,29 @@ const MainLayout = () => {
         )}
 
         <main className="flex-1 flex flex-col min-w-0 relative overflow-hidden">
-          <div className={`flex-1 overflow-y-auto custom-scrollbar mobile-scroll relative ${hideNav ? (isBillingPage ? "p-0" : "p-4 md:p-6") : isStorePage ? "p-0 pb-20 md:pb-0" : "p-2 md:p-3 lg:p-4 pb-36 md:pb-0"} ${!bottomActions && "pb-20 md:pb-0"}`}>
+          <div className={`flex-1 flex flex-col min-h-0 overflow-hidden relative ${hideNav ? (isBillingPage ? "p-0" : "p-2.5 md:p-4") : isStorePage ? "p-0 pb-20 md:pb-0" : "p-1.5 md:p-2 lg:p-2.5"} ${!bottomActions && "pb-20 md:pb-0"}`}>
 
-            {!isStorePage && !hideNav && (
-              <div className="mb-2 sm:mb-4">
-                <Breadcrumb />
+            {!isStorePage && (
+              <div className="">
+                {!hideNav && <Breadcrumb />}
 
-                <div className="mt-2 sm:mt-4">
-                  <Title title={title} subtitle={subtitle} icon={icon} actions={actions} />
-                </div>
+                {!isDetails && (
+                  <div className="">
+                    <Title title={title} subtitle={subtitle} icon={icon} actions={actions} />
+                  </div>
+                )}
               </div>
             )}
 
-            <Outlet />
+            {isListPage || isDetails ? (
+              <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+                <Outlet />
+              </div>
+            ) : (
+              <div className="flex-1 overflow-y-auto custom-scrollbar mobile-scroll pb-16 md:pb-6">
+                <Outlet />
+              </div>
+            )}
           </div>
 
           {/* Global Bottom Action Bar (Glassmorphism) */}

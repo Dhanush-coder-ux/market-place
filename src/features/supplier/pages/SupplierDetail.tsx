@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   AlertCircle, Package, Mail, Pencil, User, MapPin, Phone, Trash2,
-  Store, Database, ShoppingBag, History, CreditCard,
+  Store, Database, ShoppingBag, History,
 } from "lucide-react";
 import {
   fmt, SectionCard, DetailItem, InfoRow, Modal,

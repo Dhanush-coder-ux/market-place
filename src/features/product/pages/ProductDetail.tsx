@@ -58,7 +58,6 @@ const ProductDetail = () => {
   const { showToast } = useToast();
 
   const [product, setProduct] = useState<InventoryRecord | null>(null);
-  const [supplierName, setSupplierName] = useState<string>("Not Assigned");
   const [recordLoading, setRecordLoading] = useState(true);
   const [activeTab, setActiveTab] = useState(0);
   const [viewValue, setViewValue] = useState<{ label: string; value: string } | null>(null);
@@ -75,22 +74,6 @@ const ProductDetail = () => {
       if (res) {
         const prod = Array.isArray(res.data) ? res.data[0] : res.data;
         setProduct(prod);
-        
-        // Fetch supplier name if available
-        const supId = prod?.datas?.supplier || prod?.supplier_id || prod?.datas?.supplier_id || prod?.supplier;
-        if (supId) {
-          try {
-            const sres = await getData(`${ENDPOINTS.SUPPLIERS}/by/${SHOP_ID}/${supId}`);
-            const s = Array.isArray(sres?.data) ? sres.data[0] : sres?.data;
-            if (s) {
-              setSupplierName(s.name || s.datas?.supplier_name || s.supplier_name || String(supId));
-            } else {
-              setSupplierName(String(supId));
-            }
-          } catch {
-            setSupplierName(String(supId));
-          }
-        }
       }
       setRecordLoading(false);
     });

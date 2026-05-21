@@ -48,8 +48,8 @@ export function StockMovementsTable({ rows, loading }: StockMovementsTableProps)
                   <th className="px-5 py-3.5">Date</th>
                   <th className="px-5 py-3.5">Type</th>
                   <th className="px-5 py-3.5">Product / Variant / Batch</th>
-                  <th className="px-5 py-3.5">Ordered Stock</th>
-                  <th className="px-5 py-3.5">Received Stock</th>
+                  <th className="px-5 py-3.5">Base Qty</th>
+                  <th className="px-5 py-3.5">In / Out</th>
                   <th className="px-5 py-3.5">Stock Overview</th>
                   <th className="px-5 py-3.5">Details</th>
                 </tr>

@@ -694,20 +694,22 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                   </div>
                 </div>
 
-                <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden hover:shadow-md transition-all pf-section-enter">
-                  <div className="px-6 py-4 bg-gradient-to-r from-amber-50/50 to-transparent border-b border-slate-100 flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center text-amber-600">
-                      <BarChart2 size={16} />
+                {!form.has_variants && (
+                  <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden hover:shadow-md transition-all pf-section-enter">
+                    <div className="px-6 py-4 bg-gradient-to-r from-amber-50/50 to-transparent border-b border-slate-100 flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center text-amber-600">
+                        <BarChart2 size={16} />
+                      </div>
+                      <h2 className="text-xs font-bold text-slate-800  ">Stock & inventory</h2>
                     </div>
-                    <h2 className="text-xs font-bold text-slate-800  ">Stock & inventory</h2>
+                    <div className="p-6 grid grid-cols-1 gap-5">
+                      <InputField label="Reorder Point" name="reorder_point" required
+                        type="number" value={form.reorder_point} onChange={handleChange}
+                        placeholder="5"
+                      />
+                    </div>
                   </div>
-                  <div className="p-6 grid grid-cols-1 gap-5">
-                    <InputField label="Reorder Point" name="reorder_point" required
-                      type="number" value={form.reorder_point} onChange={handleChange}
-                      placeholder="5"
-                    />
-                  </div>
-                </div>
+                )}
               </div>
             </div>
           </div>

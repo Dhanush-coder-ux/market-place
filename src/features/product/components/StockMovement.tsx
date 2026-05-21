@@ -16,12 +16,31 @@ const StockMovementTab = ({ inventoryId }: StockMovementTabProps) => {
     if (!inventoryId) return;
     setLoading(true);
     
-    // Only call the stock movement route, no other APIs
     getData(`${ENDPOINTS.S_ADJUSTMENTS}/by/shop/${SHOP_ID}`, { inventory_id: inventoryId })
-      .then((res) => {
+      .then(async (res) => {
         const rawData = res?.data || res?.datas || (Array.isArray(res) ? res : []);
         
-        // Map rawData to the rows format expected by StockMovementsTable
+        // Extract unique supplier IDs for purchase movements
+        const supplierIds = [...new Set(rawData
+          .filter((a: any) => a.movement_type === "DIRECT" || a.movement_type === "PURCHASE" || (a.movement_type || "").includes("PO_"))
+          .map((a: any) => a.supplier_id || a.datas?.supplier_id || a.reference_id)
+          .filter(Boolean))];
+          
+        const supplierNames: Record<string, string> = {};
+        
+        // Fetch supplier names in parallel
+        await Promise.all(supplierIds.map(async (sid) => {
+          try {
+            const sres = await getData(`${ENDPOINTS.SUPPLIERS}/by/${SHOP_ID}/${sid}`);
+            const s = Array.isArray(sres?.data) ? sres.data[0] : sres?.data;
+            if (s) {
+              supplierNames[sid as string] = s.name || s.datas?.supplier_name || s.supplier_name || String(sid);
+            }
+          } catch (e) {
+            // ignore
+          }
+        }));
+
         const rows: any[] = [];
         
         rawData.forEach((a: any) => {
@@ -33,6 +52,12 @@ const StockMovementTab = ({ inventoryId }: StockMovementTabProps) => {
           else if (mType === "RETURN" || mType === "SALE_RETURN") { displayType = "Return"; source = "return"; }
           else if (mType.includes("PO_")) { displayType = "PO Purchase"; source = "purchase"; }
 
+          const sid = a.supplier_id || a.datas?.supplier_id || a.reference_id;
+          let finalDesc = a.description || "";
+          if (source === "purchase" && sid && supplierNames[sid]) {
+            finalDesc = `Supplier: ${supplierNames[sid]}`;
+          }
+
           const products = (a.products || []) as any[];
           const dateStr = String(a.adjusted_date || a.created_at || new Date().toISOString());
 
@@ -43,7 +68,7 @@ const StockMovementTab = ({ inventoryId }: StockMovementTabProps) => {
             const baseRow = {
               id: a.id,
               date: dateStr,
-              description: a.description || "",
+              description: finalDesc,
               displayType,
               source,
               isInc: !isDecrement,
@@ -93,7 +118,6 @@ const StockMovementTab = ({ inventoryId }: StockMovementTabProps) => {
           });
         });
         
-        // Sort newest first
         rows.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
         setMovements(rows);
       })

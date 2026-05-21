@@ -49,7 +49,7 @@ const SupplierSearch = () => {
   );
 };
 
-const TABS = ["General Info", "Financials", "Purchase Orders"];
+const TABS = ["General Info", "Purchase Orders"];
 
 export default function SupplierDetail() {
   const { id } = useParams<{ id: string }>();
@@ -77,7 +77,7 @@ export default function SupplierDetail() {
   }, [id]);
 
   useEffect(() => {
-    if (!id || activeTab !== 2) return;
+    if (!id || activeTab !== 1) return;
     setPurLoading(true);
     getData(`${ENDPOINTS.PURCHASES}/by/supplier/${SHOP_ID}/${id}`).then((res: any) => {
       setPurchases(res?.data ? (Array.isArray(res.data) ? res.data : [res.data]) : []);
@@ -181,8 +181,8 @@ export default function SupplierDetail() {
       </div>
 
       {/* Tab Panels (scrollable or flex-locked depending on active tab) */}
-      <div className={`flex-1 min-h-0 ${activeTab === 2 ? "flex flex-col overflow-hidden" : "overflow-y-auto custom-scrollbar"} px-1 pb-6`}>
-        <div className={`animate-in fade-in slide-in-from-bottom-4 duration-500 ${activeTab === 2 ? "flex flex-col flex-1 min-h-0 h-full" : ""}`}>
+      <div className={`flex-1 min-h-0 ${activeTab === 1 ? "flex flex-col overflow-hidden" : "overflow-y-auto custom-scrollbar"} px-1 pb-6`}>
+        <div className={`animate-in fade-in slide-in-from-bottom-4 duration-500 ${activeTab === 1 ? "flex flex-col flex-1 min-h-0 h-full" : ""}`}>
           {activeTab === 0 && (
             <div className="grid grid-cols-1 xl:grid-cols-4 gap-4">
               <div className="xl:col-span-3 space-y-4">
@@ -256,30 +256,7 @@ export default function SupplierDetail() {
             </div>
           )}
 
-          {activeTab === 1 && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <SectionCard title="Payment Status">
-                <div className="flex flex-col items-center py-12 text-center space-y-4">
-                  <div className="w-16 h-16 bg-slate-50 rounded-lg flex items-center justify-center text-slate-300 mx-auto">
-                    <CreditCard size={32} />
-                  </div>
-                  <p className="text-slate-400 font-medium">Financial records module loading...</p>
-                </div>
-              </SectionCard>
-              <SectionCard className="bg-slate-900 text-white border-0 shadow-2xl shadow-blue-200">
-                <h2 className="text-[10px] font-bold text-blue-400   mb-6">Current Payable</h2>
-                <div className="space-y-1 mb-8">
-                  <div className="text-4xl font-black">{fmt(Number(datas.pending_amount) || 0)}</div>
-                  <div className="text-xs text-slate-400 font-medium">Net amount payable to this vendor</div>
-                </div>
-                <button className="w-full py-4 bg-blue-600 hover:bg-blue-700 rounded-lg font-bold text-sm transition-all shadow-lg shadow-blue-900/20">
-                  Record Payment
-                </button>
-              </SectionCard>
-            </div>
-          )}
-
-          {activeTab === 2 && (() => {
+          {activeTab === 1 && (() => {
             // Flatten: purchase → products rows, with purchase-level metadata attached
             const rows: any[] = [];
             purchases.forEach((p: any) => {

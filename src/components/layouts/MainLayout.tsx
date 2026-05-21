@@ -257,6 +257,15 @@ const isDetailsRoute = (pathname: string) => {
       return !standardActions.includes(id);
     }
   }
+  
+  if (parts.length >= 2 && parts[1] === "detail") {
+    return true;
+  }
+  
+  if (pathname.startsWith("/purchase/detail/") || pathname.startsWith("/product/detail/")) {
+    return true;
+  }
+
   const staticDetails = ["/purchase/detail", "/product/detail", "/supplier/detail"];
   return staticDetails.includes(pathname);
 };
@@ -312,7 +321,7 @@ const MainLayout = () => {
 
             {!isStorePage && (
               <div className="">
-                {!hideNav && <Breadcrumb />}
+                {!hideNav && !isDetails && <Breadcrumb />}
 
                 {!isDetails && (
                   <div className="">

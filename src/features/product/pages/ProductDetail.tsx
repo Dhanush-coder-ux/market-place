@@ -58,6 +58,7 @@ const ProductDetail = () => {
   const { showToast } = useToast();
 
   const [product, setProduct] = useState<InventoryRecord | null>(null);
+  const [supplierName, setSupplierName] = useState<string>("Not Assigned");
   const [recordLoading, setRecordLoading] = useState(true);
   const [activeTab, setActiveTab] = useState(0);
   const [viewValue, setViewValue] = useState<{ label: string; value: string } | null>(null);
@@ -70,8 +71,27 @@ const ProductDetail = () => {
   useEffect(() => {
     if (!id) return;
     setRecordLoading(true);
-    getData(`${ENDPOINTS.INVENTORIES}/by/${SHOP_ID}/${id}`).then((res) => {
-      if (res) setProduct(Array.isArray(res.data) ? res.data[0] : res.data);
+    getData(`${ENDPOINTS.INVENTORIES}/by/${SHOP_ID}/${id}`).then(async (res) => {
+      if (res) {
+        const prod = Array.isArray(res.data) ? res.data[0] : res.data;
+        setProduct(prod);
+        
+        // Fetch supplier name if available
+        const supId = prod?.datas?.supplier || prod?.supplier_id || prod?.datas?.supplier_id || prod?.supplier;
+        if (supId) {
+          try {
+            const sres = await getData(`${ENDPOINTS.SUPPLIERS}/by/${SHOP_ID}/${supId}`);
+            const s = Array.isArray(sres?.data) ? sres.data[0] : sres?.data;
+            if (s) {
+              setSupplierName(s.name || s.datas?.supplier_name || s.supplier_name || String(supId));
+            } else {
+              setSupplierName(String(supId));
+            }
+          } catch {
+            setSupplierName(String(supId));
+          }
+        }
+      }
       setRecordLoading(false);
     });
   }, [id]);
@@ -178,7 +198,7 @@ const ProductDetail = () => {
           ]}
           infoItems={[
             { icon: Tag, text: `Unit: ${unit}` },
-            { icon: ShoppingCart, text: `Stock: ${currentStock}` },
+            { icon: ShoppingCart, text: `Available in inventory: ${currentStock}` },
           ]}
           actions={
             <div className="flex items-center gap-1.5">
@@ -260,7 +280,6 @@ const ProductDetail = () => {
                         <p className="text-[13px] font-semibold text-slate-400">—</p>
                       )}
                     </div>
-                    <DetailItem icon={ShoppingCart} label="Supplier" value={String(datas.supplier || "—")} onClick={click("Supplier", String(datas.supplier || "—"))} />
                     <DetailItem icon={Info} label="Description" value={description} onClick={click("Description", description)} />
                   </div>
                 </div>
@@ -279,7 +298,23 @@ const ProductDetail = () => {
                   <DetailItem icon={Upload} label="Selling Price" value={String(sellingPrice) !== "—" ? `₹${sellingPrice}` : "—"} onClick={click("Selling Price", `₹${sellingPrice}`)} />
                   <DetailItem icon={Tag} label="MRP" value={datas.mrp ? `₹${datas.mrp}` : "—"} onClick={click("MRP", datas.mrp ? `₹${datas.mrp}` : "—")} />
                   <DetailItem icon={BarChart2} label="GST Rate" value={String(datas.gst || "—")} onClick={click("GST Rate", String(datas.gst || "—"))} />
-                  <DetailItem icon={Info} label="Reorder Point" value={String(reorderPoint || "—")} onClick={click("Reorder Point", String(reorderPoint || "—"))} />
+                  <div>
+                    <p className="text-[10px] font-medium text-slate-400  tracking-[0.05em] mb-1.5 flex items-center gap-1.5">
+                      <Info size={12} className="text-blue-400" /> Reorder Point
+                    </p>
+                    {hasVariants || hasBatches ? (
+                      <div 
+                        className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 border border-indigo-100 rounded-lg w-fit cursor-pointer hover:bg-indigo-100 transition-colors"
+                        onClick={() => setActiveTab(1)}
+                      >
+                        <Layers size={12} className="text-indigo-500" />
+                        <span className="text-[11px] font-bold text-indigo-600">Available in Inventory tab</span>
+                      </div>
+                    ) : (
+                      <p className="text-[13px] font-semibold text-slate-800 tabular-nums">{String(reorderPoint || "—")}</p>
+                    )}
+                  </div>
+                  <DetailItem icon={Package} label="Available In Inventory" value={String(currentStock)} onClick={click("Available In Inventory", String(currentStock))} />
                   <DetailItem icon={MapPin} label="Location" value={String(datas.storage_location || datas.location || "—")} onClick={click("Location", String(datas.storage_location || datas.location || "—"))} />
                 </div>
               </SectionCard>

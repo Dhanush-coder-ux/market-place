@@ -205,6 +205,19 @@ export const InventoryItemsCard = ({
   };
 
   const selectBatch = (rowIndex: number, batch: any) => {
+    const p = products[rowIndex];
+    const isDuplicate = products.some((existing, i) => 
+      i !== rowIndex && 
+      existing.inventory_id === p.inventory_id && 
+      (p.variant_id ? existing.variant_id === p.variant_id : true) && 
+      (existing.batch_id === batch.id || existing.batchNum === (batch.name || batch.batch_number))
+    );
+
+    if (isDuplicate) {
+      showToast(`${batch.name || batch.batch_number} is already added. Please select a different batch.`, "error");
+      return;
+    }
+
     const batchSerials = Array.isArray(batch.serial_numbers)
       ? batch.serial_numbers
       : Array.isArray(batch.serial_number)
@@ -504,6 +517,14 @@ export const InventoryItemsCard = ({
 
 
                                 if (opt.is_variant) {
+                                  if (!hasBatchTracking && !hasSerialTracking) {
+                                    const isDuplicate = products.some((p, i) => i !== index && p.inventory_id === opt.id && p.variant_id === opt.variant_id);
+                                    if (isDuplicate) {
+                                      showToast(`${opt.name} is already added to the list.`, "error");
+                                      return;
+                                    }
+                                  }
+
                                   updateProductFields(index, {
                                     inventory_id: opt.id,
                                     variant_id: opt.variant_id,
@@ -871,19 +892,12 @@ export const InventoryItemsCard = ({
                                     <span className="text-xs font-bold text-slate-800">Additional Settings</span>
                                   </div>
                                   <div className="grid grid-cols-2 gap-3">
-                                    <div>
-                                      <label className="text-[10px] font-bold text-slate-400 ml-1 mb-1 block">Storage Location</label>
-                                      <ReusableSelect
-                                        options={[
-                                          { value: 'Warehouse A', label: 'Warehouse A' },
-                                          { value: 'Cold Storage', label: 'Cold Storage' },
-                                          { value: 'Main Rack', label: 'Main Rack' }
-                                        ]}
-                                        value={product.storageLoc}
-                                        onValueChange={(val) => handleProductChange(index, "storageLoc", val)}
-                                        className="!h-9"
-                                      />
-                                    </div>
+                                    <Input
+                                      label="Storage Location"
+                                      value={product.storageLoc}
+                                      onChange={(e) => handleProductChange(index, "storageLoc", e.target.value)}
+                                      className="!h-9 !text-xs"
+                                    />
                                     <Input
                                       label="Reorder Threshold"
                                       type="number"

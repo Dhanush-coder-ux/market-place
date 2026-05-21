@@ -334,17 +334,17 @@ export const VariantRows = ({ combinations, baseSellPrice, baseBuyPrice }: { com
                   {/* Stats */}
                   <div className="flex items-center justify-between sm:justify-end gap-6 md:gap-10 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-50">
                     <div className="flex items-center gap-6 sm:gap-8">
-                      <div className="text-left sm:text-right min-w-[70px]">
-                        <p className="text-[9px] font-bold text-slate-400   leading-none mb-1">Buy Price</p>
+                      <div className="text-right min-w-[70px]">
+                        <p className="text-[9px] font-bold text-slate-400 leading-none mb-1">Buy Price</p>
                         <p className="text-xs font-bold text-rose-500">{formatCurrency(buyPrice)}</p>
                       </div>
-                      <div className="text-left sm:text-right min-w-[70px]">
-                        <p className="text-[9px] font-bold text-slate-400   leading-none mb-1">Sell Price</p>
+                      <div className="text-right min-w-[70px]">
+                        <p className="text-[9px] font-bold text-slate-400 leading-none mb-1">Sell Price</p>
                         <p className="text-xs font-bold text-emerald-600">{formatCurrency(sellPrice)}</p>
                       </div>
                     </div>
-                    <div className="text-right min-w-[90px]">
-                      <p className="text-[9px] font-bold text-slate-400   leading-none mb-1.5">Status</p>
+                    <div className="text-center min-w-[90px]">
+                      <p className="text-[9px] font-bold text-slate-400 leading-none mb-1.5">Status</p>
                       <span className={`inline-flex px-2 py-0.5 rounded-lg text-[10px] font-bold border ${stockStatus.color}`}>
                         {stockStatus.label}
                       </span>

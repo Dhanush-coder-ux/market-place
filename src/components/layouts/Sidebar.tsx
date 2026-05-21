@@ -65,15 +65,23 @@ const Sidebar: FC<{ links: SidebarLink[] }> = ({ links }) => {
    */
   // Memoize — only recomputes when settings or links change, not on every render
   const filteredLinks: SidebarLink[] = useMemo(() => links.map((link) => {
-    if (link.name === "Purchase" && link.subLinks) {
-      const visibleSubItems = link.subLinks.filter((item) => {
-        if (!isSubGroup(item)) return true;
-        if (!item.settingsKey) return true;
+    if (!link.subLinks) return link;
+
+    const visibleSubItems = link.subLinks.filter((item) => {
+      // Hide all 'Saved Drafts' options globally
+      if (item.name === "Saved Drafts" || (!isSubGroup(item) && (item as SubLink).path?.includes('/drafts'))) {
+        return false;
+      }
+
+      // Hide Purchase sub-groups based on settings
+      if (link.name === "Purchase" && isSubGroup(item) && item.settingsKey) {
         return settings[item.settingsKey] === true;
-      });
-      return { ...link, subLinks: visibleSubItems };
-    }
-    return link;
+      }
+      
+      return true;
+    });
+
+    return { ...link, subLinks: visibleSubItems };
   }), [links, settings]);
 
   // Stable callback — defined at component level (hooks cannot be called inside JSX)

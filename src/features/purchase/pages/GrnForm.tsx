@@ -241,9 +241,15 @@ const HeaderOverview = ({
           <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest mb-3">Breakdown</p>
           <div className="space-y-2">
             <div className="flex justify-between text-[13px]">
-              <span className="text-slate-500">Subtotal</span>
+              <span className="text-slate-500">Subtotal (Excl. GST)</span>
               <span className="font-semibold text-slate-700">₹{stats.subtotal.toLocaleString()}</span>
             </div>
+            {(stats.totalGst || 0) > 0 && (
+              <div className="flex justify-between text-[13px]">
+                <span className="text-indigo-500 font-medium">Total GST</span>
+                <span className="font-semibold text-indigo-600">₹{stats.totalGst.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+              </div>
+            )}
             <div className="flex justify-between text-[13px]">
               <span className="text-slate-500">Charges</span>
               <span className="font-semibold text-slate-700">₹{stats.totalCharges.toLocaleString()}</span>
@@ -346,18 +352,33 @@ const GrnForm = () => {
   const stats = useMemo(() => {
     let totalQty = 0;
     let subtotal = 0;
+    let totalGst = 0;
+    const gstBreakdown: Record<number, number> = {};
+
     products.forEach((p) => {
       const q = Number(p.quantity) || 0;
       const c = Number(p.costPrice) || 0;
+      const gstRate = Number(p.taxGst) || 0;
       totalQty += q;
-      subtotal += q * c;
+      
+      const lineExcl = q * c;
+      const lineGst = lineExcl * (gstRate / 100);
+      
+      subtotal += lineExcl;
+      totalGst += lineGst;
+      if (gstRate > 0) {
+        gstBreakdown[gstRate] = (gstBreakdown[gstRate] || 0) + lineGst;
+      }
     });
+
     const transportCost = Number(charges.transport) || 0;
     const otherCost = Number(charges.other) || 0;
     const totalCharges = transportCost + otherCost;
-    const grandTotal = Math.round(subtotal + totalCharges);
+
+    const grandTotal = Math.round(subtotal + totalGst + totalCharges);
     const paid = Number(payment.amountPaid) || 0;
     const outstanding = grandTotal - paid;
+
     const allocations = products.map((p) => {
       const q = Number(p.quantity) || 0;
       const c = Number(p.costPrice) || 0;
@@ -368,7 +389,8 @@ const GrnForm = () => {
       const netCostPerUnit = q > 0 ? (q * c + alloc) / q : c;
       return { alloc, netCostPerUnit };
     });
-    return { totalQty, subtotal, totalCharges, grandTotal, outstanding, allocations };
+
+    return { totalQty, subtotal, totalGst, gstBreakdown, totalCharges, grandTotal, outstanding, allocations };
   }, [products, charges, payment.amountPaid, costMethod]);
 
   useEffect(() => {
@@ -789,7 +811,43 @@ const GrnForm = () => {
               accentColor="slate"
             >
               <div className="space-y-3">
-                <SummaryRow label="Subtotal" value={`₹${stats.subtotal.toLocaleString()}`} />
+                <SummaryRow label="Subtotal (Excl. GST)" value={`₹${stats.subtotal.toLocaleString()}`} />
+
+                {/* GST Dynamic Breakdown Block */}
+                {stats.totalGst > 0 && (
+                  <div className="p-3 bg-slate-50 border border-slate-150 rounded-xl space-y-2 animate-in fade-in slide-in-from-top-1 duration-200">
+                    <div className="flex justify-between items-center border-b border-slate-200/60 pb-1.5 mb-1.5">
+                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">GST Rate breakdown</span>
+                      <span className="text-[11px] font-black text-slate-700 tabular-nums">Total GST: ₹{stats.totalGst.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    </div>
+                    {Object.entries(stats.gstBreakdown).map(([rate, amt]) => {
+                      if (Number(amt) <= 0) return null;
+                      const basePriceForRate = products.reduce((acc, p) => {
+                        const q = Number(p.quantity) || 0;
+                        const c = Number(p.costPrice) || 0;
+                        const r = Number(p.taxGst) || 0;
+                        if (r === Number(rate)) {
+                          return acc + (q * c);
+                        }
+                        return acc;
+                      }, 0);
+                      return (
+                        <div key={rate} className="flex justify-between items-center text-[11px] text-slate-600 font-medium">
+                          <span className="text-slate-500">
+                            GST {rate}% (on ₹{basePriceForRate.toLocaleString()})
+                          </span>
+                          <span className="text-slate-800 font-bold tabular-nums">
+                            ₹{Number(amt).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </span>
+                        </div>
+                      );
+                    })}
+                    <div className="text-[10px] text-slate-400 italic pt-1 border-t border-slate-200/30 flex flex-col gap-0.5 leading-normal">
+                      <span className="font-semibold text-slate-500">Breakdown explanation:</span>
+                      <span>Product base: ₹{stats.subtotal.toLocaleString()} + GST: ₹{stats.totalGst.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })} = ₹{(stats.subtotal + stats.totalGst).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })} with GST</span>
+                    </div>
+                  </div>
+                )}
 
                 {/* Charge inputs */}
                 <div className="pt-2 space-y-2.5">

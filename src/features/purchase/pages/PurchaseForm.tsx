@@ -99,19 +99,30 @@ const PurchaseForm = () => {
   const stats = useMemo(() => {
     let totalQty = 0;
     let subtotal = 0;
+    let totalGst = 0;
+    const gstBreakdown: Record<number, number> = {};
 
     products.forEach(p => {
       const q = Number(p.quantity) || 0;
       const c = Number(p.costPrice) || 0;
+      const gstRate = Number(p.taxGst) || 0;
       totalQty += q;
-      subtotal += (q * c);
+      
+      const lineExcl = q * c;
+      const lineGst = lineExcl * (gstRate / 100);
+      
+      subtotal += lineExcl;
+      totalGst += lineGst;
+      if (gstRate > 0) {
+        gstBreakdown[gstRate] = (gstBreakdown[gstRate] || 0) + lineGst;
+      }
     });
 
     const transportCost = Number(charges.transport) || 0;
     const otherCost = Number(charges.other) || 0;
     const totalCharges = transportCost + otherCost;
 
-    const grandTotal = Math.round(subtotal + totalCharges);
+    const grandTotal = Math.round(subtotal + totalGst + totalCharges);
     const paid = Number(payment.amountPaid) || 0;
     const outstanding = grandTotal - paid;
 
@@ -131,7 +142,7 @@ const PurchaseForm = () => {
       return { alloc, netCostPerUnit };
     });
 
-    return { totalQty, subtotal, totalCharges, grandTotal, outstanding, allocations };
+    return { totalQty, subtotal, totalGst, gstBreakdown, totalCharges, grandTotal, outstanding, allocations };
   }, [products, charges, payment.amountPaid, costMethod]);
 
   // --- Load Existing Purchase or Draft ---
@@ -577,9 +588,46 @@ const PurchaseForm = () => {
 
               <div className="p-6 space-y-4">
                 <div className="flex justify-between items-center text-slate-500">
-                  <span className="text-[11px] font-bold uppercase tracking-wider">Subtotal</span>
+                  <span className="text-[11px] font-bold uppercase tracking-wider">Subtotal (Excl. GST)</span>
                   <span className="text-sm font-black text-slate-800 tabular-nums">₹{stats.subtotal.toLocaleString()}</span>
                 </div>
+
+                {/* GST Dynamic Breakdown Block */}
+                {stats.totalGst > 0 && (
+                  <div className="p-3 bg-slate-50 border border-slate-150 rounded-xl space-y-2 animate-in fade-in slide-in-from-top-1 duration-200">
+                    <div className="flex justify-between items-center border-b border-slate-200/60 pb-1.5 mb-1.5">
+                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">GST Rate breakdown</span>
+                      <span className="text-[11px] font-black text-slate-700 tabular-nums">Total GST: ₹{stats.totalGst.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    </div>
+                    {Object.entries(stats.gstBreakdown).map(([rate, amt]) => {
+                      if (Number(amt) <= 0) return null;
+                      const basePriceForRate = products.reduce((acc, p) => {
+                        const q = Number(p.quantity) || 0;
+                        const c = Number(p.costPrice) || 0;
+                        const r = Number(p.taxGst) || 0;
+                        if (r === Number(rate)) {
+                          return acc + (q * c);
+                        }
+                        return acc;
+                      }, 0);
+                      return (
+                        <div key={rate} className="flex justify-between items-center text-[11px] text-slate-600 font-medium">
+                          <span className="text-slate-500">
+                            GST {rate}% (on ₹{basePriceForRate.toLocaleString()})
+                          </span>
+                          <span className="text-slate-800 font-bold tabular-nums">
+                            ₹{Number(amt).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </span>
+                        </div>
+                      );
+                    })}
+                    <div className="text-[10px] text-slate-400 italic pt-1 border-t border-slate-200/30 flex flex-col gap-0.5 leading-normal">
+                      <span className="font-semibold text-slate-500">Breakdown explanation:</span>
+                      <span>Product base: ₹{stats.subtotal.toLocaleString()} + GST: ₹{stats.totalGst.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })} = ₹{(stats.subtotal + stats.totalGst).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })} with GST</span>
+                    </div>
+                  </div>
+                )}
+
                 <div className="flex justify-between items-center text-slate-500">
                   <span className="text-[11px] font-bold uppercase tracking-wider">Transport</span>
                   <div className="w-24">

@@ -32,6 +32,7 @@ export interface ProductItem {
   sell_price?: number;
   barcode?: string;
   category?: string;
+  gst?: number;
   variants?: {
     id: string;
     name: string;
@@ -118,6 +119,7 @@ function toDisplayData(p: PurchaseRecord): DirectPurchaseData {
       sell_price: pr.sell_price,
       barcode: pr.barcode,
       category: pr.category,
+      gst: Number(pr.gst || pr.taxGst || pr.tax_gst || 0),
       variants: Array.isArray(pr.variants) ? pr.variants.map((v: any) => ({
         id: v.id,
         name: v.name,

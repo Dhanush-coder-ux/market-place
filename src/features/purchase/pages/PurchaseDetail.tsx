@@ -36,6 +36,7 @@ const PurchaseDetail = () => {
 
   const totalQty = po.products.reduce((s, i) => s + i.quantity, 0);
   const subtotal = po.products.reduce((sum, item) => sum + (item.quantity * (item.buy_price || 0)), 0);
+  const totalGst = po.products.reduce((sum, item) => sum + (item.quantity * (item.buy_price || 0) * ((item.gst || 0) / 100)), 0);
   const hasSubtotal = subtotal > 0;
   const transportCharge = po.charges?.transport || 0;
   const otherCharge = po.charges?.other || 0;
@@ -132,7 +133,8 @@ const PurchaseDetail = () => {
                 <div className="lg:col-span-8">
                   <SectionCard title="Financial Summary">
                     <div className="space-y-1">
-                      {hasSubtotal && <InfoRow label="Subtotal (Items)" value={fmt(subtotal)} />}
+                      {hasSubtotal && <InfoRow label="Subtotal (Excl. GST)" value={fmt(subtotal)} />}
+                      {totalGst > 0 && <InfoRow label="Total GST" value={<span className="text-indigo-600 font-semibold">+{fmt(totalGst)}</span>} />}
                       {transportCharge > 0 && <InfoRow label="Transport Charges" value={<span className="text-slate-700">+{fmt(transportCharge)}</span>} />}
                       {otherCharge > 0 && <InfoRow label="Other Charges" value={<span className="text-slate-700">+{fmt(otherCharge)}</span>} />}
                       
@@ -231,14 +233,28 @@ const PurchaseDetail = () => {
                           </td>
                           <td className="px-6 py-4 text-right">
                             {product.buy_price !== undefined ? (
-                              <span className="text-xs font-bold text-slate-500 tabular-nums">{fmt(product.buy_price)}</span>
+                              <div className="flex flex-col items-end">
+                                <span className="text-xs font-bold text-slate-500 tabular-nums">{fmt(product.buy_price)}</span>
+                                {product.gst !== undefined && product.gst > 0 && (
+                                  <span className="text-[9px] text-indigo-600 font-semibold mt-0.5 whitespace-nowrap">
+                                    ₹{(product.buy_price * (1 + product.gst / 100)).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} incl. {product.gst}% GST
+                                  </span>
+                                )}
+                              </div>
                             ) : (
                               <span className="text-xs text-slate-400">—</span>
                             )}
                           </td>
                           <td className="px-6 py-4 text-right">
                             {product.buy_price !== undefined ? (
-                              <span className="text-sm font-black text-slate-800 tabular-nums">{fmt(product.buy_price * product.quantity)}</span>
+                              <div className="flex flex-col items-end">
+                                <span className="text-sm font-black text-slate-800 tabular-nums">{fmt(product.buy_price * product.quantity)}</span>
+                                {product.gst !== undefined && product.gst > 0 && (
+                                  <span className="text-[9px] text-indigo-600 font-semibold mt-0.5 whitespace-nowrap">
+                                    ₹{((product.buy_price * product.quantity) * (1 + product.gst / 100)).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} incl. GST
+                                  </span>
+                                )}
+                              </div>
                             ) : (
                               <span className="text-xs text-slate-400">—</span>
                             )}

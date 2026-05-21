@@ -14,7 +14,6 @@ import { useState, useEffect, Fragment } from "react";
 import { createPortal } from "react-dom";
 import { SearchSelect } from "@/components/inputbuilders/SearchSelect";
 import { inventoryApi } from "@/services/api/inventory";
-import { ReusableSelect } from "@/components/ui/ReusableSelect";
 import Input from "@/components/ui/Input";
 import { GradientButton } from "@/components/ui/GradientButton";
 import { useToast } from "@/context/ToastContext";
@@ -178,7 +177,10 @@ export const InventoryItemsCard = ({
         serialTracking: hasSerialTracking,
         existingSerials: parsedSerials,
         serialno_id: serialnoId,
-        batch_id: variantData?.batch_id || variantData?.datas?.batch_id || baseOpt.batch_id || d.batch_id
+        batch_id: variantData?.batch_id || variantData?.datas?.batch_id || baseOpt.batch_id || d.batch_id,
+        reorderPoint: getVal("reorder_point") !== "" ? getVal("reorder_point") : undefined,
+        brand: getVal("brand"),
+        gstInfo: getVal("gst") || (parseInt(getVal("gst", "18")) || 18) + "%"
       };
 
       // If it has batches, show batch modal (Suppressed for PURCHASE type)
@@ -541,7 +543,10 @@ export const InventoryItemsCard = ({
                                     existingSerials: existingSerials,
                                     serialno_id: serialnoId,
                                     batch_id: opt.batch_id || d.batch_id || opt.id,
-                                    baseVariants: combinations
+                                    baseVariants: combinations,
+                                    reorderPoint: get("reorder_point") !== "" ? get("reorder_point") : undefined,
+                                    brand: get("brand"),
+                                    gstInfo: get("gst") || (parseInt(get("gst", "18")) || 18) + "%"
                                   });
 
                                   if (hasBatchTracking && (type !== "PURCHASE" || purchaseType === "DIRECT")) {
@@ -590,7 +595,10 @@ export const InventoryItemsCard = ({
                                       batchTracking: hasBatchTracking,
                                       serialTracking: false,
                                       serialno_id: serialnoId,
-                                      batch_id: opt.batch_id || d.batch_id || opt.id
+                                      batch_id: opt.batch_id || d.batch_id || opt.id,
+                                      reorderPoint: get("reorder_point") !== "" ? get("reorder_point") : undefined,
+                                      brand: get("brand"),
+                                      gstInfo: get("gst") || (parseInt(get("gst", "18")) || 18) + "%"
                                     });
                                   }
                                   return;
@@ -627,7 +635,10 @@ export const InventoryItemsCard = ({
                                     existingSerials: existingSerials,
                                     serialno_id: serialnoId,
                                     hasVariants: false,
-                                    baseVariants: combinations
+                                    baseVariants: combinations,
+                                    reorderPoint: get("reorder_point") !== "" ? get("reorder_point") : undefined,
+                                    brand: get("brand"),
+                                    gstInfo: get("gst") || (parseInt(get("gst", "18")) || 18) + "%"
                                   });
 
                                   if (hasBatchTracking && (type !== "PURCHASE" || purchaseType === "DIRECT")) {
@@ -682,6 +693,26 @@ export const InventoryItemsCard = ({
                                       ? `${product.serialNumbers?.split(",").filter(Boolean).length} Serials Set` 
                                       : "Serials Required"
                                   }
+                                </span>
+                              )}
+                              {product.taxGst !== undefined && product.taxGst !== null && (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded bg-pink-50 text-pink-700 text-[9px] font-black border border-pink-100">
+                                  GST: {product.taxGst}%
+                                </span>
+                              )}
+                              {(product.reorderPoint !== undefined && product.reorderPoint !== null && product.reorderPoint !== "") && (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded bg-orange-50 text-orange-700 text-[9px] font-black border border-orange-100">
+                                  Reorder: {product.reorderPoint}
+                                </span>
+                              )}
+                              {product.brand && (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded bg-teal-50 text-teal-700 text-[9px] font-black border border-teal-100">
+                                  Brand: {product.brand}
+                                </span>
+                              )}
+                              {product.category && (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded bg-sky-50 text-sky-700 text-[9px] font-black border border-sky-100">
+                                  Category: {product.category}
                                 </span>
                               )}
                             </div>
@@ -742,19 +773,18 @@ export const InventoryItemsCard = ({
                       {/* Tax */}
                       <td className="py-3 px-2 align-middle">
                         <div className="w-20">
-                          <ReusableSelect
-                            options={[
-                              { value: '0', label: '0%' },
-                              { value: '5', label: '5%' },
-                              { value: '12', label: '12%' },
-                              { value: '18', label: '18%' },
-                              { value: '28', label: '28%' }
-                            ]}
-                            value={String(product.taxGst)}
-                            onValueChange={(val) => handleProductChange(index, "taxGst", Number(val))}
-                            placeholder="GST"
-                            className="!h-8 !text-[11px]"
-                          />
+                          <div className="relative flex items-center">
+                            <input
+                              type="number"
+                              value={product.taxGst ?? ""}
+                              onChange={(e) => handleProductChange(index, "taxGst", e.target.value ? Number(e.target.value) : 0)}
+                              className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs font-black text-center focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none pr-6 bg-white"
+                              min="0"
+                              max="100"
+                              placeholder="GST"
+                            />
+                            <span className="absolute right-2.5 text-[10px] text-slate-400 font-black pointer-events-none">%</span>
+                          </div>
                         </div>
                       </td>
 
@@ -910,7 +940,7 @@ export const InventoryItemsCard = ({
                               )}
 
                               {expandedBreakdown.has(index) && (
-                                <div className="flex-1 bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
+                                <div className="flex-1 bg-white p-4 rounded-lg border border-slate-200 shadow-sm animate-in fade-in slide-in-from-top-1 duration-200">
                                   <div className="flex items-center gap-2 mb-3">
                                     <Info size={14} className="text-slate-500" />
                                     <span className="text-xs font-bold text-slate-800">Cost Breakdown</span>
@@ -921,7 +951,19 @@ export const InventoryItemsCard = ({
                                         <span className="text-slate-500">Unit Cost (Base)</span>
                                         <span className="font-bold text-slate-700">₹{baseCost.toFixed(2)}</span>
                                       </div>
-                                      <div className="flex justify-between text-[11px]">
+                                      {product.taxGst !== undefined && Number(product.taxGst) > 0 && (
+                                        <>
+                                          <div className="flex justify-between text-[11px]">
+                                            <span className="text-slate-500">GST Cost ({product.taxGst}%)</span>
+                                            <span className="font-bold text-indigo-650">+₹{(baseCost * Number(product.taxGst) / 100).toFixed(2)}</span>
+                                          </div>
+                                          <div className="flex justify-between text-[11px] font-semibold text-slate-750">
+                                            <span className="text-slate-600">Unit Cost (incl. GST)</span>
+                                            <span className="text-slate-800">₹{(baseCost * (1 + Number(product.taxGst) / 100)).toFixed(2)}</span>
+                                          </div>
+                                        </>
+                                      )}
+                                      <div className="flex justify-between text-[11px] pt-1.5 border-t border-slate-100/60">
                                         <span className="text-blue-500">Allocated Cost</span>
                                         <span className="font-bold text-blue-600">₹{allocPerUnit.toFixed(2)}</span>
                                       </div>
@@ -929,13 +971,31 @@ export const InventoryItemsCard = ({
                                         <span className="font-bold text-slate-800">Net Cost / Unit</span>
                                         <span className="font-black text-emerald-600">₹{netCostPerUnit.toFixed(2)}</span>
                                       </div>
+                                      {product.taxGst !== undefined && Number(product.taxGst) > 0 && (
+                                        <div className="flex justify-between text-[11px] pt-1 border-t border-slate-100/30">
+                                          <span className="font-semibold text-slate-700">Net Cost / Unit (incl. GST)</span>
+                                          <span className="font-bold text-emerald-700">₹{(netCostPerUnit + (baseCost * Number(product.taxGst) / 100)).toFixed(2)}</span>
+                                        </div>
+                                      )}
                                     </div>
                                     <div className="space-y-1.5">
                                       <div className="flex justify-between text-[11px]">
-                                        <span className="text-slate-500">Row Subtotal</span>
+                                        <span className="text-slate-500">Row Subtotal (Base)</span>
                                         <span className="font-bold text-slate-700">₹{rowTotal.toLocaleString()}</span>
                                       </div>
-                                      <div className="flex justify-between text-[11px]">
+                                      {product.taxGst !== undefined && Number(product.taxGst) > 0 && (
+                                        <>
+                                          <div className="flex justify-between text-[11px]">
+                                            <span className="text-slate-500">Row GST ({product.taxGst}%)</span>
+                                            <span className="font-bold text-indigo-650">+₹{(rowTotal * Number(product.taxGst) / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                          </div>
+                                          <div className="flex justify-between text-[11px] font-semibold text-slate-750">
+                                            <span className="text-slate-600">Row Subtotal (incl. GST)</span>
+                                            <span className="text-slate-800">₹{(rowTotal * (1 + Number(product.taxGst) / 100)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                          </div>
+                                        </>
+                                      )}
+                                      <div className="flex justify-between text-[11px] pt-1.5 border-t border-slate-100/60">
                                         <span className="text-emerald-500">Expected Margin</span>
                                         <span className="font-bold text-emerald-600">{effectiveMarginPct || '0'}%</span>
                                       </div>
@@ -945,6 +1005,14 @@ export const InventoryItemsCard = ({
                                       </div>
                                     </div>
                                   </div>
+                                  {product.taxGst !== undefined && Number(product.taxGst) > 0 && (
+                                    <div className="mt-4 p-2.5 bg-slate-50 border border-slate-150 rounded-xl flex items-center justify-between text-[11px] text-slate-600">
+                                      <span className="font-black text-slate-400 uppercase tracking-wider text-[9px]">Tax Formula:</span>
+                                      <span className="font-medium tabular-nums">
+                                        Base Cost <span className="font-semibold text-slate-700">₹{baseCost.toFixed(2)}</span> + GST Cost ({product.taxGst}%) <span className="font-semibold text-indigo-600">₹{(baseCost * Number(product.taxGst) / 100).toFixed(2)}</span> = Total <span className="font-bold text-slate-800">₹{(baseCost * (1 + Number(product.taxGst) / 100)).toFixed(2)}</span>
+                                      </span>
+                                    </div>
+                                  )}
                                 </div>
                               )}
                             </div>

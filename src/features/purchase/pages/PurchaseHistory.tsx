@@ -8,14 +8,13 @@ import {
   ReceiptText,
   LayoutGrid,
   List,
-  TrendingUp,
+
   ExternalLink,
   Filter
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useHeader } from "@/context/HeaderContext";
 import DirectHeader from "../components/DirectHeader";
-import { FloatingFormCard } from "@/components/common/FloatingFormCard";
 import { useApi } from "@/context/ApiContext";
 import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 import { RightSidebarFilter } from "@/components/common/RightSidebarFilter";

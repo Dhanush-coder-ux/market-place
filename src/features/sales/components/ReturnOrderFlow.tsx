@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { 
   X, Package, AlertCircle, CheckCircle2, 
   ChevronRight, Minus, Plus, ArrowRight, RefreshCw, Banknote, 
-  Gift, ArrowLeft, Check, Loader2, Smartphone, Hash, CreditCard, Search
+  Gift, ArrowLeft, Check, Loader2, Hash, Search
 } from "lucide-react";
 import { SHOP_ID } from "@/services/endpoints";
 import { OrderResponse } from "@/features/order/types";
@@ -18,7 +18,6 @@ import { InventoryItem, ProductVariant } from "../../billing/types";
 type PaymentMethod = "Cash" | "Card" | "UPI" | "G-Pay" | "PhonePe" | "Other";
 type ReturnMode = "refund" | "exchange";
 type ReturnReason = "Damaged" | "Wrong Item" | "Customer Request" | "Size Issue" | "Other" | "";
-type SettlementMethod = "Cash" | "UPI" | "Card" | "Bank" | "Store Credit" | "";
 type SaleRecord = OrderResponse;
 
 interface SaleItem {

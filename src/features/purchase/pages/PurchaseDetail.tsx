@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
-  Download, Printer, Building2, Calendar, Package, TrendingUp,
+  Printer, Building2, Calendar, Package, TrendingUp,
   ReceiptText, ArrowLeft, User, FileText, CheckCircle2, Clock, Banknote
 } from "lucide-react";
 import type { DirectPurchaseData } from "./PurchaseHistory";

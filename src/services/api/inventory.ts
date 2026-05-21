@@ -89,7 +89,7 @@ export const inventoryApi = {
     return await apiClient.post(ENDPOINTS.RETURN, data);
   },
 
-  bulkReturnOrder: async (data: { order_id: string; items_id: string[] }) => {
+  bulkReturnOrder: async (data: any) => {
     console.log("Bulk Return Payload:", data);
     return await apiClient.post(ENDPOINTS.RETURN, data);
   }

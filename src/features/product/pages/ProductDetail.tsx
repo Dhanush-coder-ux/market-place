@@ -63,8 +63,7 @@ const ProductDetail = () => {
   const [viewValue, setViewValue] = useState<{ label: string; value: string } | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [movements, setMovements] = useState<any[]>([]);
-  const [movLoading, setMovLoading] = useState(false);
+
   const [purchases, setPurchases] = useState<any[]>([]);
   const [purLoading, setPurLoading] = useState(false);
 

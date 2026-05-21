@@ -288,8 +288,8 @@ const ProductionForm = () => {
         }
 
         return {
-          inventory_id: p.inventory_id || (p.id.length > 10 ? p.id : undefined),
-          variant_id: p.variant_id,
+          inventory_id: p.inventory_id || (p.id.length > 10 ? p.id : undefined) || null,
+          variant_id: p.variant_id || null,
           name: p.name,
           barcode: p.sku,
           quantity: q,
@@ -316,17 +316,18 @@ const ProductionForm = () => {
       });
 
       const payload = {
+        shop_id: SHOP_ID,
+        type: "PRODUCTION",
+        supplier_id: "INTERNAL_PRODUCTION",
         datas: {
-          shop_id: SHOP_ID,
-          type: "PRODUCTION",
-          supplier_id: "INTERNAL_PRODUCTION",
           supplier_name: "Internal Workshop",
           productionDetails: { ...productionDetails },
           productionCosts: { ...productionCosts },
           charges: { transport: Number(charges.transport) || 0, other: Number(charges.other) || 0 },
           payment: { method: payment.method, amountPaid: Number(payment.amountPaid) || 0 },
-          products: transformedProducts,
         },
+        paid_amount: Number(payment.amountPaid) || 0,
+        products: transformedProducts,
       };
 
       const res = await postData(ENDPOINTS.PURCHASES, payload); // Using purchase endpoint as generic entry point for now

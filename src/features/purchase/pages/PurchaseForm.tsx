@@ -310,8 +310,8 @@ const PurchaseForm = () => {
         }
 
         return {
-          inventory_id: p.inventory_id,
-          variant_id: p.variant_id,
+          inventory_id: p.inventory_id || null,
+          variant_id: p.variant_id || null,
           name: p.name,
           barcode: p.sku,
           stocks: q,
@@ -319,8 +319,16 @@ const PurchaseForm = () => {
           buy_price: baseCost,
           sell_price: Number(finalSellPrice.toFixed(2)),
           margin: Number(p.marginPercent) || 0,
-          batch_id: p.batch_id,
-          serialno_id: p.serialno_id,
+          unit: p.unit || "pc",
+          gst: Number(p.taxGst) || 0,
+          batch_tracking: p.batchTracking || false,
+          serial_tracking: p.serialTracking || false,
+          batch_number: p.batchNum || "",
+          manufacturing_date: p.manufacturingDate || null,
+          expiry_date: p.expiryDate || null,
+          variant: p.variant || "",
+          batch_id: p.batch_id || null,
+          serialno_id: p.serialno_id || null,
           serial_numbers: p.serialNumbers ? p.serialNumbers.split(",").map(s => s.trim()).filter(Boolean) : [],
           batch: (!p.batch_id && p.batchTracking && p.batchNum) ? {
             name: p.batchNum,
@@ -340,7 +348,7 @@ const PurchaseForm = () => {
       const payload = {
         shop_id: SHOP_ID,
         type: purchaseType,
-        purchase_id: purchaseId,
+        purchase_id: purchaseId || null,
         supplier_id: supplierDetails?.id || "SUP_" + purchaseDetails.supplier.substring(0, 3).toUpperCase(),
         calculations: {
           divided_by: costMethodMap[costMethod] || "NONE",
@@ -362,6 +370,7 @@ const PurchaseForm = () => {
             amountPaid: Number(payment.amountPaid) || 0
           },
         },
+        paid_amount: Number(payment.amountPaid) || 0,
         products: transformedProducts,
       };
 

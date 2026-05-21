@@ -541,6 +541,11 @@ export const InventoryItemsCard = ({
 
 
                                 if (purchaseType === 'PO_CREATE') {
+                                  if (hasVariants && combinations.length === 0) {
+                                    showToast("This product is marked as having variants, but no variants have been generated yet. Please generate variants in the Inventory module before purchasing.", "error");
+                                    return;
+                                  }
+                                  
                                   if (hasVariants && combinations.length > 0) {
                                     const mappedVariants = combinations.map((c: any) => ({
                                       id: c.id,
@@ -567,6 +572,11 @@ export const InventoryItemsCard = ({
                                       batch_id: opt.batch_id || d.batch_id || opt.id
                                     });
                                   }
+                                  return;
+                                }
+
+                                if (hasVariants && combinations.length === 0) {
+                                  showToast("This product is marked as having variants, but no variants have been generated yet. Please generate variants in the Inventory module before purchasing.", "error");
                                   return;
                                 }
 

@@ -41,6 +41,7 @@ export interface VariantCombination {
     expiry_date: string;
     manufacturing_date: string;
   };
+  reorder_point: string;
 }
 
 // --- Constants ---
@@ -307,6 +308,7 @@ export const VariantMatrixTable: React.FC<VariantMatrixTableProps> = ({
                   </th>
                 ))}
                 <th className="px-5 py-4 text-[10px] font-black uppercase text-slate-400 whitespace-nowrap">Barcode</th>
+                <th className="px-5 py-4 text-center text-[10px] font-black uppercase text-slate-400">Reorder Pt</th>
                 <th className="px-5 py-4 text-center text-[10px] font-black uppercase text-slate-400">Status</th>
               </tr>
             </thead>
@@ -328,6 +330,15 @@ export const VariantMatrixTable: React.FC<VariantMatrixTableProps> = ({
                           placeholder="SKU-001"
                           value={combo.barcode}
                           onChange={e => update(combo.id, "barcode", e.target.value)}
+                        />
+                      </td>
+                      <td className="px-5 py-4">
+                        <input
+                          className="h-9 px-3 text-xs border border-slate-200 rounded-lg w-20 text-center font-mono focus:ring-2 focus:ring-blue-100 outline-none"
+                          placeholder="5"
+                          type="number"
+                          value={combo.reorder_point}
+                          onChange={e => update(combo.id, "reorder_point", e.target.value)}
                         />
                       </td>
                       <td className="px-5 py-4 text-center">
@@ -358,7 +369,7 @@ export const VariantMatrixTable: React.FC<VariantMatrixTableProps> = ({
 export const generateCombinations = (
   variantTypes: VariantType[],
   existing: VariantCombination[],
-  defaults: { buy_price: string; sell_price: string; mrp: string }
+  defaults: { buy_price: string; sell_price: string; mrp: string; reorder_point: string }
 ): VariantCombination[] => {
   const validTypes = variantTypes.filter(t => t.values.length > 0);
   if (validTypes.length === 0) return [];
@@ -391,6 +402,7 @@ export const generateCombinations = (
       price: defaults.sell_price,
       buy_price: defaults.buy_price,
       mrp: defaults.mrp,
+      reorder_point: defaults.reorder_point,
       stock: "0",
       active: true,
       serials: [],

@@ -576,12 +576,7 @@ export default function StockMovementPage() {
 
   useEffect(() => {
     const load = async () => {
-      // 1. Fetch Purchases (Unified view)
-      const pRes = await getData(`${ENDPOINTS.PURCHASES}`, { view: "STOCKADJUSTMENT_VIEW", shop_id: SHOP_ID, limit: "50", offset: "1" });
-      const pData = pRes?.data || pRes?.datas || (Array.isArray(pRes) ? pRes : []);
-      const pMovements = purchaseToMovements(pData, "PURCHASE");
-
-      // 2. Fetch Stock Adjustments
+      // Fetch centralized Stock Adjustments which now contain ALL stock movements
       const adjRes = await getData(`${ENDPOINTS.S_ADJUSTMENTS}/by/shop/${SHOP_ID}`, { view: "STOCKADJUSTMENT_VIEW", shop_id: SHOP_ID, limit: "50", offset: "1" });
       const aData = adjRes?.data || adjRes?.datas || (Array.isArray(adjRes) ? adjRes : []);
 
@@ -589,29 +584,62 @@ export default function StockMovementPage() {
         const products = (a.products || []) as any[];
         const dateStr = String(a.adjusted_date || a.created_at || new Date().toISOString());
 
+        // Map movement_type from backend
+        let finalType: MovementType = "STOCK_ADJUSTMENT";
+        const mType = a.movement_type || "";
+        if (mType === "DIRECT" || mType === "PURCHASE") finalType = "PURCHASE";
+        else if (mType === "SALES") finalType = "SALES";
+        else if (mType === "RETURN" || mType === "SALE_RETURN") finalType = "SALE_RETURN";
+        else if (mType.includes("PO_")) finalType = "PO_PURCHASE";
+        else if (mType === "OPENING") finalType = "OPENING";
+        else if (mType === "PRODUCTION") finalType = "PRODUCTION";
+        else if (mType === "TRANSFER") finalType = "TRANSFER";
+
+        // Determine source/destination based on type
+        let source = "System";
+        let destination = "Warehouse";
+        if (finalType === "SALES") {
+          source = "Warehouse";
+          destination = "Customer";
+        } else if (finalType === "PURCHASE" || finalType === "PO_PURCHASE") {
+          source = "Supplier";
+          destination = "Warehouse";
+        } else if (finalType === "SALE_RETURN") {
+          source = "Customer";
+          destination = "Warehouse";
+        } else if (finalType === "STOCK_ADJUSTMENT") {
+          source = "Stock";
+          destination = "Adjusted";
+        }
+
         return products.flatMap(prod => {
           const results: Movement[] = [];
           const isDecrement = prod.type === 'DECREMENT';
           const baseQty = Number(prod.stocks || 0);
+          const qtyVal = isDecrement ? -baseQty : baseQty;
+
+          const baseMovement = {
+            id: a.id?.slice(0, 8).toUpperCase() || "ADJ",
+            product: prod.name || "—",
+            type: finalType,
+            source,
+            destination,
+            ref: String(a.ui_id ? `REF-${a.ui_id}` : a.id?.slice(0, 8).toUpperCase() || "REF"),
+            date: dateStr.includes("T") ? dateStr : dateStr + "T00:00:00",
+            status: "Completed" as StatusType,
+            user: String(a.added_by || "Admin"),
+            notes: a.description || "",
+          };
 
           if (prod.variants && prod.variants.length > 0) {
             prod.variants.forEach((v: any) => {
               if (v.batches && v.batches.length > 0) {
                 v.batches.forEach((b: any) => {
                   results.push({
-                    id: a.id?.slice(0, 8).toUpperCase() || "ADJ",
-                    product: prod.name || "—",
+                    ...baseMovement,
                     sku: b.barcode || v.sku || prod.barcode || (a.id?.slice(0, 8) || ""),
-                    type: "STOCK_ADJUSTMENT" as MovementType,
                     qty: isDecrement ? -Number(b.stocks || v.stocks || baseQty) : Number(b.stocks || v.stocks || baseQty),
                     stocks_before: b.stocks_before ?? v.stocks_before ?? prod.stocks_before,
-                    source: "Stock",
-                    destination: "Adjusted",
-                    ref: String(a.ui_id || a.id?.slice(0, 8).toUpperCase() || "REF"),
-                    date: dateStr.includes("T") ? dateStr : dateStr + "T00:00:00",
-                    status: "Completed" as StatusType,
-                    user: String(a.added_by || "Admin"),
-                    notes: a.description || "",
                     variant: v.name || "",
                     batch: b.name || "",
                     expiry_date: b.expiry_date,
@@ -621,19 +649,10 @@ export default function StockMovementPage() {
                 });
               } else {
                 results.push({
-                  id: a.id?.slice(0, 8).toUpperCase() || "ADJ",
-                  product: prod.name || "—",
+                  ...baseMovement,
                   sku: v.sku || prod.barcode || (a.id?.slice(0, 8) || ""),
-                  type: "STOCK_ADJUSTMENT" as MovementType,
                   qty: isDecrement ? -Number(v.stocks || baseQty) : Number(v.stocks || baseQty),
                   stocks_before: v.stocks_before ?? prod.stocks_before,
-                  source: "Stock",
-                  destination: "Adjusted",
-                  ref: String(a.ui_id || a.id?.slice(0, 8).toUpperCase() || "REF"),
-                  date: dateStr.includes("T") ? dateStr : dateStr + "T00:00:00",
-                  status: "Completed" as StatusType,
-                  user: String(a.added_by || "Admin"),
-                  notes: a.description || "",
                   variant: v.name || "",
                   serial_numbers: Array.isArray(v.serial_numbers?.serial_numbers) ? v.serial_numbers.serial_numbers : []
                 });
@@ -641,32 +660,18 @@ export default function StockMovementPage() {
             });
           } else {
             results.push({
-              id: a.id?.slice(0, 8).toUpperCase() || "ADJ",
-              product: prod.name || "—",
+              ...baseMovement,
               sku: prod.barcode || (a.id?.slice(0, 8) || ""),
-              type: "STOCK_ADJUSTMENT" as MovementType,
-              qty: isDecrement ? -baseQty : baseQty,
+              qty: qtyVal,
               stocks_before: prod.stocks_before,
-              source: "Stock",
-              destination: "Adjusted",
-              ref: String(a.ui_id || a.id?.slice(0, 8).toUpperCase() || "REF"),
-              date: dateStr.includes("T") ? dateStr : dateStr + "T00:00:00",
-              status: "Completed" as StatusType,
-              user: String(a.added_by || "Admin"),
-              notes: a.description || "",
               serial_numbers: Array.isArray(prod.serial_numbers?.serial_numbers) ? prod.serial_numbers.serial_numbers : []
             });
           }
           return results;
         });
       });
-      // 3. Fetch Sales (Orders)
-      const sRes = await getData(`${ENDPOINTS.ORDERS}/${SHOP_ID}`, { limit: "50", offset: "1" });
-      const sData = sRes?.data || (Array.isArray(sRes) ? sRes : []);
-      const sMovements = ordersToMovements(sData);
 
-      // 4. Combine and Sort
-      const all = [...pMovements, ...adjMovements, ...sMovements].sort((a, b) =>
+      const all = [...adjMovements].sort((a, b) =>
         new Date(b.date).getTime() - new Date(a.date).getTime()
       );
 

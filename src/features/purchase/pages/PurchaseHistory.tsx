@@ -12,7 +12,7 @@ import {
   ExternalLink,
   Filter
 } from "lucide-react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useHeader } from "@/context/HeaderContext";
 import DirectHeader from "../components/DirectHeader";
 import { FloatingFormCard } from "@/components/common/FloatingFormCard";
@@ -478,7 +478,7 @@ const PurchaseHistory = () => {
   const [allPurchases, setAllPurchases] = useState<DirectPurchaseData[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [viewMode, setViewMode] = useState<ViewMode>("vertical");
-  const [selectedPO, setSelectedPO] = useState<DirectPurchaseData | null>(null);
+  const navigate = useNavigate();
 
   const [filterType, setFilterType] = useState("");
   const [filterVendor, setFilterVendor] = useState("");
@@ -505,7 +505,7 @@ const PurchaseHistory = () => {
   }, []);
 
   const handleCardClick = (po: DirectPurchaseData) => {
-    setSelectedPO(po);
+    navigate(`/purchase/detail/${po.id}`, { state: { po } });
   };
 
   const filtered = allPurchases.filter((po) => {
@@ -621,211 +621,6 @@ const PurchaseHistory = () => {
           <VerticalTable data={filtered} onClick={handleCardClick} totalCount={allPurchases.length} />
         )}
       </div>
-      <FloatingFormCard
-        isOpen={!!selectedPO}
-        onClose={() => setSelectedPO(null)}
-        title={selectedPO ? `Purchase Details: ${selectedPO.poNumber}` : "Details"}
-        maxWidth="max-w-2xl"
-      >
-        {selectedPO && (
-          <div className="space-y-6">
-
-            {/* Meta Information Grid */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 bg-zinc-50 p-4 rounded-lg border border-zinc-100">
-              <div>
-                <p className="text-[10px] font-bold   text-zinc-400 mb-1">Vendor</p>
-                <p className="text-sm font-semibold text-zinc-800">{selectedPO.vendor}</p>
-              </div>
-              <div>
-                <p className="text-[10px] font-bold   text-zinc-400 mb-1">Date</p>
-                <p className="text-sm font-semibold text-zinc-800">{selectedPO.date}</p>
-                <p className="text-[10px] text-zinc-500">{selectedPO.time}</p>
-              </div>
-              <div>
-                <p className="text-[10px] font-bold   text-zinc-400 mb-1">Payment</p>
-                <p className="text-sm font-semibold text-zinc-800">{selectedPO.paymentMethod}</p>
-              </div>
-              <div>
-                <p className="text-[10px] font-bold   text-zinc-400 mb-1">Total Cost</p>
-                <p className="text-lg font-bold text-blue-600">₹{selectedPO.total_cost.toLocaleString()}</p>
-              </div>
-            </div>
-
-            {/* Charges Breakdown */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="p-3 bg-zinc-50 rounded-lg border border-zinc-100">
-                <p className="text-[10px] font-bold   text-zinc-400 mb-1">Transport Charges</p>
-                <p className="text-sm font-semibold text-zinc-800">₹{selectedPO.charges?.transport.toLocaleString()}</p>
-              </div>
-              <div className="p-3 bg-zinc-50 rounded-lg border border-zinc-100">
-                <p className="text-[10px] font-bold   text-zinc-400 mb-1">Other Charges</p>
-                <p className="text-sm font-semibold text-zinc-800">₹{selectedPO.charges?.other.toLocaleString()}</p>
-              </div>
-            </div>
-
-            {/* Products List */}
-            <div>
-              <div className="flex items-center gap-2 mb-3 border-b border-zinc-100 pb-2">
-                <Package size={16} className="text-zinc-400" />
-                <h3 className="text-sm font-bold text-zinc-800">Products Ordered</h3>
-                <span className="text-xs font-semibold text-zinc-500 bg-zinc-100 px-2 py-0.5 rounded-full ml-auto">
-                  {selectedPO.products.reduce((s, i) => s + i.quantity, 0)} Total Units
-                </span>
-              </div>
-
-              <div className="space-y-2">
-                {selectedPO.products.map((product, idx) => (
-                  <div key={idx} className="flex flex-col p-3 rounded-lg border border-zinc-200 bg-white shadow-sm hover:border-blue-200 transition-colors">
-
-                    <div className="flex items-start justify-between mb-3 border-b border-zinc-50 pb-2">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-bold text-zinc-800">{product.name}</span>
-                          {product.barcode && <span className="text-[10px] font-mono text-zinc-500 bg-zinc-100 border border-zinc-200 px-1.5 py-0.5 rounded">{product.barcode}</span>}
-                        </div>
-                        {product.category && <p className="text-[11px] font-medium text-zinc-500 mt-0.5">{product.category}</p>}
-                      </div>
-                      <div className="text-right flex flex-col items-end">
-                        <span className="text-sm font-bold text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-md border border-blue-100 shadow-sm mb-1.5">
-                          × {product.quantity}
-                        </span>
-                        {(product.buy_price !== undefined || product.sell_price !== undefined) && (
-                          <div className="text-[10px] font-medium text-zinc-500 flex flex-col items-end gap-0.5">
-                            {product.buy_price !== undefined && <span>Buy: ₹{product.buy_price}</span>}
-                            {product.sell_price !== undefined && <span className="text-emerald-600">Sell: ₹{product.sell_price}</span>}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Stock Movement Tracking */}
-                    {product.stocks_before !== undefined && (
-                      <div className="mb-3 p-2.5 bg-zinc-50 rounded-lg border border-zinc-100 flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                          <div className="flex flex-col">
-                            <span className="text-[8px] font-black text-zinc-400  ">Opening Stock</span>
-                            <span className="text-xs font-bold text-zinc-600">{product.stocks_before}</span>
-                          </div>
-                          <div className="w-px h-6 bg-zinc-200" />
-                          <div className="flex flex-col">
-                            <span className="text-[8px] font-black text-blue-400  ">Received Stock</span>
-                            <span className="text-xs font-bold text-blue-600">+{product.quantity}</span>
-                          </div>
-                          <div className="w-px h-6 bg-zinc-200" />
-                          <div className="flex flex-col">
-                            <span className="text-[8px] font-black text-emerald-400  ">Closing Stock</span>
-                            <span className="text-xs font-bold text-emerald-600">{(product.stocks_before ?? 0) + product.quantity}</span>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-1.5 px-2 py-1 bg-emerald-100/50 rounded-lg border border-emerald-100">
-                          <TrendingUp size={12} className="text-emerald-600" />
-                          <span className="text-[9px] font-black text-emerald-700 ">Stock Updated</span>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Render Variants */}
-                    {product.variants && product.variants.length > 0 && (
-                      <div className="mt-2 space-y-3 pl-3 border-l-2 border-zinc-100">
-                        {product.variants.map((variant, vIdx) => (
-                          <div key={vIdx} className="space-y-2">
-                            <div className="flex items-start justify-between">
-                              <div className="flex items-center gap-2">
-                                <div className="w-1.5 h-1.5 rounded-full bg-blue-400" />
-                                <span className="text-xs font-bold text-zinc-600">{variant.name}</span>
-                              </div>
-                              <div className="text-right flex flex-col items-end">
-                                {(variant.buy_price !== undefined || variant.sell_price !== undefined) && (
-                                  <div className="text-[9px] font-medium text-zinc-500 flex flex-col items-end gap-0.5">
-                                    {variant.buy_price !== undefined && <span>Buy: ₹{variant.buy_price}</span>}
-                                    {variant.sell_price !== undefined && <span className="text-emerald-600">Sell: ₹{variant.sell_price}</span>}
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-
-                            {/* Variant Batches */}
-                            {variant.batches && variant.batches.length > 0 && (
-                              <div className="grid grid-cols-1 gap-2 pl-4">
-                                {variant.batches.map((batch, bIdx) => (
-                                  <div key={bIdx} className="p-2 bg-zinc-50 rounded border border-zinc-100">
-                                    <div className="flex justify-between items-center mb-1">
-                                      <span className="text-xs font-semibold text-zinc-700">{batch.name}</span>
-                                      <span className="text-[10px] font-bold text-zinc-500">Qty: {batch.stocks}</span>
-                                    </div>
-                                    {(batch.expiry_date || batch.manufacturing_date) && (
-                                      <div className="flex items-center gap-3 text-[9px] text-zinc-400 mt-0.5">
-                                        {batch.manufacturing_date && <span>MFG: {new Date(batch.manufacturing_date).toLocaleDateString()}</span>}
-                                        {batch.expiry_date && <span>EXP: {new Date(batch.expiry_date).toLocaleDateString()}</span>}
-                                      </div>
-                                    )}
-                                    {batch.serial_numbers && batch.serial_numbers.length > 0 && (
-                                      <div className="flex flex-wrap gap-1 mt-1.5">
-                                        {batch.serial_numbers.map((sn: string, snIdx: number) => (
-                                          <span key={snIdx} className="text-[9px] font-mono bg-white border border-zinc-200 px-1.5 py-0.5 rounded text-zinc-500">
-                                            {sn}
-                                          </span>
-                                        ))}
-                                      </div>
-                                    )}
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    {/* Render Product Level Batches (if no variants) */}
-                    {(!product.variants || product.variants.length === 0) && product.batches && product.batches.length > 0 && (
-                      <div className="mt-2 grid grid-cols-1 gap-2 pl-3 border-l-2 border-zinc-100">
-                        {product.batches.map((batch, bIdx) => (
-                          <div key={bIdx} className="p-2 bg-zinc-50 rounded border border-zinc-100">
-                            <div className="flex justify-between items-center mb-1">
-                              <span className="text-xs font-semibold text-zinc-700">{batch.name}</span>
-                              <span className="text-[10px] font-bold text-zinc-500">Qty: {batch.stocks}</span>
-                            </div>
-                            {(batch.expiry_date || batch.manufacturing_date) && (
-                              <div className="flex items-center gap-3 text-[9px] text-zinc-400 mt-0.5">
-                                {batch.manufacturing_date && <span>MFG: {new Date(batch.manufacturing_date).toLocaleDateString()}</span>}
-                                {batch.expiry_date && <span>EXP: {new Date(batch.expiry_date).toLocaleDateString()}</span>}
-                              </div>
-                            )}
-                            {batch.serial_numbers && batch.serial_numbers.length > 0 && (
-                              <div className="flex flex-wrap gap-1 mt-1.5">
-                                {batch.serial_numbers.map((sn: string, snIdx: number) => (
-                                  <span key={snIdx} className="text-[9px] font-mono bg-white border border-zinc-200 px-1.5 py-0.5 rounded text-zinc-500">
-                                    {sn}
-                                  </span>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Action Buttons (Optional) */}
-            <div className="flex justify-end gap-3 pt-4 border-t border-zinc-100">
-              <button
-                onClick={() => setSelectedPO(null)}
-                className="px-4 py-2 text-sm font-semibold text-zinc-600 bg-white border border-zinc-200 hover:bg-zinc-50 rounded-lg transition-colors"
-              >
-                Close
-              </button>
-              <button className="px-4 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 shadow-sm rounded-lg transition-colors">
-                Print Invoice
-              </button>
-            </div>
-
-          </div>
-        )}
-      </FloatingFormCard>
     </>
   );
 };

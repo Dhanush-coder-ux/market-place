@@ -99,10 +99,10 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
       setCombinations(prev => generateCombinations(
         variantTypes,
         prev,
-        { buy_price: form.buy_price, sell_price: form.sell_price, mrp: form.mrp }
+        { buy_price: form.buy_price, sell_price: form.sell_price, mrp: form.mrp, reorder_point: form.reorder_point || "5" }
       ));
     }
-  }, [variantTypes, form.has_variants, form.buy_price, form.sell_price, form.mrp]);
+  }, [variantTypes, form.has_variants, form.buy_price, form.sell_price, form.mrp, form.reorder_point]);
 
   const steps: QuickCreateStep[] = [
     {
@@ -351,6 +351,7 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
           buy_price: 0,
           sell_price: 0,
           stocks: 0,
+          reorder_point: Number(combo.reorder_point) || 0,
           serial_numbers: [],
           datas: {
             barcode: combo.barcode,

@@ -111,7 +111,7 @@ export const router = createBrowserRouter([
       { path: '/po-grn/update', element: <Page><ReceiveGoodsPage /></Page> },
       { path: "/purchase-history", element: <Page><PurchaseHistory /></Page> },
       { path: "/production-entry/add", element: <Page><ProductionForm /></Page> },
-      { path: '/purchase/detail', element: <Page><PurchaseDetail /></Page> },
+      { path: '/purchase/detail/:id', element: <Page><PurchaseDetail /></Page> },
       { path: "/purchase/add", element: <Page><PurchaseForm /></Page> },
       { path: "/purchase/drafts", element: <Page><PurchaseDraftsPage /></Page> },
 

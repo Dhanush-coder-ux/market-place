@@ -14,7 +14,8 @@ import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { SearchSelect } from "@/components/inputbuilders/SearchSelect";
 import { VariantRows, SerialBadgeList, BatchCards } from "../../inventory/components/StockTree";
 import type { InventoryRecord } from "@/types/api";
-import { StockMovementsTable, ProductPurchasesTable } from "@/components/common/HistoryTables";
+import { ProductPurchasesTable } from "@/components/common/HistoryTables";
+import StockMovementTab from "../components/StockMovement";
 
 // ── Search bar ───────────────────────────────────────────────────────────────
 const ProductSearchSelect = () => {
@@ -82,21 +83,11 @@ const ProductDetail = () => {
   const PUR_TAB_LABEL = "Purchases";
 
   useEffect(() => {
+    // The StockMovementTab handles its own loading.
     if (!id || !product) return;
     const hasInvTab = (product.has_variant === true && (product.variants ?? []).length > 0) || (product.has_batch === true && (product.batches ?? []).length > 0);
     const movIdx = hasInvTab ? 2 : 1;
     if (activeTab !== movIdx) return;
-
-    setMovLoading(true);
-    // Load both adjustments and purchases for unified stock movements view
-    Promise.all([
-      getData(`${ENDPOINTS.S_ADJUSTMENTS}/by/product/${SHOP_ID}/${id}`).catch(() => null),
-      getData(`${ENDPOINTS.PURCHASES}/by/product/${SHOP_ID}/${id}`).catch(() => null),
-    ]).then(([adjRes, purRes]) => {
-      setMovements(adjRes?.data ? (Array.isArray(adjRes.data) ? adjRes.data : [adjRes.data]) : []);
-      setPurchases(purRes?.data ? (Array.isArray(purRes.data) ? purRes.data : [purRes.data]) : []);
-      setMovLoading(false);
-    }).catch(() => setMovLoading(false));
   }, [activeTab, id, product]);
 
   useEffect(() => {
@@ -398,91 +389,9 @@ const ProductDetail = () => {
         )}
 
         {/* TAB — Stock Movements */}
-        {TABS[activeTab] === MOV_TAB_LABEL && (() => {
-          const rows: any[] = [];
-
-          movements.forEach((adj: any) => {
-            (adj.products ?? []).forEach((prod: any) => {
-              const isInc = prod.type === 'INCREMENT';
-              const baseRow = {
-                id: adj.id,
-                date: adj.adjusted_date || adj.created_at,
-                description: adj.description || 'Stock Adjustment',
-                displayType: isInc ? 'Adjustment (In)' : 'Adjustment (Out)',
-                isInc,
-                stocks: prod.stocks ?? 0,
-                receivedStocks: prod.received_stocks ?? prod.stocks ?? 0,
-                stocksBefore: prod.stocks_before ?? null,
-                source: 'adjustment' as const,
-              };
-
-              const variants = prod.variants ?? [];
-              if (variants.length > 0) {
-                variants.forEach((v: any) => {
-                  const batches = v.batches ?? [];
-                  if (batches.length > 0) {
-                    batches.forEach((b: any) => {
-                      const sns = Array.isArray(b.serial_numbers) ? b.serial_numbers : (b.serial_numbers?.serial_numbers ?? []);
-                      rows.push({ ...baseRow, variant: v.name, batch: b.name, stocks: b.stocks, serials: sns });
-                    });
-                  } else {
-                    rows.push({ ...baseRow, variant: v.name, batch: null, serials: [] });
-                  }
-                });
-              } else {
-                rows.push({ ...baseRow, variant: null, batch: null, serials: [] });
-              }
-            });
-          });
-
-          // Merge purchases into the movements timeline
-          purchases.forEach((p: any) => {
-            const d = p.datas ?? {};
-            const pd = d.purchaseDetails ?? {};
-            const pType = p.type === 'DIRECT' ? 'Purchase' : (p.type?.includes('PO') ? 'PO Purchase' : 'Purchase');
-
-            (p.products ?? []).forEach((prod: any) => {
-              const baseRow = {
-                id: p.id,
-                date: pd.date || p.created_at,
-                description: `Supplier: ${d.supplier_name || '—'}`,
-                displayType: pType,
-                isInc: true,
-                stocks: prod.stocks ?? 0,
-                receivedStocks: prod.received_stocks ?? prod.stocks ?? 0,
-                stocksBefore: prod.stocks_before ?? null,
-                uiId: p.ui_id,
-                source: 'purchase' as const,
-              };
-
-              const variants = prod.variants ?? [];
-              if (variants.length > 0) {
-                variants.forEach((v: any) => {
-                  const batches = v.batches ?? [];
-                  if (batches.length > 0) {
-                    batches.forEach((b: any) => {
-                      const sns = Array.isArray(b.serial_numbers) ? b.serial_numbers : (b.serial_numbers?.serial_numbers ?? []);
-                      rows.push({ ...baseRow, variant: v.name, batch: b.name, stocks: b.stocks, serials: sns });
-                    });
-                  } else {
-                    rows.push({ ...baseRow, variant: v.name, batch: null, serials: [] });
-                  }
-                });
-              } else {
-                rows.push({ ...baseRow, variant: null, batch: null, serials: [] });
-              }
-            });
-          });
-
-          rows.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
-          return (
-            <StockMovementsTable
-              rows={rows}
-              loading={movLoading}
-            />
-          );
-        })()}
+        {TABS[activeTab] === MOV_TAB_LABEL && (
+          <StockMovementTab inventoryId={id || ""} />
+        )}
 
         {/* TAB — Purchases */}
         {TABS[activeTab] === PUR_TAB_LABEL && (() => {
@@ -491,19 +400,26 @@ const ProductDetail = () => {
           purchases.forEach((p: any) => {
             const d = p.datas ?? {};
             const pd = d.purchaseDetails ?? {};
+            const payment = d.payment ?? {};
             const pType = p.type === 'DIRECT' ? 'Purchase' : (p.type?.includes('PO') ? 'PO Purchase' : 'Purchase');
 
             (p.products ?? []).forEach((prod: any) => {
               const baseRow = {
                 id: p.id,
                 date: pd.date || p.created_at,
-                description: `Supplier: ${d.supplier_name || '—'} ${pd.invoiceNo ? `| Inv: ${pd.invoiceNo}` : ''}`,
+                description: `Supplier: ${d.supplier_name || '—'}`,
                 displayType: pType,
                 isInc: true, // Purchases always add stock
                 stocks: prod.stocks ?? 0,
                 receivedStocks: prod.received_stocks ?? prod.stocks ?? 0,
                 stocksBefore: prod.stocks_before ?? null,
                 uiId: p.ui_id,
+                buyPrice: prod.buy_price,
+                sellPrice: prod.sell_price,
+                paymentMethod: payment.method || "—",
+                amountPaid: payment.amountPaid || 0,
+                invoiceNo: pd.invoiceNo || "—",
+                referenceNo: pd.referenceNo || "—",
               };
 
               const variants = prod.variants ?? [];
@@ -513,10 +429,25 @@ const ProductDetail = () => {
                   if (batches.length > 0) {
                     batches.forEach((b: any) => {
                       const sns = Array.isArray(b.serial_numbers) ? b.serial_numbers : (b.serial_numbers?.serial_numbers ?? []);
-                      rows.push({ ...baseRow, variant: v.name, batch: b.name, stocks: b.stocks, serials: sns });
+                      rows.push({ 
+                        ...baseRow, 
+                        variant: v.name, 
+                        batch: b.name, 
+                        stocks: b.stocks, 
+                        serials: sns,
+                        buyPrice: v.buy_price ?? baseRow.buyPrice,
+                        sellPrice: v.sell_price ?? baseRow.sellPrice,
+                      });
                     });
                   } else {
-                    rows.push({ ...baseRow, variant: v.name, batch: null, serials: [] });
+                    rows.push({ 
+                      ...baseRow, 
+                      variant: v.name, 
+                      batch: null, 
+                      serials: [],
+                      buyPrice: v.buy_price ?? baseRow.buyPrice,
+                      sellPrice: v.sell_price ?? baseRow.sellPrice,
+                    });
                   }
                 });
               } else {

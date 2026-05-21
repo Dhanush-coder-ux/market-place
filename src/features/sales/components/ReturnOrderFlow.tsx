@@ -22,7 +22,7 @@ type SettlementMethod = "Cash" | "UPI" | "Card" | "Bank" | "Store Credit" | "";
 type SaleRecord = OrderResponse;
 
 interface SaleItem {
-  id: string; name: string; sku: string; category: string;
+  id: string; inventory_id: string; name: string; sku: string; category: string;
   quantity: number; unitPrice: number; buyPrice: number;
   imageColor: string; status?: string; stocks_before?: number; serial_numbers?: string[];
 }
@@ -32,8 +32,10 @@ type ReturnStep = 1 | 2 | 3 | 4 | 5;
 interface ReturnState {
   step: ReturnStep; mode: ReturnMode;
   returnItems: Record<string, number>; exchangeMap: Record<string, any>;
-  serialReturnMap: Record<string, string[]>; reason: ReturnReason;
-  notes: string; settlementMethod: SettlementMethod;
+  serialReturnMap: Record<string, string[]>;
+  itemReasons: Record<string, ReturnReason>;
+  notes: string;
+  payments: { mode: string; amount: number }[];
   errors: ReturnErrors; isSubmitting: boolean;
 }
 
@@ -51,6 +53,7 @@ const generateItems = (sale: SaleRecord, productMap: Record<string, string> = {}
     const productName = productMap[item.inventory_id] || item.barcode || `Item ${i + 1}`;
     return {
       id: item.id,
+      inventory_id: item.inventory_id,
       name: item.status === "REFUNDED" ? `(Refunded) ${productName}` : item.status === "EXCHANGED" ? `(Exchanged) ${productName}` : productName,
       sku: item.barcode?.trim() || item.inventory_id.slice(-6),
       category: "General", quantity: item.quantity,
@@ -127,9 +130,10 @@ const StepHeader: React.FC<{ step: ReturnStep; mode: ReturnMode; invoice: string
   );
 };
 
-const RefundSummary: React.FC<{ mode: ReturnMode; selectedItems: SelectedReturnItem[]; totals: { returnValue: number; exchangeValue: number; diff: number }; settlementMethod: SettlementMethod; originalPayment: PaymentMethod; }> = ({ mode, selectedItems, totals, settlementMethod, originalPayment }) => {
+const RefundSummary: React.FC<{ mode: ReturnMode; selectedItems: SelectedReturnItem[]; totals: { returnValue: number; exchangeValue: number; diff: number }; payments: { mode: string; amount: number }[]; originalPayment: PaymentMethod; }> = ({ mode, selectedItems, totals, payments, originalPayment }) => {
   const { returnValue, exchangeValue, diff } = totals;
-  const isStoreCredit = settlementMethod === "Store Credit";
+  const isStoreCredit = payments.length === 1 && payments[0].mode === "Store Credit";
+  const paymentModes = payments.map(p => p.mode).join(", ");
   if (mode === "refund") {
     return (
       <div className="bg-gradient-to-br from-blue-50 to-slate-50 border border-blue-200 rounded-lg p-3.5 px-4">
@@ -144,7 +148,7 @@ const RefundSummary: React.FC<{ mode: ReturnMode; selectedItems: SelectedReturnI
             <span className="text-[10px] text-slate-500">{selectedItems.reduce((s, i) => s + i.returnQty, 0)} item(s)</span>
             <span className="text-[10px] font-semibold text-slate-600 flex items-center gap-1">
               {isStoreCredit ? <Gift size={10} /> : <Banknote size={10} />}
-              {isStoreCredit ? "Store Credit" : `Via ${settlementMethod || originalPayment}`}
+              {isStoreCredit ? "Store Credit" : `Via ${paymentModes || originalPayment}`}
             </span>
           </div>
         </div>
@@ -206,7 +210,7 @@ const SerialReturnPicker: React.FC<{ allSerials: string[]; selected: string[]; r
   );
 };
 
-const ItemSelector: React.FC<{ items: SaleItem[]; returnItems: Record<string, number>; serialReturnMap: Record<string, string[]>; onToggle: (id: string) => void; onQtyChange: (id: string, v: number) => void; onSerialChange: (id: string, serials: string[]) => void; onSelectAll: (all: boolean) => void; error?: string; }> = ({ items, returnItems, serialReturnMap, onToggle, onQtyChange, onSerialChange, onSelectAll, error }) => {
+const ItemSelector: React.FC<{ items: SaleItem[]; returnItems: Record<string, number>; serialReturnMap: Record<string, string[]>; itemReasons: Record<string, ReturnReason>; onToggle: (id: string) => void; onQtyChange: (id: string, v: number) => void; onSerialChange: (id: string, serials: string[]) => void; onReasonChange: (id: string, reason: ReturnReason) => void; onSelectAll: (all: boolean) => void; error?: string; }> = ({ items, returnItems, serialReturnMap, itemReasons, onToggle, onQtyChange, onSerialChange, onReasonChange, onSelectAll, error }) => {
   const [q, setQ] = useState("");
   const filtered = items.filter(i => i.name.toLowerCase().includes(q.toLowerCase()) || i.sku.toLowerCase().includes(q.toLowerCase()));
   const selectableItems = filtered.filter(i => i.status !== "REFUNDED" && i.status !== "EXCHANGED");
@@ -241,6 +245,7 @@ const ItemSelector: React.FC<{ items: SaleItem[]; returnItems: Record<string, nu
           const isProcessed = item.status === "REFUNDED" || item.status === "EXCHANGED";
           const hasSerials = item.serial_numbers && item.serial_numbers.length > 0;
           const selectedSerials = serialReturnMap[item.id] ?? [];
+          const reason = itemReasons[item.id] ?? "";
           return (
             <div 
               key={item.id} 
@@ -279,6 +284,16 @@ const ItemSelector: React.FC<{ items: SaleItem[]; returnItems: Record<string, nu
                         <span className="font-mono ml-auto text-[10px] font-bold text-blue-600">{fmt(item.unitPrice * qty)}</span>
                       </div>
                       {hasSerials && <SerialReturnPicker allSerials={item.serial_numbers as string[]} selected={selectedSerials} required={qty} onChange={s => onSerialChange(item.id, s)} />}
+                      <div className="mt-2" onClick={e => e.stopPropagation()}>
+                        <select
+                          value={reason}
+                          onChange={e => onReasonChange(item.id, e.target.value as ReturnReason)}
+                          className="w-full h-8 px-2 text-[11px] border border-slate-200 rounded-md bg-white text-slate-700 outline-none focus:border-blue-500 font-semibold"
+                        >
+                          <option value="">Select Return Reason</option>
+                          {RETURN_REASONS.map(r => <option key={r} value={r}>{r}</option>)}
+                        </select>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -301,8 +316,8 @@ const ItemSelector: React.FC<{ items: SaleItem[]; returnItems: Record<string, nu
    USE RETURN HOOK
 ═══════════════════════════════════════════════════════════════ */
 const initialState = (): ReturnState => ({
-  step: 1, mode: "refund", returnItems: {}, exchangeMap: {}, serialReturnMap: {},
-  reason: "", notes: "", settlementMethod: "Cash", errors: {}, isSubmitting: false,
+  step: 1, mode: "refund", returnItems: {}, exchangeMap: {}, serialReturnMap: {}, itemReasons: {},
+  notes: "", payments: [{ mode: "Cash", amount: 0 }], errors: {}, isSubmitting: false,
 });
 
 const useReturnModalLogic = (sale: SaleRecord | null, productMap: Record<string, string> = {}) => {
@@ -310,10 +325,20 @@ const useReturnModalLogic = (sale: SaleRecord | null, productMap: Record<string,
   const saleItems = useMemo<SaleItem[]>(() => (sale ? generateItems(sale, productMap) : []), [sale?.id, productMap]);
   const reset = useCallback(() => setState(initialState()), []);
   const setStep = (step: ReturnStep) => setState(s => ({ ...s, step }));
-  const setMode = (mode: ReturnMode) => setState(s => ({ ...s, mode, settlementMethod: mode === "refund" ? "Cash" : "" }));
-  const setReason = (reason: ReturnReason) => setState(s => ({ ...s, reason, errors: { ...s.errors, reason: undefined } }));
+  const setMode = (mode: ReturnMode) => setState(s => ({ ...s, mode, payments: [{ mode: "Cash", amount: 0 }] }));
+  const setReason = (id: string, reason: ReturnReason) => setState(s => ({ ...s, itemReasons: { ...s.itemReasons, [id]: reason }, errors: { ...s.errors, items: undefined } }));
   const setNotes = (notes: string) => setState(s => ({ ...s, notes }));
-  const setSettlementMethod = (sm: SettlementMethod) => setState(s => ({ ...s, settlementMethod: sm, errors: { ...s.errors, settlement: undefined } }));
+  
+  const updatePayment = (index: number, updates: Partial<{ mode: string; amount: number }>) => {
+    setState(s => ({
+      ...s,
+      payments: s.payments.map((p, i) => i === index ? { ...p, ...updates } : p),
+      errors: { ...s.errors, settlement: undefined }
+    }));
+  };
+  
+  const addPayment = () => setState(s => ({ ...s, payments: [...s.payments, { mode: "UPI", amount: 0 }] }));
+  const removePayment = (index: number) => setState(s => ({ ...s, payments: s.payments.filter((_, i) => i !== index) }));
   const { showToast } = useToast();
 
   const toggleItem = useCallback((itemId: string) => {
@@ -360,13 +385,22 @@ const useReturnModalLogic = (sale: SaleRecord | null, productMap: Record<string,
 
   const validate = useCallback((): boolean => {
     const errs: ReturnErrors = {};
-    if (!state.reason) errs.reason = "Please select a reason.";
     if (selectedItems.length === 0) errs.items = "Select at least one item.";
+    if (selectedItems.some(i => !state.itemReasons[i.id])) errs.items = "Please select a return reason for all selected items.";
+    
     const requiresSettlement = state.mode === "refund" || totals.diff !== 0;
-    if (requiresSettlement && !state.settlementMethod) errs.settlement = "Please select a payment/refund method.";
+    if (requiresSettlement) {
+      if (state.payments.length === 0) errs.settlement = "Please add at least one payment method.";
+      else if (state.mode === "exchange") {
+        const sum = state.payments.reduce((acc, p) => acc + p.amount, 0);
+        if (Math.abs(sum - Math.abs(totals.diff)) > 0.01) {
+          errs.settlement = `Total payment must equal ${fmt(Math.abs(totals.diff))}`;
+        }
+      }
+    }
     setState(s => ({ ...s, errors: errs }));
     return Object.keys(errs).length === 0;
-  }, [state.reason, state.mode, state.settlementMethod, selectedItems, totals]);
+  }, [state.itemReasons, state.mode, state.payments, selectedItems, totals]);
 
   const goNext = useCallback(() => { if (state.step === 3 && !validate()) return; setStep((state.step + 1) as ReturnStep); }, [state.step, validate]);
   const goBack = useCallback(() => { if (state.step > 1) setStep((state.step - 1) as ReturnStep); }, [state.step]);
@@ -374,8 +408,20 @@ const useReturnModalLogic = (sale: SaleRecord | null, productMap: Record<string,
   const confirm = useCallback(async (onSuccess?: () => void) => {
     setState(s => ({ ...s, isSubmitting: true }));
     try {
+      const itemsPayload = selectedItems.map(i => ({
+        item_id: i.id,
+        inventory_id: i.inventory_id,
+        quantity: i.returnQty,
+        reason: state.itemReasons[i.id] || "Customer Request",
+        serial_numbers: i.selectedSerials?.length ? i.selectedSerials : undefined
+      }));
+
       if (state.mode === "refund") {
-        await inventoryApi.bulkReturnOrder({ order_id: sale?.id || "", items_id: selectedItems.map(i => i.id), serial_numbers: selectedItems.filter(i => i.selectedSerials?.length).flatMap(i => i.selectedSerials as string[]) } as any);
+        await inventoryApi.bulkReturnOrder({ 
+          order_id: sale?.id || "", 
+          shop_id: SHOP_ID,
+          items: itemsPayload 
+        });
         showToast("Refund(s) processed successfully", "success");
       } else {
         const productsMap = new Map<string, any>();
@@ -385,7 +431,25 @@ const useReturnModalLogic = (sale: SaleRecord | null, productMap: Record<string,
           if (productsMap.has(key)) { const ex = productsMap.get(key); ex.quantity += replacement.quantity || item.returnQty; if (replacement.serial_numbers) ex.serial_numbers = [...ex.serial_numbers, ...replacement.serial_numbers]; }
           else productsMap.set(key, { id: replacement.id, variant_id: replacement.variant_id || null, batch_id: replacement.batch_id || null, serialno_id: replacement.serialno_id || null, serial_numbers: replacement.serial_numbers || [], quantity: replacement.quantity || item.returnQty });
         });
-        await inventoryApi.bulkExchangeOrder({ shop_id: SHOP_ID, customer_id: sale?.customer_id || "", order_id: sale?.id || "", items_id: selectedItems.map(i => i.id), payment_method: state.settlementMethod || sale?.payment_method || "Cash", products: Array.from(productsMap.values()) });
+        
+        const paymentsDict: Record<string, number> = {};
+        if (totals.diff !== 0) {
+          state.payments.forEach(p => {
+            if (p.amount > 0) paymentsDict[p.mode] = p.amount;
+          });
+        }
+        if (Object.keys(paymentsDict).length === 0 && totals.diff !== 0) {
+          paymentsDict[sale?.payment_method || "Cash"] = Math.abs(totals.diff);
+        }
+
+        await inventoryApi.bulkExchangeOrder({ 
+          shop_id: SHOP_ID, 
+          customer_id: sale?.customer_id || "", 
+          order_id: sale?.id || "", 
+          items: itemsPayload, 
+          payments: paymentsDict, 
+          products: Array.from(productsMap.values()) 
+        });
         showToast("Exchange(s) processed successfully", "success");
       }
       onSuccess?.();
@@ -395,7 +459,7 @@ const useReturnModalLogic = (sale: SaleRecord | null, productMap: Record<string,
       showToast("Operation failed. Please try again.", "error");
       setState(s => ({ ...s, isSubmitting: false }));
     }
-  }, [state, selectedItems, sale, showToast]);
+  }, [state, selectedItems, sale, showToast, totals.diff]);
 
   const canProceed = useMemo(() => {
     if (state.step === 2) {
@@ -404,11 +468,18 @@ const useReturnModalLogic = (sale: SaleRecord | null, productMap: Record<string,
       if (!serialsOk) return false;
       return state.mode === "refund" || selectedItems.every(i => !!i.exchangeItemId);
     }
-    if (state.step === 3) return !!state.reason && (state.mode === "refund" || totals.diff === 0 || !!state.settlementMethod);
+    if (state.step === 3) {
+      if (selectedItems.some(i => !state.itemReasons[i.id])) return false;
+      if (totals.diff !== 0 && state.mode === "exchange") {
+        const sum = state.payments.reduce((acc, p) => acc + p.amount, 0);
+        if (Math.abs(sum - Math.abs(totals.diff)) > 0.01) return false;
+      }
+      return true;
+    }
     return true;
-  }, [state.step, state.mode, selectedItems, state.reason, totals.diff, state.settlementMethod]);
+  }, [state.step, state.mode, selectedItems, state.itemReasons, totals.diff, state.payments]);
 
-  return { state, saleItems, selectedItems, totals, reset, setMode, setReason, setNotes, setSettlementMethod, toggleItem, selectAll, updateQty, setExchangeProduct, setSerialReturns, goNext, goBack, confirm, canProceed };
+  return { state, saleItems, selectedItems, totals, reset, setMode, setReason, setNotes, updatePayment, addPayment, removePayment, toggleItem, selectAll, updateQty, setExchangeProduct, setSerialReturns, goNext, goBack, confirm, canProceed };
 };
 
 /* ═══════════════════════════════════════════════════════════════
@@ -511,7 +582,7 @@ export const ReturnFlow: React.FC<ReturnFlowProps> = ({ sale, onClose, onRefresh
               )}
               {state.step === 2 && (
                 <>
-                  <ItemSelector items={saleItems} returnItems={state.returnItems} serialReturnMap={state.serialReturnMap} onToggle={m.toggleItem} onQtyChange={m.updateQty} onSerialChange={m.setSerialReturns} onSelectAll={m.selectAll} error={state.errors.items} />
+                  <ItemSelector items={saleItems} returnItems={state.returnItems} serialReturnMap={state.serialReturnMap} itemReasons={state.itemReasons} onToggle={m.toggleItem} onQtyChange={m.updateQty} onSerialChange={m.setSerialReturns} onReasonChange={m.setReason} onSelectAll={m.selectAll} error={state.errors.items} />
                   {state.mode === "exchange" && selectedItems.length > 0 && (
                     <div className="pt-4 border-t border-slate-100">
                       <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Replacement Items</p>
@@ -603,23 +674,6 @@ export const ReturnFlow: React.FC<ReturnFlowProps> = ({ sale, onClose, onRefresh
               )}
               {state.step === 3 && (
                 <>
-                  <div>
-                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Return Reason <span className="text-red-500">*</span></label>
-                    <div className="relative">
-                      <select 
-                        value={state.reason} 
-                        onChange={e => m.setReason(e.target.value as ReturnReason)}
-                        className={`w-full h-12 p-2.5 px-4 pr-10 text-[13px] border-2 rounded-lg bg-white outline-none appearance-none transition-all font-semibold ${
-                          state.errors.reason ? 'border-red-300 bg-red-50/30' : 'border-slate-100 focus:border-blue-500'
-                        }`}
-                        style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 16px center' }}
-                      >
-                        <option value="">Select a reason…</option>
-                        {RETURN_REASONS.map(r => <option key={r} value={r}>{r}</option>)}
-                      </select>
-                    </div>
-                    {state.errors.reason && <p className="mt-2 flex items-center gap-1.5 text-[12px] text-red-500 font-bold"><AlertCircle size={12} />{state.errors.reason}</p>}
-                  </div>
                   {(state.mode === "refund" || totals.diff !== 0) && (
                     <div className="animate-in fade-in slide-in-from-top-2 duration-300">
                       <div className="flex items-center justify-between mb-2.5">
@@ -630,20 +684,45 @@ export const ReturnFlow: React.FC<ReturnFlowProps> = ({ sale, onClose, onRefresh
                           <span className={`text-[11px] font-black px-3 py-1 rounded-full border-2 ${totals.diff > 0 ? 'bg-amber-50 text-amber-800 border-amber-200' : 'bg-emerald-50 text-emerald-800 border-emerald-200'}`}>Balance: {fmt(Math.abs(totals.diff))}</span>
                         )}
                       </div>
-                      <div className="grid grid-cols-2 gap-3">
-                        {[{ id: "Cash", icon: <Banknote size={20} strokeWidth={1.5} /> }, { id: "UPI", icon: <Smartphone size={20} strokeWidth={1.5} /> }, { id: "Card", icon: <CreditCard size={20} strokeWidth={1.5} /> }, ...(state.mode === "refund" || totals.diff < 0 ? [{ id: "Store Credit", icon: <Gift size={20} strokeWidth={1.5} /> }] : [])].map(opt => (
-                          <div 
-                            key={opt.id} 
-                            onClick={() => m.setSettlementMethod(opt.id as SettlementMethod)}
-                            className={`flex flex-col p-4 border-2 rounded-lg transition-all duration-200 cursor-pointer ${
-                              state.settlementMethod === opt.id ? "bg-white border-blue-500 shadow-xl shadow-blue-500/10 scale-[1.02]" : "bg-white border-slate-100 hover:border-slate-200"
-                            }`}
-                          >
-                            <div className={`mb-2 ${state.settlementMethod === opt.id ? "text-blue-600" : "text-slate-400"}`}>{opt.icon}</div>
-                            <p className="text-[13px] font-bold text-slate-800">{opt.id}</p>
+                      
+                      {/* Split Payment UI */}
+                      <div className="space-y-2">
+                        {state.payments.map((p, idx) => (
+                          <div key={idx} className="flex items-center gap-2">
+                            <select
+                              value={p.mode}
+                              onChange={e => m.updatePayment(idx, { mode: e.target.value })}
+                              className="h-10 px-3 text-[12px] border-2 border-slate-100 rounded-lg bg-white text-slate-800 outline-none focus:border-blue-500 font-semibold"
+                            >
+                              {["Cash", "UPI", "Card", "Bank Transfer", ...(state.mode === "refund" || totals.diff < 0 ? ["Store Credit"] : [])].map(opt => (
+                                <option key={opt} value={opt}>{opt}</option>
+                              ))}
+                            </select>
+                            <input
+                              type="number"
+                              value={p.amount === 0 ? "" : p.amount}
+                              onChange={e => m.updatePayment(idx, { amount: Number(e.target.value) })}
+                              placeholder="Amount"
+                              className="flex-1 h-10 px-3 text-[13px] border-2 border-slate-100 rounded-lg bg-white text-slate-800 outline-none focus:border-blue-500 font-semibold text-right placeholder:text-slate-300"
+                            />
+                            {state.payments.length > 1 && (
+                              <button
+                                onClick={() => m.removePayment(idx)}
+                                className="w-10 h-10 rounded-lg bg-rose-50 text-rose-500 hover:bg-rose-100 flex items-center justify-center transition-all border border-rose-100"
+                              >
+                                <X size={14} />
+                              </button>
+                            )}
                           </div>
                         ))}
+                        <button
+                          onClick={m.addPayment}
+                          className="w-full py-2.5 mt-2 border-2 border-dashed border-slate-200 rounded-lg text-[11px] font-bold text-slate-500 hover:bg-slate-50 hover:text-slate-700 transition-all flex items-center justify-center gap-1.5"
+                        >
+                          <Plus size={12} /> Add Split Payment
+                        </button>
                       </div>
+
                       {state.errors.settlement && <p className="mt-2.5 flex items-center gap-1.5 text-[12px] text-red-500 font-bold"><AlertCircle size={12} />{state.errors.settlement}</p>}
                     </div>
                   )}
@@ -661,7 +740,7 @@ export const ReturnFlow: React.FC<ReturnFlowProps> = ({ sale, onClose, onRefresh
               )}
               {state.step === 4 && (
                 <>
-                  <RefundSummary mode={state.mode} selectedItems={selectedItems} totals={totals} settlementMethod={state.settlementMethod} originalPayment={sale.payment_method as PaymentMethod} />
+                  <RefundSummary mode={state.mode} selectedItems={selectedItems} totals={totals} payments={state.payments} originalPayment={sale.payment_method as PaymentMethod} />
                   <div>
                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Items Summary</p>
                     <div className="border border-slate-100 rounded-lg overflow-hidden shadow-sm">
@@ -679,7 +758,7 @@ export const ReturnFlow: React.FC<ReturnFlowProps> = ({ sale, onClose, onRefresh
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
-                    {[{ label: "Return Mode", value: state.mode === "refund" ? "Refund" : "Exchange" }, { label: "Reason", value: state.reason }, ...((state.mode === "refund" || totals.diff !== 0) && state.settlementMethod ? [{ label: totals.diff > 0 ? "Collect Via" : "Refund Via", value: state.settlementMethod }] : [])].map(row => (
+                    {[{ label: "Return Mode", value: state.mode === "refund" ? "Refund" : "Exchange" }, ...((state.mode === "refund" || totals.diff !== 0) && state.payments.length > 0 ? [{ label: totals.diff > 0 ? "Collect Via" : "Refund Via", value: state.payments.map(p => p.mode).join(", ") }] : [])].map(row => (
                       <div key={row.label} className="bg-slate-50 border border-slate-100 rounded-lg p-3 px-4 shadow-sm">
                         <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">{row.label}</p>
                         <p className="text-[13px] font-bold text-slate-800">{row.value}</p>
@@ -700,11 +779,11 @@ export const ReturnFlow: React.FC<ReturnFlowProps> = ({ sale, onClose, onRefresh
                   <div>
                     <p className="text-[18px] font-black text-slate-900 mb-2">{state.mode === "refund" ? "Refund Successful" : "Exchange Completed"}</p>
                     <p className="text-[13px] text-slate-500 leading-relaxed max-w-[320px] mx-auto font-medium">
-                      {state.mode === "refund" ? `A refund of ${fmt(totals.returnValue)} has been processed via ${state.settlementMethod}.` : totals.diff > 0 ? `Exchange order created. Balance of ${fmt(totals.diff)} collected via ${state.settlementMethod}.` : totals.diff < 0 ? `Exchange order created. Balance of ${fmt(Math.abs(totals.diff))} refunded via ${state.settlementMethod}.` : "The exchange order has been finalized successfully."}
+                      {state.mode === "refund" ? `A refund of ${fmt(totals.returnValue)} has been processed via ${state.payments.map(p => p.mode).join(", ")}.` : totals.diff > 0 ? `Exchange order created. Balance of ${fmt(totals.diff)} collected via ${state.payments.map(p => p.mode).join(", ")}.` : totals.diff < 0 ? `Exchange order created. Balance of ${fmt(Math.abs(totals.diff))} refunded via ${state.payments.map(p => p.mode).join(", ")}.` : "The exchange order has been finalized successfully."}
                     </p>
                   </div>
                   <div className="w-full border-2 border-slate-100 rounded-lg overflow-hidden shadow-xl shadow-slate-100/50">
-                    {[{ label: "Invoice Number", value: `INV-${sale.ui_id}` }, { label: "Return Mode", value: state.mode === "refund" ? "Refund" : "Exchange" }, { label: "Return Reason", value: state.reason }, ...(state.mode === "refund" ? [{ label: "Amount Refunded", value: fmt(totals.returnValue) }] : totals.diff !== 0 ? [{ label: totals.diff > 0 ? "Balance Collected" : "Balance Refunded", value: fmt(Math.abs(totals.diff)) }] : [])].map((row, i) => (
+                    {[{ label: "Invoice Number", value: `INV-${sale.ui_id}` }, { label: "Return Mode", value: state.mode === "refund" ? "Refund" : "Exchange" }, ...(state.mode === "refund" ? [{ label: "Amount Refunded", value: fmt(totals.returnValue) }] : totals.diff !== 0 ? [{ label: totals.diff > 0 ? "Balance Collected" : "Balance Refunded", value: fmt(Math.abs(totals.diff)) }] : [])].map((row, i) => (
                       <div key={row.label} className={`flex justify-between p-3.5 px-5 bg-white ${i > 0 ? 'border-t border-slate-50' : ''}`}>
                         <span className="text-[12px] text-slate-400 font-bold uppercase tracking-tight">{row.label}</span>
                         <span className="font-mono text-[13px] font-black text-slate-900">{row.value}</span>

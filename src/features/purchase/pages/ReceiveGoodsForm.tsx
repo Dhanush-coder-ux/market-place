@@ -694,7 +694,7 @@ const ReceiveGoodForm = () => {
       const productLines = items.filter(p => Number(p.receivedQty) > 0).map(p => {
         const q = Number(p.receivedQty) || 0;
         return {
-          inventory_id: p.product_id || p.id,
+          inventory_id: p.product_id || p.id || null,
           variant_id: p.variant_id || null,
           batch_id: p.batch_id || null,
           serialno_id: p.serialno_id || null,
@@ -730,7 +730,8 @@ const ReceiveGoodForm = () => {
       const payload = {
         shop_id: SHOP_ID,
         type: "PO_UPDATE",
-        purchase_id: poSummary.id,
+        purchase_id: poSummary.id || null,
+        po_id: poSummary.id || null,
         supplier_id: poSummary.supplierId,
         calculations: {
           divided_by: "NONE",
@@ -754,6 +755,7 @@ const ReceiveGoodForm = () => {
             amountPaid: Number(amountPaid) || 0,
           },
         },
+        paid_amount: Number(amountPaid) || 0,
         products: productLines,
       };
 

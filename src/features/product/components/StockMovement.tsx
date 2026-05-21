@@ -1,111 +1,113 @@
-import { Eye } from "lucide-react";
-import Table from "@/components/common/Table";
+import { useEffect, useState } from "react";
+import { useApi } from "@/context/ApiContext";
+import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
+import { StockMovementsTable } from "@/components/common/HistoryTables";
 
-/* ================= MOCK DATA ================= */
-const movementData = [
-  { id: 1, date: "April 20, 2024", time: "2:45 PM", type: "Stock In", source: "XYZ Wholesalers", ref: "INV-004 PU03TO-34", change: 10, stock: 20 },
-  { id: 2, date: "April 17, 2024", time: "11:00 AM", type: "Stock Out", source: "Sales Invoice", ref: "INV-034 PU03093", change: -6, stock: 10 },
-  { id: 3, date: "Mar 15, 2024", time: "3:20 PM", type: "Stock In", source: "Purchase INV-003", ref: "ABC Traders PU0389", change: 10, stock: 16 },
-  { id: 4, date: "Feb 23, 2024", time: "9:30 AM", type: "Stock Out", source: "Stock Adjustment", ref: "Missing item #0034", change: -5, stock: 6 },
-  { id: 5, date: "Feb 10, 2024", time: "10:00 AM", type: "Stock In", source: "Purchase INV-002", ref: "ABC Traders PU0513", change: 18, stock: 11 },
-  { id: 6, date: "Jan 30, 2024", time: "4:15 PM", type: "Stock Out", source: "Sales Invoice INV-012", ref: "ABC Traders PY05", change: -7, stock: 0 },
-];
+interface StockMovementTabProps {
+  inventoryId: string;
+}
 
-/* ================= COLUMN DEFINITION ================= */
-const MOVEMENT_COLUMNS = [
-  {
-    key: "date",
-    label: "Date & Time",
-    render: (value: string, row: any) => (
-      <div>
-        <p className="text-sm font-semibold text-slate-700">{value}</p>
-        <p className="text-[10px] text-slate-400 font-medium">{row.time}</p>
-      </div>
-    ),
-  },
-  {
-    key: "type",
-    label: "Type",
-    render: (value: string) => (
-      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-lg text-[10px] font-bold tracking-tight border ${
-        value === 'Stock In' 
-        ? 'bg-emerald-50 text-emerald-600 border-emerald-100' 
-        : 'bg-rose-50 text-rose-600 border-rose-100'
-      }`}>
-        {value}
-      </span>
-    ),
-  },
-  {
-    key: "source",
-    label: "Source",
-    render: (value: string, row: any) => (
-      <div>
-        <p className="text-sm font-bold text-slate-800 tracking-tight">{value}</p>
-        <p className="text-[10px] text-slate-400 font-medium truncate max-w-[150px]">{row.ref}</p>
-      </div>
-    ),
-  },
-  {
-    key: "change",
-    label: "Stock Change",
-    className: "text-center",
-    render: (value: number) => (
-      <span className={`font-bold text-sm ${value > 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
-        {value > 0 ? `+ ${value}` : value}
-      </span>
-    ),
-  },
-  {
-    key: "stock",
-    label: "Updated Stock",
-    render: (value: number) => (
-      <span className="text-sm font-black text-slate-700">{value}</span>
-    ),
-  },
-  {
-    key: "id",
-    label: "Action",
-    className: "text-right",
-    render: () => (
-      <button className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-lg text-[11px] font-bold hover:bg-indigo-600 hover:text-white transition-all shadow-sm">
-        <Eye size={14} /> View Details
-      </button>
-    ),
-  },
-];
+const StockMovementTab = ({ inventoryId }: StockMovementTabProps) => {
+  const { getData } = useApi();
+  const [movements, setMovements] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-const StockMovementTab = () => {
+  useEffect(() => {
+    if (!inventoryId) return;
+    setLoading(true);
+    
+    // Only call the stock movement route, no other APIs
+    getData(`${ENDPOINTS.S_ADJUSTMENTS}/by/shop/${SHOP_ID}`, { inventory_id: inventoryId })
+      .then((res) => {
+        const rawData = res?.data || res?.datas || (Array.isArray(res) ? res : []);
+        
+        // Map rawData to the rows format expected by StockMovementsTable
+        const rows: any[] = [];
+        
+        rawData.forEach((a: any) => {
+          const mType = a.movement_type || "";
+          let displayType = "Adjustment";
+          let source = "stock";
+          if (mType === "DIRECT" || mType === "PURCHASE") { displayType = "Purchase"; source = "purchase"; }
+          else if (mType === "SALES") { displayType = "Sales"; source = "sales"; }
+          else if (mType === "RETURN" || mType === "SALE_RETURN") { displayType = "Return"; source = "return"; }
+          else if (mType.includes("PO_")) { displayType = "PO Purchase"; source = "purchase"; }
+
+          const products = (a.products || []) as any[];
+          const dateStr = String(a.adjusted_date || a.created_at || new Date().toISOString());
+
+          products.forEach((prod: any) => {
+            const isDecrement = prod.type === 'DECREMENT';
+            const baseQty = Number(prod.stocks || 0);
+
+            const baseRow = {
+              id: a.id,
+              date: dateStr,
+              description: a.description || "",
+              displayType,
+              source,
+              isInc: !isDecrement,
+              uiId: a.ui_id,
+            };
+
+            if (prod.variants && prod.variants.length > 0) {
+              prod.variants.forEach((v: any) => {
+                if (v.batches && v.batches.length > 0) {
+                  v.batches.forEach((b: any) => {
+                    const sns = Array.isArray(b.serial_numbers?.serial_numbers) 
+                      ? b.serial_numbers.serial_numbers 
+                      : (Array.isArray(v.serial_numbers?.serial_numbers) ? v.serial_numbers.serial_numbers : []);
+                    rows.push({
+                      ...baseRow,
+                      variant: v.name || "",
+                      batch: b.name || "",
+                      stocks: Number(b.stocks || v.stocks || baseQty),
+                      receivedStocks: Number(b.stocks || v.stocks || baseQty),
+                      stocksBefore: b.stocks_before ?? v.stocks_before ?? prod.stocks_before ?? null,
+                      serials: sns
+                    });
+                  });
+                } else {
+                  rows.push({
+                    ...baseRow,
+                    variant: v.name || "",
+                    batch: null,
+                    stocks: Number(v.stocks || baseQty),
+                    receivedStocks: Number(v.stocks || baseQty),
+                    stocksBefore: v.stocks_before ?? prod.stocks_before ?? null,
+                    serials: Array.isArray(v.serial_numbers?.serial_numbers) ? v.serial_numbers.serial_numbers : []
+                  });
+                }
+              });
+            } else {
+              rows.push({
+                ...baseRow,
+                variant: null,
+                batch: null,
+                stocks: baseQty,
+                receivedStocks: baseQty,
+                stocksBefore: prod.stocks_before ?? null,
+                serials: Array.isArray(prod.serial_numbers?.serial_numbers) ? prod.serial_numbers.serial_numbers : []
+              });
+            }
+          });
+        });
+        
+        // Sort newest first
+        rows.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        setMovements(rows);
+      })
+      .catch(() => {
+        setMovements([]);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  }, [inventoryId, getData]);
+
   return (
-    <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
-      {/* 1. Summary Header */}
-      <div className="p-4 border-b border-slate-100 bg-slate-50/30 flex items-center gap-6">
-        <div className="flex items-center gap-2">
-          <span className="text-emerald-600 font-bold text-sm">+38</span>
-          <span className="text-slate-400 text-sm font-medium">Stock In /</span>
-          <span className="text-rose-500 font-bold text-sm">-28</span>
-          <span className="text-slate-400 text-sm font-medium">Stock Out</span>
-        </div>
-      </div>
-
-      {/* 2. Reusable Table */}
-      <Table 
-        columns={MOVEMENT_COLUMNS} 
-        data={movementData} 
-        rowKey="id" 
-      />
-
-      {/* 3. Footer Pagination */}
-      <div className="p-4 border-t border-slate-100 flex items-center justify-between bg-white">
-        <p className="text-[11px] text-slate-400 font-bold tracking-tighter">
-          Showing 1 to {movementData.length} of {movementData.length} entries
-        </p>
-        <div className="flex gap-1">
-          <button className="px-3 py-1 text-xs font-bold text-slate-400 hover:text-slate-600 transition-colors font-mono">Prev</button>
-          <button className="w-8 h-8 bg-indigo-600 text-white rounded-lg text-xs font-bold shadow-md shadow-indigo-100 transition-transform active:scale-95">1</button>
-          <button className="px-3 py-1 text-xs font-bold text-slate-400 hover:text-slate-600 transition-colors font-mono">Next</button>
-        </div>
-      </div>
+    <div className="animate-in fade-in slide-in-from-bottom-2 duration-500 h-full flex flex-col">
+      <StockMovementsTable rows={movements} loading={loading} />
     </div>
   );
 };

@@ -383,6 +383,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
               price: String(v.sell_price || ""),
               buy_price: String(v.buy_price || ""),
               mrp: String(v.datas?.mrp || ""),
+              reorder_point: String(v.reorder_point || v.datas?.reorder_point || "5"),
               stock: String(v.stocks || ""),
               active: true,
               serials: (v.datas?.serial_numbers || []).map((sn: string) => ({
@@ -454,7 +455,8 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
     const newCombos = generateCombinations(variantTypes, combinations, {
       buy_price: "0",
       sell_price: "0",
-      mrp: "0"
+      mrp: "0",
+      reorder_point: form.reorder_point || "5"
     });
     setCombinations(newCombos);
   }, [variantTypes, form.has_variants]);
@@ -488,6 +490,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
         buy_price: buyPrice,
         sell_price: sellPrice,
         stocks: stocks,
+        reorder_point: Number(combo.reorder_point) || 0,
         serial_numbers: combo.serials.map(s => s.serial),
         datas: {
           barcode: combo.barcode,

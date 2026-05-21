@@ -165,11 +165,12 @@ export function ProductPurchasesTable({ rows, loading }: ProductPurchasesTablePr
                   <th className="px-5 py-3.5">#</th>
                   <th className="px-5 py-3.5">Date</th>
                   <th className="px-5 py-3.5">Type</th>
-                  <th className="px-5 py-3.5">Product / Variant / Batch</th>
-                  <th className="px-5 py-3.5">Ordered Stock</th>
-                  <th className="px-5 py-3.5">Received Stock</th>
-                  <th className="px-5 py-3.5">Stock Overview</th>
-                  <th className="px-5 py-3.5">Details</th>
+                  <th className="px-5 py-3.5">Variant / Batch</th>
+                  <th className="px-5 py-3.5">Stock (Ord/Rec)</th>
+                  <th className="px-5 py-3.5">Financials</th>
+                  <th className="px-5 py-3.5">Payment</th>
+                  <th className="px-5 py-3.5">Reference</th>
+                  <th className="px-5 py-3.5">Supplier</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -205,28 +206,45 @@ export function ProductPurchasesTable({ rows, loading }: ProductPurchasesTablePr
                         )}
                       </div>
                     </td>
-                    <td className="px-5 py-4 whitespace-nowrap font-black text-sm text-slate-700 tabular-nums">
-                      {r.stocks}
-                    </td>
-                    <td className="px-5 py-4 whitespace-nowrap font-black text-sm text-emerald-600 tabular-nums">
-                      +{r.receivedStocks}
+                    <td className="px-5 py-4 whitespace-nowrap">
+                      <div className="flex items-center gap-2">
+                        <span className="font-black text-sm text-slate-400 tabular-nums">{r.stocks}</span>
+                        <span className="text-slate-300">/</span>
+                        <span className="font-black text-sm text-emerald-600 tabular-nums">+{r.receivedStocks}</span>
+                      </div>
                     </td>
                     <td className="px-5 py-4 whitespace-nowrap">
                       <div className="flex flex-col gap-0.5">
                         <div className="flex items-center gap-2">
-                          <span className="text-[9px] font-black text-slate-400 tracking-wider uppercase">Opening</span>
-                          <span className="text-xs font-bold text-slate-600">{r.stocksBefore ?? '—'}</span>
+                          <span className="text-[9px] font-black text-slate-400 tracking-wider uppercase">Buy</span>
+                          <span className="text-xs font-bold text-slate-600">₹{r.buyPrice ?? '—'}</span>
                         </div>
                         <div className="flex items-center gap-2">
-                          <span className="text-[9px] font-black text-blue-400 tracking-wider uppercase">Current</span>
-                          <span className="text-xs font-black text-blue-600">
-                            {r.stocksBefore !== null ? (r.stocksBefore + r.receivedStocks) : '—'}
-                          </span>
+                          <span className="text-[9px] font-black text-emerald-400 tracking-wider uppercase">Sell</span>
+                          <span className="text-xs font-black text-emerald-600">₹{r.sellPrice ?? '—'}</span>
                         </div>
                       </div>
                     </td>
-                    <td className="px-5 py-4 text-xs text-slate-500 max-w-[220px] truncate" title={r.description}>
-                      {r.description}
+                    <td className="px-5 py-4 whitespace-nowrap">
+                      <div className="flex flex-col gap-0.5">
+                        <span className={`text-[9px] font-bold px-2 py-0.5 rounded-md w-fit ${
+                          r.paymentMethod === 'Cash' ? 'bg-emerald-50 text-emerald-700' :
+                          r.paymentMethod === 'UPI' ? 'bg-violet-50 text-violet-700' :
+                          'bg-slate-50 text-slate-600'
+                        }`}>{r.paymentMethod}</span>
+                        {r.amountPaid > 0 && (
+                          <span className="text-[9px] text-slate-400 font-bold">Paid: ₹{r.amountPaid}</span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-5 py-4 whitespace-nowrap">
+                      <div className="flex flex-col gap-0.5">
+                        <span className="text-[10px] font-mono text-slate-600">INV: {r.invoiceNo}</span>
+                        <span className="text-[10px] font-mono text-slate-400">REF: {r.referenceNo}</span>
+                      </div>
+                    </td>
+                    <td className="px-5 py-4 text-xs text-slate-500 max-w-[150px] truncate" title={r.description}>
+                      {r.description.replace('Supplier: ', '')}
                     </td>
                   </tr>
                 ))}

@@ -20,7 +20,7 @@ const fmt = (n: number) => `₹${n.toLocaleString("en-IN")}`;
 const ITEM_COLORS = ["#dbeafe", "#dcfce7", "#fef3c7", "#fce7f3", "#ede9fe", "#ffedd5", "#f0fdf4", "#ecfeff"];
 
 type SaleItem = {
-  id: string; name: string; sku: string; quantity: number;
+  id: string; name: string; sku: string; quantity: number; returnedQty?: number; reason?: string;
   unitPrice: number; buyPrice: number; imageColor: string;
   status?: string; serial_numbers?: string[];
 };
@@ -32,7 +32,8 @@ const generateItems = (sale: OrderResponse, productMap: Record<string, string> =
       id: item.id,
       name: item.status === "REFUNDED" ? `(Refunded) ${base}` : item.status === "EXCHANGED" ? `(Exchanged) ${base}` : base,
       sku: item.barcode?.trim() || item.inventory_id.slice(-6),
-      quantity: item.quantity, unitPrice: item.sell_price, buyPrice: item.buy_price,
+      quantity: item.quantity, returnedQty: (item as any).returned_quantity, reason: (item as any).reason,
+      unitPrice: item.sell_price, buyPrice: item.buy_price,
       imageColor: ITEM_COLORS[i % ITEM_COLORS.length],
       status: item.status, serial_numbers: item.serial_numbers || [],
     } as any;
@@ -282,8 +283,9 @@ const SaleDetailPage: React.FC = () => {
 
           {/* TAB 1 — Items */}
           {activeTab === 1 && (
-            <SectionCard title="Order Items" className="p-0 overflow-hidden">
-              <div className="overflow-x-auto">
+            <div className="space-y-4">
+              <SectionCard title="Order Items" className="p-0 overflow-hidden">
+                <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="bg-slate-50/50 border-b border-slate-100">
@@ -310,7 +312,12 @@ const SaleDetailPage: React.FC = () => {
                                 <span className="text-[10px] font-mono font-bold text-slate-400">{item.sku}</span>
                                 {item.status && (
                                   <span className={`px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wide ${item.status === "REFUNDED" ? "bg-red-50 text-red-600" : "bg-blue-50 text-blue-600"}`}>
-                                    {item.status}
+                                    {item.status} {item.returnedQty ? `(${item.returnedQty})` : ""}
+                                  </span>
+                                )}
+                                {item.reason && (
+                                  <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wide bg-slate-100 text-slate-500">
+                                    Reason: {item.reason}
                                   </span>
                                 )}
                               </div>
@@ -340,6 +347,57 @@ const SaleDetailPage: React.FC = () => {
                 </table>
               </div>
             </SectionCard>
+            
+            {sale.exchanged_items?.map((exch, idx) => {
+              const replacementItems = generateItems(exch.replacement_order, productMap);
+              return (
+                <SectionCard key={idx} title={`Replacement Order #INV-${exch.replacement_order.ui_id}`} className="p-0 overflow-hidden border-blue-100">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="bg-blue-50/30 border-b border-blue-100/50">
+                          <th className="px-6 py-3 text-[10px] font-black text-blue-400 uppercase tracking-[0.15em]">Replacement Product</th>
+                          <th className="px-6 py-3 text-[10px] font-black text-blue-400 uppercase tracking-[0.15em] text-center">Qty</th>
+                          <th className="px-6 py-3 text-[10px] font-black text-blue-400 uppercase tracking-[0.15em] text-right">Unit Price</th>
+                          <th className="px-6 py-3 text-[10px] font-black text-blue-400 uppercase tracking-[0.15em] text-right">Total</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-50">
+                        {replacementItems.map((item) => (
+                          <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
+                            <td className="px-6 py-4">
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0 border bg-blue-50 border-blue-100">
+                                  <Package size={16} className="text-blue-500" />
+                                </div>
+                                <div className="min-w-0">
+                                  <p className="text-sm font-bold text-slate-800 truncate">{item.name}</p>
+                                  <p className="text-[10px] font-mono font-bold text-slate-400 mt-0.5">{item.sku}</p>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 text-center">
+                              <span className="text-xs font-black text-slate-600">{item.quantity}</span>
+                            </td>
+                            <td className="px-6 py-4 text-right">
+                              <span className="text-xs font-bold text-slate-500 tabular-nums">{fmt(item.unitPrice)}</span>
+                            </td>
+                            <td className="px-6 py-4 text-right">
+                              <span className="text-sm font-black text-slate-800 tabular-nums">{fmt(item.unitPrice * item.quantity)}</span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <div className="p-4 bg-slate-50 border-t border-slate-100 flex justify-between items-center">
+                    <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Replacement Value</span>
+                    <span className="text-sm font-black text-blue-600 tabular-nums">{fmt(exch.replacement_order.total_sellprice)}</span>
+                  </div>
+                </SectionCard>
+              );
+            })}
+          </div>
           )}
 
           {/* TAB 2 — Customer & Payments */}

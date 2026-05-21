@@ -502,8 +502,8 @@ const GrnForm = () => {
             ? finalCost + (Number(p.marginAmount) || 0)
             : Number(p.sellingPrice) || 0;
         return {
-          inventory_id: p.inventory_id,
-          variant_id: p.variant_id,
+          inventory_id: p.inventory_id || null,
+          variant_id: p.variant_id || null,
           name: p.name,
           barcode: p.sku,
           stocks: q,
@@ -563,6 +563,7 @@ const GrnForm = () => {
           },
           payment: { method: payment.method, amountPaid: Number(payment.amountPaid) || 0 },
         },
+        paid_amount: Number(payment.amountPaid) || 0,
         products: transformedProducts,
       };
 

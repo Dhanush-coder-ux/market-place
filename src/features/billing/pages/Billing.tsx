@@ -59,8 +59,6 @@ const Billing = () => {
   const totalAmount = useMemo(() => items.reduce((s, i) => s + (i.tprice || 0), 0), [items]);
   const gstAmount = useMemo(() => round2((totalAmount * GST_PERCENT) / 100), [totalAmount]);
   const finalAmount = useMemo(() => includeGst ? round2(totalAmount + gstAmount) : totalAmount, [includeGst, totalAmount, gstAmount]);
-  const paidAmount = useMemo(() => payments.reduce((s, p) => s + (p.amount || 0), 0), [payments]);
-  const balanceAmount = useMemo(() => finalAmount - paidAmount, [finalAmount, paidAmount]);
 
   // Sync single-mode payment amount when total changes
   useEffect(() => {
@@ -253,21 +251,6 @@ const Billing = () => {
   }, [items, customerData, postData, putData, showToast]);
 
 
-  const handleHoldBill = useCallback(() => {
-    console.log("[Billing] Bill held:", items);
-    setItems([createEmptyRow()]);
-    setPhone("");
-    setCustomerName("");
-    setIsLoadingCustomer(false);
-    setWasAutofilled(false);
-    setPayments([{ mode: "cash", amount: 0 }]);
-  }, [items]);
-
-  const handleClearBill = useCallback(() => {
-    setItems([createEmptyRow()]);
-  }, []);
-
-
   return (
     <div className="flex-1 flex flex-col min-h-0 bg-neutral-50/80 overflow-hidden h-full">
 
@@ -417,8 +400,6 @@ const Billing = () => {
             phone={phone}
             onConfirmOrder={handleConfirmOrder}
             isSubmitting={isSubmitting}
-            onHoldBill={handleHoldBill}
-            onClearBill={handleClearBill}
             includeGst={includeGst}
             totalAmount={totalAmount}
             gstAmount={gstAmount}
@@ -438,8 +419,6 @@ const Billing = () => {
           phone={phone}
           onConfirmOrder={handleConfirmOrder}
           isSubmitting={isSubmitting}
-          onHoldBill={handleHoldBill}
-          onClearBill={handleClearBill}
           includeGst={includeGst}
           totalAmount={totalAmount}
           gstAmount={gstAmount}

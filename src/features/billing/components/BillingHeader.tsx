@@ -20,8 +20,6 @@ interface BillingHeaderProps {
   phone: string;
   onConfirmOrder: (payments: { mode: string, amount: number }[], includeGst: boolean, status: string) => void;
   isSubmitting: boolean;
-  onHoldBill: () => void;
-  onClearBill: () => void;
   // Lifted state from parent
   includeGst: boolean;
   totalAmount: number;
@@ -102,7 +100,7 @@ const PaymentModeDropdown: React.FC<{
 
 const BillingHeader: React.FC<BillingHeaderProps> = ({
   items, customerData, customerName, phone,
-  onConfirmOrder, isSubmitting, onHoldBill, onClearBill,
+  onConfirmOrder, isSubmitting,
   includeGst, totalAmount, gstAmount, finalAmount,
   payments, onPaymentsChange,
 }) => {

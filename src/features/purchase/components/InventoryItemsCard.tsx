@@ -280,14 +280,13 @@ export const InventoryItemsCard = ({
                         {isSelected && <Check size={12} strokeWidth={4} />}
                       </div>
                       <h4 className="font-black text-slate-800 text-sm pr-8 tracking-tight">{variant.name}</h4>
-                      <div className="flex flex-wrap items-center gap-2 mt-2">
-                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">SKU: {variant.sku}</p>
-                        {variant.batchCount > 0 && (
+                      {variant.batchCount > 0 && (
+                        <div className="flex flex-wrap items-center gap-2 mt-2">
                           <span className="flex items-center gap-1 text-[9px] font-black text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-100">
                             <Package size={8} /> {variant.batchCount} Batches
                           </span>
-                        )}
-                      </div>
+                        </div>
+                      )}
                     </div>
                   );
                 })}

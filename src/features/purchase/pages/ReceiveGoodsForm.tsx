@@ -64,6 +64,7 @@ type POProduct = {
   existingSerials: string[];
   reorder_point?: number;
   storageLoc?: string;
+  gst: number;
 }
 
 interface POSummary {
@@ -199,7 +200,7 @@ const HeaderOverview = ({
         <p className="text-[12px] text-slate-400 mt-0.5 font-medium">{reference || "No PO Selected"}</p>
       </div>
 
-      <div className="flex items-center gap-8 lg:gap-12">
+      <div className="flex items-center gap-6 md:gap-8 lg:gap-10">
         <div className="text-center">
           <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1">Ordered</p>
           <p className="text-[15px] font-bold text-slate-700">{stats.totalOrdered}</p>
@@ -209,8 +210,14 @@ const HeaderOverview = ({
           <p className="text-[15px] font-bold text-blue-600">{stats.totalThisRec}</p>
         </div>
         <div className="text-center">
-          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1">Total Value</p>
-          <p className="text-[15px] font-bold text-slate-800">₹{stats.receiptValue.toLocaleString()}</p>
+          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1">Grand Total</p>
+          <p className="text-[15px] font-bold text-slate-800">₹{stats.grandTotal.toLocaleString()}</p>
+        </div>
+        <div className="text-center">
+          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1">Outstanding</p>
+          <p className={`text-[15px] font-bold ${stats.outstanding > 0 ? "text-rose-500" : "text-emerald-500"}`}>
+            ₹{stats.outstanding.toLocaleString()}
+          </p>
         </div>
       </div>
 
@@ -258,16 +265,43 @@ const HeaderOverview = ({
           </div>
         </div>
 
-        <div className="md:col-span-2 bg-white rounded-lg p-4 border border-slate-100/50 shadow-sm flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-lg bg-blue-50 text-blue-500 flex items-center justify-center shadow-sm">
-              <Banknote size={24} />
+        <div className="md:col-span-2 bg-white rounded-lg p-4 border border-slate-100/50 shadow-sm flex items-center justify-between flex-wrap gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-blue-50 text-blue-500 flex items-center justify-center shadow-sm">
+              <Banknote size={20} />
             </div>
             <div>
-              <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest">Receipt Value</p>
-              <p className="text-[20px] font-extrabold text-slate-800">
-                ₹{stats.receiptValue.toLocaleString()}
-              </p>
+              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Subtotal (Excl. GST)</p>
+              <p className="text-[14px] font-bold text-slate-700">₹{stats.receiptValue.toLocaleString()}</p>
+            </div>
+          </div>
+          {stats.totalGst > 0 && (
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-indigo-50 text-indigo-500 flex items-center justify-center shadow-sm">
+                <Banknote size={20} />
+              </div>
+              <div>
+                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Total GST</p>
+                <p className="text-[14px] font-bold text-indigo-600">₹{stats.totalGst.toLocaleString()}</p>
+              </div>
+            </div>
+          )}
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-500 flex items-center justify-center shadow-sm">
+              <Banknote size={20} />
+            </div>
+            <div>
+              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Grand Total</p>
+              <p className="text-[16px] font-extrabold text-slate-800">₹{stats.grandTotal.toLocaleString()}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className={`w-10 h-10 rounded-lg flex items-center justify-center shadow-sm ${stats.outstanding > 0 ? "bg-rose-50 text-rose-500" : "bg-emerald-50 text-emerald-500"}`}>
+              <AlertCircle size={20} />
+            </div>
+            <div>
+              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Outstanding</p>
+              <p className={`text-[16px] font-extrabold ${stats.outstanding > 0 ? "text-rose-600" : "text-emerald-600"}`}>₹{stats.outstanding.toLocaleString()}</p>
             </div>
           </div>
         </div>
@@ -277,6 +311,14 @@ const HeaderOverview = ({
 );
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function parseGst(val: any): number {
+  if (val === undefined || val === null) return 0;
+  if (typeof val === "number") return val;
+  const str = String(val).replace("%", "").trim();
+  const num = parseFloat(str);
+  return isNaN(num) ? 0 : num;
+}
 
 /** Fetch PO reference list for SearchSelect */
 const fetchPOOptions = async (query: string, getData: Function) => {
@@ -576,6 +618,7 @@ const ReceiveGoodForm = () => {
         existingSerials: [],
         reorder_point: p.reorder_point ?? p.datas?.reorder_point ?? 5,
         storageLoc: p.storage_location || p.datas?.storage_location || "",
+        gst: parseGst(p.gst || p.datas?.gst || p.taxGst || p.tax_gst || 0),
       }));
 
       // Fetch full inventory data per unique inventory_id to populate available batches
@@ -663,6 +706,26 @@ const ReceiveGoodForm = () => {
     const totalRemaining = Math.max(0, totalOrdered - totalPrevRec - totalThisRec);
     const receiptValue = items.reduce((s, p) => s + (Number(p.receivedQty) || 0) * p.costPrice, 0);
 
+    const totalGst = items.reduce((s, p) => {
+      const q = Number(p.receivedQty) || 0;
+      const gstRate = Number(p.gst) || 0;
+      return s + (q * p.costPrice * (gstRate / 100));
+    }, 0);
+
+    const gstBreakdown: Record<number, number> = {};
+    items.forEach((p) => {
+      const q = Number(p.receivedQty) || 0;
+      const gstRate = Number(p.gst) || 0;
+      if (q > 0 && gstRate > 0) {
+        const lineGst = q * p.costPrice * (gstRate / 100);
+        gstBreakdown[gstRate] = (gstBreakdown[gstRate] || 0) + lineGst;
+      }
+    });
+
+    const grandTotal = Math.round(receiptValue + totalGst);
+    const paid = Number(amountPaid) || 0;
+    const outstanding = Math.max(0, grandTotal - paid);
+
     // Validate batch/serial requirements for items being received
     const itemsToReceive = items.filter(p => Number(p.receivedQty) > 0);
     const batchValid = itemsToReceive.every(p => {
@@ -677,8 +740,21 @@ const ReceiveGoodForm = () => {
 
     const isValid = !!globalData.warehouse && !!receiptDate && totalThisRec > 0 && batchValid && serialValid;
 
-    return { totalOrdered, totalPrevRec, totalThisRec, totalRemaining, receiptValue, grandTotal: receiptValue, isValid, batchValid, serialValid };
-  }, [items, globalData.warehouse, receiptDate]);
+    return {
+      totalOrdered,
+      totalPrevRec,
+      totalThisRec,
+      totalRemaining,
+      receiptValue,
+      totalGst,
+      gstBreakdown,
+      grandTotal,
+      outstanding,
+      isValid,
+      batchValid,
+      serialValid
+    };
+  }, [items, globalData.warehouse, receiptDate, amountPaid]);
 
   const handleSubmit = async () => {
     if (!poSummary) return;
@@ -710,7 +786,7 @@ const ReceiveGoodForm = () => {
           sell_price: p.sellPrice,
           margin: 0,
           unit: p.unit || "pc",
-          gst: 18, // Default or pull from item if available
+          gst: Number(p.gst) || 0,
           batch_tracking: p.has_batch,
           serial_tracking: p.has_serialno,
           variant: p.variant || "",
@@ -744,7 +820,7 @@ const ReceiveGoodForm = () => {
         supplier_id: poSummary.supplierId,
         calculations: {
           divided_by: "NONE",
-          gst: { type: "inclusive", value: 18, registered: true }
+          gst: { type: "inclusive", value: Number(items.filter(p => Number(p.receivedQty) > 0)[0]?.gst) || 18, registered: true }
         },
         additional_charges: {
           delivery_charge: 0,
@@ -979,7 +1055,12 @@ const ReceiveGoodForm = () => {
                           <td className="py-4 px-6">
                             <div className="flex flex-col">
                               <span className="text-[13px] font-bold text-slate-700 tracking-tight">{item.name}</span>
-                              <span className="text-[10px] font-bold text-slate-400 mt-0.5 tracking-wider font-mono">SKU: {item.sku}</span>
+                              <div className="flex items-center gap-2 mt-0.5">
+                                <span className="text-[10px] font-bold text-slate-400 tracking-wider font-mono">SKU: {item.sku}</span>
+                                <span className="text-[9px] font-extrabold text-indigo-500 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-100 uppercase tracking-wider font-sans">
+                                  GST {item.gst}%
+                                </span>
+                              </div>
                             </div>
                           </td>
                           <td className="py-4 px-4 text-center text-[13px] font-bold text-slate-500 tabular-nums">{item.orderedQty}</td>
@@ -1045,12 +1126,72 @@ const ReceiveGoodForm = () => {
             <SectionCard
               icon={<Banknote size={16} />}
               title="Order Summary"
-              subtitle="Receipt value and balance"
+              subtitle="Receipt value, GST, and outstanding dues"
               accentColor="slate"
             >
               <div className="space-y-4">
-                <SummaryRow label="Receipt Value" value={`₹${stats.receiptValue.toLocaleString()}`} />
-                <SummaryRow label="Total Balance Due" value={`₹${stats.grandTotal.toLocaleString()}`} large />
+                <SummaryRow label="Subtotal (Excl. GST)" value={`₹${stats.receiptValue.toLocaleString()}`} />
+
+                {/* GST Dynamic Breakdown Block */}
+                {stats.totalGst > 0 && (
+                  <div className="p-3 bg-slate-50 border border-slate-100 rounded-xl space-y-2 animate-in fade-in slide-in-from-top-1 duration-200">
+                    <div className="flex justify-between items-center border-b border-slate-200/60 pb-1.5 mb-1.5">
+                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">GST Rate breakdown</span>
+                      <span className="text-[11px] font-black text-slate-700 tabular-nums">Total GST: ₹{stats.totalGst.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    </div>
+                    {Object.entries(stats.gstBreakdown).map(([rate, amt]) => {
+                      if (Number(amt) <= 0) return null;
+                      const basePriceForRate = items.reduce((acc, p) => {
+                        const q = Number(p.receivedQty) || 0;
+                        const c = Number(p.costPrice) || 0;
+                        const r = Number(p.gst) || 0;
+                        if (r === Number(rate)) {
+                          return acc + (q * c);
+                        }
+                        return acc;
+                      }, 0);
+                      return (
+                        <div key={rate} className="flex justify-between items-center text-[11px] text-slate-600 font-medium">
+                          <span className="text-slate-500">
+                            GST {rate}% (on ₹{basePriceForRate.toLocaleString()})
+                          </span>
+                          <span className="text-slate-800 font-bold tabular-nums">
+                            ₹{Number(amt).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </span>
+                        </div>
+                      );
+                    })}
+                    <div className="text-[10px] text-slate-400 italic pt-1 border-t border-slate-200/30 flex flex-col gap-0.5 leading-normal">
+                      <span className="font-semibold text-slate-500">Breakdown explanation:</span>
+                      <span>Product base: ₹{stats.receiptValue.toLocaleString()} + GST: ₹{stats.totalGst.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })} = ₹{(stats.receiptValue + stats.totalGst).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })} with GST</span>
+                    </div>
+                  </div>
+                )}
+
+                <div className="pt-2">
+                  <SummaryRow label="Total Balance Due" value={`₹${stats.grandTotal.toLocaleString()}`} large />
+                </div>
+
+                {/* Outstanding Balance indicators */}
+                {stats.outstanding > 0 ? (
+                  <div className="mt-3 p-3 bg-rose-50/50 border border-rose-100 rounded-xl flex items-center justify-between animate-in fade-in duration-200">
+                    <div className="flex items-center gap-2">
+                      <AlertCircle size={14} className="text-rose-500 animate-pulse" />
+                      <span className="text-[11px] font-bold text-rose-700 uppercase tracking-wider">Outstanding Balance</span>
+                    </div>
+                    <span className="text-[15px] font-extrabold text-rose-600 tabular-nums">
+                      ₹{stats.outstanding.toLocaleString()}
+                    </span>
+                  </div>
+                ) : (
+                  <div className="mt-3 p-3 bg-emerald-50/40 border border-emerald-100 rounded-xl flex items-center justify-between animate-in fade-in duration-200">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 size={14} className="text-emerald-500" />
+                      <span className="text-[11px] font-bold text-emerald-700 uppercase tracking-wider">Fully Paid</span>
+                    </div>
+                    <span className="text-[11px] text-emerald-600 font-bold">NO BALANCE DUE</span>
+                  </div>
+                )}
               </div>
             </SectionCard>
 

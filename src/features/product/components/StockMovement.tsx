@@ -5,9 +5,10 @@ import { StockMovementsTable } from "@/components/common/HistoryTables";
 
 interface StockMovementTabProps {
   inventoryId: string;
+  onNavigateToPurchase?: (id: string) => void;
 }
 
-const StockMovementTab = ({ inventoryId }: StockMovementTabProps) => {
+const StockMovementTab = ({ inventoryId, onNavigateToPurchase }: StockMovementTabProps) => {
   const { getData } = useApi();
   const [movements, setMovements] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -131,7 +132,7 @@ const StockMovementTab = ({ inventoryId }: StockMovementTabProps) => {
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-2 duration-500 h-full flex flex-col">
-      <StockMovementsTable rows={movements} loading={loading} />
+      <StockMovementsTable rows={movements} loading={loading} onNavigateToPurchase={onNavigateToPurchase} />
     </div>
   );
 };

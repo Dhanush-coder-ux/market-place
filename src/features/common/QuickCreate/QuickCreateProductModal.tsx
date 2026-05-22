@@ -35,7 +35,6 @@ const CATEGORY_CONFIGS: Record<string, { suggestedVariantTypes: string[]; suppor
 
 const CATEGORIES = Object.keys(CATEGORY_CONFIGS);
 const UNITS = ["Piece (pcs)", "Box", "Kilogram (kg)", "Gram (g)", "Litre (L)", "Metre (m)", "Set", "Pair"];
-const GST_RATES = ["0%", "5%", "12%", "18%", "28%"];
 
 interface QuickCreateProductModalProps {
   isOpen: boolean;
@@ -66,7 +65,7 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
     buy_price: "",
     sell_price: "",
     mrp: "",
-    gst: "18%",
+    gst: "18",
     hsn: "",
     opening_stock: "0",
     reorder_point: "5",
@@ -90,7 +89,12 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
+    if (name === "gst") {
+      const sanitized = value.replace(/[^0-9.]/g, "");
+      setForm((prev) => ({ ...prev, gst: sanitized }));
+    } else {
+      setForm((prev) => ({ ...prev, [name]: value }));
+    }
   };
 
   // Sync combinations when variant types or base prices change
@@ -143,11 +147,14 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
               />
             </div>
             <div className="space-y-1.5">
-              <label className="text-[10px] font-black text-slate-400 ml-1">GST Rate</label>
-              <ReusableSelect
+              <Input
+                label="GST Rate"
+                name="gst"
                 value={form.gst}
-                onValueChange={(val) => setForm(p => ({ ...p, gst: val }))}
-                options={GST_RATES.map(r => ({ label: r, value: r }))}
+                onChange={handleChange}
+                placeholder="e.g. 18"
+                rightIcon="%"
+                required
               />
             </div>
           </div>
@@ -269,7 +276,7 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 border-t border-slate-200/60">
               <div className="space-y-1">
                 <p className="text-[10px] font-black text-slate-400">Tax (GST)</p>
-                <p className="text-sm font-bold text-slate-700">{form.gst}</p>
+                <p className="text-sm font-bold text-slate-700">{form.gst}%</p>
               </div>
             </div>
 
@@ -346,7 +353,7 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
       const mappedVariants = form.has_variants ? combinations.filter(c => c.active).map(combo => {
         const variantName = Object.values(combo.attributes).join(" / ");
 
-        return {
+        const vData: any = {
           name: variantName,
           buy_price: 0,
           sell_price: 0,
@@ -354,15 +361,20 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
           reorder_point: Number(combo.reorder_point) || 0,
           serial_numbers: [],
           datas: {
-            barcode: combo.barcode,
             mrp: 0,
             attributes: combo.attributes,
           },
           batch: null
         };
+
+        if (combo.barcode && combo.barcode.trim() !== "") {
+          vData.datas.barcode = combo.barcode;
+        }
+
+        return vData;
       }) : [];
 
-      const payload = {
+      const payload: any = {
         shop_id: SHOP_ID,
         name: form.name,
         category: form.category,
@@ -370,7 +382,6 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
         buy_price: 0,
         sell_price: 0,
         stocks: 0,
-        barcode: form.barcode,
         has_variant: form.has_variants,
         has_serialno: form.serial_tracking,
         has_batch: form.batch_tracking,
@@ -382,7 +393,7 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
           brand: form.brand,
           unit: form.unit,
           mrp: 0,
-          gst: form.gst,
+          gst: form.gst ? (form.gst.includes("%") ? form.gst : `${form.gst}%`) : "18%",
           hsn: form.hsn,
           reorder_point: Number(form.reorder_point) || 0,
           opening_stock: 0,
@@ -391,6 +402,10 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
           variant_types: form.has_variants ? variantTypes : [],
         }
       };
+
+      if (form.barcode && form.barcode.trim() !== "") {
+        payload.barcode = form.barcode;
+      }
 
       const res = await postData(ENDPOINTS.INVENTORIES, payload);
       

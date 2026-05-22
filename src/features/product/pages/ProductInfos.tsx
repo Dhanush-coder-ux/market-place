@@ -3,7 +3,8 @@ import { useNavigate, useLocation } from "react-router-dom";
 import {
   Package, Search, Filter, Bookmark, Trash2, Eye,
   ChevronDown, ChevronRight, Layers, AlertTriangle,
-  X, AlertCircle, Calendar, Hash, ExternalLink
+  X, AlertCircle, Calendar, Hash, ExternalLink,
+  Copy, Check
 } from "lucide-react";
 import { VariantRows, BatchCards, SerialBadgeList } from "../../inventory/components/StockTree";
 import { useHeader } from "@/context/HeaderContext";
@@ -96,6 +97,35 @@ const Pill = ({
     >
       {children}
     </span>
+  );
+};
+
+// --- Copy SKU Button with Micro-Animation ---
+const CopySKUButton = ({ val }: { val: string }) => {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(val);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={handleCopy}
+      className={`inline-flex items-center justify-center p-0.5 rounded transition-all duration-200 ${
+        copied ? "text-emerald-500 bg-emerald-50" : "text-slate-350 hover:text-blue-600 hover:bg-slate-100/80"
+      }`}
+      title="Copy SKU"
+    >
+      {copied ? (
+        <Check size={10} className="animate-in zoom-in duration-200" />
+      ) : (
+        <Copy size={10} className="transition-transform duration-200 active:scale-75" />
+      )}
+    </button>
   );
 };
 
@@ -260,13 +290,21 @@ const ProductRow = React.memo(
                   </div>
                 </div>
                 <div className="flex items-center gap-2 text-[11px] text-slate-400 font-medium leading-none">
-                  <span className="font-mono tabular-nums">
-                    {p.barcode ||
-                      datas.barcode ||
-                      (p as any).sku ||
-                      datas.sku ||
-                      "—"}
-                  </span>
+                  {(() => {
+                    const rawSku = p.barcode || datas.barcode || (p as any).sku || datas.sku || "";
+                    if (!rawSku) {
+                      return <span className="font-mono tabular-nums">—</span>;
+                    }
+                    const trimmedSku = rawSku.length > 12 ? `${rawSku.slice(0, 8)}...` : rawSku;
+                    return (
+                      <span className="flex items-center gap-1">
+                        <span className="font-mono tabular-nums" title={rawSku}>
+                          {trimmedSku}
+                        </span>
+                        <CopySKUButton val={rawSku} />
+                      </span>
+                    );
+                  })()}
                   <span className="text-slate-200">·</span>
                   <span>{datas.brand || (p as any).brand || "Generic"}</span>
                   {(datas.gst || (p as any).gst) && (
@@ -369,6 +407,28 @@ const ProductRow = React.memo(
                   ) : (
                     <span className="text-slate-200 text-sm">—</span>
                   )}
+                </td>
+              );
+            }
+
+            if (key === "barcode") {
+              const rawSku = value || p.barcode || datas.barcode || (p as any).sku || datas.sku || "";
+              if (!rawSku) {
+                return (
+                  <td key={key} className="px-3 py-2.5 whitespace-nowrap">
+                    <span className="text-[12px] font-medium text-slate-400">—</span>
+                  </td>
+                );
+              }
+              const trimmedSku = rawSku.length > 12 ? `${rawSku.slice(0, 8)}...` : rawSku;
+              return (
+                <td key={key} className="px-3 py-2.5 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                  <span className="flex items-center gap-1 text-[12px] font-medium text-slate-600">
+                    <span className="font-mono tabular-nums" title={rawSku}>
+                      {trimmedSku}
+                    </span>
+                    <CopySKUButton val={rawSku} />
+                  </span>
                 </td>
               );
             }

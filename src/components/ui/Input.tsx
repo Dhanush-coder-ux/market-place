@@ -5,6 +5,7 @@ interface CustomInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label?: string;
   required?: boolean;
   leftIcon?: React.ReactNode;
+  rightIcon?: React.ReactNode;
   tooltip?: string;
 }
 
@@ -12,6 +13,7 @@ const Input: React.FC<CustomInputProps> = ({
   label,
   required,
   leftIcon,
+  rightIcon,
   tooltip,
   className = "",
   id: manualId,
@@ -58,11 +60,18 @@ const Input: React.FC<CustomInputProps> = ({
             transition-all duration-200
             focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none
             ${leftIcon ? "pl-10" : ""}
+            ${rightIcon ? "pr-10" : ""}
             ${props.disabled ? "bg-slate-50 opacity-60 cursor-not-allowed" : "bg-white"}
             ${className}
           `}
           {...props}
         />
+
+        {rightIcon && (
+          <div className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">
+            {rightIcon}
+          </div>
+        )}
       </div>
     </div>
   );

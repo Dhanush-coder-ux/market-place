@@ -34,6 +34,9 @@ export interface ProductItem {
   category?: string;
   gst?: number;
   storage_location?: string;
+  has_batch?: boolean;
+  has_serialno?: boolean;
+  has_variant?: boolean;
   variants?: {
     id: string;
     name: string;
@@ -48,6 +51,10 @@ export interface ProductItem {
       manufacturing_date?: string;
       serial_numbers?: string[];
     }[];
+    serials?: {
+      id: string;
+      serial_numbers: string[];
+    }[];
   }[];
   batches?: {
     name: string;
@@ -55,6 +62,10 @@ export interface ProductItem {
     expiry_date?: string;
     manufacturing_date?: string;
     serial_numbers?: string[];
+  }[];
+  serials?: {
+    id: string;
+    serial_numbers: string[];
   }[];
 }
 
@@ -75,11 +86,21 @@ export interface DirectPurchaseData {
     transport: number;
   };
   storage_location?: string;
+  paid_amount?: number;
+  outstanding?: number;
 }
 
 type ViewMode = "grid" | "horizontal" | "vertical";
 
-function toDisplayData(p: PurchaseRecord): DirectPurchaseData {
+export function parseGst(val: any): number {
+  if (val === undefined || val === null) return 0;
+  if (typeof val === "number") return val;
+  const str = String(val).replace("%", "").trim();
+  const num = parseFloat(str);
+  return isNaN(num) ? 0 : num;
+}
+
+export function toDisplayData(p: PurchaseRecord): DirectPurchaseData {
   const d2 = p.datas as any;
   const products = ((p as any).products ?? d2?.products ?? d2?.purchase_products ?? d2?.grn_products ?? d2?.finished_products) as any[] | undefined;
   const dateRaw = String(d2?.purchaseDetails?.date ?? d2?.purchase_date ?? d2?.production_date ?? d2?.receipt_date ?? (p as any).date ?? new Date().toISOString());
@@ -94,17 +115,27 @@ function toDisplayData(p: PurchaseRecord): DirectPurchaseData {
   // Try to find the vendor name from various possible fields
   const vendorName = d2?.supplier_name ?? d2?.supplier ?? d2?.purchaseDetails?.supplier_name ?? "—";
 
-  let totalCost = Number(d2?.payment?.amountPaid ?? d2?.total_cost ?? d2?.grand_total ?? 0);
-
   const otherCharge = Number(p.additional_charges?.other_charge ?? d2?.charges?.other ?? 0);
   const transportCharge = Number(p.additional_charges?.delivery_charge ?? d2?.charges?.transport ?? 0);
 
-  if (totalCost === 0 && Array.isArray((p as any).products ?? d2?.products ?? d2?.purchase_products ?? d2?.grn_products ?? d2?.finished_products)) {
-    const prods = ((p as any).products ?? d2?.products ?? d2?.purchase_products ?? d2?.grn_products ?? d2?.finished_products);
-    totalCost = prods.reduce((sum: number, pr: any) => sum + (Number(pr.quantity ?? pr.qty ?? pr.stocks ?? 1) * Number(pr.buy_price ?? 0)), 0);
-    // Include charges in the manually calculated total cost
-    totalCost += otherCharge + transportCharge;
-  }
+  const prods = (products ?? []);
+  const subtotal = prods.reduce((sum: number, pr: any) => {
+    const qty = Number(pr.received_stocks ?? pr.received_qty ?? pr.quantity ?? pr.qty ?? 1);
+    const price = Number(pr.buy_price ?? 0);
+    return sum + (qty * price);
+  }, 0);
+
+  const totalGst = prods.reduce((sum: number, pr: any) => {
+    const qty = Number(pr.received_stocks ?? pr.received_qty ?? pr.quantity ?? pr.qty ?? 1);
+    const price = Number(pr.buy_price ?? 0);
+    const gstPercent = parseGst(pr.gst || pr.datas?.gst || pr.taxGst || pr.tax_gst || 0);
+    return sum + (qty * price * (gstPercent / 100));
+  }, 0);
+
+  const totalCost = subtotal + totalGst + otherCharge + transportCharge;
+
+  const paidAmount = Number((p as any).paid_amount ?? d2?.payment?.amountPaid ?? d2?.paid_amount ?? 0);
+  const outstanding = Math.max(0, totalCost - paidAmount);
 
   return {
     id: p.id,
@@ -121,8 +152,11 @@ function toDisplayData(p: PurchaseRecord): DirectPurchaseData {
       sell_price: pr.sell_price,
       barcode: pr.barcode,
       category: pr.category,
-      gst: Number(pr.gst || pr.taxGst || pr.tax_gst || 0),
+      gst: parseGst(pr.gst || pr.datas?.gst || pr.taxGst || pr.tax_gst || 0),
       storage_location: pr.storage_location || pr.datas?.storage_location,
+      has_batch: pr.has_batch,
+      has_serialno: pr.has_serialno,
+      has_variant: pr.has_variant,
       variants: Array.isArray(pr.variants) ? pr.variants.map((v: any) => ({
         id: v.id,
         name: v.name,
@@ -136,7 +170,11 @@ function toDisplayData(p: PurchaseRecord): DirectPurchaseData {
           expiry_date: b.expiry_date,
           manufacturing_date: b.manufacturing_date,
           serial_numbers: b.serial_numbers?.serial_numbers || b.serial_number?.serial_numbers || null,
-        })) : []
+        })) : [],
+        serials: Array.isArray(v.serials) ? v.serials.map((s: any) => ({
+          id: s.id,
+          serial_numbers: s.serial_numbers || []
+        })) : undefined
       })) : undefined,
       batches: Array.isArray(pr.batches) ? pr.batches.map((b: any) => ({
         name: b.name,
@@ -145,8 +183,14 @@ function toDisplayData(p: PurchaseRecord): DirectPurchaseData {
         manufacturing_date: b.manufacturing_date,
         serial_numbers: b.serial_numbers?.serial_numbers || b.serial_number?.serial_numbers || null,
       })) : undefined,
+      serials: Array.isArray(pr.serials) ? pr.serials.map((s: any) => ({
+        id: s.id,
+        serial_numbers: s.serial_numbers || []
+      })) : undefined
     })),
     total_cost: totalCost,
+    paid_amount: paidAmount,
+    outstanding: outstanding,
     purchaseType: typeMap[p.type] ?? "Purchase",
     paymentMethod: String(d2?.payment?.method ?? d2?.payment_method ?? "—"),
     charges: {

@@ -33,6 +33,7 @@ export interface ProductItem {
   barcode?: string;
   category?: string;
   gst?: number;
+  storage_location?: string;
   variants?: {
     id: string;
     name: string;
@@ -73,6 +74,7 @@ export interface DirectPurchaseData {
     other: number;
     transport: number;
   };
+  storage_location?: string;
 }
 
 type ViewMode = "grid" | "horizontal" | "vertical";
@@ -120,6 +122,7 @@ function toDisplayData(p: PurchaseRecord): DirectPurchaseData {
       barcode: pr.barcode,
       category: pr.category,
       gst: Number(pr.gst || pr.taxGst || pr.tax_gst || 0),
+      storage_location: pr.storage_location || pr.datas?.storage_location,
       variants: Array.isArray(pr.variants) ? pr.variants.map((v: any) => ({
         id: v.id,
         name: v.name,
@@ -150,6 +153,7 @@ function toDisplayData(p: PurchaseRecord): DirectPurchaseData {
       other: otherCharge,
       transport: transportCharge,
     },
+    storage_location: d2?.storage_location || (p as any).storage_location || "",
   };
 }
 
@@ -193,12 +197,17 @@ const STYLES = `
 /* ================= SHARED HELPERS ================= */
 const fmt = (n: number) => `₹${n.toLocaleString()}`;
 
-const ProductPill = ({ name, qty, stocks }: { name: string; qty: number; stocks?: number }) => (
-  <span className="inline-flex items-center gap-1.5 text-xs font-medium text-zinc-600 bg-zinc-50 border border-zinc-100 px-2.5 py-1 rounded-full">
-    <span className="truncate max-w-[150px]">{name}</span>
-    <span className="text-zinc-400 font-semibold tabular-nums shrink-0">
-      Received Stock: {qty} {stocks !== undefined && <span className="ml-1 text-blue-500 font-bold">Ordered Stock: {stocks}</span>}
-    </span>
+const ProductPill = ({ name, qty, stocksBefore }: { name: string; qty: number; stocksBefore?: number }) => (
+  <span className="inline-flex flex-col gap-0.5 text-xs font-medium text-zinc-650 bg-zinc-50 border border-zinc-100 px-2.5 py-1.5 rounded-lg">
+    <span className="truncate max-w-[150px] font-bold text-zinc-750">{name}</span>
+    <div className="flex items-center gap-1.5 flex-wrap text-[10px] text-zinc-400 font-semibold tabular-nums shrink-0 mt-0.5">
+      <span>Received: {qty}</span>
+      {stocksBefore !== undefined && stocksBefore !== null && (
+        <span className="text-blue-500 font-bold whitespace-nowrap bg-zinc-100/80 px-1 py-0.2 rounded border border-zinc-200/50">
+          Op: {stocksBefore} → Cur: {stocksBefore + qty}
+        </span>
+      )}
+    </div>
   </span>
 );
 
@@ -257,6 +266,17 @@ const GridCard = ({ po, onClick }: { po: DirectPurchaseData; onClick: () => void
             <p className="text-[11px] text-zinc-400 mt-0.5">{po.time}</p>
           </div>
         </div>
+        {po.storage_location && (
+          <div className="col-span-2 flex items-start gap-2.5 pt-3 border-t border-zinc-100">
+            <Building2 size={14} className="text-zinc-400 mt-0.5 shrink-0" />
+            <div>
+              <p className="text-[10px] font-semibold text-zinc-400 mb-0.5">Storage Location</p>
+              <p className="text-xs font-semibold text-zinc-650 uppercase tracking-wide bg-zinc-50 border border-zinc-200 px-2 py-0.5 rounded w-fit">
+                {po.storage_location}
+              </p>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Products */}
@@ -267,16 +287,18 @@ const GridCard = ({ po, onClick }: { po: DirectPurchaseData; onClick: () => void
         </div>
         <div className="po-scrollbar max-h-[7.5rem] overflow-y-auto space-y-1.5 pr-1">
           {po.products.map((p, idx) => (
-            <div key={idx} className="flex items-center justify-between py-1 text-sm border-b border-zinc-50 last:border-0">
+            <div key={idx} className="flex items-center justify-between py-2 text-sm border-b border-zinc-50 last:border-0">
               <span className="text-zinc-600 truncate pr-3 group-hover:text-zinc-800 transition-colors">{p.name}</span>
-              <div className="shrink-0 flex flex-col items-end gap-0.5">
+              <div className="shrink-0 flex flex-col items-end gap-1">
                 <span className="text-[10px] font-bold text-zinc-500 bg-zinc-50 border border-zinc-100 px-1.5 py-0.5 rounded">
                   Received Stock: {p.quantity}
                 </span>
-                {p.stocks !== undefined && (
-                  <span className="text-[9px] font-bold text-blue-600 bg-blue-50 border border-blue-100 px-1.5 py-0.5 rounded">
-                    Ordered Stock: {p.stocks}
-                  </span>
+                {p.stocks_before !== undefined && p.stocks_before !== null && (
+                  <div className="flex items-center gap-1.5 text-[9px] font-bold text-zinc-400 uppercase">
+                    <span>Op: {p.stocks_before}</span>
+                    <span>•</span>
+                    <span className="text-blue-500 font-extrabold">Cur: {p.stocks_before + p.quantity}</span>
+                  </div>
                 )}
               </div>
             </div>
@@ -338,7 +360,14 @@ const VerticalTable = ({ data, onClick, totalCount }: { data: DirectPurchaseData
                       </div>
                       <div className="flex flex-col gap-0.5">
                         <span className="font-mono text-[11px] font-semibold text-slate-800">{po.poNumber}</span>
-                        <div className="w-fit"><PurchaseTypeBadge type={po.purchaseType} /></div>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <PurchaseTypeBadge type={po.purchaseType} />
+                          {po.storage_location && (
+                            <span className="text-[9px] font-bold text-zinc-500 bg-zinc-50 border border-zinc-200 px-1.5 py-0.5 rounded uppercase tracking-wider shrink-0">
+                              {po.storage_location}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </td>
@@ -366,7 +395,7 @@ const VerticalTable = ({ data, onClick, totalCount }: { data: DirectPurchaseData
                   <td className="p-2.5 px-3 hidden md:table-cell max-w-[320px]">
                     <div className="flex flex-wrap gap-1.5">
                       {po.products.slice(0, 2).map((p, idx) => (
-                        <ProductPill key={idx} name={p.name} qty={p.quantity} stocks={p.stocks} />
+                        <ProductPill key={idx} name={p.name} qty={p.quantity} stocksBefore={p.stocks_before} />
                       ))}
                       {po.products.length > 2 && (
                         <span className="inline-flex items-center text-[9px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200">

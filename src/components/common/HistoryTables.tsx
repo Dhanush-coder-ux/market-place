@@ -46,7 +46,7 @@ export function StockMovementsTable({ rows, loading }: StockMovementsTableProps)
               <thead>
                 <tr className="sticky top-0 bg-slate-50/90 backdrop-blur-sm z-10 text-[9px] font-black text-slate-400 tracking-wider uppercase border-b border-slate-100 shadow-[0_1px_0_rgba(0,0,0,0.05)]">
                   <th className="px-5 py-3.5">Date</th>
-                  <th className="px-5 py-3.5">Type</th>
+                  <th className="px-5 py-3.5">Movement Type</th>
                   <th className="px-5 py-3.5">Product / Variant / Batch</th>
                   <th className="px-5 py-3.5">Base Qty</th>
                   <th className="px-5 py-3.5">In / Out</th>
@@ -166,10 +166,12 @@ export function ProductPurchasesTable({ rows, loading }: ProductPurchasesTablePr
                   <th className="px-5 py-3.5">Date</th>
                   <th className="px-5 py-3.5">Type</th>
                   <th className="px-5 py-3.5">Variant / Batch</th>
-                  <th className="px-5 py-3.5">Stock (Ord/Rec)</th>
+                  <th className="px-5 py-3.5">In / Out</th>
+                  <th className="px-5 py-3.5">Stock Overview</th>
                   <th className="px-5 py-3.5">Financials</th>
                   <th className="px-5 py-3.5">Payment</th>
                   <th className="px-5 py-3.5">Reference</th>
+                  <th className="px-5 py-3.5">Storage Loc</th>
                   <th className="px-5 py-3.5">Supplier</th>
                 </tr>
               </thead>
@@ -206,13 +208,25 @@ export function ProductPurchasesTable({ rows, loading }: ProductPurchasesTablePr
                         )}
                       </div>
                     </td>
-                    <td className="px-5 py-4 whitespace-nowrap">
-                      <div className="flex items-center gap-2">
-                        <span className="font-black text-sm text-slate-400 tabular-nums">{r.stocks}</span>
-                        <span className="text-slate-300">/</span>
-                        <span className="font-black text-sm text-emerald-600 tabular-nums">+{r.receivedStocks}</span>
-                      </div>
+                    <td className="px-5 py-4 whitespace-nowrap font-black text-sm tabular-nums">
+                      <span className={r.isInc !== false ? 'text-emerald-600' : 'text-rose-600'}>
+                        {r.isInc !== false ? '+' : '-'}{r.receivedStocks}
+                      </span>
                     </td>
+                    <td className="px-5 py-4 whitespace-nowrap">
+                       <div className="flex flex-col gap-0.5">
+                         <div className="flex items-center gap-2">
+                           <span className="text-[9px] font-black text-slate-400 tracking-wider uppercase">Opening</span>
+                           <span className="text-xs font-bold text-slate-600">{r.stocksBefore !== null ? r.stocksBefore : '—'}</span>
+                         </div>
+                         <div className="flex items-center gap-2">
+                           <span className="text-[9px] font-black text-blue-400 tracking-wider uppercase">Current</span>
+                           <span className="text-xs font-black text-blue-600">
+                             {r.stocksBefore !== null ? (r.stocksBefore + r.receivedStocks) : '—'}
+                           </span>
+                         </div>
+                       </div>
+                     </td>
                     <td className="px-5 py-4 whitespace-nowrap">
                       <div className="flex flex-col gap-0.5">
                         <div className="flex items-center gap-2">
@@ -242,6 +256,9 @@ export function ProductPurchasesTable({ rows, loading }: ProductPurchasesTablePr
                         <span className="text-[10px] font-mono text-slate-600">INV: {r.invoiceNo}</span>
                         <span className="text-[10px] font-mono text-slate-400">REF: {r.referenceNo}</span>
                       </div>
+                    </td>
+                    <td className="px-5 py-4 text-xs font-semibold text-slate-650 uppercase whitespace-nowrap">
+                      {r.storageLocation || '—'}
                     </td>
                     <td className="px-5 py-4 text-xs text-slate-500 max-w-[150px] truncate" title={r.description}>
                       {r.description.replace('Supplier: ', '')}
@@ -290,13 +307,14 @@ export function SupplierPurchasesTable({ rows, loading }: SupplierPurchasesTable
                   <th className="px-5 py-3.5">#</th>
                   <th className="px-5 py-3.5">Type</th>
                   <th className="px-5 py-3.5">Product</th>
-                  <th className="px-5 py-3.5">Ordered Stock</th>
-                  <th className="px-5 py-3.5">Received Stock</th>
+                  <th className="px-5 py-3.5">In / Out</th>
+                  <th className="px-5 py-3.5">Stock Overview</th>
                   <th className="px-5 py-3.5">Buy Price</th>
                   <th className="px-5 py-3.5">Sell Price</th>
                   <th className="px-5 py-3.5">Payment</th>
                   <th className="px-5 py-3.5">Invoice</th>
                   <th className="px-5 py-3.5">Reference</th>
+                  <th className="px-5 py-3.5">Storage Location</th>
                   <th className="px-5 py-3.5">Date</th>
                 </tr>
               </thead>
@@ -319,12 +337,25 @@ export function SupplierPurchasesTable({ rows, loading }: SupplierPurchasesTable
                     <td className="px-5 py-4 text-xs font-semibold text-slate-700 whitespace-nowrap max-w-[150px] truncate" title={r.productName}>
                       {r.productName}
                     </td>
-                    <td className="px-5 py-4 whitespace-nowrap font-black text-sm text-slate-400 tabular-nums">
-                      {r.stocks ?? '—'}
+                    <td className="px-5 py-4 whitespace-nowrap font-black text-sm tabular-nums">
+                      <span className={r.isInc !== false ? 'text-emerald-600' : 'text-rose-600'}>
+                        {r.isInc !== false ? '+' : '-'}{r.receivedStocks}
+                      </span>
                     </td>
-                    <td className="px-5 py-4 whitespace-nowrap font-black text-sm text-emerald-600 tabular-nums">
-                      {r.receivedStocks ?? '—'}
-                    </td>
+                    <td className="px-5 py-4 whitespace-nowrap">
+                       <div className="flex flex-col gap-0.5">
+                         <div className="flex items-center gap-2">
+                           <span className="text-[9px] font-black text-slate-400 tracking-wider uppercase">Opening</span>
+                           <span className="text-xs font-bold text-slate-600">{r.stocksBefore !== undefined && r.stocksBefore !== null ? r.stocksBefore : '—'}</span>
+                         </div>
+                         <div className="flex items-center gap-2">
+                           <span className="text-[9px] font-black text-blue-400 tracking-wider uppercase">Current</span>
+                           <span className="text-xs font-black text-blue-600">
+                             {r.stocksBefore !== undefined && r.stocksBefore !== null ? (r.stocksBefore + r.receivedStocks) : '—'}
+                           </span>
+                         </div>
+                       </div>
+                     </td>
                     <td className="px-5 py-4 whitespace-nowrap text-xs font-bold text-slate-700">
                       ₹{r.buy_price ?? '—'}
                     </td>
@@ -348,6 +379,9 @@ export function SupplierPurchasesTable({ rows, loading }: SupplierPurchasesTable
                     </td>
                     <td className="px-5 py-4 text-xs font-mono text-slate-400 whitespace-nowrap">
                       {r.referenceNo}
+                    </td>
+                    <td className="px-5 py-4 text-xs font-semibold text-slate-655 uppercase whitespace-nowrap">
+                      {r.storageLocation || '—'}
                     </td>
                     <td className="px-5 py-4 text-xs text-slate-500 font-medium whitespace-nowrap">
                       {r.purchaseDate ? new Date(r.purchaseDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}

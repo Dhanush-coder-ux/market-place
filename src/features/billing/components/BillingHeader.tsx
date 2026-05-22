@@ -28,13 +28,13 @@ const GST_PERCENT = 18;
 const formatINR = (amount: number, decimals = 2) => amount.toLocaleString("en-IN", { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
-const PaymentModeDropdown: React.FC<{ 
-  value: PaymentMode; 
-  onChange: (val: PaymentMode) => void; 
+const PaymentModeDropdown: React.FC<{
+  value: PaymentMode;
+  onChange: (val: PaymentMode) => void;
   isCreditAllowed: boolean;
 }> = ({ value, onChange, isCreditAllowed }) => {
   const [isOpen, setIsOpen] = useState(false);
-  
+
   const options: { value: PaymentMode; label: string; icon: any; color: string; bgColor: string; borderColor: string; disabled?: boolean }[] = [
     { value: "cash", label: "Cash", icon: <Banknote size={13} />, color: "text-emerald-600", bgColor: "bg-emerald-50/80", borderColor: "border-emerald-200/60" },
     { value: "upi", label: "UPI/Card", icon: <CreditCard size={13} />, color: "text-violet-600", bgColor: "bg-violet-50/80", borderColor: "border-violet-200/60" },
@@ -71,10 +71,9 @@ const PaymentModeDropdown: React.FC<{
                   onChange(opt.value);
                   setIsOpen(false);
                 }}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 text-[11px] font-bold transition-all relative ${
-                  opt.disabled ? "opacity-30 cursor-not-allowed" : 
-                  value === opt.value ? "bg-blue-50/80 text-blue-700" : "text-slate-600 hover:bg-slate-50"
-                }`}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 text-[11px] font-bold transition-all relative ${opt.disabled ? "opacity-30 cursor-not-allowed" :
+                    value === opt.value ? "bg-blue-50/80 text-blue-700" : "text-slate-600 hover:bg-slate-50"
+                  }`}
               >
                 <span className={`shrink-0 ${value === opt.value ? "text-blue-600" : opt.color}`}>
                   {opt.icon}
@@ -113,7 +112,7 @@ const BillingHeader: React.FC<BillingHeaderProps> = ({
   const finalAmount = useMemo(() => includeGst ? round2(totalAmount + gstAmount) : totalAmount, [includeGst, totalAmount, gstAmount]);
 
   const isCreditAllowed = customerData ? customerData.outstanding < customerData.creditLimit : false;
-  
+
   // Body Scroll Lock for Split Modal
   useEffect(() => {
     if (isSplitModalOpen) document.body.classList.add("no-scroll");
@@ -145,14 +144,14 @@ const BillingHeader: React.FC<BillingHeaderProps> = ({
     setPayments(payments.map((p, i) => {
       if (i !== index) return p;
       const next = { ...p, ...updates };
-      
+
       // Auto-fill logic when switching to credit
       if (updates.mode === "credit" && customerData) {
         const available = customerData.creditLimit - customerData.outstanding;
         const currentBalance = finalAmount - payments.reduce((s, pay, j) => s + (j === index ? 0 : pay.amount), 0);
         next.amount = Math.min(currentBalance, available);
       }
-      
+
       // Validation for credit limit
       if (next.mode === "credit" && customerData) {
         const available = customerData.creditLimit - customerData.outstanding;
@@ -225,9 +224,8 @@ const BillingHeader: React.FC<BillingHeaderProps> = ({
           {/* GST Toggle */}
           <div
             onClick={() => setIncludeGst(v => !v)}
-            className={`rounded-lg border p-2.5 flex items-center justify-between transition-all duration-200 cursor-pointer ${
-              includeGst ? "bg-blue-50/40 border-blue-200/60" : "bg-white border-slate-200/60 hover:border-slate-300/60"
-            }`}
+            className={`rounded-lg border p-2.5 flex items-center justify-between transition-all duration-200 cursor-pointer ${includeGst ? "bg-blue-50/40 border-blue-200/60" : "bg-white border-slate-200/60 hover:border-slate-300/60"
+              }`}
           >
             <div className="flex items-center gap-2.5">
               <div className={`w-7 h-7 rounded-md flex items-center justify-center transition-colors duration-200 ${includeGst ? "bg-blue-500/90 text-white" : "bg-slate-100 text-slate-400"}`}>
@@ -272,21 +270,19 @@ const BillingHeader: React.FC<BillingHeaderProps> = ({
 
           {/* Payment Overview Card */}
           <div className="mt-1">
-            <div 
+            <div
               onClick={() => setIsSplitModalOpen(true)}
-              className={`group cursor-pointer rounded-lg border p-3.5 transition-all duration-300 relative overflow-hidden ${
-                Math.abs(balanceAmount) < 0.01 
-                  ? "bg-emerald-50/40 border-emerald-100 hover:bg-emerald-50/60" 
-                  : balanceAmount > 0 
-                    ? "bg-amber-50/40 border-amber-100 hover:bg-amber-50/60" 
+              className={`group cursor-pointer rounded-lg border p-3.5 transition-all duration-300 relative overflow-hidden ${Math.abs(balanceAmount) < 0.01
+                  ? "bg-emerald-50/40 border-emerald-100 hover:bg-emerald-50/60"
+                  : balanceAmount > 0
+                    ? "bg-amber-50/40 border-amber-100 hover:bg-amber-50/60"
                     : "bg-blue-50/40 border-blue-100 hover:bg-blue-50/60"
-              }`}
+                }`}
             >
               <div className="flex items-center justify-between mb-3 relative z-10">
                 <div className="flex items-center gap-2">
-                  <div className={`w-2 h-2 rounded-full animate-pulse ${
-                    Math.abs(balanceAmount) < 0.01 ? "bg-emerald-500" : balanceAmount > 0 ? "bg-amber-500" : "bg-blue-500"
-                  }`} />
+                  <div className={`w-2 h-2 rounded-full animate-pulse ${Math.abs(balanceAmount) < 0.01 ? "bg-emerald-500" : balanceAmount > 0 ? "bg-amber-500" : "bg-blue-500"
+                    }`} />
                   <p className="text-[10px] font-black text-slate-500 tracking-wider">PAYMENT STATUS</p>
                 </div>
                 <button className="text-[9px] font-black text-blue-600 bg-white border border-blue-100 px-2 py-0.5 rounded-lg shadow-sm hover:bg-blue-50 transition-all">
@@ -300,14 +296,12 @@ const BillingHeader: React.FC<BillingHeaderProps> = ({
                   <span className="text-[18px] font-black text-slate-800 tabular-nums">₹{formatINR(paidAmount, 0)}</span>
                 </div>
                 <div className="flex flex-col items-end text-right">
-                  <span className={`text-[8px] font-black uppercase tracking-wider ${
-                    balanceAmount > 0 ? "text-amber-500" : balanceAmount < 0 ? "text-blue-500" : "text-emerald-500"
-                  }`}>
+                  <span className={`text-[8px] font-black uppercase tracking-wider ${balanceAmount > 0 ? "text-amber-500" : balanceAmount < 0 ? "text-blue-500" : "text-emerald-500"
+                    }`}>
                     {balanceAmount > 0 ? "Remaining" : balanceAmount < 0 ? "Change" : "Settled"}
                   </span>
-                  <span className={`text-[18px] font-black tabular-nums ${
-                    balanceAmount > 0 ? "text-amber-600" : balanceAmount < 0 ? "text-blue-600" : "text-emerald-600"
-                  }`}>
+                  <span className={`text-[18px] font-black tabular-nums ${balanceAmount > 0 ? "text-amber-600" : balanceAmount < 0 ? "text-blue-600" : "text-emerald-600"
+                    }`}>
                     ₹{formatINR(Math.abs(balanceAmount), 0)}
                   </span>
                 </div>
@@ -330,16 +324,14 @@ const BillingHeader: React.FC<BillingHeaderProps> = ({
         <div className="px-4 py-4 border-t border-slate-100/60 bg-slate-50/30 shrink-0 flex flex-col gap-2.5">
           <div className="flex gap-2">
             <button onClick={handleHoldBill} disabled={totalQty === 0}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg border text-[11px] font-bold transition-all duration-200 ${
-                totalQty === 0 ? "bg-slate-50 border-slate-200/60 text-slate-300 cursor-not-allowed" : "bg-amber-50/40 border-amber-200/60 text-amber-600 hover:bg-amber-50/80 shadow-sm"
-              }`}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg border text-[11px] font-bold transition-all duration-200 ${totalQty === 0 ? "bg-slate-50 border-slate-200/60 text-slate-300 cursor-not-allowed" : "bg-amber-50/40 border-amber-200/60 text-amber-600 hover:bg-amber-50/80 shadow-sm"
+                }`}
             >
               <Clock size={14} strokeWidth={2} /> HOLD BILL
             </button>
             <button onClick={handleClearBill} disabled={totalQty === 0}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg border text-[11px] font-bold transition-all duration-200 ${
-                totalQty === 0 ? "bg-slate-50 border-slate-200/60 text-slate-300 cursor-not-allowed" : "bg-red-50/40 border-red-200/60 text-red-500 hover:bg-red-50/80 shadow-sm"
-              }`}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg border text-[11px] font-bold transition-all duration-200 ${totalQty === 0 ? "bg-slate-50 border-slate-200/60 text-slate-300 cursor-not-allowed" : "bg-red-50/40 border-red-200/60 text-red-500 hover:bg-red-50/80 shadow-sm"
+                }`}
             >
               <Trash2 size={14} strokeWidth={2} /> CLEAR
             </button>
@@ -348,9 +340,8 @@ const BillingHeader: React.FC<BillingHeaderProps> = ({
             <ScanBarcode size={16} strokeWidth={2} /> SCAN PRODUCT
           </button>
           <button onClick={handleGenerateInvoice} disabled={totalQty === 0 || balanceAmount > 0.01}
-            className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg text-[14px] font-black text-white transition-all duration-300 ${
-              totalQty === 0 || balanceAmount > 0.01 ? "bg-slate-200 cursor-not-allowed text-slate-400" : "bg-blue-600 hover:bg-blue-700 shadow-[0_4px_12px_rgba(59,130,246,0.3)] active:scale-95"
-            }`}
+            className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg text-[14px] font-black text-white transition-all duration-300 ${totalQty === 0 || balanceAmount > 0.01 ? "bg-slate-200 cursor-not-allowed text-slate-400" : "bg-blue-600 hover:bg-blue-700 shadow-[0_4px_12px_rgba(59,130,246,0.3)] active:scale-95"
+              }`}
           >
             {balanceAmount > 0.01 ? "PAY BALANCE TO PROCEED" : <>GENERATE INVOICE <ArrowRight size={16} strokeWidth={2} /></>}
           </button>
@@ -361,11 +352,11 @@ const BillingHeader: React.FC<BillingHeaderProps> = ({
       {isSplitModalOpen && createPortal(
         <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 pointer-events-none">
           {/* Backdrop */}
-          <div 
-            className="fixed inset-0 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-300 pointer-events-auto" 
-            onClick={() => setIsSplitModalOpen(false)} 
+          <div
+            className="fixed inset-0 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-300 pointer-events-auto"
+            onClick={() => setIsSplitModalOpen(false)}
           />
-          
+
           <div className="relative bg-white rounded-2xl shadow-[0_32px_64px_-12px_rgba(0,0,0,0.14)] w-full max-w-sm overflow-hidden flex flex-col animate-in zoom-in-95 duration-300 border border-slate-200/60 pointer-events-auto">
             <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
               <div className="flex items-center gap-3">
@@ -377,7 +368,7 @@ const BillingHeader: React.FC<BillingHeaderProps> = ({
                   <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1.5">Total: ₹{formatINR(finalAmount, 0)}</p>
                 </div>
               </div>
-              <button 
+              <button
                 onClick={() => setIsSplitModalOpen(false)}
                 className="w-8 h-8 rounded-full bg-white border border-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-600 hover:border-slate-300 hover:rotate-90 transition-all shadow-sm"
               >
@@ -394,7 +385,7 @@ const BillingHeader: React.FC<BillingHeaderProps> = ({
 
               <div className="flex items-center justify-between">
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Select Modes</p>
-                <button 
+                <button
                   onClick={addPayment}
                   disabled={payments.length >= 3}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-50 text-indigo-600 text-[10px] font-black hover:bg-indigo-100 disabled:opacity-30 transition-all shadow-sm border border-indigo-100"
@@ -413,7 +404,7 @@ const BillingHeader: React.FC<BillingHeaderProps> = ({
                     />
                     <div className="flex-1 min-w-0 flex items-center gap-2 bg-slate-50/50 rounded-lg px-3 py-2 border border-slate-100 focus-within:border-indigo-200 focus-within:bg-white transition-all shadow-inner">
                       <span className="text-slate-400 font-bold text-[11px]">₹</span>
-                      <input 
+                      <input
                         type="number" autoFocus={idx === payments.length - 1}
                         value={p.amount || ""}
                         onChange={(e) => updatePayment(idx, { amount: Number(e.target.value) })}
@@ -421,7 +412,7 @@ const BillingHeader: React.FC<BillingHeaderProps> = ({
                         className="w-full bg-transparent text-[15px] font-black text-slate-800 outline-none tabular-nums"
                       />
                       {balanceAmount > 0 && (
-                        <button 
+                        <button
                           onClick={() => updatePayment(idx, { amount: round2(p.amount + balanceAmount) })}
                           className="shrink-0 px-2 py-1 rounded-md bg-indigo-600 text-white text-[9px] font-black hover:bg-indigo-700 shadow-md"
                         >
@@ -438,9 +429,8 @@ const BillingHeader: React.FC<BillingHeaderProps> = ({
                 ))}
               </div>
 
-              <div className={`mt-auto p-5 rounded-2xl border transition-all duration-300 relative overflow-hidden ${
-                Math.abs(balanceAmount) < 0.01 ? "bg-emerald-50/40 border-emerald-100" : balanceAmount > 0 ? "bg-amber-50/40 border-amber-100" : "bg-indigo-50/40 border-indigo-100"
-              }`}>
+              <div className={`mt-auto p-5 rounded-2xl border transition-all duration-300 relative overflow-hidden ${Math.abs(balanceAmount) < 0.01 ? "bg-emerald-50/40 border-emerald-100" : balanceAmount > 0 ? "bg-amber-50/40 border-amber-100" : "bg-indigo-50/40 border-indigo-100"
+                }`}>
                 <div className="flex items-center justify-between mb-3.5 relative z-10">
                   <div className="flex items-center gap-2">
                     <div className={`w-2 h-2 rounded-full ${Math.abs(balanceAmount) < 0.01 ? "bg-emerald-500" : balanceAmount > 0 ? "bg-amber-500" : "bg-indigo-500"}`} />
@@ -475,8 +465,8 @@ const BillingHeader: React.FC<BillingHeaderProps> = ({
             </div>
 
             <div className="px-6 py-5 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
-               <p className="text-[10px] text-slate-400 font-medium">Split your bill into up to 3 modes</p>
-               <button 
+              <p className="text-[10px] text-slate-400 font-medium">Split your bill into up to 3 modes</p>
+              <button
                 onClick={() => setIsSplitModalOpen(false)}
                 className="px-6 py-2.5 bg-slate-900 text-white rounded-xl text-[12px] font-black hover:bg-slate-800 shadow-lg transition-all active:scale-95"
               >

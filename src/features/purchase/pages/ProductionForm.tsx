@@ -312,6 +312,11 @@ const ProductionForm = () => {
           },
           serial_numbers: p.serialNumbers ? p.serialNumbers.split(",").map(s => s.trim()).filter(Boolean) : [],
           variant: p.variant,
+          storage_location: p.storageLoc || "",
+          datas: {
+            storage_location: p.storageLoc || "",
+          },
+          reorder_point: Number(p.reorderPoint) || 0,
         };
       });
 
@@ -325,6 +330,7 @@ const ProductionForm = () => {
           productionCosts: { ...productionCosts },
           charges: { transport: Number(charges.transport) || 0, other: Number(charges.other) || 0 },
           payment: { method: payment.method, amountPaid: Number(payment.amountPaid) || 0 },
+          storage_location: products[0]?.storageLoc || "",
         },
         paid_amount: Number(payment.amountPaid) || 0,
         products: transformedProducts,

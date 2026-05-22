@@ -297,8 +297,18 @@ const ProductDetail = () => {
                       <p className="text-[13px] font-semibold text-slate-800 tabular-nums">{String(reorderPoint || "—")}</p>
                     )}
                   </div>
-                  <DetailItem icon={Package} label="Available In Inventory" value={String(currentStock)} onClick={click("Available In Inventory", String(currentStock))} />
-                  <DetailItem icon={MapPin} label="Location" value={String(datas.storage_location || datas.location || "—")} onClick={click("Location", String(datas.storage_location || datas.location || "—"))} />
+                  <div>
+                    <p className="text-[10px] font-medium text-slate-400 tracking-[0.05em] mb-1.5 flex items-center gap-1.5">
+                      <MapPin size={12} className="text-blue-400" /> Location
+                    </p>
+                    <div 
+                      className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 border border-indigo-100 rounded-lg w-fit cursor-pointer hover:bg-indigo-100 transition-colors"
+                      onClick={() => setActiveTab(hasVariants || hasBatches ? 3 : 2)}
+                    >
+                      <ShoppingCart size={12} className="text-indigo-500" />
+                      <span className="text-[11px] font-bold text-indigo-600">Available in Purchases tab</span>
+                    </div>
+                  </div>
                 </div>
               </SectionCard>
             </div>
@@ -437,6 +447,7 @@ const ProductDetail = () => {
                 amountPaid: payment.amountPaid || 0,
                 invoiceNo: pd.invoiceNo || "—",
                 referenceNo: pd.referenceNo || "—",
+                storageLocation: d.storage_location || p.storage_location || prod.storage_location || '—',
               };
 
               const variants = prod.variants ?? [];

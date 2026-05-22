@@ -179,6 +179,8 @@ const PurchaseForm = () => {
             manufacturingDate: p.manufacturing_date || "",
             expiryDate: p.expiry_date || "",
             serialno_id: p.serialno_id || p.serial_number?.id || p.serial_numbers?.id,
+            storageLoc: p.datas?.storage_location || "",
+            reorderPoint: p.reorder_point ?? p.datas?.reorder_point ?? 5,
             serialNumbers: Array.isArray(p.serial_numbers) ? p.serial_numbers.join(',') : (p.serial_numbers?.serial_numbers || p.serial_number?.serial_numbers || []).join(','),
             existingSerials: Array.isArray(p.serial_numbers) ? p.serial_numbers : (p.serial_numbers?.serial_numbers || p.serial_number?.serial_numbers || [])
           })));
@@ -346,6 +348,11 @@ const PurchaseForm = () => {
             manufacturing_date: p.manufacturingDate || new Date().toISOString(),
             expiry_date: p.expiryDate || new Date().toISOString()
           } : undefined,
+          datas: {
+            storage_location: p.storageLoc || "",
+          },
+          storage_location: p.storageLoc || "",
+          reorder_point: Number(p.reorderPoint) || 0,
         };
       });
 
@@ -380,6 +387,7 @@ const PurchaseForm = () => {
             method: payment.method,
             amountPaid: Number(payment.amountPaid) || 0
           },
+          storage_location: products[0]?.storageLoc || "",
         },
         paid_amount: Number(payment.amountPaid) || 0,
         products: transformedProducts,
@@ -574,106 +582,101 @@ const PurchaseForm = () => {
             )}
           </div>
 
-          {/* 2. Summary & Payment (2 cols) */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
-            {/* 3. Order Summary Card */}
-            <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden transition-all hover:shadow-md">
-              <div className="px-6 py-4 bg-gradient-to-r from-emerald-50/50 to-transparent border-b border-slate-100 flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-600 border border-emerald-200 shadow-sm">
-                  <Banknote size={16} />
-                </div>
-                <h2 className="text-xs font-bold text-slate-800 uppercase tracking-widest">Order Summary</h2>
+          {/* 2. Summary & Payment Combined Card */}
+          <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col transition-all hover:shadow-md">
+            <div className="px-6 py-4 bg-gradient-to-r from-slate-50 to-transparent border-b border-slate-100 flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-600 border border-slate-200 shadow-sm">
+                <Banknote size={16} />
               </div>
-
-              <div className="p-6 space-y-4">
-                <div className="flex justify-between items-center text-slate-500">
-                  <span className="text-[11px] font-bold uppercase tracking-wider">Subtotal (Excl. GST)</span>
-                  <span className="text-sm font-black text-slate-800 tabular-nums">₹{stats.subtotal.toLocaleString()}</span>
-                </div>
-
-                {/* GST Dynamic Breakdown Block */}
-                {stats.totalGst > 0 && (
-                  <div className="p-3 bg-slate-50 border border-slate-150 rounded-xl space-y-2 animate-in fade-in slide-in-from-top-1 duration-200">
-                    <div className="flex justify-between items-center border-b border-slate-200/60 pb-1.5 mb-1.5">
-                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">GST Rate breakdown</span>
-                      <span className="text-[11px] font-black text-slate-700 tabular-nums">Total GST: ₹{stats.totalGst.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                    </div>
-                    {Object.entries(stats.gstBreakdown).map(([rate, amt]) => {
-                      if (Number(amt) <= 0) return null;
-                      const basePriceForRate = products.reduce((acc, p) => {
-                        const q = Number(p.quantity) || 0;
-                        const c = Number(p.costPrice) || 0;
-                        const r = Number(p.taxGst) || 0;
-                        if (r === Number(rate)) {
-                          return acc + (q * c);
-                        }
-                        return acc;
-                      }, 0);
-                      return (
-                        <div key={rate} className="flex justify-between items-center text-[11px] text-slate-600 font-medium">
-                          <span className="text-slate-500">
-                            GST {rate}% (on ₹{basePriceForRate.toLocaleString()})
-                          </span>
-                          <span className="text-slate-800 font-bold tabular-nums">
-                            ₹{Number(amt).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                          </span>
-                        </div>
-                      );
-                    })}
-                    <div className="text-[10px] text-slate-400 italic pt-1 border-t border-slate-200/30 flex flex-col gap-0.5 leading-normal">
-                      <span className="font-semibold text-slate-500">Breakdown explanation:</span>
-                      <span>Product base: ₹{stats.subtotal.toLocaleString()} + GST: ₹{stats.totalGst.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })} = ₹{(stats.subtotal + stats.totalGst).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })} with GST</span>
-                    </div>
-                  </div>
-                )}
-
-                <div className="flex justify-between items-center text-slate-500">
-                  <span className="text-[11px] font-bold uppercase tracking-wider">Transport</span>
-                  <div className="w-24">
-                    <Input
-                      type="number"
-                      tooltip="Delivery or transportation costs charged by the supplier."
-                      placeholder="0"
-                      className="!h-8 !text-right !text-xs !bg-slate-50/50"
-                      value={charges.transport as any}
-                      onChange={(e) => setCharges({ ...charges, transport: e.target.value ? Number(e.target.value) : "" })}
-                    />
-                  </div>
-                </div>
-                <div className="flex justify-between items-center text-slate-500">
-                  <span className="text-[11px] font-bold uppercase tracking-wider">Other Charges</span>
-                  <div className="w-24">
-                    <Input
-                      type="number"
-                      placeholder="0"
-                      className="!h-8 !text-right !text-xs !bg-slate-50/50"
-                      value={charges.other as any}
-                      onChange={(e) => setCharges({ ...charges, other: e.target.value ? Number(e.target.value) : "" })}
-                    />
-                  </div>
-                </div>
-
-                <div className="pt-4 border-t border-slate-100 mt-2">
-                  <div className="flex flex-col gap-1">
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Grand Total</span>
-                    <span className="text-3xl font-black text-slate-900 tracking-tight">₹{stats.grandTotal.toLocaleString()}</span>
-                  </div>
-                </div>
-              </div>
+              <h2 className="text-xs font-black text-slate-800 uppercase tracking-widest">Additional Charge</h2>
             </div>
-
-            {/* 4. Payment Details Card */}
-            <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden transition-all hover:shadow-md">
-              <div className="px-6 py-4 bg-gradient-to-r from-amber-50/50 to-transparent border-b border-slate-100 flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center text-amber-600 border border-amber-200 shadow-sm">
-                  <CreditCard size={16} />
-                </div>
-                <h2 className="text-xs font-bold text-slate-800 uppercase tracking-widest">Payment Details</h2>
+            
+            <div className="p-6 space-y-6">
+              <div className="flex justify-between items-center text-slate-500">
+                <span className="text-[11px] font-bold uppercase tracking-wider">Subtotal (Excl. GST)</span>
+                <span className="text-sm font-black text-slate-800 tabular-nums">₹{stats.subtotal.toLocaleString()}</span>
               </div>
 
-              <div className="p-6 space-y-6">
-                <div className="grid grid-cols-4 gap-2">
+              {/* GST Dynamic Breakdown Block */}
+              {stats.totalGst > 0 && (
+                <div className="p-4 bg-slate-50/50 border border-slate-100 rounded-xl space-y-3 animate-in fade-in slide-in-from-top-1 duration-200">
+                  <div className="flex justify-between items-center border-b border-slate-200/60 pb-2">
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">GST Rate breakdown</span>
+                    <span className="text-[11px] font-black text-slate-700 tabular-nums">Total GST: ₹{stats.totalGst.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  </div>
+                  {Object.entries(stats.gstBreakdown).map(([rate, amt]) => {
+                    if (Number(amt) <= 0) return null;
+                    const basePriceForRate = products.reduce((acc, p) => {
+                      const q = Number(p.quantity) || 0;
+                      const c = Number(p.costPrice) || 0;
+                      const r = Number(p.taxGst) || 0;
+                      if (r === Number(rate)) {
+                        return acc + (q * c);
+                      }
+                      return acc;
+                    }, 0);
+                    return (
+                      <div key={rate} className="flex justify-between items-center text-[11px] text-slate-600 font-medium">
+                        <span className="text-slate-500">
+                          GST {rate}% (on ₹{basePriceForRate.toLocaleString()})
+                        </span>
+                        <span className="text-slate-800 font-bold tabular-nums">
+                          ₹{Number(amt).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
+                      </div>
+                    );
+                  })}
+                  <div className="text-[10px] text-slate-400 italic pt-2 border-t border-slate-200/30 flex flex-col gap-0.5 leading-normal">
+                    <span className="font-semibold text-slate-500">Breakdown explanation:</span>
+                    <span>Product base: ₹{stats.subtotal.toLocaleString()} + GST: ₹{stats.totalGst.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })} = ₹{(stats.subtotal + stats.totalGst).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })} with GST</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Additional Charges Section */}
+              <div className="pt-2">
+                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 pb-2 border-b border-slate-100">
+                  Additional Charge
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="flex justify-between items-center text-slate-500 bg-slate-50/50 p-2.5 rounded-lg border border-slate-100">
+                    <span className="text-[11px] font-bold uppercase tracking-wider">Transport</span>
+                    <div className="w-28">
+                      <Input
+                        type="number"
+                        tooltip="Delivery or transportation costs charged by the supplier."
+                        placeholder="0"
+                        className="!h-9 !text-right !text-xs !bg-white"
+                        value={charges.transport as any}
+                        onChange={(e) => setCharges({ ...charges, transport: e.target.value ? Number(e.target.value) : "" })}
+                      />
+                    </div>
+                  </div>
+                  <div className="flex justify-between items-center text-slate-500 bg-slate-50/50 p-2.5 rounded-lg border border-slate-100">
+                    <span className="text-[11px] font-bold uppercase tracking-wider">Other Charges</span>
+                    <div className="w-28">
+                      <Input
+                        type="number"
+                        placeholder="0"
+                        className="!h-9 !text-right !text-xs !bg-white"
+                        value={charges.other as any}
+                        onChange={(e) => setCharges({ ...charges, other: e.target.value ? Number(e.target.value) : "" })}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Payment Method Block */}
+              <div className="pt-4 border-t border-slate-100 mt-4">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-6 h-6 rounded-md bg-amber-100 flex items-center justify-center text-amber-600 border border-amber-200 shadow-sm">
+                    <CreditCard size={12} />
+                  </div>
+                  <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Payment Method</h3>
+                </div>
+
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   {[
                     { id: "Cash", icon: <Banknote size={16} /> },
                     { id: "UPI", icon: <Smartphone size={16} /> },
@@ -683,30 +686,38 @@ const PurchaseForm = () => {
                     <button
                       key={m.id}
                       onClick={() => setPayment({ ...payment, method: m.id as PaymentMethod })}
-                      className={`flex flex-col items-center justify-center py-3 rounded-lg border transition-all ${payment.method === m.id
-                        ? "border-amber-500 bg-amber-50 text-amber-700 shadow-sm"
-                        : "border-slate-100 bg-slate-50/50 text-slate-400 hover:border-amber-200"
+                      className={`flex flex-col items-center justify-center py-4 rounded-xl border transition-all ${payment.method === m.id
+                        ? "border-amber-500 bg-amber-50 text-amber-700 shadow-sm ring-1 ring-amber-500/20"
+                        : "border-slate-200 bg-white text-slate-500 hover:border-amber-200 hover:bg-amber-50/50"
                         }`}
                     >
-                      <div className="mb-1.5">{m.icon}</div>
-                      <span className="text-[9px] font-black uppercase tracking-widest">{m.id}</span>
+                      <div className="mb-2">{m.icon}</div>
+                      <span className="text-[10px] font-black uppercase tracking-widest">{m.id}</span>
                     </button>
                   ))}
                 </div>
+              </div>
 
-                <div className="space-y-4 pt-2">
+              {/* Totals & Balance Block */}
+              <div className="pt-8 border-t border-slate-100 mt-8 space-y-6">
+                <div className="p-6 rounded-xl bg-slate-50 border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <span className="text-xs font-black text-slate-500 uppercase tracking-widest">Grand Total</span>
+                  <span className="text-4xl font-black text-slate-900 tracking-tight">₹{stats.grandTotal.toLocaleString()}</span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <Input
                     label="Amount Paid Now (₹)"
                     type="number"
-                    className="!h-12 !text-lg !font-black !text-emerald-600"
+                    className="!h-14 !text-xl !font-black !text-emerald-600 !bg-white"
                     value={payment.amountPaid as any}
                     onChange={(e) => setPayment({ ...payment, amountPaid: e.target.value ? Number(e.target.value) : "" })}
                     placeholder={stats.grandTotal.toString()}
                   />
 
-                  <div className="p-4 rounded-lg bg-slate-50 border border-slate-100 flex flex-col gap-1">
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Outstanding Balance</span>
-                    <span className={`text-xl font-black ${stats.outstanding > 0 ? "text-rose-600" : "text-emerald-600"}`}>
+                  <div className="h-full min-h-[56px] p-4 rounded-xl bg-white border border-slate-200 shadow-sm flex justify-between items-center self-end">
+                    <span className="text-xs font-black text-slate-500 uppercase tracking-widest">Outstanding Balance</span>
+                    <span className={`text-2xl font-black ${stats.outstanding > 0 ? "text-rose-500" : "text-emerald-500"}`}>
                       ₹{stats.outstanding.toLocaleString()}
                     </span>
                   </div>

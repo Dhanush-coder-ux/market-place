@@ -276,6 +276,7 @@ export default function SupplierDetail() {
                 deliveryCharge: charges.delivery_charge ?? 0,
                 otherCharge: charges.other_charge ?? 0,
                 uiId: p.ui_id,
+                storageLocation: d.storage_location || p.storage_location || '—',
               };
               (p.products ?? []).forEach((prod: any) => {
                 rows.push({
@@ -283,6 +284,8 @@ export default function SupplierDetail() {
                   productName: prod.name || 'Unknown Product',
                   stocks: prod.stocks,
                   receivedStocks: prod.received_stocks ?? prod.stocks ?? 0,
+                  stocksBefore: prod.stocks_before ?? null,
+                  isInc: true,
                   buy_price: prod.buy_price,
                   sell_price: prod.sell_price
                 });

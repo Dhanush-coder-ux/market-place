@@ -51,14 +51,14 @@ const ShortcutKbd = ({ keys, label }: { keys: string[]; label: string; }) => (
   </div>
 );
 
-const QtyAdjuster = ({ 
-  value, 
-  onChange, 
+const QtyAdjuster = ({
+  value,
+  onChange,
   disabled,
   isEditable
-}: { 
-  value: number; 
-  onChange: (v: number) => void; 
+}: {
+  value: number;
+  onChange: (v: number) => void;
   disabled: boolean;
   isEditable: boolean;
 }) => {
@@ -71,7 +71,7 @@ const QtyAdjuster = ({
   }
   return (
     <div className={`inline-flex items-center border border-slate-250 rounded-lg overflow-hidden bg-white h-[32px] w-24 shrink-0 shadow-sm ${disabled ? "opacity-40 pointer-events-none" : ""}`}>
-      <button 
+      <button
         type="button"
         className="w-7 h-full flex items-center justify-center border-none bg-transparent cursor-pointer text-slate-400 hover:bg-slate-50 hover:text-slate-600 transition-colors active:scale-90"
         onClick={() => onChange(Math.max(1, value - 1))}
@@ -85,7 +85,7 @@ const QtyAdjuster = ({
         onChange={(e) => onChange(Math.max(1, Number(e.target.value)))}
         className="w-10 bg-transparent text-center outline-none text-[12px] font-bold text-slate-700 tabular-nums border-x border-slate-100 h-full p-0 flex items-center justify-center"
       />
-      <button 
+      <button
         type="button"
         className="w-7 h-full flex items-center justify-center border-none bg-transparent cursor-pointer text-slate-400 hover:bg-slate-50 hover:text-slate-600 transition-colors active:scale-90"
         onClick={() => onChange(value + 1)}
@@ -111,14 +111,13 @@ const BillingRow = React.memo(({
 }) => {
   const isFilled = !!item.name;
   const [baseName, variantName] = item.name ? item.name.split(' - ') : ["", ""];
-  
+
   // A "Simple" product has no serial tracking, no batch tracking, and no variant.
   const isQtyEditable = !item.requireSerial && isFilled;
 
   return (
-    <tr className={`group/row transition-colors duration-150 ${
-      isFilled ? "hover:bg-blue-50/10" : "hover:bg-slate-50/30"
-    } ${index % 2 === 0 ? "" : "bg-slate-50/15"}`}>
+    <tr className={`group/row transition-colors duration-150 ${isFilled ? "hover:bg-blue-50/10" : "hover:bg-slate-50/30"
+      } ${index % 2 === 0 ? "" : "bg-slate-50/15"}`}>
       {/* Row Index */}
       <td className={`hidden sm:table-cell pl-4 pr-2 py-3 align-middle ${!isLast ? "border-b border-slate-100/60" : ""}`}>
         <div className="w-5 h-5 rounded flex items-center justify-center text-[10px] font-bold text-slate-400">
@@ -207,7 +206,7 @@ const BillingRow = React.memo(({
       {/* Quantity */}
       <td className={`px-2 py-3 align-middle text-right ${!isLast ? "border-b border-slate-100/60" : ""}`}>
         <div className="flex items-center justify-end">
-          <QtyAdjuster 
+          <QtyAdjuster
             value={item.qty}
             onChange={(qty) => onQtyChange(item.id, qty)}
             disabled={!isQtyEditable}
@@ -285,7 +284,7 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
         })),
         requireSerial: p.has_serialno || false,
         batchTracking: p.has_batch || false,
-        manufacturingDate: p.batches?.[0]?.manufacturing_date, 
+        manufacturingDate: p.batches?.[0]?.manufacturing_date,
         expiryDate: p.batches?.[0]?.expiry_date,
         price: p.sell_price || 0,
         stocks: p.stocks || 0,
@@ -358,9 +357,9 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
       }
     }
 
-    const existingItemIndex = items.findIndex((item) => 
-      item.id !== activeRowId && 
-      item.inventoryId === pendingProduct.id && 
+    const existingItemIndex = items.findIndex((item) =>
+      item.id !== activeRowId &&
+      item.inventoryId === pendingProduct.id &&
       item.variantId === (variant.id === "default" ? null : variant.id) &&
       item.batchId === (variant.batchId || pendingProduct.batchId)
     );
@@ -385,7 +384,7 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
 
       // Remove the active row if it was just a temporary/empty row or if it's being merged away
       updatedItems = updatedItems.filter(item => item.id !== activeRowId);
-      
+
       // Ensure there's always one empty row at the bottom if we removed one
       if (!updatedItems.some(item => !item.name)) {
         updatedItems.push(createEmptyRow());

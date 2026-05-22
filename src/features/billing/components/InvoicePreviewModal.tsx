@@ -42,7 +42,7 @@ const InvoicePreviewModal: React.FC<InvoicePreviewModalProps> = ({
   const dateStr = today.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
   const timeStr = today.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
   const invoiceNo = `INV-${Date.now().toString(36).toUpperCase().slice(-6)}`;
-  
+
   const primaryPayment = payments[0] || { mode: "cash" };
   const modeInfo = payMeta[primaryPayment.mode] || payMeta.cash;
 

@@ -425,8 +425,8 @@ const GrnForm = () => {
               batchNum: p.batch_number || "",
               manufacturingDate: p.manufacturing_date || "",
               expiryDate: p.expiry_date || "",
-              storageLoc: "",
-              reorderPoint: "",
+              storageLoc: p.storage_location || p.datas?.storage_location || "",
+              reorderPoint: p.reorder_point ?? p.datas?.reorder_point ?? 5,
               size: "",
             }))
           );
@@ -553,6 +553,11 @@ const GrnForm = () => {
                 .filter(Boolean)
             : [],
           variant: p.variant,
+          storage_location: p.storageLoc || "",
+          datas: {
+            storage_location: p.storageLoc || "",
+          },
+          reorder_point: Number(p.reorderPoint) || 0,
         };
       });
 
@@ -584,6 +589,7 @@ const GrnForm = () => {
             poReference: grnDetails.poReference,
           },
           payment: { method: payment.method, amountPaid: Number(payment.amountPaid) || 0 },
+          storage_location: products[0]?.storageLoc || "",
         },
         paid_amount: Number(payment.amountPaid) || 0,
         products: transformedProducts,

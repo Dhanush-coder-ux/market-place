@@ -179,6 +179,7 @@ export const InventoryItemsCard = ({
         serialno_id: serialnoId,
         batch_id: variantData?.batch_id || variantData?.datas?.batch_id || baseOpt.batch_id || d.batch_id,
         reorderPoint: getVal("reorder_point") !== "" ? getVal("reorder_point") : undefined,
+        storageLoc: getVal("storage_location") || getVal("location") || "",
         brand: getVal("brand"),
         gstInfo: getVal("gst") || (parseInt(getVal("gst", "18")) || 18) + "%"
       };
@@ -545,6 +546,7 @@ export const InventoryItemsCard = ({
                                     batch_id: opt.batch_id || d.batch_id || opt.id,
                                     baseVariants: combinations,
                                     reorderPoint: get("reorder_point") !== "" ? get("reorder_point") : undefined,
+                                    storageLoc: get("storage_location") || get("location") || "",
                                     brand: get("brand"),
                                     gstInfo: get("gst") || (parseInt(get("gst", "18")) || 18) + "%"
                                   });
@@ -597,6 +599,7 @@ export const InventoryItemsCard = ({
                                       serialno_id: serialnoId,
                                       batch_id: opt.batch_id || d.batch_id || opt.id,
                                       reorderPoint: get("reorder_point") !== "" ? get("reorder_point") : undefined,
+                                      storageLoc: get("storage_location") || get("location") || "",
                                       brand: get("brand"),
                                       gstInfo: get("gst") || (parseInt(get("gst", "18")) || 18) + "%"
                                     });

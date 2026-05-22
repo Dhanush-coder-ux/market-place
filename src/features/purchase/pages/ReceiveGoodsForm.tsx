@@ -62,6 +62,8 @@ type POProduct = {
   isNewBatch: boolean;
   availableBatches: any[];
   existingSerials: string[];
+  reorder_point?: number;
+  storageLoc?: string;
 }
 
 interface POSummary {
@@ -572,6 +574,8 @@ const ReceiveGoodForm = () => {
         isNewBatch: false,
         availableBatches: [],
         existingSerials: [],
+        reorder_point: p.reorder_point ?? p.datas?.reorder_point ?? 5,
+        storageLoc: p.storage_location || p.datas?.storage_location || "",
       }));
 
       // Fetch full inventory data per unique inventory_id to populate available batches
@@ -713,6 +717,11 @@ const ReceiveGoodForm = () => {
           batch_number: p.batchNum,
           manufacturing_date: p.manufacturingDate || null,
           expiry_date: p.expiryDate || null,
+          reorder_point: p.reorder_point ?? 5,
+          storage_location: p.storageLoc || globalData.warehouse || "",
+          datas: {
+            storage_location: p.storageLoc || globalData.warehouse || "",
+          },
           // Batch: send batch object if new
           ...(p.has_batch && !p.batch_id ? {
             batches: {
@@ -748,6 +757,7 @@ const ReceiveGoodForm = () => {
           invoice_no: invoiceNo,
           status: (manualStatus || liveStatus).toUpperCase(),
           warehouse: globalData.warehouse,
+          storage_location: globalData.warehouse || "",
           notes: globalData.notes,
           received_by: globalData.received_by,
           payment: {

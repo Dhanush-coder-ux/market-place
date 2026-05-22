@@ -158,6 +158,12 @@ const PurchaseDetail = () => {
                         <span className="text-[11px] font-medium text-slate-400 uppercase tracking-tight">Payment</span>
                         <span className="text-xs font-bold text-slate-700">{po.paymentMethod || "—"}</span>
                       </div>
+                      {po.storage_location && (
+                        <div className="flex justify-between items-center pt-2.5 border-t border-slate-100/50">
+                          <span className="text-[11px] font-medium text-slate-400 uppercase tracking-tight">Storage Location</span>
+                          <span className="text-xs font-bold text-slate-700 uppercase">{po.storage_location}</span>
+                        </div>
+                      )}
                     </div>
                   </SectionCard>
                 </div>
@@ -175,6 +181,7 @@ const PurchaseDetail = () => {
                       <tr className="bg-slate-50/50 border-b border-slate-100">
                         <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em]">Product Details</th>
                         <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-center">Qty</th>
+                        <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em]">Stock Overview</th>
                         <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-right">Unit Price</th>
                         <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-right">Total</th>
                       </tr>
@@ -231,6 +238,20 @@ const PurchaseDetail = () => {
                           <td className="px-6 py-4 text-center">
                             <span className="text-xs font-black text-slate-600">{product.quantity}</span>
                           </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="flex flex-col gap-0.5">
+                              <div className="flex items-center gap-2">
+                                <span className="text-[9px] font-black text-slate-400 tracking-wider uppercase">Opening</span>
+                                <span className="text-xs font-bold text-slate-600">{product.stocks_before !== undefined && product.stocks_before !== null ? product.stocks_before : '—'}</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-[9px] font-black text-blue-400 tracking-wider uppercase">Current</span>
+                                <span className="text-xs font-black text-blue-600">
+                                  {product.stocks_before !== undefined && product.stocks_before !== null ? (product.stocks_before + product.quantity) : '—'}
+                                </span>
+                              </div>
+                            </div>
+                          </td>
                           <td className="px-6 py-4 text-right">
                             {product.buy_price !== undefined ? (
                               <div className="flex flex-col items-end">
@@ -278,6 +299,9 @@ const PurchaseDetail = () => {
                   <DetailItem icon={Calendar} label="Date" value={po.date} />
                   <DetailItem icon={Clock} label="Time" value={po.time} />
                   <DetailItem icon={User} label="Purchase Type" value={po.purchaseType} />
+                  {po.storage_location && (
+                    <DetailItem icon={Building2} label="Storage Location" value={po.storage_location} />
+                  )}
                 </div>
               </SectionCard>
 

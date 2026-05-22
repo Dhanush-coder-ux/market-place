@@ -15,11 +15,11 @@ const StockMovementTab = ({ inventoryId }: StockMovementTabProps) => {
   useEffect(() => {
     if (!inventoryId) return;
     setLoading(true);
-    
-    getData(`${ENDPOINTS.S_ADJUSTMENTS}/by/shop/${SHOP_ID}`, { inventory_id: inventoryId })
+
+    getData(`${ENDPOINTS.S_ADJUSTMENTS}/by/product/${SHOP_ID}/${inventoryId}`)
       .then(async (res) => {
         const rawData = res?.data || res?.datas || (Array.isArray(res) ? res : []);
-        
+
         // Extract unique supplier IDs for purchase movements
         const supplierIds = [...new Set(rawData
           .filter((a: any) => a.movement_type === "DIRECT" || a.movement_type === "PURCHASE" || (a.movement_type || "").includes("PO_"))

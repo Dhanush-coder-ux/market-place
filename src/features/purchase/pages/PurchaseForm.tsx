@@ -107,10 +107,10 @@ const PurchaseForm = () => {
       const c = Number(p.costPrice) || 0;
       const gstRate = Number(p.taxGst) || 0;
       totalQty += q;
-      
+
       const lineExcl = q * c;
       const lineGst = lineExcl * (gstRate / 100);
-      
+
       subtotal += lineExcl;
       totalGst += lineGst;
       if (gstRate > 0) {
@@ -590,7 +590,7 @@ const PurchaseForm = () => {
               </div>
               <h2 className="text-xs font-black text-slate-800 uppercase tracking-widest">Additional Charge</h2>
             </div>
-            
+
             <div className="p-6 space-y-6">
               <div className="flex justify-between items-center text-slate-500">
                 <span className="text-[11px] font-bold uppercase tracking-wider">Subtotal (Excl. GST)</span>

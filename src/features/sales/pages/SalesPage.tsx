@@ -245,11 +245,10 @@ const SalesListPage: React.FC = () => {
         <button
           type="button"
           onClick={() => setIsFilterOpen(true)}
-          className={`h-8 px-3 rounded-md border text-xs font-semibold flex items-center gap-1.5 active:scale-95 transition-all shadow-sm shrink-0 ${
-            activeFilters > 0
+          className={`h-8 px-3 rounded-md border text-xs font-semibold flex items-center gap-1.5 active:scale-95 transition-all shadow-sm shrink-0 ${activeFilters > 0
               ? "border-blue-200 text-blue-600 bg-blue-50/50"
               : "border-slate-200 text-slate-650 bg-white hover:bg-slate-50"
-          }`}
+            }`}
           title="Filters"
         >
           <Filter size={13} />
@@ -259,7 +258,7 @@ const SalesListPage: React.FC = () => {
         </button>
 
         <div className="flex-1" />
-        
+
         <button className="inline-flex items-center gap-1.5 h-8 px-3.5 text-xs font-bold bg-blue-600 text-white border-none rounded-md cursor-pointer transition-all hover:bg-blue-700 hover:shadow-lg shadow-blue-500/20 active:scale-95 whitespace-nowrap shrink-0" onClick={() => setIsReturnSearchOpen(true)}>
           <RotateCcw size={13} />Process Return
         </button>
@@ -269,7 +268,7 @@ const SalesListPage: React.FC = () => {
       <RightSidebarFilter
         isOpen={isFilterOpen}
         onClose={() => setIsFilterOpen(false)}
-        onApply={() => {}}
+        onApply={() => { }}
         onClear={clearAll}
         title="Sales Filters"
       >

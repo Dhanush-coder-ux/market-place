@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import {
-  Trash2, IndianRupee, Package, Keyboard, Barcode,
-  Plus, RotateCcw, Minus
+  Trash2, IndianRupee, Package, Barcode,
+  Plus, RotateCcw, Minus, ScanBarcode
 } from "lucide-react";
 import { v4 as uuidv4 } from "uuid";
 import { BillingItem, InventoryItem, ProductVariant } from "../types";
@@ -38,18 +38,7 @@ const formatDate = (dateStr?: string) => {
 
 
 
-const ShortcutKbd = ({ keys, label }: { keys: string[]; label: string; }) => (
-  <div className="flex items-center gap-1">
-    <div className="flex gap-0.5">
-      {keys.map((k, i) => (
-        <kbd key={i} className="px-1.5 py-0.5 rounded bg-white text-slate-500 border border-slate-200/80 font-sans text-[9px] font-medium shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
-          {k}
-        </kbd>
-      ))}
-    </div>
-    <span className="text-[10px] text-slate-400 font-normal ml-0.5">{label}</span>
-  </div>
-);
+
 
 const QtyAdjuster = ({
   value,
@@ -264,7 +253,7 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
   const fetchInventory = useCallback(async (q: string, signal: AbortSignal) => {
 
     try {
-      const res = await getData(ENDPOINTS.INVENTORIES, { limit: "10", offset: "1", q, shop_id: SHOP_ID }, { signal });
+      const res = await getData(ENDPOINTS.INVENTORIES, { limit: "10", offset: "1", q, shop_id: SHOP_ID, is_active: "true" }, { signal });
       const data = res?.data ? (Array.isArray(res.data) ? res.data : [res.data]) : [];
       return data.map((p: any) => ({
         ...p,
@@ -469,6 +458,10 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
           </div>
 
           <div className="flex items-center gap-1.5 mt-3 sm:mt-0">
+            <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-slate-200 bg-white text-[12px] font-bold text-slate-600 hover:bg-slate-50 transition-all duration-150 shadow-sm mr-2">
+              <ScanBarcode size={14} strokeWidth={2} /> 
+              <span>Scan Product</span>
+            </button>
             <button
               onClick={handleClearAll}
               className="flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[12px] font-normal text-slate-500 hover:text-slate-700 hover:bg-slate-50 transition-all duration-150"
@@ -527,15 +520,7 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
         {/* Footer */}
         <div className="border-t border-slate-100/60 px-4 py-3 bg-slate-50/30 flex items-center justify-between flex-wrap gap-3">
 
-          {/* Shortcuts */}
-          <div className="hidden sm:flex items-center gap-3">
-            <div className="flex items-center gap-1 text-slate-400 mr-1">
-              <Keyboard size={12} />
-              <span className="text-[9px] font-medium  ">Shortcuts</span>
-            </div>
-            <ShortcutKbd keys={["Alt", "A"]} label="Add" />
-            <ShortcutKbd keys={["Alt", "⌫"]} label="Delete" />
-          </div>
+
 
           {/* Grand Total */}
           <div className="flex items-center gap-3 ml-auto bg-white border border-slate-200/60 shadow-[0_1px_2px_rgba(0,0,0,0.04)] rounded-lg py-2 px-4">

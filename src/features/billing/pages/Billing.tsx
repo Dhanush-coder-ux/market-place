@@ -1,6 +1,6 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import {
-  User, Loader2, CheckCircle2, AlertCircle, Wallet,
+  User, Loader2, CheckCircle2, AlertCircle, Wallet
 } from "lucide-react";
 
 import BillingTable, { createEmptyRow } from "../components/BillingTable";
@@ -38,6 +38,7 @@ const Billing = () => {
   const [staticCustomers, setStaticCustomers] = useState<CustomerData[]>([]);
   const [newCreditLimit, setNewCreditLimit] = useState<string>("");
   const [isUpdatingLimit, setIsUpdatingLimit] = useState(false);
+  const [isShortcutsModalOpen, setIsShortcutsModalOpen] = useState(false);
 
   // ── Derived Credit Info
   const currentBillTotal = items.reduce((s, i) => s + (i.tprice || 0), 0);
@@ -45,6 +46,24 @@ const Billing = () => {
   const isCreditExceeded = customerData ? projectedOutstanding > customerData.creditLimit : false;
   const creditRemaining = customerData ? Math.max(0, customerData.creditLimit - projectedOutstanding) : 0;
   const creditUsagePercent = customerData?.creditLimit ? Math.min(100, (projectedOutstanding / customerData.creditLimit) * 100) : 0;
+
+  // ── Billing Totals (lifted from BillingHeader for shared strip)
+  const GST_PERCENT = 18;
+  const round2 = (n: number) => Math.round(n * 100) / 100;
+  const [includeGst, setIncludeGst] = useState(false);
+  const [payments, setPayments] = useState<{ mode: "cash" | "upi" | "credit"; amount: number }[]>([
+    { mode: "cash", amount: 0 },
+  ]);
+  const totalAmount = useMemo(() => items.reduce((s, i) => s + (i.tprice || 0), 0), [items]);
+  const gstAmount = useMemo(() => round2((totalAmount * GST_PERCENT) / 100), [totalAmount]);
+  const finalAmount = useMemo(() => includeGst ? round2(totalAmount + gstAmount) : totalAmount, [includeGst, totalAmount, gstAmount]);
+  const paidAmount = useMemo(() => payments.reduce((s, p) => s + (p.amount || 0), 0), [payments]);
+  const balanceAmount = useMemo(() => finalAmount - paidAmount, [finalAmount, paidAmount]);
+
+  // Sync single-mode payment amount when total changes
+  useEffect(() => {
+    setPayments(prev => prev.length === 1 ? [{ ...prev[0], amount: finalAmount }] : prev);
+  }, [finalAmount]);
 
   // ── Handlers
   const handleItemsChange = useCallback((next: BillingItem[]) => setItems(next), []);
@@ -172,19 +191,19 @@ const Billing = () => {
   };
 
   // ── Confirm Order → POST to Billing API
-  const handleConfirmOrder = useCallback(async (payments: { mode: string, amount: number }[]) => {
+  const handleConfirmOrder = useCallback(async (paymentsArg: { mode: string, amount: number }[], _includeGst: boolean, _status: string) => {
     const filledItems = items.filter(i => !!i.name);
     if (filledItems.length === 0) return;
 
     const paymentDict: Record<string, number> = {};
-    payments.forEach(p => {
+    paymentsArg.forEach(p => {
       const key = p.mode.toUpperCase();
       paymentDict[key] = (paymentDict[key] || 0) + p.amount;
     });
 
     const payload: CreateBillingSchema = {
       shop_id: SHOP_ID,
-      payment_method: payments.map(p => p.mode).join(", "),
+      payment_method: paymentsArg.map(p => p.mode).join(", "),
       customer_id: customerData?.id || "walk-in",
       payments: paymentDict,
       products: filledItems.map(i => ({
@@ -199,13 +218,10 @@ const Billing = () => {
 
     const res = await postData(ENDPOINTS.BILLING, payload);
     if (res) {
-      // Calculate how much was paid via credit to update local customer state
-      const creditPaid = payments.filter(p => p.mode === "credit").reduce((s, p) => s + p.amount, 0);
+      const creditPaid = paymentsArg.filter(p => p.mode === "credit").reduce((s, p) => s + p.amount, 0);
 
       if (customerData && creditPaid > 0) {
         const nextLimit = Math.max(0, customerData.creditLimit - creditPaid);
-
-        // Persist the new credit limit to the backend
         try {
           await putData(`${ENDPOINTS.CUSTOMERS}`, {
             credit_limit: nextLimit,
@@ -216,26 +232,24 @@ const Billing = () => {
           console.error("Failed to persist updated credit limit:", err);
           showToast("Order confirmed, but failed to update credit limit on server", "warning");
         }
-
         setCustomerData(prev => prev ? {
           ...prev,
           creditLimit: nextLimit,
-          // We also update outstanding to reflect the debt if the backend handles it this way,
-          // but based on user request, we are primarily focusing on reducing the limit.
           outstanding: prev.outstanding + creditPaid,
         } : null);
       }
 
-      // Success — reset billing state (except maybe customer if we want to see the update, 
-      // but usually we clear the screen for next customer)
       setItems([createEmptyRow()]);
       setPhone("");
       setCustomerName("");
       setCustomerData(null);
       setWasAutofilled(false);
+      setPayments([{ mode: "cash", amount: 0 }]);
+      setIncludeGst(false);
       showToast("Order confirmed successfully", "success");
     }
-  }, [items, customerData, postData, showToast]);
+  }, [items, customerData, postData, putData, showToast]);
+
 
   const handleHoldBill = useCallback(() => {
     console.log("[Billing] Bill held:", items);
@@ -244,32 +258,16 @@ const Billing = () => {
     setCustomerName("");
     setIsLoadingCustomer(false);
     setWasAutofilled(false);
+    setPayments([{ mode: "cash", amount: 0 }]);
   }, [items]);
 
   const handleClearBill = useCallback(() => {
     setItems([createEmptyRow()]);
   }, []);
 
+
   return (
     <div className="flex-1 flex flex-col min-h-0 bg-neutral-50/80 overflow-hidden h-full">
-
-      {/* ── Top Bar ─────────────────────────────────────────────────── */}
-      <header className="shrink-0 h-[52px] flex items-center justify-between px-5 border-b border-slate-200/60 bg-white/90 backdrop-blur-sm">
-        <div className="flex items-center gap-3">
-          <div className="w-7 h-7 rounded-lg bg-blue-50 flex items-center justify-center">
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="1" width="5" height="5" rx="1.5" fill="#3b82f6" fillOpacity="0.8" /><rect x="8" y="1" width="5" height="5" rx="1.5" fill="#3b82f6" fillOpacity="0.4" /><rect x="1" y="8" width="5" height="5" rx="1.5" fill="#3b82f6" fillOpacity="0.4" /><rect x="8" y="8" width="5" height="5" rx="1.5" fill="#3b82f6" fillOpacity="0.8" /></svg>
-          </div>
-          <div>
-            <h1 className="text-[15px] font-semibold text-slate-800 leading-none tracking-[-0.01em]">Point of Sale</h1>
-            <p className="text-[11px] text-slate-400 font-normal mt-0.5">Billing Terminal</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2.5 text-[11px] text-slate-400 font-normal">
-          <span className="px-2.5 py-1 rounded-md bg-slate-50 border border-slate-100">
-            {new Date().toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" })}
-          </span>
-        </div>
-      </header>
 
       {/* ── Customer Bar ──────────────────────────────────────────── */}
       <div className="shrink-0 px-5 py-3 bg-white border-b border-slate-100/80">
@@ -386,9 +384,19 @@ const Billing = () => {
               </div>
             )}
           </div>
+          
+          <button 
+            onClick={() => setIsShortcutsModalOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-2 border border-slate-200/80 rounded-lg text-slate-500 hover:bg-slate-50 hover:text-slate-700 transition-colors shrink-0 text-[11px] font-medium self-center"
+            title="View Keyboard Shortcuts"
+          >
+            <Keyboard size={14} />
+            <span className="hidden md:inline">Shortcuts</span>
+          </button>
 
         </div>
       </div>
+
 
       {/* ── Main Content ──────────────────────────────────────────── */}
       <div className="flex flex-1 overflow-hidden">
@@ -409,6 +417,12 @@ const Billing = () => {
             isSubmitting={isSubmitting}
             onHoldBill={handleHoldBill}
             onClearBill={handleClearBill}
+            includeGst={includeGst}
+            totalAmount={totalAmount}
+            gstAmount={gstAmount}
+            finalAmount={finalAmount}
+            payments={payments}
+            onPaymentsChange={setPayments}
           />
         </aside>
       </div>
@@ -424,6 +438,12 @@ const Billing = () => {
           isSubmitting={isSubmitting}
           onHoldBill={handleHoldBill}
           onClearBill={handleClearBill}
+          includeGst={includeGst}
+          totalAmount={totalAmount}
+          gstAmount={gstAmount}
+          finalAmount={finalAmount}
+          payments={payments}
+          onPaymentsChange={setPayments}
         />
       </div>
 
@@ -435,6 +455,56 @@ const Billing = () => {
         initialName={newCustomerName}
         isSubmitting={isCreatingCustomer}
       />
+      
+      {/* ── Shortcuts Modal ────────────────────────────────────────── */}
+      {isShortcutsModalOpen && (
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4">
+          <div
+            className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200"
+            onClick={() => setIsShortcutsModalOpen(false)}
+          />
+          <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden flex flex-col animate-in zoom-in-95 duration-200 border border-slate-200/60">
+            <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600">
+                  <Keyboard size={16} />
+                </div>
+                <h3 className="text-[14px] font-bold text-slate-800">Keyboard Shortcuts</h3>
+              </div>
+              <button
+                onClick={() => setIsShortcutsModalOpen(false)}
+                className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+              >
+                <X size={16} />
+              </button>
+            </div>
+            <div className="p-5 flex flex-col gap-3 bg-white">
+              <div className="flex items-center justify-between py-2 border-b border-slate-100/60">
+                <span className="text-[12px] font-medium text-slate-600">Add New Row</span>
+                <div className="flex gap-1">
+                  <kbd className="px-2 py-1 rounded bg-slate-100 border border-slate-200 text-[10px] font-mono font-bold text-slate-500 shadow-sm">Alt</kbd>
+                  <kbd className="px-2 py-1 rounded bg-slate-100 border border-slate-200 text-[10px] font-mono font-bold text-slate-500 shadow-sm">A</kbd>
+                </div>
+              </div>
+              <div className="flex items-center justify-between py-2 border-b border-slate-100/60">
+                <span className="text-[12px] font-medium text-slate-600">Delete Last Row</span>
+                <div className="flex gap-1">
+                  <kbd className="px-2 py-1 rounded bg-slate-100 border border-slate-200 text-[10px] font-mono font-bold text-slate-500 shadow-sm">Alt</kbd>
+                  <kbd className="px-2 py-1 rounded bg-slate-100 border border-slate-200 text-[10px] font-mono font-bold text-slate-500 shadow-sm">Backspace</kbd>
+                </div>
+              </div>
+            </div>
+            <div className="p-4 bg-slate-50/50 border-t border-slate-100 flex justify-end">
+              <button
+                onClick={() => setIsShortcutsModalOpen(false)}
+                className="px-4 py-2 bg-slate-800 text-white text-[12px] font-bold rounded-lg hover:bg-slate-700 transition-colors shadow-sm"
+              >
+                Got it
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

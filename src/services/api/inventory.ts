@@ -51,7 +51,7 @@ export const inventoryApi = {
 
   searchInventories: async (query: string): Promise<any[]> => {
     try {
-      const response = await apiClient.get(`${ENDPOINTS.INVENTORIES}/by/shop/${SHOP_ID}?q=${query}`);
+      const response = await apiClient.get(`${ENDPOINTS.INVENTORIES}/by/shop/${SHOP_ID}?q=${query}&is_active=true`);
       const items = response?.data || (Array.isArray(response) ? response : []);
 
       return items.map((i: any) => {

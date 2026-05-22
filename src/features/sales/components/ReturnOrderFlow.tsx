@@ -378,7 +378,7 @@ const useReturnModalLogic = (sale: SaleRecord | null, productMap: Record<string,
 
   const totals = useMemo(() => {
     const returnValue = selectedItems.reduce((s, i) => s + i.unitPrice * i.returnQty, 0);
-    const exchangeValue = state.mode === "exchange" ? selectedItems.reduce((s, i) => { if (!i.exchangeItemId) return s; const ep = i.exchangeItemId as any; return s + (ep?.sell_price ?? 0); }, 0) : 0;
+    const exchangeValue = state.mode === "exchange" ? selectedItems.reduce((s, i) => { if (!i.exchangeItemId) return s; const ep = i.exchangeItemId as any; return s + ((ep?.sell_price ?? 0) * (ep?.quantity ?? i.returnQty)); }, 0) : 0;
     return { returnValue, exchangeValue, diff: exchangeValue - returnValue };
   }, [selectedItems, state.mode]);
 
@@ -465,12 +465,12 @@ const useReturnModalLogic = (sale: SaleRecord | null, productMap: Record<string,
       if (selectedItems.length === 0) return false;
       const serialsOk = selectedItems.every(i => !i.serial_numbers?.length || (i.selectedSerials?.length ?? 0) === i.returnQty);
       if (!serialsOk) return false;
+      if (selectedItems.some(i => !state.itemReasons[i.id])) return false;
       return state.mode === "refund" || selectedItems.every(i => !!i.exchangeItemId);
     }
     if (state.step === 3) {
-      if (selectedItems.some(i => !state.itemReasons[i.id])) return false;
       if (totals.diff !== 0 && state.mode === "exchange") {
-        const sum = state.payments.reduce((acc, p) => acc + p.amount, 0);
+        const sum = state.payments.reduce((acc, p) => acc + (Number(p.amount) || 0), 0);
         if (Math.abs(sum - Math.abs(totals.diff)) > 0.01) return false;
       }
       return true;

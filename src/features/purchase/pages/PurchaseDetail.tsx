@@ -1,23 +1,68 @@
-import { useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import {
   Printer, Building2, Calendar, Package, TrendingUp,
-  ReceiptText, ArrowLeft, User, FileText, CheckCircle2, Clock, Banknote
+  ReceiptText, ArrowLeft, User, FileText, CheckCircle2, Clock, Banknote, AlertCircle
 } from "lucide-react";
+import { toDisplayData } from "./PurchaseHistory";
 import type { DirectPurchaseData } from "./PurchaseHistory";
 import { ProfileHeaderCard, SectionCard, DetailItem, InfoRow } from "@/components/common/SuperUI";
 import { StatCard } from "@/components/common/StatsCard";
+import { useApi } from "@/context/ApiContext";
+import { ENDPOINTS } from "@/services/endpoints";
 
 const fmt = (n: number) => `₹${n.toLocaleString("en-IN")}`;
 
+const formatBatchDate = (dateStr?: string) => {
+  if (!dateStr) return null;
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return dateStr;
+  return d.toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric"
+  });
+};
+
 const PurchaseDetail = () => {
+  const { id } = useParams<{ id: string }>();
   const location = useLocation();
   const navigate = useNavigate();
+  const { getData } = useApi();
 
-  // Retrieve po from state (passed from PurchaseHistory)
-  const po = location.state?.po as DirectPurchaseData | undefined;
+  // Retrieve po from state or use state fetched from API
+  const [po, setPo] = useState<DirectPurchaseData | undefined>(location.state?.po);
+  const [loading, setLoading] = useState(!po);
 
   const [activeTab, setActiveTab] = useState(0);
+
+  useEffect(() => {
+    if (!po && id) {
+      const fetchPo = async () => {
+        setLoading(true);
+        try {
+          const res = await getData(`${ENDPOINTS.PURCHASES}/${id}`);
+          if (res && res.data) {
+            setPo(toDisplayData(res.data));
+          }
+        } catch (err) {
+          console.error("Failed to fetch purchase:", err);
+        } finally {
+          setLoading(false);
+        }
+      };
+      fetchPo();
+    }
+  }, [id, po, getData]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center font-sans">
+        <ReceiptText size={48} className="mb-4 text-slate-300 animate-pulse" />
+        <p className="text-sm font-semibold text-slate-500">Loading purchase details...</p>
+      </div>
+    );
+  }
 
   if (!po) {
     return (
@@ -52,7 +97,11 @@ const PurchaseDetail = () => {
           subText={`ID: ${po.id}`}
           badges={[
             { text: po.purchaseType, variant: "primary" },
-            { text: "Paid", variant: "success" } // Assuming paid for simplicity unless status exists
+            po.outstanding && po.outstanding > 0
+              ? (po.paid_amount === 0 
+                ? { text: "Unpaid", variant: "danger" }
+                : { text: "Partially Paid", variant: "warning" })
+              : { text: "Paid", variant: "success" }
           ]}
           infoItems={[
             { icon: Calendar, text: `${po.date} at ${po.time}` },
@@ -126,6 +175,13 @@ const PurchaseDetail = () => {
                   iconBg="bg-emerald-50 text-emerald-600"
                   className="flex-1 min-w-[140px]"
                 />
+                <StatCard
+                  icon={AlertCircle}
+                  label="Outstanding"
+                  value={fmt(po.outstanding || 0)}
+                  iconBg={po.outstanding && po.outstanding > 0 ? "bg-rose-50 text-rose-600" : "bg-emerald-50 text-emerald-600"}
+                  className="flex-1 min-w-[140px]"
+                />
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
@@ -142,6 +198,22 @@ const PurchaseDetail = () => {
                         <span className="text-sm font-black text-slate-800 uppercase tracking-wider">Total Cost</span>
                         <span className="text-xl font-black text-blue-600 tabular-nums">{fmt(po.total_cost)}</span>
                       </div>
+
+                      {po.paid_amount !== undefined && (
+                        <div className="mt-2 pt-2 border-t border-slate-100 flex justify-between items-center text-xs font-semibold text-slate-500">
+                          <span>Paid Amount</span>
+                          <span className="tabular-nums text-slate-700">{fmt(po.paid_amount)}</span>
+                        </div>
+                      )}
+
+                      {po.outstanding !== undefined && (
+                        <div className="mt-1 flex justify-between items-center text-xs font-semibold">
+                          <span className="text-slate-500">Outstanding</span>
+                          <span className={`tabular-nums font-bold ${po.outstanding > 0 ? "text-amber-600" : "text-emerald-600"}`}>
+                            {fmt(po.outstanding)}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </SectionCard>
                 </div>
@@ -196,38 +268,120 @@ const PurchaseDetail = () => {
                               </div>
                               <div className="min-w-0">
                                 <p className="text-sm font-bold text-slate-800 truncate">{product.name}</p>
-                                <div className="flex items-center gap-2 mt-0.5">
-                                  {product.barcode && (
-                                    <span className="text-[10px] font-mono font-bold text-slate-400">{product.barcode}</span>
-                                  )}
-                                  {product.category && (
-                                    <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wide bg-slate-100 text-slate-500">
-                                      {product.category}
-                                    </span>
-                                  )}
-                                </div>
+                                  <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                                    {product.barcode && (
+                                      <span className="text-[10px] font-mono font-bold text-slate-400">{product.barcode}</span>
+                                    )}
+                                    {product.gst !== undefined && product.gst > 0 && (
+                                      <span className="text-[9px] font-extrabold text-indigo-500 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-100 uppercase tracking-wider font-sans">
+                                        GST {product.gst}%
+                                      </span>
+                                    )}
+                                    {product.category && (
+                                      <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wide bg-slate-100 text-slate-500">
+                                        {product.category}
+                                      </span>
+                                    )}
+                                  </div>
 
-                                {/* Render nested variants/batches cleanly */}
+                                {/* Variant-Level Batches & Serials */}
                                 {(product.variants?.length ?? 0) > 0 && (
-                                  <div className="mt-2 pl-3 border-l-2 border-indigo-100 space-y-2">
+                                  <div className="mt-2 pl-3 border-l-2 border-indigo-100 space-y-2.5">
                                     {product.variants?.map((v, vIdx) => (
-                                      <div key={vIdx}>
-                                        <p className="text-[10px] font-bold text-slate-600 mb-1">• {v.name}</p>
-                                        {v.batches?.map((b, bIdx) => (
-                                          <div key={bIdx} className="bg-slate-50 p-1.5 rounded border border-slate-100 mb-1">
-                                            <div className="flex justify-between items-center">
-                                              <span className="text-[9px] font-bold text-slate-500">{b.name}</span>
-                                              <span className="text-[9px] font-bold text-indigo-600">Qty: {b.stocks}</span>
-                                            </div>
-                                            {b.serial_numbers && b.serial_numbers.length > 0 && (
-                                              <div className="flex flex-wrap gap-1 mt-1">
-                                                {b.serial_numbers.map(sn => (
-                                                  <span key={sn} className="text-[8px] font-mono font-bold px-1 py-0.5 rounded bg-white text-slate-500 border border-slate-200">{sn}</span>
-                                                ))}
+                                      <div key={vIdx} className="space-y-1">
+                                        <p className="text-[10px] font-extrabold text-indigo-750 bg-indigo-50/50 px-1.5 py-0.5 rounded w-fit">• {v.name}</p>
+                                        
+                                        {/* Variant Batches */}
+                                        {v.batches && v.batches.length > 0 && (
+                                          <div className="space-y-1 pl-2">
+                                            {v.batches.map((b, bIdx) => (
+                                              <div key={bIdx} className="bg-slate-50 p-2 rounded border border-slate-100 max-w-md text-[10px] text-slate-600 shadow-sm">
+                                                <div className="flex justify-between items-center font-bold">
+                                                  <span className="text-slate-800">Batch: {b.name || "Default"}</span>
+                                                  <span className="text-indigo-600">Qty: {b.stocks}</span>
+                                                </div>
+                                                {(b.manufacturing_date || b.expiry_date) && (
+                                                  <div className="flex gap-3 text-[9px] text-slate-400 mt-1 font-medium">
+                                                    {b.manufacturing_date && <span>MFG: {formatBatchDate(b.manufacturing_date)}</span>}
+                                                    {b.expiry_date && <span>EXP: {formatBatchDate(b.expiry_date)}</span>}
+                                                  </div>
+                                                )}
+                                                {b.serial_numbers && b.serial_numbers.length > 0 && (
+                                                  <div className="mt-1.5">
+                                                    <p className="text-[8px] font-bold text-slate-400 mb-1 uppercase tracking-wider">Serials:</p>
+                                                    <div className="flex flex-wrap gap-1">
+                                                      {b.serial_numbers.map(sn => (
+                                                        <span key={sn} className="text-[8px] font-mono font-bold px-1.5 py-0.5 rounded bg-white text-indigo-600 border border-slate-200 shadow-sm">{sn}</span>
+                                                      ))}
+                                                    </div>
+                                                  </div>
+                                                )}
                                               </div>
-                                            )}
+                                            ))}
                                           </div>
-                                        ))}
+                                        )}
+
+                                        {/* Variant-level Serials (if no batches) */}
+                                        {(!v.batches || v.batches.length === 0) && v.serials && v.serials.length > 0 && (
+                                          <div className="pl-2 space-y-1">
+                                            {v.serials.map((sObj, sIdx) => (
+                                              <div key={sIdx} className="bg-slate-50 p-2 rounded border border-slate-100 max-w-md shadow-sm">
+                                                <p className="text-[8px] font-bold text-slate-400 mb-1 uppercase tracking-wider">Serial Numbers:</p>
+                                                <div className="flex flex-wrap gap-1">
+                                                  {sObj.serial_numbers?.map(sn => (
+                                                    <span key={sn} className="text-[8px] font-mono font-bold px-1.5 py-0.5 rounded bg-white text-indigo-600 border border-slate-200 shadow-sm">{sn}</span>
+                                                  ))}
+                                                </div>
+                                              </div>
+                                            ))}
+                                          </div>
+                                        )}
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+
+                                {/* Top-Level (No Variant) Batches */}
+                                {(!product.variants || product.variants.length === 0) && product.batches && product.batches.length > 0 && (
+                                  <div className="mt-2 pl-3 border-l-2 border-indigo-150 space-y-1.5">
+                                    {product.batches.map((b, bIdx) => (
+                                      <div key={bIdx} className="bg-slate-50 p-2 rounded border border-slate-100 max-w-md text-[10px] text-slate-650 shadow-sm">
+                                        <div className="flex justify-between items-center font-bold">
+                                          <span className="text-slate-800">Batch: {b.name || "Default"}</span>
+                                          <span className="text-indigo-600">Qty: {b.stocks}</span>
+                                        </div>
+                                        {(b.manufacturing_date || b.expiry_date) && (
+                                          <div className="flex gap-3 text-[9px] text-slate-400 mt-1 font-medium">
+                                            {b.manufacturing_date && <span>MFG: {formatBatchDate(b.manufacturing_date)}</span>}
+                                            {b.expiry_date && <span>EXP: {formatBatchDate(b.expiry_date)}</span>}
+                                          </div>
+                                        )}
+                                        {b.serial_numbers && b.serial_numbers.length > 0 && (
+                                          <div className="mt-1.5">
+                                            <p className="text-[8px] font-bold text-slate-400 mb-1 uppercase tracking-wider">Serials:</p>
+                                            <div className="flex flex-wrap gap-1">
+                                              {b.serial_numbers.map(sn => (
+                                                <span key={sn} className="text-[8px] font-mono font-bold px-1.5 py-0.5 rounded bg-white text-indigo-600 border border-slate-200 shadow-sm">{sn}</span>
+                                              ))}
+                                            </div>
+                                          </div>
+                                        )}
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+
+                                {/* Top-Level (No Variant) Serials */}
+                                {(!product.variants || product.variants.length === 0) && product.serials && product.serials.length > 0 && (
+                                  <div className="mt-2 pl-3 border-l-2 border-indigo-150 space-y-1.5">
+                                    {product.serials.map((sObj, sIdx) => (
+                                      <div key={sIdx} className="bg-slate-50 p-2 rounded border border-slate-100 max-w-md shadow-sm">
+                                        <p className="text-[8px] font-bold text-slate-400 mb-1 uppercase tracking-wider">Serial Numbers:</p>
+                                        <div className="flex flex-wrap gap-1">
+                                          {sObj.serial_numbers?.map(sn => (
+                                            <span key={sn} className="text-[8px] font-mono font-bold px-1.5 py-0.5 rounded bg-white text-indigo-600 border border-slate-200 shadow-sm">{sn}</span>
+                                          ))}
+                                        </div>
                                       </div>
                                     ))}
                                   </div>
@@ -306,13 +460,38 @@ const PurchaseDetail = () => {
               </SectionCard>
 
               <SectionCard title="Payment Status">
-                <div className="flex flex-col items-center justify-center p-6 bg-emerald-50/50 border border-emerald-100 rounded-xl h-full min-h-[160px]">
-                  <div className="w-14 h-14 rounded-full bg-emerald-500 text-white flex items-center justify-center mb-4 shadow-sm shadow-emerald-200">
-                    <CheckCircle2 size={28} />
+                {po.outstanding && po.outstanding > 0 ? (
+                  po.paid_amount === 0 ? (
+                    <div className="flex flex-col items-center justify-center p-6 bg-rose-50/50 border border-rose-100 rounded-xl h-full min-h-[160px]">
+                      <div className="w-14 h-14 rounded-full bg-rose-500 text-white flex items-center justify-center mb-4 shadow-sm shadow-rose-200 ring-2 ring-white">
+                        <Clock size={28} />
+                      </div>
+                      <span className="text-xl font-black tracking-tight text-rose-700">Unpaid</span>
+                      <p className="text-[10px] font-bold text-slate-400 mt-2 uppercase tracking-widest">{po.paymentMethod || "Pending"}</p>
+                      <p className="text-xs font-bold text-rose-600 mt-1">Outstanding: {fmt(po.outstanding)}</p>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center p-6 bg-amber-50/50 border border-amber-100 rounded-xl h-full min-h-[160px]">
+                      <div className="w-14 h-14 rounded-full bg-amber-500 text-white flex items-center justify-center mb-4 shadow-sm shadow-amber-200 ring-2 ring-white">
+                        <TrendingUp size={28} />
+                      </div>
+                      <span className="text-xl font-black tracking-tight text-amber-700">Partially Paid</span>
+                      <p className="text-[10px] font-bold text-slate-400 mt-2 uppercase tracking-widest">{po.paymentMethod || "Partial"}</p>
+                      <div className="text-center mt-2 space-y-0.5">
+                        <p className="text-[10px] font-semibold text-slate-500">Paid: {fmt(po.paid_amount || 0)}</p>
+                        <p className="text-xs font-bold text-amber-600">Outstanding: {fmt(po.outstanding)}</p>
+                      </div>
+                    </div>
+                  )
+                ) : (
+                  <div className="flex flex-col items-center justify-center p-6 bg-emerald-50/50 border border-emerald-100 rounded-xl h-full min-h-[160px]">
+                    <div className="w-14 h-14 rounded-full bg-emerald-500 text-white flex items-center justify-center mb-4 shadow-sm shadow-emerald-200 ring-2 ring-white">
+                      <CheckCircle2 size={28} />
+                    </div>
+                    <span className="text-xl font-black tracking-tight text-emerald-700">Paid</span>
+                    <p className="text-[10px] font-bold text-slate-400 mt-2 uppercase tracking-widest">{po.paymentMethod || "Completed"}</p>
                   </div>
-                  <span className="text-xl font-black tracking-tight text-emerald-700">Paid</span>
-                  <p className="text-[10px] font-bold text-slate-400 mt-2 uppercase tracking-widest">{po.paymentMethod || "Completed"}</p>
-                </div>
+                )}
               </SectionCard>
             </div>
           )}

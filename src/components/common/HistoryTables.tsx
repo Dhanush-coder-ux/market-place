@@ -1,4 +1,4 @@
-import { ArrowUp, ArrowDown, ShoppingCart, TrendingUp, RefreshCcw, FileText, ArrowRight, Banknote } from "lucide-react";
+import { ArrowUp, ArrowDown, ShoppingCart, TrendingUp, RefreshCcw, FileText, ArrowRight, Banknote, Eye } from "lucide-react";
 
 // ─── STOCK MOVEMENTS TABLE ──────────────────────────────────────────────────
 export interface StockMovementRow {
@@ -20,9 +20,10 @@ export interface StockMovementRow {
 interface StockMovementsTableProps {
   rows: StockMovementRow[];
   loading: boolean;
+  onNavigateToPurchase?: (id: string) => void;
 }
 
-export function StockMovementsTable({ rows, loading }: StockMovementsTableProps) {
+export function StockMovementsTable({ rows, loading, onNavigateToPurchase }: StockMovementsTableProps) {
   return (
     <div className="flex flex-col h-full min-h-0 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden animate-in fade-in duration-300">
 
@@ -52,6 +53,7 @@ export function StockMovementsTable({ rows, loading }: StockMovementsTableProps)
                   <th className="px-5 py-3.5">In / Out</th>
                   <th className="px-5 py-3.5">Stock Overview</th>
                   <th className="px-5 py-3.5">Details</th>
+                  <th className="px-5 py-3.5 w-12"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -120,6 +122,17 @@ export function StockMovementsTable({ rows, loading }: StockMovementsTableProps)
                       <td className="px-5 py-4 text-xs text-slate-500 max-w-[220px] truncate" title={r.description}>
                         {r.description}
                       </td>
+                      <td className="px-5 py-4">
+                        {r.source === 'purchase' && onNavigateToPurchase && (
+                          <button
+                            onClick={() => onNavigateToPurchase(r.id)}
+                            title="View Purchase Detail"
+                            className="w-7 h-7 flex items-center justify-center rounded-lg bg-indigo-50 text-indigo-500 hover:bg-indigo-100 hover:text-indigo-700 border border-indigo-100 transition-all active:scale-95 shadow-sm"
+                          >
+                            <Eye size={13} strokeWidth={2.5} />
+                          </button>
+                        )}
+                      </td>
                     </tr>
                   );
                 })}
@@ -137,9 +150,10 @@ export function StockMovementsTable({ rows, loading }: StockMovementsTableProps)
 interface ProductPurchasesTableProps {
   rows: any[];
   loading: boolean;
+  onNavigateToPurchase?: (id: string) => void;
 }
 
-export function ProductPurchasesTable({ rows, loading }: ProductPurchasesTableProps) {
+export function ProductPurchasesTable({ rows, loading, onNavigateToPurchase }: ProductPurchasesTableProps) {
   return (
     <div className="flex flex-col h-full min-h-0 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden animate-in fade-in duration-300">
 
@@ -173,6 +187,7 @@ export function ProductPurchasesTable({ rows, loading }: ProductPurchasesTablePr
                   <th className="px-5 py-3.5">Reference</th>
                   <th className="px-5 py-3.5">Storage Loc</th>
                   <th className="px-5 py-3.5">Supplier</th>
+                  <th className="px-5 py-3.5 w-12"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -262,6 +277,17 @@ export function ProductPurchasesTable({ rows, loading }: ProductPurchasesTablePr
                     </td>
                     <td className="px-5 py-4 text-xs text-slate-500 max-w-[150px] truncate" title={r.description}>
                       {r.description.replace('Supplier: ', '')}
+                    </td>
+                    <td className="px-5 py-4">
+                      {onNavigateToPurchase && (
+                        <button
+                          onClick={() => onNavigateToPurchase(r.id)}
+                          title="View Purchase Detail"
+                          className="w-7 h-7 flex items-center justify-center rounded-lg bg-indigo-50 text-indigo-500 hover:bg-indigo-100 hover:text-indigo-700 border border-indigo-100 transition-all active:scale-95 shadow-sm"
+                        >
+                          <Eye size={13} strokeWidth={2.5} />
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}

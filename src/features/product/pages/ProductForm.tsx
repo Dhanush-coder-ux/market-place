@@ -75,7 +75,6 @@ const CATEGORY_CONFIGS: Record<string, CategoryConfig> = {
 
 const CATEGORIES = Object.keys(CATEGORY_CONFIGS);
 const UNITS = ["Piece (pcs)", "Box", "Kilogram (kg)", "Gram (g)", "Litre (L)", "Metre (m)", "Set", "Pair"];
-const GST_RATES = ["0%", "5%", "12%", "18%", "28%"];
 
 const uid = () => `id_${Math.random().toString(36).slice(2, 11)}`;
 
@@ -183,18 +182,20 @@ interface InputFieldProps extends React.InputHTMLAttributes<HTMLInputElement> {
   required?: boolean;
   hint?: string;
   leftEl?: React.ReactNode;
+  rightEl?: React.ReactNode;
   error?: string;
   tooltip?: string;
 }
-const InputField: React.FC<InputFieldProps> = ({ label, required, hint, leftEl, error, tooltip, className = "", ...rest }) => (
+const InputField: React.FC<InputFieldProps> = ({ label, required, hint, leftEl, rightEl, error, tooltip, className = "", ...rest }) => (
   <div>
     {label && <Label text={label} required={required} hint={hint} tooltip={tooltip} />}
     <div className="relative">
       {leftEl && <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">{leftEl}</span>}
       <input
         {...rest}
-        className={`pf-input w-full px-3 py-2.5 text-sm border border-slate-200 rounded-lg bg-white text-slate-800 placeholder-slate-300 ${leftEl ? "pl-7" : ""} ${error ? "border-red-300 bg-red-50/30" : ""} ${className}`}
+        className={`pf-input w-full px-3 py-2.5 text-sm border border-slate-200 rounded-lg bg-white text-slate-800 placeholder-slate-300 ${leftEl ? "pl-7" : ""} ${rightEl ? "pr-8" : ""} ${error ? "border-red-300 bg-red-50/30" : ""} ${className}`}
       />
+      {rightEl && <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-semibold">{rightEl}</span>}
     </div>
     {error && <p className="mt-1 text-[11px] text-red-500 flex items-center gap-1"><AlertCircle size={10} />{error}</p>}
   </div>
@@ -257,7 +258,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
     description: (propInitialData.description as string) || "",
     is_active: (propInitialData.is_active as boolean) ?? true,
     mrp: (propInitialData.mrp as string) || "",
-    gst: (propInitialData.gst as string) || "18%",
+    gst: String((propInitialData.gst as string) || "18").replace("%", ""),
     hsn: "",
     supplier: (propInitialData.supplier as string) || "",
     opening_stock: (propInitialData.opening_stock as string) || "",
@@ -337,7 +338,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
             description: prod.description || datas.description || "",
             is_active: prod.is_active ?? datas.is_active ?? true,
             mrp: String(datas.mrp || ""),
-            gst: String(datas.gst || "18%"),
+            gst: String(datas.gst || "18").replace("%", ""),
             hsn: String(datas.hsn || ""),
             supplier: datas.supplier || "",
             opening_stock: String(datas.opening_stock || ""),
@@ -465,7 +466,12 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setForm(p => ({ ...p, [name]: value }));
+    if (name === "gst") {
+      const sanitized = value.replace(/[^0-9.]/g, "");
+      setForm(p => ({ ...p, gst: sanitized }));
+    } else {
+      setForm(p => ({ ...p, [name]: value }));
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -493,12 +499,14 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
         reorder_point: Number(combo.reorder_point) || 0,
         serial_numbers: combo.serials.map(s => s.serial),
         datas: {
-          barcode: combo.barcode,
           mrp: mrp,
           attributes: combo.attributes,
         },
         batch: null
       };
+      if (combo.barcode && combo.barcode.trim() !== "") {
+        v.datas.barcode = combo.barcode;
+      }
       return v;
     });
 
@@ -510,7 +518,6 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
       buy_price: 0,
       sell_price: 0,
       stocks: 0,
-      barcode: form.barcode,
       has_variant: form.has_variants,
       has_serialno: form.serial_tracking,
       has_batch: form.batch_tracking,
@@ -522,7 +529,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
         brand: form.brand,
         unit: form.unit,
         mrp: Number(form.mrp) || 0,
-        gst: form.gst,
+        gst: form.gst ? (form.gst.includes("%") ? form.gst : `${form.gst}%`) : "18%",
         hsn: form.hsn,
         supplier: form.supplier,
         opening_stock: 0,
@@ -532,6 +539,10 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
         variant_types: variantTypes,
       }
     };
+
+    if (form.barcode && form.barcode.trim() !== "") {
+      payload.barcode = form.barcode;
+    }
 
     if (id) {
       payload.id = id;
@@ -589,7 +600,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                   />
 
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <InputField label="Barcode" name="barcode" required
+                    <InputField label="Barcode" name="barcode"
                       tooltip="Unique identification code or Barcode for inventory identification."
                       value={form.barcode} onChange={handleChange}
                       placeholder="Barcode..."
@@ -631,10 +642,11 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                         value={form.hsn} onChange={handleChange}
                         placeholder="e.g. 1905"
                       />
-                      <SelectField label="GST Rate" name="gst"
-                        tooltip="Applicable GST tax rate for this product."
+                      <InputField label="GST Rate" name="gst"
+                        tooltip="Applicable GST tax rate for this product (e.g. 18)."
                         value={form.gst} onChange={handleChange}
-                        options={GST_RATES.map(r => ({ value: r, label: r }))}
+                        placeholder="e.g. 18"
+                        rightEl="%"
                       />
                     </div>
                   </div>

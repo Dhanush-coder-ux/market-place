@@ -136,7 +136,8 @@ const ProductDetail = () => {
   const name = String(product.name || "Unknown Product");
   const reorderPoint = product?.reorder_point;
   const initials = name.slice(0, 2).toUpperCase();
-  const sku = String(product.barcode || "—");
+  const sku = String(product.sku || "—");
+  const barcode = String(product.barcode || "—");
   const category = String(product.category || "—");
   const description = String(product.description || "—");
   const sellingPrice = product.sell_price ?? "—";
@@ -174,7 +175,7 @@ const ProductDetail = () => {
         <ProfileHeaderCard
           name={name}
           initials={initials}
-          subText={`Barcode: ${sku}`}
+          subText={`SKU: ${sku} • Barcode: ${barcode}`}
           badges={[
             { text: category, variant: "primary" },
             { text: isActive ? "Active" : "Inactive", variant: isActive ? "success" : "danger", showPulse: true },
@@ -247,7 +248,8 @@ const ProductDetail = () => {
                     <DetailItem icon={Tag} label="Category" value={category} onClick={click("Category", category)} />
                     <DetailItem icon={Hash} label="Brand" value={String(datas.brand || "—")} onClick={click("Brand", String(datas.brand || "—"))} />
                     <DetailItem icon={Info} label="Unit" value={unit} onClick={click("Unit", unit)} />
-                    <DetailItem icon={Hash} label="Barcode / SKU" value={sku} onClick={click("Barcode / SKU", sku)} />
+                    <DetailItem icon={Hash} label="SKU" value={sku} onClick={click("SKU", sku)} />
+                    <DetailItem icon={Hash} label="Barcode" value={barcode} onClick={click("Barcode", barcode)} />
                     <div className="lg:col-span-2">
                       <p className="text-[10px] font-medium text-slate-400  tracking-[0.05em] mb-1.5 flex items-center gap-1.5">
                         <FileText size={12} className="text-blue-400" /> Serial Numbers
@@ -418,7 +420,10 @@ const ProductDetail = () => {
 
         {/* TAB — Stock Movements */}
         {TABS[activeTab] === MOV_TAB_LABEL && (
-          <StockMovementTab inventoryId={id || ""} />
+          <StockMovementTab
+            inventoryId={id || ""}
+            onNavigateToPurchase={(purchaseId) => navigate(`/purchase/detail/${purchaseId}`)}
+          />
         )}
 
         {/* TAB — Purchases */}
@@ -491,6 +496,7 @@ const ProductDetail = () => {
             <ProductPurchasesTable
               rows={rows}
               loading={purLoading}
+              onNavigateToPurchase={(purchaseId) => navigate(`/purchase/detail/${purchaseId}`)}
             />
           );
         })()}

@@ -87,7 +87,8 @@ export default function CustomerBalanceSummary() {
 
     getData(`${ENDPOINTS.CUSTOMERS}/by/shop/${SHOP_ID}`, params).then((res) => {
       if (res) {
-        const data: CustomerRecord[] = Array.isArray(res.data) ? res.data : [res.data];
+        const raw: CustomerRecord[] = Array.isArray(res.data) ? res.data : [res.data];
+        const data: CustomerRecord[] = raw.filter(Boolean); // guard against null entries from API
         setCustomers(data);
 
         // Detect unique keys from both root and datas field
@@ -192,6 +193,7 @@ export default function CustomerBalanceSummary() {
     let outstanding = 0;
     let credit = 0;
     customers.forEach(c => {
+      if (!c) return;
       if (c.is_active ?? c.datas?.is_active ?? true) active++;
       outstanding += Number(c.outstanding ?? c.datas?.outstanding_balance ?? 0);
       credit += Number(c.credit_limit ?? c.datas?.credit_limit ?? 0);

@@ -15,6 +15,8 @@ import {
   Tag,
   AlertTriangle,
   ExternalLink,
+  Copy,
+  Check,
 } from "lucide-react";
 import { VariantRows, BatchCards, SerialBadgeList } from "../components/StockTree";
 import { useApi, useApiLoading } from "@/context/ApiContext";
@@ -175,6 +177,35 @@ const Pill = ({
     >
       {children}
     </span>
+  );
+};
+
+// --- Copy SKU Button with Micro-Animation ---
+const CopySKUButton = ({ val }: { val: string }) => {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(val);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={handleCopy}
+      className={`inline-flex items-center justify-center p-0.5 rounded transition-all duration-205 ${
+        copied ? "text-emerald-500 bg-emerald-50" : "text-slate-350 hover:text-blue-600 hover:bg-slate-100/80"
+      }`}
+      title="Copy SKU"
+    >
+      {copied ? (
+        <Check size={10} className="animate-in zoom-in duration-200" />
+      ) : (
+        <Copy size={10} className="transition-transform duration-200 active:scale-75" />
+      )}
+    </button>
   );
 };
 
@@ -351,13 +382,21 @@ const ProductRow = React.memo(
                   </div>
                 </div>
                 <div className="flex items-center gap-2 text-[11px] text-slate-400 font-medium leading-none">
-                  <span className="font-mono text-slate-400 tabular-nums">
-                    {item.barcode ||
-                      datas.barcode ||
-                      (item as any).sku ||
-                      datas.sku ||
-                      "—"}
-                  </span>
+                  {(() => {
+                    const rawSku = item.barcode || datas.barcode || (item as any).sku || datas.sku || "";
+                    if (!rawSku) {
+                      return <span className="font-mono text-slate-400 tabular-nums">—</span>;
+                    }
+                    const trimmedSku = rawSku.length > 12 ? `${rawSku.slice(0, 8)}...` : rawSku;
+                    return (
+                      <span className="flex items-center gap-1">
+                        <span className="font-mono text-slate-400 tabular-nums" title={rawSku}>
+                          {trimmedSku}
+                        </span>
+                        <CopySKUButton val={rawSku} />
+                      </span>
+                    );
+                  })()}
                   <span className="text-slate-200">·</span>
                   <span>{datas.brand || item.brand || "Generic"}</span>
                 </div>
@@ -365,15 +404,23 @@ const ProductRow = React.memo(
             </div>
           </td>
 
-          {/* Classification */}
+          {/* Category */}
           <td className="px-3 py-2.5">
             <div className="flex flex-col gap-0.5">
               <span className="text-[12px] font-medium text-slate-700 leading-none">
                 {datas.category || item.category || "Uncategorized"}
               </span>
-              <span className="text-[11px] text-slate-400 leading-none">
-                {datas.supplier || item.supplier || "No supplier"}
-              </span>
+              {(() => {
+                const supplier = datas.supplier || item.supplier || "";
+                if (!supplier || supplier.toLowerCase() === "no supplier") {
+                  return null;
+                }
+                return (
+                  <span className="text-[11px] text-slate-400 leading-none">
+                    {supplier}
+                  </span>
+                );
+              })()}
             </div>
           </td>
 
@@ -767,7 +814,7 @@ const InventoryPage = () => {
                     Product
                   </th>
                   <th className="px-3 py-2.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wide">
-                    Classification
+                    Category
                   </th>
                   <th className="px-3 py-2.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wide">
                     Serials

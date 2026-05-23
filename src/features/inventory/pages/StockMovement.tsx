@@ -74,16 +74,34 @@ function truncateId(id: string | undefined) {
 }
 
 
-function TypeBadge({ type, qty }: { type: MovementType; qty: number }) {
-  const isStockIn = qty > 0;
-  const s = isStockIn
-    ? { bg: "bg-emerald-50 text-emerald-700 border-emerald-200", dot: "bg-emerald-500" }
-    : { bg: "bg-rose-50 text-rose-700 border-rose-200", dot: "bg-rose-500" };
+function TypeBadge({ type }: { type: MovementType }) {
+  let s = { bg: "bg-slate-50 text-slate-700 border-slate-200", dot: "bg-slate-500" };
+
+  if (type === "PURCHASE" || type === "PO_PURCHASE") {
+    s = { bg: "bg-emerald-50 text-emerald-700 border-emerald-200", dot: "bg-emerald-500" };
+  } else if (type === "SALES") {
+    s = { bg: "bg-rose-50 text-rose-700 border-rose-200", dot: "bg-rose-500" };
+  } else if (type === "STOCK_ADJUSTMENT") {
+    s = { bg: "bg-violet-50 text-violet-700 border-violet-200", dot: "bg-violet-500" };
+  } else if (type === "TRANSFER") {
+    s = { bg: "bg-sky-50 text-sky-700 border-sky-200", dot: "bg-sky-500" };
+  } else if (type === "OPENING") {
+    s = { bg: "bg-slate-50 text-slate-700 border-slate-200", dot: "bg-slate-500" };
+  } else if (type === "PRODUCTION") {
+    s = { bg: "bg-teal-50 text-teal-700 border-teal-200", dot: "bg-teal-500" };
+  } else if (type === "SALE_RETURN") {
+    s = { bg: "bg-fuchsia-50 text-fuchsia-700 border-fuchsia-200", dot: "bg-fuchsia-500" };
+  }
+
+  let displayName = type.replace(/_/g, ' ').replace(/-/g, ' ');
+  if (type === "STOCK_ADJUSTMENT") {
+    displayName = "ADJUSTMENT";
+  }
 
   return (
     <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-extrabold border leading-none shadow-sm uppercase tracking-wider ${s.bg}`}>
       <span className={`w-1 h-1 rounded-full ${s.dot}`} />
-      {type.replace('_', ' ')}
+      {displayName}
     </span>
   );
 }
@@ -165,7 +183,7 @@ function DetailDrawer({ movement, onClose }: DetailDrawerProps) {
             )}
 
             <div className="inline-flex items-center px-3 py-1 rounded-full bg-white border border-slate-100 shadow-sm">
-              <TypeBadge type={movement.type} qty={movement.qty} />
+              <TypeBadge type={movement.type} />
             </div>
           </div>
 
@@ -406,10 +424,11 @@ export default function StockMovementPage() {
   };
 
   // Dynamic Column State
-  const [availableKeys] = useState<string[]>(["sku", "source", "destination", "ref", "user", "notes"]);
+  const [availableKeys] = useState<string[]>(["source", "destination", "user", "notes"]);
   const [selectedKeys, setSelectedKeys] = useState<string[]>(() => {
     const saved = localStorage.getItem('stock_movement_columns');
-    return saved ? JSON.parse(saved) : ["sku", "ref", "user"];
+    const parsed = saved ? JSON.parse(saved) : ["user", "notes"];
+    return parsed.filter((k: string) => k !== "sku" && k !== "ref");
   });
   const [isFilterOpen, setIsFilterOpen] = useState(false);
 
@@ -805,7 +824,7 @@ export default function StockMovementPage() {
                       </div>
                     </td>
                     <td className="px-4 py-3 align-middle border-r border-slate-100 last:border-r-0">
-                      <TypeBadge type={m.type} qty={m.qty} />
+                      <TypeBadge type={m.type} />
                     </td>
                     <td className="px-4 py-3 text-right align-middle border-r border-slate-100 last:border-r-0">
                       <span className={`text-[13px] font-black tabular-nums ${m.qty > 0 ? "text-emerald-600" : "text-rose-600"}`}>

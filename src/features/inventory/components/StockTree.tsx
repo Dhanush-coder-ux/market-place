@@ -7,7 +7,9 @@ import {
   ChevronDown,
   Hash,
   Package,
-  AlertTriangle
+  AlertTriangle,
+  Copy,
+  Check
 } from "lucide-react";
 import { Modal } from "../../../components/common/SuperUI";
 
@@ -257,6 +259,35 @@ export const BatchCards = ({ batches }: { batches: any | any[] }) => {
   );
 };
 
+// --- Copy SKU Button with Micro-Animation ---
+const CopySKUButton = ({ val }: { val: string }) => {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(val);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={handleCopy}
+      className={`inline-flex items-center justify-center p-0.5 rounded transition-all duration-200 ${
+        copied ? "text-emerald-500 bg-emerald-55" : "text-slate-350 hover:text-blue-600 hover:bg-slate-100/80"
+      }`}
+      title="Copy SKU"
+    >
+      {copied ? (
+        <Check size={10} className="animate-in zoom-in duration-200" />
+      ) : (
+        <Copy size={10} className="transition-transform duration-200 active:scale-75" />
+      )}
+    </button>
+  );
+};
+
 export const VariantRows = ({ combinations, baseSellPrice, baseBuyPrice }: { combinations: any[]; baseSellPrice: any; baseBuyPrice?: any }) => {
   const [expandedVariant, setExpandedVariant] = useState<string | null>(null);
 
@@ -320,7 +351,19 @@ export const VariantRows = ({ combinations, baseSellPrice, baseBuyPrice }: { com
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-bold text-slate-800 truncate">{variantLabel}</p>
                       <div className="flex items-center gap-2 mt-0.5">
-                        <span className="text-[10px] font-mono text-slate-400 font-medium">{comb.barcode || combDatas.barcode || "No SKU"}</span>
+                        {(() => {
+                          const rawSku = comb.barcode || combDatas.barcode || "";
+                          if (!rawSku) {
+                            return <span className="text-[10px] font-mono text-slate-400 font-medium">No SKU</span>;
+                          }
+                          const trimmedSku = rawSku.length > 12 ? `${rawSku.slice(0, 8)}...` : rawSku;
+                          return (
+                            <span className="flex items-center gap-1 text-[10px] font-mono text-slate-400 font-medium" onClick={(e) => e.stopPropagation()}>
+                              <span title={rawSku}>{trimmedSku}</span>
+                              <CopySKUButton val={rawSku} />
+                            </span>
+                          );
+                        })()}
                         {hasBatches && (
                           <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-600 border border-indigo-100  tracking-tighter shrink-0">
                             {batches.length} {batches.length === 1 ? 'Batch' : 'Batches'}

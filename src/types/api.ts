@@ -150,6 +150,7 @@ export interface InventoryRecord {
   buy_price: number;
   stocks: number;
   barcode: string;
+  sku?: string;
   shop_id: string;
   added_by: string;
   datas?: Record<string, any>;

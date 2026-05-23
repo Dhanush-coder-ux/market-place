@@ -209,10 +209,10 @@ export const InventoryItemsCard = ({
 
   const selectBatch = (rowIndex: number, batch: any) => {
     const p = products[rowIndex];
-    const isDuplicate = products.some((existing, i) => 
-      i !== rowIndex && 
-      existing.inventory_id === p.inventory_id && 
-      (p.variant_id ? existing.variant_id === p.variant_id : true) && 
+    const isDuplicate = products.some((existing, i) =>
+      i !== rowIndex &&
+      existing.inventory_id === p.inventory_id &&
+      (p.variant_id ? existing.variant_id === p.variant_id : true) &&
       (existing.batch_id === batch.id || existing.batchNum === (batch.name || batch.batch_number))
     );
 
@@ -573,7 +573,7 @@ export const InventoryItemsCard = ({
                                     showToast("This product is marked as having variants, but no variants have been generated yet. Please generate variants in the Inventory module before purchasing.", "error");
                                     return;
                                   }
-                                  
+
                                   if (hasVariants && combinations.length > 0) {
                                     const mappedVariants = combinations.map((c: any) => ({
                                       id: c.id,
@@ -677,23 +677,21 @@ export const InventoryItemsCard = ({
                                 </span>
                               )}
                               {product.batchTracking && (
-                                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-black border transition-all ${
-                                  product.batchNum 
-                                    ? "bg-amber-50 text-amber-700 border-amber-200" 
+                                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-black border transition-all ${product.batchNum
+                                    ? "bg-amber-50 text-amber-700 border-amber-200"
                                     : "bg-rose-50/50 text-rose-600 border-rose-100/60 animate-pulse"
-                                }`}>
+                                  }`}>
                                   <Package size={9} /> {product.batchNum ? `Batch: ${product.batchNum}` : "Batch Details Required"}
                                 </span>
                               )}
                               {product.serialTracking && (
-                                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-black border transition-all ${
-                                  (product.serialNumbers?.split(",").filter(Boolean).length || 0) >= (Number(product.quantity) || 0)
-                                    ? "bg-blue-50 text-blue-700 border-blue-200" 
+                                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-black border transition-all ${(product.serialNumbers?.split(",").filter(Boolean).length || 0) >= (Number(product.quantity) || 0)
+                                    ? "bg-blue-50 text-blue-700 border-blue-200"
                                     : "bg-rose-50/50 text-rose-600 border-rose-100/60 animate-pulse"
-                                }`}>
+                                  }`}>
                                   <Check size={9} /> {
                                     (product.serialNumbers?.split(",").filter(Boolean).length || 0) >= (Number(product.quantity) || 0)
-                                      ? `${product.serialNumbers?.split(",").filter(Boolean).length} Serials Set` 
+                                      ? `${product.serialNumbers?.split(",").filter(Boolean).length} Serials Set`
                                       : "Serials Required"
                                   }
                                 </span>

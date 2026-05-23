@@ -280,6 +280,7 @@ const ProductDetail = () => {
                   <DetailItem icon={Download} label="Buy Price" value={String(buyingPrice) !== "—" ? `₹${buyingPrice}` : "—"} onClick={click("Buy Price", `₹${buyingPrice}`)} />
                   <DetailItem icon={Upload} label="Selling Price" value={String(sellingPrice) !== "—" ? `₹${sellingPrice}` : "—"} onClick={click("Selling Price", `₹${sellingPrice}`)} />
                   <DetailItem icon={Tag} label="MRP" value={datas.mrp ? `₹${datas.mrp}` : "—"} onClick={click("MRP", datas.mrp ? `₹${datas.mrp}` : "—")} />
+                  <DetailItem icon={Hash} label="HSN Code" value={String(datas.hsn || "—")} onClick={click("HSN Code", String(datas.hsn || "—"))} />
                   <DetailItem icon={BarChart2} label="GST Rate" value={String(datas.gst || "—")} onClick={click("GST Rate", String(datas.gst || "—"))} />
                   <div>
                     <p className="text-[10px] font-medium text-slate-400  tracking-[0.05em] mb-1.5 flex items-center gap-1.5">

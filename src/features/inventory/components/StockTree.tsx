@@ -183,7 +183,7 @@ export const BatchCards = ({ batches }: { batches: any | any[] }) => {
         <p className="text-[15px] font-bold text-slate-800 tracking-tight">Product Batches</p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-2 gap-3 sm:gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5">
         {visible.map((batch: any, idx: number) => {
           const qty = Number(batch.stocks ?? batch.quantity ?? batch.qty ?? 0);
           const serials = extractSerials(batch.serial_numbers || batch.datas?.serial_numbers);
@@ -195,44 +195,43 @@ export const BatchCards = ({ batches }: { batches: any | any[] }) => {
               className="bg-white border border-slate-200 rounded-lg overflow-hidden shadow-sm hover:shadow-md hover:border-blue-300 transition-all flex flex-col"
             >
               {/* Card Header */}
-              <div className="px-3 sm:px-4 py-2.5 sm:py-3 bg-white border-b border-slate-50 flex items-center justify-between">
-                <span className="text-[12px] sm:text-[13px] font-bold text-slate-800 tracking-tight truncate mr-2">
+              <div className="px-2.5 py-2 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between">
+                <span className="text-[11px] font-bold text-slate-800 tracking-tight truncate mr-2">
                   {batch.name || batch.batch || `BATCH-${String(idx + 1).padStart(3, '0')}`}
                 </span>
-                <span className={`px-2 py-0.5 rounded text-[9px] sm:text-[10px] font-bold   shrink-0 ${daysToExpiry !== null && daysToExpiry <= 0 ? "bg-rose-50 text-rose-600" : "bg-emerald-50 text-emerald-600"}`}>
+                <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold shrink-0 ${daysToExpiry !== null && daysToExpiry <= 0 ? "bg-rose-50 text-rose-600" : "bg-emerald-50 text-emerald-600"}`}>
                   {daysToExpiry !== null && daysToExpiry <= 0 ? "Expired" : "Active"}
                 </span>
               </div>
 
               {/* Card Body */}
-              <div className="p-3 sm:p-4 space-y-2.5 sm:space-y-3 flex-1">
+              <div className="p-2.5 flex-1 flex flex-col gap-1.5">
                 {[
-                  { label: "Lot Number:", value: batch.lot_number || batch.batch_no || `BATCH-${String(idx + 1).padStart(3, '0')}` },
+                  { label: "Lot No:", value: batch.lot_number || batch.batch_no || `BATCH-${String(idx + 1).padStart(3, '0')}` },
                   { label: "Stock:", value: `${qty} units` },
-                  { label: "Mfg Date:", value: formatDate(batch.manufacturing_date) },
-                  { label: "Expiry:", value: formatDate(batch.expiry_date || batch.expiry) },
-                  { label: "Location:", value: batch.location || "Default" }
+                  { label: "Mfg:", value: formatDate(batch.manufacturing_date) },
+                  { label: "Exp:", value: formatDate(batch.expiry_date || batch.expiry) }
                 ].map((item, i) => (
-                  <div key={i} className="flex items-center justify-between py-1 border-b border-slate-50 last:border-0">
-                    <span className="text-[11px] sm:text-[12px] text-slate-400 font-medium">{item.label}</span>
-                    <span className="text-[11px] sm:text-[12px] text-slate-700 font-bold">{item.value}</span>
+                  <div key={i} className="flex items-center justify-between py-0.5">
+                    <span className="text-[10px] text-slate-400 font-medium">{item.label}</span>
+                    <span className="text-[10px] text-slate-700 font-bold truncate max-w-[120px] text-right">{item.value}</span>
                   </div>
                 ))}
 
                 {daysToExpiry !== null && (
-                  <div className={`mt-2 sm:mt-4 p-2 sm:p-2.5 rounded-lg flex items-center gap-2 ${daysToExpiry <= 0 ? "bg-rose-50 text-rose-600" : "bg-amber-50 text-amber-600"}`}>
-                    <AlertTriangle size={14} className={`shrink-0 ${daysToExpiry <= 0 ? "text-rose-500" : "text-amber-500"}`} />
-                    <span className="text-[10px] sm:text-[11px] font-bold tracking-tight">
+                  <div className={`mt-1 p-1.5 rounded flex items-center gap-1.5 ${daysToExpiry <= 0 ? "bg-rose-50 text-rose-600" : "bg-amber-50 text-amber-600"}`}>
+                    <AlertTriangle size={12} className={`shrink-0 ${daysToExpiry <= 0 ? "text-rose-500" : "text-amber-500"}`} />
+                    <span className="text-[9px] font-bold tracking-tight leading-none">
                       {daysToExpiry < 0 ? `Expired ${Math.abs(daysToExpiry)} days ago` : daysToExpiry === 0 ? "Expired today" : `Expires in ${daysToExpiry} days`}
                     </span>
                   </div>
                 )}
 
                 {serials.length > 0 && (
-                  <div className="mt-3 pt-3 border-t border-slate-100">
-                    <div className="flex items-center justify-between mb-2">
-                      <p className="text-[10px] font-bold text-slate-400  ">Serial Numbers</p>
-                      <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">{serials.length}</span>
+                  <div className="mt-2 pt-2 border-t border-slate-100">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <p className="text-[9px] font-bold text-slate-400">Serials</p>
+                      <span className="text-[9px] font-bold text-blue-600 bg-blue-50 px-1 py-0.5 rounded leading-none">{serials.length}</span>
                     </div>
                     <SerialBadgeList serials={serials} title={`Batch Serials: ${batch.name || batch.batch}`} />
                   </div>

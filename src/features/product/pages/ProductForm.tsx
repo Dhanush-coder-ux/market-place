@@ -523,6 +523,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
         unit: form.unit,
         mrp: Number(form.mrp) || 0,
         gst: form.gst,
+        hsn: form.hsn,
         supplier: form.supplier,
         opening_stock: 0,
 
@@ -623,12 +624,19 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                     />
                   </div>
 
-                  <div className="pt-2 border-t border-slate-50 mt-2">
-                    <SelectField label="GST Rate" name="gst" required
-                      tooltip="Applicable GST tax rate for this product."
-                      value={form.gst} onChange={handleChange}
-                      options={GST_RATES.map(r => ({ value: r, label: r }))}
-                    />
+                  <div className="pt-4 border-t border-slate-50 mt-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <InputField label="HSN Code" name="hsn"
+                        tooltip="Harmonized System of Nomenclature code for GST."
+                        value={form.hsn} onChange={handleChange}
+                        placeholder="e.g. 1905"
+                      />
+                      <SelectField label="GST Rate" name="gst"
+                        tooltip="Applicable GST tax rate for this product."
+                        value={form.gst} onChange={handleChange}
+                        options={GST_RATES.map(r => ({ value: r, label: r }))}
+                      />
+                    </div>
                   </div>
                 </div>
               </div>

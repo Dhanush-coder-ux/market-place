@@ -324,7 +324,7 @@ const Billing = () => {
               )}
             </div>
 
-            {/* Credit Quick Badge */}
+       
             {customerData && (
               <div className={`hidden md:flex items-center gap-1.5 px-2 py-1 rounded-md border text-[9px] font-medium shrink-0 ${
                 isCreditExceeded 

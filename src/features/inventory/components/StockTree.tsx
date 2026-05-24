@@ -194,51 +194,39 @@ export const BatchCards = ({ batches }: { batches: any | any[] }) => {
           return (
             <div 
               key={batch.id || idx} 
-              className="bg-white border border-slate-200 rounded-lg overflow-hidden shadow-sm hover:shadow-md hover:border-blue-300 transition-all flex flex-col"
+              className="bg-white border border-slate-200 rounded-lg p-2.5 shadow-sm hover:shadow-md hover:border-blue-300 transition-all flex flex-col gap-1.5"
             >
-              {/* Card Header */}
-              <div className="px-2.5 py-2 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between">
-                <span className="text-[11px] font-bold text-slate-800 tracking-tight truncate mr-2">
-                  {batch.name || batch.batch || `BATCH-${String(idx + 1).padStart(3, '0')}`}
+              <div className="flex items-center justify-between">
+                <span className="text-[12px] font-bold text-slate-800">
+                  Batch: {batch.name || batch.batch || `BAT-${String(idx + 1).padStart(3, '0')}`}
                 </span>
-                <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold shrink-0 ${daysToExpiry !== null && daysToExpiry <= 0 ? "bg-rose-50 text-rose-600" : "bg-emerald-50 text-emerald-600"}`}>
-                  {daysToExpiry !== null && daysToExpiry <= 0 ? "Expired" : "Active"}
+                <span className="text-[12px] font-bold text-indigo-600">
+                  Qty: {qty}
                 </span>
               </div>
-
-              {/* Card Body */}
-              <div className="p-2.5 flex-1 flex flex-col gap-1.5">
-                {[
-                  { label: "Lot No:", value: batch.lot_number || batch.batch_no || `BATCH-${String(idx + 1).padStart(3, '0')}` },
-                  { label: "Stock:", value: `${qty} units` },
-                  { label: "Mfg:", value: formatDate(batch.manufacturing_date) },
-                  { label: "Exp:", value: formatDate(batch.expiry_date || batch.expiry) }
-                ].map((item, i) => (
-                  <div key={i} className="flex items-center justify-between py-0.5">
-                    <span className="text-[10px] text-slate-400 font-medium">{item.label}</span>
-                    <span className="text-[10px] text-slate-700 font-bold truncate max-w-[120px] text-right">{item.value}</span>
-                  </div>
-                ))}
-
-                {daysToExpiry !== null && (
-                  <div className={`mt-1 p-1.5 rounded flex items-center gap-1.5 ${daysToExpiry <= 0 ? "bg-rose-50 text-rose-600" : "bg-amber-50 text-amber-600"}`}>
-                    <AlertTriangle size={12} className={`shrink-0 ${daysToExpiry <= 0 ? "text-rose-500" : "text-amber-500"}`} />
-                    <span className="text-[9px] font-bold tracking-tight leading-none">
-                      {daysToExpiry < 0 ? `Expired ${Math.abs(daysToExpiry)} days ago` : daysToExpiry === 0 ? "Expired today" : `Expires in ${daysToExpiry} days`}
-                    </span>
-                  </div>
-                )}
-
-                {serials.length > 0 && (
-                  <div className="mt-2 pt-2 border-t border-slate-100">
-                    <div className="flex items-center justify-between mb-1.5">
-                      <p className="text-[9px] font-bold text-slate-400">Serials</p>
-                      <span className="text-[9px] font-bold text-blue-600 bg-blue-50 px-1 py-0.5 rounded leading-none">{serials.length}</span>
-                    </div>
-                    <SerialBadgeList serials={serials} title={`Batch Serials: ${batch.name || batch.batch}`} />
-                  </div>
-                )}
+              <div className="flex items-center justify-between text-[11px] font-medium text-slate-400">
+                <span>MFG: {formatDate(batch.manufacturing_date)}</span>
+                <span>EXP: {formatDate(batch.expiry_date || batch.expiry)}</span>
               </div>
+
+              {daysToExpiry !== null && (
+                <div className={`mt-1 p-1 rounded flex items-center gap-1.5 ${daysToExpiry <= 0 ? "bg-rose-50 text-rose-600" : "bg-amber-50 text-amber-600"}`}>
+                  <AlertTriangle size={10} className={`shrink-0 ${daysToExpiry <= 0 ? "text-rose-500" : "text-amber-500"}`} />
+                  <span className="text-[9px] font-bold tracking-tight leading-none">
+                    {daysToExpiry < 0 ? `Expired ${Math.abs(daysToExpiry)} days ago` : daysToExpiry === 0 ? "Expired today" : `Expires in ${daysToExpiry} days`}
+                  </span>
+                </div>
+              )}
+
+              {serials.length > 0 && (
+                <div className="mt-1 pt-1 border-t border-slate-100">
+                  <div className="flex items-center justify-between mb-1">
+                    <p className="text-[9px] font-bold text-slate-400">Serials</p>
+                    <span className="text-[9px] font-bold text-blue-600 bg-blue-50 px-1 py-0.5 rounded leading-none">{serials.length}</span>
+                  </div>
+                  <SerialBadgeList serials={serials} title={`Batch Serials: ${batch.name || batch.batch}`} />
+                </div>
+              )}
             </div>
           );
         })}

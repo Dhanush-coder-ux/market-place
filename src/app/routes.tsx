@@ -28,6 +28,7 @@ const ProductDraftsPage = React.lazy(() => import("../features/product/pages/Pro
 
 // ─── Purchase ────────────────────────────────────────────────────────────────
 const PurchaseDetail = React.lazy(() => import("@/features/purchase/pages/PurchaseDetail"));
+const PurchaseSearch = React.lazy(() => import("@/features/purchase/pages/PurchaseSearch"));
 const PurchaseForm = React.lazy(() => import("@/features/purchase/pages/PurchaseForm"));
 const PurchaseHistory = React.lazy(() => import("@/features/purchase/pages/PurchaseHistory"));
 const PurchaseDraftsPage = React.lazy(() => import("@/features/purchase/pages/PurchaseDraftsPage"));
@@ -53,6 +54,7 @@ const EmployeeDraftsPage = React.lazy(() => import("../features/employee/pages/E
 // ─── Inventory ───────────────────────────────────────────────────────────────
 const Inventory = React.lazy(() => import("../features/inventory/pages/Inventory"));
 const StockMovementPage = React.lazy(() => import("../features/inventory/pages/StockMovement"));
+const StockMovementDetail = React.lazy(() => import("../features/inventory/pages/StockMovementDetail"));
 const StockAdjustmentForm = React.lazy(() => import("../features/inventory/pages/StockAdjusstment"));
 const StockAdjustmentDraftsPage = React.lazy(() => import("../features/inventory/pages/StockAdjustmentDraftsPage"));
 
@@ -66,6 +68,7 @@ const CustomerDraftsPage = React.lazy(() => import("@/features/customer/pages/Cu
 // ─── Sales & Orders ──────────────────────────────────────────────────────────
 const SalesListPage = React.lazy(() => import("@/features/sales/pages/SalesPage"));
 const SaleDetailPage = React.lazy(() => import("@/features/sales/pages/SaleDetailPage"));
+const SaleSearch = React.lazy(() => import("@/features/sales/pages/SaleSearch"));
 const Order = React.lazy(() => import("../features/order/pages/Order"));
 const Billing = React.lazy(() => import("../features/billing/pages/Billing"));
 
@@ -94,6 +97,7 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: <Page><AnalyticsDashboard /></Page> },
       { path: "/sales", element: <Page><SalesListPage /></Page> },
+      { path: "/sales/detail", element: <Page><SaleSearch /></Page> },
       { path: "/sales/:id", element: <Page><SaleDetailPage /></Page> },
 
       // Products — static "add" before dynamic ":id"
@@ -111,6 +115,7 @@ export const router = createBrowserRouter([
       { path: '/po-grn/update', element: <Page><ReceiveGoodsPage /></Page> },
       { path: "/purchase-history", element: <Page><PurchaseHistory /></Page> },
       { path: "/production-entry/add", element: <Page><ProductionForm /></Page> },
+      { path: '/purchase/detail', element: <Page><PurchaseSearch /></Page> },
       { path: '/purchase/detail/:id', element: <Page><PurchaseDetail /></Page> },
       { path: "/purchase/add", element: <Page><PurchaseForm /></Page> },
       { path: "/purchase/drafts", element: <Page><PurchaseDraftsPage /></Page> },
@@ -134,6 +139,7 @@ export const router = createBrowserRouter([
       // Inventory
       { path: '/inventory', element: <Page><Inventory /></Page> },
       { path: "/stock-movement", element: <Page><StockMovementPage /></Page> },
+      { path: "/stock-movement/:id", element: <Page><StockMovementDetail /></Page> },
       { path: "/stock-adjustment", element: <Page><StockAdjustmentForm /></Page> },
       { path: "/stock-adjustment/drafts", element: <Page><StockAdjustmentDraftsPage /></Page> },
 

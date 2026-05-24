@@ -101,10 +101,18 @@ export function parseGst(val: any): number {
 }
 
 export function toDisplayData(p: PurchaseRecord): DirectPurchaseData {
-  const d2 = p.datas as any;
+  const d2 = (p.datas ? (typeof p.datas === "string" ? JSON.parse(p.datas) : p.datas) : p) as any;
   const products = ((p as any).products ?? d2?.products ?? d2?.purchase_products ?? d2?.grn_products ?? d2?.finished_products) as any[] | undefined;
-  const dateRaw = String(d2?.purchaseDetails?.date ?? d2?.purchase_date ?? d2?.production_date ?? d2?.receipt_date ?? (p as any).date ?? new Date().toISOString());
-  const d = new Date(dateRaw.includes("T") ? dateRaw : dateRaw + "T00:00:00");
+  const dateRaw = String(d2?.purchaseDetails?.date ?? d2?.purchase_date ?? d2?.production_date ?? d2?.receipt_date ?? d2?.adjusted_date ?? (p as any).date ?? new Date().toISOString());
+  
+  let d = new Date();
+  if (dateRaw && dateRaw !== "undefined" && dateRaw !== "null" && dateRaw !== "—") {
+    const parsedDate = new Date(dateRaw.includes("T") ? dateRaw : dateRaw + "T00:00:00");
+    if (!isNaN(parsedDate.getTime())) {
+      d = parsedDate;
+    }
+  }
+
   const typeMap: Record<string, PurchaseType> = {
     DIRECT: "Purchase",
     PO_CREATE: "PO Purchase",
@@ -138,8 +146,8 @@ export function toDisplayData(p: PurchaseRecord): DirectPurchaseData {
   const outstanding = Math.max(0, totalCost - paidAmount);
 
   return {
-    id: p.id,
-    poNumber: d2?.purchaseDetails?.invoiceNo ?? p.id.slice(0, 8).toUpperCase(),
+    id: p.id || "",
+    poNumber: d2?.purchaseDetails?.invoiceNo ?? p.id?.slice(0, 8).toUpperCase() ?? "PO",
     date: d.toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" }),
     time: d.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }),
     vendor: String(vendorName),

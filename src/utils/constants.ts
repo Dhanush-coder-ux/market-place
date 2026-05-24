@@ -1,4 +1,4 @@
-import { History, IndianRupee, Plus, UserCircle, Wallet, Bookmark } from "lucide-react";
+import { History, IndianRupee, Plus, UserCircle, Wallet, Bookmark, Receipt } from "lucide-react";
 import {
   Database,
   LayoutDashboard,
@@ -53,7 +53,15 @@ export interface SidebarLink {
 
 export const sidebarLinks: SidebarLink[] = [
   { name: "Dashboard", icon: LayoutDashboard, path: "/" },
-  { name: "Sales", icon: IndianRupee, path: "/sales", addPath: "/billing", newTab: false },
+  {
+    name: "Sales",
+    icon: IndianRupee,
+    addPath: "/billing",
+    subLinks: [
+      { name: "Sales List", path: "/sales", icon: ClipboardList, addPath: "/billing" },
+      { name: "Sale Detail", path: "/sales/detail", icon: Receipt },
+    ],
+  },
 
   {
     name: "Purchase",
@@ -86,6 +94,7 @@ export const sidebarLinks: SidebarLink[] = [
         ],
       },
       { name: "Purchase History", path: "/purchase-history", icon: History, addPath: "/purchase/add" },
+      { name: "Purchase Detail", path: "/purchase/detail", icon: FileText },
     ],
   },
 

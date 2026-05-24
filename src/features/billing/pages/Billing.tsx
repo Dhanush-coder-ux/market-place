@@ -42,13 +42,6 @@ const Billing = () => {
   const [isUpdatingLimit, setIsUpdatingLimit] = useState(false);
   const [isShortcutsModalOpen, setIsShortcutsModalOpen] = useState(false);
 
-  // ── Derived Credit Info
-  const currentBillTotal = items.reduce((s, i) => s + (i.tprice || 0), 0);
-  const projectedOutstanding = (customerData?.outstanding || 0) + currentBillTotal;
-  const isCreditExceeded = customerData ? projectedOutstanding > customerData.creditLimit : false;
-  const creditRemaining = customerData ? Math.max(0, customerData.creditLimit - projectedOutstanding) : 0;
-  const creditUsagePercent = customerData?.creditLimit ? Math.min(100, (projectedOutstanding / customerData.creditLimit) * 100) : 0;
-
   // ── Billing Totals (lifted from BillingHeader for shared strip)
   const GST_PERCENT = 18;
   const round2 = (n: number) => Math.round(n * 100) / 100;
@@ -64,6 +57,13 @@ const Billing = () => {
   useEffect(() => {
     setPayments(prev => prev.length === 1 ? [{ ...prev[0], amount: finalAmount }] : prev);
   }, [finalAmount]);
+
+  // ── Derived Credit Info
+  const creditPaymentAmount = payments
+    .filter(p => p.mode === "credit")
+    .reduce((sum, p) => sum + (p.amount || 0), 0);
+  const projectedOutstanding = (customerData?.outstanding || 0) + creditPaymentAmount;
+  const isCreditExceeded = customerData ? projectedOutstanding > customerData.creditLimit : false;
 
   // ── Handlers
   const handleItemsChange = useCallback((next: BillingItem[]) => setItems(next), []);
@@ -218,6 +218,33 @@ const Billing = () => {
 
     const res = await postData(ENDPOINTS.BILLING, payload);
     if (res) {
+      // Auto-decrement stock manually because backend doesn't do it correctly for billing
+      try {
+        const adjustmentPayload = {
+          shop_id: SHOP_ID,
+          adjusted_date: new Date().toISOString(),
+          description: `Stock decreased due to Sales (Ref: ${res?.data?.ui_id || "POS"})`,
+          products: filledItems.map(i => ({
+            inventory_id: i.inventoryId || "",
+            variant_id: i.variantId || null,
+            batch_id: i.batchId || null,
+            serialno_id: i.serialnoId || null,
+            serial_numbers: i.serialNumbers?.length ? i.serialNumbers : null,
+            stocks: Number(i.qty),
+            type: "DECREMENT",
+            datas: {
+              reason: "Sales",
+              notes: "Auto-deducted from POS",
+              barcode: i.code,
+              product_name: i.name
+            }
+          }))
+        };
+        await postData(ENDPOINTS.S_ADJUSTMENTS, adjustmentPayload);
+      } catch (err) {
+        console.error("Failed to automatically decrement stock for sale", err);
+      }
+
       const creditPaid = paymentsArg.filter(p => p.mode === "credit").reduce((s, p) => s + p.amount, 0);
 
       if (customerData && creditPaid > 0) {
@@ -252,147 +279,102 @@ const Billing = () => {
 
 
   return (
-    <div className="flex-1 flex flex-col min-h-0 bg-neutral-50/80 overflow-hidden h-full">
+    <div className="flex-1 flex min-h-0 bg-slate-50/80 overflow-hidden h-full">
 
-      {/* ── Customer Bar ──────────────────────────────────────────── */}
-      <div className="shrink-0 px-5 py-3 bg-white border-b border-slate-100/80">
-        <div className="flex flex-col md:flex-row gap-3 items-stretch">
+      {/* ── Left Panel (Customer + Table) ──────────────────────── */}
+      <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
 
-          {/* Customer Search */}
-          <div className="flex-1 flex items-center gap-3 min-w-0">
-            <div className="flex items-center gap-2 shrink-0">
-              <div className="w-8 h-8 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center">
-                <User size={14} strokeWidth={1.5} className="text-slate-400" />
+        {/* Customer Bar (only spans the table width) */}
+        <div className="shrink-0 px-3 sm:px-4 py-2 bg-white border-b border-slate-200/60">
+          <div className="flex items-center gap-2">
+
+            {/* Customer Search */}
+            <div className="flex-1 flex items-center gap-2 min-w-0">
+              <div className="w-7 h-7 rounded-md bg-slate-50 border border-slate-100 flex items-center justify-center shrink-0">
+                <User size={12} strokeWidth={1.5} className="text-slate-400" />
               </div>
-              <div className="hidden sm:block">
-                <p className="text-[11px] font-medium text-slate-400   leading-none">Customer</p>
-              </div>
-            </div>
-            <div className="flex-1 min-w-0">
-              <SearchSelect<CustomerData>
-                placeholder="Search by name or phone..."
-                fetchOptions={fetchCustomers}
-                options={staticCustomers}
-                labelKey="name"
-                valueKey="id"
-                onChange={handleCustomerChange}
-                value={customerData?.id}
-                allowClear
-                className="h-[38px] shadow-none border-slate-200/80 rounded-lg text-[13px]"
-                onCreateNew={(name) => {
-                  setNewCustomerName(name);
-                  setIsCustomerModalOpen(true);
-                }}
-                renderOption={(opt) => (
-                  <div className="flex flex-col py-0.5">
-                    <span className="text-[13px] font-medium text-slate-700">{opt.name}</span>
-                    <span className="text-[10px] text-slate-400 font-mono tracking-wide">{opt.phone}</span>
-                  </div>
-                )}
-              />
-            </div>
-            {isLoadingCustomer && <Loader2 size={14} className="text-blue-400 animate-spin shrink-0" />}
-            {customerData && !isLoadingCustomer && (
-              <span className="flex items-center gap-1 text-[10px] font-medium text-emerald-600 bg-emerald-50/80 border border-emerald-100 px-2 py-1 rounded-md shrink-0">
-                <CheckCircle2 size={10} /> Linked
-              </span>
-            )}
-          </div>
-
-          {/* Credit Summary – Compact Inline */}
-          <div className="w-full md:w-[300px] shrink-0">
-            {customerData ? (
-              <div className={`h-full px-3.5 py-2.5 rounded-lg border flex flex-col justify-center transition-colors duration-200 ${isCreditExceeded
-                ? "bg-red-50/40 border-red-200/60"
-                : "bg-slate-50/60 border-slate-200/60"
-                }`}>
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-[10px] font-medium text-slate-500   flex items-center gap-1.5">
-                    <Wallet size={11} className="text-slate-400" /> Credit
-                  </p>
-                  <span className="text-[9px] font-normal text-slate-400 tabular-nums">
-                    {customerData.id.slice(-8)}
-                  </span>
-                </div>
-
-                {/* Progress Bar */}
-                <div className="mb-2">
-                  <div className="h-1.5 rounded-full bg-slate-200/80 overflow-hidden">
-                    <div
-                      className={`h-full rounded-full transition-all duration-500 ease-out ${isCreditExceeded ? "bg-red-400" : "bg-emerald-400"
-                        }`}
-                      style={{ width: `${creditUsagePercent}%` }}
-                    />
-                  </div>
-                  <div className="flex justify-between mt-1 text-[10px] font-normal text-slate-500">
-                    <span className={currentBillTotal > 0 ? "text-slate-600" : ""}>
-                      ₹{formatINR(projectedOutstanding, 0)}
-                    </span>
-                    <span>Limit: ₹{formatINR(customerData.creditLimit, 0)}</span>
-                  </div>
-                </div>
-
-                {isCreditExceeded ? (
-                  <div className="space-y-1.5">
-                    <div className="flex items-start gap-1.5 text-red-600 bg-red-50 p-1.5 rounded-md">
-                      <AlertCircle size={12} className="mt-0.5 shrink-0" strokeWidth={2} />
-                      <p className="text-[10px] font-medium leading-tight">Limit exceeded. Update below.</p>
+              <div className="flex-1 min-w-0">
+                <SearchSelect<CustomerData>
+                  placeholder="Search customer..."
+                  fetchOptions={fetchCustomers}
+                  options={staticCustomers}
+                  labelKey="name"
+                  valueKey="id"
+                  onChange={handleCustomerChange}
+                  value={customerData?.id}
+                  allowClear
+                  className="h-[32px] shadow-none border-slate-200/60 rounded-md text-[12px]"
+                  onCreateNew={(name) => {
+                    setNewCustomerName(name);
+                    setIsCustomerModalOpen(true);
+                  }}
+                  renderOption={(opt) => (
+                    <div className="flex flex-col py-0.5">
+                      <span className="text-[12px] font-medium text-slate-700">{opt.name}</span>
+                      <span className="text-[9px] text-slate-400 font-mono tracking-wide">{opt.phone}</span>
                     </div>
-                    <div className="flex gap-1.5">
-                      <input
-                        type="number"
-                        placeholder="New limit"
-                        value={newCreditLimit}
-                        onChange={e => setNewCreditLimit(e.target.value)}
-                        className="flex-1 px-2 py-1 text-[11px] border border-red-200/80 rounded-md outline-none focus:border-red-300 bg-white transition-colors"
-                      />
-                      <button
-                        onClick={handleUpdateCreditLimit}
-                        disabled={isUpdatingLimit || !newCreditLimit}
-                        className="px-2.5 py-1 bg-red-500 text-white text-[10px] font-medium rounded-md hover:bg-red-600 transition-colors disabled:opacity-40"
-                      >
-                        {isUpdatingLimit ? "..." : "Update"}
-                      </button>
-                    </div>
-                    <p className="text-[9px] text-slate-400 font-normal text-center">Collect cash first</p>
-                  </div>
-                ) : (
-                  <div className="flex items-center justify-between text-[11px] pt-1.5 border-t border-slate-200/40">
-                    <span className="text-slate-500 font-normal">Remaining</span>
-                    <span className="font-medium tabular-nums text-emerald-600">₹{formatINR(creditRemaining, 0)}</span>
-                  </div>
-                )}
+                  )}
+                />
               </div>
-            ) : (
-              <div className="h-full rounded-lg border border-dashed border-slate-200 bg-slate-50/40 flex items-center justify-center px-4 py-3">
-                <p className="text-[11px] text-slate-400 font-normal text-center">Select a customer to view credit</p>
+              {isLoadingCustomer && <Loader2 size={12} className="text-blue-400 animate-spin shrink-0" />}
+              {customerData && !isLoadingCustomer && (
+                <span className="hidden sm:flex items-center gap-1 text-[9px] font-medium text-emerald-600 bg-emerald-50/80 border border-emerald-100 px-1.5 py-0.5 rounded shrink-0">
+                  <CheckCircle2 size={9} /> {customerData.name}
+                </span>
+              )}
+            </div>
+
+            {/* Credit Quick Badge */}
+            {customerData && (
+              <div className={`hidden md:flex items-center gap-1.5 px-2 py-1 rounded-md border text-[9px] font-medium shrink-0 ${
+                isCreditExceeded 
+                  ? "bg-red-50/60 border-red-200/60 text-red-600" 
+                  : "bg-slate-50/60 border-slate-200/60 text-slate-500"
+              }`}>
+                <Wallet size={10} className={isCreditExceeded ? "text-red-400" : "text-slate-400"} />
+                <span>Credit: ₹{formatINR(customerData.creditLimit - customerData.outstanding, 0)}</span>
+                {isCreditExceeded && <AlertCircle size={9} className="text-red-500" />}
               </div>
             )}
-          </div>
-          
-          <button 
-            onClick={() => setIsShortcutsModalOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-2 border border-slate-200/80 rounded-lg text-slate-500 hover:bg-slate-50 hover:text-slate-700 transition-colors shrink-0 text-[11px] font-medium self-center"
-            title="View Keyboard Shortcuts"
-          >
-            <Keyboard size={14} />
-            <span className="hidden md:inline">Shortcuts</span>
-          </button>
 
+            {/* Credit Limit Update (only when exceeded) */}
+            {customerData && isCreditExceeded && (
+              <div className="hidden lg:flex items-center gap-1 shrink-0">
+                <input
+                  type="number"
+                  placeholder="New limit"
+                  value={newCreditLimit}
+                  onChange={e => setNewCreditLimit(e.target.value)}
+                  className="w-16 px-1.5 py-1 text-[10px] border border-red-200/80 rounded-md outline-none focus:border-red-300 bg-white"
+                />
+                <button
+                  onClick={handleUpdateCreditLimit}
+                  disabled={isUpdatingLimit || !newCreditLimit}
+                  className="px-2 py-1 bg-red-500 text-white text-[9px] font-bold rounded-md hover:bg-red-600 transition-colors disabled:opacity-40"
+                >
+                  {isUpdatingLimit ? "..." : "Update"}
+                </button>
+              </div>
+            )}
+
+            {/* Shortcuts Button */}
+            <button 
+              onClick={() => setIsShortcutsModalOpen(true)}
+              className="flex items-center px-1.5 py-1.5 border border-slate-200/60 rounded-md text-slate-400 hover:bg-slate-50 hover:text-slate-600 transition-colors shrink-0"
+              title="Keyboard Shortcuts"
+            >
+              <Keyboard size={12} />
+            </button>
+          </div>
         </div>
-      </div>
 
-
-      {/* ── Main Content ──────────────────────────────────────────── */}
-      <div className="flex flex-1 overflow-hidden">
-
-        {/* Left: Billing Table */}
-        <div className="flex-1 flex flex-col min-h-0 overflow-hidden p-4">
+        {/* Billing Table */}
+        <div className="flex-1 flex flex-col min-h-0 overflow-hidden p-2 sm:p-3">
           <BillingTable items={items} onItemsChange={handleItemsChange} />
         </div>
 
-        {/* Right: Payment Summary Sidebar */}
-        <aside className="hidden lg:flex w-[340px] shrink-0 flex-col border-l border-slate-200/60 bg-white">
+        {/* ── Mobile Payment Bar (lg:hidden) ────────────────────── */}
+        <div className="lg:hidden shrink-0 flex flex-col border-t border-slate-200/60 bg-white max-h-[50vh]">
           <BillingHeader
             items={items}
             customerData={customerData}
@@ -407,11 +389,11 @@ const Billing = () => {
             payments={payments}
             onPaymentsChange={setPayments}
           />
-        </aside>
+        </div>
       </div>
 
-      {/* ── Mobile Payment Bar (lg:hidden) ────────────────────── */}
-      <div className="lg:hidden shrink-0 border-t border-slate-200/60 bg-white px-4 py-3">
+      {/* ── Right Sidebar (full height) ────────────────────────── */}
+      <aside className="hidden lg:flex w-[280px] xl:w-[300px] shrink-0 flex-col border-l border-slate-200/60 bg-white">
         <BillingHeader
           items={items}
           customerData={customerData}
@@ -426,7 +408,7 @@ const Billing = () => {
           payments={payments}
           onPaymentsChange={setPayments}
         />
-      </div>
+      </aside>
 
       {/* Customer Creation Modal */}
       <CustomerCreateModal
@@ -444,41 +426,41 @@ const Billing = () => {
             className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200"
             onClick={() => setIsShortcutsModalOpen(false)}
           />
-          <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden flex flex-col animate-in zoom-in-95 duration-200 border border-slate-200/60">
-            <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+          <div className="relative bg-white rounded-xl shadow-xl w-full max-w-xs overflow-hidden flex flex-col animate-in zoom-in-95 duration-200 border border-slate-200/60">
+            <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600">
-                  <Keyboard size={16} />
+                <div className="w-7 h-7 rounded-md bg-blue-50 flex items-center justify-center text-blue-600">
+                  <Keyboard size={14} />
                 </div>
-                <h3 className="text-[14px] font-bold text-slate-800">Keyboard Shortcuts</h3>
+                <h3 className="text-[13px] font-bold text-slate-800">Shortcuts</h3>
               </div>
               <button
                 onClick={() => setIsShortcutsModalOpen(false)}
-                className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+                className="w-7 h-7 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
               >
-                <X size={16} />
+                <X size={14} />
               </button>
             </div>
-            <div className="p-5 flex flex-col gap-3 bg-white">
-              <div className="flex items-center justify-between py-2 border-b border-slate-100/60">
-                <span className="text-[12px] font-medium text-slate-600">Add New Row</span>
+            <div className="p-4 flex flex-col gap-2 bg-white">
+              <div className="flex items-center justify-between py-1.5 border-b border-slate-100/60">
+                <span className="text-[11px] font-medium text-slate-600">Add New Row</span>
                 <div className="flex gap-1">
-                  <kbd className="px-2 py-1 rounded bg-slate-100 border border-slate-200 text-[10px] font-mono font-bold text-slate-500 shadow-sm">Alt</kbd>
-                  <kbd className="px-2 py-1 rounded bg-slate-100 border border-slate-200 text-[10px] font-mono font-bold text-slate-500 shadow-sm">A</kbd>
+                  <kbd className="px-1.5 py-0.5 rounded bg-slate-100 border border-slate-200 text-[9px] font-mono font-bold text-slate-500">Alt</kbd>
+                  <kbd className="px-1.5 py-0.5 rounded bg-slate-100 border border-slate-200 text-[9px] font-mono font-bold text-slate-500">A</kbd>
                 </div>
               </div>
-              <div className="flex items-center justify-between py-2 border-b border-slate-100/60">
-                <span className="text-[12px] font-medium text-slate-600">Delete Last Row</span>
+              <div className="flex items-center justify-between py-1.5 border-b border-slate-100/60">
+                <span className="text-[11px] font-medium text-slate-600">Delete Last Row</span>
                 <div className="flex gap-1">
-                  <kbd className="px-2 py-1 rounded bg-slate-100 border border-slate-200 text-[10px] font-mono font-bold text-slate-500 shadow-sm">Alt</kbd>
-                  <kbd className="px-2 py-1 rounded bg-slate-100 border border-slate-200 text-[10px] font-mono font-bold text-slate-500 shadow-sm">Backspace</kbd>
+                  <kbd className="px-1.5 py-0.5 rounded bg-slate-100 border border-slate-200 text-[9px] font-mono font-bold text-slate-500">Alt</kbd>
+                  <kbd className="px-1.5 py-0.5 rounded bg-slate-100 border border-slate-200 text-[9px] font-mono font-bold text-slate-500">⌫</kbd>
                 </div>
               </div>
             </div>
-            <div className="p-4 bg-slate-50/50 border-t border-slate-100 flex justify-end">
+            <div className="p-3 bg-slate-50/50 border-t border-slate-100 flex justify-end">
               <button
                 onClick={() => setIsShortcutsModalOpen(false)}
-                className="px-4 py-2 bg-slate-800 text-white text-[12px] font-bold rounded-lg hover:bg-slate-700 transition-colors shadow-sm"
+                className="px-3 py-1.5 bg-slate-800 text-white text-[11px] font-bold rounded-md hover:bg-slate-700 transition-colors"
               >
                 Got it
               </button>

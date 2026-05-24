@@ -460,9 +460,16 @@ const ProductRow = React.memo(
 
           {/* Stock */}
           <td className="px-3 py-2.5 text-right">
-            <span className="text-[13px] font-semibold text-slate-800 tabular-nums">
-              {stockNumber}
-            </span>
+            <div className="flex flex-col items-end gap-0.5">
+              <span className="text-[13px] font-semibold text-slate-800 tabular-nums leading-none">
+                {stockNumber}
+              </span>
+              {(datas.unit || (item as any).unit) && (
+                <span className="text-[10px] text-slate-400 font-medium leading-none">
+                  {datas.unit || (item as any).unit}
+                </span>
+              )}
+            </div>
           </td>
 
           {/* Reorder point */}

@@ -35,7 +35,7 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
 
   // Derived properties
   const hasVariants = product?.variants && product.variants.length > 0;
-  const isElectronics = product?.category === "Electronics" || product?.requireSerial;
+  const isElectronics = product?.requireSerial;
 
   // Determine logical steps
   const steps = useMemo(() => {

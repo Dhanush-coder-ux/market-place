@@ -21,12 +21,22 @@ interface StockMovementsTableProps {
   rows: StockMovementRow[];
   loading: boolean;
   onNavigateToPurchase?: (id: string) => void;
+  onNavigateToSale?: (id: string) => void;
+  availableStock?: number;
 }
 
-export function StockMovementsTable({ rows, loading, onNavigateToPurchase }: StockMovementsTableProps) {
+export function StockMovementsTable({ rows, loading, onNavigateToPurchase, onNavigateToSale, availableStock }: StockMovementsTableProps) {
   return (
     <div className="flex flex-col h-full min-h-0 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden animate-in fade-in duration-300">
-
+      
+      {availableStock !== undefined && (
+        <div className="px-5 py-3 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center shrink-0">
+          <span className="text-xs font-black text-slate-500 uppercase tracking-wider">Stock Ledger</span>
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-blue-50 text-blue-700 border border-blue-100 text-xs font-bold shadow-sm">
+            Current Available Stock: <strong className="font-extrabold text-blue-800">{availableStock} units</strong>
+          </span>
+        </div>
+      )}
 
       {/* Table Body Container with internal scroll only */}
       <div className="flex-1 min-h-0 overflow-auto custom-scrollbar">
@@ -50,7 +60,7 @@ export function StockMovementsTable({ rows, loading, onNavigateToPurchase }: Sto
                   <th className="px-5 py-3.5">Movement Type</th>
                   <th className="px-5 py-3.5">Product / Variant / Batch</th>
                   <th className="px-5 py-3.5">Base Qty</th>
-                  <th className="px-5 py-3.5">In / Out</th>
+                  <th className="px-5 py-3.5">Stock In / Out</th>
                   <th className="px-5 py-3.5">Stock Overview</th>
                   <th className="px-5 py-3.5">Details</th>
                   <th className="px-5 py-3.5 w-12"></th>
@@ -58,25 +68,23 @@ export function StockMovementsTable({ rows, loading, onNavigateToPurchase }: Sto
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {rows.map((r, i) => {
-                  const currentStockVal = r.stocksBefore !== null 
-                    ? (r.stocksBefore + (r.isInc ? r.receivedStocks : -r.receivedStocks)) 
+                  const currentStockVal = r.stocksBefore !== null
+                    ? (r.stocksBefore + (r.isInc ? r.receivedStocks : -r.receivedStocks))
                     : null;
                   return (
-                    <tr 
-                      key={`${r.id}-${i}`} 
-                      className={`hover:bg-slate-50/80 transition-colors border-l-[3px] ${
-                        r.source === 'purchase' ? 'border-l-indigo-400' : r.isInc ? 'border-l-emerald-400' : 'border-l-rose-400'
-                      }`}
+                    <tr
+                      key={`${r.id}-${i}`}
+                      className={`hover:bg-slate-50/80 transition-colors border-l-[3px] ${r.source === 'purchase' ? 'border-l-indigo-400' : r.isInc ? 'border-l-emerald-400' : 'border-l-rose-400'
+                        }`}
                     >
                       <td className="px-5 py-4 text-xs text-slate-500 font-medium whitespace-nowrap">
                         {r.date ? new Date(r.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
                       </td>
                       <td className="px-5 py-4 whitespace-nowrap">
-                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
-                          r.source === 'purchase'
+                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${r.source === 'purchase'
                             ? (r.displayType === 'PO Purchase' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-indigo-50 text-indigo-700 border-indigo-200')
                             : r.isInc ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-rose-50 text-rose-700 border-rose-200'
-                        }`}>
+                          }`}>
                           {r.isInc ? <ArrowUp size={10} className="stroke-[3]" /> : <ArrowDown size={10} className="stroke-[3]" />}
                           {r.displayType}
                         </span>
@@ -132,6 +140,15 @@ export function StockMovementsTable({ rows, loading, onNavigateToPurchase }: Sto
                             <Eye size={13} strokeWidth={2.5} />
                           </button>
                         )}
+                        {r.source === 'sales' && onNavigateToSale && (
+                          <button
+                            onClick={() => onNavigateToSale(r.id)}
+                            title="View Sale Detail"
+                            className="w-7 h-7 flex items-center justify-center rounded-lg bg-rose-50 text-rose-500 hover:bg-rose-100 hover:text-rose-700 border border-rose-100 transition-all active:scale-95 shadow-sm"
+                          >
+                            <Eye size={13} strokeWidth={2.5} />
+                          </button>
+                        )}
                       </td>
                     </tr>
                   );
@@ -180,7 +197,7 @@ export function ProductPurchasesTable({ rows, loading, onNavigateToPurchase }: P
                   <th className="px-5 py-3.5">Date</th>
                   <th className="px-5 py-3.5">Type</th>
                   <th className="px-5 py-3.5">Variant / Batch</th>
-                  <th className="px-5 py-3.5">In / Out</th>
+                  <th className="px-5 py-3.5">Stock In / Out</th>
                   <th className="px-5 py-3.5">Stock Overview</th>
                   <th className="px-5 py-3.5">Financials</th>
                   <th className="px-5 py-3.5">Payment</th>
@@ -200,9 +217,8 @@ export function ProductPurchasesTable({ rows, loading, onNavigateToPurchase }: P
                       {r.date ? new Date(r.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
                     </td>
                     <td className="px-5 py-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
-                        r.displayType === 'PO Purchase' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-indigo-50 text-indigo-700 border-indigo-200'
-                      }`}>
+                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${r.displayType === 'PO Purchase' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-indigo-50 text-indigo-700 border-indigo-200'
+                        }`}>
                         <ArrowUp size={10} className="stroke-[3]" />
                         {r.displayType}
                       </span>
@@ -229,19 +245,19 @@ export function ProductPurchasesTable({ rows, loading, onNavigateToPurchase }: P
                       </span>
                     </td>
                     <td className="px-5 py-4 whitespace-nowrap">
-                       <div className="flex flex-col gap-0.5">
-                         <div className="flex items-center gap-2">
-                           <span className="text-[9px] font-black text-slate-400 tracking-wider uppercase">Opening</span>
-                           <span className="text-xs font-bold text-slate-600">{r.stocksBefore !== null ? r.stocksBefore : '—'}</span>
-                         </div>
-                         <div className="flex items-center gap-2">
-                           <span className="text-[9px] font-black text-blue-400 tracking-wider uppercase">Current</span>
-                           <span className="text-xs font-black text-blue-600">
-                             {r.stocksBefore !== null ? (r.stocksBefore + r.receivedStocks) : '—'}
-                           </span>
-                         </div>
-                       </div>
-                     </td>
+                      <div className="flex flex-col gap-0.5">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[9px] font-black text-slate-400 tracking-wider uppercase">Opening</span>
+                          <span className="text-xs font-bold text-slate-600">{r.stocksBefore !== null ? r.stocksBefore : '—'}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[9px] font-black text-blue-400 tracking-wider uppercase">Current</span>
+                          <span className="text-xs font-black text-blue-600">
+                            {r.stocksBefore !== null ? (r.stocksBefore + r.receivedStocks) : '—'}
+                          </span>
+                        </div>
+                      </div>
+                    </td>
                     <td className="px-5 py-4 whitespace-nowrap">
                       <div className="flex flex-col gap-0.5">
                         <div className="flex items-center gap-2">
@@ -256,11 +272,10 @@ export function ProductPurchasesTable({ rows, loading, onNavigateToPurchase }: P
                     </td>
                     <td className="px-5 py-4 whitespace-nowrap">
                       <div className="flex flex-col gap-0.5">
-                        <span className={`text-[9px] font-bold px-2 py-0.5 rounded-md w-fit ${
-                          r.paymentMethod === 'Cash' ? 'bg-emerald-50 text-emerald-700' :
-                          r.paymentMethod === 'UPI' ? 'bg-violet-50 text-violet-700' :
-                          'bg-slate-50 text-slate-600'
-                        }`}>{r.paymentMethod}</span>
+                        <span className={`text-[9px] font-bold px-2 py-0.5 rounded-md w-fit ${r.paymentMethod === 'Cash' ? 'bg-emerald-50 text-emerald-700' :
+                            r.paymentMethod === 'UPI' ? 'bg-violet-50 text-violet-700' :
+                              'bg-slate-50 text-slate-600'
+                          }`}>{r.paymentMethod}</span>
                         {r.amountPaid > 0 && (
                           <span className="text-[9px] text-slate-400 font-bold">Paid: ₹{r.amountPaid}</span>
                         )}
@@ -333,7 +348,7 @@ export function SupplierPurchasesTable({ rows, loading }: SupplierPurchasesTable
                   <th className="px-5 py-3.5">#</th>
                   <th className="px-5 py-3.5">Type</th>
                   <th className="px-5 py-3.5">Product</th>
-                  <th className="px-5 py-3.5">In / Out</th>
+                  <th className="px-5 py-3.5">Stock In / Out</th>
                   <th className="px-5 py-3.5">Stock Overview</th>
                   <th className="px-5 py-3.5">Buy Price</th>
                   <th className="px-5 py-3.5">Sell Price</th>
@@ -351,11 +366,10 @@ export function SupplierPurchasesTable({ rows, loading }: SupplierPurchasesTable
                       <span className="text-[10px] font-black text-slate-400 font-mono">#{r.uiId}</span>
                     </td>
                     <td className="px-5 py-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
-                        r.type === 'DIRECT' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
-                        r.type?.includes('PO') ? 'bg-blue-50 text-blue-700 border-blue-200' :
-                        'bg-slate-50 text-slate-600 border-slate-200'
-                      }`}>
+                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${r.type === 'DIRECT' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                          r.type?.includes('PO') ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                            'bg-slate-50 text-slate-600 border-slate-200'
+                        }`}>
                         <span className="w-1.5 h-1.5 rounded-full bg-current" />
                         {r.type === 'DIRECT' ? 'Purchase' : (r.type || '—').replace(/_/g, ' ')}
                       </span>
@@ -369,19 +383,19 @@ export function SupplierPurchasesTable({ rows, loading }: SupplierPurchasesTable
                       </span>
                     </td>
                     <td className="px-5 py-4 whitespace-nowrap">
-                       <div className="flex flex-col gap-0.5">
-                         <div className="flex items-center gap-2">
-                           <span className="text-[9px] font-black text-slate-400 tracking-wider uppercase">Opening</span>
-                           <span className="text-xs font-bold text-slate-600">{r.stocksBefore !== undefined && r.stocksBefore !== null ? r.stocksBefore : '—'}</span>
-                         </div>
-                         <div className="flex items-center gap-2">
-                           <span className="text-[9px] font-black text-blue-400 tracking-wider uppercase">Current</span>
-                           <span className="text-xs font-black text-blue-600">
-                             {r.stocksBefore !== undefined && r.stocksBefore !== null ? (r.stocksBefore + r.receivedStocks) : '—'}
-                           </span>
-                         </div>
-                       </div>
-                     </td>
+                      <div className="flex flex-col gap-0.5">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[9px] font-black text-slate-400 tracking-wider uppercase">Opening</span>
+                          <span className="text-xs font-bold text-slate-600">{r.stocksBefore !== undefined && r.stocksBefore !== null ? r.stocksBefore : '—'}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[9px] font-black text-blue-400 tracking-wider uppercase">Current</span>
+                          <span className="text-xs font-black text-blue-600">
+                            {r.stocksBefore !== undefined && r.stocksBefore !== null ? (r.stocksBefore + r.receivedStocks) : '—'}
+                          </span>
+                        </div>
+                      </div>
+                    </td>
                     <td className="px-5 py-4 whitespace-nowrap text-xs font-bold text-slate-700">
                       ₹{r.buy_price ?? '—'}
                     </td>
@@ -390,11 +404,10 @@ export function SupplierPurchasesTable({ rows, loading }: SupplierPurchasesTable
                     </td>
                     <td className="px-5 py-4 whitespace-nowrap">
                       <div className="flex flex-col gap-0.5">
-                        <span className={`text-[9px] font-bold px-2 py-0.5 rounded-md w-fit ${
-                          r.paymentMethod === 'Cash' ? 'bg-emerald-50 text-emerald-700' :
-                          r.paymentMethod === 'UPI' ? 'bg-violet-50 text-violet-700' :
-                          'bg-slate-50 text-slate-600'
-                        }`}>{r.paymentMethod}</span>
+                        <span className={`text-[9px] font-bold px-2 py-0.5 rounded-md w-fit ${r.paymentMethod === 'Cash' ? 'bg-emerald-50 text-emerald-700' :
+                            r.paymentMethod === 'UPI' ? 'bg-violet-50 text-violet-700' :
+                              'bg-slate-50 text-slate-600'
+                          }`}>{r.paymentMethod}</span>
                         {r.amountPaid > 0 && (
                           <span className="text-[9px] text-slate-400 font-bold">Paid: ₹{r.amountPaid}</span>
                         )}
@@ -437,9 +450,8 @@ function LocalStatusBadge({ status }: { status: string }) {
   };
   return (
     <span
-      className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold border ${
-        colorMap[status] ?? "bg-slate-50 text-slate-500 border-slate-100"
-      }`}
+      className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold border ${colorMap[status] ?? "bg-slate-50 text-slate-500 border-slate-100"
+        }`}
     >
       {status}
     </span>
@@ -477,11 +489,11 @@ export function CustomerPurchasesTable({ rows, loading }: CustomerPurchasesTable
               <tbody className="divide-y divide-slate-100">
                 {rows.map((order, i) => {
                   const date = order.created_at || order.date
-                    ? new Date(order.created_at || order.date).toLocaleDateString('en-IN', { 
-                        day: '2-digit', 
-                        month: 'short', 
-                        year: 'numeric' 
-                      })
+                    ? new Date(order.created_at || order.date).toLocaleDateString('en-IN', {
+                      day: '2-digit',
+                      month: 'short',
+                      year: 'numeric'
+                    })
                     : '—';
                   const total = Number(order.total_sellprice || order.grand_total || order.total_amount || 0);
                   const products = order.items || order.products || [];
@@ -515,16 +527,14 @@ export function CustomerPurchasesTable({ rows, loading }: CustomerPurchasesTable
                       <td className="px-5 py-4 whitespace-nowrap">
                         <div className="flex flex-wrap gap-1.5">
                           {order.payments && Object.entries(order.payments).map(([mode, amount]) => (
-                            <div key={mode} className={`px-2 py-0.5 rounded text-[9px] font-black border flex items-center gap-1.5 ${
-                              mode.toUpperCase() === 'CREDIT' ? 'bg-blue-50 text-blue-600 border-blue-100' :
-                              mode.toUpperCase() === 'CASH' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
-                              'bg-violet-50 text-violet-600 border-violet-100'
-                            }`}>
-                              <div className={`w-1 h-1 rounded-full ${
-                                mode.toUpperCase() === 'CREDIT' ? 'bg-blue-400' :
-                                mode.toUpperCase() === 'CASH' ? 'bg-emerald-400' :
-                                'bg-violet-400'
-                              }`} />
+                            <div key={mode} className={`px-2 py-0.5 rounded text-[9px] font-black border flex items-center gap-1.5 ${mode.toUpperCase() === 'CREDIT' ? 'bg-blue-50 text-blue-600 border-blue-100' :
+                                mode.toUpperCase() === 'CASH' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                                  'bg-violet-50 text-violet-600 border-violet-100'
+                              }`}>
+                              <div className={`w-1 h-1 rounded-full ${mode.toUpperCase() === 'CREDIT' ? 'bg-blue-400' :
+                                  mode.toUpperCase() === 'CASH' ? 'bg-emerald-400' :
+                                    'bg-violet-400'
+                                }`} />
                               {mode.toUpperCase()}
                               <span className="opacity-40">₹{Number(amount).toLocaleString('en-IN')}</span>
                             </div>
@@ -584,11 +594,11 @@ export function CustomerCollectionsTable({ rows, loading }: CustomerCollectionsT
               <tbody className="divide-y divide-slate-100">
                 {rows.map((h, i) => {
                   const date = h.created_at
-                    ? new Date(h.created_at).toLocaleDateString('en-IN', { 
-                        day: '2-digit', 
-                        month: 'short', 
-                        year: 'numeric' 
-                      })
+                    ? new Date(h.created_at).toLocaleDateString('en-IN', {
+                      day: '2-digit',
+                      month: 'short',
+                      year: 'numeric'
+                    })
                     : '—';
                   const clearedAmount = Number(h.cleared_amount || 0);
                   const refId = `#${String(h.id).padStart(3, '0')}`;

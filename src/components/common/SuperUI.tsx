@@ -272,8 +272,8 @@ export function ProfileHeaderCard({
                     <span key={i} className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[9px] font-extrabold   border ${styles}`}>
                       {badge.showPulse && (
                         <div className={`w-1.5 h-1.5 rounded-full ${badge.variant === "success" ? "bg-emerald-500" :
-                            badge.variant === "danger" ? "bg-rose-500" :
-                              "bg-blue-500"
+                          badge.variant === "danger" ? "bg-rose-500" :
+                            "bg-blue-500"
                           } animate-pulse`} />
                       )}
                       {badge.text}
@@ -297,7 +297,7 @@ export function ProfileHeaderCard({
               </div>
             ))}
           </div>
-           
+
         </div>
 
         {actions && (

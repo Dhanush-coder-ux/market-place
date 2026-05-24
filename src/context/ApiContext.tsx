@@ -144,7 +144,7 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
         if (method === "GET") {
           setCache(url, data);
         } else {
-          invalidateCache(`${BASE_URL}${endpoint}`);
+          cache.clear();
         }
 
         return data;

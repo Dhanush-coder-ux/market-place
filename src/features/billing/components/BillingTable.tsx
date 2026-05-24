@@ -292,7 +292,7 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
   const handleQtyChange = useCallback((id: string, qty: number) => {
     onItemsChange(items.map(item => {
       if (item.id !== id) return item;
-      const newQty = Math.max(0, qty);
+      const newQty = Math.max(0, Number(qty.toFixed(2)));
       return {
         ...item,
         qty: newQty,
@@ -330,6 +330,78 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
   const handleProductSelectClick = (selectedProduct: any, rowId: string) => {
     if (!selectedProduct) return;
 
+    const hasVariants = selectedProduct.variants && selectedProduct.variants.length > 0;
+    const requiresSerial = selectedProduct.requireSerial;
+
+    // Simple product: no serial tracking, no variants → add directly without modal
+    if (!requiresSerial && !hasVariants) {
+      const defaultVariant: ProductVariant = {
+        id: "default",
+        name: "Standard",
+        price: selectedProduct.price || 0,
+        stock: selectedProduct.stocks || 0,
+        serialnoId: selectedProduct.serialnoId,
+        batchId: selectedProduct.batchId,
+        availableSerials: selectedProduct.availableSerials,
+      };
+
+      // Check if this product is already in the bill (for merging)
+      const existingItemIndex = items.findIndex((item) =>
+        item.id !== rowId &&
+        item.inventoryId === selectedProduct.id &&
+        !item.variantId &&
+        item.batchId === (selectedProduct.batchId)
+      );
+
+      let updatedItems: BillingItem[];
+
+      if (existingItemIndex !== -1) {
+        // Merge: increment qty on existing row
+        updatedItems = items.map((item, idx) => {
+          if (idx === existingItemIndex) {
+            const newQty = item.qty + 1;
+            return { ...item, qty: newQty, tprice: newQty * item.price };
+          }
+          return item;
+        });
+        // Remove the empty row that triggered the search
+        updatedItems = updatedItems.filter(item => item.id !== rowId);
+        if (!updatedItems.some(item => !item.name)) {
+          updatedItems.push(createEmptyRow());
+        }
+      } else {
+        // Fill the current row directly
+        updatedItems = items.map((item) => {
+          if (item.id !== rowId) return item;
+          return {
+            ...item,
+            inventoryId: selectedProduct.id,
+            code: selectedProduct.product_barcode,
+            name: selectedProduct.product_name,
+            price: defaultVariant.price,
+            qty: 1,
+            tprice: defaultVariant.price,
+            variantId: null,
+            batchId: selectedProduct.batchId,
+            serialnoId: selectedProduct.serialnoId,
+            requireSerial: false,
+            batchTracking: selectedProduct.batchTracking,
+            manufacturingDate: selectedProduct.manufacturingDate,
+            expiryDate: selectedProduct.expiryDate,
+            _product: selectedProduct,
+          };
+        });
+        // Add a new empty row at the bottom
+        if (rowId === items[items.length - 1].id) {
+          updatedItems.push(createEmptyRow());
+        }
+      }
+
+      onItemsChange(updatedItems);
+      return; // Done — no modal needed
+    }
+
+    // Has variants or serial tracking → open the modal
     setPendingProduct(selectedProduct);
     setActiveRowId(rowId);
     setModalOpen(true);
@@ -433,7 +505,6 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
 
   // ── Derived values ────────────────────────────────────────────────────────
 
-  const grandTotal = useMemo(() => items.reduce((sum, item) => sum + item.tprice, 0), [items]);
   const totalQty = useMemo(() => items.reduce((sum, item) => sum + item.qty, 0), [items]);
   const filledRows = useMemo(() => items.filter((i) => i.name).length, [items]);
 
@@ -517,24 +588,8 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
           </table>
         </div>
 
-        {/* Footer */}
-        <div className="border-t border-slate-100/60 px-4 py-3 bg-slate-50/30 flex items-center justify-between flex-wrap gap-3">
-
-
-
-          {/* Grand Total */}
-          <div className="flex items-center gap-3 ml-auto bg-white border border-slate-200/60 shadow-[0_1px_2px_rgba(0,0,0,0.04)] rounded-lg py-2 px-4">
-            <span className="text-[10px] text-slate-400   font-medium">Total</span>
-            <div className="flex items-center gap-0.5 text-blue-500">
-              <IndianRupee size={16} strokeWidth={2} />
-              <span className="text-xl font-semibold tracking-tight tabular-nums">
-                {grandTotal.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-              </span>
-            </div>
-          </div>
-
-        </div>
       </div>
+
 
       {/* Product Selection Modal */}
       <ProductSelectionModal

@@ -209,7 +209,7 @@ const SaleDetailPage: React.FC = () => {
                 <StatCard
                   icon={Package}
                   label="Total Items"
-                  value={String(sale.total_quantity)}
+                  value={String(Number(sale.total_quantity.toFixed(2)))}
                   iconBg="bg-indigo-50 text-indigo-600"
                   className="flex-1 min-w-[140px]"
                 />
@@ -333,7 +333,7 @@ const SaleDetailPage: React.FC = () => {
                           </div>
                         </td>
                         <td className="px-6 py-4 text-center">
-                          <span className="text-xs font-black text-slate-600">{item.quantity}</span>
+                          <span className="text-xs font-black text-slate-600">{Number(item.quantity.toFixed(2))}</span>
                         </td>
                         <td className="px-6 py-4 text-right">
                           <span className="text-xs font-bold text-slate-500 tabular-nums">{fmt(item.unitPrice)}</span>
@@ -377,7 +377,7 @@ const SaleDetailPage: React.FC = () => {
                               </div>
                             </td>
                             <td className="px-6 py-4 text-center">
-                              <span className="text-xs font-black text-slate-600">{item.quantity}</span>
+                              <span className="text-xs font-black text-slate-600">{Number(item.quantity.toFixed(2))}</span>
                             </td>
                             <td className="px-6 py-4 text-right">
                               <span className="text-xs font-bold text-slate-500 tabular-nums">{fmt(item.unitPrice)}</span>

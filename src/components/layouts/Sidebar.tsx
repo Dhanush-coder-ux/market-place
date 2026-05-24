@@ -311,7 +311,14 @@ const SidebarItem = memo(({ link, sidebarOpen, collapseTrigger, onHover, onNavig
   const isDescendantActive = (items: SubItem[]): boolean =>
     items.some((item) => {
       if (isSubGroup(item)) return item.children.some((c) => pathname === c.path);
-      return pathname === (item as SubLink).path;
+      const pathToCheck = (item as SubLink).path;
+      if (pathToCheck === "/sales/detail") {
+        return pathname.startsWith("/sales/") && pathname !== "/sales";
+      }
+      if (pathToCheck === "/purchase/detail") {
+        return pathname.startsWith("/purchase/detail/") && pathname !== "/purchase/detail";
+      }
+      return pathname === pathToCheck;
     });
 
   const isChildActive = hasSub && isDescendantActive(link.subLinks!);
@@ -612,18 +619,29 @@ const SubGroupItem: FC<SubGroupItemProps> = ({ group, collapseTrigger }) => {
 const FlatSubLink: FC<{ sub: SubLink; isPopup?: boolean }> = memo(({ sub, isPopup = false }) => {
   const Icon = sub.icon;
   const navigate = useNavigate();
-  const active = window.location.pathname === sub.path;
+  const { pathname } = useLocation();
+
+  const active = useMemo(() => {
+    if (sub.path === "/sales/detail") {
+      return pathname.startsWith("/sales/") && pathname !== "/sales";
+    }
+    if (sub.path === "/purchase/detail") {
+      return pathname.startsWith("/purchase/detail/") && pathname !== "/purchase/detail";
+    }
+    return pathname === sub.path;
+  }, [pathname, sub.path]);
 
   return (
     <div className="group/sub relative flex items-center w-full pr-1.5">
       <NavLink
         to={sub.path}
-        className={({ isActive }) =>
-          `flex-1 flex items-center gap-2 py-1.5 px-3 text-[11.5px] rounded-lg no-underline tracking-tight leading-none transition-all duration-200 ${isActive
+        className={({ isActive }) => {
+          const isReallyActive = active || isActive;
+          return `flex-1 flex items-center gap-2 py-1.5 px-3 text-[11.5px] rounded-lg no-underline tracking-tight leading-none transition-all duration-200 ${isReallyActive
             ? (isPopup ? "bg-[#3B82F6] text-white font-semibold shadow-lg" : "bg-white/5 text-white")
             : (isPopup ? "text-slate-300 hover:text-white hover:bg-white/5" : "text-white/60 hover:text-white/80")
-          }`
-        }
+          }`;
+        }}
       >
         {({ isActive }) => (
           <>

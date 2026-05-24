@@ -135,7 +135,7 @@ const SalesListPage: React.FC = () => {
   const fetchOrders = async () => {
     try {
       setLoading(true);
-      const res = await api.getData(`${ENDPOINTS.ORDERS}/${SHOP_ID}`);
+      const res = await api.getData(`${ENDPOINTS.ORDERS}/${SHOP_ID}`, { limit: "100", offset: "1" });
       if (res && res.data) {
         const normalized = (res.data as any[]).map(s => {
           let pm = "Other";
@@ -402,7 +402,7 @@ const SalesListPage: React.FC = () => {
                       </div>
                     </td>
                     <td className="p-2.5 px-3 border-b border-slate-50"><span className="font-mono text-[11px] text-slate-500">{dateStr}</span></td>
-                    <td className="p-2.5 px-3 border-b border-slate-50 text-center"><span className="text-[11px] font-semibold text-slate-600">{sale.total_quantity}</span></td>
+                    <td className="p-2.5 px-3 border-b border-slate-50 text-center"><span className="text-[11px] font-semibold text-slate-600">{Number(sale.total_quantity.toFixed(2))}</span></td>
                     <td className="p-2.5 px-3 border-b border-slate-50 text-right"><span className="font-mono text-xs font-bold text-slate-900">{fmt(sale.total_sellprice)}</span></td>
                     <td className="p-2.5 px-3 border-b border-slate-50">{(() => { const cfg = STATUS_CFG[sale.status as SaleStatus] || STATUS_CFG["Pending"]; return <Badge cls={cfg.cls} dot={cfg.dot} label={sale.status} />; })()}</td>
                     <td className="p-2.5 px-3 border-b border-slate-50 text-right">

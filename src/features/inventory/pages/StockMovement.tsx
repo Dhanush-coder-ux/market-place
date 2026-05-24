@@ -26,6 +26,7 @@ export type StatusType = "Completed" | "Pending";
 
 export interface Movement {
   id: string;
+  fullId?: string;
   product: string;
   sku: string;
   type: MovementType;
@@ -43,6 +44,7 @@ export interface Movement {
   expiry_date?: string;
   manufacturing_date?: string;
   serial_numbers?: string[];
+  current_stock?: number;
 }
 
 // ─── Mock Data ───────────────────────────────────────────────────────────────
@@ -159,6 +161,11 @@ function DetailDrawer({ movement, onClose }: DetailDrawerProps) {
                 </span>
                 <span className="text-slate-400 font-bold text-sm">Units</span>
               </div>
+              {movement.current_stock !== undefined && (
+                <p className="text-xs font-bold text-slate-500 mt-2">
+                  Current Available Stock: <span className="text-slate-700">{movement.current_stock} units</span>
+                </p>
+              )}
             </div>
 
             {movement.stocks_before !== undefined && (
@@ -423,6 +430,16 @@ export default function StockMovementPage() {
     showToast("Copied to clipboard!", "success");
   };
 
+  const handleMovementClick = (m: Movement) => {
+    if (m.type === "PURCHASE" || m.type === "PO_PURCHASE") {
+      navigate(`/purchase/detail/${encodeURIComponent(m.fullId || m.id)}`);
+    } else if (m.type === "SALES" || m.type === "SALE_RETURN") {
+      navigate(`/sales/${encodeURIComponent(m.fullId || m.id)}`);
+    } else {
+      navigate(`/stock-movement/${encodeURIComponent(m.id)}`, { state: { movement: m } });
+    }
+  };
+
   // Dynamic Column State
   const [availableKeys] = useState<string[]>(["source", "destination", "user", "notes"]);
   const [selectedKeys, setSelectedKeys] = useState<string[]>(() => {
@@ -471,8 +488,33 @@ export default function StockMovementPage() {
       const adjRes = await getData(`${ENDPOINTS.S_ADJUSTMENTS}/by/shop/${SHOP_ID}`, { view: "STOCKADJUSTMENT_VIEW", shop_id: SHOP_ID, limit: "50", offset: "1" });
       const aData = adjRes?.data || adjRes?.datas || (Array.isArray(adjRes) ? adjRes : []);
 
-      const adjMovements: Movement[] = aData.flatMap((a: any) => {
-        const products = (a.products || []) as any[];
+      const invRes = await getData(`${ENDPOINTS.INVENTORIES}/by/shop/${SHOP_ID}?limit=100`);
+      const invMap: Record<string, number> = {};
+      (invRes?.data || invRes?.datas || []).forEach((item: any) => {
+        invMap[item.name] = Number(item.stocks || 0);
+        if (item.variants) {
+          item.variants.forEach((v: any) => {
+            invMap[`${item.name}-${v.name}`] = Number(v.stocks || 0);
+            if (v.batches) {
+              v.batches.forEach((b: any) => {
+                invMap[`${item.name}-${v.name}-${b.name}`] = Number(b.stocks || 0);
+              });
+            }
+          });
+        }
+        if (item.batches && !item.variants) {
+          item.batches.forEach((b: any) => {
+            invMap[`${item.name}-${b.name}`] = Number(b.stocks || 0);
+          });
+        }
+      });
+
+      // Backend returns corrupted products array for SALES and RETURN movements (they all match the products from ui_id 21)
+      // So we filter them out of S_ADJUSTMENTS entirely and fetch them from ORDERS instead
+      const filteredAData = aData.filter((a: any) => a.movement_type !== "SALES" && a.movement_type !== "SALE_RETURN" && a.movement_type !== "RETURN");
+
+      const adjMovements: Movement[] = filteredAData.flatMap((a: any) => {
+        let products = Array.isArray(a.products) ? a.products : [];
         const dateStr = String(a.adjusted_date || a.created_at || new Date().toISOString());
 
         // Map movement_type from backend
@@ -503,7 +545,7 @@ export default function StockMovementPage() {
           destination = "Adjusted";
         }
 
-        return products.flatMap(prod => {
+        return products.flatMap((prod: any) => {
           const results: Movement[] = [];
           const isDecrement = prod.type === 'DECREMENT';
           const baseQty = Number(prod.stocks || 0);
@@ -511,6 +553,7 @@ export default function StockMovementPage() {
 
           const baseMovement = {
             id: a.id?.slice(0, 8).toUpperCase() || "ADJ",
+            fullId: a.id,
             product: prod.name || "—",
             type: finalType,
             source,
@@ -531,6 +574,7 @@ export default function StockMovementPage() {
                     sku: b.barcode || v.sku || prod.barcode || (a.id?.slice(0, 8) || ""),
                     qty: isDecrement ? -Number(b.stocks || v.stocks || baseQty) : Number(b.stocks || v.stocks || baseQty),
                     stocks_before: b.stocks_before ?? v.stocks_before ?? prod.stocks_before,
+                    current_stock: invMap[`${prod.name}-${v.name}-${b.name}`] ?? invMap[`${prod.name}-${v.name}`] ?? invMap[prod.name],
                     variant: v.name || "",
                     batch: b.name || "",
                     expiry_date: b.expiry_date,
@@ -544,6 +588,7 @@ export default function StockMovementPage() {
                   sku: v.sku || prod.barcode || (a.id?.slice(0, 8) || ""),
                   qty: isDecrement ? -Number(v.stocks || baseQty) : Number(v.stocks || baseQty),
                   stocks_before: v.stocks_before ?? prod.stocks_before,
+                  current_stock: invMap[`${prod.name}-${v.name}`] ?? invMap[prod.name],
                   variant: v.name || "",
                   serial_numbers: Array.isArray(v.serial_numbers?.serial_numbers) ? v.serial_numbers.serial_numbers : []
                 });
@@ -555,6 +600,7 @@ export default function StockMovementPage() {
               sku: prod.barcode || (a.id?.slice(0, 8) || ""),
               qty: qtyVal,
               stocks_before: prod.stocks_before,
+              current_stock: invMap[prod.name],
               serial_numbers: Array.isArray(prod.serial_numbers?.serial_numbers) ? prod.serial_numbers.serial_numbers : []
             });
           }
@@ -562,7 +608,79 @@ export default function StockMovementPage() {
         });
       });
 
-      const all = [...adjMovements].sort((a, b) =>
+      // Fetch Orders for SALES and SALE_RETURN movements because backend S_ADJUSTMENTS returns corrupted products for SALES
+      let ordMovements: Movement[] = [];
+      try {
+        const ordRes = await getData(`${ENDPOINTS.ORDERS}/${SHOP_ID}?limit=100`);
+        const ordData = (ordRes?.data || []) as any[];
+
+        // Use invRes to map inventory_id to product name
+        const invRes = await getData(`${ENDPOINTS.INVENTORIES}/by/shop/${SHOP_ID}?limit=100`);
+        const invMapName: Record<string, string> = {};
+        const globalBatchNameMap: Record<string, string> = {};
+        (invRes?.data || invRes?.datas || []).forEach((item: any) => {
+          invMapName[item.id] = item.name;
+          if (Array.isArray(item.batches)) {
+            item.batches.forEach((b: any) => {
+              if (b.id && b.name) globalBatchNameMap[b.id] = b.name;
+            });
+          }
+          if (Array.isArray(item.variants)) {
+            item.variants.forEach((v: any) => {
+              if (Array.isArray(v.batches)) {
+                v.batches.forEach((b: any) => {
+                  if (b.id && b.name) globalBatchNameMap[b.id] = b.name;
+                });
+              }
+            });
+          }
+        });
+
+        ordMovements = ordData.filter((o: any) => o.status === "COMPLETED" || o.status === "Completed" || o.status === "completed").flatMap((o: any) => {
+          const products = o.items || [];
+          const dateStr = String(o.created_at || new Date().toISOString());
+
+          const finalType: MovementType = o.origin === "Sales Return" ? "SALE_RETURN" : "SALES";
+          let source = "Warehouse";
+          let destination = "Customer";
+          if (finalType === "SALE_RETURN") {
+            source = "Customer";
+            destination = "Warehouse";
+          }
+
+          return products.flatMap((prod: any) => {
+            const baseQty = Number(prod.quantity || 0);
+            const qtyVal = finalType === "SALE_RETURN" ? baseQty : -baseQty;
+
+            let productName = invMapName[prod.inventory_id] || prod.barcode || "—";
+
+            return [{
+              id: o.id?.slice(0, 8).toUpperCase() || "ORD",
+              fullId: o.id,
+              product: productName,
+              type: finalType,
+              source,
+              destination,
+              ref: String(o.ui_id ? `INV-${o.ui_id}` : o.id?.slice(0, 8).toUpperCase() || "INV"),
+              date: dateStr.includes("T") ? dateStr : dateStr + "T00:00:00",
+              status: "Completed" as StatusType,
+              user: o.cashier_id || "Admin",
+              notes: o.notes || "",
+              sku: prod.barcode || "",
+              qty: qtyVal,
+              stocks_before: undefined,
+              current_stock: invMap[productName] !== undefined ? invMap[productName] : undefined,
+              variant: prod.variant_id || "",
+              batch: prod.batch_id ? (globalBatchNameMap[prod.batch_id] || prod.batch_id) : "",
+              serial_numbers: prod.serial_numbers || [],
+            }];
+          });
+        });
+      } catch (e) {
+        console.error("Error fetching orders:", e);
+      }
+
+      const all = [...adjMovements, ...ordMovements].sort((a, b) =>
         new Date(b.date).getTime() - new Date(a.date).getTime()
       );
 
@@ -661,7 +779,7 @@ export default function StockMovementPage() {
           />
         </div>
 
-        
+
 
         <div className="flex items-center gap-2 shrink-0">
           <button
@@ -672,18 +790,18 @@ export default function StockMovementPage() {
               : "border-slate-200 text-slate-650 bg-white hover:bg-slate-50"
               }`}
             title="Filters"
-          > 
+          >
             <Filter size={13} />
-            
+
           </button>
 
           <ColumnPicker
-          availableKeys={availableKeys}
-          selectedKeys={selectedKeys}
-          onApply={setSelectedKeys}
-          storageKey="stock_movement_columns"
-          className="h-8 px-3 rounded-md border text-xs font-semibold flex items-center gap-1.5 active:scale-95 transition-all shadow-sm shrink-0 "
-        />  
+            availableKeys={availableKeys}
+            selectedKeys={selectedKeys}
+            onApply={setSelectedKeys}
+            storageKey="stock_movement_columns"
+            className="h-8 px-3 rounded-md border text-xs font-semibold flex items-center gap-1.5 active:scale-95 transition-all shadow-sm shrink-0 "
+          />
         </div>
       </div>
 
@@ -743,145 +861,150 @@ export default function StockMovementPage() {
         </div>
       </RightSidebarFilter>
 
-        {/* ── Table Section ── */}
-        <div className="bg-white border border-slate-100 rounded-lg shadow-sm min-w-0 overflow-hidden flex flex-col flex-1 min-h-0 mt-2">
-          <div className="overflow-auto flex-1 scrollbar-thin scrollbar-thumb-slate-200">
-            <table className="w-full text-left border-collapse table-fixed">
-              <thead className="sticky top-0 z-20 bg-slate-50 border-b border-slate-200">
-                <tr className="text-slate-400 text-[10px] font-bold tracking-[0.15em]">
-                  <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500 border-r border-slate-100 last:border-r-0 w-[25%] min-w-[260px]">Product Information</th>
-                  <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500 border-r border-slate-100 last:border-r-0 w-[12%] min-w-[125px]">Movement Type</th>
-                  <th className="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wider text-slate-500 border-r border-slate-100 last:border-r-0 w-[12%] min-w-[110px]">
-                    <SortBtn field="qty" label="In / Out" align="right" />
-                  </th>
+      {/* ── Table Section ── */}
+      <div className="bg-white border border-slate-100 rounded-lg shadow-sm min-w-0 overflow-hidden flex flex-col flex-1 min-h-0 mt-2">
+        <div className="overflow-auto flex-1 scrollbar-thin scrollbar-thumb-slate-200">
+          <table className="w-full text-left border-collapse table-fixed">
+            <thead className="sticky top-0 z-20 bg-slate-50 border-b border-slate-200">
+              <tr className="text-slate-400 text-[10px] font-bold tracking-[0.15em]">
+                <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500 border-r border-slate-100 last:border-r-0 w-[25%] min-w-[260px]">Product Information</th>
+                <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500 border-r border-slate-100 last:border-r-0 w-[12%] min-w-[125px]">Movement Type</th>
+                <th className="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wider text-slate-500 border-r border-slate-100 last:border-r-0 w-[12%] min-w-[110px]">
+                  <SortBtn field="qty" label="Stock In / Out" align="right" />
+                </th>
+                {selectedKeys.map(key => {
+                  let width = "w-[12%] min-w-[120px]";
+                  if (key === "notes") width = "w-[20%] min-w-[180px]";
+                  if (key === "user") width = "w-[10%] min-w-[100px]";
+                  return (
+                    <th key={key} className={`px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500 border-r border-slate-100 last:border-r-0 ${width}`}>{key.replace(/_/g, ' ')}</th>
+                  );
+                })}
+                <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500 border-r border-slate-100 last:border-r-0 w-[15%] min-w-[150px]">
+                  <SortBtn field="date" label="Date & Time" />
+                </th>
+                <th className="px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-slate-500 w-14">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 text-sm bg-white">
+              {pageData.length === 0 ? (
+                <tr>
+                  <td colSpan={selectedKeys.length + 5} className="py-20 text-center text-slate-400 font-medium italic bg-white">
+                    No movements found matching your filters.
+                  </td>
+                </tr>
+              ) : pageData.map((m, idx) => (
+                <tr key={`${m.id}-${idx}`}
+                  className="group hover:bg-blue-50/30 transition-all cursor-pointer border-b border-slate-100 last:border-b-0 even:bg-slate-50/20"
+                  onClick={() => handleMovementClick(m)}
+                >
+                  <td className="px-4 py-3 align-middle border-r border-slate-100 last:border-r-0">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className={`w-8 h-8 rounded-md bg-gradient-to-br flex items-center justify-center text-white text-xs font-black shrink-0 shadow-sm ${m.qty > 0 ? "from-emerald-500 to-emerald-400 shadow-emerald-50" : "from-rose-500 to-rose-400 shadow-rose-50"}`}>
+                        {m.product?.[0]?.toUpperCase() || "—"}
+                      </div>
+                      <div className="flex flex-col min-w-0 gap-0.5">
+                        <span className="text-[13px] font-semibold text-slate-800 truncate leading-tight">{m.product}</span>
+                        <div className="flex items-center flex-wrap gap-1.5 mt-0.5">
+                          <button
+                            onClick={(e) => copyToClipboard(e, m.id)}
+                            className="group flex items-center gap-1 text-[9px] font-extrabold text-slate-400 bg-slate-50 px-1 py-0.2 rounded border border-slate-100 hover:bg-slate-100 hover:text-slate-600 transition-all leading-none"
+                          >
+                            ID: {m.id}
+                            <Copy size={8} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+                          </button>
+                          <span className="text-[9px] font-medium text-slate-400 font-mono">SKU: {m.sku}</span>
+                          {m.variant && (
+                            <button
+                              onClick={(e) => copyToClipboard(e, m.variant || "")}
+                              className="group flex items-center gap-0.5 text-[9px] font-extrabold text-violet-600 bg-violet-50/50 px-1 py-0.2 rounded border border-violet-100 hover:bg-violet-100 transition-all leading-none"
+                            >
+                              <Layers size={8} /> {truncateId(m.variant)}
+                              <Copy size={7} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+                            </button>
+                          )}
+                          {m.batch && (
+                            <button
+                              onClick={(e) => copyToClipboard(e, m.batch || "")}
+                              className="group flex items-center gap-0.5 text-[9px] font-extrabold text-amber-600 bg-amber-50/50 px-1 py-0.2 rounded border border-amber-100 hover:bg-amber-100 transition-all leading-none"
+                            >
+                              <Hash size={8} /> {truncateId(m.batch)}
+                              <Copy size={7} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+                            </button>
+                          )}
+                          {m.serial_numbers && m.serial_numbers.length > 0 && (
+                            <span className="inline-flex items-center gap-0.5 text-[9px] font-extrabold text-emerald-600 bg-emerald-50/50 px-1 py-0.2 rounded border border-emerald-100 leading-none">
+                              <Zap size={8} fill="currentColor" /> {m.serial_numbers.length} Serials
+                            </span>
+                          )}
+                          {m.current_stock !== undefined && (
+                            <span className="inline-flex items-center gap-0.5 text-[9px] font-extrabold text-blue-650 bg-blue-50/50 px-1.5 py-0.5 rounded border border-blue-100 leading-none" title="Current Available Stock">
+                              Stock: {m.current_stock}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 align-middle border-r border-slate-100 last:border-r-0">
+                    <TypeBadge type={m.type} />
+                  </td>
+                  <td className="px-4 py-3 text-right align-middle border-r border-slate-100 last:border-r-0">
+                    <span className={`text-[13px] font-black tabular-nums ${m.qty > 0 ? "text-emerald-600" : "text-rose-600"}`}>
+                      {m.qty > 0 ? `+${m.qty}` : m.qty}
+                    </span>
+                  </td>
                   {selectedKeys.map(key => {
-                    let width = "w-[12%] min-w-[120px]";
-                    if (key === "notes") width = "w-[20%] min-w-[180px]";
-                    if (key === "user") width = "w-[10%] min-w-[100px]";
+                    const value = m[key as keyof Movement];
+                    const displayValue = value === undefined || value === null ? "—" :
+                      typeof value === 'object' ? (Array.isArray(value) ? value.join(", ") : JSON.stringify(value)) :
+                        String(value);
                     return (
-                      <th key={key} className={`px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500 border-r border-slate-100 last:border-r-0 ${width}`}>{key.replace(/_/g, ' ')}</th>
+                      <td key={key} className="px-4 py-3 align-middle border-r border-slate-100 last:border-r-0 truncate">
+                        <p className="text-[12px] font-bold text-slate-600 tracking-tight">
+                          {displayValue}
+                        </p>
+                      </td>
                     );
                   })}
-                  <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500 border-r border-slate-100 last:border-r-0 w-[15%] min-w-[150px]">
-                    <SortBtn field="date" label="Date & Time" />
-                  </th>
-                  <th className="px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-slate-500 w-14">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 text-sm bg-white">
-                {pageData.length === 0 ? (
-                  <tr>
-                    <td colSpan={selectedKeys.length + 5} className="py-20 text-center text-slate-400 font-medium italic bg-white">
-                      No movements found matching your filters.
-                    </td>
-                  </tr>
-                ) : pageData.map((m, idx) => (
-                  <tr key={`${m.id}-${idx}`}
-                    className="group hover:bg-blue-50/30 transition-all cursor-pointer border-b border-slate-100 last:border-b-0 even:bg-slate-50/20"
-                    onClick={() => setSelected(m)}
-                  >
-                    <td className="px-4 py-3 align-middle border-r border-slate-100 last:border-r-0">
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className={`w-8 h-8 rounded-md bg-gradient-to-br flex items-center justify-center text-white text-xs font-black shrink-0 shadow-sm ${m.qty > 0 ? "from-emerald-500 to-emerald-400 shadow-emerald-50" : "from-rose-500 to-rose-400 shadow-rose-50"}`}>
-                          {m.product?.[0]?.toUpperCase() || "—"}
-                        </div>
-                        <div className="flex flex-col min-w-0 gap-0.5">
-                          <span className="text-[13px] font-semibold text-slate-800 truncate leading-tight">{m.product}</span>
-                          <div className="flex items-center flex-wrap gap-1.5 mt-0.5">
-                            <button
-                              onClick={(e) => copyToClipboard(e, m.id)}
-                              className="group flex items-center gap-1 text-[9px] font-extrabold text-slate-400 bg-slate-50 px-1 py-0.2 rounded border border-slate-100 hover:bg-slate-100 hover:text-slate-600 transition-all leading-none"
-                            >
-                              ID: {m.id}
-                              <Copy size={8} className="opacity-0 group-hover:opacity-100 transition-opacity" />
-                            </button>
-                            <span className="text-[9px] font-medium text-slate-400 font-mono">SKU: {m.sku}</span>
-                            {m.variant && (
-                              <button
-                                onClick={(e) => copyToClipboard(e, m.variant || "")}
-                                className="group flex items-center gap-0.5 text-[9px] font-extrabold text-violet-600 bg-violet-50/50 px-1 py-0.2 rounded border border-violet-100 hover:bg-violet-100 transition-all leading-none"
-                              >
-                                <Layers size={8} /> {truncateId(m.variant)}
-                                <Copy size={7} className="opacity-0 group-hover:opacity-100 transition-opacity" />
-                              </button>
-                            )}
-                            {m.batch && (
-                              <button
-                                onClick={(e) => copyToClipboard(e, m.batch || "")}
-                                className="group flex items-center gap-0.5 text-[9px] font-extrabold text-amber-600 bg-amber-50/50 px-1 py-0.2 rounded border border-amber-100 hover:bg-amber-100 transition-all leading-none"
-                              >
-                                <Hash size={8} /> {truncateId(m.batch)}
-                                <Copy size={7} className="opacity-0 group-hover:opacity-100 transition-opacity" />
-                              </button>
-                            )}
-                            {m.serial_numbers && m.serial_numbers.length > 0 && (
-                              <span className="inline-flex items-center gap-0.5 text-[9px] font-extrabold text-emerald-600 bg-emerald-50/50 px-1 py-0.2 rounded border border-emerald-100 leading-none">
-                                <Zap size={8} fill="currentColor" /> {m.serial_numbers.length} Serials
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 align-middle border-r border-slate-100 last:border-r-0">
-                      <TypeBadge type={m.type} />
-                    </td>
-                    <td className="px-4 py-3 text-right align-middle border-r border-slate-100 last:border-r-0">
-                      <span className={`text-[13px] font-black tabular-nums ${m.qty > 0 ? "text-emerald-600" : "text-rose-600"}`}>
-                        {m.qty > 0 ? `+${m.qty}` : m.qty}
+                  <td className="px-4 py-3 align-middle border-r border-slate-100 last:border-r-0">
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-[13px] font-semibold text-slate-700">
+                        {new Date(m.date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
                       </span>
-                    </td>
-                    {selectedKeys.map(key => {
-                      const value = m[key as keyof Movement];
-                      const displayValue = value === undefined || value === null ? "—" :
-                        typeof value === 'object' ? (Array.isArray(value) ? value.join(", ") : JSON.stringify(value)) :
-                          String(value);
-                      return (
-                        <td key={key} className="px-4 py-3 align-middle border-r border-slate-100 last:border-r-0 truncate">
-                          <p className="text-[12px] font-bold text-slate-600 tracking-tight">
-                            {displayValue}
-                          </p>
-                        </td>
-                      );
-                    })}
-                    <td className="px-4 py-3 align-middle border-r border-slate-100 last:border-r-0">
-                      <div className="flex flex-col gap-0.5">
-                        <span className="text-[13px] font-semibold text-slate-700">
-                          {new Date(m.date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
-                        </span>
-                        <span className="text-[11px] text-slate-400 font-bold">
-                          {new Date(m.date).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-center align-middle w-14">
-                      <button
-                        onClick={(e) => { e.stopPropagation(); setSelected(m); }}
-                        className="p-1.5 text-slate-300 hover:text-blue-600 hover:bg-blue-50/50 rounded-lg transition-all active:scale-95"
-                      >
-                        <Eye size={15} />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Pagination */}
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-5 py-4 border-t border-slate-200 bg-slate-50/50">
-            <span className="text-xs font-medium text-slate-500">
-              Showing <strong className="text-slate-900">{filtered.length > 0 ? (page - 1) * PAGE_SIZE + 1 : 0}–{Math.min(page * PAGE_SIZE, filtered.length)}</strong> of <strong className="text-slate-900">{filtered.length}</strong> records
-            </span>
-            <div className="flex items-center gap-1.5">
-              <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
-                className="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 font-semibold text-xs disabled:opacity-50 hover:bg-slate-50 transition-colors shadow-sm">← Prev</button>
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
-                <button key={p} onClick={() => setPage(p)}
-                  className={`w-8 h-8 rounded-lg text-xs font-medium transition-all shadow-sm ${p === page ? "bg-blue-600 text-white border border-blue-600 shadow-blue-500/20" : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-900"}`}>{p}</button>
+                      <span className="text-[11px] text-slate-400 font-bold">
+                        {new Date(m.date).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}
+                      </span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 text-center align-middle w-14">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleMovementClick(m); }}
+                      className="p-1.5 text-slate-300 hover:text-blue-600 hover:bg-blue-50/50 rounded-lg transition-all active:scale-95"
+                    >
+                      <Eye size={15} />
+                    </button>
+                  </td>
+                </tr>
               ))}
-              <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}
-                className="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 font-semibold text-xs disabled:opacity-50 hover:bg-slate-50 transition-colors shadow-sm">Next →</button>
+            </tbody>
+          </table>
+        </div>
+
+        {/* Pagination */}
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-5 py-4 border-t border-slate-200 bg-slate-50/50">
+          <span className="text-xs font-medium text-slate-500">
+            Showing <strong className="text-slate-900">{filtered.length > 0 ? (page - 1) * PAGE_SIZE + 1 : 0}–{Math.min(page * PAGE_SIZE, filtered.length)}</strong> of <strong className="text-slate-900">{filtered.length}</strong> records
+          </span>
+          <div className="flex items-center gap-1.5">
+            <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
+              className="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 font-semibold text-xs disabled:opacity-50 hover:bg-slate-50 transition-colors shadow-sm">← Prev</button>
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
+              <button key={p} onClick={() => setPage(p)}
+                className={`w-8 h-8 rounded-lg text-xs font-medium transition-all shadow-sm ${p === page ? "bg-blue-600 text-white border border-blue-600 shadow-blue-500/20" : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-900"}`}>{p}</button>
+            ))}
+            <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}
+              className="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 font-semibold text-xs disabled:opacity-50 hover:bg-slate-50 transition-colors shadow-sm">Next →</button>
           </div>
         </div>
       </div>

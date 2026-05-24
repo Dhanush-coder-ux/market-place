@@ -9,7 +9,7 @@ import type { DirectPurchaseData } from "./PurchaseHistory";
 import { ProfileHeaderCard, SectionCard, DetailItem, InfoRow } from "@/components/common/SuperUI";
 import { StatCard } from "@/components/common/StatsCard";
 import { useApi } from "@/context/ApiContext";
-import { ENDPOINTS } from "@/services/endpoints";
+import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 
 const fmt = (n: number) => `₹${n.toLocaleString("en-IN")}`;
 
@@ -33,6 +33,7 @@ const PurchaseDetail = () => {
   // Retrieve po from state or use state fetched from API
   const [po, setPo] = useState<DirectPurchaseData | undefined>(location.state?.po);
   const [loading, setLoading] = useState(!po);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const [activeTab, setActiveTab] = useState(0);
 
@@ -41,12 +42,27 @@ const PurchaseDetail = () => {
       const fetchPo = async () => {
         setLoading(true);
         try {
-          const res = await getData(`${ENDPOINTS.PURCHASES}/${id}`);
-          if (res && res.data) {
-            setPo(toDisplayData(res.data));
+          // First try the purchases endpoint (direct purchase ID with shop scope)
+          const res = await getData(`${ENDPOINTS.PURCHASES}/by/${SHOP_ID}/${id}`);
+          let data = res?.data ? (Array.isArray(res.data) ? res.data[0] : res.data) : null;
+          if (!data && res && res.id) {
+            data = res;
           }
-        } catch (err) {
+          if (data) {
+            setPo(toDisplayData(data));
+            return;
+          }
+          // Fallback: try the stock adjustments endpoint by shop list (used when navigating from Stock Movements tab)
+          // Since GET /inventories/s-adjustments/:id throws 405 Method Not Allowed, we fetch by shop list and find the record
+          const adjRes = await getData(`${ENDPOINTS.S_ADJUSTMENTS}/by/shop/${SHOP_ID}`, { view: "STOCKADJUSTMENT_VIEW", shop_id: SHOP_ID, limit: "100" });
+          const adjList = adjRes?.data || adjRes?.datas || (Array.isArray(adjRes) ? adjRes : []);
+          const adjData = adjList.find((a: any) => a.id === id);
+          if (adjData) {
+            setPo(toDisplayData(adjData));
+          }
+        } catch (err: any) {
           console.error("Failed to fetch purchase:", err);
+          setErrorMsg(err.message || String(err));
         } finally {
           setLoading(false);
         }
@@ -66,9 +82,14 @@ const PurchaseDetail = () => {
 
   if (!po) {
     return (
-      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center font-sans">
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center font-sans p-6 text-center">
         <ReceiptText size={48} className="mb-4 text-slate-300" />
         <p className="text-lg font-bold text-slate-800">Purchase details not found</p>
+        {errorMsg && (
+          <p className="text-xs text-red-500 bg-red-50 border border-red-100 rounded-md p-3 max-w-md my-3 font-mono break-all">
+            Error: {errorMsg}
+          </p>
+        )}
         <button
           onClick={() => navigate("/purchase-history")}
           className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-semibold text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors shadow-sm"

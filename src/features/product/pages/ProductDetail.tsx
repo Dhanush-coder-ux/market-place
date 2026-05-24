@@ -422,7 +422,9 @@ const ProductDetail = () => {
         {TABS[activeTab] === MOV_TAB_LABEL && (
           <StockMovementTab
             inventoryId={id || ""}
+            product={product}
             onNavigateToPurchase={(purchaseId) => navigate(`/purchase/detail/${purchaseId}`)}
+            onNavigateToSale={(saleId) => navigate(`/sales/${saleId}`)}
           />
         )}
 

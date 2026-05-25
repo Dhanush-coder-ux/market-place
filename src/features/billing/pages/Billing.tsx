@@ -218,53 +218,7 @@ const Billing = () => {
 
     const res = await postData(ENDPOINTS.BILLING, payload);
     if (res) {
-      // Auto-decrement stock manually because backend doesn't do it correctly for billing
-      try {
-        const adjustmentPayload = {
-          shop_id: SHOP_ID,
-          adjusted_date: new Date().toISOString(),
-          description: `Stock decreased due to Sales (Ref: ${res?.data?.ui_id || "POS"})`,
-          products: filledItems.map(i => ({
-            inventory_id: i.inventoryId || "",
-            variant_id: i.variantId || null,
-            batch_id: i.batchId || null,
-            serialno_id: i.serialnoId || null,
-            serial_numbers: i.serialNumbers?.length ? i.serialNumbers : null,
-            stocks: Number(i.qty),
-            type: "DECREMENT",
-            datas: {
-              reason: "Sales",
-              notes: "Auto-deducted from POS",
-              barcode: i.code,
-              product_name: i.name
-            }
-          }))
-        };
-        await postData(ENDPOINTS.S_ADJUSTMENTS, adjustmentPayload);
-      } catch (err) {
-        console.error("Failed to automatically decrement stock for sale", err);
-      }
 
-      const creditPaid = paymentsArg.filter(p => p.mode === "credit").reduce((s, p) => s + p.amount, 0);
-
-      if (customerData && creditPaid > 0) {
-        const nextLimit = Math.max(0, customerData.creditLimit - creditPaid);
-        try {
-          await putData(`${ENDPOINTS.CUSTOMERS}`, {
-            credit_limit: nextLimit,
-            id: customerData.id,
-            shop_id: SHOP_ID,
-          });
-        } catch (err) {
-          console.error("Failed to persist updated credit limit:", err);
-          showToast("Order confirmed, but failed to update credit limit on server", "warning");
-        }
-        setCustomerData(prev => prev ? {
-          ...prev,
-          creditLimit: nextLimit,
-          outstanding: prev.outstanding + creditPaid,
-        } : null);
-      }
 
       setItems([createEmptyRow()]);
       setPhone("");
@@ -324,13 +278,12 @@ const Billing = () => {
               )}
             </div>
 
-       
+
             {customerData && (
-              <div className={`hidden md:flex items-center gap-1.5 px-2 py-1 rounded-md border text-[9px] font-medium shrink-0 ${
-                isCreditExceeded 
-                  ? "bg-red-50/60 border-red-200/60 text-red-600" 
+              <div className={`hidden md:flex items-center gap-1.5 px-2 py-1 rounded-md border text-[9px] font-medium shrink-0 ${isCreditExceeded
+                  ? "bg-red-50/60 border-red-200/60 text-red-600"
                   : "bg-slate-50/60 border-slate-200/60 text-slate-500"
-              }`}>
+                }`}>
                 <Wallet size={10} className={isCreditExceeded ? "text-red-400" : "text-slate-400"} />
                 <span>Credit: ₹{formatINR(customerData.creditLimit - customerData.outstanding, 0)}</span>
                 {isCreditExceeded && <AlertCircle size={9} className="text-red-500" />}
@@ -358,7 +311,7 @@ const Billing = () => {
             )}
 
             {/* Shortcuts Button */}
-            <button 
+            <button
               onClick={() => setIsShortcutsModalOpen(true)}
               className="flex items-center px-1.5 py-1.5 border border-slate-200/60 rounded-md text-slate-400 hover:bg-slate-50 hover:text-slate-600 transition-colors shrink-0"
               title="Keyboard Shortcuts"
@@ -418,7 +371,7 @@ const Billing = () => {
         initialName={newCustomerName}
         isSubmitting={isCreatingCustomer}
       />
-      
+
       {/* ── Shortcuts Modal ────────────────────────────────────────── */}
       {isShortcutsModalOpen && (
         <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4">

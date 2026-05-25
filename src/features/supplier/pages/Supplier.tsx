@@ -14,6 +14,19 @@ import { StatCard } from "@/components/common/StatsCard";
 import { useQuickCreate } from "@/features/common/QuickCreate/QuickCreateContext";
 
 
+// Human-readable labels for every possible dynamic column key
+const COLUMN_LABELS: Record<string, string> = {
+  contact_person:  "Contact Person Name",
+  contact_email:   "Contact Person Email",
+  contact_mobile:  "Contact Person Mobile No.",
+  email:           "Supplier Email",
+  mobile_number:   "Supplier Mobile No.",
+  gst_no:          "GST No.",
+  city:            "City",
+  zipcode:         "ZIP Code",
+  address:         "Street Address",
+};
+
 const Supplier = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -38,7 +51,7 @@ const Supplier = () => {
   const [availableKeys, setAvailableKeys] = useState<string[]>([]);
   const [selectedKeys, setSelectedKeys] = useState<string[]>(() => {
     const saved = localStorage.getItem('supplier_table_columns');
-    return saved ? JSON.parse(saved) : ["contact_person", "email", "mobile_number", "city"];
+    return saved ? JSON.parse(saved) : ["contact_person", "contact_email", "contact_mobile", "email", "mobile_number", "city"];
   });
 
   useEffect(() => {
@@ -90,6 +103,7 @@ const Supplier = () => {
 
           // Map contact_info
           if (s.contact_info?.name) keys.add("contact_person");
+          if (s.contact_info?.email) keys.add("contact_email");
           if (s.contact_info?.mobile_number) keys.add("contact_mobile");
 
           // Flatten address
@@ -184,6 +198,7 @@ const Supplier = () => {
           selectedKeys={selectedKeys}
           onApply={setSelectedKeys}
           storageKey="supplier_table_columns"
+          labelMap={COLUMN_LABELS}
           className="h-8 px-3 rounded-md border border-slate-200 text-slate-650 bg-white hover:bg-slate-50 active:scale-95 transition-all text-xs font-semibold shadow-sm shrink-0 flex items-center justify-center gap-1.5"
         />
       </div>
@@ -206,7 +221,9 @@ const Supplier = () => {
               <tr className="text-slate-400 text-[10px] font-bold  tracking-[0.15em] border-b border-slate-100">
                 <th className="px-6 py-5 whitespace-nowrap min-w-[200px]">Supplier Details</th>
                 {selectedKeys.map(key => (
-                  <th key={key} className="px-6 py-5 capitalize whitespace-nowrap">{key.replace(/_/g, ' ')}</th>
+                  <th key={key} className="px-6 py-5 whitespace-nowrap">
+                    {COLUMN_LABELS[key] ?? key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
+                  </th>
                 ))}
                 <th className="px-6 py-5 text-right whitespace-nowrap">Actions</th>
               </tr>
@@ -246,6 +263,7 @@ const Supplier = () => {
 
                         // Handle Specific Column Mappings
                         if (key === "contact_person") val = sup.contact_info?.name;
+                        else if (key === "contact_email") val = sup.contact_info?.email;
                         else if (key === "contact_mobile") val = sup.contact_info?.mobile_number;
                         else if (key === "city") val = sup.datas?.address?.city;
                         else if (key === "zipcode") val = sup.datas?.address?.zipcode;

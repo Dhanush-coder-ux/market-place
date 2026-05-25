@@ -9,6 +9,7 @@ import {
 
 import { GradientButton } from "@/components/ui/GradientButton";
 import { StatCard } from "@/components/common/StatsCard";
+import { TypeBadge } from "@/components/common/SuperUI";
 import { useApi } from "@/context/ApiContext";
 import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 import { useHeader } from "@/context/HeaderContext";
@@ -73,39 +74,6 @@ function truncateId(id: string | undefined) {
     return id.slice(0, 8).toUpperCase();
   }
   return id;
-}
-
-
-function TypeBadge({ type }: { type: MovementType }) {
-  let s = { bg: "bg-slate-50 text-slate-700 border-slate-200", dot: "bg-slate-500" };
-
-  if (type === "PURCHASE" || type === "PO_PURCHASE") {
-    s = { bg: "bg-emerald-50 text-emerald-700 border-emerald-200", dot: "bg-emerald-500" };
-  } else if (type === "SALES") {
-    s = { bg: "bg-rose-50 text-rose-700 border-rose-200", dot: "bg-rose-500" };
-  } else if (type === "STOCK_ADJUSTMENT") {
-    s = { bg: "bg-violet-50 text-violet-700 border-violet-200", dot: "bg-violet-500" };
-  } else if (type === "TRANSFER") {
-    s = { bg: "bg-sky-50 text-sky-700 border-sky-200", dot: "bg-sky-500" };
-  } else if (type === "OPENING") {
-    s = { bg: "bg-slate-50 text-slate-700 border-slate-200", dot: "bg-slate-500" };
-  } else if (type === "PRODUCTION") {
-    s = { bg: "bg-teal-50 text-teal-700 border-teal-200", dot: "bg-teal-500" };
-  } else if (type === "SALE_RETURN") {
-    s = { bg: "bg-fuchsia-50 text-fuchsia-700 border-fuchsia-200", dot: "bg-fuchsia-500" };
-  }
-
-  let displayName = type.replace(/_/g, ' ').replace(/-/g, ' ');
-  if (type === "STOCK_ADJUSTMENT") {
-    displayName = "ADJUSTMENT";
-  }
-
-  return (
-    <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-extrabold border leading-none shadow-sm uppercase tracking-wider ${s.bg}`}>
-      <span className={`w-1 h-1 rounded-full ${s.dot}`} />
-      {displayName}
-    </span>
-  );
 }
 
 interface DetailDrawerProps {
@@ -431,13 +399,7 @@ export default function StockMovementPage() {
   };
 
   const handleMovementClick = (m: Movement) => {
-    if (m.type === "PURCHASE" || m.type === "PO_PURCHASE") {
-      navigate(`/purchase/detail/${encodeURIComponent(m.fullId || m.id)}`);
-    } else if (m.type === "SALES" || m.type === "SALE_RETURN") {
-      navigate(`/sales/${encodeURIComponent(m.fullId || m.id)}`);
-    } else {
-      navigate(`/stock-movement/${encodeURIComponent(m.id)}`, { state: { movement: m } });
-    }
+    navigate(`/stock-movement/${encodeURIComponent(m.fullId || m.id)}`);
   };
 
   // Dynamic Column State
@@ -509,11 +471,7 @@ export default function StockMovementPage() {
         }
       });
 
-      // Backend returns corrupted products array for SALES and RETURN movements (they all match the products from ui_id 21)
-      // So we filter them out of S_ADJUSTMENTS entirely and fetch them from ORDERS instead
-      const filteredAData = aData.filter((a: any) => a.movement_type !== "SALES" && a.movement_type !== "SALE_RETURN" && a.movement_type !== "RETURN");
-
-      const adjMovements: Movement[] = filteredAData.flatMap((a: any) => {
+      const adjMovements: Movement[] = aData.flatMap((a: any) => {
         let products = Array.isArray(a.products) ? a.products : [];
         const dateStr = String(a.adjusted_date || a.created_at || new Date().toISOString());
 
@@ -547,7 +505,7 @@ export default function StockMovementPage() {
 
         return products.flatMap((prod: any) => {
           const results: Movement[] = [];
-          const isDecrement = prod.type === 'DECREMENT';
+          const isDecrement = prod.type === 'DECREMENT' || finalType === "SALES";
           const baseQty = Number(prod.stocks || 0);
           const qtyVal = isDecrement ? -baseQty : baseQty;
 
@@ -608,79 +566,7 @@ export default function StockMovementPage() {
         });
       });
 
-      // Fetch Orders for SALES and SALE_RETURN movements because backend S_ADJUSTMENTS returns corrupted products for SALES
-      let ordMovements: Movement[] = [];
-      try {
-        const ordRes = await getData(`${ENDPOINTS.ORDERS}/${SHOP_ID}?limit=100`);
-        const ordData = (ordRes?.data || []) as any[];
-
-        // Use invRes to map inventory_id to product name
-        const invRes = await getData(`${ENDPOINTS.INVENTORIES}/by/shop/${SHOP_ID}?limit=100`);
-        const invMapName: Record<string, string> = {};
-        const globalBatchNameMap: Record<string, string> = {};
-        (invRes?.data || invRes?.datas || []).forEach((item: any) => {
-          invMapName[item.id] = item.name;
-          if (Array.isArray(item.batches)) {
-            item.batches.forEach((b: any) => {
-              if (b.id && b.name) globalBatchNameMap[b.id] = b.name;
-            });
-          }
-          if (Array.isArray(item.variants)) {
-            item.variants.forEach((v: any) => {
-              if (Array.isArray(v.batches)) {
-                v.batches.forEach((b: any) => {
-                  if (b.id && b.name) globalBatchNameMap[b.id] = b.name;
-                });
-              }
-            });
-          }
-        });
-
-        ordMovements = ordData.filter((o: any) => o.status === "COMPLETED" || o.status === "Completed" || o.status === "completed").flatMap((o: any) => {
-          const products = o.items || [];
-          const dateStr = String(o.created_at || new Date().toISOString());
-
-          const finalType: MovementType = o.origin === "Sales Return" ? "SALE_RETURN" : "SALES";
-          let source = "Warehouse";
-          let destination = "Customer";
-          if (finalType === "SALE_RETURN") {
-            source = "Customer";
-            destination = "Warehouse";
-          }
-
-          return products.flatMap((prod: any) => {
-            const baseQty = Number(prod.quantity || 0);
-            const qtyVal = finalType === "SALE_RETURN" ? baseQty : -baseQty;
-
-            let productName = invMapName[prod.inventory_id] || prod.barcode || "—";
-
-            return [{
-              id: o.id?.slice(0, 8).toUpperCase() || "ORD",
-              fullId: o.id,
-              product: productName,
-              type: finalType,
-              source,
-              destination,
-              ref: String(o.ui_id ? `INV-${o.ui_id}` : o.id?.slice(0, 8).toUpperCase() || "INV"),
-              date: dateStr.includes("T") ? dateStr : dateStr + "T00:00:00",
-              status: "Completed" as StatusType,
-              user: o.cashier_id || "Admin",
-              notes: o.notes || "",
-              sku: prod.barcode || "",
-              qty: qtyVal,
-              stocks_before: undefined,
-              current_stock: invMap[productName] !== undefined ? invMap[productName] : undefined,
-              variant: prod.variant_id || "",
-              batch: prod.batch_id ? (globalBatchNameMap[prod.batch_id] || prod.batch_id) : "",
-              serial_numbers: prod.serial_numbers || [],
-            }];
-          });
-        });
-      } catch (e) {
-        console.error("Error fetching orders:", e);
-      }
-
-      const all = [...adjMovements, ...ordMovements].sort((a, b) =>
+      const all = [...adjMovements].sort((a, b) =>
         new Date(b.date).getTime() - new Date(a.date).getTime()
       );
 
@@ -869,9 +755,9 @@ export default function StockMovementPage() {
               <tr className="text-slate-400 text-[10px] font-bold tracking-[0.15em]">
                 <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500 border-r border-slate-100 last:border-r-0 w-[25%] min-w-[260px]">Product Information</th>
                 <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500 border-r border-slate-100 last:border-r-0 w-[12%] min-w-[125px]">Movement Type</th>
-                <th className="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wider text-slate-500 border-r border-slate-100 last:border-r-0 w-[12%] min-w-[110px]">
-                  <SortBtn field="qty" label="Stock In / Out" align="right" />
-                </th>
+                <th className="px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-slate-500 border-r border-slate-100 last:border-r-0 w-[10%] min-w-[90px]">Stock Before</th>
+                <th className="px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-slate-500 border-r border-slate-100 last:border-r-0 w-[10%] min-w-[90px]">Stock In / Out</th>
+                <th className="px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-slate-500 border-r border-slate-100 last:border-r-0 w-[10%] min-w-[90px]">Stock After</th>
                 {selectedKeys.map(key => {
                   let width = "w-[12%] min-w-[120px]";
                   if (key === "notes") width = "w-[20%] min-w-[180px]";
@@ -949,9 +835,19 @@ export default function StockMovementPage() {
                   <td className="px-4 py-3 align-middle border-r border-slate-100 last:border-r-0">
                     <TypeBadge type={m.type} />
                   </td>
-                  <td className="px-4 py-3 text-right align-middle border-r border-slate-100 last:border-r-0">
+                  <td className="px-4 py-3 text-center align-middle border-r border-slate-100 last:border-r-0">
+                    <span className="text-[12px] font-bold text-slate-500 tabular-nums">
+                      {m.stocks_before !== undefined && m.stocks_before !== null ? m.stocks_before : "—"}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-center align-middle border-r border-slate-100 last:border-r-0 bg-slate-50/30">
                     <span className={`text-[13px] font-black tabular-nums ${m.qty > 0 ? "text-emerald-600" : "text-rose-600"}`}>
                       {m.qty > 0 ? `+${m.qty}` : m.qty}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-center align-middle border-r border-slate-100 last:border-r-0">
+                    <span className="text-[12px] font-bold text-blue-600 tabular-nums">
+                      {m.stocks_before !== undefined && m.stocks_before !== null ? m.stocks_before + m.qty : "—"}
                     </span>
                   </td>
                   {selectedKeys.map(key => {

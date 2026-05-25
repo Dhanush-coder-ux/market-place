@@ -56,7 +56,7 @@ export interface EmployeeRecord {
   updated_at: string;
   joined_date: string;
   datas?: {
-    salary_rage?: number;
+    salary_range?: number;
     address?: {
       full_address?: string;
       zip_code?: string;

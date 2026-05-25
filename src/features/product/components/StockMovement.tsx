@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useApi } from "@/context/ApiContext";
 import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 import { StockMovementsTable } from "@/components/common/HistoryTables";
@@ -6,12 +7,12 @@ import { StockMovementsTable } from "@/components/common/HistoryTables";
 interface StockMovementTabProps {
   inventoryId: string;
   product?: any;
-  onNavigateToPurchase?: (id: string) => void;
-  onNavigateToSale?: (id: string) => void;
+  onViewDetails?: (id: string) => void;
 }
 
-const StockMovementTab = ({ inventoryId, product, onNavigateToPurchase, onNavigateToSale }: StockMovementTabProps) => {
+const StockMovementTab = ({ inventoryId, product }: StockMovementTabProps) => {
   const { getData } = useApi();
+  const navigate = useNavigate();
   const [movements, setMovements] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -88,15 +89,14 @@ const StockMovementTab = ({ inventoryId, product, onNavigateToPurchase, onNaviga
           });
         });
 
-        // Filter out SALES because the backend returns corrupted products array for SALES adjustments
-        const filteredRawData = rawData.filter((a: any) => a.movement_type !== "SALES" && a.movement_type !== "SALE_RETURN" && a.movement_type !== "RETURN");
-
-        filteredRawData.forEach((a: any) => {
+        rawData.forEach((a: any) => {
           const mType = a.movement_type || "";
           let displayType = "Adjustment";
           let source = "stock";
           if (mType === "DIRECT" || mType === "PURCHASE") { displayType = "Purchase"; source = "purchase"; }
           else if (mType.includes("PO_")) { displayType = "PO Purchase"; source = "purchase"; }
+          else if (mType === "SALES") { displayType = "Sales"; source = "sales"; }
+          else if (mType === "SALE_RETURN" || mType === "RETURN") { displayType = "Return"; source = "return"; }
 
           const sid = a.supplier_id || a.datas?.supplier_id || a.reference_id;
           let finalDesc = a.description || `Stock ${displayType}`;
@@ -108,7 +108,7 @@ const StockMovementTab = ({ inventoryId, product, onNavigateToPurchase, onNaviga
           const dateStr = String(a.adjusted_date || a.created_at || new Date().toISOString());
 
           products.forEach((prod: any) => {
-            const isDecrement = prod.type === 'DECREMENT';
+            const isDecrement = prod.type === 'DECREMENT' || source === 'sales';
             const baseQty = Number(prod.stocks || 0);
 
             const baseRow = {
@@ -132,8 +132,8 @@ const StockMovementTab = ({ inventoryId, product, onNavigateToPurchase, onNaviga
                       ...baseRow,
                       variant: v.name || "",
                       batch: b.name || "",
-                      stocks: Number(b.stocks || v.stocks || baseQty),
-                      receivedStocks: Number(b.stocks || v.stocks || baseQty),
+                      stocks: Number(b.stocks ?? v.stocks ?? baseQty),
+                      receivedStocks: Number(b.stocks ?? v.stocks ?? baseQty),
                       stocksBefore: b.stocks_before ?? v.stocks_before ?? prod.stocks_before ?? null,
                       serials: sns
                     });
@@ -143,12 +143,27 @@ const StockMovementTab = ({ inventoryId, product, onNavigateToPurchase, onNaviga
                     ...baseRow,
                     variant: v.name || "",
                     batch: null,
-                    stocks: Number(v.stocks || baseQty),
-                    receivedStocks: Number(v.stocks || baseQty),
+                    stocks: Number(v.stocks ?? baseQty),
+                    receivedStocks: Number(v.stocks ?? baseQty),
                     stocksBefore: v.stocks_before ?? prod.stocks_before ?? null,
                     serials: Array.isArray(v.serial_numbers?.serial_numbers) ? v.serial_numbers.serial_numbers : []
                   });
                 }
+              });
+            } else if (prod.batches && prod.batches.length > 0) {
+              prod.batches.forEach((b: any) => {
+                const sns = Array.isArray(b.serial_numbers?.serial_numbers)
+                  ? b.serial_numbers.serial_numbers
+                  : (Array.isArray(prod.serial_numbers?.serial_numbers) ? prod.serial_numbers.serial_numbers : []);
+                rows.push({
+                  ...baseRow,
+                  variant: null,
+                  batch: b.name || "",
+                  stocks: Number(b.stocks ?? baseQty),
+                  receivedStocks: Number(b.stocks ?? baseQty),
+                  stocksBefore: b.stocks_before ?? prod.stocks_before ?? null,
+                  serials: sns
+                });
               });
             } else {
               rows.push({
@@ -164,46 +179,7 @@ const StockMovementTab = ({ inventoryId, product, onNavigateToPurchase, onNaviga
           });
         });
 
-        // Fetch Orders for SALES and SALE_RETURN because backend S_ADJUSTMENTS is corrupted for Sales
-        try {
-          const ordRes = await getData(`${ENDPOINTS.ORDERS}/${SHOP_ID}`);
-          const ordData = (ordRes?.data || []) as any[];
-          const productOrders = ordData.filter((o: any) =>
-            (o.status === "COMPLETED" || o.status === "Completed" || o.status === "completed") &&
-            (o.items || []).some((i: any) => i.inventory_id === inventoryId)
-          );
 
-          productOrders.forEach((o: any) => {
-            const dateStr = String(o.created_at || new Date().toISOString());
-            const displayType = o.origin === "Sales Return" ? "Return" : "Sales";
-            const source = o.origin === "Sales Return" ? "return" : "sales";
-
-            const prodItems = (o.items || []).filter((i: any) => i.inventory_id === inventoryId);
-
-            prodItems.forEach((prod: any) => {
-              const qty = Number(prod.quantity || 0);
-              const isInc = source === "return"; // Return increases stock, Sales decreases stock
-
-              rows.push({
-                id: o.id,
-                date: dateStr,
-                description: `Customer: ${o.customer_id === "walk-in" ? "Walk-in" : o.customer_id}`,
-                displayType,
-                source,
-                isInc,
-                uiId: o.ui_id,
-                variant: prod.variant_id || null,
-                batch: prod.batch_id ? (batchNameMap[prod.batch_id] || prod.batch_id) : null,
-                stocks: qty,
-                receivedStocks: qty,
-                stocksBefore: null,
-                serials: prod.serial_numbers || []
-              });
-            });
-          });
-        } catch (e) {
-          // ignore order fetch error
-        }
 
         rows.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
         setMovements(rows);
@@ -221,9 +197,7 @@ const StockMovementTab = ({ inventoryId, product, onNavigateToPurchase, onNaviga
       <StockMovementsTable 
         rows={movements} 
         loading={loading} 
-        onNavigateToPurchase={onNavigateToPurchase} 
-        onNavigateToSale={onNavigateToSale} 
-        availableStock={product?.stocks}
+        onViewDetails={(id) => navigate(`/purchases/${id}`)}
       />
     </div>
   );

@@ -1,19 +1,16 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { 
-  Save, 
-  User, 
-  Mail, 
-  Phone, 
-  MapPin, 
-  Shield,
+  Save,
+  User,
+  Mail,
+  Phone,
+  MapPin,
   Calendar,
   Bookmark,
   FileText,
   Tag
 } from "lucide-react";
-
-import { Switch } from "@/components/ui/switch";
 import Input from "@/components/ui/Input"; 
 import { ReusableSelect } from "@/components/ui/ReusableSelect"; 
 import { GradientButton } from "@/components/ui/GradientButton";
@@ -60,17 +57,8 @@ const EmployeeForm = () => {
 
   // Header Actions
   useEffect(() => {
-    setActions(
-        <div className="flex items-center gap-3 bg-white px-4 h-11 rounded-lg border border-slate-200 shadow-sm scale-90 md:scale-100">
-          <span className="text-[10px] font-bold text-slate-500  ">Active</span>
-          <Switch 
-            checked={formData.is_accepted} 
-            onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_accepted: checked }))}
-          />
-        </div>
-    );
-    return () => setActions(null);
-  }, [setActions, formData.is_accepted]);
+    setActions(null);
+  }, [setActions]);
 
   useEffect(() => {
     setBottomActions(
@@ -123,7 +111,7 @@ const EmployeeForm = () => {
             joinDate: emp.joined_date || new Date().toISOString().split('T')[0],
             is_accepted: true,
             department: emp.department || "",
-            salary_range: String(datas.salary_rage || ""),
+            salary_range: String(datas.salary_range || ""),
           });
         }
       });
@@ -173,7 +161,7 @@ const EmployeeForm = () => {
       joined_date: formData.joinDate,
       department: formData.department,
       datas: {
-        salary_rage: Number(formData.salary_range) || 0,
+        salary_range: Number(formData.salary_range) || 0,
         address: { 
           full_address: formData.address,
           zip_code: formData.zip_code
@@ -225,92 +213,77 @@ const EmployeeForm = () => {
         {/* ── FORM ── */}
         <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-6 gap-6 items-start">
           
-          {/* BOX 1: IDENTITY (Spans 4 cols) */}
-          <div className="lg:col-span-4 bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden transition-all hover:shadow-md h-full">
+          {/* BOX 1: IDENTITY (Spans 6 cols) */}
+          <div className="lg:col-span-6 bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden transition-all hover:shadow-md h-full">
             <div className="px-6 py-4 bg-gradient-to-r from-blue-50/50 to-transparent border-b border-slate-100 flex items-center gap-3">
               <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600">
                 <User size={18} />
               </div>
               <h2 className="text-xs font-bold text-slate-800  ">Personal Identity</h2>
             </div>
-            <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Input
-                label="Full Name"
-                required
-                name="name"
-                value={formData.name}
-                onChange={handleChange}
-                placeholder="Johnathan Doe"
-                leftIcon={<User size={16} className="text-slate-300" />}
-              />
-              <Input
-                label="Email Address"
-                required
-                type="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                placeholder="john@example.com"
-                leftIcon={<Mail size={16} className="text-slate-300" />}
-              />
-              <Input
-                label="Phone Number"
-                type="tel"
-                name="mobile_number"
-                value={formData.mobile_number}
-                onChange={handleChange}
-                placeholder="+91 00000 00000"
-                leftIcon={<Phone size={16} className="text-slate-300" />}
-              />
-              <div className="space-y-1.5">
-                <label className="text-[11px] font-bold text-slate-500 ml-1  ">System Role</label>
-                <ReusableSelect 
-                  options={roleOptions}
-                  value={formData.role}
-                  onValueChange={(val) => handleSelectChange("role", val)}
-                  placeholder="Select Permissions"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* BOX 2: CLASSIFICATION (Spans 2 cols) */}
-          <div className="lg:col-span-2 bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden transition-all hover:shadow-md h-full">
-            <div className="px-6 py-4 bg-gradient-to-r from-amber-50/50 to-transparent border-b border-slate-100 flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center text-amber-600">
-                <Shield size={18} />
-              </div>
-              <h2 className="text-xs font-bold text-slate-800  ">Classification</h2>
-            </div>
             <div className="p-8 space-y-6">
-              <div className="flex items-center justify-between p-4 rounded-lg bg-slate-50 border border-slate-100">
-                <span className="text-xs font-bold text-slate-500  ">Member Active</span>
-                <Switch 
-                  checked={formData.is_accepted} 
-                  onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_accepted: checked }))}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <Input
+                  label="Full Name"
+                  required
+                  name="name"
+                  value={formData.name}
+                  onChange={handleChange}
+                  placeholder="Johnathan Doe"
+                  leftIcon={<User size={16} className="text-slate-300" />}
+                />
+                <Input
+                  label="Email Address"
+                  required
+                  type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  placeholder="john@example.com"
+                  leftIcon={<Mail size={16} className="text-slate-300" />}
+                />
+                <Input
+                  label="Phone Number"
+                  type="tel"
+                  name="mobile_number"
+                  value={formData.mobile_number}
+                  onChange={handleChange}
+                  placeholder="+91 00000 00000"
+                  leftIcon={<Phone size={16} className="text-slate-300" />}
                 />
               </div>
-              <div className="space-y-1.5">
-                <label className="text-[11px] font-bold text-slate-500 ml-1  ">Department</label>
-                <ReusableSelect
-                  options={departmentOptions}
-                  value={formData.department}
-                  onValueChange={(val) => handleSelectChange("department", val)}
-                  placeholder="Select Department"
-                />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold text-slate-500 ml-1  ">System Role</label>
+                  <ReusableSelect 
+                    options={roleOptions}
+                    value={formData.role}
+                    onValueChange={(val) => handleSelectChange("role", val)}
+                    placeholder="Select Permissions"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold text-slate-500 ml-1  ">Department</label>
+                  <ReusableSelect
+                    options={departmentOptions}
+                    value={formData.department}
+                    onValueChange={(val) => handleSelectChange("department", val)}
+                    placeholder="Select Department"
+                  />
+                </div>
               </div>
             </div>
           </div>
 
-          {/* BOX 4: FINANCIALS (Spans 3 cols) */}
+          {/* BOX 2: FINANCIAL & LIFECYCLE (Spans 3 cols) */}
           <div className="lg:col-span-3 bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden transition-all hover:shadow-md h-full">
             <div className="px-6 py-4 bg-gradient-to-r from-emerald-50/50 to-transparent border-b border-slate-100 flex items-center gap-3">
               <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-600">
                 <FileText size={18} />
               </div>
-              <h2 className="text-xs font-bold text-slate-800  ">Financial Context</h2>
+              <h2 className="text-xs font-bold text-slate-800  ">Financial & Lifecycle</h2>
             </div>
-            <div className="p-8">
+            <div className="p-8 space-y-6">
               <Input
                 label="Salary Range / CTC"
                 name="salary_range"
@@ -319,18 +292,6 @@ const EmployeeForm = () => {
                 placeholder="e.g. 50000"
                 leftIcon={<Tag size={16} className="text-slate-300" />}
               />
-            </div>
-          </div>
-
-          {/* BOX 5: DATE (Spans 3 cols) */}
-          <div className="lg:col-span-3 bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden transition-all hover:shadow-md h-full">
-            <div className="px-6 py-4 bg-gradient-to-r from-rose-50/50 to-transparent border-b border-slate-100 flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-rose-100 flex items-center justify-center text-rose-600">
-                <Calendar size={18} />
-              </div>
-              <h2 className="text-xs font-bold text-slate-800  ">Lifecycle</h2>
-            </div>
-            <div className="p-8">
               <Input
                 label="Joining Date"
                 type="date"
@@ -342,25 +303,23 @@ const EmployeeForm = () => {
             </div>
           </div>
 
-          {/* BOX 6: ADDRESS (Spans 6 cols) */}
-          <div className="lg:col-span-6 bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden transition-all hover:shadow-md">
+          {/* BOX 3: ADDRESS (Spans 3 cols) */}
+          <div className="lg:col-span-3 bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden transition-all hover:shadow-md h-full">
             <div className="px-6 py-4 bg-gradient-to-r from-blue-50/50 to-transparent border-b border-slate-100 flex items-center gap-3">
               <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600">
                 <MapPin size={18} />
               </div>
-              <h2 className="text-xs font-bold text-slate-800  ">Residance & Work Location</h2>
+              <h2 className="text-xs font-bold text-slate-800  ">Residence & Work Location</h2>
             </div>
-            <div className="p-8 grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="md:col-span-2">
-                <Input
-                  label="Physical Address"
-                  name="address"
-                  value={formData.address}
-                  onChange={handleChange}
-                  placeholder="Street, Area, City"
-                  leftIcon={<MapPin size={16} className="text-slate-300" />}
-                />
-              </div>
+            <div className="p-8 space-y-6">
+              <Input
+                label="Physical Address"
+                name="address"
+                value={formData.address}
+                onChange={handleChange}
+                placeholder="Street, Area, City"
+                leftIcon={<MapPin size={16} className="text-slate-300" />}
+              />
               <Input
                 label="ZIP Code"
                 name="zip_code"

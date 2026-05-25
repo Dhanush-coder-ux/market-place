@@ -253,7 +253,7 @@ const isDetailsRoute = (pathname: string) => {
   if (parts.length === 2) {
     const [entity, id] = parts;
     const standardActions = ["add", "drafts", "all", "history"];
-    if (["customers", "employee", "supplier", "product", "sales"].includes(entity)) {
+    if (["customers", "employee", "supplier", "product", "sales", "stock-movement", "stock-adjustment"].includes(entity)) {
       return !standardActions.includes(id);
     }
   }

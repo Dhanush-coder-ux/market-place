@@ -1,4 +1,5 @@
 import { ArrowUp, ArrowDown, ShoppingCart, TrendingUp, RefreshCcw, FileText, ArrowRight, Banknote, Eye } from "lucide-react";
+import { TypeBadge } from "@/components/common/SuperUI";
 
 // ─── STOCK MOVEMENTS TABLE ──────────────────────────────────────────────────
 export interface StockMovementRow {
@@ -20,23 +21,14 @@ export interface StockMovementRow {
 interface StockMovementsTableProps {
   rows: StockMovementRow[];
   loading: boolean;
-  onNavigateToPurchase?: (id: string) => void;
-  onNavigateToSale?: (id: string) => void;
-  availableStock?: number;
+  onViewDetails?: (id: string) => void;
 }
 
-export function StockMovementsTable({ rows, loading, onNavigateToPurchase, onNavigateToSale, availableStock }: StockMovementsTableProps) {
+export function StockMovementsTable({ rows, loading, onViewDetails }: StockMovementsTableProps) {
   return (
     <div className="flex flex-col h-full min-h-0 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden animate-in fade-in duration-300">
       
-      {availableStock !== undefined && (
-        <div className="px-5 py-3 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center shrink-0">
-          <span className="text-xs font-black text-slate-500 uppercase tracking-wider">Stock Ledger</span>
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-blue-50 text-blue-700 border border-blue-100 text-xs font-bold shadow-sm">
-            Current Available Stock: <strong className="font-extrabold text-blue-800">{availableStock} units</strong>
-          </span>
-        </div>
-      )}
+
 
       {/* Table Body Container with internal scroll only */}
       <div className="flex-1 min-h-0 overflow-auto custom-scrollbar">
@@ -59,9 +51,9 @@ export function StockMovementsTable({ rows, loading, onNavigateToPurchase, onNav
                   <th className="px-5 py-3.5">Date</th>
                   <th className="px-5 py-3.5">Movement Type</th>
                   <th className="px-5 py-3.5">Product / Variant / Batch</th>
-                  <th className="px-5 py-3.5">Base Qty</th>
-                  <th className="px-5 py-3.5">Stock In / Out</th>
-                  <th className="px-5 py-3.5">Stock Overview</th>
+                  <th className="px-5 py-3.5 text-center">Stock Before</th>
+                  <th className="px-5 py-3.5 text-center">Qty Changed</th>
+                  <th className="px-5 py-3.5 text-center">Stock After</th>
                   <th className="px-5 py-3.5">Details</th>
                   <th className="px-5 py-3.5 w-12"></th>
                 </tr>
@@ -81,13 +73,10 @@ export function StockMovementsTable({ rows, loading, onNavigateToPurchase, onNav
                         {r.date ? new Date(r.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
                       </td>
                       <td className="px-5 py-4 whitespace-nowrap">
-                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${r.source === 'purchase'
-                            ? (r.displayType === 'PO Purchase' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-indigo-50 text-indigo-700 border-indigo-200')
-                            : r.isInc ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-rose-50 text-rose-700 border-rose-200'
-                          }`}>
-                          {r.isInc ? <ArrowUp size={10} className="stroke-[3]" /> : <ArrowDown size={10} className="stroke-[3]" />}
-                          {r.displayType}
-                        </span>
+                        <TypeBadge 
+                          type={r.displayType} 
+                          icon={r.isInc ? ArrowUp : ArrowDown} 
+                        />
                       </td>
                       <td className="px-5 py-4">
                         <div className="flex flex-col gap-1 max-w-[200px]">
@@ -105,46 +94,29 @@ export function StockMovementsTable({ rows, loading, onNavigateToPurchase, onNav
                           )}
                         </div>
                       </td>
-                      <td className="px-5 py-4 whitespace-nowrap font-black text-sm text-slate-700 tabular-nums">
-                        {r.stocks}
+                      <td className="px-5 py-4 whitespace-nowrap text-center font-bold text-slate-500 tabular-nums">
+                        {r.stocksBefore ?? '—'}
                       </td>
-                      <td className="px-5 py-4 whitespace-nowrap font-black text-sm tabular-nums">
+                      <td className="px-5 py-4 whitespace-nowrap font-black text-sm tabular-nums text-center bg-slate-50/40">
                         <span className={r.isInc ? 'text-emerald-600' : 'text-rose-600'}>
                           {r.isInc ? '+' : '-'}{r.receivedStocks}
                         </span>
                       </td>
-                      <td className="px-5 py-4 whitespace-nowrap">
-                        <div className="flex flex-col gap-0.5">
-                          <div className="flex items-center gap-2">
-                            <span className="text-[9px] font-black text-slate-400 tracking-wider uppercase">Opening</span>
-                            <span className="text-xs font-bold text-slate-600">{r.stocksBefore ?? '—'}</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-[9px] font-black text-blue-400 tracking-wider uppercase">Current</span>
-                            <span className="text-xs font-black text-blue-600">
-                              {currentStockVal !== null ? currentStockVal : '—'}
-                            </span>
-                          </div>
-                        </div>
+                      <td className="px-5 py-4 whitespace-nowrap text-center font-bold text-blue-600 tabular-nums">
+                        {currentStockVal !== null ? currentStockVal : '—'}
                       </td>
                       <td className="px-5 py-4 text-xs text-slate-500 max-w-[220px] truncate" title={r.description}>
                         {r.description}
                       </td>
                       <td className="px-5 py-4">
-                        {r.source === 'purchase' && onNavigateToPurchase && (
+                        {onViewDetails && (
                           <button
-                            onClick={() => onNavigateToPurchase(r.id)}
-                            title="View Purchase Detail"
-                            className="w-7 h-7 flex items-center justify-center rounded-lg bg-indigo-50 text-indigo-500 hover:bg-indigo-100 hover:text-indigo-700 border border-indigo-100 transition-all active:scale-95 shadow-sm"
-                          >
-                            <Eye size={13} strokeWidth={2.5} />
-                          </button>
-                        )}
-                        {r.source === 'sales' && onNavigateToSale && (
-                          <button
-                            onClick={() => onNavigateToSale(r.id)}
-                            title="View Sale Detail"
-                            className="w-7 h-7 flex items-center justify-center rounded-lg bg-rose-50 text-rose-500 hover:bg-rose-100 hover:text-rose-700 border border-rose-100 transition-all active:scale-95 shadow-sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onViewDetails(r.id);
+                            }}
+                            title="View Adjustment Detail"
+                            className="w-7 h-7 flex items-center justify-center rounded-lg bg-blue-50 text-blue-500 hover:bg-blue-100 hover:text-blue-700 border border-blue-100 transition-all active:scale-95 shadow-sm"
                           >
                             <Eye size={13} strokeWidth={2.5} />
                           </button>
@@ -197,9 +169,11 @@ export function ProductPurchasesTable({ rows, loading, onNavigateToPurchase }: P
                   <th className="px-5 py-3.5">Date</th>
                   <th className="px-5 py-3.5">Type</th>
                   <th className="px-5 py-3.5">Variant / Batch</th>
-                  <th className="px-5 py-3.5">Stock In / Out</th>
-                  <th className="px-5 py-3.5">Stock Overview</th>
-                  <th className="px-5 py-3.5">Financials</th>
+                  <th className="px-5 py-3.5 text-center">Stock Before</th>
+                  <th className="px-5 py-3.5 text-center">Qty Changed</th>
+                  <th className="px-5 py-3.5 text-center">Stock After</th>
+                  <th className="px-5 py-3.5">Buy Price</th>
+                  <th className="px-5 py-3.5">Sell Price</th>
                   <th className="px-5 py-3.5">Payment</th>
                   <th className="px-5 py-3.5">Reference</th>
                   <th className="px-5 py-3.5">Storage Loc</th>
@@ -217,11 +191,10 @@ export function ProductPurchasesTable({ rows, loading, onNavigateToPurchase }: P
                       {r.date ? new Date(r.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
                     </td>
                     <td className="px-5 py-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${r.displayType === 'PO Purchase' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-indigo-50 text-indigo-700 border-indigo-200'
-                        }`}>
-                        <ArrowUp size={10} className="stroke-[3]" />
-                        {r.displayType}
-                      </span>
+                      <TypeBadge 
+                        type={r.displayType} 
+                        icon={ArrowUp} 
+                      />
                     </td>
                     <td className="px-5 py-4">
                       <div className="flex flex-col gap-1 max-w-[200px]">
@@ -239,36 +212,22 @@ export function ProductPurchasesTable({ rows, loading, onNavigateToPurchase }: P
                         )}
                       </div>
                     </td>
-                    <td className="px-5 py-4 whitespace-nowrap font-black text-sm tabular-nums">
+                    <td className="px-5 py-4 whitespace-nowrap text-center font-bold text-slate-500 tabular-nums">
+                      {r.stocksBefore !== null ? r.stocksBefore : '—'}
+                    </td>
+                    <td className="px-5 py-4 whitespace-nowrap font-black text-sm tabular-nums text-center bg-slate-50/40">
                       <span className={r.isInc !== false ? 'text-emerald-600' : 'text-rose-600'}>
                         {r.isInc !== false ? '+' : '-'}{r.receivedStocks}
                       </span>
                     </td>
-                    <td className="px-5 py-4 whitespace-nowrap">
-                      <div className="flex flex-col gap-0.5">
-                        <div className="flex items-center gap-2">
-                          <span className="text-[9px] font-black text-slate-400 tracking-wider uppercase">Opening</span>
-                          <span className="text-xs font-bold text-slate-600">{r.stocksBefore !== null ? r.stocksBefore : '—'}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-[9px] font-black text-blue-400 tracking-wider uppercase">Current</span>
-                          <span className="text-xs font-black text-blue-600">
-                            {r.stocksBefore !== null ? (r.stocksBefore + r.receivedStocks) : '—'}
-                          </span>
-                        </div>
-                      </div>
+                    <td className="px-5 py-4 whitespace-nowrap text-center font-bold text-blue-600 tabular-nums">
+                      {r.stocksBefore !== null ? (r.stocksBefore + r.receivedStocks) : '—'}
                     </td>
-                    <td className="px-5 py-4 whitespace-nowrap">
-                      <div className="flex flex-col gap-0.5">
-                        <div className="flex items-center gap-2">
-                          <span className="text-[9px] font-black text-slate-400 tracking-wider uppercase">Buy</span>
-                          <span className="text-xs font-bold text-slate-600">₹{r.buyPrice ?? '—'}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-[9px] font-black text-emerald-400 tracking-wider uppercase">Sell</span>
-                          <span className="text-xs font-black text-emerald-600">₹{r.sellPrice ?? '—'}</span>
-                        </div>
-                      </div>
+                    <td className="px-5 py-4 whitespace-nowrap text-xs font-bold text-slate-700">
+                      ₹{r.buyPrice ?? '—'}
+                    </td>
+                    <td className="px-5 py-4 whitespace-nowrap text-xs font-bold text-emerald-700">
+                      ₹{r.sellPrice ?? '—'}
                     </td>
                     <td className="px-5 py-4 whitespace-nowrap">
                       <div className="flex flex-col gap-0.5">
@@ -320,9 +279,10 @@ export function ProductPurchasesTable({ rows, loading, onNavigateToPurchase }: P
 interface SupplierPurchasesTableProps {
   rows: any[];
   loading: boolean;
+  onNavigateToPurchase?: (id: string) => void;
 }
 
-export function SupplierPurchasesTable({ rows, loading }: SupplierPurchasesTableProps) {
+export function SupplierPurchasesTable({ rows, loading, onNavigateToPurchase }: SupplierPurchasesTableProps) {
   return (
     <div className="flex flex-col h-full min-h-0 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden animate-in fade-in duration-300">
 
@@ -348,8 +308,9 @@ export function SupplierPurchasesTable({ rows, loading }: SupplierPurchasesTable
                   <th className="px-5 py-3.5">#</th>
                   <th className="px-5 py-3.5">Type</th>
                   <th className="px-5 py-3.5">Product</th>
-                  <th className="px-5 py-3.5">Stock In / Out</th>
-                  <th className="px-5 py-3.5">Stock Overview</th>
+                  <th className="px-5 py-3.5 text-center">Stock Before</th>
+                  <th className="px-5 py-3.5 text-center">Qty Changed</th>
+                  <th className="px-5 py-3.5 text-center">Stock After</th>
                   <th className="px-5 py-3.5">Buy Price</th>
                   <th className="px-5 py-3.5">Sell Price</th>
                   <th className="px-5 py-3.5">Payment</th>
@@ -357,6 +318,7 @@ export function SupplierPurchasesTable({ rows, loading }: SupplierPurchasesTable
                   <th className="px-5 py-3.5">Reference</th>
                   <th className="px-5 py-3.5">Storage Location</th>
                   <th className="px-5 py-3.5">Date</th>
+                  <th className="px-5 py-3.5 w-12"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -366,35 +328,21 @@ export function SupplierPurchasesTable({ rows, loading }: SupplierPurchasesTable
                       <span className="text-[10px] font-black text-slate-400 font-mono">#{r.uiId}</span>
                     </td>
                     <td className="px-5 py-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${r.type === 'DIRECT' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
-                          r.type?.includes('PO') ? 'bg-blue-50 text-blue-700 border-blue-200' :
-                            'bg-slate-50 text-slate-600 border-slate-200'
-                        }`}>
-                        <span className="w-1.5 h-1.5 rounded-full bg-current" />
-                        {r.type === 'DIRECT' ? 'Purchase' : (r.type || '—').replace(/_/g, ' ')}
-                      </span>
+                      <TypeBadge type={r.type || "PURCHASE"} labelOverride={r.type === 'DIRECT' ? 'Purchase' : (r.type || '—').replace(/_/g, ' ')} />
                     </td>
                     <td className="px-5 py-4 text-xs font-semibold text-slate-700 whitespace-nowrap max-w-[150px] truncate" title={r.productName}>
                       {r.productName}
                     </td>
-                    <td className="px-5 py-4 whitespace-nowrap font-black text-sm tabular-nums">
+                    <td className="px-5 py-4 whitespace-nowrap text-center font-bold text-slate-500 tabular-nums">
+                      {r.stocksBefore !== undefined && r.stocksBefore !== null ? r.stocksBefore : '—'}
+                    </td>
+                    <td className="px-5 py-4 whitespace-nowrap font-black text-sm tabular-nums text-center bg-slate-50/40">
                       <span className={r.isInc !== false ? 'text-emerald-600' : 'text-rose-600'}>
                         {r.isInc !== false ? '+' : '-'}{r.receivedStocks}
                       </span>
                     </td>
-                    <td className="px-5 py-4 whitespace-nowrap">
-                      <div className="flex flex-col gap-0.5">
-                        <div className="flex items-center gap-2">
-                          <span className="text-[9px] font-black text-slate-400 tracking-wider uppercase">Opening</span>
-                          <span className="text-xs font-bold text-slate-600">{r.stocksBefore !== undefined && r.stocksBefore !== null ? r.stocksBefore : '—'}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-[9px] font-black text-blue-400 tracking-wider uppercase">Current</span>
-                          <span className="text-xs font-black text-blue-600">
-                            {r.stocksBefore !== undefined && r.stocksBefore !== null ? (r.stocksBefore + r.receivedStocks) : '—'}
-                          </span>
-                        </div>
-                      </div>
+                    <td className="px-5 py-4 whitespace-nowrap text-center font-bold text-blue-600 tabular-nums">
+                      {r.stocksBefore !== undefined && r.stocksBefore !== null ? (r.stocksBefore + r.receivedStocks) : '—'}
                     </td>
                     <td className="px-5 py-4 whitespace-nowrap text-xs font-bold text-slate-700">
                       ₹{r.buy_price ?? '—'}
@@ -425,6 +373,17 @@ export function SupplierPurchasesTable({ rows, loading }: SupplierPurchasesTable
                     <td className="px-5 py-4 text-xs text-slate-500 font-medium whitespace-nowrap">
                       {r.purchaseDate ? new Date(r.purchaseDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
                     </td>
+                    <td className="px-5 py-4">
+                      {onNavigateToPurchase && (
+                        <button
+                          onClick={() => onNavigateToPurchase(r.purchaseId)}
+                          title="View Purchase Detail"
+                          className="w-7 h-7 flex items-center justify-center rounded-lg bg-indigo-50 text-indigo-500 hover:bg-indigo-100 hover:text-indigo-700 border border-indigo-100 transition-all active:scale-95 shadow-sm"
+                        >
+                          <Eye size={13} strokeWidth={2.5} />
+                        </button>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -440,6 +399,7 @@ export function SupplierPurchasesTable({ rows, loading }: SupplierPurchasesTable
 interface CustomerPurchasesTableProps {
   rows: any[];
   loading: boolean;
+  onNavigateToSale?: (id: string) => void;
 }
 
 function LocalStatusBadge({ status }: { status: string }) {
@@ -458,7 +418,7 @@ function LocalStatusBadge({ status }: { status: string }) {
   );
 }
 
-export function CustomerPurchasesTable({ rows, loading }: CustomerPurchasesTableProps) {
+export function CustomerPurchasesTable({ rows, loading, onNavigateToSale }: CustomerPurchasesTableProps) {
   return (
     <div className="flex flex-col h-full min-h-0 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden animate-in fade-in duration-300">
       <div className="flex-1 min-h-0 overflow-auto custom-scrollbar">
@@ -480,10 +440,11 @@ export function CustomerPurchasesTable({ rows, loading }: CustomerPurchasesTable
                 <tr className="sticky top-0 bg-slate-50/90 backdrop-blur-sm z-10 text-[9px] font-black text-slate-400 tracking-wider uppercase border-b border-slate-100 shadow-[0_1px_0_rgba(0,0,0,0.05)]">
                   <th className="px-5 py-3.5">Invoice Identity</th>
                   <th className="px-5 py-3.5">Order Date</th>
-                  <th className="px-5 py-3.5">Volume</th>
+                  <th className="px-5 py-3.5">Qty</th>
                   <th className="px-5 py-3.5">Financials</th>
                   <th className="px-5 py-3.5">Payment Summary</th>
                   <th className="px-5 py-3.5 text-right">Status</th>
+                  <th className="px-5 py-3.5 w-12"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -498,7 +459,8 @@ export function CustomerPurchasesTable({ rows, loading }: CustomerPurchasesTable
                   const total = Number(order.total_sellprice || order.grand_total || order.total_amount || 0);
                   const products = order.items || order.products || [];
                   const itemCount = order.total_quantity || products.length;
-                  const invoiceId = order.ui_id ? `INV-${order.ui_id}` : `#${order.id.slice(0, 8).toUpperCase()}`;
+                  const unit = products[0]?.product?.unit || products[0]?.unit || products[0]?.datas?.unit || (itemCount === 1 ? "Item" : "Units");
+                  const invoiceId = order.ui_id ? `Order #${order.ui_id}` : `#${order.id.slice(0, 8).toUpperCase()}`;
 
                   return (
                     <tr key={`${order.id}-${i}`} className="hover:bg-indigo-50/20 transition-colors border-l-[3px] border-l-indigo-400">
@@ -518,7 +480,7 @@ export function CustomerPurchasesTable({ rows, loading }: CustomerPurchasesTable
                       </td>
                       <td className="px-5 py-4 whitespace-nowrap">
                         <span className="px-2 py-0.5 rounded bg-slate-100 text-[10px] font-black text-slate-500">
-                          {itemCount} {itemCount === 1 ? "Item" : "Units"}
+                          {itemCount} {unit}
                         </span>
                       </td>
                       <td className="px-5 py-4 whitespace-nowrap font-black text-sm text-slate-800 tabular-nums">
@@ -536,7 +498,7 @@ export function CustomerPurchasesTable({ rows, loading }: CustomerPurchasesTable
                                     'bg-violet-400'
                                 }`} />
                               {mode.toUpperCase()}
-                              <span className="opacity-40">₹{Number(amount).toLocaleString('en-IN')}</span>
+                              <span className="ml-0.5">₹{Number(amount).toLocaleString('en-IN')}</span>
                             </div>
                           ))}
                           {!order.payments && <span className="text-[9px] font-bold text-slate-300 italic">No payment record</span>}
@@ -544,6 +506,17 @@ export function CustomerPurchasesTable({ rows, loading }: CustomerPurchasesTable
                       </td>
                       <td className="px-5 py-4 whitespace-nowrap text-right">
                         <LocalStatusBadge status={order.status || "Pending"} />
+                      </td>
+                      <td className="px-5 py-4">
+                        {onNavigateToSale && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); onNavigateToSale(order.id); }}
+                            title="View Sale Detail"
+                            className="w-7 h-7 flex items-center justify-center rounded-lg bg-blue-50 text-blue-500 hover:bg-blue-100 hover:text-blue-700 border border-blue-100 transition-all active:scale-95 shadow-sm"
+                          >
+                            <Eye size={13} strokeWidth={2.5} />
+                          </button>
+                        )}
                       </td>
                     </tr>
                   );
@@ -615,10 +588,10 @@ export function CustomerCollectionsTable({ rows, loading }: CustomerCollectionsT
                         ₹{clearedAmount.toLocaleString('en-IN')}
                       </td>
                       <td className="px-5 py-4 whitespace-nowrap">
-                        <div className="flex items-center gap-2 text-xs">
-                          <span className="text-slate-400 line-through opacity-70">₹{Number(h.outstanding_before || 0).toLocaleString('en-IN')}</span>
-                          <ArrowRight className="w-3 h-3 text-slate-300" />
-                          <span className="font-bold text-emerald-600">₹{Number(h.outstanding_after || 0).toLocaleString('en-IN')}</span>
+                        <div className="flex items-center gap-2.5 text-sm">
+                          <span className="font-black text-slate-800 line-through decoration-slate-500 decoration-2">₹{Number(h.outstanding_before || 0).toLocaleString('en-IN')}</span>
+                          <ArrowRight className="w-4 h-4 text-slate-600 stroke-[4px]" />
+                          <span className="font-black text-emerald-700">₹{Number(h.outstanding_after || 0).toLocaleString('en-IN')}</span>
                         </div>
                       </td>
                       <td className="px-5 py-4 whitespace-nowrap">

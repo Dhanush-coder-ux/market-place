@@ -1,9 +1,9 @@
 import { useState } from "react";
-import { 
-  Layers, 
-  Tag, 
-  Clock, 
-  ChevronRight, 
+import {
+  Layers,
+  Tag,
+  Clock,
+  ChevronRight,
   ChevronDown,
   Hash,
   Package,
@@ -24,20 +24,21 @@ const formatDate = (dateStr?: string) => {
   try {
     const date = new Date(dateStr);
     if (isNaN(date.getTime())) return dateStr;
-    return date.toLocaleDateString('en-GB', { 
-      day: '2-digit', 
-      month: 'short', 
-      year: 'numeric' 
+    return date.toLocaleDateString('en-GB', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric'
     });
   } catch (e) {
     return dateStr;
   }
 };
 
-const getStockStatus = (stock: number | string) => {
+const getStockStatus = (stock: number | string, reorderPoint?: number | string) => {
   const stockNum = Number(stock) || 0;
+  const rp = Number(reorderPoint) || 10;
   if (stockNum <= 0) return { label: '0 In Stock', color: 'text-rose-600 bg-rose-50 border-rose-200' };
-  if (stockNum <= 15) return { label: `${stockNum} Low Stock`, color: 'text-amber-600 bg-amber-50 border-amber-200' };
+  if (stockNum <= rp) return { label: `${stockNum} Low Stock`, color: 'text-amber-600 bg-amber-50 border-amber-200' };
   return { label: `${stockNum} In Stock`, color: 'text-emerald-600 bg-emerald-50 border-emerald-200' };
 };
 
@@ -85,7 +86,7 @@ export const BatchBadge = ({ expDate, qty }: { expDate?: string; qty: number }) 
 export const SerialBadgeList = ({ serials, title = "Serial Numbers" }: { serials: string[], title?: string }) => {
   const [showModal, setShowModal] = useState(false);
   if (!serials || serials.length === 0) return null;
-  
+
   const limit = 10;
   const visibleSerials = serials.slice(0, limit);
   const remaining = serials.length - limit;
@@ -99,7 +100,7 @@ export const SerialBadgeList = ({ serials, title = "Serial Numbers" }: { serials
           </span>
         ))}
         {remaining > 0 && (
-          <button 
+          <button
             onClick={(e) => { e.stopPropagation(); setShowModal(true); }}
             className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-blue-50 text-blue-600 border border-blue-100 hover:bg-blue-100 transition-colors"
           >
@@ -124,7 +125,7 @@ export const SerialBadgeList = ({ serials, title = "Serial Numbers" }: { serials
               <Hash size={20} />
             </div>
           </div>
-          
+
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 max-h-[50vh] overflow-y-auto p-1 custom-scrollbar">
             {serials.map((s, i) => (
               <div key={i} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white border border-slate-200 shadow-sm hover:border-blue-300 transition-colors group">
@@ -133,9 +134,9 @@ export const SerialBadgeList = ({ serials, title = "Serial Numbers" }: { serials
               </div>
             ))}
           </div>
-          
+
           <div className="pt-4 border-t border-slate-100 flex justify-end">
-            <button 
+            <button
               onClick={() => setShowModal(false)}
               className="px-6 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-[11px]   rounded-lg transition-all"
             >
@@ -190,10 +191,10 @@ export const BatchCards = ({ batches }: { batches: any | any[] }) => {
           const qty = Number(batch.stocks ?? batch.quantity ?? batch.qty ?? 0);
           const serials = extractSerials(batch.serial_numbers || batch.datas?.serial_numbers);
           const daysToExpiry = getDaysDiff(batch.expiry_date || batch.expiry);
-          
+
           return (
-            <div 
-              key={batch.id || idx} 
+            <div
+              key={batch.id || idx}
               className="bg-white border border-slate-200 rounded-lg p-2.5 shadow-sm hover:shadow-md hover:border-blue-300 transition-all flex flex-col gap-1.5"
             >
               <div className="flex items-center justify-between">
@@ -234,7 +235,7 @@ export const BatchCards = ({ batches }: { batches: any | any[] }) => {
 
       {remaining > 0 && !showAll && (
         <div className="mt-4 flex justify-center">
-          <button 
+          <button
             onClick={() => setShowAll(true)}
             className="flex items-center gap-2 px-6 py-2.5 bg-white border border-slate-200 text-slate-600 font-bold text-[11px]   rounded-lg hover:bg-slate-50 hover:border-blue-200 transition-all shadow-sm"
           >
@@ -262,9 +263,8 @@ const CopySKUButton = ({ val }: { val: string }) => {
     <button
       type="button"
       onClick={handleCopy}
-      className={`inline-flex items-center justify-center p-0.5 rounded transition-all duration-200 ${
-        copied ? "text-emerald-500 bg-emerald-55" : "text-slate-350 hover:text-blue-600 hover:bg-slate-100/80"
-      }`}
+      className={`inline-flex items-center justify-center p-0.5 rounded transition-all duration-200 ${copied ? "text-emerald-500 bg-emerald-55" : "text-slate-350 hover:text-blue-600 hover:bg-slate-100/80"
+        }`}
       title="Copy SKU"
     >
       {copied ? (
@@ -292,7 +292,7 @@ export const VariantRows = ({ combinations, baseSellPrice, baseBuyPrice }: { com
           const isLast = idx === combinations.length - 1;
           const combDatas = comb.datas || {};
           const attributes = comb.attributes || combDatas.attributes || combDatas.datas?.attributes || {};
-          
+
           // Improved variant label extraction based on sample response
           let variantLabel = comb.name || combDatas.name || 'Standard Variant';
           if (Object.keys(attributes).length > 0) {
@@ -308,7 +308,8 @@ export const VariantRows = ({ combinations, baseSellPrice, baseBuyPrice }: { com
           const hasBatches = batches.length > 0;
           const hasSerials = serials.length > 0;
           const stockNum = Number(comb.stocks ?? comb.stock ?? combDatas.stocks ?? combDatas.datas?.stocks ?? 0);
-          const stockStatus = getStockStatus(stockNum);
+          const reorderPoint = Number(comb.reorder_point ?? combDatas.reorder_point ?? combDatas.datas?.reorder_point ?? 0);
+          const stockStatus = getStockStatus(stockNum, reorderPoint);
           const sellPrice = comb.sell_price ?? comb.price ?? combDatas.sell_price ?? combDatas.datas?.sell_price ?? baseSellPrice;
           const buyPrice = comb.buy_price ?? combDatas.buy_price ?? combDatas.datas?.buy_price ?? baseBuyPrice ?? 0;
 
@@ -324,7 +325,7 @@ export const VariantRows = ({ combinations, baseSellPrice, baseBuyPrice }: { com
                   className={`flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 px-4 sm:px-5 py-3 ${hasBatches ? 'hover:bg-slate-50 cursor-pointer' : ''}`}
                   onClick={() => hasBatches && setExpandedVariant(isVarExpanded ? null : variantId)}
                 >
-                  <div className="flex items-center gap-3 sm:gap-4">
+                  <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
                     {/* Expand Icon for Batches */}
                     {hasBatches ? (
                       <div className={`w-6 h-6 rounded-lg flex items-center justify-center transition-all shrink-0 ${isVarExpanded ? "bg-blue-600 text-white shadow-lg shadow-blue-200" : "bg-slate-100 text-slate-500"}`}>
@@ -360,21 +361,23 @@ export const VariantRows = ({ combinations, baseSellPrice, baseBuyPrice }: { com
                       </div>
                     </div>
                   </div>
-                  
+
                   {/* Stats */}
-                  <div className="flex items-center justify-between sm:justify-end gap-6 md:gap-10 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-50">
-                    <div className="flex items-center gap-6 sm:gap-8">
-                      <div className="text-right min-w-[70px]">
-                        <p className="text-[9px] font-bold text-slate-400 leading-none mb-1">Buy Price</p>
-                        <p className="text-xs font-bold text-rose-500">{formatCurrency(buyPrice)}</p>
-                      </div>
-                      <div className="text-right min-w-[70px]">
-                        <p className="text-[9px] font-bold text-slate-400 leading-none mb-1">Sell Price</p>
-                        <p className="text-xs font-bold text-emerald-600">{formatCurrency(sellPrice)}</p>
-                      </div>
+                  <div className="flex items-center justify-end gap-6 sm:gap-8 md:gap-10 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-50">
+                    <div className="text-right w-[70px]">
+                      <p className="text-[9px] font-bold text-slate-400 leading-none mb-1">Buy Price</p>
+                      <p className="text-xs font-bold text-rose-500 tabular-nums">{formatCurrency(buyPrice)}</p>
                     </div>
-                    <div className="text-center min-w-[90px]">
-                      <p className="text-[9px] font-bold text-slate-400 leading-none mb-1.5">Status</p>
+                    <div className="text-right w-[70px]">
+                      <p className="text-[9px] font-bold text-slate-400 leading-none mb-1">Sell Price</p>
+                      <p className="text-xs font-bold text-emerald-600 tabular-nums">{formatCurrency(sellPrice)}</p>
+                    </div>
+                    <div className="text-center w-[70px]">
+                      <p className="text-[9px] font-bold text-slate-400 leading-none mb-1">Reorder Point</p>
+                      <p className="text-xs font-bold text-slate-700 tabular-nums">{reorderPoint || "—"}</p>
+                    </div>
+                    <div className="text-right w-[90px] flex flex-col items-end">
+                      <p className="text-[9px] font-bold text-slate-400 leading-none mb-1.5 text-right w-full">Status</p>
                       <span className={`inline-flex px-2 py-0.5 rounded-lg text-[10px] font-bold border ${stockStatus.color}`}>
                         {stockStatus.label}
                       </span>
@@ -385,12 +388,12 @@ export const VariantRows = ({ combinations, baseSellPrice, baseBuyPrice }: { com
                 {/* Serial Numbers - Always Visible */}
                 {hasSerials && (
                   <div className="px-5 pb-3 pt-2 border-t border-slate-50/50 bg-indigo-50/10">
-                     <div className="flex items-center justify-between mb-1">
-                       <p className="text-[9px] font-bold text-slate-400   flex items-center gap-1">
-                         <Hash size={10} className="text-indigo-400" /> Serial Numbers ({serials.length})
-                       </p>
-                     </div>
-                     <SerialBadgeList serials={serials} title={`Variant Serials: ${variantLabel}`} />
+                    <div className="flex items-center justify-between mb-1">
+                      <p className="text-[9px] font-bold text-slate-400   flex items-center gap-1">
+                        <Hash size={10} className="text-indigo-400" /> Serial Numbers ({serials.length})
+                      </p>
+                    </div>
+                    <SerialBadgeList serials={serials} title={`Variant Serials: ${variantLabel}`} />
                   </div>
                 )}
 

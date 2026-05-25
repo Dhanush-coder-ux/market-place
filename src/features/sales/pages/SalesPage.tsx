@@ -236,7 +236,7 @@ const SalesListPage: React.FC = () => {
           <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
           <input
             className="w-full h-8 pl-8 pr-3 text-[12px] font-medium text-slate-700 bg-slate-50 border border-slate-200 rounded-md placeholder:text-slate-400 focus:outline-none focus:border-slate-300 focus:bg-white transition-colors"
-            placeholder="Search invoice or customer…"
+            placeholder="Search order or customer…"
             value={search}
             onChange={e => setSearch(e.target.value)}
           />
@@ -335,7 +335,7 @@ const SalesListPage: React.FC = () => {
           <table className="w-full border-collapse table-fixed">
             <thead className="sticky top-0 z-10 bg-slate-50 border-b border-slate-100">
               <tr>
-                <th className="w-[110px] p-2.5 px-3 text-[10px] font-bold tracking-wider text-slate-400 uppercase text-left">Invoice</th>
+                <th className="w-[110px] p-2.5 px-3 text-[10px] font-bold tracking-wider text-slate-400 uppercase text-left">Order ID</th>
                 <th className="w-[160px] p-2.5 px-3 text-[10px] font-bold tracking-wider text-slate-400 uppercase text-left">Customer</th>
                 <th className="w-[100px] p-2.5 px-3 text-[10px] font-bold tracking-wider text-slate-400 uppercase text-left">Origin</th>
                 <th className="w-[110px] p-2.5 px-3 text-[10px] font-bold tracking-wider text-slate-400 uppercase text-left">Payment</th>
@@ -373,7 +373,7 @@ const SalesListPage: React.FC = () => {
                   <tr key={sale.id} className="group hover:bg-slate-50/60 transition-colors">
                     <td className="p-2.5 px-3 border-b border-slate-50">
                       <div>
-                        <span className="font-mono text-[11px] font-semibold text-slate-800 block">INV-{sale.ui_id}</span>
+                        <span className="font-mono text-[11px] font-semibold text-slate-800 block">Order #{sale.ui_id}</span>
                         <div className="flex gap-1 mt-1 flex-wrap">
                           {sale.origin === "Sales Return" && <span className="text-[9px] font-bold text-red-600 bg-red-50 px-1 py-0.5 rounded">Return</span>}
                           {refundedCount > 0 && <span className="text-[9px] font-bold text-orange-600 bg-orange-50 px-1 py-0.5 rounded">{refundedCount} Refunded</span>}
@@ -502,7 +502,7 @@ const ReturnSearchPortal: React.FC<ReturnSearchPortalProps> = ({ isOpen, onClose
               <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
               <input
                 autoFocus
-                placeholder="Invoice ID or customer name…"
+                placeholder="Order ID or customer name…"
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
                 className="w-full h-12 pl-11 pr-4 text-[13px] border-2 border-slate-100 rounded-lg outline-none bg-slate-50/50 text-slate-800 transition-all focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/5 placeholder:text-slate-400 font-bold"
@@ -516,7 +516,7 @@ const ReturnSearchPortal: React.FC<ReturnSearchPortalProps> = ({ isOpen, onClose
                   <div className="w-10 h-10 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center flex-shrink-0 group-hover:bg-blue-50 group-hover:border-blue-200 transition-colors"><Receipt size={18} className="text-slate-400 group-hover:text-blue-500" /></div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between mb-0.5">
-                      <p className="text-[14px] font-black text-slate-900 group-hover:text-blue-600 transition-colors tracking-tight">INV-{sale.ui_id}</p>
+                      <p className="text-[14px] font-black text-slate-900 group-hover:text-blue-600 transition-colors tracking-tight">Order #{sale.ui_id}</p>
                       <span className="font-mono text-[13px] font-black text-slate-900 group-hover:text-blue-700">{fmt(sale.total_sellprice)}</span>
                     </div>
                     <p className="text-[11px] text-slate-500 truncate font-bold uppercase tracking-tight opacity-70 group-hover:opacity-100">{customerMap[sale.customer_id] || sale.customer_id} · {sale.created_at.split('T')[0]}</p>
@@ -535,7 +535,7 @@ const ReturnSearchPortal: React.FC<ReturnSearchPortalProps> = ({ isOpen, onClose
                 <div className="py-12 text-center animate-in fade-in zoom-in-95">
                   <div className="w-16 h-16 rounded-full bg-blue-50 flex items-center justify-center mx-auto mb-4 border-2 border-blue-100/50 shadow-lg shadow-blue-500/10"><RotateCcw size={28} className="text-blue-500" /></div>
                   <p className="text-[14px] font-black text-slate-800">Find an order to return</p>
-                  <p className="text-[11px] text-slate-400 mt-1 font-bold uppercase tracking-widest">Search by Invoice or Name</p>
+                  <p className="text-[11px] text-slate-400 mt-1 font-bold uppercase tracking-widest">Search by Order ID or Name</p>
                 </div>
               )}
             </div>

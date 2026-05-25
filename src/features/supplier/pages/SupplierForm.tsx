@@ -151,6 +151,8 @@ const SupplierForm = () => {
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!formData.supplier_name) return showToast("Supplier name is required", "error");
+    if (!formData.phone) return showToast("Phone number is required", "error");
+    if (!formData.gst_number) return showToast("GSTIN / Tax ID is required", "error");
 
     setSubmitting(true);
     const payload: any = {
@@ -159,12 +161,15 @@ const SupplierForm = () => {
       email: formData.email || null,
       mobile_number: formData.phone,
       gst_no: formData.gst_number,
-      contact_info: {
-        name: formData.contact_name,
-        mobile_number: formData.contact_mobile,
-        email: formData.contact_email || null,
-        type: formData.type,
-      },
+      // Only include contact_info when a contact name is provided
+      ...(formData.contact_name.trim() && {
+        contact_info: {
+          name: formData.contact_name,
+          mobile_number: formData.contact_mobile || null,
+          email: formData.contact_email || null,
+          type: formData.type,
+        },
+      }),
       datas: {
         internal_notes: formData.notes,
         address: {
@@ -227,6 +232,7 @@ const SupplierForm = () => {
               <div className="md:col-span-2">
                 <Input
                   label="Supplier / Business Name"
+                  required
                   tooltip="The legal registered name of the supplier business."
                   name="supplier_name"
                   value={formData.supplier_name}
@@ -237,31 +243,36 @@ const SupplierForm = () => {
               </div>
               <Input
                 label="Contact Person Name"
-                tooltip="Name of the primary point of contact at this business."
+                tooltip="Name of the primary point of contact at this business. Fill this to unlock contact email & mobile."
                 name="contact_name"
                 value={formData.contact_name}
                 onChange={handleChange}
-                placeholder="Full Name"
+                placeholder="Full Name (optional)"
                 leftIcon={<User size={16} className="text-slate-400" />}
               />
-              <Input
-                label="Contact Person Email"
-                name="contact_email"
-                type="email"
-                value={formData.contact_email}
-                onChange={handleChange}
-                placeholder="contact@example.com"
-                leftIcon={<Mail size={16} className="text-slate-400" />}
-              />
-              <Input
-                label="Contact Person Mobile"
-                tooltip="Mobile number of the primary contact person."
-                name="contact_mobile"
-                value={formData.contact_mobile}
-                onChange={handleChange}
-                placeholder="+91 00000 00000"
-                leftIcon={<Phone size={16} className="text-slate-400" />}
-              />
+              {/* Show contact email & mobile only when contact name is provided */}
+              {formData.contact_name.trim() && (
+                <>
+                  <Input
+                    label="Contact Person Email"
+                    name="contact_email"
+                    type="email"
+                    value={formData.contact_email}
+                    onChange={handleChange}
+                    placeholder="contact@example.com"
+                    leftIcon={<Mail size={16} className="text-slate-400" />}
+                  />
+                  <Input
+                    label="Contact Person Mobile"
+                    tooltip="Mobile number of the primary contact person."
+                    name="contact_mobile"
+                    value={formData.contact_mobile}
+                    onChange={handleChange}
+                    placeholder="+91 00000 00000"
+                    leftIcon={<Phone size={16} className="text-slate-400" />}
+                  />
+                </>
+              )}
               <div className="space-y-1.5">
                 <label className="text-[10px] font-black text-slate-400   ml-1">Business Type</label>
                 <ReusableSelect
@@ -303,6 +314,7 @@ const SupplierForm = () => {
               />
               <Input
                 label="Phone Number"
+                required
                 tooltip="Primary business phone number for general communication."
                 name="phone"
                 value={formData.phone}
@@ -362,6 +374,7 @@ const SupplierForm = () => {
             <div className="space-y-6">
               <Input
                 label="GSTIN / Tax ID"
+                required
                 tooltip="Goods and Services Tax Identification Number of the supplier."
                 name="gst_number"
                 value={formData.gst_number}

@@ -543,7 +543,7 @@ export const ReturnFlow: React.FC<ReturnFlowProps> = ({ sale, onClose, onRefresh
           <X size={16} />
         </button>
       )}
-      <StepHeader step={state.step} mode={state.mode} invoice={`INV-${sale.ui_id}`} />
+      <StepHeader step={state.step} mode={state.mode} invoice={`Order #${sale.ui_id}`} />
 
       {!canReturn ? (
         <div className="flex-1 flex flex-col items-center justify-center gap-4 p-12 px-8 text-center">
@@ -782,7 +782,7 @@ export const ReturnFlow: React.FC<ReturnFlowProps> = ({ sale, onClose, onRefresh
                     </p>
                   </div>
                   <div className="w-full border-2 border-slate-100 rounded-lg overflow-hidden shadow-xl shadow-slate-100/50">
-                    {[{ label: "Invoice Number", value: `INV-${sale.ui_id}` }, { label: "Return Mode", value: state.mode === "refund" ? "Refund" : "Exchange" }, ...(state.mode === "refund" ? [{ label: "Amount Refunded", value: fmt(totals.returnValue) }] : totals.diff !== 0 ? [{ label: totals.diff > 0 ? "Balance Collected" : "Balance Refunded", value: fmt(Math.abs(totals.diff)) }] : [])].map((row, i) => (
+                    {[{ label: "Order ID", value: `Order #${sale.ui_id}` }, { label: "Return Mode", value: state.mode === "refund" ? "Refund" : "Exchange" }, ...(state.mode === "refund" ? [{ label: "Amount Refunded", value: fmt(totals.returnValue) }] : totals.diff !== 0 ? [{ label: totals.diff > 0 ? "Balance Collected" : "Balance Refunded", value: fmt(Math.abs(totals.diff)) }] : [])].map((row, i) => (
                       <div key={row.label} className={`flex justify-between p-3.5 px-5 bg-white ${i > 0 ? 'border-t border-slate-50' : ''}`}>
                         <span className="text-[12px] text-slate-400 font-bold uppercase tracking-tight">{row.label}</span>
                         <span className="font-mono text-[13px] font-black text-slate-900">{row.value}</span>

@@ -22,7 +22,7 @@ export const Tooltip = ({ children, message, className = "" }: TooltipProps) => 
       >
         <div className="bg-gray-900 text-white text-[11px] font-medium px-2.5 py-1.5 
                         rounded-lg shadow-xl border border-white/10 whitespace-normal 
-                        min-w-[120px] max-w-[200px] text-center leading-tight">
+                        min-w-[120px] max-w-[200px] text-center leading-tight normal-case tracking-normal">
           {message}
         </div>
 

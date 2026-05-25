@@ -54,6 +54,7 @@ export interface BillingItem {
   manufacturingDate?: string;
   expiryDate?: string;
   requireSerial?: boolean;
+  maxStock?: number;
 }
 
 // Alias for convenience if used in shopping cart contexts

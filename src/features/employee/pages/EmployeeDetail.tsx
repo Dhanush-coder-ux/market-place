@@ -192,8 +192,8 @@ export default function EmployeeDetail() {
                     onClick={() => setViewValue({ label: "Joining Date", value: String(employee.joined_date || "—") })}
                   />
                   <DetailItem
-                    icon={Database} label="Salary Range" value={employee.datas?.salary_rage ? `₹${employee.datas.salary_rage}` : "—"}
-                    onClick={() => setViewValue({ label: "Salary Range", value: String(employee.datas?.salary_rage || "—") })}
+                    icon={Database} label="Salary Range" value={employee.datas?.salary_range ? `₹${employee.datas.salary_range}` : "—"}
+                    onClick={() => setViewValue({ label: "Salary Range", value: String(employee.datas?.salary_range || "—") })}
                   />
                   <DetailItem
                     icon={MapPin} label="Full Address" value={employee.datas?.address?.full_address || "—"}

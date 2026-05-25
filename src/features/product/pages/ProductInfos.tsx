@@ -32,16 +32,16 @@ const formatCurrency = (amount?: any) => {
 };
 
 const columnLabels: Record<string, string> = {
-  barcode: "SKU / Barcode",
-  buy_price: "Buy",
-  sell_price: "Sell",
+  barcode: "Barcode",
+  buy_price: "Buy Price",
+  sell_price: "Sell Price",
   stocks: "Stock",
   category: "Category",
   unit: "Unit",
   brand: "Brand",
   supplier: "Supplier",
   serial_number: "Serials",
-  reorder_point: "ROP",
+  reorder_point: "Reorder Point",
   status: "Status",
 };
 
@@ -327,12 +327,12 @@ const ProductRow = React.memo(
 
             if (key === "buy_price" || key === "sell_price" || key === "price") {
               return (
-                <td key={key} className="px-3 py-2.5 whitespace-nowrap text-right">
+                <td key={key} className="px-3 py-2.5 whitespace-nowrap">
                   <span
                     className={`tabular-nums ${
                       key === "sell_price"
-                        ? "text-[13px] font-semibold text-slate-700"
-                        : "text-[12px] font-medium text-slate-400"
+                        ? "text-[13px] font-bold text-slate-800"
+                        : "text-[13px] font-semibold text-slate-700"
                     }`}
                   >
                     {hasVariants ? "—" : formatCurrency(value)}
@@ -343,7 +343,7 @@ const ProductRow = React.memo(
 
             if (key === "stocks" || key === "quantity") {
               return (
-                <td key={key} className="px-3 py-2.5 whitespace-nowrap text-right">
+                <td key={key} className="px-3 py-2.5 whitespace-nowrap">
                   <span className="text-[13px] font-semibold text-slate-800 tabular-nums">
                     {value}
                   </span>
@@ -353,9 +353,9 @@ const ProductRow = React.memo(
 
             if (key === "reorder_point") {
               return (
-                <td key={key} className="px-3 py-2.5 whitespace-nowrap text-center">
-                  <span className="text-[11px] font-medium text-slate-400 tabular-nums">
-                    {value !== undefined && value !== null ? value : "—"}
+                <td key={key} className="px-3 py-2.5 whitespace-nowrap">
+                  <span className="text-[13px] font-semibold text-slate-700 tabular-nums">
+                    {hasVariants ? "—" : (value !== undefined && value !== null ? value : "—")}
                   </span>
                 </td>
               );
@@ -369,7 +369,7 @@ const ProductRow = React.memo(
               );
               const status = getStockStatus(stocks, reorderPoint);
               return (
-                <td key={key} className="px-3 py-2.5 whitespace-nowrap text-center">
+                <td key={key} className="px-3 py-2.5 whitespace-nowrap">
                   <span
                     className={`inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-medium border leading-none ${status.color}`}
                   >
@@ -884,13 +884,7 @@ const ProductInfos = () => {
                   return (
                     <th
                       key={key}
-                      className={`px-3 py-2.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wide ${
-                        key === "stocks" || key === "sell_price" || key === "buy_price" || key === "price"
-                          ? "text-right"
-                          : key === "reorder_point" || key === "status"
-                          ? "text-center"
-                          : ""
-                      }`}
+                      className="px-3 py-2.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wide"
                     >
                       {getColumnLabel(key)}
                     </th>

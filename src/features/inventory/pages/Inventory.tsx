@@ -3,7 +3,6 @@ import {
   X,
   Eye,
   Hash,
-  Info,
   ChevronDown,
   ChevronRight,
   Package,
@@ -252,7 +251,6 @@ const ProductRow = React.memo(
     const serials = parseData(
       datas.serial_numbers || item.serial_numbers || item.serial_number
     );
-    const variantTypes = datas.variantTypes || datas.variant_types || [];
 
     const hasVariants =
       (datas.has_variants ||
@@ -446,7 +444,7 @@ const ProductRow = React.memo(
 
           {/* Buy price */}
           <td className="px-3 py-2.5 text-right">
-            <span className="text-[12px] font-medium text-slate-400 tabular-nums">
+            <span className="text-[13px] font-semibold text-slate-700 tabular-nums">
               {hasVariants ? "—" : formatCurrency(item.buy_price)}
             </span>
           </td>
@@ -460,22 +458,22 @@ const ProductRow = React.memo(
 
           {/* Stock */}
           <td className="px-3 py-2.5 text-right">
-            <div className="flex flex-col items-end gap-0.5">
-              <span className="text-[13px] font-semibold text-slate-800 tabular-nums leading-none">
-                {stockNumber}
-              </span>
-              {(datas.unit || (item as any).unit) && (
-                <span className="text-[10px] text-slate-400 font-medium leading-none">
-                  {datas.unit || (item as any).unit}
-                </span>
-              )}
-            </div>
+            <span className="text-[13px] font-semibold text-slate-800 tabular-nums">
+              {stockNumber}
+            </span>
+          </td>
+
+          {/* Unit */}
+          <td className="px-3 py-2.5">
+            <span className="text-[12px] font-medium text-slate-600">
+              {datas.unit || (item as any).unit || "—"}
+            </span>
           </td>
 
           {/* Reorder point */}
           <td className="px-3 py-2.5 text-center">
-            <span className="text-[11px] text-slate-400 tabular-nums font-medium">
-              {reorderPoint ?? "—"}
+            <span className="text-[13px] font-semibold text-slate-700 tabular-nums">
+              {hasVariants ? "—" : (reorderPoint ?? "—")}
             </span>
           </td>
 
@@ -514,64 +512,10 @@ const ProductRow = React.memo(
         {/* Expanded row */}
         {isExpanded && isExpandable && (
           <tr className="bg-slate-50/40">
-            <td colSpan={11} className="px-0 py-0">
+            <td colSpan={12} className="px-0 py-0">
               <div className="ml-10 mr-4 my-3 space-y-3 border-l border-slate-100 pl-6">
-                {/* Product overview */}
-                {(datas.description || item.description || datas.unit) && (
-                  <div className="bg-white border border-slate-100 rounded-lg p-3">
-                    <p className="text-[10px] font-semibold text-slate-400 mb-2 flex items-center gap-1.5 uppercase tracking-wide">
-                      <Info size={10} className="text-slate-400" />
-                      Overview
-                    </p>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                      {datas.unit && (
-                        <div className="bg-slate-50 rounded-md px-3 py-2">
-                          <p className="text-[9px] font-semibold text-slate-400 uppercase tracking-wide mb-0.5">
-                            Unit
-                          </p>
-                          <p className="text-[12px] font-medium text-slate-700">
-                            {datas.unit}
-                          </p>
-                        </div>
-                      )}
-                      {(datas.description || item.description) && (
-                        <div className="bg-slate-50 rounded-md px-3 py-2">
-                          <p className="text-[9px] font-semibold text-slate-400 uppercase tracking-wide mb-0.5">
-                            Description
-                          </p>
-                          <p className="text-[12px] font-medium text-slate-600 line-clamp-2">
-                            {datas.description || item.description}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
 
-                {/* Variant configuration */}
-                {hasVariants && variantTypes.length > 0 && (
-                  <div className="bg-white border border-slate-100 rounded-lg p-3">
-                    <p className="text-[10px] font-semibold text-slate-400 mb-2 flex items-center gap-1.5 uppercase tracking-wide">
-                      <Layers size={10} className="text-slate-400" />
-                      Configuration
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      {variantTypes.map((vt: any) => (
-                        <div
-                          key={vt.id}
-                          className="bg-slate-50 border border-slate-100 rounded-md px-3 py-1.5"
-                        >
-                          <p className="text-[9px] font-semibold text-slate-400 uppercase tracking-wide mb-0.5">
-                            {vt.name}
-                          </p>
-                          <p className="text-[12px] font-medium text-slate-700">
-                            {(vt.values as string[]).join(", ")}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+
 
                 {/* Serial numbers */}
                 {!hasVariants && !hasBatches && hasSerials && (
@@ -827,22 +771,25 @@ const InventoryPage = () => {
                     Serials
                   </th>
                   <th className="px-3 py-2.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wide text-right">
-                    Buy
+                    Buy Price
                   </th>
                   <th className="px-3 py-2.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wide text-right">
-                    Sell
+                    Sell Price
                   </th>
                   <th className="px-3 py-2.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wide text-right">
                     Stock
                   </th>
+                  <th className="px-3 py-2.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wide">
+                    Unit
+                  </th>
                   <th className="px-3 py-2.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wide text-center">
-                    ROP
+                    Reorder Point
                   </th>
                   <th className="px-3 py-2.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wide">
                     Status
                   </th>
                   <th className="px-3 py-2.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wide text-right">
-                    Updated
+                    Last updated
                   </th>
                   <th className="px-3 py-2.5 w-10 text-center text-[10px] font-semibold text-slate-400 uppercase tracking-wide">
                   </th>

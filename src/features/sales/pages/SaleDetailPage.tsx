@@ -4,7 +4,7 @@ import {
   ArrowLeft, Package, User, Hash,
   RotateCcw, Calendar, CreditCard, CheckCircle2, Clock,
   XCircle, AlertCircle, Banknote, Smartphone,
-  TrendingUp, Tag, 
+  TrendingUp,
   Database,
   Search
 } from "lucide-react";
@@ -17,27 +17,28 @@ import { ReturnModal } from "../components/ReturnOrderFlow";
 
 /* ── helpers ── */
 const fmt = (n: number) => `₹${n.toLocaleString("en-IN")}`;
-const ITEM_COLORS = ["#dbeafe", "#dcfce7", "#fef3c7", "#fce7f3", "#ede9fe", "#ffedd5", "#f0fdf4", "#ecfeff"];
 
 type SaleItem = {
   id: string; name: string; sku: string; quantity: number; returnedQty?: number; reason?: string;
-  unitPrice: number; buyPrice: number; imageColor: string;
+  unitPrice: number; buyPrice: number;
   status?: string; serial_numbers?: string[];
+  unit: string;
 };
 
 const generateItems = (sale: OrderResponse, productMap: Record<string, string> = {}): SaleItem[] =>
-  (sale.items || []).map((item, i) => {
-    const base = productMap[item.inventory_id] || item.barcode || `Item ${i + 1}`;
-    return {
-      id: item.id,
-      name: item.status === "REFUNDED" ? `(Refunded) ${base}` : item.status === "EXCHANGED" ? `(Exchanged) ${base}` : base,
-      sku: item.barcode?.trim() || item.inventory_id.slice(-6),
-      quantity: item.quantity, returnedQty: (item as any).returned_quantity, reason: (item as any).reason,
-      unitPrice: item.sell_price, buyPrice: item.buy_price,
-      imageColor: ITEM_COLORS[i % ITEM_COLORS.length],
-      status: item.status, serial_numbers: item.serial_numbers || [],
-    } as any;
-  });
+  (sale.items || []).map((i: any) => ({
+    id: i.id,
+    name: productMap[i.inventory_id] || "Unknown Item",
+    sku: i.barcode?.trim() || i.inventory_id?.slice(-6) || "N/A",
+    quantity: i.quantity,
+    returnedQty: i.returned_quantity || 0,
+    unitPrice: i.sell_price,
+    buyPrice: i.buy_price,
+    status: i.status || "COMPLETED",
+    reason: i.reason,
+    serial_numbers: i.serial_numbers || [],
+    unit: i.product?.unit || i.unit || i.datas?.unit || "UNIT"
+  }));
 
 const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
   const cfg: Record<string, { bg: string; color: string; icon: React.ReactNode }> = {
@@ -114,8 +115,6 @@ const SaleDetailPage: React.FC = () => {
 
   const items = generateItems(sale, productMap);
   const subtotal = items.reduce((s, i) => s + i.unitPrice * i.quantity, 0);
-  const totalTax = (sale as any).total_tax || 0;
-  const totalDiscount = (sale as any).total_discount || 0;
   const canReturn = sale.status === "Completed" && sale.origin !== "Sales Return";
   const customerName = customerMap[sale.customer_id] || "Walk-in Customer";
   const dateStr = sale.created_at.split("T")[0];
@@ -131,14 +130,17 @@ const SaleDetailPage: React.FC = () => {
     })
     : [{ label: sale.payment_method || "Other", amount: sale.total_sellprice }];
 
+  const totalPaid = paymentsDetail.reduce((sum, p) => sum + p.amount, 0);
+  const outstanding = Math.max(0, sale.total_sellprice - totalPaid);
+
   return (
     <div className="flex-1 flex flex-col min-h-0 h-full bg-slate-50/50 font-sans text-slate-900 overflow-hidden relative">
       
       {/* Profile Header Card */}
       <div className="flex-none p-1 pb-0">
         <ProfileHeaderCard
-          name={`Invoice INV-${sale.ui_id}`}
-          initials="INV"
+          name={`Order #${sale.ui_id}`}
+          initials="ORD"
           subText={`ID: ${sale.id}`}
           badges={[
             { text: sale.status, variant: sale.status === "Completed" ? "success" : sale.status === "Cancelled" ? "danger" : "warning", showPulse: sale.status === "Pending" },
@@ -214,14 +216,6 @@ const SaleDetailPage: React.FC = () => {
                   className="flex-1 min-w-[140px]"
                 />
                 <StatCard
-                  icon={Tag}
-                  label="Discount"
-                  value={fmt(totalDiscount)}
-                  iconBg="bg-rose-50 text-rose-600"
-                  valueClassName="text-rose-600"
-                  className="flex-1 min-w-[140px]"
-                />
-                <StatCard
                   icon={TrendingUp}
                   label="Status"
                   value={sale.status}
@@ -236,8 +230,6 @@ const SaleDetailPage: React.FC = () => {
                   <SectionCard title="Financial Summary">
                     <div className="space-y-1">
                       <InfoRow label="Subtotal" value={fmt(subtotal)} />
-                      {totalDiscount > 0 && <InfoRow label="Discount" value={<span className="text-red-500">-{fmt(totalDiscount)}</span>} />}
-                      {totalTax > 0 && <InfoRow label="Tax" value={<span className="text-slate-700">+{fmt(totalTax)}</span>} />}
                       <div className="mt-4 pt-4 border-t-2 border-slate-100 border-dashed flex justify-between items-center">
                         <span className="text-sm font-black text-slate-800 uppercase tracking-wider">Grand Total</span>
                         <span className="text-xl font-black text-blue-600 tabular-nums">{fmt(sale.total_sellprice)}</span>
@@ -262,20 +254,6 @@ const SaleDetailPage: React.FC = () => {
                       {exchanged > 0 && <InfoRow label="Exchanged Items" value={<span className="text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md text-[10px] font-black">{exchanged}</span>} />}
                     </div>
                   </SectionCard>
-
-                  <SectionCard title="Actions">
-                    <button
-                      disabled={!canReturn}
-                      onClick={() => setIsReturnOpen(true)}
-                      className={`flex items-center justify-center gap-2 w-full py-2.5 rounded-lg text-[11px] font-black transition-all shadow-sm ${canReturn
-                          ? "bg-red-50 text-red-600 hover:bg-red-100 border border-red-100 hover:border-red-200 shadow-red-50 active:scale-[0.98]"
-                          : "bg-slate-50 text-slate-300 border border-slate-100 cursor-not-allowed opacity-70"
-                        }`}
-                    >
-                      <RotateCcw size={14} />
-                      {sale.origin === "Sales Return" ? "RETURN ORDER" : canReturn ? "PROCESS RETURN" : `RETURN UNAVAILABLE`}
-                    </button>
-                  </SectionCard>
                 </div>
               </div>
             </div>
@@ -291,6 +269,7 @@ const SaleDetailPage: React.FC = () => {
                     <tr className="bg-slate-50/50 border-b border-slate-100">
                       <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em]">Product Details</th>
                       <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-center">Qty</th>
+                      <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-center">Unit</th>
                       <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-right">Unit Price</th>
                       <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-right">Total</th>
                     </tr>
@@ -300,10 +279,7 @@ const SaleDetailPage: React.FC = () => {
                       <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
-                            <div
-                              className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0 border"
-                              style={{ backgroundColor: item.imageColor + "33", borderColor: item.imageColor + "66" }}
-                            >
+                            <div className="w-10 h-10 rounded-lg flex items-center justify-center font-bold text-slate-700 bg-slate-100 border border-slate-200">
                               <Package size={16} className="text-slate-500" />
                             </div>
                             <div className="min-w-0">
@@ -335,6 +311,9 @@ const SaleDetailPage: React.FC = () => {
                         <td className="px-6 py-4 text-center">
                           <span className="text-xs font-black text-slate-600">{Number(item.quantity.toFixed(2))}</span>
                         </td>
+                        <td className="px-6 py-4 text-center">
+                          <span className="text-[10px] font-black text-slate-500 uppercase px-2 py-0.5 rounded bg-slate-100">{item.unit}</span>
+                        </td>
                         <td className="px-6 py-4 text-right">
                           <span className="text-xs font-bold text-slate-500 tabular-nums">{fmt(item.unitPrice)}</span>
                         </td>
@@ -351,13 +330,14 @@ const SaleDetailPage: React.FC = () => {
             {sale.exchanged_items?.map((exch, idx) => {
               const replacementItems = generateItems(exch.replacement_order, productMap);
               return (
-                <SectionCard key={idx} title={`Replacement Order #INV-${exch.replacement_order.ui_id}`} className="p-0 overflow-hidden border-blue-100">
+                <SectionCard key={idx} title={`Replacement Order #${exch.replacement_order.ui_id}`} className="p-0 overflow-hidden border-blue-100">
                   <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
                       <thead>
                         <tr className="bg-blue-50/30 border-b border-blue-100/50">
                           <th className="px-6 py-3 text-[10px] font-black text-blue-400 uppercase tracking-[0.15em]">Replacement Product</th>
                           <th className="px-6 py-3 text-[10px] font-black text-blue-400 uppercase tracking-[0.15em] text-center">Qty</th>
+                          <th className="px-6 py-3 text-[10px] font-black text-blue-400 uppercase tracking-[0.15em] text-center">Unit</th>
                           <th className="px-6 py-3 text-[10px] font-black text-blue-400 uppercase tracking-[0.15em] text-right">Unit Price</th>
                           <th className="px-6 py-3 text-[10px] font-black text-blue-400 uppercase tracking-[0.15em] text-right">Total</th>
                         </tr>
@@ -378,6 +358,9 @@ const SaleDetailPage: React.FC = () => {
                             </td>
                             <td className="px-6 py-4 text-center">
                               <span className="text-xs font-black text-slate-600">{Number(item.quantity.toFixed(2))}</span>
+                            </td>
+                            <td className="px-6 py-4 text-center">
+                              <span className="text-[10px] font-black text-blue-500 uppercase px-2 py-0.5 rounded bg-blue-50 border border-blue-100">{item.unit}</span>
                             </td>
                             <td className="px-6 py-4 text-right">
                               <span className="text-xs font-bold text-slate-500 tabular-nums">{fmt(item.unitPrice)}</span>
@@ -413,8 +396,41 @@ const SaleDetailPage: React.FC = () => {
                 </div>
               </SectionCard>
 
-              <SectionCard title="Payment Breakdown">
-                <div className="space-y-4">
+              <div className="space-y-4">
+                <SectionCard title="Payment Status">
+                  {outstanding > 0 ? (
+                    totalPaid === 0 ? (
+                      <div className="flex flex-col items-center justify-center p-6 bg-rose-50/50 border border-rose-100 rounded-xl">
+                        <div className="w-14 h-14 rounded-full bg-rose-500 text-white flex items-center justify-center mb-4 shadow-sm shadow-rose-200 ring-2 ring-white">
+                          <Clock size={28} />
+                        </div>
+                        <span className="text-xl font-black tracking-tight text-rose-700">Unpaid</span>
+                        <p className="text-xs font-bold text-rose-600 mt-2">Outstanding: {fmt(outstanding)}</p>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center p-6 bg-amber-50/50 border border-amber-100 rounded-xl">
+                        <div className="w-14 h-14 rounded-full bg-amber-500 text-white flex items-center justify-center mb-4 shadow-sm shadow-amber-200 ring-2 ring-white">
+                          <TrendingUp size={28} />
+                        </div>
+                        <span className="text-xl font-black tracking-tight text-amber-700">Partially Paid</span>
+                        <div className="text-center mt-3 space-y-1">
+                          <p className="text-[11px] font-semibold text-slate-500">Paid: {fmt(totalPaid)}</p>
+                          <p className="text-xs font-bold text-amber-600">Outstanding: {fmt(outstanding)}</p>
+                        </div>
+                      </div>
+                    )
+                  ) : (
+                    <div className="flex flex-col items-center justify-center p-6 bg-emerald-50/50 border border-emerald-100 rounded-xl">
+                      <div className="w-14 h-14 rounded-full bg-emerald-500 text-white flex items-center justify-center mb-4 shadow-sm shadow-emerald-200 ring-2 ring-white">
+                        <CheckCircle2 size={28} />
+                      </div>
+                      <span className="text-xl font-black tracking-tight text-emerald-700">Paid</span>
+                      <p className="text-[10px] font-bold text-slate-400 mt-2 uppercase tracking-widest">Completed</p>
+                    </div>
+                  )}
+                </SectionCard>
+
+                <SectionCard title="Payment Breakdown">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {paymentsDetail.map((p, idx) => (
                       <div key={idx} className="bg-slate-50 rounded-lg p-4 border border-slate-100 flex flex-col gap-2">
@@ -426,8 +442,8 @@ const SaleDetailPage: React.FC = () => {
                       </div>
                     ))}
                   </div>
-                </div>
-              </SectionCard>
+                </SectionCard>
+              </div>
             </div>
           )}
 

@@ -44,12 +44,14 @@ const QtyAdjuster = ({
   value,
   onChange,
   disabled,
-  isEditable
+  isEditable,
+  max
 }: {
   value: number;
   onChange: (v: number) => void;
   disabled: boolean;
   isEditable: boolean;
+  max?: number;
 }) => {
   if (!isEditable) {
     return (
@@ -78,6 +80,7 @@ const QtyAdjuster = ({
         type="button"
         className="w-7 h-full flex items-center justify-center border-none bg-transparent cursor-pointer text-slate-400 hover:bg-slate-50 hover:text-slate-600 transition-colors active:scale-90"
         onClick={() => onChange(value + 1)}
+        disabled={typeof max === 'number' && value >= max}
       >
         <Plus size={10} />
       </button>
@@ -200,6 +203,7 @@ const BillingRow = React.memo(({
             onChange={(qty) => onQtyChange(item.id, qty)}
             disabled={!isQtyEditable}
             isEditable={isQtyEditable}
+            max={item.maxStock}
           />
         </div>
       </td>
@@ -255,32 +259,48 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
     try {
       const res = await getData(ENDPOINTS.INVENTORIES, { limit: "10", offset: "1", q, shop_id: SHOP_ID, is_active: "true" }, { signal });
       const data = res?.data ? (Array.isArray(res.data) ? res.data : [res.data]) : [];
-      return data.map((p: any) => ({
-        ...p,
-        // Map backend fields based on provided JSON structure
-        product_name: p.name || "Unknown Product",
-        product_barcode: p.barcode || "N/A",
-        category: p.category || "Other",
-        displayName: `${p.name || "Unknown"} • ${p.category || 'Other'}`,
-        barcodeDisplay: p.barcode || 'N/A',
-        variants: (p.variants || []).map((v: any) => ({
+      return data.map((p: any) => {
+        let mappedVariants = (p.variants || []).map((v: any) => ({
           ...v,
           price: v.sell_price || 0,
           stock: v.stocks || 0,
           serialnoId: v.serial_numbers?.id || v.serial_number?.id || v.batches?.[0]?.serial_numbers?.id,
           availableSerials: v.serial_numbers?.serial_numbers || v.serial_number?.serial_numbers || v.batches?.[0]?.serial_numbers?.serial_numbers || [],
           batchId: v.batches?.[0]?.id,
-        })),
-        requireSerial: p.has_serialno || false,
-        batchTracking: p.has_batch || false,
-        manufacturingDate: p.batches?.[0]?.manufacturing_date,
-        expiryDate: p.batches?.[0]?.expiry_date,
-        price: p.sell_price || 0,
-        stocks: p.stocks || 0,
-        serialnoId: p.serial_number?.id || p.batches?.[0]?.serial_numbers?.id,
-        availableSerials: p.serial_number?.serial_numbers || p.batches?.[0]?.serial_numbers?.serial_numbers || [],
-        batchId: p.batches?.[0]?.id,
-      }));
+        }));
+
+        if (mappedVariants.length === 0 && p.has_batch && Array.isArray(p.batches) && p.batches.length > 0) {
+          mappedVariants = p.batches.map((b: any) => ({
+            id: b.id,
+            name: `Batch: ${b.batch_no || b.id.slice(0, 8)}`,
+            price: b.sell_price || p.sell_price || 0,
+            stock: b.stocks || 0,
+            serialnoId: b.serial_numbers?.id || p.serial_number?.id,
+            availableSerials: b.serial_numbers?.serial_numbers || p.serial_number?.serial_numbers || [],
+            batchId: b.id,
+          }));
+        }
+
+        return {
+          ...p,
+          // Map backend fields based on provided JSON structure
+          product_name: p.name || "Unknown Product",
+          product_barcode: p.barcode || "N/A",
+          category: p.category || "Other",
+          displayName: `${p.name || "Unknown"} • ${p.category || 'Other'}`,
+          barcodeDisplay: p.barcode || 'N/A',
+          variants: mappedVariants,
+          requireSerial: p.has_serialno || false,
+          batchTracking: p.has_batch || false,
+          manufacturingDate: p.batches?.[0]?.manufacturing_date,
+          expiryDate: p.batches?.[0]?.expiry_date,
+          price: p.sell_price || 0,
+          stocks: p.stocks || 0,
+          serialnoId: p.serial_number?.id || p.batches?.[0]?.serial_numbers?.id,
+          availableSerials: p.serial_number?.serial_numbers || p.batches?.[0]?.serial_numbers?.serial_numbers || [],
+          batchId: p.batches?.[0]?.id,
+        };
+      });
     } catch (err) {
       console.error("Failed to fetch inventory:", err);
       return [];
@@ -292,7 +312,10 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
   const handleQtyChange = useCallback((id: string, qty: number) => {
     onItemsChange(items.map(item => {
       if (item.id !== id) return item;
-      const newQty = Math.max(0, Number(qty.toFixed(2)));
+      let newQty = Math.max(0, Number(qty.toFixed(2)));
+      if (typeof item.maxStock === 'number') {
+        newQty = Math.min(newQty, item.maxStock);
+      }
       return {
         ...item,
         qty: newQty,
@@ -359,7 +382,10 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
         // Merge: increment qty on existing row
         updatedItems = items.map((item, idx) => {
           if (idx === existingItemIndex) {
-            const newQty = item.qty + 1;
+            let newQty = item.qty + 1;
+            if (typeof item.maxStock === 'number') {
+              newQty = Math.min(newQty, item.maxStock);
+            }
             return { ...item, qty: newQty, tprice: newQty * item.price };
           }
           return item;
@@ -388,6 +414,7 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
             batchTracking: selectedProduct.batchTracking,
             manufacturingDate: selectedProduct.manufacturingDate,
             expiryDate: selectedProduct.expiryDate,
+            maxStock: defaultVariant.stock,
             _product: selectedProduct,
           };
         });
@@ -431,7 +458,10 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
       // Merge logic
       updatedItems = items.map((item, idx) => {
         if (idx === existingItemIndex) {
-          const newQty = item.qty + quantity;
+          let newQty = item.qty + quantity;
+          if (typeof item.maxStock === 'number') {
+            newQty = Math.min(newQty, item.maxStock);
+          }
           const newSerials = serials ? [...(item.serialNumbers || []), ...serials] : item.serialNumbers;
           const merged = {
             ...item,
@@ -469,6 +499,7 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
           batchTracking: pendingProduct.batchTracking,
           manufacturingDate: pendingProduct.manufacturingDate,
           expiryDate: pendingProduct.expiryDate,
+          maxStock: variant.stock,
           _product: pendingProduct, // Store source for later edits
         };
         return { ...merged, tprice: (merged.qty || 0) * (merged.price || 0) };

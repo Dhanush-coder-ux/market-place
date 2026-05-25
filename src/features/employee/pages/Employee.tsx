@@ -91,7 +91,7 @@ export default function Employee() {
           // Nested datas keys
           if (e.datas) {
             Object.keys(e.datas).forEach(k => {
-              if (!["id", "shop_id", "name", "salary_rage", "address"].includes(k)) {
+              if (!["id", "shop_id", "name", "salary_range", "address"].includes(k)) {
                 keys.add(k);
               }
             });

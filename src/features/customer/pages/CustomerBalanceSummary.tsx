@@ -1,6 +1,6 @@
 import {
   Users, Search, Filter, Trash2, Edit3,
-  Eye, Bookmark, Banknote, Loader2, Wallet, Plus, ExternalLink
+  Eye, Bookmark, Banknote, Wallet, ExternalLink
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useHeader } from "@/context/HeaderContext";
@@ -15,7 +15,7 @@ import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { ColumnPicker } from "@/components/common/ColumnPicker";
 import { RightSidebarFilter } from "@/components/common/RightSidebarFilter";
 import { useEffect, useMemo, useState } from "react";
-import { Modal } from "@/components/common/SuperUI";
+import { RecordPaymentModal } from "@/features/customer/components/RecordPaymentModal";
 
 
 export default function CustomerBalanceSummary() {
@@ -28,7 +28,7 @@ export default function CustomerBalanceSummary() {
   };
 
   const { setActions } = useHeader();
-  const { getData, deleteData, postData, loading } = useApi();
+  const { getData, deleteData, loading } = useApi();
   const { showToast } = useToast();
 
   const [customers, setCustomers] = useState<CustomerRecord[]>([]);
@@ -42,10 +42,6 @@ export default function CustomerBalanceSummary() {
   // Payment Modal State
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedCustomerForPayment, setSelectedCustomerForPayment] = useState<CustomerRecord | null>(null);
-  const [payments, setPayments] = useState<{ mode: string, amount: string }[]>([
-    { mode: "UPI", amount: "" }
-  ]);
-  const [isClearing, setIsClearing] = useState(false);
 
   // Dynamic Column State
   const [availableKeys, setAvailableKeys] = useState<string[]>([]);
@@ -96,7 +92,7 @@ export default function CustomerBalanceSummary() {
         data.forEach((c: any) => {
           if (!c) return;
           // Root level keys from schema
-          const rootKeys = ["email", "mobile_number", "credit_limit", "is_active", "ui_id", "created_at"];
+          const rootKeys = ["email", "mobile_number", "outstanding", "credit_limit", "is_active", "ui_id", "created_at", "updated_at"];
           rootKeys.forEach(k => keys.add(k));
 
           // Nested datas keys
@@ -127,66 +123,7 @@ export default function CustomerBalanceSummary() {
     }
   };
 
-  const addPaymentRow = () => {
-    if (payments.length >= 4) return;
-    setPayments([...payments, { mode: "Cash", amount: "" }]);
-  };
 
-  const removePaymentRow = (idx: number) => {
-    if (payments.length <= 1) return;
-    setPayments(payments.filter((_, i) => i !== idx));
-  };
-
-  const updatePayment = (idx: number, updates: Partial<{ mode: string, amount: string }>) => {
-    setPayments(payments.map((p, i) => i === idx ? { ...p, ...updates } : p));
-  };
-
-  const handleSavePayment = async () => {
-    if (!selectedCustomerForPayment) return;
-
-    const validPayments = payments.filter(p => parseFloat(p.amount) > 0);
-    if (validPayments.length === 0) { showToast("Please enter at least one payment amount", "error"); return; }
-
-    setIsClearing(true);
-    const methodMap: Record<string, string> = {
-      "UPI": "UPI",
-      "Cash": "CASH",
-      "Card": "CARD",
-      "Bank Transfer": "BANK"
-    };
-
-    const paymentDict: Record<string, number> = {};
-    let totalCleared = 0;
-
-    validPayments.forEach(p => {
-      const mode = methodMap[p.mode] || "CASH";
-      const amt = parseFloat(p.amount);
-      paymentDict[mode] = (paymentDict[mode] || 0) + amt;
-      totalCleared += amt;
-    });
-
-    const payload = {
-      shop_id: SHOP_ID,
-      customer_id: selectedCustomerForPayment.id,
-      payments: paymentDict,
-      cleared_amount: totalCleared
-    };
-
-    try {
-      const res = await postData(`${ENDPOINTS.CUSTOMERS}/outstanding/clear`, payload);
-      if (res) {
-        showToast(`₹${totalCleared.toLocaleString()} collected successfully`, "success");
-        setShowPaymentModal(false);
-        setRefreshKey(prev => prev + 1);
-        setPayments([{ mode: "UPI", amount: "" }]);
-      }
-    } catch (error) {
-      console.error("Payment error:", error);
-      showToast("Failed to record payment", "error");
-    } finally {
-      setIsClearing(false);
-    }
-  };
 
   const stats = useMemo(() => {
     let active = 0;
@@ -361,27 +298,40 @@ export default function CustomerBalanceSummary() {
                         </div>
                       </div>
                     </td>
-                    {selectedKeys.map(key => (
-                      <td key={key} className="px-6 py-4 whitespace-nowrap">
-                        <p className={`text-[12px] font-semibold tracking-tight ${key === 'customer_type' || key === 'payment_cycle' ? 'text-blue-600 bg-blue-50 w-fit px-2 py-0.5 rounded-md' : 'text-slate-600'}`}>
-                          {key === 'is_active'
-                            ? (c[key] ? "Active" : "Inactive")
-                            : String((c as any).datas?.[key] ?? (c as any)[key] ?? "—")}
-                        </p>
-                      </td>
-                    ))}
+                    {selectedKeys.map(key => {
+                      const value = (c as any).datas?.[key] ?? (c as any)[key];
+                      let displayValue = String(value ?? "—");
+
+                      if (key === 'is_active') {
+                        displayValue = value ? "Active" : "Inactive";
+                      } else if ((key === 'created_at' || key === 'updated_at') && value) {
+                        displayValue = new Date(value).toLocaleString("en-IN", {
+                          year: 'numeric', month: 'short', day: 'numeric',
+                          hour: '2-digit', minute: '2-digit'
+                        });
+                      } else if ((key === 'outstanding' || key === 'credit_limit' || key === 'outstanding_balance') && value != null) {
+                        displayValue = `₹${Number(value).toLocaleString("en-IN")}`;
+                      }
+
+                      return (
+                        <td key={key} className="px-6 py-4 whitespace-nowrap">
+                          <p className={`text-[12px] font-semibold tracking-tight ${key === 'customer_type' || key === 'payment_cycle' ? 'text-blue-600 bg-blue-50 w-fit px-2 py-0.5 rounded-md' : 'text-slate-600'}`}>
+                            {displayValue}
+                          </p>
+                        </td>
+                      );
+                    })}
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-1">
                         <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            const balance = Number(c.outstanding ?? c.datas?.outstanding_balance ?? 0);
-                            setSelectedCustomerForPayment(c);
-                            setPayments([{ mode: "UPI", amount: balance > 0 ? String(balance) : "" }]);
-                            setShowPaymentModal(true);
-                          }}
-                          className={`p-2 rounded-lg transition-all shadow-sm active:scale-95 text-emerald-500 hover:text-emerald-600 hover:bg-emerald-50`}
-                          title="Record Payment"
+                          onClick={(e) => { e.stopPropagation(); setSelectedCustomerForPayment(c); setShowPaymentModal(true); }}
+                          disabled={Number(c.outstanding ?? c.datas?.outstanding_balance ?? 0) <= 0}
+                          className={`p-2 rounded-lg transition-all shadow-sm ${
+                            Number(c.outstanding ?? c.datas?.outstanding_balance ?? 0) > 0 
+                              ? "active:scale-95 text-emerald-500 hover:text-emerald-600 hover:bg-emerald-50" 
+                              : "text-slate-300 bg-slate-50 cursor-not-allowed"
+                          }`}
+                          title={Number(c.outstanding ?? c.datas?.outstanding_balance ?? 0) > 0 ? "Record Payment" : "No Outstanding"}
                         >
                           <Banknote size={16} />
                         </button>
@@ -424,105 +374,15 @@ export default function CustomerBalanceSummary() {
       />
 
       {/* Record Payment Modal */}
-      <Modal
+      <RecordPaymentModal
         show={showPaymentModal}
         onClose={() => setShowPaymentModal(false)}
-        title={`Collect Payment: ${selectedCustomerForPayment?.name}`}
-        footer={
-          <div className="flex justify-end gap-2 p-4 bg-slate-50/50 rounded-b-2xl border-t border-slate-100">
-            <button
-              onClick={() => setShowPaymentModal(false)}
-              className="px-5 py-2.5 rounded-lg text-xs font-semibold text-slate-500 hover:bg-white border border-transparent hover:border-slate-200 transition-all"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleSavePayment}
-              disabled={isClearing}
-              className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-md shadow-blue-200 disabled:opacity-50 transition-all active:scale-95"
-            >
-              {isClearing ? <><Loader2 className="w-4 h-4 animate-spin" /> Processing...</> : <><Wallet className="w-4 h-4" /> Confirm Collection</>}
-            </button>
-          </div>
-        }
-      >
-        <div className="space-y-6">
-          <div className="flex items-center justify-between px-1">
-            <div>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Customer balance</p>
-              <p className="text-lg font-bold text-rose-500 tabular-nums">₹{Number(selectedCustomerForPayment?.datas?.outstanding_balance || 0).toLocaleString("en-IN")}</p>
-            </div>
-            <button
-              onClick={addPaymentRow}
-              disabled={payments.length >= 4}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 text-blue-600 text-[10px] font-bold hover:bg-blue-100 transition-all disabled:opacity-30 border border-blue-100/50"
-            >
-              <Plus size={12} /> ADD MODE
-            </button>
-          </div>
-
-          <div className="space-y-4">
-            {payments.map((p, idx) => (
-              <div key={idx} className="grid grid-cols-[1fr,1fr,auto] gap-3 items-end animate-in fade-in slide-in-from-top-2 duration-200">
-                <div className="space-y-1.5">
-                  <p className="text-[10px] font-semibold text-slate-400 ml-1">Payment Mode</p>
-                  <div className="scale-95 origin-left w-[105%]">
-                    <ReusableSelect
-                      options={[
-                        { label: "UPI", value: "UPI" },
-                        { label: "Cash", value: "Cash" },
-                        { label: "Card", value: "Card" },
-                        { label: "Bank Transfer", value: "Bank Transfer" }
-                      ]}
-                      value={p.mode}
-                      onValueChange={(val) => updatePayment(idx, { mode: val })}
-                    />
-                  </div>
-                </div>
-                <div className="space-y-1.5">
-                  <p className="text-[10px] font-semibold text-slate-400 ml-1">Amount</p>
-                  <div className="relative group">
-                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 group-focus-within:text-blue-500 transition-colors">₹</span>
-                    <input
-                      type="number"
-                      value={p.amount}
-                      onChange={(e) => updatePayment(idx, { amount: e.target.value })}
-                      placeholder="0.00"
-                      className="w-full h-10 pl-7 pr-4 bg-white border border-slate-200 rounded-lg text-sm font-semibold text-slate-700 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-500/5 transition-all placeholder:text-slate-300"
-                    />
-                  </div>
-                </div>
-                {payments.length > 1 && (
-                  <button
-                    onClick={() => removePaymentRow(idx)}
-                    className="w-10 h-10 flex items-center justify-center text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-all mb-[1px]"
-                    title="Remove mode"
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                )}
-              </div>
-            ))}
-          </div>
-
-          <div className="p-4 bg-slate-50/50 rounded-lg border border-slate-100 relative overflow-hidden">
-            <div className="flex items-center justify-between mb-2.5">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Total Collection</span>
-              <span className="text-base font-bold text-slate-700 tabular-nums">
-                ₹{payments.reduce((acc, curr) => acc + (parseFloat(curr.amount) || 0), 0).toLocaleString("en-IN")}
-              </span>
-            </div>
-            <div className="w-full h-1 bg-slate-100 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-blue-500 transition-all duration-700 ease-out"
-                style={{
-                  width: `${Math.min(100, (payments.reduce((acc, curr) => acc + (parseFloat(curr.amount) || 0), 0) / Number(selectedCustomerForPayment?.datas?.outstanding_balance || 1)) * 100)}%`
-                }}
-              />
-            </div>
-          </div>
-        </div>
-      </Modal>
+        customer={selectedCustomerForPayment}
+        onSuccess={() => {
+          setShowPaymentModal(false);
+          setRefreshKey(prev => prev + 1);
+        }}
+      />
     </div>
   );
 }

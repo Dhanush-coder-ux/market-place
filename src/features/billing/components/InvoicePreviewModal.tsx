@@ -41,7 +41,7 @@ const InvoicePreviewModal: React.FC<InvoicePreviewModalProps> = ({
   const today = new Date();
   const dateStr = today.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
   const timeStr = today.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
-  const invoiceNo = `INV-${Date.now().toString(36).toUpperCase().slice(-6)}`;
+  const invoiceNo = `ORD-${Date.now().toString(36).toUpperCase().slice(-6)}`;
 
   const primaryPayment = payments[0] || { mode: "cash" };
   const modeInfo = payMeta[primaryPayment.mode] || payMeta.cash;
@@ -56,7 +56,7 @@ const InvoicePreviewModal: React.FC<InvoicePreviewModalProps> = ({
   if (!isOpen) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center p-4 print:p-0 pointer-events-none">
+    <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center p-2 sm:p-6 print:p-0">
       {/* Styles for Printing */}
       <style dangerouslySetInnerHTML={{
         __html: `
@@ -88,24 +88,24 @@ const InvoicePreviewModal: React.FC<InvoicePreviewModalProps> = ({
       `}} />
 
       {/* Backdrop */}
-      <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm no-print pointer-events-auto" onClick={onClose} />
+      <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm no-print" onClick={onClose} />
 
       {/* Modal Container */}
-      <div className="relative bg-slate-100 rounded-lg shadow-[0_24px_80px_rgba(0,0,0,0.3)] w-full max-w-[640px] max-h-[85vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-300 print:max-h-none print:bg-white print:rounded-none print:shadow-none print:w-full print:max-w-none pointer-events-auto">
+      <div className="relative bg-slate-100 rounded-lg shadow-[0_24px_80px_rgba(0,0,0,0.3)] w-full max-w-[640px] max-h-[calc(100dvh-1rem)] sm:max-h-[calc(100dvh-3rem)] flex flex-col overflow-hidden animate-in zoom-in-95 duration-300 print:max-h-none print:bg-white print:rounded-none print:shadow-none print:w-full print:max-w-none">
 
         {/* Modal Header */}
         <div className="flex items-center justify-between px-5 py-3 bg-white border-b border-slate-200/60 shrink-0 no-print">
-          <h3 className="text-[14px] font-semibold text-slate-700">Invoice Preview</h3>
+          <h3 className="text-[14px] font-semibold text-slate-700">Order Preview</h3>
           <button onClick={onClose} className="w-7 h-7 rounded-md flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors">
             <X size={16} strokeWidth={1.5} />
           </button>
         </div>
 
-        {/* Scrollable Invoice Paper */}
-        <div className="flex-1 overflow-y-auto p-5 print:p-0 print:overflow-visible custom-scrollbar">
+        {/* Scrollable Receipt Paper */}
+        <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-2 sm:p-5 print:p-0 print:overflow-visible custom-scrollbar" style={{ WebkitOverflowScrolling: 'touch' }}>
           <div ref={invoiceRef} className="print-area bg-white rounded-lg shadow-[0_2px_8px_rgba(0,0,0,0.06)] border border-slate-200/40 mx-auto max-w-[560px] print:max-w-none print:border-none print:shadow-none print:rounded-none">
 
-            {/* ── Invoice Header ─────────────────────────── */}
+            {/* ── Receipt Header ─────────────────────────── */}
             <div className="px-6 pt-6 pb-4 border-b border-slate-100">
               <div className="flex justify-between items-start">
                 {/* Company Info */}
@@ -127,7 +127,7 @@ const InvoicePreviewModal: React.FC<InvoicePreviewModalProps> = ({
 
                 {/* Invoice Meta */}
                 <div className="text-right">
-                  <p className="text-[9px] font-medium text-blue-500 mb-0.5 print:text-blue-600">Tax Invoice</p>
+                  <p className="text-[9px] font-medium text-blue-500 mb-0.5 print:text-blue-600">Order Receipt</p>
                   <p className="text-[13px] font-semibold text-slate-800">{invoiceNo}</p>
                   <div className="mt-2 space-y-0.5">
                     <p className="text-[10px] text-slate-400">{dateStr} · {timeStr}</p>
@@ -259,7 +259,7 @@ const InvoicePreviewModal: React.FC<InvoicePreviewModalProps> = ({
                   <p className="text-[9px] text-slate-400">Authorized Signatory</p>
                 </div>
               </div>
-              <p className="text-center text-[8px] text-slate-400 mt-3">This is a computer-generated invoice and does not require a physical signature.</p>
+              <p className="text-center text-[8px] text-slate-400 mt-3">This is a computer-generated receipt and does not require a physical signature.</p>
             </div>
           </div>
         </div>

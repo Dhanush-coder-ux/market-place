@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import {
-  Package, BarChart2, Save,
+  Package, Save,
   Cpu, AlertCircle,
   Layers, Zap, Bookmark, Plus, Info
 } from "lucide-react";
@@ -11,6 +11,8 @@ import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useHeader } from "@/context/HeaderContext";
 import { useToast } from "@/context/ToastContext";
 import { Switch } from "@/components/ui/switch";
+import { ReusableSelect } from "@/components/ui/ReusableSelect";
+
 
 import { supplierApi } from "@/services/api/supplier";
 import { QuickCreateSupplierModal } from "@/features/common/QuickCreate/QuickCreateSupplierModal";
@@ -201,24 +203,7 @@ const InputField: React.FC<InputFieldProps> = ({ label, required, hint, leftEl, 
   </div>
 );
 
-interface SelectFieldProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
-  label?: string;
-  required?: boolean;
-  tooltip?: string;
-  options: { value: string; label: string }[];
-}
-const SelectField: React.FC<SelectFieldProps> = ({ label, required, tooltip, options, className = "", ...rest }) => (
-  <div>
-    {label && <Label text={label} required={required} tooltip={tooltip} />}
-    <select
-      {...rest}
-      className={`pf-select pf-input w-full px-3 py-2.5 pr-8 text-sm border border-slate-200 rounded-lg bg-white text-slate-800 ${className}`}
-    >
-      <option value="">Select</option>
-      {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-    </select>
-  </div>
-);
+
 
 
 
@@ -277,6 +262,8 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
   const [combinations, setCombinations] = useState<VariantCombination[]>([]);
   const [baseSerials, setBaseSerials] = useState<string[]>([]);
   const [supplierDetails, setSupplierDetails] = useState<any>(null);
+  // Tracks the product name without the brand prefix so brand changes can auto-prepend
+  const [baseName, setBaseName] = useState("");
 
   // useEffect(() => {
   //   setActions(
@@ -352,6 +339,14 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
             mfg_date: prod.batch?.manufacturing_date || "",
             exp_date: prod.batch?.expiry_date || "",
           });
+
+          // Initialise baseName: strip the brand prefix from the loaded product name
+          const loadedBrand = datas.brand || "";
+          const loadedName  = prod.name || "";
+          const baseFromLoad = loadedBrand && loadedName.startsWith(loadedBrand + " ")
+            ? loadedName.slice(loadedBrand.length + 1)
+            : loadedName;
+          setBaseName(baseFromLoad);
 
           // Fetch matching supplier details for SearchSelect display if ID is set
           if (datas.supplier) {
@@ -469,6 +464,19 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
     if (name === "gst") {
       const sanitized = value.replace(/[^0-9.]/g, "");
       setForm(p => ({ ...p, gst: sanitized }));
+    } else if (name === "name") {
+      // User is editing the name field — strip the brand prefix to isolate the base
+      setForm(p => {
+        const stripped = p.brand && value.startsWith(p.brand + " ")
+          ? value.slice(p.brand.length + 1)
+          : value;
+        setBaseName(stripped);
+        return { ...p, name: p.brand ? `${p.brand} ${stripped}`.trim() : stripped };
+      });
+    } else if (name === "brand") {
+      // Brand changed — auto-prepend brand to baseName
+      const fullName = value ? `${value} ${baseName}`.trim() : baseName;
+      setForm(p => ({ ...p, brand: value, name: fullName }));
     } else {
       setForm(p => ({ ...p, [name]: value }));
     }
@@ -580,9 +588,9 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
       <div className="pf-root min-h-screen bg-slate-50/50 font-sans">
         <form onSubmit={handleSubmit} className=" mx-auto space-y-5">
 
-          <div className="grid grid-cols-1 lg:grid-cols-6 gap-5 items-start">
+          <div className="space-y-5">
 
-            <div className="lg:col-span-4 space-y-6">
+            <div className="space-y-6">
 
               {/* SECTION 1: IDENTITY */}
               <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden hover:shadow-md transition-all">
@@ -599,7 +607,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                     placeholder="e.g. Apple iPhone 15 Pro Max"
                   />
 
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                     <InputField label="Barcode" name="barcode"
                       tooltip="Unique identification code or Barcode for inventory identification."
                       value={form.barcode} onChange={handleChange}
@@ -610,33 +618,51 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                       value={form.brand} onChange={handleChange}
                       placeholder="e.g. Apple"
                     />
-                    <SelectField label="Category" required
-                      tooltip="Organize your products into categories for easier filtering."
-                      value={form.category}
-                      onChange={e => handleCategoryChange(e.target.value)}
-                      options={CATEGORIES.map(c => ({ value: c, label: c }))}
-                    />
-                    <SelectField label="Unit" name="unit" required
-                      tooltip="Base unit of measurement for this product."
-                      value={form.unit} onChange={handleChange}
-                      options={UNITS.map(u => ({ value: u, label: u }))}
-                    />
-                  </div>
-
-                  <div>
-                    <Label text="Description" hint="optional" />
-                    <textarea
-                      name="description"
-                      value={form.description}
+                    <div>
+                      <Label text="Category" required tooltip="Organize your products into categories for easier filtering." />
+                      <ReusableSelect
+                        value={form.category}
+                        onValueChange={handleCategoryChange}
+                        options={CATEGORIES.map(c => ({ value: c, label: c }))}
+                        placeholder="Select category"
+                      />
+                    </div>
+                    <div>
+                      <Label text="Unit" required tooltip="Base unit of measurement for this product." />
+                      <ReusableSelect
+                        value={form.unit}
+                        onValueChange={(val) => setForm(p => ({ ...p, unit: val }))}
+                        options={UNITS.map(u => ({ value: u, label: u }))}
+                        placeholder="Select unit"
+                      />
+                    </div>
+                    <InputField label="Reorder Point" name="reorder_point" required={!form.has_variants}
+                      tooltip={form.has_variants ? "Reorder point is managed per variant." : "Minimum stock level before a restock alert is triggered."}
+                      type={form.has_variants ? "text" : "number"}
+                      value={form.has_variants ? "—" : form.reorder_point} 
                       onChange={handleChange}
-                      rows={1}
-                      className="pf-input w-full px-4 py-3 text-sm border border-slate-200 rounded-lg bg-white text-slate-800 resize-none placeholder-slate-300 min-h-[50px]"
-                      placeholder="Key features, materials, dimensions"
+                      placeholder="5"
+                      disabled={form.has_variants}
                     />
                   </div>
 
-                  <div className="pt-4 border-t border-slate-50 mt-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Description + Tax fields split layout */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Left: Description */}
+                    <div>
+                      <Label text="Description" hint="optional" />
+                      <textarea
+                        name="description"
+                        value={form.description}
+                        onChange={handleChange}
+                        rows={4}
+                        className="pf-input w-full px-4 py-3 h-50 text-sm border border-slate-200 rounded-lg bg-white text-slate-800 resize-none placeholder-slate-300"
+                        placeholder="Key features, materials, dimensions"
+                      />
+                    </div>
+
+                    {/* Right: HSN + GST + MRP stacked */}
+                    <div className="flex flex-col gap-4">
                       <InputField label="HSN Code" name="hsn"
                         tooltip="Harmonized System of Nomenclature code for GST."
                         value={form.hsn} onChange={handleChange}
@@ -647,6 +673,13 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                         value={form.gst} onChange={handleChange}
                         placeholder="e.g. 18"
                         rightEl="%"
+                      />
+                      <InputField label="MRP" name="mrp"
+                        tooltip="Maximum Retail Price printed on the product packaging."
+                        type="number"
+                        value={form.mrp} onChange={handleChange}
+                        placeholder="e.g. 999"
+                        leftEl="₹"
                       />
                     </div>
                   </div>
@@ -690,48 +723,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                 {/* CONDITIONAL TRACKING PANELS - REMOVED AS PER REQUEST */}
               </div>
             </div>
-            {/* --- RIGHT COLUMN: SIDEBAR --- */}
-            <div className="lg:col-span-2 space-y-6 lg:sticky lg:top-1">
-              {/* BOX 3: Pricing */}
-              {/* Pricing section removed as per request */}
 
-              {/* BOX 4: Live Summary + Stock */}
-              <div className="space-y-4">
-                <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
-                  <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
-                    <h2 className="text-xs font-bold text-slate-800  ">Live summary</h2>
-                  </div>
-                  <div className="divide-y divide-slate-50 px-6">
-                    {[
-                      { label: "Barcode", value: form.barcode || "-" },
-                      { label: "Variants", value: form.has_variants ? `${combinations.length} combos` : "None" },
-                    ].map(row => (
-                      <div key={row.label} className="flex items-center justify-between py-2.5">
-                        <span className="text-[11px] text-slate-400 font-medium">{row.label}</span>
-                        <span className={`text-[11px] font-bold font-mono text-slate-800`}>{row.value}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {!form.has_variants && (
-                  <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden hover:shadow-md transition-all pf-section-enter">
-                    <div className="px-6 py-4 bg-gradient-to-r from-amber-50/50 to-transparent border-b border-slate-100 flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center text-amber-600">
-                        <BarChart2 size={16} />
-                      </div>
-                      <h2 className="text-xs font-bold text-slate-800  ">Stock & inventory</h2>
-                    </div>
-                    <div className="p-6 grid grid-cols-1 gap-5">
-                      <InputField label="Reorder Point" name="reorder_point" required
-                        type="number" value={form.reorder_point} onChange={handleChange}
-                        placeholder="5"
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
           </div>
 
           {/* BOTTOM SECTION: VARIANTS */}

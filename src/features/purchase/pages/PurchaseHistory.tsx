@@ -88,6 +88,8 @@ export interface DirectPurchaseData {
   storage_location?: string;
   paid_amount?: number;
   outstanding?: number;
+  grand_total?: number;
+  additional_charges_total?: number;
 }
 
 type ViewMode = "grid" | "horizontal" | "vertical";
@@ -104,7 +106,7 @@ export function toDisplayData(p: PurchaseRecord): DirectPurchaseData {
   const d2 = (p.datas ? (typeof p.datas === "string" ? JSON.parse(p.datas) : p.datas) : p) as any;
   const products = ((p as any).products ?? d2?.products ?? d2?.purchase_products ?? d2?.grn_products ?? d2?.finished_products) as any[] | undefined;
   const dateRaw = String(d2?.purchaseDetails?.date ?? d2?.purchase_date ?? d2?.production_date ?? d2?.receipt_date ?? d2?.adjusted_date ?? (p as any).date ?? new Date().toISOString());
-  
+
   let d = new Date();
   if (dateRaw && dateRaw !== "undefined" && dateRaw !== "null" && dateRaw !== "—") {
     const parsedDate = new Date(dateRaw.includes("T") ? dateRaw : dateRaw + "T00:00:00");
@@ -140,7 +142,9 @@ export function toDisplayData(p: PurchaseRecord): DirectPurchaseData {
     return sum + (qty * price * (gstPercent / 100));
   }, 0);
 
-  const totalCost = subtotal + totalGst + otherCharge + transportCharge;
+  const totalCost = subtotal + totalGst;
+  const additionalChargesTotal = otherCharge + transportCharge;
+  const grandTotal = totalCost + additionalChargesTotal;
 
   const paidAmount = Number((p as any).paid_amount ?? d2?.payment?.amountPaid ?? d2?.paid_amount ?? 0);
   const outstanding = Math.max(0, totalCost - paidAmount);
@@ -172,25 +176,35 @@ export function toDisplayData(p: PurchaseRecord): DirectPurchaseData {
         sell_price: v.sell_price,
         stocks: v.stocks,
         stocks_before: v.stocks_before,
-        batches: Array.isArray(v.batches) ? v.batches.map((b: any) => ({
-          name: b.name,
-          stocks: b.stocks ?? b.quantity ?? 1,
-          expiry_date: b.expiry_date,
-          manufacturing_date: b.manufacturing_date,
-          serial_numbers: b.serial_numbers?.serial_numbers || b.serial_number?.serial_numbers || null,
-        })) : [],
+        batches: Array.isArray(v.batches) ? v.batches.map((b: any) => {
+          const serialsArr = Array.isArray(b.serials)
+            ? b.serials.flatMap((s: any) => s.serial_numbers || [])
+            : (b.serial_numbers?.serial_numbers || b.serial_number?.serial_numbers || (Array.isArray(b.serial_numbers) ? b.serial_numbers : null));
+          return {
+            name: b.name,
+            stocks: b.stocks ?? b.quantity ?? 1,
+            expiry_date: b.expiry_date,
+            manufacturing_date: b.manufacturing_date,
+            serial_numbers: serialsArr && serialsArr.length > 0 ? serialsArr : null,
+          };
+        }) : [],
         serials: Array.isArray(v.serials) ? v.serials.map((s: any) => ({
           id: s.id,
           serial_numbers: s.serial_numbers || []
         })) : undefined
       })) : undefined,
-      batches: Array.isArray(pr.batches) ? pr.batches.map((b: any) => ({
-        name: b.name,
-        stocks: b.stocks ?? b.quantity ?? 1,
-        expiry_date: b.expiry_date,
-        manufacturing_date: b.manufacturing_date,
-        serial_numbers: b.serial_numbers?.serial_numbers || b.serial_number?.serial_numbers || null,
-      })) : undefined,
+      batches: Array.isArray(pr.batches) ? pr.batches.map((b: any) => {
+        const serialsArr = Array.isArray(b.serials)
+          ? b.serials.flatMap((s: any) => s.serial_numbers || [])
+          : (b.serial_numbers?.serial_numbers || b.serial_number?.serial_numbers || (Array.isArray(b.serial_numbers) ? b.serial_numbers : null));
+        return {
+          name: b.name,
+          stocks: b.stocks ?? b.quantity ?? 1,
+          expiry_date: b.expiry_date,
+          manufacturing_date: b.manufacturing_date,
+          serial_numbers: serialsArr && serialsArr.length > 0 ? serialsArr : null,
+        };
+      }) : undefined,
       serials: Array.isArray(pr.serials) ? pr.serials.map((s: any) => ({
         id: s.id,
         serial_numbers: s.serial_numbers || []
@@ -205,6 +219,8 @@ export function toDisplayData(p: PurchaseRecord): DirectPurchaseData {
       other: otherCharge,
       transport: transportCharge,
     },
+    grand_total: grandTotal,
+    additional_charges_total: additionalChargesTotal,
     storage_location: d2?.storage_location || (p as any).storage_location || "",
   };
 }
@@ -568,7 +584,7 @@ const PurchaseHistory = () => {
 
   const vendorsList = useMemo(() => Array.from(new Set(allPurchases.map(p => p.vendor))), [allPurchases]);
   const activeFiltersCount = [filterType, filterVendor].filter(Boolean).length;
-  
+
   const resetFilters = () => {
     setFilterType("");
     setFilterVendor("");
@@ -623,11 +639,10 @@ const PurchaseHistory = () => {
           <button
             type="button"
             onClick={() => setIsFilterOpen(true)}
-            className={`h-8 px-3 rounded-md border text-xs font-semibold flex items-center gap-1.5 active:scale-95 transition-all shadow-sm shrink-0 ${
-              activeFiltersCount > 0
+            className={`h-8 px-3 rounded-md border text-xs font-semibold flex items-center gap-1.5 active:scale-95 transition-all shadow-sm shrink-0 ${activeFiltersCount > 0
                 ? "border-blue-200 text-blue-600 bg-blue-50/50"
                 : "border-slate-200 text-slate-650 bg-white hover:bg-slate-50"
-            }`}
+              }`}
             title="Filters"
           >
             <Filter size={13} />
@@ -650,7 +665,7 @@ const PurchaseHistory = () => {
         <RightSidebarFilter
           isOpen={isFilterOpen}
           onClose={() => setIsFilterOpen(false)}
-          onApply={() => {}}
+          onApply={() => { }}
           onClear={resetFilters}
           title="Purchase Order Filters"
         >

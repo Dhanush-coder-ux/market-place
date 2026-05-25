@@ -22,8 +22,6 @@ import { InlineSerialManager } from "@/components/common/InlineSerialManager";
 interface InventoryItemsCardProps {
   products: any[];
   stats: any;
-  costMethod: string;
-  setCostMethod: (method: string) => void;
   type?: "PURCHASE" | "PRODUCTION";
   handleProductChange: (index: number, field: string, value: any) => void;
   updateProductFields: (index: number, updates: any) => void;
@@ -33,13 +31,13 @@ interface InventoryItemsCardProps {
   // 💡 NEW: Added this prop to receive the modal trigger from GrnForm
   onAddNewProduct?: (query: string) => void;
   purchaseType?: string;
+  costMethod?: string;
+  setCostMethod?: (val: string) => void;
 }
 
 export const InventoryItemsCard = ({
   products,
   stats,
-  costMethod,
-  setCostMethod,
   type = "PURCHASE",
   handleProductChange,
   updateProductFields,
@@ -47,7 +45,7 @@ export const InventoryItemsCard = ({
   addProduct,
   removeProduct,
   onAddNewProduct,
-  purchaseType
+  purchaseType,
 }: InventoryItemsCardProps) => {
   const [expandedBreakdown, setExpandedBreakdown] = useState<Set<number>>(new Set());
   const [expandedSettings, setExpandedSettings] = useState<Set<number>>(new Set());
@@ -407,21 +405,7 @@ export const InventoryItemsCard = ({
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {/* Cost Method Toggle */}
-            <div className="hidden sm:flex items-center bg-slate-100 rounded-lg p-0.5">
-              {["None", "By Unit", "By Value", "Equally"].map((method) => (
-                <button
-                  key={method}
-                  onClick={() => setCostMethod(method)}
-                  className={`px-3 py-1.5 text-[11px] font-medium rounded-md transition-all ${costMethod === method
-                    ? "bg-white text-slate-800 shadow-sm"
-                    : "text-slate-500 hover:text-slate-700"
-                    }`}
-                >
-                  {method}
-                </button>
-              ))}
-            </div>
+
             <button
               onClick={addProduct}
               className={`flex items-center gap-1.5 px-3.5 h-9 rounded-lg bg-${themeColor}-600 text-white text-[11px] font-medium shadow-sm hover:bg-${themeColor}-700 transition-all active:scale-95`}
@@ -440,11 +424,11 @@ export const InventoryItemsCard = ({
                 <th className="py-4 px-6 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '60px' }}>#</th>
                 <th className="py-4 px-4 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '300px' }}>Item Description</th>
                 <th className="py-4 px-2 text-center text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '100px' }}>Qty / Unit</th>
-                <th className="py-4 px-4 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '140px' }}>{type === "PURCHASE" ? "Buy Price" : "Material Cost"}</th>
+                <th className="py-4 px-4 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '140px' }}>{type === "PURCHASE" ? "Buy Price / Unit" : "Material Cost"}</th>
                 <th className="py-4 px-2 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '120px' }}>Subtotal</th>
                 <th className="py-4 px-2 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '110px' }}>Allocated</th>
                 <th className="py-4 px-2 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '100px' }}>Tax (GST)</th>
-                <th className="py-4 px-4 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '220px' }}>Pricing & Margin</th>
+                <th className="py-4 px-4 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '220px' }}>Pricing & Margin / Unit</th>
                 <th className="py-4 px-6 text-right text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '120px' }}>Actions</th>
               </tr>
             </thead>
@@ -478,14 +462,14 @@ export const InventoryItemsCard = ({
                       className={`group transition-all hover:bg-slate-50/50 ${!hasProduct ? 'bg-slate-50/10' : ''}`}
                     >
                       {/* Index */}
-                      <td className="py-3 px-6 align-middle">
+                      <td className="py-3 px-6 align-top">
                         <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-[11px] font-black ${hasProduct ? `bg-${themeColor}-600 text-white shadow-sm shadow-${themeColor}-200` : 'bg-slate-100 text-slate-400'}`}>
                           {index + 1}
                         </div>
                       </td>
 
                       {/* Product search */}
-                      <td className="py-3 px-2 align-middle">
+                      <td className="py-3 px-2 align-top">
                         <div className="flex flex-col gap-1.5">
                           <SearchSelect
                             labelKey="name"
@@ -721,59 +705,57 @@ export const InventoryItemsCard = ({
                       </td>
 
                       {/* Qty / Unit */}
-                      <td className="py-3 px-2 align-middle">
-                        <div className="flex flex-col items-center gap-1.5">
+                      <td className="py-3 px-2 align-top">
+                        <div className="flex items-center justify-center">
                           <Input
                             type="number"
                             value={product.quantity as any}
                             onChange={(e) => handleProductChange(index, "quantity", e.target.value ? Number(e.target.value) : "")}
-                            className="!h-9 !w-20 !text-xs text-center font-black rounded-lg border-slate-200 shadow-sm"
+                            className="!h-9 !w-24 !text-xs font-black rounded-lg border-slate-200 shadow-sm"
+                            rightIcon={<span className="text-[9px] text-slate-400 font-bold uppercase">{product.unit || 'pc'}</span>}
                           />
-                          <span className="text-[9px] text-slate-400 font-bold uppercase">{product.unit || 'pc'}</span>
                         </div>
                       </td>
 
                       {/* Buy Price */}
-                      <td className="py-3 px-2 align-middle">
-                        <div className="flex flex-col gap-1">
+                      <td className="py-3 px-2 align-top">
+                        <div className="flex items-center">
                           <Input
                             type="number"
                             value={product.costPrice as any}
                             onChange={(e) => handleProductChange(index, "costPrice", e.target.value ? Number(e.target.value) : "")}
-                            className="!h-9 !text-xs font-black rounded-lg border-slate-200 shadow-sm"
+                            className="!h-9 !text-xs font-black rounded-lg border-slate-200 shadow-sm min-w-[110px]"
                             leftIcon={<span className="text-[10px] text-slate-400 font-black">₹</span>}
+                            rightIcon={<span className="text-[9px] text-slate-400 font-bold">/{product.unit || 'pc'}</span>}
                           />
-                          <span className="text-[9px] text-slate-400 font-bold text-center">
-                            per {product.unit || 'pc'}
-                          </span>
                         </div>
                       </td>
 
                       {/* Subtotal */}
-                      <td className="py-3 px-2 align-middle">
-                        <div className="flex flex-col">
+                      <td className="py-3 px-2 align-top">
+                        <div className="h-9 flex items-center">
                           <span className="text-xs font-black text-slate-800 tabular-nums">₹{rowTotal.toLocaleString()}</span>
                         </div>
                       </td>
 
                       {/* Allocated */}
-                      <td className="py-3 px-2 align-middle">
-                        <div className="flex flex-col">
+                      <td className="py-3 px-2 align-top">
+                        <div className="h-9 flex items-center gap-1.5 flex-wrap">
                           <span className="text-xs font-black text-slate-800 tabular-nums">
                             ₹{allocTotal > 0 ? allocTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00"}
                           </span>
                           {allocPerUnit > 0 && (
-                            <span className="text-[9px] text-blue-500 font-bold mt-0.5">
-                              (₹{allocPerUnit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/unit)
+                            <span className="text-[9px] text-blue-500 font-bold whitespace-nowrap">
+                              (+₹{allocPerUnit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/u)
                             </span>
                           )}
                         </div>
                       </td>
 
                       {/* Tax */}
-                      <td className="py-3 px-2 align-middle">
-                        <div className="w-20">
-                          <div className="relative flex items-center">
+                      <td className="py-3 px-2 align-top">
+                        <div className="w-20 h-9 flex items-center">
+                          <div className="relative flex items-center w-full">
                             <input
                               type="number"
                               value={product.taxGst ?? ""}
@@ -789,32 +771,30 @@ export const InventoryItemsCard = ({
                       </td>
 
                       {/* Pricing & Margin */}
-                      <td className="py-3 px-2 align-middle">
-                        <div className="flex flex-col gap-1.5">
-                          <div className="flex items-center gap-1">
-                            <div className="flex bg-slate-100 rounded-lg p-0.5 shrink-0">
-                              {["percent", "amount", "sellingPrice"].map((m) => (
-                                <button
-                                  key={m}
-                                  onClick={() => handleProductChange(index, "marginType", m)}
-                                  className={`w-6 h-6 flex items-center justify-center rounded-md text-[9px] font-black transition-all ${product.marginType === m ? "bg-white text-blue-600 shadow-sm" : "text-slate-400 hover:text-slate-600"}`}
-                                >
-                                  {m === "percent" ? "%" : m === "amount" ? "₹" : "SP"}
-                                </button>
-                              ))}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <Input
-                                type="number"
-                                value={(product.marginType === "percent" ? product.marginPercent : product.marginType === "amount" ? product.marginAmount : product.sellingPrice) as any}
-                                onChange={(e) => handleProductChange(index, product.marginType === "percent" ? "marginPercent" : product.marginType === "amount" ? "marginAmount" : "sellingPrice", e.target.value ? Number(e.target.value) : "")}
-                                className="!h-7 !text-[11px] !font-bold !w-full"
-                                placeholder={product.marginType === "sellingPrice" ? "Price" : "Margin"}
-                              />
-                            </div>
+                      <td className="py-3 px-2 align-top">
+                        <div className="flex items-center gap-2">
+                          <div className="flex bg-slate-100 rounded-lg p-0.5 shrink-0">
+                            {["percent", "amount", "sellingPrice"].map((m) => (
+                              <button
+                                key={m}
+                                onClick={() => handleProductChange(index, "marginType", m)}
+                                className={`w-6 h-6 flex items-center justify-center rounded-md text-[9px] font-black transition-all ${product.marginType === m ? "bg-white text-blue-600 shadow-sm" : "text-slate-400 hover:text-slate-600"}`}
+                              >
+                                {m === "percent" ? "%" : m === "amount" ? "₹" : "SP"}
+                              </button>
+                            ))}
                           </div>
-                          <div className="flex items-center justify-between px-2 py-0.5 bg-emerald-50/50 border border-emerald-100 rounded-md">
-                            <span className="text-[9px] font-black text-emerald-600 uppercase tracking-tighter">Final SP</span>
+                          <div className="flex-1 min-w-[70px]">
+                            <Input
+                              type="number"
+                              value={(product.marginType === "percent" ? product.marginPercent : product.marginType === "amount" ? product.marginAmount : product.sellingPrice) as any}
+                              onChange={(e) => handleProductChange(index, product.marginType === "percent" ? "marginPercent" : product.marginType === "amount" ? "marginAmount" : "sellingPrice", e.target.value ? Number(e.target.value) : "")}
+                              className="!h-7 !text-[11px] !font-bold !w-full"
+                              placeholder={product.marginType === "sellingPrice" ? "Price" : "Margin"}
+                            />
+                          </div>
+                          <div className="flex items-center gap-1 px-1.5 py-1 bg-emerald-50/50 border border-emerald-100 rounded-md shrink-0">
+                            <span className="text-[9px] font-black text-emerald-600 uppercase tracking-tighter">SP</span>
                             <span className="text-[11px] font-black text-emerald-700 tabular-nums">
                               ₹{computedSellPrice.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
                             </span>
@@ -823,8 +803,8 @@ export const InventoryItemsCard = ({
                       </td>
 
                       {/* Actions */}
-                      <td className="py-3 px-6 align-middle text-right">
-                        <div className="flex items-center justify-end gap-1">
+                      <td className="py-3 px-6 align-top text-right">
+                        <div className="h-9 w-full flex items-center justify-end gap-1">
                           <button
                             onClick={() => toggleBreakdown(index)}
                             className={`p-1.5 rounded-lg transition-all ${expandedBreakdown.has(index) ? 'bg-slate-800 text-white' : 'text-slate-400 hover:bg-slate-100'}`}

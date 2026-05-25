@@ -280,7 +280,7 @@ const ProductDetail = () => {
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-y-6 gap-x-8">
                   <DetailItem icon={Download} label="Buy Price" value={String(buyingPrice) !== "—" ? `₹${buyingPrice}` : "—"} onClick={click("Buy Price", `₹${buyingPrice}`)} />
-                  <DetailItem icon={Upload} label="Selling Price" value={String(sellingPrice) !== "—" ? `₹${sellingPrice}` : "—"} onClick={click("Selling Price", `₹${sellingPrice}`)} />
+                  <DetailItem icon={Upload} label="Sell Price" value={String(sellingPrice) !== "—" ? `₹${sellingPrice}` : "—"} onClick={click("Selling Price", `₹${sellingPrice}`)} />
                   <DetailItem icon={Tag} label="MRP" value={datas.mrp ? `₹${datas.mrp}` : "—"} onClick={click("MRP", datas.mrp ? `₹${datas.mrp}` : "—")} />
                   <DetailItem icon={Hash} label="HSN Code" value={String(datas.hsn || "—")} onClick={click("HSN Code", String(datas.hsn || "—"))} />
                   <DetailItem icon={BarChart2} label="GST Rate" value={String(datas.gst || "—")} onClick={click("GST Rate", String(datas.gst || "—"))} />
@@ -302,7 +302,7 @@ const ProductDetail = () => {
                   </div>
                   <div>
                     <p className="text-[10px] font-medium text-slate-400 tracking-[0.05em] mb-1.5 flex items-center gap-1.5">
-                      <MapPin size={12} className="text-blue-400" /> Location
+                      <MapPin size={12} className="text-blue-400" /> Storage Location
                     </p>
                     <div 
                       className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 border border-indigo-100 rounded-lg w-fit cursor-pointer hover:bg-indigo-100 transition-colors"
@@ -418,13 +418,11 @@ const ProductDetail = () => {
           </div>
         )}
 
-        {/* TAB — Stock Movements */}
         {TABS[activeTab] === MOV_TAB_LABEL && (
           <StockMovementTab
             inventoryId={id || ""}
             product={product}
-            onNavigateToPurchase={(purchaseId) => navigate(`/purchase/detail/${purchaseId}`)}
-            onNavigateToSale={(saleId) => navigate(`/sales/${saleId}`)}
+            onViewDetails={(movementId) => navigate(`/stock-movement/${movementId}`)}
           />
         )}
 

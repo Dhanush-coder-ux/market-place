@@ -109,17 +109,17 @@ const PurchaseDetail = () => {
 
   return (
     <div className="flex-1 flex flex-col min-h-0 h-full bg-slate-50/50 font-sans text-slate-900 overflow-hidden relative">
-      
+
       {/* Profile Header Card */}
       <div className="flex-none p-1 pb-0">
         <ProfileHeaderCard
-          name={`Purchase PO · ${po.poNumber}`}
+          name={`Purchase · ${po.poNumber}`}
           initials="PO"
           subText={`ID: ${po.id}`}
           badges={[
             { text: po.purchaseType, variant: "primary" },
             po.outstanding && po.outstanding > 0
-              ? (po.paid_amount === 0 
+              ? (po.paid_amount === 0
                 ? { text: "Unpaid", variant: "danger" }
                 : { text: "Partially Paid", variant: "warning" })
               : { text: "Paid", variant: "success" }
@@ -169,7 +169,7 @@ const PurchaseDetail = () => {
       {/* Tab Panels */}
       <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar px-1 pb-6">
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-          
+
           {/* TAB 0 — Overview */}
           {activeTab === 0 && (
             <div className="space-y-4">
@@ -212,29 +212,27 @@ const PurchaseDetail = () => {
                     <div className="space-y-1">
                       {hasSubtotal && <InfoRow label="Subtotal (Excl. GST)" value={fmt(subtotal)} />}
                       {totalGst > 0 && <InfoRow label="Total GST" value={<span className="text-indigo-600 font-semibold">+{fmt(totalGst)}</span>} />}
-                      {transportCharge > 0 && <InfoRow label="Transport Charges" value={<span className="text-slate-700">+{fmt(transportCharge)}</span>} />}
-                      {otherCharge > 0 && <InfoRow label="Other Charges" value={<span className="text-slate-700">+{fmt(otherCharge)}</span>} />}
-                      
                       <div className="mt-4 pt-4 border-t-2 border-slate-100 border-dashed flex justify-between items-center">
-                        <span className="text-sm font-black text-slate-800 uppercase tracking-wider">Total Cost</span>
+                        <span className="text-sm font-black text-slate-800 uppercase tracking-wider">Purchase Total</span>
                         <span className="text-xl font-black text-blue-600 tabular-nums">{fmt(po.total_cost)}</span>
                       </div>
 
-                      {po.paid_amount !== undefined && (
-                        <div className="mt-2 pt-2 border-t border-slate-100 flex justify-between items-center text-xs font-semibold text-slate-500">
-                          <span>Paid Amount</span>
-                          <span className="tabular-nums text-slate-700">{fmt(po.paid_amount)}</span>
+                      {(transportCharge > 0 || otherCharge > 0) && (
+                        <div className="mt-4 pt-4 border-t border-slate-100 space-y-1">
+                          <p className="text-[10px] font-bold text-slate-400 mb-2 uppercase tracking-widest">Additional Charges</p>
+                          {transportCharge > 0 && <InfoRow label="Transport Charges" value={<span className="text-slate-600">+{fmt(transportCharge)}</span>} />}
+                          {otherCharge > 0 && <InfoRow label="Other Charges" value={<span className="text-slate-600">+{fmt(otherCharge)}</span>} />}
+                          <div className="mt-2 pt-2 border-t border-slate-50 flex justify-between items-center">
+                            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Total Additional</span>
+                            <span className="text-sm font-black text-slate-700 tabular-nums">+{fmt(po.additional_charges_total || 0)}</span>
+                          </div>
                         </div>
                       )}
 
-                      {po.outstanding !== undefined && (
-                        <div className="mt-1 flex justify-between items-center text-xs font-semibold">
-                          <span className="text-slate-500">Outstanding</span>
-                          <span className={`tabular-nums font-bold ${po.outstanding > 0 ? "text-amber-600" : "text-emerald-600"}`}>
-                            {fmt(po.outstanding)}
-                          </span>
-                        </div>
-                      )}
+                      <div className="mt-4 pt-4 border-t-2 border-slate-800 flex justify-between items-center">
+                        <span className="text-sm font-black text-slate-900 uppercase tracking-wider">Grand Total</span>
+                        <span className="text-xl font-black text-slate-900 tabular-nums">{fmt(po.grand_total || po.total_cost)}</span>
+                      </div>
                     </div>
                   </SectionCard>
                 </div>
@@ -259,6 +257,25 @@ const PurchaseDetail = () => {
                       )}
                     </div>
                   </SectionCard>
+
+                  <SectionCard title="Payment Summary">
+                    <div className="space-y-3">
+                      {po.paid_amount !== undefined && (
+                        <div className="flex justify-between items-center text-sm font-semibold text-slate-600">
+                          <span>Paid Amount</span>
+                          <span className="tabular-nums text-slate-800">{fmt(po.paid_amount)}</span>
+                        </div>
+                      )}
+                      {po.outstanding !== undefined && (
+                        <div className="flex justify-between items-center text-sm font-bold pt-3 border-t border-slate-100">
+                          <span className="text-slate-600">Outstanding</span>
+                          <span className={`tabular-nums ${po.outstanding > 0 ? "text-amber-600" : "text-emerald-600"}`}>
+                            {fmt(po.outstanding)}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </SectionCard>
                 </div>
               </div>
             </div>
@@ -274,7 +291,9 @@ const PurchaseDetail = () => {
                       <tr className="bg-slate-50/50 border-b border-slate-100">
                         <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em]">Product Details</th>
                         <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-center">Qty</th>
-                        <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em]">Stock Overview</th>
+                        <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-center">Stock Before</th>
+                        <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-center">Stock In/Out</th>
+                        <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-center">Stock After</th>
                         <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-right">Unit Price</th>
                         <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-right">Total</th>
                       </tr>
@@ -289,29 +308,29 @@ const PurchaseDetail = () => {
                               </div>
                               <div className="min-w-0">
                                 <p className="text-sm font-bold text-slate-800 truncate">{product.name}</p>
-                                  <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                                    {product.barcode && (
-                                      <span className="text-[10px] font-mono font-bold text-slate-400">{product.barcode}</span>
-                                    )}
-                                    {product.gst !== undefined && product.gst > 0 && (
-                                      <span className="text-[9px] font-extrabold text-indigo-500 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-100 uppercase tracking-wider font-sans">
-                                        GST {product.gst}%
-                                      </span>
-                                    )}
-                                    {product.category && (
-                                      <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wide bg-slate-100 text-slate-500">
-                                        {product.category}
-                                      </span>
-                                    )}
-                                  </div>
+                                <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                                  {product.barcode && (
+                                    <span className="text-[10px] font-mono font-bold text-slate-400">{product.barcode}</span>
+                                  )}
+                                  {product.gst !== undefined && product.gst > 0 && (
+                                    <span className="text-[9px] font-extrabold text-indigo-500 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-100 uppercase tracking-wider font-sans">
+                                      GST {product.gst}%
+                                    </span>
+                                  )}
+                                  {product.category && (
+                                    <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wide bg-slate-100 text-slate-500">
+                                      {product.category}
+                                    </span>
+                                  )}
+                                </div>
 
                                 {/* Variant-Level Batches & Serials */}
                                 {(product.variants?.length ?? 0) > 0 && (
                                   <div className="mt-2 pl-3 border-l-2 border-indigo-100 space-y-2.5">
                                     {product.variants?.map((v, vIdx) => (
                                       <div key={vIdx} className="space-y-1">
-                                        <p className="text-[10px] font-extrabold text-indigo-750 bg-indigo-50/50 px-1.5 py-0.5 rounded w-fit">• {v.name}</p>
-                                        
+                                        <p className="text-[10px] font-extrabold text-indigo-750 bg-indigo-50/50 px-1.5 py-0.5 rounded w-fit">• {v.name} {v.buy_price !== undefined ? `(Buy: ${fmt(v.buy_price)})` : ""}</p>
+
                                         {/* Variant Batches */}
                                         {v.batches && v.batches.length > 0 && (
                                           <div className="space-y-1 pl-2">
@@ -413,24 +432,25 @@ const PurchaseDetail = () => {
                           <td className="px-6 py-4 text-center">
                             <span className="text-xs font-black text-slate-600">{product.quantity}</span>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="flex flex-col gap-0.5">
-                              <div className="flex items-center gap-2">
-                                <span className="text-[9px] font-black text-slate-400 tracking-wider uppercase">Opening</span>
-                                <span className="text-xs font-bold text-slate-600">{product.stocks_before !== undefined && product.stocks_before !== null ? product.stocks_before : '—'}</span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <span className="text-[9px] font-black text-blue-400 tracking-wider uppercase">Current</span>
-                                <span className="text-xs font-black text-blue-600">
-                                  {product.stocks_before !== undefined && product.stocks_before !== null ? (product.stocks_before + product.quantity) : '—'}
-                                </span>
-                              </div>
-                            </div>
+                          <td className="px-6 py-4 whitespace-nowrap text-center">
+                            <span className="text-xs font-semibold text-slate-650">
+                              {product.stocks_before !== undefined && product.stocks_before !== null ? product.stocks_before : '—'}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-center">
+                            <span className="text-xs font-bold text-blue-600">
+                              +{product.quantity}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-center">
+                            <span className="text-xs font-black text-slate-800">
+                              {product.stocks_before !== undefined && product.stocks_before !== null ? (product.stocks_before + product.quantity) : '—'}
+                            </span>
                           </td>
                           <td className="px-6 py-4 text-right">
                             {product.buy_price !== undefined ? (
                               <div className="flex flex-col items-end">
-                                <span className="text-xs font-bold text-slate-500 tabular-nums">{fmt(product.buy_price)}</span>
+                                <span className="text-xs font-black text-slate-800 tabular-nums">{fmt(product.buy_price)}</span>
                                 {product.gst !== undefined && product.gst > 0 && (
                                   <span className="text-[9px] text-indigo-600 font-semibold mt-0.5 whitespace-nowrap">
                                     ₹{(product.buy_price * (1 + product.gst / 100)).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} incl. {product.gst}% GST
@@ -470,7 +490,7 @@ const PurchaseDetail = () => {
               <SectionCard title="Vendor Information">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-6 gap-x-8">
                   <DetailItem icon={Building2} label="Vendor Name" value={po.vendor} />
-                  <DetailItem icon={FileText} label="PO Number" value={po.poNumber} />
+                  <DetailItem icon={FileText} label="Invoice Number" value={po.poNumber} />
                   <DetailItem icon={Calendar} label="Date" value={po.date} />
                   <DetailItem icon={Clock} label="Time" value={po.time} />
                   <DetailItem icon={User} label="Purchase Type" value={po.purchaseType} />

@@ -49,7 +49,7 @@ const SupplierSearch = () => {
   );
 };
 
-const TABS = ["General Info", "Purchase Orders"];
+const TABS = ["General Info", "Purchases"];
 
 export default function SupplierDetail() {
   const { id } = useParams<{ id: string }>();
@@ -193,24 +193,24 @@ export default function SupplierDetail() {
                       onClick={() => setViewValue({ label: "Business Name", value: name })}
                     />
                     <DetailItem
-                      icon={User} label="Contact Person" value={String(contact.name || "—")}
-                      onClick={() => setViewValue({ label: "Contact Person", value: String(contact.name || "—") })}
+                      icon={User} label="Contact Person Name" value={String(contact.name || "—")}
+                      onClick={() => setViewValue({ label: "Contact Person Name", value: String(contact.name || "—") })}
                     />
                     <DetailItem
-                      icon={Mail} label="Contact Email" value={String(contact.email || "—")}
-                      onClick={() => setViewValue({ label: "Contact Email", value: String(contact.email || "—") })}
+                      icon={Mail} label="Contact Person Email" value={String(contact.email || "—")}
+                      onClick={() => setViewValue({ label: "Contact Person Email", value: String(contact.email || "—") })}
                     />
                     <DetailItem
-                      icon={Phone} label="Contact Mobile" value={String(contact.mobile_number || "—")}
-                      onClick={() => setViewValue({ label: "Contact Mobile", value: String(contact.mobile_number || "—") })}
+                      icon={Phone} label="Contact Person Mobile No." value={String(contact.mobile_number || "—")}
+                      onClick={() => setViewValue({ label: "Contact Person Mobile No.", value: String(contact.mobile_number || "—") })}
                     />
                     <DetailItem
-                      icon={Mail} label="Email" value={String(supplier.email || "—")}
-                      onClick={() => setViewValue({ label: "Email", value: String(supplier.email || "—") })}
+                      icon={Mail} label="Supplier Email" value={String(supplier.email || "—")}
+                      onClick={() => setViewValue({ label: "Supplier Email", value: String(supplier.email || "—") })}
                     />
                     <DetailItem
-                      icon={Phone} label="Phone" value={String(supplier.mobile_number || "—")}
-                      onClick={() => setViewValue({ label: "Phone", value: String(supplier.mobile_number || "—") })}
+                      icon={Phone} label="Supplier Mobile No." value={String(supplier.mobile_number || "—")}
+                      onClick={() => setViewValue({ label: "Supplier Mobile No.", value: String(supplier.mobile_number || "—") })}
                     />
                     <DetailItem
                       icon={MapPin} label="City" value={String(datas.address?.city || "—")}
@@ -296,6 +296,7 @@ export default function SupplierDetail() {
               <SupplierPurchasesTable
                 rows={rows}
                 loading={purLoading}
+                onNavigateToPurchase={(purchaseId) => navigate(`/purchase/detail/${purchaseId}`)}
               />
             );
           })()}

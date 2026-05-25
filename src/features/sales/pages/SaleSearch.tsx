@@ -39,7 +39,7 @@ const SaleSearch = () => {
       const query = q.toLowerCase().trim();
       const filtered = data.filter((s: any) => {
         if (!query) return true;
-        const invStr = `INV-${s.ui_id}`.toLowerCase();
+        const invStr = `Order #${s.ui_id}`.toLowerCase();
         const idStr = String(s.id).toLowerCase();
         const custStr = String(s.customer_id || "").toLowerCase();
         const cashierStr = String(s.cashier_id || "").toLowerCase();
@@ -61,7 +61,7 @@ const SaleSearch = () => {
       });
 
       return filtered.slice(0, 10).map((s: any) => {
-        const invLabel = `INV-${s.ui_id}`;
+        const invLabel = `Order #${s.ui_id}`;
         const totalLabel = `₹${Number(s.total_sellprice).toLocaleString("en-IN")}`;
         const statusLabel = s.status ? s.status.charAt(0).toUpperCase() + s.status.slice(1).toLowerCase() : "Completed";
         const dateLabel = s.created_at ? new Date(s.created_at).toLocaleDateString("en-IN", { day: "2-digit", month: "short" }) : "";
@@ -84,7 +84,7 @@ const SaleSearch = () => {
             <Receipt size={40} />
           </div>
           <h1 className="text-4xl font-black text-slate-800 tracking-tight">Sales Directory</h1>
-          <p className="text-slate-500 font-medium text-lg">Search for invoices, customer transactions or manage sales.</p>
+          <p className="text-slate-500 font-medium text-lg">Search for orders, customer transactions or manage sales.</p>
         </div>
 
         <div className="relative group">
@@ -94,7 +94,7 @@ const SaleSearch = () => {
               labelKey="displayName"
               valueKey="id"
               fetchOptions={fetchSales}
-              placeholder="Search by invoice ID (INV-), status, payment method or amount..."
+              placeholder="Search by order ID, status, payment method or amount..."
               className="w-full h-16 border-none text-lg font-medium"
               onChange={(val) => val && navigate(`/sales/${val}`)}
             />

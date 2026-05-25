@@ -16,15 +16,15 @@ const PurchaseSearch = () => {
   useEffect(() => {
     setActions(
       <div className="flex items-center gap-3">
-        <button 
+        <button
           onClick={() => navigate("/purchase-history")}
-          className="px-5 h-11 rounded-lg border border-blue-100 text-blue-600 font-bold text-[14px] bg-blue-50/50 hover:bg-blue-100 transition-all flex-nowrap shrink-0 flex items-center gap-2"
+          className="px-4 h-8 rounded-lg border border-blue-100 text-blue-600 font-bold text-[13px] bg-blue-50/50 hover:bg-blue-100 transition-all flex-nowrap shrink-0 flex items-center gap-1.5"
         >
-          <History size={18} />
+          <History size={16} />
           Purchase History
         </button>
-        <GradientButton path="/purchase/add" className="h-11 flex-nowrap shrink-0 flex items-center px-6 text-[14px] shadow-lg shadow-blue-200">
-          <PlusCircle size={18} className="mr-1.5" />
+        <GradientButton path="/purchase/add" className="h-8 flex items-center px-4 text-[13px] shadow-md shadow-blue-200">
+          <PlusCircle size={16} className="mr-1.5" />
           Add Purchase
         </GradientButton>
       </div>
@@ -37,7 +37,7 @@ const PurchaseSearch = () => {
       const res = await getData(ENDPOINTS.PURCHASES, { view: "PURCHASE_VIEW", shop_id: SHOP_ID, limit: "100", offset: "1" });
       const rawData = res?.data ? (Array.isArray(res.data) ? res.data : [res.data]) : [];
       const data = rawData.map(toDisplayData);
-      
+
       const query = q.toLowerCase().trim();
       const filtered = data.filter((po: any) => {
         if (!query) return true;
@@ -47,7 +47,7 @@ const PurchaseSearch = () => {
         const costStr = String(po.total_cost || "").toLowerCase();
         const dateStr = String(po.date || "").toLowerCase();
         const typeStr = String(po.purchaseType || "").toLowerCase();
-        
+
         return (
           poNumStr.includes(query) ||
           idStr.includes(query) ||

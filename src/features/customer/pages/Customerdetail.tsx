@@ -359,7 +359,7 @@ export default function CustomerDetail() {
                         })}
                       </div>
                     </div>
-                  </SectionCard>
+                  </SectionCard>  
 
                   {/* Address Card */}
                   <SectionCard className="rounded-lg border-slate-200 shadow-sm p-6 overflow-hidden relative">

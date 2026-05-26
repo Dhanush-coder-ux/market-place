@@ -438,12 +438,12 @@ const PurchaseDetail = () => {
                             </span>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-center">
-                            <span className="text-xs font-bold text-blue-600">
+                            <span className="text-xs font-bold text-green-600">
                               +{product.quantity}
                             </span>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-center">
-                            <span className="text-xs font-black text-slate-800">
+                            <span className="text-xs font-black text-blue-600">
                               {product.stocks_before !== undefined && product.stocks_before !== null ? (product.stocks_before + product.quantity) : '—'}
                             </span>
                           </td>

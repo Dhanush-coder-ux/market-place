@@ -52,7 +52,7 @@ export function StockMovementsTable({ rows, loading, onViewDetails }: StockMovem
                   <th className="px-5 py-3.5">Movement Type</th>
                   <th className="px-5 py-3.5">Product / Variant / Batch</th>
                   <th className="px-5 py-3.5 text-center">Stock Before</th>
-                  <th className="px-5 py-3.5 text-center">Qty Changed</th>
+                  <th className="px-5 py-3.5 text-center">Stock In/Out</th>
                   <th className="px-5 py-3.5 text-center">Stock After</th>
                   <th className="px-5 py-3.5">Details</th>
                   <th className="px-5 py-3.5 w-12"></th>
@@ -170,7 +170,7 @@ export function ProductPurchasesTable({ rows, loading, onNavigateToPurchase }: P
                   <th className="px-5 py-3.5">Type</th>
                   <th className="px-5 py-3.5">Variant / Batch</th>
                   <th className="px-5 py-3.5 text-center">Stock Before</th>
-                  <th className="px-5 py-3.5 text-center">Qty Changed</th>
+                  <th className="px-5 py-3.5 text-center">Stock In/Out</th>
                   <th className="px-5 py-3.5 text-center">Stock After</th>
                   <th className="px-5 py-3.5">Buy Price</th>
                   <th className="px-5 py-3.5">Sell Price</th>
@@ -309,7 +309,7 @@ export function SupplierPurchasesTable({ rows, loading, onNavigateToPurchase }: 
                   <th className="px-5 py-3.5">Type</th>
                   <th className="px-5 py-3.5">Product</th>
                   <th className="px-5 py-3.5 text-center">Stock Before</th>
-                  <th className="px-5 py-3.5 text-center">Qty Changed</th>
+                  <th className="px-5 py-3.5 text-center">Stock In/Out</th>
                   <th className="px-5 py-3.5 text-center">Stock After</th>
                   <th className="px-5 py-3.5">Buy Price</th>
                   <th className="px-5 py-3.5">Sell Price</th>

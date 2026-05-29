@@ -20,7 +20,6 @@ interface InvoicePreviewModalProps {
   onConfirm: (status: BillStatus) => void;
 }
 
-const GST_PERCENT = 18;
 const formatINR = (v: number, d = 2) =>
   v.toLocaleString("en-IN", { minimumFractionDigits: d, maximumFractionDigits: d });
 
@@ -198,7 +197,7 @@ const InvoicePreviewModal: React.FC<InvoicePreviewModalProps> = ({
                         </td>
                         <td className="px-2 py-2.5 text-center text-[11px] text-slate-600 tabular-nums">{item.qty}</td>
                         <td className="px-2 py-2.5 text-right text-[11px] text-slate-500 tabular-nums">₹{formatINR(item.price)}</td>
-                        {includeGst && <td className="px-2 py-2.5 text-right text-[10px] text-slate-400 tabular-nums">{GST_PERCENT}%</td>}
+                        {includeGst && <td className="px-2 py-2.5 text-right text-[10px] text-slate-400 tabular-nums">{item.gst ?? 18}%</td>}
                         <td className="pl-2 pr-6 py-2.5 text-right text-[12px] font-medium text-slate-800 tabular-nums">₹{formatINR(item.tprice)}</td>
                       </tr>
                     );
@@ -217,7 +216,7 @@ const InvoicePreviewModal: React.FC<InvoicePreviewModalProps> = ({
                   </div>
                   {includeGst && (
                     <div className="flex justify-between text-[11px] text-slate-500">
-                      <span>GST ({GST_PERCENT}%)</span>
+                      <span>Total GST</span>
                       <span className="tabular-nums">₹{formatINR(gstAmount)}</span>
                     </div>
                   )}

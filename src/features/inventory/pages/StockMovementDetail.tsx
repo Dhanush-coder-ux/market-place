@@ -243,14 +243,13 @@ const StockMovementDetail = () => {
                       <th className="px-4 py-3 w-[35%]">Product Information</th>
                       <th className="px-4 py-3 w-[15%]">Category</th>
                       <th className="px-4 py-3 w-[15%]">Type</th>
-                      <th className="px-4 py-3 text-center w-[10%]">Stock Before</th>
                       <th className="px-4 py-3 text-center w-[15%]">Quantity Changed</th>
                       <th className="px-4 py-3 text-center w-[10%]">Stock After</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 text-sm">
                     {products.length === 0 && (
-                      <tr><td colSpan={6} className="p-8 text-center text-slate-400 font-medium bg-slate-50/30">No products found in this movement.</td></tr>
+                      <tr><td colSpan={5} className="p-8 text-center text-slate-400 font-medium bg-slate-50/30">No products found in this movement.</td></tr>
                     )}
                     {products.map((prod: any, idx: number) => {
                       const isDec = prod.type === "DECREMENT" || adjustment.movement_type === "SALES";
@@ -272,9 +271,6 @@ const StockMovementDetail = () => {
                                {isDec ? <TrendingDown size={12} className="stroke-[3]" /> : <TrendingUp size={12} className="stroke-[3]" />}
                                {movementLabel.toUpperCase()}
                              </span>
-                          </td>
-                          <td className="px-4 py-4 font-bold text-slate-500 text-center align-top pt-4 tabular-nums">
-                            {sBefore !== null ? sBefore : "—"}
                           </td>
                           <td className="px-4 py-4 font-black text-xl tabular-nums text-center align-top pt-3 border-x border-slate-50 bg-slate-50/20">
                             <span className={isDec ? "text-rose-600" : "text-emerald-600"}>

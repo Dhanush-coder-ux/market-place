@@ -33,6 +33,32 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
   const [variantSearch, setVariantSearch] = useState("");
   const [serialSearch, setSerialSearch] = useState("");
 
+  const executeSubmit = (v: ProductVariant | null, b: any | null, s: string[], qty: number) => {
+    const activeV = v || selectedVariant;
+    if (!activeV) return;
+
+    const finalVariant = { ...activeV };
+    const activeB = b !== undefined ? b : selectedBatch;
+
+    if (product?.batchTracking && activeB) {
+      finalVariant.batchId = activeB.id || activeB.batchId;
+      finalVariant.expiryDate = activeB.expiry_date || activeB.expiryDate;
+      finalVariant.manufacturingDate = activeB.manufacturing_date || activeB.manufacturingDate;
+      if (activeB.sell_price || activeB.price) {
+        finalVariant.price = activeB.sell_price || activeB.price;
+      }
+      if (activeB.stocks !== undefined || activeB.stock !== undefined) {
+        finalVariant.stock = activeB.stocks !== undefined ? activeB.stocks : activeB.stock;
+      }
+      if (activeB.serial_numbers || activeB.availableSerials) {
+        finalVariant.serialnoId = activeB.serial_numbers?.id || activeB.serialnoId;
+        finalVariant.availableSerials = activeB.serial_numbers?.serial_numbers || activeB.availableSerials || [];
+      }
+    }
+
+    onSuccess(finalVariant, qty, s);
+  };
+
   // Body Scroll Lock
   useEffect(() => {
     if (isOpen) document.body.classList.add("no-scroll");
@@ -51,7 +77,6 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
     if (hasVariants) s.push("variant");
     if (hasBatches) s.push("batch");
     if (isElectronics) s.push("serial");
-    s.push("summary");
     return s;
   }, [hasVariants, hasBatches, isElectronics]);
 
@@ -182,10 +207,13 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
       
       {/* Centering Wrapper */}
       <div className="relative w-full h-full flex items-center justify-center p-4 pointer-events-none">
-        <div className="relative bg-white w-full max-w-md rounded-lg shadow-[0_24px_80px_rgba(0,0,0,0.3)] border border-slate-100 overflow-hidden transform scale-100 animate-in fade-in zoom-in-95 duration-300 pointer-events-auto">
+        <div 
+          className="relative bg-white w-full max-w-md rounded-lg shadow-[0_24px_80px_rgba(0,0,0,0.3)] border border-slate-100 overflow-hidden transform scale-100 animate-in fade-in zoom-in-95 duration-300 pointer-events-auto flex flex-col"
+          style={{ display: "flex", flexDirection: "column", maxHeight: "80vh" }}
+        >
           
           {/* Header */}
-          <div className="px-6 py-5 border-b border-slate-100 bg-white relative">
+          <div className="px-6 py-5 border-b border-slate-100 bg-white relative shrink-0">
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h3 className="text-lg font-bold text-slate-800 tracking-tight">{product.product_name}</h3>
@@ -207,20 +235,21 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
                 </React.Fragment>
               ))}
             </div>
-          </div>
-
-          <div className="p-6 overflow-y-auto pf-scroll" style={{ minHeight: '320px', maxHeight: '60vh' }}>
+          </div>          <div 
+            className="p-6 flex flex-col flex-1 min-h-0 overflow-hidden" 
+            style={{ maxHeight: "calc(80vh - 200px)" }}
+          >
             
             {/* STEP: VARIANT */}
             {currentStep === "variant" && (
-              <div className="space-y-4 animate-in slide-in-from-right-4 duration-300">
-                <div className="flex items-center justify-between">
+              <div className="flex flex-col flex-1 min-h-0 space-y-4 animate-in slide-in-from-right-4 duration-300">
+                <div className="flex items-center justify-between shrink-0">
                   <p className="text-[11px] font-bold text-slate-400">Choose Variant</p>
                   <span className="text-[10px] font-bold text-blue-500 bg-blue-50 px-2 py-0.5 rounded-full">Required</span>
                 </div>
 
                 {/* Variant Search */}
-                <div className="relative">
+                <div className="relative shrink-0">
                   <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                   <input
                     type="text"
@@ -231,60 +260,69 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
                   />
                 </div>
 
-                <div className="grid grid-cols-1 gap-2.5">
-                  {product.variants
-                    .filter(v => v.name.toLowerCase().includes(variantSearch.toLowerCase()))
-                    .map((variant) => {
-                    const isSelected = selectedVariant?.id === variant.id;
-                    const isOutOfStock = variant.stock === 0;
+                <div className="flex-1 overflow-y-auto custom-scrollbar modal-content pr-0.5">
+                  <div className="grid grid-cols-1 gap-2.5 pb-2">
+                    {product.variants
+                      .filter(v => v.name.toLowerCase().includes(variantSearch.toLowerCase()))
+                      .map((variant) => {
+                      const isSelected = selectedVariant?.id === variant.id;
+                      const isOutOfStock = variant.stock === 0;
 
-                    return (
-                      <button
-                        key={variant.id}
-                        disabled={isOutOfStock}
-                        onClick={() => setSelectedVariant(variant)}
-                        className={`group flex items-center gap-4 p-4 rounded-lg border-2 text-left transition-all duration-200 ${
-                          isOutOfStock ? "opacity-40 cursor-not-allowed border-slate-50 bg-slate-50/50" :
-                          isSelected ? "border-blue-500 bg-blue-50/50 shadow-md shadow-blue-100" : "border-slate-100 hover:border-slate-200 hover:bg-slate-50"
-                        }`}
-                      >
-                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 transition-colors ${
-                          isSelected ? "bg-blue-500 text-white" : "bg-slate-100 text-slate-400 group-hover:bg-slate-200"
-                        }`}>
-                          <Package size={18} />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className={`text-sm font-bold ${isSelected ? "text-blue-900" : "text-slate-700"}`}>
-                            {variant.name}
-                          </p>
-                          <p className="text-xs font-medium text-slate-400 mt-0.5">Stock: {variant.stock} units</p>
-                        </div>
-                        <div className="text-right">
-                          <p className={`text-sm font-bold ${isSelected ? "text-blue-700" : "text-slate-900"}`}>{fmt(variant.price)}</p>
-                          {isSelected && <CheckCircle2 size={16} className="text-blue-500 ml-auto mt-1" />}
-                        </div>
-                      </button>
-                    );
-                  })}
-                  {product.variants.filter(v => v.name.toLowerCase().includes(variantSearch.toLowerCase())).length === 0 && (
-                    <div className="py-8 text-center bg-slate-50 rounded-lg border-2 border-dashed border-slate-100">
-                      <p className="text-xs text-slate-400 font-medium">No variants match "{variantSearch}"</p>
-                    </div>
-                  )}
+                      return (
+                        <button
+                          key={variant.id}
+                          disabled={isOutOfStock}
+                          onClick={() => {
+                            setSelectedVariant(variant);
+                            if (steps.length === 1) {
+                              executeSubmit(variant, selectedBatch, selectedSerials, quantity);
+                            } else {
+                              setStepIndex(1);
+                            }
+                          }}
+                          className={`group flex items-center gap-4 p-4 rounded-lg border-2 text-left transition-all duration-200 ${
+                            isOutOfStock ? "opacity-40 cursor-not-allowed border-slate-50 bg-slate-50/50" :
+                            isSelected ? "border-blue-500 bg-blue-50/50 shadow-md shadow-blue-100" : "border-slate-100 hover:border-slate-200 hover:bg-slate-50"
+                          }`}
+                        >
+                          <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 transition-colors ${
+                            isSelected ? "bg-blue-500 text-white" : "bg-slate-100 text-slate-400 group-hover:bg-slate-200"
+                          }`}>
+                            <Package size={18} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className={`text-sm font-bold ${isSelected ? "text-blue-900" : "text-slate-700"}`}>
+                              {variant.name}
+                            </p>
+                            <p className="text-xs font-medium text-slate-400 mt-0.5">Stock: {variant.stock} units</p>
+                          </div>
+                          <div className="text-right">
+                            <p className={`text-sm font-bold ${isSelected ? "text-blue-700" : "text-slate-900"}`}>{fmt(variant.price)}</p>
+                            {isSelected && <CheckCircle2 size={16} className="text-blue-500 ml-auto mt-1" />}
+                          </div>
+                        </button>
+                      );
+                    })}
+                    {product.variants.filter(v => v.name.toLowerCase().includes(variantSearch.toLowerCase())).length === 0 && (
+                      <div className="py-8 text-center bg-slate-50 rounded-lg border-2 border-dashed border-slate-100">
+                        <p className="text-xs text-slate-400 font-medium">No variants match "{variantSearch}"</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             )}
 
             {/* STEP: BATCH */}
             {currentStep === "batch" && (
-              <div className="space-y-4 animate-in slide-in-from-right-4 duration-300">
-                <div className="flex items-center justify-between">
+              <div className="flex flex-col flex-1 min-h-0 space-y-4 animate-in slide-in-from-right-4 duration-300">
+                <div className="flex items-center justify-between shrink-0">
                   <p className="text-[11px] font-bold text-slate-400">Choose Batch</p>
                   <span className="text-[10px] font-bold text-blue-500 bg-blue-50 px-2 py-0.5 rounded-full">Required</span>
                 </div>
 
                 {/* Batch Search */}
-                <div className="relative">
+                <div className="relative shrink-0">
                   <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                   <input
                     type="text"
@@ -295,80 +333,94 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
                   />
                 </div>
 
-                <div className="grid grid-cols-1 gap-2.5">
-                  {batchesToSelect
-                    .filter((b: any) => {
+                <div className="flex-1 overflow-y-auto custom-scrollbar modal-content pr-0.5">
+                  <div className="grid grid-cols-1 gap-2.5 pb-2">
+                    {batchesToSelect
+                      .filter((b: any) => {
+                        const name = b.name || b.batch_no || b.id;
+                        return name.toLowerCase().includes(variantSearch.toLowerCase());
+                      })
+                      .map((batch: any) => {
+                        const isSelected = selectedBatch?.id === batch.id;
+                        const isOutOfStock = (batch.stocks !== undefined ? batch.stocks : batch.stock) === 0;
+                        const batchName = batch.name || (batch.batch_no ? `Batch: ${batch.batch_no}` : `Batch: ${batch.id.slice(0, 8)}`);
+                        const batchStock = batch.stocks !== undefined ? batch.stocks : batch.stock;
+                        const batchPrice = batch.sell_price || batch.price || product.price || 0;
+
+                        return (
+                          <button
+                            key={batch.id}
+                            disabled={isOutOfStock}
+                            onClick={() => {
+                              setSelectedBatch(batch);
+                              if (currentStep === steps[steps.length - 1]) {
+                                executeSubmit(selectedVariant, batch, selectedSerials, quantity);
+                              } else {
+                                const batchIdx = steps.indexOf("batch");
+                                if (batchIdx < steps.length - 1) {
+                                  setStepIndex(batchIdx + 1);
+                                }
+                              }
+                            }}
+                            className={`group flex items-center gap-4 p-4 rounded-lg border-2 text-left transition-all duration-200 ${
+                              isOutOfStock ? "opacity-40 cursor-not-allowed border-slate-50 bg-slate-50/50" :
+                              isSelected ? "border-blue-500 bg-blue-50/50 shadow-md shadow-blue-100" : "border-slate-100 hover:border-slate-200 hover:bg-slate-50"
+                            }`}
+                          >
+                            <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 transition-colors ${
+                              isSelected ? "bg-blue-500 text-white" : "bg-slate-100 text-slate-400 group-hover:bg-slate-200"
+                            }`}>
+                              <CalendarDays size={18} />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className={`text-sm font-bold ${isSelected ? "text-blue-900" : "text-slate-700"}`}>
+                                {batchName}
+                              </p>
+                              <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                                <span className="text-xs font-medium text-slate-400">Stock: {batchStock} units</span>
+                                {(batch.expiry_date || batch.expiryDate) && (
+                                  <span className="inline-flex items-center text-[9px] font-semibold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">
+                                    EXP: {formatDate(batch.expiry_date || batch.expiryDate)}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <p className={`text-sm font-bold ${isSelected ? "text-blue-700" : "text-slate-900"}`}>{fmt(batchPrice)}</p>
+                              {isSelected && <CheckCircle2 size={16} className="text-blue-500 ml-auto mt-1" />}
+                            </div>
+                          </button>
+                        );
+                      })}
+                    {batchesToSelect.length > 0 && batchesToSelect.filter((b: any) => {
                       const name = b.name || b.batch_no || b.id;
                       return name.toLowerCase().includes(variantSearch.toLowerCase());
-                    })
-                    .map((batch: any) => {
-                      const isSelected = selectedBatch?.id === batch.id;
-                      const isOutOfStock = (batch.stocks !== undefined ? batch.stocks : batch.stock) === 0;
-                      const batchName = batch.name || (batch.batch_no ? `Batch: ${batch.batch_no}` : `Batch: ${batch.id.slice(0, 8)}`);
-                      const batchStock = batch.stocks !== undefined ? batch.stocks : batch.stock;
-                      const batchPrice = batch.sell_price || batch.price || product.price || 0;
-
-                      return (
-                        <button
-                          key={batch.id}
-                          disabled={isOutOfStock}
-                          onClick={() => setSelectedBatch(batch)}
-                          className={`group flex items-center gap-4 p-4 rounded-lg border-2 text-left transition-all duration-200 ${
-                            isOutOfStock ? "opacity-40 cursor-not-allowed border-slate-50 bg-slate-50/50" :
-                            isSelected ? "border-blue-500 bg-blue-50/50 shadow-md shadow-blue-100" : "border-slate-100 hover:border-slate-200 hover:bg-slate-50"
-                          }`}
-                        >
-                          <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 transition-colors ${
-                            isSelected ? "bg-blue-500 text-white" : "bg-slate-100 text-slate-400 group-hover:bg-slate-200"
-                          }`}>
-                            <CalendarDays size={18} />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className={`text-sm font-bold ${isSelected ? "text-blue-900" : "text-slate-700"}`}>
-                              {batchName}
-                            </p>
-                            <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                              <span className="text-xs font-medium text-slate-400">Stock: {batchStock} units</span>
-                              {(batch.expiry_date || batch.expiryDate) && (
-                                <span className="inline-flex items-center text-[9px] font-semibold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">
-                                  EXP: {formatDate(batch.expiry_date || batch.expiryDate)}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <p className={`text-sm font-bold ${isSelected ? "text-blue-700" : "text-slate-900"}`}>{fmt(batchPrice)}</p>
-                            {isSelected && <CheckCircle2 size={16} className="text-blue-500 ml-auto mt-1" />}
-                          </div>
-                        </button>
-                      );
-                    })}
-                  {batchesToSelect.length > 0 && batchesToSelect.filter((b: any) => {
-                    const name = b.name || b.batch_no || b.id;
-                    return name.toLowerCase().includes(variantSearch.toLowerCase());
-                  }).length === 0 && (
-                    <div className="py-8 text-center bg-slate-50 rounded-lg border-2 border-dashed border-slate-100">
-                      <p className="text-xs text-slate-400 font-medium">No batches match "{variantSearch}"</p>
-                    </div>
-                  )}
-                  {batchesToSelect.length === 0 && (
-                    <div className="flex flex-col items-center gap-3 py-10 px-6 rounded-lg border-2 border-dashed border-slate-100 text-center">
-                      <AlertCircle size={32} className="text-amber-500" />
-                      <div>
-                        <p className="text-sm font-bold text-slate-700">No Batches Found</p>
-                        <p className="text-xs text-slate-400 mt-1">This product requires batch tracking but no active batches are available.</p>
+                    }).length === 0 && (
+                      <div className="py-8 text-center bg-slate-50 rounded-lg border-2 border-dashed border-slate-100">
+                        <p className="text-xs text-slate-400 font-medium">No batches match "{variantSearch}"</p>
                       </div>
-                    </div>
-                  )}
+                    )}
+                    {batchesToSelect.length === 0 && (
+                      <div className="flex flex-col items-center gap-3 py-10 px-6 rounded-lg border-2 border-dashed border-slate-100 text-center">
+                        <AlertCircle size={32} className="text-amber-500" />
+                        <div>
+                          <p className="text-sm font-bold text-slate-700">No Batches Found</p>
+                          <p className="text-xs text-slate-400 mt-1">This product requires batch tracking but no active batches are available.</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             )}
 
             {/* STEP: SERIALS */}
             {currentStep === "serial" && (
-              <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
-                <div>
-                  <p className="text-[11px] font-bold text-slate-400 mb-3">Quantity & Serials</p>
+              <div className="flex flex-col flex-1 min-h-0 space-y-4 animate-in slide-in-from-right-4 duration-300">
+                <div className="space-y-3 shrink-0">
+                  <div className="flex items-center justify-between">
+                    <p className="text-[11px] font-bold text-slate-400">Quantity & Serials</p>
+                  </div>
                   <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-lg border border-slate-100">
                     <div className="flex-1">
                       <label className="block text-[10px] font-bold text-slate-400 mb-1">Enter Quantity</label>
@@ -419,8 +471,8 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
                   )}
                 </div>
 
-                <div>
-                  <div className="flex items-center justify-between mb-3">
+                <div className="flex flex-col flex-1 min-h-0 space-y-3">
+                  <div className="flex items-center justify-between shrink-0">
                     <p className="text-[11px] font-bold text-slate-400 flex items-center gap-1.5">
                       <Barcode size={14} /> Select {quantity} Serial{quantity !== 1 ? 's' : ''}
                     </p>
@@ -432,7 +484,7 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
                   </div>
 
                   {/* Serial Search */}
-                  <div className="relative mb-3">
+                  <div className="relative shrink-0">
                     <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                     <input
                       type="text"
@@ -443,74 +495,76 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
                     />
                   </div>
                   
-                  {availableSerials.length > 0 ? (
-                    <div className="grid grid-cols-2 gap-2">
-                      {availableSerials
-                        .filter((s: string) => s.toLowerCase().includes(serialSearch.toLowerCase()))
-                        .map((s: string) => {
-                        const isSelected = Array.isArray(selectedSerials) && selectedSerials.includes(s);
-                        const isInitial = Array.isArray(initialSerials) && initialSerials.includes(s);
-                        
-                        const isDisabled = (() => {
-                          // Basic: reached quantity limit
-                          if (!isSelected && selectedSerials.length >= quantity) return true;
+                  <div className="flex-1 overflow-y-auto custom-scrollbar modal-content pr-0.5">
+                    {availableSerials.length > 0 ? (
+                      <div className="grid grid-cols-2 gap-2 pb-2">
+                        {availableSerials
+                          .filter((s: string) => s.toLowerCase().includes(serialSearch.toLowerCase()))
+                          .map((s: string) => {
+                          const isSelected = Array.isArray(selectedSerials) && selectedSerials.includes(s);
+                          const isInitial = Array.isArray(initialSerials) && initialSerials.includes(s);
                           
-                          // Increasing: lock initial ones
-                          if (initialSerials && quantity > initialSerials.length && isInitial) return true;
-                          
-                          // Decreasing: disable non-initial ones
-                          if (initialSerials && quantity < initialSerials.length && !isInitial) return true;
-                          
-                          return false;
-                        })();
+                          const isDisabled = (() => {
+                            // Basic: reached quantity limit
+                            if (!isSelected && selectedSerials.length >= quantity) return true;
+                            
+                            // Increasing: lock initial ones
+                            if (initialSerials && quantity > initialSerials.length && isInitial) return true;
+                            
+                            // Decreasing: disable non-initial ones
+                            if (initialSerials && quantity < initialSerials.length && !isInitial) return true;
+                            
+                            return false;
+                          })();
 
-                        return (
-                          <button
-                            key={s}
-                            disabled={isDisabled}
-                            onClick={() => toggleSerial(s)}
-                            className={`px-3 py-2.5 rounded-lg text-xs font-semibold border-2 transition-all duration-150 text-left relative overflow-hidden ${
-                              isSelected 
-                                ? isDisabled && isInitial && quantity > (initialSerials?.length || 0)
-                                  ? "border-slate-200 bg-slate-50 text-slate-400" // Locked style
-                                  : "border-blue-500 bg-blue-50 text-blue-700 shadow-sm" 
-                                : isDisabled
-                                  ? "border-slate-50 bg-slate-50 text-slate-300 cursor-not-allowed opacity-50"
-                                  : "border-slate-100 bg-white text-slate-600 hover:border-slate-200"
-                            }`}
-                          >
-                            <span className="truncate block pr-4">{s}</span>
-                            {isSelected && <Check size={12} className={`absolute right-2 top-1/2 -translate-y-1/2 ${
-                              isDisabled && isInitial && quantity > (initialSerials?.length || 0) ? "text-slate-300" : "text-blue-500"
-                            }`} />}
-                          </button>
-                        );
-                      })}
-                      {availableSerials.filter((s: string) => s.toLowerCase().includes(serialSearch.toLowerCase())).length === 0 && (
-                        <div className="col-span-2 py-8 text-center bg-slate-50 rounded-lg border-2 border-dashed border-slate-100">
-                          <p className="text-xs text-slate-400 font-medium">No serials match "{serialSearch}"</p>
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-center gap-3 py-10 px-6 rounded-lg border-2 border-dashed border-slate-100 text-center">
-                      <AlertCircle size={32} className="text-amber-300" />
-                      <div>
-                        <p className="text-sm font-bold text-slate-700">No Serials Found</p>
-                        <p className="text-xs text-slate-400 mt-1">This product requires serial numbers but none are available in stock.</p>
+                          return (
+                            <button
+                              key={s}
+                              disabled={isDisabled}
+                              onClick={() => toggleSerial(s)}
+                              className={`px-3 py-2.5 rounded-lg text-xs font-semibold border-2 transition-all duration-150 text-left relative overflow-hidden ${
+                                isSelected 
+                                  ? isDisabled && isInitial && quantity > (initialSerials?.length || 0)
+                                    ? "border-slate-200 bg-slate-50 text-slate-400" // Locked style
+                                    : "border-blue-500 bg-blue-50 text-blue-700 shadow-sm" 
+                                  : isDisabled
+                                    ? "border-slate-50 bg-slate-50 text-slate-300 cursor-not-allowed opacity-50"
+                                    : "border-slate-100 bg-white text-slate-600 hover:border-slate-200"
+                              }`}
+                            >
+                              <span className="truncate block pr-4">{s}</span>
+                              {isSelected && <Check size={12} className={`absolute right-2 top-1/2 -translate-y-1/2 ${
+                                isDisabled && isInitial && quantity > (initialSerials?.length || 0) ? "text-slate-300" : "text-blue-500"
+                              }`} />}
+                            </button>
+                          );
+                        })}
+                        {availableSerials.filter((s: string) => s.toLowerCase().includes(serialSearch.toLowerCase())).length === 0 && (
+                          <div className="col-span-2 py-8 text-center bg-slate-50 rounded-lg border-2 border-dashed border-slate-100">
+                            <p className="text-xs text-slate-400 font-medium">No serials match "{serialSearch}"</p>
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  )}
+                    ) : (
+                      <div className="flex flex-col items-center gap-3 py-10 px-6 rounded-lg border-2 border-dashed border-slate-100 text-center">
+                        <AlertCircle size={32} className="text-amber-300" />
+                        <div>
+                          <p className="text-sm font-bold text-slate-700">No Serials Found</p>
+                          <p className="text-xs text-slate-400 mt-1">This product requires serial numbers but none are available in stock.</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             )}
 
             {/* STEP: SUMMARY */}
             {currentStep === "summary" && (
-              <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
-                <p className="text-[11px] font-bold text-slate-400">Review Selection</p>
+              <div className="flex flex-col flex-1 min-h-0 space-y-3 animate-in slide-in-from-right-4 duration-300">
+                <p className="text-[11px] font-bold text-slate-400 shrink-0">Review Selection</p>
                 
-                <div className="space-y-3">
+                <div className="flex-1 overflow-y-auto custom-scrollbar modal-content pr-0.5 space-y-3">
                   <div className="p-4 bg-slate-50 rounded-lg border border-slate-100 flex items-center justify-between">
                     <div>
                       <p className="text-[10px] font-bold text-slate-400 mb-0.5">Selected Variant</p>
@@ -577,10 +631,11 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
                 </div>
               </div>
             )}
+
           </div>
 
           {/* Footer Actions */}
-          <div className="p-6 border-t border-slate-100 bg-white flex gap-3">
+          <div className="p-6 border-t border-slate-100 bg-white flex gap-3 shrink-0">
             {stepIndex > 0 ? (
               <button 
                 onClick={handleBack} 
@@ -611,33 +666,15 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
               </button>
             ) : (
               <button
+                disabled={!canGoNext}
                 onClick={() => {
-                  if (!selectedVariant) return;
-                  
-                  const finalVariant = { ...selectedVariant };
-                  
-                  if (product.batchTracking && selectedBatch) {
-                    finalVariant.batchId = selectedBatch.id || selectedBatch.batchId;
-                    finalVariant.expiryDate = selectedBatch.expiry_date || selectedBatch.expiryDate;
-                    finalVariant.manufacturingDate = selectedBatch.manufacturing_date || selectedBatch.manufacturingDate;
-                    // Update price if batch has its own price
-                    if (selectedBatch.sell_price || selectedBatch.price) {
-                      finalVariant.price = selectedBatch.sell_price || selectedBatch.price;
-                    }
-                    // Update stock if batch has its own stock
-                    if (selectedBatch.stocks !== undefined || selectedBatch.stock !== undefined) {
-                      finalVariant.stock = selectedBatch.stocks !== undefined ? selectedBatch.stocks : selectedBatch.stock;
-                    }
-                    // Update serial details from batch if any
-                    if (selectedBatch.serial_numbers || selectedBatch.availableSerials) {
-                      finalVariant.serialnoId = selectedBatch.serial_numbers?.id || selectedBatch.serialnoId;
-                      finalVariant.availableSerials = selectedBatch.serial_numbers?.serial_numbers || selectedBatch.availableSerials || [];
-                    }
-                  }
-                  
-                  onSuccess(finalVariant, quantity, selectedSerials);
+                  executeSubmit(selectedVariant, selectedBatch, selectedSerials, quantity);
                 }}
-                className="flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-lg text-sm font-bold text-white bg-emerald-500 hover:bg-emerald-600 shadow-lg shadow-emerald-200 transition-all duration-300"
+                className={`flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-lg text-sm font-bold text-white transition-all duration-300 ${
+                  canGoNext 
+                    ? "bg-emerald-500 hover:bg-emerald-600 shadow-lg shadow-emerald-200" 
+                    : "bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed"
+                }`}
               >
                 Add to Bill
                 <Check size={18} />

@@ -4,7 +4,8 @@ import {
   X, AlertTriangle, ArrowUp, ArrowDown,
   User, TrendingUp, TrendingDown, Activity,
   Bookmark, Filter,
-  FileText, Layers, Hash, Zap, Copy, ExternalLink
+  FileText, Layers, Hash, Zap, Copy, ExternalLink,
+  ChevronDown, ChevronRight
 } from "lucide-react";
 
 import { GradientButton } from "@/components/ui/GradientButton";
@@ -46,6 +47,7 @@ export interface Movement {
   manufacturing_date?: string;
   serial_numbers?: string[];
   current_stock?: number;
+  productsList?: any[];
 }
 
 // ─── Mock Data ───────────────────────────────────────────────────────────────
@@ -66,15 +68,6 @@ function fmtDate(dateStr: string) {
 }
 
 // Fixed styling helper to accommodate all MovementTypes
-
-
-function truncateId(id: string | undefined) {
-  if (!id) return "";
-  if (id.length > 12 && id.includes("-")) {
-    return id.slice(0, 8).toUpperCase();
-  }
-  return id;
-}
 
 interface DetailDrawerProps {
   movement: Movement;
@@ -164,98 +157,139 @@ function DetailDrawer({ movement, onClose }: DetailDrawerProps) {
 
           {/* Structured Inventory Path */}
           <div className="space-y-4">
-            <h4 className="text-[10px] font-black text-slate-400  tracking-[0.2em] px-1">Inventory Specification Path</h4>
-
-            {/* Product Level */}
-            <div className="relative pl-6 before:absolute before:left-[11px] before:top-8 before:bottom-0 before:w-0.5 before:bg-slate-100">
-              <div className="relative group mb-4">
-                <div className="absolute -left-[19px] top-1.5 w-4 h-4 rounded-full border-2 border-blue-500 bg-white z-10" />
-                <div className="bg-blue-50/40 border border-blue-100 rounded-lg p-4 transition-all hover:bg-blue-50 hover:shadow-md hover:shadow-blue-500/5">
-                  <div className="flex items-center gap-2 text-blue-600 font-black text-[10px]   mb-1">
-                    <Layers size={12} /> Product Root
-                  </div>
-                  <p className="text-slate-800 font-bold text-base leading-tight">{movement.product}</p>
-                  <div className="flex items-center gap-2 mt-2">
-                    <span className="text-[10px] font-mono text-slate-400 bg-white px-2 py-0.5 rounded border border-slate-100">SKU: {movement.sku}</span>
-                    <button onClick={(e) => copyToClipboard(e, movement.id)} className="text-[9px] font-bold text-blue-500 hover:underline">Copy ID</button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Variant Level */}
-              {movement.variant && (
-                <div className="relative group mb-4">
-                  <div className="absolute -left-[19px] top-1.5 w-4 h-4 rounded-full border-2 border-violet-500 bg-white z-10" />
-                  <div className="bg-violet-50/40 border border-violet-100 rounded-lg p-4 ml-2 transition-all hover:bg-violet-50 hover:shadow-md hover:shadow-violet-500/5">
-                    <div className="flex items-center gap-2 text-violet-600 font-black text-[10px]   mb-1">
-                      <Activity size={12} /> Variant Configuration
-                    </div>
-                    <p className="text-slate-800 font-bold text-sm">{movement.variant}</p>
-                  </div>
-                </div>
-              )}
-
-              {/* Batch Level */}
-              {movement.batch && (
-                <div className="relative group mb-4">
-                  <div className="absolute -left-[19px] top-1.5 w-4 h-4 rounded-full border-2 border-amber-500 bg-white z-10" />
-                  <div className="bg-amber-50/40 border border-amber-100 rounded-lg p-4 ml-4 transition-all hover:bg-amber-50 hover:shadow-md hover:shadow-amber-500/5">
-                    <div className="flex items-center gap-2 text-amber-600 font-black text-[10px]   mb-1">
-                      <Hash size={12} /> Batch Identifier
-                    </div>
-                    <p className="text-slate-800 font-bold text-sm mb-2">{movement.batch}</p>
-
-                    {(movement.expiry_date || movement.manufacturing_date) && (
-                      <div className="space-y-1.5 border-t border-amber-100 pt-2 mt-2">
-                        {movement.manufacturing_date && (
-                          <div className="flex justify-between items-center text-[10px]">
-                            <span className="text-amber-600/70 font-bold  tracking-tight">MFG Date</span>
-                            <span className="text-slate-700 font-bold">{fmtDate(movement.manufacturing_date)}</span>
+            {movement.productsList && movement.productsList.length > 1 ? (
+              <>
+                <h4 className="text-[10px] font-black text-slate-400 tracking-[0.2em] px-1">Grouped Items Specification ({movement.productsList.length})</h4>
+                <div className="space-y-3">
+                  {movement.productsList.map((p, idx) => {
+                    const hasSpec = p.variant || p.batch || (p.serial_numbers && p.serial_numbers.length > 0);
+                    return (
+                      <div key={idx} className="bg-slate-50 border border-slate-100 rounded-lg p-3 hover:bg-slate-100/55 hover:shadow-sm transition-all">
+                        <div className="flex justify-between items-start gap-2 mb-1.5">
+                          <div>
+                            <p className="text-slate-800 font-bold text-xs leading-tight">{p.name}</p>
+                            <span className="text-[9px] font-mono text-slate-400 mt-0.5 block">SKU: {p.sku}</span>
+                          </div>
+                          <span className={`text-xs font-black tabular-nums ${p.qty > 0 ? 'text-emerald-650' : 'text-rose-655'}`}>
+                            {p.qty > 0 ? `+${p.qty}` : p.qty}
+                          </span>
+                        </div>
+                        {hasSpec && (
+                          <div className="flex flex-wrap gap-1 mt-2 pt-2 border-t border-slate-200/50">
+                            {p.variant && <span className="px-1.5 py-0.2 rounded bg-violet-50 text-violet-650 border border-violet-100 text-[8px] font-bold">V: {p.variant}</span>}
+                            {p.batch && <span className="px-1.5 py-0.2 rounded bg-amber-50 text-amber-650 border border-amber-100 text-[8px] font-bold">B: {p.batch}</span>}
+                            {p.serial_numbers && p.serial_numbers.length > 0 && (
+                              <div className="flex flex-wrap gap-0.5 items-center">
+                                <span className="text-[8px] text-slate-400 font-bold mr-0.5">SN:</span>
+                                {p.serial_numbers.slice(0, 2).map((sn: string, sIdx: number) => (
+                                  <span key={sIdx} className="text-[8px] font-mono text-slate-500 bg-white border border-slate-100 px-1 rounded">{sn}</span>
+                                ))}
+                                {p.serial_numbers.length > 2 && <span className="text-[8px] font-bold text-slate-400">+{p.serial_numbers.length - 2}</span>}
+                              </div>
+                            )}
                           </div>
                         )}
-                        {movement.expiry_date && (
-                          <>
-                            <div className="flex justify-between items-center text-[10px]">
-                              <span className="text-amber-600/70 font-bold  tracking-tight">EXP Date</span>
-                              <span className="text-slate-700 font-bold">{fmtDate(movement.expiry_date)}</span>
-                            </div>
-                            <div className="flex justify-between items-center bg-white/50 rounded-lg px-2 py-1 mt-1">
-                              <span className="text-[9px] font-black text-rose-500  ">Remaining</span>
-                              <span className="text-[10px] font-black text-rose-600 tabular-nums">
-                                {(() => {
-                                  const diff = new Date(movement.expiry_date).getTime() - new Date().getTime();
-                                  const days = Math.ceil(diff / (1000 * 3600 * 24));
-                                  return days > 0 ? `${days} Days` : "Expired";
-                                })()}
-                              </span>
-                            </div>
-                          </>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            ) : (
+              <>
+                <h4 className="text-[10px] font-black text-slate-400  tracking-[0.2em] px-1">Inventory Specification Path</h4>
+
+                {/* Product Level */}
+                <div className="relative pl-6 before:absolute before:left-[11px] before:top-8 before:bottom-0 before:w-0.5 before:bg-slate-100">
+                  <div className="relative group mb-4">
+                    <div className="absolute -left-[19px] top-1.5 w-4 h-4 rounded-full border-2 border-blue-500 bg-white z-10" />
+                    <div className="bg-blue-50/40 border border-blue-100 rounded-lg p-4 transition-all hover:bg-blue-50 hover:shadow-md hover:shadow-blue-500/5">
+                      <div className="flex items-center gap-2 text-blue-600 font-black text-[10px]   mb-1">
+                        <Layers size={12} /> Product Root
+                      </div>
+                      <p className="text-slate-800 font-bold text-base leading-tight">{movement.product}</p>
+                      <div className="flex items-center gap-2 mt-2">
+                        <span className="text-[10px] font-mono text-slate-400 bg-white px-2 py-0.5 rounded border border-slate-100">SKU: {movement.sku}</span>
+                        <button onClick={(e) => copyToClipboard(e, movement.id)} className="text-[9px] font-bold text-blue-500 hover:underline">Copy ID</button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Variant Level */}
+                  {movement.variant && (
+                    <div className="relative group mb-4">
+                      <div className="absolute -left-[19px] top-1.5 w-4 h-4 rounded-full border-2 border-violet-500 bg-white z-10" />
+                      <div className="bg-violet-50/40 border border-violet-100 rounded-lg p-4 ml-2 transition-all hover:bg-violet-50 hover:shadow-md hover:shadow-violet-500/5">
+                        <div className="flex items-center gap-2 text-violet-600 font-black text-[10px]   mb-1">
+                          <Activity size={12} /> Variant Configuration
+                        </div>
+                        <p className="text-slate-800 font-bold text-sm">{movement.variant}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Batch Level */}
+                  {movement.batch && (
+                    <div className="relative group mb-4">
+                      <div className="absolute -left-[19px] top-1.5 w-4 h-4 rounded-full border-2 border-amber-500 bg-white z-10" />
+                      <div className="bg-amber-50/40 border border-amber-100 rounded-lg p-4 ml-4 transition-all hover:bg-amber-50 hover:shadow-md hover:shadow-amber-500/5">
+                        <div className="flex items-center gap-2 text-amber-600 font-black text-[10px]   mb-1">
+                          <Hash size={12} /> Batch Identifier
+                        </div>
+                        <p className="text-slate-800 font-bold text-sm mb-2">{movement.batch}</p>
+
+                        {(movement.expiry_date || movement.manufacturing_date) && (
+                          <div className="space-y-1.5 border-t border-amber-100 pt-2 mt-2">
+                            {movement.manufacturing_date && (
+                              <div className="flex justify-between items-center text-[10px]">
+                                <span className="text-amber-600/70 font-bold  tracking-tight">MFG Date</span>
+                                <span className="text-slate-700 font-bold">{fmtDate(movement.manufacturing_date)}</span>
+                              </div>
+                            )}
+                            {movement.expiry_date && (
+                              <>
+                                <div className="flex justify-between items-center text-[10px]">
+                                  <span className="text-amber-600/70 font-bold  tracking-tight">EXP Date</span>
+                                  <span className="text-slate-700 font-bold">{fmtDate(movement.expiry_date)}</span>
+                                </div>
+                                <div className="flex justify-between items-center bg-white/50 rounded-lg px-2 py-1 mt-1">
+                                  <span className="text-[9px] font-black text-rose-500  ">Remaining</span>
+                                  <span className="text-[10px] font-black text-rose-600 tabular-nums">
+                                    {(() => {
+                                      const diff = new Date(movement.expiry_date).getTime() - new Date().getTime();
+                                      const days = Math.ceil(diff / (1000 * 3600 * 24));
+                                      return days > 0 ? `${days} Days` : "Expired";
+                                    })()}
+                                  </span>
+                                </div>
+                              </>
+                            )}
+                          </div>
                         )}
                       </div>
-                    )}
-                  </div>
-                </div>
-              )}
+                    </div>
+                  )}
 
-              {/* Serial Numbers Level */}
-              {movement.serial_numbers && movement.serial_numbers.length > 0 && (
-                <div className="relative group">
-                  <div className="absolute -left-[19px] top-1.5 w-4 h-4 rounded-full border-2 border-emerald-500 bg-white z-10" />
-                  <div className="bg-emerald-50/30 border border-emerald-100 rounded-lg p-4 ml-6 transition-all hover:bg-emerald-50/50 hover:shadow-md hover:shadow-emerald-500/5">
-                    <div className="flex items-center gap-2 text-emerald-600 font-black text-[10px]   mb-3">
-                      <Zap size={12} fill="currentColor" /> Unique Serials ({movement.serial_numbers.length})
+                  {/* Serial Numbers Level */}
+                  {movement.serial_numbers && movement.serial_numbers.length > 0 && (
+                    <div className="relative group">
+                      <div className="absolute -left-[19px] top-1.5 w-4 h-4 rounded-full border-2 border-emerald-500 bg-white z-10" />
+                      <div className="bg-emerald-50/30 border border-emerald-100 rounded-lg p-4 ml-6 transition-all hover:bg-emerald-50/50 hover:shadow-md hover:shadow-emerald-500/5">
+                        <div className="flex items-center gap-2 text-emerald-600 font-black text-[10px]   mb-3">
+                          <Zap size={12} fill="currentColor" /> Unique Serials ({movement.serial_numbers.length})
+                        </div>
+                        <div className="flex flex-wrap gap-1.5 max-h-[120px] overflow-y-auto custom-scrollbar pr-1">
+                          {movement.serial_numbers.map((sn, i) => (
+                            <span key={i} className="px-2 py-1 rounded-lg bg-white border border-emerald-100 text-emerald-700 font-mono text-[10px] font-bold shadow-sm">
+                              {sn}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
                     </div>
-                    <div className="flex flex-wrap gap-1.5 max-h-[120px] overflow-y-auto custom-scrollbar pr-1">
-                      {movement.serial_numbers.map((sn, i) => (
-                        <span key={i} className="px-2 py-1 rounded-lg bg-white border border-emerald-100 text-emerald-700 font-mono text-[10px] font-bold shadow-sm">
-                          {sn}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
+                  )}
                 </div>
-              )}
-            </div>
+              </>
+            )}
           </div>
 
           {/* Context Details */}
@@ -392,6 +426,15 @@ export default function StockMovementPage() {
   const { showToast } = useToast();
   const PAGE_SIZE = 10;
 
+  const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
+  const toggleExpand = (rowKey: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setExpandedRows((prev) => ({
+      ...prev,
+      [rowKey]: !prev[rowKey],
+    }));
+  };
+
   const copyToClipboard = (e: React.MouseEvent, text: string) => {
     e.stopPropagation();
     navigator.clipboard.writeText(text);
@@ -503,32 +546,21 @@ export default function StockMovementPage() {
           destination = "Adjusted";
         }
 
-        return products.flatMap((prod: any) => {
-          const results: Movement[] = [];
+        const productsList: any[] = [];
+        products.forEach((prod: any) => {
           const isDecrement = prod.type === 'DECREMENT' || finalType === "SALES";
           const baseQty = Number(prod.stocks || 0);
           const qtyVal = isDecrement ? -baseQty : baseQty;
-
-          const baseMovement = {
-            id: a.id?.slice(0, 8).toUpperCase() || "ADJ",
-            fullId: a.id,
-            product: prod.name || "—",
-            type: finalType,
-            source,
-            destination,
-            ref: String(a.ui_id ? `REF-${a.ui_id}` : a.id?.slice(0, 8).toUpperCase() || "REF"),
-            date: dateStr.includes("T") ? dateStr : dateStr + "T00:00:00",
-            status: "Completed" as StatusType,
-            user: String(a.added_by || "Admin"),
-            notes: a.description || "",
-          };
 
           if (prod.variants && prod.variants.length > 0) {
             prod.variants.forEach((v: any) => {
               if (v.batches && v.batches.length > 0) {
                 v.batches.forEach((b: any) => {
-                  results.push({
-                    ...baseMovement,
+                  const sns = Array.isArray(b.serial_numbers?.serial_numbers) 
+                    ? b.serial_numbers.serial_numbers 
+                    : (Array.isArray(v.serial_numbers?.serial_numbers) ? v.serial_numbers.serial_numbers : []);
+                  productsList.push({
+                    name: prod.name || "—",
                     sku: b.barcode || v.sku || prod.barcode || (a.id?.slice(0, 8) || ""),
                     qty: isDecrement ? -Number(b.stocks || v.stocks || baseQty) : Number(b.stocks || v.stocks || baseQty),
                     stocks_before: b.stocks_before ?? v.stocks_before ?? prod.stocks_before,
@@ -537,33 +569,64 @@ export default function StockMovementPage() {
                     batch: b.name || "",
                     expiry_date: b.expiry_date,
                     manufacturing_date: b.manufacturing_date,
-                    serial_numbers: Array.isArray(b.serial_numbers?.serial_numbers) ? b.serial_numbers.serial_numbers : (Array.isArray(v.serial_numbers?.serial_numbers) ? v.serial_numbers.serial_numbers : [])
+                    serial_numbers: sns
                   });
                 });
               } else {
-                results.push({
-                  ...baseMovement,
+                const sns = Array.isArray(v.serial_numbers?.serial_numbers) ? v.serial_numbers.serial_numbers : [];
+                productsList.push({
+                  name: prod.name || "—",
                   sku: v.sku || prod.barcode || (a.id?.slice(0, 8) || ""),
                   qty: isDecrement ? -Number(v.stocks || baseQty) : Number(v.stocks || baseQty),
                   stocks_before: v.stocks_before ?? prod.stocks_before,
                   current_stock: invMap[`${prod.name}-${v.name}`] ?? invMap[prod.name],
                   variant: v.name || "",
-                  serial_numbers: Array.isArray(v.serial_numbers?.serial_numbers) ? v.serial_numbers.serial_numbers : []
+                  batch: "",
+                  serial_numbers: sns
                 });
               }
             });
           } else {
-            results.push({
-              ...baseMovement,
+            const sns = Array.isArray(prod.serial_numbers?.serial_numbers) ? prod.serial_numbers.serial_numbers : [];
+            productsList.push({
+              name: prod.name || "—",
               sku: prod.barcode || (a.id?.slice(0, 8) || ""),
               qty: qtyVal,
               stocks_before: prod.stocks_before,
               current_stock: invMap[prod.name],
-              serial_numbers: Array.isArray(prod.serial_numbers?.serial_numbers) ? prod.serial_numbers.serial_numbers : []
+              variant: "",
+              batch: "",
+              serial_numbers: sns
             });
           }
-          return results;
         });
+
+        if (productsList.length === 0) return [];
+
+        const firstProd = productsList[0];
+        return [{
+          id: a.id?.slice(0, 8).toUpperCase() || "ADJ",
+          fullId: a.id,
+          product: firstProd.name,
+          sku: firstProd.sku,
+          type: finalType,
+          qty: firstProd.qty,
+          stocks_before: firstProd.stocks_before,
+          source,
+          destination,
+          ref: String(a.ui_id ? `REF-${a.ui_id}` : a.id?.slice(0, 8).toUpperCase() || "REF"),
+          date: dateStr.includes("T") ? dateStr : dateStr + "T00:00:00",
+          status: "Completed" as StatusType,
+          user: String(a.added_by || "Admin"),
+          notes: a.description || "",
+          variant: firstProd.variant,
+          batch: firstProd.batch,
+          expiry_date: firstProd.expiry_date,
+          manufacturing_date: firstProd.manufacturing_date,
+          serial_numbers: firstProd.serial_numbers,
+          current_stock: firstProd.current_stock,
+          productsList: productsList
+        }];
       });
 
       const all = [...adjMovements].sort((a, b) =>
@@ -755,7 +818,6 @@ export default function StockMovementPage() {
               <tr className="text-slate-400 text-[10px] font-bold tracking-[0.15em]">
                 <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500 border-r border-slate-100 last:border-r-0 w-[25%] min-w-[260px]">Product Information</th>
                 <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500 border-r border-slate-100 last:border-r-0 w-[12%] min-w-[125px]">Movement Type</th>
-                <th className="px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-slate-500 border-r border-slate-100 last:border-r-0 w-[10%] min-w-[90px]">Stock Before</th>
                 <th className="px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-slate-500 border-r border-slate-100 last:border-r-0 w-[10%] min-w-[90px]">Stock In / Out</th>
                 <th className="px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-slate-500 border-r border-slate-100 last:border-r-0 w-[10%] min-w-[90px]">Stock After</th>
                 {selectedKeys.map(key => {
@@ -775,81 +837,123 @@ export default function StockMovementPage() {
             <tbody className="divide-y divide-slate-100 text-sm bg-white">
               {pageData.length === 0 ? (
                 <tr>
-                  <td colSpan={selectedKeys.length + 5} className="py-20 text-center text-slate-400 font-medium italic bg-white">
+                  <td colSpan={selectedKeys.length + 6} className="py-20 text-center text-slate-400 font-medium italic bg-white">
                     No movements found matching your filters.
                   </td>
                 </tr>
-              ) : pageData.map((m, idx) => (
-                <tr key={`${m.id}-${idx}`}
-                  className="group hover:bg-blue-50/30 transition-all cursor-pointer border-b border-slate-100 last:border-b-0 even:bg-slate-50/20"
-                  onClick={() => handleMovementClick(m)}
-                >
-                  <td className="px-4 py-3 align-middle border-r border-slate-100 last:border-r-0">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className={`w-8 h-8 rounded-md bg-gradient-to-br flex items-center justify-center text-white text-xs font-black shrink-0 shadow-sm ${m.qty > 0 ? "from-emerald-500 to-emerald-400 shadow-emerald-50" : "from-rose-500 to-rose-400 shadow-rose-50"}`}>
-                        {m.product?.[0]?.toUpperCase() || "—"}
-                      </div>
-                      <div className="flex flex-col min-w-0 gap-0.5">
-                        <span className="text-[13px] font-semibold text-slate-800 truncate leading-tight">{m.product}</span>
-                        <div className="flex items-center flex-wrap gap-1.5 mt-0.5">
-                          <button
-                            onClick={(e) => copyToClipboard(e, m.id)}
-                            className="group flex items-center gap-1 text-[9px] font-extrabold text-slate-400 bg-slate-50 px-1 py-0.2 rounded border border-slate-100 hover:bg-slate-100 hover:text-slate-600 transition-all leading-none"
-                          >
-                            ID: {m.id}
-                            <Copy size={8} className="opacity-0 group-hover:opacity-100 transition-opacity" />
-                          </button>
-                          <span className="text-[9px] font-medium text-slate-400 font-mono">SKU: {m.sku}</span>
-                          {m.variant && (
-                            <button
-                              onClick={(e) => copyToClipboard(e, m.variant || "")}
-                              className="group flex items-center gap-0.5 text-[9px] font-extrabold text-violet-600 bg-violet-50/50 px-1 py-0.2 rounded border border-violet-100 hover:bg-violet-100 transition-all leading-none"
-                            >
-                              <Layers size={8} /> {truncateId(m.variant)}
-                              <Copy size={7} className="opacity-0 group-hover:opacity-100 transition-opacity" />
-                            </button>
-                          )}
-                          {m.batch && (
-                            <button
-                              onClick={(e) => copyToClipboard(e, m.batch || "")}
-                              className="group flex items-center gap-0.5 text-[9px] font-extrabold text-amber-600 bg-amber-50/50 px-1 py-0.2 rounded border border-amber-100 hover:bg-amber-100 transition-all leading-none"
-                            >
-                              <Hash size={8} /> {truncateId(m.batch)}
-                              <Copy size={7} className="opacity-0 group-hover:opacity-100 transition-opacity" />
-                            </button>
-                          )}
-                          {m.serial_numbers && m.serial_numbers.length > 0 && (
-                            <span className="inline-flex items-center gap-0.5 text-[9px] font-extrabold text-emerald-600 bg-emerald-50/50 px-1 py-0.2 rounded border border-emerald-100 leading-none">
-                              <Zap size={8} fill="currentColor" /> {m.serial_numbers.length} Serials
+              ) : pageData.map((m, idx) => {
+                const hasList = m.productsList && m.productsList.length > 1;
+                const rowKey = `${m.id}-${idx}`;
+                const isExpanded = !!expandedRows[rowKey];
+                
+                const totalQty = hasList
+                  ? m.productsList!.reduce((sum, p) => sum + p.qty, 0)
+                  : m.qty;
+
+                const firstProd = m.productsList?.[0] || {};
+                const currentStockVal = (() => {
+                  const prods = m.productsList;
+                  if (!prods || prods.length === 0) {
+                    const sb = m.stocks_before;
+                    if (sb === undefined || sb === null) return null;
+                    return sb + (firstProd.qty ?? m.qty);
+                  }
+                  let total = 0;
+                  for (const p of prods) {
+                    const sb = p.stocks_before;
+                    if (sb === undefined || sb === null) return null;
+                    total += sb + p.qty;
+                  }
+                  return total;
+                })();
+
+                const truncateId = (id?: string) => {
+                  if (!id) return "—";
+                  return id.length > 10 ? `${id.slice(0, 6)}...` : id;
+                };
+
+                return (
+                  <React.Fragment key={rowKey}>
+                    <tr
+                      className="group hover:bg-blue-50/30 transition-all cursor-pointer border-b border-slate-100 last:border-b-0 even:bg-slate-50/20"
+                      onClick={() => handleMovementClick(m)}
+                    >
+                      <td className="px-4 py-3 align-middle border-r border-slate-100 last:border-r-0">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className={`w-8 h-8 rounded-md bg-gradient-to-br flex items-center justify-center text-white text-xs font-black shrink-0 shadow-sm ${totalQty > 0 ? "from-emerald-500 to-emerald-400 shadow-emerald-50" : "from-rose-500 to-rose-400 shadow-rose-50"}`}>
+                            {(hasList ? firstProd.name : m.product)?.[0]?.toUpperCase() || "—"}
+                          </div>
+                          <div className="flex flex-col min-w-0 gap-0.5">
+                            <span className="text-[13px] font-semibold text-slate-800 truncate leading-tight">
+                              {hasList ? firstProd.name : m.product}
                             </span>
-                          )}
-                          {m.current_stock !== undefined && (
-                            <span className="inline-flex items-center gap-0.5 text-[9px] font-extrabold text-blue-650 bg-blue-50/50 px-1.5 py-0.5 rounded border border-blue-100 leading-none" title="Current Available Stock">
-                              Stock: {m.current_stock}
-                            </span>
-                          )}
+                            <div className="flex items-center flex-wrap gap-1.5 mt-0.5">
+                              <button
+                                onClick={(e) => copyToClipboard(e, m.id)}
+                                className="group flex items-center gap-1 text-[9px] font-extrabold text-slate-400 bg-slate-50 px-1 py-0.2 rounded border border-slate-100 hover:bg-slate-100 hover:text-slate-600 transition-all leading-none"
+                              >
+                                ID: {m.id}
+                                <Copy size={8} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+                              </button>
+                              <span className="text-[9px] font-medium text-slate-400 font-mono">SKU: {hasList ? firstProd.sku : m.sku}</span>
+                              {(hasList ? firstProd.variant : m.variant) && (
+                                <button
+                                  onClick={(e) => copyToClipboard(e, (hasList ? firstProd.variant : m.variant) || "")}
+                                  className="group flex items-center gap-0.5 text-[9px] font-extrabold text-violet-600 bg-violet-50/50 px-1 py-0.2 rounded border border-violet-100 hover:bg-violet-100 transition-all leading-none"
+                                >
+                                  <Layers size={8} /> {truncateId(hasList ? firstProd.variant : m.variant)}
+                                  <Copy size={7} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+                                </button>
+                              )}
+                              {(hasList ? firstProd.batch : m.batch) && (
+                                <button
+                                  onClick={(e) => copyToClipboard(e, (hasList ? firstProd.batch : m.batch) || "")}
+                                  className="group flex items-center gap-0.5 text-[9px] font-extrabold text-amber-600 bg-amber-50/50 px-1 py-0.2 rounded border border-amber-100 hover:bg-amber-100 transition-all leading-none"
+                                >
+                                  <Hash size={8} /> {truncateId(hasList ? firstProd.batch : m.batch)}
+                                  <Copy size={7} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+                                </button>
+                              )}
+                              {hasList ? (
+                                <button
+                                  onClick={(e) => toggleExpand(rowKey, e)}
+                                  className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] font-extrabold bg-blue-50 text-blue-600 border border-blue-100 hover:bg-blue-100 transition-colors shrink-0 shadow-sm"
+                                  title={isExpanded ? "Collapse Items" : "Expand Items"}
+                                >
+                                  {isExpanded ? <ChevronDown size={10} strokeWidth={3} /> : <ChevronRight size={10} strokeWidth={3} />}
+                                  <span>+ {m.productsList!.length - 1} more</span>
+                                </button>
+                              ) : (
+                                <>
+                                  {m.serial_numbers && m.serial_numbers.length > 0 && (
+                                    <span className="inline-flex items-center gap-0.5 text-[9px] font-extrabold text-emerald-600 bg-emerald-50/50 px-1 py-0.2 rounded border border-emerald-100 leading-none">
+                                      <Zap size={8} fill="currentColor" /> {m.serial_numbers.length} Serials
+                                    </span>
+                                  )}
+                                  {m.current_stock !== undefined && (
+                                    <span className="inline-flex items-center gap-0.5 text-[9px] font-extrabold text-blue-650 bg-blue-50/50 px-1.5 py-0.5 rounded border border-blue-100 leading-none" title="Current Available Stock">
+                                      Stock: {m.current_stock}
+                                    </span>
+                                  )}
+                                </>
+                              )}
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 align-middle border-r border-slate-100 last:border-r-0">
-                    <TypeBadge type={m.type} />
-                  </td>
-                  <td className="px-4 py-3 text-center align-middle border-r border-slate-100 last:border-r-0">
-                    <span className="text-[12px] font-bold text-slate-500 tabular-nums">
-                      {m.stocks_before !== undefined && m.stocks_before !== null ? m.stocks_before : "—"}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-center align-middle border-r border-slate-100 last:border-r-0 bg-slate-50/30">
-                    <span className={`text-[13px] font-black tabular-nums ${m.qty > 0 ? "text-emerald-600" : "text-rose-600"}`}>
-                      {m.qty > 0 ? `+${m.qty}` : m.qty}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-center align-middle border-r border-slate-100 last:border-r-0">
-                    <span className="text-[12px] font-bold text-blue-600 tabular-nums">
-                      {m.stocks_before !== undefined && m.stocks_before !== null ? m.stocks_before + m.qty : "—"}
-                    </span>
-                  </td>
+                      </td>
+                      <td className="px-4 py-3 align-middle border-r border-slate-100 last:border-r-0">
+                        <TypeBadge type={m.type} />
+                      </td>
+                      <td className="px-4 py-3 text-center align-middle border-r border-slate-100 last:border-r-0 bg-slate-50/30">
+                        <span className={`text-[13px] font-black tabular-nums ${totalQty > 0 ? "text-emerald-600" : "text-rose-600"}`}>
+                          {totalQty > 0 ? `+${totalQty}` : totalQty}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-center align-middle border-r border-slate-100 last:border-r-0">
+                        <span className="text-[12px] font-bold text-blue-600 tabular-nums">
+                          {currentStockVal !== null ? currentStockVal : '—'}
+                        </span>
+                      </td>
                   {selectedKeys.map(key => {
                     const value = m[key as keyof Movement];
                     const displayValue = value === undefined || value === null ? "—" :
@@ -882,7 +986,66 @@ export default function StockMovementPage() {
                     </button>
                   </td>
                 </tr>
-              ))}
+
+                {/* Expanded Sub-table */}
+                {hasList && isExpanded && (
+                  <tr className="bg-slate-50/30 border-b border-slate-100" onClick={(e) => e.stopPropagation()}>
+                    <td colSpan={selectedKeys.length + 6} className="p-0">
+                      <div className="ml-14 mr-6 my-3 border border-slate-100 rounded-lg bg-white p-4 shadow-sm space-y-3 animate-in slide-in-from-top-2 duration-300">
+                        <div className="flex items-center gap-1.5 border-b border-slate-55 pb-2 mb-2">
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Adjustment Transaction Details</span>
+                        </div>
+                        <table className="w-full text-left border-collapse text-[12px]">
+                          <thead>
+                            <tr className="text-[9px] font-black text-slate-400 tracking-wider uppercase border-b border-slate-100">
+                              <th className="py-2 px-3">Product Item</th>
+                              <th className="py-2 px-3 text-center">Stock In / Out</th>
+                              <th className="py-2 px-3 text-center">Stock After</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-50">
+                            {m.productsList!.map((p: any, pIdx: number) => {
+                              const pStockVal = p.stocks_before !== null && p.stocks_before !== undefined
+                                ? (p.stocks_before + p.qty)
+                                : null;
+                              return (
+                                <tr key={pIdx} className="hover:bg-slate-50/30">
+                                  <td className="py-2.5 px-3">
+                                    <div className="flex flex-col gap-0.5">
+                                      <span className="font-semibold text-slate-800">{p.name}</span>
+                                      <div className="flex flex-wrap gap-1 mt-0.5">
+                                        {p.variant && <span className="px-1.5 py-0.2 rounded bg-violet-50 text-violet-650 border border-violet-100 text-[8px] font-bold">V: {p.variant}</span>}
+                                        {p.batch && <span className="px-1.5 py-0.2 rounded bg-amber-50 text-amber-655 border border-amber-100 text-[8px] font-bold">B: {p.batch}</span>}
+                                        {p.serial_numbers && p.serial_numbers.length > 0 && (
+                                          <div className="flex flex-wrap gap-1">
+                                            <span className="text-[8px] text-slate-400 font-bold">SN: </span>
+                                            {p.serial_numbers.slice(0, 2).map((s: string, si: number) => (
+                                              <span key={si} className="text-[8px] font-mono text-slate-500">{s}{si === 0 && p.serial_numbers.length > 1 ? ',' : ''}</span>
+                                            ))}
+                                            {p.serial_numbers.length > 2 && <span className="text-[8px] font-bold text-slate-400">+{p.serial_numbers.length - 2}</span>}
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </td>
+                                  <td className="py-2.5 px-3 text-center font-black">
+                                    <span className={p.qty > 0 ? 'text-emerald-600' : 'text-rose-600'}>
+                                      {p.qty > 0 ? `+${p.qty}` : p.qty}
+                                    </span>
+                                  </td>
+                                  <td className="py-2.5 px-3 text-center font-bold text-blue-600">{pStockVal !== null ? pStockVal : '—'}</td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </React.Fragment>
+            );
+          })}
             </tbody>
           </table>
         </div>

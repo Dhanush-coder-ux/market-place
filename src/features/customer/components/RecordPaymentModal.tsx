@@ -14,6 +14,8 @@ interface RecordPaymentModalProps {
   onSuccess: () => void;
 }
 
+const round2 = (n: number) => Math.round(n * 100) / 100;
+
 export function RecordPaymentModal({ show, onClose, customer, onSuccess }: RecordPaymentModalProps) {
   const { postData } = useApi();
   const { showToast } = useToast();
@@ -93,8 +95,8 @@ export function RecordPaymentModal({ show, onClose, customer, onSuccess }: Recor
     }
   };
 
-  const totalCollected = payments.reduce((acc, curr) => acc + (parseFloat(curr.amount) || 0), 0);
-  const remainingBalance = Math.max(0, maxOutstanding - totalCollected);
+  const totalCollected = round2(payments.reduce((acc, curr) => acc + (parseFloat(curr.amount) || 0), 0));
+  const remainingBalance = round2(Math.max(0, maxOutstanding - totalCollected));
 
   return (
     <Modal
@@ -180,12 +182,12 @@ export function RecordPaymentModal({ show, onClose, customer, onSuccess }: Recor
                       let num = parseFloat(val);
                       if (isNaN(num) || num < 0) return;
                       
-                      const otherTotal = payments.reduce((acc, curr, i) => i !== idx ? acc + (parseFloat(curr.amount) || 0) : acc, 0);
-                      const maxAllowed = Math.max(0, maxOutstanding - otherTotal);
+                      const otherTotal = round2(payments.reduce((acc, curr, i) => i !== idx ? acc + (parseFloat(curr.amount) || 0) : acc, 0));
+                      const maxAllowed = round2(Math.max(0, maxOutstanding - otherTotal));
                       
                       if (num > maxAllowed) {
                         num = maxAllowed;
-                        val = num.toString();
+                        val = round2(num).toString();
                       }
                       updatePayment(idx, { amount: val });
                     }}

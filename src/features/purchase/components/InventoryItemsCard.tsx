@@ -33,6 +33,8 @@ interface InventoryItemsCardProps {
   purchaseType?: string;
   costMethod?: string;
   setCostMethod?: (val: string) => void;
+  gstMode?: "inclusive" | "exclusive";
+  setGstMode?: (val: "inclusive" | "exclusive") => void;
 }
 
 export const InventoryItemsCard = ({
@@ -46,6 +48,8 @@ export const InventoryItemsCard = ({
   removeProduct,
   onAddNewProduct,
   purchaseType,
+  gstMode = "inclusive",
+  setGstMode,
 }: InventoryItemsCardProps) => {
   const [expandedBreakdown, setExpandedBreakdown] = useState<Set<number>>(new Set());
   const [expandedSettings, setExpandedSettings] = useState<Set<number>>(new Set());
@@ -404,7 +408,33 @@ export const InventoryItemsCard = ({
               <p className="text-[11px] text-slate-400 mt-0.5">Add products to this {typeText.toLowerCase()}</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
+            {type === "PURCHASE" && gstMode && setGstMode && (
+              <div className="flex bg-slate-100 rounded-lg p-0.5 shrink-0 border border-slate-200/55 shadow-inner h-9 items-center select-none">
+                <button
+                  type="button"
+                  onClick={() => setGstMode("inclusive")}
+                  className={`px-3 py-1 flex items-center justify-center rounded-md text-[10px] font-black uppercase tracking-wider transition-all duration-200 cursor-pointer h-7 ${
+                    gstMode === "inclusive" 
+                      ? "bg-white text-blue-600 shadow-sm border border-slate-200/40" 
+                      : "text-slate-500 hover:text-slate-700"
+                  }`}
+                >
+                  Inclusive GST
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setGstMode("exclusive")}
+                  className={`px-3 py-1 flex items-center justify-center rounded-md text-[10px] font-black uppercase tracking-wider transition-all duration-200 cursor-pointer h-7 ${
+                    gstMode === "exclusive" 
+                      ? "bg-white text-blue-600 shadow-sm border border-slate-200/40" 
+                      : "text-slate-500 hover:text-slate-700"
+                  }`}
+                >
+                  Exclusive GST
+                </button>
+              </div>
+            )}
 
             <button
               onClick={addProduct}
@@ -436,22 +466,35 @@ export const InventoryItemsCard = ({
               {products.map((product, index) => {
                 const q = Number(product.quantity) || 0;
                 const baseCost = Number(product.costPrice) || 0;
-                const rowTotal = q * baseCost;
+                const gstRate = Number(product.taxGst) || 0;
                 const hasProduct = !!product.name;
+
+                const rowBaseCost = gstMode === "inclusive"
+                  ? baseCost / (1 + gstRate / 100)
+                  : baseCost;
+                const rowGstPerUnit = gstMode === "inclusive"
+                  ? baseCost - rowBaseCost
+                  : baseCost * (gstRate / 100);
+
+                const rowTotal = q * rowBaseCost;
+                const rowGstTotal = q * rowGstPerUnit;
+                const rowGrandTotal = q * (rowBaseCost + rowGstPerUnit);
 
                 const allocTotal = stats.allocations[index]?.alloc || 0;
                 const allocPerUnit = q > 0 ? allocTotal / q : 0;
-                const netCostPerUnit = stats.allocations[index]?.netCostPerUnit || baseCost;
+                const netCostPerUnit = stats.allocations[index]?.netCostPerUnit || rowBaseCost;
+                const costForSp = rowBaseCost + rowGstPerUnit;
+                const netCostForSp = costForSp + allocPerUnit;
 
                 let computedSellPrice = Number(product.sellingPrice) || 0;
                 if (product.marginType === "percent" && Number(product.marginPercent) > 0) {
-                  computedSellPrice = netCostPerUnit * (1 + Number(product.marginPercent) / 100);
+                  computedSellPrice = netCostForSp * (1 + Number(product.marginPercent) / 100);
                 } else if (product.marginType === "amount" && Number(product.marginAmount) > 0) {
-                  computedSellPrice = netCostPerUnit + Number(product.marginAmount);
+                  computedSellPrice = netCostForSp + Number(product.marginAmount);
                 }
 
-                const effectiveMarginPct = netCostPerUnit > 0 && computedSellPrice > 0
-                  ? (((computedSellPrice - netCostPerUnit) / netCostPerUnit) * 100).toFixed(1)
+                const effectiveMarginPct = netCostForSp > 0 && computedSellPrice > 0
+                  ? (((computedSellPrice - netCostForSp) / netCostForSp) * 100).toFixed(1)
                   : null;
 
                 const isExpanded = expandedSettings.has(index) || expandedBreakdown.has(index) || product.batchTracking || product.serialTracking;
@@ -719,7 +762,7 @@ export const InventoryItemsCard = ({
 
                       {/* Buy Price */}
                       <td className="py-3 px-2 align-top">
-                        <div className="flex items-center">
+                        <div className="flex flex-col">
                           <Input
                             type="number"
                             value={product.costPrice as any}
@@ -728,13 +771,30 @@ export const InventoryItemsCard = ({
                             leftIcon={<span className="text-[10px] text-slate-400 font-black">₹</span>}
                             rightIcon={<span className="text-[9px] text-slate-400 font-bold">/{product.unit || 'pc'}</span>}
                           />
+                          {baseCost > 0 && (
+                            <div className="text-[9px] text-slate-400 font-bold mt-1.5 leading-normal bg-blue-50/40 border border-blue-100/50 rounded-md px-2 py-1 select-none animate-in fade-in duration-200 flex flex-wrap gap-x-1 items-center">
+                              <span>Base:</span>
+                              <span className="text-slate-700 font-black">₹{rowBaseCost.toFixed(2)}</span>
+                              <span className="mx-0.5 text-slate-350">|</span>
+                              <span>GST:</span>
+                              <span className="text-blue-600 font-black">+₹{rowGstPerUnit.toFixed(2)}</span>
+                              <span className="mx-0.5 text-slate-350">|</span>
+                              <span>Tot:</span>
+                              <span className="text-emerald-600 font-black">₹{(rowBaseCost + rowGstPerUnit).toFixed(2)}</span>
+                            </div>
+                          )}
                         </div>
                       </td>
 
                       {/* Subtotal */}
                       <td className="py-3 px-2 align-top">
-                        <div className="h-9 flex items-center">
-                          <span className="text-xs font-black text-slate-800 tabular-nums">₹{rowTotal.toLocaleString()}</span>
+                        <div className="flex flex-col">
+                          <span className="text-xs font-black text-slate-800 tabular-nums">₹{rowTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                          {q > 0 && (
+                            <span className="text-[9.5px] text-slate-400 font-semibold mt-1">
+                              Total: <span className="text-slate-600 font-bold">₹{rowGrandTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                            </span>
+                          )}
                         </div>
                       </td>
 
@@ -754,8 +814,8 @@ export const InventoryItemsCard = ({
 
                       {/* Tax */}
                       <td className="py-3 px-2 align-top">
-                        <div className="w-20 h-9 flex items-center">
-                          <div className="relative flex items-center w-full">
+                        <div className="flex flex-col">
+                          <div className="relative flex items-center w-full w-20">
                             <input
                               type="number"
                               value={product.taxGst ?? ""}
@@ -767,6 +827,11 @@ export const InventoryItemsCard = ({
                             />
                             <span className="absolute right-2.5 text-[10px] text-slate-400 font-black pointer-events-none">%</span>
                           </div>
+                          {rowGstTotal > 0 && (
+                            <span className="text-[9px] font-bold text-slate-400 block mt-1.5">
+                              GST: <span className="text-slate-600 font-black">₹{rowGstTotal.toFixed(2)}</span>
+                            </span>
+                          )}
                         </div>
                       </td>
 

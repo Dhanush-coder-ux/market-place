@@ -71,20 +71,48 @@ const SaleDetailPage: React.FC = () => {
   const [isReturnOpen, setIsReturnOpen] = useState(false);
 
   const fetchSaleDetail = async () => {
+    setLoading(true);
     try {
-      setLoading(true);
-      const [ordRes, custRes, invRes] = await Promise.all([
-        api.getData(`${ENDPOINTS.ORDERS}/${SHOP_ID}`),
-        api.getData(`${ENDPOINTS.CUSTOMERS}/by/shop/${SHOP_ID}`),
-        api.getData(ENDPOINTS.INVENTORIES),
-      ]);
+      // Fetch the specific order directly by ID
+      const ordRes = await api.getData(`${ENDPOINTS.ORDERS}/${SHOP_ID}/${id}`);
       if (ordRes?.data) {
-        const found = (ordRes.data as any[]).find(o => o.id === id);
-        if (found) setSale({ ...found, status: found.status.charAt(0).toUpperCase() + found.status.slice(1).toLowerCase(), origin: found.origin === "OFFLINE" ? "Sales" : found.origin });
+        const found = Array.isArray(ordRes.data) ? ordRes.data[0] : ordRes.data;
+        if (found) {
+          setSale({
+            ...found,
+            status: found.status.charAt(0).toUpperCase() + found.status.slice(1).toLowerCase(),
+            origin: found.origin === "OFFLINE" ? "Sales" : found.origin,
+          });
+        }
       }
-      if (custRes?.data) { const m: Record<string, string> = {}; custRes.data.forEach((c: any) => m[c.id] = c.name); setCustomerMap(m); }
-      if (invRes?.data) { const m: Record<string, string> = {}; invRes.data.forEach((p: any) => m[p.id] = p.name); setProductMap(m); }
-    } finally { setLoading(false); }
+    } catch (err) {
+      console.error("Failed to fetch order:", err);
+    } finally {
+      setLoading(false);
+    }
+
+    // Fetch supporting data independently — failures here won't break the order view
+    try {
+      const custRes = await api.getData(`${ENDPOINTS.CUSTOMERS}/by/shop/${SHOP_ID}`);
+      if (custRes?.data) {
+        const m: Record<string, string> = {};
+        custRes.data.forEach((c: any) => { m[c.id] = c.name; });
+        setCustomerMap(m);
+      }
+    } catch (err) {
+      console.warn("Could not load customer map:", err);
+    }
+
+    try {
+      const invRes = await api.getData(ENDPOINTS.INVENTORIES);
+      if (invRes?.data) {
+        const m: Record<string, string> = {};
+        invRes.data.forEach((p: any) => { m[p.id] = p.name; });
+        setProductMap(m);
+      }
+    } catch (err) {
+      console.warn("Could not load product map:", err);
+    }
   };
 
   useEffect(() => {

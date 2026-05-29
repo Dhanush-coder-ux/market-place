@@ -36,13 +36,38 @@ const columnLabels: Record<string, string> = {
   buy_price: "Buy Price",
   sell_price: "Sell Price",
   stocks: "Stock",
+  status: "Status",
   category: "Category",
   unit: "Unit",
   brand: "Brand",
   supplier: "Supplier",
   serial_number: "Serials",
   reorder_point: "Reorder Point",
-  status: "Status",
+};
+
+const columnOrder = [
+  "barcode",
+  "category",
+  "supplier",
+  "unit",
+  "brand",
+  "buy_price",
+  "sell_price",
+  "stocks",
+  "status",
+  "reorder_point",
+  "serial_number"
+];
+
+const sortKeys = (keys: string[]) => {
+  return [...keys].sort((a, b) => {
+    const idxA = columnOrder.indexOf(a);
+    const idxB = columnOrder.indexOf(b);
+    if (idxA === -1 && idxB === -1) return a.localeCompare(b);
+    if (idxA === -1) return 1;
+    if (idxB === -1) return -1;
+    return idxA - idxB;
+  });
 };
 
 const getColumnLabel = (key: string) => {
@@ -344,7 +369,7 @@ const ProductRow = React.memo(
             if (key === "stocks" || key === "quantity") {
               return (
                 <td key={key} className="px-3 py-2.5 whitespace-nowrap">
-                  <span className="text-[13px] font-semibold text-slate-800 tabular-nums">
+                  <span className="text-[13px] font-semibold text-blue-600 tabular-nums">
                     {value}
                   </span>
                 </td>
@@ -599,8 +624,10 @@ const ProductInfos = () => {
     const saved = localStorage.getItem("product_table_columns");
     return saved
       ? JSON.parse(saved)
-      : ["category", "sell_price", "stocks", "reorder_point", "status"];
+      : ["category", "status", "buy_price", "sell_price", "stocks", "reorder_point"];
   });
+
+  const sortedSelectedKeys = useMemo(() => sortKeys(selectedKeys), [selectedKeys]);
 
   useEffect(() => {
     setActions(
@@ -862,10 +889,10 @@ const ProductInfos = () => {
                 <th className="px-3 py-2.5 min-w-[260px] text-[10px] font-semibold text-slate-400 uppercase tracking-wide">
                   Product
                 </th>
-                {selectedKeys.map((key) => {
+                {sortedSelectedKeys.map((key) => {
                   if (
                     key === "category" &&
-                    selectedKeys.includes("supplier")
+                    sortedSelectedKeys.includes("supplier")
                   ) {
                     return (
                       <th
@@ -878,7 +905,7 @@ const ProductInfos = () => {
                   }
                   if (
                     key === "supplier" &&
-                    selectedKeys.includes("category")
+                    sortedSelectedKeys.includes("category")
                   )
                     return null;
                   return (
@@ -945,7 +972,7 @@ const ProductInfos = () => {
                     p={p}
                     isExpanded={expandedRows.has(p.id)}
                     toggleExpand={toggleExpand}
-                    selectedKeys={selectedKeys}
+                    selectedKeys={sortedSelectedKeys}
                     navigate={navigate}
                     setProductToDelete={setProductToDelete}
                     setIsDeleteDialogOpen={setIsDeleteDialogOpen}

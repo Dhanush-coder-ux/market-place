@@ -292,15 +292,37 @@ export default function CustomerBalanceSummary() {
                           <p className="text-sm font-semibold text-slate-700 tracking-tight">
                             {String(c.name || "Untitled")}
                           </p>
-                          <p className="text-[11px] font-semibold text-slate-400">
-                            {String(c.mobile_number || "No phone")}
-                          </p>
+                          {(c.mobile_number || c.email) ? (
+                            <div className="flex flex-col gap-0">
+                              {c.mobile_number && (
+                                <p className="text-[11px] font-semibold text-slate-400">
+                                  {String(c.mobile_number)}
+                                </p>
+                              )}
+                              {c.email && (
+                                <p className="text-[11px] font-medium text-slate-400 truncate max-w-[180px]">
+                                  {String(c.email)}
+                                </p>
+                              )}
+                            </div>
+                          ) : (
+                            <p className="text-[11px] font-medium text-slate-300">—</p>
+                          )}
                         </div>
                       </div>
                     </td>
                     {selectedKeys.map(key => {
-                      const value = (c as any).datas?.[key] ?? (c as any)[key];
-                      let displayValue = String(value ?? "—");
+                      // Map column key aliases to actual data fields
+                      let value: any;
+                      if (key === 'phone') {
+                        value = c.mobile_number ?? c.datas?.mobile_number;
+                      } else if (key === 'email') {
+                        value = c.email ?? c.datas?.email;
+                      } else {
+                        value = (c as any).datas?.[key] ?? (c as any)[key];
+                      }
+
+                      let displayValue = value != null && value !== '' ? String(value) : '—';
 
                       if (key === 'is_active') {
                         displayValue = value ? "Active" : "Inactive";

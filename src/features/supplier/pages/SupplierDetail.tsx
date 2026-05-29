@@ -257,39 +257,89 @@ export default function SupplierDetail() {
           )}
 
           {activeTab === 1 && (() => {
-            // Flatten: purchase → products rows, with purchase-level metadata attached
             const rows: any[] = [];
             purchases.forEach((p: any) => {
               const d = p.datas ?? {};
               const pd = d.purchaseDetails ?? {};
               const payment = d.payment ?? {};
               const charges = p.additional_charges ?? {};
-              const purchaseMeta = {
-                purchaseId: p.id,
-                type: p.type,
-                productName: '—', // We'll fill this from products
-                invoiceNo: pd.invoiceNo || '—',
-                referenceNo: pd.referenceNo || '—',
-                purchaseDate: pd.date || p.created_at,
-                paymentMethod: payment.method || '—',
-                amountPaid: payment.amountPaid ?? 0,
-                deliveryCharge: charges.delivery_charge ?? 0,
-                otherCharge: charges.other_charge ?? 0,
-                uiId: p.ui_id,
-                storageLocation: d.storage_location || p.storage_location || '—',
-              };
+              
+              const productsList: any[] = [];
               (p.products ?? []).forEach((prod: any) => {
-                rows.push({
-                  ...purchaseMeta,
+                const baseProd = {
                   productName: prod.name || 'Unknown Product',
-                  stocks: prod.stocks,
-                  receivedStocks: prod.received_stocks ?? prod.stocks ?? 0,
                   stocksBefore: prod.stocks_before ?? null,
-                  isInc: true,
+                  receivedStocks: prod.received_stocks ?? prod.stocks ?? 0,
                   buy_price: prod.buy_price,
-                  sell_price: prod.sell_price
-                });
+                  sell_price: prod.sell_price,
+                };
+
+                const variants = prod.variants ?? [];
+                if (variants.length > 0) {
+                  variants.forEach((v: any) => {
+                    const batches = v.batches ?? [];
+                    if (batches.length > 0) {
+                      batches.forEach((b: any) => {
+                        const sns = Array.isArray(b.serial_numbers) ? b.serial_numbers : (b.serial_numbers?.serial_numbers ?? []);
+                        productsList.push({
+                          ...baseProd,
+                          variant: v.name,
+                          batch: b.name,
+                          stocksBefore: b.stocks_before ?? v.stocks_before ?? baseProd.stocksBefore,
+                          receivedStocks: b.stocks ?? v.stocks ?? baseProd.receivedStocks,
+                          buy_price: v.buy_price ?? baseProd.buy_price,
+                          sell_price: v.sell_price ?? baseProd.sell_price,
+                          serials: sns
+                        });
+                      });
+                    } else {
+                      productsList.push({
+                        ...baseProd,
+                        variant: v.name,
+                        batch: null,
+                        stocksBefore: v.stocks_before ?? baseProd.stocksBefore,
+                        receivedStocks: v.stocks ?? baseProd.receivedStocks,
+                        buy_price: v.buy_price ?? baseProd.buy_price,
+                        sell_price: v.sell_price ?? baseProd.sell_price,
+                        serials: []
+                      });
+                    }
+                  });
+                } else {
+                  productsList.push({
+                    ...baseProd,
+                    variant: null,
+                    batch: null,
+                    serials: []
+                  });
+                }
               });
+
+              if (productsList.length > 0) {
+                const firstItem = productsList[0];
+                rows.push({
+                  purchaseId: p.id,
+                  type: p.type,
+                  productName: firstItem.productName,
+                  stocksBefore: firstItem.stocksBefore,
+                  receivedStocks: firstItem.receivedStocks,
+                  buy_price: firstItem.buy_price,
+                  sell_price: firstItem.sell_price,
+                  variant: firstItem.variant,
+                  batch: firstItem.batch,
+                  serials: firstItem.serials,
+                  invoiceNo: pd.invoiceNo || '—',
+                  referenceNo: pd.referenceNo || '—',
+                  purchaseDate: pd.date || p.created_at,
+                  paymentMethod: payment.method || '—',
+                  amountPaid: payment.amountPaid ?? 0,
+                  deliveryCharge: charges.delivery_charge ?? 0,
+                  otherCharge: charges.other_charge ?? 0,
+                  uiId: p.ui_id,
+                  storageLocation: d.storage_location || p.storage_location || '—',
+                  productsList: productsList
+                });
+              }
             });
 
             return (

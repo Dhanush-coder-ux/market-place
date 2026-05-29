@@ -442,6 +442,16 @@ const ProductRow = React.memo(
             )}
           </td>
 
+
+          {/* Unit */}
+          <td className="px-3 py-2.5">
+            <span className="text-[12px] font-medium text-slate-600">
+              {datas.unit || (item as any).unit || "—"}
+            </span>
+          </td>
+
+          
+
           {/* Buy price */}
           <td className="px-3 py-2.5 text-right">
             <span className="text-[13px] font-semibold text-slate-700 tabular-nums">
@@ -458,22 +468,8 @@ const ProductRow = React.memo(
 
           {/* Stock */}
           <td className="px-3 py-2.5 text-right">
-            <span className="text-[13px] font-semibold text-slate-800 tabular-nums">
+            <span className="text-[13px] font-semibold text-blue-600 tabular-nums">
               {stockNumber}
-            </span>
-          </td>
-
-          {/* Unit */}
-          <td className="px-3 py-2.5">
-            <span className="text-[12px] font-medium text-slate-600">
-              {datas.unit || (item as any).unit || "—"}
-            </span>
-          </td>
-
-          {/* Reorder point */}
-          <td className="px-3 py-2.5 text-center">
-            <span className="text-[13px] font-semibold text-slate-700 tabular-nums">
-              {hasVariants ? "—" : (reorderPoint ?? "—")}
             </span>
           </td>
 
@@ -484,6 +480,15 @@ const ProductRow = React.memo(
             >
               <span className={`w-1.5 h-1.5 rounded-full ${status.dot}`} />
               {status.label}
+            </span>
+          </td>
+
+          
+
+          {/* Reorder point */}
+          <td className="px-3 py-2.5 text-center">
+            <span className="text-[13px] font-semibold text-slate-700 tabular-nums">
+              {hasVariants ? "—" : (reorderPoint ?? "—")}
             </span>
           </td>
 
@@ -770,6 +775,9 @@ const InventoryPage = () => {
                   <th className="px-3 py-2.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wide">
                     Serials
                   </th>
+                  <th className="px-3 py-2.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wide">
+                    Unit
+                  </th>
                   <th className="px-3 py-2.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wide text-right">
                     Buy Price
                   </th>
@@ -780,13 +788,10 @@ const InventoryPage = () => {
                     Stock
                   </th>
                   <th className="px-3 py-2.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wide">
-                    Unit
+                    Status
                   </th>
                   <th className="px-3 py-2.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wide text-center">
                     Reorder Point
-                  </th>
-                  <th className="px-3 py-2.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wide">
-                    Status
                   </th>
                   <th className="px-3 py-2.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wide text-right">
                     Last updated

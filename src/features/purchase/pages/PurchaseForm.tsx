@@ -98,6 +98,7 @@ const PurchaseForm = () => {
   const [costMethod, setCostMethod] = useState("None");
   const [supplierDetails, setSupplierDetails] = useState<any>(null);
   const [isGstExpanded, setIsGstExpanded] = useState(false);
+  const [gstMode, setGstMode] = useState<"inclusive" | "exclusive">("inclusive");
 
   // --- Calculations ---
   const stats = useMemo(() => {
@@ -112,8 +113,18 @@ const PurchaseForm = () => {
       const gstRate = Number(p.taxGst) || 0;
       totalQty += q;
 
-      const lineExcl = q * c;
-      const lineGst = lineExcl * (gstRate / 100);
+      let baseCost = c;
+      let lineGst = 0;
+      
+      if (gstMode === "inclusive") {
+        baseCost = c / (1 + gstRate / 100);
+        lineGst = q * (c - baseCost);
+      } else {
+        baseCost = c;
+        lineGst = q * c * (gstRate / 100);
+      }
+
+      const lineExcl = q * baseCost;
 
       subtotal += lineExcl;
       totalGst += lineGst;
@@ -134,20 +145,23 @@ const PurchaseForm = () => {
     const allocations = products.map(p => {
       const q = Number(p.quantity) || 0;
       const c = Number(p.costPrice) || 0;
+      const gstRate = Number(p.taxGst) || 0;
+      const baseCost = gstMode === "inclusive" ? c / (1 + gstRate / 100) : c;
+      
       let alloc = 0;
       if (costMethod === "By Unit" && totalQty > 0) {
         alloc = (q / totalQty) * totalCharges;
       } else if (costMethod === "By Value" && subtotal > 0) {
-        alloc = ((q * c) / subtotal) * totalCharges;
+        alloc = ((q * baseCost) / subtotal) * totalCharges;
       } else if (costMethod === "Equally" && products.length > 0) {
         alloc = totalCharges / products.length;
       }
-      const netCostPerUnit = q > 0 ? (q * c + alloc) / q : c;
+      const netCostPerUnit = q > 0 ? (q * baseCost + alloc) / q : baseCost;
       return { alloc, netCostPerUnit };
     });
 
     return { totalQty, subtotal, totalGst, gstBreakdown, totalCharges, grandTotal, outstanding, allocations };
-  }, [products, charges, payment.amountPaid, costMethod]);
+  }, [products, charges, payment.amountPaid, costMethod, gstMode]);
 
   // --- Load Existing Purchase or Draft ---
   useEffect(() => {
@@ -305,7 +319,17 @@ const PurchaseForm = () => {
     try {
       const transformedProducts = products.map((p) => {
         const q = Math.floor(Number(p.quantity) || 0);
-        const baseCost = Number(p.costPrice) || 0;
+        const rawCostPrice = Number(p.costPrice) || 0;
+        const gstRate = Number(p.taxGst) || 0;
+        const baseCost = gstMode === "inclusive" 
+          ? rawCostPrice / (1 + gstRate / 100) 
+          : rawCostPrice;
+
+        const rowBaseCost = baseCost;
+        const rowGstPerUnit = gstMode === "inclusive"
+          ? rawCostPrice - rowBaseCost
+          : rawCostPrice * (gstRate / 100);
+        const costForSp = rowBaseCost + rowGstPerUnit;
 
         let allocated = 0;
         if (costMethod === "By Unit" && stats.totalQty > 0) {
@@ -315,16 +339,20 @@ const PurchaseForm = () => {
         } else if (costMethod === "Equally" && products.length > 0) {
           allocated = (stats.totalCharges / products.length) / (q > 0 ? q : 1);
         }
-        const finalCost = baseCost + allocated;
+        const netCostForSp = costForSp + allocated;
 
         let finalSellPrice = 0;
         if (p.marginType === "percent") {
-          finalSellPrice = finalCost + (finalCost * ((Number(p.marginPercent) || 0) / 100));
-        } else if (p.marginType === "amount") {
-          finalSellPrice = finalCost + (Number(p.marginAmount) || 0);
+          finalSellPrice = netCostForSp + (netCostForSp * ((Number(p.marginPercent) || 0) / 100));
+        } else if (p.marginType === "amount" && Number(p.marginAmount) > 0) {
+          finalSellPrice = netCostForSp + (Number(p.marginAmount) || 0);
         } else {
           finalSellPrice = Number(p.sellingPrice) || 0;
         }
+
+        const calculatedMargin = p.marginType === "percent"
+          ? (Number(p.marginPercent) || 0)
+          : (netCostForSp > 0 ? Number((((finalSellPrice - netCostForSp) / netCostForSp) * 100).toFixed(2)) : 0);
 
         return {
           inventory_id: p.inventory_id || null,
@@ -333,9 +361,9 @@ const PurchaseForm = () => {
           barcode: p.sku,
           stocks: q,
           received_stocks: q,
-          buy_price: baseCost,
+          buy_price: Number(baseCost.toFixed(2)),
           sell_price: Number(finalSellPrice.toFixed(2)),
-          margin: Number(p.marginPercent) || 0,
+          margin: calculatedMargin,
           unit: p.unit || "pc",
           gst: Number(p.taxGst) || 0,
           batch_tracking: p.batchTracking || false,
@@ -375,7 +403,7 @@ const PurchaseForm = () => {
         calculations: {
           divided_by: costMethodMap[costMethod] || "NONE",
           gst: {
-            type: "inclusive",
+            type: gstMode,
             value: 18,
             registered: true
           }
@@ -420,7 +448,7 @@ const PurchaseForm = () => {
     } finally {
       setSubmitting(false);
     }
-  }, [purchaseDetails, products, charges, payment, supplierDetails, id, postData, putData, showToast, navigate, searchParams]);
+  }, [purchaseDetails, products, charges, payment, supplierDetails, id, postData, putData, showToast, navigate, searchParams, costMethod, stats, purchaseType, gstMode]);
 
   // --- Header Actions ---
   useEffect(() => {
@@ -829,7 +857,6 @@ const PurchaseForm = () => {
             </div>
           </div>
 
-          {/* 3. Items List Card */}
           <InventoryItemsCard
             products={products}
             stats={stats}
@@ -843,6 +870,8 @@ const PurchaseForm = () => {
             type="PURCHASE"
             purchaseType={purchaseType}
             onAddNewProduct={handleAddNewProduct}
+            gstMode={gstMode}
+            setGstMode={setGstMode}
           />
         </div>
       </div>

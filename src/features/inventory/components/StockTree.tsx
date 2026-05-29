@@ -364,6 +364,12 @@ export const VariantRows = ({ combinations, baseSellPrice, baseBuyPrice }: { com
 
                   {/* Stats */}
                   <div className="flex items-center justify-end gap-6 sm:gap-8 md:gap-10 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-50">
+                    <div className="text-right w-[90px] flex flex-col items-end mr-2">
+                      <p className="text-[9px] font-bold text-slate-400 leading-none mb-1.5 text-right w-full">Stocks</p>
+                      <span className={`inline-flex px-2 py-0.5 rounded-lg text-[10px] font-bold border ${stockStatus.color}`}>
+                        {stockStatus.label}
+                      </span>
+                    </div>
                     <div className="text-right w-[70px]">
                       <p className="text-[9px] font-bold text-slate-400 leading-none mb-1">Buy Price</p>
                       <p className="text-xs font-bold text-rose-500 tabular-nums">{formatCurrency(buyPrice)}</p>
@@ -375,12 +381,6 @@ export const VariantRows = ({ combinations, baseSellPrice, baseBuyPrice }: { com
                     <div className="text-center w-[70px]">
                       <p className="text-[9px] font-bold text-slate-400 leading-none mb-1">Reorder Point</p>
                       <p className="text-xs font-bold text-slate-700 tabular-nums">{reorderPoint || "—"}</p>
-                    </div>
-                    <div className="text-right w-[90px] flex flex-col items-end">
-                      <p className="text-[9px] font-bold text-slate-400 leading-none mb-1.5 text-right w-full">Status</p>
-                      <span className={`inline-flex px-2 py-0.5 rounded-lg text-[10px] font-bold border ${stockStatus.color}`}>
-                        {stockStatus.label}
-                      </span>
                     </div>
                   </div>
                 </div>

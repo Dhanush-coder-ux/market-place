@@ -291,7 +291,6 @@ const PurchaseDetail = () => {
                       <tr className="bg-slate-50/50 border-b border-slate-100">
                         <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em]">Product Details</th>
                         <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-center">Qty</th>
-                        <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-center">Stock Before</th>
                         <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-center">Stock In/Out</th>
                         <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-center">Stock After</th>
                         <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-right">Unit Price</th>
@@ -431,11 +430,6 @@ const PurchaseDetail = () => {
                           </td>
                           <td className="px-6 py-4 text-center">
                             <span className="text-xs font-black text-slate-600">{product.quantity}</span>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-center">
-                            <span className="text-xs font-semibold text-slate-650">
-                              {product.stocks_before !== undefined && product.stocks_before !== null ? product.stocks_before : '—'}
-                            </span>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-center">
                             <span className="text-xs font-bold text-green-600">

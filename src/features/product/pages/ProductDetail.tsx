@@ -250,26 +250,69 @@ const ProductDetail = () => {
                     <DetailItem icon={Info} label="Unit" value={unit} onClick={click("Unit", unit)} />
                     <DetailItem icon={Hash} label="SKU" value={sku} onClick={click("SKU", sku)} />
                     <DetailItem icon={Hash} label="Barcode" value={barcode} onClick={click("Barcode", barcode)} />
-                    <div className="lg:col-span-2">
-                      <p className="text-[10px] font-medium text-slate-400  tracking-[0.05em] mb-1.5 flex items-center gap-1.5">
-                        <FileText size={12} className="text-blue-400" /> Serial Numbers
-                      </p>
-                      {rootSerials.length > 0 ? (
-                        <SerialBadgeList serials={rootSerials} />
-                      ) : hasVariants ? (
-                        <div className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 border border-indigo-100 rounded-lg w-fit">
-                          <Layers size={12} className="text-indigo-500" />
-                          <span className="text-[11px] font-bold text-indigo-600">Available in Inventory tab</span>
-                        </div>
-                      ) : (
-                        <p className="text-[13px] font-semibold text-slate-400">—</p>
-                      )}
+                    <div className="md:col-span-2">
+                      <DetailItem icon={Info} label="Description" value={description} onClick={click("Description", description)} />
                     </div>
-                    <DetailItem icon={Info} label="Description" value={description} onClick={click("Description", description)} />
+
+                    {/* Dedicated Next Row for Characteristics */}
+                    <div className="col-span-full grid grid-cols-1 md:grid-cols-3 gap-6 pt-4 border-t border-slate-100">
+                      <div>
+                        <p className="text-[10px] font-medium text-slate-400 tracking-[0.05em] mb-1.5 flex items-center gap-1.5">
+                          <Layers size={12} className="text-blue-400" /> Variants
+                        </p>
+                        {product.has_variant === true ? (
+                          <div 
+                            className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 border border-indigo-100 rounded-lg w-fit cursor-pointer hover:bg-indigo-100 transition-colors"
+                            onClick={() => setActiveTab(1)}
+                          >
+                            <Layers size={12} className="text-indigo-500" />
+                            <span className="text-[11px] font-bold text-indigo-600">Available in Inventory tab</span>
+                          </div>
+                        ) : (
+                          <p className="text-[13px] font-semibold text-slate-400">No variants</p>
+                        )}
+                      </div>
+
+                      <div>
+                        <p className="text-[10px] font-medium text-slate-400 tracking-[0.05em] mb-1.5 flex items-center gap-1.5">
+                          <Layers size={12} className="text-blue-400" /> Batches
+                        </p>
+                        {product.has_batch === true ? (
+                          <div 
+                            className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 border border-indigo-100 rounded-lg w-fit cursor-pointer hover:bg-indigo-100 transition-colors"
+                            onClick={() => setActiveTab(1)}
+                          >
+                            <Layers size={12} className="text-indigo-500" />
+                            <span className="text-[11px] font-bold text-indigo-600">Available in Inventory tab</span>
+                          </div>
+                        ) : (
+                          <p className="text-[13px] font-semibold text-slate-400">No batches</p>
+                        )}
+                      </div>
+
+                      <div>
+                        <p className="text-[10px] font-medium text-slate-400 tracking-[0.05em] mb-1.5 flex items-center gap-1.5">
+                          <FileText size={12} className="text-blue-400" /> Serial Numbers
+                        </p>
+                        {rootSerials.length > 0 ? (
+                          <SerialBadgeList serials={rootSerials} />
+                        ) : (product.has_serialno === true) ? (
+                          <div 
+                            className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 border border-indigo-100 rounded-lg w-fit cursor-pointer hover:bg-indigo-100 transition-colors"
+                            onClick={() => setActiveTab(1)}
+                          >
+                            <Layers size={12} className="text-indigo-500" />
+                            <span className="text-[11px] font-bold text-indigo-600">Available in Inventory tab</span>
+                          </div>
+                        ) : (
+                          <p className="text-[13px] font-semibold text-slate-400">No serial numbers</p>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </div>
               </SectionCard>
-
+ 
               {/* Pricing Section */}
               <SectionCard className="rounded-lg border-slate-200 shadow-sm p-4">
                 <div className="flex items-center gap-2 mb-4">
@@ -279,8 +322,39 @@ const ProductDetail = () => {
                   <h2 className="text-[10px] font-black text-slate-800  tracking-[0.15em]">Pricing & Compliance</h2>
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-y-6 gap-x-8">
-                  <DetailItem icon={Download} label="Buy Price" value={String(buyingPrice) !== "—" ? `₹${buyingPrice}` : "—"} onClick={click("Buy Price", `₹${buyingPrice}`)} />
-                  <DetailItem icon={Upload} label="Sell Price" value={String(sellingPrice) !== "—" ? `₹${sellingPrice}` : "—"} onClick={click("Selling Price", `₹${sellingPrice}`)} />
+                  <div>
+                    <p className="text-[10px] font-medium text-slate-400 tracking-[0.05em] mb-1.5 flex items-center gap-1.5">
+                      <Download size={12} className="text-blue-400" /> Buy Price
+                    </p>
+                    {hasVariants ? (
+                      <div 
+                        className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 border border-indigo-100 rounded-lg w-fit cursor-pointer hover:bg-indigo-100 transition-colors"
+                        onClick={() => setActiveTab(1)}
+                      >
+                        <Layers size={12} className="text-indigo-500" />
+                        <span className="text-[11px] font-bold text-indigo-600">Available in Inventory tab</span>
+                      </div>
+                    ) : (
+                      <p className="text-[13px] font-semibold text-slate-800 tabular-nums">{String(buyingPrice) !== "—" ? `₹${buyingPrice}` : "—"}</p>
+                    )}
+                  </div>
+
+                  <div>
+                    <p className="text-[10px] font-medium text-slate-400 tracking-[0.05em] mb-1.5 flex items-center gap-1.5">
+                      <Upload size={12} className="text-blue-400" /> Sell Price
+                    </p>
+                    {hasVariants ? (
+                      <div 
+                        className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 border border-indigo-100 rounded-lg w-fit cursor-pointer hover:bg-indigo-100 transition-colors"
+                        onClick={() => setActiveTab(1)}
+                      >
+                        <Layers size={12} className="text-indigo-500" />
+                        <span className="text-[11px] font-bold text-indigo-600">Available in Inventory tab</span>
+                      </div>
+                    ) : (
+                      <p className="text-[13px] font-semibold text-slate-800 tabular-nums">{String(sellingPrice) !== "—" ? `₹${sellingPrice}` : "—"}</p>
+                    )}
+                  </div>
                   <DetailItem icon={Tag} label="MRP" value={datas.mrp ? `₹${datas.mrp}` : "—"} onClick={click("MRP", datas.mrp ? `₹${datas.mrp}` : "—")} />
                   <DetailItem icon={Hash} label="HSN Code" value={String(datas.hsn || "—")} onClick={click("HSN Code", String(datas.hsn || "—"))} />
                   <DetailItem icon={BarChart2} label="GST Rate" value={String(datas.gst || "—")} onClick={click("GST Rate", String(datas.gst || "—"))} />
@@ -436,24 +510,13 @@ const ProductDetail = () => {
             const payment = d.payment ?? {};
             const pType = p.type === 'DIRECT' ? 'Purchase' : (p.type?.includes('PO') ? 'PO Purchase' : 'Purchase');
 
+            const productsList: any[] = [];
             (p.products ?? []).forEach((prod: any) => {
-              const baseRow = {
-                id: p.id,
-                date: pd.date || p.created_at,
-                description: `Supplier: ${d.supplier_name || '—'}`,
-                displayType: pType,
-                isInc: true, // Purchases always add stock
-                stocks: prod.stocks ?? 0,
-                receivedStocks: prod.received_stocks ?? prod.stocks ?? 0,
+              const baseProd = {
                 stocksBefore: prod.stocks_before ?? null,
-                uiId: p.ui_id,
+                receivedStocks: prod.received_stocks ?? prod.stocks ?? 0,
                 buyPrice: prod.buy_price,
                 sellPrice: prod.sell_price,
-                paymentMethod: payment.method || "—",
-                amountPaid: payment.amountPaid || 0,
-                invoiceNo: pd.invoiceNo || "—",
-                referenceNo: pd.referenceNo || "—",
-                storageLocation: d.storage_location || p.storage_location || prod.storage_location || '—',
               };
 
               const variants = prod.variants ?? [];
@@ -463,31 +526,66 @@ const ProductDetail = () => {
                   if (batches.length > 0) {
                     batches.forEach((b: any) => {
                       const sns = Array.isArray(b.serial_numbers) ? b.serial_numbers : (b.serial_numbers?.serial_numbers ?? []);
-                      rows.push({ 
-                        ...baseRow, 
-                        variant: v.name, 
-                        batch: b.name, 
-                        stocks: b.stocks, 
-                        serials: sns,
-                        buyPrice: v.buy_price ?? baseRow.buyPrice,
-                        sellPrice: v.sell_price ?? baseRow.sellPrice,
+                      productsList.push({
+                        variant: v.name,
+                        batch: b.name,
+                        stocksBefore: b.stocks_before ?? v.stocks_before ?? baseProd.stocksBefore,
+                        receivedStocks: b.stocks ?? v.stocks ?? baseProd.receivedStocks,
+                        buyPrice: v.buy_price ?? baseProd.buyPrice,
+                        sellPrice: v.sell_price ?? baseProd.sellPrice,
+                        serials: sns
                       });
                     });
                   } else {
-                    rows.push({ 
-                      ...baseRow, 
-                      variant: v.name, 
-                      batch: null, 
-                      serials: [],
-                      buyPrice: v.buy_price ?? baseRow.buyPrice,
-                      sellPrice: v.sell_price ?? baseRow.sellPrice,
+                    productsList.push({
+                      variant: v.name,
+                      batch: null,
+                      stocksBefore: v.stocks_before ?? baseProd.stocksBefore,
+                      receivedStocks: v.stocks ?? baseProd.receivedStocks,
+                      buyPrice: v.buy_price ?? baseProd.buyPrice,
+                      sellPrice: v.sell_price ?? baseProd.sellPrice,
+                      serials: []
                     });
                   }
                 });
               } else {
-                rows.push({ ...baseRow, variant: null, batch: null, serials: [] });
+                productsList.push({
+                  variant: null,
+                  batch: null,
+                  stocksBefore: baseProd.stocksBefore,
+                  receivedStocks: baseProd.receivedStocks,
+                  buyPrice: baseProd.buyPrice,
+                  sellPrice: baseProd.sellPrice,
+                  serials: []
+                });
               }
             });
+
+            if (productsList.length > 0) {
+              const firstItem = productsList[0];
+              rows.push({
+                id: p.id,
+                date: pd.date || p.created_at,
+                description: `Supplier: ${d.supplier_name || '—'}`,
+                displayType: pType,
+                isInc: true, // Purchases always add stock
+                stocks: firstItem.receivedStocks,
+                receivedStocks: firstItem.receivedStocks,
+                stocksBefore: firstItem.stocksBefore,
+                uiId: p.ui_id,
+                buyPrice: firstItem.buyPrice,
+                sellPrice: firstItem.sellPrice,
+                variant: firstItem.variant,
+                batch: firstItem.batch,
+                serials: firstItem.serials,
+                paymentMethod: payment.method || "—",
+                amountPaid: payment.amountPaid || 0,
+                invoiceNo: pd.invoiceNo || "—",
+                referenceNo: pd.referenceNo || "—",
+                storageLocation: d.storage_location || p.storage_location || '—',
+                productsList: productsList
+              });
+            }
           });
 
           rows.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());

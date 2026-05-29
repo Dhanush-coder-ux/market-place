@@ -107,19 +107,12 @@ const StockMovementTab = ({ inventoryId, product }: StockMovementTabProps) => {
           const products = (a.products || []) as any[];
           const dateStr = String(a.adjusted_date || a.created_at || new Date().toISOString());
 
+          const productsList: any[] = [];
           products.forEach((prod: any) => {
-            const isDecrement = prod.type === 'DECREMENT' || source === 'sales';
+            if (product && product.name && prod.name && prod.name.trim().toLowerCase() !== product.name.trim().toLowerCase()) {
+              return;
+            }
             const baseQty = Number(prod.stocks || 0);
-
-            const baseRow = {
-              id: a.id,
-              date: dateStr,
-              description: finalDesc,
-              displayType,
-              source,
-              isInc: !isDecrement,
-              uiId: a.ui_id,
-            };
 
             if (prod.variants && prod.variants.length > 0) {
               prod.variants.forEach((v: any) => {
@@ -128,8 +121,8 @@ const StockMovementTab = ({ inventoryId, product }: StockMovementTabProps) => {
                     const sns = Array.isArray(b.serial_numbers?.serial_numbers)
                       ? b.serial_numbers.serial_numbers
                       : (Array.isArray(v.serial_numbers?.serial_numbers) ? v.serial_numbers.serial_numbers : []);
-                    rows.push({
-                      ...baseRow,
+                    productsList.push({
+                      name: prod.name,
                       variant: v.name || "",
                       batch: b.name || "",
                       stocks: Number(b.stocks ?? v.stocks ?? baseQty),
@@ -139,8 +132,8 @@ const StockMovementTab = ({ inventoryId, product }: StockMovementTabProps) => {
                     });
                   });
                 } else {
-                  rows.push({
-                    ...baseRow,
+                  productsList.push({
+                    name: prod.name,
                     variant: v.name || "",
                     batch: null,
                     stocks: Number(v.stocks ?? baseQty),
@@ -155,8 +148,8 @@ const StockMovementTab = ({ inventoryId, product }: StockMovementTabProps) => {
                 const sns = Array.isArray(b.serial_numbers?.serial_numbers)
                   ? b.serial_numbers.serial_numbers
                   : (Array.isArray(prod.serial_numbers?.serial_numbers) ? prod.serial_numbers.serial_numbers : []);
-                rows.push({
-                  ...baseRow,
+                productsList.push({
+                  name: prod.name,
                   variant: null,
                   batch: b.name || "",
                   stocks: Number(b.stocks ?? baseQty),
@@ -166,8 +159,8 @@ const StockMovementTab = ({ inventoryId, product }: StockMovementTabProps) => {
                 });
               });
             } else {
-              rows.push({
-                ...baseRow,
+              productsList.push({
+                name: prod.name,
                 variant: null,
                 batch: null,
                 stocks: baseQty,
@@ -177,6 +170,28 @@ const StockMovementTab = ({ inventoryId, product }: StockMovementTabProps) => {
               });
             }
           });
+
+          if (productsList.length > 0) {
+            const matchedProduct = products.find((prod: any) => product && product.name && prod.name && prod.name.trim().toLowerCase() === product.name.trim().toLowerCase());
+            const isDecrement = (matchedProduct || products[0])?.type === 'DECREMENT' || source === 'sales';
+            const firstItem = productsList[0];
+            rows.push({
+              id: a.id,
+              date: dateStr,
+              description: finalDesc,
+              displayType,
+              source,
+              isInc: !isDecrement,
+              uiId: a.ui_id,
+              variant: firstItem.variant,
+              batch: firstItem.batch,
+              stocks: firstItem.stocks,
+              receivedStocks: firstItem.receivedStocks,
+              stocksBefore: firstItem.stocksBefore,
+              serials: firstItem.serials,
+              productsList: productsList
+            });
+          }
         });
 
 
@@ -197,7 +212,7 @@ const StockMovementTab = ({ inventoryId, product }: StockMovementTabProps) => {
       <StockMovementsTable 
         rows={movements} 
         loading={loading} 
-        onViewDetails={(id) => navigate(`/purchases/${id}`)}
+        onViewDetails={(id) => navigate(`/stock-movement/${id}`)}
       />
     </div>
   );

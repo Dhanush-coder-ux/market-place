@@ -3,6 +3,7 @@ import {
   ListTree,
   Settings, ChevronRight,
   ShoppingBag, 
+  Percent,
 } from "lucide-react";
 
 // Components
@@ -20,12 +21,13 @@ const MENU_ITEMS = [
   { id: "dropdowns", label: "Dropdown Settings", icon: <ListTree size={18} />, description: "Industries & Sectors" },
   { id: "advanced", label: "Advanced Config", icon: <Settings size={18} />, description: "System-wide variables" },
   { id: "purchasetypes", label: "Purchase Modules", icon: <ShoppingBag size={18} />, description: "Enable/Disable purchase types" },
+  { id: "gst", label: "GST Configuration", icon: <Percent size={18} />, description: "Registered / Non-Registered" },
 ];
 
 export const ProfileSettingsPage = () => {
   const [activeTab, setActiveTab] = useState("dropdowns");
   const [builtOptions, setBuiltOptions] = useState<any[]>([]);
-  const { settings, toggleSetting } = usePurchaseSettings();
+  const { settings, toggleSetting, setGstType } = usePurchaseSettings();
   const isMobile = useMediaQuery("(max-width: 768px)");
   
   const handleBuilderChange = (options: any) => {
@@ -91,6 +93,78 @@ export const ProfileSettingsPage = () => {
                     checked={settings.productionEntry} 
                     onCheckedChange={() => toggleSetting('productionEntry')} 
                   />
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+
+      case "gst":
+        return (
+          <div className="animate-in fade-in slide-in-from-right-4 duration-300">
+            <div className="bg-white md:rounded-lg border-y md:border border-slate-200 shadow-sm overflow-hidden">
+              <div className="px-6 py-5 border-b border-slate-100 bg-slate-50/50">
+                <h3 className="text-lg font-bold text-slate-900">GST Registration Configuration</h3>
+                <p className="text-[13.5px] text-slate-500 mt-1">Configure whether your business is a registered GST tax entity or non-GST registered.</p>
+              </div>
+              
+              <div className="p-6 space-y-5 max-w-2xl">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Option 1: GST Registered */}
+                  <div 
+                    onClick={() => setGstType("registered")}
+                    className={`flex flex-col p-5 rounded-xl border-2 cursor-pointer transition-all duration-200 relative ${
+                      settings.gstType === "registered" 
+                        ? "border-blue-500 bg-blue-50/30 ring-4 ring-blue-500/5" 
+                        : "border-slate-150 bg-white hover:border-slate-300"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-[14.5px] font-bold text-slate-800">GST Registered Entity</span>
+                      <div className={`w-4.5 h-4.5 rounded-full border flex items-center justify-center ${
+                        settings.gstType === "registered" ? "border-blue-500 bg-blue-500" : "border-slate-300 bg-white"
+                      }`}>
+                        {settings.gstType === "registered" && (
+                          <div className="w-1.5 h-1.5 rounded-full bg-white" />
+                        )}
+                      </div>
+                    </div>
+                    <p className="text-[13px] text-slate-500 mt-2.5 leading-relaxed">
+                      Enable this if you have a valid GSTIN. Product GST rates (e.g., 18%) will be calculated and printed on invoices.
+                    </p>
+                  </div>
+
+                  {/* Option 2: Non-GST Registered */}
+                  <div 
+                    onClick={() => setGstType("non-registered")}
+                    className={`flex flex-col p-5 rounded-xl border-2 cursor-pointer transition-all duration-200 relative ${
+                      settings.gstType === "non-registered" 
+                        ? "border-blue-500 bg-blue-50/30 ring-4 ring-blue-500/5" 
+                        : "border-slate-150 bg-white hover:border-slate-300"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-[14.5px] font-bold text-slate-800">Non-GST Registered</span>
+                      <div className={`w-4.5 h-4.5 rounded-full border flex items-center justify-center ${
+                        settings.gstType === "non-registered" ? "border-blue-500 bg-blue-500" : "border-slate-300 bg-white"
+                      }`}>
+                        {settings.gstType === "non-registered" && (
+                          <div className="w-1.5 h-1.5 rounded-full bg-white" />
+                        )}
+                      </div>
+                    </div>
+                    <p className="text-[13px] text-slate-500 mt-2.5 leading-relaxed">
+                      Enable this if you are a non-GST registered entity. Product GST taxes will be excluded entirely from billing invoices.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Banner notice */}
+                <div className="p-4 rounded-xl bg-blue-50/20 border border-blue-100 text-blue-800 text-xs leading-relaxed flex gap-2">
+                  <Settings size={16} className="shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-bold">System Status:</span> Selecting either option automatically configures the POS billing engine in real-time. Invoices will automatically compute or exclude tax metrics based on your choice above.
+                  </div>
                 </div>
               </div>
             </div>

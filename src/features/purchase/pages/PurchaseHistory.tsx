@@ -265,9 +265,23 @@ const STYLES = `
 /* ================= SHARED HELPERS ================= */
 const fmt = (n: number) => `₹${n.toLocaleString()}`;
 
-const ProductPill = ({ name, qty, stocksBefore }: { name: string; qty: number; stocksBefore?: number }) => (
+const ProductPill = ({ name, qty, stocksBefore, variant, batch }: { name: string; qty: number; stocksBefore?: number; variant?: string | null; batch?: string | null }) => (
   <span className="inline-flex flex-col gap-0.5 text-xs font-medium text-zinc-650 bg-zinc-50 border border-zinc-100 px-2.5 py-1.5 rounded-lg">
     <span className="truncate max-w-[150px] font-bold text-zinc-750">{name}</span>
+    {(variant || batch) && (
+      <div className="flex flex-wrap gap-1 mt-0.5">
+        {variant && (
+          <span className="px-1.5 py-0.5 rounded text-[8px] font-extrabold bg-violet-50 text-violet-700 border border-violet-100 truncate max-w-[110px]">
+            V: {variant}
+          </span>
+        )}
+        {batch && (
+          <span className="px-1.5 py-0.5 rounded text-[8px] font-extrabold bg-amber-50 text-amber-700 border border-amber-100 truncate max-w-[110px]">
+            B: {batch}
+          </span>
+        )}
+      </div>
+    )}
     <div className="flex items-center gap-1.5 flex-wrap text-[10px] text-zinc-400 font-semibold tabular-nums shrink-0 mt-0.5">
       <span>Received: {qty}</span>
       {stocksBefore !== undefined && stocksBefore !== null && (
@@ -353,24 +367,61 @@ const GridCard = ({ po, onClick }: { po: DirectPurchaseData; onClick: () => void
           <Package size={13} className="text-zinc-400" />
           <span className="text-[10px] font-semibold   text-zinc-400">Products Ordered</span>
         </div>
-        <div className="po-scrollbar max-h-[7.5rem] overflow-y-auto space-y-1.5 pr-1">
-          {po.products.map((p, idx) => (
-            <div key={idx} className="flex items-center justify-between py-2 text-sm border-b border-zinc-50 last:border-0">
-              <span className="text-zinc-600 truncate pr-3 group-hover:text-zinc-800 transition-colors">{p.name}</span>
-              <div className="shrink-0 flex flex-col items-end gap-1">
-                <span className="text-[10px] font-bold text-zinc-500 bg-zinc-50 border border-zinc-100 px-1.5 py-0.5 rounded">
-                  Received Stock: {p.quantity}
-                </span>
-                {p.stocks_before !== undefined && p.stocks_before !== null && (
-                  <div className="flex items-center gap-1.5 text-[9px] font-bold text-zinc-400 uppercase">
-                    <span>Op: {p.stocks_before}</span>
-                    <span>•</span>
-                    <span className="text-blue-500 font-extrabold">Cur: {p.stocks_before + p.quantity}</span>
-                  </div>
-                )}
+        <div className="po-scrollbar max-h-[9rem] overflow-y-auto space-y-1.5 pr-1">
+          {po.products.map((p, idx) => {
+            // Flatten variants/batches for display
+            const variantRows: { variant?: string; batch?: string }[] = [];
+            if (p.variants && p.variants.length > 0) {
+              p.variants.forEach((v) => {
+                if (v.batches && v.batches.length > 0) {
+                  v.batches.forEach((b) => variantRows.push({ variant: v.name, batch: b.name }));
+                } else {
+                  variantRows.push({ variant: v.name });
+                }
+              });
+            } else if (p.batches && p.batches.length > 0) {
+              p.batches.forEach((b) => variantRows.push({ batch: b.name }));
+            }
+            const firstRow = variantRows[0];
+            return (
+              <div key={idx} className="flex items-start justify-between py-2 text-sm border-b border-zinc-50 last:border-0 gap-2">
+                <div className="flex flex-col gap-0.5 min-w-0">
+                  <span className="text-zinc-600 truncate group-hover:text-zinc-800 transition-colors text-xs font-semibold">{p.name}</span>
+                  {(firstRow?.variant || firstRow?.batch) && (
+                    <div className="flex flex-wrap gap-1 mt-0.5">
+                      {firstRow.variant && (
+                        <span className="px-1.5 py-0.5 rounded text-[8px] font-extrabold bg-violet-50 text-violet-700 border border-violet-100 truncate max-w-[100px]">
+                          V: {firstRow.variant}
+                        </span>
+                      )}
+                      {firstRow.batch && (
+                        <span className="px-1.5 py-0.5 rounded text-[8px] font-extrabold bg-amber-50 text-amber-700 border border-amber-100 truncate max-w-[100px]">
+                          B: {firstRow.batch}
+                        </span>
+                      )}
+                      {variantRows.length > 1 && (
+                        <span className="text-[8px] font-bold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
+                          +{variantRows.length - 1} more
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
+                <div className="shrink-0 flex flex-col items-end gap-1">
+                  <span className="text-[10px] font-bold text-zinc-500 bg-zinc-50 border border-zinc-100 px-1.5 py-0.5 rounded">
+                    Recv: {p.quantity}
+                  </span>
+                  {p.stocks_before !== undefined && p.stocks_before !== null && (
+                    <div className="flex items-center gap-1.5 text-[9px] font-bold text-zinc-400 uppercase">
+                      <span>Op: {p.stocks_before}</span>
+                      <span>•</span>
+                      <span className="text-blue-500 font-extrabold">Cur: {p.stocks_before + p.quantity}</span>
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 
@@ -402,7 +453,7 @@ const VerticalTable = ({ data, onClick, totalCount }: { data: DirectPurchaseData
         <table className="w-full text-left border-collapse whitespace-nowrap text-sm">
           <thead className="sticky top-0 z-20 bg-slate-50 border-b border-slate-100">
             <tr>
-              <th className="px-3 py-2.5 text-[10px] font-bold tracking-wider text-slate-400 uppercase text-left">PO Details</th>
+              <th className="px-3 py-2.5 text-[10px] font-bold tracking-wider text-slate-400 uppercase text-left">Purchase Invoice</th>
               <th className="px-3 py-2.5 text-[10px] font-bold tracking-wider text-slate-400 uppercase text-left">Vendor</th>
               <th className="px-3 py-2.5 text-[10px] font-bold tracking-wider text-slate-400 uppercase text-left">Date</th>
               <th className="px-3 py-2.5 text-[10px] font-bold tracking-wider text-slate-400 uppercase text-left hidden md:table-cell">Products</th>
@@ -460,11 +511,23 @@ const VerticalTable = ({ data, onClick, totalCount }: { data: DirectPurchaseData
                   </td>
 
                   {/* Products */}
-                  <td className="p-2.5 px-3 hidden md:table-cell max-w-[320px]">
+                  <td className="p-2.5 px-3 hidden md:table-cell max-w-[360px]">
                     <div className="flex flex-wrap gap-1.5">
-                      {po.products.slice(0, 2).map((p, idx) => (
-                        <ProductPill key={idx} name={p.name} qty={p.quantity} stocksBefore={p.stocks_before} />
-                      ))}
+                      {po.products.slice(0, 2).map((p, idx) => {
+                        // Get first variant/batch for the pill
+                        const firstVariant = p.variants?.[0]?.name || null;
+                        const firstBatch = p.variants?.[0]?.batches?.[0]?.name || p.batches?.[0]?.name || null;
+                        return (
+                          <ProductPill
+                            key={idx}
+                            name={p.name}
+                            qty={p.quantity}
+                            stocksBefore={p.stocks_before}
+                            variant={firstVariant}
+                            batch={firstBatch}
+                          />
+                        );
+                      })}
                       {po.products.length > 2 && (
                         <span className="inline-flex items-center text-[9px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200">
                           +{po.products.length - 2} more

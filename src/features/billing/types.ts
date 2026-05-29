@@ -40,6 +40,7 @@ export interface InventoryItem {
   serialnoId?: string;
   availableSerials?: string[];
   batches?: any[];
+  gst?: number;
 }
 
 export interface BillingItem {
@@ -59,6 +60,8 @@ export interface BillingItem {
   expiryDate?: string;
   requireSerial?: boolean;
   maxStock?: number;
+  gst?: number;
+  _product?: any;
 }
 
 // Alias for convenience if used in shopping cart contexts

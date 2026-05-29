@@ -1,7 +1,8 @@
-import { ArrowUp, ArrowDown, ShoppingCart, TrendingUp, RefreshCcw, FileText, ArrowRight, Banknote, Eye } from "lucide-react";
+import { ArrowUp, ArrowDown, ShoppingCart, TrendingUp, RefreshCcw, FileText, ArrowRight, Banknote, Eye, ChevronDown, ChevronRight } from "lucide-react";
 import { TypeBadge } from "@/components/common/SuperUI";
+import { useState } from "react";
 
-// ─── STOCK MOVEMENTS TABLE ──────────────────────────────────────────────────
+// ─── STOCK MOVEMENTS TABLE ────────────────────────────────────────────────────
 export interface StockMovementRow {
   id: string;
   date: string;
@@ -16,6 +17,15 @@ export interface StockMovementRow {
   description: string;
   serials?: string[];
   uiId?: string;
+  productsList?: {
+    name?: string;
+    variant: string | null;
+    batch: string | null;
+    stocks: number;
+    receivedStocks: number;
+    stocksBefore: number | null;
+    serials?: string[];
+  }[];
 }
 
 interface StockMovementsTableProps {
@@ -25,11 +35,18 @@ interface StockMovementsTableProps {
 }
 
 export function StockMovementsTable({ rows, loading, onViewDetails }: StockMovementsTableProps) {
+  const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
+
+  const toggleExpand = (rowKey: string) => {
+    setExpandedRows((prev) => ({
+      ...prev,
+      [rowKey]: !prev[rowKey],
+    }));
+  };
+
   return (
     <div className="flex flex-col h-full min-h-0 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden animate-in fade-in duration-300">
       
-
-
       {/* Table Body Container with internal scroll only */}
       <div className="flex-1 min-h-0 overflow-auto custom-scrollbar">
         {loading ? (
@@ -51,7 +68,6 @@ export function StockMovementsTable({ rows, loading, onViewDetails }: StockMovem
                   <th className="px-5 py-3.5">Date</th>
                   <th className="px-5 py-3.5">Movement Type</th>
                   <th className="px-5 py-3.5">Product / Variant / Batch</th>
-                  <th className="px-5 py-3.5 text-center">Stock Before</th>
                   <th className="px-5 py-3.5 text-center">Stock In/Out</th>
                   <th className="px-5 py-3.5 text-center">Stock After</th>
                   <th className="px-5 py-3.5">Details</th>
@@ -60,69 +76,167 @@ export function StockMovementsTable({ rows, loading, onViewDetails }: StockMovem
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {rows.map((r, i) => {
-                  const currentStockVal = r.stocksBefore !== null
-                    ? (r.stocksBefore + (r.isInc ? r.receivedStocks : -r.receivedStocks))
-                    : null;
+                  const hasList = r.productsList && r.productsList.length > 1;
+                  const rowKey = `${r.id}-${i}`;
+                  const isExpanded = !!expandedRows[rowKey];
+                  
+                  const totalStocksIn = hasList
+                    ? r.productsList!.reduce((sum, p) => sum + p.receivedStocks, 0)
+                    : (r.productsList?.[0]?.receivedStocks ?? r.receivedStocks);
+
+                  const firstProd = r.productsList?.[0];
+                  // Compute stock after for single or multi-product rows
+                  const currentStockVal = (() => {
+                    const prods = r.productsList;
+                    if (!prods || prods.length === 0) {
+                      const sb = r.stocksBefore;
+                      if (sb === null || sb === undefined) return null;
+                      return sb + (r.isInc ? r.receivedStocks : -r.receivedStocks);
+                    }
+                    let total = 0;
+                    for (const p of prods) {
+                      const sb = p.stocksBefore;
+                      if (sb === null || sb === undefined) return null;
+                      total += sb + (r.isInc ? p.receivedStocks : -p.receivedStocks);
+                    }
+                    return total;
+                  })();
+
                   return (
-                    <tr
-                      key={`${r.id}-${i}`}
-                      className={`hover:bg-slate-50/80 transition-colors border-l-[3px] ${r.source === 'purchase' ? 'border-l-indigo-400' : r.isInc ? 'border-l-emerald-400' : 'border-l-rose-400'
-                        }`}
-                    >
-                      <td className="px-5 py-4 text-xs text-slate-500 font-medium whitespace-nowrap">
-                        {r.date ? new Date(r.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
-                      </td>
-                      <td className="px-5 py-4 whitespace-nowrap">
-                        <TypeBadge 
-                          type={r.displayType} 
-                          icon={r.isInc ? ArrowUp : ArrowDown} 
-                        />
-                      </td>
-                      <td className="px-5 py-4">
-                        <div className="flex flex-col gap-1 max-w-[200px]">
-                          {r.variant && <span className="w-fit px-2 py-0.5 rounded-md text-[9px] font-bold bg-violet-50 text-violet-700 border border-violet-100 truncate">V: {r.variant}</span>}
-                          {r.batch && <span className="w-fit px-2 py-0.5 rounded-md text-[9px] font-bold bg-amber-50 text-amber-700 border border-amber-100 truncate">B: {r.batch}</span>}
-                          {!r.variant && !r.batch && <span className="text-slate-300">—</span>}
-                          {r.serials && r.serials.length > 0 && (
-                            <div className="flex flex-wrap gap-1 mt-0.5">
-                              <span className="text-[9px] text-slate-400 font-bold">SN: </span>
-                              {r.serials.slice(0, 2).map((s, si) => (
-                                <span key={si} className="text-[9px] font-mono font-bold text-slate-500">{s}{si === 0 && r.serials!.length > 1 ? ',' : ''}</span>
-                              ))}
-                              {r.serials.length > 2 && <span className="text-[9px] font-bold text-slate-400">+{r.serials.length - 2}</span>}
+                    <Fragment key={rowKey}>
+                      <tr
+                        className={`hover:bg-slate-50/80 transition-colors border-l-[3px] ${r.source === 'purchase' ? 'border-l-indigo-400' : r.isInc ? 'border-l-emerald-400' : 'border-l-rose-400'
+                          }`}
+                      >
+                        <td className="px-5 py-4 text-xs text-slate-500 font-medium whitespace-nowrap">
+                          {r.date ? new Date(r.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
+                        </td>
+                        <td className="px-5 py-4 whitespace-nowrap">
+                          <TypeBadge 
+                            type={r.displayType} 
+                            icon={r.isInc ? ArrowUp : ArrowDown} 
+                          />
+                        </td>
+                        <td className="px-5 py-4">
+                          <div className="flex flex-col gap-0.5">
+                            {firstProd?.name && (
+                              <span className="text-[12px] font-semibold text-slate-850 truncate max-w-[180px] inline-block">
+                                {firstProd.name}
+                              </span>
+                            )}
+                            <div className="flex flex-wrap gap-1 mt-0.5 items-center">
+                              {(firstProd?.variant || r.variant) && <span className="w-fit px-2 py-0.5 rounded-md text-[9px] font-bold bg-violet-50 text-violet-700 border border-violet-100 truncate">V: {firstProd?.variant || r.variant}</span>}
+                              {(firstProd?.batch || r.batch) && <span className="w-fit px-2 py-0.5 rounded-md text-[9px] font-bold bg-amber-50 text-amber-700 border border-amber-100 truncate">B: {firstProd?.batch || r.batch}</span>}
+                              {((firstProd?.serials || r.serials) && (firstProd?.serials || r.serials)!.length > 0) && (
+                                <div className="flex flex-wrap gap-1">
+                                  <span className="text-[9px] text-slate-400 font-bold">SN: </span>
+                                  {(firstProd?.serials || r.serials)!.slice(0, 2).map((s: string, si: number) => (
+                                    <span key={si} className="text-[9px] font-mono font-bold text-slate-500">{s}{si === 0 && (firstProd?.serials || r.serials)!.length > 1 ? ',' : ''}</span>
+                                  ))}
+                                  {(firstProd?.serials || r.serials)!.length > 2 && <span className="text-[9px] font-bold text-slate-400">+{(firstProd?.serials || r.serials)!.length - 2}</span>}
+                                </div>
+                              )}
+                              
+                              {hasList && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    toggleExpand(rowKey);
+                                  }}
+                                  className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] font-extrabold bg-blue-50 text-blue-600 border border-blue-100 hover:bg-blue-100 transition-colors shrink-0 shadow-sm"
+                                  title={isExpanded ? "Collapse Items" : "Expand Items"}
+                                >
+                                  {isExpanded ? <ChevronDown size={10} strokeWidth={3} /> : <ChevronRight size={10} strokeWidth={3} />}
+                                  <span>+ {r.productsList!.length - 1} more</span>
+                                </button>
+                              )}
                             </div>
+                          </div>
+                        </td>
+                        <td className="px-5 py-4 whitespace-nowrap font-black text-sm tabular-nums text-center bg-slate-50/40">
+                          <span className={r.isInc ? 'text-emerald-600' : 'text-rose-600'}>
+                            {r.isInc ? '+' : '-'}{totalStocksIn}
+                          </span>
+                        </td>
+                        <td className="px-5 py-4 whitespace-nowrap text-center font-bold text-blue-600 tabular-nums">
+                          {currentStockVal !== null ? currentStockVal : '—'}
+                        </td>
+                        <td className="px-5 py-4 text-xs text-slate-500 max-w-[220px] truncate" title={r.description}>
+                          {r.description}
+                        </td>
+                        <td className="px-5 py-4 text-center">
+                          {onViewDetails && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onViewDetails(r.id);
+                              }}
+                              title="View Adjustment Detail"
+                              className="w-7 h-7 mx-auto flex items-center justify-center rounded-lg bg-blue-50 text-blue-500 hover:bg-blue-100 hover:text-blue-700 border border-blue-100 transition-all active:scale-95 shadow-sm"
+                            >
+                              <Eye size={13} strokeWidth={2.5} />
+                            </button>
                           )}
-                        </div>
-                      </td>
-                      <td className="px-5 py-4 whitespace-nowrap text-center font-bold text-slate-500 tabular-nums">
-                        {r.stocksBefore ?? '—'}
-                      </td>
-                      <td className="px-5 py-4 whitespace-nowrap font-black text-sm tabular-nums text-center bg-slate-50/40">
-                        <span className={r.isInc ? 'text-emerald-600' : 'text-rose-600'}>
-                          {r.isInc ? '+' : '-'}{r.receivedStocks}
-                        </span>
-                      </td>
-                      <td className="px-5 py-4 whitespace-nowrap text-center font-bold text-blue-600 tabular-nums">
-                        {currentStockVal !== null ? currentStockVal : '—'}
-                      </td>
-                      <td className="px-5 py-4 text-xs text-slate-500 max-w-[220px] truncate" title={r.description}>
-                        {r.description}
-                      </td>
-                      <td className="px-5 py-4">
-                        {onViewDetails && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onViewDetails(r.id);
-                            }}
-                            title="View Adjustment Detail"
-                            className="w-7 h-7 flex items-center justify-center rounded-lg bg-blue-50 text-blue-500 hover:bg-blue-100 hover:text-blue-700 border border-blue-100 transition-all active:scale-95 shadow-sm"
-                          >
-                            <Eye size={13} strokeWidth={2.5} />
-                          </button>
-                        )}
-                      </td>
-                    </tr>
+                        </td>
+                      </tr>
+
+                      {/* Expanded Sub-table */}
+                      {hasList && isExpanded && (
+                        <tr className="bg-slate-50/30 border-b border-slate-100">
+                          <td colSpan={7} className="p-0">
+                            <div className="ml-14 mr-6 my-3 border border-slate-100 rounded-lg bg-white p-4 shadow-sm space-y-3 animate-in slide-in-from-top-2 duration-300">
+                              <div className="flex items-center gap-1.5 border-b border-slate-55 pb-2 mb-2">
+                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Adjustment Transaction Details</span>
+                              </div>
+                              <table className="w-full text-left border-collapse text-[12px]">
+                                <thead>
+                                  <tr className="text-[9px] font-black text-slate-400 tracking-wider uppercase border-b border-slate-100">
+                                    <th className="py-2 px-3">Product Item</th>
+                                    <th className="py-2 px-3 text-center">Stock In / Out</th>
+                                    <th className="py-2 px-3 text-center">Stock After</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-50">
+                                  {r.productsList!.map((p: any, pIdx: number) => {
+                                    const pStockVal = p.stocksBefore !== null && p.stocksBefore !== undefined
+                                      ? (p.stocksBefore + (r.isInc ? p.receivedStocks : -p.receivedStocks))
+                                      : null;
+                                    return (
+                                      <tr key={pIdx} className="hover:bg-slate-50/30">
+                                        <td className="py-2.5 px-3">
+                                          <div className="flex flex-col gap-0.5">
+                                            <span className="font-semibold text-slate-800">{p.name || r.description}</span>
+                                            <div className="flex flex-wrap gap-1 mt-0.5">
+                                              {p.variant && <span className="px-1.5 py-0.2 rounded bg-violet-50 text-violet-600 border border-violet-100 text-[8px] font-bold">V: {p.variant}</span>}
+                                              {p.batch && <span className="px-1.5 py-0.2 rounded bg-amber-50 text-amber-700 border border-amber-100 text-[8px] font-bold">B: {p.batch}</span>}
+                                              {p.serials && p.serials.length > 0 && (
+                                                <div className="flex flex-wrap gap-1">
+                                                  <span className="text-[8px] text-slate-400 font-bold">SN: </span>
+                                                  {p.serials.slice(0, 2).map((s: string, si: number) => (
+                                                    <span key={si} className="text-[8px] font-mono text-slate-500">{s}{si === 0 && p.serials.length > 1 ? ',' : ''}</span>
+                                                  ))}
+                                                  {p.serials.length > 2 && <span className="text-[8px] font-bold text-slate-400">+{p.serials.length - 2}</span>}
+                                                </div>
+                                              )}
+                                            </div>
+                                          </div>
+                                        </td>
+                                        <td className="py-2.5 px-3 text-center font-black text-emerald-600">
+                                          <span className={r.isInc ? 'text-emerald-600' : 'text-rose-600'}>
+                                            {r.isInc ? '+' : '-'}{p.receivedStocks}
+                                          </span>
+                                        </td>
+                                        <td className="py-2.5 px-3 text-center font-bold text-blue-600">{pStockVal !== null ? pStockVal : '—'}</td>
+                                      </tr>
+                                    );
+                                  })}
+                                </tbody>
+                              </table>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </Fragment>
                   );
                 })}
               </tbody>
@@ -134,8 +248,7 @@ export function StockMovementsTable({ rows, loading, onViewDetails }: StockMovem
   );
 }
 
-
-// ─── PRODUCT PURCHASES TABLE ────────────────────────────────────────────────
+// ─── PRODUCT PURCHASES TABLE ──────────────────────────────────────────────────
 interface ProductPurchasesTableProps {
   rows: any[];
   loading: boolean;
@@ -143,10 +256,17 @@ interface ProductPurchasesTableProps {
 }
 
 export function ProductPurchasesTable({ rows, loading, onNavigateToPurchase }: ProductPurchasesTableProps) {
+  const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
+
+  const toggleExpand = (rowKey: string) => {
+    setExpandedRows((prev) => ({
+      ...prev,
+      [rowKey]: !prev[rowKey],
+    }));
+  };
+
   return (
     <div className="flex flex-col h-full min-h-0 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden animate-in fade-in duration-300">
-
-
       {/* Body */}
       <div className="flex-1 min-h-0 overflow-auto custom-scrollbar">
         {loading ? (
@@ -169,102 +289,198 @@ export function ProductPurchasesTable({ rows, loading, onNavigateToPurchase }: P
                   <th className="px-5 py-3.5">Date</th>
                   <th className="px-5 py-3.5">Type</th>
                   <th className="px-5 py-3.5">Variant / Batch</th>
-                  <th className="px-5 py-3.5 text-center">Stock Before</th>
                   <th className="px-5 py-3.5 text-center">Stock In/Out</th>
                   <th className="px-5 py-3.5 text-center">Stock After</th>
                   <th className="px-5 py-3.5">Buy Price</th>
                   <th className="px-5 py-3.5">Sell Price</th>
                   <th className="px-5 py-3.5">Payment</th>
                   <th className="px-5 py-3.5">Reference</th>
-                  <th className="px-5 py-3.5">Storage Loc</th>
                   <th className="px-5 py-3.5">Supplier</th>
                   <th className="px-5 py-3.5 w-12"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {rows.map((r, i) => (
-                  <tr key={`${r.id}-${i}`} className="hover:bg-indigo-50/20 transition-colors border-l-[3px] border-l-indigo-400">
-                    <td className="px-5 py-4 whitespace-nowrap">
-                      <span className="text-[10px] font-black text-slate-400 font-mono">#{r.uiId}</span>
-                    </td>
-                    <td className="px-5 py-4 text-xs text-slate-500 font-medium whitespace-nowrap">
-                      {r.date ? new Date(r.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
-                    </td>
-                    <td className="px-5 py-4 whitespace-nowrap">
-                      <TypeBadge 
-                        type={r.displayType} 
-                        icon={ArrowUp} 
-                      />
-                    </td>
-                    <td className="px-5 py-4">
-                      <div className="flex flex-col gap-1 max-w-[200px]">
-                        {r.variant && <span className="w-fit px-2 py-0.5 rounded-md text-[9px] font-bold bg-violet-50 text-violet-700 border border-violet-100 truncate">V: {r.variant}</span>}
-                        {r.batch && <span className="w-fit px-2 py-0.5 rounded-md text-[9px] font-bold bg-amber-50 text-amber-700 border border-amber-100 truncate">B: {r.batch}</span>}
-                        {!r.variant && !r.batch && <span className="text-slate-300">—</span>}
-                        {r.serials && r.serials.length > 0 && (
-                          <div className="flex flex-wrap gap-1 mt-0.5">
-                            <span className="text-[9px] text-slate-400 font-bold">SN: </span>
-                            {r.serials.slice(0, 2).map((s: string, si: number) => (
-                              <span key={si} className="text-[9px] font-mono font-bold text-slate-500">{s}{si === 0 && r.serials.length > 1 ? ',' : ''}</span>
-                            ))}
-                            {r.serials.length > 2 && <span className="text-[9px] font-bold text-slate-400">+{r.serials.length - 2}</span>}
+                {rows.map((r, i) => {
+                  const hasList = r.productsList && r.productsList.length > 1;
+                  const rowKey = `${r.id}-${i}`;
+                  const isExpanded = !!expandedRows[rowKey];
+
+                  const totalStocksIn = hasList
+                    ? r.productsList!.reduce((sum: number, p: any) => sum + p.receivedStocks, 0)
+                    : (r.productsList?.[0]?.receivedStocks ?? r.receivedStocks);
+
+                  const firstProd = r.productsList?.[0] || {};
+                  // Compute total stock after across all items (purchases are always increments)
+                  const totalStockAfterProd = (() => {
+                    const prods = r.productsList;
+                    if (!prods || prods.length === 0) {
+                      const sb = r.stocksBefore;
+                      return sb !== null && sb !== undefined ? (sb + totalStocksIn) : null;
+                    }
+                    let total = 0;
+                    for (const p of prods) {
+                      if (p.stocksBefore === null || p.stocksBefore === undefined) return null;
+                      total += p.stocksBefore + p.receivedStocks;
+                    }
+                    return total;
+                  })();
+
+
+                  return (
+                    <Fragment key={rowKey}>
+                      <tr className="hover:bg-indigo-50/20 transition-colors border-l-[3px] border-l-indigo-400">
+                        <td className="px-5 py-4 whitespace-nowrap">
+                          <span className="text-[10px] font-black text-slate-400 font-mono">#{r.uiId}</span>
+                        </td>
+                        <td className="px-5 py-4 text-xs text-slate-500 font-medium whitespace-nowrap">
+                          {r.date ? new Date(r.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
+                        </td>
+                        <td className="px-5 py-4 whitespace-nowrap">
+                          <TypeBadge 
+                            type={r.displayType} 
+                            icon={ArrowUp} 
+                          />
+                        </td>
+                        <td className="px-5 py-4">
+                          {hasList ? (
+                            <div className="flex flex-col gap-1 max-w-[200px]">
+                              <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
+                                {(firstProd.variant || r.variant) && <span className="w-fit px-2 py-0.5 rounded-md text-[9px] font-bold bg-violet-50 text-violet-700 border border-violet-100 truncate">V: {firstProd.variant || r.variant}</span>}
+                                {(firstProd.batch || r.batch) && <span className="w-fit px-2 py-0.5 rounded-md text-[9px] font-bold bg-amber-50 text-amber-700 border border-amber-100 truncate">B: {firstProd.batch || r.batch}</span>}
+                                
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    toggleExpand(rowKey);
+                                  }}
+                                  className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] font-extrabold bg-indigo-50 text-indigo-600 border border-indigo-100 hover:bg-indigo-100 transition-colors shrink-0 shadow-sm"
+                                  title={isExpanded ? "Collapse Items" : "Expand Items"}
+                                >
+                                  {isExpanded ? <ChevronDown size={10} strokeWidth={3} /> : <ChevronRight size={10} strokeWidth={3} />}
+                                  <span>+ {r.productsList!.length - 1} more</span>
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="flex flex-col gap-1 max-w-[200px]">
+                              {(firstProd.variant || r.variant) && <span className="w-fit px-2 py-0.5 rounded-md text-[9px] font-bold bg-violet-50 text-violet-700 border border-violet-100 truncate">V: {firstProd.variant || r.variant}</span>}
+                              {(firstProd.batch || r.batch) && <span className="w-fit px-2 py-0.5 rounded-md text-[9px] font-bold bg-amber-50 text-amber-700 border border-amber-100 truncate">B: {firstProd.batch || r.batch}</span>}
+                              {!firstProd.variant && !r.variant && !firstProd.batch && !r.batch && <span className="text-slate-300">—</span>}
+                              {((firstProd.serials || r.serials) && (firstProd.serials || r.serials)!.length > 0) && (
+                                <div className="flex flex-wrap gap-1 mt-0.5">
+                                  <span className="text-[9px] text-slate-400 font-bold">SN: </span>
+                                  {(firstProd.serials || r.serials)!.slice(0, 2).map((s: string, si: number) => (
+                                    <span key={si} className="text-[9px] font-mono font-bold text-slate-500">{s}{si === 0 && (firstProd.serials || r.serials)!.length > 1 ? ',' : ''}</span>
+                                  ))}
+                                  {(firstProd.serials || r.serials)!.length > 2 && <span className="text-[9px] font-bold text-slate-400">+{(firstProd.serials || r.serials)!.length - 2}</span>}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-5 py-4 whitespace-nowrap font-black text-sm tabular-nums text-center bg-slate-50/40">
+                          <span className="text-emerald-600">+{totalStocksIn}</span>
+                        </td>
+                        <td className="px-5 py-4 whitespace-nowrap text-center font-bold text-blue-600 tabular-nums">
+                          {totalStockAfterProd !== null ? totalStockAfterProd : '—'}
+                        </td>
+                        <td className="px-5 py-4 whitespace-nowrap text-xs font-bold text-slate-700">
+                          {hasList ? '—' : `₹${firstProd.buyPrice ?? r.buyPrice ?? '—'}`}
+                        </td>
+                        <td className="px-5 py-4 whitespace-nowrap text-xs font-bold text-emerald-700">
+                          {hasList ? '—' : `₹${firstProd.sellPrice ?? r.sellPrice ?? '—'}`}
+                        </td>
+                        <td className="px-5 py-4 whitespace-nowrap">
+                          <div className="flex flex-col gap-0.5">
+                            <span className={`text-[9px] font-bold px-2 py-0.5 rounded-md w-fit ${r.paymentMethod === 'Cash' ? 'bg-emerald-50 text-emerald-700' :
+                                r.paymentMethod === 'UPI' ? 'bg-violet-50 text-violet-700' :
+                                  'bg-slate-50 text-slate-600'
+                              }`}>{r.paymentMethod}</span>
+                            {r.amountPaid > 0 && (
+                              <span className="text-[9px] text-slate-400 font-bold">Paid: ₹{r.amountPaid}</span>
+                            )}
                           </div>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-5 py-4 whitespace-nowrap text-center font-bold text-slate-500 tabular-nums">
-                      {r.stocksBefore !== null ? r.stocksBefore : '—'}
-                    </td>
-                    <td className="px-5 py-4 whitespace-nowrap font-black text-sm tabular-nums text-center bg-slate-50/40">
-                      <span className={r.isInc !== false ? 'text-emerald-600' : 'text-rose-600'}>
-                        {r.isInc !== false ? '+' : '-'}{r.receivedStocks}
-                      </span>
-                    </td>
-                    <td className="px-5 py-4 whitespace-nowrap text-center font-bold text-blue-600 tabular-nums">
-                      {r.stocksBefore !== null ? (r.stocksBefore + r.receivedStocks) : '—'}
-                    </td>
-                    <td className="px-5 py-4 whitespace-nowrap text-xs font-bold text-slate-700">
-                      ₹{r.buyPrice ?? '—'}
-                    </td>
-                    <td className="px-5 py-4 whitespace-nowrap text-xs font-bold text-emerald-700">
-                      ₹{r.sellPrice ?? '—'}
-                    </td>
-                    <td className="px-5 py-4 whitespace-nowrap">
-                      <div className="flex flex-col gap-0.5">
-                        <span className={`text-[9px] font-bold px-2 py-0.5 rounded-md w-fit ${r.paymentMethod === 'Cash' ? 'bg-emerald-50 text-emerald-700' :
-                            r.paymentMethod === 'UPI' ? 'bg-violet-50 text-violet-700' :
-                              'bg-slate-50 text-slate-600'
-                          }`}>{r.paymentMethod}</span>
-                        {r.amountPaid > 0 && (
-                          <span className="text-[9px] text-slate-400 font-bold">Paid: ₹{r.amountPaid}</span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-5 py-4 whitespace-nowrap">
-                      <div className="flex flex-col gap-0.5">
-                        <span className="text-[10px] font-mono text-slate-600">INV: {r.invoiceNo}</span>
-                        <span className="text-[10px] font-mono text-slate-400">REF: {r.referenceNo}</span>
-                      </div>
-                    </td>
-                    <td className="px-5 py-4 text-xs font-semibold text-slate-650 uppercase whitespace-nowrap">
-                      {r.storageLocation || '—'}
-                    </td>
-                    <td className="px-5 py-4 text-xs text-slate-500 max-w-[150px] truncate" title={r.description}>
-                      {r.description.replace('Supplier: ', '')}
-                    </td>
-                    <td className="px-5 py-4">
-                      {onNavigateToPurchase && (
-                        <button
-                          onClick={() => onNavigateToPurchase(r.id)}
-                          title="View Purchase Detail"
-                          className="w-7 h-7 flex items-center justify-center rounded-lg bg-indigo-50 text-indigo-500 hover:bg-indigo-100 hover:text-indigo-700 border border-indigo-100 transition-all active:scale-95 shadow-sm"
-                        >
-                          <Eye size={13} strokeWidth={2.5} />
-                        </button>
+                        </td>
+                        <td className="px-5 py-4 whitespace-nowrap">
+                          <div className="flex flex-col gap-0.5">
+                            <span className="text-[10px] font-mono text-slate-600">INV: {r.invoiceNo}</span>
+                            <span className="text-[10px] font-mono text-slate-400">REF: {r.referenceNo}</span>
+                          </div>
+                        </td>
+                        <td className="px-5 py-4 text-xs font-semibold text-slate-655 uppercase whitespace-nowrap">
+                          {r.storageLocation || '—'}
+                        </td>
+                        <td className="px-5 py-4 text-xs text-slate-500 max-w-[150px] truncate" title={r.description}>
+                          {r.description.replace('Supplier: ', '')}
+                        </td>
+                        <td className="px-5 py-4">
+                          {onNavigateToPurchase && (
+                            <button
+                              onClick={() => onNavigateToPurchase(r.id)}
+                              title="View Purchase Detail"
+                              className="w-7 h-7 flex items-center justify-center rounded-lg bg-indigo-50 text-indigo-500 hover:bg-indigo-100 hover:text-indigo-700 border border-indigo-100 transition-all active:scale-95 shadow-sm"
+                            >
+                              <Eye size={13} strokeWidth={2.5} />
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+
+                      {/* Expanded Sub-table */}
+                      {hasList && isExpanded && (
+                        <tr className="bg-slate-50/30 border-b border-slate-100">
+                          <td colSpan={12} className="p-0">
+                            <div className="ml-14 mr-6 my-3 border border-slate-100 rounded-lg bg-white p-4 shadow-sm space-y-3 animate-in slide-in-from-top-2 duration-300">
+                              <div className="flex items-center gap-1.5 border-b border-slate-55 pb-2 mb-2">
+                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Grouped Purchase Item Details</span>
+                              </div>
+                              <table className="w-full text-left border-collapse text-[12px]">
+                                <thead>
+                                  <tr className="text-[9px] font-black text-slate-400 tracking-wider uppercase border-b border-slate-100">
+                                    <th className="py-2 px-3">Variant / Batch Details</th>
+                                    <th className="py-2 px-3 text-center">Stock Received</th>
+                                    <th className="py-2 px-3 text-center">Stock After</th>
+                                    <th className="py-2 px-3">Buy Price</th>
+                                    <th className="py-2 px-3">Sell Price</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-50">
+                                  {r.productsList!.map((p: any, pIdx: number) => {
+                                    return (
+                                      <tr key={pIdx} className="hover:bg-slate-50/30">
+                                        <td className="py-2.5 px-3">
+                                          <div className="flex flex-col gap-0.5">
+                                            <span className="font-semibold text-slate-800">{p.variant ? `V: ${p.variant}` : 'Standard Product'}</span>
+                                            <div className="flex flex-wrap gap-1 mt-0.5">
+                                              {p.batch && <span className="px-1.5 py-0.2 rounded bg-amber-50 text-amber-700 border border-amber-100 text-[8px] font-bold">B: {p.batch}</span>}
+                                              {p.serials && p.serials.length > 0 && (
+                                                <div className="flex flex-wrap gap-1">
+                                                  <span className="text-[8px] text-slate-400 font-bold">SN: </span>
+                                                  {p.serials.slice(0, 2).map((s: string, si: number) => (
+                                                    <span key={si} className="text-[8px] font-mono text-slate-500">{s}{si === 0 && p.serials.length > 1 ? ',' : ''}</span>
+                                                  ))}
+                                                  {p.serials.length > 2 && <span className="text-[8px] font-bold text-slate-400">+{p.serials.length - 2}</span>}
+                                                </div>
+                                              )}
+                                            </div>
+                                          </div>
+                                        </td>
+                                        <td className="py-2.5 px-3 text-center font-black text-emerald-600">+{p.receivedStocks}</td>
+                                        <td className="py-2.5 px-3 text-center font-bold text-blue-600">{p.stocksBefore !== null && p.stocksBefore !== undefined ? (p.stocksBefore + p.receivedStocks) : '—'}</td>
+                                        <td className="py-2.5 px-3 font-semibold text-slate-700">₹{p.buyPrice ?? '—'}</td>
+                                        <td className="py-2.5 px-3 font-semibold text-emerald-750">₹{p.sellPrice ?? '—'}</td>
+                                      </tr>
+                                    );
+                                  })}
+                                </tbody>
+                              </table>
+                            </div>
+                          </td>
+                        </tr>
                       )}
-                    </td>
-                  </tr>
-                ))}
+                    </Fragment>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -274,8 +490,7 @@ export function ProductPurchasesTable({ rows, loading, onNavigateToPurchase }: P
   );
 }
 
-
-// ─── SUPPLIER PURCHASES TABLE ────────────────────────────────────────────────
+// ─── SUPPLIER PURCHASES TABLE ──────────────────────────────────────────────────
 interface SupplierPurchasesTableProps {
   rows: any[];
   loading: boolean;
@@ -283,10 +498,17 @@ interface SupplierPurchasesTableProps {
 }
 
 export function SupplierPurchasesTable({ rows, loading, onNavigateToPurchase }: SupplierPurchasesTableProps) {
+  const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
+
+  const toggleExpand = (rowKey: string) => {
+    setExpandedRows((prev) => ({
+      ...prev,
+      [rowKey]: !prev[rowKey],
+    }));
+  };
+
   return (
     <div className="flex flex-col h-full min-h-0 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden animate-in fade-in duration-300">
-
-
       {/* Body */}
       <div className="flex-1 min-h-0 overflow-auto custom-scrollbar">
         {loading ? (
@@ -308,84 +530,193 @@ export function SupplierPurchasesTable({ rows, loading, onNavigateToPurchase }: 
                   <th className="px-5 py-3.5">#</th>
                   <th className="px-5 py-3.5">Type</th>
                   <th className="px-5 py-3.5">Product</th>
-                  <th className="px-5 py-3.5 text-center">Stock Before</th>
                   <th className="px-5 py-3.5 text-center">Stock In/Out</th>
                   <th className="px-5 py-3.5 text-center">Stock After</th>
                   <th className="px-5 py-3.5">Buy Price</th>
                   <th className="px-5 py-3.5">Sell Price</th>
                   <th className="px-5 py-3.5">Payment</th>
                   <th className="px-5 py-3.5">Invoice</th>
-                  <th className="px-5 py-3.5">Reference</th>
-                  <th className="px-5 py-3.5">Storage Location</th>
                   <th className="px-5 py-3.5">Date</th>
                   <th className="px-5 py-3.5 w-12"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {rows.map((r, i) => (
-                  <tr key={`${r.purchaseId}-${i}`} className="hover:bg-indigo-50/20 transition-colors border-l-[3px] border-l-indigo-400">
-                    <td className="px-5 py-4 whitespace-nowrap">
-                      <span className="text-[10px] font-black text-slate-400 font-mono">#{r.uiId}</span>
-                    </td>
-                    <td className="px-5 py-4 whitespace-nowrap">
-                      <TypeBadge type={r.type || "PURCHASE"} labelOverride={r.type === 'DIRECT' ? 'Purchase' : (r.type || '—').replace(/_/g, ' ')} />
-                    </td>
-                    <td className="px-5 py-4 text-xs font-semibold text-slate-700 whitespace-nowrap max-w-[150px] truncate" title={r.productName}>
-                      {r.productName}
-                    </td>
-                    <td className="px-5 py-4 whitespace-nowrap text-center font-bold text-slate-500 tabular-nums">
-                      {r.stocksBefore !== undefined && r.stocksBefore !== null ? r.stocksBefore : '—'}
-                    </td>
-                    <td className="px-5 py-4 whitespace-nowrap font-black text-sm tabular-nums text-center bg-slate-50/40">
-                      <span className={r.isInc !== false ? 'text-emerald-600' : 'text-rose-600'}>
-                        {r.isInc !== false ? '+' : '-'}{r.receivedStocks}
-                      </span>
-                    </td>
-                    <td className="px-5 py-4 whitespace-nowrap text-center font-bold text-blue-600 tabular-nums">
-                      {r.stocksBefore !== undefined && r.stocksBefore !== null ? (r.stocksBefore + r.receivedStocks) : '—'}
-                    </td>
-                    <td className="px-5 py-4 whitespace-nowrap text-xs font-bold text-slate-700">
-                      ₹{r.buy_price ?? '—'}
-                    </td>
-                    <td className="px-5 py-4 whitespace-nowrap text-xs font-bold text-emerald-700">
-                      ₹{r.sell_price ?? '—'}
-                    </td>
-                    <td className="px-5 py-4 whitespace-nowrap">
-                      <div className="flex flex-col gap-0.5">
-                        <span className={`text-[9px] font-bold px-2 py-0.5 rounded-md w-fit ${r.paymentMethod === 'Cash' ? 'bg-emerald-50 text-emerald-700' :
-                            r.paymentMethod === 'UPI' ? 'bg-violet-50 text-violet-700' :
-                              'bg-slate-50 text-slate-600'
-                          }`}>{r.paymentMethod}</span>
-                        {r.amountPaid > 0 && (
-                          <span className="text-[9px] text-slate-400 font-bold">Paid: ₹{r.amountPaid}</span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-5 py-4 text-xs font-mono text-slate-500 whitespace-nowrap">
-                      {r.invoiceNo}
-                    </td>
-                    <td className="px-5 py-4 text-xs font-mono text-slate-400 whitespace-nowrap">
-                      {r.referenceNo}
-                    </td>
-                    <td className="px-5 py-4 text-xs font-semibold text-slate-655 uppercase whitespace-nowrap">
-                      {r.storageLocation || '—'}
-                    </td>
-                    <td className="px-5 py-4 text-xs text-slate-500 font-medium whitespace-nowrap">
-                      {r.purchaseDate ? new Date(r.purchaseDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
-                    </td>
-                    <td className="px-5 py-4">
-                      {onNavigateToPurchase && (
-                        <button
-                          onClick={() => onNavigateToPurchase(r.purchaseId)}
-                          title="View Purchase Detail"
-                          className="w-7 h-7 flex items-center justify-center rounded-lg bg-indigo-50 text-indigo-500 hover:bg-indigo-100 hover:text-indigo-700 border border-indigo-100 transition-all active:scale-95 shadow-sm"
-                        >
-                          <Eye size={13} strokeWidth={2.5} />
-                        </button>
+                {rows.map((r, i) => {
+                  const hasList = r.productsList && r.productsList.length > 1;
+                  const rowKey = `${r.purchaseId}-${i}`;
+                  const isExpanded = !!expandedRows[rowKey];
+
+                  const totalStocksIn = hasList
+                    ? r.productsList!.reduce((sum: number, p: any) => sum + p.receivedStocks, 0)
+                    : (r.productsList?.[0]?.receivedStocks ?? r.receivedStocks);
+
+                  const firstProd = r.productsList?.[0] || {};
+                  // Compute total stock after across all items (purchases are always increments)
+                  const totalStockAfterSupp = (() => {
+                    const prods = r.productsList;
+                    if (!prods || prods.length === 0) {
+                      const sb = r.stocksBefore;
+                      return sb !== null && sb !== undefined ? (sb + totalStocksIn) : null;
+                    }
+                    let total = 0;
+                    for (const p of prods) {
+                      if (p.stocksBefore === null || p.stocksBefore === undefined) return null;
+                      total += p.stocksBefore + p.receivedStocks;
+                    }
+                    return total;
+                  })();
+
+                  return (
+                    <Fragment key={rowKey}>
+                      <tr className="hover:bg-indigo-50/20 transition-colors border-l-[3px] border-l-indigo-400">
+                        <td className="px-5 py-4 whitespace-nowrap">
+                          <span className="text-[10px] font-black text-slate-400 font-mono">#{r.uiId}</span>
+                        </td>
+                        <td className="px-5 py-4 whitespace-nowrap">
+                          <TypeBadge type={r.type || "PURCHASE"} labelOverride={r.type === 'DIRECT' ? 'Purchase' : (r.type || '').replace(/_/g, ' ')} />
+                        </td>
+                        <td className="px-5 py-4">
+                          {hasList ? (
+                            <div className="flex flex-col gap-1 max-w-[240px]">
+                              <span className="text-xs font-semibold text-slate-700 whitespace-nowrap truncate" title={firstProd.productName || r.productName}>
+                                {firstProd.productName || r.productName}
+                              </span>
+                              <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
+                                {(firstProd.variant || r.variant) && <span className="w-fit px-2 py-0.5 rounded-md text-[9px] font-bold bg-violet-50 text-violet-700 border border-violet-100 truncate">V: {firstProd.variant || r.variant}</span>}
+                                {(firstProd.batch || r.batch) && <span className="w-fit px-2 py-0.5 rounded-md text-[9px] font-bold bg-amber-50 text-amber-700 border border-amber-100 truncate">B: {firstProd.batch || r.batch}</span>}
+                                
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    toggleExpand(rowKey);
+                                  }}
+                                  className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] font-extrabold bg-indigo-50 text-indigo-600 border border-indigo-100 hover:bg-indigo-100 transition-colors shrink-0 shadow-sm"
+                                  title={isExpanded ? "Collapse Items" : "Expand Items"}
+                                >
+                                  {isExpanded ? <ChevronDown size={10} strokeWidth={3} /> : <ChevronRight size={10} strokeWidth={3} />}
+                                  <span>+ {r.productsList!.length - 1} more</span>
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="flex flex-col gap-1 max-w-[240px]">
+                              <span className="text-xs font-semibold text-slate-700 whitespace-nowrap truncate" title={firstProd.productName || r.productName}>
+                                {firstProd.productName || r.productName}
+                              </span>
+                              <div className="flex flex-wrap gap-1 mt-0.5">
+                                {(firstProd.variant || r.variant) && <span className="w-fit px-2 py-0.5 rounded-md text-[9px] font-bold bg-violet-50 text-violet-700 border border-violet-100 truncate">V: {firstProd.variant || r.variant}</span>}
+                                {(firstProd.batch || r.batch) && <span className="w-fit px-2 py-0.5 rounded-md text-[9px] font-bold bg-amber-50 text-amber-700 border border-amber-100 truncate">B: {firstProd.batch || r.batch}</span>}
+                                {((firstProd.serials || r.serials) && (firstProd.serials || r.serials)!.length > 0) && (
+                                  <div className="flex flex-wrap gap-1 mt-0.5">
+                                    <span className="text-[9px] text-slate-400 font-bold">SN: </span>
+                                    {(firstProd.serials || r.serials)!.slice(0, 2).map((s: string, si: number) => (
+                                      <span key={si} className="text-[9px] font-mono font-bold text-slate-500">{s}{si === 0 && (firstProd.serials || r.serials)!.length > 1 ? ',' : ''}</span>
+                                    ))}
+                                    {(firstProd.serials || r.serials)!.length > 2 && <span className="text-[9px] font-bold text-slate-400">+{(firstProd.serials || r.serials)!.length - 2}</span>}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-5 py-4 whitespace-nowrap font-black text-sm tabular-nums text-center bg-slate-50/40">
+                          <span className="text-emerald-600">+{totalStocksIn}</span>
+                        </td>
+                        <td className="px-5 py-4 whitespace-nowrap text-center font-bold text-blue-600 tabular-nums">
+                          {totalStockAfterSupp !== null ? totalStockAfterSupp : '—'}
+                        </td>
+                        <td className="px-5 py-4 whitespace-nowrap text-xs font-bold text-slate-700">
+                          {hasList ? '—' : `₹${firstProd.buy_price ?? r.buy_price ?? '—'}`}
+                        </td>
+                        <td className="px-5 py-4 whitespace-nowrap text-xs font-bold text-emerald-700">
+                          {hasList ? '—' : `₹${firstProd.sell_price ?? r.sell_price ?? '—'}`}
+                        </td>
+                        <td className="px-5 py-4 whitespace-nowrap">
+                          <div className="flex flex-col gap-0.5">
+                            <span className={`text-[9px] font-bold px-2 py-0.5 rounded-md w-fit ${r.paymentMethod === 'Cash' ? 'bg-emerald-50 text-emerald-700' :
+                                r.paymentMethod === 'UPI' ? 'bg-violet-50 text-violet-700' :
+                                  'bg-slate-50 text-slate-600'
+                              }`}>{r.paymentMethod}</span>
+                            {r.amountPaid > 0 && (
+                              <span className="text-[9px] text-slate-400 font-bold">Paid: ₹{r.amountPaid}</span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-5 py-4 text-xs font-mono text-slate-500 whitespace-nowrap">
+                          {r.invoiceNo}
+                        </td>
+                        <td className="px-5 py-4 text-xs text-slate-500 font-medium whitespace-nowrap">
+                          {r.purchaseDate ? new Date(r.purchaseDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
+                        </td>
+                        <td className="px-5 py-4">
+                          {onNavigateToPurchase && (
+                            <button
+                              onClick={() => onNavigateToPurchase(r.purchaseId)}
+                              title="View Purchase Detail"
+                              className="w-7 h-7 flex items-center justify-center rounded-lg bg-indigo-50 text-indigo-500 hover:bg-indigo-100 hover:text-indigo-700 border border-indigo-100 transition-all active:scale-95 shadow-sm"
+                            >
+                              <Eye size={13} strokeWidth={2.5} />
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+
+                      {/* Expanded Sub-table */}
+                      {hasList && isExpanded && (
+                        <tr className="bg-slate-50/30 border-b border-slate-100">
+                          <td colSpan={11} className="p-0">
+                            <div className="ml-14 mr-6 my-3 border border-slate-100 rounded-lg bg-white p-4 shadow-sm space-y-3 animate-in slide-in-from-top-2 duration-300">
+                              <div className="flex items-center gap-1.5 border-b border-slate-55 pb-2 mb-2">
+                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Grouped Purchase Item Details</span>
+                              </div>
+                              <table className="w-full text-left border-collapse text-[12px]">
+                                <thead>
+                                  <tr className="text-[9px] font-black text-slate-400 tracking-wider uppercase border-b border-slate-100">
+                                    <th className="py-2 px-3">Product Name & Variant Details</th>
+                                    <th className="py-2 px-3 text-center">Stock Received</th>
+                                    <th className="py-2 px-3 text-center">Stock After</th>
+                                    <th className="py-2 px-3">Buy Price</th>
+                                    <th className="py-2 px-3">Sell Price</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-50">
+                                  {r.productsList!.map((p: any, pIdx: number) => {
+                                    return (
+                                      <tr key={pIdx} className="hover:bg-slate-50/30">
+                                        <td className="py-2.5 px-3">
+                                          <div className="flex flex-col gap-0.5">
+                                            <span className="font-semibold text-slate-800">{p.productName || r.productName}</span>
+                                            <div className="flex flex-wrap gap-1 mt-0.5">
+                                              {p.variant && <span className="px-1.5 py-0.2 rounded bg-violet-50 text-violet-600 border border-violet-100 text-[8px] font-bold">V: {p.variant}</span>}
+                                              {p.batch && <span className="px-1.5 py-0.2 rounded bg-amber-50 text-amber-700 border border-amber-100 text-[8px] font-bold">B: {p.batch}</span>}
+                                              {p.serials && p.serials.length > 0 && (
+                                                <div className="flex flex-wrap gap-1">
+                                                  <span className="text-[8px] text-slate-400 font-bold">SN: </span>
+                                                  {p.serials.slice(0, 2).map((s: string, si: number) => (
+                                                    <span key={si} className="text-[8px] font-mono text-slate-500">{s}{si === 0 && p.serials.length > 1 ? ',' : ''}</span>
+                                                  ))}
+                                                  {p.serials.length > 2 && <span className="text-[8px] font-bold text-slate-400">+{p.serials.length - 2}</span>}
+                                                </div>
+                                              )}
+                                            </div>
+                                          </div>
+                                        </td>
+                                        <td className="py-2.5 px-3 text-center font-black text-emerald-600">+{p.receivedStocks}</td>
+                                        <td className="py-2.5 px-3 text-center font-bold text-blue-600">{p.stocksBefore !== null && p.stocksBefore !== undefined ? (p.stocksBefore + p.receivedStocks) : '—'}</td>
+                                        <td className="py-2.5 px-3 font-semibold text-slate-700">₹{p.buy_price ?? '—'}</td>
+                                        <td className="py-2.5 px-3 font-semibold text-emerald-750">₹{p.sell_price ?? '—'}</td>
+                                      </tr>
+                                    );
+                                  })}
+                                </tbody>
+                              </table>
+                            </div>
+                          </td>
+                        </tr>
                       )}
-                    </td>
-                  </tr>
-                ))}
+                    </Fragment>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -395,7 +726,9 @@ export function SupplierPurchasesTable({ rows, loading, onNavigateToPurchase }: 
   );
 }
 
-// ─── CUSTOMER PURCHASES TABLE ────────────────────────────────────────────────
+// ─── Fragment Import ──────────────────────────────────────────────────────────
+import { Fragment } from "react";
+
 interface CustomerPurchasesTableProps {
   rows: any[];
   loading: boolean;

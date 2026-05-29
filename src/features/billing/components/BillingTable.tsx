@@ -278,6 +278,8 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
             serialnoId: b.serial_numbers?.id || p.serial_number?.id,
             availableSerials: b.serial_numbers?.serial_numbers || p.serial_number?.serial_numbers || [],
             batchId: b.id,
+            expiryDate: b.expiry_date,
+            manufacturingDate: b.manufacturing_date,
           }));
         }
 
@@ -356,8 +358,8 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
     const hasVariants = selectedProduct.variants && selectedProduct.variants.length > 0;
     const requiresSerial = selectedProduct.requireSerial;
 
-    // Simple product: no serial tracking, no variants → add directly without modal
-    if (!requiresSerial && !hasVariants) {
+    // Simple product: no serial tracking, no variants, no batch tracking → add directly without modal
+    if (!requiresSerial && !hasVariants && !selectedProduct.batchTracking) {
       const defaultVariant: ProductVariant = {
         id: "default",
         name: "Standard",
@@ -428,7 +430,7 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
       return; // Done — no modal needed
     }
 
-    // Has variants or serial tracking → open the modal
+    // Has variants or serial tracking or batch tracking → open the modal
     setPendingProduct(selectedProduct);
     setActiveRowId(rowId);
     setModalOpen(true);
@@ -497,8 +499,8 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
           serialnoId: variant.serialnoId || pendingProduct.serialnoId,
           requireSerial: pendingProduct.requireSerial,
           batchTracking: pendingProduct.batchTracking,
-          manufacturingDate: pendingProduct.manufacturingDate,
-          expiryDate: pendingProduct.expiryDate,
+          manufacturingDate: variant.manufacturingDate || pendingProduct.manufacturingDate,
+          expiryDate: variant.expiryDate || pendingProduct.expiryDate,
           maxStock: variant.stock,
           _product: pendingProduct, // Store source for later edits
         };
@@ -635,6 +637,7 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
         initialQuantity={activeRowId ? items.find(i => i.id === activeRowId)?.qty : undefined}
         initialSerials={activeRowId ? items.find(i => i.id === activeRowId)?.serialNumbers : undefined}
         initialVariantId={activeRowId ? (items.find(i => i.id === activeRowId)?.variantId ?? undefined) : undefined}
+        initialBatchId={activeRowId ? (items.find(i => i.id === activeRowId)?.batchId ?? undefined) : undefined}
       />
     </div>
   );

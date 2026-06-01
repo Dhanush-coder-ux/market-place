@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from "react";
 import {
-  Banknote, Clock, Trash2, Plus, ChevronDown, CreditCard, User, X
+  Banknote, Clock, Trash2, Plus, ChevronDown, CreditCard, User, X, Search
 } from "lucide-react";
 import { BillingItem, CustomerData } from "../types";
 import InvoicePreviewModal from "./InvoicePreviewModal";
@@ -31,68 +31,7 @@ const formatINR = (amount: number, decimals = 2) =>
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
-/* ── Compact Payment Mode Selector ─────────────────────────────────────────── */
-const PaymentModeDropdown: React.FC<{
-  value: PaymentMode;
-  onChange: (val: PaymentMode) => void;
-  isCreditAllowed: boolean;
-}> = ({ value, onChange, isCreditAllowed }) => {
-  const [isOpen, setIsOpen] = useState(false);
 
-  const options: { value: PaymentMode; label: string; icon: any; color: string; bgColor: string; borderColor: string; disabled?: boolean }[] = [
-    { value: "cash", label: "Cash", icon: <Banknote size={11} />, color: "text-emerald-600", bgColor: "bg-emerald-50/80", borderColor: "border-emerald-200/60" },
-    { value: "upi", label: "UPI/Card", icon: <CreditCard size={11} />, color: "text-violet-600", bgColor: "bg-violet-50/80", borderColor: "border-violet-200/60" },
-    { value: "credit", label: "Credit", icon: <Clock size={11} />, color: "text-blue-600", bgColor: "bg-blue-50/80", borderColor: "border-blue-200/60", disabled: !isCreditAllowed },
-  ];
-
-  const current = options.find(o => o.value === value) || options[0];
-
-  return (
-    <div className="relative">
-      <button
-        type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        className={`flex items-center gap-1.5 ${current.bgColor} border ${current.borderColor} text-[10px] font-bold ${current.color} pl-2 pr-5 py-1.5 rounded-lg w-[85px] transition-all relative hover:brightness-95 active:scale-95`}
-      >
-        <span className="shrink-0 opacity-80">{current.icon}</span>
-        <span className="truncate">{current.label}</span>
-        <ChevronDown size={9} className={`absolute right-1.5 top-1/2 -translate-y-1/2 transition-transform duration-350 ${isOpen ? "rotate-180" : ""}`} />
-      </button>
-
-      {isOpen && (
-        <>
-          <div className="fixed inset-0 z-[100]" onClick={() => setIsOpen(false)} />
-          <div className="absolute top-full left-0 mt-1 w-[120px] bg-white border border-slate-200/65 rounded-lg shadow-xl z-[101] py-1 animate-in fade-in slide-in-from-top-2 duration-150 overflow-hidden">
-            {options.map((opt) => (
-              <button
-                key={opt.value}
-                type="button"
-                disabled={opt.disabled}
-                onClick={() => {
-                  onChange(opt.value);
-                  setIsOpen(false);
-                }}
-                className={`w-full flex items-center gap-2 px-2.5 py-1.5 text-[10px] font-bold transition-all ${opt.disabled ? "opacity-30 cursor-not-allowed" :
-                  value === opt.value ? "bg-blue-55 text-blue-700" : "text-slate-650 hover:bg-slate-50"
-                  }`}
-              >
-                <span className={`shrink-0 ${value === opt.value ? "text-blue-600" : opt.color}`}>
-                  {opt.icon}
-                </span>
-                {opt.label}
-                {value === opt.value && (
-                  <div className="ml-auto">
-                    <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                  </div>
-                )}
-              </button>
-            ))}
-          </div>
-        </>
-      )}
-    </div>
-  );
-};
 
 /* ── Main Component ────────────────────────────────────────────────────────── */
 const BillingHeader: React.FC<BillingHeaderProps> = ({
@@ -109,9 +48,11 @@ const BillingHeader: React.FC<BillingHeaderProps> = ({
   const filledItems = useMemo(() => items.filter(i => !!i.name).length, [items]);
   const isCreditAllowed = customerData ? customerData.outstanding < customerData.creditLimit : false;
 
-  const addPayment = () => {
-    if (payments.length >= 3) return;
-    onPaymentsChange([...payments, { mode: "upi", amount: 0 }]);
+  const addPayment = (mode: PaymentMode) => {
+    if (payments.some(p => p.mode === mode)) return;
+    const currentPaid = payments.reduce((s, p) => s + (p.amount || 0), 0);
+    const balance = Math.max(0, finalAmount - currentPaid);
+    onPaymentsChange([...payments, { mode, amount: round2(balance) }]);
   };
 
   const removePayment = (index: number) => {
@@ -172,23 +113,23 @@ const BillingHeader: React.FC<BillingHeaderProps> = ({
         <div className="shrink-0">
           {!customerData ? (
             /* Walk-in Customer View - Mild Blue Theme (Enforced Selection) */
-            <div className="p-3.5 bg-blue-50/40 border border-blue-200/70 rounded-xl flex items-center justify-evenly shadow-sm">
+            <div className="p-3.5 bg-blue-50/40 border border-blue-200/70 rounded-xl flex items-center justify-between shadow-sm">
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-full bg-white border border-blue-150 flex items-center justify-center text-blue-500 shrink-0">
                   <User size={15} />
                 </div>
                 <div>
-                  <h4 className="text-[12px] font-bold text-slate-800">No Customer Selected</h4>
-                  <p className="text-[9px] text-blue-600/80 font-bold uppercase mt-0.5 tracking-tight">Selection Required to proceed</p>
+                  <h4 className="text-[12px] font-bold text-slate-800">Walk-in Customer</h4>
+                  <p className="text-[9px] text-slate-500 font-bold uppercase mt-0.5 tracking-tight">Standard Billing</p>
                 </div>
               </div>
               <div>
               <button 
                 onClick={onAddCustomerClick}
-                className="flex items-center gap-1 px-2.5 py-1.5 bg-blue-600 hover:bg-blue-700 border border-blue-600 rounded-lg text-[10px] font-bold text-white shadow-sm transition-all duration-150 active:scale-95 cursor-pointer animate-none"
+                className="flex items-center gap-1 px-2.5 py-1.5 bg-white hover:bg-slate-50 border border-slate-200 rounded-lg text-[10px] font-bold text-slate-600 shadow-sm transition-all duration-150 active:scale-95 cursor-pointer animate-none"
               >
-                <Plus size={10} strokeWidth={3} /> Select / Create
-                <kbd className="ml-1 text-[8px] text-blue-200 font-mono font-bold leading-none bg-blue-500 border border-blue-400 px-1 py-0.2 rounded shadow-sm">F4</kbd>
+                <Search size={10} strokeWidth={3} /> Select
+                <kbd className="ml-1 text-[8px] text-slate-400 font-mono font-bold leading-none bg-slate-50 border border-slate-200 px-1 py-0.2 rounded shadow-sm">F4</kbd>
               </button>
               </div>
             </div>
@@ -263,56 +204,91 @@ const BillingHeader: React.FC<BillingHeaderProps> = ({
         </div>
 
         {/* ── Split Payments Section ─────────────────────────────────── */}
-        <div className="border border-slate-150 rounded-xl p-3.5 space-y-3 shadow-sm flex-1 flex flex-col min-h-0 bg-slate-50/20">
+        <div className="border border-slate-150 rounded-xl p-3.5 space-y-3 shadow-sm flex flex-col shrink-0 bg-white">
           <div className="flex items-center justify-between shrink-0 border-b border-slate-100 pb-1.5">
-            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">SPILIT PAYMENTS</p>
-            <button
-              onClick={addPayment}
-              disabled={payments.length >= 3}
-              className="flex items-center gap-0.5 px-2 py-0.5 rounded bg-blue-50 text-blue-600 text-[9px] font-bold hover:bg-blue-100 disabled:opacity-30 transition-all border border-blue-100/60"
-            >
-              <Plus size={9} /> Split
-            </button>
+            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">PAYMENT RECEIVED</p>
           </div>
 
-          {/* Payment list scrollable */}
-          <div className="flex-1 overflow-y-auto space-y-2 pr-0.5 custom-scrollbar min-h-[100px]">
+          {/* Payment list */}
+          <div className="space-y-2 pr-0.5">
             {payments.map((p, idx) => (
-              <div key={idx} className="flex gap-1.5 items-center">
-                <PaymentModeDropdown
-                  value={p.mode}
-                  onChange={(mode) => updatePayment(idx, { mode })}
-                  isCreditAllowed={isCreditAllowed}
-                />
-                <div className="flex-1 min-w-0 flex items-center gap-1 bg-white rounded-lg px-2 py-1.5 border border-slate-200 focus-within:border-blue-300 transition-all shadow-sm">
-                  <span className="text-slate-400 font-bold text-[10px]">₹</span>
+              <div key={idx} className="flex gap-2 items-center">
+                <div className="flex-1 flex items-center bg-blue-50/40 rounded-lg border border-blue-100/80 h-[38px] overflow-hidden">
+                  <div className="flex items-center gap-2 px-2.5 w-[85px] bg-blue-50/40 text-blue-900 text-[12px] font-bold shrink-0">
+                    {p.mode === 'cash' && <Banknote size={14} className="opacity-60" />}
+                    {p.mode === 'upi' && <CreditCard size={14} className="opacity-60" />}
+                    {p.mode === 'credit' && <Clock size={14} className="opacity-60" />}
+                    <span className="capitalize">{p.mode === 'upi' ? 'UPI' : p.mode}</span>
+                  </div>
+                  <div className="h-full w-px bg-blue-100/80" />
+                  <div className="flex items-center justify-center px-3 bg-blue-50/80 text-blue-600 text-[12px] font-bold shrink-0">
+                    ₹
+                  </div>
+                  <div className="h-full w-px bg-blue-100/80" />
                   <input
                     type="number"
                     autoFocus={idx === payments.length - 1}
                     value={p.amount || ""}
                     onChange={(e) => updatePayment(idx, { amount: Number(e.target.value) })}
-                    placeholder="0.00"
-                    className="w-full bg-transparent text-[11px] font-bold text-slate-700 outline-none tabular-nums"
+                    placeholder="0"
+                    className="flex-1 w-full bg-white h-full px-3 text-right text-[14px] font-bold text-slate-800 outline-none tabular-nums"
                   />
-                  {balanceAmount > 0 && (
-                    <button
-                      onClick={() => updatePayment(idx, { amount: round2(p.amount + balanceAmount) })}
-                      className="shrink-0 px-1 py-0.5 rounded bg-blue-600 text-white text-[7px] font-bold hover:bg-blue-700 transition-colors"
-                    >
-                      MAX
-                    </button>
-                  )}
                 </div>
-                {payments.length > 1 && (
+                {payments.length > 1 ? (
                   <button
                     onClick={() => removePayment(idx)}
-                    className="w-6 h-6 rounded bg-rose-50 text-rose-400 hover:text-rose-600 hover:bg-rose-100 flex items-center justify-center transition-all border border-rose-100 shrink-0"
+                    className="w-[38px] h-[38px] rounded-lg bg-blue-50/40 hover:bg-rose-50 text-blue-400 hover:text-rose-500 flex items-center justify-center transition-all border border-blue-100/80 shrink-0"
                   >
-                    <Trash2 size={11} />
+                    <X size={14} strokeWidth={2.5} />
                   </button>
+                ) : (
+                  <div className="w-[38px] h-[38px] rounded-lg bg-slate-50/50 border border-slate-100 flex items-center justify-center text-slate-300 shrink-0">
+                    <X size={14} strokeWidth={2.5} />
+                  </div>
                 )}
               </div>
             ))}
+          </div>
+
+          {/* Quick Actions */}
+          <div className="shrink-0 space-y-2 pt-2 border-t border-slate-100">
+            <div className="grid grid-cols-3 gap-2 p-2 border border-dashed border-slate-200 rounded-lg">
+              <button 
+                onClick={() => addPayment('cash')}
+                disabled={payments.some(p => p.mode === 'cash')}
+                className="flex items-center justify-center gap-1.5 py-1.5 rounded bg-white border border-slate-200 text-slate-600 text-[11px] font-bold hover:bg-slate-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <Banknote size={12} className="opacity-60" /> Cash
+              </button>
+              <button 
+                onClick={() => addPayment('upi')}
+                disabled={payments.some(p => p.mode === 'upi')}
+                className="flex items-center justify-center gap-1.5 py-1.5 rounded bg-white border border-slate-200 text-slate-600 text-[11px] font-bold hover:bg-slate-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <CreditCard size={12} className="opacity-60" /> UPI
+              </button>
+              <button 
+                onClick={() => addPayment('credit')}
+                disabled={!isCreditAllowed || payments.some(p => p.mode === 'credit')}
+                className="flex items-center justify-center gap-1.5 py-1.5 rounded bg-white border border-slate-200 text-slate-600 text-[11px] font-bold hover:bg-slate-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <Clock size={12} className="opacity-60" /> Credit
+              </button>
+            </div>
+            <div className="flex gap-2">
+              <button 
+                onClick={() => setPayments([{mode: 'cash', amount: finalAmount}])}
+                className="px-2.5 py-1.5 bg-blue-50/80 text-blue-700 rounded-md text-[11px] font-bold border border-blue-100/80 hover:bg-blue-100/80 transition-colors"
+              >
+                Full ₹{formatINR(finalAmount)} in Cash
+              </button>
+              <button 
+                onClick={() => setPayments([{mode: 'upi', amount: finalAmount}])}
+                className="px-2.5 py-1.5 bg-blue-50/80 text-blue-700 rounded-md text-[11px] font-bold border border-blue-100/80 hover:bg-blue-100/80 transition-colors"
+              >
+                Full ₹{formatINR(finalAmount)} in UPI
+              </button>
+            </div>
           </div>
 
           {/* Settle Status Indicator */}
@@ -355,9 +331,9 @@ const BillingHeader: React.FC<BillingHeaderProps> = ({
         <div className="shrink-0 flex gap-2.5 pt-1">
           <button 
             onClick={handleQuickCheckout} 
-            disabled={totalQty === 0 || balanceAmount > 0.01 || isSubmitting || !customerData}
+            disabled={totalQty === 0 || balanceAmount > 0.01 || isSubmitting}
             className={`flex-1 h-11 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all duration-200 ${
-              totalQty === 0 || balanceAmount > 0.01 || isSubmitting || !customerData
+              totalQty === 0 || balanceAmount > 0.01 || isSubmitting
                 ? "bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed shadow-none"
                 : "text-blue-500 border-blue-400 border-2 hover:bg-blue-500 hover:text-white shadow-md shadow-slate-900/10 active:scale-97"
             }`}
@@ -367,9 +343,9 @@ const BillingHeader: React.FC<BillingHeaderProps> = ({
           
           <button 
             onClick={handleGenerateInvoice} 
-            disabled={totalQty === 0 || isSubmitting || !customerData}
+            disabled={totalQty === 0 || isSubmitting}
             className={`flex-1 h-11 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all duration-200 ${
-              totalQty === 0 || isSubmitting || !customerData
+              totalQty === 0 || isSubmitting
                 ? "bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed shadow-none"
                 : "text-blue-500 border-blue-400 border-2 hover:bg-blue-500 hover:text-white shadow-lg shadow-blue-500/20 active:scale-97"
             }`}

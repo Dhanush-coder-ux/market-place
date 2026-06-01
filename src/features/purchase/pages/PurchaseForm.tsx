@@ -115,7 +115,7 @@ const PurchaseForm = () => {
 
       let baseCost = c;
       let lineGst = 0;
-      
+
       if (gstMode === "inclusive") {
         baseCost = c / (1 + gstRate / 100);
         lineGst = q * (c - baseCost);
@@ -147,7 +147,7 @@ const PurchaseForm = () => {
       const c = Number(p.costPrice) || 0;
       const gstRate = Number(p.taxGst) || 0;
       const baseCost = gstMode === "inclusive" ? c / (1 + gstRate / 100) : c;
-      
+
       let alloc = 0;
       if (costMethod === "By Unit" && totalQty > 0) {
         alloc = (q / totalQty) * totalCharges;
@@ -321,8 +321,8 @@ const PurchaseForm = () => {
         const q = Math.floor(Number(p.quantity) || 0);
         const rawCostPrice = Number(p.costPrice) || 0;
         const gstRate = Number(p.taxGst) || 0;
-        const baseCost = gstMode === "inclusive" 
-          ? rawCostPrice / (1 + gstRate / 100) 
+        const baseCost = gstMode === "inclusive"
+          ? rawCostPrice / (1 + gstRate / 100)
           : rawCostPrice;
 
         const rowBaseCost = baseCost;
@@ -516,7 +516,10 @@ const PurchaseForm = () => {
   return (
     <>
       <div className="min-h-screen bg-slate-50/50 p-4 md:p-6 lg:p-8 font-sans">
-        <div className="max-w-[1600px] mx-auto flex flex-col gap-6">
+        <div className="max-w-[1600px] mx-auto flex flex-col xl:flex-row gap-6 items-start">
+
+          {/* --- Left Column (Scrollable Content) --- */}
+          <div className="flex-1 w-full space-y-6 min-w-0">
 
           {/* 1. Purchase Details Card */}
           <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden transition-all hover:shadow-md">
@@ -614,28 +617,23 @@ const PurchaseForm = () => {
             )}
           </div>
 
-          {/* 2. Summary & Payment Combined Card */}
+          {/* Additional Charges Card */}
           <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col transition-all hover:shadow-md">
-            <div className="px-6 py-4 bg-gradient-to-r from-slate-50 to-transparent border-b border-slate-100 flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-600 border border-slate-200 shadow-sm">
-                <Banknote size={16} />
+              <div className="px-6 py-4 bg-gradient-to-r from-slate-50 to-transparent border-b border-slate-100 flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-600 border border-slate-200 shadow-sm">
+                  <Banknote size={16} />
+                </div>
+                <h2 className="text-xs font-black text-slate-800 uppercase tracking-widest">Additional Charge & Details</h2>
               </div>
-              <h2 className="text-xs font-black text-slate-800 uppercase tracking-widest">Additional Charge</h2>
-            </div>
 
-            <div className="p-6 space-y-6">
-              {/* --- Unified Additional Charges & Payment Section --- */}
-              <div className="">
-                <div className="flex flex-col lg:flex-row gap-8">
-                  {/* Left Column (Inputs) */}
-                  <div className="flex-1 space-y-4">
-                    
+              <div className="p-6 flex flex-col gap-6">
+
                     {/* Row 1 & 2: Transport, Other Charges, Paid By, Distribute By */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                       {/* Transport */}
                       <div className="flex flex-col gap-2">
                         <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5 group cursor-help w-fit">
-                          Transport Charge 
+                          Transport Charge
                           <Tooltip message="Delivery or transportation costs charged by the supplier.">
                             <span className="cursor-help flex"><Info size={12} className="text-slate-400 group-hover:text-blue-500 transition-colors" /></span>
                           </Tooltip>
@@ -655,7 +653,7 @@ const PurchaseForm = () => {
                       {/* Other Charges */}
                       <div className="flex flex-col gap-2">
                         <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5 group cursor-help w-fit">
-                          Other Charges 
+                          Other Charges
                           <Tooltip message="Any additional fees, loading/unloading costs, or miscellaneous charges.">
                             <span className="cursor-help flex"><Info size={12} className="text-slate-400 group-hover:text-blue-500 transition-colors" /></span>
                           </Tooltip>
@@ -675,7 +673,7 @@ const PurchaseForm = () => {
                       {/* Paid By (Dropdown) */}
                       <div className="flex flex-col gap-2">
                         <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5 group cursor-help w-fit">
-                          Paid By 
+                          Paid By
                           <Tooltip message="The method of payment used for this transaction.">
                             <span className="cursor-help flex"><Info size={12} className="text-slate-400 group-hover:text-blue-500 transition-colors" /></span>
                           </Tooltip>
@@ -693,86 +691,49 @@ const PurchaseForm = () => {
                         />
                       </div>
 
-                      
+
                     </div>
 
                     {/* Distribute By */}
-                      <div className="flex flex-col gap-2">
-                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5 group cursor-help w-fit">
-                          Distribute By 
-                          <Tooltip message="How the additional charges should be distributed across the purchased items' cost price.">
-                            <span className="cursor-help flex"><Info size={12} className="text-slate-400 group-hover:text-blue-500 transition-colors" /></span>
-                          </Tooltip>
-                        </label>
-                        <div className="flex items-center gap-1.5">
-                          {[
-                            { name: "None", tooltip: "Do not allocate additional charges to product cost" },
-                            { name: "By Unit", tooltip: "Allocate proportionally based on item quantity" },
-                            { name: "By Value", tooltip: "Allocate proportionally based on total item value" },
-                            { name: "Equally", tooltip: "Split additional charges equally across all items" }
-                          ].map((method) => (
-                            <button
-                              key={method.name}
-                              onClick={() => setCostMethod(method.name)}
-                              className={`px-2 py-1.5 h-11 flex items-center justify-center gap-1.5 text-[10px] font-bold uppercase tracking-wider rounded-lg border transition-all flex-1 whitespace-nowrap ${costMethod === method.name
-                                ? "border-blue-500 bg-blue-50 text-blue-700 shadow-sm"
-                                : "border-slate-200 bg-white text-slate-500 hover:border-blue-200 hover:bg-slate-50"
-                                }`}
-                            >
-                              {method.name}
-                              <Tooltip message={method.tooltip}>
-                                <span className="cursor-help flex items-center justify-center group/tooltip relative">
-                                  <Info size={12} className={`transition-colors ${costMethod === method.name ? "text-blue-500" : "text-slate-400 group-hover:text-blue-400"}`} />
-                                </span>
-                              </Tooltip>
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
-                    {/* Row 3: Paid Amount & Outstanding Amount */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-slate-100">
-                      {/* Paid Amount */}
-                      <div className="flex flex-col gap-2">
-                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5 group cursor-help w-fit">
-                          Paid Amount 
-                          <Tooltip message="Amount currently paid to the supplier.">
-                            <span className="cursor-help flex"><Info size={12} className="text-slate-400 group-hover:text-emerald-500 transition-colors" /></span>
-                          </Tooltip>
-                        </label>
-                        <div className="relative">
-                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-emerald-600 text-sm font-bold">₹</span>
-                          <input
-                            type="number"
-                            placeholder={stats.grandTotal.toString()}
-                            className="w-full h-11 pl-8 pr-3 bg-white border border-emerald-200 rounded-lg text-sm font-medium text-emerald-700 outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/20 transition-all tabular-nums shadow-sm placeholder:text-gray-100"
-                            value={payment.amountPaid as any}
-                            onChange={(e) => setPayment({ ...payment, amountPaid: e.target.value ? Number(e.target.value) : "" })}
-                          />
-                        </div>
-                      </div>
-
-                      {/* Outstanding Amount */}
-                      <div className="flex flex-col gap-2">
-                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5 group cursor-help w-fit">
-                          Outstanding Amount 
-                          <Tooltip message="Remaining balance to be paid to the supplier.">
-                            <span className="cursor-help flex"><Info size={12} className="text-slate-400 group-hover:text-rose-500 transition-colors" /></span>
-                          </Tooltip>
-                        </label>
-                        <div className={`h-11 px-4 rounded-lg border shadow-sm flex items-center justify-between transition-colors ${stats.outstanding > 0 ? "bg-rose-50 border-rose-200" : "bg-slate-50 border-slate-200"}`}>
-                           <span className={`text-[10px] font-bold uppercase tracking-wider ${stats.outstanding > 0 ? "text-rose-400" : "text-slate-400"}`}>Balance</span>
-                           <span className={`text-lg font-semibold tabular-nums ${stats.outstanding > 0 ? "text-rose-600" : "text-slate-600"}`}>
-                             ₹{stats.outstanding.toLocaleString()}
-                           </span>
-                        </div>
+                    <div className="flex flex-col gap-2">
+                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5 group cursor-help w-fit">
+                        Distribute By
+                        <Tooltip message="How the additional charges should be distributed across the purchased items' cost price.">
+                          <span className="cursor-help flex"><Info size={12} className="text-slate-400 group-hover:text-blue-500 transition-colors" /></span>
+                        </Tooltip>
+                      </label>
+                      <div className="flex items-center gap-1.5">
+                        {[
+                          { name: "None", tooltip: "Do not allocate additional charges to product cost" },
+                          { name: "By Unit", tooltip: "Allocate proportionally based on item quantity" },
+                          { name: "By Value", tooltip: "Allocate proportionally based on total item value" },
+                          { name: "Equally", tooltip: "Split additional charges equally across all items" }
+                        ].map((method) => (
+                          <button
+                            key={method.name}
+                            onClick={() => setCostMethod(method.name)}
+                            className={`px-2 py-1.5 h-11 flex items-center justify-center gap-1.5 text-[10px] font-bold uppercase tracking-wider rounded-lg border transition-all flex-1 whitespace-nowrap ${costMethod === method.name
+                              ? "border-blue-500 bg-blue-50 text-blue-700 shadow-sm"
+                              : "border-slate-200 bg-white text-slate-500 hover:border-blue-200 hover:bg-slate-50"
+                              }`}
+                          >
+                            {method.name}
+                            <Tooltip message={method.tooltip}>
+                              <span className="cursor-help flex items-center justify-center group/tooltip relative">
+                                <Info size={12} className={`transition-colors ${costMethod === method.name ? "text-blue-500" : "text-slate-400 group-hover:text-blue-400"}`} />
+                              </span>
+                            </Tooltip>
+                          </button>
+                        ))}
                       </div>
                     </div>
+
+
 
                     {/* Expandable GST Rate Breakdown */}
                     {stats.totalGst > 0 && (
                       <div className="mt-6 border border-slate-200 rounded-xl overflow-hidden bg-white shadow-sm transition-all">
-                        <button 
+                        <button
                           onClick={() => setIsGstExpanded(!isGstExpanded)}
                           className="w-full flex justify-between items-center p-4 bg-slate-50 hover:bg-slate-100 transition-colors"
                         >
@@ -784,7 +745,7 @@ const PurchaseForm = () => {
                             {isGstExpanded ? <ChevronUp size={16} className="text-slate-400" /> : <ChevronDown size={16} className="text-slate-400" />}
                           </div>
                         </button>
-                        
+
                         {isGstExpanded && (
                           <div className="p-4 border-t border-slate-100 space-y-3 animate-in fade-in slide-in-from-top-1 duration-200">
                             {Object.entries(stats.gstBreakdown).map(([rate, amt]) => {
@@ -818,61 +779,98 @@ const PurchaseForm = () => {
                       </div>
                     )}
 
+              </div>
+            </div>
+
+            <InventoryItemsCard
+              products={products}
+              stats={stats}
+              costMethod={costMethod}
+              setCostMethod={setCostMethod}
+              handleProductChange={handleProductChange}
+              updateProductFields={updateProductFields}
+              setProducts={setProducts}
+              addProduct={addProduct}
+              removeProduct={removeProduct}
+              type="PURCHASE"
+              purchaseType={purchaseType}
+              onAddNewProduct={handleAddNewProduct}
+              gstMode={gstMode}
+              setGstMode={setGstMode}
+            />
+
+          </div>
+
+          {/* --- Right Column (Sticky Payment Summary) --- */}
+          <div className="w-full xl:w-[18rem] shrink-0 xl:sticky xl:top-6 space-y-6">
+
+            {/* Payment Summary Card */}
+            <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col transition-all hover:shadow-md">
+              <div className="px-6 py-4 bg-gradient-to-r from-blue-50/50 to-transparent border-b border-slate-100 flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600 border border-blue-200 shadow-sm">
+                  <Banknote size={16} />
+                </div>
+                <h2 className="text-xs font-black text-slate-800 uppercase tracking-widest">Payment Summary</h2>
+              </div>
+              
+              <div className="p-6 flex flex-col h-full bg-slate-50/50">
+                <div className="space-y-3 mb-6">
+                  <div className="flex justify-between items-center text-[13px]">
+                    <span className="text-slate-500 font-medium">Subtotal</span>
+                    <span className="font-bold text-slate-800 tabular-nums">₹{stats.subtotal.toLocaleString()}</span>
                   </div>
+                  <div className="flex justify-between items-center text-[13px]">
+                    <span className="text-slate-500 font-medium">Total GST</span>
+                    <span className="font-bold text-slate-800 tabular-nums">₹{stats.totalGst.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-[13px]">
+                    <span className="text-slate-500 font-medium">Add. Charges</span>
+                    <span className="font-bold text-slate-800 tabular-nums">₹{stats.totalCharges.toLocaleString()}</span>
+                  </div>
+                </div>
 
-                  {/* Right Column (Summary) */}
-                  <div className="w-full lg:w-64 shrink-0">
-                    <div className="bg-slate-50/50 border border-slate-200 rounded-xl p-5 h-full flex flex-col shadow-sm">
-                      <h3 className="text-[10px] font-black text-slate-800 uppercase tracking-widest mb-3 flex items-center gap-2">
-                        <Banknote size={14} className="text-blue-500" />
-                        Payment Summary
-                      </h3>
-                      
-                      <div className="space-y-3 mb-6">
-                        <div className="flex justify-between items-center text-[13px]">
-                          <span className="text-slate-500 font-medium">Subtotal</span>
-                          <span className="font-bold text-slate-800 tabular-nums">₹{stats.subtotal.toLocaleString()}</span>
-                        </div>
-                        <div className="flex justify-between items-center text-[13px]">
-                          <span className="text-slate-500 font-medium">Total GST</span>
-                          <span className="font-bold text-slate-800 tabular-nums">₹{stats.totalGst.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                        </div>
-                        <div className="flex justify-between items-center text-[13px]">
-                          <span className="text-slate-500 font-medium">Add. Charges</span>
-                          <span className="font-bold text-slate-800 tabular-nums">₹{stats.totalCharges.toLocaleString()}</span>
-                        </div>
-                      </div>
+                <div className="pt-4 border-t-2 border-slate-200/50 mb-6">
+                  <div className="flex justify-between items-end">
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Grand Total</span>
+                    <span className="text-2xl font-black text-slate-900 tracking-tight tabular-nums">₹{stats.grandTotal.toLocaleString()}</span>
+                  </div>
+                </div>
 
-                      <div className="mt-auto pt-4 border-t-2 border-slate-200/50">
-                        <div className="flex justify-between items-end">
-                          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Grand Total</span>
-                          <span className="text-2xl font-black text-slate-900 tracking-tight tabular-nums">₹{stats.grandTotal.toLocaleString()}</span>
-                        </div>
-                      </div>
+                {/* Paid Amount */}
+                <div className="space-y-4 pt-4 border-t border-slate-200/50 mt-auto">
+                  <div className="flex flex-col gap-2">
+                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center justify-between">
+                      <span>Paid Amount</span>
+                      <span className="text-emerald-500 font-bold uppercase tracking-wider">{payment.method}</span>
+                    </label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-emerald-600 text-sm font-bold">₹</span>
+                      <input
+                        type="number"
+                        placeholder={stats.grandTotal.toString()}
+                        className="w-full h-11 pl-8 pr-3 bg-white border border-emerald-200 rounded-lg text-sm font-medium text-emerald-700 outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/20 transition-all tabular-nums shadow-sm placeholder:text-gray-100"
+                        value={payment.amountPaid as any}
+                        onChange={(e) => setPayment({ ...payment, amountPaid: e.target.value ? Number(e.target.value) : "" })}
+                      />
                     </div>
                   </div>
 
+                  {/* Outstanding Amount */}
+                  <div className="flex flex-col gap-2">
+                    <div className={`h-11 px-4 rounded-lg border shadow-sm flex items-center justify-between transition-colors ${stats.outstanding > 0 ? "bg-rose-50 border-rose-200" : "bg-slate-50 border-slate-200"}`}>
+                      <span className={`text-[10px] font-bold uppercase tracking-wider ${stats.outstanding > 0 ? "text-rose-400" : "text-slate-400"}`}>Outstanding</span>
+                      <span className={`text-lg font-semibold tabular-nums ${stats.outstanding > 0 ? "text-rose-600" : "text-slate-600"}`}>
+                        ₹{stats.outstanding.toLocaleString()}
+                      </span>
+                    </div>
+                  </div>
                 </div>
+
               </div>
             </div>
+
           </div>
 
-          <InventoryItemsCard
-            products={products}
-            stats={stats}
-            costMethod={costMethod}
-            setCostMethod={setCostMethod}
-            handleProductChange={handleProductChange}
-            updateProductFields={updateProductFields}
-            setProducts={setProducts}
-            addProduct={addProduct}
-            removeProduct={removeProduct}
-            type="PURCHASE"
-            purchaseType={purchaseType}
-            onAddNewProduct={handleAddNewProduct}
-            gstMode={gstMode}
-            setGstMode={setGstMode}
-          />
         </div>
       </div>
 

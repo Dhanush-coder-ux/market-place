@@ -13,6 +13,7 @@ import { StatCard } from "@/components/common/StatsCard";
 import { BiLogoWhatsapp } from "react-icons/bi";
 import { useApi } from "@/context/ApiContext";
 import { useToast } from "@/context/ToastContext";
+import { useHeader } from "@/context/HeaderContext";
 import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 import Loader from "@/components/common/Loader";
 import type { CustomerRecord } from "@/types/api";
@@ -85,6 +86,7 @@ export default function CustomerDetail() {
   const navigate = useNavigate();
   const { getData, deleteData } = useApi();
   const { showToast } = useToast();
+  const { setBottomActions } = useHeader();
 
   const [customer, setCustomer] = useState<CustomerRecord | null>(null);
   const [recordLoading, setRecordLoading] = useState(true);
@@ -123,6 +125,21 @@ export default function CustomerDetail() {
       setClearingLoading(false);
     });
   };
+
+  useEffect(() => {
+    setBottomActions(
+      <div className="flex items-center justify-end w-full animate-in fade-in slide-in-from-right-4 duration-300">
+        <button 
+          type="button"
+          onClick={() => navigate("/customers")}
+          className="px-6 h-8 rounded-lg border border-slate-200 bg-white text-slate-700 font-bold text-xs hover:bg-slate-50 transition-all flex items-center shadow-sm"
+        >
+          Clear
+        </button>
+      </div>
+    );
+    return () => setBottomActions(null);
+  }, [setBottomActions, navigate]);
 
   useEffect(() => {
     if (!id) return;
@@ -530,6 +547,8 @@ export default function CustomerDetail() {
             <FormTextarea label="Message" defaultValue={`Dear ${name},\n\nPlease find attached your invoice.\n\nThank you!\n\nBest regards,\nMarket Place Team`} style={{ minHeight: 120 }} />
           </div>
         </Modal>
+
+
 
         {/* Global Reusable Confirm Dialog */}
         <ConfirmDialog

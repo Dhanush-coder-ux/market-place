@@ -12,6 +12,7 @@ import Loader from "@/components/common/Loader";
 import { Modal, ProfileHeaderCard, SectionCard, DetailItem } from "@/components/common/SuperUI";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { SearchSelect } from "@/components/inputbuilders/SearchSelect";
+import { useHeader } from "@/context/HeaderContext";
 import { VariantRows, SerialBadgeList, BatchCards } from "../../inventory/components/StockTree";
 import type { InventoryRecord } from "@/types/api";
 import { ProductPurchasesTable } from "@/components/common/HistoryTables";
@@ -56,6 +57,7 @@ const ProductDetail = () => {
   const navigate = useNavigate();
   const { getData, deleteData } = useApi();
   const { showToast } = useToast();
+  const { setBottomActions } = useHeader();
 
   const [product, setProduct] = useState<InventoryRecord | null>(null);
   const [recordLoading, setRecordLoading] = useState(true);
@@ -66,6 +68,21 @@ const ProductDetail = () => {
 
   const [purchases, setPurchases] = useState<any[]>([]);
   const [purLoading, setPurLoading] = useState(false);
+
+  useEffect(() => {
+    setBottomActions(
+      <div className="flex items-center justify-end w-full animate-in fade-in slide-in-from-right-4 duration-300">
+        <button 
+          type="button"
+          onClick={() => navigate("/product")}
+          className="px-6 h-8 rounded-lg border border-slate-200 bg-white text-slate-700 font-bold text-xs hover:bg-slate-50 transition-all flex items-center shadow-sm"
+        >
+          Clear
+        </button>
+      </div>
+    );
+    return () => setBottomActions(null);
+  }, [setBottomActions, navigate]);
 
   useEffect(() => {
     if (!id) return;
@@ -599,6 +616,8 @@ const ProductDetail = () => {
           );
         })()}
       </div>
+
+
 
       {/* ── Field Value Modal (global SuperUI Modal) ──────────── */}
       <Modal

@@ -275,16 +275,7 @@ const AttachCustomerModal: React.FC<AttachCustomerModalProps> = ({
           )}
         </div>
 
-        {/* Create New Button Section */}
-        <div className="p-4 bg-slate-50/50 border-t border-slate-100 shrink-0 flex justify-center">
-          <button 
-            type="button"
-            onClick={onOpenCreateCustomer}
-            className="w-full h-11 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all flex items-center justify-center gap-2 shadow-md shadow-blue-500/10 active:scale-98"
-          >
-            <Plus size={14} strokeWidth={3} /> Create New Customer
-          </button>
-        </div>
+
 
         {/* Modal Footer Keyboard Guide */}
         <div className="px-6 py-3.5 bg-slate-50 border-t border-slate-100 flex items-center gap-4 shrink-0 text-[10px] text-slate-400 font-bold uppercase tracking-wider">

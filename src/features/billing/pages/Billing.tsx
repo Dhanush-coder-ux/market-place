@@ -251,18 +251,7 @@ const Billing = () => {
           setCustomerName(customer.name);
           setPhone(customer.phone);
         }}
-        onOpenCreateCustomer={() => {
-          setIsCustomerModalOpen(false);
-          setIsCustomerCreateOpen(true);
-        }}
-      />
-
-      {/* Customer Creation Modal */}
-      <CustomerCreateModal
-        isOpen={isCustomerCreateOpen}
-        onClose={() => setIsCustomerCreateOpen(false)}
-        onCreated={handleCreateCustomer}
-        isSubmitting={isCreatingCustomer}
+        onOpenCreateCustomer={() => {}}
       />
 
       {/* Checkout Success Modal */}

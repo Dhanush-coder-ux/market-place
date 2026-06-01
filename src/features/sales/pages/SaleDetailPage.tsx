@@ -8,12 +8,13 @@ import {
   Database,
   Search
 } from "lucide-react";
+import { StatCard } from "@/components/common/StatsCard";
 import { useApi } from "@/context/ApiContext";
 import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
-import { OrderResponse } from "@/features/order/types";
-import { ProfileHeaderCard, SectionCard, DetailItem, InfoRow } from "@/components/common/SuperUI";
-import { StatCard } from "@/components/common/StatsCard";
+import { useHeader } from "@/context/HeaderContext";
 import { ReturnModal } from "../components/ReturnOrderFlow";
+import { DetailItem, InfoRow, ProfileHeaderCard, SectionCard } from "@/components/common/SuperUI";
+import { OrderResponse } from "@/features/order/types";
 
 /* ── helpers ── */
 const fmt = (n: number) => `₹${n.toLocaleString("en-IN")}`;
@@ -62,6 +63,7 @@ const SaleDetailPage: React.FC = () => {
   const location = useLocation();
   const { id } = useParams<{ id: string }>();
   const api = useApi();
+  const { setBottomActions } = useHeader();
 
   const [sale, setSale] = useState<OrderResponse | null>(location.state?.sale || null);
   const [customerMap, setCustomerMap] = useState<Record<string, string>>(location.state?.customerMap || {});
@@ -114,6 +116,21 @@ const SaleDetailPage: React.FC = () => {
       console.warn("Could not load product map:", err);
     }
   };
+
+  useEffect(() => {
+    setBottomActions(
+      <div className="flex items-center justify-end w-full animate-in fade-in slide-in-from-right-4 duration-300">
+        <button 
+          type="button"
+          onClick={() => navigate("/sales/detail")}
+          className="px-6 h-8 rounded-lg border border-slate-200 bg-white text-slate-700 font-bold text-xs hover:bg-slate-50 transition-all flex items-center shadow-sm"
+        >
+          Clear
+        </button>
+      </div>
+    );
+    return () => setBottomActions(null);
+  }, [setBottomActions, navigate]);
 
   useEffect(() => {
     if (!sale) fetchSaleDetail();
@@ -477,6 +494,8 @@ const SaleDetailPage: React.FC = () => {
 
         </div>
       </div>
+
+
 
       {isReturnOpen && sale && (
         <ReturnModal

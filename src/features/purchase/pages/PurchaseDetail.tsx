@@ -10,6 +10,7 @@ import { ProfileHeaderCard, SectionCard, DetailItem, InfoRow } from "@/component
 import { StatCard } from "@/components/common/StatsCard";
 import { useApi } from "@/context/ApiContext";
 import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
+import { useHeader } from "@/context/HeaderContext";
 
 const fmt = (n: number) => `₹${n.toLocaleString("en-IN")}`;
 
@@ -29,6 +30,7 @@ const PurchaseDetail = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { getData } = useApi();
+  const { setBottomActions } = useHeader();
 
   // Retrieve po from state or use state fetched from API
   const [po, setPo] = useState<DirectPurchaseData | undefined>(location.state?.po);
@@ -36,6 +38,21 @@ const PurchaseDetail = () => {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const [activeTab, setActiveTab] = useState(0);
+
+  useEffect(() => {
+    setBottomActions(
+      <div className="flex items-center justify-end w-full animate-in fade-in slide-in-from-right-4 duration-300">
+        <button 
+          type="button"
+          onClick={() => navigate("/purchase/detail")}
+          className="px-6 h-8 rounded-lg border border-slate-200 bg-white text-slate-700 font-bold text-xs hover:bg-slate-50 transition-all flex items-center shadow-sm"
+        >
+          Clear
+        </button>
+      </div>
+    );
+    return () => setBottomActions(null);
+  }, [setBottomActions, navigate]);
 
   useEffect(() => {
     if (!po && id) {
@@ -533,6 +550,8 @@ const PurchaseDetail = () => {
 
         </div>
       </div>
+
+
     </div>
   );
 };

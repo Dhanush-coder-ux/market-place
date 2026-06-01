@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from "react";
 import {
-  Banknote, Clock, Trash2, Plus, ChevronDown, CreditCard, User, X, Search
+  Banknote, Clock, CreditCard, User, X, Search
 } from "lucide-react";
 import { BillingItem, CustomerData } from "../types";
 import InvoicePreviewModal from "./InvoicePreviewModal";
@@ -277,13 +277,13 @@ const BillingHeader: React.FC<BillingHeaderProps> = ({
             </div>
             <div className="flex gap-2">
               <button 
-                onClick={() => setPayments([{mode: 'cash', amount: finalAmount}])}
+                onClick={() => onPaymentsChange([{mode: 'cash', amount: finalAmount}])}
                 className="px-2.5 py-1.5 bg-blue-50/80 text-blue-700 rounded-md text-[11px] font-bold border border-blue-100/80 hover:bg-blue-100/80 transition-colors"
               >
                 Full ₹{formatINR(finalAmount)} in Cash
               </button>
               <button 
-                onClick={() => setPayments([{mode: 'upi', amount: finalAmount}])}
+                onClick={() => onPaymentsChange([{mode: 'upi', amount: finalAmount}])}
                 className="px-2.5 py-1.5 bg-blue-50/80 text-blue-700 rounded-md text-[11px] font-bold border border-blue-100/80 hover:bg-blue-100/80 transition-colors"
               >
                 Full ₹{formatINR(finalAmount)} in UPI

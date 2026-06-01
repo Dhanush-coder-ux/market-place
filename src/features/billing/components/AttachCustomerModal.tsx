@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { X, Search, Plus } from "lucide-react";
+import { X, Search } from "lucide-react";
 import { useApi } from "@/context/ApiContext";
 import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 import { CustomerData } from "../types";
@@ -9,7 +9,6 @@ interface AttachCustomerModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSelect: (customer: CustomerData) => void;
-  onOpenCreateCustomer: () => void;
 }
 
 const getInitials = (name: string) => {
@@ -36,8 +35,7 @@ const formatINR = (amount: number, decimals = 0) =>
 const AttachCustomerModal: React.FC<AttachCustomerModalProps> = ({
   isOpen,
   onClose,
-  onSelect,
-  onOpenCreateCustomer
+  onSelect
 }) => {
   const { getData } = useApi();
   const [searchQuery, setSearchQuery] = useState("");

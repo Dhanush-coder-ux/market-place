@@ -8,7 +8,6 @@ import { useToast } from "@/context/ToastContext";
 import { useApi } from "@/context/ApiContext";
 import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 import AttachCustomerModal from "../components/AttachCustomerModal";
-import CustomerCreateModal from "../components/CustomerCreateModal";
 import { usePurchaseSettings } from "@/context/PurchaseContext";
 import { BillingSuccessModal } from "../components/BillingSuccessModal";
 
@@ -27,8 +26,6 @@ const Billing = () => {
 
   // ── Attach/Create Customer Modal State
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
-  const [isCustomerCreateOpen, setIsCustomerCreateOpen] = useState(false);
-  const [isCreatingCustomer, setIsCreatingCustomer] = useState(false);
 
   // ── Checkout Success Details State
   const [successDetails, setSuccessDetails] = useState<{
@@ -102,44 +99,7 @@ const Billing = () => {
     return () => window.removeEventListener("keydown", handleF4Key);
   }, []);
 
-  // Handle Quick Create customer submit in modal
-  const handleCreateCustomer = async (customerValues: any) => {
-    try {
-      setIsCreatingCustomer(true);
-      const res = await postData(ENDPOINTS.CUSTOMERS, {
-        ...customerValues,
-        shop_id: SHOP_ID,
-      });
 
-      const isSuccess = res?.success || res?.detail?.success;
-      const responseData = Array.isArray(res?.data) ? res.data[0] : res?.data;
-
-      if (isSuccess && responseData) {
-        const newCustomer: CustomerData = {
-          id: responseData.id,
-          name: responseData.name,
-          phone: responseData.mobile_number || responseData.phone || "",
-          outstanding: responseData.outstanding || 0,
-          creditLimit: responseData.credit_limit || 0,
-          totalSpent: responseData.total_spent || 0,
-        };
-
-        setCustomerData(newCustomer);
-        setCustomerName(newCustomer.name);
-        setPhone(newCustomer.phone);
-        setIsCustomerModalOpen(false);
-        setIsCustomerCreateOpen(false);
-        showToast("Customer registered and linked successfully!", "success");
-      } else {
-        showToast("Failed to register customer", "error");
-      }
-    } catch (err) {
-      console.error("Failed to create customer:", err);
-      showToast("An error occurred registering customer", "error");
-    } finally {
-      setIsCreatingCustomer(false);
-    }
-  };
 
   // ── Confirm Order → POST to Billing API
   const handleConfirmOrder = useCallback(async (paymentsArg: { mode: string, amount: number }[], _includeGst: boolean, _status: string) => {
@@ -251,7 +211,6 @@ const Billing = () => {
           setCustomerName(customer.name);
           setPhone(customer.phone);
         }}
-        onOpenCreateCustomer={() => {}}
       />
 
       {/* Checkout Success Modal */}

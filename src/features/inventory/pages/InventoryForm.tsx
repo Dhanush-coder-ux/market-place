@@ -27,8 +27,42 @@ const CATEGORIES = [
 
 const InventoryForm = () => {
   const navigate = useNavigate();
-  const { postData, loading: submitting, error } = useApi();
+  const { postData, getData, loading: submitting, error } = useApi();
   const { setBottomActions } = useHeader();
+
+  const [customCategories, setCustomCategories] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchCustomCategories = async () => {
+      try {
+        const res = await getData(`${ENDPOINTS.UTILITIES}/dropdowns/custom/by/name/${SHOP_ID}/categories`);
+        if (res?.data?.values) {
+          const parsedValues = typeof res.data.values === 'string' 
+            ? JSON.parse(res.data.values) 
+            : res.data.values;
+          if (Array.isArray(parsedValues)) {
+            setCustomCategories(parsedValues.map(c => ({ value: c, label: c })));
+          }
+        }
+      } catch (e) {}
+    };
+    fetchCustomCategories();
+  }, [getData]);
+
+  const allCategories = React.useMemo(() => {
+    // CATEGORIES already has value and label.
+    // Ensure uniqueness by value.
+    const combined = [...CATEGORIES, ...customCategories];
+    const unique = [];
+    const seen = new Set();
+    for (const c of combined) {
+      if (!seen.has(c.value.toLowerCase())) {
+        seen.add(c.value.toLowerCase());
+        unique.push({ label: c.label, value: c.value });
+      }
+    }
+    return unique;
+  }, [customCategories]);
 
   const [formData, setFormData] = useState({
     barcode: "",
@@ -286,7 +320,7 @@ const InventoryForm = () => {
                 <FieldLabel label="Category" required />
                 <ReusableSelect
                   value={formData.category}
-                  options={CATEGORIES}
+                  options={allCategories}
                   onValueChange={(val) => setFormData((p) => ({ ...p, category: val }))}
                 />
                 {errors.category && <span className="text-xs text-red-500">Required</span>}

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useLocation, useParams } from "react-router-dom";
 import {
-  ArrowLeft, Package, User, Hash,
+  ArrowLeft, Package, User,
   RotateCcw, Calendar, CreditCard, CheckCircle2, Clock,
   XCircle, AlertCircle, Banknote, Smartphone,
   TrendingUp,
@@ -24,12 +24,17 @@ type SaleItem = {
   unitPrice: number; buyPrice: number;
   status?: string; serial_numbers?: string[];
   unit: string;
+  variantName?: string;
+  batchName?: string;
+  mfgDate?: string;
+  expDate?: string;
+  gst?: string | number;
 };
 
 const generateItems = (sale: OrderResponse, productMap: Record<string, string> = {}): SaleItem[] =>
   (sale.items || []).map((i: any) => ({
     id: i.id,
-    name: productMap[i.inventory_id] || "Unknown Item",
+    name: i.name || i.product_name || i.datas?.product_name || i.datas?.name || productMap[i.inventory_id] || "Unknown Item",
     sku: i.barcode?.trim() || i.inventory_id?.slice(-6) || "N/A",
     quantity: i.quantity,
     returnedQty: i.returned_quantity || 0,
@@ -37,8 +42,13 @@ const generateItems = (sale: OrderResponse, productMap: Record<string, string> =
     buyPrice: i.buy_price,
     status: i.status || "COMPLETED",
     reason: i.reason,
-    serial_numbers: i.serial_numbers || [],
-    unit: i.product?.unit || i.unit || i.datas?.unit || "UNIT"
+    serial_numbers: i.serialno_info?.serial_numbers || i.serial_info?.serial_numbers || i.serial_numbers || [],
+    unit: i.product?.unit || i.unit || i.datas?.unit || "UNIT",
+    variantName: i.variant_info?.variant_name || i.variant?.variant_name,
+    batchName: i.batch_info?.batch_name || i.batch?.batch_name,
+    mfgDate: i.batch_info?.mfg_date || i.batch?.mfg_date,
+    expDate: i.batch_info?.exp_date || i.batch?.exp_date,
+    gst: i.gst || i.datas?.gst,
   }));
 
 const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
@@ -161,7 +171,8 @@ const SaleDetailPage: React.FC = () => {
   const items = generateItems(sale, productMap);
   const subtotal = items.reduce((s, i) => s + i.unitPrice * i.quantity, 0);
   const canReturn = sale.status === "Completed" && sale.origin !== "Sales Return";
-  const customerName = customerMap[sale.customer_id] || "Walk-in Customer";
+  const customerName = sale.customer?.customer_name || customerMap[sale.customer_id] || "Walk-in Customer";
+  const customerMobile = sale.customer?.customer_mobile_number || "";
   const dateStr = sale.created_at.split("T")[0];
   const timeStr = sale.created_at.split("T")[1]?.slice(0, 5) || "";
   const refunded = items.filter(i => i.status === "REFUNDED").length;
@@ -329,7 +340,7 @@ const SaleDetailPage: React.FC = () => {
                             </div>
                             <div className="min-w-0">
                               <p className="text-sm font-bold text-slate-800 truncate">{item.name}</p>
-                              <div className="flex items-center gap-2 mt-0.5">
+                              <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                                 <span className="text-[10px] font-mono font-bold text-slate-400">{item.sku}</span>
                                 {item.status && (
                                   <span className={`px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wide ${item.status === "REFUNDED" ? "bg-red-50 text-red-600" : "bg-blue-50 text-blue-600"}`}>
@@ -342,12 +353,37 @@ const SaleDetailPage: React.FC = () => {
                                   </span>
                                 )}
                               </div>
+                              {item.variantName && (
+                                <div className="mt-2 pl-3 border-l-2 border-indigo-100 space-y-2.5">
+                                  <p className="text-[10px] font-extrabold text-indigo-750 bg-indigo-50/50 px-1.5 py-0.5 rounded w-fit">• {item.variantName}</p>
+                                </div>
+                              )}
+                              {item.batchName && (
+                                <div className="mt-2 pl-3 border-l-2 border-indigo-150 space-y-1.5">
+                                  <div className="bg-slate-50 p-2 rounded border border-slate-100 max-w-md text-[10px] text-slate-650 shadow-sm">
+                                    <div className="flex justify-between items-center font-bold">
+                                      <span className="text-slate-800">Batch: {item.batchName || "Default"}</span>
+                                      <span className="text-indigo-600">Qty: {item.quantity}</span>
+                                    </div>
+                                    {(item.mfgDate || item.expDate) && (
+                                      <div className="flex gap-3 text-[9px] text-slate-400 mt-1 font-medium">
+                                        {item.mfgDate && <span>MFG: {item.mfgDate}</span>}
+                                        {item.expDate && <span>EXP: {item.expDate}</span>}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
                               {item.serial_numbers && item.serial_numbers.length > 0 && (
-                                <div className="flex items-center gap-1 mt-1.5 flex-wrap">
-                                  <Hash size={10} className="text-indigo-400" />
-                                  {item.serial_numbers.map(sn => (
-                                    <span key={sn} className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-600 border border-indigo-100">{sn}</span>
-                                  ))}
+                                <div className="mt-2 pl-3 border-l-2 border-indigo-150 space-y-1.5">
+                                  <div className="bg-slate-50 p-2 rounded border border-slate-100 max-w-md shadow-sm">
+                                    <p className="text-[8px] font-bold text-slate-400 mb-1 uppercase tracking-wider">Serial Numbers:</p>
+                                    <div className="flex flex-wrap gap-1">
+                                      {item.serial_numbers.map((sn: string, idx: number) => (
+                                        <span key={idx} className="text-[8px] font-mono font-bold px-1.5 py-0.5 rounded bg-white text-indigo-600 border border-slate-200 shadow-sm">{sn}</span>
+                                      ))}
+                                    </div>
+                                  </div>
                                 </div>
                               )}
                             </div>
@@ -397,7 +433,57 @@ const SaleDetailPage: React.FC = () => {
                                 </div>
                                 <div className="min-w-0">
                                   <p className="text-sm font-bold text-slate-800 truncate">{item.name}</p>
-                                  <p className="text-[10px] font-mono font-bold text-slate-400 mt-0.5">{item.sku}</p>
+                                  <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                                    <span className="text-[10px] font-mono font-bold text-slate-400">{item.sku}</span>
+                                    {item.gst && (
+                                      <span className="text-[9px] font-extrabold text-indigo-500 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-100 uppercase tracking-wider font-sans">
+                                        GST {item.gst}
+                                      </span>
+                                    )}
+                                    {item.status && (
+                                      <span className={`px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wide ${item.status === "REFUNDED" ? "bg-red-50 text-red-600" : "bg-blue-50 text-blue-600"}`}>
+                                        {item.status} {item.returnedQty ? `(${item.returnedQty})` : ""}
+                                      </span>
+                                    )}
+                                    {item.reason && (
+                                      <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wide bg-slate-100 text-slate-500">
+                                        Reason: {item.reason}
+                                      </span>
+                                    )}
+                                  </div>
+                                  {item.variantName && (
+                                    <div className="mt-2 pl-3 border-l-2 border-indigo-100 space-y-2.5">
+                                      <p className="text-[10px] font-extrabold text-indigo-750 bg-indigo-50/50 px-1.5 py-0.5 rounded w-fit">• {item.variantName}</p>
+                                    </div>
+                                  )}
+                                  {item.batchName && (
+                                    <div className="mt-2 pl-3 border-l-2 border-indigo-150 space-y-1.5">
+                                      <div className="bg-slate-50 p-2 rounded border border-slate-100 max-w-md text-[10px] text-slate-650 shadow-sm">
+                                        <div className="flex justify-between items-center font-bold">
+                                          <span className="text-slate-800">Batch: {item.batchName || "Default"}</span>
+                                          <span className="text-indigo-600">Qty: {item.quantity}</span>
+                                        </div>
+                                        {(item.mfgDate || item.expDate) && (
+                                          <div className="flex gap-3 text-[9px] text-slate-400 mt-1 font-medium">
+                                            {item.mfgDate && <span>MFG: {item.mfgDate}</span>}
+                                            {item.expDate && <span>EXP: {item.expDate}</span>}
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  )}
+                                  {item.serial_numbers && item.serial_numbers.length > 0 && (
+                                    <div className="mt-2 pl-3 border-l-2 border-indigo-150 space-y-1.5">
+                                      <div className="bg-slate-50 p-2 rounded border border-slate-100 max-w-md shadow-sm">
+                                        <p className="text-[8px] font-bold text-slate-400 mb-1 uppercase tracking-wider">Serial Numbers:</p>
+                                        <div className="flex flex-wrap gap-1">
+                                          {item.serial_numbers.map((sn: string, idx: number) => (
+                                            <span key={idx} className="text-[8px] font-mono font-bold px-1.5 py-0.5 rounded bg-white text-indigo-600 border border-slate-200 shadow-sm">{sn}</span>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  )}
                                 </div>
                               </div>
                             </td>
@@ -420,7 +506,26 @@ const SaleDetailPage: React.FC = () => {
                   </div>
                   <div className="p-4 bg-slate-50 border-t border-slate-100 flex justify-between items-center">
                     <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Replacement Value</span>
-                    <span className="text-sm font-black text-blue-600 tabular-nums">{fmt(exch.replacement_order.total_sellprice)}</span>
+                    <div className="flex items-center gap-6 text-right">
+                      <div className="flex flex-col">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Payment Collected / Refunded</span>
+                        {(() => {
+                          const paymentSum = Object.values(exch.replacement_order.payments || {}).reduce((sum: number, val: any) => sum + Number(val), 0);
+                          if (paymentSum < 0) {
+                            return <span className="text-sm font-black tabular-nums text-red-600">Refund: {fmt(Math.abs(paymentSum))}</span>;
+                          } else if (paymentSum > 0) {
+                            return <span className="text-sm font-black tabular-nums text-emerald-600">Collected: {fmt(paymentSum)}</span>;
+                          } else {
+                            return <span className="text-sm font-black tabular-nums text-slate-500">₹0</span>;
+                          }
+                        })()}
+                      </div>
+                      <div className="h-8 w-px bg-slate-200"></div>
+                      <div className="flex flex-col">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Total Value</span>
+                        <span className="text-sm font-black text-blue-600 tabular-nums">{fmt(exch.replacement_order.total_sellprice)}</span>
+                      </div>
+                    </div>
                   </div>
                 </SectionCard>
               );
@@ -434,6 +539,7 @@ const SaleDetailPage: React.FC = () => {
               <SectionCard title="Customer Information">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-6 gap-x-8">
                   <DetailItem icon={User} label="Customer Name" value={customerName} />
+                  {customerMobile && <DetailItem icon={Smartphone} label="Customer Mobile" value={customerMobile} />}
                   <DetailItem icon={Database} label="Customer ID" value={sale.customer_id} />
                   <DetailItem icon={Calendar} label="Order Date" value={dateStr} />
                   <DetailItem icon={Clock} label="Order Time" value={timeStr || "—"} />

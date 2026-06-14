@@ -5,7 +5,7 @@ import {
 import { useNavigate, useLocation } from "react-router-dom";
 import { useHeader } from "@/context/HeaderContext";
 import { StatCard } from "@/components/common/StatsCard";
-import { ReusableSelect } from "@/components/ui/ReusableSelect";
+
 import { GradientButton } from "@/components/ui/GradientButton";
 import { useApi } from "@/context/ApiContext";
 import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
@@ -33,7 +33,8 @@ export default function CustomerBalanceSummary() {
 
   const [customers, setCustomers] = useState<CustomerRecord[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("All");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -80,10 +81,16 @@ export default function CustomerBalanceSummary() {
   useEffect(() => {
     const params: Record<string, string> = { limit: "100", offset: "1" };
     if (searchTerm) params.q = searchTerm;
+    if (fromDate) params.from_date = fromDate;
+    if (toDate) params.to_date = toDate;
 
     getData(`${ENDPOINTS.CUSTOMERS}/by/shop/${SHOP_ID}`, params).then((res) => {
       if (res) {
-        const raw: CustomerRecord[] = Array.isArray(res.data) ? res.data : [res.data];
+        let actualData = res.data;
+        if (actualData && typeof actualData === 'object' && !Array.isArray(actualData) && 'datas' in actualData) {
+          actualData = actualData.datas;
+        }
+        const raw: CustomerRecord[] = Array.isArray(actualData) ? actualData : [actualData];
         const data: CustomerRecord[] = raw.filter(Boolean); // guard against null entries from API
         setCustomers(data);
 
@@ -107,7 +114,7 @@ export default function CustomerBalanceSummary() {
         setAvailableKeys(Array.from(keys).sort());
       }
     });
-  }, [refreshKey, searchTerm]);
+  }, [refreshKey, searchTerm, fromDate, toDate]);
 
   const handleDelete = async () => {
     if (!customerToDelete) return;
@@ -150,6 +157,11 @@ export default function CustomerBalanceSummary() {
       return matchesSearch;
     });
   }, [customers, searchTerm]);
+
+  const activeFilters = [
+    fromDate,
+    toDate
+  ].filter(Boolean).length;
 
   return (
     <div className="flex-1 flex flex-col min-h-0 font-sans w-full overflow-hidden relative">
@@ -210,15 +222,18 @@ export default function CustomerBalanceSummary() {
           type="button"
           onClick={() => setIsFilterOpen(true)}
           className={`h-8 px-3 rounded-md border text-xs font-semibold flex items-center gap-1.5 active:scale-95 transition-all shadow-sm shrink-0 ${
-            statusFilter !== "All"
-              ? "border-slate-200 text-slate-650 bg-white hover:bg-slate-50"
+            activeFilters > 0
+              ? "border-blue-200 text-blue-600 bg-blue-50"
               : "border-slate-200 text-slate-650 bg-white hover:bg-slate-50"
           }`}
           title="Filters"
         >
           <Filter size={13} />
-          {statusFilter !== "All" && (
-            <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+          Filters
+          {activeFilters > 0 && (
+            <span className="ml-1 px-1.5 py-0.5 bg-blue-600 text-white rounded-full text-[9px] font-black">
+              {activeFilters}
+            </span>
           )}
         </button>
 
@@ -237,20 +252,30 @@ export default function CustomerBalanceSummary() {
         isOpen={isFilterOpen}
         onClose={() => setIsFilterOpen(false)}
         onApply={() => {}}
-        onClear={() => setStatusFilter("All")}
+        onClear={() => { setFromDate(""); setToDate(""); }}
         title="Customer Filters"
       >
         <div className="space-y-4">
-          <div className="space-y-1.5">
-            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Status</label>
-            <ReusableSelect
-              value={statusFilter}
-              onValueChange={(val) => setStatusFilter(val)}
-              options={[
-                { label: "All Statuses", value: "All" },
-              ]}
-              placeholder="Status"
-            />
+
+          <div className="flex items-center gap-2">
+            <div className="space-y-1.5 flex-1">
+              <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">From</label>
+              <input
+                type="date"
+                value={fromDate}
+                onChange={e => setFromDate(e.target.value)}
+                className="w-full h-9 px-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-750 focus:outline-none focus:border-slate-300 focus:bg-white transition-colors"
+              />
+            </div>
+            <div className="space-y-1.5 flex-1">
+              <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">To</label>
+              <input
+                type="date"
+                value={toDate}
+                onChange={e => setToDate(e.target.value)}
+                className="w-full h-9 px-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-750 focus:outline-none focus:border-slate-300 focus:bg-white transition-colors"
+              />
+            </div>
           </div>
         </div>
       </RightSidebarFilter>

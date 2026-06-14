@@ -227,6 +227,14 @@ const getPageHeaderInfo = (pathname: string) => {
     };
   }
 
+  // Dynamic match for Edit Purchase
+  if (pathname.match(/^\/purchase\/edit\/[^/]+$/)) {
+    return {
+      title: "Edit Purchase",
+      subtitle: "Modify and update existing purchase details.",
+    };
+  }
+
   // Drafts Pages
   if (pathname === "/supplier/drafts") {
     return {

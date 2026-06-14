@@ -1,4 +1,5 @@
 import React from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 // ─── Utility ──────────────────────────────────────────────────────────────────
 
@@ -239,11 +240,48 @@ export function BottomActionBar({ label, actions }: BottomActionBarProps) {
 
 
 
+// ─── ImageCarousel ──────────────────────────────────────────────────────────────
+
+export function ImageCarousel({ images, alt, className = "" }: { images: string[], alt: string, className?: string }) {
+  const [currentIndex, setCurrentIndex] = React.useState(0);
+  if (!images || images.length === 0) return null;
+  if (images.length === 1) return <img src={images[0]} alt={alt} className={`w-full h-full object-cover ${className}`} />;
+  
+  const next = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setCurrentIndex((prev) => (prev + 1) % images.length);
+  };
+  const prev = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setCurrentIndex((prev) => (prev - 1 + images.length) % images.length);
+  };
+
+  return (
+    <div className="relative w-full h-full group">
+      <img src={images[currentIndex]} alt={`${alt} ${currentIndex + 1}`} className={`w-full h-full object-cover transition-all ${className}`} />
+      <div className="absolute inset-0 flex items-center justify-between p-1 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+        <button onClick={prev} className="pointer-events-auto w-5 h-5 md:w-6 md:h-6 flex items-center justify-center bg-black/40 text-white rounded-full hover:bg-black/60 transition-colors">
+          <ChevronLeft size={14} />
+        </button>
+        <button onClick={next} className="pointer-events-auto w-5 h-5 md:w-6 md:h-6 flex items-center justify-center bg-black/40 text-white rounded-full hover:bg-black/60 transition-colors">
+          <ChevronRight size={14} />
+        </button>
+      </div>
+      <div className="absolute bottom-1.5 left-0 right-0 flex justify-center gap-1">
+        {images.map((_, i) => (
+          <div key={i} className={`w-1.5 h-1.5 rounded-full transition-colors ${i === currentIndex ? 'bg-white' : 'bg-white/50'}`} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ─── ProfileHeaderCard ────────────────────────────────────────────────────────
 
 export interface ProfileHeaderCardProps {
   name: string;
   initials: string;
+  imageUrl?: string | string[];
   subText?: string;
   badges?: Array<{
     text: string;
@@ -261,6 +299,7 @@ export interface ProfileHeaderCardProps {
 export function ProfileHeaderCard({
   name,
   initials,
+  imageUrl,
   subText,
   badges = [],
   actions,
@@ -272,8 +311,12 @@ export function ProfileHeaderCard({
       <div className="absolute top-0 right-0 w-48 h-48 bg-blue-500/5 rounded-full -mr-24 -mt-24 blur-3xl" />
 
       <div className="relative flex flex-col md:flex-row items-start md:items-center gap-4">
-        <div className="w-16 h-16 rounded-lg bg-gradient-to-br from-blue-600 to-blue-400 flex items-center justify-center text-xl font-bold text-white shadow-lg shadow-blue-200 ring-2 ring-white">
-          {initials}
+        <div className="w-16 h-16 rounded-lg bg-gradient-to-br from-blue-600 to-blue-400 flex items-center justify-center text-xl font-bold text-white shadow-lg shadow-blue-200 ring-2 ring-white overflow-hidden shrink-0">
+          {imageUrl && (Array.isArray(imageUrl) ? imageUrl.length > 0 : true) ? (
+            <ImageCarousel images={Array.isArray(imageUrl) ? imageUrl : [imageUrl]} alt={name} />
+          ) : (
+            initials
+          )}
         </div>
 
         <div className="flex-1 space-y-1">

@@ -112,6 +112,22 @@ const StockMovementTab = ({ inventoryId, product }: StockMovementTabProps) => {
             if (product && product.name && prod.name && prod.name.trim().toLowerCase() !== product.name.trim().toLowerCase()) {
               return;
             }
+
+            // NEW FORMAT SUPPORT (StockMovementReadModel)
+            if (prod.stocks_adjusted !== undefined) {
+              productsList.push({
+                name: prod.name,
+                variant: prod.variant?.variant_name || null,
+                batch: prod.batch?.batch_name || null,
+                stocks: Math.abs(prod.stocks_adjusted),
+                receivedStocks: Math.abs(prod.stocks_adjusted),
+                stocksBefore: prod.stocks_before ?? null,
+                serials: prod.serial_info?.serial_numbers || []
+              });
+              return;
+            }
+
+            // OLD FORMAT SUPPORT
             const baseQty = Number(prod.stocks || 0);
 
             if (prod.variants && prod.variants.length > 0) {

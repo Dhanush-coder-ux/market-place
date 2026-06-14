@@ -23,80 +23,116 @@ function fmtShortDate(dateStr: string) {
 }
 
 function ProductDetailsList({ prod }: { prod: any }) {
-  if (prod.variants && prod.variants.length > 0) {
-    return (
-      <div className="mt-2 space-y-2">
-        {prod.variants.map((v: any, i: number) => (
-          <div key={i} className="flex flex-col gap-1 bg-slate-50 border border-slate-100 rounded p-2 shadow-sm">
-            <div className="flex justify-between items-center">
-              <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5"><Layers size={12} className="text-violet-500" /> Variant: {v.name}</span>
-              <span className="text-[10px] font-black text-slate-500 tabular-nums">Qty: {v.stocks}</span>
+  const hasOldVariants = prod.variants && prod.variants.length > 0;
+  const hasOldBatches = prod.batches && prod.batches.length > 0;
+  const hasOldSerials = prod.serials && prod.serials.length > 0;
+  
+  const hasNewVariant = !!prod.variant;
+  const hasNewBatch = !!prod.batch;
+  const hasNewSerials = prod.serial_info && prod.serial_info.serial_numbers && prod.serial_info.serial_numbers.length > 0;
+
+  if (!hasOldVariants && !hasOldBatches && !hasOldSerials && !hasNewVariant && !hasNewBatch && !hasNewSerials) return null;
+
+  return (
+    <div className="mt-2 space-y-2">
+      {/* --- NEW FORMAT --- */}
+      {hasNewVariant && (
+        <div className="pl-3 border-l-2 border-blue-100">
+          <p className="text-[10px] font-extrabold text-blue-750 bg-blue-50/50 px-1.5 py-0.5 rounded w-fit flex items-center gap-1">
+            <Layers size={10} /> {prod.variant.variant_name}
+          </p>
+        </div>
+      )}
+      
+      {hasNewBatch && (
+        <div className="pl-3 border-l-2 border-blue-100">
+          <div className="bg-slate-50 p-2 rounded border border-slate-100 max-w-md text-[10px] text-slate-650 shadow-sm">
+            <div className="flex justify-between items-center font-bold">
+              <span className="text-slate-800 flex items-center gap-1"><Tag size={10} /> Batch: {prod.batch.batch_name || "Default"}</span>
+              <span className="text-blue-600">Qty: {Math.abs(Number(prod.stocks_adjusted || 0))}</span>
             </div>
-            {v.batches && v.batches.length > 0 && (
-              <div className="pl-3 ml-1 border-l-2 border-slate-200 mt-1 space-y-1">
-                {v.batches.map((b: any, j: number) => (
-                  <div key={j} className="flex flex-col gap-1 text-[10px] bg-white border border-slate-100 p-1.5 rounded shadow-sm">
-                    <div className="flex justify-between items-center">
-                      <span className="font-bold text-amber-600 flex items-center gap-1"><Tag size={10} /> Batch: {b.name}</span>
-                      <span className="font-bold text-slate-500 tabular-nums">Qty: {b.stocks}</span>
-                    </div>
-                    {(b.manufacturing_date || b.expiry_date) && (
-                      <div className="flex gap-2 text-[9px] mt-0.5 pt-1 border-t border-slate-100">
-                         {b.manufacturing_date && <span className="text-slate-500 font-medium">MFG: <span className="font-bold text-slate-700">{fmtShortDate(b.manufacturing_date)}</span></span>}
-                         {b.expiry_date && <span className="text-slate-500 font-medium">EXP: <span className="font-bold text-rose-600">{fmtShortDate(b.expiry_date)}</span></span>}
-                      </div>
-                    )}
+            {(prod.batch.mfg_date || prod.batch.exp_date) && (
+              <div className="flex gap-3 text-[9px] text-slate-400 mt-1 font-medium">
+                {prod.batch.mfg_date && <span>MFG: {fmtShortDate(prod.batch.mfg_date)}</span>}
+                {prod.batch.exp_date && <span>EXP: {fmtShortDate(prod.batch.exp_date)}</span>}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {hasNewSerials && (
+        <div className="pl-3 border-l-2 border-blue-100">
+          <div className="bg-slate-50 p-2 rounded border border-slate-100 max-w-md shadow-sm">
+            <p className="text-[8px] font-bold text-slate-400 mb-1 uppercase tracking-wider flex items-center gap-1"><Zap size={8} /> Serial Numbers:</p>
+            <div className="flex flex-wrap gap-1">
+              {prod.serial_info.serial_numbers.map((sn: string) => (
+                <span key={sn} className="text-[8px] font-mono font-bold px-1.5 py-0.5 rounded bg-white text-blue-600 border border-slate-200 shadow-sm">{sn}</span>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- OLD FORMAT (Fallback) --- */}
+      {hasOldVariants && prod.variants.map((v: any, i: number) => (
+        <div key={`v-${i}`} className="flex flex-col gap-1 bg-slate-50 border border-slate-100 rounded p-2 shadow-sm">
+          <div className="flex justify-between items-center">
+            <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5"><Layers size={12} className="text-violet-500" /> Variant: {v.name}</span>
+            <span className="text-[10px] font-black text-slate-500 tabular-nums">Qty: {v.stocks}</span>
+          </div>
+          {v.batches && v.batches.length > 0 && (
+            <div className="pl-3 ml-1 border-l-2 border-slate-200 mt-1 space-y-1">
+              {v.batches.map((b: any, j: number) => (
+                <div key={`b-${j}`} className="flex flex-col gap-1 text-[10px] bg-white border border-slate-100 p-1.5 rounded shadow-sm">
+                  <div className="flex justify-between items-center">
+                    <span className="font-bold text-amber-600 flex items-center gap-1"><Tag size={10} /> Batch: {b.name}</span>
+                    <span className="font-bold text-slate-500 tabular-nums">Qty: {b.stocks}</span>
                   </div>
-                ))}
-              </div>
-            )}
-            {v.serials && v.serials.length > 0 && (
-              <div className="text-[9px] text-slate-400 mt-1 flex flex-wrap gap-1">
-                <span className="font-bold flex items-center gap-1"><Zap size={10} /> Serials:</span> 
-                {v.serials.map((s: string, k: number) => (
-                  <span key={k} className="px-1.5 py-0.5 bg-white border border-slate-200 rounded font-mono font-medium">{s}</span>
-                ))}
-              </div>
-            )}
-          </div>
-        ))}
-      </div>
-    );
-  }
-
-  if (prod.batches && prod.batches.length > 0) {
-    return (
-      <div className="mt-2 space-y-1">
-        {prod.batches.map((b: any, j: number) => (
-          <div key={j} className="flex flex-col gap-1.5 text-xs bg-slate-50 border border-slate-100 rounded p-2 shadow-sm">
-            <div className="flex justify-between items-center">
-              <span className="font-bold text-amber-600 flex items-center gap-1.5"><Tag size={12} /> Batch: {b.name}</span>
-              <span className="font-bold text-slate-500 tabular-nums">Qty: {b.stocks}</span>
+                  {(b.manufacturing_date || b.expiry_date) && (
+                    <div className="flex gap-2 text-[9px] mt-0.5 pt-1 border-t border-slate-100">
+                       {b.manufacturing_date && <span className="text-slate-500 font-medium">MFG: <span className="font-bold text-slate-700">{fmtShortDate(b.manufacturing_date)}</span></span>}
+                       {b.expiry_date && <span className="text-slate-500 font-medium">EXP: <span className="font-bold text-rose-600">{fmtShortDate(b.expiry_date)}</span></span>}
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
-            {(b.manufacturing_date || b.expiry_date) && (
-               <div className="flex gap-3 text-[10px] mt-0.5 pt-1.5 border-t border-slate-200/60">
-                 {b.manufacturing_date && <span className="text-slate-500 font-medium">MFG: <span className="font-bold text-slate-700">{fmtShortDate(b.manufacturing_date)}</span></span>}
-                 {b.expiry_date && <span className="text-slate-500 font-medium">EXP: <span className="font-bold text-rose-600">{fmtShortDate(b.expiry_date)}</span></span>}
-               </div>
-            )}
+          )}
+          {v.serials && v.serials.length > 0 && (
+            <div className="text-[9px] text-slate-400 mt-1 flex flex-wrap gap-1">
+              <span className="font-bold flex items-center gap-1"><Zap size={10} /> Serials:</span> 
+              {v.serials.map((s: string, k: number) => (
+                <span key={k} className="px-1.5 py-0.5 bg-white border border-slate-200 rounded font-mono font-medium">{s}</span>
+              ))}
+            </div>
+          )}
+        </div>
+      ))}
+      {hasOldBatches && !hasOldVariants && prod.batches.map((b: any, j: number) => (
+        <div key={`ob-${j}`} className="flex flex-col gap-1.5 text-xs bg-slate-50 border border-slate-100 rounded p-2 shadow-sm">
+          <div className="flex justify-between items-center">
+            <span className="font-bold text-amber-600 flex items-center gap-1.5"><Tag size={12} /> Batch: {b.name}</span>
+            <span className="font-bold text-slate-500 tabular-nums">Qty: {b.stocks}</span>
           </div>
-        ))}
-      </div>
-    );
-  }
-
-  if (prod.serials && prod.serials.length > 0) {
-    return (
-      <div className="mt-2 text-[10px] text-slate-500 bg-slate-50 border border-slate-100 rounded p-2 flex flex-wrap gap-1 shadow-sm">
-        <span className="font-bold flex items-center gap-1 text-slate-700 mr-1"><Zap size={10} /> Serials:</span>
-        {prod.serials.map((s: string, k: number) => (
-          <span key={k} className="px-1.5 py-0.5 bg-white border border-slate-200 rounded font-mono font-medium text-[9px]">{s}</span>
-        ))}
-      </div>
-    );
-  }
-
-  return null;
+          {(b.manufacturing_date || b.expiry_date) && (
+             <div className="flex gap-3 text-[10px] mt-0.5 pt-1.5 border-t border-slate-200/60">
+               {b.manufacturing_date && <span className="text-slate-500 font-medium">MFG: <span className="font-bold text-slate-700">{fmtShortDate(b.manufacturing_date)}</span></span>}
+               {b.expiry_date && <span className="text-slate-500 font-medium">EXP: <span className="font-bold text-rose-600">{fmtShortDate(b.expiry_date)}</span></span>}
+             </div>
+          )}
+        </div>
+      ))}
+      {hasOldSerials && !hasOldVariants && !hasOldBatches && (
+        <div className="mt-2 text-[10px] text-slate-500 bg-slate-50 border border-slate-100 rounded p-2 flex flex-wrap gap-1 shadow-sm">
+          <span className="font-bold flex items-center gap-1 text-slate-700 mr-1"><Zap size={10} /> Serials:</span>
+          {prod.serials.map((s: string, k: number) => (
+            <span key={`os-${k}`} className="px-1.5 py-0.5 bg-white border border-slate-200 rounded font-mono font-medium text-[9px]">{s}</span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 const StockMovementDetail = () => {
@@ -156,7 +192,8 @@ const StockMovementDetail = () => {
   const movementLabel = getMovementLabel(adjustment.movement_type);
 
   const products = Array.isArray(adjustment.products) ? adjustment.products : [];
-  const refId = adjustment.ui_id ? `ADJ-${adjustment.ui_id}` : adjustment.id?.slice(0, 8).toUpperCase();
+  const realId = adjustment.stock_movement_id || adjustment.id || adjustment._id || adjustment.movement_id || "ADJ";
+  const refId = adjustment.ui_id ? `ADJ-${adjustment.ui_id}` : realId.slice(0, 8).toUpperCase();
   const dateStr = adjustment.adjusted_date || adjustment.created_at;
 
   const TABS = ["Overview", "Items"];
@@ -167,7 +204,7 @@ const StockMovementDetail = () => {
         <ProfileHeaderCard
           name={`Stock Movement · ${refId}`}
           initials="MV"
-          subText={`ID: ${adjustment.id}`}
+          subText={`ID: ${realId}`}
           badges={[
             { text: movementLabel, variant: "primary" }
           ]}
@@ -240,23 +277,22 @@ const StockMovementDetail = () => {
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="bg-slate-50 border-b border-slate-200 text-[10px] font-black text-slate-400 tracking-wider uppercase">
-                      <th className="px-4 py-3 w-[35%]">Product Information</th>
-                      <th className="px-4 py-3 w-[15%]">Category</th>
-                      <th className="px-4 py-3 w-[15%]">Type</th>
-                      <th className="px-4 py-3 text-center w-[15%]">Quantity Changed</th>
-                      <th className="px-4 py-3 text-center w-[10%]">Stock After</th>
+                      <th className="px-4 py-3 w-[45%]">Product Information</th>
+                      <th className="px-4 py-3 w-[20%]">Type</th>
+                      <th className="px-4 py-3 text-center w-[20%]">Quantity Changed</th>
+                      <th className="px-4 py-3 text-center w-[15%]">Stock After</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 text-sm">
                     {products.length === 0 && (
-                      <tr><td colSpan={5} className="p-8 text-center text-slate-400 font-medium bg-slate-50/30">No products found in this movement.</td></tr>
+                      <tr><td colSpan={4} className="p-8 text-center text-slate-400 font-medium bg-slate-50/30">No products found in this movement.</td></tr>
                     )}
                     {products.map((prod: any, idx: number) => {
                       const isDec = prod.type === "DECREMENT" || adjustment.movement_type === "SALES";
                       
-                      const qty = Number(prod.stocks || 0);
+                      const qty = prod.stocks_adjusted !== undefined ? Math.abs(Number(prod.stocks_adjusted)) : Number(prod.stocks || 0);
                       const sBefore = prod.stocks_before !== undefined && prod.stocks_before !== null ? Number(prod.stocks_before) : null;
-                      const sAfter = sBefore !== null ? (isDec ? sBefore - qty : sBefore + qty) : null;
+                      const sAfter = prod.stocks_after !== undefined && prod.stocks_after !== null ? Number(prod.stocks_after) : (sBefore !== null ? (isDec ? sBefore - qty : sBefore + qty) : null);
 
                       return (
                         <tr key={idx} className="hover:bg-slate-50/30 transition-colors">
@@ -265,7 +301,6 @@ const StockMovementDetail = () => {
                             {prod.description && <p className="text-[10px] text-slate-500 mt-1 font-medium">{prod.description}</p>}
                             <ProductDetailsList prod={prod} />
                           </td>
-                          <td className="px-4 py-4 font-medium text-slate-600 text-xs align-top pt-5">{prod.category || "—"}</td>
                           <td className="px-4 py-4 align-top pt-4">
                              <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded text-[10px] font-bold border shadow-sm ${isDec ? "bg-rose-50 text-rose-700 border-rose-200" : "bg-emerald-50 text-emerald-700 border-emerald-200"}`}>
                                {isDec ? <TrendingDown size={12} className="stroke-[3]" /> : <TrendingUp size={12} className="stroke-[3]" />}

@@ -56,7 +56,7 @@ const Billing = () => {
       }, 0)
     );
   }, [items, includeGst]);
-  const finalAmount = useMemo(() => includeGst ? round2(totalAmount + gstAmount) : totalAmount, [includeGst, totalAmount, gstAmount]);
+  const finalAmount = useMemo(() => Math.round(includeGst ? totalAmount + gstAmount : totalAmount), [includeGst, totalAmount, gstAmount]);
 
   // Sync single-mode payment amount when total changes
   useEffect(() => {
@@ -183,7 +183,7 @@ const Billing = () => {
       </div>
 
       {/* ── Right Sidebar (full height) ────────────────────────── */}
-      <aside className="hidden lg:flex w-[300px] xl:w-[320px] shrink-0 flex-col border-l border-slate-200 bg-white">
+      <aside className="hidden lg:flex w-[360px] xl:w-[400px] shrink-0 flex-col border-l border-slate-200 bg-white">
         <BillingHeader
           items={items}
           customerData={customerData}

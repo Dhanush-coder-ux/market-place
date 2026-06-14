@@ -41,7 +41,16 @@ const PurchaseDetail = () => {
 
   useEffect(() => {
     setBottomActions(
-      <div className="flex items-center justify-end w-full animate-in fade-in slide-in-from-right-4 duration-300">
+      <div className="flex items-center justify-end w-full animate-in fade-in slide-in-from-right-4 duration-300 gap-2">
+        {po && po.purchaseType === 'Purchase' && po.status !== 'cancelled' && (
+          <button 
+            type="button"
+            onClick={() => navigate(`/purchase/edit/${po.id}`)}
+            className="px-6 h-8 rounded-lg border border-blue-600 bg-blue-600 text-white font-bold text-xs hover:bg-blue-700 transition-all flex items-center shadow-sm"
+          >
+            Edit Purchase
+          </button>
+        )}
         <button 
           type="button"
           onClick={() => navigate("/purchase/detail")}
@@ -52,7 +61,7 @@ const PurchaseDetail = () => {
       </div>
     );
     return () => setBottomActions(null);
-  }, [setBottomActions, navigate]);
+  }, [setBottomActions, navigate, po]);
 
   useEffect(() => {
     if (!po && id) {
@@ -72,7 +81,11 @@ const PurchaseDetail = () => {
           // Fallback: try the stock adjustments endpoint by shop list (used when navigating from Stock Movements tab)
           // Since GET /inventories/s-adjustments/:id throws 405 Method Not Allowed, we fetch by shop list and find the record
           const adjRes = await getData(`${ENDPOINTS.S_ADJUSTMENTS}/by/shop/${SHOP_ID}`, { view: "STOCKADJUSTMENT_VIEW", shop_id: SHOP_ID, limit: "100" });
-          const adjList = adjRes?.data || adjRes?.datas || (Array.isArray(adjRes) ? adjRes : []);
+          let adjList: any[] = [];
+          if (Array.isArray(adjRes)) adjList = adjRes;
+          else if (Array.isArray(adjRes?.data)) adjList = adjRes.data;
+          else if (Array.isArray(adjRes?.data?.datas)) adjList = adjRes.data.datas;
+          else if (Array.isArray(adjRes?.datas)) adjList = adjRes.datas;
           const adjData = adjList.find((a: any) => a.id === id);
           if (adjData) {
             setPo(toDisplayData(adjData));
@@ -132,7 +145,7 @@ const PurchaseDetail = () => {
         <ProfileHeaderCard
           name={`Purchase · ${po.poNumber}`}
           initials="PO"
-          subText={`ID: ${po.id}`}
+          subText={po.systemId && po.systemId !== po.poNumber ? `Sys ID: ${po.systemId} • ID: ${po.id}` : `ID: ${po.id}`}
           badges={[
             { text: po.purchaseType, variant: "primary" },
             po.outstanding && po.outstanding > 0
@@ -143,7 +156,9 @@ const PurchaseDetail = () => {
           ]}
           infoItems={[
             { icon: Calendar, text: `${po.date} at ${po.time}` },
-            { icon: Building2, text: po.vendor }
+            { icon: Building2, text: typeof po.vendor === 'object' ? (po.vendor as any).supplier_name || (po.vendor as any).name || "—" : po.vendor },
+            { icon: Banknote, text: `Paid: ${fmt(po.paid_amount || 0)}` },
+            { icon: AlertCircle, text: `Due: ${fmt(po.outstanding || 0)}` }
           ]}
           actions={
             <div className="flex items-center gap-2">
@@ -340,7 +355,44 @@ const PurchaseDetail = () => {
                                   )}
                                 </div>
 
-                                {/* Variant-Level Batches & Serials */}
+                                {/* Flat Format (PurchaseReadModel) Batches & Serials */}
+                                {product.variant && (
+                                  <div className="mt-2 pl-3 border-l-2 border-indigo-100 space-y-2.5">
+                                    <p className="text-[10px] font-extrabold text-indigo-750 bg-indigo-50/50 px-1.5 py-0.5 rounded w-fit">• {product.variant.variant_name}</p>
+                                  </div>
+                                )}
+                                
+                                {product.batch && (
+                                  <div className="mt-2 pl-3 border-l-2 border-indigo-150 space-y-1.5">
+                                    <div className="bg-slate-50 p-2 rounded border border-slate-100 max-w-md text-[10px] text-slate-650 shadow-sm">
+                                      <div className="flex justify-between items-center font-bold">
+                                        <span className="text-slate-800">Batch: {product.batch.batch_name || "Default"}</span>
+                                        <span className="text-indigo-600">Qty: {product.stocks_added ?? product.received_stocks ?? 0}</span>
+                                      </div>
+                                      {(product.batch.mfg_date || product.batch.exp_date) && (
+                                        <div className="flex gap-3 text-[9px] text-slate-400 mt-1 font-medium">
+                                          {product.batch.mfg_date && <span>MFG: {formatBatchDate(product.batch.mfg_date)}</span>}
+                                          {product.batch.exp_date && <span>EXP: {formatBatchDate(product.batch.exp_date)}</span>}
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
+
+                                {product.serial_info && product.serial_info.serial_numbers && product.serial_info.serial_numbers.length > 0 && (
+                                  <div className="mt-2 pl-3 border-l-2 border-indigo-150 space-y-1.5">
+                                    <div className="bg-slate-50 p-2 rounded border border-slate-100 max-w-md shadow-sm">
+                                      <p className="text-[8px] font-bold text-slate-400 mb-1 uppercase tracking-wider">Serial Numbers:</p>
+                                      <div className="flex flex-wrap gap-1">
+                                        {product.serial_info.serial_numbers.map((sn: string) => (
+                                          <span key={sn} className="text-[8px] font-mono font-bold px-1.5 py-0.5 rounded bg-white text-indigo-600 border border-slate-200 shadow-sm">{sn}</span>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Old Nested Format Variant-Level Batches & Serials */}
                                 {(product.variants?.length ?? 0) > 0 && (
                                   <div className="mt-2 pl-3 border-l-2 border-indigo-100 space-y-2.5">
                                     {product.variants?.map((v, vIdx) => (
@@ -501,7 +553,10 @@ const PurchaseDetail = () => {
               <SectionCard title="Vendor Information">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-6 gap-x-8">
                   <DetailItem icon={Building2} label="Vendor Name" value={po.vendor} />
-                  <DetailItem icon={FileText} label="Invoice Number" value={po.poNumber} />
+                  <DetailItem icon={FileText} label="Purchase Invoice" value={po.poNumber} />
+                  {po.systemId && po.systemId !== po.poNumber && (
+                    <DetailItem icon={FileText} label="System ID" value={po.systemId} />
+                  )}
                   <DetailItem icon={Calendar} label="Date" value={po.date} />
                   <DetailItem icon={Clock} label="Time" value={po.time} />
                   <DetailItem icon={User} label="Purchase Type" value={po.purchaseType} />

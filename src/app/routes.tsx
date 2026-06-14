@@ -118,6 +118,7 @@ export const router = createBrowserRouter([
       { path: '/purchase/detail', element: <Page><PurchaseSearch /></Page> },
       { path: '/purchase/detail/:id', element: <Page><PurchaseDetail /></Page> },
       { path: "/purchase/add", element: <Page><PurchaseForm /></Page> },
+      { path: "/purchase/edit/:id", element: <Page><PurchaseForm /></Page> },
       { path: "/purchase/drafts", element: <Page><PurchaseDraftsPage /></Page> },
 
       // Suppliers — static "add" before dynamic ":id"

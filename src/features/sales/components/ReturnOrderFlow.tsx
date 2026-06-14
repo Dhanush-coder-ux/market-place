@@ -5,10 +5,11 @@ import {
   ChevronRight, Minus, Plus, ArrowRight, RefreshCw, Banknote, 
   Gift, ArrowLeft, Check, Loader2, Hash, Search
 } from "lucide-react";
-import { SHOP_ID } from "@/services/endpoints";
+import { SHOP_ID, ENDPOINTS } from "@/services/endpoints";
 import { OrderResponse } from "@/features/order/types";
 import { inventoryApi } from "@/services/api/inventory";
 import { useToast } from "@/context/ToastContext";
+import { useApi } from "@/context/ApiContext";
 import ProductSelectionModal from "../../billing/components/ProductSelectionModel";
 import { InventoryItem, ProductVariant } from "../../billing/types";
 
@@ -49,7 +50,8 @@ const ITEM_COLORS = ["#dbeafe", "#dcfce7", "#fef3c7", "#fce7f3", "#ede9fe", "#ff
 ═══════════════════════════════════════════════════════════════ */
 const generateItems = (sale: SaleRecord, productMap: Record<string, string> = {}): SaleItem[] =>
   (sale.items || []).map((item, i) => {
-    const productName = productMap[item.inventory_id] || item.barcode || `Item ${i + 1}`;
+    const rawName = (item as any).name || (item as any).product_name || (item as any).datas?.product_name || (item as any).datas?.name || productMap[item.inventory_id] || item.barcode || `Item ${i + 1}`;
+    const productName = rawName;
     return {
       id: item.id,
       inventory_id: item.inventory_id,
@@ -321,6 +323,23 @@ const initialState = (): ReturnState => ({
 
 const useReturnModalLogic = (sale: SaleRecord | null, productMap: Record<string, string> = {}) => {
   const [state, setState] = useState<ReturnState>(initialState());
+  const [customerOutstanding, setCustomerOutstanding] = useState<number>(0);
+  const { getData } = useApi();
+
+  useEffect(() => {
+    const customerId = sale?.customer_id || sale?.customer?.customer_id;
+    if (customerId) {
+      getData(`${ENDPOINTS.CUSTOMERS}/by/${SHOP_ID}/${customerId}`).then(res => {
+        if (res && res.data) {
+           const c = Array.isArray(res.data) ? res.data[0] : res.data;
+           setCustomerOutstanding(Number(c.outstanding ?? c.datas?.outstanding_balance ?? 0));
+        }
+      }).catch(err => console.error("Failed to fetch customer", err));
+    } else {
+      setCustomerOutstanding(0);
+    }
+  }, [sale?.customer_id, sale?.customer?.customer_id, getData]);
+
   const saleItems = useMemo<SaleItem[]>(() => (sale ? generateItems(sale, productMap) : []), [sale?.id, productMap]);
   const reset = useCallback(() => setState(initialState()), []);
   const setStep = (step: ReturnStep) => setState(s => ({ ...s, step }));
@@ -329,14 +348,33 @@ const useReturnModalLogic = (sale: SaleRecord | null, productMap: Record<string,
   const setNotes = (notes: string) => setState(s => ({ ...s, notes }));
   
   const updatePayment = (index: number, updates: Partial<{ mode: string; amount: number }>) => {
-    setState(s => ({
-      ...s,
-      payments: s.payments.map((p, i) => i === index ? { ...p, ...updates } : p),
-      errors: { ...s.errors, settlement: undefined }
-    }));
+    setState(s => {
+      let newAmount = updates.amount;
+      if (newAmount !== undefined) {
+         const otherSum = s.payments.filter((_, i) => i !== index).reduce((acc, p) => acc + (p.amount || 0), 0);
+         const targetMode = updates.mode || s.payments[index].mode;
+         let maxAllowed = Math.abs(totals.diff) - otherSum;
+         if (targetMode === "Store Credit") {
+            maxAllowed = Math.min(maxAllowed, customerOutstanding);
+         }
+         if (maxAllowed < 0) maxAllowed = 0;
+         if (newAmount > maxAllowed) newAmount = maxAllowed;
+      }
+      return {
+        ...s,
+        payments: s.payments.map((p, i) => i === index ? { ...p, ...updates, ...(newAmount !== undefined && { amount: newAmount }) } : p),
+        errors: { ...s.errors, settlement: undefined }
+      };
+    });
   };
   
-  const addPayment = () => setState(s => ({ ...s, payments: [...s.payments, { mode: "UPI", amount: 0 }] }));
+  const addPayment = () => setState(s => {
+    const currentSum = s.payments.reduce((acc, p) => acc + (p.amount || 0), 0);
+    const d = Math.abs(totals.diff);
+    const remaining = Math.max(0, d - currentSum);
+    return { ...s, payments: [...s.payments, { mode: "UPI", amount: remaining }] };
+  });
+  
   const removePayment = (index: number) => setState(s => ({ ...s, payments: s.payments.filter((_, i) => i !== index) }));
   const { showToast } = useToast();
 
@@ -401,7 +439,23 @@ const useReturnModalLogic = (sale: SaleRecord | null, productMap: Record<string,
     return Object.keys(errs).length === 0;
   }, [state.itemReasons, state.mode, state.payments, selectedItems, totals]);
 
-  const goNext = useCallback(() => { if (state.step === 3 && !validate()) return; setStep((state.step + 1) as ReturnStep); }, [state.step, validate]);
+  const goNext = useCallback(() => { 
+    if (state.step === 3 && !validate()) return; 
+    
+    setState(s => {
+      if (s.step === 2) {
+        const d = Math.abs(totals.diff);
+        const newPayments = [...s.payments];
+        if (newPayments.length === 1 && newPayments[0].amount === 0) {
+          let maxAllowed = d;
+          if (newPayments[0].mode === "Store Credit") maxAllowed = Math.min(maxAllowed, customerOutstanding);
+          newPayments[0] = { ...newPayments[0], amount: maxAllowed };
+        }
+        return { ...s, step: 3, payments: newPayments };
+      }
+      return { ...s, step: Math.min(4, s.step + 1) as ReturnStep };
+    });
+  }, [state.step, validate, totals.diff, customerOutstanding]);
   const goBack = useCallback(() => { if (state.step > 1) setStep((state.step - 1) as ReturnStep); }, [state.step]);
 
   const confirm = useCallback(async (onSuccess?: () => void) => {
@@ -415,10 +469,25 @@ const useReturnModalLogic = (sale: SaleRecord | null, productMap: Record<string,
         serial_numbers: i.selectedSerials?.length ? i.selectedSerials : undefined
       }));
 
+      const paymentsDict: Record<string, number> = {};
+      if (totals.diff !== 0) {
+        state.payments.forEach(p => {
+          if (p.amount > 0) {
+            const key = p.mode === "Store Credit" ? "CREDIT" : p.mode.toUpperCase();
+            paymentsDict[key] = totals.diff > 0 ? p.amount : -p.amount;
+          }
+        });
+      }
+      if (Object.keys(paymentsDict).length === 0 && totals.diff !== 0) {
+        paymentsDict[sale?.payment_method?.toUpperCase() || "CASH"] = totals.diff;
+      }
+
       if (state.mode === "refund") {
         await inventoryApi.bulkReturnOrder({ 
           order_id: sale?.id || "", 
           shop_id: SHOP_ID,
+          customer_id: sale?.customer_id || sale?.customer?.customer_id || undefined,
+          payments: paymentsDict,
           items: itemsPayload 
         });
         showToast("Refund(s) processed successfully", "success");
@@ -428,22 +497,12 @@ const useReturnModalLogic = (sale: SaleRecord | null, productMap: Record<string,
           const replacement = state.exchangeMap[item.id]; if (!replacement) return;
           const key = `${replacement.id}-${replacement.variant_id || "none"}-${replacement.batch_id || "none"}-${replacement.serialno_id || "none"}`;
           if (productsMap.has(key)) { const ex = productsMap.get(key); ex.quantity += replacement.quantity || item.returnQty; if (replacement.serial_numbers) ex.serial_numbers = [...ex.serial_numbers, ...replacement.serial_numbers]; }
-          else productsMap.set(key, { id: replacement.id, variant_id: replacement.variant_id || null, batch_id: replacement.batch_id || null, serialno_id: replacement.serialno_id || null, serial_numbers: replacement.serial_numbers || [], quantity: replacement.quantity || item.returnQty });
+          else productsMap.set(key, { id: replacement.id, variant_id: replacement.variant_id || null, batch_id: replacement.batch_id || null, serialno_id: replacement.serialno_id || null, serial_numbers: replacement.serial_numbers || [], quantity: replacement.quantity || item.returnQty, datas: { product_name: replacement.name?.split(" - ")[0], variant_name: replacement.name?.includes(" - ") ? replacement.name?.split(" - ")[1] : null, batch_no: replacement.batch_id } });
         });
-        
-        const paymentsDict: Record<string, number> = {};
-        if (totals.diff !== 0) {
-          state.payments.forEach(p => {
-            if (p.amount > 0) paymentsDict[p.mode] = p.amount;
-          });
-        }
-        if (Object.keys(paymentsDict).length === 0 && totals.diff !== 0) {
-          paymentsDict[sale?.payment_method || "Cash"] = Math.abs(totals.diff);
-        }
 
         await inventoryApi.bulkExchangeOrder({ 
           shop_id: SHOP_ID, 
-          customer_id: sale?.customer_id || "", 
+          customer_id: sale?.customer_id || sale?.customer?.customer_id || undefined, 
           order_id: sale?.id || "", 
           items: itemsPayload, 
           payments: paymentsDict, 
@@ -478,7 +537,47 @@ const useReturnModalLogic = (sale: SaleRecord | null, productMap: Record<string,
     return true;
   }, [state.step, state.mode, selectedItems, state.itemReasons, totals.diff, state.payments]);
 
-  return { state, saleItems, selectedItems, totals, reset, setMode, setReason, setNotes, updatePayment, addPayment, removePayment, toggleItem, selectAll, updateQty, setExchangeProduct, setSerialReturns, goNext, goBack, confirm, canProceed };
+  return { state, saleItems, selectedItems, totals, reset, setMode, setReason, setNotes, updatePayment, addPayment, removePayment, toggleItem, selectAll, updateQty, setExchangeProduct, setSerialReturns, goNext, goBack, confirm, canProceed, customerOutstanding };
+};
+
+/* ═══════════════════════════════════════════════════════════════
+   CUSTOM COMPONENTS
+═══════════════════════════════════════════════════════════════ */
+const SelectDropdown = ({ value, options, onChange, displayMap }: { value: string, options: string[], onChange: (v: string) => void, displayMap?: Record<string, string> }) => {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  return (
+    <div className="relative w-full sm:w-[180px]" ref={ref}>
+      <button 
+        type="button" 
+        onClick={() => setOpen(!open)}
+        className="w-full h-10 px-3 text-[12px] border-2 border-slate-100 rounded-lg bg-white text-slate-800 outline-none focus:border-blue-500 font-semibold flex items-center justify-between"
+      >
+        <span className="truncate">{displayMap?.[value] || value}</span>
+        <svg className={`w-3 h-3 transition-transform ${open ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+      </button>
+      {open && (
+        <div className="absolute z-50 w-full mt-1 bg-white border border-slate-100 rounded-lg shadow-xl max-h-48 overflow-y-auto left-0">
+          {options.map(opt => (
+            <button
+              key={opt}
+              type="button"
+              onClick={() => { onChange(opt); setOpen(false); }}
+              className={`w-full text-left px-3 py-2.5 text-[12px] font-semibold hover:bg-slate-50 transition-colors ${value === opt ? 'bg-blue-50 text-blue-600' : 'text-slate-700'}`}
+            >
+              {displayMap?.[opt] || opt}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 };
 
 /* ═══════════════════════════════════════════════════════════════
@@ -488,7 +587,7 @@ interface ReturnFlowProps { sale: SaleRecord; onClose: () => void; onRefresh: ()
 
 export const ReturnFlow: React.FC<ReturnFlowProps> = ({ sale, onClose, onRefresh, productMap, isInline }) => {
   const m = useReturnModalLogic(sale, productMap);
-  const { state, saleItems, selectedItems, totals } = m;
+  const { state, saleItems, selectedItems, totals, customerOutstanding } = m;
   const scrollRef = useRef<HTMLDivElement>(null);
   const [exchSearch, setExchSearch] = useState("");
   const [activeReplaceId, setActiveReplaceId] = useState<string | null>(null);
@@ -504,18 +603,109 @@ export const ReturnFlow: React.FC<ReturnFlowProps> = ({ sale, onClose, onRefresh
     return () => { document.body.style.overflow = "unset"; };
   }, [isInline]);
 
-  const mapToInventoryItem = (p: any): InventoryItem => ({
-    id: p.id, product_barcode: p.barcode || "N/A", product_name: p.name || "Unknown", category: p.category || "Other",
-    variants: (p.variants || []).map((v: any) => ({ ...v, price: v.sell_price || 0, stock: v.stocks || 0, serialnoId: v.serial_numbers?.id || v.serial_number?.id || v.batches?.[0]?.serial_numbers?.id, availableSerials: v.serial_numbers?.serial_numbers || v.serial_number?.serial_numbers || v.batches?.[0]?.serial_numbers?.serial_numbers || [], batchId: v.batches?.[0]?.id })),
-    requireSerial: p.has_serialno || false, batchTracking: p.has_batch || false,
-    manufacturingDate: p.batches?.[0]?.manufacturing_date, expiryDate: p.batches?.[0]?.expiry_date,
-    price: p.sell_price || 0, stocks: p.stocks || 0,
-    serialnoId: p.serial_number?.id || p.batches?.[0]?.serial_numbers?.id,
-    availableSerials: p.serial_number?.serial_numbers || p.batches?.[0]?.serial_numbers?.serial_numbers || [],
-    batchId: p.batches?.[0]?.id,
-  });
+  const mapToInventoryItem = (fullProduct: any): InventoryItem => {
+    let rawVariants: any[] = [];
+    const candidateSources = [
+      fullProduct.variants,
+      fullProduct.varients,
+      fullProduct.combinations,
+      fullProduct.datas?.variants,
+      fullProduct.datas?.varients,
+      fullProduct.datas?.combinations
+    ].filter(arr => Array.isArray(arr) && arr.length > 0);
 
-  const handleExchangeClick = (ep: any) => { setPendingProduct(mapToInventoryItem(ep)); setIsProductModalOpen(true); };
+    if (candidateSources.length > 0) {
+      rawVariants = candidateSources.reduce((max, current) => current.length > max.length ? current : max, candidateSources[0]);
+    }
+
+    let mappedVariants = rawVariants.map((v: any) => {
+      const combDatas = v.datas || {};
+      const attributes = v.attributes || combDatas.attributes || combDatas.datas?.attributes || {};
+      let variantLabel = v.name || combDatas.name;
+      if (attributes && Object.keys(attributes).length > 0) {
+        variantLabel = Object.values(attributes).join(' / ');
+      } else if (v.barcode && v.barcode !== combDatas.barcode) {
+        variantLabel = v.barcode;
+      }
+      if (!variantLabel) {
+        variantLabel = "Standard Variant";
+      }
+      
+      const extractSerialsStr = (obj: any): string[] => {
+        if (!obj) return [];
+        if (Array.isArray(obj)) return obj.filter(x => typeof x === 'string');
+        if (typeof obj === 'object') {
+          for (const k in obj) {
+            if (Array.isArray(obj[k])) return obj[k].filter((x: any) => typeof x === 'string');
+          }
+        }
+        return [];
+      };
+
+      const extractedAvailable = extractSerialsStr(v.serial_numbers).length > 0 ? extractSerialsStr(v.serial_numbers) : extractSerialsStr(v.serial_number).length > 0 ? extractSerialsStr(v.serial_number) : extractSerialsStr(v.batches?.[0]?.serial_numbers).length > 0 ? extractSerialsStr(v.batches?.[0]?.serial_numbers) : extractSerialsStr(combDatas.serial_numbers).length > 0 ? extractSerialsStr(combDatas.serial_numbers) : extractSerialsStr(fullProduct.serial_number).length > 0 ? extractSerialsStr(fullProduct.serial_number) : extractSerialsStr(fullProduct.serials);
+
+      return {
+        ...v,
+        id: v.id || String(Math.random()),
+        name: variantLabel,
+        price: v.sell_price || v.price || combDatas.sell_price || combDatas.price || fullProduct.sell_price || 0,
+        stock: v.stocks !== undefined ? v.stocks : (v.stock !== undefined ? v.stock : (combDatas.stocks !== undefined ? combDatas.stocks : 0)),
+        serialnoId: v.serial_numbers?.id || v.serial_number?.id || v.batches?.[0]?.serial_numbers?.id || combDatas.serial_numbers?.id || fullProduct.serial_number?.id || fullProduct.serials?.id,
+        availableSerials: extractedAvailable,
+        batchId: v.batches?.[0]?.id || v.batchId || combDatas.batches?.[0]?.id,
+      };
+    });
+
+    if (mappedVariants.length === 0 && fullProduct.has_batch && Array.isArray(fullProduct.batches) && fullProduct.batches.length > 0) {
+      mappedVariants = fullProduct.batches.map((b: any) => ({
+        id: b.id,
+        name: `Batch: ${b.batch_no || b.id.slice(0, 8)}`,
+        price: b.sell_price || fullProduct.sell_price || 0,
+        stock: b.stocks || 0,
+        serialnoId: b.serial_numbers?.id || fullProduct.serial_number?.id || fullProduct.serials?.id,
+        availableSerials: b.serial_numbers?.serial_numbers || fullProduct.serial_number?.serial_numbers || fullProduct.serials?.serial_numbers || [],
+        batchId: b.id,
+        expiryDate: b.expiry_date,
+        manufacturingDate: b.manufacturing_date,
+      }));
+    }
+
+    return {
+      ...fullProduct,
+      product_name: fullProduct.name || "Unknown Product",
+      product_barcode: fullProduct.barcode || "N/A",
+      category: fullProduct.category || "Other",
+      variants: mappedVariants,
+      requireSerial: fullProduct.has_serialno || false,
+      batchTracking: fullProduct.has_batch || false,
+      manufacturingDate: fullProduct.batches?.[0]?.manufacturing_date,
+      expiryDate: fullProduct.batches?.[0]?.expiry_date,
+      price: fullProduct.sell_price || 0,
+      stocks: fullProduct.stocks || 0,
+      serialnoId: fullProduct.serial_number?.id || fullProduct.serials?.id || fullProduct.batches?.[0]?.serial_numbers?.id,
+      availableSerials: fullProduct.serial_number?.serial_numbers || fullProduct.serials?.serial_numbers || fullProduct.batches?.[0]?.serial_numbers?.serial_numbers || [],
+      batchId: fullProduct.batches?.[0]?.id,
+      gst: parseInt(String(fullProduct.gst || fullProduct.datas?.gst || "18").replace("%", ""))
+    } as InventoryItem;
+  };
+
+  const handleExchangeClick = async (ep: any) => { 
+    setLoadingExch(true);
+    try {
+      const targetId = ep.inventory_id || ep.id || ep._id;
+      if (!targetId) throw new Error("No valid ID found for product");
+      const response = await inventoryApi.getInventoryById(targetId);
+      const fullProduct = response?.data || response;
+      setPendingProduct(mapToInventoryItem(fullProduct));
+      setIsProductModalOpen(true);
+    } catch (e) {
+      console.error(e);
+      setPendingProduct(mapToInventoryItem(ep));
+      setIsProductModalOpen(true);
+    } finally {
+      setLoadingExch(false);
+    }
+  };
   const handleProductSelectSuccess = (variant: ProductVariant, quantity: number, serials?: string[]) => {
     if (!activeReplaceId || !pendingProduct) return;
     m.setExchangeProduct(activeReplaceId, { id: pendingProduct.id, name: variant.id === "default" ? pendingProduct.product_name : `${pendingProduct.product_name} - ${variant.name}`, sell_price: variant.price, variant_id: variant.id === "default" ? null : variant.id, batch_id: variant.batchId || pendingProduct.batchId, serialno_id: variant.serialnoId || pendingProduct.serialnoId, serial_numbers: serials || [], quantity });
@@ -685,18 +875,21 @@ export const ReturnFlow: React.FC<ReturnFlowProps> = ({ sale, onClose, onRefresh
                       </div>
                       
                       {/* Split Payment UI */}
+                      {(sale?.customer_id || sale?.customer?.customer_id) && customerOutstanding > 0 && (
+                        <div className="mb-3 p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-center justify-between shadow-sm">
+                          <span className="text-[12px] font-bold text-amber-800">Customer Outstanding Balance</span>
+                          <span className="font-mono font-bold text-[14px] text-amber-700">{fmt(customerOutstanding)}</span>
+                        </div>
+                      )}
                       <div className="space-y-2">
                         {state.payments.map((p, idx) => (
                           <div key={idx} className="flex items-center gap-2">
-                            <select
+                            <SelectDropdown
                               value={p.mode}
-                              onChange={e => m.updatePayment(idx, { mode: e.target.value })}
-                              className="h-10 px-3 text-[12px] border-2 border-slate-100 rounded-lg bg-white text-slate-800 outline-none focus:border-blue-500 font-semibold"
-                            >
-                              {["Cash", "UPI", "Card", "Bank Transfer", ...(state.mode === "refund" || totals.diff < 0 ? ["Store Credit"] : [])].map(opt => (
-                                <option key={opt} value={opt}>{opt}</option>
-                              ))}
-                            </select>
+                              onChange={mode => m.updatePayment(idx, { mode })}
+                              options={["Cash", "UPI", "Card", "Bank Transfer", ...((sale?.customer_id || sale?.customer?.customer_id) ? ["Store Credit"] : [])]}
+                              displayMap={{ "Store Credit": customerOutstanding > 0 ? "Clear Outstanding" : "Store Credit" }}
+                            />
                             <input
                               type="number"
                               value={p.amount === 0 ? "" : p.amount}

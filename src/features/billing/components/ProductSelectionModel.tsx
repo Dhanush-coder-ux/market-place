@@ -52,7 +52,9 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
       }
       if (activeB.serial_numbers || activeB.availableSerials) {
         finalVariant.serialnoId = activeB.serial_numbers?.id || activeB.serialnoId;
-        finalVariant.availableSerials = activeB.serial_numbers?.serial_numbers || activeB.availableSerials || [];
+        finalVariant.availableSerials = Array.isArray(activeB.serial_numbers) 
+          ? activeB.serial_numbers 
+          : (activeB.serial_numbers?.serial_numbers || activeB.availableSerials || []);
       }
     }
 
@@ -98,7 +100,12 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
   // Reset state when modal opens
   useEffect(() => {
     if (isOpen && product) {
-      const isEdit = !!initialVariantId || !!initialQuantity;
+      const isEdit = (() => {
+        const hasV = product.variants && product.variants.length > 0 && !product.variants[0].name.startsWith("Batch: ");
+        if (hasV && !initialVariantId) return false;
+        if (product.batchTracking && !initialBatchId) return false;
+        return !!initialVariantId || !!initialBatchId || !!initialSerials?.length || !!initialQuantity;
+      })();
 
       if (product.variants && product.variants.length > 0 && !product.variants[0].name.startsWith("Batch: ")) {
         if (initialVariantId) {
@@ -154,9 +161,27 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
     if (!product) return [];
     let raw = [];
     if (product.batchTracking && selectedBatch) {
-      raw = selectedBatch.serial_numbers?.serial_numbers || selectedBatch.availableSerials || [];
+      raw = Array.isArray(selectedBatch.serial_numbers) 
+        ? selectedBatch.serial_numbers 
+        : (selectedBatch.serial_numbers?.serial_numbers || selectedBatch.availableSerials || []);
     } else {
-      raw = selectedVariant?.availableSerials || product.availableSerials || [];
+      const extractAll = (obj: any): string[] => { 
+        if (!obj) return []; 
+        if (Array.isArray(obj)) return obj.filter(x => typeof x === 'string'); 
+        if (typeof obj === 'object') { 
+          for (const key in obj) { 
+            if (Array.isArray(obj[key])) return obj[key].filter((x: any) => typeof x === 'string'); 
+          } 
+        } 
+        return []; 
+      }; 
+      raw = extractAll((selectedVariant as any)?.serial_numbers).length > 0 
+        ? extractAll((selectedVariant as any)?.serial_numbers) 
+        : extractAll(selectedVariant?.availableSerials).length > 0 
+          ? extractAll(selectedVariant?.availableSerials) 
+          : extractAll(product?.availableSerials).length > 0 
+            ? extractAll(product?.availableSerials) 
+            : [];
     }
     // Filter out serials that are already used elsewhere, BUT keep those that were initially selected for THIS item (in case of editing)
     const initialS = Array.isArray(initialSerials) ? initialSerials : [];

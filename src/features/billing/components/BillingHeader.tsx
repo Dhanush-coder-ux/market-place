@@ -218,7 +218,7 @@ const BillingHeader: React.FC<BillingHeaderProps> = ({
                     {p.mode === 'cash' && <Banknote size={14} className="opacity-60" />}
                     {p.mode === 'upi' && <CreditCard size={14} className="opacity-60" />}
                     {p.mode === 'credit' && <Clock size={14} className="opacity-60" />}
-                    <span className="capitalize">{p.mode === 'upi' ? 'UPI' : p.mode}</span>
+                    <span className="capitalize">{p.mode === 'upi' ? 'UPI' : p.mode === 'credit' ? 'On Credit' : p.mode}</span>
                   </div>
                   <div className="h-full w-px bg-blue-100/80" />
                   <div className="flex items-center justify-center px-3 bg-blue-50/80 text-blue-600 text-[12px] font-bold shrink-0">
@@ -272,10 +272,10 @@ const BillingHeader: React.FC<BillingHeaderProps> = ({
                 disabled={!isCreditAllowed || payments.some(p => p.mode === 'credit')}
                 className="flex items-center justify-center gap-1.5 py-1.5 rounded bg-white border border-slate-200 text-slate-600 text-[11px] font-bold hover:bg-slate-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                <Clock size={12} className="opacity-60" /> Credit
+                <Clock size={12} className="opacity-60" /> On Credit
               </button>
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <button 
                 onClick={() => onPaymentsChange([{mode: 'cash', amount: finalAmount}])}
                 className="px-2.5 py-1.5 bg-blue-50/80 text-blue-700 rounded-md text-[11px] font-bold border border-blue-100/80 hover:bg-blue-100/80 transition-colors"
@@ -288,6 +288,15 @@ const BillingHeader: React.FC<BillingHeaderProps> = ({
               >
                 Full ₹{formatINR(finalAmount)} in UPI
               </button>
+              {customerData && (
+                <button 
+                  onClick={() => onPaymentsChange([{mode: 'credit', amount: finalAmount}])}
+                  disabled={finalAmount > Math.max(0, customerData.creditLimit - customerData.outstanding)}
+                  className="px-2.5 py-1.5 bg-blue-50/80 text-blue-700 rounded-md text-[11px] font-bold border border-blue-100/80 hover:bg-blue-100/80 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Full ₹{formatINR(finalAmount)} in On Credit
+                </button>
+              )}
             </div>
           </div>
 

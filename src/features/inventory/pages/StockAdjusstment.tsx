@@ -233,6 +233,12 @@ export default function StockAdjustmentPage() {
       });
       setVariantModal(prev => ({ ...prev, isOpen: false }));
     } else {
+      const hasBatchTracking = variantModal.baseData.has_batch || variantModal.baseData.datas?.has_batch || false;
+      if (hasBatchTracking) {
+        showToast("This variant requires batch tracking but has no existing batches. Please create an initial batch via Purchase first.", "error");
+        return;
+      }
+
       const updatedItems = [...items];
       const serialInfo = extractSerials(variantData.serial_numbers);
       
@@ -718,6 +724,12 @@ export default function StockAdjustmentPage() {
                                               baseProduct: opt.name || String(val)
                                             });
                                           } else {
+                                            const hasBatchTracking = opt.has_batch || (opt.datas && opt.datas.has_batch) || false;
+                                            if (hasBatchTracking) {
+                                              showToast("This product requires batch tracking but has no existing batches. Please create an initial batch via Purchase first.", "error");
+                                              return;
+                                            }
+
                                             const serialInfo = extractSerials(opt.serial_number || (opt.datas && opt.datas.serial_number));
                                             updateMultiple(item.id, { 
                                               inventory_id: opt.id,

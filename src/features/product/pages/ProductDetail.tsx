@@ -26,11 +26,11 @@ const ProductSearchSelect = () => {
   const fetchProducts = async (q: string) => {
 
     try {
-      const res = await getData(ENDPOINTS.INVENTORIES, { q, limit: "8", shop_id: SHOP_ID });
+      const res = await getData(`${ENDPOINTS.INVENTORIES}/search/${SHOP_ID}`, { q, limit: "8" });
       const data = res?.data ? (Array.isArray(res.data) ? res.data : [res.data]) : [];
       return data.map((p: any) => ({
         ...p,
-        displayName: String(p.datas?.name ?? p.barcode ?? p.id),
+        displayName: String(p.datas?.name ?? p.name ?? p.barcode ?? p.id),
       }));
     } catch {
       return [];
@@ -153,7 +153,7 @@ const ProductDetail = () => {
   const name = String(product.name || "Unknown Product");
   const reorderPoint = product?.reorder_point;
   const initials = name.slice(0, 2).toUpperCase();
-  const sku = String(product.sku || "—");
+  const sku = String(product.ui_id || product.sku || "—");
   const barcode = String(product.barcode || "—");
   const category = String(product.category || "—");
   const description = String(product.description || "—");
@@ -192,6 +192,7 @@ const ProductDetail = () => {
         <ProfileHeaderCard
           name={name}
           initials={initials}
+          imageUrl={datas.images}
           subText={`SKU: ${sku} • Barcode: ${barcode}`}
           badges={[
             { text: category, variant: "primary" },
@@ -522,13 +523,37 @@ const ProductDetail = () => {
           const rows: any[] = [];
 
           purchases.forEach((p: any) => {
+            // Support both old formats (p.datas) and new PurchaseReadModel format
+            const isNewFormat = !!p.purchase_id;
             const d = p.datas ?? {};
             const pd = d.purchaseDetails ?? {};
             const payment = d.payment ?? {};
             const pType = p.type === 'DIRECT' ? 'Purchase' : (p.type?.includes('PO') ? 'PO Purchase' : 'Purchase');
 
+            const dateStr = isNewFormat ? p.purchase_date : (pd.date || p.created_at);
+            const supplierName = isNewFormat ? p.supplier?.supplier_name : d.supplier_name;
+            const uiId = isNewFormat ? p.purchase_id.split('-')[0].toUpperCase() : p.ui_id;
+
             const productsList: any[] = [];
             (p.products ?? []).forEach((prod: any) => {
+              // NEW FORMAT SUPPORT
+              if (prod.stocks_added !== undefined) {
+                productsList.push({
+                  variant: prod.variant?.variant_name || null,
+                  batch: prod.batch?.batch_name || null,
+                  stocksBefore: prod.stocks_before ?? null,
+                  receivedStocks: prod.stocks_added,
+                  buyPrice: prod.buy_price,
+                  sellPrice: prod.sell_price,
+                  serials: prod.serial_info?.serial_numbers || [],
+                  variant_details: prod.variant || null,
+                  batch_details: prod.batch || null,
+                  serial_info: prod.serial_info || null
+                });
+                return;
+              }
+
+              // OLD FORMAT SUPPORT
               const baseProd = {
                 stocksBefore: prod.stocks_before ?? null,
                 receivedStocks: prod.received_stocks ?? prod.stocks ?? 0,
@@ -581,25 +606,26 @@ const ProductDetail = () => {
             if (productsList.length > 0) {
               const firstItem = productsList[0];
               rows.push({
-                id: p.id,
-                date: pd.date || p.created_at,
-                description: `Supplier: ${d.supplier_name || '—'}`,
+                id: p.id || p.purchase_id,
+                date: dateStr,
+                description: `Supplier: ${supplierName || '—'}`,
                 displayType: pType,
                 isInc: true, // Purchases always add stock
                 stocks: firstItem.receivedStocks,
                 receivedStocks: firstItem.receivedStocks,
                 stocksBefore: firstItem.stocksBefore,
-                uiId: p.ui_id,
+                uiId: uiId,
                 buyPrice: firstItem.buyPrice,
                 sellPrice: firstItem.sellPrice,
                 variant: firstItem.variant,
                 batch: firstItem.batch,
                 serials: firstItem.serials,
-                paymentMethod: payment.method || "—",
-                amountPaid: payment.amountPaid || 0,
-                invoiceNo: pd.invoiceNo || "—",
-                referenceNo: pd.referenceNo || "—",
-                storageLocation: d.storage_location || p.storage_location || '—',
+                paymentMethod: isNewFormat ? p.payment_status : (payment.method || "—"),
+                amountPaid: isNewFormat ? p.paid_amount : (payment.amountPaid || 0),
+                totalCost: isNewFormat ? p.total_cost : (pd.totalCost || 0),
+                invoiceNo: isNewFormat ? p.invoice_no : (pd.invoiceNo || "—"),
+                referenceNo: isNewFormat ? p.reference_no : (pd.referenceNo || "—"),
+                storageLocation: isNewFormat ? productsList[0].storage_location || '—' : (d.storage_location || p.storage_location || '—'),
                 productsList: productsList
               });
             }

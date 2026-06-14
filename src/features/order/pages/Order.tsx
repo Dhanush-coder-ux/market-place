@@ -14,7 +14,7 @@ import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 import type { OrderRecord } from "@/types/api";
 
 const toCardShape = (o: OrderRecord) => ({
-  billNo: o.id,
+  billNo: o.ui_id || o.id,
   customerName: o.customer_name ?? String(o.datas?.customer_name ?? "Unknown"),
   phone: o.customer_number ?? String(o.datas?.phone ?? "—"),
   totalAmount: Number(o.datas?.total_amount ?? 0),

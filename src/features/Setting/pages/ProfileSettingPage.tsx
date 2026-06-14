@@ -4,6 +4,7 @@ import {
   Settings, ChevronRight,
   ShoppingBag, 
   Percent,
+  Activity,
 } from "lucide-react";
 
 // Components
@@ -11,36 +12,43 @@ import { Switch } from "@/components/ui/switch";
 
 // Features (Ensure these paths match your project)
 import { AdditionalSettings } from "@/features/Setting/pages/AdditionalSettings";
-import SelectBuilder from "@/features/Setting/pages/SelectBuilder";
+import { ActivityLogPage } from "@/features/Setting/pages/ActivityLogPage";
+import { CustomListSettings } from "@/features/Setting/pages/CustomListSettings";
+import { IdPrefixSettings } from "@/features/Setting/pages/IdPrefixSettings";
 import { usePurchaseSettings } from "@/context/PurchaseContext";
 import { useMediaQuery } from "@/hooks/use-media-query";
+import { Hash } from "lucide-react";
 
 
 // --- Configuration ---
 const MENU_ITEMS = [
+  { id: "id_prefixes", label: "ID Sequence", icon: <Hash size={18} />, description: "Set module ID prefixes" },
   { id: "dropdowns", label: "Dropdown Settings", icon: <ListTree size={18} />, description: "Industries & Sectors" },
   { id: "advanced", label: "Advanced Config", icon: <Settings size={18} />, description: "System-wide variables" },
   { id: "purchasetypes", label: "Purchase Modules", icon: <ShoppingBag size={18} />, description: "Enable/Disable purchase types" },
   { id: "gst", label: "GST Configuration", icon: <Percent size={18} />, description: "Registered / Non-Registered" },
+  { id: "activity", label: "Activity Log", icon: <Activity size={18} />, description: "System audit trail" },
 ];
 
 export const ProfileSettingsPage = () => {
   const [activeTab, setActiveTab] = useState("dropdowns");
-  const [builtOptions, setBuiltOptions] = useState<any[]>([]);
   const { settings, toggleSetting, setGstType } = usePurchaseSettings();
   const isMobile = useMediaQuery("(max-width: 768px)");
-  
-  const handleBuilderChange = (options: any) => {
-    setBuiltOptions(options);
-  };
 
   const renderContent = () => {
     switch (activeTab) {
+
+      case "id_prefixes":
+        return (
+          <div className="animate-in fade-in slide-in-from-right-4 duration-300">
+            <IdPrefixSettings />
+          </div>
+        );
       case "advanced":
         return (
           <div className="animate-in fade-in slide-in-from-right-4 duration-300">
             <AdditionalSettings 
-              availableSelectOptions={builtOptions}
+              availableSelectOptions={[]}
               title="Advanced System Configuration"
               description="Modify internal variables and feature flags for the entire platform."
             />
@@ -49,8 +57,16 @@ export const ProfileSettingsPage = () => {
       
       case "dropdowns":
         return (
-          <div className="animate-in fade-in slide-in-from-right-4 duration-300">
-            <SelectBuilder onSettingsChange={handleBuilderChange} />
+          <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
+            <CustomListSettings type="categories" />
+            <CustomListSettings type="units" />
+          </div>
+        );
+
+      case "activity":
+        return (
+          <div className="animate-in fade-in slide-in-from-right-4 duration-300 h-full">
+            <ActivityLogPage />
           </div>
         );
 
@@ -192,8 +208,8 @@ export const ProfileSettingsPage = () => {
   };
 
   return (
-    <div className="flex flex-col md:flex-row gap-6 p-0">
-      <aside className={`${isMobile ? "flex overflow-x-auto gap-2 pb-4 px-2 scrollbar-hide border-b border-slate-100 mb-4" : "w-72 space-y-1.5 shrink-0"}`}>
+    <div className="flex flex-col md:flex-row gap-6 p-0 items-start relative">
+      <aside className={`${isMobile ? "flex overflow-x-auto gap-2 pb-4 px-2 scrollbar-hide border-b border-slate-100 mb-4" : "w-72 space-y-1.5 shrink-0 md:sticky md:top-6"}`}>
         {!isMobile && (
           <h2 className="text-[10px] font-black text-slate-400  tracking-[0.2em] px-4 mb-3">
             Configuration
@@ -230,7 +246,7 @@ export const ProfileSettingsPage = () => {
         })}
       </aside>
 
-      <section className="flex-1 min-w-0">
+      <section className="flex-1 min-w-0 pb-20">
         <div className="w-full max-w-4xl mx-auto md:mx-0">
           {renderContent()}
         </div>

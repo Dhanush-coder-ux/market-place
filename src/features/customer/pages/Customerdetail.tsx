@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
-  DollarSign, AlertCircle, Package, Star,
+  DollarSign, AlertCircle, Star,
   Mail, Pencil, User, Phone, Trash2,
   CreditCard, Database, MapPin, Tag, FileText, Banknote
 } from "lucide-react";
@@ -31,7 +31,11 @@ const CustomerSearch = () => {
 
     try {
       const res = await getData(`${ENDPOINTS.CUSTOMERS}/by/shop/${SHOP_ID}`, { limit: "8", offset: "1", q });
-      const data = res?.data ? (Array.isArray(res.data) ? res.data : [res.data]) : [];
+      let actualData = res?.data;
+      if (actualData && typeof actualData === 'object' && !Array.isArray(actualData) && 'datas' in actualData) {
+        actualData = actualData.datas;
+      }
+      const data = actualData ? (Array.isArray(actualData) ? actualData : [actualData]) : [];
       return data.map((c: any) => ({
         ...c,
         displayName: String(c.name || c.datas?.name || c.datas?.full_name || c.datas?.customer_name || c.id)
@@ -104,6 +108,7 @@ export default function CustomerDetail() {
   const [clearingLoading, setClearingLoading] = useState(false);
   const [customerOrders, setCustomerOrders] = useState<any[]>([]);
   const [ordersLoading, setOrdersLoading] = useState(false);
+  const [stats, setStats] = useState<any>(null);
 
   const fetchCustomerDetail = () => {
     if (!id) return;
@@ -111,16 +116,32 @@ export default function CustomerDetail() {
       if (res) setCustomer(Array.isArray(res.data) ? res.data[0] : res.data);
     });
     setOrdersLoading(true);
-    getData(`${ENDPOINTS.ORDERS}/by/customer/${SHOP_ID}/${id}`).then((res) => {
+    getData(`${ENDPOINTS.ORDERS}/by/customer/${SHOP_ID}/${id}`, undefined, { cacheKey: `customer-orders-${id}-${Date.now()}` }).then((res) => {
+      console.log('ORDERS RAW RES:', res);
       if (res && res.data) {
-        setCustomerOrders(res.data);
+        let actualData = res.data;
+        if (typeof actualData === 'object' && !Array.isArray(actualData) && 'datas' in actualData) {
+          actualData = actualData.datas;
+        }
+        const orders = Array.isArray(actualData) ? actualData : [actualData];
+        console.log('PARSED ORDERS:', orders.length, 'total_sellprice values:', orders.map((o: any) => o.total_sellprice));
+        setCustomerOrders(orders);
+        // Compute stats from the fetched orders
+        const salesCount = orders.length;
+        const salesValue = orders.reduce((sum: number, o: any) => sum + (o.total_sellprice || 0), 0);
+        console.log('COMPUTED STATS:', { salesCount, salesValue });
+        setStats({ total_sales_count: salesCount, total_sales_value: salesValue });
       }
       setOrdersLoading(false);
     });
     setClearingLoading(true);
     getData(`${ENDPOINTS.CUSTOMERS}/outstanding/clear/${SHOP_ID}/${id}`).then((res) => {
       if (res && res.data) {
-        setClearingHistory(Array.isArray(res.data) ? res.data : [res.data]);
+        let actualData = res.data;
+        if (typeof actualData === 'object' && !Array.isArray(actualData) && 'datas' in actualData) {
+          actualData = actualData.datas;
+        }
+        setClearingHistory(Array.isArray(actualData) ? actualData : [actualData]);
       }
       setClearingLoading(false);
     });
@@ -148,14 +169,36 @@ export default function CustomerDetail() {
       if (res) setCustomer(Array.isArray(res.data) ? res.data[0] : res.data);
       setRecordLoading(false);
     });
+    // Also fetch orders to compute stats on initial load
+    getData(`${ENDPOINTS.ORDERS}/by/customer/${SHOP_ID}/${id}`, undefined, { cacheKey: `customer-orders-init-${id}-${Date.now()}` }).then((res) => {
+      if (res && res.data) {
+        let actualData = res.data;
+        if (typeof actualData === 'object' && !Array.isArray(actualData) && 'datas' in actualData) {
+          actualData = actualData.datas;
+        }
+        const orders = Array.isArray(actualData) ? actualData : [actualData];
+        const salesCount = orders.length;
+        const salesValue = orders.reduce((sum: number, o: any) => sum + (o.total_sellprice || 0), 0);
+        setStats({ total_sales_count: salesCount, total_sales_value: salesValue });
+      }
+    });
   }, [id, getData]);
 
   useEffect(() => {
     if (activeTab === 1 && id) { // Index 1 is Purchases
       setOrdersLoading(true);
-      getData(`${ENDPOINTS.ORDERS}/by/customer/${SHOP_ID}/${id}`).then((res) => {
+      getData(`${ENDPOINTS.ORDERS}/by/customer/${SHOP_ID}/${id}`, undefined, { cacheKey: `customer-orders-${id}-${Date.now()}` }).then((res) => {
         if (res && res.data) {
-          setCustomerOrders(res.data);
+          let actualData = res.data;
+          if (typeof actualData === 'object' && !Array.isArray(actualData) && 'datas' in actualData) {
+            actualData = actualData.datas;
+          }
+          const orders = Array.isArray(actualData) ? actualData : [actualData];
+          setCustomerOrders(orders);
+          // Compute stats from the fetched orders
+          const salesCount = orders.length;
+          const salesValue = orders.reduce((sum: number, o: any) => sum + (o.total_sellprice || 0), 0);
+          setStats({ total_sales_count: salesCount, total_sales_value: salesValue });
         }
         setOrdersLoading(false);
       });
@@ -167,7 +210,11 @@ export default function CustomerDetail() {
       setClearingLoading(true);
       getData(`${ENDPOINTS.CUSTOMERS}/outstanding/clear/${SHOP_ID}/${id}`).then((res) => {
         if (res && res.data) {
-          setClearingHistory(Array.isArray(res.data) ? res.data : [res.data]);
+          let actualData = res.data;
+          if (typeof actualData === 'object' && !Array.isArray(actualData) && 'datas' in actualData) {
+            actualData = actualData.datas;
+          }
+          setClearingHistory(Array.isArray(actualData) ? actualData : [actualData]);
         }
         setClearingLoading(false);
       });
@@ -289,31 +336,29 @@ export default function CustomerDetail() {
           <div className="flex flex-wrap gap-2">
             <StatCard
               icon={DollarSign}
-              label="Total Revenue"
-              value={datas.total_purchases ? `₹${datas.total_purchases}` : "₹0"}
+              label="Total Sales"
+              value={`${stats?.total_sales_count || 0} (₹${(stats?.total_sales_value || 0).toFixed(2)})`}
               iconBg="bg-blue-50 text-blue-600"
               className="flex-1 min-w-[140px]"
             />
-            <div className="flex-1 min-w-[140px] relative group/card">
-              <StatCard
-                icon={AlertCircle}
-                label="Customer balance"
-                value={fmt(Number(customer.outstanding ?? datas.outstanding_balance ?? 0))}
-                iconBg="bg-rose-50 text-rose-600"
-                valueClassName={Number(customer.outstanding ?? datas.outstanding_balance ?? 0) !== 0 ? "text-rose-600 font-black" : ""}
-              />
-            </div>
             <StatCard
-              icon={Package}
-              label="Total Orders"
-              value={String(datas.total_orders || "0")}
-              iconBg="bg-blue-50 text-blue-600"
+              icon={CreditCard}
+              label="Credit Limit"
+              value={`₹${(customer.credit_limit || 0).toFixed(2)}`}
+              iconBg="bg-emerald-50 text-emerald-600"
+              className="flex-1 min-w-[140px]"
+            />
+            <StatCard
+              icon={AlertCircle}
+              label="Outstanding"
+              value={`₹${(customer?.outstanding ?? 0).toFixed(2)}`}
+              iconBg={(customer?.outstanding ?? 0) > 0 ? "bg-rose-50 text-rose-600" : "bg-emerald-50 text-emerald-600"}
               className="flex-1 min-w-[140px]"
             />
             <StatCard
               icon={Star}
-              label="LTV Score"
-              value={datas.lifetime_value ? `₹${datas.lifetime_value}` : "₹0"}
+              label="Customer Balance"
+              value={`₹${((customer?.credit_limit ?? 0) - (customer?.outstanding ?? 0)).toFixed(2)}`}
               iconBg="bg-amber-50 text-amber-600"
               className="flex-1 min-w-[140px]"
             />

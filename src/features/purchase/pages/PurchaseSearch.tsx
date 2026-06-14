@@ -6,7 +6,6 @@ import { GradientButton } from "@/components/ui/GradientButton";
 import { SearchSelect } from "@/components/inputbuilders/SearchSelect";
 import { useApi } from "@/context/ApiContext";
 import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
-import { toDisplayData } from "./PurchaseHistory";
 
 const PurchaseSearch = () => {
   const navigate = useNavigate();
@@ -34,37 +33,14 @@ const PurchaseSearch = () => {
 
   const fetchPurchases = async (q: string) => {
     try {
-      const res = await getData(ENDPOINTS.PURCHASES, { view: "PURCHASE_VIEW", shop_id: SHOP_ID, limit: "100", offset: "1" });
-      const rawData = res?.data ? (Array.isArray(res.data) ? res.data : [res.data]) : [];
-      const data = rawData.map(toDisplayData);
-
-      const query = q.toLowerCase().trim();
-      const filtered = data.filter((po: any) => {
-        if (!query) return true;
-        const poNumStr = String(po.poNumber || "").toLowerCase();
-        const idStr = String(po.id).toLowerCase();
-        const vendorStr = String(po.vendor || "").toLowerCase();
-        const costStr = String(po.total_cost || "").toLowerCase();
-        const dateStr = String(po.date || "").toLowerCase();
-        const typeStr = String(po.purchaseType || "").toLowerCase();
-
-        return (
-          poNumStr.includes(query) ||
-          idStr.includes(query) ||
-          vendorStr.includes(query) ||
-          costStr.includes(query) ||
-          dateStr.includes(query) ||
-          typeStr.includes(query)
-        );
-      });
-
-      return filtered.slice(0, 10).map((po: any) => {
-        const totalLabel = `₹${Number(po.total_cost).toLocaleString("en-IN")}`;
-        const poLabel = po.poNumber || "Direct";
-        const dateLabel = po.date || "";
+      const res = await getData(`${ENDPOINTS.PURCHASES}/search/${SHOP_ID}`, { limit: "10", q });
+      const rawData = res?.data || [];
+      return rawData.map((po: any) => {
+        const poLabel = po.invoice_no || po.id;
+        const vendor = po.supplier?.supplier_name || "Unknown Vendor";
         return {
           ...po,
-          displayName: `${poLabel} · ${po.vendor} · ${totalLabel} (${dateLabel})`
+          displayName: `${poLabel} · ${vendor}`
         };
       });
     } catch (err) {

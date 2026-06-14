@@ -54,7 +54,12 @@ const AttachCustomerModal: React.FC<AttachCustomerModalProps> = ({
       try {
         const res = await getData(`${ENDPOINTS.CUSTOMERS}/by/shop/${SHOP_ID}`, { q: query, search: query, limit: "20" });
         if (res && res.data) {
-          const list = res.data.map((c: any) => ({
+          let actualData = res.data;
+          if (typeof actualData === 'object' && !Array.isArray(actualData) && 'datas' in actualData) {
+            actualData = actualData.datas;
+          }
+          const dataArr = Array.isArray(actualData) ? actualData : [actualData];
+          const list = dataArr.map((c: any) => ({
             id: c.id,
             name: c.name || "Unnamed Customer",
             phone: c.mobile_number || c.phone || c.mobilenum || "",

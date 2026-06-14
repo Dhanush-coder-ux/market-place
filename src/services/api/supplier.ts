@@ -23,7 +23,7 @@ export const supplierApi = {
 
   searchSuppliers: async (query: string): Promise<any[]> => {
     try {
-      const response = await apiClient.get(`${ENDPOINTS.SUPPLIERS}/by/shop/${SHOP_ID}`, { q: query, limit: "10" });
+      const response = await apiClient.get(`${ENDPOINTS.SUPPLIERS}/search/${SHOP_ID}`, { q: query, limit: "10" });
       const suppliers = response.data || [];
       return suppliers.map((s: any) => ({
         ...s,
@@ -32,6 +32,15 @@ export const supplierApi = {
       }));
     } catch {
       return [];
+    }
+  },
+
+  getSupplierPurchaseStats: async (supplierId: string): Promise<any> => {
+    try {
+      const response = await apiClient.get(`${ENDPOINTS.PURCHASES}/stats/supplier/${SHOP_ID}/${supplierId}`);
+      return response.data;
+    } catch {
+      return null;
     }
   }
 };

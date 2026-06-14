@@ -71,6 +71,7 @@ const PurchaseForm = () => {
   const [submitting, setSubmitting] = useState(false);
 
   const { openQuickCreate } = useQuickCreate();
+  const [soldStockWarnings, setSoldStockWarnings] = useState<string[]>([]);
 
   // --- State Management ---
   const [purchaseDetails, setPurchaseDetails] = useState({
@@ -167,46 +168,89 @@ const PurchaseForm = () => {
   useEffect(() => {
     if (id) {
       const fetchPurchase = async () => {
-        const res = await getData(`${ENDPOINTS.PURCHASES}/${id}`);
-        if (res && res.data) {
-          const data = res.data;
+        const res = await getData(`${ENDPOINTS.PURCHASES}/by/${SHOP_ID}/${id}`);
+        if (res && (res.data || res.id)) {
+          const data = res.data ? (Array.isArray(res.data) ? res.data[0] : res.data) : res;
+          const loadedSupplierId = data.supplier?.supplier_id || data.supplier?.id || data.supplier_id || "";
+          const loadedSupplierName = data.supplier?.supplier_name || data.supplier?.name || data.supplier_name || "";
+          
           setPurchaseDetails(data.purchaseDetails || {
-            supplier: data.supplier_name,
+            supplier: loadedSupplierId,
             invoiceNo: data.invoice_no || "",
-            date: data.date || new Date().toISOString().split("T")[0],
+            date: data.purchase_date ? data.purchase_date.split("T")[0] : (data.date || new Date().toISOString().split("T")[0]),
             referenceNo: data.reference_no || "",
           });
+          
+          if (loadedSupplierId && !data.purchaseDetails) {
+            setSupplierDetails({
+              id: loadedSupplierId,
+              name: loadedSupplierName
+            });
+          }
+
           setPurchaseType(data.type || "DIRECT");
-          setPurchaseId(data.id);
-          setProducts(data.products.map((p: any) => ({
-            id: p.id || Math.random().toString(),
-            name: p.name,
-            quantity: p.quantity,
-            costPrice: p.buy_price,
-            sellingPrice: p.sell_price,
-            marginPercent: "",
-            marginAmount: "",
-            marginType: "sellingPrice",
-            unit: p.unit || "pc",
-            taxGst: p.gst || 18,
-            sku: p.barcode,
-            variant: p.variant || "",
-            batchTracking: p.batch_tracking || false,
-            serialTracking: p.serial_tracking || false,
-            batchNum: p.batch_number || "",
-            manufacturingDate: p.manufacturing_date || "",
-            expiryDate: p.expiry_date || "",
-            serialno_id: p.serialno_id || p.serial_number?.id || p.serial_numbers?.id,
-            storageLoc: p.datas?.storage_location || "",
-            reorderPoint: p.reorder_point ?? p.datas?.reorder_point ?? 5,
-            serialNumbers: Array.isArray(p.serial_numbers) ? p.serial_numbers.join(',') : (p.serial_numbers?.serial_numbers || p.serial_number?.serial_numbers || []).join(','),
-            existingSerials: Array.isArray(p.serial_numbers) ? p.serial_numbers : (p.serial_numbers?.serial_numbers || p.serial_number?.serial_numbers || [])
-          })));
-          setCharges(data.additional_charges ? {
-            transport: data.additional_charges.delivery_charge,
-            other: data.additional_charges.other_charge
-          } : data.charges || { transport: 0, other: 0 });
-          setPayment(data.payment || { method: "Cash", amountPaid: 0 });
+          setPurchaseId(data.id || data.purchase_id);
+          const updatedProducts = [...data.products.map((p: any) => {
+            const qty = p.quantity ?? p.stocks_added ?? 0;
+            return {
+              id: p.id || crypto.randomUUID(),
+              inventory_id: p.inventory_id,
+              name: p.name,
+              quantity: qty,
+              originalQuantity: qty,
+              costPrice: p.buy_price,
+              sellingPrice: p.sell_price,
+              marginPercent: "",
+              marginAmount: "",
+              marginType: "sellingPrice",
+              unit: p.unit || "pc",
+              taxGst: p.gst || 18,
+              variant_id: (typeof p.variant === 'object' && p.variant !== null) ? p.variant.variant_id : null,
+              variant: (typeof p.variant === 'object' && p.variant !== null ? p.variant.variant_name || p.variant.name : p.variant) || "",
+              sku: p.ui_id || p.barcode,
+              batchTracking: p.batch_tracking || p.has_batch || !!p.batch || !!p.batch_id,
+              serialTracking: p.serial_tracking || p.has_serialno || !!p.serial_info || !!p.serialno_id || !!(p.serial_number) || !!(p.serial_numbers),
+              batch_id: (typeof p.batch === 'object' && p.batch !== null) ? p.batch.batch_id : null,
+              batchNum: (typeof p.batch === 'object' && p.batch !== null ? p.batch.batch_name || p.batch.name : p.batch) || "",
+              manufacturingDate: (p.manufacturing_date || p.batch?.manufacturing_date || p.batch?.mfg_date || "").split("T")[0],
+              expiryDate: (p.expiry_date || p.batch?.expiry_date || p.batch?.exp_date || "").split("T")[0],
+              serialno_id: p.serialno_id || p.serial_number?.id || p.serial_numbers?.id || p.serial_info?.serialno_id,
+              storageLoc: p.datas?.storage_location || "",
+              reorderPoint: p.reorder_point ?? p.datas?.reorder_point ?? 5,
+              serialNumbers: Array.isArray(p.serial_numbers) ? p.serial_numbers.join(',') : (p.serial_numbers?.serial_numbers || p.serial_number?.serial_numbers || p.serial_info?.serial_numbers || []).join(','),
+              existingSerials: Array.isArray(p.serial_numbers) ? p.serial_numbers : (p.serial_numbers?.serial_numbers || p.serial_number?.serial_numbers || p.serial_info?.serial_numbers || [])
+            };
+          })];
+
+          const warnings: string[] = [];
+          for (let i = 0; i < updatedProducts.length; i++) {
+            const p = updatedProducts[i];
+            if (!p.inventory_id) continue;
+            try {
+              const invRes = await getData(`${ENDPOINTS.INVENTORIES}/by/${SHOP_ID}/${p.inventory_id}`);
+              if (invRes && invRes.data) {
+                 const invData = Array.isArray(invRes.data) ? invRes.data[0] : invRes.data;
+                 
+                 // Update tracking flags from live inventory data
+                 p.batchTracking = !!(invData.has_batch || invData.datas?.has_batch || p.batchTracking);
+                 p.serialTracking = !!(invData.has_serialno || invData.datas?.has_serialno || p.serialTracking);
+                 
+                 let currentStock = invData?.stocks ?? invData?.datas?.stocks;
+                 if (p.variant_id && invData?.datas?.combinations) {
+                    const variant = invData.datas.combinations.find((v: any) => v.id === p.variant_id);
+                    if (variant) currentStock = variant.stocks;
+                 }
+                 if (currentStock !== undefined && currentStock < p.quantity) {
+                    warnings.push(`"${p.name}" (Left in stock: ${currentStock}, Originally bought: ${p.quantity})`);
+                 }
+              }
+            } catch (err) {
+              console.error("Error checking inventory stock", err);
+            }
+          }
+          
+          setProducts(updatedProducts);
+          setSoldStockWarnings(warnings);
         }
       };
       fetchPurchase();
@@ -413,6 +457,7 @@ const PurchaseForm = () => {
           other_charge: Number(charges.other) || 0
         },
         datas: {
+          invoice_no: purchaseDetails.invoiceNo || "",
           supplier_name: supplierDetails?.name || purchaseDetails.supplier,
           purchaseDetails: { ...purchaseDetails },
           payment: {
@@ -520,6 +565,25 @@ const PurchaseForm = () => {
 
           {/* --- Left Column (Scrollable Content) --- */}
           <div className="flex-1 w-full space-y-6 min-w-0">
+
+          {soldStockWarnings.length > 0 && (
+            <div className="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-lg shadow-sm animate-in fade-in slide-in-from-top-2">
+              <div className="flex items-start gap-3">
+                <Info className="text-amber-500 shrink-0 mt-0.5" size={20} />
+                <div>
+                  <h3 className="text-amber-800 font-bold text-sm uppercase tracking-wide">Warning: Stock Already Sold</h3>
+                  <p className="text-amber-700 text-xs mt-1 leading-relaxed font-medium">
+                    Some items from this purchase have already been sold. Editing their quantities or prices will retroactively affect historical profit margins.
+                  </p>
+                  <ul className="list-disc list-inside text-amber-700 text-xs mt-2 font-semibold space-y-0.5">
+                    {soldStockWarnings.map((w, i) => (
+                      <li key={i}>{w}</li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* 1. Purchase Details Card */}
           <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden transition-all hover:shadow-md">

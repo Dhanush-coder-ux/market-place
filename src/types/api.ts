@@ -170,6 +170,7 @@ export interface InventoryRecord {
 
 export interface OrderRecord {
   id: string;
+  ui_id?: string;
   shop_id: string;
   status: string;
   origin: string;
@@ -182,6 +183,7 @@ export interface OrderRecord {
 // Purchase types: DIRECT | PO_CREATE | PO_UPDATE | PRODUCTION
 export interface PurchaseRecord {
   id: string;
+  ui_id?: string;
   shop_id: string;
   type: "DIRECT" | "PO_CREATE" | "PO_UPDATE" | "PRODUCTION";
   datas: Record<string, unknown>;

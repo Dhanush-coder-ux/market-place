@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import {
   Search,
   Calendar,
@@ -14,12 +14,14 @@ import {
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useHeader } from "@/context/HeaderContext";
-import DirectHeader from "../components/DirectHeader";
 import { useApi } from "@/context/ApiContext";
-import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 import { RightSidebarFilter } from "@/components/common/RightSidebarFilter";
 import { ReusableSelect } from "@/components/ui/ReusableSelect";
+import { SearchSelect } from "@/components/inputbuilders/SearchSelect";
+import { StatCard } from "@/components/common/StatsCard";
 import type { PurchaseRecord } from "@/types/api";
+import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
+import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 
 
 /* ================= TYPES ================= */
@@ -67,6 +69,11 @@ export interface ProductItem {
     id: string;
     serial_numbers: string[];
   }[];
+  variant?: any;
+  batch?: any;
+  serial_info?: any;
+  stocks_added?: number;
+  received_stocks?: number;
 }
 
 export type PurchaseType = "Purchase" | "PO Purchase" | "Production";
@@ -74,6 +81,7 @@ export type PurchaseType = "Purchase" | "PO Purchase" | "Production";
 export interface DirectPurchaseData {
   id: string;
   poNumber: string;
+  systemId?: string;
   date: string;
   time: string;
   vendor: string;
@@ -90,6 +98,7 @@ export interface DirectPurchaseData {
   outstanding?: number;
   grand_total?: number;
   additional_charges_total?: number;
+  status?: string;
 }
 
 type ViewMode = "grid" | "horizontal" | "vertical";
@@ -105,7 +114,7 @@ export function parseGst(val: any): number {
 export function toDisplayData(p: PurchaseRecord): DirectPurchaseData {
   const d2 = (p.datas ? (typeof p.datas === "string" ? JSON.parse(p.datas) : p.datas) : p) as any;
   const products = ((p as any).products ?? d2?.products ?? d2?.purchase_products ?? d2?.grn_products ?? d2?.finished_products) as any[] | undefined;
-  const dateRaw = String(d2?.purchaseDetails?.date ?? d2?.purchase_date ?? d2?.production_date ?? d2?.receipt_date ?? d2?.adjusted_date ?? (p as any).date ?? new Date().toISOString());
+  const dateRaw = String(d2?.purchaseDetails?.date ?? d2?.purchase_date ?? d2?.production_date ?? d2?.receipt_date ?? d2?.adjusted_date ?? (p as any).date ?? (p as any).purchase_date ?? new Date().toISOString());
 
   let d = new Date();
   if (dateRaw && dateRaw !== "undefined" && dateRaw !== "null" && dateRaw !== "—") {
@@ -123,26 +132,30 @@ export function toDisplayData(p: PurchaseRecord): DirectPurchaseData {
   };
 
   // Try to find the vendor name from various possible fields
-  const vendorName = d2?.supplier_name ?? d2?.supplier ?? d2?.purchaseDetails?.supplier_name ?? "—";
+  const vendorObj = (p as any).supplier;
+  let vendorName = d2?.supplier_name ?? d2?.purchaseDetails?.supplier_name ?? vendorObj?.supplier_name ?? vendorObj?.name ?? d2?.supplier ?? "—";
+  if (typeof vendorName === 'object') {
+    vendorName = (vendorName as any).supplier_name || (vendorName as any).name || "—";
+  }
 
   const otherCharge = Number(p.additional_charges?.other_charge ?? d2?.charges?.other ?? 0);
   const transportCharge = Number(p.additional_charges?.delivery_charge ?? d2?.charges?.transport ?? 0);
 
   const prods = (products ?? []);
   const subtotal = prods.reduce((sum: number, pr: any) => {
-    const qty = Number(pr.received_stocks ?? pr.received_qty ?? pr.quantity ?? pr.qty ?? 1);
+    const qty = Number(pr.received_stocks ?? pr.received_qty ?? pr.quantity ?? pr.qty ?? pr.stocks_added ?? 1);
     const price = Number(pr.buy_price ?? 0);
     return sum + (qty * price);
   }, 0);
 
   const totalGst = prods.reduce((sum: number, pr: any) => {
-    const qty = Number(pr.received_stocks ?? pr.received_qty ?? pr.quantity ?? pr.qty ?? 1);
+    const qty = Number(pr.received_stocks ?? pr.received_qty ?? pr.quantity ?? pr.qty ?? pr.stocks_added ?? 1);
     const price = Number(pr.buy_price ?? 0);
     const gstPercent = parseGst(pr.gst || pr.datas?.gst || pr.taxGst || pr.tax_gst || 0);
     return sum + (qty * price * (gstPercent / 100));
   }, 0);
 
-  const totalCost = subtotal + totalGst;
+  const totalCost = (p as any).total_cost ?? (subtotal + totalGst);
   const additionalChargesTotal = otherCharge + transportCharge;
   const grandTotal = totalCost + additionalChargesTotal;
 
@@ -150,14 +163,15 @@ export function toDisplayData(p: PurchaseRecord): DirectPurchaseData {
   const outstanding = Math.max(0, totalCost - paidAmount);
 
   return {
-    id: p.id || "",
-    poNumber: d2?.purchaseDetails?.invoiceNo ?? p.id?.slice(0, 8).toUpperCase() ?? "PO",
+    id: p.id || (p as any).purchase_id || "",
+    poNumber: d2?.purchaseDetails?.invoiceNo || (p as any).invoice_no || ((p as any).ui_id ? String((p as any).ui_id) : p.id?.slice(0, 8).toUpperCase() ?? "PO"),
+    systemId: (p as any).ui_id ? String((p as any).ui_id) : "",
     date: d.toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" }),
     time: d.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }),
     vendor: String(vendorName),
     products: (products ?? []).map((pr: any) => ({
       name: String(pr.name ?? pr.product_name ?? "Item"),
-      quantity: Number(pr.received_stocks ?? pr.received_qty ?? pr.quantity ?? pr.qty ?? 1),
+      quantity: Number(pr.received_stocks ?? pr.received_qty ?? pr.quantity ?? pr.qty ?? pr.stocks_added ?? 1),
       stocks: Number(pr.stocks ?? 0),
       stocks_before: pr.stocks_before,
       buy_price: pr.buy_price,
@@ -169,6 +183,9 @@ export function toDisplayData(p: PurchaseRecord): DirectPurchaseData {
       has_batch: pr.has_batch,
       has_serialno: pr.has_serialno,
       has_variant: pr.has_variant,
+      variant: pr.variant,
+      batch: pr.batch,
+      serial_info: pr.serial_info,
       variants: Array.isArray(pr.variants) ? pr.variants.map((v: any) => ({
         id: v.id,
         name: v.name,
@@ -222,6 +239,7 @@ export function toDisplayData(p: PurchaseRecord): DirectPurchaseData {
     grand_total: grandTotal,
     additional_charges_total: additionalChargesTotal,
     storage_location: d2?.storage_location || (p as any).storage_location || "",
+    status: d2?.status ?? (p as any).status ?? "completed",
   };
 }
 
@@ -265,23 +283,26 @@ const STYLES = `
 /* ================= SHARED HELPERS ================= */
 const fmt = (n: number) => `₹${n.toLocaleString()}`;
 
-const ProductPill = ({ name, qty, stocksBefore, variant, batch }: { name: string; qty: number; stocksBefore?: number; variant?: string | null; batch?: string | null }) => (
-  <span className="inline-flex flex-col gap-0.5 text-xs font-medium text-zinc-650 bg-zinc-50 border border-zinc-100 px-2.5 py-1.5 rounded-lg">
-    <span className="truncate max-w-[150px] font-bold text-zinc-750">{name}</span>
-    {(variant || batch) && (
-      <div className="flex flex-wrap gap-1 mt-0.5">
-        {variant && (
-          <span className="px-1.5 py-0.5 rounded text-[8px] font-extrabold bg-violet-50 text-violet-700 border border-violet-100 truncate max-w-[110px]">
-            V: {variant}
-          </span>
-        )}
-        {batch && (
-          <span className="px-1.5 py-0.5 rounded text-[8px] font-extrabold bg-amber-50 text-amber-700 border border-amber-100 truncate max-w-[110px]">
-            B: {batch}
-          </span>
-        )}
-      </div>
-    )}
+const ProductPill = ({ name, qty, stocksBefore, variant, batch }: { name: string; qty: number; stocksBefore?: number; variant?: any; batch?: any }) => {
+  const variantStr = typeof variant === 'object' && variant !== null ? ((variant as any).variant_name || (variant as any).name) : variant;
+  const batchStr = typeof batch === 'object' && batch !== null ? ((batch as any).batch_name || (batch as any).name) : batch;
+  return (
+    <span className="inline-flex flex-col gap-0.5 text-xs font-medium text-zinc-650 bg-zinc-50 border border-zinc-100 px-2.5 py-1.5 rounded-lg">
+      <span className="truncate max-w-[150px] font-bold text-zinc-750">{name}</span>
+      {(variantStr || batchStr) && (
+        <div className="flex flex-wrap gap-1 mt-0.5">
+          {variantStr && (
+            <span className="px-1.5 py-0.5 rounded text-[8px] font-extrabold bg-violet-50 text-violet-700 border border-violet-100 truncate max-w-[110px]">
+              V: {variantStr}
+            </span>
+          )}
+          {batchStr && (
+            <span className="px-1.5 py-0.5 rounded text-[8px] font-extrabold bg-amber-50 text-amber-700 border border-amber-100 truncate max-w-[110px]">
+              B: {batchStr}
+            </span>
+          )}
+        </div>
+      )}
     <div className="flex items-center gap-1.5 flex-wrap text-[10px] text-zinc-400 font-semibold tabular-nums shrink-0 mt-0.5">
       <span>Received: {qty}</span>
       {stocksBefore !== undefined && stocksBefore !== null && (
@@ -291,7 +312,8 @@ const ProductPill = ({ name, qty, stocksBefore, variant, batch }: { name: string
       )}
     </div>
   </span>
-);
+  );
+};
 
 
 
@@ -310,7 +332,7 @@ const PurchaseTypeBadge = ({ type }: { type: PurchaseType }) => {
 };
 
 /* ================= GRID CARD ================= */
-const GridCard = ({ po, onClick }: { po: DirectPurchaseData; onClick: () => void }) => {
+const GridCard = ({ po, onClick, onEdit }: { po: DirectPurchaseData; onClick: () => void; onEdit?: (po: DirectPurchaseData) => void }) => {
   const totalQty = po.products.reduce((s, i) => s + i.quantity, 0);
   return (
     <div
@@ -323,7 +345,12 @@ const GridCard = ({ po, onClick }: { po: DirectPurchaseData; onClick: () => void
           <div className="w-7 h-7 rounded-md bg-blue-50 flex items-center justify-center shrink-0">
             <ReceiptText size={14} className="text-blue-600" />
           </div>
-          <span className="text-sm font-semibold text-zinc-800 tracking-tight">{po.poNumber}</span>
+          <div className="flex flex-col">
+            <span className="text-sm font-semibold text-zinc-800 tracking-tight">{po.poNumber}</span>
+            {po.systemId && po.systemId !== po.poNumber && (
+              <span className="text-[10px] font-medium text-zinc-500">System ID: {po.systemId}</span>
+            )}
+          </div>
           <PurchaseTypeBadge type={po.purchaseType} />
         </div>
         <span className="shrink-0 text-xs font-medium text-zinc-400 bg-white border border-zinc-200 px-2.5 py-0.5 rounded-full">
@@ -373,14 +400,21 @@ const GridCard = ({ po, onClick }: { po: DirectPurchaseData; onClick: () => void
             const variantRows: { variant?: string; batch?: string }[] = [];
             if (p.variants && p.variants.length > 0) {
               p.variants.forEach((v) => {
+                const vName = typeof v.name === 'object' && v.name !== null ? ((v.name as any).variant_name || (v.name as any).name) : v.name;
                 if (v.batches && v.batches.length > 0) {
-                  v.batches.forEach((b) => variantRows.push({ variant: v.name, batch: b.name }));
+                  v.batches.forEach((b) => {
+                    const bName = typeof b.name === 'object' && b.name !== null ? ((b.name as any).batch_name || (b.name as any).name) : b.name;
+                    variantRows.push({ variant: vName, batch: bName });
+                  });
                 } else {
-                  variantRows.push({ variant: v.name });
+                  variantRows.push({ variant: vName });
                 }
               });
             } else if (p.batches && p.batches.length > 0) {
-              p.batches.forEach((b) => variantRows.push({ batch: b.name }));
+              p.batches.forEach((b) => {
+                const bName = typeof b.name === 'object' && b.name !== null ? ((b.name as any).batch_name || (b.name as any).name) : b.name;
+                variantRows.push({ batch: bName });
+              });
             }
             const firstRow = variantRows[0];
             return (
@@ -436,6 +470,17 @@ const GridCard = ({ po, onClick }: { po: DirectPurchaseData; onClick: () => void
             <p className="text-[10px] font-semibold   text-zinc-400 mb-0.5">Qty</p>
             <p className="text-sm font-semibold text-zinc-700 tabular-nums">{totalQty}</p>
           </div>
+          {po.purchaseType === 'Purchase' && po.status !== 'cancelled' && onEdit && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onEdit(po);
+              }}
+              className="px-3 h-8 rounded-lg border border-blue-200 bg-blue-50 text-blue-600 hover:bg-blue-100 hover:border-blue-300 transition-colors text-[11px] font-bold shadow-sm"
+            >
+              Edit
+            </button>
+          )}
           <div className="w-8 h-8 rounded-full border border-zinc-200 bg-white flex items-center justify-center shadow-sm group-hover:border-blue-200 group-hover:bg-blue-50 transition-all">
             <ChevronRight size={15} className="po-arrow text-zinc-400" />
           </div>
@@ -446,7 +491,7 @@ const GridCard = ({ po, onClick }: { po: DirectPurchaseData; onClick: () => void
 };
 
 
-const VerticalTable = ({ data, onClick, totalCount }: { data: DirectPurchaseData[]; onClick: (po: DirectPurchaseData) => void; totalCount: number }) => {
+const VerticalTable = ({ data, onClick, onEdit, totalCount, lastElementRef, loadingMore }: { data: DirectPurchaseData[]; onClick: (po: DirectPurchaseData) => void; onEdit?: (po: DirectPurchaseData) => void; totalCount: number; lastElementRef?: any; loadingMore?: boolean }) => {
   return (
     <div className="bg-white border border-slate-100 rounded-lg shadow-sm overflow-hidden flex flex-col flex-1 min-h-0">
       <div className="overflow-x-auto overflow-y-auto flex-1 scrollbar-thin scrollbar-thumb-slate-200">
@@ -463,11 +508,12 @@ const VerticalTable = ({ data, onClick, totalCount }: { data: DirectPurchaseData
             </tr>
           </thead>
           <tbody>
-            {data.map((po) => {
+            {data.map((po, index) => {
               const totalQty = po.products.reduce((s, i) => s + i.quantity, 0);
               return (
                 <tr
                   key={po.id}
+                  ref={index === data.length - 1 ? lastElementRef : null}
                   onClick={() => onClick(po)}
                   className="group cursor-pointer transition-colors border-b border-slate-50 hover:bg-slate-50/60"
                 >
@@ -479,7 +525,10 @@ const VerticalTable = ({ data, onClick, totalCount }: { data: DirectPurchaseData
                       </div>
                       <div className="flex flex-col gap-0.5">
                         <span className="font-mono text-[11px] font-semibold text-slate-800">{po.poNumber}</span>
-                        <div className="flex items-center gap-1.5 flex-wrap">
+                        {po.systemId && po.systemId !== po.poNumber && (
+                          <span className="font-mono text-[9px] font-medium text-slate-500">System ID: {po.systemId}</span>
+                        )}
+                        <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
                           <PurchaseTypeBadge type={po.purchaseType} />
                           {po.storage_location && (
                             <span className="text-[9px] font-bold text-zinc-500 bg-zinc-50 border border-zinc-200 px-1.5 py-0.5 rounded uppercase tracking-wider shrink-0">
@@ -552,7 +601,18 @@ const VerticalTable = ({ data, onClick, totalCount }: { data: DirectPurchaseData
 
                   {/* Action */}
                   <td className="p-2.5 px-3 text-right">
-                    <div className="flex items-center justify-end">
+                    <div className="flex items-center justify-end gap-2">
+                      {po.purchaseType === 'Purchase' && po.status !== 'cancelled' && onEdit && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onEdit(po);
+                          }}
+                          className="px-3 h-7 rounded border border-blue-200 bg-blue-50 text-blue-600 hover:bg-blue-100 hover:border-blue-300 transition-colors text-[10px] font-bold shadow-sm flex items-center"
+                        >
+                          Edit
+                        </button>
+                      )}
                       <div className="w-7 h-7 flex items-center justify-center rounded-lg bg-transparent text-slate-400 group-hover:bg-blue-50 group-hover:text-blue-600 transition-colors">
                         <ChevronRight size={14} />
                       </div>
@@ -563,12 +623,13 @@ const VerticalTable = ({ data, onClick, totalCount }: { data: DirectPurchaseData
             })}
           </tbody>
         </table>
+        {loadingMore && <div className="py-4 text-center text-xs text-slate-500">Loading more...</div>}
       </div>
 
       {/* Footer */}
       <div className="border-t border-slate-50 px-4 py-2 flex items-center justify-between bg-white shrink-0">
         <span className="text-[11px] text-slate-400 font-medium">
-          {data.length} of {totalCount} purchase{totalCount !== 1 ? "s" : ""}
+          {data.length} {totalCount > 0 ? `of ${totalCount}` : ''} purchase{data.length !== 1 ? "s" : ""}
         </span>
       </div>
     </div>
@@ -636,53 +697,121 @@ const PurchaseHistory = () => {
     return () => setActions(null);
   }, [setActions, isCleanMode]);
 
-  const [allPurchases, setAllPurchases] = useState<DirectPurchaseData[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(searchTerm), 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
   const [viewMode, setViewMode] = useState<ViewMode>("vertical");
   const navigate = useNavigate();
 
   const [filterType, setFilterType] = useState("");
   const [filterVendor, setFilterVendor] = useState("");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
 
-  const vendorsList = useMemo(() => Array.from(new Set(allPurchases.map(p => p.vendor))), [allPurchases]);
-  const activeFiltersCount = [filterType, filterVendor].filter(Boolean).length;
+  const activeFiltersCount = [filterType, filterVendor, fromDate, toDate].filter(Boolean).length;
 
   const resetFilters = () => {
     setFilterType("");
     setFilterVendor("");
+    setFromDate("");
+    setToDate("");
+    setSearchTerm("");
   };
 
-  useEffect(() => {
-    const load = async () => {
-      const [direct] = await Promise.all([
-        getData(ENDPOINTS.PURCHASES, { view: "PURCHASE_VIEW", shop_id: SHOP_ID, limit: "50", offset: "1" }),
-      ]);
-      const toList = (res: any): PurchaseRecord[] =>
-        res ? (Array.isArray(res.data) ? res.data : [res.data]) : [];
-      setAllPurchases([...toList(direct)].map(toDisplayData));
+  const fetchPage = useCallback(async (limit: number, offset: number, filters: any) => {
+    const params: any = {
+      view: "PURCHASE_VIEW",
+      shop_id: SHOP_ID,
+      limit: limit.toString(),
+      offset: offset.toString()
     };
-    load();
-  }, []);
+    if (filters.search) params.search = filters.search;
+    if (filters.type) params.type = filters.type;
+    if (filters.supplier_id) params.supplier_id = filters.supplier_id;
+    if (filters.fromDate) params.from_date = filters.fromDate;
+    if (filters.toDate) params.to_date = filters.toDate;
+
+    const res = await getData(ENDPOINTS.PURCHASES, params);
+    
+    const itemsRaw = res ? (Array.isArray(res?.data) ? res.data : (res?.data?.purchases ?? res?.data?.datas ?? [])) : [];
+    const parsedItems = itemsRaw.map(toDisplayData);
+
+    return {
+      items: parsedItems,
+      hasMore: itemsRaw.length === limit,
+      stats: res?.data?.overall_stats,
+      total: res?.data?.total_count || 0
+    };
+  }, [getData]);
+
+  const filters = useMemo(() => ({
+    search: debouncedSearch,
+    type: filterType,
+    supplier_id: filterVendor,
+    fromDate,
+    toDate
+  }), [debouncedSearch, filterType, filterVendor, fromDate, toDate]);
+
+  const { items, loading, loadingMore, stats: overallStats, totalCount, lastElementRef } = useInfiniteScroll<DirectPurchaseData, any>({
+    fetchPage,
+    filters,
+    limit: 50
+  });
+
+  const filtered = items as DirectPurchaseData[];
+
+
 
   const handleCardClick = (po: DirectPurchaseData) => {
     navigate(`/purchase/detail/${po.id}`, { state: { po } });
   };
 
-  const filtered = allPurchases.filter((po) => {
-    const matchesSearch = po.poNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      po.vendor.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesType = !filterType || po.purchaseType === filterType;
-    const matchesVendor = !filterVendor || po.vendor === filterVendor;
-    return matchesSearch && matchesType && matchesVendor;
-  });
+  const handleEditClick = (po: DirectPurchaseData) => {
+    navigate(`/purchase/edit/${po.id}`);
+  };
 
   return (
     <>
       <style>{STYLES}</style>
 
       <div className="flex-1 flex flex-col min-h-0 gap-2.5 font-sans w-full overflow-hidden relative">
-        {!isCleanMode && <div className="flex-none"><DirectHeader /></div>}
+        {/* ── KPI Row ── */}
+        {!isCleanMode && overallStats && (
+          <div className="flex gap-3 pb-1 overflow-x-auto scrollbar-none">
+            <StatCard
+              label="Total Purchase"
+              value={(overallStats.total_purchase_value || 0).toLocaleString()}
+              prefix="₹"
+              icon={<ReceiptText size={18} />}
+              iconBg="bg-blue-50"
+              iconColor="text-blue-600"
+              subValue={`${overallStats.total_purchase_count || 0} Orders`}
+            />
+            <StatCard
+              label="Pending Payment"
+              value={(overallStats.pending_value ?? overallStats.outstanding_value ?? 0).toLocaleString()}
+              prefix="₹"
+              icon={<Calendar size={18} />}
+              iconBg="bg-amber-50"
+              iconColor="text-amber-500"
+              subValue={`${overallStats.pending_count ?? overallStats.outstanding_counts ?? 0} Pending`}
+            />
+            <StatCard
+              label="Completed Payment"
+              value={(overallStats.completed_value ?? overallStats.complete_value ?? 0).toLocaleString()}
+              prefix="₹"
+              icon={<Package size={18} />}
+              iconBg="bg-emerald-50"
+              iconColor="text-emerald-600"
+              subValue={`${overallStats.completed_count ?? overallStats.complete_counts ?? 0} Completed`}
+            />
+          </div>
+        )}
 
         {/* ── Toolbar ── */}
         <div className="bg-white border border-slate-100 rounded-lg p-1.5 px-2.5 flex flex-nowrap items-center gap-1.5 shadow-sm overflow-x-auto scrollbar-none">
@@ -749,36 +878,69 @@ const PurchaseHistory = () => {
 
             <div className="space-y-1.5">
               <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Vendor</label>
-              <ReusableSelect
-                options={[
-                  { label: "All Vendors", value: "" },
-                  ...vendorsList.map(vendor => ({ label: vendor, value: vendor }))
-                ]}
+              <SearchSelect
+                labelKey="name"
+                valueKey="id"
+                fetchOptions={async (q) => {
+                  const { supplierApi } = await import("@/services/api/supplier");
+                  return await supplierApi.searchSuppliers(q);
+                }}
+                options={filterVendor ? [{ id: filterVendor, name: "Selected Vendor" }] : []}
                 value={filterVendor}
-                onValueChange={setFilterVendor}
-                placeholder="Vendor"
+                onChange={(val) => setFilterVendor(val ? String(val) : "")}
+                placeholder="Search Supplier..."
+                className="w-full h-9 bg-slate-50 border border-slate-200"
               />
+            </div>
+
+            <div className="flex items-center gap-2">
+              <div className="space-y-1.5 flex-1">
+                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">From</label>
+                <input
+                  type="date"
+                  value={fromDate}
+                  onChange={e => setFromDate(e.target.value)}
+                  className="w-full h-9 px-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-750 focus:outline-none focus:border-slate-300 focus:bg-white transition-colors"
+                />
+              </div>
+              <div className="space-y-1.5 flex-1">
+                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">To</label>
+                <input
+                  type="date"
+                  value={toDate}
+                  onChange={e => setToDate(e.target.value)}
+                  className="w-full h-9 px-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-750 focus:outline-none focus:border-slate-300 focus:bg-white transition-colors"
+                />
+              </div>
             </div>
           </div>
         </RightSidebarFilter>
 
         {/* ── Content ── */}
-        {filtered.length === 0 ? (
+        {loading && filtered.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20 text-zinc-400">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-3"></div>
+            <p className="text-sm font-medium">Loading purchases...</p>
+          </div>
+        ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-zinc-400">
             <ReceiptText size={32} className="mb-3 opacity-30" />
             <p className="text-sm font-medium">No purchase orders found</p>
-            <p className="text-xs mt-1">Try adjusting your search term</p>
+            <p className="text-xs mt-1">Try adjusting your filters</p>
           </div>
         ) : viewMode === "grid" ? (
           <div className="overflow-x-auto overflow-y-auto bg-white border border-slate-100 rounded-lg shadow-sm p-4 flex-1 min-h-0">
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-              {filtered.map((po) => (
-                <GridCard key={po.id} po={po} onClick={() => handleCardClick(po)} />
+              {filtered.map((po, index) => (
+                <div key={po.id} ref={index === filtered.length - 1 ? lastElementRef : null}>
+                  <GridCard po={po} onClick={() => handleCardClick(po)} onEdit={handleEditClick} />
+                </div>
               ))}
             </div>
+            {loadingMore && <div className="py-4 text-center text-xs text-slate-500">Loading more...</div>}
           </div>
         ) : (
-          <VerticalTable data={filtered} onClick={handleCardClick} totalCount={allPurchases.length} />
+          <VerticalTable data={filtered} onClick={handleCardClick} onEdit={handleEditClick} totalCount={totalCount || filtered.length} lastElementRef={lastElementRef} loadingMore={loadingMore} />
         )}
       </div>
     </>

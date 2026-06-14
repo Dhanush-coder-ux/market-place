@@ -49,9 +49,32 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
   initialName = "",
   onSuccess,
 }) => {
-  const { postData } = useApi();
+  const { postData, getData } = useApi();
   const { showToast } = useToast();
   const [submitting, setSubmitting] = useState(false);
+  const [customCategories, setCustomCategories] = useState<string[]>([]);
+
+  useEffect(() => {
+    const fetchCustomCategories = async () => {
+      try {
+        const res = await getData(`${ENDPOINTS.UTILITIES}/dropdowns/custom/by/name/${SHOP_ID}/categories`);
+        if (res?.data?.values) {
+          const parsedValues = typeof res.data.values === 'string' 
+            ? JSON.parse(res.data.values) 
+            : res.data.values;
+          if (Array.isArray(parsedValues)) {
+            setCustomCategories(parsedValues);
+          }
+        }
+      } catch (e) {}
+    };
+    fetchCustomCategories();
+  }, [getData]);
+
+  const allCategories = React.useMemo(() => {
+    const combined = [...CATEGORIES, ...customCategories];
+    return Array.from(new Set(combined));
+  }, [customCategories]);
 
   // --- Form State ---
   const [form, setForm] = useState({
@@ -135,7 +158,7 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
               <ReusableSelect
                 value={form.category}
                 onValueChange={(val) => setForm(p => ({ ...p, category: val }))}
-                options={CATEGORIES.map(c => ({ label: c, value: c }))}
+                options={allCategories.map(c => ({ label: c, value: c }))}
               />
             </div>
             <div className="space-y-1.5">

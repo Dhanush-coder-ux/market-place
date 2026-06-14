@@ -3,9 +3,8 @@ import { Trash2, Package, Plus, RotateCcw, Minus, Search, Barcode } from "lucide
 import { v4 as uuidv4 } from "uuid";
 import { BillingItem, InventoryItem, ProductVariant } from "../types";
 import ProductSelectionModal from "./ProductSelectionModel";
-import { useApi } from "@/context/ApiContext";
-import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 import { useToast } from "@/context/ToastContext";
+import { inventoryApi } from "@/services/api/inventory";
 
 interface BillingTableProps {
   items: BillingItem[];
@@ -89,7 +88,6 @@ const QtyAdjuster = ({
 
 // ─── Main BillingTable Component ──────────────────────────────────────────────
 const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => {
-  const { getData } = useApi();
   const { showToast } = useToast();
   const [modalOpen, setModalOpen] = useState(false);
   const [pendingProduct, setPendingProduct] = useState<InventoryItem | null>(null);
@@ -105,90 +103,22 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Fetch inventory callback
+  // Fetch inventory callback via the search route
   const fetchInventory = useCallback(async (q: string) => {
     setLoading(true);
     try {
-      const params: any = { limit: "15", offset: "1", shop_id: SHOP_ID, is_active: "true" };
-      if (q.trim()) {
-        params.q = q;
-      }
-      const res = await getData(ENDPOINTS.INVENTORIES, params);
-      const data = res?.data ? (Array.isArray(res.data) ? res.data : [res.data]) : [];
-      const mapped = data.map((p: any) => {
-        const candidateSources = [
-          p.variants,
-          p.varients,
-          p.combinations,
-          p.datas?.variants,
-          p.datas?.varients,
-          p.datas?.combinations,
-          p.datas?.datas?.variants,
-          p.datas?.datas?.combinations
-        ].filter(arr => Array.isArray(arr) && arr.length > 0);
-
-        let rawVariants: any[] = [];
-        if (candidateSources.length > 0) {
-          rawVariants = candidateSources.reduce((max, current) => current.length > max.length ? current : max, candidateSources[0]);
-        }
-
-        let mappedVariants = rawVariants.map((v: any) => {
-          const combDatas = v.datas || {};
-          const attributes = v.attributes || combDatas.attributes || combDatas.datas?.attributes || {};
-          let variantLabel = v.name || combDatas.name;
-          if (attributes && Object.keys(attributes).length > 0) {
-            variantLabel = Object.values(attributes).join(' / ');
-          } else if (v.barcode && v.barcode !== combDatas.barcode) {
-            variantLabel = v.barcode;
-          }
-          if (!variantLabel) {
-            variantLabel = "Standard Variant";
-          }
-          return {
-            ...v,
-            id: v.id || String(Math.random()),
-            name: variantLabel,
-            price: v.sell_price || v.price || combDatas.sell_price || combDatas.price || p.sell_price || p.price || 0,
-            stock: v.stocks !== undefined ? v.stocks : (v.stock !== undefined ? v.stock : (combDatas.stocks !== undefined ? combDatas.stocks : 0)),
-            serialnoId: v.serial_numbers?.id || v.serial_number?.id || v.batches?.[0]?.serial_numbers?.id || combDatas.serial_numbers?.id || p.serial_number?.id,
-            availableSerials: v.serial_numbers?.serial_numbers || v.serial_number?.serial_numbers || v.batches?.[0]?.serial_numbers?.serial_numbers || combDatas.serial_numbers?.serial_numbers || p.serial_number?.serial_numbers || [],
-            batchId: v.batches?.[0]?.id || v.batchId || combDatas.batches?.[0]?.id,
-          };
-        });
-
-        if (mappedVariants.length === 0 && p.has_batch && Array.isArray(p.batches) && p.batches.length > 0) {
-          mappedVariants = p.batches.map((b: any) => ({
-            id: b.id,
-            name: `Batch: ${b.batch_no || b.id.slice(0, 8)}`,
-            price: b.sell_price || p.sell_price || 0,
-            stock: b.stocks || 0,
-            serialnoId: b.serial_numbers?.id || p.serial_number?.id,
-            availableSerials: b.serial_numbers?.serial_numbers || p.serial_number?.serial_numbers || [],
-            batchId: b.id,
-            expiryDate: b.expiry_date,
-            manufacturingDate: b.manufacturing_date,
-          }));
-        }
-
-        return {
-          ...p,
-          product_name: p.name || "Unknown Product",
-          product_barcode: p.barcode || "N/A",
-          category: p.category || "Other",
-          displayName: `${p.name || "Unknown"} • ${p.category || 'Other'}`,
-          barcodeDisplay: p.barcode || 'N/A',
-          variants: mappedVariants,
-          requireSerial: p.has_serialno || false,
-          batchTracking: p.has_batch || false,
-          manufacturingDate: p.batches?.[0]?.manufacturing_date,
-          expiryDate: p.batches?.[0]?.expiry_date,
-          price: p.sell_price || 0,
-          stocks: p.stocks || 0,
-          serialnoId: p.serial_number?.id || p.batches?.[0]?.serial_numbers?.id,
-          availableSerials: p.serial_number?.serial_numbers || p.batches?.[0]?.serial_numbers?.serial_numbers || [],
-          batchId: p.batches?.[0]?.id,
-          gst: parseInt(String(p.gst || p.datas?.gst || "18").replace("%", ""))
-        };
-      });
+      const data = await inventoryApi.searchInventories(q, true);
+      const mapped = data.map((p: any) => ({
+        ...p,
+        product_name: p.name || "Unknown Product",
+        product_barcode: p.barcode || "N/A",
+        category: p.category || "Other",
+        displayName: `${p.name || "Unknown"} • ${p.category || 'Other'}`,
+        barcodeDisplay: p.barcode || 'N/A',
+        price: p.sell_price || 0,
+        stocks: p.stocks || 0,
+        gst: parseInt(String(p.gst || p.datas?.gst || "18").replace("%", ""))
+      }));
       setSearchResults(mapped);
       setActiveIndex(0);
     } catch (err) {
@@ -197,172 +127,182 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
     } finally {
       setLoading(false);
     }
-  }, [getData]);
+  }, []);
 
   // Product Selection handler
-  const handleProductSelect = useCallback((selectedProduct: any) => {
+  const handleProductSelect = useCallback(async (selectedProduct: any) => {
     if (!selectedProduct) return;
 
-    const hasVariants = selectedProduct.variants && selectedProduct.variants.length > 0;
-    const requiresSerial = selectedProduct.requireSerial;
+    setLoading(true);
+    try {
+      // Fetch full product details
+      const response = await inventoryApi.getInventoryById(selectedProduct.id);
+      const fullProduct = response?.data || response;
+      
+      if (!fullProduct || !fullProduct.id) {
+        showToast("Failed to fetch full product details", "error");
+        return;
+      }
 
-    // Simple product: add directly
-    if (!requiresSerial && !hasVariants && !selectedProduct.batchTracking) {
-      const defaultVariant: ProductVariant = {
-        id: "default",
-        name: "Standard",
-        price: selectedProduct.price || 0,
-        stock: selectedProduct.stocks || 0,
-        serialnoId: selectedProduct.serialnoId,
-        batchId: selectedProduct.batchId,
-        availableSerials: selectedProduct.availableSerials,
+      // Map variants the same way ProductSelectionModal expects
+      let rawVariants: any[] = [];
+      const candidateSources = [
+        fullProduct.variants,
+        fullProduct.varients,
+        fullProduct.combinations,
+        fullProduct.datas?.variants,
+        fullProduct.datas?.varients,
+        fullProduct.datas?.combinations
+      ].filter(arr => Array.isArray(arr) && arr.length > 0);
+
+      if (candidateSources.length > 0) {
+        rawVariants = candidateSources.reduce((max, current) => current.length > max.length ? current : max, candidateSources[0]);
+      }
+
+      let mappedVariants = rawVariants.map((v: any) => {
+        const combDatas = v.datas || {};
+        const attributes = v.attributes || combDatas.attributes || combDatas.datas?.attributes || {};
+        let variantLabel = v.name || combDatas.name;
+        if (attributes && Object.keys(attributes).length > 0) {
+          variantLabel = Object.values(attributes).join(' / ');
+        } else if (v.barcode && v.barcode !== combDatas.barcode) {
+          variantLabel = v.barcode;
+        }
+        if (!variantLabel) {
+          variantLabel = "Standard Variant";
+        }
+        return {
+          ...v,
+          id: v.id || String(Math.random()),
+          name: variantLabel,
+          price: v.sell_price || v.price || combDatas.sell_price || combDatas.price || fullProduct.sell_price || 0,
+          stock: v.stocks !== undefined ? v.stocks : (v.stock !== undefined ? v.stock : (combDatas.stocks !== undefined ? combDatas.stocks : 0)),
+          serialnoId: v.serial_numbers?.id || v.serial_number?.id || v.batches?.[0]?.serial_numbers?.id || combDatas.serial_numbers?.id || fullProduct.serial_number?.id || fullProduct.serials?.id,
+          availableSerials: v.serial_numbers?.serial_numbers || v.serial_number?.serial_numbers || v.batches?.[0]?.serial_numbers?.serial_numbers || combDatas.serial_numbers?.serial_numbers || fullProduct.serial_number?.serial_numbers || fullProduct.serials?.serial_numbers || [],
+          batchId: v.batches?.[0]?.id || v.batchId || combDatas.batches?.[0]?.id,
+        };
+      });
+
+      if (mappedVariants.length === 0 && fullProduct.has_batch && Array.isArray(fullProduct.batches) && fullProduct.batches.length > 0) {
+        mappedVariants = fullProduct.batches.map((b: any) => ({
+          id: b.id,
+          name: `Batch: ${b.batch_no || b.id.slice(0, 8)}`,
+          price: b.sell_price || fullProduct.sell_price || 0,
+          stock: b.stocks || 0,
+          serialnoId: b.serial_numbers?.id || fullProduct.serial_number?.id || fullProduct.serials?.id,
+          availableSerials: b.serial_numbers?.serial_numbers || fullProduct.serial_number?.serial_numbers || fullProduct.serials?.serial_numbers || [],
+          batchId: b.id,
+          expiryDate: b.expiry_date,
+          manufacturingDate: b.manufacturing_date,
+        }));
+      }
+
+      const pMapped = {
+        ...fullProduct,
+        product_name: fullProduct.name || "Unknown Product",
+        product_barcode: fullProduct.barcode || "N/A",
+        category: fullProduct.category || "Other",
+        variants: mappedVariants,
+        requireSerial: fullProduct.has_serialno || false,
+        batchTracking: fullProduct.has_batch || false,
+        manufacturingDate: fullProduct.batches?.[0]?.manufacturing_date,
+        expiryDate: fullProduct.batches?.[0]?.expiry_date,
+        price: fullProduct.sell_price || 0,
+        stocks: fullProduct.stocks || 0,
+        serialnoId: fullProduct.serial_number?.id || fullProduct.serials?.id || fullProduct.batches?.[0]?.serial_numbers?.id,
+        availableSerials: fullProduct.serial_number?.serial_numbers || fullProduct.serials?.serial_numbers || fullProduct.batches?.[0]?.serial_numbers?.serial_numbers || [],
+        batchId: fullProduct.batches?.[0]?.id,
+        gst: parseInt(String(fullProduct.gst || fullProduct.datas?.gst || "18").replace("%", ""))
       };
 
-      // Check if product is already in the cart
-      const existingIndex = items.findIndex((item) =>
-        item.inventoryId === selectedProduct.id &&
-        !item.variantId &&
-        item.batchId === selectedProduct.batchId
-      );
+      const hasVariants = pMapped.variants && pMapped.variants.length > 0;
+      const requiresSerial = pMapped.requireSerial;
+      const hasBatches = pMapped.batchTracking;
 
-      let updatedItems: BillingItem[];
+      // Simple product: add directly
+      if (!requiresSerial && !hasVariants && !hasBatches) {
+        const defaultVariant: ProductVariant = {
+          id: "default",
+          name: "Standard",
+          price: pMapped.price || 0,
+          stock: pMapped.stocks || 0,
+          serialnoId: pMapped.serialnoId,
+          batchId: pMapped.batchId,
+          availableSerials: pMapped.availableSerials,
+        };
 
-      if (existingIndex !== -1) {
-        updatedItems = items.map((item, idx) => {
-          if (idx === existingIndex) {
-            let newQty = item.qty + 1;
-            if (typeof item.maxStock === 'number') {
-              newQty = Math.min(newQty, item.maxStock);
+        const existingIndex = items.findIndex((item) =>
+          item.inventoryId === pMapped.id &&
+          !item.variantId &&
+          item.batchId === pMapped.batchId
+        );
+
+        let updatedItems: BillingItem[];
+
+        if (existingIndex !== -1) {
+          updatedItems = items.map((item, idx) => {
+            if (idx === existingIndex) {
+              let newQty = item.qty + 1;
+              if (typeof item.maxStock === 'number') {
+                newQty = Math.min(newQty, item.maxStock);
+              }
+              return { ...item, qty: newQty, tprice: newQty * item.price };
             }
-            return { ...item, qty: newQty, tprice: newQty * item.price };
-          }
-          return item;
-        });
+            return item;
+          });
+        } else {
+          updatedItems = [
+            ...items,
+            {
+              id: uuidv4(),
+              inventoryId: pMapped.id,
+              code: pMapped.product_barcode,
+              name: pMapped.product_name,
+              price: defaultVariant.price,
+              qty: 1,
+              tprice: defaultVariant.price,
+              variantId: null,
+              batchId: pMapped.batchId,
+              serialnoId: pMapped.serialnoId,
+              requireSerial: false,
+              batchTracking: pMapped.batchTracking,
+              manufacturingDate: pMapped.manufacturingDate,
+              expiryDate: pMapped.expiryDate,
+              maxStock: defaultVariant.stock,
+              gst: pMapped.gst,
+              _product: pMapped,
+            }
+          ];
+        }
+        onItemsChange(updatedItems);
+        setSearchQuery("");
+        setDropdownOpen(false);
       } else {
-        updatedItems = [
-          ...items,
-          {
-            id: uuidv4(),
-            inventoryId: selectedProduct.id,
-            code: selectedProduct.product_barcode,
-            name: selectedProduct.product_name,
-            price: defaultVariant.price,
-            qty: 1,
-            tprice: defaultVariant.price,
-            variantId: null,
-            batchId: selectedProduct.batchId,
-            serialnoId: selectedProduct.serialnoId,
-            requireSerial: false,
-            batchTracking: selectedProduct.batchTracking,
-            manufacturingDate: selectedProduct.manufacturingDate,
-            expiryDate: selectedProduct.expiryDate,
-            maxStock: defaultVariant.stock,
-            gst: selectedProduct.gst,
-            _product: selectedProduct,
-          }
-        ];
+        // Has variants / batch / serials -> open modal
+        setPendingProduct(pMapped);
+        setModalOpen(true);
       }
-      onItemsChange(updatedItems);
-      setSearchQuery("");
-      setDropdownOpen(false);
-      return;
+    } catch (err) {
+      console.error("Failed to fetch full product details:", err);
+      showToast("Failed to fetch product details", "error");
+    } finally {
+      setLoading(false);
     }
-
-    // Has variants / batch / serials -> open modal
-    setPendingProduct(selectedProduct);
-    setModalOpen(true);
-  }, [items, onItemsChange]);
+  }, [items, onItemsChange, showToast]);
 
   // Instant scanner lookup trigger
   const triggerInstantLookup = useCallback(async (query: string) => {
     if (!query) return;
     setLoading(true);
     try {
-      const params = { q: query, limit: "5", offset: "1", shop_id: SHOP_ID, is_active: "true" };
-      const res = await getData(ENDPOINTS.INVENTORIES, params);
-      const data = res?.data ? (Array.isArray(res.data) ? res.data : [res.data]) : [];
-      if (data.length > 0) {
+      const data = await inventoryApi.searchInventories(query, true);
+      if (data && data.length > 0) {
         // Find exact barcode match or default to first result
         const matchedProduct = data.find(
           (p: any) => p.barcode === query || p.name === query
         ) || data[0];
 
-        const p = matchedProduct;
-        const candidateSources = [
-          p.variants,
-          p.varients,
-          p.combinations,
-          p.datas?.variants,
-          p.datas?.varients,
-          p.datas?.combinations,
-          p.datas?.datas?.variants,
-          p.datas?.datas?.combinations
-        ].filter(arr => Array.isArray(arr) && arr.length > 0);
-
-        let rawVariants: any[] = [];
-        if (candidateSources.length > 0) {
-          rawVariants = candidateSources.reduce((max, current) => current.length > max.length ? current : max, candidateSources[0]);
-        }
-
-        let mappedVariants = rawVariants.map((v: any) => {
-          const combDatas = v.datas || {};
-          const attributes = v.attributes || combDatas.attributes || combDatas.datas?.attributes || {};
-          let variantLabel = v.name || combDatas.name;
-          if (attributes && Object.keys(attributes).length > 0) {
-            variantLabel = Object.values(attributes).join(' / ');
-          } else if (v.barcode && v.barcode !== combDatas.barcode) {
-            variantLabel = v.barcode;
-          }
-          if (!variantLabel) {
-            variantLabel = "Standard Variant";
-          }
-          return {
-            ...v,
-            id: v.id || String(Math.random()),
-            name: variantLabel,
-            price: v.sell_price || v.price || combDatas.sell_price || combDatas.price || p.sell_price || p.price || 0,
-            stock: v.stocks !== undefined ? v.stocks : (v.stock !== undefined ? v.stock : (combDatas.stocks !== undefined ? combDatas.stocks : 0)),
-            serialnoId: v.serial_numbers?.id || v.serial_number?.id || v.batches?.[0]?.serial_numbers?.id || combDatas.serial_numbers?.id || p.serial_number?.id,
-            availableSerials: v.serial_numbers?.serial_numbers || v.serial_number?.serial_numbers || v.batches?.[0]?.serial_numbers?.serial_numbers || combDatas.serial_numbers?.serial_numbers || p.serial_number?.serial_numbers || [],
-            batchId: v.batches?.[0]?.id || v.batchId || combDatas.batches?.[0]?.id,
-          };
-        });
-
-        if (mappedVariants.length === 0 && p.has_batch && Array.isArray(p.batches) && p.batches.length > 0) {
-          mappedVariants = p.batches.map((b: any) => ({
-            id: b.id,
-            name: `Batch: ${b.batch_no || b.id.slice(0, 8)}`,
-            price: b.sell_price || p.sell_price || 0,
-            stock: b.stocks || 0,
-            serialnoId: b.serial_numbers?.id || p.serial_number?.id,
-            availableSerials: b.serial_numbers?.serial_numbers || p.serial_number?.serial_numbers || [],
-            batchId: b.id,
-            expiryDate: b.expiry_date,
-            manufacturingDate: b.manufacturing_date,
-          }));
-        }
-
-        const mapped = {
-          ...p,
-          product_name: p.name || "Unknown Product",
-          product_barcode: p.barcode || "N/A",
-          category: p.category || "Other",
-          displayName: `${p.name || "Unknown"} • ${p.category || 'Other'}`,
-          barcodeDisplay: p.barcode || 'N/A',
-          variants: mappedVariants,
-          requireSerial: p.has_serialno || false,
-          batchTracking: p.has_batch || false,
-          manufacturingDate: p.batches?.[0]?.manufacturing_date,
-          expiryDate: p.batches?.[0]?.expiry_date,
-          price: p.sell_price || 0,
-          stocks: p.stocks || 0,
-          serialnoId: p.serial_number?.id || p.batches?.[0]?.serial_numbers?.id,
-          availableSerials: p.serial_number?.serial_numbers || p.batches?.[0]?.serial_numbers?.serial_numbers || [],
-          batchId: p.batches?.[0]?.id,
-          gst: parseInt(String(p.gst || p.datas?.gst || "18").replace("%", ""))
-        };
-
-        handleProductSelect(mapped);
+        handleProductSelect(matchedProduct);
       } else {
         showToast("Product not found for scanned barcode", "error");
       }
@@ -371,7 +311,7 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
     } finally {
       setLoading(false);
     }
-  }, [getData, handleProductSelect, showToast]);
+  }, [handleProductSelect, showToast]);
 
   // Debounced query trigger
   useEffect(() => {
@@ -650,10 +590,14 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
                   >
                     <div className="flex items-center gap-3.5 min-w-0">
                       <div 
-                        className="w-9 h-9 rounded-lg flex items-center justify-center text-white text-[11px] font-black shrink-0 shadow-sm"
+                        className="w-9 h-9 rounded-lg flex items-center justify-center text-white text-[11px] font-black shrink-0 shadow-sm overflow-hidden"
                         style={{ backgroundColor: avatarBg }}
                       >
-                        {initials}
+                        {(product.images && product.images.length > 0) || (product.datas?.images && product.datas.images.length > 0) ? (
+                          <img src={product.images?.[0] || product.datas?.images?.[0]} alt={product.product_name} className="w-full h-full object-cover" />
+                        ) : (
+                          initials
+                        )}
                       </div>
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">
@@ -727,10 +671,14 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
                   {/* Left Side: Avatar & Details */}
                   <div className="flex items-center gap-3.5 min-w-0 flex-1">
                     <div 
-                      className="w-10 h-10 rounded-xl flex items-center justify-center text-white text-[12px] font-black shrink-0 shadow-sm"
+                      className="w-10 h-10 rounded-xl flex items-center justify-center text-white text-[12px] font-black shrink-0 shadow-sm overflow-hidden"
                       style={{ backgroundColor: getAvatarBg(item.name) }}
                     >
-                      {getInitials(item.name)}
+                      {(item._product?.images && item._product.images.length > 0) || (item._product?.datas?.images && item._product.datas.images.length > 0) ? (
+                        <img src={item._product?.images?.[0] || item._product?.datas?.images?.[0]} alt={item.name} className="w-full h-full object-cover" />
+                      ) : (
+                        getInitials(item.name)
+                      )}
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 flex-wrap">

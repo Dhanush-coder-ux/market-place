@@ -18,6 +18,7 @@ import Input from "@/components/ui/Input";
 import { GradientButton } from "@/components/ui/GradientButton";
 import { useToast } from "@/context/ToastContext";
 import { InlineSerialManager } from "@/components/common/InlineSerialManager";
+import { useQuickCreate } from "@/features/common/QuickCreate/QuickCreateContext";
 
 interface InventoryItemsCardProps {
   products: any[];
@@ -56,6 +57,7 @@ export const InventoryItemsCard = ({
   const [autoExpanded, setAutoExpanded] = useState<Set<string>>(new Set());
 
   const { showToast } = useToast();
+  const { openQuickCreate } = useQuickCreate();
 
   useEffect(() => {
     products.forEach((p, idx) => {
@@ -154,7 +156,8 @@ export const InventoryItemsCard = ({
       const allVariants = baseOpt.variants || baseOpt.varients || d.combinations || d.varients || d.variants || [];
       const variantData = allVariants.find((v: any) => v.id === selectedId);
 
-      const rawSerials = variantData?.serial_numbers || variantData?.serial_number || variantData?.datas?.serial_numbers || variantData?.datas?.serial_number || baseOpt.serial_numbers || baseOpt.serial_number || baseOpt.datas?.serial_numbers || baseOpt.datas?.serial_number;
+      const rawSerials = variantData?.serial_numbers || variantData?.serial_number || variantData?.datas?.serial_numbers || variantData?.datas?.serial_number || baseOpt.serials || baseOpt.serial_numbers || baseOpt.serial_number || baseOpt.datas?.serial_numbers || baseOpt.datas?.serial_number;
+      
       const parsedSerials = Array.isArray(rawSerials)
         ? rawSerials
         : (rawSerials?.serial_numbers || rawSerials?.serial_number || []);
@@ -174,7 +177,7 @@ export const InventoryItemsCard = ({
         unit: getVal("unit", "pc"),
         category: getVal("category"),
         variant: variantItem.name,
-        sku: variantItem.sku || getVal("barcode", getVal("sku")),
+        sku: getVal("ui_id", variantItem.sku || getVal("barcode", getVal("sku"))),
         batchTracking: hasBatchTracking,
         serialTracking: hasSerialTracking,
         existingSerials: parsedSerials,
@@ -187,7 +190,7 @@ export const InventoryItemsCard = ({
       };
 
       // If it has batches, show batch modal (Suppressed for PURCHASE type)
-      if (hasBatchTracking && (type !== "PURCHASE" || purchaseType === "DIRECT")) {
+      if (hasBatchTracking && (type !== "PURCHASE" || purchaseType !== "PO_CREATE")) {
         const batches = variantData?.batches || variantData?.datas?.batches || baseOpt.batches || d.batches || [];
         const isPoCreate = purchaseType === 'PO_CREATE';
 
@@ -227,12 +230,14 @@ export const InventoryItemsCard = ({
       ? batch.serial_numbers
       : Array.isArray(batch.serial_number)
         ? batch.serial_number
-        : (batch.serial_numbers?.serial_numbers || batch.serial_number?.serial_numbers || []);
+        : Array.isArray(batch.serials)
+          ? batch.serials
+          : (batch.serial_numbers?.serial_numbers || batch.serial_number?.serial_numbers || batch.serials?.serial_numbers || []);
 
     updateProductFields(rowIndex, {
       batchNum: batch.name || batch.batch_number,
       batch_id: batch.id,
-      serialno_id: batch.serial_numbers?.id || batch.serial_number?.id || products[rowIndex]?.serialno_id,
+      serialno_id: batch.serial_numbers?.id || batch.serial_number?.id || batch.serials?.id || products[rowIndex]?.serialno_id,
       existingSerials: batchSerials.length > 0 ? batchSerials : batchModal.existingSerials,
       manufacturingDate: (batch.manufacturing_date || batch.mfg_date) ? new Date(batch.manufacturing_date || batch.mfg_date).toISOString().split('T')[0] : "",
       expiryDate: batch.expiry_date ? new Date(batch.expiry_date).toISOString().split('T')[0] : "",
@@ -514,15 +519,26 @@ export const InventoryItemsCard = ({
                       {/* Product search */}
                       <td className="py-3 px-2 align-top">
                         <div className="flex flex-col gap-1.5">
-                          <SearchSelect
-                            labelKey="name"
-                            valueKey="id"
-                            fetchOptions={async (q) => await inventoryApi.searchInventories(q)}
-                            options={product.inventory_id ? [{ id: product.inventory_id, name: product.name }] as any[] : []}
-                            value={product.inventory_id}
-                            onCreateNew={onAddNewProduct}
-                            onChange={(val, opt: any) => {
-                              if (opt) {
+                          {(() => {
+                            const handleProductSelect = async (val: any, initialOpt: any) => {
+                              if (initialOpt) {
+                                let opt = initialOpt;
+                                // Always fetch full details if ID exists, because search API only returns a partial object
+                                // and maps missing properties (like has_variant) to false.
+                                if (opt.id) {
+                                  try {
+                                    const fullRes = await inventoryApi.getInventoryById(opt.id);
+                                    if (fullRes && fullRes.data) {
+                                      const prodData = Array.isArray(fullRes.data) ? fullRes.data[0] : fullRes.data;
+                                      if (prodData) {
+                                        opt = { ...opt, ...prodData };
+                                      }
+                                    }
+                                  } catch (err) {
+                                    console.error("Failed to fetch full inventory details", err);
+                                  }
+                                }
+                                
                                 const d = opt.datas || {};
                                 const get = (key: string, fallback: any = "") => opt[key] ?? d[key] ?? fallback;
 
@@ -540,10 +556,9 @@ export const InventoryItemsCard = ({
                                   }
                                 }
 
-                                const rawSerials = opt.serial_numbers || opt.serial_number || d.serial_numbers || d.serial_number;
+                                const rawSerials = opt.serials || opt.serial_numbers || opt.serial_number || d.serials || d.serial_numbers || d.serial_number;
                                 const existingSerials = Array.isArray(rawSerials) ? rawSerials : (rawSerials?.serial_numbers || rawSerials?.serial_number || []);
-                                const serialnoId = opt.serialno_id || d.serialno_id || rawSerials?.id || opt.serial_number?.id || d.serial_number?.id || opt.serial_numbers?.id || d.serial_numbers?.id;
-
+                                const serialnoId = opt.serialno_id || d.serialno_id || rawSerials?.id || opt.serials?.id || opt.serial_number?.id || d.serial_number?.id || opt.serial_numbers?.id || d.serial_numbers?.id;
 
                                 if (opt.is_variant) {
                                   if (!hasBatchTracking && !hasSerialTracking) {
@@ -562,7 +577,7 @@ export const InventoryItemsCard = ({
                                     costPrice: get("buy_price"),
                                     sellingPrice: get("sell_price"),
                                     taxGst: parseInt(get("gst", "18")) || 18,
-                                    sku: get("barcode", get("sku")),
+                                    sku: get("ui_id", get("barcode", get("sku"))),
                                     unit: get("unit", "pc"),
                                     category: get("category"),
                                     batchTracking: hasBatchTracking,
@@ -577,7 +592,7 @@ export const InventoryItemsCard = ({
                                     gstInfo: get("gst") || (parseInt(get("gst", "18")) || 18) + "%"
                                   });
 
-                                  if (hasBatchTracking && (type !== "PURCHASE" || purchaseType === "DIRECT")) {
+                                  if (hasBatchTracking && (type !== "PURCHASE" || purchaseType !== "PO_CREATE")) {
                                     const batches = opt.batches || d.batches || [];
                                     setBatchModal({
                                       isOpen: true,
@@ -591,8 +606,6 @@ export const InventoryItemsCard = ({
                                   }
                                   return;
                                 }
-
-
 
                                 if (purchaseType === 'PO_CREATE') {
                                   if (hasVariants && combinations.length === 0) {
@@ -617,7 +630,7 @@ export const InventoryItemsCard = ({
                                       costPrice: get("buy_price", get("costPrice")),
                                       sellingPrice: get("sell_price", get("sellingPrice")),
                                       taxGst: parseInt(get("gst", "18")) || 18,
-                                      sku: get("barcode", get("sku")),
+                                      sku: get("ui_id", get("barcode", get("sku"))),
                                       unit: get("unit", "pc"),
                                       category: get("category"),
                                       batchTracking: hasBatchTracking,
@@ -666,11 +679,12 @@ export const InventoryItemsCard = ({
                                     hasVariants: false,
                                     baseVariants: combinations,
                                     reorderPoint: get("reorder_point") !== "" ? get("reorder_point") : undefined,
+                                    storageLoc: get("storage_location") || get("location") || "",
                                     brand: get("brand"),
                                     gstInfo: get("gst") || (parseInt(get("gst", "18")) || 18) + "%"
                                   });
 
-                                  if (hasBatchTracking && (type !== "PURCHASE" || purchaseType === "DIRECT")) {
+                                  if (hasBatchTracking && (type !== "PURCHASE" || purchaseType !== "PO_CREATE")) {
                                     const batches = opt.batches || d.batches || [];
                                     setBatchModal({
                                       isOpen: true,
@@ -686,15 +700,35 @@ export const InventoryItemsCard = ({
                               } else {
                                 handleProductChange(index, "name", String(val));
                               }
-                            }}
-                            placeholder="Find or add product..."
-                            className="!h-10 text-sm"
-                          />
+                            };
+
+                            return (
+                              <SearchSelect
+                                labelKey="name"
+                                valueKey="id"
+                                fetchOptions={async (q) => await inventoryApi.searchInventories(q)}
+                                options={product.inventory_id ? [{ id: product.inventory_id, name: product.name }] as any[] : []}
+                                value={product.inventory_id}
+                                onCreateNew={(query) => {
+                                  if (openQuickCreate) {
+                                    openQuickCreate("PRODUCT", (newProduct: any) => {
+                                      handleProductSelect(newProduct.id, newProduct);
+                                    }, { name: query });
+                                  } else if (onAddNewProduct) {
+                                    onAddNewProduct(query);
+                                  }
+                                }}
+                                onChange={handleProductSelect}
+                                placeholder="Find or add product..."
+                                className="!h-10 text-sm"
+                              />
+                            );
+                          })()}
                           {hasProduct && (
                             <div className="flex flex-wrap items-center gap-1.5 px-1">
                               {product.variant && (
                                 <span className={`inline-flex items-center px-2 py-0.5 rounded bg-${themeColor}-50 text-${themeColor}-600 text-[9px] font-black border border-${themeColor}-100`}>
-                                  {product.variant}
+                                  {typeof product.variant === 'object' && product.variant !== null ? (product.variant.variant_name || product.variant.name) : product.variant}
                                 </span>
                               )}
                               {product.sku && (
@@ -707,7 +741,7 @@ export const InventoryItemsCard = ({
                                     ? "bg-amber-50 text-amber-700 border-amber-200"
                                     : "bg-rose-50/50 text-rose-600 border-rose-100/60 animate-pulse"
                                   }`}>
-                                  <Package size={9} /> {product.batchNum ? `Batch: ${product.batchNum}` : "Batch Details Required"}
+                                  <Package size={9} /> {product.batchNum ? `Batch: ${typeof product.batchNum === 'object' && product.batchNum !== null ? (product.batchNum.batch_name || product.batchNum.name) : product.batchNum}` : "Batch Details Required"}
                                 </span>
                               )}
                               {product.serialTracking && (
@@ -749,28 +783,34 @@ export const InventoryItemsCard = ({
 
                       {/* Qty / Unit */}
                       <td className="py-3 px-2 align-top">
-                        <div className="flex items-center justify-center">
+                        <div className="flex flex-col items-center justify-center gap-1.5">
                           <Input
                             type="number"
                             value={product.quantity as any}
                             onChange={(e) => handleProductChange(index, "quantity", e.target.value ? Number(e.target.value) : "")}
-                            className="!h-9 !w-24 !text-xs font-black rounded-lg border-slate-200 shadow-sm"
-                            rightIcon={<span className="text-[9px] text-slate-400 font-bold uppercase">{product.unit || 'pc'}</span>}
+                            className="!h-9 !w-24 !text-xs font-black rounded-lg border-slate-200 shadow-sm text-center !px-2"
                           />
+                          <span className="text-[9px] text-slate-500 font-bold uppercase bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200 max-w-[80px] truncate" title={product.unit || 'pc'}>
+                            {product.unit || 'pc'}
+                          </span>
                         </div>
                       </td>
 
                       {/* Buy Price */}
                       <td className="py-3 px-2 align-top">
                         <div className="flex flex-col">
-                          <Input
-                            type="number"
-                            value={product.costPrice as any}
-                            onChange={(e) => handleProductChange(index, "costPrice", e.target.value ? Number(e.target.value) : "")}
-                            className="!h-9 !text-xs font-black rounded-lg border-slate-200 shadow-sm min-w-[110px]"
-                            leftIcon={<span className="text-[10px] text-slate-400 font-black">₹</span>}
-                            rightIcon={<span className="text-[9px] text-slate-400 font-bold">/{product.unit || 'pc'}</span>}
-                          />
+                          <div className="flex items-center gap-1.5">
+                            <Input
+                              type="number"
+                              value={product.costPrice as any}
+                              onChange={(e) => handleProductChange(index, "costPrice", e.target.value ? Number(e.target.value) : "")}
+                              className="!h-9 !text-xs font-black rounded-lg border-slate-200 shadow-sm min-w-[90px] !pl-7 !pr-2"
+                              leftIcon={<span className="text-[10px] text-slate-400 font-black absolute left-1">₹</span>}
+                            />
+                            <span className="text-[9px] text-slate-400 font-bold whitespace-nowrap truncate max-w-[45px]" title={`/${product.unit || 'pc'}`}>
+                              /{product.unit || 'pc'}
+                            </span>
+                          </div>
                           {baseCost > 0 && (
                             <div className="text-[9px] text-slate-400 font-bold mt-1.5 leading-normal bg-blue-50/40 border border-blue-100/50 rounded-md px-2 py-1 select-none animate-in fade-in duration-200 flex flex-wrap gap-x-1 items-center">
                               <span>Base:</span>
@@ -904,7 +944,7 @@ export const InventoryItemsCard = ({
                             {/* Row 1: Batch & Serial Tracking */}
                             <div className="flex gap-4">
                               {/* Batch Section */}
-                              {(type !== "PURCHASE" || purchaseType === "DIRECT") && product.batchTracking && (
+                              {(type !== "PURCHASE" || purchaseType !== "PO_CREATE") && product.batchTracking && (
                                 <div className="flex-1 bg-white p-4 rounded-lg border border-amber-200 shadow-sm">
                                   <div className="flex items-center gap-2 mb-3">
                                     <Package size={14} className="text-amber-500" />
@@ -939,7 +979,7 @@ export const InventoryItemsCard = ({
                               )}
 
                               {/* Serial Section */}
-                              {(type !== "PURCHASE" || purchaseType === "DIRECT") && product.serialTracking && (
+                              {(type !== "PURCHASE" || purchaseType !== "PO_CREATE") && product.serialTracking && (
                                 <div className="flex-1 bg-white p-4 rounded-lg border border-blue-200 shadow-sm">
                                   <div className="flex items-center gap-2 mb-3">
                                     <Check size={14} className="text-blue-500" />

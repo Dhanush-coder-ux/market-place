@@ -74,7 +74,7 @@ const PURCHASE_COLUMNS: Column[] = [
     key: "id",
     label: "Reference",
     render: (_, row) => (
-      <span className="text-xs font-mono text-slate-500">{row.id.slice(0, 8)}…</span>
+      <span className="text-xs font-mono text-slate-500">{row.ui_id || row.id.slice(0, 8)}</span>
     ),
   },
 ];

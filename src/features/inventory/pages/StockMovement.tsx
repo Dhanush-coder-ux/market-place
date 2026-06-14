@@ -1,11 +1,11 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import {
   Search, Eye,
-  X, AlertTriangle, ArrowUp, ArrowDown,
+  X, ArrowUp, ArrowDown,
   User, TrendingUp, TrendingDown, Activity,
   Bookmark, Filter,
   FileText, Layers, Hash, Zap, Copy, ExternalLink,
-  ChevronDown, ChevronRight
+  ChevronDown, ChevronRight, Package, ShoppingBag
 } from "lucide-react";
 
 import { GradientButton } from "@/components/ui/GradientButton";
@@ -20,6 +20,7 @@ import { ReusableSelect } from "@/components/ui/ReusableSelect";
 import { useToast } from "@/context/ToastContext";
 import { createPortal } from "react-dom";
 import { RightSidebarFilter } from "@/components/common/RightSidebarFilter";
+import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 
 // ─── Types & Interfaces ──────────────────────────────────────────────────────
 
@@ -53,7 +54,7 @@ export interface Movement {
 // ─── Mock Data ───────────────────────────────────────────────────────────────
 
 const WAREHOUSES = ["All Locations", "Warehouse A", "Warehouse B", "Store Front", "Cold Storage", "Returns Depot"];
-const MOVEMENT_TYPES = ["All", "PURCHASE", "PO_PURCHASE", "SALES", "TRANSFER", "SALE_RETURN", "STOCK_ADJUSTMENT"];
+const MOVEMENT_TYPES = ["All", "PURCHASE", "SALES", "STOCK_ADJUSTMENT"];
 
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -421,10 +422,14 @@ export default function StockMovementPage() {
   const [showAdd, setShowAdd] = useState(false);
   const [sortField, setSort] = useState<"date" | "qty">("date");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
-  const [page, setPage] = useState(1);
-  const [movements, setMovements] = useState<Movement[]>([]);
+
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(search), 300);
+    return () => clearTimeout(timer);
+  }, [search]);
+
   const { showToast } = useToast();
-  const PAGE_SIZE = 10;
 
   const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
   const toggleExpand = (rowKey: string, e: React.MouseEvent) => {
@@ -487,15 +492,32 @@ export default function StockMovementPage() {
     return () => setActions(null);
   }, [setActions, navigate, isCleanMode]);
 
-  useEffect(() => {
-    const load = async () => {
-      // Fetch centralized Stock Adjustments which now contain ALL stock movements
-      const adjRes = await getData(`${ENDPOINTS.S_ADJUSTMENTS}/by/shop/${SHOP_ID}`, { view: "STOCKADJUSTMENT_VIEW", shop_id: SHOP_ID, limit: "50", offset: "1" });
-      const aData = adjRes?.data || adjRes?.datas || (Array.isArray(adjRes) ? adjRes : []);
+  const fetchPage = useCallback(async (limit: number, offset: number, filters: any) => {
+      const params: any = { view: "STOCKADJUSTMENT_VIEW", shop_id: SHOP_ID, limit: limit.toString(), offset: offset.toString() };
+      
+      if (filters.search) params.search = filters.search;
+      if (filters.type && filters.type !== "All") {
+        params.movement_type = filters.type === "PURCHASE" ? "DIRECT" : filters.type;
+      }
+      if (filters.dateFrom) params.from_date = filters.dateFrom;
+      if (filters.dateTo) params.to_date = filters.dateTo;
+      
+      const adjRes = await getData(`${ENDPOINTS.S_ADJUSTMENTS}/by/shop/${SHOP_ID}`, params);
+      const aData = Array.isArray(adjRes?.data) ? adjRes.data : (adjRes?.data?.datas ?? adjRes?.data?.movements ?? (Array.isArray(adjRes?.datas) ? adjRes.datas : (adjRes?.datas?.datas ?? adjRes?.datas?.movements ?? [])));
+
+      let fetchedStats = null;
+      if (adjRes?.data?.overall_stats) {
+        fetchedStats = adjRes.data.overall_stats;
+      } else if (adjRes?.datas?.overall_stats) {
+        fetchedStats = adjRes.datas.overall_stats;
+      }
 
       const invRes = await getData(`${ENDPOINTS.INVENTORIES}/by/shop/${SHOP_ID}?limit=100`);
       const invMap: Record<string, number> = {};
-      (invRes?.data || invRes?.datas || []).forEach((item: any) => {
+      
+      const invList = Array.isArray(invRes?.data) ? invRes.data : (invRes?.data?.inventories ?? (Array.isArray(invRes?.datas) ? invRes.datas : (invRes?.datas?.inventories ?? [])));
+      
+      invList.forEach((item: any) => {
         invMap[item.name] = Number(item.stocks || 0);
         if (item.variants) {
           item.variants.forEach((v: any) => {
@@ -517,6 +539,7 @@ export default function StockMovementPage() {
       const adjMovements: Movement[] = aData.flatMap((a: any) => {
         let products = Array.isArray(a.products) ? a.products : [];
         const dateStr = String(a.adjusted_date || a.created_at || new Date().toISOString());
+        const realId = a.stock_movement_id || a.id || a._id || a.movement_id || "ADJ";
 
         // Map movement_type from backend
         let finalType: MovementType = "STOCK_ADJUSTMENT";
@@ -548,6 +571,34 @@ export default function StockMovementPage() {
 
         const productsList: any[] = [];
         products.forEach((prod: any) => {
+          // NEW FORMAT SUPPORT
+          if (prod.stocks_adjusted !== undefined) {
+            const isDecrement = prod.type === 'DECREMENT' || finalType === "SALES" || finalType === "SALE_RETURN" && prod.stocks_adjusted < 0;
+            const absoluteAdjusted = Math.abs(Number(prod.stocks_adjusted));
+            const qtyVal = isDecrement && prod.type !== 'INCREMENT' ? -absoluteAdjusted : absoluteAdjusted;
+            
+            // Note: finalType 'SALES' is usually decrement, but if type='INCREMENT' it might be a return mapped wrongly? 
+            // We just use the backend's `type` field if available.
+            const finalQtyVal = prod.type === 'DECREMENT' ? -absoluteAdjusted : (prod.type === 'INCREMENT' ? absoluteAdjusted : qtyVal);
+
+            const sns = prod.serial_info?.serial_numbers || [];
+            
+            productsList.push({
+              name: prod.name || "—",
+              sku: prod.barcode || (realId.slice(0, 8) || ""),
+              qty: finalQtyVal,
+              stocks_before: prod.stocks_before,
+              current_stock: prod.stocks_after,
+              variant: prod.variant?.variant_name || "",
+              batch: prod.batch?.batch_name || "",
+              expiry_date: prod.batch?.exp_date,
+              manufacturing_date: prod.batch?.mfg_date,
+              serial_numbers: sns
+            });
+            return;
+          }
+
+          // OLD FORMAT SUPPORT
           const isDecrement = prod.type === 'DECREMENT' || finalType === "SALES";
           const baseQty = Number(prod.stocks || 0);
           const qtyVal = isDecrement ? -baseQty : baseQty;
@@ -561,7 +612,7 @@ export default function StockMovementPage() {
                     : (Array.isArray(v.serial_numbers?.serial_numbers) ? v.serial_numbers.serial_numbers : []);
                   productsList.push({
                     name: prod.name || "—",
-                    sku: b.barcode || v.sku || prod.barcode || (a.id?.slice(0, 8) || ""),
+                    sku: b.barcode || v.sku || prod.barcode || (realId.slice(0, 8) || ""),
                     qty: isDecrement ? -Number(b.stocks || v.stocks || baseQty) : Number(b.stocks || v.stocks || baseQty),
                     stocks_before: b.stocks_before ?? v.stocks_before ?? prod.stocks_before,
                     current_stock: invMap[`${prod.name}-${v.name}-${b.name}`] ?? invMap[`${prod.name}-${v.name}`] ?? invMap[prod.name],
@@ -576,7 +627,7 @@ export default function StockMovementPage() {
                 const sns = Array.isArray(v.serial_numbers?.serial_numbers) ? v.serial_numbers.serial_numbers : [];
                 productsList.push({
                   name: prod.name || "—",
-                  sku: v.sku || prod.barcode || (a.id?.slice(0, 8) || ""),
+                  sku: v.sku || prod.barcode || (realId.slice(0, 8) || ""),
                   qty: isDecrement ? -Number(v.stocks || baseQty) : Number(v.stocks || baseQty),
                   stocks_before: v.stocks_before ?? prod.stocks_before,
                   current_stock: invMap[`${prod.name}-${v.name}`] ?? invMap[prod.name],
@@ -590,7 +641,7 @@ export default function StockMovementPage() {
             const sns = Array.isArray(prod.serial_numbers?.serial_numbers) ? prod.serial_numbers.serial_numbers : [];
             productsList.push({
               name: prod.name || "—",
-              sku: prod.barcode || (a.id?.slice(0, 8) || ""),
+              sku: prod.barcode || (realId.slice(0, 8) || ""),
               qty: qtyVal,
               stocks_before: prod.stocks_before,
               current_stock: invMap[prod.name],
@@ -605,8 +656,8 @@ export default function StockMovementPage() {
 
         const firstProd = productsList[0];
         return [{
-          id: a.id?.slice(0, 8).toUpperCase() || "ADJ",
-          fullId: a.id,
+          id: a.ui_id ? String(a.ui_id) : realId.slice(0, 8).toUpperCase(),
+          fullId: realId,
           product: firstProd.name,
           sku: firstProd.sku,
           type: finalType,
@@ -614,7 +665,7 @@ export default function StockMovementPage() {
           stocks_before: firstProd.stocks_before,
           source,
           destination,
-          ref: String(a.ui_id ? `REF-${a.ui_id}` : a.id?.slice(0, 8).toUpperCase() || "REF"),
+          ref: String(a.ui_id ? `REF-${a.ui_id}` : realId.slice(0, 8).toUpperCase()),
           date: dateStr.includes("T") ? dateStr : dateStr + "T00:00:00",
           status: "Completed" as StatusType,
           user: String(a.added_by || "Admin"),
@@ -629,50 +680,37 @@ export default function StockMovementPage() {
         }];
       });
 
-      const all = [...adjMovements].sort((a, b) =>
-        new Date(b.date).getTime() - new Date(a.date).getTime()
-      );
-
-      setMovements(all);
-    };
-    load();
+      return {
+        items: adjMovements,
+        hasMore: aData.length === limit,
+        stats: fetchedStats,
+        total: adjRes?.data?.total_count || 0
+      }
   }, [getData]);
 
-  const filtered = useMemo(() => {
-    let data = [...movements];
+  const filters = useMemo(() => ({
+    search: debouncedSearch,
+    type: typeFilter,
+    status: statusFilter,
+    warehouse: warehouseFilter,
+    dateFrom,
+    dateTo,
+    sortField,
+    sortDir
+  }), [debouncedSearch, typeFilter, statusFilter, warehouseFilter, dateFrom, dateTo, sortField, sortDir]);
 
-    if (search) {
-      const q = search.toLowerCase();
-      data = data.filter(m => m.product.toLowerCase().includes(q) || m.sku.toLowerCase().includes(q) || m.id.toLowerCase().includes(q));
-    }
-    if (typeFilter !== "All") data = data.filter(m => m.type === typeFilter);
-    if (statusFilter !== "All") data = data.filter(m => m.status === statusFilter);
-    if (warehouseFilter !== "All Locations") data = data.filter(m => m.source === warehouseFilter || m.destination === warehouseFilter);
-    if (dateFrom) data = data.filter(m => fmtDate(m.date) >= dateFrom);
-    if (dateTo) data = data.filter(m => fmtDate(m.date) <= dateTo);
+  const { items: filtered, loading, loadingMore, hasMore, stats: overallStats, totalCount, lastElementRef } = useInfiniteScroll({
+    fetchPage,
+    filters,
+    limit: 20
+  });
 
-    data.sort((a, b) => {
-      if (sortField === "date") {
-        return sortDir === "asc" ? a.date.localeCompare(b.date) : b.date.localeCompare(a.date);
-      } else {
-        const aQty = Math.abs(a.qty);
-        const bQty = Math.abs(b.qty);
-        return sortDir === "asc" ? aQty - bQty : bQty - aQty;
-      }
-    });
-
-    return data;
-  }, [movements, search, typeFilter, statusFilter, warehouseFilter, dateFrom, dateTo, sortField, sortDir]);
+  const pageData = filtered;
 
   const today = new Date().toISOString().slice(0, 10);
-  const todayMvts = movements.filter(m => fmtDate(m.date) === today);
+  const todayMvts = filtered.filter(m => fmtDate(m.date) === today);
   const totalIn = todayMvts.filter(m => ["PURCHASE", "PO_PURCHASE"].includes(m.type)).reduce((s, m) => s + m.qty, 0);
   const totalOut = todayMvts.filter(m => m.type === "SALES").reduce((s, m) => s + Math.abs(m.qty), 0);
-  const netMov = totalIn - totalOut;
-  const lowStockAlerts = 0;
-
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const pageData = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   function toggleSort(field: "date" | "qty") {
     if (sortField === field) setSortDir(d => d === "asc" ? "desc" : "asc");
@@ -680,7 +718,7 @@ export default function StockMovementPage() {
   }
 
   function resetFilters() {
-    setSearch(""); setTypeFilter("All"); setStatus("All"); setWH("All Locations"); setDateFrom(""); setDateTo(""); setPage(1);
+    setSearch(""); setTypeFilter("All"); setStatus("All"); setWH("All Locations"); setDateFrom(""); setDateTo("");
   }
 
 
@@ -708,10 +746,41 @@ export default function StockMovementPage() {
       {/* ── Summary Cards ── */}
       {!isCleanMode && (
         <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-none">
-          <StatCard label="Total Stock In" value={`+${totalIn}`} icon={TrendingUp} iconBg="bg-emerald-50" iconColor="text-emerald-600" />
-          <StatCard label="Total Stock Out" value={`-${totalOut}`} icon={TrendingDown} iconBg="bg-rose-50" iconColor="text-rose-600" />
-          <StatCard label="Net Movement" value={netMov >= 0 ? `+${netMov}` : `${netMov}`} icon={Activity} iconBg="bg-blue-50" iconColor="text-blue-600" />
-          <StatCard label="Low Stock Alerts" value={lowStockAlerts} icon={AlertTriangle} iconBg="bg-amber-50" iconColor="text-amber-600" />
+          <StatCard 
+            label="Total Stock In" 
+            value={`+${overallStats?.total_stock_in ?? totalIn}`} 
+            icon={TrendingUp} 
+            iconBg="bg-emerald-50" 
+            iconColor="text-emerald-600" 
+          />
+          <StatCard 
+            label="Total Stock Out" 
+            value={`-${overallStats?.total_stock_out ?? totalOut}`} 
+            icon={TrendingDown} 
+            iconBg="bg-rose-50" 
+            iconColor="text-rose-600" 
+          />
+          <StatCard 
+            label="Total Movements" 
+            value={(overallStats?.total_movements_count ?? filtered.length).toString()} 
+            icon={Activity} 
+            iconBg="bg-blue-50" 
+            iconColor="text-blue-600" 
+          />
+          <StatCard 
+            label="Total Purchases" 
+            value={(overallStats?.total_purchase_count ?? 0).toString()} 
+            icon={Package} 
+            iconBg="bg-indigo-50" 
+            iconColor="text-indigo-600" 
+          />
+          <StatCard 
+            label="Total Sales" 
+            value={(overallStats?.total_sales_count ?? 0).toString()} 
+            icon={ShoppingBag} 
+            iconBg="bg-violet-50" 
+            iconColor="text-violet-600" 
+          />
         </div>
       )}
 
@@ -722,7 +791,7 @@ export default function StockMovementPage() {
           <input
             type="text"
             value={search}
-            onChange={e => { setSearch(e.target.value); setPage(1); }}
+            onChange={e => setSearch(e.target.value)}
             placeholder="Search product, SKU, movement ID…"
             className="w-full h-8 pl-8 pr-3 text-[12px] font-medium text-slate-700 bg-slate-50 border border-slate-200 rounded-md placeholder:text-slate-400 focus:outline-none focus:border-slate-300 focus:bg-white transition-colors"
           />
@@ -757,23 +826,11 @@ export default function StockMovementPage() {
       <RightSidebarFilter
         isOpen={isFilterOpen}
         onClose={() => setIsFilterOpen(false)}
-        onApply={() => {
-          setPage(1);
-        }}
+        onApply={() => {}}
         onClear={resetFilters}
         title="Stock Movement Filters"
       >
         <div className="space-y-4">
-          <div className="space-y-1.5">
-            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Location</label>
-            <ReusableSelect
-              options={WAREHOUSES.map(w => ({ label: w, value: w }))}
-              value={warehouseFilter}
-              onValueChange={(val) => setWH(val)}
-              placeholder="Location"
-            />
-          </div>
-
           <div className="space-y-1.5">
             <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Movement Type</label>
             <ReusableSelect
@@ -812,7 +869,9 @@ export default function StockMovementPage() {
 
       {/* ── Table Section ── */}
       <div className="bg-white border border-slate-100 rounded-lg shadow-sm min-w-0 overflow-hidden flex flex-col flex-1 min-h-0 mt-2">
-        <div className="overflow-auto flex-1 scrollbar-thin scrollbar-thumb-slate-200">
+        <div 
+          className="overflow-auto flex-1 scrollbar-thin scrollbar-thumb-slate-200"
+        >
           <table className="w-full text-left border-collapse table-fixed">
             <thead className="sticky top-0 z-20 bg-slate-50 border-b border-slate-200">
               <tr className="text-slate-400 text-[10px] font-bold tracking-[0.15em]">
@@ -835,7 +894,16 @@ export default function StockMovementPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-sm bg-white">
-              {pageData.length === 0 ? (
+              {loading && pageData.length === 0 ? (
+                <tr>
+                  <td colSpan={selectedKeys.length + 6} className="py-20 text-center text-slate-400 font-medium italic bg-white">
+                    <div className="flex flex-col items-center justify-center">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-3"></div>
+                      <p className="text-sm font-medium">Loading movements...</p>
+                    </div>
+                  </td>
+                </tr>
+              ) : pageData.length === 0 ? (
                 <tr>
                   <td colSpan={selectedKeys.length + 6} className="py-20 text-center text-slate-400 font-medium italic bg-white">
                     No movements found matching your filters.
@@ -875,6 +943,7 @@ export default function StockMovementPage() {
                 return (
                   <React.Fragment key={rowKey}>
                     <tr
+                      ref={idx === pageData.length - 1 ? lastElementRef : null}
                       className="group hover:bg-blue-50/30 transition-all cursor-pointer border-b border-slate-100 last:border-b-0 even:bg-slate-50/20"
                       onClick={() => handleMovementClick(m)}
                     >
@@ -1050,21 +1119,15 @@ export default function StockMovementPage() {
           </table>
         </div>
 
-        {/* Pagination */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-5 py-4 border-t border-slate-200 bg-slate-50/50">
+        {loadingMore && <div className="py-4 text-center text-xs text-slate-500">Loading more...</div>}
+        {/* Infinite Scroll Footer */}
+        <div className="flex items-center justify-between px-5 py-3 border-t border-slate-200 bg-slate-50/50">
           <span className="text-xs font-medium text-slate-500">
-            Showing <strong className="text-slate-900">{filtered.length > 0 ? (page - 1) * PAGE_SIZE + 1 : 0}–{Math.min(page * PAGE_SIZE, filtered.length)}</strong> of <strong className="text-slate-900">{filtered.length}</strong> records
+            Showing <strong className="text-slate-900">{pageData.length}</strong> {totalCount > 0 ? <>of <strong className="text-slate-900">{totalCount}</strong></> : ''} records
           </span>
-          <div className="flex items-center gap-1.5">
-            <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
-              className="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 font-semibold text-xs disabled:opacity-50 hover:bg-slate-50 transition-colors shadow-sm">← Prev</button>
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
-              <button key={p} onClick={() => setPage(p)}
-                className={`w-8 h-8 rounded-lg text-xs font-medium transition-all shadow-sm ${p === page ? "bg-blue-600 text-white border border-blue-600 shadow-blue-500/20" : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-900"}`}>{p}</button>
-            ))}
-            <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}
-              className="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 font-semibold text-xs disabled:opacity-50 hover:bg-slate-50 transition-colors shadow-sm">Next →</button>
-          </div>
+          {hasMore && (
+            <span className="text-[10px] font-bold text-slate-400 animate-pulse">Scroll down to load more ↓</span>
+          )}
         </div>
       </div>
 

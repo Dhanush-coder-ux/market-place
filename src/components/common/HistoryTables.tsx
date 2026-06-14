@@ -1,6 +1,69 @@
 import { ArrowUp, ArrowDown, ShoppingCart, TrendingUp, RefreshCcw, FileText, ArrowRight, Banknote, Eye, ChevronDown, ChevronRight } from "lucide-react";
 import { TypeBadge } from "@/components/common/SuperUI";
-import { useState } from "react";
+import { useState, Fragment } from "react";
+
+const formatBatchDate = (dateStr?: string) => {
+  if (!dateStr) return null;
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return dateStr;
+  return d.toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric"
+  });
+};
+
+const getVariantName = (v: any) => {
+  if (!v) return null;
+  return typeof v === 'object' ? (v.variant_name || v.name) : v;
+};
+
+const getBatchName = (b: any) => {
+  if (!b) return null;
+  return typeof b === 'object' ? (b.batch_name || b.name) : b;
+};
+
+const RichProductDetails = ({ p }: { p: any }) => {
+  return (
+    <div className="flex flex-col mt-1 w-full max-w-sm">
+      {p.variant_details && (
+        <div className="mt-1 pl-3 border-l-2 border-indigo-100 space-y-2.5">
+          <p className="text-[10px] font-extrabold text-indigo-750 bg-indigo-50/50 px-1.5 py-0.5 rounded w-fit">• {getVariantName(p.variant_details?.variant_name || p.variant)}</p>
+        </div>
+      )}
+      
+      {p.batch_details && (
+        <div className="mt-1 pl-3 border-l-2 border-indigo-150 space-y-1.5">
+          <div className="bg-slate-50 p-2 rounded border border-slate-100 w-full text-[10px] text-slate-650 shadow-sm">
+            <div className="flex justify-between items-center font-bold">
+              <span className="text-slate-800">Batch: {p.batch_details.batch_name || p.batch || "Default"}</span>
+              <span className="text-indigo-600">Qty: {p.receivedStocks ?? 0}</span>
+            </div>
+            {(p.batch_details.mfg_date || p.batch_details.exp_date) && (
+              <div className="flex gap-3 text-[9px] text-slate-400 mt-1 font-medium">
+                {p.batch_details.mfg_date && <span>MFG: {formatBatchDate(p.batch_details.mfg_date)}</span>}
+                {p.batch_details.exp_date && <span>EXP: {formatBatchDate(p.batch_details.exp_date)}</span>}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {p.serial_info && p.serial_info.serial_numbers && p.serial_info.serial_numbers.length > 0 && (
+        <div className="mt-1 pl-3 border-l-2 border-indigo-150 space-y-1.5">
+          <div className="bg-slate-50 p-2 rounded border border-slate-100 w-full shadow-sm">
+            <p className="text-[8px] font-bold text-slate-400 mb-1 uppercase tracking-wider">Serial Numbers:</p>
+            <div className="flex flex-wrap gap-1">
+              {p.serial_info.serial_numbers.map((sn: string) => (
+                <span key={sn} className="text-[8px] font-mono font-bold px-1.5 py-0.5 rounded bg-white text-indigo-600 border border-slate-200 shadow-sm">{sn}</span>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
 
 // ─── STOCK MOVEMENTS TABLE ────────────────────────────────────────────────────
 export interface StockMovementRow {
@@ -125,8 +188,8 @@ export function StockMovementsTable({ rows, loading, onViewDetails }: StockMovem
                               </span>
                             )}
                             <div className="flex flex-wrap gap-1 mt-0.5 items-center">
-                              {(firstProd?.variant || r.variant) && <span className="w-fit px-2 py-0.5 rounded-md text-[9px] font-bold bg-violet-50 text-violet-700 border border-violet-100 truncate">V: {firstProd?.variant || r.variant}</span>}
-                              {(firstProd?.batch || r.batch) && <span className="w-fit px-2 py-0.5 rounded-md text-[9px] font-bold bg-amber-50 text-amber-700 border border-amber-100 truncate">B: {firstProd?.batch || r.batch}</span>}
+                              {(firstProd?.variant || r.variant) && <span className="w-fit px-2 py-0.5 rounded-md text-[9px] font-bold bg-violet-50 text-violet-700 border border-violet-100 truncate">V: {getVariantName(firstProd?.variant || r.variant)}</span>}
+                              {(firstProd?.batch || r.batch) && <span className="w-fit px-2 py-0.5 rounded-md text-[9px] font-bold bg-amber-50 text-amber-700 border border-amber-100 truncate">B: {getBatchName(firstProd?.batch || r.batch)}</span>}
                               {((firstProd?.serials || r.serials) && (firstProd?.serials || r.serials)!.length > 0) && (
                                 <div className="flex flex-wrap gap-1">
                                   <span className="text-[9px] text-slate-400 font-bold">SN: </span>
@@ -207,8 +270,8 @@ export function StockMovementsTable({ rows, loading, onViewDetails }: StockMovem
                                           <div className="flex flex-col gap-0.5">
                                             <span className="font-semibold text-slate-800">{p.name || r.description}</span>
                                             <div className="flex flex-wrap gap-1 mt-0.5">
-                                              {p.variant && <span className="px-1.5 py-0.2 rounded bg-violet-50 text-violet-600 border border-violet-100 text-[8px] font-bold">V: {p.variant}</span>}
-                                              {p.batch && <span className="px-1.5 py-0.2 rounded bg-amber-50 text-amber-700 border border-amber-100 text-[8px] font-bold">B: {p.batch}</span>}
+                                              {p.variant && <span className="px-1.5 py-0.2 rounded bg-violet-50 text-violet-600 border border-violet-100 text-[8px] font-bold">V: {getVariantName(p.variant)}</span>}
+                                              {p.batch && <span className="px-1.5 py-0.2 rounded bg-amber-50 text-amber-700 border border-amber-100 text-[8px] font-bold">B: {getBatchName(p.batch)}</span>}
                                               {p.serials && p.serials.length > 0 && (
                                                 <div className="flex flex-wrap gap-1">
                                                   <span className="text-[8px] text-slate-400 font-bold">SN: </span>
@@ -294,7 +357,6 @@ export function ProductPurchasesTable({ rows, loading, onNavigateToPurchase }: P
                   <th className="px-5 py-3.5">Buy Price</th>
                   <th className="px-5 py-3.5">Sell Price</th>
                   <th className="px-5 py-3.5">Payment</th>
-                  <th className="px-5 py-3.5">Reference</th>
                   <th className="px-5 py-3.5">Supplier</th>
                   <th className="px-5 py-3.5 w-12"></th>
                 </tr>
@@ -344,11 +406,15 @@ export function ProductPurchasesTable({ rows, loading, onNavigateToPurchase }: P
                         <td className="px-5 py-4">
                           {hasList ? (
                             <div className="flex flex-col gap-1 max-w-[200px]">
-                              <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
-                                {(firstProd.variant || r.variant) && <span className="w-fit px-2 py-0.5 rounded-md text-[9px] font-bold bg-violet-50 text-violet-700 border border-violet-100 truncate">V: {firstProd.variant || r.variant}</span>}
-                                {(firstProd.batch || r.batch) && <span className="w-fit px-2 py-0.5 rounded-md text-[9px] font-bold bg-amber-50 text-amber-700 border border-amber-100 truncate">B: {firstProd.batch || r.batch}</span>}
-                                
-                                <button
+                              {firstProd.variant_details || firstProd.batch_details || firstProd.serial_info ? (
+                                <RichProductDetails p={firstProd} />
+                              ) : (
+                                <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
+                                  {(firstProd.variant || r.variant) && <span className="w-fit px-2 py-0.5 rounded-md text-[9px] font-bold bg-violet-50 text-violet-700 border border-violet-100 truncate">V: {getVariantName(firstProd.variant || r.variant)}</span>}
+                                  {(firstProd.batch || r.batch) && <span className="w-fit px-2 py-0.5 rounded-md text-[9px] font-bold bg-amber-50 text-amber-700 border border-amber-100 truncate">B: {getBatchName(firstProd.batch || r.batch)}</span>}
+                                </div>
+                              )}
+                              <button
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     toggleExpand(rowKey);
@@ -360,26 +426,33 @@ export function ProductPurchasesTable({ rows, loading, onNavigateToPurchase }: P
                                   <span>+ {r.productsList!.length - 1} more</span>
                                 </button>
                               </div>
-                            </div>
                           ) : (
-                            <div className="flex flex-col gap-1 max-w-[200px]">
-                              {(firstProd.variant || r.variant) && <span className="w-fit px-2 py-0.5 rounded-md text-[9px] font-bold bg-violet-50 text-violet-700 border border-violet-100 truncate">V: {firstProd.variant || r.variant}</span>}
-                              {(firstProd.batch || r.batch) && <span className="w-fit px-2 py-0.5 rounded-md text-[9px] font-bold bg-amber-50 text-amber-700 border border-amber-100 truncate">B: {firstProd.batch || r.batch}</span>}
-                              {!firstProd.variant && !r.variant && !firstProd.batch && !r.batch && <span className="text-slate-300">—</span>}
-                              {((firstProd.serials || r.serials) && (firstProd.serials || r.serials)!.length > 0) && (
-                                <div className="flex flex-wrap gap-1 mt-0.5">
-                                  <span className="text-[9px] text-slate-400 font-bold">SN: </span>
-                                  {(firstProd.serials || r.serials)!.slice(0, 2).map((s: string, si: number) => (
-                                    <span key={si} className="text-[9px] font-mono font-bold text-slate-500">{s}{si === 0 && (firstProd.serials || r.serials)!.length > 1 ? ',' : ''}</span>
-                                  ))}
-                                  {(firstProd.serials || r.serials)!.length > 2 && <span className="text-[9px] font-bold text-slate-400">+{(firstProd.serials || r.serials)!.length - 2}</span>}
-                                </div>
+                            <div className="flex flex-col gap-1 max-w-[350px]">
+                              {firstProd.variant_details || firstProd.batch_details || firstProd.serial_info ? (
+                                <RichProductDetails p={firstProd} />
+                              ) : (
+                                <>
+                                  {(firstProd.variant || r.variant) && <span className="w-fit px-2 py-0.5 rounded-md text-[9px] font-bold bg-violet-50 text-violet-700 border border-violet-100 truncate">V: {getVariantName(firstProd.variant || r.variant)}</span>}
+                                  {(firstProd.batch || r.batch) && <span className="w-fit px-2 py-0.5 rounded-md text-[9px] font-bold bg-amber-50 text-amber-700 border border-amber-100 truncate">B: {getBatchName(firstProd.batch || r.batch)}</span>}
+                                  {!firstProd.variant && !r.variant && !firstProd.batch && !r.batch && <span className="text-slate-300">—</span>}
+                                  {((firstProd.serials || r.serials) && (firstProd.serials || r.serials)!.length > 0) && (
+                                    <div className="flex flex-wrap gap-1 mt-0.5">
+                                      <span className="text-[9px] text-slate-400 font-bold">SN: </span>
+                                      {(firstProd.serials || r.serials)!.slice(0, 2).map((s: string, si: number) => (
+                                        <span key={si} className="text-[9px] font-mono font-bold text-slate-500">{s}{si === 0 && (firstProd.serials || r.serials)!.length > 1 ? ',' : ''}</span>
+                                      ))}
+                                      {(firstProd.serials || r.serials)!.length > 2 && <span className="text-[9px] font-bold text-slate-400">+{(firstProd.serials || r.serials)!.length - 2}</span>}
+                                    </div>
+                                  )}
+                                </>
                               )}
                             </div>
                           )}
                         </td>
                         <td className="px-5 py-4 whitespace-nowrap font-black text-sm tabular-nums text-center bg-slate-50/40">
-                          <span className="text-emerald-600">+{totalStocksIn}</span>
+                          <span className={r.type === 'RETURN' ? 'text-rose-600' : 'text-emerald-600'}>
+                            {r.type === 'RETURN' ? '-' : '+'}{totalStocksIn}
+                          </span>
                         </td>
                         <td className="px-5 py-4 whitespace-nowrap text-center font-bold text-blue-600 tabular-nums">
                           {totalStockAfterProd !== null ? totalStockAfterProd : '—'}
@@ -392,25 +465,21 @@ export function ProductPurchasesTable({ rows, loading, onNavigateToPurchase }: P
                         </td>
                         <td className="px-5 py-4 whitespace-nowrap">
                           <div className="flex flex-col gap-0.5">
-                            <span className={`text-[9px] font-bold px-2 py-0.5 rounded-md w-fit ${r.paymentMethod === 'Cash' ? 'bg-emerald-50 text-emerald-700' :
+                            <span className={`text-[9px] font-bold px-2 py-0.5 rounded-md w-fit ${
+                                r.paymentMethod?.toLowerCase() === 'outstanding' ? 'bg-rose-50 text-rose-700' :
+                                r.paymentMethod === 'Cash' ? 'bg-emerald-50 text-emerald-700' :
                                 r.paymentMethod === 'UPI' ? 'bg-violet-50 text-violet-700' :
-                                  'bg-slate-50 text-slate-600'
+                                'bg-slate-50 text-slate-600'
                               }`}>{r.paymentMethod}</span>
-                            {r.amountPaid > 0 && (
+                            {r.paymentMethod?.toLowerCase() === 'outstanding' ? (
+                              <span className="text-[9px] text-rose-500 font-bold">Left: ₹{r.totalCost - r.amountPaid}</span>
+                            ) : r.amountPaid > 0 ? (
                               <span className="text-[9px] text-slate-400 font-bold">Paid: ₹{r.amountPaid}</span>
-                            )}
+                            ) : null}
                           </div>
                         </td>
-                        <td className="px-5 py-4 whitespace-nowrap">
-                          <div className="flex flex-col gap-0.5">
-                            <span className="text-[10px] font-mono text-slate-600">INV: {r.invoiceNo}</span>
-                            <span className="text-[10px] font-mono text-slate-400">REF: {r.referenceNo}</span>
-                          </div>
-                        </td>
-                        <td className="px-5 py-4 text-xs font-semibold text-slate-655 uppercase whitespace-nowrap">
-                          {r.storageLocation || '—'}
-                        </td>
-                        <td className="px-5 py-4 text-xs text-slate-500 max-w-[150px] truncate" title={r.description}>
+
+                        <td className="px-5 py-4 text-xs font-bold text-slate-700 max-w-[150px] truncate" title={r.description}>
                           {r.description.replace('Supplier: ', '')}
                         </td>
                         <td className="px-5 py-4">
@@ -450,9 +519,9 @@ export function ProductPurchasesTable({ rows, loading, onNavigateToPurchase }: P
                                       <tr key={pIdx} className="hover:bg-slate-50/30">
                                         <td className="py-2.5 px-3">
                                           <div className="flex flex-col gap-0.5">
-                                            <span className="font-semibold text-slate-800">{p.variant ? `V: ${p.variant}` : 'Standard Product'}</span>
+                                            <span className="font-semibold text-slate-800">{p.variant ? `V: ${getVariantName(p.variant)}` : 'Standard Product'}</span>
                                             <div className="flex flex-wrap gap-1 mt-0.5">
-                                              {p.batch && <span className="px-1.5 py-0.2 rounded bg-amber-50 text-amber-700 border border-amber-100 text-[8px] font-bold">B: {p.batch}</span>}
+                                              {p.batch && <span className="px-1.5 py-0.2 rounded bg-amber-50 text-amber-700 border border-amber-100 text-[8px] font-bold">B: {getBatchName(p.batch)}</span>}
                                               {p.serials && p.serials.length > 0 && (
                                                 <div className="flex flex-wrap gap-1">
                                                   <span className="text-[8px] text-slate-400 font-bold">SN: </span>
@@ -465,7 +534,11 @@ export function ProductPurchasesTable({ rows, loading, onNavigateToPurchase }: P
                                             </div>
                                           </div>
                                         </td>
-                                        <td className="py-2.5 px-3 text-center font-black text-emerald-600">+{p.receivedStocks}</td>
+                                        <td className="py-2.5 px-3 text-center font-black">
+                                          <span className={r.type === 'RETURN' ? 'text-rose-600' : 'text-emerald-600'}>
+                                            {r.type === 'RETURN' ? '-' : '+'}{p.receivedStocks}
+                                          </span>
+                                        </td>
                                         <td className="py-2.5 px-3 text-center font-bold text-blue-600">{p.stocksBefore !== null && p.stocksBefore !== undefined ? (p.stocksBefore + p.receivedStocks) : '—'}</td>
                                         <td className="py-2.5 px-3 font-semibold text-slate-700">₹{p.buyPrice ?? '—'}</td>
                                         <td className="py-2.5 px-3 font-semibold text-emerald-750">₹{p.sellPrice ?? '—'}</td>
@@ -532,8 +605,8 @@ export function SupplierPurchasesTable({ rows, loading, onNavigateToPurchase }: 
                   <th className="px-5 py-3.5">Product</th>
                   <th className="px-5 py-3.5 text-center">Stock In/Out</th>
                   <th className="px-5 py-3.5 text-center">Stock After</th>
-                  <th className="px-5 py-3.5">Buy Price</th>
-                  <th className="px-5 py-3.5">Sell Price</th>
+                  <th className="px-5 py-3.5">Total Cost</th>
+                  <th className="px-5 py-3.5">Paid</th>
                   <th className="px-5 py-3.5">Payment</th>
                   <th className="px-5 py-3.5">Invoice</th>
                   <th className="px-5 py-3.5">Date</th>
@@ -551,17 +624,18 @@ export function SupplierPurchasesTable({ rows, loading, onNavigateToPurchase }: 
                     : (r.productsList?.[0]?.receivedStocks ?? r.receivedStocks);
 
                   const firstProd = r.productsList?.[0] || {};
-                  // Compute total stock after across all items (purchases are always increments)
+                  // Compute total stock after across all items (purchases are always increments, returns are decrements)
                   const totalStockAfterSupp = (() => {
                     const prods = r.productsList;
                     if (!prods || prods.length === 0) {
                       const sb = r.stocksBefore;
-                      return sb !== null && sb !== undefined ? (sb + totalStocksIn) : null;
+                      if (sb === null || sb === undefined) return null;
+                      return r.type === 'RETURN' ? (sb - totalStocksIn) : (sb + totalStocksIn);
                     }
                     let total = 0;
                     for (const p of prods) {
                       if (p.stocksBefore === null || p.stocksBefore === undefined) return null;
-                      total += p.stocksBefore + p.receivedStocks;
+                      total += r.type === 'RETURN' ? (p.stocksBefore - p.receivedStocks) : (p.stocksBefore + p.receivedStocks);
                     }
                     return total;
                   })();
@@ -581,65 +655,76 @@ export function SupplierPurchasesTable({ rows, loading, onNavigateToPurchase }: 
                               <span className="text-xs font-semibold text-slate-700 whitespace-nowrap truncate" title={firstProd.productName || r.productName}>
                                 {firstProd.productName || r.productName}
                               </span>
-                              <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
-                                {(firstProd.variant || r.variant) && <span className="w-fit px-2 py-0.5 rounded-md text-[9px] font-bold bg-violet-50 text-violet-700 border border-violet-100 truncate">V: {firstProd.variant || r.variant}</span>}
-                                {(firstProd.batch || r.batch) && <span className="w-fit px-2 py-0.5 rounded-md text-[9px] font-bold bg-amber-50 text-amber-700 border border-amber-100 truncate">B: {firstProd.batch || r.batch}</span>}
-                                
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    toggleExpand(rowKey);
-                                  }}
-                                  className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] font-extrabold bg-indigo-50 text-indigo-600 border border-indigo-100 hover:bg-indigo-100 transition-colors shrink-0 shadow-sm"
-                                  title={isExpanded ? "Collapse Items" : "Expand Items"}
-                                >
-                                  {isExpanded ? <ChevronDown size={10} strokeWidth={3} /> : <ChevronRight size={10} strokeWidth={3} />}
-                                  <span>+ {r.productsList!.length - 1} more</span>
-                                </button>
-                              </div>
+                              {firstProd.variant_details || firstProd.batch_details || firstProd.serial_info ? (
+                                <RichProductDetails p={firstProd} />
+                              ) : (
+                                <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
+                                  {(firstProd.variant || r.variant) && <span className="w-fit px-2 py-0.5 rounded-md text-[9px] font-bold bg-violet-50 text-violet-700 border border-violet-100 truncate">V: {getVariantName(firstProd.variant || r.variant)}</span>}
+                                  {(firstProd.batch || r.batch) && <span className="w-fit px-2 py-0.5 rounded-md text-[9px] font-bold bg-amber-50 text-amber-700 border border-amber-100 truncate">B: {getBatchName(firstProd.batch || r.batch)}</span>}
+                                </div>
+                              )}
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleExpand(rowKey);
+                                }}
+                                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] font-extrabold bg-indigo-50 text-indigo-600 border border-indigo-100 hover:bg-indigo-100 transition-colors shrink-0 shadow-sm"
+                                title={isExpanded ? "Collapse Items" : "Expand Items"}
+                              >
+                                {isExpanded ? <ChevronDown size={10} strokeWidth={3} /> : <ChevronRight size={10} strokeWidth={3} />}
+                                <span>+ {r.productsList!.length - 1} more</span>
+                              </button>
                             </div>
                           ) : (
-                            <div className="flex flex-col gap-1 max-w-[240px]">
+                            <div className="flex flex-col gap-1 max-w-[350px]">
                               <span className="text-xs font-semibold text-slate-700 whitespace-nowrap truncate" title={firstProd.productName || r.productName}>
                                 {firstProd.productName || r.productName}
                               </span>
-                              <div className="flex flex-wrap gap-1 mt-0.5">
-                                {(firstProd.variant || r.variant) && <span className="w-fit px-2 py-0.5 rounded-md text-[9px] font-bold bg-violet-50 text-violet-700 border border-violet-100 truncate">V: {firstProd.variant || r.variant}</span>}
-                                {(firstProd.batch || r.batch) && <span className="w-fit px-2 py-0.5 rounded-md text-[9px] font-bold bg-amber-50 text-amber-700 border border-amber-100 truncate">B: {firstProd.batch || r.batch}</span>}
-                                {((firstProd.serials || r.serials) && (firstProd.serials || r.serials)!.length > 0) && (
-                                  <div className="flex flex-wrap gap-1 mt-0.5">
-                                    <span className="text-[9px] text-slate-400 font-bold">SN: </span>
-                                    {(firstProd.serials || r.serials)!.slice(0, 2).map((s: string, si: number) => (
-                                      <span key={si} className="text-[9px] font-mono font-bold text-slate-500">{s}{si === 0 && (firstProd.serials || r.serials)!.length > 1 ? ',' : ''}</span>
-                                    ))}
-                                    {(firstProd.serials || r.serials)!.length > 2 && <span className="text-[9px] font-bold text-slate-400">+{(firstProd.serials || r.serials)!.length - 2}</span>}
-                                  </div>
-                                )}
-                              </div>
+                              {firstProd.variant_details || firstProd.batch_details || firstProd.serial_info ? (
+                                <RichProductDetails p={firstProd} />
+                              ) : (
+                                <>
+                                  {(firstProd.variant || r.variant) && <span className="w-fit px-2 py-0.5 rounded-md text-[9px] font-bold bg-violet-50 text-violet-700 border border-violet-100 truncate">V: {getVariantName(firstProd.variant || r.variant)}</span>}
+                                  {(firstProd.batch || r.batch) && <span className="w-fit px-2 py-0.5 rounded-md text-[9px] font-bold bg-amber-50 text-amber-700 border border-amber-100 truncate">B: {getBatchName(firstProd.batch || r.batch)}</span>}
+                                  {((firstProd.serials || r.serials) && (firstProd.serials || r.serials)!.length > 0) && (
+                                    <div className="flex flex-wrap gap-1 mt-0.5">
+                                      <span className="text-[9px] text-slate-400 font-bold">SN: </span>
+                                      {(firstProd.serials || r.serials)!.slice(0, 2).map((s: string, si: number) => (
+                                        <span key={si} className="text-[9px] font-mono font-bold text-slate-500">{s}{si === 0 && (firstProd.serials || r.serials)!.length > 1 ? ',' : ''}</span>
+                                      ))}
+                                      {(firstProd.serials || r.serials)!.length > 2 && <span className="text-[9px] font-bold text-slate-400">+{(firstProd.serials || r.serials)!.length - 2}</span>}
+                                    </div>
+                                  )}
+                                </>
+                              )}
                             </div>
                           )}
                         </td>
                         <td className="px-5 py-4 whitespace-nowrap font-black text-sm tabular-nums text-center bg-slate-50/40">
-                          <span className="text-emerald-600">+{totalStocksIn}</span>
+                          <span className={r.type === 'RETURN' ? 'text-rose-600' : 'text-emerald-600'}>
+                            {r.type === 'RETURN' ? '-' : '+'}{totalStocksIn}
+                          </span>
                         </td>
                         <td className="px-5 py-4 whitespace-nowrap text-center font-bold text-blue-600 tabular-nums">
                           {totalStockAfterSupp !== null ? totalStockAfterSupp : '—'}
                         </td>
                         <td className="px-5 py-4 whitespace-nowrap text-xs font-bold text-slate-700">
-                          {hasList ? '—' : `₹${firstProd.buy_price ?? r.buy_price ?? '—'}`}
+                          ₹{r.totalCost || 0}
                         </td>
-                        <td className="px-5 py-4 whitespace-nowrap text-xs font-bold text-emerald-700">
-                          {hasList ? '—' : `₹${firstProd.sell_price ?? r.sell_price ?? '—'}`}
+                        <td className="px-5 py-4 whitespace-nowrap text-xs font-bold text-emerald-600">
+                          ₹{r.amountPaid || 0}
                         </td>
                         <td className="px-5 py-4 whitespace-nowrap">
                           <div className="flex flex-col gap-0.5">
-                            <span className={`text-[9px] font-bold px-2 py-0.5 rounded-md w-fit ${r.paymentMethod === 'Cash' ? 'bg-emerald-50 text-emerald-700' :
+                            <span className={`text-[9px] font-bold px-2 py-0.5 rounded-md w-fit ${
+                                r.paymentMethod?.toLowerCase() === 'outstanding' ? 'bg-rose-50 text-rose-700' :
+                                r.paymentMethod === 'Cash' ? 'bg-emerald-50 text-emerald-700' :
                                 r.paymentMethod === 'UPI' ? 'bg-violet-50 text-violet-700' :
-                                  'bg-slate-50 text-slate-600'
+                                'bg-slate-50 text-slate-600'
                               }`}>{r.paymentMethod}</span>
-                            {r.amountPaid > 0 && (
-                              <span className="text-[9px] text-slate-400 font-bold">Paid: ₹{r.amountPaid}</span>
-                            )}
+                            {(r.totalCost || 0) - (r.amountPaid || 0) > 0 ? (
+                              <span className="text-[9px] text-rose-500 font-bold">Left: ₹{(r.totalCost || 0) - (r.amountPaid || 0)}</span>
+                            ) : null}
                           </div>
                         </td>
                         <td className="px-5 py-4 text-xs font-mono text-slate-500 whitespace-nowrap">
@@ -687,8 +772,8 @@ export function SupplierPurchasesTable({ rows, loading, onNavigateToPurchase }: 
                                           <div className="flex flex-col gap-0.5">
                                             <span className="font-semibold text-slate-800">{p.productName || r.productName}</span>
                                             <div className="flex flex-wrap gap-1 mt-0.5">
-                                              {p.variant && <span className="px-1.5 py-0.2 rounded bg-violet-50 text-violet-600 border border-violet-100 text-[8px] font-bold">V: {p.variant}</span>}
-                                              {p.batch && <span className="px-1.5 py-0.2 rounded bg-amber-50 text-amber-700 border border-amber-100 text-[8px] font-bold">B: {p.batch}</span>}
+                                              {p.variant && <span className="px-1.5 py-0.2 rounded bg-violet-50 text-violet-600 border border-violet-100 text-[8px] font-bold">V: {getVariantName(p.variant)}</span>}
+                                              {p.batch && <span className="px-1.5 py-0.2 rounded bg-amber-50 text-amber-700 border border-amber-100 text-[8px] font-bold">B: {getBatchName(p.batch)}</span>}
                                               {p.serials && p.serials.length > 0 && (
                                                 <div className="flex flex-wrap gap-1">
                                                   <span className="text-[8px] text-slate-400 font-bold">SN: </span>
@@ -701,7 +786,11 @@ export function SupplierPurchasesTable({ rows, loading, onNavigateToPurchase }: 
                                             </div>
                                           </div>
                                         </td>
-                                        <td className="py-2.5 px-3 text-center font-black text-emerald-600">+{p.receivedStocks}</td>
+                                        <td className="py-2.5 px-3 text-center font-black">
+                                          <span className={r.type === 'RETURN' ? 'text-rose-600' : 'text-emerald-600'}>
+                                            {r.type === 'RETURN' ? '-' : '+'}{p.receivedStocks}
+                                          </span>
+                                        </td>
                                         <td className="py-2.5 px-3 text-center font-bold text-blue-600">{p.stocksBefore !== null && p.stocksBefore !== undefined ? (p.stocksBefore + p.receivedStocks) : '—'}</td>
                                         <td className="py-2.5 px-3 font-semibold text-slate-700">₹{p.buy_price ?? '—'}</td>
                                         <td className="py-2.5 px-3 font-semibold text-emerald-750">₹{p.sell_price ?? '—'}</td>
@@ -727,7 +816,6 @@ export function SupplierPurchasesTable({ rows, loading, onNavigateToPurchase }: 
 }
 
 // ─── Fragment Import ──────────────────────────────────────────────────────────
-import { Fragment } from "react";
 
 interface CustomerPurchasesTableProps {
   rows: any[];

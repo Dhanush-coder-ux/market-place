@@ -143,7 +143,7 @@ export const sidebarLinks: SidebarLink[] = [
     subLinks: [
       { name: "Add Customer", path: "/customers/add", icon: UserPlus },
       { name: "Saved Drafts", path: "/customers/drafts", icon: Bookmark },
-      { name: "Customers List", path: "/customers-Summary", icon: ClipboardList, addPath: "/customers/add" },
+      { name: "Customers List", path: "/customers/all", icon: ClipboardList, addPath: "/customers/add" },
       { name: "Customer Details", path: "/customers", icon: FileText },
     ],
   },

@@ -78,8 +78,8 @@ const getPageHeaderInfo = (pathname: string) => {
       subtitle: "Browse and manage your vendor relationships.",
     },
     "/supplier": {
-      title: "Suppliers Directory",
-      subtitle: "Browse and manage your entire supplier catalog.",
+      title: "Supplier Directory",
+      subtitle: "Search for suppliers or manage your network.",
     },
     "/supplier/detail": {
       title: "Supplier Details",
@@ -139,6 +139,10 @@ const getPageHeaderInfo = (pathname: string) => {
     },
     "/customers": {
       title: "Customer Directory",
+      subtitle: "Search for customers, explore database or manage relationships.",
+    },
+    "/customers/all": {
+      title: "Customers List",
       subtitle: "Centralized database of your client relationships.",
     },
     "/customers-Summary": {

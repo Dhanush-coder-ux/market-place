@@ -1,37 +1,40 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Truck, Bookmark } from "lucide-react";
+import { Users, Bookmark } from "lucide-react";
 import { useHeader } from "@/context/HeaderContext";
 import { GradientButton } from "@/components/ui/GradientButton";
 import { SearchSelect } from "@/components/inputbuilders/SearchSelect";
+import { useApi } from "@/context/ApiContext";
+import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 
-const SupplierSearch = () => {
+const CustomerSearch = () => {
   const navigate = useNavigate();
   const { setActions } = useHeader();
+  const { getData } = useApi();
 
   useEffect(() => {
     setActions(
       <div className="flex items-center gap-3">
         <button 
-          onClick={() => navigate("/supplier/drafts")}
+          onClick={() => navigate("/customers/drafts")}
           className="px-4 h-8 rounded-lg border border-blue-100 text-blue-600 font-bold text-[13px] bg-blue-50/50 hover:bg-blue-100 transition-all flex items-center gap-1.5"
         >
           <Bookmark size={16} />
           Saved Drafts
         </button>
-        <GradientButton path="/supplier/add" className="h-8 flex items-center px-4 text-[13px] shadow-md shadow-blue-200">+ Add Supplier</GradientButton>
+        <GradientButton path="/customers/add" className="h-8 flex items-center px-4 text-[13px] shadow-md shadow-blue-200">+ Add Customer</GradientButton>
       </div>
     );
     return () => setActions(null);
   }, [setActions, navigate]);
 
-  const fetchSuppliers = async (q: string) => {
+  const fetchCustomers = async (q: string) => {
     try {
-      const { supplierApi } = await import("@/services/api/supplier");
-      const data = await supplierApi.searchSuppliers(q);
-      return data.map((s: any) => ({
-        ...s,
-        displayName: String(s.name || s.id)
+      const res = await getData(`${ENDPOINTS.CUSTOMERS}/search/${SHOP_ID}`, { limit: "10", offset: "1", q });
+      const data = res?.data ? (Array.isArray(res.data) ? res.data : [res.data]) : [];
+      return data.map((c: any) => ({
+        ...c,
+        displayName: String(c.name || c.id)
       }));
     } catch {
       return [];
@@ -43,10 +46,10 @@ const SupplierSearch = () => {
       <div className="w-full max-w-2xl space-y-8">
         <div className="text-center space-y-3">
           <div className="w-20 h-20 bg-blue-600 rounded-lg flex items-center justify-center text-white mx-auto shadow-2xl shadow-blue-200 mb-6">
-            <Truck size={40} />
+            <Users size={40} />
           </div>
-          <h1 className="text-4xl font-black text-slate-800 tracking-tight">Supplier Directory</h1>
-          <p className="text-slate-500 font-medium text-lg">Search for suppliers or manage your network.</p>
+          <h1 className="text-4xl font-black text-slate-800 tracking-tight">Customer Directory</h1>
+          <p className="text-slate-500 font-medium text-lg">Search for customers or manage your database.</p>
         </div>
 
         <div className="relative group">
@@ -55,10 +58,10 @@ const SupplierSearch = () => {
             <SearchSelect
               labelKey="displayName"
               valueKey="id"
-              fetchOptions={fetchSuppliers}
-              placeholder="Search by name, email or phone..."
+              fetchOptions={fetchCustomers}
+              placeholder="Search by name, email or mobile..."
               className="w-full h-16 border-none text-lg font-medium"
-              onChange={(val) => val && navigate(`/supplier/${val}`)}
+              onChange={(val) => val && navigate(`/customers/${val}`)}
             />
           </div>
         </div>
@@ -67,4 +70,4 @@ const SupplierSearch = () => {
   );
 };
 
-export default SupplierSearch;
+export default CustomerSearch;

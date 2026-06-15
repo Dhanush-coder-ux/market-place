@@ -12,6 +12,7 @@ import {
 import { StatCard } from "@/components/common/StatsCard";
 import { useApi } from "@/context/ApiContext";
 import { useToast } from "@/context/ToastContext";
+import { useHeader } from "@/context/HeaderContext";
 import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 import Loader from "@/components/common/Loader";
 import type { EmployeeRecord } from "@/types/api";
@@ -27,12 +28,28 @@ export default function EmployeeDetail() {
   const navigate = useNavigate();
   const { getData, deleteData } = useApi();
   const { showToast } = useToast();
+  const { setBottomActions } = useHeader();
 
   const [employee, setEmployee] = useState<EmployeeRecord | null>(null);
   const [recordLoading, setRecordLoading] = useState(true);
   const [activeTab, setActiveTab] = useState(0);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [viewValue, setViewValue] = useState<{ label: string, value: string } | null>(null);
+
+  useEffect(() => {
+    setBottomActions(
+      <div className="flex items-center justify-end w-full animate-in fade-in slide-in-from-right-4 duration-300">
+        <button 
+          type="button"
+          onClick={() => navigate("/employee")}
+          className="px-6 h-8 rounded-lg border border-slate-200 bg-white text-slate-700 font-bold text-xs hover:bg-slate-50 transition-all flex items-center shadow-sm"
+        >
+          Clear
+        </button>
+      </div>
+    );
+    return () => setBottomActions(null);
+  }, [setBottomActions, navigate]);
 
   useEffect(() => {
     if (!id) return;
@@ -192,8 +209,8 @@ export default function EmployeeDetail() {
                     onClick={() => setViewValue({ label: "Joining Date", value: String(employee.joined_date || "—") })}
                   />
                   <DetailItem
-                    icon={Database} label="Salary Range" value={employee.datas?.salary_rage ? `₹${employee.datas.salary_rage}` : "—"}
-                    onClick={() => setViewValue({ label: "Salary Range", value: String(employee.datas?.salary_rage || "—") })}
+                    icon={Database} label="Salary Range" value={employee.datas?.salary_range ? `₹${employee.datas.salary_range}` : "—"}
+                    onClick={() => setViewValue({ label: "Salary Range", value: String(employee.datas?.salary_range || "—") })}
                   />
                   <DetailItem
                     icon={MapPin} label="Full Address" value={employee.datas?.address?.full_address || "—"}
@@ -274,6 +291,8 @@ export default function EmployeeDetail() {
             Double click the text to select and copy
           </p>
         </Modal>
+
+
 
         {/* Confirm Dialog */}
         <ConfirmDialog

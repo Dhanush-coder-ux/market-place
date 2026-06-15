@@ -3,7 +3,6 @@ import {
   X,
   Eye,
   Hash,
-  Info,
   ChevronDown,
   ChevronRight,
   Package,
@@ -12,19 +11,21 @@ import {
   Filter,
   Search,
   AlertCircle,
-  Tag,
   AlertTriangle,
   ExternalLink,
   Copy,
   Check,
+  IndianRupee,
 } from "lucide-react";
 import { VariantRows, BatchCards, SerialBadgeList } from "../components/StockTree";
-import { useApi, useApiLoading } from "@/context/ApiContext";
+import { useApi } from "@/context/ApiContext";
 import { useHeader } from "@/context/HeaderContext";
 import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 import Loader from "@/components/common/Loader";
 import { StatCard } from "@/components/common/StatsCard";
 import { useNavigate, useLocation } from "react-router-dom";
+import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
+import { RightSidebarFilter } from "@/components/common/RightSidebarFilter";
 
 // --- Types (unchanged) ---
 export interface VariantAttribute {
@@ -68,6 +69,7 @@ export interface ProductDatas {
   variants?: any[];
   serial_numbers?: string[];
   batches?: any[];
+  images?: string[];
 }
 
 export interface InventoryItem {
@@ -215,10 +217,12 @@ const ProductRow = React.memo(
     item,
     isExpanded,
     toggleExpand,
+    innerRef,
   }: {
     item: InventoryItem;
     isExpanded: boolean;
     toggleExpand: (id: string) => void;
+    innerRef?: any;
   }) => {
     const datas = item.datas || {};
 
@@ -252,7 +256,6 @@ const ProductRow = React.memo(
     const serials = parseData(
       datas.serial_numbers || item.serial_numbers || item.serial_number
     );
-    const variantTypes = datas.variantTypes || datas.variant_types || [];
 
     const hasVariants =
       (datas.has_variants ||
@@ -327,6 +330,7 @@ const ProductRow = React.memo(
     return (
       <Fragment>
         <tr
+          ref={innerRef}
           onClick={() => isExpandable && toggleExpand(item.id)}
           className={`group border-b border-slate-50 transition-colors ${
             isExpandable ? "cursor-pointer" : ""
@@ -358,8 +362,12 @@ const ProductRow = React.memo(
           {/* Product identity */}
           <td className="px-3 py-2.5">
             <div className="flex items-center gap-2.5">
-              <div className="w-7 h-7 rounded-md bg-slate-100 flex items-center justify-center text-slate-600 text-[11px] font-semibold shrink-0 select-none">
-                {initial}
+              <div className="w-7 h-7 rounded-md bg-slate-100 flex items-center justify-center text-slate-600 text-[11px] font-semibold shrink-0 select-none overflow-hidden">
+                {datas.images && datas.images.length > 0 ? (
+                  <img src={datas.images[0]} alt={productName} className="w-full h-full object-cover" />
+                ) : (
+                  initial
+                )}
               </div>
               <div className="flex flex-col gap-0.5 min-w-0">
                 <div className="flex items-center gap-1.5 flex-wrap">
@@ -388,8 +396,13 @@ const ProductRow = React.memo(
                       return <span className="font-mono text-slate-400 tabular-nums">—</span>;
                     }
                     const trimmedSku = rawSku.length > 12 ? `${rawSku.slice(0, 8)}...` : rawSku;
+                    const uiId = (item as any).ui_id || item.id || "";
                     return (
                       <span className="flex items-center gap-1">
+                        <span className="font-mono text-slate-400 tabular-nums" title={uiId}>
+                          ID: {uiId}
+                        </span>
+                        <span className="text-slate-200">·</span>
                         <span className="font-mono text-slate-400 tabular-nums" title={rawSku}>
                           {trimmedSku}
                         </span>
@@ -444,9 +457,19 @@ const ProductRow = React.memo(
             )}
           </td>
 
+
+          {/* Unit */}
+          <td className="px-3 py-2.5">
+            <span className="text-[12px] font-medium text-slate-600">
+              {datas.unit || (item as any).unit || "—"}
+            </span>
+          </td>
+
+          
+
           {/* Buy price */}
           <td className="px-3 py-2.5 text-right">
-            <span className="text-[12px] font-medium text-slate-400 tabular-nums">
+            <span className="text-[13px] font-semibold text-slate-700 tabular-nums">
               {hasVariants ? "—" : formatCurrency(item.buy_price)}
             </span>
           </td>
@@ -460,22 +483,8 @@ const ProductRow = React.memo(
 
           {/* Stock */}
           <td className="px-3 py-2.5 text-right">
-            <div className="flex flex-col items-end gap-0.5">
-              <span className="text-[13px] font-semibold text-slate-800 tabular-nums leading-none">
-                {stockNumber}
-              </span>
-              {(datas.unit || (item as any).unit) && (
-                <span className="text-[10px] text-slate-400 font-medium leading-none">
-                  {datas.unit || (item as any).unit}
-                </span>
-              )}
-            </div>
-          </td>
-
-          {/* Reorder point */}
-          <td className="px-3 py-2.5 text-center">
-            <span className="text-[11px] text-slate-400 tabular-nums font-medium">
-              {reorderPoint ?? "—"}
+            <span className="text-[13px] font-semibold text-blue-600 tabular-nums">
+              {stockNumber}
             </span>
           </td>
 
@@ -486,6 +495,15 @@ const ProductRow = React.memo(
             >
               <span className={`w-1.5 h-1.5 rounded-full ${status.dot}`} />
               {status.label}
+            </span>
+          </td>
+
+          
+
+          {/* Reorder point */}
+          <td className="px-3 py-2.5 text-center">
+            <span className="text-[13px] font-semibold text-slate-700 tabular-nums">
+              {hasVariants ? "—" : (reorderPoint ?? "—")}
             </span>
           </td>
 
@@ -514,64 +532,10 @@ const ProductRow = React.memo(
         {/* Expanded row */}
         {isExpanded && isExpandable && (
           <tr className="bg-slate-50/40">
-            <td colSpan={11} className="px-0 py-0">
+            <td colSpan={12} className="px-0 py-0">
               <div className="ml-10 mr-4 my-3 space-y-3 border-l border-slate-100 pl-6">
-                {/* Product overview */}
-                {(datas.description || item.description || datas.unit) && (
-                  <div className="bg-white border border-slate-100 rounded-lg p-3">
-                    <p className="text-[10px] font-semibold text-slate-400 mb-2 flex items-center gap-1.5 uppercase tracking-wide">
-                      <Info size={10} className="text-slate-400" />
-                      Overview
-                    </p>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                      {datas.unit && (
-                        <div className="bg-slate-50 rounded-md px-3 py-2">
-                          <p className="text-[9px] font-semibold text-slate-400 uppercase tracking-wide mb-0.5">
-                            Unit
-                          </p>
-                          <p className="text-[12px] font-medium text-slate-700">
-                            {datas.unit}
-                          </p>
-                        </div>
-                      )}
-                      {(datas.description || item.description) && (
-                        <div className="bg-slate-50 rounded-md px-3 py-2">
-                          <p className="text-[9px] font-semibold text-slate-400 uppercase tracking-wide mb-0.5">
-                            Description
-                          </p>
-                          <p className="text-[12px] font-medium text-slate-600 line-clamp-2">
-                            {datas.description || item.description}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
 
-                {/* Variant configuration */}
-                {hasVariants && variantTypes.length > 0 && (
-                  <div className="bg-white border border-slate-100 rounded-lg p-3">
-                    <p className="text-[10px] font-semibold text-slate-400 mb-2 flex items-center gap-1.5 uppercase tracking-wide">
-                      <Layers size={10} className="text-slate-400" />
-                      Configuration
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      {variantTypes.map((vt: any) => (
-                        <div
-                          key={vt.id}
-                          className="bg-slate-50 border border-slate-100 rounded-md px-3 py-1.5"
-                        >
-                          <p className="text-[9px] font-semibold text-slate-400 uppercase tracking-wide mb-0.5">
-                            {vt.name}
-                          </p>
-                          <p className="text-[12px] font-medium text-slate-700">
-                            {(vt.values as string[]).join(", ")}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+
 
                 {/* Serial numbers */}
                 {!hasVariants && !hasBatches && hasSerials && (
@@ -637,41 +601,75 @@ const InventoryPage = () => {
     return () => setActions(null);
   }, [setActions, isCleanMode]);
 
-  const loading = useApiLoading("inventory-list");
-  const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
-  const [refreshKey] = useState(0);
-
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   useEffect(() => {
-    getData(
-      `${ENDPOINTS.INVENTORIES}/by/shop/${SHOP_ID}`,
-      { is_active: "true" },
-      { cacheKey: "inventory-list" }
-    ).then((res: any) => {
-      if (res && res.data) setInventory(res.data);
-    });
-  }, [refreshKey, getData]);
+    const timer = setTimeout(() => setDebouncedSearch(searchQuery), 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
-  const filteredInventory = useMemo(() => {
-    if (!searchQuery) return inventory;
-    const q = searchQuery.toLowerCase();
-    return inventory.filter(
-      (item) =>
-        (
-          item.barcode ||
-          item.datas?.barcode ||
-          (item as any).sku ||
-          item.datas?.sku ||
-          ""
-        )
-          ?.toLowerCase()
-          .includes(q) ||
-        (item.datas?.name || item.name || "").toLowerCase().includes(q) ||
-        (item.datas?.brand || item.brand || "").toLowerCase().includes(q) ||
-        (item.datas?.category || item.category || "").toLowerCase().includes(q)
-    );
-  }, [inventory, searchQuery]);
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  
+  const activeFiltersCount = [fromDate, toDate].filter(Boolean).length;
+  
+  const resetFilters = () => {
+    setFromDate("");
+    setToDate("");
+    setSearchQuery("");
+  };
+
+  const fetchPage = useCallback(async (limit: number, offset: number, filters: any) => {
+    const params: any = {
+      is_active: "true",
+      limit: limit.toString(),
+      offset: offset.toString()
+    };
+    if (filters.search) params.search = filters.search;
+    if (filters.fromDate) params.from_date = filters.fromDate;
+    if (filters.toDate) params.to_date = filters.toDate;
+
+    const res = await getData(`${ENDPOINTS.INVENTORIES}/by/shop/${SHOP_ID}`, params);
+    
+    let itemsRaw: any[] = [];
+    let fetchedStats = null;
+    let total = 0;
+    
+    if (res && res.data) {
+      itemsRaw = Array.isArray(res.data) ? res.data : (res.data.inventories || res.data.datas || []);
+      if (res.data.overall_stats) {
+        fetchedStats = res.data.overall_stats;
+      } else if (res.datas?.overall_stats) {
+        fetchedStats = res.datas.overall_stats;
+      }
+      total = res.data.total_count || 0;
+    }
+
+    return {
+      items: itemsRaw,
+      hasMore: itemsRaw.length === limit,
+      stats: fetchedStats,
+      total
+    };
+  }, [getData]);
+
+  const filters = useMemo(() => ({
+    search: debouncedSearch,
+    fromDate,
+    toDate
+  }), [debouncedSearch, fromDate, toDate]);
+
+  const { items: inventory, loading, loadingMore, stats: overallStats, totalCount, lastElementRef } = useInfiniteScroll({
+    fetchPage,
+    filters,
+    limit: 50
+  });
+  
+  const filteredInventory = inventory;
+
+
 
   const stats = useMemo(() => {
     const total = filteredInventory.length;
@@ -709,35 +707,36 @@ const InventoryPage = () => {
         <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-none mt-2">
           <StatCard
             icon={Package}
-            label="Catalog"
-            value={stats.total.toString()}
+            label="Total Products"
+            value={overallStats?.total_product_count?.toString() || stats.total.toString()}
             subValue="items"
-            iconBg="bg-slate-50"
-            iconColor="text-slate-500"
+            iconBg="bg-blue-50"
+            iconColor="text-blue-600"
           />
           <StatCard
-            icon={AlertCircle}
-            label="Restock alerts"
-            value={stats.lowStock.toString()}
-            subValue="priority"
-            iconBg="bg-amber-50"
-            iconColor="text-amber-600"
-          />
-          <StatCard
-            icon={Tag}
-            label="Categories"
-            value={stats.categories.toString()}
-            subValue="active"
+            icon={IndianRupee}
+            label="Total Stock Value"
+            value={(overallStats?.total_stock_value || 0).toLocaleString()}
+            prefix="₹"
+            subValue="inventory value"
             iconBg="bg-emerald-50"
             iconColor="text-emerald-600"
           />
           <StatCard
-            icon={Hash}
-            label="Barcodes"
-            value={stats.barcodes.toString()}
-            subValue="unique"
-            iconBg="bg-violet-50"
-            iconColor="text-violet-600"
+            icon={AlertTriangle}
+            label="Low Stock"
+            value={overallStats?.low_stocks_count?.toString() || stats.lowStock.toString()}
+            subValue="priority"
+            iconBg="bg-amber-50"
+            iconColor="text-amber-500"
+          />
+          <StatCard
+            icon={AlertCircle}
+            label="Out of Stock"
+            value={overallStats?.no_stocks_count?.toString() || (inventory.filter((p: InventoryItem) => Number(p.stocks || 0) === 0).length).toString()}
+            subValue="items empty"
+            iconBg="bg-red-50"
+            iconColor="text-red-500"
           />
         </div>
       )}
@@ -773,11 +772,14 @@ const InventoryPage = () => {
             className="w-full h-8 pl-8 pr-3 text-[12px] font-medium text-slate-700 bg-slate-50 border border-slate-200 rounded-md placeholder:text-slate-400 focus:outline-none focus:border-slate-300 focus:bg-white transition-colors"
           />
         </div>
-        <button className="h-8 px-3 rounded-md border text-xs font-semibold flex items-center gap-1.5 active:scale-95 transition-all shadow-sm shrink-0">
+        <button 
+          onClick={() => setIsFilterOpen(true)}
+          className={`h-8 px-3 rounded-md border text-xs font-semibold flex items-center gap-1.5 active:scale-95 transition-all shadow-sm shrink-0 ${activeFiltersCount > 0 ? "border-blue-200 text-blue-600 bg-blue-50/50" : "border-slate-200 text-slate-650 bg-white hover:bg-slate-50"}`}
+        >
           <Filter size={13} />
+          {activeFiltersCount > 0 && <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />}
         </button>
         
-
 
         {searchQuery && (
           <span className="text-[11px] text-slate-400 font-medium ml-1 shrink-0">
@@ -786,14 +788,46 @@ const InventoryPage = () => {
           </span>
         )}
       </div>
+      
+      <RightSidebarFilter
+        isOpen={isFilterOpen}
+        onClose={() => setIsFilterOpen(false)}
+        onApply={() => {}}
+        onClear={resetFilters}
+        title="Inventory Filters"
+      >
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <div className="space-y-1.5 flex-1">
+              <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">From</label>
+              <input
+                type="date"
+                value={fromDate}
+                onChange={e => setFromDate(e.target.value)}
+                className="w-full h-9 px-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-750 focus:outline-none focus:border-slate-300 focus:bg-white transition-colors"
+              />
+            </div>
+            <div className="space-y-1.5 flex-1">
+              <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">To</label>
+              <input
+                type="date"
+                value={toDate}
+                onChange={e => setToDate(e.target.value)}
+                className="w-full h-9 px-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-750 focus:outline-none focus:border-slate-300 focus:bg-white transition-colors"
+              />
+            </div>
+          </div>
+        </div>
+      </RightSidebarFilter>
 
       {/* Main table card */}
       <div className="bg-white border border-slate-100 rounded-lg shadow-sm min-w-0 overflow-hidden flex flex-col flex-1 min-h-0 mt-2">
 
         {/* Table */}
-        {loading ? (
-          <div className="flex-1 flex items-center justify-center py-20">
+        {loading && inventory.length === 0 ? (
+          <div className="flex-1 flex flex-col items-center justify-center py-20 text-slate-400">
             <Loader />
+            <p className="text-sm font-medium mt-3">Loading inventory...</p>
           </div>
         ) : inventory.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center py-24 gap-3">
@@ -826,23 +860,26 @@ const InventoryPage = () => {
                   <th className="px-3 py-2.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wide">
                     Serials
                   </th>
-                  <th className="px-3 py-2.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wide text-right">
-                    Buy
+                  <th className="px-3 py-2.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wide">
+                    Unit
                   </th>
                   <th className="px-3 py-2.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wide text-right">
-                    Sell
+                    Buy Price
+                  </th>
+                  <th className="px-3 py-2.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wide text-right">
+                    Sell Price
                   </th>
                   <th className="px-3 py-2.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wide text-right">
                     Stock
                   </th>
-                  <th className="px-3 py-2.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wide text-center">
-                    ROP
-                  </th>
                   <th className="px-3 py-2.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wide">
                     Status
                   </th>
+                  <th className="px-3 py-2.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wide text-center">
+                    Reorder Point
+                  </th>
                   <th className="px-3 py-2.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wide text-right">
-                    Updated
+                    Last updated
                   </th>
                   <th className="px-3 py-2.5 w-10 text-center text-[10px] font-semibold text-slate-400 uppercase tracking-wide">
                   </th>
@@ -850,16 +887,18 @@ const InventoryPage = () => {
               </thead>
 
               <tbody className="divide-y-0">
-                {filteredInventory.map((item: InventoryItem) => (
+                {filteredInventory.map((item: InventoryItem, index) => (
                   <ProductRow
                     key={item.id}
                     item={item}
                     isExpanded={expandedRows.has(item.id)}
                     toggleExpand={toggleExpand}
+                    innerRef={index === filteredInventory.length - 1 ? lastElementRef : null}
                   />
                 ))}
               </tbody>
             </table>
+            {loadingMore && <div className="py-4 text-center text-xs text-slate-500">Loading more...</div>}
 
             {/* Empty search result */}
             {filteredInventory.length === 0 && searchQuery && (
@@ -878,7 +917,7 @@ const InventoryPage = () => {
         {!loading && inventory.length > 0 && (
           <div className="border-t border-slate-50 px-4 py-2 flex items-center justify-between">
             <span className="text-[11px] text-slate-400 font-medium">
-              {filteredInventory.length} of {inventory.length} item
+              {inventory.length} {totalCount > 0 ? `of ${totalCount}` : ''} item
               {inventory.length !== 1 ? "s" : ""}
             </span>
             <span className="text-[11px] text-slate-300 font-medium">

@@ -120,6 +120,8 @@ export default function StockAdjustmentPage() {
     targetRowIndex: number;
     batches: any[];
     variantData: any;
+    baseData?: any;
+    baseProduct?: string;
   }>({
     isOpen: false, variantName: "", targetRowIndex: -1, batches: [], variantData: null
   });
@@ -231,6 +233,12 @@ export default function StockAdjustmentPage() {
       });
       setVariantModal(prev => ({ ...prev, isOpen: false }));
     } else {
+      const hasBatchTracking = variantModal.baseData.has_batch || variantModal.baseData.datas?.has_batch || false;
+      if (hasBatchTracking) {
+        showToast("This variant requires batch tracking but has no existing batches. Please create an initial batch via Purchase first.", "error");
+        return;
+      }
+
       const updatedItems = [...items];
       const serialInfo = extractSerials(variantData.serial_numbers);
       
@@ -260,24 +268,27 @@ export default function StockAdjustmentPage() {
   const confirmBatch = (batch: any) => {
     const updatedItems = [...items];
     const vData = batchModal.variantData;
+    const baseD = batchModal.baseData || variantModal.baseData;
+    const baseP = batchModal.baseProduct || variantModal.baseProduct;
+    
     const serialInfo = extractSerials(batch.serial_numbers || vData.serial_numbers);
     
     updatedItems[batchModal.targetRowIndex] = {
       ...updatedItems[batchModal.targetRowIndex],
-      inventory_id: variantModal.baseData.id,
-      product: variantModal.baseProduct,
-      barcode: batch.barcode || vData.sku || variantModal.baseData.barcode || '',
+      inventory_id: baseD.id,
+      product: baseP,
+      barcode: batch.barcode || vData.sku || baseD.barcode || '',
       currentStock: batch.stocks || batch.quantity || 0,
-      variant_name: vData.name,
-      variant_id: vData.id,
+      variant_name: vData.id ? vData.name : '',
+      variant_id: vData.id || '',
       batch_id: batch.id,
       batch_name: batch.name || batch.batch,
       serialno_id: serialInfo.id,
-      sku: vData.sku || vData.barcode,
-      has_serialno_tracking: variantModal.baseData.has_serialno || variantModal.baseData.datas?.has_serialno || false,
+      sku: vData.sku || vData.barcode || baseD.barcode || '',
+      has_serialno_tracking: baseD.has_serialno || baseD.datas?.has_serialno || false,
       existing_serial_numbers: serialInfo.list,
       serial_numbers: [],
-      type: (variantModal.baseData.has_serialno || variantModal.baseData.datas?.has_serialno) && serialInfo.list.length === 0
+      type: (baseD.has_serialno || baseD.datas?.has_serialno) && serialInfo.list.length === 0
         ? 'INCREMENT'
         : updatedItems[batchModal.targetRowIndex].type
     };
@@ -668,10 +679,10 @@ export default function StockAdjustmentPage() {
                               <div className="flex flex-col gap-1.5">
                                 <label className="text-[10px] font-bold text-slate-500 ml-1 uppercase tracking-wider">Product Details</label>
                                   <SearchSelect 
-                                    fetchOptions={async (q) => await inventoryApi.searchInventories(q)}
+                                    fetchOptions={async (q) => await inventoryApi.searchInventories(q, true)}
                                     value={item.product}
                                     labelKey="name"
-                                    valueKey="id"
+                                    valueKey="name"
                                     onChange={(val, opt: any) => {
                                       if (opt) {
                                         const hasVariants = opt.has_variant || (opt.datas && opt.datas.has_variant);
@@ -705,13 +716,20 @@ export default function StockAdjustmentPage() {
                                           if (rootBatches.length > 0) {
                                             setBatchModal({
                                               isOpen: true,
-                                              variantName: opt.name || String(val),
+                                              variantName: '',
                                               targetRowIndex: index,
                                               batches: rootBatches,
-                                              variantData: opt // Using opt as variant data for standard products
+                                              variantData: { id: '', name: '', sku: opt.barcode }, 
+                                              baseData: opt,
+                                              baseProduct: opt.name || String(val)
                                             });
-                                            setVariantModal(prev => ({ ...prev, baseData: opt }));
                                           } else {
+                                            const hasBatchTracking = opt.has_batch || (opt.datas && opt.datas.has_batch) || false;
+                                            if (hasBatchTracking) {
+                                              showToast("This product requires batch tracking but has no existing batches. Please create an initial batch via Purchase first.", "error");
+                                              return;
+                                            }
+
                                             const serialInfo = extractSerials(opt.serial_number || (opt.datas && opt.datas.serial_number));
                                             updateMultiple(item.id, { 
                                               inventory_id: opt.id,

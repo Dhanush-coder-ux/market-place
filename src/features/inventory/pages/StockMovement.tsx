@@ -1,14 +1,16 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import {
   Search, Eye,
-  X, AlertTriangle, ArrowUp, ArrowDown,
+  X, ArrowUp, ArrowDown,
   User, TrendingUp, TrendingDown, Activity,
   Bookmark, Filter,
-  FileText, Layers, Hash, Zap, Copy, ExternalLink
+  FileText, Layers, Hash, Zap, Copy, ExternalLink,
+  ChevronDown, ChevronRight, Package, ShoppingBag
 } from "lucide-react";
 
 import { GradientButton } from "@/components/ui/GradientButton";
 import { StatCard } from "@/components/common/StatsCard";
+import { TypeBadge } from "@/components/common/SuperUI";
 import { useApi } from "@/context/ApiContext";
 import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 import { useHeader } from "@/context/HeaderContext";
@@ -18,6 +20,7 @@ import { ReusableSelect } from "@/components/ui/ReusableSelect";
 import { useToast } from "@/context/ToastContext";
 import { createPortal } from "react-dom";
 import { RightSidebarFilter } from "@/components/common/RightSidebarFilter";
+import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 
 // ─── Types & Interfaces ──────────────────────────────────────────────────────
 
@@ -45,12 +48,13 @@ export interface Movement {
   manufacturing_date?: string;
   serial_numbers?: string[];
   current_stock?: number;
+  productsList?: any[];
 }
 
 // ─── Mock Data ───────────────────────────────────────────────────────────────
 
 const WAREHOUSES = ["All Locations", "Warehouse A", "Warehouse B", "Store Front", "Cold Storage", "Returns Depot"];
-const MOVEMENT_TYPES = ["All", "PURCHASE", "PO_PURCHASE", "SALES", "TRANSFER", "SALE_RETURN", "STOCK_ADJUSTMENT"];
+const MOVEMENT_TYPES = ["All", "PURCHASE", "SALES", "STOCK_ADJUSTMENT"];
 
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -65,48 +69,6 @@ function fmtDate(dateStr: string) {
 }
 
 // Fixed styling helper to accommodate all MovementTypes
-
-
-function truncateId(id: string | undefined) {
-  if (!id) return "";
-  if (id.length > 12 && id.includes("-")) {
-    return id.slice(0, 8).toUpperCase();
-  }
-  return id;
-}
-
-
-function TypeBadge({ type }: { type: MovementType }) {
-  let s = { bg: "bg-slate-50 text-slate-700 border-slate-200", dot: "bg-slate-500" };
-
-  if (type === "PURCHASE" || type === "PO_PURCHASE") {
-    s = { bg: "bg-emerald-50 text-emerald-700 border-emerald-200", dot: "bg-emerald-500" };
-  } else if (type === "SALES") {
-    s = { bg: "bg-rose-50 text-rose-700 border-rose-200", dot: "bg-rose-500" };
-  } else if (type === "STOCK_ADJUSTMENT") {
-    s = { bg: "bg-violet-50 text-violet-700 border-violet-200", dot: "bg-violet-500" };
-  } else if (type === "TRANSFER") {
-    s = { bg: "bg-sky-50 text-sky-700 border-sky-200", dot: "bg-sky-500" };
-  } else if (type === "OPENING") {
-    s = { bg: "bg-slate-50 text-slate-700 border-slate-200", dot: "bg-slate-500" };
-  } else if (type === "PRODUCTION") {
-    s = { bg: "bg-teal-50 text-teal-700 border-teal-200", dot: "bg-teal-500" };
-  } else if (type === "SALE_RETURN") {
-    s = { bg: "bg-fuchsia-50 text-fuchsia-700 border-fuchsia-200", dot: "bg-fuchsia-500" };
-  }
-
-  let displayName = type.replace(/_/g, ' ').replace(/-/g, ' ');
-  if (type === "STOCK_ADJUSTMENT") {
-    displayName = "ADJUSTMENT";
-  }
-
-  return (
-    <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-extrabold border leading-none shadow-sm uppercase tracking-wider ${s.bg}`}>
-      <span className={`w-1 h-1 rounded-full ${s.dot}`} />
-      {displayName}
-    </span>
-  );
-}
 
 interface DetailDrawerProps {
   movement: Movement;
@@ -196,98 +158,139 @@ function DetailDrawer({ movement, onClose }: DetailDrawerProps) {
 
           {/* Structured Inventory Path */}
           <div className="space-y-4">
-            <h4 className="text-[10px] font-black text-slate-400  tracking-[0.2em] px-1">Inventory Specification Path</h4>
-
-            {/* Product Level */}
-            <div className="relative pl-6 before:absolute before:left-[11px] before:top-8 before:bottom-0 before:w-0.5 before:bg-slate-100">
-              <div className="relative group mb-4">
-                <div className="absolute -left-[19px] top-1.5 w-4 h-4 rounded-full border-2 border-blue-500 bg-white z-10" />
-                <div className="bg-blue-50/40 border border-blue-100 rounded-lg p-4 transition-all hover:bg-blue-50 hover:shadow-md hover:shadow-blue-500/5">
-                  <div className="flex items-center gap-2 text-blue-600 font-black text-[10px]   mb-1">
-                    <Layers size={12} /> Product Root
-                  </div>
-                  <p className="text-slate-800 font-bold text-base leading-tight">{movement.product}</p>
-                  <div className="flex items-center gap-2 mt-2">
-                    <span className="text-[10px] font-mono text-slate-400 bg-white px-2 py-0.5 rounded border border-slate-100">SKU: {movement.sku}</span>
-                    <button onClick={(e) => copyToClipboard(e, movement.id)} className="text-[9px] font-bold text-blue-500 hover:underline">Copy ID</button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Variant Level */}
-              {movement.variant && (
-                <div className="relative group mb-4">
-                  <div className="absolute -left-[19px] top-1.5 w-4 h-4 rounded-full border-2 border-violet-500 bg-white z-10" />
-                  <div className="bg-violet-50/40 border border-violet-100 rounded-lg p-4 ml-2 transition-all hover:bg-violet-50 hover:shadow-md hover:shadow-violet-500/5">
-                    <div className="flex items-center gap-2 text-violet-600 font-black text-[10px]   mb-1">
-                      <Activity size={12} /> Variant Configuration
-                    </div>
-                    <p className="text-slate-800 font-bold text-sm">{movement.variant}</p>
-                  </div>
-                </div>
-              )}
-
-              {/* Batch Level */}
-              {movement.batch && (
-                <div className="relative group mb-4">
-                  <div className="absolute -left-[19px] top-1.5 w-4 h-4 rounded-full border-2 border-amber-500 bg-white z-10" />
-                  <div className="bg-amber-50/40 border border-amber-100 rounded-lg p-4 ml-4 transition-all hover:bg-amber-50 hover:shadow-md hover:shadow-amber-500/5">
-                    <div className="flex items-center gap-2 text-amber-600 font-black text-[10px]   mb-1">
-                      <Hash size={12} /> Batch Identifier
-                    </div>
-                    <p className="text-slate-800 font-bold text-sm mb-2">{movement.batch}</p>
-
-                    {(movement.expiry_date || movement.manufacturing_date) && (
-                      <div className="space-y-1.5 border-t border-amber-100 pt-2 mt-2">
-                        {movement.manufacturing_date && (
-                          <div className="flex justify-between items-center text-[10px]">
-                            <span className="text-amber-600/70 font-bold  tracking-tight">MFG Date</span>
-                            <span className="text-slate-700 font-bold">{fmtDate(movement.manufacturing_date)}</span>
+            {movement.productsList && movement.productsList.length > 1 ? (
+              <>
+                <h4 className="text-[10px] font-black text-slate-400 tracking-[0.2em] px-1">Grouped Items Specification ({movement.productsList.length})</h4>
+                <div className="space-y-3">
+                  {movement.productsList.map((p, idx) => {
+                    const hasSpec = p.variant || p.batch || (p.serial_numbers && p.serial_numbers.length > 0);
+                    return (
+                      <div key={idx} className="bg-slate-50 border border-slate-100 rounded-lg p-3 hover:bg-slate-100/55 hover:shadow-sm transition-all">
+                        <div className="flex justify-between items-start gap-2 mb-1.5">
+                          <div>
+                            <p className="text-slate-800 font-bold text-xs leading-tight">{p.name}</p>
+                            <span className="text-[9px] font-mono text-slate-400 mt-0.5 block">SKU: {p.sku}</span>
+                          </div>
+                          <span className={`text-xs font-black tabular-nums ${p.qty > 0 ? 'text-emerald-650' : 'text-rose-655'}`}>
+                            {p.qty > 0 ? `+${p.qty}` : p.qty}
+                          </span>
+                        </div>
+                        {hasSpec && (
+                          <div className="flex flex-wrap gap-1 mt-2 pt-2 border-t border-slate-200/50">
+                            {p.variant && <span className="px-1.5 py-0.2 rounded bg-violet-50 text-violet-650 border border-violet-100 text-[8px] font-bold">V: {p.variant}</span>}
+                            {p.batch && <span className="px-1.5 py-0.2 rounded bg-amber-50 text-amber-650 border border-amber-100 text-[8px] font-bold">B: {p.batch}</span>}
+                            {p.serial_numbers && p.serial_numbers.length > 0 && (
+                              <div className="flex flex-wrap gap-0.5 items-center">
+                                <span className="text-[8px] text-slate-400 font-bold mr-0.5">SN:</span>
+                                {p.serial_numbers.slice(0, 2).map((sn: string, sIdx: number) => (
+                                  <span key={sIdx} className="text-[8px] font-mono text-slate-500 bg-white border border-slate-100 px-1 rounded">{sn}</span>
+                                ))}
+                                {p.serial_numbers.length > 2 && <span className="text-[8px] font-bold text-slate-400">+{p.serial_numbers.length - 2}</span>}
+                              </div>
+                            )}
                           </div>
                         )}
-                        {movement.expiry_date && (
-                          <>
-                            <div className="flex justify-between items-center text-[10px]">
-                              <span className="text-amber-600/70 font-bold  tracking-tight">EXP Date</span>
-                              <span className="text-slate-700 font-bold">{fmtDate(movement.expiry_date)}</span>
-                            </div>
-                            <div className="flex justify-between items-center bg-white/50 rounded-lg px-2 py-1 mt-1">
-                              <span className="text-[9px] font-black text-rose-500  ">Remaining</span>
-                              <span className="text-[10px] font-black text-rose-600 tabular-nums">
-                                {(() => {
-                                  const diff = new Date(movement.expiry_date).getTime() - new Date().getTime();
-                                  const days = Math.ceil(diff / (1000 * 3600 * 24));
-                                  return days > 0 ? `${days} Days` : "Expired";
-                                })()}
-                              </span>
-                            </div>
-                          </>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            ) : (
+              <>
+                <h4 className="text-[10px] font-black text-slate-400  tracking-[0.2em] px-1">Inventory Specification Path</h4>
+
+                {/* Product Level */}
+                <div className="relative pl-6 before:absolute before:left-[11px] before:top-8 before:bottom-0 before:w-0.5 before:bg-slate-100">
+                  <div className="relative group mb-4">
+                    <div className="absolute -left-[19px] top-1.5 w-4 h-4 rounded-full border-2 border-blue-500 bg-white z-10" />
+                    <div className="bg-blue-50/40 border border-blue-100 rounded-lg p-4 transition-all hover:bg-blue-50 hover:shadow-md hover:shadow-blue-500/5">
+                      <div className="flex items-center gap-2 text-blue-600 font-black text-[10px]   mb-1">
+                        <Layers size={12} /> Product Root
+                      </div>
+                      <p className="text-slate-800 font-bold text-base leading-tight">{movement.product}</p>
+                      <div className="flex items-center gap-2 mt-2">
+                        <span className="text-[10px] font-mono text-slate-400 bg-white px-2 py-0.5 rounded border border-slate-100">SKU: {movement.sku}</span>
+                        <button onClick={(e) => copyToClipboard(e, movement.id)} className="text-[9px] font-bold text-blue-500 hover:underline">Copy ID</button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Variant Level */}
+                  {movement.variant && (
+                    <div className="relative group mb-4">
+                      <div className="absolute -left-[19px] top-1.5 w-4 h-4 rounded-full border-2 border-violet-500 bg-white z-10" />
+                      <div className="bg-violet-50/40 border border-violet-100 rounded-lg p-4 ml-2 transition-all hover:bg-violet-50 hover:shadow-md hover:shadow-violet-500/5">
+                        <div className="flex items-center gap-2 text-violet-600 font-black text-[10px]   mb-1">
+                          <Activity size={12} /> Variant Configuration
+                        </div>
+                        <p className="text-slate-800 font-bold text-sm">{movement.variant}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Batch Level */}
+                  {movement.batch && (
+                    <div className="relative group mb-4">
+                      <div className="absolute -left-[19px] top-1.5 w-4 h-4 rounded-full border-2 border-amber-500 bg-white z-10" />
+                      <div className="bg-amber-50/40 border border-amber-100 rounded-lg p-4 ml-4 transition-all hover:bg-amber-50 hover:shadow-md hover:shadow-amber-500/5">
+                        <div className="flex items-center gap-2 text-amber-600 font-black text-[10px]   mb-1">
+                          <Hash size={12} /> Batch Identifier
+                        </div>
+                        <p className="text-slate-800 font-bold text-sm mb-2">{movement.batch}</p>
+
+                        {(movement.expiry_date || movement.manufacturing_date) && (
+                          <div className="space-y-1.5 border-t border-amber-100 pt-2 mt-2">
+                            {movement.manufacturing_date && (
+                              <div className="flex justify-between items-center text-[10px]">
+                                <span className="text-amber-600/70 font-bold  tracking-tight">MFG Date</span>
+                                <span className="text-slate-700 font-bold">{fmtDate(movement.manufacturing_date)}</span>
+                              </div>
+                            )}
+                            {movement.expiry_date && (
+                              <>
+                                <div className="flex justify-between items-center text-[10px]">
+                                  <span className="text-amber-600/70 font-bold  tracking-tight">EXP Date</span>
+                                  <span className="text-slate-700 font-bold">{fmtDate(movement.expiry_date)}</span>
+                                </div>
+                                <div className="flex justify-between items-center bg-white/50 rounded-lg px-2 py-1 mt-1">
+                                  <span className="text-[9px] font-black text-rose-500  ">Remaining</span>
+                                  <span className="text-[10px] font-black text-rose-600 tabular-nums">
+                                    {(() => {
+                                      const diff = new Date(movement.expiry_date).getTime() - new Date().getTime();
+                                      const days = Math.ceil(diff / (1000 * 3600 * 24));
+                                      return days > 0 ? `${days} Days` : "Expired";
+                                    })()}
+                                  </span>
+                                </div>
+                              </>
+                            )}
+                          </div>
                         )}
                       </div>
-                    )}
-                  </div>
-                </div>
-              )}
+                    </div>
+                  )}
 
-              {/* Serial Numbers Level */}
-              {movement.serial_numbers && movement.serial_numbers.length > 0 && (
-                <div className="relative group">
-                  <div className="absolute -left-[19px] top-1.5 w-4 h-4 rounded-full border-2 border-emerald-500 bg-white z-10" />
-                  <div className="bg-emerald-50/30 border border-emerald-100 rounded-lg p-4 ml-6 transition-all hover:bg-emerald-50/50 hover:shadow-md hover:shadow-emerald-500/5">
-                    <div className="flex items-center gap-2 text-emerald-600 font-black text-[10px]   mb-3">
-                      <Zap size={12} fill="currentColor" /> Unique Serials ({movement.serial_numbers.length})
+                  {/* Serial Numbers Level */}
+                  {movement.serial_numbers && movement.serial_numbers.length > 0 && (
+                    <div className="relative group">
+                      <div className="absolute -left-[19px] top-1.5 w-4 h-4 rounded-full border-2 border-emerald-500 bg-white z-10" />
+                      <div className="bg-emerald-50/30 border border-emerald-100 rounded-lg p-4 ml-6 transition-all hover:bg-emerald-50/50 hover:shadow-md hover:shadow-emerald-500/5">
+                        <div className="flex items-center gap-2 text-emerald-600 font-black text-[10px]   mb-3">
+                          <Zap size={12} fill="currentColor" /> Unique Serials ({movement.serial_numbers.length})
+                        </div>
+                        <div className="flex flex-wrap gap-1.5 max-h-[120px] overflow-y-auto custom-scrollbar pr-1">
+                          {movement.serial_numbers.map((sn, i) => (
+                            <span key={i} className="px-2 py-1 rounded-lg bg-white border border-emerald-100 text-emerald-700 font-mono text-[10px] font-bold shadow-sm">
+                              {sn}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
                     </div>
-                    <div className="flex flex-wrap gap-1.5 max-h-[120px] overflow-y-auto custom-scrollbar pr-1">
-                      {movement.serial_numbers.map((sn, i) => (
-                        <span key={i} className="px-2 py-1 rounded-lg bg-white border border-emerald-100 text-emerald-700 font-mono text-[10px] font-bold shadow-sm">
-                          {sn}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
+                  )}
                 </div>
-              )}
-            </div>
+              </>
+            )}
           </div>
 
           {/* Context Details */}
@@ -419,10 +422,23 @@ export default function StockMovementPage() {
   const [showAdd, setShowAdd] = useState(false);
   const [sortField, setSort] = useState<"date" | "qty">("date");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
-  const [page, setPage] = useState(1);
-  const [movements, setMovements] = useState<Movement[]>([]);
+
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(search), 300);
+    return () => clearTimeout(timer);
+  }, [search]);
+
   const { showToast } = useToast();
-  const PAGE_SIZE = 10;
+
+  const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
+  const toggleExpand = (rowKey: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setExpandedRows((prev) => ({
+      ...prev,
+      [rowKey]: !prev[rowKey],
+    }));
+  };
 
   const copyToClipboard = (e: React.MouseEvent, text: string) => {
     e.stopPropagation();
@@ -431,13 +447,7 @@ export default function StockMovementPage() {
   };
 
   const handleMovementClick = (m: Movement) => {
-    if (m.type === "PURCHASE" || m.type === "PO_PURCHASE") {
-      navigate(`/purchase/detail/${encodeURIComponent(m.fullId || m.id)}`);
-    } else if (m.type === "SALES" || m.type === "SALE_RETURN") {
-      navigate(`/sales/${encodeURIComponent(m.fullId || m.id)}`);
-    } else {
-      navigate(`/stock-movement/${encodeURIComponent(m.id)}`, { state: { movement: m } });
-    }
+    navigate(`/stock-movement/${encodeURIComponent(m.fullId || m.id)}`);
   };
 
   // Dynamic Column State
@@ -482,15 +492,32 @@ export default function StockMovementPage() {
     return () => setActions(null);
   }, [setActions, navigate, isCleanMode]);
 
-  useEffect(() => {
-    const load = async () => {
-      // Fetch centralized Stock Adjustments which now contain ALL stock movements
-      const adjRes = await getData(`${ENDPOINTS.S_ADJUSTMENTS}/by/shop/${SHOP_ID}`, { view: "STOCKADJUSTMENT_VIEW", shop_id: SHOP_ID, limit: "50", offset: "1" });
-      const aData = adjRes?.data || adjRes?.datas || (Array.isArray(adjRes) ? adjRes : []);
+  const fetchPage = useCallback(async (limit: number, offset: number, filters: any) => {
+      const params: any = { view: "STOCKADJUSTMENT_VIEW", shop_id: SHOP_ID, limit: limit.toString(), offset: offset.toString() };
+      
+      if (filters.search) params.search = filters.search;
+      if (filters.type && filters.type !== "All") {
+        params.movement_type = filters.type === "PURCHASE" ? "DIRECT" : filters.type;
+      }
+      if (filters.dateFrom) params.from_date = filters.dateFrom;
+      if (filters.dateTo) params.to_date = filters.dateTo;
+      
+      const adjRes = await getData(`${ENDPOINTS.S_ADJUSTMENTS}/by/shop/${SHOP_ID}`, params);
+      const aData = Array.isArray(adjRes?.data) ? adjRes.data : (adjRes?.data?.datas ?? adjRes?.data?.movements ?? (Array.isArray(adjRes?.datas) ? adjRes.datas : (adjRes?.datas?.datas ?? adjRes?.datas?.movements ?? [])));
+
+      let fetchedStats = null;
+      if (adjRes?.data?.overall_stats) {
+        fetchedStats = adjRes.data.overall_stats;
+      } else if (adjRes?.datas?.overall_stats) {
+        fetchedStats = adjRes.datas.overall_stats;
+      }
 
       const invRes = await getData(`${ENDPOINTS.INVENTORIES}/by/shop/${SHOP_ID}?limit=100`);
       const invMap: Record<string, number> = {};
-      (invRes?.data || invRes?.datas || []).forEach((item: any) => {
+      
+      const invList = Array.isArray(invRes?.data) ? invRes.data : (invRes?.data?.inventories ?? (Array.isArray(invRes?.datas) ? invRes.datas : (invRes?.datas?.inventories ?? [])));
+      
+      invList.forEach((item: any) => {
         invMap[item.name] = Number(item.stocks || 0);
         if (item.variants) {
           item.variants.forEach((v: any) => {
@@ -509,13 +536,10 @@ export default function StockMovementPage() {
         }
       });
 
-      // Backend returns corrupted products array for SALES and RETURN movements (they all match the products from ui_id 21)
-      // So we filter them out of S_ADJUSTMENTS entirely and fetch them from ORDERS instead
-      const filteredAData = aData.filter((a: any) => a.movement_type !== "SALES" && a.movement_type !== "SALE_RETURN" && a.movement_type !== "RETURN");
-
-      const adjMovements: Movement[] = filteredAData.flatMap((a: any) => {
+      const adjMovements: Movement[] = aData.flatMap((a: any) => {
         let products = Array.isArray(a.products) ? a.products : [];
         const dateStr = String(a.adjusted_date || a.created_at || new Date().toISOString());
+        const realId = a.stock_movement_id || a.id || a._id || a.movement_id || "ADJ";
 
         // Map movement_type from backend
         let finalType: MovementType = "STOCK_ADJUSTMENT";
@@ -545,33 +569,50 @@ export default function StockMovementPage() {
           destination = "Adjusted";
         }
 
-        return products.flatMap((prod: any) => {
-          const results: Movement[] = [];
-          const isDecrement = prod.type === 'DECREMENT';
+        const productsList: any[] = [];
+        products.forEach((prod: any) => {
+          // NEW FORMAT SUPPORT
+          if (prod.stocks_adjusted !== undefined) {
+            const isDecrement = prod.type === 'DECREMENT' || finalType === "SALES" || finalType === "SALE_RETURN" && prod.stocks_adjusted < 0;
+            const absoluteAdjusted = Math.abs(Number(prod.stocks_adjusted));
+            const qtyVal = isDecrement && prod.type !== 'INCREMENT' ? -absoluteAdjusted : absoluteAdjusted;
+            
+            // Note: finalType 'SALES' is usually decrement, but if type='INCREMENT' it might be a return mapped wrongly? 
+            // We just use the backend's `type` field if available.
+            const finalQtyVal = prod.type === 'DECREMENT' ? -absoluteAdjusted : (prod.type === 'INCREMENT' ? absoluteAdjusted : qtyVal);
+
+            const sns = prod.serial_info?.serial_numbers || [];
+            
+            productsList.push({
+              name: prod.name || "—",
+              sku: prod.barcode || (realId.slice(0, 8) || ""),
+              qty: finalQtyVal,
+              stocks_before: prod.stocks_before,
+              current_stock: prod.stocks_after,
+              variant: prod.variant?.variant_name || "",
+              batch: prod.batch?.batch_name || "",
+              expiry_date: prod.batch?.exp_date,
+              manufacturing_date: prod.batch?.mfg_date,
+              serial_numbers: sns
+            });
+            return;
+          }
+
+          // OLD FORMAT SUPPORT
+          const isDecrement = prod.type === 'DECREMENT' || finalType === "SALES";
           const baseQty = Number(prod.stocks || 0);
           const qtyVal = isDecrement ? -baseQty : baseQty;
-
-          const baseMovement = {
-            id: a.id?.slice(0, 8).toUpperCase() || "ADJ",
-            fullId: a.id,
-            product: prod.name || "—",
-            type: finalType,
-            source,
-            destination,
-            ref: String(a.ui_id ? `REF-${a.ui_id}` : a.id?.slice(0, 8).toUpperCase() || "REF"),
-            date: dateStr.includes("T") ? dateStr : dateStr + "T00:00:00",
-            status: "Completed" as StatusType,
-            user: String(a.added_by || "Admin"),
-            notes: a.description || "",
-          };
 
           if (prod.variants && prod.variants.length > 0) {
             prod.variants.forEach((v: any) => {
               if (v.batches && v.batches.length > 0) {
                 v.batches.forEach((b: any) => {
-                  results.push({
-                    ...baseMovement,
-                    sku: b.barcode || v.sku || prod.barcode || (a.id?.slice(0, 8) || ""),
+                  const sns = Array.isArray(b.serial_numbers?.serial_numbers) 
+                    ? b.serial_numbers.serial_numbers 
+                    : (Array.isArray(v.serial_numbers?.serial_numbers) ? v.serial_numbers.serial_numbers : []);
+                  productsList.push({
+                    name: prod.name || "—",
+                    sku: b.barcode || v.sku || prod.barcode || (realId.slice(0, 8) || ""),
                     qty: isDecrement ? -Number(b.stocks || v.stocks || baseQty) : Number(b.stocks || v.stocks || baseQty),
                     stocks_before: b.stocks_before ?? v.stocks_before ?? prod.stocks_before,
                     current_stock: invMap[`${prod.name}-${v.name}-${b.name}`] ?? invMap[`${prod.name}-${v.name}`] ?? invMap[prod.name],
@@ -579,151 +620,97 @@ export default function StockMovementPage() {
                     batch: b.name || "",
                     expiry_date: b.expiry_date,
                     manufacturing_date: b.manufacturing_date,
-                    serial_numbers: Array.isArray(b.serial_numbers?.serial_numbers) ? b.serial_numbers.serial_numbers : (Array.isArray(v.serial_numbers?.serial_numbers) ? v.serial_numbers.serial_numbers : [])
+                    serial_numbers: sns
                   });
                 });
               } else {
-                results.push({
-                  ...baseMovement,
-                  sku: v.sku || prod.barcode || (a.id?.slice(0, 8) || ""),
+                const sns = Array.isArray(v.serial_numbers?.serial_numbers) ? v.serial_numbers.serial_numbers : [];
+                productsList.push({
+                  name: prod.name || "—",
+                  sku: v.sku || prod.barcode || (realId.slice(0, 8) || ""),
                   qty: isDecrement ? -Number(v.stocks || baseQty) : Number(v.stocks || baseQty),
                   stocks_before: v.stocks_before ?? prod.stocks_before,
                   current_stock: invMap[`${prod.name}-${v.name}`] ?? invMap[prod.name],
                   variant: v.name || "",
-                  serial_numbers: Array.isArray(v.serial_numbers?.serial_numbers) ? v.serial_numbers.serial_numbers : []
+                  batch: "",
+                  serial_numbers: sns
                 });
               }
             });
           } else {
-            results.push({
-              ...baseMovement,
-              sku: prod.barcode || (a.id?.slice(0, 8) || ""),
+            const sns = Array.isArray(prod.serial_numbers?.serial_numbers) ? prod.serial_numbers.serial_numbers : [];
+            productsList.push({
+              name: prod.name || "—",
+              sku: prod.barcode || (realId.slice(0, 8) || ""),
               qty: qtyVal,
               stocks_before: prod.stocks_before,
               current_stock: invMap[prod.name],
-              serial_numbers: Array.isArray(prod.serial_numbers?.serial_numbers) ? prod.serial_numbers.serial_numbers : []
+              variant: "",
+              batch: "",
+              serial_numbers: sns
             });
           }
-          return results;
         });
+
+        if (productsList.length === 0) return [];
+
+        const firstProd = productsList[0];
+        return [{
+          id: a.ui_id ? String(a.ui_id) : realId.slice(0, 8).toUpperCase(),
+          fullId: realId,
+          product: firstProd.name,
+          sku: firstProd.sku,
+          type: finalType,
+          qty: firstProd.qty,
+          stocks_before: firstProd.stocks_before,
+          source,
+          destination,
+          ref: String(a.ui_id ? `REF-${a.ui_id}` : realId.slice(0, 8).toUpperCase()),
+          date: dateStr.includes("T") ? dateStr : dateStr + "T00:00:00",
+          status: "Completed" as StatusType,
+          user: String(a.added_by || "Admin"),
+          notes: a.description || "",
+          variant: firstProd.variant,
+          batch: firstProd.batch,
+          expiry_date: firstProd.expiry_date,
+          manufacturing_date: firstProd.manufacturing_date,
+          serial_numbers: firstProd.serial_numbers,
+          current_stock: firstProd.current_stock,
+          productsList: productsList
+        }];
       });
 
-      // Fetch Orders for SALES and SALE_RETURN movements because backend S_ADJUSTMENTS returns corrupted products for SALES
-      let ordMovements: Movement[] = [];
-      try {
-        const ordRes = await getData(`${ENDPOINTS.ORDERS}/${SHOP_ID}?limit=100`);
-        const ordData = (ordRes?.data || []) as any[];
-
-        // Use invRes to map inventory_id to product name
-        const invRes = await getData(`${ENDPOINTS.INVENTORIES}/by/shop/${SHOP_ID}?limit=100`);
-        const invMapName: Record<string, string> = {};
-        const globalBatchNameMap: Record<string, string> = {};
-        (invRes?.data || invRes?.datas || []).forEach((item: any) => {
-          invMapName[item.id] = item.name;
-          if (Array.isArray(item.batches)) {
-            item.batches.forEach((b: any) => {
-              if (b.id && b.name) globalBatchNameMap[b.id] = b.name;
-            });
-          }
-          if (Array.isArray(item.variants)) {
-            item.variants.forEach((v: any) => {
-              if (Array.isArray(v.batches)) {
-                v.batches.forEach((b: any) => {
-                  if (b.id && b.name) globalBatchNameMap[b.id] = b.name;
-                });
-              }
-            });
-          }
-        });
-
-        ordMovements = ordData.filter((o: any) => o.status === "COMPLETED" || o.status === "Completed" || o.status === "completed").flatMap((o: any) => {
-          const products = o.items || [];
-          const dateStr = String(o.created_at || new Date().toISOString());
-
-          const finalType: MovementType = o.origin === "Sales Return" ? "SALE_RETURN" : "SALES";
-          let source = "Warehouse";
-          let destination = "Customer";
-          if (finalType === "SALE_RETURN") {
-            source = "Customer";
-            destination = "Warehouse";
-          }
-
-          return products.flatMap((prod: any) => {
-            const baseQty = Number(prod.quantity || 0);
-            const qtyVal = finalType === "SALE_RETURN" ? baseQty : -baseQty;
-
-            let productName = invMapName[prod.inventory_id] || prod.barcode || "—";
-
-            return [{
-              id: o.id?.slice(0, 8).toUpperCase() || "ORD",
-              fullId: o.id,
-              product: productName,
-              type: finalType,
-              source,
-              destination,
-              ref: String(o.ui_id ? `INV-${o.ui_id}` : o.id?.slice(0, 8).toUpperCase() || "INV"),
-              date: dateStr.includes("T") ? dateStr : dateStr + "T00:00:00",
-              status: "Completed" as StatusType,
-              user: o.cashier_id || "Admin",
-              notes: o.notes || "",
-              sku: prod.barcode || "",
-              qty: qtyVal,
-              stocks_before: undefined,
-              current_stock: invMap[productName] !== undefined ? invMap[productName] : undefined,
-              variant: prod.variant_id || "",
-              batch: prod.batch_id ? (globalBatchNameMap[prod.batch_id] || prod.batch_id) : "",
-              serial_numbers: prod.serial_numbers || [],
-            }];
-          });
-        });
-      } catch (e) {
-        console.error("Error fetching orders:", e);
+      return {
+        items: adjMovements,
+        hasMore: aData.length === limit,
+        stats: fetchedStats,
+        total: adjRes?.data?.total_count || 0
       }
-
-      const all = [...adjMovements, ...ordMovements].sort((a, b) =>
-        new Date(b.date).getTime() - new Date(a.date).getTime()
-      );
-
-      setMovements(all);
-    };
-    load();
   }, [getData]);
 
-  const filtered = useMemo(() => {
-    let data = [...movements];
+  const filters = useMemo(() => ({
+    search: debouncedSearch,
+    type: typeFilter,
+    status: statusFilter,
+    warehouse: warehouseFilter,
+    dateFrom,
+    dateTo,
+    sortField,
+    sortDir
+  }), [debouncedSearch, typeFilter, statusFilter, warehouseFilter, dateFrom, dateTo, sortField, sortDir]);
 
-    if (search) {
-      const q = search.toLowerCase();
-      data = data.filter(m => m.product.toLowerCase().includes(q) || m.sku.toLowerCase().includes(q) || m.id.toLowerCase().includes(q));
-    }
-    if (typeFilter !== "All") data = data.filter(m => m.type === typeFilter);
-    if (statusFilter !== "All") data = data.filter(m => m.status === statusFilter);
-    if (warehouseFilter !== "All Locations") data = data.filter(m => m.source === warehouseFilter || m.destination === warehouseFilter);
-    if (dateFrom) data = data.filter(m => fmtDate(m.date) >= dateFrom);
-    if (dateTo) data = data.filter(m => fmtDate(m.date) <= dateTo);
+  const { items: filtered, loading, loadingMore, hasMore, stats: overallStats, totalCount, lastElementRef } = useInfiniteScroll({
+    fetchPage,
+    filters,
+    limit: 20
+  });
 
-    data.sort((a, b) => {
-      if (sortField === "date") {
-        return sortDir === "asc" ? a.date.localeCompare(b.date) : b.date.localeCompare(a.date);
-      } else {
-        const aQty = Math.abs(a.qty);
-        const bQty = Math.abs(b.qty);
-        return sortDir === "asc" ? aQty - bQty : bQty - aQty;
-      }
-    });
-
-    return data;
-  }, [movements, search, typeFilter, statusFilter, warehouseFilter, dateFrom, dateTo, sortField, sortDir]);
+  const pageData = filtered;
 
   const today = new Date().toISOString().slice(0, 10);
-  const todayMvts = movements.filter(m => fmtDate(m.date) === today);
+  const todayMvts = filtered.filter(m => fmtDate(m.date) === today);
   const totalIn = todayMvts.filter(m => ["PURCHASE", "PO_PURCHASE"].includes(m.type)).reduce((s, m) => s + m.qty, 0);
   const totalOut = todayMvts.filter(m => m.type === "SALES").reduce((s, m) => s + Math.abs(m.qty), 0);
-  const netMov = totalIn - totalOut;
-  const lowStockAlerts = 0;
-
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const pageData = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   function toggleSort(field: "date" | "qty") {
     if (sortField === field) setSortDir(d => d === "asc" ? "desc" : "asc");
@@ -731,7 +718,7 @@ export default function StockMovementPage() {
   }
 
   function resetFilters() {
-    setSearch(""); setTypeFilter("All"); setStatus("All"); setWH("All Locations"); setDateFrom(""); setDateTo(""); setPage(1);
+    setSearch(""); setTypeFilter("All"); setStatus("All"); setWH("All Locations"); setDateFrom(""); setDateTo("");
   }
 
 
@@ -759,10 +746,41 @@ export default function StockMovementPage() {
       {/* ── Summary Cards ── */}
       {!isCleanMode && (
         <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-none">
-          <StatCard label="Total Stock In" value={`+${totalIn}`} icon={TrendingUp} iconBg="bg-emerald-50" iconColor="text-emerald-600" />
-          <StatCard label="Total Stock Out" value={`-${totalOut}`} icon={TrendingDown} iconBg="bg-rose-50" iconColor="text-rose-600" />
-          <StatCard label="Net Movement" value={netMov >= 0 ? `+${netMov}` : `${netMov}`} icon={Activity} iconBg="bg-blue-50" iconColor="text-blue-600" />
-          <StatCard label="Low Stock Alerts" value={lowStockAlerts} icon={AlertTriangle} iconBg="bg-amber-50" iconColor="text-amber-600" />
+          <StatCard 
+            label="Total Stock In" 
+            value={`+${overallStats?.total_stock_in ?? totalIn}`} 
+            icon={TrendingUp} 
+            iconBg="bg-emerald-50" 
+            iconColor="text-emerald-600" 
+          />
+          <StatCard 
+            label="Total Stock Out" 
+            value={`-${overallStats?.total_stock_out ?? totalOut}`} 
+            icon={TrendingDown} 
+            iconBg="bg-rose-50" 
+            iconColor="text-rose-600" 
+          />
+          <StatCard 
+            label="Total Movements" 
+            value={(overallStats?.total_movements_count ?? filtered.length).toString()} 
+            icon={Activity} 
+            iconBg="bg-blue-50" 
+            iconColor="text-blue-600" 
+          />
+          <StatCard 
+            label="Total Purchases" 
+            value={(overallStats?.total_purchase_count ?? 0).toString()} 
+            icon={Package} 
+            iconBg="bg-indigo-50" 
+            iconColor="text-indigo-600" 
+          />
+          <StatCard 
+            label="Total Sales" 
+            value={(overallStats?.total_sales_count ?? 0).toString()} 
+            icon={ShoppingBag} 
+            iconBg="bg-violet-50" 
+            iconColor="text-violet-600" 
+          />
         </div>
       )}
 
@@ -773,7 +791,7 @@ export default function StockMovementPage() {
           <input
             type="text"
             value={search}
-            onChange={e => { setSearch(e.target.value); setPage(1); }}
+            onChange={e => setSearch(e.target.value)}
             placeholder="Search product, SKU, movement ID…"
             className="w-full h-8 pl-8 pr-3 text-[12px] font-medium text-slate-700 bg-slate-50 border border-slate-200 rounded-md placeholder:text-slate-400 focus:outline-none focus:border-slate-300 focus:bg-white transition-colors"
           />
@@ -808,23 +826,11 @@ export default function StockMovementPage() {
       <RightSidebarFilter
         isOpen={isFilterOpen}
         onClose={() => setIsFilterOpen(false)}
-        onApply={() => {
-          setPage(1);
-        }}
+        onApply={() => {}}
         onClear={resetFilters}
         title="Stock Movement Filters"
       >
         <div className="space-y-4">
-          <div className="space-y-1.5">
-            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Location</label>
-            <ReusableSelect
-              options={WAREHOUSES.map(w => ({ label: w, value: w }))}
-              value={warehouseFilter}
-              onValueChange={(val) => setWH(val)}
-              placeholder="Location"
-            />
-          </div>
-
           <div className="space-y-1.5">
             <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Movement Type</label>
             <ReusableSelect
@@ -863,15 +869,16 @@ export default function StockMovementPage() {
 
       {/* ── Table Section ── */}
       <div className="bg-white border border-slate-100 rounded-lg shadow-sm min-w-0 overflow-hidden flex flex-col flex-1 min-h-0 mt-2">
-        <div className="overflow-auto flex-1 scrollbar-thin scrollbar-thumb-slate-200">
+        <div 
+          className="overflow-auto flex-1 scrollbar-thin scrollbar-thumb-slate-200"
+        >
           <table className="w-full text-left border-collapse table-fixed">
             <thead className="sticky top-0 z-20 bg-slate-50 border-b border-slate-200">
               <tr className="text-slate-400 text-[10px] font-bold tracking-[0.15em]">
                 <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500 border-r border-slate-100 last:border-r-0 w-[25%] min-w-[260px]">Product Information</th>
                 <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500 border-r border-slate-100 last:border-r-0 w-[12%] min-w-[125px]">Movement Type</th>
-                <th className="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wider text-slate-500 border-r border-slate-100 last:border-r-0 w-[12%] min-w-[110px]">
-                  <SortBtn field="qty" label="Stock In / Out" align="right" />
-                </th>
+                <th className="px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-slate-500 border-r border-slate-100 last:border-r-0 w-[10%] min-w-[90px]">Stock In / Out</th>
+                <th className="px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-slate-500 border-r border-slate-100 last:border-r-0 w-[10%] min-w-[90px]">Stock After</th>
                 {selectedKeys.map(key => {
                   let width = "w-[12%] min-w-[120px]";
                   if (key === "notes") width = "w-[20%] min-w-[180px]";
@@ -887,73 +894,135 @@ export default function StockMovementPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-sm bg-white">
-              {pageData.length === 0 ? (
+              {loading && pageData.length === 0 ? (
                 <tr>
-                  <td colSpan={selectedKeys.length + 5} className="py-20 text-center text-slate-400 font-medium italic bg-white">
+                  <td colSpan={selectedKeys.length + 6} className="py-20 text-center text-slate-400 font-medium italic bg-white">
+                    <div className="flex flex-col items-center justify-center">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-3"></div>
+                      <p className="text-sm font-medium">Loading movements...</p>
+                    </div>
+                  </td>
+                </tr>
+              ) : pageData.length === 0 ? (
+                <tr>
+                  <td colSpan={selectedKeys.length + 6} className="py-20 text-center text-slate-400 font-medium italic bg-white">
                     No movements found matching your filters.
                   </td>
                 </tr>
-              ) : pageData.map((m, idx) => (
-                <tr key={`${m.id}-${idx}`}
-                  className="group hover:bg-blue-50/30 transition-all cursor-pointer border-b border-slate-100 last:border-b-0 even:bg-slate-50/20"
-                  onClick={() => handleMovementClick(m)}
-                >
-                  <td className="px-4 py-3 align-middle border-r border-slate-100 last:border-r-0">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className={`w-8 h-8 rounded-md bg-gradient-to-br flex items-center justify-center text-white text-xs font-black shrink-0 shadow-sm ${m.qty > 0 ? "from-emerald-500 to-emerald-400 shadow-emerald-50" : "from-rose-500 to-rose-400 shadow-rose-50"}`}>
-                        {m.product?.[0]?.toUpperCase() || "—"}
-                      </div>
-                      <div className="flex flex-col min-w-0 gap-0.5">
-                        <span className="text-[13px] font-semibold text-slate-800 truncate leading-tight">{m.product}</span>
-                        <div className="flex items-center flex-wrap gap-1.5 mt-0.5">
-                          <button
-                            onClick={(e) => copyToClipboard(e, m.id)}
-                            className="group flex items-center gap-1 text-[9px] font-extrabold text-slate-400 bg-slate-50 px-1 py-0.2 rounded border border-slate-100 hover:bg-slate-100 hover:text-slate-600 transition-all leading-none"
-                          >
-                            ID: {m.id}
-                            <Copy size={8} className="opacity-0 group-hover:opacity-100 transition-opacity" />
-                          </button>
-                          <span className="text-[9px] font-medium text-slate-400 font-mono">SKU: {m.sku}</span>
-                          {m.variant && (
-                            <button
-                              onClick={(e) => copyToClipboard(e, m.variant || "")}
-                              className="group flex items-center gap-0.5 text-[9px] font-extrabold text-violet-600 bg-violet-50/50 px-1 py-0.2 rounded border border-violet-100 hover:bg-violet-100 transition-all leading-none"
-                            >
-                              <Layers size={8} /> {truncateId(m.variant)}
-                              <Copy size={7} className="opacity-0 group-hover:opacity-100 transition-opacity" />
-                            </button>
-                          )}
-                          {m.batch && (
-                            <button
-                              onClick={(e) => copyToClipboard(e, m.batch || "")}
-                              className="group flex items-center gap-0.5 text-[9px] font-extrabold text-amber-600 bg-amber-50/50 px-1 py-0.2 rounded border border-amber-100 hover:bg-amber-100 transition-all leading-none"
-                            >
-                              <Hash size={8} /> {truncateId(m.batch)}
-                              <Copy size={7} className="opacity-0 group-hover:opacity-100 transition-opacity" />
-                            </button>
-                          )}
-                          {m.serial_numbers && m.serial_numbers.length > 0 && (
-                            <span className="inline-flex items-center gap-0.5 text-[9px] font-extrabold text-emerald-600 bg-emerald-50/50 px-1 py-0.2 rounded border border-emerald-100 leading-none">
-                              <Zap size={8} fill="currentColor" /> {m.serial_numbers.length} Serials
+              ) : pageData.map((m, idx) => {
+                const hasList = m.productsList && m.productsList.length > 1;
+                const rowKey = `${m.id}-${idx}`;
+                const isExpanded = !!expandedRows[rowKey];
+                
+                const totalQty = hasList
+                  ? m.productsList!.reduce((sum, p) => sum + p.qty, 0)
+                  : m.qty;
+
+                const firstProd = m.productsList?.[0] || {};
+                const currentStockVal = (() => {
+                  const prods = m.productsList;
+                  if (!prods || prods.length === 0) {
+                    const sb = m.stocks_before;
+                    if (sb === undefined || sb === null) return null;
+                    return sb + (firstProd.qty ?? m.qty);
+                  }
+                  let total = 0;
+                  for (const p of prods) {
+                    const sb = p.stocks_before;
+                    if (sb === undefined || sb === null) return null;
+                    total += sb + p.qty;
+                  }
+                  return total;
+                })();
+
+                const truncateId = (id?: string) => {
+                  if (!id) return "—";
+                  return id.length > 10 ? `${id.slice(0, 6)}...` : id;
+                };
+
+                return (
+                  <React.Fragment key={rowKey}>
+                    <tr
+                      ref={idx === pageData.length - 1 ? lastElementRef : null}
+                      className="group hover:bg-blue-50/30 transition-all cursor-pointer border-b border-slate-100 last:border-b-0 even:bg-slate-50/20"
+                      onClick={() => handleMovementClick(m)}
+                    >
+                      <td className="px-4 py-3 align-middle border-r border-slate-100 last:border-r-0">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className={`w-8 h-8 rounded-md bg-gradient-to-br flex items-center justify-center text-white text-xs font-black shrink-0 shadow-sm ${totalQty > 0 ? "from-emerald-500 to-emerald-400 shadow-emerald-50" : "from-rose-500 to-rose-400 shadow-rose-50"}`}>
+                            {(hasList ? firstProd.name : m.product)?.[0]?.toUpperCase() || "—"}
+                          </div>
+                          <div className="flex flex-col min-w-0 gap-0.5">
+                            <span className="text-[13px] font-semibold text-slate-800 truncate leading-tight">
+                              {hasList ? firstProd.name : m.product}
                             </span>
-                          )}
-                          {m.current_stock !== undefined && (
-                            <span className="inline-flex items-center gap-0.5 text-[9px] font-extrabold text-blue-650 bg-blue-50/50 px-1.5 py-0.5 rounded border border-blue-100 leading-none" title="Current Available Stock">
-                              Stock: {m.current_stock}
-                            </span>
-                          )}
+                            <div className="flex items-center flex-wrap gap-1.5 mt-0.5">
+                              <button
+                                onClick={(e) => copyToClipboard(e, m.id)}
+                                className="group flex items-center gap-1 text-[9px] font-extrabold text-slate-400 bg-slate-50 px-1 py-0.2 rounded border border-slate-100 hover:bg-slate-100 hover:text-slate-600 transition-all leading-none"
+                              >
+                                ID: {m.id}
+                                <Copy size={8} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+                              </button>
+                              <span className="text-[9px] font-medium text-slate-400 font-mono">SKU: {hasList ? firstProd.sku : m.sku}</span>
+                              {(hasList ? firstProd.variant : m.variant) && (
+                                <button
+                                  onClick={(e) => copyToClipboard(e, (hasList ? firstProd.variant : m.variant) || "")}
+                                  className="group flex items-center gap-0.5 text-[9px] font-extrabold text-violet-600 bg-violet-50/50 px-1 py-0.2 rounded border border-violet-100 hover:bg-violet-100 transition-all leading-none"
+                                >
+                                  <Layers size={8} /> {truncateId(hasList ? firstProd.variant : m.variant)}
+                                  <Copy size={7} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+                                </button>
+                              )}
+                              {(hasList ? firstProd.batch : m.batch) && (
+                                <button
+                                  onClick={(e) => copyToClipboard(e, (hasList ? firstProd.batch : m.batch) || "")}
+                                  className="group flex items-center gap-0.5 text-[9px] font-extrabold text-amber-600 bg-amber-50/50 px-1 py-0.2 rounded border border-amber-100 hover:bg-amber-100 transition-all leading-none"
+                                >
+                                  <Hash size={8} /> {truncateId(hasList ? firstProd.batch : m.batch)}
+                                  <Copy size={7} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+                                </button>
+                              )}
+                              {hasList ? (
+                                <button
+                                  onClick={(e) => toggleExpand(rowKey, e)}
+                                  className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] font-extrabold bg-blue-50 text-blue-600 border border-blue-100 hover:bg-blue-100 transition-colors shrink-0 shadow-sm"
+                                  title={isExpanded ? "Collapse Items" : "Expand Items"}
+                                >
+                                  {isExpanded ? <ChevronDown size={10} strokeWidth={3} /> : <ChevronRight size={10} strokeWidth={3} />}
+                                  <span>+ {m.productsList!.length - 1} more</span>
+                                </button>
+                              ) : (
+                                <>
+                                  {m.serial_numbers && m.serial_numbers.length > 0 && (
+                                    <span className="inline-flex items-center gap-0.5 text-[9px] font-extrabold text-emerald-600 bg-emerald-50/50 px-1 py-0.2 rounded border border-emerald-100 leading-none">
+                                      <Zap size={8} fill="currentColor" /> {m.serial_numbers.length} Serials
+                                    </span>
+                                  )}
+                                  {m.current_stock !== undefined && (
+                                    <span className="inline-flex items-center gap-0.5 text-[9px] font-extrabold text-blue-650 bg-blue-50/50 px-1.5 py-0.5 rounded border border-blue-100 leading-none" title="Current Available Stock">
+                                      Stock: {m.current_stock}
+                                    </span>
+                                  )}
+                                </>
+                              )}
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 align-middle border-r border-slate-100 last:border-r-0">
-                    <TypeBadge type={m.type} />
-                  </td>
-                  <td className="px-4 py-3 text-right align-middle border-r border-slate-100 last:border-r-0">
-                    <span className={`text-[13px] font-black tabular-nums ${m.qty > 0 ? "text-emerald-600" : "text-rose-600"}`}>
-                      {m.qty > 0 ? `+${m.qty}` : m.qty}
-                    </span>
-                  </td>
+                      </td>
+                      <td className="px-4 py-3 align-middle border-r border-slate-100 last:border-r-0">
+                        <TypeBadge type={m.type} />
+                      </td>
+                      <td className="px-4 py-3 text-center align-middle border-r border-slate-100 last:border-r-0 bg-slate-50/30">
+                        <span className={`text-[13px] font-black tabular-nums ${totalQty > 0 ? "text-emerald-600" : "text-rose-600"}`}>
+                          {totalQty > 0 ? `+${totalQty}` : totalQty}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-center align-middle border-r border-slate-100 last:border-r-0">
+                        <span className="text-[12px] font-bold text-blue-600 tabular-nums">
+                          {currentStockVal !== null ? currentStockVal : '—'}
+                        </span>
+                      </td>
                   {selectedKeys.map(key => {
                     const value = m[key as keyof Movement];
                     const displayValue = value === undefined || value === null ? "—" :
@@ -986,26 +1055,79 @@ export default function StockMovementPage() {
                     </button>
                   </td>
                 </tr>
-              ))}
+
+                {/* Expanded Sub-table */}
+                {hasList && isExpanded && (
+                  <tr className="bg-slate-50/30 border-b border-slate-100" onClick={(e) => e.stopPropagation()}>
+                    <td colSpan={selectedKeys.length + 6} className="p-0">
+                      <div className="ml-14 mr-6 my-3 border border-slate-100 rounded-lg bg-white p-4 shadow-sm space-y-3 animate-in slide-in-from-top-2 duration-300">
+                        <div className="flex items-center gap-1.5 border-b border-slate-55 pb-2 mb-2">
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Adjustment Transaction Details</span>
+                        </div>
+                        <table className="w-full text-left border-collapse text-[12px]">
+                          <thead>
+                            <tr className="text-[9px] font-black text-slate-400 tracking-wider uppercase border-b border-slate-100">
+                              <th className="py-2 px-3">Product Item</th>
+                              <th className="py-2 px-3 text-center">Stock In / Out</th>
+                              <th className="py-2 px-3 text-center">Stock After</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-50">
+                            {m.productsList!.map((p: any, pIdx: number) => {
+                              const pStockVal = p.stocks_before !== null && p.stocks_before !== undefined
+                                ? (p.stocks_before + p.qty)
+                                : null;
+                              return (
+                                <tr key={pIdx} className="hover:bg-slate-50/30">
+                                  <td className="py-2.5 px-3">
+                                    <div className="flex flex-col gap-0.5">
+                                      <span className="font-semibold text-slate-800">{p.name}</span>
+                                      <div className="flex flex-wrap gap-1 mt-0.5">
+                                        {p.variant && <span className="px-1.5 py-0.2 rounded bg-violet-50 text-violet-650 border border-violet-100 text-[8px] font-bold">V: {p.variant}</span>}
+                                        {p.batch && <span className="px-1.5 py-0.2 rounded bg-amber-50 text-amber-655 border border-amber-100 text-[8px] font-bold">B: {p.batch}</span>}
+                                        {p.serial_numbers && p.serial_numbers.length > 0 && (
+                                          <div className="flex flex-wrap gap-1">
+                                            <span className="text-[8px] text-slate-400 font-bold">SN: </span>
+                                            {p.serial_numbers.slice(0, 2).map((s: string, si: number) => (
+                                              <span key={si} className="text-[8px] font-mono text-slate-500">{s}{si === 0 && p.serial_numbers.length > 1 ? ',' : ''}</span>
+                                            ))}
+                                            {p.serial_numbers.length > 2 && <span className="text-[8px] font-bold text-slate-400">+{p.serial_numbers.length - 2}</span>}
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </td>
+                                  <td className="py-2.5 px-3 text-center font-black">
+                                    <span className={p.qty > 0 ? 'text-emerald-600' : 'text-rose-600'}>
+                                      {p.qty > 0 ? `+${p.qty}` : p.qty}
+                                    </span>
+                                  </td>
+                                  <td className="py-2.5 px-3 text-center font-bold text-blue-600">{pStockVal !== null ? pStockVal : '—'}</td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </React.Fragment>
+            );
+          })}
             </tbody>
           </table>
         </div>
 
-        {/* Pagination */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-5 py-4 border-t border-slate-200 bg-slate-50/50">
+        {loadingMore && <div className="py-4 text-center text-xs text-slate-500">Loading more...</div>}
+        {/* Infinite Scroll Footer */}
+        <div className="flex items-center justify-between px-5 py-3 border-t border-slate-200 bg-slate-50/50">
           <span className="text-xs font-medium text-slate-500">
-            Showing <strong className="text-slate-900">{filtered.length > 0 ? (page - 1) * PAGE_SIZE + 1 : 0}–{Math.min(page * PAGE_SIZE, filtered.length)}</strong> of <strong className="text-slate-900">{filtered.length}</strong> records
+            Showing <strong className="text-slate-900">{pageData.length}</strong> {totalCount > 0 ? <>of <strong className="text-slate-900">{totalCount}</strong></> : ''} records
           </span>
-          <div className="flex items-center gap-1.5">
-            <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
-              className="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 font-semibold text-xs disabled:opacity-50 hover:bg-slate-50 transition-colors shadow-sm">← Prev</button>
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
-              <button key={p} onClick={() => setPage(p)}
-                className={`w-8 h-8 rounded-lg text-xs font-medium transition-all shadow-sm ${p === page ? "bg-blue-600 text-white border border-blue-600 shadow-blue-500/20" : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-900"}`}>{p}</button>
-            ))}
-            <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}
-              className="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 font-semibold text-xs disabled:opacity-50 hover:bg-slate-50 transition-colors shadow-sm">Next →</button>
-          </div>
+          {hasMore && (
+            <span className="text-[10px] font-bold text-slate-400 animate-pulse">Scroll down to load more ↓</span>
+          )}
         </div>
       </div>
 

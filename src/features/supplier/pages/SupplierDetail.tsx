@@ -5,12 +5,13 @@ import {
   Store, Database, ShoppingBag, History,
 } from "lucide-react";
 import {
-  fmt, SectionCard, DetailItem, InfoRow, Modal,
+  SectionCard, DetailItem, InfoRow, Modal,
   ProfileHeaderCard
 } from "@/components/common/SuperUI";
 import { StatCard } from "@/components/common/StatsCard";
 import { useApi } from "@/context/ApiContext";
 import { useToast } from "@/context/ToastContext";
+import { useHeader } from "@/context/HeaderContext";
 import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 import Loader from "@/components/common/Loader";
 import type { SupplierRecord } from "@/types/api";
@@ -26,8 +27,9 @@ const SupplierSearch = () => {
   const fetchSuppliers = async (q: string) => {
 
     try {
-      const res = await getData(`${ENDPOINTS.SUPPLIERS}/by/shop/${SHOP_ID}`, { limit: "8", offset: "1", q });
-      const data = res?.data ? (Array.isArray(res.data) ? res.data : [res.data]) : [];
+      const res = await getData(`${ENDPOINTS.SUPPLIERS}/search/${SHOP_ID}`, { limit: "8", q });
+      const rawData = res?.data || [];
+      const data = Array.isArray(rawData) ? rawData : (rawData?.datas ?? []);
       return data.map((s: any) => ({
         ...s,
         displayName: String(s.name || s.datas?.supplier_name || s.datas?.name || s.supplier_name || s.id)
@@ -49,16 +51,17 @@ const SupplierSearch = () => {
   );
 };
 
-const TABS = ["General Info", "Purchase Orders"];
+const TABS = ["General Info", "Purchases"];
 
 export default function SupplierDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { getData, deleteData } = useApi();
   const { showToast } = useToast();
-
+  const { setBottomActions } = useHeader();
 
   const [supplier, setSupplier] = useState<SupplierRecord | null>(null);
+  const [stats, setStats] = useState<any>(null);
   const [recordLoading, setRecordLoading] = useState(true);
   const [activeTab, setActiveTab] = useState(0);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -68,11 +71,39 @@ export default function SupplierDetail() {
   const [purLoading, setPurLoading] = useState(false);
 
   useEffect(() => {
+    setBottomActions(
+      <div className="flex items-center justify-end w-full animate-in fade-in slide-in-from-right-4 duration-300">
+        <button 
+          type="button"
+          onClick={() => navigate("/supplier")}
+          className="px-6 h-8 rounded-lg border border-slate-200 bg-white text-slate-700 font-bold text-xs hover:bg-slate-50 transition-all flex items-center shadow-sm"
+        >
+          Clear
+        </button>
+      </div>
+    );
+    return () => setBottomActions(null);
+  }, [setBottomActions, navigate]);
+
+  useEffect(() => {
     if (!id) return;
     setRecordLoading(true);
-    getData(`${ENDPOINTS.SUPPLIERS}/by/${SHOP_ID}/${id}`).then((res) => {
-      if (res) setSupplier(Array.isArray(res.data) ? res.data[0] : res.data);
-      setRecordLoading(false);
+    
+    import("@/services/api/supplier").then(({ supplierApi }) => {
+      Promise.all([
+        getData(`${ENDPOINTS.SUPPLIERS}/by/${SHOP_ID}/${id}`),
+        supplierApi.getSupplierPurchaseStats(id)
+      ]).then(([res, statsRes]) => {
+        if (res) {
+          let suppData = res.data;
+          if (suppData?.datas && Array.isArray(suppData.datas)) suppData = suppData.datas[0];
+          setSupplier(Array.isArray(suppData) ? suppData[0] : suppData);
+        }
+        if (statsRes) {
+          setStats(statsRes);
+        }
+        setRecordLoading(false);
+      }).catch(() => setRecordLoading(false));
     });
   }, [id]);
 
@@ -173,10 +204,10 @@ export default function SupplierDetail() {
         </div>
 
         <div className="flex flex-wrap gap-2">
-          <StatCard icon={ShoppingBag} label="Total Purchases" value={datas.total_purchases ? `₹${datas.total_purchases}` : "₹0"} iconBg="bg-blue-50 text-blue-600" className="flex-1 min-w-[140px]" />
-          <StatCard icon={AlertCircle} label="Outstanding" value={fmt(Number(datas.pending_amount) || 0)} iconBg="bg-rose-50 text-rose-600" className="flex-1 min-w-[140px]" />
-          <StatCard icon={Package} label="Total Items" value={String(datas.total_items_bought || "0")} iconBg="bg-blue-50 text-blue-600" className="flex-1 min-w-[140px]" />
-          <StatCard icon={History} label="Last Order" value={String(datas.last_order_date || "N/A")} iconBg="bg-amber-50 text-amber-600" className="flex-1 min-w-[140px]" />
+          <StatCard icon={ShoppingBag} label="Total Purchases" value={`${stats?.purchase_count || 0} (₹${(stats?.total_purchase_value || 0).toFixed(2)})`} iconBg="bg-blue-50 text-blue-600" className="flex-1 min-w-[140px]" />
+          <StatCard icon={AlertCircle} label="Outstanding" value={`${stats?.outstanding_count || 0} (₹${(stats?.outstanding_value || 0).toFixed(2)})`} iconBg={stats?.outstanding_value > 0 ? "bg-rose-50 text-rose-600" : "bg-emerald-50 text-emerald-600"} className="flex-1 min-w-[140px]" />
+          <StatCard icon={Package} label="Total Stocks" value={String(stats?.total_items_bought || "0")} iconBg="bg-indigo-50 text-indigo-600" className="flex-1 min-w-[140px]" />
+          <StatCard icon={History} label="Last Order" value={stats?.last_order_date ? new Date(stats.last_order_date).toLocaleDateString() : "N/A"} iconBg="bg-amber-50 text-amber-600" className="flex-1 min-w-[140px]" />
         </div>
       </div>
 
@@ -193,24 +224,24 @@ export default function SupplierDetail() {
                       onClick={() => setViewValue({ label: "Business Name", value: name })}
                     />
                     <DetailItem
-                      icon={User} label="Contact Person" value={String(contact.name || "—")}
-                      onClick={() => setViewValue({ label: "Contact Person", value: String(contact.name || "—") })}
+                      icon={User} label="Contact Person Name" value={String(contact.name || "—")}
+                      onClick={() => setViewValue({ label: "Contact Person Name", value: String(contact.name || "—") })}
                     />
                     <DetailItem
-                      icon={Mail} label="Contact Email" value={String(contact.email || "—")}
-                      onClick={() => setViewValue({ label: "Contact Email", value: String(contact.email || "—") })}
+                      icon={Mail} label="Contact Person Email" value={String(contact.email || "—")}
+                      onClick={() => setViewValue({ label: "Contact Person Email", value: String(contact.email || "—") })}
                     />
                     <DetailItem
-                      icon={Phone} label="Contact Mobile" value={String(contact.mobile_number || "—")}
-                      onClick={() => setViewValue({ label: "Contact Mobile", value: String(contact.mobile_number || "—") })}
+                      icon={Phone} label="Contact Person Mobile No." value={String(contact.mobile_number || "—")}
+                      onClick={() => setViewValue({ label: "Contact Person Mobile No.", value: String(contact.mobile_number || "—") })}
                     />
                     <DetailItem
-                      icon={Mail} label="Email" value={String(supplier.email || "—")}
-                      onClick={() => setViewValue({ label: "Email", value: String(supplier.email || "—") })}
+                      icon={Mail} label="Supplier Email" value={String(supplier.email || "—")}
+                      onClick={() => setViewValue({ label: "Supplier Email", value: String(supplier.email || "—") })}
                     />
                     <DetailItem
-                      icon={Phone} label="Phone" value={String(supplier.mobile_number || "—")}
-                      onClick={() => setViewValue({ label: "Phone", value: String(supplier.mobile_number || "—") })}
+                      icon={Phone} label="Supplier Mobile No." value={String(supplier.mobile_number || "—")}
+                      onClick={() => setViewValue({ label: "Supplier Mobile No.", value: String(supplier.mobile_number || "—") })}
                     />
                     <DetailItem
                       icon={MapPin} label="City" value={String(datas.address?.city || "—")}
@@ -257,45 +288,75 @@ export default function SupplierDetail() {
           )}
 
           {activeTab === 1 && (() => {
-            // Flatten: purchase → products rows, with purchase-level metadata attached
             const rows: any[] = [];
             purchases.forEach((p: any) => {
               const d = p.datas ?? {};
               const pd = d.purchaseDetails ?? {};
               const payment = d.payment ?? {};
               const charges = p.additional_charges ?? {};
-              const purchaseMeta = {
-                purchaseId: p.id,
-                type: p.type,
-                productName: '—', // We'll fill this from products
-                invoiceNo: pd.invoiceNo || '—',
-                referenceNo: pd.referenceNo || '—',
-                purchaseDate: pd.date || p.created_at,
-                paymentMethod: payment.method || '—',
-                amountPaid: payment.amountPaid ?? 0,
-                deliveryCharge: charges.delivery_charge ?? 0,
-                otherCharge: charges.other_charge ?? 0,
-                uiId: p.ui_id,
-                storageLocation: d.storage_location || p.storage_location || '—',
-              };
+              
+              const productsList: any[] = [];
               (p.products ?? []).forEach((prod: any) => {
-                rows.push({
-                  ...purchaseMeta,
+                const baseProd = {
                   productName: prod.name || 'Unknown Product',
-                  stocks: prod.stocks,
-                  receivedStocks: prod.received_stocks ?? prod.stocks ?? 0,
                   stocksBefore: prod.stocks_before ?? null,
-                  isInc: true,
+                  receivedStocks: prod.stocks_added ?? prod.received_stocks ?? prod.stocks ?? 0,
                   buy_price: prod.buy_price,
-                  sell_price: prod.sell_price
+                  sell_price: prod.sell_price,
+                };
+
+                // PurchaseReadModel provides variant, batch, and serial_info directly on the product
+                const v = prod.variant;
+                const b = prod.batch;
+                const s = prod.serial_info;
+                
+                productsList.push({
+                  ...baseProd,
+                  variant: v?.variant_name || null,
+                  batch: b?.batch_name || null,
+                  serials: s?.serial_numbers || [],
+                  variant_details: v || null,
+                  batch_details: b || null,
+                  serial_info: s || null
                 });
               });
+
+              if (productsList.length > 0) {
+                const firstItem = productsList[0];
+                rows.push({
+                  purchaseId: p.id,
+                  type: p.type,
+                  productName: firstItem.productName,
+                  stocksBefore: firstItem.stocksBefore,
+                  receivedStocks: firstItem.receivedStocks,
+                  buy_price: firstItem.buy_price,
+                  sell_price: firstItem.sell_price,
+                  variant: firstItem.variant,
+                  batch: firstItem.batch,
+                  serials: firstItem.serials,
+                  variant_details: firstItem.variant_details,
+                  batch_details: firstItem.batch_details,
+                  serial_info: firstItem.serial_info,
+                  invoiceNo: p.invoice_no || pd.invoiceNo || '—',
+                  referenceNo: pd.referenceNo || '—',
+                  purchaseDate: p.purchase_date || pd.date || p.created_at,
+                  paymentMethod: (p.payment_status && p.payment_status.toLowerCase() === "outstanding") ? "Outstanding" : (payment.method || p.payment_status || '—'),
+                  amountPaid: p.paid_amount ?? payment.amountPaid ?? 0,
+                  totalCost: p.total_cost ?? pd.totalAmount ?? 0,
+                  deliveryCharge: p.transport_charge ?? charges.delivery_charge ?? 0,
+                  otherCharge: p.other_charges ?? charges.other_charge ?? 0,
+                  uiId: p.ui_id || p.purchase_id?.slice(-6),
+                  storageLocation: d.storage_location || p.storage_location || '—',
+                  productsList: productsList
+                });
+              }
             });
 
             return (
               <SupplierPurchasesTable
                 rows={rows}
                 loading={purLoading}
+                onNavigateToPurchase={(purchaseId) => navigate(`/purchase/detail/${purchaseId}`)}
               />
             );
           })()}
@@ -317,6 +378,8 @@ export default function SupplierDetail() {
             Double click the text to select and copy
           </p>
         </Modal>
+
+
 
         {/* Confirm Dialog */}
         <ConfirmDialog

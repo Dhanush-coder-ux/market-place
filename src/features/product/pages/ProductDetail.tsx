@@ -12,6 +12,7 @@ import Loader from "@/components/common/Loader";
 import { Modal, ProfileHeaderCard, SectionCard, DetailItem } from "@/components/common/SuperUI";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { SearchSelect } from "@/components/inputbuilders/SearchSelect";
+import { useHeader } from "@/context/HeaderContext";
 import { VariantRows, SerialBadgeList, BatchCards } from "../../inventory/components/StockTree";
 import type { InventoryRecord } from "@/types/api";
 import { ProductPurchasesTable } from "@/components/common/HistoryTables";
@@ -25,11 +26,11 @@ const ProductSearchSelect = () => {
   const fetchProducts = async (q: string) => {
 
     try {
-      const res = await getData(ENDPOINTS.INVENTORIES, { q, limit: "8", shop_id: SHOP_ID });
+      const res = await getData(`${ENDPOINTS.INVENTORIES}/search/${SHOP_ID}`, { q, limit: "8" });
       const data = res?.data ? (Array.isArray(res.data) ? res.data : [res.data]) : [];
       return data.map((p: any) => ({
         ...p,
-        displayName: String(p.datas?.name ?? p.barcode ?? p.id),
+        displayName: String(p.datas?.name ?? p.name ?? p.barcode ?? p.id),
       }));
     } catch {
       return [];
@@ -56,6 +57,7 @@ const ProductDetail = () => {
   const navigate = useNavigate();
   const { getData, deleteData } = useApi();
   const { showToast } = useToast();
+  const { setBottomActions } = useHeader();
 
   const [product, setProduct] = useState<InventoryRecord | null>(null);
   const [recordLoading, setRecordLoading] = useState(true);
@@ -66,6 +68,21 @@ const ProductDetail = () => {
 
   const [purchases, setPurchases] = useState<any[]>([]);
   const [purLoading, setPurLoading] = useState(false);
+
+  useEffect(() => {
+    setBottomActions(
+      <div className="flex items-center justify-end w-full animate-in fade-in slide-in-from-right-4 duration-300">
+        <button 
+          type="button"
+          onClick={() => navigate("/product")}
+          className="px-6 h-8 rounded-lg border border-slate-200 bg-white text-slate-700 font-bold text-xs hover:bg-slate-50 transition-all flex items-center shadow-sm"
+        >
+          Clear
+        </button>
+      </div>
+    );
+    return () => setBottomActions(null);
+  }, [setBottomActions, navigate]);
 
   useEffect(() => {
     if (!id) return;
@@ -136,7 +153,7 @@ const ProductDetail = () => {
   const name = String(product.name || "Unknown Product");
   const reorderPoint = product?.reorder_point;
   const initials = name.slice(0, 2).toUpperCase();
-  const sku = String(product.sku || "—");
+  const sku = String(product.ui_id || product.sku || "—");
   const barcode = String(product.barcode || "—");
   const category = String(product.category || "—");
   const description = String(product.description || "—");
@@ -175,6 +192,7 @@ const ProductDetail = () => {
         <ProfileHeaderCard
           name={name}
           initials={initials}
+          imageUrl={datas.images}
           subText={`SKU: ${sku} • Barcode: ${barcode}`}
           badges={[
             { text: category, variant: "primary" },
@@ -250,26 +268,69 @@ const ProductDetail = () => {
                     <DetailItem icon={Info} label="Unit" value={unit} onClick={click("Unit", unit)} />
                     <DetailItem icon={Hash} label="SKU" value={sku} onClick={click("SKU", sku)} />
                     <DetailItem icon={Hash} label="Barcode" value={barcode} onClick={click("Barcode", barcode)} />
-                    <div className="lg:col-span-2">
-                      <p className="text-[10px] font-medium text-slate-400  tracking-[0.05em] mb-1.5 flex items-center gap-1.5">
-                        <FileText size={12} className="text-blue-400" /> Serial Numbers
-                      </p>
-                      {rootSerials.length > 0 ? (
-                        <SerialBadgeList serials={rootSerials} />
-                      ) : hasVariants ? (
-                        <div className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 border border-indigo-100 rounded-lg w-fit">
-                          <Layers size={12} className="text-indigo-500" />
-                          <span className="text-[11px] font-bold text-indigo-600">Available in Inventory tab</span>
-                        </div>
-                      ) : (
-                        <p className="text-[13px] font-semibold text-slate-400">—</p>
-                      )}
+                    <div className="md:col-span-2">
+                      <DetailItem icon={Info} label="Description" value={description} onClick={click("Description", description)} />
                     </div>
-                    <DetailItem icon={Info} label="Description" value={description} onClick={click("Description", description)} />
+
+                    {/* Dedicated Next Row for Characteristics */}
+                    <div className="col-span-full grid grid-cols-1 md:grid-cols-3 gap-6 pt-4 border-t border-slate-100">
+                      <div>
+                        <p className="text-[10px] font-medium text-slate-400 tracking-[0.05em] mb-1.5 flex items-center gap-1.5">
+                          <Layers size={12} className="text-blue-400" /> Variants
+                        </p>
+                        {product.has_variant === true ? (
+                          <div 
+                            className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 border border-indigo-100 rounded-lg w-fit cursor-pointer hover:bg-indigo-100 transition-colors"
+                            onClick={() => setActiveTab(1)}
+                          >
+                            <Layers size={12} className="text-indigo-500" />
+                            <span className="text-[11px] font-bold text-indigo-600">Available in Inventory tab</span>
+                          </div>
+                        ) : (
+                          <p className="text-[13px] font-semibold text-slate-400">No variants</p>
+                        )}
+                      </div>
+
+                      <div>
+                        <p className="text-[10px] font-medium text-slate-400 tracking-[0.05em] mb-1.5 flex items-center gap-1.5">
+                          <Layers size={12} className="text-blue-400" /> Batches
+                        </p>
+                        {product.has_batch === true ? (
+                          <div 
+                            className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 border border-indigo-100 rounded-lg w-fit cursor-pointer hover:bg-indigo-100 transition-colors"
+                            onClick={() => setActiveTab(1)}
+                          >
+                            <Layers size={12} className="text-indigo-500" />
+                            <span className="text-[11px] font-bold text-indigo-600">Available in Inventory tab</span>
+                          </div>
+                        ) : (
+                          <p className="text-[13px] font-semibold text-slate-400">No batches</p>
+                        )}
+                      </div>
+
+                      <div>
+                        <p className="text-[10px] font-medium text-slate-400 tracking-[0.05em] mb-1.5 flex items-center gap-1.5">
+                          <FileText size={12} className="text-blue-400" /> Serial Numbers
+                        </p>
+                        {rootSerials.length > 0 ? (
+                          <SerialBadgeList serials={rootSerials} />
+                        ) : (product.has_serialno === true) ? (
+                          <div 
+                            className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 border border-indigo-100 rounded-lg w-fit cursor-pointer hover:bg-indigo-100 transition-colors"
+                            onClick={() => setActiveTab(1)}
+                          >
+                            <Layers size={12} className="text-indigo-500" />
+                            <span className="text-[11px] font-bold text-indigo-600">Available in Inventory tab</span>
+                          </div>
+                        ) : (
+                          <p className="text-[13px] font-semibold text-slate-400">No serial numbers</p>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </div>
               </SectionCard>
-
+ 
               {/* Pricing Section */}
               <SectionCard className="rounded-lg border-slate-200 shadow-sm p-4">
                 <div className="flex items-center gap-2 mb-4">
@@ -279,8 +340,39 @@ const ProductDetail = () => {
                   <h2 className="text-[10px] font-black text-slate-800  tracking-[0.15em]">Pricing & Compliance</h2>
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-y-6 gap-x-8">
-                  <DetailItem icon={Download} label="Buy Price" value={String(buyingPrice) !== "—" ? `₹${buyingPrice}` : "—"} onClick={click("Buy Price", `₹${buyingPrice}`)} />
-                  <DetailItem icon={Upload} label="Selling Price" value={String(sellingPrice) !== "—" ? `₹${sellingPrice}` : "—"} onClick={click("Selling Price", `₹${sellingPrice}`)} />
+                  <div>
+                    <p className="text-[10px] font-medium text-slate-400 tracking-[0.05em] mb-1.5 flex items-center gap-1.5">
+                      <Download size={12} className="text-blue-400" /> Buy Price
+                    </p>
+                    {hasVariants ? (
+                      <div 
+                        className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 border border-indigo-100 rounded-lg w-fit cursor-pointer hover:bg-indigo-100 transition-colors"
+                        onClick={() => setActiveTab(1)}
+                      >
+                        <Layers size={12} className="text-indigo-500" />
+                        <span className="text-[11px] font-bold text-indigo-600">Available in Inventory tab</span>
+                      </div>
+                    ) : (
+                      <p className="text-[13px] font-semibold text-slate-800 tabular-nums">{String(buyingPrice) !== "—" ? `₹${buyingPrice}` : "—"}</p>
+                    )}
+                  </div>
+
+                  <div>
+                    <p className="text-[10px] font-medium text-slate-400 tracking-[0.05em] mb-1.5 flex items-center gap-1.5">
+                      <Upload size={12} className="text-blue-400" /> Sell Price
+                    </p>
+                    {hasVariants ? (
+                      <div 
+                        className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 border border-indigo-100 rounded-lg w-fit cursor-pointer hover:bg-indigo-100 transition-colors"
+                        onClick={() => setActiveTab(1)}
+                      >
+                        <Layers size={12} className="text-indigo-500" />
+                        <span className="text-[11px] font-bold text-indigo-600">Available in Inventory tab</span>
+                      </div>
+                    ) : (
+                      <p className="text-[13px] font-semibold text-slate-800 tabular-nums">{String(sellingPrice) !== "—" ? `₹${sellingPrice}` : "—"}</p>
+                    )}
+                  </div>
                   <DetailItem icon={Tag} label="MRP" value={datas.mrp ? `₹${datas.mrp}` : "—"} onClick={click("MRP", datas.mrp ? `₹${datas.mrp}` : "—")} />
                   <DetailItem icon={Hash} label="HSN Code" value={String(datas.hsn || "—")} onClick={click("HSN Code", String(datas.hsn || "—"))} />
                   <DetailItem icon={BarChart2} label="GST Rate" value={String(datas.gst || "—")} onClick={click("GST Rate", String(datas.gst || "—"))} />
@@ -302,7 +394,7 @@ const ProductDetail = () => {
                   </div>
                   <div>
                     <p className="text-[10px] font-medium text-slate-400 tracking-[0.05em] mb-1.5 flex items-center gap-1.5">
-                      <MapPin size={12} className="text-blue-400" /> Location
+                      <MapPin size={12} className="text-blue-400" /> Storage Location
                     </p>
                     <div 
                       className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 border border-indigo-100 rounded-lg w-fit cursor-pointer hover:bg-indigo-100 transition-colors"
@@ -418,13 +510,11 @@ const ProductDetail = () => {
           </div>
         )}
 
-        {/* TAB — Stock Movements */}
         {TABS[activeTab] === MOV_TAB_LABEL && (
           <StockMovementTab
             inventoryId={id || ""}
             product={product}
-            onNavigateToPurchase={(purchaseId) => navigate(`/purchase/detail/${purchaseId}`)}
-            onNavigateToSale={(saleId) => navigate(`/sales/${saleId}`)}
+            onViewDetails={(movementId) => navigate(`/stock-movement/${movementId}`)}
           />
         )}
 
@@ -433,29 +523,42 @@ const ProductDetail = () => {
           const rows: any[] = [];
 
           purchases.forEach((p: any) => {
+            // Support both old formats (p.datas) and new PurchaseReadModel format
+            const isNewFormat = !!p.purchase_id;
             const d = p.datas ?? {};
             const pd = d.purchaseDetails ?? {};
             const payment = d.payment ?? {};
             const pType = p.type === 'DIRECT' ? 'Purchase' : (p.type?.includes('PO') ? 'PO Purchase' : 'Purchase');
 
+            const dateStr = isNewFormat ? p.purchase_date : (pd.date || p.created_at);
+            const supplierName = isNewFormat ? p.supplier?.supplier_name : d.supplier_name;
+            const uiId = isNewFormat ? p.purchase_id.split('-')[0].toUpperCase() : p.ui_id;
+
+            const productsList: any[] = [];
             (p.products ?? []).forEach((prod: any) => {
-              const baseRow = {
-                id: p.id,
-                date: pd.date || p.created_at,
-                description: `Supplier: ${d.supplier_name || '—'}`,
-                displayType: pType,
-                isInc: true, // Purchases always add stock
-                stocks: prod.stocks ?? 0,
-                receivedStocks: prod.received_stocks ?? prod.stocks ?? 0,
+              // NEW FORMAT SUPPORT
+              if (prod.stocks_added !== undefined) {
+                productsList.push({
+                  variant: prod.variant?.variant_name || null,
+                  batch: prod.batch?.batch_name || null,
+                  stocksBefore: prod.stocks_before ?? null,
+                  receivedStocks: prod.stocks_added,
+                  buyPrice: prod.buy_price,
+                  sellPrice: prod.sell_price,
+                  serials: prod.serial_info?.serial_numbers || [],
+                  variant_details: prod.variant || null,
+                  batch_details: prod.batch || null,
+                  serial_info: prod.serial_info || null
+                });
+                return;
+              }
+
+              // OLD FORMAT SUPPORT
+              const baseProd = {
                 stocksBefore: prod.stocks_before ?? null,
-                uiId: p.ui_id,
+                receivedStocks: prod.received_stocks ?? prod.stocks ?? 0,
                 buyPrice: prod.buy_price,
                 sellPrice: prod.sell_price,
-                paymentMethod: payment.method || "—",
-                amountPaid: payment.amountPaid || 0,
-                invoiceNo: pd.invoiceNo || "—",
-                referenceNo: pd.referenceNo || "—",
-                storageLocation: d.storage_location || p.storage_location || prod.storage_location || '—',
               };
 
               const variants = prod.variants ?? [];
@@ -465,31 +568,67 @@ const ProductDetail = () => {
                   if (batches.length > 0) {
                     batches.forEach((b: any) => {
                       const sns = Array.isArray(b.serial_numbers) ? b.serial_numbers : (b.serial_numbers?.serial_numbers ?? []);
-                      rows.push({ 
-                        ...baseRow, 
-                        variant: v.name, 
-                        batch: b.name, 
-                        stocks: b.stocks, 
-                        serials: sns,
-                        buyPrice: v.buy_price ?? baseRow.buyPrice,
-                        sellPrice: v.sell_price ?? baseRow.sellPrice,
+                      productsList.push({
+                        variant: v.name,
+                        batch: b.name,
+                        stocksBefore: b.stocks_before ?? v.stocks_before ?? baseProd.stocksBefore,
+                        receivedStocks: b.stocks ?? v.stocks ?? baseProd.receivedStocks,
+                        buyPrice: v.buy_price ?? baseProd.buyPrice,
+                        sellPrice: v.sell_price ?? baseProd.sellPrice,
+                        serials: sns
                       });
                     });
                   } else {
-                    rows.push({ 
-                      ...baseRow, 
-                      variant: v.name, 
-                      batch: null, 
-                      serials: [],
-                      buyPrice: v.buy_price ?? baseRow.buyPrice,
-                      sellPrice: v.sell_price ?? baseRow.sellPrice,
+                    productsList.push({
+                      variant: v.name,
+                      batch: null,
+                      stocksBefore: v.stocks_before ?? baseProd.stocksBefore,
+                      receivedStocks: v.stocks ?? baseProd.receivedStocks,
+                      buyPrice: v.buy_price ?? baseProd.buyPrice,
+                      sellPrice: v.sell_price ?? baseProd.sellPrice,
+                      serials: []
                     });
                   }
                 });
               } else {
-                rows.push({ ...baseRow, variant: null, batch: null, serials: [] });
+                productsList.push({
+                  variant: null,
+                  batch: null,
+                  stocksBefore: baseProd.stocksBefore,
+                  receivedStocks: baseProd.receivedStocks,
+                  buyPrice: baseProd.buyPrice,
+                  sellPrice: baseProd.sellPrice,
+                  serials: []
+                });
               }
             });
+
+            if (productsList.length > 0) {
+              const firstItem = productsList[0];
+              rows.push({
+                id: p.id || p.purchase_id,
+                date: dateStr,
+                description: `Supplier: ${supplierName || '—'}`,
+                displayType: pType,
+                isInc: true, // Purchases always add stock
+                stocks: firstItem.receivedStocks,
+                receivedStocks: firstItem.receivedStocks,
+                stocksBefore: firstItem.stocksBefore,
+                uiId: uiId,
+                buyPrice: firstItem.buyPrice,
+                sellPrice: firstItem.sellPrice,
+                variant: firstItem.variant,
+                batch: firstItem.batch,
+                serials: firstItem.serials,
+                paymentMethod: isNewFormat ? p.payment_status : (payment.method || "—"),
+                amountPaid: isNewFormat ? p.paid_amount : (payment.amountPaid || 0),
+                totalCost: isNewFormat ? p.total_cost : (pd.totalCost || 0),
+                invoiceNo: isNewFormat ? p.invoice_no : (pd.invoiceNo || "—"),
+                referenceNo: isNewFormat ? p.reference_no : (pd.referenceNo || "—"),
+                storageLocation: isNewFormat ? productsList[0].storage_location || '—' : (d.storage_location || p.storage_location || '—'),
+                productsList: productsList
+              });
+            }
           });
 
           rows.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
@@ -503,6 +642,8 @@ const ProductDetail = () => {
           );
         })()}
       </div>
+
+
 
       {/* ── Field Value Modal (global SuperUI Modal) ──────────── */}
       <Modal

@@ -124,6 +124,7 @@ export interface ReusableSelectProps {
   label?: string
   className?: string
   error?: string
+  footer?: React.ReactNode
 }
 export interface ImageUploadProps {
   label?: string;

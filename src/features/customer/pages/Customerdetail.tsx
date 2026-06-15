@@ -1,27 +1,26 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
-  DollarSign, AlertCircle, Package, Star,
-  Banknote, Mail, Wallet, Pencil, User, Tag, MapPin, Phone, Trash2,
-  FileText, Database, CreditCard,
-  Loader2,
-  Plus
+  DollarSign, AlertCircle, Star,
+  Mail, Pencil, User, Phone, Trash2,
+  CreditCard, Database, MapPin, Tag, FileText, Banknote
 } from "lucide-react";
 import {
-  fmt, FormInput, FormSelect,
-  FormTextarea, SectionCard,
+  fmt, SectionCard, FormInput, FormTextarea
 } from "./CustomerDetailComponents";
 import { Modal, ProfileHeaderCard } from "@/components/common/SuperUI";
 import { StatCard } from "@/components/common/StatsCard";
 import { BiLogoWhatsapp } from "react-icons/bi";
 import { useApi } from "@/context/ApiContext";
 import { useToast } from "@/context/ToastContext";
+import { useHeader } from "@/context/HeaderContext";
 import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 import Loader from "@/components/common/Loader";
 import type { CustomerRecord } from "@/types/api";
 import { SearchSelect } from "@/components/inputbuilders/SearchSelect";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { CustomerPurchasesTable, CustomerCollectionsTable } from "@/components/common/HistoryTables";
+import { RecordPaymentModal } from "@/features/customer/components/RecordPaymentModal";
 
 // ── Search bar ──────────────────────────────────────────────────────────────
 const CustomerSearch = () => {
@@ -32,7 +31,11 @@ const CustomerSearch = () => {
 
     try {
       const res = await getData(`${ENDPOINTS.CUSTOMERS}/by/shop/${SHOP_ID}`, { limit: "8", offset: "1", q });
-      const data = res?.data ? (Array.isArray(res.data) ? res.data : [res.data]) : [];
+      let actualData = res?.data;
+      if (actualData && typeof actualData === 'object' && !Array.isArray(actualData) && 'datas' in actualData) {
+        actualData = actualData.datas;
+      }
+      const data = actualData ? (Array.isArray(actualData) ? actualData : [actualData]) : [];
       return data.map((c: any) => ({
         ...c,
         displayName: String(c.name || c.datas?.name || c.datas?.full_name || c.datas?.customer_name || c.id)
@@ -85,35 +88,79 @@ const DetailItem = ({ icon: Icon, label, value, onClick }: { icon: any, label: s
 export default function CustomerDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { getData, deleteData, postData } = useApi();
+  const { getData, deleteData } = useApi();
   const { showToast } = useToast();
+  const { setBottomActions } = useHeader();
 
   const [customer, setCustomer] = useState<CustomerRecord | null>(null);
   const [recordLoading, setRecordLoading] = useState(true);
 
   // Tab & modal state
   const [activeTab, setActiveTab] = useState(0);
-  const [showPayment, setShowPayment] = useState(false);
-  const [showInvoice, setShowInvoice] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [isClearing, setIsClearing] = useState(false);
 
-  // Payment form
-  const [payments, setPayments] = useState<{ mode: string, amount: string }[]>([
-    { mode: "UPI", amount: "" }
-  ]);
-  const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split("T")[0]);
-  const [paymentRef, setPaymentRef] = useState("");
-  const [paymentNotes, setPaymentNotes] = useState("");
-
-  const [outstanding] = useState(0);
+  const [showPayment, setShowPayment] = useState(false);
+  const [showInvoice, setShowInvoice] = useState(false);
 
   const [viewValue, setViewValue] = useState<{ label: string, value: string } | null>(null);
   const [clearingHistory, setClearingHistory] = useState<any[]>([]);
   const [clearingLoading, setClearingLoading] = useState(false);
   const [customerOrders, setCustomerOrders] = useState<any[]>([]);
   const [ordersLoading, setOrdersLoading] = useState(false);
+  const [stats, setStats] = useState<any>(null);
+
+  const fetchCustomerDetail = () => {
+    if (!id) return;
+    getData(`${ENDPOINTS.CUSTOMERS}/by/${SHOP_ID}/${id}`).then((res) => {
+      if (res) setCustomer(Array.isArray(res.data) ? res.data[0] : res.data);
+    });
+    setOrdersLoading(true);
+    getData(`${ENDPOINTS.ORDERS}/by/customer/${SHOP_ID}/${id}`, undefined, { cacheKey: `customer-orders-${id}-${Date.now()}` }).then((res) => {
+      console.log('ORDERS RAW RES:', res);
+      if (res && res.data) {
+        let actualData = res.data;
+        if (typeof actualData === 'object' && !Array.isArray(actualData) && 'datas' in actualData) {
+          actualData = actualData.datas;
+        }
+        const orders = Array.isArray(actualData) ? actualData : [actualData];
+        console.log('PARSED ORDERS:', orders.length, 'total_sellprice values:', orders.map((o: any) => o.total_sellprice));
+        setCustomerOrders(orders);
+        // Compute stats from the fetched orders
+        const salesCount = orders.length;
+        const salesValue = orders.reduce((sum: number, o: any) => sum + (o.total_sellprice || 0), 0);
+        console.log('COMPUTED STATS:', { salesCount, salesValue });
+        setStats({ total_sales_count: salesCount, total_sales_value: salesValue });
+      }
+      setOrdersLoading(false);
+    });
+    setClearingLoading(true);
+    getData(`${ENDPOINTS.CUSTOMERS}/outstanding/clear/${SHOP_ID}/${id}`).then((res) => {
+      if (res && res.data) {
+        let actualData = res.data;
+        if (typeof actualData === 'object' && !Array.isArray(actualData) && 'datas' in actualData) {
+          actualData = actualData.datas;
+        }
+        setClearingHistory(Array.isArray(actualData) ? actualData : [actualData]);
+      }
+      setClearingLoading(false);
+    });
+  };
+
+  useEffect(() => {
+    setBottomActions(
+      <div className="flex items-center justify-end w-full animate-in fade-in slide-in-from-right-4 duration-300">
+        <button 
+          type="button"
+          onClick={() => navigate("/customers")}
+          className="px-6 h-8 rounded-lg border border-slate-200 bg-white text-slate-700 font-bold text-xs hover:bg-slate-50 transition-all flex items-center shadow-sm"
+        >
+          Clear
+        </button>
+      </div>
+    );
+    return () => setBottomActions(null);
+  }, [setBottomActions, navigate]);
 
   useEffect(() => {
     if (!id) return;
@@ -122,14 +169,36 @@ export default function CustomerDetail() {
       if (res) setCustomer(Array.isArray(res.data) ? res.data[0] : res.data);
       setRecordLoading(false);
     });
+    // Also fetch orders to compute stats on initial load
+    getData(`${ENDPOINTS.ORDERS}/by/customer/${SHOP_ID}/${id}`, undefined, { cacheKey: `customer-orders-init-${id}-${Date.now()}` }).then((res) => {
+      if (res && res.data) {
+        let actualData = res.data;
+        if (typeof actualData === 'object' && !Array.isArray(actualData) && 'datas' in actualData) {
+          actualData = actualData.datas;
+        }
+        const orders = Array.isArray(actualData) ? actualData : [actualData];
+        const salesCount = orders.length;
+        const salesValue = orders.reduce((sum: number, o: any) => sum + (o.total_sellprice || 0), 0);
+        setStats({ total_sales_count: salesCount, total_sales_value: salesValue });
+      }
+    });
   }, [id, getData]);
 
   useEffect(() => {
     if (activeTab === 1 && id) { // Index 1 is Purchases
       setOrdersLoading(true);
-      getData(`${ENDPOINTS.ORDERS}/by/customer/${SHOP_ID}/${id}`).then((res) => {
+      getData(`${ENDPOINTS.ORDERS}/by/customer/${SHOP_ID}/${id}`, undefined, { cacheKey: `customer-orders-${id}-${Date.now()}` }).then((res) => {
         if (res && res.data) {
-          setCustomerOrders(res.data);
+          let actualData = res.data;
+          if (typeof actualData === 'object' && !Array.isArray(actualData) && 'datas' in actualData) {
+            actualData = actualData.datas;
+          }
+          const orders = Array.isArray(actualData) ? actualData : [actualData];
+          setCustomerOrders(orders);
+          // Compute stats from the fetched orders
+          const salesCount = orders.length;
+          const salesValue = orders.reduce((sum: number, o: any) => sum + (o.total_sellprice || 0), 0);
+          setStats({ total_sales_count: salesCount, total_sales_value: salesValue });
         }
         setOrdersLoading(false);
       });
@@ -141,80 +210,16 @@ export default function CustomerDetail() {
       setClearingLoading(true);
       getData(`${ENDPOINTS.CUSTOMERS}/outstanding/clear/${SHOP_ID}/${id}`).then((res) => {
         if (res && res.data) {
-          setClearingHistory(Array.isArray(res.data) ? res.data : [res.data]);
+          let actualData = res.data;
+          if (typeof actualData === 'object' && !Array.isArray(actualData) && 'datas' in actualData) {
+            actualData = actualData.datas;
+          }
+          setClearingHistory(Array.isArray(actualData) ? actualData : [actualData]);
         }
         setClearingLoading(false);
       });
     }
   }, [activeTab, id, getData]);
-
-  const addPaymentRow = () => {
-    if (payments.length >= 4) return;
-    setPayments([...payments, { mode: "Cash", amount: "" }]);
-  };
-
-  const removePaymentRow = (idx: number) => {
-    if (payments.length <= 1) return;
-    setPayments(payments.filter((_, i) => i !== idx));
-  };
-
-  const updatePayment = (idx: number, updates: Partial<{ mode: string, amount: string }>) => {
-    setPayments(payments.map((p, i) => i === idx ? { ...p, ...updates } : p));
-  };
-
-  async function handleSavePayment() {
-    const validPayments = payments.filter(p => parseFloat(p.amount) > 0);
-    if (validPayments.length === 0) { showToast("Please enter at least one payment amount", "error"); return; }
-    
-    setIsClearing(true);
-    
-    // Map UI payment method to Schema Enum
-    const methodMap: Record<string, string> = {
-      "UPI": "UPI",
-      "Cash": "CASH",
-      "Card": "CARD",
-      "Bank Transfer": "BANK",
-      "Cheque": "BANK"
-    };
-
-    const paymentDict: Record<string, number> = {};
-    let totalCleared = 0;
-
-    validPayments.forEach(p => {
-      const mode = methodMap[p.mode] || "CASH";
-      const amt = parseFloat(p.amount);
-      paymentDict[mode] = (paymentDict[mode] || 0) + amt;
-      totalCleared += amt;
-    });
-
-    const payload = {
-      shop_id: SHOP_ID,
-      customer_id: id,
-      payments: paymentDict,
-      cleared_amount: totalCleared
-    };
-
-    try {
-      const res = await postData(`${ENDPOINTS.CUSTOMERS}/outstanding/clear`, payload);
-      if (res) {
-        showToast(`Payment of ₹${totalCleared.toLocaleString()} recorded successfully!`, "success");
-        setShowPayment(false);
-        setPayments([{ mode: "UPI", amount: "" }]);
-        setPaymentRef(""); setPaymentNotes("");
-        
-        // Refresh customer data
-        const fresh = await getData(`${ENDPOINTS.CUSTOMERS}/by/${SHOP_ID}/${id}`);
-        if (fresh) setCustomer(Array.isArray(fresh.data) ? fresh.data[0] : fresh.data);
-        
-
-      }
-    } catch (error) {
-      console.error("Payment error:", error);
-      showToast("Failed to record payment. Please try again.", "error");
-    } finally {
-      setIsClearing(false);
-    }
-  }
 
   async function handleDelete() {
     const targetId = customer?.id || id;
@@ -314,7 +319,7 @@ export default function CustomerDetail() {
         {/* Tabs Navigation & Quick Stats Grid (pinned) */}
         <div className="flex-none px-1 py-2 space-y-2">
           <div className="flex gap-2 p-1 bg-slate-100/50 w-fit rounded-lg border border-slate-200/50">
-            {["Overview", "Purchases", "Collection History"].map((tab, i) => (
+            {["Overview", "Sales", "Collection History"].map((tab, i) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(i)}
@@ -331,31 +336,29 @@ export default function CustomerDetail() {
           <div className="flex flex-wrap gap-2">
             <StatCard
               icon={DollarSign}
-              label="Total Revenue"
-              value={datas.total_purchases ? `₹${datas.total_purchases}` : "₹0"}
+              label="Total Sales"
+              value={`${stats?.total_sales_count || 0} (₹${(stats?.total_sales_value || 0).toFixed(2)})`}
               iconBg="bg-blue-50 text-blue-600"
               className="flex-1 min-w-[140px]"
             />
-            <div className="flex-1 min-w-[140px] relative group/card">
-              <StatCard
-                icon={AlertCircle}
-                label="Customer balance"
-                value={fmt(Number(customer.outstanding ?? datas.outstanding_balance ?? outstanding ?? 0))}
-                iconBg="bg-rose-50 text-rose-600"
-                valueClassName={Number(customer.outstanding ?? datas.outstanding_balance ?? outstanding ?? 0) !== 0 ? "text-rose-600 font-black" : ""}
-              />
-            </div>
             <StatCard
-              icon={Package}
-              label="Total Orders"
-              value={String(datas.total_orders || "0")}
-              iconBg="bg-blue-50 text-blue-600"
+              icon={CreditCard}
+              label="Credit Limit"
+              value={`₹${(customer.credit_limit || 0).toFixed(2)}`}
+              iconBg="bg-emerald-50 text-emerald-600"
+              className="flex-1 min-w-[140px]"
+            />
+            <StatCard
+              icon={AlertCircle}
+              label="Outstanding"
+              value={`₹${(customer?.outstanding ?? 0).toFixed(2)}`}
+              iconBg={(customer?.outstanding ?? 0) > 0 ? "bg-rose-50 text-rose-600" : "bg-emerald-50 text-emerald-600"}
               className="flex-1 min-w-[140px]"
             />
             <StatCard
               icon={Star}
-              label="LTV Score"
-              value={datas.lifetime_value ? `₹${datas.lifetime_value}` : "₹0"}
+              label="Customer Balance"
+              value={`₹${((customer?.credit_limit ?? 0) - (customer?.outstanding ?? 0)).toFixed(2)}`}
               iconBg="bg-amber-50 text-amber-600"
               className="flex-1 min-w-[140px]"
             />
@@ -418,7 +421,7 @@ export default function CustomerDetail() {
                         })}
                       </div>
                     </div>
-                  </SectionCard>
+                  </SectionCard>  
 
                   {/* Address Card */}
                   <SectionCard className="rounded-lg border-slate-200 shadow-sm p-6 overflow-hidden relative">
@@ -488,11 +491,12 @@ export default function CustomerDetail() {
               </div>
             )}
 
-            {/* TAB 1 — Purchases */}
+            {/* TAB 1 — Sales */}
             {activeTab === 1 && (
               <CustomerPurchasesTable
                 rows={customerOrders}
                 loading={ordersLoading}
+                onNavigateToSale={(orderId) => navigate(`/sales/${orderId}`)}
               />
             )}
 
@@ -507,14 +511,12 @@ export default function CustomerDetail() {
                     </span>
                   </div>
                   <button 
-                    disabled={Number(customer.outstanding ?? datas.outstanding_balance ?? outstanding ?? 0) <= 0}
+                    disabled={Number(customer.outstanding ?? datas.outstanding_balance ?? 0) <= 0}
                     onClick={() => {
-                      const bal = Number(customer.outstanding ?? datas.outstanding_balance ?? outstanding ?? 0);
-                      setPayments([{ mode: "UPI", amount: bal > 0 ? String(bal) : "" }]);
                       setShowPayment(true);
                     }}
                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black transition-all shadow-md active:scale-95 ${
-                      Number(customer.outstanding ?? datas.outstanding_balance ?? outstanding ?? 0) > 0
+                      Number(customer.outstanding ?? datas.outstanding_balance ?? 0) > 0
                         ? "bg-emerald-600 text-white hover:bg-emerald-700 shadow-emerald-100"
                         : "bg-slate-50 text-slate-400 cursor-not-allowed border border-slate-200 shadow-none"
                     }`}
@@ -562,98 +564,15 @@ export default function CustomerDetail() {
           ]}
         /> */}
 
-        <Modal show={showPayment} onClose={() => setShowPayment(false)} title="Record Payment"
-          footer={
-            <div className="flex justify-end gap-3 p-4 bg-slate-50/50 rounded-b-2xl border-t border-slate-100">
-              <button onClick={() => setShowPayment(false)} className="px-5 py-2.5 rounded-lg text-xs font-semibold text-slate-500 hover:bg-white border border-transparent hover:border-slate-200 transition-all">Cancel</button>
-              <button 
-                onClick={handleSavePayment} 
-                disabled={isClearing}
-                className="flex items-center gap-2 px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold shadow-lg shadow-emerald-100 disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-95"
-              >
-                {isClearing ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving...</> : <><Wallet className="w-4 h-4" /> Save Payment</>}
-              </button>
-            </div>
-          }
-        >
-          <div className="space-y-6">
-            <div className="flex items-center justify-between px-1">
-              <div>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Customer balance</p>
-                <p className="text-lg font-bold text-rose-500 tabular-nums">
-                  ₹{Number(customer.outstanding ?? datas.outstanding_balance ?? 0).toLocaleString("en-IN")}
-                </p>
-              </div>
-              <button
-                onClick={addPaymentRow}
-                disabled={payments.length >= 4}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 text-blue-600 text-[10px] font-bold hover:bg-blue-100 transition-all disabled:opacity-30 border border-blue-100/50"
-              >
-                <Plus size={12} /> ADD MODE
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              {payments.map((p, idx) => (
-                <div key={idx} className="grid grid-cols-[1fr,1.5fr,auto] gap-3 items-end animate-in fade-in slide-in-from-top-2 duration-200">
-                  <div className="space-y-1.5">
-                    <p className="text-[10px] font-semibold text-slate-400 ml-1">Payment Mode</p>
-                    <FormSelect
-                      options={["UPI", "Cash", "Bank Transfer", "Card", "Cheque"]} 
-                      value={p.mode} 
-                      onChange={(e: any) => updatePayment(idx, { mode: e.target.value })} 
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <p className="text-[10px] font-semibold text-slate-400 ml-1">Amount</p>
-                    <div className="relative group">
-                      <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 group-focus-within:text-blue-500 transition-colors">₹</span>
-                      <input
-                        type="number"
-                        value={p.amount}
-                        onChange={(e) => updatePayment(idx, { amount: e.target.value })}
-                        placeholder="0.00"
-                        className="w-full h-10 pl-7 pr-4 bg-white border border-slate-200 rounded-lg text-sm font-semibold text-slate-700 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-500/5 transition-all placeholder:text-slate-300"
-                      />
-                    </div>
-                  </div>
-                  {payments.length > 1 && (
-                    <button
-                      onClick={() => removePaymentRow(idx)}
-                      className="w-10 h-10 flex items-center justify-center text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-all mb-[1px]"
-                      title="Remove mode"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  )}
-                </div>
-              ))}
-            </div>
-
-            <div className="p-4 bg-slate-50/50 rounded-lg border border-slate-100 relative overflow-hidden">
-              <div className="flex items-center justify-between mb-2.5">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Total Collection</span>
-                <span className="text-base font-bold text-slate-700 tabular-nums">
-                  ₹{payments.reduce((acc, curr) => acc + (parseFloat(curr.amount) || 0), 0).toLocaleString("en-IN")}
-                </span>
-              </div>
-              <div className="w-full h-1 bg-slate-100 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-emerald-500 transition-all duration-700 ease-out"
-                  style={{
-                    width: `${Math.min(100, (payments.reduce((acc, curr) => acc + (parseFloat(curr.amount) || 0), 0) / Number(customer.outstanding ?? datas.outstanding_balance ?? 1)) * 100)}%`
-                  }}
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <FormInput label="Payment Date" type="date" value={paymentDate} onChange={(e: any) => setPaymentDate(e.target.value)} />
-              <FormInput label="Reference Number (Optional)" type="text" value={paymentRef} onChange={(e: any) => setPaymentRef(e.target.value)} placeholder="Txn ID, Cheque #" />
-            </div>
-            <FormTextarea label="Notes (Optional)" value={paymentNotes} onChange={(e: any) => setPaymentNotes(e.target.value)} placeholder="Add any notes..." />
-          </div>
-        </Modal>
+        <RecordPaymentModal
+          show={showPayment}
+          onClose={() => setShowPayment(false)}
+          customer={customer}
+          onSuccess={() => {
+            setShowPayment(false);
+            fetchCustomerDetail();
+          }}
+        />
 
         {/* MODAL — Send Invoice */}
         <Modal show={showInvoice} onClose={() => setShowInvoice(false)} title="Send Invoice"
@@ -673,6 +592,8 @@ export default function CustomerDetail() {
             <FormTextarea label="Message" defaultValue={`Dear ${name},\n\nPlease find attached your invoice.\n\nThank you!\n\nBest regards,\nMarket Place Team`} style={{ minHeight: 120 }} />
           </div>
         </Modal>
+
+
 
         {/* Global Reusable Confirm Dialog */}
         <ConfirmDialog

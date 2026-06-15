@@ -143,7 +143,7 @@ export const sidebarLinks: SidebarLink[] = [
     subLinks: [
       { name: "Add Customer", path: "/customers/add", icon: UserPlus },
       { name: "Saved Drafts", path: "/customers/drafts", icon: Bookmark },
-      { name: "Customers List", path: "/customers-Summary", icon: ClipboardList, addPath: "/customers/add" },
+      { name: "Customers List", path: "/customers/all", icon: ClipboardList, addPath: "/customers/add" },
       { name: "Customer Details", path: "/customers", icon: FileText },
     ],
   },
@@ -174,3 +174,21 @@ export const FIELD_DESCRIPTIONS = {
   buyingPrice: "The cost price you paid to the supplier per unit.",
   sellingPrice: "The price at which you intend to sell this product to customers.",
 };
+
+export interface CategoryConfig {
+  suggestedVariantTypes: string[];
+  supportsSerials: boolean;
+  serialLabel: string;
+}
+
+export const CATEGORY_CONFIGS: Record<string, CategoryConfig> = {
+  "Mobile Phones": { suggestedVariantTypes: ["Storage", "Color", "Model"], supportsSerials: true, serialLabel: "IMEI Number" },
+  "Laptops": { suggestedVariantTypes: ["RAM", "Storage", "Color"], supportsSerials: true, serialLabel: "Serial Number" },
+  "Clothing": { suggestedVariantTypes: ["Size", "Color"], supportsSerials: false, serialLabel: "Serial Number" },
+  "Footwear": { suggestedVariantTypes: ["Size", "Color"], supportsSerials: false, serialLabel: "Serial Number" },
+  "Electronics": { suggestedVariantTypes: ["Color", "Wattage", "Model"], supportsSerials: true, serialLabel: "Serial Number" },
+  "Accessories": { suggestedVariantTypes: ["Color", "Size"], supportsSerials: false, serialLabel: "Serial Number" },
+  "Tablets": { suggestedVariantTypes: ["Storage", "Connectivity", "Color"], supportsSerials: true, serialLabel: "IMEI / Serial" },
+};
+
+export const CATEGORIES = Object.keys(CATEGORY_CONFIGS);

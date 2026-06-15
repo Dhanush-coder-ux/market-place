@@ -323,7 +323,7 @@ function parseGst(val: any): number {
 /** Fetch PO reference list for SearchSelect */
 const fetchPOOptions = async (query: string, getData: Function) => {
   try {
-    const res = await getData(`${ENDPOINTS.PURCHASES}/by/${SHOP_ID}/${query}`);
+    const res = await getData(`${ENDPOINTS.PURCHASES}/search/${SHOP_ID}`, { q: query, limit: "10" });
     let list: any[] = [];
     if (res?.data) {
       list = Array.isArray(res.data) ? res.data : [res.data];

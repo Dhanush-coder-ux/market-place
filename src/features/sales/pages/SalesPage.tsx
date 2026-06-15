@@ -6,7 +6,7 @@ import {
   RotateCcw, Receipt,
   ChevronRight, Filter,
   DollarSign, RefreshCw, TrendingUp, Loader2,
-  ExternalLink,
+  ExternalLink, User
 } from "lucide-react";
 import { useApi } from "@/context/ApiContext";
 import { useHeader } from "@/context/HeaderContext";
@@ -16,6 +16,7 @@ import { ReturnModal } from "../components/ReturnOrderFlow";
 import { StatCard } from "@/components/common/StatsCard";
 import { RightSidebarFilter } from "@/components/common/RightSidebarFilter";
 import { ReusableSelect } from "@/components/ui/ReusableSelect";
+import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 
 /* ═══════════════════════════════════════════════════════════════
    TYPES
@@ -100,12 +101,18 @@ const SalesListPage: React.FC = () => {
   }, [setActions, isCleanMode]);
 
   const [orders, setOrders] = useState<OrderResponse[]>([]);
-  const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(search), 300);
+    return () => clearTimeout(timer);
+  }, [search]);
+
   const [filterOrigin, setFilterOrigin] = useState("");
   const [filterPayment, setFilterPayment] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
-  const [filterDate, setFilterDate] = useState("");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [customerMap, setCustomerMap] = useState<Record<string, string>>({});
   const [productMap, setProductMap] = useState<Record<string, string>>({});
@@ -131,61 +138,92 @@ const SalesListPage: React.FC = () => {
   }, [location.state]);
   const closeReturn = () => setReturnSale(null);
 
-  /* ── Data fetching ── */
-  const fetchOrders = async () => {
-    try {
-      setLoading(true);
-      const res = await api.getData(`${ENDPOINTS.ORDERS}/${SHOP_ID}`, { limit: "100", offset: "1" });
-      if (res && res.data) {
-        const normalized = (res.data as any[]).map(s => {
-          let pm = "Other";
-          if (s.payments && Object.keys(s.payments).length > 0) {
-            pm = Object.keys(s.payments).map(k => { const u = k.toUpperCase(); if (u === "CASH") return "Cash"; if (u === "CARD") return "Card"; if (u === "UPI" || u === "G-PAY" || u === "GPAY") return "UPI"; if (u === "PHONEPE") return "PhonePe"; if (u === "CREDIT") return "Credit"; return k.charAt(0).toUpperCase() + k.slice(1).toLowerCase(); }).join(", ");
-          } else if (s.payment_method) {
-            const r = (s.payment_method || "Other").toUpperCase();
-            pm = r === "CASH" ? "Cash" : r === "CARD" ? "Card" : r === "UPI" || r === "G-PAY" || r === "GPAY" ? "UPI" : r === "PHONEPE" ? "PhonePe" : r === "CREDIT" ? "Credit" : s.payment_method;
-          }
-          return { ...s, status: s.status.charAt(0).toUpperCase() + s.status.slice(1).toLowerCase(), payment_method: pm, origin: s.origin === "OFFLINE" ? "Sales" : s.origin };
-        });
-        setOrders(normalized);
-        fetchDetails();
+  const fetchPage = React.useCallback(async (limit: number, offset: number, filters: any) => {
+      const params: any = { limit: limit.toString(), offset: offset.toString() };
+      if (filters.search) params.search = filters.search;
+      if (filters.origin) params.origin = filters.origin;
+      if (filters.payment) params.payment_method = filters.payment;
+      if (filters.status) params.status = filters.status;
+      if (filters.fromDate) params.from_date = filters.fromDate;
+      if (filters.toDate) params.to_date = filters.toDate;
+
+      const res = await api.getData(`${ENDPOINTS.ORDERS}/${SHOP_ID}`, params);
+      
+      let fetchedStats = null;
+      if (res?.data?.overall_datas) {
+        fetchedStats = res.data.overall_datas;
       }
-    } catch (err) { console.error("Failed to fetch orders:", err); }
-    finally { setLoading(false); }
-  };
+
+      const dataList = Array.isArray(res?.data) ? res.data : (res?.data?.datas ?? []);
+      const normalized = dataList.map((s: any) => {
+        let pm = "Other";
+        if (s.payments && Object.keys(s.payments).length > 0) {
+          pm = Object.keys(s.payments).map(k => { const u = k.toUpperCase(); if (u === "CASH") return "Cash"; if (u === "CARD") return "Card"; if (u === "UPI" || u === "G-PAY" || u === "GPAY") return "UPI"; if (u === "PHONEPE") return "PhonePe"; if (u === "CREDIT") return "Credit"; return k.charAt(0).toUpperCase() + k.slice(1).toLowerCase(); }).join(", ");
+        } else if (s.payment_method) {
+          const r = (s.payment_method || "Other").toUpperCase();
+          pm = r === "CASH" ? "Cash" : r === "CARD" ? "Card" : r === "UPI" || r === "G-PAY" || r === "GPAY" ? "UPI" : r === "PHONEPE" ? "PhonePe" : r === "CREDIT" ? "Credit" : s.payment_method;
+        }
+        return { ...s, status: s.status.charAt(0).toUpperCase() + s.status.slice(1).toLowerCase(), payment_method: pm, origin: s.origin === "OFFLINE" ? "Sales" : s.origin };
+      });
+      
+      return {
+        items: normalized,
+        hasMore: dataList.length === limit,
+        stats: fetchedStats,
+        total: res?.data?.total_count || 0
+      };
+  }, [api]);
 
   const fetchDetails = async () => {
     try {
       const custRes = await api.getData(`${ENDPOINTS.CUSTOMERS}/by/shop/${SHOP_ID}`);
-      if (custRes?.data) { const m: Record<string, string> = {}; custRes.data.forEach((c: any) => { m[c.id] = c.name; }); setCustomerMap(m); }
+      if (custRes?.data) { 
+        const m: Record<string, string> = {}; 
+        const custList = Array.isArray(custRes.data) ? custRes.data : (custRes.data.datas ?? []);
+        custList.forEach((c: any) => { m[c.id] = c.name; }); 
+        setCustomerMap(m); 
+      }
       const invRes = await api.getData(ENDPOINTS.INVENTORIES);
-      if (invRes?.data) { const m: Record<string, string> = {}; invRes.data.forEach((p: any) => { m[p.id] = p.name; }); setProductMap(m); }
+      if (invRes?.data) { 
+        const m: Record<string, string> = {}; 
+        const invList = Array.isArray(invRes.data) ? invRes.data : (invRes.data.inventories ?? invRes.data.datas ?? []);
+        invList.forEach((p: any) => { m[p.id] = p.name; }); 
+        setProductMap(m); 
+      }
     } catch (err) { console.error("Failed to fetch details:", err); }
   };
 
   useEffect(() => {
-    fetchOrders();
-    window.addEventListener("focus", fetchOrders);
-    return () => window.removeEventListener("focus", fetchOrders);
+    fetchDetails();
   }, []);
 
   /* ── Filters ── */
-  const filtered = useMemo(() => orders.filter(s => {
-    const q = search.toLowerCase();
-    const dateStr = s.created_at.split("T")[0];
-    return (!q || s.ui_id.toString().includes(q) || s.customer_id.toLowerCase().includes(q) || (customerMap[s.customer_id] || "").toLowerCase().includes(q)) && (!filterOrigin || s.origin === filterOrigin) && (!filterPayment || s.payment_method === filterPayment) && (!filterStatus || s.status.toLowerCase() === filterStatus.toLowerCase()) && (!filterDate || dateStr === filterDate);
-  }), [search, filterOrigin, filterPayment, filterStatus, filterDate, orders, customerMap]);
+  const filters = useMemo(() => ({
+    search: debouncedSearch,
+    origin: filterOrigin,
+    payment: filterPayment,
+    status: filterStatus,
+    fromDate,
+    toDate,
+  }), [debouncedSearch, filterOrigin, filterPayment, filterStatus, fromDate, toDate]);
 
-  /* ── Stats ── */
-  const totalRevenue = useMemo(() => orders.filter(s => s.status.toLowerCase() === "completed").reduce((a, b) => a + b.total_sellprice, 0), [orders]);
-  const salesReturnCount = useMemo(() => orders.filter(s => s.origin === "Sales Return").length, [orders]);
-  const todayRevenue = useMemo(() => { const today = new Date().toISOString().split("T")[0]; return orders.filter(s => s.created_at.startsWith(today) && s.status.toLowerCase() === "completed").reduce((a, b) => a + b.total_sellprice, 0); }, [orders]);
-  const pendingCount = useMemo(() => orders.filter(s => s.status.toLowerCase() === "pending").length, [orders]);
+  const { items, loading, loadingMore, stats, totalCount, lastElementRef } = useInfiniteScroll<any, any>({
+    fetchPage,
+    filters,
+    limit: 50
+  });
 
-  const activeFilters = [filterOrigin, filterPayment, filterStatus, filterDate].filter(Boolean).length;
-  const clearAll = () => { setFilterOrigin(""); setFilterPayment(""); setFilterStatus(""); setFilterDate(""); setSearch(""); };
+  const filtered = items as any[];
+
+  const activeFilters = [filterOrigin, filterPayment, filterStatus, fromDate, toDate].filter(Boolean).length;
+  const clearAll = () => { setFilterOrigin(""); setFilterPayment(""); setFilterStatus(""); setFromDate(""); setToDate(""); setSearch(""); };
 
   const filteredRevenue = useMemo(() => filtered.filter(s => s.status === "Completed").reduce((a, b) => a + b.total_sellprice, 0), [filtered]);
+
+  // Keep orders updated for Return Search (it relies on orders)
+  useEffect(() => {
+    setOrders(filtered);
+  }, [filtered]);
 
   return (
     <div className="flex-1 flex flex-col min-h-0 font-sans w-full overflow-hidden relative">
@@ -195,7 +233,7 @@ const SalesListPage: React.FC = () => {
         <div className="flex gap-3 pb-1 overflow-x-auto scrollbar-none">
           <StatCard
             label="Total Revenue"
-            value={totalRevenue.toLocaleString()}
+            value={(stats?.total_order_value || 0).toLocaleString()}
             prefix="₹"
             icon={<DollarSign size={18} />}
             iconBg="bg-emerald-50"
@@ -203,29 +241,28 @@ const SalesListPage: React.FC = () => {
             subValue="Completed"
           />
           <StatCard
-            label="Today's Sales"
-            value={todayRevenue.toLocaleString()}
-            prefix="₹"
+            label="Total Orders"
+            value={stats?.total_orders || 0}
             icon={<TrendingUp size={18} />}
             iconBg="bg-blue-50"
             iconColor="text-blue-600"
-            subValue="Today"
+            subValue="All Time"
           />
           <StatCard
-            label="Returns"
-            value={salesReturnCount}
+            label="Returns & Exchanges"
+            value={`${stats?.total_returns || 0} / ${stats?.total_exchanged || 0}`}
             icon={<RefreshCw size={18} />}
             iconBg="bg-rose-50"
             iconColor="text-rose-500"
-            subValue="Total"
+            subValue="Items"
           />
           <StatCard
-            label="Pending Orders"
-            value={pendingCount}
-            icon={<Loader2 size={18} className="animate-spin-slow" />}
-            iconBg="bg-amber-50"
-            iconColor="text-amber-500"
-            subValue="In Queue"
+            label="Registered / Walk-in"
+            value={`${stats?.registered_customer_count || 0} / ${stats?.walkin_customer_count || 0}`}
+            icon={<User size={18} />}
+            iconBg="bg-indigo-50"
+            iconColor="text-indigo-500"
+            subValue="Customers"
           />
         </div>
       )}
@@ -236,7 +273,7 @@ const SalesListPage: React.FC = () => {
           <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
           <input
             className="w-full h-8 pl-8 pr-3 text-[12px] font-medium text-slate-700 bg-slate-50 border border-slate-200 rounded-md placeholder:text-slate-400 focus:outline-none focus:border-slate-300 focus:bg-white transition-colors"
-            placeholder="Search invoice or customer…"
+            placeholder="Search order or customer…"
             value={search}
             onChange={e => setSearch(e.target.value)}
           />
@@ -255,6 +292,7 @@ const SalesListPage: React.FC = () => {
           {activeFilters > 0 && (
             <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
           )}
+          <p>Filters</p>
         </button>
 
         <div className="flex-1" />
@@ -262,7 +300,7 @@ const SalesListPage: React.FC = () => {
         <button className="inline-flex items-center gap-1.5 h-8 px-3.5 text-xs font-bold bg-blue-600 text-white border-none rounded-md cursor-pointer transition-all hover:bg-blue-700 hover:shadow-lg shadow-blue-500/20 active:scale-95 whitespace-nowrap shrink-0" onClick={() => setIsReturnSearchOpen(true)}>
           <RotateCcw size={13} />Process Return
         </button>
-        <span className="font-mono text-[11px] font-medium text-slate-400 shrink-0">{filtered.length}/{orders.length}</span>
+        <span className="font-mono text-[11px] font-medium text-slate-400 shrink-0">{filtered.length} {totalCount > 0 ? `/ ${totalCount}` : ''}</span>
       </div>
 
       <RightSidebarFilter
@@ -317,14 +355,25 @@ const SalesListPage: React.FC = () => {
             />
           </div>
 
-          <div className="space-y-1.5">
-            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Date</label>
-            <input
-              type="date"
-              value={filterDate}
-              onChange={e => setFilterDate(e.target.value)}
-              className="w-full h-9 px-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-750 focus:outline-none focus:border-slate-300 focus:bg-white transition-colors"
-            />
+          <div className="flex items-center gap-2">
+            <div className="space-y-1.5 flex-1">
+              <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">From</label>
+              <input
+                type="date"
+                value={fromDate}
+                onChange={e => setFromDate(e.target.value)}
+                className="w-full h-9 px-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-750 focus:outline-none focus:border-slate-300 focus:bg-white transition-colors"
+              />
+            </div>
+            <div className="space-y-1.5 flex-1">
+              <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">To</label>
+              <input
+                type="date"
+                value={toDate}
+                onChange={e => setToDate(e.target.value)}
+                className="w-full h-9 px-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-750 focus:outline-none focus:border-slate-300 focus:bg-white transition-colors"
+              />
+            </div>
           </div>
         </div>
       </RightSidebarFilter>
@@ -335,7 +384,7 @@ const SalesListPage: React.FC = () => {
           <table className="w-full border-collapse table-fixed">
             <thead className="sticky top-0 z-10 bg-slate-50 border-b border-slate-100">
               <tr>
-                <th className="w-[110px] p-2.5 px-3 text-[10px] font-bold tracking-wider text-slate-400 uppercase text-left">Invoice</th>
+                <th className="w-[110px] p-2.5 px-3 text-[10px] font-bold tracking-wider text-slate-400 uppercase text-left">Order ID</th>
                 <th className="w-[160px] p-2.5 px-3 text-[10px] font-bold tracking-wider text-slate-400 uppercase text-left">Customer</th>
                 <th className="w-[100px] p-2.5 px-3 text-[10px] font-bold tracking-wider text-slate-400 uppercase text-left">Origin</th>
                 <th className="w-[110px] p-2.5 px-3 text-[10px] font-bold tracking-wider text-slate-400 uppercase text-left">Payment</th>
@@ -347,7 +396,7 @@ const SalesListPage: React.FC = () => {
               </tr>
             </thead>
             <tbody>
-              {loading ? (
+              {loading && filtered.length === 0 ? (
                 <tr>
                   <td colSpan={9} className="p-12 text-center">
                     <Loader2 size={28} className="text-blue-500 mx-auto animate-spin mb-2" />
@@ -362,18 +411,18 @@ const SalesListPage: React.FC = () => {
                     <p className="text-xs text-slate-400">Try adjusting your filters</p>
                   </td>
                 </tr>
-              ) : filtered.map(sale => {
+              ) : filtered.map((sale, index) => {
                 const oCfg = ORIGIN_CFG[sale.origin as OriginType] || ORIGIN_CFG["Sales"];
                 const returnable = sale.status === "Completed" && sale.origin !== "Sales Return";
                 const dateStr = sale.created_at.split("T")[0];
-                const refundedCount = (sale.items || []).filter(i => i.status === "REFUNDED").length;
-                const exchangedCount = (sale.items || []).filter(i => i.status === "EXCHANGED").length;
+                const refundedCount = (sale.items || []).filter((i: any) => i.status === "REFUNDED").length;
+                const exchangedCount = (sale.items || []).filter((i: any) => i.status === "EXCHANGED").length;
 
                 return (
-                  <tr key={sale.id} className="group hover:bg-slate-50/60 transition-colors">
+                  <tr ref={index === filtered.length - 1 ? lastElementRef : null} key={sale.id} className="group hover:bg-slate-50/60 transition-colors">
                     <td className="p-2.5 px-3 border-b border-slate-50">
                       <div>
-                        <span className="font-mono text-[11px] font-semibold text-slate-800 block">INV-{sale.ui_id}</span>
+                        <span className="font-mono text-[11px] font-semibold text-slate-800 block">Order #{sale.ui_id}</span>
                         <div className="flex gap-1 mt-1 flex-wrap">
                           {sale.origin === "Sales Return" && <span className="text-[9px] font-bold text-red-600 bg-red-50 px-1 py-0.5 rounded">Return</span>}
                           {refundedCount > 0 && <span className="text-[9px] font-bold text-orange-600 bg-orange-50 px-1 py-0.5 rounded">{refundedCount} Refunded</span>}
@@ -382,9 +431,12 @@ const SalesListPage: React.FC = () => {
                       </div>
                     </td>
                     <td className="p-2.5 px-3 border-b border-slate-50">
-                      <span className="truncate text-xs font-medium text-slate-800 block" title={customerMap[sale.customer_id] || sale.customer_id}>
-                        {customerMap[sale.customer_id] || sale.customer_id}
+                      <span className="truncate text-xs font-medium text-slate-800 block" title={sale.customer?.customer_name || (sale.customer_id ? (customerMap[sale.customer_id] || sale.customer_id) : "Walk in Customer")}>
+                        {sale.customer?.customer_name || (sale.customer_id ? (customerMap[sale.customer_id] || sale.customer_id) : "Walk in Customer")}
                       </span>
+                      {sale.customer?.customer_mobile_number && (
+                        <span className="text-[10px] text-slate-500 block mt-0.5 truncate">{sale.customer.customer_mobile_number}</span>
+                      )}
                     </td>
                     <td className="p-2.5 px-3 border-b border-slate-50"><Badge cls={oCfg.cls} dot={oCfg.dot} label={sale.origin} /></td>
                     <td className="p-2.5 px-3 border-b border-slate-50">
@@ -420,13 +472,18 @@ const SalesListPage: React.FC = () => {
           </table>
         </div>
 
+        {loadingMore && <div className="py-4 text-center text-xs text-slate-500">Loading more...</div>}
         {/* Table footer */}
         {filtered.length > 0 && (
           <div className="p-3 px-4 border-t border-slate-100 flex items-center justify-between bg-slate-50/30">
             <p className="text-xs text-slate-400">
               <span className="font-semibold text-slate-600">{filtered.length}</span>
-              {' '}of{' '}
-              <span className="font-semibold text-slate-600">{orders.length}</span>
+              {totalCount > 0 && (
+                <>
+                  {' '}of{' '}
+                  <span className="font-semibold text-slate-600">{totalCount}</span>
+                </>
+              )}
               {' '}records
             </p>
             <span className="text-xs text-slate-500 font-medium">
@@ -438,7 +495,7 @@ const SalesListPage: React.FC = () => {
       </div>
 
       {/* ── Return Modal ── */}
-      {returnSale && <ReturnModal sale={returnSale} onClose={closeReturn} onRefresh={fetchOrders} productMap={productMap} />}
+      {returnSale && <ReturnModal sale={returnSale} onClose={closeReturn} onRefresh={() => {}} productMap={productMap} />}
 
       {/* ── Return Search Modal ── */}
       <ReturnSearchPortal
@@ -502,7 +559,7 @@ const ReturnSearchPortal: React.FC<ReturnSearchPortalProps> = ({ isOpen, onClose
               <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
               <input
                 autoFocus
-                placeholder="Invoice ID or customer name…"
+                placeholder="Order ID or customer name…"
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
                 className="w-full h-12 pl-11 pr-4 text-[13px] border-2 border-slate-100 rounded-lg outline-none bg-slate-50/50 text-slate-800 transition-all focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/5 placeholder:text-slate-400 font-bold"
@@ -516,10 +573,10 @@ const ReturnSearchPortal: React.FC<ReturnSearchPortalProps> = ({ isOpen, onClose
                   <div className="w-10 h-10 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center flex-shrink-0 group-hover:bg-blue-50 group-hover:border-blue-200 transition-colors"><Receipt size={18} className="text-slate-400 group-hover:text-blue-500" /></div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between mb-0.5">
-                      <p className="text-[14px] font-black text-slate-900 group-hover:text-blue-600 transition-colors tracking-tight">INV-{sale.ui_id}</p>
+                      <p className="text-[14px] font-black text-slate-900 group-hover:text-blue-600 transition-colors tracking-tight">Order #{sale.ui_id}</p>
                       <span className="font-mono text-[13px] font-black text-slate-900 group-hover:text-blue-700">{fmt(sale.total_sellprice)}</span>
                     </div>
-                    <p className="text-[11px] text-slate-500 truncate font-bold uppercase tracking-tight opacity-70 group-hover:opacity-100">{customerMap[sale.customer_id] || sale.customer_id} · {sale.created_at.split('T')[0]}</p>
+                    <p className="text-[11px] text-slate-500 truncate font-bold uppercase tracking-tight opacity-70 group-hover:opacity-100">{sale.customer?.customer_name || customerMap[sale.customer_id] || sale.customer_id} {sale.customer?.customer_mobile_number ? `· ${sale.customer.customer_mobile_number}` : ''} · {sale.created_at.split('T')[0]}</p>
                   </div>
                   <div className="w-6 h-6 rounded-lg bg-slate-50 flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-all">
                     <ChevronRight size={14} className="text-slate-300 group-hover:text-white" />
@@ -535,7 +592,7 @@ const ReturnSearchPortal: React.FC<ReturnSearchPortalProps> = ({ isOpen, onClose
                 <div className="py-12 text-center animate-in fade-in zoom-in-95">
                   <div className="w-16 h-16 rounded-full bg-blue-50 flex items-center justify-center mx-auto mb-4 border-2 border-blue-100/50 shadow-lg shadow-blue-500/10"><RotateCcw size={28} className="text-blue-500" /></div>
                   <p className="text-[14px] font-black text-slate-800">Find an order to return</p>
-                  <p className="text-[11px] text-slate-400 mt-1 font-bold uppercase tracking-widest">Search by Invoice or Name</p>
+                  <p className="text-[11px] text-slate-400 mt-1 font-bold uppercase tracking-widest">Search by Order ID or Name</p>
                 </div>
               )}
             </div>

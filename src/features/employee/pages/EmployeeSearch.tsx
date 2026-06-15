@@ -17,12 +17,12 @@ const EmployeeSearch = () => {
       <div className="flex items-center gap-3">
         <button
           onClick={() => navigate("/employee/drafts")}
-          className="px-5 h-11 rounded-lg border border-blue-100 text-blue-600 font-bold text-[14px] bg-blue-50/50 hover:bg-blue-100 transition-all flex items-center gap-2"
+          className="px-4 h-8 rounded-lg border border-blue-100 text-blue-600 font-bold text-[13px] bg-blue-50/50 hover:bg-blue-100 transition-all flex items-center gap-1.5"
         >
-          <Bookmark size={18} />
+          <Bookmark size={16} />
           Saved Drafts
         </button>
-        <GradientButton path="/employee/add" className="h-11 flex items-center px-6 text-[14px] shadow-lg shadow-blue-200">+ Add Employee</GradientButton>
+        <GradientButton path="/employee/add" className="h-8 flex items-center px-4 text-[13px] shadow-md shadow-blue-200">+ Add Employee</GradientButton>
       </div>
     );
     return () => setActions(null);

@@ -1,5 +1,5 @@
-import { useState, useEffect, useMemo } from "react";
-import { Search, Trash2, X, Edit, Bookmark, Users, Building2, Phone, Eye, ExternalLink } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Search, Trash2, X, Edit, Bookmark, Building2, Phone, Eye, ExternalLink, Filter } from "lucide-react";
 import { GradientButton } from "@/components/ui/GradientButton";
 import { useNavigate, useLocation } from "react-router-dom";
 import Loader from "@/components/common/Loader";
@@ -12,7 +12,21 @@ import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { ColumnPicker } from "@/components/common/ColumnPicker";
 import { StatCard } from "@/components/common/StatsCard";
 import { useQuickCreate } from "@/features/common/QuickCreate/QuickCreateContext";
+import { RightSidebarFilter } from "@/components/common/RightSidebarFilter";
 
+
+// Human-readable labels for every possible dynamic column key
+const COLUMN_LABELS: Record<string, string> = {
+  contact_person:  "Contact Person Name",
+  contact_email:   "Contact Person Email",
+  contact_mobile:  "Contact Person Mobile No.",
+  email:           "Supplier Email",
+  mobile_number:   "Supplier Mobile No.",
+  gst_no:          "GST No.",
+  city:            "City",
+  zipcode:         "ZIP Code",
+  address:         "Street Address",
+};
 
 const Supplier = () => {
   const navigate = useNavigate();
@@ -33,12 +47,19 @@ const Supplier = () => {
   const [refreshKey, setRefreshKey] = useState(0);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [supplierToDelete, setSupplierToDelete] = useState<SupplierRecord | null>(null);
+  const [backendStats, setBackendStats] = useState<{total_suppliers: number; contact_persons: number} | null>(null);
+
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  
+  const activeFilters = [fromDate, toDate].filter(Boolean).length;
 
   // Dynamic Column State
   const [availableKeys, setAvailableKeys] = useState<string[]>([]);
   const [selectedKeys, setSelectedKeys] = useState<string[]>(() => {
     const saved = localStorage.getItem('supplier_table_columns');
-    return saved ? JSON.parse(saved) : ["contact_person", "email", "mobile_number", "city"];
+    return saved ? JSON.parse(saved) : ["contact_person", "contact_email", "contact_mobile", "email", "mobile_number", "city"];
   });
 
   useEffect(() => {
@@ -74,10 +95,21 @@ const Supplier = () => {
   useEffect(() => {
     const params: Record<string, string> = { limit: "50", offset: "1" };
     if (searchTerm) params.q = searchTerm;
+    if (fromDate) params.from_date = fromDate;
+    if (toDate) params.to_date = toDate;
 
     getData(`${ENDPOINTS.SUPPLIERS}/by/shop/${SHOP_ID}`, params).then((res) => {
       if (res) {
-        const data: SupplierRecord[] = Array.isArray(res.data) ? res.data : [res.data];
+        const rawData = res.data;
+        const data: SupplierRecord[] = Array.isArray(rawData) ? rawData : (rawData?.datas ?? []);
+        
+        if (rawData?.overall_datas) {
+          setBackendStats({
+            total_suppliers: rawData.overall_datas.total_suppliers || data.length,
+            contact_persons: rawData.overall_datas.contact_persons || 0
+          });
+        }
+        
         setSuppliers(data);
 
         // Detect unique keys from both root and datas field
@@ -90,6 +122,7 @@ const Supplier = () => {
 
           // Map contact_info
           if (s.contact_info?.name) keys.add("contact_person");
+          if (s.contact_info?.email) keys.add("contact_email");
           if (s.contact_info?.mobile_number) keys.add("contact_mobile");
 
           // Flatten address
@@ -110,7 +143,7 @@ const Supplier = () => {
         setAvailableKeys(sortedKeys);
       }
     });
-  }, [refreshKey, searchTerm]);
+  }, [refreshKey, searchTerm, fromDate, toDate]);
 
   const handleDelete = async () => {
     if (!supplierToDelete) return;
@@ -126,16 +159,7 @@ const Supplier = () => {
     }
   };
 
-  const stats = useMemo(() => {
-    let active = 0;
-    let contacts = 0;
-    suppliers.forEach(s => {
-      if (!s) return;
-      if (s.is_active ?? s.datas?.is_active ?? true) active++;
-      if (s.mobile_number || s.contact_info?.mobile_number || s.datas?.phone || s.email) contacts++;
-    });
-    return { active, contacts };
-  }, [suppliers]);
+
 
   return (
     <div className="flex-1 flex flex-col min-h-0 font-sans w-full overflow-hidden relative">
@@ -146,19 +170,13 @@ const Supplier = () => {
           <StatCard
             icon={Building2}
             label="Total Suppliers"
-            value={suppliers.length.toString()}
+            value={(backendStats?.total_suppliers || suppliers.length).toString()}
             iconBg="bg-blue-50 text-blue-600"
           />
           <StatCard
-            icon={Users}
-            label="Active Partners"
-            value={stats.active.toString()}
-            iconBg="bg-emerald-50 text-emerald-600"
-          />
-          <StatCard
             icon={Phone}
-            label="Support Contacts"
-            value={stats.contacts.toString()}
+            label="Contact Persons"
+            value={(backendStats?.contact_persons || 0).toString()}
             iconBg="bg-amber-50 text-amber-600"
           />
         </div>
@@ -179,14 +197,62 @@ const Supplier = () => {
             className="w-full h-8 pl-8 pr-3 text-[12px] font-medium text-slate-700 bg-slate-50 border border-slate-200 rounded-md placeholder:text-slate-400 focus:outline-none focus:border-slate-300 focus:bg-white transition-colors"
           />
         </div>
+        
+        <button
+          onClick={() => setIsFilterOpen(true)}
+          className={`h-8 px-3 flex items-center gap-1.5 rounded-md border text-xs font-semibold transition-all active:scale-95 shrink-0 ${activeFilters > 0
+            ? "border-blue-200 bg-blue-50 text-blue-600"
+            : "border-slate-200 bg-white text-slate-650 hover:bg-slate-50"
+            }`}
+        >
+          <Filter size={13} />
+          Filters
+          {activeFilters > 0 && (
+            <span className="ml-1 px-1.5 py-0.5 bg-blue-600 text-white rounded-full text-[9px] font-black">{activeFilters}</span>
+          )}
+        </button>
+
         <ColumnPicker
           availableKeys={availableKeys}
           selectedKeys={selectedKeys}
           onApply={setSelectedKeys}
           storageKey="supplier_table_columns"
+          labelMap={COLUMN_LABELS}
           className="h-8 px-3 rounded-md border border-slate-200 text-slate-650 bg-white hover:bg-slate-50 active:scale-95 transition-all text-xs font-semibold shadow-sm shrink-0 flex items-center justify-center gap-1.5"
         />
       </div>
+
+      {/* Filter Sidebar */}
+      <RightSidebarFilter
+        isOpen={isFilterOpen}
+        onClose={() => setIsFilterOpen(false)}
+        onApply={() => { }}
+        onClear={() => { setFromDate(""); setToDate(""); setSearchTerm(""); }}
+        title="Supplier Filters"
+      >
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <div className="space-y-1.5 flex-1">
+              <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">From</label>
+              <input
+                type="date"
+                value={fromDate}
+                onChange={e => setFromDate(e.target.value)}
+                className="w-full h-9 px-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-750 focus:outline-none focus:border-slate-300 focus:bg-white transition-colors"
+              />
+            </div>
+            <div className="space-y-1.5 flex-1">
+              <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">To</label>
+              <input
+                type="date"
+                value={toDate}
+                onChange={e => setToDate(e.target.value)}
+                className="w-full h-9 px-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-750 focus:outline-none focus:border-slate-300 focus:bg-white transition-colors"
+              />
+            </div>
+          </div>
+        </div>
+      </RightSidebarFilter>
 
       {/* Error State */}
       {error && (
@@ -206,7 +272,9 @@ const Supplier = () => {
               <tr className="text-slate-400 text-[10px] font-bold  tracking-[0.15em] border-b border-slate-100">
                 <th className="px-6 py-5 whitespace-nowrap min-w-[200px]">Supplier Details</th>
                 {selectedKeys.map(key => (
-                  <th key={key} className="px-6 py-5 capitalize whitespace-nowrap">{key.replace(/_/g, ' ')}</th>
+                  <th key={key} className="px-6 py-5 whitespace-nowrap">
+                    {COLUMN_LABELS[key] ?? key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
+                  </th>
                 ))}
                 <th className="px-6 py-5 text-right whitespace-nowrap">Actions</th>
               </tr>
@@ -236,7 +304,7 @@ const Supplier = () => {
                           </div>
                           <div>
                             <p className="text-sm font-semibold text-slate-700 tracking-tight">{String(sup.name)}</p>
-                            <p className="text-[11px] font-semibold text-slate-400 font-mono">ID: {sup.id}</p>
+                            <p className="text-[11px] font-semibold text-slate-400 font-mono">ID: {sup.ui_id || sup.id}</p>
                           </div>
                         </div>
                       </td>
@@ -246,6 +314,7 @@ const Supplier = () => {
 
                         // Handle Specific Column Mappings
                         if (key === "contact_person") val = sup.contact_info?.name;
+                        else if (key === "contact_email") val = sup.contact_info?.email;
                         else if (key === "contact_mobile") val = sup.contact_info?.mobile_number;
                         else if (key === "city") val = sup.datas?.address?.city;
                         else if (key === "zipcode") val = sup.datas?.address?.zipcode;

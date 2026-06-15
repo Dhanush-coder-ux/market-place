@@ -61,6 +61,11 @@ export interface OrderResponse {
   total_sellprice: number;
   origin: string;
   type: string;
+  customer?: {
+    customer_id?: string;
+    customer_name?: string;
+    customer_mobile_number?: string;
+  };
   items?: OrderItemResponse[];
   exchanged_items?: ExchangeInfo[] | null;
   created_at: string;

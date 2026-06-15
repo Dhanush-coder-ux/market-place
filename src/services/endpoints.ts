@@ -13,6 +13,9 @@ export const ENDPOINTS = {
   SHOPS: "/shops",
   OFFERS: "/offers",
   COUPONS: "/coupons",
+  UTILITIES: "/utilities",
+  UPLOAD_IMAGES: "/utilities/upload/images",
+  GENERATE_BARCODE: "/products/generate-barcode",
 } as const;
 
 // Hardcoded until auth wires up shop_id from login session

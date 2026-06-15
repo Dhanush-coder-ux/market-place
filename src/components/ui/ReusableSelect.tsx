@@ -8,8 +8,7 @@ import {
 import { cn } from "@/lib/utils"
 import { ReusableSelectProps } from "../types"
 import { SelectPortal } from "@radix-ui/react-select"
-
-
+import { useState } from "react"
 
 export function ReusableSelect({
   options,
@@ -19,8 +18,10 @@ export function ReusableSelect({
   label,
   className,
   error,
-  required
+  required,
+  footer
 }: ReusableSelectProps) {
+  const [open, setOpen] = useState(false);
   const mappedValue = value === "" ? "__EMPTY__" : value;
 
   const handleValueChange = (val: string) => {
@@ -37,7 +38,7 @@ export function ReusableSelect({
         </label>
       )}
       
-      <Select value={mappedValue} onValueChange={handleValueChange}>
+      <Select value={mappedValue} onValueChange={handleValueChange} open={open} onOpenChange={setOpen}>
         <SelectTrigger 
           className={cn(
             "w-full h-10 rounded-lg border-gray-200 bg-white px-4 py-5 shadow-sm transition-all hover:border-blue-400 focus:ring-4 focus:ring-blue-500/10 outline-none",
@@ -48,7 +49,17 @@ export function ReusableSelect({
           <SelectValue placeholder={placeholder} />
         </SelectTrigger>
         <SelectPortal>
-        <SelectContent className="z-[9999] rounded-lg shadow-2xl border-gray-100 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+        <SelectContent 
+          position="popper" 
+          className="z-[9999] rounded-lg shadow-2xl border-gray-100 overflow-hidden h-64 animate-in fade-in zoom-in-95 duration-200"
+          footer={
+            footer && (
+              <div onClick={() => setOpen(false)} className="w-full">
+                {footer}
+              </div>
+            )
+          }
+        >
           {options.map((option) => (
             <SelectItem 
               key={option.value || "__EMPTY__"} 
@@ -66,7 +77,6 @@ export function ReusableSelect({
             </SelectItem>
           ))}
         </SelectContent>
-
         </SelectPortal>
       </Select>
       

@@ -76,7 +76,7 @@ export default function Employee() {
 
     getData(`${ENDPOINTS.EMPLOYEES}/by/shop/${SHOP_ID}`, params).then((res) => {
       if (res) {
-        const data: EmployeeRecord[] = Array.isArray(res.data) ? res.data : [res.data];
+        const data: EmployeeRecord[] = res.data?.datas ? res.data.datas : (Array.isArray(res.data) ? res.data : [res.data]);
         setEmployees(data);
 
         // Detect unique keys from both root and datas field
@@ -91,7 +91,7 @@ export default function Employee() {
           // Nested datas keys
           if (e.datas) {
             Object.keys(e.datas).forEach(k => {
-              if (!["id", "shop_id", "name", "salary_rage", "address"].includes(k)) {
+              if (!["id", "shop_id", "name", "salary_range", "address"].includes(k)) {
                 keys.add(k);
               }
             });
@@ -270,11 +270,11 @@ export default function Employee() {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-600 to-blue-400 flex items-center justify-center text-white text-sm font-bold shadow-lg shadow-blue-100">
-                          {emp.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
+                          {(emp.name || 'Unknown').split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
                         </div>
                         <div>
-                          <p className="text-sm font-semibold text-slate-700 tracking-tight">{emp.name}</p>
-                          <p className="text-[11px] font-semibold text-slate-400 font-mono">ID: {emp.id}</p>
+                          <p className="text-sm font-semibold text-slate-700 tracking-tight">{emp.name || 'Unknown'}</p>
+                          <p className="text-[11px] font-semibold text-slate-400 font-mono">ID: {emp.ui_id || emp.id}</p>
                         </div>
                       </div>
                     </td>

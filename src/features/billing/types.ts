@@ -19,6 +19,9 @@ export interface ProductVariant {
   serialnoId?: string;
   batchId?: string;
   availableSerials?: string[];
+  expiryDate?: string;
+  manufacturingDate?: string;
+  batches?: any[];
 }
 
 export interface InventoryItem {
@@ -36,6 +39,8 @@ export interface InventoryItem {
   batchId?: string;
   serialnoId?: string;
   availableSerials?: string[];
+  batches?: any[];
+  gst?: number;
 }
 
 export interface BillingItem {
@@ -54,6 +59,9 @@ export interface BillingItem {
   manufacturingDate?: string;
   expiryDate?: string;
   requireSerial?: boolean;
+  maxStock?: number;
+  gst?: number;
+  _product?: any;
 }
 
 // Alias for convenience if used in shopping cart contexts

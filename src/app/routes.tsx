@@ -59,6 +59,7 @@ const StockAdjustmentForm = React.lazy(() => import("../features/inventory/pages
 const StockAdjustmentDraftsPage = React.lazy(() => import("../features/inventory/pages/StockAdjustmentDraftsPage"));
 
 // ─── Customers ───────────────────────────────────────────────────────────────
+const CustomerSearch = React.lazy(() => import("@/features/customer/pages/CustomerSearch"));
 const CustomerList = React.lazy(() => import("@/features/customer/pages/CustomerList"));
 const CustomerDetail = React.lazy(() => import("@/features/customer/pages/Customerdetail"));
 const CustomerBalanceSummary = React.lazy(() => import("@/features/customer/pages/CustomerBalanceSummary"));
@@ -118,6 +119,7 @@ export const router = createBrowserRouter([
       { path: '/purchase/detail', element: <Page><PurchaseSearch /></Page> },
       { path: '/purchase/detail/:id', element: <Page><PurchaseDetail /></Page> },
       { path: "/purchase/add", element: <Page><PurchaseForm /></Page> },
+      { path: "/purchase/edit/:id", element: <Page><PurchaseForm /></Page> },
       { path: "/purchase/drafts", element: <Page><PurchaseDraftsPage /></Page> },
 
       // Suppliers — static "add" before dynamic ":id"
@@ -156,7 +158,8 @@ export const router = createBrowserRouter([
       { path: '/digital-store/profile', element: <Page><DigitalMain /></Page> },
 
       // Customers — static "add" before dynamic ":id"
-      { path: "/customers", element: <Page><CustomerList /></Page> },
+      { path: "/customers", element: <Page><CustomerSearch /></Page> },
+      { path: "/customers/all", element: <Page><CustomerList /></Page> },
       { path: "/customers-Summary", element: <Page><CustomerBalanceSummary /></Page> },
       { path: "/customers/add", element: <Page><CustomerFormPage /></Page> },
       { path: "/customers/drafts", element: <Page><CustomerDraftsPage /></Page> },

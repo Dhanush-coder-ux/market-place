@@ -4,7 +4,7 @@ import {
   Package, Search, Filter, Bookmark, Trash2, Eye,
   ChevronDown, ChevronRight, Layers, AlertTriangle,
   X, AlertCircle, Calendar, Hash, ExternalLink,
-  Copy, Check
+  Copy, Check, IndianRupee
 } from "lucide-react";
 import { VariantRows, BatchCards, SerialBadgeList } from "../../inventory/components/StockTree";
 import { useHeader } from "@/context/HeaderContext";
@@ -32,17 +32,42 @@ const formatCurrency = (amount?: any) => {
 };
 
 const columnLabels: Record<string, string> = {
-  barcode: "SKU / Barcode",
-  buy_price: "Buy",
-  sell_price: "Sell",
+  barcode: "Barcode",
+  buy_price: "Buy Price",
+  sell_price: "Sell Price",
   stocks: "Stock",
+  status: "Status",
   category: "Category",
   unit: "Unit",
   brand: "Brand",
   supplier: "Supplier",
   serial_number: "Serials",
-  reorder_point: "ROP",
-  status: "Status",
+  reorder_point: "Reorder Point",
+};
+
+const columnOrder = [
+  "barcode",
+  "category",
+  "supplier",
+  "unit",
+  "brand",
+  "buy_price",
+  "sell_price",
+  "stocks",
+  "status",
+  "reorder_point",
+  "serial_number"
+];
+
+const sortKeys = (keys: string[]) => {
+  return [...keys].sort((a, b) => {
+    const idxA = columnOrder.indexOf(a);
+    const idxB = columnOrder.indexOf(b);
+    if (idxA === -1 && idxB === -1) return a.localeCompare(b);
+    if (idxA === -1) return 1;
+    if (idxB === -1) return -1;
+    return idxA - idxB;
+  });
 };
 
 const getColumnLabel = (key: string) => {
@@ -266,8 +291,12 @@ const ProductRow = React.memo(
           {/* Product identity */}
           <td className="px-3 py-2.5">
             <div className="flex items-center gap-2.5">
-              <div className="w-7 h-7 rounded-md bg-slate-100 flex items-center justify-center text-slate-600 text-[11px] font-semibold shrink-0 select-none">
-                {initial}
+              <div className="w-7 h-7 rounded-md bg-slate-100 flex items-center justify-center text-slate-600 text-[11px] font-semibold shrink-0 select-none overflow-hidden">
+                {datas.images && datas.images.length > 0 ? (
+                  <img src={datas.images[0]} alt={productName} className="w-full h-full object-cover" />
+                ) : (
+                  initial
+                )}
               </div>
               <div className="flex flex-col gap-0.5 min-w-0">
                 <div className="flex items-center gap-1.5 flex-wrap">
@@ -327,12 +356,12 @@ const ProductRow = React.memo(
 
             if (key === "buy_price" || key === "sell_price" || key === "price") {
               return (
-                <td key={key} className="px-3 py-2.5 whitespace-nowrap text-right">
+                <td key={key} className="px-3 py-2.5 whitespace-nowrap">
                   <span
                     className={`tabular-nums ${
                       key === "sell_price"
-                        ? "text-[13px] font-semibold text-slate-700"
-                        : "text-[12px] font-medium text-slate-400"
+                        ? "text-[13px] font-bold text-slate-800"
+                        : "text-[13px] font-semibold text-slate-700"
                     }`}
                   >
                     {hasVariants ? "—" : formatCurrency(value)}
@@ -343,8 +372,8 @@ const ProductRow = React.memo(
 
             if (key === "stocks" || key === "quantity") {
               return (
-                <td key={key} className="px-3 py-2.5 whitespace-nowrap text-right">
-                  <span className="text-[13px] font-semibold text-slate-800 tabular-nums">
+                <td key={key} className="px-3 py-2.5 whitespace-nowrap">
+                  <span className="text-[13px] font-semibold text-blue-600 tabular-nums">
                     {value}
                   </span>
                 </td>
@@ -353,9 +382,9 @@ const ProductRow = React.memo(
 
             if (key === "reorder_point") {
               return (
-                <td key={key} className="px-3 py-2.5 whitespace-nowrap text-center">
-                  <span className="text-[11px] font-medium text-slate-400 tabular-nums">
-                    {value !== undefined && value !== null ? value : "—"}
+                <td key={key} className="px-3 py-2.5 whitespace-nowrap">
+                  <span className="text-[13px] font-semibold text-slate-700 tabular-nums">
+                    {hasVariants ? "—" : (value !== undefined && value !== null ? value : "—")}
                   </span>
                 </td>
               );
@@ -369,7 +398,7 @@ const ProductRow = React.memo(
               );
               const status = getStockStatus(stocks, reorderPoint);
               return (
-                <td key={key} className="px-3 py-2.5 whitespace-nowrap text-center">
+                <td key={key} className="px-3 py-2.5 whitespace-nowrap">
                   <span
                     className={`inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-medium border leading-none ${status.color}`}
                   >
@@ -483,8 +512,15 @@ const ProductRow = React.memo(
               }
               if (Array.isArray(value)) {
                 if (value.length === 0) return "—";
-                if (typeof value[0] === "object" && value[0].name)
-                  return value.map((v: any) => v.name).join(", ");
+                if (typeof value[0] === "object") {
+                  return value.map((v: any) => {
+                    if (v.name && v.values && Array.isArray(v.values)) {
+                      return `${v.name} (${v.values.join('/')})`;
+                    }
+                    if (v.name) return v.name;
+                    return JSON.stringify(v);
+                  }).join(", ");
+                }
                 return value.join(", ");
               }
               if (typeof value === "object") return JSON.stringify(value);
@@ -586,6 +622,7 @@ const ProductInfos = () => {
   const { showToast } = useToast();
 
   const [products, setProducts] = useState<InventoryRecord[]>([]);
+  const [overallStats, setOverallStats] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -599,8 +636,10 @@ const ProductInfos = () => {
     const saved = localStorage.getItem("product_table_columns");
     return saved
       ? JSON.parse(saved)
-      : ["category", "sell_price", "stocks", "reorder_point", "status"];
+      : ["category", "status", "buy_price", "sell_price", "stocks", "reorder_point"];
   });
+
+  const sortedSelectedKeys = useMemo(() => sortKeys(selectedKeys), [selectedKeys]);
 
   useEffect(() => {
     setActions(
@@ -643,10 +682,16 @@ const ProductInfos = () => {
     getData(`${ENDPOINTS.INVENTORIES}/by/shop/${SHOP_ID}`, params).then(
       (res) => {
         if (res) {
-          const data: InventoryRecord[] = Array.isArray(res.data)
-            ? res.data
-            : [res.data];
+          const data: InventoryRecord[] = Array.isArray(res?.data) 
+            ? res.data 
+            : (res?.data?.inventories ?? (Array.isArray(res?.datas) ? res.datas : (res?.datas?.inventories ?? [])));
           setProducts(data);
+          
+          if (res?.data?.overall_stats) {
+            setOverallStats(res.data.overall_stats);
+          } else if (res?.datas?.overall_stats) {
+            setOverallStats(res.datas.overall_stats);
+          }
 
           const keys = new Set<string>();
           data.forEach((p: InventoryRecord) => {
@@ -707,10 +752,7 @@ const ProductInfos = () => {
     });
   }, [products, searchTerm]);
 
-  const totalStock = useMemo(
-    () => products.reduce((acc, p) => acc + Number(p.stocks || 0), 0),
-    [products]
-  );
+
 
   const lowStockCount = useMemo(
     () =>
@@ -723,6 +765,11 @@ const ProductInfos = () => {
       }).length,
     [products]
   );
+  
+  const outOfStockCount = useMemo(
+    () => products.filter((p) => Number(p.stocks || 0) === 0).length,
+    [products]
+  );
 
   return (
     <div className="flex-1 flex flex-col min-h-0 font-sans w-full overflow-hidden relative">
@@ -732,27 +779,36 @@ const ProductInfos = () => {
         <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-none">
           <StatCard
             icon={Package}
-            label="Total products"
-            value={products.length.toString()}
+            label="Total Products"
+            value={overallStats?.total_product_count?.toString() || products.length.toString()}
             subValue="items"
-            iconBg="bg-slate-50"
-            iconColor="text-slate-500"
-          />
-          <StatCard
-            icon={Layers}
-            label="Total stock"
-            value={totalStock.toString()}
-            subValue="units"
             iconBg="bg-blue-50"
             iconColor="text-blue-600"
           />
           <StatCard
+            icon={IndianRupee}
+            label="Total Stock Value"
+            value={(overallStats?.total_stock_value || 0).toLocaleString()}
+            prefix="₹"
+            subValue="inventory value"
+            iconBg="bg-emerald-50"
+            iconColor="text-emerald-600"
+          />
+          <StatCard
             icon={AlertTriangle}
-            label="Low stock"
-            value={lowStockCount.toString()}
-            subValue="items"
-            iconBg="bg-rose-50"
-            iconColor="text-rose-500"
+            label="Low Stock"
+            value={overallStats?.low_stocks_count?.toString() || lowStockCount.toString()}
+            subValue="items need restock"
+            iconBg="bg-amber-50"
+            iconColor="text-amber-500"
+          />
+          <StatCard
+            icon={AlertCircle}
+            label="Out of Stock"
+            value={overallStats?.no_stocks_count?.toString() || outOfStockCount.toString()}
+            subValue="items empty"
+            iconBg="bg-red-50"
+            iconColor="text-red-500"
           />
         </div>
       )}
@@ -862,10 +918,10 @@ const ProductInfos = () => {
                 <th className="px-3 py-2.5 min-w-[260px] text-[10px] font-semibold text-slate-400 uppercase tracking-wide">
                   Product
                 </th>
-                {selectedKeys.map((key) => {
+                {sortedSelectedKeys.map((key) => {
                   if (
                     key === "category" &&
-                    selectedKeys.includes("supplier")
+                    sortedSelectedKeys.includes("supplier")
                   ) {
                     return (
                       <th
@@ -878,19 +934,13 @@ const ProductInfos = () => {
                   }
                   if (
                     key === "supplier" &&
-                    selectedKeys.includes("category")
+                    sortedSelectedKeys.includes("category")
                   )
                     return null;
                   return (
                     <th
                       key={key}
-                      className={`px-3 py-2.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wide ${
-                        key === "stocks" || key === "sell_price" || key === "buy_price" || key === "price"
-                          ? "text-right"
-                          : key === "reorder_point" || key === "status"
-                          ? "text-center"
-                          : ""
-                      }`}
+                      className="px-3 py-2.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wide"
                     >
                       {getColumnLabel(key)}
                     </th>
@@ -951,7 +1001,7 @@ const ProductInfos = () => {
                     p={p}
                     isExpanded={expandedRows.has(p.id)}
                     toggleExpand={toggleExpand}
-                    selectedKeys={selectedKeys}
+                    selectedKeys={sortedSelectedKeys}
                     navigate={navigate}
                     setProductToDelete={setProductToDelete}
                     setIsDeleteDialogOpen={setIsDeleteDialogOpen}

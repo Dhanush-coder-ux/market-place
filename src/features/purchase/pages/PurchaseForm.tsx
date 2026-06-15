@@ -4,15 +4,18 @@ import {
   Save,
   Banknote,
   Smartphone,
-  CreditCard,
-  Landmark,
   PackageOpen,
   Bookmark,
   Mail,
-  User
+  User,
+  Info,
+  ChevronDown,
+  ChevronUp
 } from "lucide-react";
 
 import Input from "@/components/ui/Input";
+import { ReusableSelect } from "@/components/ui/ReusableSelect";
+import { Tooltip } from "@/components/common/Tootlip";
 import { GradientButton } from "@/components/ui/GradientButton";
 import { useApi } from "@/context/ApiContext";
 import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
@@ -68,6 +71,7 @@ const PurchaseForm = () => {
   const [submitting, setSubmitting] = useState(false);
 
   const { openQuickCreate } = useQuickCreate();
+  const [soldStockWarnings, setSoldStockWarnings] = useState<string[]>([]);
 
   // --- State Management ---
   const [purchaseDetails, setPurchaseDetails] = useState({
@@ -94,6 +98,8 @@ const PurchaseForm = () => {
   const [payment, setPayment] = useState({ method: "Cash" as PaymentMethod, amountPaid: "" as number | "" });
   const [costMethod, setCostMethod] = useState("None");
   const [supplierDetails, setSupplierDetails] = useState<any>(null);
+  const [isGstExpanded, setIsGstExpanded] = useState(false);
+  const [gstMode, setGstMode] = useState<"inclusive" | "exclusive">("inclusive");
 
   // --- Calculations ---
   const stats = useMemo(() => {
@@ -108,8 +114,18 @@ const PurchaseForm = () => {
       const gstRate = Number(p.taxGst) || 0;
       totalQty += q;
 
-      const lineExcl = q * c;
-      const lineGst = lineExcl * (gstRate / 100);
+      let baseCost = c;
+      let lineGst = 0;
+
+      if (gstMode === "inclusive") {
+        baseCost = c / (1 + gstRate / 100);
+        lineGst = q * (c - baseCost);
+      } else {
+        baseCost = c;
+        lineGst = q * c * (gstRate / 100);
+      }
+
+      const lineExcl = q * baseCost;
 
       subtotal += lineExcl;
       totalGst += lineGst;
@@ -122,7 +138,7 @@ const PurchaseForm = () => {
     const otherCost = Number(charges.other) || 0;
     const totalCharges = transportCost + otherCost;
 
-    const grandTotal = Math.round(subtotal + totalGst + totalCharges);
+    const grandTotal = Math.round(subtotal + totalGst);
     const paid = Number(payment.amountPaid) || 0;
     const outstanding = grandTotal - paid;
 
@@ -130,65 +146,111 @@ const PurchaseForm = () => {
     const allocations = products.map(p => {
       const q = Number(p.quantity) || 0;
       const c = Number(p.costPrice) || 0;
+      const gstRate = Number(p.taxGst) || 0;
+      const baseCost = gstMode === "inclusive" ? c / (1 + gstRate / 100) : c;
+
       let alloc = 0;
       if (costMethod === "By Unit" && totalQty > 0) {
         alloc = (q / totalQty) * totalCharges;
       } else if (costMethod === "By Value" && subtotal > 0) {
-        alloc = ((q * c) / subtotal) * totalCharges;
+        alloc = ((q * baseCost) / subtotal) * totalCharges;
       } else if (costMethod === "Equally" && products.length > 0) {
         alloc = totalCharges / products.length;
       }
-      const netCostPerUnit = q > 0 ? (q * c + alloc) / q : c;
+      const netCostPerUnit = q > 0 ? (q * baseCost + alloc) / q : baseCost;
       return { alloc, netCostPerUnit };
     });
 
     return { totalQty, subtotal, totalGst, gstBreakdown, totalCharges, grandTotal, outstanding, allocations };
-  }, [products, charges, payment.amountPaid, costMethod]);
+  }, [products, charges, payment.amountPaid, costMethod, gstMode]);
 
   // --- Load Existing Purchase or Draft ---
   useEffect(() => {
     if (id) {
       const fetchPurchase = async () => {
-        const res = await getData(`${ENDPOINTS.PURCHASES}/${id}`);
-        if (res && res.data) {
-          const data = res.data;
+        const res = await getData(`${ENDPOINTS.PURCHASES}/by/${SHOP_ID}/${id}`);
+        if (res && (res.data || res.id)) {
+          const data = res.data ? (Array.isArray(res.data) ? res.data[0] : res.data) : res;
+          const loadedSupplierId = data.supplier?.supplier_id || data.supplier?.id || data.supplier_id || "";
+          const loadedSupplierName = data.supplier?.supplier_name || data.supplier?.name || data.supplier_name || "";
+          
           setPurchaseDetails(data.purchaseDetails || {
-            supplier: data.supplier_name,
+            supplier: loadedSupplierId,
             invoiceNo: data.invoice_no || "",
-            date: data.date || new Date().toISOString().split("T")[0],
+            date: data.purchase_date ? data.purchase_date.split("T")[0] : (data.date || new Date().toISOString().split("T")[0]),
             referenceNo: data.reference_no || "",
           });
+          
+          if (loadedSupplierId && !data.purchaseDetails) {
+            setSupplierDetails({
+              id: loadedSupplierId,
+              name: loadedSupplierName
+            });
+          }
+
           setPurchaseType(data.type || "DIRECT");
-          setPurchaseId(data.id);
-          setProducts(data.products.map((p: any) => ({
-            id: p.id || Math.random().toString(),
-            name: p.name,
-            quantity: p.quantity,
-            costPrice: p.buy_price,
-            sellingPrice: p.sell_price,
-            marginPercent: "",
-            marginAmount: "",
-            marginType: "sellingPrice",
-            unit: p.unit || "pc",
-            taxGst: p.gst || 18,
-            sku: p.barcode,
-            variant: p.variant || "",
-            batchTracking: p.batch_tracking || false,
-            serialTracking: p.serial_tracking || false,
-            batchNum: p.batch_number || "",
-            manufacturingDate: p.manufacturing_date || "",
-            expiryDate: p.expiry_date || "",
-            serialno_id: p.serialno_id || p.serial_number?.id || p.serial_numbers?.id,
-            storageLoc: p.datas?.storage_location || "",
-            reorderPoint: p.reorder_point ?? p.datas?.reorder_point ?? 5,
-            serialNumbers: Array.isArray(p.serial_numbers) ? p.serial_numbers.join(',') : (p.serial_numbers?.serial_numbers || p.serial_number?.serial_numbers || []).join(','),
-            existingSerials: Array.isArray(p.serial_numbers) ? p.serial_numbers : (p.serial_numbers?.serial_numbers || p.serial_number?.serial_numbers || [])
-          })));
-          setCharges(data.additional_charges ? {
-            transport: data.additional_charges.delivery_charge,
-            other: data.additional_charges.other_charge
-          } : data.charges || { transport: 0, other: 0 });
-          setPayment(data.payment || { method: "Cash", amountPaid: 0 });
+          setPurchaseId(data.id || data.purchase_id);
+          const updatedProducts = [...data.products.map((p: any) => {
+            const qty = p.quantity ?? p.stocks_added ?? 0;
+            return {
+              id: p.id || crypto.randomUUID(),
+              inventory_id: p.inventory_id,
+              name: p.name,
+              quantity: qty,
+              originalQuantity: qty,
+              costPrice: p.buy_price,
+              sellingPrice: p.sell_price,
+              marginPercent: "",
+              marginAmount: "",
+              marginType: "sellingPrice",
+              unit: p.unit || "pc",
+              taxGst: p.gst || 18,
+              variant_id: (typeof p.variant === 'object' && p.variant !== null) ? p.variant.variant_id : null,
+              variant: (typeof p.variant === 'object' && p.variant !== null ? p.variant.variant_name || p.variant.name : p.variant) || "",
+              sku: p.ui_id || p.barcode,
+              batchTracking: p.batch_tracking || p.has_batch || !!p.batch || !!p.batch_id,
+              serialTracking: p.serial_tracking || p.has_serialno || !!p.serial_info || !!p.serialno_id || !!(p.serial_number) || !!(p.serial_numbers),
+              batch_id: (typeof p.batch === 'object' && p.batch !== null) ? p.batch.batch_id : null,
+              batchNum: (typeof p.batch === 'object' && p.batch !== null ? p.batch.batch_name || p.batch.name : p.batch) || "",
+              manufacturingDate: (p.manufacturing_date || p.batch?.manufacturing_date || p.batch?.mfg_date || "").split("T")[0],
+              expiryDate: (p.expiry_date || p.batch?.expiry_date || p.batch?.exp_date || "").split("T")[0],
+              serialno_id: p.serialno_id || p.serial_number?.id || p.serial_numbers?.id || p.serial_info?.serialno_id,
+              storageLoc: p.datas?.storage_location || "",
+              reorderPoint: p.reorder_point ?? p.datas?.reorder_point ?? 5,
+              serialNumbers: Array.isArray(p.serial_numbers) ? p.serial_numbers.join(',') : (p.serial_numbers?.serial_numbers || p.serial_number?.serial_numbers || p.serial_info?.serial_numbers || []).join(','),
+              existingSerials: Array.isArray(p.serial_numbers) ? p.serial_numbers : (p.serial_numbers?.serial_numbers || p.serial_number?.serial_numbers || p.serial_info?.serial_numbers || [])
+            };
+          })];
+
+          const warnings: string[] = [];
+          for (let i = 0; i < updatedProducts.length; i++) {
+            const p = updatedProducts[i];
+            if (!p.inventory_id) continue;
+            try {
+              const invRes = await getData(`${ENDPOINTS.INVENTORIES}/by/${SHOP_ID}/${p.inventory_id}`);
+              if (invRes && invRes.data) {
+                 const invData = Array.isArray(invRes.data) ? invRes.data[0] : invRes.data;
+                 
+                 // Update tracking flags from live inventory data
+                 p.batchTracking = !!(invData.has_batch || invData.datas?.has_batch || p.batchTracking);
+                 p.serialTracking = !!(invData.has_serialno || invData.datas?.has_serialno || p.serialTracking);
+                 
+                 let currentStock = invData?.stocks ?? invData?.datas?.stocks;
+                 if (p.variant_id && invData?.datas?.combinations) {
+                    const variant = invData.datas.combinations.find((v: any) => v.id === p.variant_id);
+                    if (variant) currentStock = variant.stocks;
+                 }
+                 if (currentStock !== undefined && currentStock < p.quantity) {
+                    warnings.push(`"${p.name}" (Left in stock: ${currentStock}, Originally bought: ${p.quantity})`);
+                 }
+              }
+            } catch (err) {
+              console.error("Error checking inventory stock", err);
+            }
+          }
+          
+          setProducts(updatedProducts);
+          setSoldStockWarnings(warnings);
         }
       };
       fetchPurchase();
@@ -301,7 +363,17 @@ const PurchaseForm = () => {
     try {
       const transformedProducts = products.map((p) => {
         const q = Math.floor(Number(p.quantity) || 0);
-        const baseCost = Number(p.costPrice) || 0;
+        const rawCostPrice = Number(p.costPrice) || 0;
+        const gstRate = Number(p.taxGst) || 0;
+        const baseCost = gstMode === "inclusive"
+          ? rawCostPrice / (1 + gstRate / 100)
+          : rawCostPrice;
+
+        const rowBaseCost = baseCost;
+        const rowGstPerUnit = gstMode === "inclusive"
+          ? rawCostPrice - rowBaseCost
+          : rawCostPrice * (gstRate / 100);
+        const costForSp = rowBaseCost + rowGstPerUnit;
 
         let allocated = 0;
         if (costMethod === "By Unit" && stats.totalQty > 0) {
@@ -311,16 +383,20 @@ const PurchaseForm = () => {
         } else if (costMethod === "Equally" && products.length > 0) {
           allocated = (stats.totalCharges / products.length) / (q > 0 ? q : 1);
         }
-        const finalCost = baseCost + allocated;
+        const netCostForSp = costForSp + allocated;
 
         let finalSellPrice = 0;
         if (p.marginType === "percent") {
-          finalSellPrice = finalCost + (finalCost * ((Number(p.marginPercent) || 0) / 100));
-        } else if (p.marginType === "amount") {
-          finalSellPrice = finalCost + (Number(p.marginAmount) || 0);
+          finalSellPrice = netCostForSp + (netCostForSp * ((Number(p.marginPercent) || 0) / 100));
+        } else if (p.marginType === "amount" && Number(p.marginAmount) > 0) {
+          finalSellPrice = netCostForSp + (Number(p.marginAmount) || 0);
         } else {
           finalSellPrice = Number(p.sellingPrice) || 0;
         }
+
+        const calculatedMargin = p.marginType === "percent"
+          ? (Number(p.marginPercent) || 0)
+          : (netCostForSp > 0 ? Number((((finalSellPrice - netCostForSp) / netCostForSp) * 100).toFixed(2)) : 0);
 
         return {
           inventory_id: p.inventory_id || null,
@@ -329,9 +405,9 @@ const PurchaseForm = () => {
           barcode: p.sku,
           stocks: q,
           received_stocks: q,
-          buy_price: baseCost,
+          buy_price: Number(baseCost.toFixed(2)),
           sell_price: Number(finalSellPrice.toFixed(2)),
-          margin: Number(p.marginPercent) || 0,
+          margin: calculatedMargin,
           unit: p.unit || "pc",
           gst: Number(p.taxGst) || 0,
           batch_tracking: p.batchTracking || false,
@@ -371,7 +447,7 @@ const PurchaseForm = () => {
         calculations: {
           divided_by: costMethodMap[costMethod] || "NONE",
           gst: {
-            type: "inclusive",
+            type: gstMode,
             value: 18,
             registered: true
           }
@@ -381,6 +457,7 @@ const PurchaseForm = () => {
           other_charge: Number(charges.other) || 0
         },
         datas: {
+          invoice_no: purchaseDetails.invoiceNo || "",
           supplier_name: supplierDetails?.name || purchaseDetails.supplier,
           purchaseDetails: { ...purchaseDetails },
           payment: {
@@ -416,7 +493,7 @@ const PurchaseForm = () => {
     } finally {
       setSubmitting(false);
     }
-  }, [purchaseDetails, products, charges, payment, supplierDetails, id, postData, putData, showToast, navigate, searchParams]);
+  }, [purchaseDetails, products, charges, payment, supplierDetails, id, postData, putData, showToast, navigate, searchParams, costMethod, stats, purchaseType, gstMode]);
 
   // --- Header Actions ---
   useEffect(() => {
@@ -484,7 +561,29 @@ const PurchaseForm = () => {
   return (
     <>
       <div className="min-h-screen bg-slate-50/50 p-4 md:p-6 lg:p-8 font-sans">
-        <div className="max-w-[1600px] mx-auto flex flex-col gap-6">
+        <div className="max-w-[1600px] mx-auto flex flex-col xl:flex-row gap-6 items-start">
+
+          {/* --- Left Column (Scrollable Content) --- */}
+          <div className="flex-1 w-full space-y-6 min-w-0">
+
+          {soldStockWarnings.length > 0 && (
+            <div className="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-lg shadow-sm animate-in fade-in slide-in-from-top-2">
+              <div className="flex items-start gap-3">
+                <Info className="text-amber-500 shrink-0 mt-0.5" size={20} />
+                <div>
+                  <h3 className="text-amber-800 font-bold text-sm uppercase tracking-wide">Warning: Stock Already Sold</h3>
+                  <p className="text-amber-700 text-xs mt-1 leading-relaxed font-medium">
+                    Some items from this purchase have already been sold. Editing their quantities or prices will retroactively affect historical profit margins.
+                  </p>
+                  <ul className="list-disc list-inside text-amber-700 text-xs mt-2 font-semibold space-y-0.5">
+                    {soldStockWarnings.map((w, i) => (
+                      <li key={i}>{w}</li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* 1. Purchase Details Card */}
           <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden transition-all hover:shadow-md">
@@ -518,7 +617,7 @@ const PurchaseForm = () => {
                     setSupplierDetails(newSupplier);
                   }, { name: query })}
                   placeholder="Search Supplier..."
-                  className="w-full"
+                  className="w-full h-11"
                 />
               </div>
 
@@ -582,165 +681,260 @@ const PurchaseForm = () => {
             )}
           </div>
 
-          {/* 2. Summary & Payment Combined Card */}
+          {/* Additional Charges Card */}
           <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col transition-all hover:shadow-md">
-            <div className="px-6 py-4 bg-gradient-to-r from-slate-50 to-transparent border-b border-slate-100 flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-600 border border-slate-200 shadow-sm">
-                <Banknote size={16} />
-              </div>
-              <h2 className="text-xs font-black text-slate-800 uppercase tracking-widest">Additional Charge</h2>
-            </div>
-
-            <div className="p-6 space-y-6">
-              <div className="flex justify-between items-center text-slate-500">
-                <span className="text-[11px] font-bold uppercase tracking-wider">Subtotal (Excl. GST)</span>
-                <span className="text-sm font-black text-slate-800 tabular-nums">₹{stats.subtotal.toLocaleString()}</span>
+              <div className="px-6 py-4 bg-gradient-to-r from-slate-50 to-transparent border-b border-slate-100 flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-600 border border-slate-200 shadow-sm">
+                  <Banknote size={16} />
+                </div>
+                <h2 className="text-xs font-black text-slate-800 uppercase tracking-widest">Additional Charge & Details</h2>
               </div>
 
-              {/* GST Dynamic Breakdown Block */}
-              {stats.totalGst > 0 && (
-                <div className="p-4 bg-slate-50/50 border border-slate-100 rounded-xl space-y-3 animate-in fade-in slide-in-from-top-1 duration-200">
-                  <div className="flex justify-between items-center border-b border-slate-200/60 pb-2">
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">GST Rate breakdown</span>
-                    <span className="text-[11px] font-black text-slate-700 tabular-nums">Total GST: ₹{stats.totalGst.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                  </div>
-                  {Object.entries(stats.gstBreakdown).map(([rate, amt]) => {
-                    if (Number(amt) <= 0) return null;
-                    const basePriceForRate = products.reduce((acc, p) => {
-                      const q = Number(p.quantity) || 0;
-                      const c = Number(p.costPrice) || 0;
-                      const r = Number(p.taxGst) || 0;
-                      if (r === Number(rate)) {
-                        return acc + (q * c);
-                      }
-                      return acc;
-                    }, 0);
-                    return (
-                      <div key={rate} className="flex justify-between items-center text-[11px] text-slate-600 font-medium">
-                        <span className="text-slate-500">
-                          GST {rate}% (on ₹{basePriceForRate.toLocaleString()})
-                        </span>
-                        <span className="text-slate-800 font-bold tabular-nums">
-                          ₹{Number(amt).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </span>
+              <div className="p-6 flex flex-col gap-6">
+
+                    {/* Row 1 & 2: Transport, Other Charges, Paid By, Distribute By */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      {/* Transport */}
+                      <div className="flex flex-col gap-2">
+                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5 group cursor-help w-fit">
+                          Transport Charge
+                          <Tooltip message="Delivery or transportation costs charged by the supplier.">
+                            <span className="cursor-help flex"><Info size={12} className="text-slate-400 group-hover:text-blue-500 transition-colors" /></span>
+                          </Tooltip>
+                        </label>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-black">₹</span>
+                          <input
+                            type="number"
+                            placeholder="0"
+                            className="w-full h-11 pl-8 pr-3 bg-white border border-slate-200 rounded-lg text-sm font-bold text-slate-700 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-400/10 transition-all tabular-nums shadow-sm"
+                            value={charges.transport as any}
+                            onChange={(e) => setCharges({ ...charges, transport: e.target.value ? Number(e.target.value) : "" })}
+                          />
+                        </div>
                       </div>
-                    );
-                  })}
-                  <div className="text-[10px] text-slate-400 italic pt-2 border-t border-slate-200/30 flex flex-col gap-0.5 leading-normal">
-                    <span className="font-semibold text-slate-500">Breakdown explanation:</span>
-                    <span>Product base: ₹{stats.subtotal.toLocaleString()} + GST: ₹{stats.totalGst.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })} = ₹{(stats.subtotal + stats.totalGst).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })} with GST</span>
-                  </div>
-                </div>
-              )}
 
-              {/* Additional Charges Section */}
-              <div className="pt-2">
-                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 pb-2 border-b border-slate-100">
-                  Additional Charge
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="flex justify-between items-center text-slate-500 bg-slate-50/50 p-2.5 rounded-lg border border-slate-100">
-                    <span className="text-[11px] font-bold uppercase tracking-wider">Transport</span>
-                    <div className="w-28">
-                      <Input
-                        type="number"
-                        tooltip="Delivery or transportation costs charged by the supplier."
-                        placeholder="0"
-                        className="!h-9 !text-right !text-xs !bg-white"
-                        value={charges.transport as any}
-                        onChange={(e) => setCharges({ ...charges, transport: e.target.value ? Number(e.target.value) : "" })}
-                      />
+                      {/* Other Charges */}
+                      <div className="flex flex-col gap-2">
+                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5 group cursor-help w-fit">
+                          Other Charges
+                          <Tooltip message="Any additional fees, loading/unloading costs, or miscellaneous charges.">
+                            <span className="cursor-help flex"><Info size={12} className="text-slate-400 group-hover:text-blue-500 transition-colors" /></span>
+                          </Tooltip>
+                        </label>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-black">₹</span>
+                          <input
+                            type="number"
+                            placeholder="0"
+                            className="w-full h-11 pl-8 pr-3 bg-white border border-slate-200 rounded-lg text-sm font-bold text-slate-700 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-400/10 transition-all tabular-nums shadow-sm"
+                            value={charges.other as any}
+                            onChange={(e) => setCharges({ ...charges, other: e.target.value ? Number(e.target.value) : "" })}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Paid By (Dropdown) */}
+                      <div className="flex flex-col gap-2">
+                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5 group cursor-help w-fit">
+                          Paid By
+                          <Tooltip message="The method of payment used for this transaction.">
+                            <span className="cursor-help flex"><Info size={12} className="text-slate-400 group-hover:text-blue-500 transition-colors" /></span>
+                          </Tooltip>
+                        </label>
+                        <ReusableSelect
+                          value={payment.method}
+                          onValueChange={(val) => setPayment({ ...payment, method: val as PaymentMethod })}
+                          options={[
+                            { value: "Cash", label: "Cash" },
+                            { value: "UPI", label: "UPI" },
+                            { value: "Card", label: "Credit/Debit Card" },
+                            { value: "Bank", label: "Bank Transfer" }
+                          ]}
+                          placeholder="Select Payment Method"
+                        />
+                      </div>
+
+
                     </div>
-                  </div>
-                  <div className="flex justify-between items-center text-slate-500 bg-slate-50/50 p-2.5 rounded-lg border border-slate-100">
-                    <span className="text-[11px] font-bold uppercase tracking-wider">Other Charges</span>
-                    <div className="w-28">
-                      <Input
-                        type="number"
-                        placeholder="0"
-                        className="!h-9 !text-right !text-xs !bg-white"
-                        value={charges.other as any}
-                        onChange={(e) => setCharges({ ...charges, other: e.target.value ? Number(e.target.value) : "" })}
-                      />
+
+                    {/* Distribute By */}
+                    <div className="flex flex-col gap-2">
+                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5 group cursor-help w-fit">
+                        Distribute By
+                        <Tooltip message="How the additional charges should be distributed across the purchased items' cost price.">
+                          <span className="cursor-help flex"><Info size={12} className="text-slate-400 group-hover:text-blue-500 transition-colors" /></span>
+                        </Tooltip>
+                      </label>
+                      <div className="flex items-center gap-1.5">
+                        {[
+                          { name: "None", tooltip: "Do not allocate additional charges to product cost" },
+                          { name: "By Unit", tooltip: "Allocate proportionally based on item quantity" },
+                          { name: "By Value", tooltip: "Allocate proportionally based on total item value" },
+                          { name: "Equally", tooltip: "Split additional charges equally across all items" }
+                        ].map((method) => (
+                          <button
+                            key={method.name}
+                            onClick={() => setCostMethod(method.name)}
+                            className={`px-2 py-1.5 h-11 flex items-center justify-center gap-1.5 text-[10px] font-bold uppercase tracking-wider rounded-lg border transition-all flex-1 whitespace-nowrap ${costMethod === method.name
+                              ? "border-blue-500 bg-blue-50 text-blue-700 shadow-sm"
+                              : "border-slate-200 bg-white text-slate-500 hover:border-blue-200 hover:bg-slate-50"
+                              }`}
+                          >
+                            {method.name}
+                            <Tooltip message={method.tooltip}>
+                              <span className="cursor-help flex items-center justify-center group/tooltip relative">
+                                <Info size={12} className={`transition-colors ${costMethod === method.name ? "text-blue-500" : "text-slate-400 group-hover:text-blue-400"}`} />
+                              </span>
+                            </Tooltip>
+                          </button>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                </div>
-              </div>
 
-              {/* Payment Method Block */}
-              <div className="pt-4 border-t border-slate-100 mt-4">
-                <div className="flex items-center gap-2 mb-4">
-                  <div className="w-6 h-6 rounded-md bg-amber-100 flex items-center justify-center text-amber-600 border border-amber-200 shadow-sm">
-                    <CreditCard size={12} />
-                  </div>
-                  <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Payment Method</h3>
-                </div>
 
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  {[
-                    { id: "Cash", icon: <Banknote size={16} /> },
-                    { id: "UPI", icon: <Smartphone size={16} /> },
-                    { id: "Card", icon: <CreditCard size={16} /> },
-                    { id: "Bank", icon: <Landmark size={16} /> }
-                  ].map((m) => (
-                    <button
-                      key={m.id}
-                      onClick={() => setPayment({ ...payment, method: m.id as PaymentMethod })}
-                      className={`flex flex-col items-center justify-center py-4 rounded-xl border transition-all ${payment.method === m.id
-                        ? "border-amber-500 bg-amber-50 text-amber-700 shadow-sm ring-1 ring-amber-500/20"
-                        : "border-slate-200 bg-white text-slate-500 hover:border-amber-200 hover:bg-amber-50/50"
-                        }`}
-                    >
-                      <div className="mb-2">{m.icon}</div>
-                      <span className="text-[10px] font-black uppercase tracking-widest">{m.id}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
 
-              {/* Totals & Balance Block */}
-              <div className="pt-8 border-t border-slate-100 mt-8 space-y-6">
-                <div className="p-6 rounded-xl bg-slate-50 border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
-                  <span className="text-xs font-black text-slate-500 uppercase tracking-widest">Grand Total</span>
-                  <span className="text-4xl font-black text-slate-900 tracking-tight">₹{stats.grandTotal.toLocaleString()}</span>
-                </div>
+                    {/* Expandable GST Rate Breakdown */}
+                    {stats.totalGst > 0 && (
+                      <div className="mt-6 border border-slate-200 rounded-xl overflow-hidden bg-white shadow-sm transition-all">
+                        <button
+                          onClick={() => setIsGstExpanded(!isGstExpanded)}
+                          className="w-full flex justify-between items-center p-4 bg-slate-50 hover:bg-slate-100 transition-colors"
+                        >
+                          <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                            GST Rate Breakdown
+                          </span>
+                          <div className="flex items-center gap-3">
+                            <span className="text-xs font-bold text-slate-700 tabular-nums">Total GST: ₹{stats.totalGst.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                            {isGstExpanded ? <ChevronUp size={16} className="text-slate-400" /> : <ChevronDown size={16} className="text-slate-400" />}
+                          </div>
+                        </button>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <Input
-                    label="Amount Paid Now (₹)"
-                    type="number"
-                    className="!h-14 !text-xl !font-black !text-emerald-600 !bg-white"
-                    value={payment.amountPaid as any}
-                    onChange={(e) => setPayment({ ...payment, amountPaid: e.target.value ? Number(e.target.value) : "" })}
-                    placeholder={stats.grandTotal.toString()}
-                  />
+                        {isGstExpanded && (
+                          <div className="p-4 border-t border-slate-100 space-y-3 animate-in fade-in slide-in-from-top-1 duration-200">
+                            {Object.entries(stats.gstBreakdown).map(([rate, amt]) => {
+                              if (Number(amt) <= 0) return null;
+                              const basePriceForRate = products.reduce((acc, p) => {
+                                const q = Number(p.quantity) || 0;
+                                const c = Number(p.costPrice) || 0;
+                                const r = Number(p.taxGst) || 0;
+                                if (r === Number(rate)) {
+                                  return acc + (q * c);
+                                }
+                                return acc;
+                              }, 0);
+                              return (
+                                <div key={rate} className="flex justify-between items-center text-[11px] text-slate-600 font-medium">
+                                  <span className="text-slate-500">
+                                    GST {rate}% (on ₹{basePriceForRate.toLocaleString()})
+                                  </span>
+                                  <span className="text-slate-800 font-bold tabular-nums">
+                                    ₹{Number(amt).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                            <div className="text-[10px] text-slate-400 italic pt-2 border-t border-slate-200/30 flex flex-col gap-0.5 leading-normal">
+                              <span className="font-semibold text-slate-500">Breakdown explanation:</span>
+                              <span>Product base: ₹{stats.subtotal.toLocaleString()} + GST: ₹{stats.totalGst.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })} = ₹{(stats.subtotal + stats.totalGst).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })} with GST</span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
 
-                  <div className="h-full min-h-[56px] p-4 rounded-xl bg-white border border-slate-200 shadow-sm flex justify-between items-center self-end">
-                    <span className="text-xs font-black text-slate-500 uppercase tracking-widest">Outstanding Balance</span>
-                    <span className={`text-2xl font-black ${stats.outstanding > 0 ? "text-rose-500" : "text-emerald-500"}`}>
-                      ₹{stats.outstanding.toLocaleString()}
-                    </span>
-                  </div>
-                </div>
               </div>
             </div>
+
+            <InventoryItemsCard
+              products={products}
+              stats={stats}
+              costMethod={costMethod}
+              setCostMethod={setCostMethod}
+              handleProductChange={handleProductChange}
+              updateProductFields={updateProductFields}
+              setProducts={setProducts}
+              addProduct={addProduct}
+              removeProduct={removeProduct}
+              type="PURCHASE"
+              purchaseType={purchaseType}
+              onAddNewProduct={handleAddNewProduct}
+              gstMode={gstMode}
+              setGstMode={setGstMode}
+            />
+
           </div>
 
-          {/* 3. Items List Card */}
-          <InventoryItemsCard
-            products={products}
-            stats={stats}
-            costMethod={costMethod}
-            setCostMethod={setCostMethod}
-            handleProductChange={handleProductChange}
-            updateProductFields={updateProductFields}
-            setProducts={setProducts}
-            addProduct={addProduct}
-            removeProduct={removeProduct}
-            type="PURCHASE"
-            purchaseType={purchaseType}
-            onAddNewProduct={handleAddNewProduct}
-          />
+          {/* --- Right Column (Sticky Payment Summary) --- */}
+          <div className="w-full xl:w-[18rem] shrink-0 xl:sticky xl:top-6 space-y-6">
+
+            {/* Payment Summary Card */}
+            <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col transition-all hover:shadow-md">
+              <div className="px-6 py-4 bg-gradient-to-r from-blue-50/50 to-transparent border-b border-slate-100 flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600 border border-blue-200 shadow-sm">
+                  <Banknote size={16} />
+                </div>
+                <h2 className="text-xs font-black text-slate-800 uppercase tracking-widest">Payment Summary</h2>
+              </div>
+              
+              <div className="p-6 flex flex-col h-full bg-slate-50/50">
+                <div className="space-y-3 mb-6">
+                  <div className="flex justify-between items-center text-[13px]">
+                    <span className="text-slate-500 font-medium">Subtotal</span>
+                    <span className="font-bold text-slate-800 tabular-nums">₹{stats.subtotal.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-[13px]">
+                    <span className="text-slate-500 font-medium">Total GST</span>
+                    <span className="font-bold text-slate-800 tabular-nums">₹{stats.totalGst.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-[13px]">
+                    <span className="text-slate-500 font-medium">Add. Charges</span>
+                    <span className="font-bold text-slate-800 tabular-nums">₹{stats.totalCharges.toLocaleString()}</span>
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t-2 border-slate-200/50 mb-6">
+                  <div className="flex justify-between items-end">
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Grand Total</span>
+                    <span className="text-2xl font-black text-slate-900 tracking-tight tabular-nums">₹{stats.grandTotal.toLocaleString()}</span>
+                  </div>
+                </div>
+
+                {/* Paid Amount */}
+                <div className="space-y-4 pt-4 border-t border-slate-200/50 mt-auto">
+                  <div className="flex flex-col gap-2">
+                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center justify-between">
+                      <span>Paid Amount</span>
+                      <span className="text-emerald-500 font-bold uppercase tracking-wider">{payment.method}</span>
+                    </label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-emerald-600 text-sm font-bold">₹</span>
+                      <input
+                        type="number"
+                        placeholder={stats.grandTotal.toString()}
+                        className="w-full h-11 pl-8 pr-3 bg-white border border-emerald-200 rounded-lg text-sm font-medium text-emerald-700 outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/20 transition-all tabular-nums shadow-sm placeholder:text-gray-100"
+                        value={payment.amountPaid as any}
+                        onChange={(e) => setPayment({ ...payment, amountPaid: e.target.value ? Number(e.target.value) : "" })}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Outstanding Amount */}
+                  <div className="flex flex-col gap-2">
+                    <div className={`h-11 px-4 rounded-lg border shadow-sm flex items-center justify-between transition-colors ${stats.outstanding > 0 ? "bg-rose-50 border-rose-200" : "bg-slate-50 border-slate-200"}`}>
+                      <span className={`text-[10px] font-bold uppercase tracking-wider ${stats.outstanding > 0 ? "text-rose-400" : "text-slate-400"}`}>Outstanding</span>
+                      <span className={`text-lg font-semibold tabular-nums ${stats.outstanding > 0 ? "text-rose-600" : "text-slate-600"}`}>
+                        ₹{stats.outstanding.toLocaleString()}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+          </div>
+
         </div>
       </div>
 

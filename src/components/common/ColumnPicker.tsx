@@ -9,6 +9,7 @@ interface ColumnPickerProps {
   onApply: (keys: string[]) => void;
   storageKey?: string;
   className?: string;
+  labelMap?: Record<string, string>;
 }
 
 export const ColumnPicker: React.FC<ColumnPickerProps> = ({ 
@@ -16,7 +17,8 @@ export const ColumnPicker: React.FC<ColumnPickerProps> = ({
   selectedKeys, 
   onApply,
   storageKey,
-  className
+  className,
+  labelMap = {}
 }) => {
   const [tempSelectedKeys, setTempSelectedKeys] = useState<string[]>(selectedKeys);
   const [isColumnPickerOpen, setIsColumnPickerOpen] = useState(false);
@@ -103,8 +105,8 @@ export const ColumnPicker: React.FC<ColumnPickerProps> = ({
                       <polyline points="20 6 9 17 4 12"></polyline>
                     </svg>
                   </div>
-                  <span className="text-[12px] font-bold text-slate-700 capitalize group-hover:text-blue-600 truncate">
-                    {key.replace(/_/g, ' ')}
+                  <span className="text-[12px] font-bold text-slate-700 group-hover:text-blue-600 truncate">
+                    {labelMap[key] ?? key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
                   </span>
                 </label>
               </Reorder.Item>

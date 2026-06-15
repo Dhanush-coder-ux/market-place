@@ -7,11 +7,12 @@ interface SelectOption {
 }
 
 interface SelectBuilderProps {
+  initialName?: string;
   onSettingsChange?: (settings: { name: string; values: string[] }[]) => void;
 }
 
-const SelectBuilder: React.FC<SelectBuilderProps> = ({ onSettingsChange }) => {
-  const [fieldName, setFieldName] = useState<string>('Product Type');
+const SelectBuilder: React.FC<SelectBuilderProps> = ({ initialName, onSettingsChange }) => {
+  const [fieldName] = useState(initialName || "Category");
   const [options, setOptions] = useState<SelectOption[]>([
     { id: '1', value: 'Electronics' },
     { id: '2', value: 'Furniture' },
@@ -50,20 +51,13 @@ const SelectBuilder: React.FC<SelectBuilderProps> = ({ onSettingsChange }) => {
     updateAndNotify(fieldName, updated);
   };
 
-  const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newName = e.target.value;
-    setFieldName(newName);
-    updateAndNotify(newName, options);
-  };
-
   return (
     <div className="w-full">
       {/* Main Card Container */}
       <div className="bg-white md:rounded-lg border-y md:border border-slate-200 shadow-sm overflow-hidden">
         
-        {/* Header Section */}
         <div className="p-6 border-b border-slate-100 bg-slate-50/30">
-          <div className="flex items-center gap-3 mb-6">
+          <div className="flex items-center gap-3">
             <div className="p-2.5 bg-blue-50 border border-blue-100 rounded-lg shadow-sm">
               <ListTree className="w-5 h-5 text-blue-600" />
             </div>
@@ -71,21 +65,6 @@ const SelectBuilder: React.FC<SelectBuilderProps> = ({ onSettingsChange }) => {
               <h2 className="text-[15px] font-bold text-slate-800 leading-tight">Dropdown Builder</h2>
               <p className="text-xs text-slate-500 mt-0.5">Configure your custom select options</p>
             </div>
-          </div>
-
-          {/* Category Input */}
-          <div className="space-y-2">
-            <label htmlFor="category-name" className="text-[10px] font-black text-slate-400  ">
-              Category Name
-            </label>
-            <input
-              id="category-name"
-              type="text"
-              className="w-full h-11 px-4 bg-white border border-slate-200 rounded-lg text-slate-900 text-sm font-semibold placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all shadow-sm"
-              value={fieldName}
-              onChange={handleNameChange}
-              placeholder="e.g., Product Type"
-            />
           </div>
         </div>
 

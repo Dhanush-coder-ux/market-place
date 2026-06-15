@@ -49,9 +49,10 @@ export const inventoryApi = {
     }
   },
 
-  searchInventories: async (query: string): Promise<any[]> => {
+  searchInventories: async (query: string, isActive?: boolean): Promise<any[]> => {
     try {
-      const response = await apiClient.get(`${ENDPOINTS.INVENTORIES}/by/shop/${SHOP_ID}?q=${query}`);
+      const activeParam = isActive ? `&is_active=True` : "";
+      const response = await apiClient.get(`${ENDPOINTS.INVENTORIES}/search/${SHOP_ID}?q=${query}${activeParam}`);
       const items = response?.data || (Array.isArray(response) ? response : []);
 
       return items.map((i: any) => {
@@ -66,12 +67,18 @@ export const inventoryApi = {
           unit: i.unit || d.unit || "pc",
           gst: i.gst || d.gst || "18%",
           has_variants: i.has_variant ?? d.has_variant ?? false,
+          batchTracking: i.has_batch ?? d.has_batch ?? false,
+          requireSerial: i.has_serialno ?? d.has_serialno ?? false,
           combinations: i.variants || d.variants || []
         };
       });
     } catch {
       return [];
     }
+  },
+
+  getInventoryById: async (id: string) => {
+    return await apiClient.get(`${ENDPOINTS.INVENTORIES}/by/${SHOP_ID}/${id}`);
   },
 
   exchangeOrder: async (data: any) => {

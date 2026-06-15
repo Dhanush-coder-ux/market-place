@@ -3,6 +3,8 @@ import {
   ListTree,
   Settings, ChevronRight,
   ShoppingBag, 
+  Percent,
+  Activity,
 } from "lucide-react";
 
 // Components
@@ -10,35 +12,43 @@ import { Switch } from "@/components/ui/switch";
 
 // Features (Ensure these paths match your project)
 import { AdditionalSettings } from "@/features/Setting/pages/AdditionalSettings";
-import SelectBuilder from "@/features/Setting/pages/SelectBuilder";
+import { ActivityLogPage } from "@/features/Setting/pages/ActivityLogPage";
+import { CustomListSettings } from "@/features/Setting/pages/CustomListSettings";
+import { IdPrefixSettings } from "@/features/Setting/pages/IdPrefixSettings";
 import { usePurchaseSettings } from "@/context/PurchaseContext";
 import { useMediaQuery } from "@/hooks/use-media-query";
+import { Hash } from "lucide-react";
 
 
 // --- Configuration ---
 const MENU_ITEMS = [
+  { id: "id_prefixes", label: "ID Sequence", icon: <Hash size={18} />, description: "Set module ID prefixes" },
   { id: "dropdowns", label: "Dropdown Settings", icon: <ListTree size={18} />, description: "Industries & Sectors" },
   { id: "advanced", label: "Advanced Config", icon: <Settings size={18} />, description: "System-wide variables" },
   { id: "purchasetypes", label: "Purchase Modules", icon: <ShoppingBag size={18} />, description: "Enable/Disable purchase types" },
+  { id: "gst", label: "GST Configuration", icon: <Percent size={18} />, description: "Registered / Non-Registered" },
+  { id: "activity", label: "Activity Log", icon: <Activity size={18} />, description: "System audit trail" },
 ];
 
 export const ProfileSettingsPage = () => {
   const [activeTab, setActiveTab] = useState("dropdowns");
-  const [builtOptions, setBuiltOptions] = useState<any[]>([]);
-  const { settings, toggleSetting } = usePurchaseSettings();
+  const { settings, toggleSetting, setGstType } = usePurchaseSettings();
   const isMobile = useMediaQuery("(max-width: 768px)");
-  
-  const handleBuilderChange = (options: any) => {
-    setBuiltOptions(options);
-  };
 
   const renderContent = () => {
     switch (activeTab) {
+
+      case "id_prefixes":
+        return (
+          <div className="animate-in fade-in slide-in-from-right-4 duration-300">
+            <IdPrefixSettings />
+          </div>
+        );
       case "advanced":
         return (
           <div className="animate-in fade-in slide-in-from-right-4 duration-300">
             <AdditionalSettings 
-              availableSelectOptions={builtOptions}
+              availableSelectOptions={[]}
               title="Advanced System Configuration"
               description="Modify internal variables and feature flags for the entire platform."
             />
@@ -47,8 +57,16 @@ export const ProfileSettingsPage = () => {
       
       case "dropdowns":
         return (
-          <div className="animate-in fade-in slide-in-from-right-4 duration-300">
-            <SelectBuilder onSettingsChange={handleBuilderChange} />
+          <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
+            <CustomListSettings type="categories" />
+            <CustomListSettings type="units" />
+          </div>
+        );
+
+      case "activity":
+        return (
+          <div className="animate-in fade-in slide-in-from-right-4 duration-300 h-full">
+            <ActivityLogPage />
           </div>
         );
 
@@ -97,6 +115,78 @@ export const ProfileSettingsPage = () => {
           </div>
         );
 
+      case "gst":
+        return (
+          <div className="animate-in fade-in slide-in-from-right-4 duration-300">
+            <div className="bg-white md:rounded-lg border-y md:border border-slate-200 shadow-sm overflow-hidden">
+              <div className="px-6 py-5 border-b border-slate-100 bg-slate-50/50">
+                <h3 className="text-lg font-bold text-slate-900">GST Registration Configuration</h3>
+                <p className="text-[13.5px] text-slate-500 mt-1">Configure whether your business is a registered GST tax entity or non-GST registered.</p>
+              </div>
+              
+              <div className="p-6 space-y-5 max-w-2xl">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Option 1: GST Registered */}
+                  <div 
+                    onClick={() => setGstType("registered")}
+                    className={`flex flex-col p-5 rounded-xl border-2 cursor-pointer transition-all duration-200 relative ${
+                      settings.gstType === "registered" 
+                        ? "border-blue-500 bg-blue-50/30 ring-4 ring-blue-500/5" 
+                        : "border-slate-150 bg-white hover:border-slate-300"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-[14.5px] font-bold text-slate-800">GST Registered Entity</span>
+                      <div className={`w-4.5 h-4.5 rounded-full border flex items-center justify-center ${
+                        settings.gstType === "registered" ? "border-blue-500 bg-blue-500" : "border-slate-300 bg-white"
+                      }`}>
+                        {settings.gstType === "registered" && (
+                          <div className="w-1.5 h-1.5 rounded-full bg-white" />
+                        )}
+                      </div>
+                    </div>
+                    <p className="text-[13px] text-slate-500 mt-2.5 leading-relaxed">
+                      Enable this if you have a valid GSTIN. Product GST rates (e.g., 18%) will be calculated and printed on invoices.
+                    </p>
+                  </div>
+
+                  {/* Option 2: Non-GST Registered */}
+                  <div 
+                    onClick={() => setGstType("non-registered")}
+                    className={`flex flex-col p-5 rounded-xl border-2 cursor-pointer transition-all duration-200 relative ${
+                      settings.gstType === "non-registered" 
+                        ? "border-blue-500 bg-blue-50/30 ring-4 ring-blue-500/5" 
+                        : "border-slate-150 bg-white hover:border-slate-300"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-[14.5px] font-bold text-slate-800">Non-GST Registered</span>
+                      <div className={`w-4.5 h-4.5 rounded-full border flex items-center justify-center ${
+                        settings.gstType === "non-registered" ? "border-blue-500 bg-blue-500" : "border-slate-300 bg-white"
+                      }`}>
+                        {settings.gstType === "non-registered" && (
+                          <div className="w-1.5 h-1.5 rounded-full bg-white" />
+                        )}
+                      </div>
+                    </div>
+                    <p className="text-[13px] text-slate-500 mt-2.5 leading-relaxed">
+                      Enable this if you are a non-GST registered entity. Product GST taxes will be excluded entirely from billing invoices.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Banner notice */}
+                <div className="p-4 rounded-xl bg-blue-50/20 border border-blue-100 text-blue-800 text-xs leading-relaxed flex gap-2">
+                  <Settings size={16} className="shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-bold">System Status:</span> Selecting either option automatically configures the POS billing engine in real-time. Invoices will automatically compute or exclude tax metrics based on your choice above.
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+
       default:
         const activeItem = MENU_ITEMS.find(i => i.id === activeTab);
         return (
@@ -118,8 +208,8 @@ export const ProfileSettingsPage = () => {
   };
 
   return (
-    <div className="flex flex-col md:flex-row gap-6 p-0">
-      <aside className={`${isMobile ? "flex overflow-x-auto gap-2 pb-4 px-2 scrollbar-hide border-b border-slate-100 mb-4" : "w-72 space-y-1.5 shrink-0"}`}>
+    <div className="flex flex-col md:flex-row gap-6 p-0 items-start relative">
+      <aside className={`${isMobile ? "flex overflow-x-auto gap-2 pb-4 px-2 scrollbar-hide border-b border-slate-100 mb-4" : "w-72 space-y-1.5 shrink-0 md:sticky md:top-6"}`}>
         {!isMobile && (
           <h2 className="text-[10px] font-black text-slate-400  tracking-[0.2em] px-4 mb-3">
             Configuration
@@ -156,7 +246,7 @@ export const ProfileSettingsPage = () => {
         })}
       </aside>
 
-      <section className="flex-1 min-w-0">
+      <section className="flex-1 min-w-0 pb-20">
         <div className="w-full max-w-4xl mx-auto md:mx-0">
           {renderContent()}
         </div>

@@ -1,12 +1,12 @@
 import { useState } from "react";
 import {
-  Clock, Copy, Check, X, Timer, Calendar, CheckCircle2, ChevronRight, AlertCircle
+  Clock, Copy, Check, Timer, Calendar, CheckCircle2, ChevronRight, AlertCircle
 } from "lucide-react";
 
 /* ── Types ─────────────────────────────────────────────────────────────────── */
 type Day = "Monday" | "Tuesday" | "Wednesday" | "Thursday" | "Friday" | "Saturday" | "Sunday";
 const DAYS: Day[] = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
-const DAY_SHORT: Record<Day, string> = { Monday: "Mon", Tuesday: "Tue", Wednesday: "Wed", Thursday: "Thu", Friday: "Fri", Saturday: "Sat", Sunday: "Sun" };
+
 
 type DayHours = { open: string; close: string; closed: boolean };
 

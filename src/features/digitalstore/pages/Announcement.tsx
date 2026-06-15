@@ -647,7 +647,7 @@ export default function AnnouncementsPage() {
                         { s: 'Draft' as StatusType,     dot: 'bg-slate-400',  activeBg: 'bg-slate-100',  activeText: 'text-slate-700',  activeBorder: 'border-slate-300',  emoji: '✏️' },
                         { s: 'Scheduled' as StatusType, dot: 'bg-amber-400',  activeBg: 'bg-amber-50',   activeText: 'text-amber-800',  activeBorder: 'border-amber-300',  emoji: '⏰' },
                         { s: 'Published' as StatusType, dot: 'bg-emerald-400',activeBg: 'bg-emerald-50', activeText: 'text-emerald-800',activeBorder: 'border-emerald-300',emoji: '✅' },
-                      ]).map(({ s, dot, activeBg, activeText, activeBorder, emoji }) => {
+                      ]).map(({ s, dot, activeBg, activeText, activeBorder }) => {
                         const isActive = status === s;
                         return (
                           <button

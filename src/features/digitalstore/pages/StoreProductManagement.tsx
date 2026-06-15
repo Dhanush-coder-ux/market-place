@@ -39,11 +39,7 @@ function stockStyle(stock: number): { bg: string; text: string; border: string; 
   return               { bg: "#f0fdf4", text: "#16a34a", border: "#bbf7d0",        label: `${stock} in stock` };
 }
 
-function statusStyle(status: string): { bg: string; text: string; dot: string } {
-  if (status === "Out of Stock") return { bg: "#fef2f2", text: "#dc2626", dot: "#ef4444" };
-  if (status === "Draft")        return { bg: "#f8fafc",  text: "#64748b", dot: "#94a3b8" };
-  return                          { bg: "#f0fdf4", text: "#16a34a", dot: "#22c55e" };
-}
+
 
 // ─── Visibility Toggle ────────────────────────────────────────────────────────
 function AppVisibilityToggle({ visible, onChange }: { visible: boolean; onChange: () => void }) {
@@ -80,7 +76,7 @@ function ProductCard({
   onToggleVisibility: () => void;
 }) {
   const stock = stockStyle(product.stock);
-  const st    = statusStyle(product.status);
+
 
   return (
     <div

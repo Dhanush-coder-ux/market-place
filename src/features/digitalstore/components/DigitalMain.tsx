@@ -341,7 +341,7 @@ const DigitalMain = () => {
             TABS + CONTENT
         ══════════════════════════════════════════════════ */}
         <div
-          className="px-4 pt-4 max-w-screen-xl mx-auto"
+          className="px-4 pt-4 mx-auto"
           style={{ animation: "dm-slideUp 0.25s ease 0.1s both" }}
         >
           {/* Tab Bar */}

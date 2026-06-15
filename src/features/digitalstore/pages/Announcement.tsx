@@ -512,7 +512,7 @@ export default function AnnouncementsPage() {
 
         {/* ── Premium Page Header ──────────────────────────────────────── */}
         <div className="bg-white border-b border-slate-100 px-6 pt-5 pb-0">
-          <div className="max-w-screen-xl mx-auto">
+          <div className=" mx-auto">
 
             {/* Top row */}
             <div className="flex items-start justify-between mb-4">

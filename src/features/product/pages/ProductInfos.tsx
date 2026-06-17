@@ -32,6 +32,7 @@ const formatCurrency = (amount?: any) => {
 };
 
 const columnLabels: Record<string, string> = {
+  ui_id: "SKU",
   barcode: "Barcode",
   buy_price: "Buy Price",
   sell_price: "Sell Price",
@@ -46,7 +47,6 @@ const columnLabels: Record<string, string> = {
 };
 
 const columnOrder = [
-  "barcode",
   "category",
   "supplier",
   "unit",
@@ -56,8 +56,12 @@ const columnOrder = [
   "stocks",
   "status",
   "reorder_point",
+  "ui_id",
+  "barcode",
   "serial_number"
 ];
+
+const hiddenProductColumns = new Set(["cost_to_make"]);
 
 const sortKeys = (keys: string[]) => {
   return [...keys].sort((a, b) => {
@@ -154,7 +158,7 @@ const CopySKUButton = ({ val }: { val: string }) => {
   );
 };
 
-/* ─── Product Row ────────────────────────────────────────────────────────── */
+/* â”€â”€â”€ Product Row â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 const ProductRow = React.memo(
   ({
     p,
@@ -320,7 +324,7 @@ const ProductRow = React.memo(
                 </div>
                 <div className="flex items-center gap-2 text-[11px] text-slate-400 font-medium leading-none">
                   {(() => {
-                    const rawSku = p.barcode || datas.barcode || (p as any).sku || datas.sku || "";
+                    const rawSku = p.ui_id ? String(p.ui_id) : "";
                     if (!rawSku) {
                       return <span className="font-mono tabular-nums">—</span>;
                     }
@@ -440,8 +444,10 @@ const ProductRow = React.memo(
               );
             }
 
-            if (key === "barcode") {
-              const rawSku = value || p.barcode || datas.barcode || (p as any).sku || datas.sku || "";
+            if (key === "ui_id" || key === "barcode") {
+              const rawSku = key === "ui_id"
+                ? ((p as any).ui_id || datas.ui_id || "")
+                : (p.barcode || datas.barcode || "");
               if (!rawSku) {
                 return (
                   <td key={key} className="px-3 py-2.5 whitespace-nowrap">
@@ -449,14 +455,15 @@ const ProductRow = React.memo(
                   </td>
                 );
               }
-              const trimmedSku = rawSku.length > 12 ? `${rawSku.slice(0, 8)}...` : rawSku;
+              const textValue = String(rawSku);
+              const trimmedSku = textValue.length > 16 ? `${textValue.slice(0, 12)}...` : textValue;
               return (
                 <td key={key} className="px-3 py-2.5 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                   <span className="flex items-center gap-1 text-[12px] font-medium text-slate-600">
-                    <span className="font-mono tabular-nums" title={rawSku}>
+                    <span className="font-mono tabular-nums" title={textValue}>
                       {trimmedSku}
                     </span>
-                    <CopySKUButton val={rawSku} />
+                    <CopySKUButton val={textValue} />
                   </span>
                 </td>
               );
@@ -500,16 +507,7 @@ const ProductRow = React.memo(
 
             const renderValue = () => {
               if (value === undefined || value === null) return "—";
-              if (value === "" && key !== "barcode") return "—";
-              if (value === "" && key === "barcode") {
-                return (
-                  p.barcode ||
-                  datas.barcode ||
-                  (p as any).sku ||
-                  datas.sku ||
-                  "—"
-                );
-              }
+              if (value === "") return "—";
               if (Array.isArray(value)) {
                 if (value.length === 0) return "—";
                 if (typeof value[0] === "object") {
@@ -606,7 +604,7 @@ const ProductRow = React.memo(
   }
 );
 
-/* ─── Main ProductInfos ───────────────────────────────────────────────────── */
+/* â”€â”€â”€ Main ProductInfos â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 const ProductInfos = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -635,8 +633,8 @@ const ProductInfos = () => {
   const [selectedKeys, setSelectedKeys] = useState<string[]>(() => {
     const saved = localStorage.getItem("product_table_columns");
     return saved
-      ? JSON.parse(saved)
-      : ["category", "status", "buy_price", "sell_price", "stocks", "reorder_point"];
+      ? sortKeys(JSON.parse(saved).filter((key: string) => !hiddenProductColumns.has(key)))
+      : ["category", "status", "buy_price", "sell_price", "stocks", "reorder_point", "ui_id", "barcode"];
   });
 
   const sortedSelectedKeys = useMemo(() => sortKeys(selectedKeys), [selectedKeys]);
@@ -698,16 +696,17 @@ const ProductInfos = () => {
             if (p.datas) {
               Object.keys(p.datas).forEach((k) => {
                 if (
-                  !["name", "id", "shop_id", "variantTypes", "is_active"].includes(k)
+                  !["name", "id", "shop_id", "variantTypes", "is_active"].includes(k) &&
+                  !hiddenProductColumns.has(k)
                 )
                   keys.add(k);
               });
             }
-            ["category", "sell_price", "buy_price", "stocks", "reorder_point", "status"].forEach((k) =>
+            ["category", "sell_price", "buy_price", "stocks", "reorder_point", "status", "ui_id", "barcode"].forEach((k) =>
               keys.add(k)
             );
           });
-          setAvailableKeys(Array.from(keys).sort());
+          setAvailableKeys(sortKeys(Array.from(keys).filter((key) => !hiddenProductColumns.has(key))));
         }
       }
     );
@@ -865,8 +864,9 @@ const ProductInfos = () => {
           <ColumnPicker
           availableKeys={availableKeys}
           selectedKeys={selectedKeys}
-          onApply={setSelectedKeys}
+          onApply={(keys) => setSelectedKeys(sortKeys(keys.filter((key) => !hiddenProductColumns.has(key))))}
           storageKey="product_table_columns"
+          labelMap={columnLabels}
           className="h-8 px-3 rounded-md border border-slate-200 text-slate-650 bg-white hover:bg-slate-50 active:scale-95 transition-all text-xs font-semibold shadow-sm shrink-0 flex items-center justify-center gap-1.5"
         />
         <div className="flex-1" />

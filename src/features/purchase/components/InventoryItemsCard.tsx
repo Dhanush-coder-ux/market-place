@@ -721,6 +721,7 @@ export const InventoryItemsCard = ({
                                 onChange={handleProductSelect}
                                 placeholder="Find or add product..."
                                 className="!h-10 text-sm"
+                                entityName="Product"
                               />
                             );
                           })()}

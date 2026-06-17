@@ -14,7 +14,7 @@ export interface SearchSelectProps<T extends BaseOption> {
   // Data props
   fetchOptions?: (query: string, signal: AbortSignal) => Promise<T[]>;
   options?: T[];
-
+  entityName?:String;
   // Key mapping
   labelKey: keyof T;
   valueKey: keyof T;
@@ -42,6 +42,7 @@ export function SearchSelect<T extends BaseOption>({
   value,
   onChange,
   fetchOptions,
+  entityName,
   options: staticOptions = EMPTY_ARRAY,
   labelKey,
   valueKey,
@@ -135,7 +136,7 @@ export function SearchSelect<T extends BaseOption>({
     (menu: React.ReactNode) => (
       <>
         {menu}
-        {onCreateNew && searchValue && !exactMatchExists && (
+        {onCreateNew && (
           <div className="p-2 border-t border-slate-100 bg-slate-50 mt-1">
             <button
               type="button"
@@ -151,7 +152,10 @@ export function SearchSelect<T extends BaseOption>({
               className="w-full flex items-center justify-center gap-2 py-2 bg-blue-50 text-blue-600 rounded-lg text-sm font-semibold hover:bg-blue-100 transition-colors cursor-pointer"
             >
               <Plus size={16} />
-              Create "{searchValue}"
+              {searchValue
+                ? `Create ${entityName ?? "Item"} "${searchValue}"`
+                : `Create New ${entityName ?? "Item"}`
+              }
             </button>
           </div>
         )}

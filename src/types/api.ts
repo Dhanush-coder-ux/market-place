@@ -188,6 +188,7 @@ export interface PurchaseRecord {
   type: "DIRECT" | "PO_CREATE" | "PO_UPDATE" | "PRODUCTION";
   datas: Record<string, unknown>;
   date?: string;
+  total_items:number,
   additional_charges?: {
     delivery_charge?: number;
     other_charge?: number;

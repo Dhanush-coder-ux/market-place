@@ -82,10 +82,12 @@ export interface DirectPurchaseData {
   id: string;
   poNumber: string;
   systemId?: string;
+  totoalItems:number;
   date: string;
   time: string;
   vendor: string;
   products: ProductItem[];
+  
   total_cost: number;
   purchaseType: PurchaseType;
   paymentMethod?: string;
@@ -99,6 +101,8 @@ export interface DirectPurchaseData {
   grand_total?: number;
   additional_charges_total?: number;
   status?: string;
+  transort_charge:number;
+  other_chares:number;
 }
 
 type ViewMode = "grid" | "horizontal" | "vertical";
@@ -138,8 +142,21 @@ export function toDisplayData(p: PurchaseRecord): DirectPurchaseData {
     vendorName = (vendorName as any).supplier_name || (vendorName as any).name || "—";
   }
 
-  const otherCharge = Number(p.additional_charges?.other_charge ?? d2?.charges?.other ?? 0);
-  const transportCharge = Number(p.additional_charges?.delivery_charge ?? d2?.charges?.transport ?? 0);
+  const otherCharge = Number(
+    (p as any).other_charges ??
+    p.additional_charges?.other_charge ??
+    d2?.other_charges ??
+    d2?.charges?.other ??
+    0
+  );
+
+  const transportCharge = Number(
+    (p as any).transport_charge ??
+    p.additional_charges?.delivery_charge ??
+    d2?.transport_charge ??
+    d2?.charges?.transport ??
+    0
+  );
 
   const prods = (products ?? []);
   const subtotal = prods.reduce((sum: number, pr: any) => {
@@ -159,8 +176,13 @@ export function toDisplayData(p: PurchaseRecord): DirectPurchaseData {
   const additionalChargesTotal = otherCharge + transportCharge;
   const grandTotal = totalCost + additionalChargesTotal;
 
+  const totoalItems=p.total_items;
+
   const paidAmount = Number((p as any).paid_amount ?? d2?.payment?.amountPaid ?? d2?.paid_amount ?? 0);
-  const outstanding = Math.max(0, totalCost - paidAmount);
+  const outstanding = Math.max(
+    0,
+    grandTotal - paidAmount
+  );
 
   return {
     id: p.id || (p as any).purchase_id || "",
@@ -169,6 +191,7 @@ export function toDisplayData(p: PurchaseRecord): DirectPurchaseData {
     date: d.toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" }),
     time: d.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }),
     vendor: String(vendorName),
+    totoalItems:totoalItems,
     products: (products ?? []).map((pr: any) => ({
       name: String(pr.name ?? pr.product_name ?? "Item"),
       quantity: Number(pr.received_stocks ?? pr.received_qty ?? pr.quantity ?? pr.qty ?? pr.stocks_added ?? 1),
@@ -790,7 +813,7 @@ const PurchaseHistory = () => {
               icon={<ReceiptText size={18} />}
               iconBg="bg-blue-50"
               iconColor="text-blue-600"
-              subValue={`${overallStats.total_purchase_count || 0} Orders`}
+              subValue={`${overallStats.total_purchase_count || 0} Purchases`}
             />
             <StatCard
               label="Pending Payment"

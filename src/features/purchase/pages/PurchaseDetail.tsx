@@ -131,11 +131,34 @@ const PurchaseDetail = () => {
   }
 
   const totalQty = po.products.reduce((s, i) => s + i.quantity, 0);
-  const subtotal = po.products.reduce((sum, item) => sum + (item.quantity * (item.buy_price || 0)), 0);
-  const totalGst = po.products.reduce((sum, item) => sum + (item.quantity * (item.buy_price || 0) * ((item.gst || 0) / 100)), 0);
-  const hasSubtotal = subtotal > 0;
-  const transportCharge = po.charges?.transport || 0;
-  const otherCharge = po.charges?.other || 0;
+  const subtotal = po.products.reduce(
+  (sum, item) => sum + (item.buy_price || 0) * (item.quantity || 0),
+  0
+);
+
+const totalGst = po.products.reduce((sum, item) => {
+  let gst = 0;
+
+  if (typeof item.gst === "string") {
+    gst = parseFloat(item.gst.replace("%", ""));
+  } else {
+    gst = Number(item.gst ?? 0);
+  }
+
+  return sum + ((item.buy_price || 0) * (item.quantity || 0) * gst) / 100;
+}, 0);
+
+const transportCharge = po.charges?.transport || 0;
+const otherCharge = po.charges?.other || 0;
+
+const grandTotal =
+  subtotal +
+  totalGst +
+  transportCharge +
+  otherCharge;
+
+const outstanding =
+  grandTotal - (po.paid_amount || 0);
 
   return (
     <div className="flex-1 flex flex-col min-h-0 h-full bg-slate-50/50 font-sans text-slate-900 overflow-hidden relative">
@@ -143,9 +166,9 @@ const PurchaseDetail = () => {
       {/* Profile Header Card */}
       <div className="flex-none p-1 pb-0">
         <ProfileHeaderCard
-          name={`Purchase · ${po.poNumber}`}
+          name={`Purchase · ${po.systemId}`}
           initials="PO"
-          subText={po.systemId && po.systemId !== po.poNumber ? `Sys ID: ${po.systemId} • ID: ${po.id}` : `ID: ${po.id}`}
+          subText={po.systemId && po.systemId !== po.poNumber ? `Invoice No: ${po.poNumber} • ID: ${po.id}` : `ID: ${po.id}`}
           badges={[
             { text: po.purchaseType, variant: "primary" },
             po.outstanding && po.outstanding > 0
@@ -210,7 +233,7 @@ const PurchaseDetail = () => {
                 <StatCard
                   icon={Banknote}
                   label="Total Cost"
-                  value={fmt(po.total_cost)}
+                  value={fmt(grandTotal)}
                   iconBg="bg-blue-50 text-blue-600"
                   className="flex-1 min-w-[140px]"
                 />
@@ -231,7 +254,7 @@ const PurchaseDetail = () => {
                 <StatCard
                   icon={AlertCircle}
                   label="Outstanding"
-                  value={fmt(po.outstanding || 0)}
+                  value={fmt(outstanding)}
                   iconBg={po.outstanding && po.outstanding > 0 ? "bg-rose-50 text-rose-600" : "bg-emerald-50 text-emerald-600"}
                   className="flex-1 min-w-[140px]"
                 />
@@ -242,11 +265,46 @@ const PurchaseDetail = () => {
                 <div className="lg:col-span-8">
                   <SectionCard title="Financial Summary">
                     <div className="space-y-1">
-                      {hasSubtotal && <InfoRow label="Subtotal (Excl. GST)" value={fmt(subtotal)} />}
-                      {totalGst > 0 && <InfoRow label="Total GST" value={<span className="text-indigo-600 font-semibold">+{fmt(totalGst)}</span>} />}
-                      <div className="mt-4 pt-4 border-t-2 border-slate-100 border-dashed flex justify-between items-center">
-                        <span className="text-sm font-black text-slate-800 uppercase tracking-wider">Purchase Total</span>
-                        <span className="text-xl font-black text-blue-600 tabular-nums">{fmt(po.total_cost)}</span>
+                      <InfoRow
+                        label="Subtotal"
+                        value={fmt(subtotal)}
+                      />
+
+                      <InfoRow
+                        label="GST"
+                        value={
+                          <span className="text-indigo-600 font-semibold">
+                            +{fmt(totalGst)}
+                          </span>
+                        }
+                      />
+
+                      <InfoRow
+                        label="Transport Charges"
+                        value={
+                          <span className="text-slate-600">
+                            +{fmt(transportCharge)}
+                          </span>
+                        }
+                      />
+
+                      <InfoRow
+                        label="Other Charges"
+                        value={
+                          <span className="text-slate-600">
+                            +{fmt(otherCharge)}
+                          </span>
+                        }
+                      />
+
+                      <div className="mt-4 pt-4 border-t-2 border-slate-800 flex justify-between">
+                        <span className="font-black">
+                          Grand Total
+                        </span>
+
+                        <span className="text-xl font-black text-slate-900">
+                          {fmt(grandTotal)}
+                        </span>
                       </div>
 
                       {(transportCharge > 0 || otherCharge > 0) && (
@@ -261,10 +319,6 @@ const PurchaseDetail = () => {
                         </div>
                       )}
 
-                      <div className="mt-4 pt-4 border-t-2 border-slate-800 flex justify-between items-center">
-                        <span className="text-sm font-black text-slate-900 uppercase tracking-wider">Grand Total</span>
-                        <span className="text-xl font-black text-slate-900 tabular-nums">{fmt(po.grand_total || po.total_cost)}</span>
-                      </div>
                     </div>
                   </SectionCard>
                 </div>
@@ -273,6 +327,14 @@ const PurchaseDetail = () => {
                 <div className="lg:col-span-4 space-y-4">
                   <SectionCard title="Purchase Info">
                     <div className="space-y-3">
+                      <div className="flex justify-between items-center">
+                        <span className="text-[11px] font-medium text-slate-400 uppercase tracking-tight">Invoice No</span>
+                        <span className="text-xs font-bold text-slate-700">{po.poNumber}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-[11px] font-medium text-slate-400 uppercase tracking-tight">Total Items</span>
+                        <span className="text-xs font-bold text-slate-700">{po.totoalItems}</span>
+                      </div>
                       <div className="flex justify-between items-center">
                         <span className="text-[11px] font-medium text-slate-400 uppercase tracking-tight">Origin</span>
                         <span className="text-xs font-bold text-slate-700">{po.purchaseType}</span>
@@ -302,7 +364,7 @@ const PurchaseDetail = () => {
                         <div className="flex justify-between items-center text-sm font-bold pt-3 border-t border-slate-100">
                           <span className="text-slate-600">Outstanding</span>
                           <span className={`tabular-nums ${po.outstanding > 0 ? "text-amber-600" : "text-emerald-600"}`}>
-                            {fmt(po.outstanding)}
+                            {fmt(outstanding)}
                           </span>
                         </div>
                       )}
@@ -567,7 +629,7 @@ const PurchaseDetail = () => {
               </SectionCard>
 
               <SectionCard title="Payment Status">
-                {po.outstanding && po.outstanding > 0 ? (
+                {outstanding && outstanding > 0 ? (
                   po.paid_amount === 0 ? (
                     <div className="flex flex-col items-center justify-center p-6 bg-rose-50/50 border border-rose-100 rounded-xl h-full min-h-[160px]">
                       <div className="w-14 h-14 rounded-full bg-rose-500 text-white flex items-center justify-center mb-4 shadow-sm shadow-rose-200 ring-2 ring-white">
@@ -575,7 +637,7 @@ const PurchaseDetail = () => {
                       </div>
                       <span className="text-xl font-black tracking-tight text-rose-700">Unpaid</span>
                       <p className="text-[10px] font-bold text-slate-400 mt-2 uppercase tracking-widest">{po.paymentMethod || "Pending"}</p>
-                      <p className="text-xs font-bold text-rose-600 mt-1">Outstanding: {fmt(po.outstanding)}</p>
+                      <p className="text-xs font-bold text-rose-600 mt-1">Outstanding: {fmt(outstanding)}</p>
                     </div>
                   ) : (
                     <div className="flex flex-col items-center justify-center p-6 bg-amber-50/50 border border-amber-100 rounded-xl h-full min-h-[160px]">
@@ -586,7 +648,7 @@ const PurchaseDetail = () => {
                       <p className="text-[10px] font-bold text-slate-400 mt-2 uppercase tracking-widest">{po.paymentMethod || "Partial"}</p>
                       <div className="text-center mt-2 space-y-0.5">
                         <p className="text-[10px] font-semibold text-slate-500">Paid: {fmt(po.paid_amount || 0)}</p>
-                        <p className="text-xs font-bold text-amber-600">Outstanding: {fmt(po.outstanding)}</p>
+                        <p className="text-xs font-bold text-amber-600">Outstanding: {fmt(outstanding)}</p>
                       </div>
                     </div>
                   )

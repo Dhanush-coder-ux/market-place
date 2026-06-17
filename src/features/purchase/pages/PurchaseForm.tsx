@@ -26,6 +26,7 @@ import { useToast } from "@/context/ToastContext";
 import Loader from "@/components/common/Loader";
 import { InventoryItemsCard } from "@/features/purchase/components/InventoryItemsCard";
 import { useQuickCreate } from "@/features/common/QuickCreate/QuickCreateContext";
+import PurchaseSuccessModal from "../components/purchaseSuccessModal";
 
 type PaymentMethod = "Cash" | "UPI" | "Card" | "Bank";
 
@@ -69,6 +70,7 @@ const PurchaseForm = () => {
   const { setBottomActions } = useHeader();
   const { showToast } = useToast();
   const [submitting, setSubmitting] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   const { openQuickCreate } = useQuickCreate();
   const [soldStockWarnings, setSoldStockWarnings] = useState<string[]>([]);
@@ -323,6 +325,53 @@ const PurchaseForm = () => {
     }
   }, [purchaseDetails, products, charges, payment, supplierDetails, navigate, searchParams, showToast]);
 
+
+
+  const resetForm = () => {
+   // Clear draft
+        const draftId = searchParams.get("draftId");
+        if (draftId) {
+          const savedDrafts = JSON.parse(
+            localStorage.getItem("purchase_drafts") || "[]"
+          );
+          const filtered = savedDrafts.filter((d: any) => d.id !== draftId);
+          localStorage.setItem("purchase_drafts", JSON.stringify(filtered));
+        }
+
+        // Reset form
+        setPurchaseDetails({
+          supplier: "",
+          invoiceNo: "",
+          date: new Date().toISOString().split("T")[0],
+          referenceNo: `PUR-${new Date().getFullYear()}-${String(
+            Math.floor(Math.random() * 10000)
+          ).padStart(4, "0")}`,
+        });
+
+        setSupplierDetails(null);
+
+        setProducts([
+          {
+            ...defaultProductRow,
+            id: crypto.randomUUID(),
+          },
+        ]);
+
+        setCharges({
+          transport: "",
+          other: "",
+        });
+
+        setPayment({
+          method: "Cash",
+          amountPaid: "",
+        });
+
+        setCostMethod("None");
+        setPurchaseId(null);
+        setSoldStockWarnings([]);
+}
+
   const handleSavePurchase = useCallback(async () => {
     if (!purchaseDetails.supplier && !supplierDetails?.id) {
       showToast("Please select a supplier.", "error");
@@ -479,14 +528,10 @@ const PurchaseForm = () => {
 
       if (res) {
         showToast(id ? "Purchase updated" : "Purchase created", "success");
-        // Clear draft
-        const draftId = searchParams.get("draftId");
-        if (draftId) {
-          const savedDrafts = JSON.parse(localStorage.getItem("purchase_drafts") || "[]");
-          const filtered = savedDrafts.filter((d: any) => d.id !== draftId);
-          localStorage.setItem("purchase_drafts", JSON.stringify(filtered));
-        }
-        navigate("/purchase-history");
+
+        
+        setShowSuccessModal(true);
+        
       }
     } catch (error: any) {
       showToast(error.message || "Failed to save purchase", "error");
@@ -560,6 +605,19 @@ const PurchaseForm = () => {
 
   return (
     <>
+    <PurchaseSuccessModal
+      open={showSuccessModal}
+      supplier={supplierDetails?.name}
+      invoiceNo={purchaseDetails.invoiceNo}
+      total={stats.grandTotal}
+      onAddAnother={() => {
+        resetForm();
+        setShowSuccessModal(false);
+      }}
+      onViewPurchases={() => {
+        navigate("/purchase-history");
+      }}
+    />
       <div className="min-h-screen bg-slate-50/50 p-4 md:p-6 lg:p-8 font-sans">
         <div className="max-w-[1600px] mx-auto flex flex-col xl:flex-row gap-6 items-start">
 
@@ -618,6 +676,7 @@ const PurchaseForm = () => {
                   }, { name: query })}
                   placeholder="Search Supplier..."
                   className="w-full h-11"
+                  entityName="Supplier"
                 />
               </div>
 

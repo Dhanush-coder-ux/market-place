@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, Fragment } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
-  Package, Search, Filter, Bookmark, Trash2, Eye,
+  Package, Search, Filter, Bookmark, Trash2,
   ChevronDown, ChevronRight, Layers, AlertTriangle,
   X, AlertCircle, Calendar, Hash, ExternalLink,
   Copy, Check, IndianRupee
@@ -162,20 +162,18 @@ const CopySKUButton = ({ val }: { val: string }) => {
 const ProductRow = React.memo(
   ({
     p,
+    isSelected,
+    onSelect,
     isExpanded,
     toggleExpand,
     selectedKeys,
-    navigate,
-    setProductToDelete,
-    setIsDeleteDialogOpen,
   }: {
     p: InventoryRecord;
+    isSelected: boolean;
+    onSelect: (p: InventoryRecord) => void;
     isExpanded: boolean;
     toggleExpand: (id: string) => void;
     selectedKeys: string[];
-    navigate: any;
-    setProductToDelete: (p: InventoryRecord) => void;
-    setIsDeleteDialogOpen: (val: boolean) => void;
   }) => {
     const datas = (p.datas as any) || {};
 
@@ -261,22 +259,22 @@ const ProductRow = React.memo(
       <Fragment key={p.id}>
         <tr
           className={`group border-b border-slate-50 transition-colors cursor-pointer ${
-            isExpanded ? "bg-slate-50/70" : "hover:bg-slate-50/60"
+            isSelected ? "bg-blue-50 border-l-2 border-l-blue-500" : isExpanded ? "bg-slate-50/70" : "hover:bg-slate-50/60"
           }`}
-          onClick={() =>
-            isExpandable
-              ? toggleExpand(p.id)
-              : navigate(`/product/${p.id}`)
-          }
+          onClick={() => onSelect(p)}
         >
           {/* Expand toggle */}
           <td className="px-3 py-2.5 text-center w-10">
             {isExpandable ? (
-              <div
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleExpand(p.id);
+                }}
                 className={`w-5 h-5 mx-auto rounded flex items-center justify-center transition-colors ${
                   isExpanded
                     ? "bg-blue-600 text-white"
-                    : "text-blue-300 group-hover:text-blue-500"
+                    : "text-blue-300 hover:text-blue-500"
                 }`}
               >
                 {isExpanded ? (
@@ -284,7 +282,7 @@ const ProductRow = React.memo(
                 ) : (
                   <ChevronRight size={12} />
                 )}
-              </div>
+              </button>
             ) : (
               <div className="w-5 h-5 mx-auto flex items-center justify-center">
                 <div className="w-1 h-1 rounded-full bg-slate-200" />
@@ -537,27 +535,7 @@ const ProductRow = React.memo(
           {/* Actions */}
           <td className="px-3 py-2.5 text-right whitespace-nowrap">
             <div className="flex items-center justify-end gap-0.5">
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  navigate(`/product/${p.id}`);
-                }}
-                className="p-1.5 text-slate-300 hover:text-slate-600 hover:bg-slate-100 rounded transition-colors"
-                title="View details"
-              >
-                <Eye size={14} />
-              </button>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setProductToDelete(p);
-                  setIsDeleteDialogOpen(true);
-                }}
-                className="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
-                title="Delete product"
-              >
-                <Trash2 size={14} />
-              </button>
+              <ChevronRight size={14} className={`transition-all duration-200 ${isSelected ? "text-blue-500 rotate-90" : "text-slate-300 group-hover:text-blue-500"}`} />
             </div>
           </td>
         </tr>
@@ -614,7 +592,7 @@ const ProductInfos = () => {
     window.open(`${window.location.pathname}?mode=clean`, "_blank", "noopener,noreferrer");
   };
 
-  const { setActions } = useHeader();
+  const { setActions, setBottomActions } = useHeader();
   const { getData, deleteData, error, clearError } = useApi();
   const loading = useApiLoading("products-list");
   const { showToast } = useToast();
@@ -628,6 +606,7 @@ const ProductInfos = () => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [productToDelete, setProductToDelete] = useState<InventoryRecord | null>(null);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+  const [selectedProduct, setSelectedProduct] = useState<InventoryRecord | null>(null);
 
   const [availableKeys, setAvailableKeys] = useState<string[]>([]);
   const [selectedKeys, setSelectedKeys] = useState<string[]>(() => {
@@ -725,6 +704,9 @@ const ProductInfos = () => {
     } finally {
       setIsDeleteDialogOpen(false);
       setProductToDelete(null);
+      if (selectedProduct?.id === productToDelete.id) {
+        setSelectedProduct(null);
+      }
     }
   };
 
@@ -734,6 +716,53 @@ const ProductInfos = () => {
     else n.add(id);
     setExpandedRows(n);
   };
+
+  useEffect(() => {
+    if (selectedProduct) {
+      setBottomActions(
+        <div className="flex items-center justify-between w-full animate-in fade-in slide-in-from-right-4 duration-300">
+          <div className="flex items-center gap-3">
+            <div className="w-7 h-7 rounded-md bg-blue-500 text-white flex items-center justify-center text-[10px] font-black shrink-0">
+              <Package size={14} />
+            </div>
+            <div>
+              <p className="text-[12px] font-bold text-slate-800 leading-tight">{selectedProduct.name || "N/A"}</p>
+              <p className="text-[10px] font-semibold text-slate-400 font-mono">
+                {selectedProduct.ui_id || selectedProduct.barcode || "No SKU"}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setSelectedProduct(null)}
+              className="h-8 px-3 rounded-md border border-slate-200 bg-white hover:bg-slate-50 text-slate-500 font-semibold text-[11px] transition-colors"
+            >
+              Deselect
+            </button>
+            <button
+              onClick={() => {
+                setProductToDelete(selectedProduct);
+                setIsDeleteDialogOpen(true);
+              }}
+              className="h-8 px-3 rounded-md border border-red-200 bg-red-50 hover:bg-red-100 text-red-600 font-bold text-[11px] transition-colors flex items-center gap-1.5"
+            >
+              <Trash2 size={13} />
+              Delete
+            </button>
+            <button
+              onClick={() => navigate(`/product/${selectedProduct.id}`)}
+              className="h-8 px-4 rounded-md bg-blue-600 hover:bg-blue-700 text-white font-semibold text-[11px] transition-colors flex items-center gap-1.5"
+            >
+              <ChevronRight size={13} />
+              View Details
+            </button>
+          </div>
+        </div>
+      );
+    } else {
+      setBottomActions(null);
+    }
+  }, [selectedProduct, setBottomActions, navigate, setProductToDelete, setIsDeleteDialogOpen]);
 
   const filteredProducts = useMemo(() => {
     return products.filter((p) => {
@@ -779,7 +808,7 @@ const ProductInfos = () => {
           <StatCard
             icon={Package}
             label="Total Products"
-            value={overallStats?.total_product_count?.toString() || products.length.toString()}
+            value={Math.max(Number(overallStats?.total_product_count || 0), products.length).toString()}
             subValue="items"
             iconBg="bg-blue-50"
             iconColor="text-blue-600"
@@ -999,12 +1028,11 @@ const ProductInfos = () => {
                   <ProductRow
                     key={p.id}
                     p={p}
+                    isSelected={selectedProduct?.id === p.id}
+                    onSelect={(prod) => setSelectedProduct(prev => prev?.id === prod.id ? null : prod)}
                     isExpanded={expandedRows.has(p.id)}
                     toggleExpand={toggleExpand}
                     selectedKeys={sortedSelectedKeys}
-                    navigate={navigate}
-                    setProductToDelete={setProductToDelete}
-                    setIsDeleteDialogOpen={setIsDeleteDialogOpen}
                   />
                 ))
               )}

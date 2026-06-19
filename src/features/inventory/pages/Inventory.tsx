@@ -1,7 +1,7 @@
 import React, { useState, useEffect, Fragment, useMemo, useCallback } from "react";
 import {
   X,
-  Eye,
+
   Hash,
   ChevronDown,
   ChevronRight,
@@ -215,11 +215,15 @@ const CopySKUButton = ({ val }: { val: string }) => {
 const ProductRow = React.memo(
   ({
     item,
+    isSelected,
+    onSelect,
     isExpanded,
     toggleExpand,
     innerRef,
   }: {
     item: InventoryItem;
+    isSelected: boolean;
+    onSelect: (item: InventoryItem) => void;
     isExpanded: boolean;
     toggleExpand: (id: string) => void;
     innerRef?: any;
@@ -272,7 +276,6 @@ const ProductRow = React.memo(
     );
     const status = getStockStatus(stockNumber, reorderPoint);
 
-    const navigate = useNavigate();
 
     const { totalSerials, totalBatches } = useMemo(() => {
       let ts = serials.length;
@@ -331,19 +334,23 @@ const ProductRow = React.memo(
       <Fragment>
         <tr
           ref={innerRef}
-          onClick={() => isExpandable && toggleExpand(item.id)}
-          className={`group border-b border-slate-50 transition-colors ${
-            isExpandable ? "cursor-pointer" : ""
-          } ${isExpanded ? "bg-slate-50/70" : "hover:bg-slate-50/60"}`}
+          onClick={() => onSelect(item)}
+          className={`group border-b border-slate-50 transition-colors cursor-pointer ${
+            isSelected ? "bg-blue-50 border-l-2 border-l-blue-500" : isExpanded ? "bg-slate-50/70" : "hover:bg-slate-50/60"
+          }`}
         >
           {/* Expand toggle */}
           <td className="px-3 py-2.5 text-center w-10">
             {isExpandable ? (
-              <div
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleExpand(item.id);
+                }}
                 className={`w-5 h-5 mx-auto rounded flex items-center justify-center transition-colors ${
                   isExpanded
                     ? "bg-blue-600 text-white"
-                    : "text-blue-300 group-hover:text-blue-500"
+                    : "text-blue-300 hover:text-blue-500"
                 }`}
               >
                 {isExpanded ? (
@@ -351,7 +358,7 @@ const ProductRow = React.memo(
                 ) : (
                   <ChevronRight size={12} />
                 )}
-              </div>
+              </button>
             ) : (
               <div className="w-5 h-5 mx-auto flex items-center justify-center">
                 <div className="w-1 h-1 rounded-full bg-slate-200" />
@@ -516,16 +523,7 @@ const ProductRow = React.memo(
 
           {/* Actions */}
           <td className="px-3 py-2.5 text-center">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                navigate(`/product/${item.id}`);
-              }}
-              className="p-1.5 text-slate-300 hover:text-slate-600 hover:bg-slate-100 rounded transition-colors"
-              title="View details"
-            >
-              <Eye size={14} />
-            </button>
+            <ChevronRight size={14} className={`mx-auto transition-all duration-200 ${isSelected ? "text-blue-500 rotate-90" : "text-slate-300 group-hover:text-blue-500"}`} />
           </td>
         </tr>
 
@@ -577,8 +575,9 @@ const ProductRow = React.memo(
 const InventoryPage = () => {
   const { getData, error, clearError } = useApi();
   const location = useLocation();
+  const navigate = useNavigate();
   const isCleanMode = new URLSearchParams(location.search).get("mode") === "clean";
-  const { setActions } = useHeader();
+  const { setActions, setBottomActions } = useHeader();
 
   const handleOpenNewTab = () => {
     window.open(`${window.location.pathname}?mode=clean`, "_blank", "noopener,noreferrer");
@@ -612,6 +611,46 @@ const InventoryPage = () => {
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
+
+  useEffect(() => {
+    if (selectedItem) {
+      setBottomActions(
+        <div className="flex items-center justify-between w-full animate-in fade-in slide-in-from-right-4 duration-300">
+          <div className="flex items-center gap-3">
+            <div className="w-7 h-7 rounded-md bg-blue-500 text-white flex items-center justify-center text-[10px] font-black shrink-0">
+              <Package size={14} />
+            </div>
+            <div>
+              <p className="text-[12px] font-bold text-slate-800 leading-tight">
+                {selectedItem.datas?.name || selectedItem.name || "N/A"}
+              </p>
+              <p className="text-[10px] font-semibold text-slate-400 font-mono">
+                {selectedItem.barcode || selectedItem.datas?.barcode || (selectedItem as any).sku || selectedItem.datas?.sku || "No SKU"}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setSelectedItem(null)}
+              className="h-8 px-3 rounded-md border border-slate-200 bg-white hover:bg-slate-50 text-slate-500 font-semibold text-[11px] transition-colors"
+            >
+              Deselect
+            </button>
+            <button
+              onClick={() => navigate(`/product/${selectedItem.id}`)}
+              className="h-8 px-4 rounded-md bg-blue-600 hover:bg-blue-700 text-white font-semibold text-[11px] transition-colors flex items-center gap-1.5"
+            >
+              <ChevronRight size={13} />
+              View Details
+            </button>
+          </div>
+        </div>
+      );
+    } else {
+      setBottomActions(null);
+    }
+  }, [selectedItem, setBottomActions, navigate]);
   
   const activeFiltersCount = [fromDate, toDate].filter(Boolean).length;
   
@@ -708,7 +747,7 @@ const InventoryPage = () => {
           <StatCard
             icon={Package}
             label="Total Products"
-            value={overallStats?.total_product_count?.toString() || stats.total.toString()}
+            value={Math.max(Number(overallStats?.total_product_count || 0), stats.total).toString()}
             subValue="items"
             iconBg="bg-blue-50"
             iconColor="text-blue-600"
@@ -891,6 +930,8 @@ const InventoryPage = () => {
                   <ProductRow
                     key={item.id}
                     item={item}
+                    isSelected={selectedItem?.id === item.id}
+                    onSelect={(prod) => setSelectedItem(prev => prev?.id === prod.id ? null : prod)}
                     isExpanded={expandedRows.has(item.id)}
                     toggleExpand={toggleExpand}
                     innerRef={index === filteredInventory.length - 1 ? lastElementRef : null}

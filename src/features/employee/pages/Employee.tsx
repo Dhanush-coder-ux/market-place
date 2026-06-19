@@ -1,4 +1,4 @@
-import { Search, Filter, Users, Trash2, Bookmark, Eye, Edit3, X, AlertCircle, ExternalLink } from 'lucide-react';
+import { Search, Filter, Users, Bookmark, X, AlertCircle, ExternalLink, ChevronRight } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { StatCard } from '@/components/common/StatsCard';
 import { ReusableSelect } from '@/components/ui/ReusableSelect';
@@ -26,7 +26,7 @@ export default function Employee() {
     window.open(`${window.location.pathname}?mode=clean`, "_blank", "noopener,noreferrer");
   };
 
-  const { setActions } = useHeader();
+  const { setActions, setBottomActions } = useHeader();
 
   const [employees, setEmployees] = useState<EmployeeRecord[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -35,6 +35,7 @@ export default function Employee() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [employeeToDelete, setEmployeeToDelete] = useState<EmployeeRecord | null>(null);
+  const [selectedEmployee, setSelectedEmployee] = useState<EmployeeRecord | null>(null);
 
   // Dynamic Column State
   const [availableKeys, setAvailableKeys] = useState<string[]>([]);
@@ -69,6 +70,53 @@ export default function Employee() {
     );
     return () => setActions(null);
   }, [setActions, navigate, isCleanMode]);
+
+  useEffect(() => {
+    if (selectedEmployee) {
+      setBottomActions(
+        <div className="flex items-center justify-between w-full animate-in fade-in slide-in-from-right-4 duration-300">
+          <div className="flex items-center gap-3">
+            <div className="w-7 h-7 rounded-md bg-blue-500 text-white flex items-center justify-center text-[10px] font-black shrink-0">
+              {(selectedEmployee.name || '?').split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)}
+            </div>
+            <div>
+              <p className="text-[12px] font-bold text-slate-800 leading-tight">{selectedEmployee.name || 'Unknown'}</p>
+              <p className="text-[10px] font-semibold text-slate-400 font-mono">ID: {selectedEmployee.ui_id || selectedEmployee.id?.slice(0, 8)}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setSelectedEmployee(null)}
+              className="h-8 px-3 rounded-md border border-slate-200 bg-white hover:bg-slate-50 text-slate-500 font-semibold text-[11px] transition-colors"
+            >
+              Deselect
+            </button>
+            <button
+              onClick={() => { setEmployeeToDelete(selectedEmployee); setIsDeleteDialogOpen(true); }}
+              className="h-8 px-3 rounded-md border border-slate-200 bg-white hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 text-slate-700 font-semibold text-[11px] transition-colors"
+            >
+              Delete
+            </button>
+            <button
+              onClick={() => navigate(`/employee/${selectedEmployee.id}/edit`)}
+              className="h-8 px-3 rounded-md border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-[11px] transition-colors"
+            >
+              Edit
+            </button>
+            <button
+              onClick={() => navigate(`/employee/${selectedEmployee.id}`)}
+              className="h-8 px-4 rounded-md bg-blue-600 hover:bg-blue-700 text-white font-semibold text-[11px] transition-colors flex items-center gap-1.5"
+            >
+              <ChevronRight size={13} />
+              View Details
+            </button>
+          </div>
+        </div>
+      );
+    } else {
+      setBottomActions(null);
+    }
+  }, [selectedEmployee, setBottomActions, navigate]);
 
   useEffect(() => {
     const params: Record<string, string> = { limit: "50", offset: "1" };
@@ -248,28 +296,30 @@ export default function Employee() {
                 {selectedKeys.map(key => (
                   <th key={key} className="px-6 py-5 capitalize whitespace-nowrap">{key.replace(/_/g, ' ')}</th>
                 ))}
-                <th className="px-6 py-5 text-right whitespace-nowrap">Actions</th>
+                <th className="px-6 py-5 text-right whitespace-nowrap w-10"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
               {loading ? (
                 <tr>
-                  <td colSpan={selectedKeys.length + 4} className="py-20"><Loader /></td>
+                  <td colSpan={selectedKeys.length + 3} className="py-20"><Loader /></td>
                 </tr>
               ) : filteredEmployees.length === 0 ? (
                 <tr>
-                  <td colSpan={selectedKeys.length + 4} className="py-20 text-center text-slate-400 font-medium italic">No employees matching your filters.</td>
+                  <td colSpan={selectedKeys.length + 3} className="py-20 text-center text-slate-400 font-medium italic">No employees matching your filters.</td>
                 </tr>
               ) : (
-                filteredEmployees.map((emp) => (
+                filteredEmployees.map((emp) => {
+                  const isSelected = selectedEmployee?.id === emp.id;
+                  return (
                   <tr
                     key={emp.id}
-                    className="group hover:bg-blue-50/30 transition-all cursor-pointer"
-                    onClick={() => navigate(`/employee/${emp.id}`)}
+                    className={`group transition-all cursor-pointer ${isSelected ? "bg-blue-50 border-l-2 border-l-blue-500" : "hover:bg-blue-50/30"}`}
+                    onClick={() => setSelectedEmployee(prev => prev?.id === emp.id ? null : emp)}
                   >
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-600 to-blue-400 flex items-center justify-center text-white text-sm font-bold shadow-lg shadow-blue-100">
+                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-sm font-bold shadow-sm transition-colors ${isSelected ? "bg-blue-500 text-white shadow-blue-100" : "bg-gradient-to-br from-blue-600 to-blue-400 text-white shadow-blue-100"}`}>
                           {(emp.name || 'Unknown').split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
                         </div>
                         <div>
@@ -298,29 +348,11 @@ export default function Employee() {
                       );
                     })}
                     <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        <button
-                          onClick={(e) => { e.stopPropagation(); navigate(`/employee/${emp.id}`); }}
-                          className="p-2 text-slate-400 hover:text-blue-600 hover:bg-white rounded-lg transition-all shadow-sm active:scale-95"
-                        >
-                          <Eye size={16} />
-                        </button>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); navigate(`/employee/${emp.id}/edit`); }}
-                          className="p-2 text-slate-400 hover:text-blue-600 hover:bg-white rounded-lg transition-all shadow-sm active:scale-95"
-                        >
-                          <Edit3 size={16} />
-                        </button>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); setEmployeeToDelete(emp); setIsDeleteDialogOpen(true); }}
-                          className="p-2 text-slate-400 hover:text-rose-600 hover:bg-white rounded-lg transition-all shadow-sm active:scale-95"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
+                      <ChevronRight size={14} className={`transition-all duration-200 ${isSelected ? "text-blue-500 rotate-90" : "text-slate-300 group-hover:text-blue-500"}`} />
                     </td>
                   </tr>
-                ))
+                  );
+                })
               )}
             </tbody>
           </table>

@@ -16,6 +16,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useHeader } from "@/context/HeaderContext";
 import { useApi } from "@/context/ApiContext";
 import { RightSidebarFilter } from "@/components/common/RightSidebarFilter";
+import { GroupedItemsDrawer } from "@/components/common/HistoryTables";
 import { ReusableSelect } from "@/components/ui/ReusableSelect";
 import { SearchSelect } from "@/components/inputbuilders/SearchSelect";
 import { StatCard } from "@/components/common/StatsCard";
@@ -101,8 +102,6 @@ export interface DirectPurchaseData {
   grand_total?: number;
   additional_charges_total?: number;
   status?: string;
-  transort_charge:number;
-  other_chares:number;
 }
 
 type ViewMode = "grid" | "horizontal" | "vertical";
@@ -355,12 +354,12 @@ const PurchaseTypeBadge = ({ type }: { type: PurchaseType }) => {
 };
 
 /* ================= GRID CARD ================= */
-const GridCard = ({ po, onClick, onEdit }: { po: DirectPurchaseData; onClick: () => void; onEdit?: (po: DirectPurchaseData) => void }) => {
+const GridCard = ({ po, selected, onClick }: { po: DirectPurchaseData; selected?: boolean; onClick: () => void }) => {
   const totalQty = po.products.reduce((s, i) => s + i.quantity, 0);
   return (
     <div
       onClick={onClick}
-      className="po-card group bg-white rounded-lg border border-zinc-200 shadow-sm cursor-pointer flex flex-col overflow-hidden"
+      className={`po-card group rounded-lg border shadow-sm cursor-pointer flex flex-col overflow-hidden transition-all ${selected ? "bg-blue-50 border-blue-400 ring-2 ring-blue-500/20" : "bg-white border-zinc-200"}`}
     >
       {/* Header */}
       <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-100 bg-zinc-50/50">
@@ -493,19 +492,8 @@ const GridCard = ({ po, onClick, onEdit }: { po: DirectPurchaseData; onClick: ()
             <p className="text-[10px] font-semibold   text-zinc-400 mb-0.5">Qty</p>
             <p className="text-sm font-semibold text-zinc-700 tabular-nums">{totalQty}</p>
           </div>
-          {po.purchaseType === 'Purchase' && po.status !== 'cancelled' && onEdit && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onEdit(po);
-              }}
-              className="px-3 h-8 rounded-lg border border-blue-200 bg-blue-50 text-blue-600 hover:bg-blue-100 hover:border-blue-300 transition-colors text-[11px] font-bold shadow-sm"
-            >
-              Edit
-            </button>
-          )}
-          <div className="w-8 h-8 rounded-full border border-zinc-200 bg-white flex items-center justify-center shadow-sm group-hover:border-blue-200 group-hover:bg-blue-50 transition-all">
-            <ChevronRight size={15} className="po-arrow text-zinc-400" />
+          <div className={`w-8 h-8 rounded-full border border-zinc-200 bg-white flex items-center justify-center shadow-sm transition-all ${selected ? "bg-blue-500 text-white border-blue-500" : "group-hover:border-blue-200 group-hover:bg-blue-50"}`}>
+            <ChevronRight size={15} className={`po-arrow ${selected ? "text-white rotate-90" : "text-zinc-400"}`} />
           </div>
         </div>
       </div>
@@ -514,7 +502,9 @@ const GridCard = ({ po, onClick, onEdit }: { po: DirectPurchaseData; onClick: ()
 };
 
 
-const VerticalTable = ({ data, onClick, onEdit, totalCount, lastElementRef, loadingMore }: { data: DirectPurchaseData[]; onClick: (po: DirectPurchaseData) => void; onEdit?: (po: DirectPurchaseData) => void; totalCount: number; lastElementRef?: any; loadingMore?: boolean }) => {
+const VerticalTable = ({ data, selectedId, onClick, totalCount, lastElementRef, loadingMore }: { data: DirectPurchaseData[]; selectedId: string | null; onClick: (po: DirectPurchaseData) => void; totalCount: number; lastElementRef?: any; loadingMore?: boolean }) => {
+  const [drawerRecord, setDrawerRecord] = useState<any | null>(null);
+  
   return (
     <div className="bg-white border border-slate-100 rounded-lg shadow-sm overflow-hidden flex flex-col flex-1 min-h-0">
       <div className="overflow-x-auto overflow-y-auto flex-1 scrollbar-thin scrollbar-thumb-slate-200">
@@ -527,18 +517,19 @@ const VerticalTable = ({ data, onClick, onEdit, totalCount, lastElementRef, load
               <th className="px-3 py-2.5 text-[10px] font-bold tracking-wider text-slate-400 uppercase text-left hidden md:table-cell">Products</th>
               <th className="px-3 py-2.5 text-[10px] font-bold tracking-wider text-slate-400 uppercase text-right">Qty</th>
               <th className="px-3 py-2.5 text-[10px] font-bold tracking-wider text-slate-400 uppercase text-right">Total</th>
-              <th className="px-3 py-2.5 w-16 text-right"></th>
+              <th className="px-3 py-2.5 w-10 text-right"></th>
             </tr>
           </thead>
           <tbody>
             {data.map((po, index) => {
               const totalQty = po.products.reduce((s, i) => s + i.quantity, 0);
+              const isSelected = selectedId === po.id;
               return (
                 <tr
                   key={po.id}
                   ref={index === data.length - 1 ? lastElementRef : null}
                   onClick={() => onClick(po)}
-                  className="group cursor-pointer transition-colors border-b border-slate-50 hover:bg-slate-50/60"
+                  className={`group cursor-pointer transition-colors border-b border-slate-50 ${isSelected ? "bg-blue-50 border-l-2 border-l-blue-500" : "hover:bg-slate-50/60"}`}
                 >
                   {/* PO Details */}
                   <td className="p-2.5 px-3">
@@ -601,9 +592,30 @@ const VerticalTable = ({ data, onClick, onEdit, totalCount, lastElementRef, load
                         );
                       })}
                       {po.products.length > 2 && (
-                        <span className="inline-flex items-center text-[9px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200">
-                          +{po.products.length - 2} more
-                        </span>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDrawerRecord({
+                              uiId: po.poNumber,
+                              type: undefined,
+                              productsList: po.products.map(p => ({
+                                name: p.name,
+                                receivedStocks: p.quantity,
+                                buyPrice: p.buy_price,
+                                sellPrice: p.sell_price,
+                                variant: p.variants?.[0]?.name,
+                                batch: p.variants?.[0]?.batches?.[0]?.name || p.batches?.[0]?.name,
+                                serials: p.variants?.[0]?.serials?.[0]?.serial_numbers || p.serials?.[0]?.serial_numbers,
+                                stocksBefore: p.stocks_before
+                              }))
+                            });
+                          }}
+                          className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] font-extrabold bg-indigo-50 text-indigo-600 border border-indigo-100 hover:bg-indigo-100 transition-colors shadow-sm ml-1"
+                          title="View Items"
+                        >
+                          <ChevronRight size={10} strokeWidth={3} />
+                          <span>+{po.products.length - 2} more</span>
+                        </button>
                       )}
                     </div>
                   </td>
@@ -624,22 +636,7 @@ const VerticalTable = ({ data, onClick, onEdit, totalCount, lastElementRef, load
 
                   {/* Action */}
                   <td className="p-2.5 px-3 text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      {po.purchaseType === 'Purchase' && po.status !== 'cancelled' && onEdit && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onEdit(po);
-                          }}
-                          className="px-3 h-7 rounded border border-blue-200 bg-blue-50 text-blue-600 hover:bg-blue-100 hover:border-blue-300 transition-colors text-[10px] font-bold shadow-sm flex items-center"
-                        >
-                          Edit
-                        </button>
-                      )}
-                      <div className="w-7 h-7 flex items-center justify-center rounded-lg bg-transparent text-slate-400 group-hover:bg-blue-50 group-hover:text-blue-600 transition-colors">
-                        <ChevronRight size={14} />
-                      </div>
-                    </div>
+                    <ChevronRight size={14} className={`transition-all duration-200 ${isSelected ? "text-blue-500 rotate-90" : "text-slate-300 group-hover:text-blue-500"}`} />
                   </td>
                 </tr>
               );
@@ -655,6 +652,7 @@ const VerticalTable = ({ data, onClick, onEdit, totalCount, lastElementRef, load
           {data.length} {totalCount > 0 ? `of ${totalCount}` : ''} purchase{data.length !== 1 ? "s" : ""}
         </span>
       </div>
+      <GroupedItemsDrawer record={drawerRecord} onClose={() => setDrawerRecord(null)} type="purchase" />
     </div>
   );
 };
@@ -697,7 +695,7 @@ const PurchaseHistory = () => {
   const { getData } = useApi();
   const location = useLocation();
   const isCleanMode = new URLSearchParams(location.search).get("mode") === "clean";
-  const { setActions } = useHeader();
+  const { setActions, setBottomActions } = useHeader();
 
   const handleOpenNewTab = () => {
     window.open(`${window.location.pathname}?mode=clean`, "_blank", "noopener,noreferrer");
@@ -735,6 +733,50 @@ const PurchaseHistory = () => {
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [selectedPurchase, setSelectedPurchase] = useState<DirectPurchaseData | null>(null);
+
+  useEffect(() => {
+    if (selectedPurchase) {
+      setBottomActions(
+        <div className="flex items-center justify-between w-full animate-in fade-in slide-in-from-right-4 duration-300">
+          <div className="flex items-center gap-3">
+            <div className="w-7 h-7 rounded-md bg-blue-500 text-white flex items-center justify-center text-[10px] font-black shrink-0">
+              <ReceiptText size={14} />
+            </div>
+            <div>
+              <p className="text-[12px] font-bold text-slate-800 leading-tight">{selectedPurchase.poNumber}</p>
+              <p className="text-[10px] font-semibold text-slate-400 font-mono">{selectedPurchase.vendor}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setSelectedPurchase(null)}
+              className="h-8 px-3 rounded-md border border-slate-200 bg-white hover:bg-slate-50 text-slate-500 font-semibold text-[11px] transition-colors"
+            >
+              Deselect
+            </button>
+            {selectedPurchase.purchaseType === 'Purchase' && selectedPurchase.status !== 'cancelled' && (
+              <button
+                onClick={() => navigate(`/purchase/edit/${selectedPurchase.id}`)}
+                className="h-8 px-3 rounded-md border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-[11px] transition-colors"
+              >
+                Edit
+              </button>
+            )}
+            <button
+              onClick={() => navigate(`/purchase/detail/${selectedPurchase.id}`, { state: { po: selectedPurchase } })}
+              className="h-8 px-4 rounded-md bg-blue-600 hover:bg-blue-700 text-white font-semibold text-[11px] transition-colors flex items-center gap-1.5"
+            >
+              <ChevronRight size={13} />
+              View Details
+            </button>
+          </div>
+        </div>
+      );
+    } else {
+      setBottomActions(null);
+    }
+  }, [selectedPurchase, setBottomActions, navigate]);
 
   const activeFiltersCount = [filterType, filterVendor, fromDate, toDate].filter(Boolean).length;
 
@@ -791,11 +833,7 @@ const PurchaseHistory = () => {
 
 
   const handleCardClick = (po: DirectPurchaseData) => {
-    navigate(`/purchase/detail/${po.id}`, { state: { po } });
-  };
-
-  const handleEditClick = (po: DirectPurchaseData) => {
-    navigate(`/purchase/edit/${po.id}`);
+    setSelectedPurchase(prev => prev?.id === po.id ? null : po);
   };
 
   return (
@@ -956,14 +994,14 @@ const PurchaseHistory = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
               {filtered.map((po, index) => (
                 <div key={po.id} ref={index === filtered.length - 1 ? lastElementRef : null}>
-                  <GridCard po={po} onClick={() => handleCardClick(po)} onEdit={handleEditClick} />
+                  <GridCard po={po} selected={selectedPurchase?.id === po.id} onClick={() => handleCardClick(po)} />
                 </div>
               ))}
             </div>
             {loadingMore && <div className="py-4 text-center text-xs text-slate-500">Loading more...</div>}
           </div>
         ) : (
-          <VerticalTable data={filtered} onClick={handleCardClick} onEdit={handleEditClick} totalCount={totalCount || filtered.length} lastElementRef={lastElementRef} loadingMore={loadingMore} />
+          <VerticalTable data={filtered} selectedId={selectedPurchase?.id || null} onClick={handleCardClick} totalCount={totalCount || filtered.length} lastElementRef={lastElementRef} loadingMore={loadingMore} />
         )}
       </div>
     </>

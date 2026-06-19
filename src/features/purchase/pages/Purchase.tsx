@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import type { ReactNode } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Filter, Search, X, ExternalLink } from "lucide-react";
+import { Filter, Search, X, ExternalLink, ChevronRight, ReceiptText } from "lucide-react";
 
 import Table from "@/components/common/Table";
 import PurchaseHeader from "@/features/purchase/components/PurchaseHeader";
@@ -77,6 +77,15 @@ const PURCHASE_COLUMNS: Column[] = [
       <span className="text-xs font-mono text-slate-500">{row.ui_id || row.id.slice(0, 8)}</span>
     ),
   },
+  {
+    key: "actions",
+    label: "",
+    render: () => (
+      <div className="flex justify-end">
+        <ChevronRight size={14} className="text-slate-300 group-hover:text-blue-500 transition-colors" />
+      </div>
+    ),
+  },
 ];
 
 const PurchaseHistoryTab = () => {
@@ -88,11 +97,12 @@ const PurchaseHistoryTab = () => {
     window.open(`${window.location.pathname}?mode=clean`, "_blank", "noopener,noreferrer");
   };
 
-  const { setActions } = useHeader();
+  const { setActions, setBottomActions } = useHeader();
   const { getData, loading, error, clearError } = useApi();
   const [purchases, setPurchases] = useState<PurchaseRecord[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [refreshKey] = useState(0);
+  const [selectedPurchase, setSelectedPurchase] = useState<PurchaseRecord | null>(null);
 
   const [filterSupplier, setFilterSupplier] = useState("");
   const [filterDate, setFilterDate] = useState("");
@@ -146,6 +156,43 @@ const PurchaseHistoryTab = () => {
       if (res) setPurchases(Array.isArray(res.data) ? res.data : [res.data]);
     });
   }, [refreshKey, searchTerm]);
+
+  useEffect(() => {
+    if (selectedPurchase) {
+      setBottomActions(
+        <div className="flex items-center justify-between w-full animate-in fade-in slide-in-from-right-4 duration-300">
+          <div className="flex items-center gap-3">
+            <div className="w-7 h-7 rounded-md bg-blue-500 text-white flex items-center justify-center text-[10px] font-black shrink-0">
+              <ReceiptText size={14} />
+            </div>
+            <div>
+              <p className="text-[12px] font-bold text-slate-800 leading-tight">Reference: {selectedPurchase.ui_id || selectedPurchase.id.slice(0, 8)}</p>
+              <p className="text-[10px] font-semibold text-slate-400 font-mono">
+                {String(selectedPurchase.datas?.supplier ?? selectedPurchase.datas?.supplier_name ?? "—")}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setSelectedPurchase(null)}
+              className="h-8 px-3 rounded-md border border-slate-200 bg-white hover:bg-slate-50 text-slate-500 font-semibold text-[11px] transition-colors"
+            >
+              Deselect
+            </button>
+            <button
+              onClick={() => navigate(`/purchase/detail/${selectedPurchase.id}`, { state: { po: selectedPurchase } })}
+              className="h-8 px-4 rounded-md bg-blue-600 hover:bg-blue-700 text-white font-semibold text-[11px] transition-colors flex items-center gap-1.5"
+            >
+              <ChevronRight size={13} />
+              View Details
+            </button>
+          </div>
+        </div>
+      );
+    } else {
+      setBottomActions(null);
+    }
+  }, [selectedPurchase, setBottomActions, navigate]);
 
   return (
     <div className="flex-1 flex flex-col min-h-0 gap-4 font-sans w-full overflow-hidden relative">
@@ -236,7 +283,8 @@ const PurchaseHistoryTab = () => {
               columns={PURCHASE_COLUMNS}
               data={filteredPurchases}
               rowKey="id"
-              onRowClick={() => navigate("/purchase/detail")}
+              selectedIds={selectedPurchase ? [selectedPurchase.id] : []}
+              onRowClick={(row) => setSelectedPurchase(prev => prev?.id === row.id ? null : row)}
             />
           )}
 

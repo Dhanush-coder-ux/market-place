@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
-  Search, Eye, X,
+  Search, X,
   RotateCcw, Receipt,
   ChevronRight, Filter,
   DollarSign, RefreshCw, TrendingUp, Loader2,
@@ -77,7 +77,7 @@ const SalesListPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const isCleanMode = new URLSearchParams(location.search).get("mode") === "clean";
-  const { setActions } = useHeader();
+  const { setActions, setBottomActions } = useHeader();
 
   const handleOpenNewTab = () => {
     window.open(`${window.location.pathname}?mode=clean`, "_blank", "noopener,noreferrer");
@@ -100,9 +100,11 @@ const SalesListPage: React.FC = () => {
     return () => setActions(null);
   }, [setActions, isCleanMode]);
 
+
   const [orders, setOrders] = useState<OrderResponse[]>([]);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [selectedSale, setSelectedSale] = useState<SaleRecord | null>(null);
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(search), 300);
     return () => clearTimeout(timer);
@@ -128,6 +130,53 @@ const SalesListPage: React.FC = () => {
 
   const openDetail = (sale: SaleRecord) => navigate(`/sales/${sale.id}`, { state: { sale, customerMap, productMap } });
   const openReturn = (sale: SaleRecord) => { setTimeout(() => setReturnSale(sale), 50); };
+
+  useEffect(() => {
+    if (selectedSale) {
+      const returnable = selectedSale.status === "Completed" && selectedSale.origin !== "Sales Return";
+      setBottomActions(
+        <div className="flex items-center justify-between w-full animate-in fade-in slide-in-from-right-4 duration-300">
+          <div className="flex items-center gap-3">
+            <div className="w-7 h-7 rounded-md bg-blue-500 text-white flex items-center justify-center text-[10px] font-black shrink-0">
+              <Receipt size={14} />
+            </div>
+            <div>
+              <p className="text-[12px] font-bold text-slate-800 leading-tight">Order #{selectedSale.ui_id}</p>
+              <p className="text-[10px] font-semibold text-slate-400 font-mono">
+                {selectedSale.customer?.customer_name || (selectedSale.customer_id ? (customerMap[selectedSale.customer_id] || selectedSale.customer_id) : "Walk in Customer")}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setSelectedSale(null)}
+              className="h-8 px-3 rounded-md border border-slate-200 bg-white hover:bg-slate-50 text-slate-500 font-semibold text-[11px] transition-colors"
+            >
+              Deselect
+            </button>
+            <button
+              onClick={() => returnable && openReturn(selectedSale)}
+              disabled={!returnable}
+              className={`h-8 px-3 rounded-md border border-slate-200 font-semibold text-[11px] transition-colors flex items-center gap-1.5 ${returnable ? "bg-white hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 text-slate-700" : "bg-slate-50 text-slate-300 cursor-not-allowed"}`}
+              title={!returnable ? (selectedSale.origin === "Sales Return" ? "Already returned" : `Status: ${selectedSale.status}`) : "Process return"}
+            >
+              <RotateCcw size={13} />
+              Process Return
+            </button>
+            <button
+              onClick={() => openDetail(selectedSale)}
+              className="h-8 px-4 rounded-md bg-blue-600 hover:bg-blue-700 text-white font-semibold text-[11px] transition-colors flex items-center gap-1.5"
+            >
+              <ChevronRight size={13} />
+              View Details
+            </button>
+          </div>
+        </div>
+      );
+    } else {
+      setBottomActions(null);
+    }
+  }, [selectedSale, setBottomActions, openDetail, openReturn, customerMap]);
 
   /* Handle return trigger coming back from SaleDetailPage */
   useEffect(() => {
@@ -392,7 +441,7 @@ const SalesListPage: React.FC = () => {
                 <th className="w-[62px] p-2.5 px-3 text-[10px] font-bold tracking-wider text-slate-400 uppercase text-center">Qty</th>
                 <th className="w-[110px] p-2.5 px-3 text-[10px] font-bold tracking-wider text-slate-400 uppercase text-right">Amount</th>
                 <th className="w-[100px] p-2.5 px-3 text-[10px] font-bold tracking-wider text-slate-400 uppercase text-left">Status</th>
-                <th className="w-[76px] p-2.5 px-3 text-[10px] font-bold tracking-wider text-slate-400 uppercase text-right">Actions</th>
+                <th className="w-[40px] p-2.5 px-3 text-[10px] font-bold tracking-wider text-slate-400 uppercase text-right"></th>
               </tr>
             </thead>
             <tbody>
@@ -413,13 +462,20 @@ const SalesListPage: React.FC = () => {
                 </tr>
               ) : filtered.map((sale, index) => {
                 const oCfg = ORIGIN_CFG[sale.origin as OriginType] || ORIGIN_CFG["Sales"];
-                const returnable = sale.status === "Completed" && sale.origin !== "Sales Return";
+
                 const dateStr = sale.created_at.split("T")[0];
                 const refundedCount = (sale.items || []).filter((i: any) => i.status === "REFUNDED").length;
                 const exchangedCount = (sale.items || []).filter((i: any) => i.status === "EXCHANGED").length;
 
+                const isSelected = selectedSale?.id === sale.id;
+
                 return (
-                  <tr ref={index === filtered.length - 1 ? lastElementRef : null} key={sale.id} className="group hover:bg-slate-50/60 transition-colors">
+                  <tr
+                    ref={index === filtered.length - 1 ? lastElementRef : null}
+                    key={sale.id}
+                    className={`group transition-colors cursor-pointer ${isSelected ? "bg-blue-50 border-l-2 border-l-blue-500" : "hover:bg-slate-50/60"}`}
+                    onClick={() => setSelectedSale(prev => prev?.id === sale.id ? null : sale)}
+                  >
                     <td className="p-2.5 px-3 border-b border-slate-50">
                       <div>
                         <span className="font-mono text-[11px] font-semibold text-slate-800 block">Order #{sale.ui_id}</span>
@@ -458,12 +514,7 @@ const SalesListPage: React.FC = () => {
                     <td className="p-2.5 px-3 border-b border-slate-50 text-right"><span className="font-mono text-xs font-bold text-slate-900">{fmt(sale.total_sellprice)}</span></td>
                     <td className="p-2.5 px-3 border-b border-slate-50">{(() => { const cfg = STATUS_CFG[sale.status as SaleStatus] || STATUS_CFG["Pending"]; return <Badge cls={cfg.cls} dot={cfg.dot} label={sale.status} />; })()}</td>
                     <td className="p-2.5 px-3 border-b border-slate-50 text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        <button className="w-7 h-7 flex items-center justify-center rounded-lg bg-transparent text-slate-400 hover:bg-blue-50 hover:text-blue-600 transition-colors cursor-pointer" onClick={() => openDetail(sale)} title="View details"><Eye size={14} /></button>
-                        <button className={`w-7 h-7 flex items-center justify-center rounded-lg bg-transparent transition-colors cursor-pointer ${returnable ? "text-red-400 hover:bg-red-50 hover:text-red-600" : "text-slate-200 cursor-not-allowed"}`} onClick={() => returnable && openReturn(sale)} disabled={!returnable} title={!returnable ? (sale.origin === "Sales Return" ? "Already returned" : `Status: ${sale.status}`) : "Process return"}>
-                          <RotateCcw size={14} />
-                        </button>
-                      </div>
+                      <ChevronRight size={14} className={`transition-all duration-200 ${isSelected ? "text-blue-500 rotate-90" : "text-slate-300 group-hover:text-blue-500"}`} />
                     </td>
                   </tr>
                 );

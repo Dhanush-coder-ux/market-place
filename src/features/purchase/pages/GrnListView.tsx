@@ -5,6 +5,7 @@ import {
   Copy, Check, Truck
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useHeader } from "@/context/HeaderContext";
 
 import { FloatingFormCard } from "@/components/common/FloatingFormCard";
 import GrnHeader from "../components/GrnHeader";
@@ -108,8 +109,8 @@ const toGrnShape = (p: PurchaseRecord) => {
 };
 
 /* ================= GRID CARD ================= */
-const GridCard = ({ row, onClick, onReceive }: { row: ReturnType<typeof toGrnShape>; onClick: () => void; onReceive: (e: React.MouseEvent) => void }) => (
-  <div onClick={onClick} className="bg-white rounded-lg border border-zinc-200 shadow-sm overflow-hidden flex flex-col cursor-pointer hover:-translate-y-0.5 hover:shadow-md transition-all">
+const GridCard = ({ row, selected, onClick }: { row: ReturnType<typeof toGrnShape>; selected?: boolean; onClick: () => void }) => (
+  <div onClick={onClick} className={`rounded-lg border shadow-sm overflow-hidden flex flex-col cursor-pointer transition-all ${selected ? "bg-blue-50 border-blue-400 ring-2 ring-blue-500/20" : "bg-white border-zinc-200 hover:-translate-y-0.5 hover:shadow-md"}`}>
     <div className="px-4 py-3.5 border-b border-zinc-100 bg-zinc-50/50 flex items-center justify-between gap-3">
       <div className="flex items-center gap-2 min-w-0">
         <div className="w-7 h-7 rounded-md bg-blue-50 flex items-center justify-center shrink-0">
@@ -173,17 +174,8 @@ const GridCard = ({ row, onClick, onReceive }: { row: ReturnType<typeof toGrnSha
         </div>
       </div>
       <div className="flex items-center gap-1">
-        {(row.status === "Pending" || row.status === "Partial") && (
-          <button
-            onClick={onReceive}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-bold   text-blue-600 bg-blue-50 border border-blue-100 rounded-lg hover:bg-blue-100 transition-all mr-1"
-          >
-            <Truck size={12} />
-            Receive Items
-          </button>
-        )}
-        <button onClick={(e) => { e.stopPropagation(); onClick(); }} className="w-8 h-8 flex items-center justify-center rounded-lg text-zinc-400 hover:text-blue-600 hover:bg-blue-50 transition-all">
-          <Eye size={15} />
+        <button onClick={(e) => { e.stopPropagation(); onClick(); }} className={`w-8 h-8 flex items-center justify-center rounded-lg transition-all ${selected ? "text-blue-600 bg-white shadow-sm" : "text-zinc-400 hover:text-blue-600 hover:bg-blue-50"}`}>
+          <ArrowRight size={15} className={selected ? "rotate-90" : ""} />
         </button>
       </div>
     </div>
@@ -191,7 +183,7 @@ const GridCard = ({ row, onClick, onReceive }: { row: ReturnType<typeof toGrnSha
 );
 
 /* ================= VERTICAL TABLE ================= */
-const VerticalTable = ({ data, onClick, onReceive }: { data: ReturnType<typeof toGrnShape>[]; onClick: (row: any) => void; onReceive: (id: string) => void }) => (
+const VerticalTable = ({ data, selectedId, onClick }: { data: ReturnType<typeof toGrnShape>[]; selectedId: string | null; onClick: (row: any) => void }) => (
   <div className="bg-white rounded-lg border border-zinc-200 shadow-sm overflow-hidden">
     <div className="overflow-x-auto pf-scroll">
       <table className="w-full text-left border-collapse whitespace-nowrap">
@@ -203,8 +195,10 @@ const VerticalTable = ({ data, onClick, onReceive }: { data: ReturnType<typeof t
           </tr>
         </thead>
         <tbody className="divide-y divide-zinc-100">
-          {data.map((row) => (
-            <tr key={row.id} onClick={() => onClick(row)} className="cursor-pointer hover:bg-zinc-50/60 transition-colors">
+          {data.map((row) => {
+            const isSelected = selectedId === row.id;
+            return (
+            <tr key={row.id} onClick={() => onClick(row)} className={`cursor-pointer transition-colors ${isSelected ? "bg-blue-50 border-l-2 border-l-blue-500" : "hover:bg-zinc-50/60"}`}>
               <td className="px-6 py-5">
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-md bg-blue-50 flex items-center justify-center shrink-0"><FileText size={14} className="text-blue-600" /></div>
@@ -224,21 +218,10 @@ const VerticalTable = ({ data, onClick, onReceive }: { data: ReturnType<typeof t
               <td className="px-6 py-5 text-right text-[13px] font-black text-slate-800 tabular-nums">{row.itemsCount}</td>
               <td className="px-6 py-5 text-right text-[15px] font-black text-blue-600 tabular-nums">₹{row.totalValue.toLocaleString()}</td>
               <td className="px-6 py-5 text-right">
-                <div className="flex items-center justify-end gap-2">
-                  {(row.status === "Pending" || row.status === "Partial") && (
-                    <button
-                      onClick={(e) => { e.stopPropagation(); onReceive(row.id); }}
-                      className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-black text-blue-600 bg-blue-50 border border-blue-100 rounded-lg hover:bg-blue-100 transition-all shadow-sm"
-                    >
-                      <Truck size={12} />
-                      Receive
-                    </button>
-                  )}
-                  <button onClick={(e) => { e.stopPropagation(); onClick(row); }} className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-all"><ArrowRight size={15} /></button>
-                </div>
+                <ArrowRight size={15} className={`transition-all duration-200 ${isSelected ? "text-blue-500 rotate-90" : "text-zinc-300 hover:text-blue-500"}`} />
               </td>
             </tr>
-          ))}
+          )})}
         </tbody>
       </table>
     </div>
@@ -253,7 +236,9 @@ const GRNCardView = () => {
   const [search, setSearch] = useState("");
   const [viewMode, setViewMode] = useState<ViewMode>("vertical");
   const [selectedGRN, setSelectedGRN] = useState<ReturnType<typeof toGrnShape> | null>(null);
+  const [viewingGRN, setViewingGRN] = useState<ReturnType<typeof toGrnShape> | null>(null);
   const [refreshKey] = useState(0);
+  const { setBottomActions } = useHeader();
 
   const handleReceive = (id: string) => {
     navigate(`/po-grn/update?poId=${id}`);
@@ -264,6 +249,50 @@ const GRNCardView = () => {
       if (res) setPurchases(Array.isArray(res.data) ? res.data : [res.data]);
     });
   }, [refreshKey]);
+
+  useEffect(() => {
+    if (selectedGRN) {
+      setBottomActions(
+        <div className="flex items-center justify-between w-full animate-in fade-in slide-in-from-right-4 duration-300">
+          <div className="flex items-center gap-3">
+            <div className="w-7 h-7 rounded-md bg-blue-500 text-white flex items-center justify-center text-[10px] font-black shrink-0">
+              <FileText size={14} />
+            </div>
+            <div>
+              <p className="text-[12px] font-bold text-slate-800 leading-tight">{selectedGRN.poReference}</p>
+              <p className="text-[10px] font-semibold text-slate-400 font-mono">{selectedGRN.supplier}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setSelectedGRN(null)}
+              className="h-8 px-3 rounded-md border border-slate-200 bg-white hover:bg-slate-50 text-slate-500 font-semibold text-[11px] transition-colors"
+            >
+              Deselect
+            </button>
+            {(selectedGRN.status === "Pending" || selectedGRN.status === "Partial") && (
+              <button
+                onClick={() => handleReceive(selectedGRN.id)}
+                className="h-8 px-3 rounded-md border border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-[11px] transition-colors flex items-center gap-1.5"
+              >
+                <Truck size={13} />
+                Receive Items
+              </button>
+            )}
+            <button
+              onClick={() => setViewingGRN(selectedGRN)}
+              className="h-8 px-4 rounded-md bg-blue-600 hover:bg-blue-700 text-white font-semibold text-[11px] transition-colors flex items-center gap-1.5"
+            >
+              <Eye size={13} />
+              View Details
+            </button>
+          </div>
+        </div>
+      );
+    } else {
+      setBottomActions(null);
+    }
+  }, [selectedGRN, setBottomActions, handleReceive]);
 
   const records = purchases.map(toGrnShape);
 
@@ -316,25 +345,25 @@ const GRNCardView = () => {
               <GridCard
                 key={row.id}
                 row={row}
-                onClick={() => setSelectedGRN(row)}
-                onReceive={(e) => { e.stopPropagation(); handleReceive(row.id); }}
+                selected={selectedGRN?.id === row.id}
+                onClick={() => setSelectedGRN(prev => prev?.id === row.id ? null : row)}
               />
             ))}
           </div>
         ) : (
           <VerticalTable
             data={filtered}
-            onClick={(row) => setSelectedGRN(row)}
-            onReceive={handleReceive}
+            selectedId={selectedGRN?.id || null}
+            onClick={(row) => setSelectedGRN(prev => prev?.id === row.id ? null : row)}
           />
         )}
       </div>
 
-      <FloatingFormCard isOpen={!!selectedGRN} onClose={() => setSelectedGRN(null)} title={selectedGRN ? `GRN Details: ${selectedGRN.poReference}` : "Details"} maxWidth="max-w-2xl">
-        {selectedGRN && (
+      <FloatingFormCard isOpen={!!viewingGRN} onClose={() => setViewingGRN(null)} title={viewingGRN ? `GRN Details: ${viewingGRN.poReference}` : "Details"} maxWidth="max-w-2xl">
+        {viewingGRN && (
           <div className="space-y-6">
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 bg-zinc-50 p-4 rounded-lg border border-zinc-100">
-              {[["Supplier", selectedGRN.supplier], ["Date", selectedGRN.date], ["Status", selectedGRN.status], ["Total Value", `₹${selectedGRN.totalValue.toLocaleString()}`]].map(([label, value]) => (
+              {[["Supplier", viewingGRN.supplier], ["Date", viewingGRN.date], ["Status", viewingGRN.status], ["Total Value", `₹${viewingGRN.totalValue.toLocaleString()}`]].map(([label, value]) => (
                 <div key={label}><p className="text-[10px] font-bold   text-zinc-400 mb-1">{label}</p><p className="text-sm font-semibold text-zinc-800">{value}</p></div>
               ))}
             </div>
@@ -342,12 +371,12 @@ const GRNCardView = () => {
               <div className="flex items-center gap-2 mb-3 border-b border-zinc-100 pb-2">
                 <Package size={16} className="text-zinc-400" />
                 <h3 className="heading-label text-zinc-800">Pending / Remaining Items</h3>
-                <span className="text-xs font-semibold text-zinc-500 bg-zinc-100 px-2 py-0.5 rounded-full ml-auto">{selectedGRN.itemsCount} Remaining Units</span>
+                <span className="text-xs font-semibold text-zinc-500 bg-zinc-100 px-2 py-0.5 rounded-full ml-auto">{viewingGRN.itemsCount} Remaining Units</span>
               </div>
               <div className="space-y-2 max-h-[40vh] overflow-y-auto pr-2">
-                {selectedGRN.products.length === 0
+                {viewingGRN.products.length === 0
                   ? <p className="text-sm text-zinc-400 text-center py-4">No items recorded</p>
-                  : selectedGRN.products.map((product: any, idx: number) => (
+                  : viewingGRN.products.map((product: any, idx: number) => (
                     <div key={idx} className="flex flex-col p-3 rounded-lg border border-zinc-200 bg-white shadow-sm hover:border-blue-200 transition-colors">
                       <div className="flex items-start justify-between mb-3 border-b border-zinc-50 pb-2">
                         <div>
@@ -456,16 +485,16 @@ const GRNCardView = () => {
               </div>
             </div>
             <div className="flex justify-end gap-3 pt-4 border-t border-zinc-100">
-              {(selectedGRN.status === "Pending" || selectedGRN.status === "Partial") && (
+              {(viewingGRN.status === "Pending" || viewingGRN.status === "Partial") && (
                 <button
-                  onClick={() => handleReceive(selectedGRN.id)}
+                  onClick={() => handleReceive(viewingGRN.id)}
                   className="flex items-center gap-2 px-4 py-2 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-all"
                 >
                   <Truck size={16} />
                   Continue Receipt
                 </button>
               )}
-              <button onClick={() => setSelectedGRN(null)} className="px-4 py-2 text-sm font-semibold text-zinc-600 bg-white border border-zinc-200 hover:bg-zinc-50 rounded-lg transition-colors">Close</button>
+              <button onClick={() => setViewingGRN(null)} className="px-4 py-2 text-sm font-semibold text-zinc-600 bg-white border border-zinc-200 hover:bg-zinc-50 rounded-lg transition-colors">Close</button>
             </div>
           </div>
         )}

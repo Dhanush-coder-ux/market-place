@@ -140,7 +140,7 @@ const totalGst = po.products.reduce((sum, item) => {
   let gst = 0;
 
   if (typeof item.gst === "string") {
-    gst = parseFloat(item.gst.replace("%", ""));
+    gst = parseFloat(String(item.gst).replace("%", ""));
   } else {
     gst = Number(item.gst ?? 0);
   }

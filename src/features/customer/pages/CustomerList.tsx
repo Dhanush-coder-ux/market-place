@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback } from "react";
+﻿import { useState, useMemo, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Search, Users, Bookmark, Filter,
@@ -17,7 +17,7 @@ const fmt = (n: number) => `₹${n.toLocaleString("en-IN")}`;
 
 const CustomerList = () => {
   const navigate = useNavigate();
-  const { setActions } = useHeader();
+  const { setActions, setBottomActions } = useHeader();
   const { getData } = useApi();
 
   /* ── State ── */
@@ -92,6 +92,54 @@ const CustomerList = () => {
 
   const activeFilters = [fromDate, toDate].filter(Boolean).length;
   const clearAll = () => { setFromDate(""); setToDate(""); setSearchTerm(""); };
+
+  /* ── Row Selection ── */
+  const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
+
+  const handleRowClick = (customer: any) => {
+    setSelectedCustomer((prev: any) => prev?.id === customer.id ? null : customer);
+  };
+
+  useEffect(() => {
+    if (selectedCustomer) {
+      setBottomActions(
+        <div className="flex items-center justify-between w-full animate-in fade-in slide-in-from-right-4 duration-300">
+          <div className="flex items-center gap-3">
+            <div className="w-7 h-7 rounded-md bg-blue-500 text-white flex items-center justify-center text-[10px] font-black shrink-0">
+              {(selectedCustomer.name || "?").split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2)}
+            </div>
+            <div>
+              <p className="text-[12px] font-bold text-slate-800 leading-tight">{selectedCustomer.name || "Unknown"}</p>
+              <p className="text-[10px] font-semibold text-slate-400 font-mono">{selectedCustomer.ui_id || selectedCustomer.id?.slice(0, 8)}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setSelectedCustomer(null)}
+              className="h-8 px-3 rounded-md border border-slate-200 bg-white hover:bg-slate-50 text-slate-500 font-semibold text-[11px] transition-colors"
+            >
+              Deselect
+            </button>
+            <button
+              onClick={() => navigate(`/customers/${selectedCustomer.id}/edit`)}
+              className="h-8 px-3 rounded-md border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-[11px] transition-colors"
+            >
+              Edit
+            </button>
+            <button
+              onClick={() => navigate(`/customers/${selectedCustomer.id}`)}
+              className="h-8 px-4 rounded-md bg-blue-600 hover:bg-blue-700 text-white font-semibold text-[11px] transition-colors flex items-center gap-1.5"
+            >
+              <ChevronRight size={13} />
+              View Details
+            </button>
+          </div>
+        </div>
+      );
+    } else {
+      setBottomActions(null);
+    }
+  }, [selectedCustomer, setBottomActions, navigate]);
 
   return (
     <div className="flex-1 flex flex-col min-h-0 gap-2.5 font-sans w-full overflow-hidden relative">
@@ -230,6 +278,7 @@ const CustomerList = () => {
               ) : (
                 customers.map((c: any, idx: number) => {
                   const isLast = idx === customers.length - 1;
+                  const isSelected = selectedCustomer?.id === c.id;
                   const name = c.name || "Unknown";
                   const initials = name.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2);
                   const outstanding = c.outstanding || 0;
@@ -239,12 +288,15 @@ const CustomerList = () => {
                     <tr
                       key={c.id}
                       ref={isLast ? lastElementRef : undefined}
-                      onClick={() => navigate(`/customers/${c.id}`)}
-                      className="group cursor-pointer hover:bg-blue-50/30 transition-colors"
+                      onClick={() => handleRowClick(c)}
+                      className={`group cursor-pointer transition-colors ${isSelected
+                        ? "bg-blue-50 border-l-2 border-l-blue-500"
+                        : "hover:bg-blue-50/30"
+                        }`}
                     >
                       <td className="py-3 px-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center text-[11px] font-black shrink-0">
+                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-[11px] font-black shrink-0 transition-colors ${isSelected ? "bg-blue-500 text-white" : "bg-blue-100 text-blue-600"}`}>
                             {initials}
                           </div>
                           <div className="min-w-0">
@@ -278,7 +330,7 @@ const CustomerList = () => {
                         <span className="text-[11px] font-semibold text-slate-500">{createdDate}</span>
                       </td>
                       <td className="py-3 px-4">
-                        <ChevronRight size={14} className="text-slate-300 group-hover:text-blue-500 transition-colors" />
+                        <ChevronRight size={14} className={`transition-all duration-200 ${isSelected ? "text-blue-500 rotate-90" : "text-slate-300 group-hover:text-blue-500"}`} />
                       </td>
                     </tr>
                   );

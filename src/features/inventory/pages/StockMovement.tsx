@@ -1,11 +1,11 @@
 import React, { useState, useMemo, useEffect, useCallback } from "react";
 import {
-  Search, Eye,
+  Search,
   X, ArrowUp, ArrowDown,
   User, TrendingUp, TrendingDown, Activity,
   Bookmark, Filter,
   FileText, Layers, Hash, Zap, Copy, ExternalLink,
-  ChevronDown, ChevronRight, Package, ShoppingBag
+  ChevronRight, Package, ShoppingBag
 } from "lucide-react";
 
 import { GradientButton } from "@/components/ui/GradientButton";
@@ -176,16 +176,43 @@ function DetailDrawer({ movement, onClose }: DetailDrawerProps) {
                           </span>
                         </div>
                         {hasSpec && (
-                          <div className="flex flex-wrap gap-1 mt-2 pt-2 border-t border-slate-200/50">
-                            {p.variant && <span className="px-1.5 py-0.2 rounded bg-violet-50 text-violet-650 border border-violet-100 text-[8px] font-bold">V: {p.variant}</span>}
-                            {p.batch && <span className="px-1.5 py-0.2 rounded bg-amber-50 text-amber-650 border border-amber-100 text-[8px] font-bold">B: {p.batch}</span>}
+                          <div className="flex flex-col gap-2 mt-2 pt-2 border-t border-slate-200/50">
+                            {p.variant && (
+                              <div className="pl-2.5 border-l-2 border-violet-200">
+                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-violet-50 text-violet-700 border border-violet-100 text-[9px] font-black">
+                                  Variant: {p.variant}
+                                </span>
+                              </div>
+                            )}
+                            {p.batch && (
+                              <div className="pl-2.5 border-l-2 border-amber-200">
+                                <div className="bg-white border border-slate-100 rounded p-2 shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
+                                  <div className="flex justify-between items-center">
+                                    <span className="text-[10px] font-bold text-slate-800">Batch: {p.batch}</span>
+                                    <span className={`text-[10px] font-black ${p.qty > 0 ? 'text-emerald-600' : 'text-rose-600'}`}>Qty: {p.qty}</span>
+                                  </div>
+                                  {(p.expiry_date || p.manufacturing_date) && (
+                                    <div className="flex gap-3 text-[9px] text-slate-400 mt-1 font-medium">
+                                      {p.manufacturing_date && <span>MFG: {fmtDate(p.manufacturing_date)}</span>}
+                                      {p.expiry_date && <span>EXP: {fmtDate(p.expiry_date)}</span>}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            )}
                             {p.serial_numbers && p.serial_numbers.length > 0 && (
-                              <div className="flex flex-wrap gap-0.5 items-center">
-                                <span className="text-[8px] text-slate-400 font-bold mr-0.5">SN:</span>
-                                {p.serial_numbers.slice(0, 2).map((sn: string, sIdx: number) => (
-                                  <span key={sIdx} className="text-[8px] font-mono text-slate-500 bg-white border border-slate-100 px-1 rounded">{sn}</span>
-                                ))}
-                                {p.serial_numbers.length > 2 && <span className="text-[8px] font-bold text-slate-400">+{p.serial_numbers.length - 2}</span>}
+                              <div className="pl-2.5 border-l-2 border-blue-200">
+                                <div className="bg-white border border-slate-100 rounded p-2 shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
+                                  <p className="text-[9px] font-black text-slate-400 mb-1.5 uppercase tracking-wider flex items-center gap-1">
+                                    Serial Numbers 
+                                    <span className="bg-slate-100 text-slate-500 px-1 rounded-full text-[8px]">{p.serial_numbers.length}</span>
+                                  </p>
+                                  <div className="flex flex-wrap gap-1">
+                                    {p.serial_numbers.map((sn: string, sIdx: number) => (
+                                      <span key={sIdx} className="text-[9px] font-mono text-slate-600 bg-slate-50 border border-slate-200 px-1.5 py-0.5 rounded font-bold">{sn}</span>
+                                    ))}
+                                  </div>
+                                </div>
                               </div>
                             )}
                           </div>
@@ -431,24 +458,13 @@ export default function StockMovementPage() {
 
   const { showToast } = useToast();
 
-  const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
-  const toggleExpand = (rowKey: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setExpandedRows((prev) => ({
-      ...prev,
-      [rowKey]: !prev[rowKey],
-    }));
-  };
-
   const copyToClipboard = (e: React.MouseEvent, text: string) => {
     e.stopPropagation();
     navigator.clipboard.writeText(text);
     showToast("Copied to clipboard!", "success");
   };
 
-  const handleMovementClick = (m: Movement) => {
-    navigate(`/stock-movement/${encodeURIComponent(m.fullId || m.id)}`);
-  };
+
 
   // Dynamic Column State
   const [availableKeys] = useState<string[]>(["source", "destination", "user", "notes"]);
@@ -491,6 +507,48 @@ export default function StockMovementPage() {
     );
     return () => setActions(null);
   }, [setActions, navigate, isCleanMode]);
+
+  const { setBottomActions } = useHeader();
+  const [selectedItem, setSelectedItem] = useState<Movement | null>(null);
+
+  useEffect(() => {
+    if (selectedItem) {
+      setBottomActions(
+        <div className="flex items-center justify-between w-full animate-in fade-in slide-in-from-right-4 duration-300">
+          <div className="flex items-center gap-3">
+            <div className="w-7 h-7 rounded-md bg-blue-500 text-white flex items-center justify-center text-[10px] font-black shrink-0">
+              <Activity size={14} />
+            </div>
+            <div>
+              <p className="text-[12px] font-bold text-slate-800 leading-tight">
+                {selectedItem.product || "N/A"}
+              </p>
+              <p className="text-[10px] font-semibold text-slate-400 font-mono">
+                {selectedItem.id || selectedItem.sku || "No ID"}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setSelectedItem(null)}
+              className="h-8 px-3 rounded-md border border-slate-200 bg-white hover:bg-slate-50 text-slate-500 font-semibold text-[11px] transition-colors"
+            >
+              Deselect
+            </button>
+            <button
+              onClick={() => setSelected(selectedItem)}
+              className="h-8 px-4 rounded-md bg-blue-600 hover:bg-blue-700 text-white font-semibold text-[11px] transition-colors flex items-center gap-1.5"
+            >
+              <ChevronRight size={13} />
+              View Details
+            </button>
+          </div>
+        </div>
+      );
+    } else {
+      setBottomActions(null);
+    }
+  }, [selectedItem, setBottomActions, setSelected]);
 
   const fetchPage = useCallback(async (limit: number, offset: number, filters: any) => {
       const params: any = { view: "STOCKADJUSTMENT_VIEW", shop_id: SHOP_ID, limit: limit.toString(), offset: offset.toString() };
@@ -912,8 +970,6 @@ export default function StockMovementPage() {
               ) : pageData.map((m, idx) => {
                 const hasList = m.productsList && m.productsList.length > 1;
                 const rowKey = `${m.id}-${idx}`;
-                const isExpanded = !!expandedRows[rowKey];
-                
                 const totalQty = hasList
                   ? m.productsList!.reduce((sum, p) => sum + p.qty, 0)
                   : m.qty;
@@ -944,8 +1000,10 @@ export default function StockMovementPage() {
                   <React.Fragment key={rowKey}>
                     <tr
                       ref={idx === pageData.length - 1 ? lastElementRef : null}
-                      className="group hover:bg-blue-50/30 transition-all cursor-pointer border-b border-slate-100 last:border-b-0 even:bg-slate-50/20"
-                      onClick={() => handleMovementClick(m)}
+                      className={`group transition-all cursor-pointer border-b border-slate-100 last:border-b-0 ${
+                        selectedMvt?.id === m.id ? "bg-blue-50 border-l-2 border-l-blue-500" : "hover:bg-blue-50/30 even:bg-slate-50/20"
+                      }`}
+                      onClick={() => setSelected(prev => prev?.id === m.id ? null : m)}
                     >
                       <td className="px-4 py-3 align-middle border-r border-slate-100 last:border-r-0">
                         <div className="flex items-center gap-3 min-w-0">
@@ -985,11 +1043,14 @@ export default function StockMovementPage() {
                               )}
                               {hasList ? (
                                 <button
-                                  onClick={(e) => toggleExpand(rowKey, e)}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelected(m);
+                                  }}
                                   className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] font-extrabold bg-blue-50 text-blue-600 border border-blue-100 hover:bg-blue-100 transition-colors shrink-0 shadow-sm"
-                                  title={isExpanded ? "Collapse Items" : "Expand Items"}
+                                  title="View Items"
                                 >
-                                  {isExpanded ? <ChevronDown size={10} strokeWidth={3} /> : <ChevronRight size={10} strokeWidth={3} />}
+                                  <ChevronRight size={10} strokeWidth={3} />
                                   <span>+ {m.productsList!.length - 1} more</span>
                                 </button>
                               ) : (
@@ -1047,71 +1108,11 @@ export default function StockMovementPage() {
                     </div>
                   </td>
                   <td className="px-4 py-3 text-center align-middle w-14">
-                    <button
-                      onClick={(e) => { e.stopPropagation(); handleMovementClick(m); }}
-                      className="p-1.5 text-slate-300 hover:text-blue-600 hover:bg-blue-50/50 rounded-lg transition-all active:scale-95"
-                    >
-                      <Eye size={15} />
-                    </button>
+                    <ChevronRight size={14} className={`mx-auto transition-all duration-200 ${selectedMvt?.id === m.id ? "text-blue-500 rotate-90" : "text-slate-300 group-hover:text-blue-500"}`} />
                   </td>
                 </tr>
 
-                {/* Expanded Sub-table */}
-                {hasList && isExpanded && (
-                  <tr className="bg-slate-50/30 border-b border-slate-100" onClick={(e) => e.stopPropagation()}>
-                    <td colSpan={selectedKeys.length + 6} className="p-0">
-                      <div className="ml-14 mr-6 my-3 border border-slate-100 rounded-lg bg-white p-4 shadow-sm space-y-3 animate-in slide-in-from-top-2 duration-300">
-                        <div className="flex items-center gap-1.5 border-b border-slate-55 pb-2 mb-2">
-                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Adjustment Transaction Details</span>
-                        </div>
-                        <table className="w-full text-left border-collapse text-[12px]">
-                          <thead>
-                            <tr className="text-[9px] font-black text-slate-400 tracking-wider uppercase border-b border-slate-100">
-                              <th className="py-2 px-3">Product Item</th>
-                              <th className="py-2 px-3 text-center">Stock In / Out</th>
-                              <th className="py-2 px-3 text-center">Stock After</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-slate-50">
-                            {m.productsList!.map((p: any, pIdx: number) => {
-                              const pStockVal = p.stocks_before !== null && p.stocks_before !== undefined
-                                ? (p.stocks_before + p.qty)
-                                : null;
-                              return (
-                                <tr key={pIdx} className="hover:bg-slate-50/30">
-                                  <td className="py-2.5 px-3">
-                                    <div className="flex flex-col gap-0.5">
-                                      <span className="font-semibold text-slate-800">{p.name}</span>
-                                      <div className="flex flex-wrap gap-1 mt-0.5">
-                                        {p.variant && <span className="px-1.5 py-0.2 rounded bg-violet-50 text-violet-650 border border-violet-100 text-[8px] font-bold">V: {p.variant}</span>}
-                                        {p.batch && <span className="px-1.5 py-0.2 rounded bg-amber-50 text-amber-655 border border-amber-100 text-[8px] font-bold">B: {p.batch}</span>}
-                                        {p.serial_numbers && p.serial_numbers.length > 0 && (
-                                          <div className="flex flex-wrap gap-1">
-                                            <span className="text-[8px] text-slate-400 font-bold">SN: </span>
-                                            {p.serial_numbers.slice(0, 2).map((s: string, si: number) => (
-                                              <span key={si} className="text-[8px] font-mono text-slate-500">{s}{si === 0 && p.serial_numbers.length > 1 ? ',' : ''}</span>
-                                            ))}
-                                            {p.serial_numbers.length > 2 && <span className="text-[8px] font-bold text-slate-400">+{p.serial_numbers.length - 2}</span>}
-                                          </div>
-                                        )}
-                                      </div>
-                                    </div>
-                                  </td>
-                                  <td className="py-2.5 px-3 text-center font-black">
-                                    <span className={p.qty > 0 ? 'text-emerald-600' : 'text-rose-600'}>
-                                      {p.qty > 0 ? `+${p.qty}` : p.qty}
-                                    </span>
-                                  </td>
-                                  <td className="py-2.5 px-3 text-center font-bold text-blue-600">{pStockVal !== null ? pStockVal : '—'}</td>
-                                </tr>
-                              );
-                            })}
-                          </tbody>
-                        </table>
-                      </div>
-                    </td>
-                  </tr>
-                )}
+
               </React.Fragment>
             );
           })}

@@ -1,6 +1,131 @@
-import { ArrowUp, ArrowDown, ShoppingCart, TrendingUp, RefreshCcw, FileText, ArrowRight, Banknote, Eye, ChevronDown, ChevronRight } from "lucide-react";
+import { ArrowUp, ArrowDown, ShoppingCart, TrendingUp, RefreshCcw, FileText, ArrowRight, Banknote, Eye, ChevronRight, X, Layers, Hash, Zap } from "lucide-react";
 import { TypeBadge } from "@/components/common/SuperUI";
 import { useState, Fragment } from "react";
+import { createPortal } from "react-dom";
+
+export function GroupedItemsDrawer({
+  record,
+  onClose,
+  type = 'purchase'
+}: {
+  record: any;
+  onClose: () => void;
+  type?: 'purchase' | 'supplier_purchase' | 'adjustment';
+}) {
+  if (!record || !record.productsList) return null;
+  const isAdjustment = type === 'adjustment';
+
+  return createPortal(
+    <div className="fixed inset-0 z-[100] flex justify-end" onClick={onClose}>
+      <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity" />
+      <div
+        className="relative w-full max-w-md bg-white border-l border-slate-200 h-full overflow-y-auto shadow-2xl flex flex-col animate-in slide-in-from-right duration-300"
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-white/80 sticky top-0 z-20 backdrop-blur-md">
+          <div>
+            <h3 className="text-sm font-bold text-slate-800 tracking-tight">Grouped Items Details</h3>
+            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">
+              {isAdjustment ? 'Stock Movement' : (record.uiId ? `Purchase #${record.uiId}` : 'Purchase Details')}
+            </p>
+          </div>
+          <button onClick={onClose} className="p-2 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-all border border-transparent hover:border-slate-200">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="flex-1 p-6 space-y-4 bg-slate-50/30">
+          <div className="space-y-3">
+            {record.productsList.map((p: any, idx: number) => {
+              const isReturn = record.type === 'RETURN';
+              const isDec = isAdjustment ? !record.isInc : isReturn;
+              let stockVal: number | null = null;
+              
+              if (p.stocksBefore !== null && p.stocksBefore !== undefined) {
+                if (isAdjustment) {
+                  stockVal = p.stocksBefore + (record.isInc ? p.receivedStocks : -p.receivedStocks);
+                } else {
+                  stockVal = p.stocksBefore + (isReturn ? -p.receivedStocks : p.receivedStocks);
+                }
+              }
+
+              const title = p.name || p.productName || record.productName || record.description || (p.variant ? `Variant: ${getVariantName(p.variant)}` : 'Standard Product');
+
+              return (
+                <div key={idx} className="bg-white border border-slate-100 rounded-xl p-4 shadow-sm hover:shadow-md transition-all">
+                  <div className="flex justify-between items-start gap-3 mb-3">
+                    <div>
+                      <p className="text-slate-800 font-bold text-[13px] leading-tight">{title}</p>
+                      {p.sku && <span className="text-[9px] font-mono text-slate-400 mt-0.5 block">SKU: {p.sku}</span>}
+                    </div>
+                    <div className="flex flex-col items-end shrink-0">
+                      <span className={`text-[13px] font-black tabular-nums ${isDec ? 'text-rose-600' : 'text-emerald-600'}`}>
+                        {isDec ? '-' : '+'}{p.receivedStocks}
+                      </span>
+                      {stockVal !== null && (
+                        <span className="text-[10px] font-bold text-blue-600 mt-0.5 tabular-nums">Stock: {stockVal}</span>
+                      )}
+                    </div>
+                  </div>
+                  
+                  {(p.variant || p.batch || (p.serials && p.serials.length > 0)) && (
+                    <div className="flex flex-wrap gap-1.5 pt-3 border-t border-slate-100">
+                      {p.variant && (
+                        <div className="flex items-center gap-1 px-2 py-0.5 rounded border bg-violet-50 text-violet-700 border-violet-100">
+                          <Layers size={10} />
+                          <span className="text-[9px] font-bold">{getVariantName(p.variant)}</span>
+                        </div>
+                      )}
+                      {p.batch && (
+                        <div className="flex items-center gap-1 px-2 py-0.5 rounded border bg-amber-50 text-amber-700 border-amber-100">
+                          <Hash size={10} />
+                          <span className="text-[9px] font-bold">{getBatchName(p.batch)}</span>
+                        </div>
+                      )}
+                      {p.serials && p.serials.length > 0 && (
+                        <div className="flex items-center gap-1 px-2 py-0.5 rounded border bg-emerald-50 text-emerald-700 border-emerald-100">
+                          <Zap size={10} />
+                          <span className="text-[9px] font-bold">{p.serials.length} Serials</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  
+                  {!isAdjustment && (p.buyPrice !== undefined || p.sellPrice !== undefined) && (
+                    <div className="flex items-center gap-6 mt-3 pt-3 border-t border-slate-100">
+                      {p.buyPrice !== undefined && (
+                        <div className="flex flex-col">
+                          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Buy Price</span>
+                          <span className="text-xs font-bold text-slate-700">₹{p.buyPrice}</span>
+                        </div>
+                      )}
+                      {p.sellPrice !== undefined && (
+                        <div className="flex flex-col">
+                          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Sell Price</span>
+                          <span className="text-xs font-bold text-emerald-600">₹{p.sellPrice}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+        
+        <div className="px-6 py-4 border-t border-slate-100 bg-white">
+          <button
+            onClick={onClose}
+            className="w-full h-10 rounded-lg bg-white border border-slate-200 text-slate-700 font-bold text-xs hover:bg-slate-50 transition-all shadow-sm active:scale-95"
+          >
+            Close Details
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
 
 const formatBatchDate = (dateStr?: string) => {
   if (!dateStr) return null;
@@ -98,14 +223,7 @@ interface StockMovementsTableProps {
 }
 
 export function StockMovementsTable({ rows, loading, onViewDetails }: StockMovementsTableProps) {
-  const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
-
-  const toggleExpand = (rowKey: string) => {
-    setExpandedRows((prev) => ({
-      ...prev,
-      [rowKey]: !prev[rowKey],
-    }));
-  };
+  const [selectedRecord, setSelectedRecord] = useState<any | null>(null);
 
   return (
     <div className="flex flex-col h-full min-h-0 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden animate-in fade-in duration-300">
@@ -141,8 +259,6 @@ export function StockMovementsTable({ rows, loading, onViewDetails }: StockMovem
                 {rows.map((r, i) => {
                   const hasList = r.productsList && r.productsList.length > 1;
                   const rowKey = `${r.id}-${i}`;
-                  const isExpanded = !!expandedRows[rowKey];
-                  
                   const totalStocksIn = hasList
                     ? r.productsList!.reduce((sum, p) => sum + p.receivedStocks, 0)
                     : (r.productsList?.[0]?.receivedStocks ?? r.receivedStocks);
@@ -199,17 +315,16 @@ export function StockMovementsTable({ rows, loading, onViewDetails }: StockMovem
                                   {(firstProd?.serials || r.serials)!.length > 2 && <span className="text-[9px] font-bold text-slate-400">+{(firstProd?.serials || r.serials)!.length - 2}</span>}
                                 </div>
                               )}
-                              
                               {hasList && (
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    toggleExpand(rowKey);
+                                    setSelectedRecord(r);
                                   }}
                                   className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] font-extrabold bg-blue-50 text-blue-600 border border-blue-100 hover:bg-blue-100 transition-colors shrink-0 shadow-sm"
-                                  title={isExpanded ? "Collapse Items" : "Expand Items"}
+                                  title="View Items"
                                 >
-                                  {isExpanded ? <ChevronDown size={10} strokeWidth={3} /> : <ChevronRight size={10} strokeWidth={3} />}
+                                  <ChevronRight size={10} strokeWidth={3} />
                                   <span>+ {r.productsList!.length - 1} more</span>
                                 </button>
                               )}
@@ -243,62 +358,6 @@ export function StockMovementsTable({ rows, loading, onViewDetails }: StockMovem
                         </td>
                       </tr>
 
-                      {/* Expanded Sub-table */}
-                      {hasList && isExpanded && (
-                        <tr className="bg-slate-50/30 border-b border-slate-100">
-                          <td colSpan={7} className="p-0">
-                            <div className="ml-14 mr-6 my-3 border border-slate-100 rounded-lg bg-white p-4 shadow-sm space-y-3 animate-in slide-in-from-top-2 duration-300">
-                              <div className="flex items-center gap-1.5 border-b border-slate-55 pb-2 mb-2">
-                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Adjustment Transaction Details</span>
-                              </div>
-                              <table className="w-full text-left border-collapse text-[12px]">
-                                <thead>
-                                  <tr className="text-[9px] font-black text-slate-400 tracking-wider uppercase border-b border-slate-100">
-                                    <th className="py-2 px-3">Product Item</th>
-                                    <th className="py-2 px-3 text-center">Stock In / Out</th>
-                                    <th className="py-2 px-3 text-center">Stock After</th>
-                                  </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-50">
-                                  {r.productsList!.map((p: any, pIdx: number) => {
-                                    const pStockVal = p.stocksBefore !== null && p.stocksBefore !== undefined
-                                      ? (p.stocksBefore + (r.isInc ? p.receivedStocks : -p.receivedStocks))
-                                      : null;
-                                    return (
-                                      <tr key={pIdx} className="hover:bg-slate-50/30">
-                                        <td className="py-2.5 px-3">
-                                          <div className="flex flex-col gap-0.5">
-                                            <span className="font-semibold text-slate-800">{p.name || r.description}</span>
-                                            <div className="flex flex-wrap gap-1 mt-0.5">
-                                              {p.variant && <span className="px-1.5 py-0.2 rounded bg-violet-50 text-violet-600 border border-violet-100 text-[8px] font-bold">V: {getVariantName(p.variant)}</span>}
-                                              {p.batch && <span className="px-1.5 py-0.2 rounded bg-amber-50 text-amber-700 border border-amber-100 text-[8px] font-bold">B: {getBatchName(p.batch)}</span>}
-                                              {p.serials && p.serials.length > 0 && (
-                                                <div className="flex flex-wrap gap-1">
-                                                  <span className="text-[8px] text-slate-400 font-bold">SN: </span>
-                                                  {p.serials.slice(0, 2).map((s: string, si: number) => (
-                                                    <span key={si} className="text-[8px] font-mono text-slate-500">{s}{si === 0 && p.serials.length > 1 ? ',' : ''}</span>
-                                                  ))}
-                                                  {p.serials.length > 2 && <span className="text-[8px] font-bold text-slate-400">+{p.serials.length - 2}</span>}
-                                                </div>
-                                              )}
-                                            </div>
-                                          </div>
-                                        </td>
-                                        <td className="py-2.5 px-3 text-center font-black text-emerald-600">
-                                          <span className={r.isInc ? 'text-emerald-600' : 'text-rose-600'}>
-                                            {r.isInc ? '+' : '-'}{p.receivedStocks}
-                                          </span>
-                                        </td>
-                                        <td className="py-2.5 px-3 text-center font-bold text-blue-600">{pStockVal !== null ? pStockVal : '—'}</td>
-                                      </tr>
-                                    );
-                                  })}
-                                </tbody>
-                              </table>
-                            </div>
-                          </td>
-                        </tr>
-                      )}
                     </Fragment>
                   );
                 })}
@@ -307,6 +366,7 @@ export function StockMovementsTable({ rows, loading, onViewDetails }: StockMovem
           </div>
         )}
       </div>
+      <GroupedItemsDrawer record={selectedRecord} onClose={() => setSelectedRecord(null)} type="adjustment" />
     </div>
   );
 }
@@ -319,14 +379,7 @@ interface ProductPurchasesTableProps {
 }
 
 export function ProductPurchasesTable({ rows, loading, onNavigateToPurchase }: ProductPurchasesTableProps) {
-  const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
-
-  const toggleExpand = (rowKey: string) => {
-    setExpandedRows((prev) => ({
-      ...prev,
-      [rowKey]: !prev[rowKey],
-    }));
-  };
+  const [selectedRecord, setSelectedRecord] = useState<any | null>(null);
 
   return (
     <div className="flex flex-col h-full min-h-0 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden animate-in fade-in duration-300">
@@ -365,7 +418,6 @@ export function ProductPurchasesTable({ rows, loading, onNavigateToPurchase }: P
                 {rows.map((r, i) => {
                   const hasList = r.productsList && r.productsList.length > 1;
                   const rowKey = `${r.id}-${i}`;
-                  const isExpanded = !!expandedRows[rowKey];
 
                   const totalStocksIn = hasList
                     ? r.productsList!.reduce((sum: number, p: any) => sum + p.receivedStocks, 0)
@@ -417,12 +469,12 @@ export function ProductPurchasesTable({ rows, loading, onNavigateToPurchase }: P
                               <button
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    toggleExpand(rowKey);
+                                    setSelectedRecord(r);
                                   }}
                                   className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] font-extrabold bg-indigo-50 text-indigo-600 border border-indigo-100 hover:bg-indigo-100 transition-colors shrink-0 shadow-sm"
-                                  title={isExpanded ? "Collapse Items" : "Expand Items"}
+                                  title="View Items"
                                 >
-                                  {isExpanded ? <ChevronDown size={10} strokeWidth={3} /> : <ChevronRight size={10} strokeWidth={3} />}
+                                  <ChevronRight size={10} strokeWidth={3} />
                                   <span>+ {r.productsList!.length - 1} more</span>
                                 </button>
                               </div>
@@ -495,62 +547,6 @@ export function ProductPurchasesTable({ rows, loading, onNavigateToPurchase }: P
                         </td>
                       </tr>
 
-                      {/* Expanded Sub-table */}
-                      {hasList && isExpanded && (
-                        <tr className="bg-slate-50/30 border-b border-slate-100">
-                          <td colSpan={12} className="p-0">
-                            <div className="ml-14 mr-6 my-3 border border-slate-100 rounded-lg bg-white p-4 shadow-sm space-y-3 animate-in slide-in-from-top-2 duration-300">
-                              <div className="flex items-center gap-1.5 border-b border-slate-55 pb-2 mb-2">
-                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Grouped Purchase Item Details</span>
-                              </div>
-                              <table className="w-full text-left border-collapse text-[12px]">
-                                <thead>
-                                  <tr className="text-[9px] font-black text-slate-400 tracking-wider uppercase border-b border-slate-100">
-                                    <th className="py-2 px-3">Variant / Batch Details</th>
-                                    <th className="py-2 px-3 text-center">Stock Received</th>
-                                    <th className="py-2 px-3 text-center">Stock After</th>
-                                    <th className="py-2 px-3">Buy Price</th>
-                                    <th className="py-2 px-3">Sell Price</th>
-                                  </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-50">
-                                  {r.productsList!.map((p: any, pIdx: number) => {
-                                    return (
-                                      <tr key={pIdx} className="hover:bg-slate-50/30">
-                                        <td className="py-2.5 px-3">
-                                          <div className="flex flex-col gap-0.5">
-                                            <span className="font-semibold text-slate-800">{p.variant ? `V: ${getVariantName(p.variant)}` : 'Standard Product'}</span>
-                                            <div className="flex flex-wrap gap-1 mt-0.5">
-                                              {p.batch && <span className="px-1.5 py-0.2 rounded bg-amber-50 text-amber-700 border border-amber-100 text-[8px] font-bold">B: {getBatchName(p.batch)}</span>}
-                                              {p.serials && p.serials.length > 0 && (
-                                                <div className="flex flex-wrap gap-1">
-                                                  <span className="text-[8px] text-slate-400 font-bold">SN: </span>
-                                                  {p.serials.slice(0, 2).map((s: string, si: number) => (
-                                                    <span key={si} className="text-[8px] font-mono text-slate-500">{s}{si === 0 && p.serials.length > 1 ? ',' : ''}</span>
-                                                  ))}
-                                                  {p.serials.length > 2 && <span className="text-[8px] font-bold text-slate-400">+{p.serials.length - 2}</span>}
-                                                </div>
-                                              )}
-                                            </div>
-                                          </div>
-                                        </td>
-                                        <td className="py-2.5 px-3 text-center font-black">
-                                          <span className={r.type === 'RETURN' ? 'text-rose-600' : 'text-emerald-600'}>
-                                            {r.type === 'RETURN' ? '-' : '+'}{p.receivedStocks}
-                                          </span>
-                                        </td>
-                                        <td className="py-2.5 px-3 text-center font-bold text-blue-600">{p.stocksBefore !== null && p.stocksBefore !== undefined ? (p.stocksBefore + p.receivedStocks) : '—'}</td>
-                                        <td className="py-2.5 px-3 font-semibold text-slate-700">₹{p.buyPrice ?? '—'}</td>
-                                        <td className="py-2.5 px-3 font-semibold text-emerald-750">₹{p.sellPrice ?? '—'}</td>
-                                      </tr>
-                                    );
-                                  })}
-                                </tbody>
-                              </table>
-                            </div>
-                          </td>
-                        </tr>
-                      )}
                     </Fragment>
                   );
                 })}
@@ -559,9 +555,11 @@ export function ProductPurchasesTable({ rows, loading, onNavigateToPurchase }: P
           </div>
         )}
       </div>
+      <GroupedItemsDrawer record={selectedRecord} onClose={() => setSelectedRecord(null)} type="purchase" />
     </div>
   );
 }
+
 
 // ─── SUPPLIER PURCHASES TABLE ──────────────────────────────────────────────────
 interface SupplierPurchasesTableProps {
@@ -571,14 +569,7 @@ interface SupplierPurchasesTableProps {
 }
 
 export function SupplierPurchasesTable({ rows, loading, onNavigateToPurchase }: SupplierPurchasesTableProps) {
-  const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
-
-  const toggleExpand = (rowKey: string) => {
-    setExpandedRows((prev) => ({
-      ...prev,
-      [rowKey]: !prev[rowKey],
-    }));
-  };
+  const [selectedRecord, setSelectedRecord] = useState<any | null>(null);
 
   return (
     <div className="flex flex-col h-full min-h-0 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden animate-in fade-in duration-300">
@@ -617,7 +608,6 @@ export function SupplierPurchasesTable({ rows, loading, onNavigateToPurchase }: 
                 {rows.map((r, i) => {
                   const hasList = r.productsList && r.productsList.length > 1;
                   const rowKey = `${r.purchaseId}-${i}`;
-                  const isExpanded = !!expandedRows[rowKey];
 
                   const totalStocksIn = hasList
                     ? r.productsList!.reduce((sum: number, p: any) => sum + p.receivedStocks, 0)
@@ -666,12 +656,12 @@ export function SupplierPurchasesTable({ rows, loading, onNavigateToPurchase }: 
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  toggleExpand(rowKey);
+                                  setSelectedRecord(r);
                                 }}
                                 className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] font-extrabold bg-indigo-50 text-indigo-600 border border-indigo-100 hover:bg-indigo-100 transition-colors shrink-0 shadow-sm"
-                                title={isExpanded ? "Collapse Items" : "Expand Items"}
+                                title="View Items"
                               >
-                                {isExpanded ? <ChevronDown size={10} strokeWidth={3} /> : <ChevronRight size={10} strokeWidth={3} />}
+                                <ChevronRight size={10} strokeWidth={3} />
                                 <span>+ {r.productsList!.length - 1} more</span>
                               </button>
                             </div>
@@ -746,63 +736,6 @@ export function SupplierPurchasesTable({ rows, loading, onNavigateToPurchase }: 
                         </td>
                       </tr>
 
-                      {/* Expanded Sub-table */}
-                      {hasList && isExpanded && (
-                        <tr className="bg-slate-50/30 border-b border-slate-100">
-                          <td colSpan={11} className="p-0">
-                            <div className="ml-14 mr-6 my-3 border border-slate-100 rounded-lg bg-white p-4 shadow-sm space-y-3 animate-in slide-in-from-top-2 duration-300">
-                              <div className="flex items-center gap-1.5 border-b border-slate-55 pb-2 mb-2">
-                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Grouped Purchase Item Details</span>
-                              </div>
-                              <table className="w-full text-left border-collapse text-[12px]">
-                                <thead>
-                                  <tr className="text-[9px] font-black text-slate-400 tracking-wider uppercase border-b border-slate-100">
-                                    <th className="py-2 px-3">Product Name & Variant Details</th>
-                                    <th className="py-2 px-3 text-center">Stock Received</th>
-                                    <th className="py-2 px-3 text-center">Stock After</th>
-                                    <th className="py-2 px-3">Buy Price</th>
-                                    <th className="py-2 px-3">Sell Price</th>
-                                  </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-50">
-                                  {r.productsList!.map((p: any, pIdx: number) => {
-                                    return (
-                                      <tr key={pIdx} className="hover:bg-slate-50/30">
-                                        <td className="py-2.5 px-3">
-                                          <div className="flex flex-col gap-0.5">
-                                            <span className="font-semibold text-slate-800">{p.productName || r.productName}</span>
-                                            <div className="flex flex-wrap gap-1 mt-0.5">
-                                              {p.variant && <span className="px-1.5 py-0.2 rounded bg-violet-50 text-violet-600 border border-violet-100 text-[8px] font-bold">V: {getVariantName(p.variant)}</span>}
-                                              {p.batch && <span className="px-1.5 py-0.2 rounded bg-amber-50 text-amber-700 border border-amber-100 text-[8px] font-bold">B: {getBatchName(p.batch)}</span>}
-                                              {p.serials && p.serials.length > 0 && (
-                                                <div className="flex flex-wrap gap-1">
-                                                  <span className="text-[8px] text-slate-400 font-bold">SN: </span>
-                                                  {p.serials.slice(0, 2).map((s: string, si: number) => (
-                                                    <span key={si} className="text-[8px] font-mono text-slate-500">{s}{si === 0 && p.serials.length > 1 ? ',' : ''}</span>
-                                                  ))}
-                                                  {p.serials.length > 2 && <span className="text-[8px] font-bold text-slate-400">+{p.serials.length - 2}</span>}
-                                                </div>
-                                              )}
-                                            </div>
-                                          </div>
-                                        </td>
-                                        <td className="py-2.5 px-3 text-center font-black">
-                                          <span className={r.type === 'RETURN' ? 'text-rose-600' : 'text-emerald-600'}>
-                                            {r.type === 'RETURN' ? '-' : '+'}{p.receivedStocks}
-                                          </span>
-                                        </td>
-                                        <td className="py-2.5 px-3 text-center font-bold text-blue-600">{p.stocksBefore !== null && p.stocksBefore !== undefined ? (p.stocksBefore + p.receivedStocks) : '—'}</td>
-                                        <td className="py-2.5 px-3 font-semibold text-slate-700">₹{p.buy_price ?? '—'}</td>
-                                        <td className="py-2.5 px-3 font-semibold text-emerald-750">₹{p.sell_price ?? '—'}</td>
-                                      </tr>
-                                    );
-                                  })}
-                                </tbody>
-                              </table>
-                            </div>
-                          </td>
-                        </tr>
-                      )}
                     </Fragment>
                   );
                 })}
@@ -811,6 +744,7 @@ export function SupplierPurchasesTable({ rows, loading, onNavigateToPurchase }: 
           </div>
         )}
       </div>
+      <GroupedItemsDrawer record={selectedRecord} onClose={() => setSelectedRecord(null)} type="supplier_purchase" />
     </div>
   );
 }
@@ -840,6 +774,8 @@ function LocalStatusBadge({ status }: { status: string }) {
 }
 
 export function CustomerPurchasesTable({ rows, loading, onNavigateToSale }: CustomerPurchasesTableProps) {
+  const [selectedRecord, setSelectedRecord] = useState<any | null>(null);
+
   return (
     <div className="flex flex-col h-full min-h-0 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden animate-in fade-in duration-300">
       <div className="flex-1 min-h-0 overflow-auto custom-scrollbar">
@@ -900,9 +836,35 @@ export function CustomerPurchasesTable({ rows, loading, onNavigateToSale }: Cust
                         {date}
                       </td>
                       <td className="px-5 py-4 whitespace-nowrap">
-                        <span className="px-2 py-0.5 rounded bg-slate-100 text-[10px] font-black text-slate-500">
-                          {itemCount} {unit}
-                        </span>
+                        <div className="flex flex-col items-start gap-1">
+                          <span className="px-2 py-0.5 rounded bg-slate-100 text-[10px] font-black text-slate-500">
+                            {itemCount} {unit}
+                          </span>
+                          {products.length > 0 && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedRecord({
+                                  uiId: order.ui_id || order.id.slice(0, 8).toUpperCase(),
+                                  type: order.type === 'Return' ? 'RETURN' : order.type,
+                                  productsList: products.map((p: any) => ({
+                                    name: p.product?.name || p.name || p.product_name,
+                                    receivedStocks: p.quantity || 0,
+                                    sellPrice: p.sellprice || p.price,
+                                    variant: p.variant || p.variant_details,
+                                    batch: p.batch || p.batch_details,
+                                    serials: p.serials || p.serial_info?.serial_numbers,
+                                  }))
+                                });
+                              }}
+                              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] font-extrabold bg-indigo-50 text-indigo-600 border border-indigo-100 hover:bg-indigo-100 transition-colors shadow-sm"
+                              title="View Items"
+                            >
+                              <ChevronRight size={10} strokeWidth={3} />
+                              <span>View Items</span>
+                            </button>
+                          )}
+                        </div>
                       </td>
                       <td className="px-5 py-4 whitespace-nowrap font-black text-sm text-slate-800 tabular-nums">
                         ₹{total.toLocaleString('en-IN')}
@@ -947,6 +909,7 @@ export function CustomerPurchasesTable({ rows, loading, onNavigateToSale }: Cust
           </div>
         )}
       </div>
+      <GroupedItemsDrawer record={selectedRecord} onClose={() => setSelectedRecord(null)} type="purchase" />
     </div>
   );
 }

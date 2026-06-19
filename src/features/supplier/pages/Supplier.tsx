@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Search, Trash2, X, Edit, Bookmark, Building2, Phone, Eye, ExternalLink, Filter } from "lucide-react";
+import { Search, X, Bookmark, Building2, Phone, ExternalLink, Filter, ChevronRight } from "lucide-react";
 import { GradientButton } from "@/components/ui/GradientButton";
 import { useNavigate, useLocation } from "react-router-dom";
 import Loader from "@/components/common/Loader";
@@ -34,7 +34,7 @@ const Supplier = () => {
   const isCleanMode = new URLSearchParams(location.search).get("mode") === "clean";
 
   const { getData, deleteData, loading, error, clearError } = useApi();
-  const { setActions } = useHeader();
+  const { setActions, setBottomActions } = useHeader();
   const { showToast } = useToast();
   const { openQuickCreate } = useQuickCreate();
 
@@ -47,6 +47,7 @@ const Supplier = () => {
   const [refreshKey, setRefreshKey] = useState(0);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [supplierToDelete, setSupplierToDelete] = useState<SupplierRecord | null>(null);
+  const [selectedSupplier, setSelectedSupplier] = useState<SupplierRecord | null>(null);
   const [backendStats, setBackendStats] = useState<{total_suppliers: number; contact_persons: number} | null>(null);
 
   const [fromDate, setFromDate] = useState("");
@@ -91,6 +92,53 @@ const Supplier = () => {
     );
     return () => setActions(null);
   }, [setActions, navigate, openQuickCreate, isCleanMode]);
+
+  useEffect(() => {
+    if (selectedSupplier) {
+      setBottomActions(
+        <div className="flex items-center justify-between w-full animate-in fade-in slide-in-from-right-4 duration-300">
+          <div className="flex items-center gap-3">
+            <div className="w-7 h-7 rounded-md bg-blue-500 text-white flex items-center justify-center text-[10px] font-black shrink-0">
+              {(String(selectedSupplier.name || 'S')).charAt(0).toUpperCase()}
+            </div>
+            <div>
+              <p className="text-[12px] font-bold text-slate-800 leading-tight">{String(selectedSupplier.name)}</p>
+              <p className="text-[10px] font-semibold text-slate-400 font-mono">ID: {selectedSupplier.ui_id || selectedSupplier.id?.slice(0, 8)}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setSelectedSupplier(null)}
+              className="h-8 px-3 rounded-md border border-slate-200 bg-white hover:bg-slate-50 text-slate-500 font-semibold text-[11px] transition-colors"
+            >
+              Deselect
+            </button>
+            <button
+              onClick={() => { setSupplierToDelete(selectedSupplier); setIsDeleteDialogOpen(true); }}
+              className="h-8 px-3 rounded-md border border-slate-200 bg-white hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 text-slate-700 font-semibold text-[11px] transition-colors"
+            >
+              Delete
+            </button>
+            <button
+              onClick={() => navigate(`/supplier/${selectedSupplier.id}/edit`)}
+              className="h-8 px-3 rounded-md border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-[11px] transition-colors"
+            >
+              Edit
+            </button>
+            <button
+              onClick={() => navigate(`/supplier/${selectedSupplier.id}`)}
+              className="h-8 px-4 rounded-md bg-blue-600 hover:bg-blue-700 text-white font-semibold text-[11px] transition-colors flex items-center gap-1.5"
+            >
+              <ChevronRight size={13} />
+              View Details
+            </button>
+          </div>
+        </div>
+      );
+    } else {
+      setBottomActions(null);
+    }
+  }, [selectedSupplier, setBottomActions, navigate]);
 
   useEffect(() => {
     const params: Record<string, string> = { limit: "50", offset: "1" };
@@ -276,7 +324,7 @@ const Supplier = () => {
                     {COLUMN_LABELS[key] ?? key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
                   </th>
                 ))}
-                <th className="px-6 py-5 text-right whitespace-nowrap">Actions</th>
+                <th className="px-6 py-5 text-right whitespace-nowrap w-10"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
@@ -291,15 +339,16 @@ const Supplier = () => {
               ) : (
                 suppliers.map((sup) => {
                   if (!sup) return null;
+                  const isSelected = selectedSupplier?.id === sup.id;
                   return (
                     <tr
                       key={sup.id}
-                      className="group md:hover:bg-blue-50/30 md:transition-all cursor-pointer"
-                      onClick={() => navigate(`/supplier/${sup.id}`)}
+                      className={`group transition-all cursor-pointer ${isSelected ? "bg-blue-50 border-l-2 border-l-blue-500" : "md:hover:bg-blue-50/30"}`}
+                      onClick={() => setSelectedSupplier(prev => prev?.id === sup.id ? null : sup)}
                     >
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-600 to-blue-400 flex items-center justify-center text-white text-sm font-black shadow-lg shadow-blue-100">
+                          <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-sm font-black shadow-sm transition-colors ${isSelected ? "bg-blue-500 text-white shadow-blue-100" : "bg-gradient-to-br from-blue-600 to-blue-400 text-white shadow-blue-100"}`}>
                             {(String(sup.name || 'S')).charAt(0).toUpperCase()}
                           </div>
                           <div>
@@ -336,26 +385,7 @@ const Supplier = () => {
                       })}
 
                       <td className="px-6 py-4 text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <button
-                            onClick={(e) => { e.stopPropagation(); navigate(`/supplier/${sup.id}`); }}
-                            className="p-2 text-slate-400 md:hover:text-blue-600 md:hover:bg-white rounded-lg md:transition-all shadow-sm md:active:scale-95"
-                          >
-                            <Eye size={16} />
-                          </button>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); navigate(`/supplier/${sup.id}/edit`); }}
-                            className="p-2 text-slate-400 md:hover:text-blue-600 md:hover:bg-white rounded-lg md:transition-all shadow-sm md:active:scale-95"
-                          >
-                            <Edit size={16} />
-                          </button>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); setSupplierToDelete(sup); setIsDeleteDialogOpen(true); }}
-                            className="p-2 text-slate-400 md:hover:text-rose-600 md:hover:bg-white rounded-lg md:transition-all shadow-sm md:active:scale-95"
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                        </div>
+                        <ChevronRight size={14} className={`transition-all duration-200 ${isSelected ? "text-blue-500 rotate-90" : "text-slate-300 group-hover:text-blue-500"}`} />
                       </td>
                     </tr>
                   );

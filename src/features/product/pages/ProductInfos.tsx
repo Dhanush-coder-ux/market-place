@@ -198,10 +198,10 @@ const ProductRow = React.memo(
 
     const hasVariants = combinations.length > 0;
     const hasBatches = batches.length > 0;
-    const hasSerials = extractSerials(p.serial_number).length > 0;
+    const hasSerials = extractSerials((p as any).serials || (p as any).serial_number).length > 0;
     const isExpandable = hasVariants || hasBatches || hasSerials;
 
-    const rootSerials = extractSerials(p.serial_number);
+    const rootSerials = extractSerials((p as any).serials || (p as any).serial_number);
 
     const { totalSerials, totalBatches } = useMemo(() => {
       let ts = rootSerials.length;
@@ -412,7 +412,7 @@ const ProductRow = React.memo(
             }
 
             if (key === "serial_number") {
-              const sList = extractSerials(p.serial_number);
+              const sList = extractSerials((p as any).serials || (p as any).serial_number);
               if (sList.length === 0 && totalSerials > 0) {
                 return (
                   <td key={key} className="px-3 py-2.5 whitespace-nowrap">
@@ -613,7 +613,7 @@ const ProductInfos = () => {
     const saved = localStorage.getItem("product_table_columns");
     return saved
       ? sortKeys(JSON.parse(saved).filter((key: string) => !hiddenProductColumns.has(key)))
-      : ["category", "status", "buy_price", "sell_price", "stocks", "reorder_point", "ui_id", "barcode"];
+      : ["category", "status", "buy_price", "sell_price", "stocks", "reorder_point", "ui_id", "barcode", "serial_number"];
   });
 
   const sortedSelectedKeys = useMemo(() => sortKeys(selectedKeys), [selectedKeys]);
@@ -681,7 +681,7 @@ const ProductInfos = () => {
                   keys.add(k);
               });
             }
-            ["category", "sell_price", "buy_price", "stocks", "reorder_point", "status", "ui_id", "barcode"].forEach((k) =>
+            ["category", "sell_price", "buy_price", "stocks", "reorder_point", "status", "ui_id", "barcode", "serial_number"].forEach((k) =>
               keys.add(k)
             );
           });

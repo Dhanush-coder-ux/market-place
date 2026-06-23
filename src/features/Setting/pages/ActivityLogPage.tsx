@@ -1,26 +1,99 @@
 import { useEffect, useState } from "react";
 import { useApi } from "@/context/ApiContext";
 import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
-import { Search, RefreshCw, X } from "lucide-react";
+import {
+  Search,
+  RefreshCw,
+  X,
+  Activity,
+  User,
+  Clock,
+  ChevronRight,
+  ArrowRight,
+  Filter,
+  Inbox,
+} from "lucide-react";
 import { format } from "date-fns";
+
+// ─── Types ───────────────────────────────────────────────────────────────────
+
+interface LogEntry {
+  id?: string;
+  user_name?: string;
+  action?: string;
+  entity_type?: string;
+  entity_id?: string;
+  created_at?: string;
+  description?: string;
+  changes?: { field: string; before: any; after: any }[];
+}
+
+// ─── Action Config ───────────────────────────────────────────────────────────
+
+const ACTION_CONFIG: Record<
+  string,
+  { label: string; color: string; dot: string }
+> = {
+  CREATE:        { label: "Create",  color: "bg-emerald-50 text-emerald-700 border-emerald-200", dot: "bg-emerald-500" },
+  CREATE_MANUAL: { label: "Create",  color: "bg-emerald-50 text-emerald-700 border-emerald-200", dot: "bg-emerald-500" },
+  UPDATE:        { label: "Update",  color: "bg-blue-50    text-blue-700    border-blue-200",    dot: "bg-blue-500"    },
+  DELETE:        { label: "Delete",  color: "bg-rose-50    text-rose-700    border-rose-200",    dot: "bg-rose-500"    },
+  EXPORT:        { label: "Export",  color: "bg-violet-50  text-violet-700  border-violet-200",  dot: "bg-violet-500"  },
+  IMPORT:        { label: "Import",  color: "bg-amber-50   text-amber-700   border-amber-200",   dot: "bg-amber-500"   },
+};
+
+const getAction = (action?: string) =>
+  ACTION_CONFIG[action?.toUpperCase() ?? ""] ??
+  ACTION_CONFIG["CREATE"];
+
+// ─── Entity colour strip ──────────────────────────────────────────────────────
+
+const ENTITY_COLORS: Record<string, string> = {
+  ORDER:           "bg-blue-100    text-blue-700",
+  STOCKADJUSTMENT: "bg-purple-100  text-purple-700",
+  CUSTOMER:        "bg-emerald-100 text-emerald-700",
+  PURCHASE:        "bg-amber-100   text-amber-700",
+  PRODUCT:         "bg-rose-100    text-rose-700",
+  BILLING:         "bg-indigo-100  text-indigo-700",
+};
+
+const getEntityColor = (entity?: string) =>
+  ENTITY_COLORS[entity?.toUpperCase() ?? ""] ?? "bg-slate-100 text-slate-600";
+
+// ─── Skeleton row ─────────────────────────────────────────────────────────────
+
+const SkeletonRow = () => (
+  <div className="flex items-center gap-4 px-5 py-4 border-b border-slate-50 animate-pulse">
+    <div className="w-7 h-7 rounded-full bg-slate-100 shrink-0" />
+    <div className="flex-1 space-y-1.5">
+      <div className="h-3 w-24 bg-slate-100 rounded" />
+      <div className="h-2.5 w-40 bg-slate-100 rounded" />
+    </div>
+    <div className="h-5 w-14 rounded-full bg-slate-100" />
+    <div className="h-5 w-20 rounded-full bg-slate-100" />
+    <div className="h-3 w-28 bg-slate-100 rounded ml-auto" />
+  </div>
+);
+
+// ─── Main Component ───────────────────────────────────────────────────────────
 
 export const ActivityLogPage = () => {
   const { getData } = useApi();
-  const [logs, setLogs] = useState<any[]>([]);
+  const [logs, setLogs] = useState<LogEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedLog, setSelectedLog] = useState<any>(null);
+  const [filterAction, setFilterAction] = useState<string>("ALL");
+  const [selectedLog, setSelectedLog] = useState<LogEntry | null>(null);
 
   const fetchLogs = async () => {
     setLoading(true);
     try {
-      const res = await getData(`${ENDPOINTS.UTILITIES}/activity-logs/${SHOP_ID}`, {
-        limit: "100"
-      });
-      if (res && res.data) {
-        setLogs(res.data);
-      }
-    } catch (e: any) {
+      const res = await getData(
+        `${ENDPOINTS.UTILITIES}/activity-logs/${SHOP_ID}`,
+        { limit: "200" }
+      );
+      if (res?.data) setLogs(res.data);
+    } catch (e) {
       console.error(e);
     } finally {
       setLoading(false);
@@ -31,163 +104,388 @@ export const ActivityLogPage = () => {
     fetchLogs();
   }, []);
 
-  const filteredLogs = logs.filter(log => 
-    log.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    log.user_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    log.entity_type?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // ── Filtered list ──────────────────────────────────────────────────────────
 
-  const getActionColor = (action: string) => {
-    switch (action?.toUpperCase()) {
-      case "CREATE_MANUAL": return "text-emerald-600 bg-emerald-50 border-emerald-200";
-      case "UPDATE": return "text-blue-600 bg-blue-50 border-blue-200";
-      case "EXPORT": return "text-slate-600 bg-slate-50 border-slate-200";
-      default: return "text-blue-600 bg-blue-50 border-blue-200";
-    }
-  };
+  const filteredLogs = logs.filter((log) => {
+    const matchSearch =
+      !searchTerm ||
+      log.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      log.user_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      log.entity_type?.toLowerCase().includes(searchTerm.toLowerCase());
+
+    const matchFilter =
+      filterAction === "ALL" ||
+      log.action?.toUpperCase() === filterAction ||
+      (filterAction === "CREATE" && log.action?.toUpperCase() === "CREATE_MANUAL");
+
+    return matchSearch && matchFilter;
+  });
+
+  const uniqueActions = [
+    "ALL",
+    ...Array.from(
+      new Set(logs.map((l) => l.action?.toUpperCase()).filter(Boolean))
+    ),
+  ] as string[];
+
+  // ─── Render ──────────────────────────────────────────────────────────────
 
   return (
-    <div className="bg-white md:rounded-lg border-y md:border border-slate-200 shadow-sm overflow-hidden h-[600px] flex flex-col relative">
-      {/* Header & Toolbar */}
-      <div className="p-4 border-b border-slate-100 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shrink-0">
-        <div>
-          <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-            Activity Logs
-          </h3>
-          <p className="text-[13px] text-slate-500 mt-1">Track user actions and system changes across the CRM.</p>
-        </div>
-        
-        <div className="flex items-center gap-3 w-full md:w-auto">
-          <div className="relative flex-1 md:w-64">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Search logs..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300 transition-all"
-            />
+    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden flex flex-col">
+
+      {/* ── Header ── */}
+      <div className="px-6 py-5 border-b border-slate-50 bg-gradient-to-r from-slate-50/60 to-white">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          {/* Title */}
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-rose-50 flex items-center justify-center shrink-0">
+              <Activity size={16} className="text-rose-500" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-slate-800 leading-tight">
+                Activity Log
+              </h3>
+              <p className="text-[11px] text-slate-400 font-medium mt-0.5">
+                Track user actions and system changes across the platform
+              </p>
+            </div>
           </div>
-          <button 
-            onClick={fetchLogs}
-            className="p-2 border border-slate-200 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-          >
-            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
-          </button>
+
+          {/* Toolbar */}
+          <div className="flex items-center gap-2">
+            {/* Search */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
+              <input
+                type="text"
+                placeholder="Search logs…"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-8 pr-4 py-2 h-9 text-xs font-medium bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300 transition-all w-48 placeholder:text-slate-400"
+              />
+              {searchTerm && (
+                <button
+                  onClick={() => setSearchTerm("")}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                >
+                  <X size={12} />
+                </button>
+              )}
+            </div>
+
+            {/* Refresh */}
+            <button
+              onClick={fetchLogs}
+              title="Refresh"
+              className="w-9 h-9 flex items-center justify-center border border-slate-200 rounded-xl text-slate-500 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-600 transition-all"
+            >
+              <RefreshCw
+                className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`}
+              />
+            </button>
+          </div>
+        </div>
+
+        {/* ── Action filter chips ── */}
+        <div className="flex items-center gap-1.5 mt-4 flex-wrap">
+          <Filter size={11} className="text-slate-400 shrink-0" />
+          {uniqueActions.map((action) => {
+            const config = action === "ALL" ? null : getAction(action);
+            const isActive = filterAction === action;
+            return (
+              <button
+                key={action}
+                onClick={() => setFilterAction(action)}
+                className={`px-2.5 py-1 rounded-lg text-[10px] font-bold border transition-all ${
+                  isActive
+                    ? action === "ALL"
+                      ? "bg-slate-800 border-slate-800 text-white"
+                      : `${config?.color} border-current`
+                    : "bg-white border-slate-200 text-slate-500 hover:border-slate-300"
+                }`}
+              >
+                {action === "ALL" ? "All Actions" : (config?.label ?? action)}
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      {/* Table Content */}
-      <div className="flex-1 overflow-auto">
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="bg-slate-50 border-b border-slate-100 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-              <th className="py-3 px-6 whitespace-nowrap">User</th>
-              <th className="py-3 px-6 whitespace-nowrap">Action</th>
-              <th className="py-3 px-6 whitespace-nowrap">Entity Type</th>
-              <th className="py-3 px-6 whitespace-nowrap">Date & Time</th>
-              <th className="py-3 px-6 whitespace-nowrap text-right">Details</th>
+      {/* ── Stats strip ── */}
+      <div className="grid grid-cols-3 sm:grid-cols-4 border-b border-slate-50 divide-x divide-slate-50">
+        {[
+          { label: "Total Events",   value: logs.length,                                                                    color: "text-slate-700" },
+          { label: "Creates",        value: logs.filter((l) => l.action?.toUpperCase().includes("CREATE")).length,          color: "text-emerald-600" },
+          { label: "Updates",        value: logs.filter((l) => l.action?.toUpperCase() === "UPDATE").length,                color: "text-blue-600" },
+          { label: "Shown",          value: filteredLogs.length,                                                             color: "text-violet-600" },
+        ].map((stat) => (
+          <div key={stat.label} className="px-4 py-3 text-center hidden sm:block first:block last:block">
+            <p className={`text-base font-black tabular-nums ${stat.color}`}>
+              {stat.value}
+            </p>
+            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">
+              {stat.label}
+            </p>
+          </div>
+        ))}
+      </div>
+
+      {/* ── Log list ── */}
+      <div className="flex-1 overflow-auto min-h-[420px] max-h-[520px]">
+        {/* Desktop table */}
+        <table className="w-full text-left hidden sm:table">
+          <thead className="sticky top-0 z-10">
+            <tr className="bg-slate-50/80 backdrop-blur border-b border-slate-100">
+              {["User", "Action", "Entity", "Date & Time", ""].map((h) => (
+                <th
+                  key={h}
+                  className="px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap"
+                >
+                  {h}
+                </th>
+              ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
-            {loading ? (
-              <tr>
-                <td colSpan={5} className="py-8 text-center text-slate-400 text-sm">Loading activity logs...</td>
-              </tr>
-            ) : filteredLogs.length === 0 ? (
-              <tr>
-                <td colSpan={5} className="py-8 text-center text-slate-400 text-sm">No activity logs found.</td>
-              </tr>
-            ) : (
-              filteredLogs.map((log, idx) => (
-                <tr key={log.id || idx} className="hover:bg-slate-50/50 transition-colors">
-                  <td className="py-4 px-6 text-sm font-semibold text-slate-700 whitespace-nowrap">
-                    {log.user_name || "Unknown User"}
-                  </td>
-                  <td className="py-4 px-6 whitespace-nowrap">
-                    <span className={`text-[10px] px-2 py-1 rounded border font-bold tracking-wide ${getActionColor(log.action)}`}>
-                      {log.action?.toUpperCase() || "UPDATE"}
-                    </span>
-                  </td>
-                  <td className="py-4 px-6">
-                    <div className="flex flex-col">
-                      <span className="text-xs font-bold text-slate-700 uppercase">{log.entity_type}</span>
-                      <span className="text-[11px] text-slate-400">ID: {log.entity_id}</span>
-                    </div>
-                  </td>
-                  <td className="py-4 px-6 text-sm text-slate-600 whitespace-nowrap">
-                    {log.created_at ? format(new Date(log.created_at), "MMM dd, yyyy, hh:mm:ss a") : "-"}
-                  </td>
-                  <td className="py-4 px-6 text-right whitespace-nowrap">
-                    {log.changes && log.changes.length > 0 ? (
-                      <button 
-                        onClick={() => setSelectedLog(log)}
-                        className="text-sm font-semibold text-blue-600 hover:text-blue-800 underline decoration-blue-200 underline-offset-4"
-                      >
-                        View Details
-                      </button>
-                    ) : (
-                      <span className="text-sm text-slate-400">-</span>
-                    )}
-                  </td>
-                </tr>
-              ))
-            )}
+          <tbody>
+            {loading
+              ? Array.from({ length: 7 }).map((_, i) => (
+                  <tr key={i}>
+                    <td colSpan={5} className="px-0 py-0">
+                      <SkeletonRow />
+                    </td>
+                  </tr>
+                ))
+              : filteredLogs.length === 0
+              ? (
+                  <tr>
+                    <td colSpan={5} className="py-20 text-center">
+                      <div className="flex flex-col items-center gap-3">
+                        <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center">
+                          <Inbox size={20} className="text-slate-300" />
+                        </div>
+                        <p className="text-sm font-semibold text-slate-400">
+                          No activity logs found
+                        </p>
+                        {searchTerm && (
+                          <button
+                            onClick={() => setSearchTerm("")}
+                            className="text-xs text-blue-500 hover:underline font-medium"
+                          >
+                            Clear search
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                )
+              : filteredLogs.map((log, idx) => {
+                  const actionCfg = getAction(log.action);
+                  const entityColor = getEntityColor(log.entity_type);
+                  const hasChanges = log.changes && log.changes.length > 0;
+                  return (
+                    <tr
+                      key={log.id ?? idx}
+                      className="border-b border-slate-50 hover:bg-slate-50/60 transition-colors group"
+                    >
+                      {/* User */}
+                      <td className="px-5 py-3.5 whitespace-nowrap">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-7 h-7 rounded-full bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center shrink-0">
+                            <User size={12} className="text-white" />
+                          </div>
+                          <span className="text-xs font-bold text-slate-700">
+                            {log.user_name ?? "System"}
+                          </span>
+                        </div>
+                      </td>
+
+                      {/* Action */}
+                      <td className="px-5 py-3.5 whitespace-nowrap">
+                        <span
+                          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[10px] font-black uppercase tracking-wide ${actionCfg.color}`}
+                        >
+                          <span className={`w-1.5 h-1.5 rounded-full ${actionCfg.dot}`} />
+                          {actionCfg.label}
+                        </span>
+                      </td>
+
+                      {/* Entity */}
+                      <td className="px-5 py-3.5">
+                        <div className="flex flex-col gap-0.5">
+                          <span
+                            className={`inline-flex px-2 py-0.5 rounded-md text-[10px] font-black tracking-wider w-fit ${entityColor}`}
+                          >
+                            {log.entity_type ?? "—"}
+                          </span>
+                          <span className="text-[10px] text-slate-400 font-mono truncate max-w-[180px]">
+                            {log.entity_id}
+                          </span>
+                        </div>
+                      </td>
+
+                      {/* Date */}
+                      <td className="px-5 py-3.5 whitespace-nowrap">
+                        <div className="flex items-center gap-1.5 text-[11px] text-slate-500">
+                          <Clock size={11} className="text-slate-300 shrink-0" />
+                          {log.created_at
+                            ? format(new Date(log.created_at), "MMM dd, yyyy · hh:mm a")
+                            : "—"}
+                        </div>
+                      </td>
+
+                      {/* Action */}
+                      <td className="px-5 py-3.5 text-right whitespace-nowrap">
+                        {hasChanges ? (
+                          <button
+                            onClick={() => setSelectedLog(log)}
+                            className="inline-flex items-center gap-1 text-[11px] font-bold text-blue-500 hover:text-blue-700 opacity-0 group-hover:opacity-100 transition-all"
+                          >
+                            Details
+                            <ChevronRight size={12} />
+                          </button>
+                        ) : (
+                          <span className="text-[11px] text-slate-200">—</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
           </tbody>
         </table>
+
+        {/* Mobile card list */}
+        <div className="sm:hidden divide-y divide-slate-50">
+          {loading
+            ? Array.from({ length: 5 }).map((_, i) => <SkeletonRow key={i} />)
+            : filteredLogs.map((log, idx) => {
+                const actionCfg = getAction(log.action);
+                const entityColor = getEntityColor(log.entity_type);
+                const hasChanges = log.changes && log.changes.length > 0;
+                return (
+                  <div
+                    key={log.id ?? idx}
+                    className="flex items-start gap-3 px-4 py-3.5 hover:bg-slate-50/60 transition-colors"
+                  >
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center shrink-0 mt-0.5">
+                      <User size={13} className="text-white" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-2 mb-1">
+                        <span className="text-xs font-bold text-slate-700">
+                          {log.user_name ?? "System"}
+                        </span>
+                        <span
+                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-[9px] font-black ${actionCfg.color}`}
+                        >
+                          <span className={`w-1.5 h-1.5 rounded-full ${actionCfg.dot}`} />
+                          {actionCfg.label}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <span className={`text-[10px] font-black px-1.5 py-0.5 rounded ${entityColor}`}>
+                          {log.entity_type}
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-slate-400 font-mono truncate">
+                        {log.entity_id}
+                      </p>
+                      <p className="text-[10px] text-slate-400 mt-0.5">
+                        {log.created_at
+                          ? format(new Date(log.created_at), "MMM dd, yyyy · hh:mm a")
+                          : "—"}
+                      </p>
+                    </div>
+                    {hasChanges && (
+                      <button
+                        onClick={() => setSelectedLog(log)}
+                        className="p-1.5 rounded-lg bg-blue-50 text-blue-500 shrink-0 mt-0.5"
+                      >
+                        <ChevronRight size={13} />
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+        </div>
       </div>
 
-      {/* Modal overlay */}
+      {/* ── Details Drawer / Modal ── */}
       {selectedLog && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white w-full max-w-2xl rounded-xl shadow-xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-full">
-            <div className="flex items-center justify-between p-4 border-b border-slate-100 shrink-0">
-              <h3 className="text-base font-bold flex items-center gap-2 text-slate-800">
-                <Activity className="w-4 h-4 text-blue-500" />
-                Action Details
-              </h3>
-              <button onClick={() => setSelectedLog(null)} className="p-1 hover:bg-slate-100 rounded text-slate-500 transition-colors">
-                <X className="w-5 h-5" />
+        <div
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200 p-4"
+          onClick={(e) => e.target === e.currentTarget && setSelectedLog(null)}
+        >
+          <div className="bg-white w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 slide-in-from-bottom-4 sm:slide-in-from-bottom-0 duration-200 flex flex-col max-h-[85vh]">
+
+            {/* Modal header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-xl bg-blue-50 flex items-center justify-center">
+                  <Activity size={15} className="text-blue-500" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-800">
+                    Change Details
+                  </h3>
+                  <p className="text-[10px] text-slate-400 font-medium">
+                    {selectedLog.entity_type} — {selectedLog.action}
+                    {selectedLog.created_at && (
+                      <> · {format(new Date(selectedLog.created_at), "MMM dd, yyyy · hh:mm a")}</>
+                    )}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setSelectedLog(null)}
+                className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"
+              >
+                <X size={16} />
               </button>
             </div>
-            
-            <div className="p-6 overflow-y-auto space-y-4 bg-slate-50/50 flex-1">
-              {selectedLog.changes?.map((change: any, i: number) => (
-                <div key={i} className="bg-white border border-slate-100 rounded-xl p-4 shadow-sm flex flex-col md:flex-row gap-4 items-start md:items-center">
-                  <div className="w-full md:w-1/3">
-                    <p className="text-sm font-bold text-slate-700">{change.field}</p>
-                  </div>
-                  
-                  <div className="flex-1 w-full grid grid-cols-1 sm:grid-cols-[1fr_auto_1fr] gap-3 items-center">
-                    {/* Before */}
-                    <div className="flex flex-col">
-                      <span className="text-[10px] font-bold text-slate-400 mb-1 tracking-wider">BEFORE</span>
-                      <div className="bg-rose-50 text-rose-600 border border-rose-100 text-xs px-3 py-2 rounded-lg font-mono break-all">
-                        {change.before}
+
+            {/* Change rows */}
+            <div className="flex-1 overflow-y-auto p-5 space-y-3 bg-slate-50/40">
+              {selectedLog.changes?.length === 0 && (
+                <p className="text-sm text-slate-400 text-center py-8">
+                  No field-level changes recorded.
+                </p>
+              )}
+              {selectedLog.changes?.map((change, i) => (
+                <div
+                  key={i}
+                  className="bg-white rounded-xl border border-slate-100 p-4 shadow-sm"
+                >
+                  <p className="text-xs font-black text-slate-500 uppercase tracking-wider mb-3">
+                    {change.field}
+                  </p>
+                  <div className="grid grid-cols-[1fr_auto_1fr] gap-3 items-center">
+                    <div>
+                      <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider block mb-1">
+                        Before
+                      </span>
+                      <div className="bg-rose-50 text-rose-700 border border-rose-100 text-xs px-3 py-2 rounded-lg font-mono break-all min-h-[32px]">
+                        {String(change.before ?? "—")}
                       </div>
                     </div>
-                    
-                    {/* Arrow */}
-                    <div className="hidden sm:flex text-slate-300">
-                      →
-                    </div>
-                    
-                    {/* After */}
-                    <div className="flex flex-col">
-                      <span className="text-[10px] font-bold text-slate-400 mb-1 tracking-wider">AFTER</span>
-                      <div className="bg-emerald-50 text-emerald-600 border border-emerald-100 text-xs px-3 py-2 rounded-lg font-mono break-all">
-                        {change.after}
+                    <ArrowRight size={14} className="text-slate-300 shrink-0" />
+                    <div>
+                      <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider block mb-1">
+                        After
+                      </span>
+                      <div className="bg-emerald-50 text-emerald-700 border border-emerald-100 text-xs px-3 py-2 rounded-lg font-mono break-all min-h-[32px]">
+                        {String(change.after ?? "—")}
                       </div>
                     </div>
                   </div>
                 </div>
               ))}
             </div>
-            
-            <div className="p-4 border-t border-slate-100 bg-white flex justify-end shrink-0">
-              <button 
+
+            {/* Footer */}
+            <div className="px-6 py-4 border-t border-slate-100 bg-white flex justify-end">
+              <button
                 onClick={() => setSelectedLog(null)}
-                className="px-4 py-2 border border-slate-200 text-slate-600 text-sm font-bold rounded-lg hover:bg-slate-50 transition-colors"
+                className="px-5 py-2 text-xs font-bold text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors"
               >
                 Close
               </button>
@@ -198,12 +496,5 @@ export const ActivityLogPage = () => {
     </div>
   );
 };
-
-// Activity Icon definition (since it was missing from lucide imports above)
-const Activity = ({ className }: { className?: string }) => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-    <path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"/>
-  </svg>
-);
 
 export default ActivityLogPage;

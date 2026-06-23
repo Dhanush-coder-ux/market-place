@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import {
   Megaphone,
   Truck,
@@ -18,6 +19,7 @@ import {
   ExternalLink,
   Wifi,
   ChevronRight,
+  Users,
 } from "lucide-react";
 import DeliveryPreferences from "../pages/Deliveryinfo";
 import ProductDashboard from "../pages/StoreProductManagement";
@@ -26,22 +28,79 @@ import OperatingHours from "../pages/OperatingHours";
 
 type TabType = "Promotions" | "Delivery Preferences" | "Product Dashboard" | "Operating Hours";
 
-// ─── Mock Data ────────────────────────────────────────────────────────────────
-const storeProfile = {
-  name: "Grace Super Market",
-  username: "@gracemarket",
-  location: "Chennai, Tamil Nadu",
-  tagline: "Fresh picks, fair prices — delivered to your door.",
-  description:
-    "Your trusted neighbourhood supermarket, now online. Shop from 500+ daily essentials, fresh produce, and specialty items with same-day delivery.",
-  avatar: "https://api.dicebear.com/7.x/shapes/svg?seed=grace&backgroundColor=dbeafe",
-  rating: 4.8,
-  reviews: 2340,
-  verified: true,
-  online: true,
-  memberSince: "Jan 2023",
-  category: "Grocery & Essentials",
+const THEMES = {
+  Blue: {
+    primary: "#3b82f6",
+    bg: "#eff6ff",
+    border: "#bfdbfe",
+    text: "#2563eb",
+  },
+  Emerald: {
+    primary: "#10b981",
+    bg: "#ecfdf5",
+    border: "#a7f3d0",
+    text: "#059669",
+  },
+  Violet: {
+    primary: "#8b5cf6",
+    bg: "#f5f3ff",
+    border: "#ddd6fe",
+    text: "#7c3aed",
+  },
+  Indigo: {
+    primary: "#6366f1",
+    bg: "#e0e7ff",
+    border: "#c7d2fe",
+    text: "#4f46e5",
+  },
+  Rose: {
+    primary: "#f43f5e",
+    bg: "#fff1f2",
+    border: "#fecdd3",
+    text: "#e11d48",
+  },
+  Amber: {
+    primary: "#d97706",
+    bg: "#fef3c7",
+    border: "#fde68a",
+    text: "#b45309",
+  },
 };
+
+// ─── Mock Data & Dynamic LocalStorage Loader ──────────────────────────────────
+const storeProfile = (() => {
+  const defaults = {
+    name: "Grace Super Market",
+    username: "@gracemarket",
+    location: "Chennai, Tamil Nadu",
+    tagline: "Fresh picks, fair prices — delivered to your door.",
+    description:
+      "Your trusted neighbourhood supermarket, now online. Shop from 500+ daily essentials, fresh produce, and specialty items with same-day delivery.",
+    avatar: "https://api.dicebear.com/7.x/shapes/svg?seed=grace&backgroundColor=dbeafe",
+    rating: 4.8,
+    reviews: 2340,
+    followers: 12500,
+    verified: true,
+    online: true,
+    memberSince: "Jan 2023",
+    category: "Grocery & Essentials",
+    themeColor: "Blue",
+    banner: "",
+  };
+
+  const saved = localStorage.getItem("active-store-profile");
+  if (saved) {
+    try {
+      return { ...defaults, ...JSON.parse(saved) };
+    } catch (e) {
+      console.error("Failed to parse store profile from localStorage", e);
+    }
+  }
+  return defaults;
+})();
+
+const theme = THEMES[(storeProfile.themeColor as keyof typeof THEMES) || "Blue"];
+
 
 // Stat cards — each has its own muted solid color
 const STORE_STATS = [
@@ -126,10 +185,10 @@ const DigitalMain = () => {
         @keyframes dm-pulse   { 0%,100% { opacity: 1 } 50% { opacity: 0.35 } }
 
         .dm-stat-card { transition: box-shadow 0.18s ease, transform 0.18s ease; }
-        .dm-stat-card:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(59,130,246,0.1); }
+        .dm-stat-card:hover { transform: translateY(-2px); box-shadow: 0 6px 20px ${theme.primary}18; }
 
         .dm-tab-btn { transition: all 0.14s ease; }
-        .dm-tab-btn:hover:not(.dm-tab-active) { background: #eff6ff; color: #2563eb; }
+        .dm-tab-btn:hover:not(.dm-tab-active) { background: ${theme.bg}; color: ${theme.text}; }
 
         .dm-online-dot { animation: dm-pulse 2s ease infinite; }
       `}</style>
@@ -141,48 +200,53 @@ const DigitalMain = () => {
         ══════════════════════════════════════════════════ */}
         <div style={{ animation: "dm-fadeIn 0.3s ease" }}>
 
-          {/* Cover — light blue, no darkness */}
+          {/* Cover — matches selected theme accent */}
           <div
             className="relative h-44 overflow-hidden"
-            style={{ background: "#eff6ff" }}
+            style={{ backgroundColor: theme.bg }}
           >
             {/* Subtle dot pattern */}
             <div
               className="absolute inset-0"
               style={{
-                backgroundImage: "radial-gradient(circle, #bfdbfe 1.2px, transparent 1.2px)",
+                backgroundImage: `radial-gradient(circle, ${theme.border} 1.5px, transparent 1.5px)`,
                 backgroundSize: "22px 22px",
               }}
             />
             {/* Soft light circle accent */}
             <div
               className="absolute -top-16 -right-16 w-64 h-64 rounded-full"
-              style={{ background: "#dbeafe", opacity: 0.6 }}
+              style={{ background: theme.bg, borderColor: theme.border, borderWidth: 1, opacity: 0.6 }}
             />
             <div
               className="absolute -bottom-10 -left-10 w-48 h-48 rounded-full"
-              style={{ background: "#bfdbfe", opacity: 0.35 }}
+              style={{ background: theme.border, opacity: 0.35 }}
             />
 
             {/* Banner image */}
             <img
-              src="/Shops_Assets/banner.png"
-              alt=""
-              className="absolute inset-0 w-full h-full object-cover opacity-10"
+              src={storeProfile.banner || "/Shops_Assets/banner.png"}
+              alt="Store Banner"
+              className={`absolute inset-0 w-full h-full object-cover transition-opacity ${storeProfile.banner ? "opacity-90" : "opacity-10"}`}
               onError={(e) => (e.currentTarget.style.display = "none")}
             />
 
             {/* Action buttons */}
             <div className="absolute right-5 top-4 flex gap-2 z-10">
-              <button className="flex items-center gap-1.5 bg-white border border-blue-100 text-blue-600 text-[12px] font-semibold px-3 py-1.5 rounded-lg hover:bg-blue-50 transition-all cursor-pointer shadow-sm">
+              <button 
+                className="flex items-center gap-1.5 bg-white text-[12px] font-semibold px-3 py-1.5 rounded-lg hover:bg-slate-50 transition-all cursor-pointer shadow-sm border"
+                style={{ color: theme.primary, borderColor: theme.border }}
+              >
                 <Share2 size={12} strokeWidth={2.5} /> Share
               </button>
-              <button
-                className="flex items-center gap-1.5 text-white text-[12px] font-bold px-3 py-1.5 rounded-lg transition-all cursor-pointer shadow-md hover:opacity-90"
-                style={{ background: "#3b82f6" }}
-              >
-                <Edit3 size={12} strokeWidth={2.5} /> Edit Profile
-              </button>
+              <Link to="/create-digital-store">
+                <button
+                  className="flex items-center gap-1.5 text-white text-[12px] font-bold px-3 py-1.5 rounded-lg transition-all cursor-pointer shadow-md hover:opacity-90"
+                  style={{ background: theme.primary }}
+                >
+                  <Edit3 size={12} strokeWidth={2.5} /> Edit Profile
+                </button>
+              </Link>
             </div>
 
             {/* View public store */}
@@ -206,8 +270,8 @@ const DigitalMain = () => {
                 {/* Avatar */}
                 <div className="relative shrink-0">
                   <div
-                    className="w-28 h-28 rounded-2xl border-4 border-white overflow-hidden bg-blue-50"
-                    style={{ boxShadow: "0 4px 20px rgba(59,130,246,0.18)" }}
+                    className="w-28 h-28 rounded-2xl border-4 border-white overflow-hidden bg-slate-50"
+                    style={{ boxShadow: `0 4px 20px ${theme.primary}25` }}
                   >
                     <img src={storeProfile.avatar} alt="Store Logo" className="w-full h-full object-cover" />
                   </div>
@@ -228,7 +292,7 @@ const DigitalMain = () => {
                     {storeProfile.verified && (
                       <span
                         className="flex items-center gap-1 text-[10.5px] font-bold px-2 py-0.5 rounded-full border"
-                        style={{ background: "#eff6ff", color: "#2563eb", borderColor: "#bfdbfe" }}
+                        style={{ background: theme.bg, color: theme.text, borderColor: theme.border }}
                       >
                         <BadgeCheck size={11} /> Verified
                       </span>
@@ -245,13 +309,18 @@ const DigitalMain = () => {
                     <span className="text-slate-400 font-medium">{storeProfile.username}</span>
                     <span className="text-slate-200">·</span>
                     <span className="flex items-center gap-1 text-slate-500">
+                      <Users size={12} className="text-slate-400" />
+                      <span className="font-bold text-slate-700">{storeProfile.followers.toLocaleString()}</span> Followers
+                    </span>
+                    <span className="text-slate-200">·</span>
+                    <span className="flex items-center gap-1 text-slate-500">
                       <MapPin size={12} className="text-slate-400" />
                       {storeProfile.location}
                     </span>
                     <span className="text-slate-200">·</span>
                     <span
                       className="text-[11.5px] font-medium px-2.5 py-0.5 rounded-lg border"
-                      style={{ background: "#eff6ff", color: "#3b82f6", borderColor: "#bfdbfe" }}
+                      style={{ background: theme.bg, color: theme.text, borderColor: theme.border }}
                     >
                       {storeProfile.category}
                     </span>
@@ -358,11 +427,11 @@ const DigitalMain = () => {
                     }`}
                     style={
                       isActive
-                        ? { background: "#eff6ff", color: "#2563eb", borderColor: "#bfdbfe" }
+                        ? { background: theme.bg, color: theme.text, borderColor: theme.border }
                         : undefined
                     }
                   >
-                    <span style={{ color: isActive ? "#3b82f6" : "#94a3b8" }}>{icon}</span>
+                    <span style={{ color: isActive ? theme.primary : "#94a3b8" }}>{icon}</span>
                     {tab}
                     {!isActive && (
                       <span className="text-[10px] text-slate-300 font-medium hidden md:inline">{desc}</span>

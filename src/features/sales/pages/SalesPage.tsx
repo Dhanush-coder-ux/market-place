@@ -125,7 +125,10 @@ const SalesListPage: React.FC = () => {
   const searchSalesForReturn = useMemo(() => {
     if (!returnSearchQuery) return [];
     const q = returnSearchQuery.toLowerCase();
-    return orders.filter(s => s.ui_id.toString().includes(q) || s.customer_id.toLowerCase().includes(q)).slice(0, 5);
+    return orders.filter(s => 
+      s.ui_id?.toString().toLowerCase().includes(q) || 
+      (s.customer_id && s.customer_id.toLowerCase().includes(q))
+    ).slice(0, 5);
   }, [returnSearchQuery, orders]);
 
   const openDetail = (sale: SaleRecord) => navigate(`/sales/${sale.id}`, { state: { sale, customerMap, productMap } });
@@ -212,7 +215,12 @@ const SalesListPage: React.FC = () => {
           const r = (s.payment_method || "Other").toUpperCase();
           pm = r === "CASH" ? "Cash" : r === "CARD" ? "Card" : r === "UPI" || r === "G-PAY" || r === "GPAY" ? "UPI" : r === "PHONEPE" ? "PhonePe" : r === "CREDIT" ? "Credit" : s.payment_method;
         }
-        return { ...s, status: s.status.charAt(0).toUpperCase() + s.status.slice(1).toLowerCase(), payment_method: pm, origin: s.origin === "OFFLINE" ? "Sales" : s.origin };
+        return { 
+          ...s, 
+          status: s.status ? s.status.charAt(0).toUpperCase() + s.status.slice(1).toLowerCase() : "Unknown", 
+          payment_method: pm, 
+          origin: s.origin === "OFFLINE" ? "Sales" : s.origin 
+        };
       });
       
       return {
@@ -256,7 +264,7 @@ const SalesListPage: React.FC = () => {
     toDate,
   }), [debouncedSearch, filterOrigin, filterPayment, filterStatus, fromDate, toDate]);
 
-  const { items, loading, loadingMore, stats, totalCount, lastElementRef } = useInfiniteScroll<any, any>({
+  const { items, loading, loadingMore, stats, totalCount, lastElementRef } = useInfiniteScroll({
     fetchPage,
     filters,
     limit: 50
@@ -265,7 +273,14 @@ const SalesListPage: React.FC = () => {
   const filtered = items as any[];
 
   const activeFilters = [filterOrigin, filterPayment, filterStatus, fromDate, toDate].filter(Boolean).length;
-  const clearAll = () => { setFilterOrigin(""); setFilterPayment(""); setFilterStatus(""); setFromDate(""); setToDate(""); setSearch(""); };
+  const clearAll = () => {
+    setFilterOrigin("");
+    setFilterPayment("");
+    setFilterStatus("");
+    setFromDate("");
+    setToDate("");
+    setSearch("");
+  };
 
   const filteredRevenue = useMemo(() => filtered.filter(s => s.status === "Completed").reduce((a, b) => a + b.total_sellprice, 0), [filtered]);
 
@@ -349,7 +364,7 @@ const SalesListPage: React.FC = () => {
         <button className="inline-flex items-center gap-1.5 h-8 px-3.5 text-xs font-bold bg-blue-600 text-white border-none rounded-md cursor-pointer transition-all hover:bg-blue-700 hover:shadow-lg shadow-blue-500/20 active:scale-95 whitespace-nowrap shrink-0" onClick={() => setIsReturnSearchOpen(true)}>
           <RotateCcw size={13} />Process Return
         </button>
-        <span className="font-mono text-[11px] font-medium text-slate-400 shrink-0">{filtered.length} {totalCount > 0 ? `/ ${totalCount}` : ''}</span>
+     
       </div>
 
       <RightSidebarFilter

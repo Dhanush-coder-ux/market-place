@@ -3,7 +3,13 @@ export interface StoreFormData {
   tagline?: string;
   address?: string;
   description?: string;
-  contact?: string;
+  contactEmail?: string;
+  contactPhone?: string;
+  category?: string;
+  themeColor?: string;
+  website?: string;
+  instagram?: string;
+  twitter?: string;
   logo?: File | null;
   logoPreview?: string;
   banner?: File | null;
@@ -13,3 +19,4 @@ export interface StoreFormData {
 export interface StoreSetupProps {
   existingData?: Partial<StoreFormData>;
 }
+

@@ -356,7 +356,7 @@ const MainLayout = () => {
 
           {/* Global Bottom Action Bar (Glassmorphism) */}
           {bottomActions && (
-            <div className="flex-shrink-0 h-16 md:h-12 flex items-center justify-end px-4 md:px-8 gap-3
+            <div className="flex-shrink-0 h-16 md:h-12 flex items-center justify-between px-4 md:px-8 gap-3
               fixed bottom-[calc(60px+env(safe-area-inset-bottom))] left-0 right-0 
               md:relative md:bottom-0
               bg-white/95 backdrop-mobile
@@ -364,7 +364,7 @@ const MainLayout = () => {
               shadow-[0_-8px_30px_rgba(0,0,0,0.08)]
               z-[65] md:animate-in md:slide-in-from-bottom-full md:duration-500
               gpu-layer">
-              <div className="flex items-center gap-2 w-full md:w-auto justify-end">
+              <div className="flex items-center gap-2 w-full justify-end">
                 {bottomActions}
               </div>
             </div>

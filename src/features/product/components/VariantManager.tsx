@@ -230,7 +230,7 @@ interface VariantMatrixTableProps {
 }
 
 export const VariantMatrixTable: React.FC<VariantMatrixTableProps> = ({
-  combinations, onChange,
+  combinations, onChange, supportsSerials, supportsBatch, serialLabel
 }) => {
 
   const [barcodeBase, setbarcodeBase] = useState("");
@@ -309,6 +309,7 @@ export const VariantMatrixTable: React.FC<VariantMatrixTableProps> = ({
                 ))}
                 <th className="px-5 py-4 text-[10px] font-black uppercase text-slate-400 whitespace-nowrap">Barcode</th>
                 <th className="px-5 py-4 text-center text-[10px] font-black uppercase text-slate-400">Reorder Pt</th>
+                <th className="px-5 py-4 text-center text-[10px] font-black uppercase text-slate-400">Tracking</th>
                 <th className="px-5 py-4 text-center text-[10px] font-black uppercase text-slate-400">Status</th>
               </tr>
             </thead>
@@ -342,6 +343,13 @@ export const VariantMatrixTable: React.FC<VariantMatrixTableProps> = ({
                         />
                       </td>
                       <td className="px-5 py-4 text-center">
+                        <div className="flex items-center justify-center gap-1.5">
+                          {supportsSerials && <span className="px-1.5 py-0.5 rounded-md bg-violet-50 text-violet-600 text-[9px] font-bold border border-violet-100" title={serialLabel}>Serial</span>}
+                          {supportsBatch && <span className="px-1.5 py-0.5 rounded-md bg-blue-50 text-blue-600 text-[9px] font-bold border border-blue-100">Batch</span>}
+                          {!supportsSerials && !supportsBatch && <span className="text-[10px] text-slate-300 font-medium">—</span>}
+                        </div>
+                      </td>
+                      <td className="px-5 py-4 text-center">
                         <button type="button"
                           onClick={() => {
                             // Prevent turning off the last active variant
@@ -354,7 +362,6 @@ export const VariantMatrixTable: React.FC<VariantMatrixTableProps> = ({
                         </button>
                       </td>
                     </tr>
-                    {/* EXPANDED PANELS REMOVED AS PER REQUEST */}
                   </React.Fragment>
                 );
               })}

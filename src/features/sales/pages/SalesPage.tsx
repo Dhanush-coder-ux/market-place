@@ -131,8 +131,8 @@ const SalesListPage: React.FC = () => {
     ).slice(0, 5);
   }, [returnSearchQuery, orders]);
 
-  const openDetail = (sale: SaleRecord) => navigate(`/sales/${sale.id}`, { state: { sale, customerMap, productMap } });
-  const openReturn = (sale: SaleRecord) => { setTimeout(() => setReturnSale(sale), 50); };
+  const openDetail = React.useCallback((sale: SaleRecord) => navigate(`/sales/${sale.id}`), [navigate]);
+  const openReturn = React.useCallback((sale: SaleRecord) => { setTimeout(() => setReturnSale(sale), 50); }, []);
 
   useEffect(() => {
     if (selectedSale) {

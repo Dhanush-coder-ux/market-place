@@ -32,14 +32,14 @@ type SaleItem = {
 };
 
 const generateItems = (sale: OrderResponse, productMap: Record<string, string> = {}): SaleItem[] =>
-  (sale.items || []).map((i: any) => ({
+  (sale?.items || []).map((i: any) => ({
     id: i.id,
     name: i.name || i.product_name || i.datas?.product_name || i.datas?.name || productMap[i.inventory_id] || "Unknown Item",
     sku: i.barcode?.trim() || i.inventory_id?.slice(-6) || "N/A",
-    quantity: i.quantity,
+    quantity: i.quantity || 0,
     returnedQty: i.returned_quantity || 0,
-    unitPrice: i.sell_price,
-    buyPrice: i.buy_price,
+    unitPrice: i.sell_price || 0,
+    buyPrice: i.buy_price || 0,
     status: i.status || "COMPLETED",
     reason: i.reason,
     serial_numbers: i.serialno_info?.serial_numbers || i.serial_info?.serial_numbers || i.serial_numbers || [],
@@ -92,8 +92,8 @@ const SaleDetailPage: React.FC = () => {
         if (found) {
           setSale({
             ...found,
-            status: found.status.charAt(0).toUpperCase() + found.status.slice(1).toLowerCase(),
-            origin: found.origin === "OFFLINE" ? "Sales" : found.origin,
+            status: found.status ? found.status.charAt(0).toUpperCase() + found.status.slice(1).toLowerCase() : "Completed",
+            origin: found.origin === "OFFLINE" ? "Sales" : found.origin || "Sales",
           });
         }
       }
@@ -143,8 +143,9 @@ const SaleDetailPage: React.FC = () => {
   }, [setBottomActions, navigate]);
 
   useEffect(() => {
-    if (!sale) fetchSaleDetail();
-  }, [id, api, sale]);
+    if (!sale || !sale.items) fetchSaleDetail();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
 
   if (loading) return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center font-sans">
@@ -173,8 +174,8 @@ const SaleDetailPage: React.FC = () => {
   const canReturn = sale.status === "Completed" && sale.origin !== "Sales Return";
   const customerName = sale.customer?.customer_name || customerMap[sale.customer_id] || "Walk-in Customer";
   const customerMobile = sale.customer?.customer_mobile_number || "";
-  const dateStr = sale.created_at.split("T")[0];
-  const timeStr = sale.created_at.split("T")[1]?.slice(0, 5) || "";
+  const dateStr = sale.created_at?.split("T")[0] || "N/A";
+  const timeStr = sale.created_at?.includes("T") ? sale.created_at.split("T")[1]?.slice(0, 5) || "" : "";
   const refunded = items.filter(i => i.status === "REFUNDED").length;
   const exchanged = items.filter(i => i.status === "EXCHANGED").length;
 
@@ -187,7 +188,7 @@ const SaleDetailPage: React.FC = () => {
     : [{ label: sale.payment_method || "Other", amount: sale.total_sellprice }];
 
   const totalPaid = paymentsDetail.reduce((sum, p) => sum + p.amount, 0);
-  const outstanding = Math.max(0, sale.total_sellprice - totalPaid);
+  const outstanding = Math.max(0, (sale.total_sellprice || 0) - totalPaid);
 
   return (
     <div className="flex-1 flex flex-col min-h-0 h-full bg-slate-50/50 font-sans text-slate-900 overflow-hidden relative">
@@ -267,7 +268,7 @@ const SaleDetailPage: React.FC = () => {
                 <StatCard
                   icon={Package}
                   label="Total Items"
-                  value={String(Number(sale.total_quantity.toFixed(2)))}
+                  value={String(Number((sale.total_quantity || 0).toFixed(2)))}
                   iconBg="bg-indigo-50 text-indigo-600"
                   className="flex-1 min-w-[140px]"
                 />
@@ -390,7 +391,7 @@ const SaleDetailPage: React.FC = () => {
                           </div>
                         </td>
                         <td className="px-6 py-4 text-center">
-                          <span className="text-xs font-black text-slate-600">{Number(item.quantity.toFixed(2))}</span>
+                          <span className="text-xs font-black text-slate-600">{Number((item.quantity || 0).toFixed(2))}</span>
                         </td>
                         <td className="px-6 py-4 text-center">
                           <span className="text-[10px] font-black text-slate-500 uppercase px-2 py-0.5 rounded bg-slate-100">{item.unit}</span>
@@ -488,7 +489,7 @@ const SaleDetailPage: React.FC = () => {
                               </div>
                             </td>
                             <td className="px-6 py-4 text-center">
-                              <span className="text-xs font-black text-slate-600">{Number(item.quantity.toFixed(2))}</span>
+                              <span className="text-xs font-black text-slate-600">{Number((item.quantity || 0).toFixed(2))}</span>
                             </td>
                             <td className="px-6 py-4 text-center">
                               <span className="text-[10px] font-black text-blue-500 uppercase px-2 py-0.5 rounded bg-blue-50 border border-blue-100">{item.unit}</span>

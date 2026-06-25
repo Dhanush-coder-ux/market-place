@@ -14,8 +14,12 @@ const getPageHeaderInfo = (pathname: string) => {
       subtitle: "Insights into your key business performance and metrics.",
     },
     "/sales": {
-      title: "Sales Management",
-      subtitle: "Comprehensive tracking and management of sales invoices.",
+      title: "Sales Directory",
+      subtitle: "Search, track and manage orders, customer transactions and sales performance.",
+    },
+    "/sales/detail": {
+      title: "Sale Details Search",
+      subtitle: "Search through individual sale details and transactions.",
     },
     "/product": {
       title: "Products Directory",
@@ -62,8 +66,8 @@ const getPageHeaderInfo = (pathname: string) => {
       subtitle: "Log completed manufacturing and assembly batches.",
     },
     "/purchase": {
-      title: "Purchase Management",
-      subtitle: "Monitor supplier invoices, and payment statuses.",
+      title: "Purchase Directory",
+      subtitle: "Search for purchase orders, vendor invoices or view supplier history.",
     },
     "/purchase/detail": {
       title: "Purchase Details",
@@ -90,8 +94,8 @@ const getPageHeaderInfo = (pathname: string) => {
       subtitle: "Register and onboard a new supplier to your procurement network.",
     },
     "/employee": {
-      title: "Employees Diectory",
-      subtitle: "Browse and manage your staff directory.",
+      title: "Employee Directory",
+      subtitle: "Search by name or email to view employee profiles, roles, and status.",
     },
     "/employee/all": {
       title: "Employees List",
@@ -139,7 +143,7 @@ const getPageHeaderInfo = (pathname: string) => {
     },
     "/customers": {
       title: "Customer Directory",
-      subtitle: "Search for customers, explore database or manage relationships.",
+      subtitle: "Search for customers or manage your database.",
     },
     "/customers/all": {
       title: "Customers List",
@@ -261,10 +265,15 @@ const getPageHeaderInfo = (pathname: string) => {
 };
 
 const isDetailsRoute = (pathname: string) => {
+  // Explicitly ignore Search pages that happen to use "detail" in the URL
+  if (pathname === "/sales/detail" || pathname === "/purchase/detail" || pathname === "/product/detail" || pathname === "/supplier/detail") {
+    return false;
+  }
+
   const parts = pathname.split("/").filter(Boolean);
   if (parts.length === 2) {
     const [entity, id] = parts;
-    const standardActions = ["add", "drafts", "all", "history"];
+    const standardActions = ["add", "drafts", "all", "history", "detail"];
     if (["customers", "employee", "supplier", "product", "sales", "stock-movement", "stock-adjustment"].includes(entity)) {
       return !standardActions.includes(id);
     }
@@ -278,8 +287,11 @@ const isDetailsRoute = (pathname: string) => {
     return true;
   }
 
-  const staticDetails = ["/purchase/detail", "/product/detail", "/supplier/detail"];
-  return staticDetails.includes(pathname);
+  if (pathname.startsWith("/purchase/detail/") || pathname.startsWith("/product/detail/")) {
+    return true;
+  }
+
+  return false;
 };
 
 const MainLayout = () => {

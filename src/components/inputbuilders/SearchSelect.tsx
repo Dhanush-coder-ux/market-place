@@ -34,6 +34,8 @@ export interface SearchSelectProps<T extends BaseOption> {
 
   // NEW: Callback to trigger creation modal
   onCreateNew?: (searchValue: string) => void;
+  // NEW: Callback for external filtering based on search text
+  onSearchChange?: (value: string) => void;
 }
 
 const EMPTY_ARRAY: any[] = [];
@@ -56,6 +58,7 @@ export function SearchSelect<T extends BaseOption>({
   className,
   renderOption,
   onCreateNew,
+  onSearchChange,
 }: SearchSelectProps<T>) {
   const [searchValue, setSearchValue] = useState("");
   const [open, setOpen] = useState(false);
@@ -74,7 +77,10 @@ export function SearchSelect<T extends BaseOption>({
   const onSearch = useCallback((val: string) => {
     setSearchValue(val);
     handleSearch(val);
-  }, [handleSearch]);
+    if (onSearchChange) {
+      onSearchChange(val);
+    }
+  }, [handleSearch, onSearchChange]);
 
   // Map generic objects to Ant Design Option format
   const formattedOptions = useMemo(() => {

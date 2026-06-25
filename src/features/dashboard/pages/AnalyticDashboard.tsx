@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import {
   IndianRupee, TrendingUp, ShoppingCart, Zap,
   BarChart2, ArrowUpRight, ArrowDownRight, Package,
-  Calendar, RefreshCw,
+  Calendar, RefreshCw, CreditCard, AlertTriangle, CheckCircle2
 } from "lucide-react";
 import {
   AreaChart, Area, PieChart, Pie, Cell,
@@ -168,7 +168,6 @@ const AnalyticsDashboard = () => {
 
   // ── Derived metrics ──
   const totalOrders = stats?.total_orders ?? 0;
-  const grossRevenue = stats?.gross_revenue ?? 0;
   const netRevenue = stats?.net_revenue ?? 0;
   const totalProfit = stats?.total_profit ?? 0;
   const totalCost = stats?.total_cost ?? 0;
@@ -180,6 +179,28 @@ const AnalyticsDashboard = () => {
   const paymentBreakdown = stats?.payment_breakdown ?? [];
   const topProducts = stats?.top_products ?? [];
   const dailyTrend = stats?.daily_trend ?? [];
+
+  const paymentBreakdownList = Array.isArray(paymentBreakdown) ? paymentBreakdown : [];
+  let outstandingAmount = 0;
+  let receivedAmount = 0;
+
+  if (paymentBreakdownList.length > 0) {
+    paymentBreakdownList.forEach((p: any) => {
+      const method = (p.payment_method || p.method || "").toLowerCase();
+      const amount = Number(p.total_amount || p.amount || p.total || 0);
+      if (method === "outstanding" || method === "credit" || method === "unpaid") {
+        outstandingAmount += amount;
+      } else {
+        receivedAmount += amount;
+      }
+    });
+  } else {
+    outstandingAmount = stats?.total_outstanding ?? 0;
+    receivedAmount = Math.max(0, netRevenue - outstandingAmount);
+  }
+
+  const totalBilled = receivedAmount + outstandingAmount;
+  const percentCollected = totalBilled > 0 ? (receivedAmount / totalBilled) * 100 : 0;
 
   // Format daily trend for chart
   const chartData = dailyTrend.map((d: any) => ({
@@ -305,98 +326,208 @@ const AnalyticsDashboard = () => {
         {/* ── STAT CARDS ── */}
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
           {/* Net Revenue */}
-          <div className="bg-white rounded-xl p-5 border border-slate-100 shadow-sm hover:shadow-md transition-all duration-200 group">
-            <div className="flex items-start justify-between mb-3">
-              <p className="text-slate-500 text-sm font-medium">Net Revenue</p>
-              <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-blue-50">
-                <IndianRupee className="w-5 h-5 text-blue-600" />
+          <div className="bg-white rounded-xl p-5 border border-slate-100 shadow-sm hover:shadow-md transition-all duration-200 group flex flex-col justify-between">
+            <div>
+              <div className="flex items-start justify-between mb-3">
+                <div>
+                  <h3 className="text-[12px] font-bold uppercase tracking-wider text-slate-500">Net Revenue</h3>
+                  <p className="text-[11px] text-slate-400 font-medium mt-0.5">Total excl. GST</p>
+                </div>
+                <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-blue-50 shrink-0">
+                  <IndianRupee className="w-5 h-5 text-blue-600" />
+                </div>
+              </div>
+              <div className="flex items-end gap-2 mb-1">
+                <span className="text-[26px] font-bold text-slate-800 tracking-tight leading-none">
+                  {loading ? "—" : fmtShort(netRevenue)}
+                </span>
+                {totalReturnsValue > 0 && (
+                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md mb-0.5 text-rose-600 bg-rose-50">
+                    -{fmt(totalReturnsValue)} returns
+                  </span>
+                )}
               </div>
             </div>
-            <div className="flex items-end gap-2 mb-1">
-              <span className="text-2xl font-semibold text-slate-800 tracking-tight">
-                {loading ? "—" : fmtShort(netRevenue)}
-              </span>
-              {totalReturnsValue > 0 && (
-                <span className="text-xs font-medium px-1.5 py-0.5 rounded-md mb-0.5 text-rose-500 bg-rose-50">
-                  -{fmt(totalReturnsValue)} returns
-                </span>
-              )}
+            
+            <div className="mt-4 pt-4 border-t border-slate-100 space-y-2.5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_0_2px_rgba(16,185,129,0.2)]"></span>
+                  <span className="text-xs font-semibold text-slate-600">Received</span>
+                </div>
+                <span className="text-xs font-bold text-emerald-600">{fmt(receivedAmount)}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-amber-500 shadow-[0_0_0_2px_rgba(245,158,11,0.2)]"></span>
+                  <span className="text-xs font-semibold text-slate-600">Outstanding</span>
+                </div>
+                <span className="text-xs font-bold text-amber-600">{fmt(outstandingAmount)}</span>
+              </div>
             </div>
-            <p className="text-xs text-slate-400">
-              Gross: {fmt(grossRevenue)}
-            </p>
           </div>
 
           {/* Total Profit */}
-          <div className="bg-white rounded-xl p-5 border border-slate-100 shadow-sm hover:shadow-md transition-all duration-200 group">
-            <div className="flex items-start justify-between mb-3">
-              <p className="text-slate-500 text-sm font-medium">Total Profit</p>
-              <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${totalProfit >= 0 ? "bg-emerald-50" : "bg-rose-50"}`}>
-                <TrendingUp className={`w-5 h-5 ${totalProfit >= 0 ? "text-emerald-600" : "text-rose-600"}`} />
+          <div className="bg-white rounded-xl p-5 border border-slate-100 shadow-sm hover:shadow-md transition-all duration-200 group flex flex-col justify-between">
+            <div>
+              <div className="flex items-start justify-between mb-3">
+                <div>
+                  <h3 className="text-[12px] font-bold uppercase tracking-wider text-slate-500">Total Profit</h3>
+                  <p className="text-[11px] text-slate-400 font-medium mt-0.5">Net earnings</p>
+                </div>
+                <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${totalProfit >= 0 ? "bg-emerald-50" : "bg-rose-50"}`}>
+                  <TrendingUp className={`w-5 h-5 ${totalProfit >= 0 ? "text-emerald-600" : "text-rose-600"}`} />
+                </div>
+              </div>
+              <div className="flex items-end gap-2 mb-1">
+                <span className={`text-[26px] font-bold tracking-tight leading-none ${totalProfit >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
+                  {loading ? "—" : fmtShort(totalProfit)}
+                </span>
+                {totalProfit >= 0 ? (
+                  <ArrowUpRight className="w-4 h-4 text-emerald-500 mb-0.5" />
+                ) : (
+                  <ArrowDownRight className="w-4 h-4 text-rose-500 mb-0.5" />
+                )}
               </div>
             </div>
-            <div className="flex items-end gap-2 mb-1">
-              <span className={`text-2xl font-semibold tracking-tight ${totalProfit >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
-                {loading ? "—" : fmtShort(totalProfit)}
-              </span>
-              {totalProfit >= 0 ? (
-                <ArrowUpRight className="w-4 h-4 text-emerald-500 mb-1" />
-              ) : (
-                <ArrowDownRight className="w-4 h-4 text-rose-500 mb-1" />
-              )}
+            
+            <div className="mt-4 pt-4 border-t border-slate-100">
+              <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                Total Cost: <span className="text-slate-600">{fmt(totalCost)}</span>
+              </p>
             </div>
-            <p className="text-xs text-slate-400">
-              Cost: {fmt(totalCost)}
-            </p>
           </div>
 
           {/* Total Orders */}
-          <div className="bg-white rounded-xl p-5 border border-slate-100 shadow-sm hover:shadow-md transition-all duration-200 group">
-            <div className="flex items-start justify-between mb-3">
-              <p className="text-slate-500 text-sm font-medium">Total Orders</p>
-              <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-amber-50">
-                <ShoppingCart className="w-5 h-5 text-amber-600" />
+          <div className="bg-white rounded-xl p-5 border border-slate-100 shadow-sm hover:shadow-md transition-all duration-200 group flex flex-col justify-between">
+            <div>
+              <div className="flex items-start justify-between mb-3">
+                <div>
+                  <h3 className="text-[12px] font-bold uppercase tracking-wider text-slate-500">Total Orders</h3>
+                  <p className="text-[11px] text-slate-400 font-medium mt-0.5">{RANGE_LABELS[activeRange]}</p>
+                </div>
+                <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-amber-50 shrink-0">
+                  <ShoppingCart className="w-5 h-5 text-amber-600" />
+                </div>
+              </div>
+              <div className="flex items-end gap-2 mb-1">
+                <span className="text-[26px] font-bold text-slate-800 tracking-tight leading-none">
+                  {loading ? "—" : totalOrders.toLocaleString()}
+                </span>
               </div>
             </div>
-            <div className="flex items-end gap-2 mb-1">
-              <span className="text-2xl font-semibold text-slate-800 tracking-tight">
-                {loading ? "—" : totalOrders.toLocaleString()}
-              </span>
-              <div className="flex gap-1 flex-wrap">
-                {totalReturnsCount > 0 && (
-                  <span className="text-xs font-medium px-1.5 py-0.5 rounded-md mb-0.5 text-rose-500 bg-rose-50">
-                    {totalReturnsCount} returns
-                  </span>
-                )}
-                {totalExchangesCount > 0 && (
-                  <span className="text-xs font-medium px-1.5 py-0.5 rounded-md mb-0.5 text-blue-500 bg-blue-50">
-                    {totalExchangesCount} exchanges
-                  </span>
-                )}
-              </div>
+            
+            <div className="mt-4 pt-4 border-t border-slate-100 flex gap-2 flex-wrap">
+              {totalReturnsCount > 0 && (
+                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md text-rose-600 bg-rose-50 border border-rose-100">
+                  {totalReturnsCount} returns
+                </span>
+              )}
+              {totalExchangesCount > 0 && (
+                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md text-blue-600 bg-blue-50 border border-blue-100">
+                  {totalExchangesCount} exchanges
+                </span>
+              )}
+              {totalReturnsCount === 0 && totalExchangesCount === 0 && (
+                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md text-slate-400 bg-slate-50 border border-slate-100">
+                  Clean orders
+                </span>
+              )}
             </div>
-            <p className="text-xs text-slate-400">
-              {RANGE_LABELS[activeRange]}
-            </p>
           </div>
 
           {/* AOV */}
-          <div className="bg-white rounded-xl p-5 border border-slate-100 shadow-sm hover:shadow-md transition-all duration-200 group">
-            <div className="flex items-start justify-between mb-3">
-              <p className="text-slate-500 text-sm font-medium">Avg. Order Value</p>
-              <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-violet-50">
-                <Zap className="w-5 h-5 text-violet-600" />
+          <div className="bg-white rounded-xl p-5 border border-slate-100 shadow-sm hover:shadow-md transition-all duration-200 group flex flex-col justify-between">
+            <div>
+              <div className="flex items-start justify-between mb-3">
+                <div>
+                  <h3 className="text-[12px] font-bold uppercase tracking-wider text-slate-500">Avg. Order Value</h3>
+                  <p className="text-[11px] text-slate-400 font-medium mt-0.5">Revenue / Orders</p>
+                </div>
+                <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-violet-50 shrink-0">
+                  <Zap className="w-5 h-5 text-violet-600" />
+                </div>
+              </div>
+              <div className="flex items-end gap-2 mb-1">
+                <span className="text-[26px] font-bold text-slate-800 tracking-tight leading-none">
+                  {loading ? "—" : fmt(aov)}
+                </span>
               </div>
             </div>
-            <div className="flex items-end gap-2 mb-1">
-              <span className="text-2xl font-semibold text-slate-800 tracking-tight">
-                {loading ? "—" : fmt(aov)}
-              </span>
+            
+            <div className="mt-4 pt-4 border-t border-slate-100">
+              <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                Gross Margin: <span className="text-slate-600">{loading ? "—" : `${grossMargin.toFixed(1)}%`}</span>
+              </p>
             </div>
-            <p className="text-xs text-slate-400">
-              Revenue / Orders
-            </p>
           </div>
+        </div>
+
+        {/* ── CASH POSITION CARD (APPROACH B) ── */}
+        <div className="bg-white rounded-xl p-5 border border-slate-100 shadow-sm hover:shadow-md transition-all duration-200">
+          <div className="flex items-start justify-between mb-5">
+            <h3 className="text-sm font-bold text-slate-800">Cash Position</h3>
+            <div className="w-8 h-8 rounded bg-slate-50 flex items-center justify-center text-slate-400">
+              <CreditCard className="w-4 h-4" />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            {/* Received Box */}
+            <div className="border border-emerald-100 bg-emerald-50/30 rounded-xl p-4">
+              <div className="flex items-center gap-1.5 mb-1 text-emerald-600">
+                <ArrowDownRight className="w-3.5 h-3.5" />
+                <span className="text-[11px] font-bold uppercase tracking-wider">Received</span>
+              </div>
+              <div className="text-2xl font-bold text-slate-800 tracking-tight">
+                {fmt(receivedAmount)}
+              </div>
+              <p className="text-[11px] text-slate-500 mt-1">In your hand</p>
+            </div>
+
+            {/* To Receive Box */}
+            <div className="border border-amber-100 bg-amber-50/30 rounded-xl p-4">
+              <div className="flex items-center gap-1.5 mb-1 text-amber-600">
+                <ArrowUpRight className="w-3.5 h-3.5" />
+                <span className="text-[11px] font-bold uppercase tracking-wider">To receive</span>
+              </div>
+              <div className="text-2xl font-bold text-slate-800 tracking-tight">
+                {fmt(outstandingAmount)}
+              </div>
+              <p className="text-[11px] text-slate-500 mt-1">On credit</p>
+            </div>
+          </div>
+
+          {/* Progress Bar */}
+          <div className="mb-4">
+            <div className="flex justify-between text-[11px] font-bold text-slate-400 mb-2 uppercase tracking-wider">
+              <span>{percentCollected.toFixed(0)}% collected</span>
+              <span>Total billed {fmt(totalBilled)}</span>
+            </div>
+            <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden flex">
+              <div 
+                className="h-full bg-emerald-500" 
+                style={{ width: `${percentCollected}%` }}
+              />
+              <div 
+                className="h-full bg-amber-500" 
+                style={{ width: `${100 - percentCollected}%` }}
+              />
+            </div>
+          </div>
+
+          {/* Alert */}
+          {outstandingAmount > 0 ? (
+            <div className="bg-rose-50 border border-rose-100 text-rose-600 text-xs font-semibold px-4 py-3 rounded-lg flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 shrink-0" />
+              {fmt(outstandingAmount)} overdue/on credit — follow up
+            </div>
+          ) : (
+            <div className="bg-emerald-50 border border-emerald-100 text-emerald-600 text-xs font-semibold px-4 py-3 rounded-lg flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 shrink-0" />
+              All money collected — nothing outstanding
+            </div>
+          )}
         </div>
 
         {/* ── SALES PERFORMANCE LABEL ── */}

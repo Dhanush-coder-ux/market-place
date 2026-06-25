@@ -30,6 +30,7 @@ export interface VariantCombination {
   id: string;
   attributes: Record<string, string>;
   barcode: string;
+  sku: string;
   price: string;
   buy_price: string;
   mrp: string;
@@ -307,6 +308,7 @@ export const VariantMatrixTable: React.FC<VariantMatrixTableProps> = ({
                     {k}
                   </th>
                 ))}
+                <th className="px-5 py-4 text-[10px] font-black uppercase text-slate-400 whitespace-nowrap">SKU</th>
                 <th className="px-5 py-4 text-[10px] font-black uppercase text-slate-400 whitespace-nowrap">Barcode</th>
                 <th className="px-5 py-4 text-center text-[10px] font-black uppercase text-slate-400">Reorder Pt</th>
                 <th className="px-5 py-4 text-center text-[10px] font-black uppercase text-slate-400">Tracking</th>
@@ -325,6 +327,14 @@ export const VariantMatrixTable: React.FC<VariantMatrixTableProps> = ({
                           </span>
                         </td>
                       ))}
+                      <td className="px-5 py-4">
+                        <input
+                          className="h-9 px-3 text-xs border border-slate-200 rounded-lg w-32 font-mono focus:ring-2 focus:ring-blue-100 outline-none mb-1"
+                          placeholder="SKU-001"
+                          value={combo.sku || ""}
+                          onChange={e => update(combo.id, "sku", e.target.value)}
+                        />
+                      </td>
                       <td className="px-5 py-4">
                         <input
                           className="h-9 px-3 text-xs border border-slate-200 rounded-lg w-32 font-mono focus:ring-2 focus:ring-blue-100 outline-none"
@@ -400,12 +410,13 @@ export const generateCombinations = (
     );
 
     if (existing_) return existing_;
-
     const barcodeSuffix = combo.map(v => v.slice(0, 3).toUpperCase()).join("-");
+
     return {
       id: uid(),
       attributes,
       barcode: barcodeSuffix,
+      sku: "",
       price: defaults.sell_price,
       buy_price: defaults.buy_price,
       mrp: defaults.mrp,

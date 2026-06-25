@@ -536,6 +536,9 @@ const ProductDetail = () => {
 
             const productsList: any[] = [];
             (p.products ?? []).forEach((prod: any) => {
+              // Ensure we only aggregate for the specific product being viewed
+              if (prod.inventory_id !== id && prod.product_id !== id && prod.id !== id) return;
+
               // NEW FORMAT SUPPORT
               if (prod.stocks_added !== undefined) {
                 productsList.push({

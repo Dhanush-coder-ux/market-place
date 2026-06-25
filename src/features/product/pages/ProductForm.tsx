@@ -503,6 +503,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
               id: v.id,
               attributes: v.datas?.attributes || {},
               barcode: v.datas?.barcode || "",
+              sku: v.datas?.sku || v.datas?.barcode || "",
               price: String(v.sell_price || ""),
               buy_price: String(v.buy_price || ""),
               mrp: String(v.datas?.mrp || ""),
@@ -623,6 +624,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
         batch: null,
       };
       if (combo.barcode?.trim()) v.datas.barcode = combo.barcode;
+      if (combo.sku?.trim()) v.datas.sku = combo.sku;
       return v;
     });
 

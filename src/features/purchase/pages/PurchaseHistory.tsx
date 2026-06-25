@@ -177,7 +177,7 @@ export function toDisplayData(p: PurchaseRecord): DirectPurchaseData {
 
   const totoalItems=p.total_items;
 
-  const paidAmount = Number((p as any).paid_amount ?? d2?.payment?.amountPaid ?? d2?.paid_amount ?? 0);
+  const paidAmount = Number((p as any).paid_amount ?? d2?.payment?.amountPaid ?? d2?.payment_info?.amountPaid ?? d2?.paid_amount ?? 0);
   const outstanding = Math.max(
     0,
     grandTotal - paidAmount

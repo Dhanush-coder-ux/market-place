@@ -27,7 +27,7 @@ import Loader from "@/components/common/Loader";
 import { InventoryItemsCard } from "@/features/purchase/components/InventoryItemsCard";
 import { useQuickCreate } from "@/features/common/QuickCreate/QuickCreateContext";
 import PurchaseSuccessModal from "../components/purchaseSuccessModal";
-
+import { parseGst } from "./PurchaseHistory";
 type PaymentMethod = "Cash" | "UPI" | "Card" | "Bank";
 
 export interface ProductItem {
@@ -36,6 +36,7 @@ export interface ProductItem {
   variant_id?: string;
   name: string;
   quantity: number | "";
+  originalQuantity?: number;
   costPrice: number | "";
   sellingPrice: number | "";
   marginPercent: number | "";
@@ -194,6 +195,7 @@ const PurchaseForm = () => {
           setPurchaseId(data.id || data.purchase_id);
           const updatedProducts = [...data.products.map((p: any) => {
             const qty = p.quantity ?? p.stocks_added ?? 0;
+            const parsedSku = p.sku || p.datas?.sku || p.ui_id || p.barcode || "";
             return {
               id: p.id || crypto.randomUUID(),
               inventory_id: p.inventory_id,
@@ -206,10 +208,10 @@ const PurchaseForm = () => {
               marginAmount: "",
               marginType: "sellingPrice",
               unit: p.unit || "pc",
-              taxGst: p.gst || 18,
+              taxGst: parseGst(p.gst || p.datas?.gst || p.taxGst || p.tax_gst || 0) || 18,
               variant_id: (typeof p.variant === 'object' && p.variant !== null) ? p.variant.variant_id : null,
               variant: (typeof p.variant === 'object' && p.variant !== null ? p.variant.variant_name || p.variant.name : p.variant) || "",
-              sku: p.ui_id || p.barcode,
+              sku: parsedSku,
               batchTracking: p.batch_tracking || p.has_batch || !!p.batch || !!p.batch_id,
               serialTracking: p.serial_tracking || p.has_serialno || !!p.serial_info || !!p.serialno_id || !!(p.serial_number) || !!(p.serial_numbers),
               batch_id: (typeof p.batch === 'object' && p.batch !== null) ? p.batch.batch_id : null,
@@ -253,6 +255,22 @@ const PurchaseForm = () => {
           
           setProducts(updatedProducts);
           setSoldStockWarnings(warnings);
+
+          const transportCharge = Number(
+            data.transport_charge ??
+            data.additional_charges?.delivery_charge ??
+            data.charges?.transport ?? 0
+          );
+          const otherCharge = Number(
+            data.other_charges ??
+            data.additional_charges?.other_charge ??
+            data.charges?.other ?? 0
+          );
+          setCharges({ transport: transportCharge || "", other: otherCharge || "" });
+
+          const paidAmount = Number(data.paid_amount ?? data.payment_info?.amountPaid ?? data.payment?.amountPaid ?? 0);
+          const paymentMethod = data.payment_mode ?? data.payment_info?.method ?? data.payment?.method ?? "Cash";
+          setPayment({ amountPaid: paidAmount || "", method: paymentMethod });
         }
       };
       fetchPurchase();
@@ -454,6 +472,8 @@ const PurchaseForm = () => {
           barcode: p.sku,
           stocks: q,
           received_stocks: q,
+          stocks_before: p.originalQuantity,
+          original_quantity: p.originalQuantity,
           buy_price: Number(baseCost.toFixed(2)),
           sell_price: Number(finalSellPrice.toFixed(2)),
           margin: calculatedMargin,

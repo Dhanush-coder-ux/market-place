@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import {
   IndianRupee, TrendingUp, ShoppingCart, Zap,
   BarChart2, ArrowUpRight, ArrowDownRight, Package,
-  Calendar, RefreshCw, CreditCard, AlertTriangle, CheckCircle2
+  Calendar, RefreshCw
 } from "lucide-react";
 import {
   AreaChart, Area, PieChart, Pie, Cell,
@@ -198,9 +198,6 @@ const AnalyticsDashboard = () => {
     outstandingAmount = stats?.total_outstanding ?? 0;
     receivedAmount = Math.max(0, netRevenue - outstandingAmount);
   }
-
-  const totalBilled = receivedAmount + outstandingAmount;
-  const percentCollected = totalBilled > 0 ? (receivedAmount / totalBilled) * 100 : 0;
 
   // Format daily trend for chart
   const chartData = dailyTrend.map((d: any) => ({
@@ -463,72 +460,7 @@ const AnalyticsDashboard = () => {
           </div>
         </div>
 
-        {/* ── CASH POSITION CARD (APPROACH B) ── */}
-        <div className="bg-white rounded-xl p-5 border border-slate-100 shadow-sm hover:shadow-md transition-all duration-200">
-          <div className="flex items-start justify-between mb-5">
-            <h3 className="text-sm font-bold text-slate-800">Cash Position</h3>
-            <div className="w-8 h-8 rounded bg-slate-50 flex items-center justify-center text-slate-400">
-              <CreditCard className="w-4 h-4" />
-            </div>
-          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-            {/* Received Box */}
-            <div className="border border-emerald-100 bg-emerald-50/30 rounded-xl p-4">
-              <div className="flex items-center gap-1.5 mb-1 text-emerald-600">
-                <ArrowDownRight className="w-3.5 h-3.5" />
-                <span className="text-[11px] font-bold uppercase tracking-wider">Received</span>
-              </div>
-              <div className="text-2xl font-bold text-slate-800 tracking-tight">
-                {fmt(receivedAmount)}
-              </div>
-              <p className="text-[11px] text-slate-500 mt-1">In your hand</p>
-            </div>
-
-            {/* To Receive Box */}
-            <div className="border border-amber-100 bg-amber-50/30 rounded-xl p-4">
-              <div className="flex items-center gap-1.5 mb-1 text-amber-600">
-                <ArrowUpRight className="w-3.5 h-3.5" />
-                <span className="text-[11px] font-bold uppercase tracking-wider">To receive</span>
-              </div>
-              <div className="text-2xl font-bold text-slate-800 tracking-tight">
-                {fmt(outstandingAmount)}
-              </div>
-              <p className="text-[11px] text-slate-500 mt-1">On credit</p>
-            </div>
-          </div>
-
-          {/* Progress Bar */}
-          <div className="mb-4">
-            <div className="flex justify-between text-[11px] font-bold text-slate-400 mb-2 uppercase tracking-wider">
-              <span>{percentCollected.toFixed(0)}% collected</span>
-              <span>Total billed {fmt(totalBilled)}</span>
-            </div>
-            <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden flex">
-              <div 
-                className="h-full bg-emerald-500" 
-                style={{ width: `${percentCollected}%` }}
-              />
-              <div 
-                className="h-full bg-amber-500" 
-                style={{ width: `${100 - percentCollected}%` }}
-              />
-            </div>
-          </div>
-
-          {/* Alert */}
-          {outstandingAmount > 0 ? (
-            <div className="bg-rose-50 border border-rose-100 text-rose-600 text-xs font-semibold px-4 py-3 rounded-lg flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4 shrink-0" />
-              {fmt(outstandingAmount)} overdue/on credit — follow up
-            </div>
-          ) : (
-            <div className="bg-emerald-50 border border-emerald-100 text-emerald-600 text-xs font-semibold px-4 py-3 rounded-lg flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 shrink-0" />
-              All money collected — nothing outstanding
-            </div>
-          )}
-        </div>
 
         {/* ── SALES PERFORMANCE LABEL ── */}
         <h2 className="display-font text-base font-semibold text-slate-600 tracking-wide">

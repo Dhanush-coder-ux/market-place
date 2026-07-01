@@ -361,7 +361,7 @@ export default function StoreSetupForm({ existingData }: StoreSetupProps) {
                 { s: 1, label: "Identity" },
                 { s: 2, label: "Assets" },
                 { s: 3, label: "Contacts" },
-                { s: 4, label: "Theme" }
+                { s: 4, label: "Socials" }
               ].map((item) => {
                 const isActive = step === item.s;
                 const isCompleted = step > item.s;
@@ -725,40 +725,11 @@ export default function StoreSetupForm({ existingData }: StoreSetupProps) {
               {step === 4 && (
                 <div className="space-y-5">
                   <div>
-                    <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider mb-1">Color Theme & Socials</h3>
-                    <p className="text-[11px] text-slate-400">Choose a primary storefront accent color theme and link your social channels.</p>
+                    <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider mb-1">Socials</h3>
+                    <p className="text-[11px] text-slate-400">Link your social channels.</p>
                   </div>
 
                   <div className="space-y-5 pt-2">
-                    {/* ACCENT THEME COLOR PICKER */}
-                    <div>
-                      <label className="block text-xs font-bold text-slate-500 mb-2">Accent Theme Color</label>
-                      <div className="grid grid-cols-6 gap-2">
-                        {Object.entries(THEMES).map(([name, tConfig]) => {
-                          const isSelected = form.themeColor === name;
-                          return (
-                            <button
-                              key={name}
-                              type="button"
-                              onClick={() => setForm((prev) => ({ ...prev, themeColor: name }))}
-                              className={`
-                                py-2.5 rounded-xl border flex flex-col items-center gap-1.5 transition-all
-                                ${isSelected 
-                                  ? `${tConfig.border} ${tConfig.bg} ring-2 ring-offset-1` 
-                                  : "border-slate-200 bg-white hover:bg-slate-50"}
-                              `}
-                              style={{ 
-                                borderColor: isSelected ? tConfig.color : undefined,
-                                boxShadow: isSelected ? `0 0 0 2px ${tConfig.color}` : undefined,
-                              }}
-                            >
-                              <span className={`w-4 h-4 rounded-full ${tConfig.dot} shadow-inner`} />
-                              <span className="text-[9.5px] font-bold text-slate-600">{name}</span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
 
                     {/* SOCIAL LINKS */}
                     <div className="space-y-3.5">

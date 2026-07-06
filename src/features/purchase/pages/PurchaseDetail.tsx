@@ -10,6 +10,7 @@ import { ProfileHeaderCard, SectionCard, DetailItem, InfoRow } from "@/component
 import { StatCard } from "@/components/common/StatsCard";
 import { useApi } from "@/context/ApiContext";
 import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
+import { purchaseApi } from "@/services/api/purchase";
 import { useHeader } from "@/context/HeaderContext";
 
 const fmt = (n: number) => `₹${n.toLocaleString("en-IN")}`;
@@ -69,7 +70,7 @@ const PurchaseDetail = () => {
         setLoading(true);
         try {
           // First try the purchases endpoint (direct purchase ID with shop scope)
-          const res = await getData(`${ENDPOINTS.PURCHASES}/by/${SHOP_ID}/${id}`);
+          const res = await purchaseApi.getPurchaseById(SHOP_ID, id);
           let data = res?.data ? (Array.isArray(res.data) ? res.data[0] : res.data) : null;
           if (!data && res && res.id) {
             data = res;

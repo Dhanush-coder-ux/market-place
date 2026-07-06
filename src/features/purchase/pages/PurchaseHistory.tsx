@@ -21,8 +21,9 @@ import { ReusableSelect } from "@/components/ui/ReusableSelect";
 import { SearchSelect } from "@/components/inputbuilders/SearchSelect";
 import { StatCard } from "@/components/common/StatsCard";
 import type { PurchaseRecord } from "@/types/api";
-import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
+import { SHOP_ID } from "@/services/endpoints";
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
+import { purchaseApi } from "@/services/api/purchase";
 
 
 /* ================= TYPES ================= */
@@ -116,7 +117,7 @@ export function parseGst(val: any): number {
 
 export function toDisplayData(p: PurchaseRecord): DirectPurchaseData {
   const d2 = (p.datas ? (typeof p.datas === "string" ? JSON.parse(p.datas) : p.datas) : p) as any;
-  const products = ((p as any).products ?? d2?.products ?? d2?.purchase_products ?? d2?.grn_products ?? d2?.finished_products) as any[] | undefined;
+  const products = ((p as any).items ?? (p as any).products ?? d2?.products ?? d2?.purchase_products ?? d2?.grn_products ?? d2?.finished_products) as any[] | undefined;
   const dateRaw = String(d2?.purchaseDetails?.date ?? d2?.purchase_date ?? d2?.production_date ?? d2?.receipt_date ?? d2?.adjusted_date ?? (p as any).date ?? (p as any).purchase_date ?? new Date().toISOString());
 
   let d = new Date();
@@ -142,6 +143,7 @@ export function toDisplayData(p: PurchaseRecord): DirectPurchaseData {
   }
 
   const otherCharge = Number(
+    (p as any).charges_infos?.other_charge ??
     (p as any).other_charges ??
     p.additional_charges?.other_charge ??
     d2?.other_charges ??
@@ -150,6 +152,7 @@ export function toDisplayData(p: PurchaseRecord): DirectPurchaseData {
   );
 
   const transportCharge = Number(
+    (p as any).charges_infos?.transport_charge ??
     (p as any).transport_charge ??
     p.additional_charges?.delivery_charge ??
     d2?.transport_charge ??
@@ -158,15 +161,15 @@ export function toDisplayData(p: PurchaseRecord): DirectPurchaseData {
   );
 
   const prods = (products ?? []);
-  const subtotal = prods.reduce((sum: number, pr: any) => {
-    const qty = Number(pr.received_stocks ?? pr.received_qty ?? pr.quantity ?? pr.qty ?? pr.stocks_added ?? 1);
-    const price = Number(pr.buy_price ?? 0);
+  const subtotal = (p as any).item_infos?.total_pur_cost ?? prods.reduce((sum: number, pr: any) => {
+    const qty = Number(pr.stocks_infos?.stocks ?? pr.stocks ?? pr.received_stocks ?? pr.received_qty ?? pr.quantity ?? pr.qty ?? pr.stocks_added ?? 1);
+    const price = Number(pr.pricing_infos?.[0]?.buy_price ?? pr.buy_price ?? 0);
     return sum + (qty * price);
   }, 0);
 
-  const totalGst = prods.reduce((sum: number, pr: any) => {
-    const qty = Number(pr.received_stocks ?? pr.received_qty ?? pr.quantity ?? pr.qty ?? pr.stocks_added ?? 1);
-    const price = Number(pr.buy_price ?? 0);
+  const totalGst = (p as any).item_infos?.total_gst_amount ?? prods.reduce((sum: number, pr: any) => {
+    const qty = Number(pr.stocks_infos?.stocks ?? pr.stocks ?? pr.received_stocks ?? pr.received_qty ?? pr.quantity ?? pr.qty ?? pr.stocks_added ?? 1);
+    const price = Number(pr.pricing_infos?.[0]?.buy_price ?? pr.buy_price ?? 0);
     const gstPercent = parseGst(pr.gst || pr.datas?.gst || pr.taxGst || pr.tax_gst || 0);
     return sum + (qty * price * (gstPercent / 100));
   }, 0);
@@ -175,9 +178,10 @@ export function toDisplayData(p: PurchaseRecord): DirectPurchaseData {
   const additionalChargesTotal = otherCharge + transportCharge;
   const grandTotal = totalCost + additionalChargesTotal;
 
-  const totoalItems=p.total_items;
+  const totoalItems= (p as any).item_infos?.total_pur_items ?? (p as any).total_items;
 
-  const paidAmount = Number((p as any).paid_amount ?? d2?.payment?.amountPaid ?? d2?.payment_info?.amountPaid ?? d2?.paid_amount ?? 0);
+  const paymentInfoObj = Array.isArray((p as any).payment_infos) ? (p as any).payment_infos[0] : null;
+  const paidAmount = Number(paymentInfoObj?.amount ?? (p as any).paid_amount ?? d2?.payment?.amountPaid ?? d2?.payment_info?.amountPaid ?? d2?.paid_amount ?? 0);
   const outstanding = Math.max(
     0,
     grandTotal - paidAmount
@@ -191,17 +195,22 @@ export function toDisplayData(p: PurchaseRecord): DirectPurchaseData {
     time: d.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }),
     vendor: String(vendorName),
     totoalItems:totoalItems,
-    products: (products ?? []).map((pr: any) => ({
-      name: String(pr.name ?? pr.product_name ?? "Item"),
-      quantity: Number(pr.received_stocks ?? pr.received_qty ?? pr.quantity ?? pr.qty ?? pr.stocks_added ?? 1),
-      stocks: Number(pr.stocks ?? 0),
-      stocks_before: pr.stocks_before,
-      buy_price: pr.buy_price,
-      sell_price: pr.sell_price,
+    products: (products ?? []).map((pr: any) => {
+      const pBuyPrice = pr.pricing_infos?.[0]?.buy_price ?? pr.buy_price;
+      const pSellPrice = pr.pricing_infos?.[0]?.sell_price ?? pr.sell_price;
+      const pStorage = pr.storage_location_infos?.name ?? pr.storage_locations?.[0]?.name ?? pr.storage_location ?? pr.datas?.storage_location;
+      
+      return {
+      name: String(pr.name ?? pr.product_name ?? pr.product_id ?? "Item"),
+      quantity: Number(pr.stocks_infos?.stocks ?? pr.stocks ?? pr.received_stocks ?? pr.received_qty ?? pr.quantity ?? pr.qty ?? pr.stocks_added ?? 1),
+      stocks: Number(pr.stocks_infos?.stocks ?? pr.stocks ?? 0),
+      stocks_before: pr.stocks_infos?.stocks_before ?? pr.stocks_before,
+      buy_price: pBuyPrice,
+      sell_price: pSellPrice,
       barcode: pr.barcode,
       category: pr.category,
       gst: parseGst(pr.gst || pr.datas?.gst || pr.taxGst || pr.tax_gst || 0),
-      storage_location: pr.storage_location || pr.datas?.storage_location,
+      storage_location: pStorage,
       has_batch: pr.has_batch,
       has_serialno: pr.has_serialno,
       has_variant: pr.has_variant,
@@ -248,12 +257,12 @@ export function toDisplayData(p: PurchaseRecord): DirectPurchaseData {
         id: s.id,
         serial_numbers: s.serial_numbers || []
       })) : undefined
-    })),
+    }; }),
     total_cost: totalCost,
     paid_amount: paidAmount,
     outstanding: outstanding,
     purchaseType: typeMap[p.type] ?? "Purchase",
-    paymentMethod: String(d2?.payment?.method ?? d2?.payment_method ?? "—"),
+    paymentMethod: String(paymentInfoObj?.method ?? d2?.payment?.method ?? d2?.payment_method ?? "—"),
     charges: {
       other: otherCharge,
       transport: transportCharge,
@@ -791,7 +800,6 @@ const PurchaseHistory = () => {
   const fetchPage = useCallback(async (limit: number, offset: number, filters: any) => {
     const params: any = {
       view: "PURCHASE_VIEW",
-      shop_id: SHOP_ID,
       limit: limit.toString(),
       offset: offset.toString()
     };
@@ -801,7 +809,7 @@ const PurchaseHistory = () => {
     if (filters.fromDate) params.from_date = filters.fromDate;
     if (filters.toDate) params.to_date = filters.toDate;
 
-    const res = await getData(ENDPOINTS.PURCHASES, params);
+    const res = await purchaseApi.getPurchasesByShop(SHOP_ID, params);
     
     const itemsRaw = res ? (Array.isArray(res?.data) ? res.data : (res?.data?.purchases ?? res?.data?.datas ?? [])) : [];
     const parsedItems = itemsRaw.map(toDisplayData);

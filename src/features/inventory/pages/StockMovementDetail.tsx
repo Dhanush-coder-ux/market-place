@@ -26,7 +26,7 @@ function ProductDetailsList({ prod }: { prod: any }) {
   const hasOldVariants = prod.variants && prod.variants.length > 0;
   const hasOldBatches = prod.batches && prod.batches.length > 0;
   const hasOldSerials = prod.serials && prod.serials.length > 0;
-  
+
   const hasNewVariant = !!prod.variant;
   const hasNewBatch = !!prod.batch;
   const hasNewSerials = prod.serial_info && prod.serial_info.serial_numbers && prod.serial_info.serial_numbers.length > 0;
@@ -43,7 +43,7 @@ function ProductDetailsList({ prod }: { prod: any }) {
           </p>
         </div>
       )}
-      
+
       {hasNewBatch && (
         <div className="pl-3 border-l-2 border-blue-100">
           <div className="bg-slate-50 p-2 rounded border border-slate-100 max-w-md text-[10px] text-slate-650 shadow-sm">
@@ -91,8 +91,8 @@ function ProductDetailsList({ prod }: { prod: any }) {
                   </div>
                   {(b.manufacturing_date || b.expiry_date) && (
                     <div className="flex gap-2 text-[9px] mt-0.5 pt-1 border-t border-slate-100">
-                       {b.manufacturing_date && <span className="text-slate-500 font-medium">MFG: <span className="font-bold text-slate-700">{fmtShortDate(b.manufacturing_date)}</span></span>}
-                       {b.expiry_date && <span className="text-slate-500 font-medium">EXP: <span className="font-bold text-rose-600">{fmtShortDate(b.expiry_date)}</span></span>}
+                      {b.manufacturing_date && <span className="text-slate-500 font-medium">MFG: <span className="font-bold text-slate-700">{fmtShortDate(b.manufacturing_date)}</span></span>}
+                      {b.expiry_date && <span className="text-slate-500 font-medium">EXP: <span className="font-bold text-rose-600">{fmtShortDate(b.expiry_date)}</span></span>}
                     </div>
                   )}
                 </div>
@@ -101,7 +101,7 @@ function ProductDetailsList({ prod }: { prod: any }) {
           )}
           {v.serials && v.serials.length > 0 && (
             <div className="text-[9px] text-slate-400 mt-1 flex flex-wrap gap-1">
-              <span className="font-bold flex items-center gap-1"><Zap size={10} /> Serials:</span> 
+              <span className="font-bold flex items-center gap-1"><Zap size={10} /> Serials:</span>
               {v.serials.map((s: string, k: number) => (
                 <span key={k} className="px-1.5 py-0.5 bg-white border border-slate-200 rounded font-mono font-medium">{s}</span>
               ))}
@@ -116,10 +116,10 @@ function ProductDetailsList({ prod }: { prod: any }) {
             <span className="font-bold text-slate-500 tabular-nums">Qty: {b.stocks}</span>
           </div>
           {(b.manufacturing_date || b.expiry_date) && (
-             <div className="flex gap-3 text-[10px] mt-0.5 pt-1.5 border-t border-slate-200/60">
-               {b.manufacturing_date && <span className="text-slate-500 font-medium">MFG: <span className="font-bold text-slate-700">{fmtShortDate(b.manufacturing_date)}</span></span>}
-               {b.expiry_date && <span className="text-slate-500 font-medium">EXP: <span className="font-bold text-rose-600">{fmtShortDate(b.expiry_date)}</span></span>}
-             </div>
+            <div className="flex gap-3 text-[10px] mt-0.5 pt-1.5 border-t border-slate-200/60">
+              {b.manufacturing_date && <span className="text-slate-500 font-medium">MFG: <span className="font-bold text-slate-700">{fmtShortDate(b.manufacturing_date)}</span></span>}
+              {b.expiry_date && <span className="text-slate-500 font-medium">EXP: <span className="font-bold text-rose-600">{fmtShortDate(b.expiry_date)}</span></span>}
+            </div>
           )}
         </div>
       ))}
@@ -229,11 +229,10 @@ const StockMovementDetail = () => {
             <button
               key={tab}
               onClick={() => setActiveTab(i)}
-              className={`px-4 py-1.5 rounded-lg text-[11px] font-black transition-all whitespace-nowrap ${
-                activeTab === i
+              className={`px-4 py-1.5 rounded-lg text-[11px] font-black transition-all whitespace-nowrap ${activeTab === i
                   ? "bg-blue-600 text-white shadow-lg shadow-blue-100"
                   : "text-slate-400 hover:text-slate-600 hover:bg-slate-50"
-              }`}
+                }`}
             >
               {tab} {tab === "Items" && `(${products.length})`}
             </button>
@@ -243,30 +242,30 @@ const StockMovementDetail = () => {
 
       <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar px-2 py-4">
         <div className="w-full space-y-4">
-          
+
           {activeTab === 0 && (
             <SectionCard title="Movement Context">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-1">
-                 <div>
-                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Description / Reason</p>
-                   <div className="flex items-start gap-2 bg-slate-50/50 rounded-lg p-3 border border-slate-100">
-                     <FileText size={16} className="text-blue-400 mt-0.5 shrink-0" />
-                     <p className="text-sm font-medium text-slate-700 leading-relaxed">{adjustment.description || "No description provided"}</p>
-                   </div>
-                 </div>
-                 <div>
-                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Metadata</p>
-                   <div className="space-y-2">
-                     <div className="flex justify-between items-center py-2 border-b border-slate-100 last:border-0">
-                       <span className="text-[11px] font-medium text-slate-500">Movement Type</span>
-                       <TypeBadge type={adjustment.movement_type} />
-                     </div>
-                     <div className="flex justify-between items-center py-2 border-b border-slate-100 last:border-0">
-                       <span className="text-[11px] font-medium text-slate-500">Processed At</span>
-                       <span className="text-[11px] font-bold text-slate-700">{fmtDate(dateStr)}</span>
-                     </div>
-                   </div>
-                 </div>
+                <div>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Description / Reason</p>
+                  <div className="flex items-start gap-2 bg-slate-50/50 rounded-lg p-3 border border-slate-100">
+                    <FileText size={16} className="text-blue-400 mt-0.5 shrink-0" />
+                    <p className="text-sm font-medium text-slate-700 leading-relaxed">{adjustment.description || "No description provided"}</p>
+                  </div>
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Metadata</p>
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center py-2 border-b border-slate-100 last:border-0">
+                      <span className="text-[11px] font-medium text-slate-500">Movement Type</span>
+                      <TypeBadge type={adjustment.movement_type} />
+                    </div>
+                    <div className="flex justify-between items-center py-2 border-b border-slate-100 last:border-0">
+                      <span className="text-[11px] font-medium text-slate-500">Processed At</span>
+                      <span className="text-[11px] font-bold text-slate-700">{fmtDate(dateStr)}</span>
+                    </div>
+                  </div>
+                </div>
               </div>
             </SectionCard>
           )}
@@ -289,10 +288,15 @@ const StockMovementDetail = () => {
                     )}
                     {products.map((prod: any, idx: number) => {
                       const isDec = prod.type === "DECREMENT" || adjustment.movement_type === "SALES";
+
+                      const stocksAdj = prod.stock_infos?.stocks !== undefined ? prod.stock_infos.stocks : (prod.stocks_adjusted !== undefined ? prod.stocks_adjusted : prod.stocks);
+                      const qty = Math.abs(Number(stocksAdj || 0));
                       
-                      const qty = prod.stocks_adjusted !== undefined ? Math.abs(Number(prod.stocks_adjusted)) : Number(prod.stocks || 0);
-                      const sBefore = prod.stocks_before !== undefined && prod.stocks_before !== null ? Number(prod.stocks_before) : null;
-                      const sAfter = prod.stocks_after !== undefined && prod.stocks_after !== null ? Number(prod.stocks_after) : (sBefore !== null ? (isDec ? sBefore - qty : sBefore + qty) : null);
+                      const rawBefore = prod.stock_infos?.stocks_before !== undefined ? prod.stock_infos.stocks_before : prod.stocks_before;
+                      const rawAfter = prod.stock_infos?.stocks_after !== undefined ? prod.stock_infos.stocks_after : prod.stocks_after;
+                      
+                      const sBefore = rawBefore !== undefined && rawBefore !== null ? Number(rawBefore) : null;
+                      const sAfter = rawAfter !== undefined && rawAfter !== null ? Number(rawAfter) : (sBefore !== null ? (isDec ? sBefore - qty : sBefore + qty) : null);
 
                       return (
                         <tr key={idx} className="hover:bg-slate-50/30 transition-colors">
@@ -302,10 +306,10 @@ const StockMovementDetail = () => {
                             <ProductDetailsList prod={prod} />
                           </td>
                           <td className="px-4 py-4 align-top pt-4">
-                             <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded text-[10px] font-bold border shadow-sm ${isDec ? "bg-rose-50 text-rose-700 border-rose-200" : "bg-emerald-50 text-emerald-700 border-emerald-200"}`}>
-                               {isDec ? <TrendingDown size={12} className="stroke-[3]" /> : <TrendingUp size={12} className="stroke-[3]" />}
-                               {movementLabel.toUpperCase()}
-                             </span>
+                            <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded text-[10px] font-bold border shadow-sm ${isDec ? "bg-rose-50 text-rose-700 border-rose-200" : "bg-emerald-50 text-emerald-700 border-emerald-200"}`}>
+                              {isDec ? <TrendingDown size={12} className="stroke-[3]" /> : <TrendingUp size={12} className="stroke-[3]" />}
+                              {movementLabel.toUpperCase()}
+                            </span>
                           </td>
                           <td className="px-4 py-4 font-black text-xl tabular-nums text-center align-top pt-3 border-x border-slate-50 bg-slate-50/20">
                             <span className={isDec ? "text-rose-600" : "text-emerald-600"}>

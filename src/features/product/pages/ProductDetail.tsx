@@ -4,6 +4,7 @@ import {
   Package, Edit3, Trash2, DollarSign, Download, Upload,
   Tag, Layers, Info, BarChart2,
   Hash, ShoppingCart, MapPin, FileText,
+  Check, X as XIcon, Pencil,
 } from "lucide-react";
 import { useApi } from "@/context/ApiContext";
 import { useToast } from "@/context/ToastContext";
@@ -17,6 +18,8 @@ import { VariantRows, SerialBadgeList, BatchCards } from "../../inventory/compon
 import type { InventoryRecord } from "@/types/api";
 import { ProductPurchasesTable } from "@/components/common/HistoryTables";
 import StockMovementTab from "../components/StockMovement";
+import { inventoryCustomFieldsApi } from "@/services/api/inventory";
+import type { InventoryCustomFieldDefinition, InventoryCustomFieldValue } from "@/features/inventory/types";
 
 // ── Search bar ───────────────────────────────────────────────────────────────
 const ProductSearchSelect = () => {
@@ -26,7 +29,7 @@ const ProductSearchSelect = () => {
   const fetchProducts = async (q: string) => {
 
     try {
-      const res = await getData(`${ENDPOINTS.INVENTORIES}/search/${SHOP_ID}`, { q, limit: "8" });
+      const res = await getData(`${ENDPOINTS.INVENTORIES}/by/shop/${SHOP_ID}`, { q, limit: "8" });
       const data = res?.data ? (Array.isArray(res.data) ? res.data : [res.data]) : [];
       return data.map((p: any) => ({
         ...p,
@@ -69,6 +72,14 @@ const ProductDetail = () => {
   const [purchases, setPurchases] = useState<any[]>([]);
   const [purLoading, setPurLoading] = useState(false);
 
+  // Custom Fields state
+  const [customFieldDefs, setCustomFieldDefs] = useState<InventoryCustomFieldDefinition[]>([]);
+  const [customFieldValues, setCustomFieldValues] = useState<InventoryCustomFieldValue[]>([]);
+  const [cfLoading, setCfLoading] = useState(false);
+  const [editingFieldId, setEditingFieldId] = useState<string | null>(null);
+  const [editingValue, setEditingValue] = useState<string>('');
+  const [cfSaving, setCfSaving] = useState(false);
+
   useEffect(() => {
     setBottomActions(
       <div className="flex items-center justify-end w-full animate-in fade-in slide-in-from-right-4 duration-300">
@@ -87,7 +98,7 @@ const ProductDetail = () => {
   useEffect(() => {
     if (!id) return;
     setRecordLoading(true);
-    getData(`${ENDPOINTS.INVENTORIES}/by/${SHOP_ID}/${id}`).then(async (res) => {
+    getData(`${ENDPOINTS.INVENTORIES}/by/id/${SHOP_ID}/${id}`).then(async (res) => {
       if (res) {
         const prod = Array.isArray(res.data) ? res.data[0] : res.data;
         setProduct(prod);
@@ -123,6 +134,52 @@ const ProductDetail = () => {
     }).catch(() => setPurLoading(false));
   }, [activeTab, id, product]);
 
+  // Load custom field definitions + values when Custom Fields tab is active
+  // Custom Fields is always the last tab, so compute its index from hasInvTab
+  useEffect(() => {
+    if (!id || !product) return;
+    const hasInvTab = (product.has_variant === true && (product.variants ?? []).length > 0) || (product.has_batch === true && (product.batches ?? []).length > 0);
+    // Tab order: General(0), [Inventory](optional), Movements, Purchases, Custom Fields
+    const cfIdx = hasInvTab ? 4 : 3;
+    if (activeTab !== cfIdx) return;
+    setCfLoading(true);
+    Promise.all([
+      inventoryCustomFieldsApi.getAllFields(SHOP_ID),
+      inventoryCustomFieldsApi.getValuesByProduct(SHOP_ID, id)
+    ]).then(([defs, vals]) => {
+      setCustomFieldDefs(defs);
+      setCustomFieldValues(vals);
+    }).finally(() => setCfLoading(false));
+  }, [activeTab, id, product]);
+
+  const handleSaveCustomField = async (fieldId: string) => {
+    if (!id) return;
+    setCfSaving(true);
+    try {
+      await inventoryCustomFieldsApi.upsertValue({
+        shop_id: SHOP_ID,
+        product_id: id,
+        field_id: fieldId,
+        value: editingValue,
+      });
+      setCustomFieldValues((prev) => {
+        const existing = prev.findIndex((v) => v.field_id === fieldId);
+        if (existing >= 0) {
+          const updated = [...prev];
+          updated[existing] = { ...updated[existing], value: editingValue };
+          return updated;
+        }
+        return [...prev, { shop_id: SHOP_ID, product_id: id, field_id: fieldId, value: editingValue }];
+      });
+      showToast('Custom field updated', 'success');
+    } catch {
+      showToast('Failed to update field', 'error');
+    } finally {
+      setCfSaving(false);
+      setEditingFieldId(null);
+    }
+  };
+
   const handleDelete = async () => {
     if (!id) return;
     setDeleting(true);
@@ -149,36 +206,36 @@ const ProductDetail = () => {
     );
   }
 
-  const datas = product.datas ?? {};
+  const datas = product.custom_fields || product.additional_infos || product.datas || {};
   const name = String(product.name || "Unknown Product");
-  const reorderPoint = product?.reorder_point;
+  const reorderPoint = product.reorder_point_infos?.reorder_point ?? product.reorder_point;
   const initials = name.slice(0, 2).toUpperCase();
   const sku = String(product.ui_id || product.sku || "—");
   const barcode = String(product.barcode || "—");
-  const category = String(product.category || "—");
+  const category = String(product.category_id || product.category || "—");
   const description = String(product.description || "—");
-  const sellingPrice = product.sell_price ?? "—";
-  const buyingPrice = product.buy_price ?? "—";
-  const currentStock = product.stocks ?? "—";
-  const unit = String(datas.unit ?? "—");
-  const combinations: any[] = product.variants ?? [];
+  const sellingPrice = product.pricing_infos?.sell_price ?? product.sell_price ?? "—";
+  const buyingPrice = product.pricing_infos?.buy_price ?? product.buy_price ?? "—";
+  const currentStock = product.stock_infos?.available_stocks ?? product.stocks ?? "—";
+  const unit = String(product.unit_id || product.unit || datas.unit || "—");
+  const combinations: any[] = product.variant_infos || product.variants || [];
   const variantTypes: any[] = datas.variant_types ?? datas.variantTypes ?? [];
-  const batches: any[] = product.batches ?? [];
+  const batches: any[] = Array.isArray(product.batch_infos) ? product.batch_infos : (product.batch_infos ? [product.batch_infos] : (product.batches || []));
 
   const extractSerials = (val: any): string[] => {
     if (!val) return [];
-    if (Array.isArray(val)) return val;
-    if (val.serial_numbers && Array.isArray(val.serial_numbers)) return val.serial_numbers;
+    if (Array.isArray(val)) return val.map((v: any) => typeof v === 'string' ? v : v.name || "");
+    if (val.serial_numbers && Array.isArray(val.serial_numbers)) return val.serial_numbers.map((v: any) => typeof v === 'string' ? v : v.name || "");
     return [];
   };
 
-  const rootSerials = extractSerials(product.serial_number);
-  const hasVariants = product.has_variant === true && combinations.length > 0;
-  const hasBatches = product.has_batch === true && batches.length > 0;
+  const rootSerials = extractSerials(product.serialno_infos || product.serial_number);
+  const hasVariants = !!product.type_infos?.has_variant || combinations.length > 0;
+  const hasBatches = !!product.type_infos?.has_batch || batches.length > 0;
   const isActive = product.is_active === true;
 
 
-  const TABS = ["General Info", ...((hasVariants || hasBatches) ? ["Inventory & Variants"] : []), MOV_TAB_LABEL, PUR_TAB_LABEL];
+  const TABS = ["General Info", ...((hasVariants || hasBatches) ? ["Inventory & Variants"] : []), MOV_TAB_LABEL, PUR_TAB_LABEL, "Custom Fields"];
   const isTableTab = TABS[activeTab] === MOV_TAB_LABEL || TABS[activeTab] === PUR_TAB_LABEL;
 
   // Clickable field definition
@@ -314,7 +371,7 @@ const ProductDetail = () => {
                         </p>
                         {rootSerials.length > 0 ? (
                           <SerialBadgeList serials={rootSerials} />
-                        ) : (product.has_serialno === true) ? (
+                        ) : (!!product.type_infos?.has_serialno) ? (
                           <div 
                             className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 border border-indigo-100 rounded-lg w-fit cursor-pointer hover:bg-indigo-100 transition-colors"
                             onClick={() => setActiveTab(1)}
@@ -644,6 +701,91 @@ const ProductDetail = () => {
             />
           );
         })()}
+
+        {/* TAB — Custom Fields */}
+        {TABS[activeTab] === 'Custom Fields' && (
+          <div className="space-y-4 animate-in fade-in duration-300">
+            {cfLoading ? (
+              <div className="py-16 flex justify-center"><Loader /></div>
+            ) : customFieldDefs.length === 0 ? (
+              <div className="py-16 text-center">
+                <div className="w-12 h-12 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-400 mx-auto mb-3">
+                  <Layers size={22} />
+                </div>
+                <p className="text-sm font-semibold text-slate-400">No custom fields defined for this shop yet.</p>
+                <p className="text-xs text-slate-300 mt-1">Create field definitions from the Settings panel.</p>
+              </div>
+            ) : (
+              <SectionCard className="rounded-lg border-slate-200 shadow-sm p-5">
+                <div className="flex items-center gap-2 mb-5">
+                  <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-100">
+                    <Layers size={16} />
+                  </div>
+                  <h2 className="text-[10px] font-black text-slate-800 tracking-[0.15em]">CUSTOM ATTRIBUTES</h2>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {customFieldDefs.map((field) => {
+                    const currentVal = customFieldValues.find((v) => v.field_id === field.id);
+                    const isEditing = editingFieldId === field.id;
+                    return (
+                      <div
+                        key={field.id}
+                        className={`group relative p-4 rounded-xl border transition-all ${
+                          isEditing
+                            ? 'border-indigo-200 bg-indigo-50/40'
+                            : 'border-slate-100 bg-white hover:border-indigo-100 hover:bg-indigo-50/20'
+                        }`}
+                      >
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">
+                          {field.label_name}
+                          {field.required && <span className="text-rose-400 ml-0.5">*</span>}
+                        </p>
+
+                        {isEditing ? (
+                          <div className="flex items-center gap-1.5 mt-1">
+                            <input
+                              autoFocus
+                              type={field.type === 'number' ? 'number' : field.type === 'date' ? 'date' : 'text'}
+                              value={editingValue}
+                              onChange={(e) => setEditingValue(e.target.value)}
+                              className="flex-1 h-8 px-2 text-xs font-semibold bg-white border border-indigo-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-200 transition-all"
+                            />
+                            <button
+                              onClick={() => handleSaveCustomField(field.id)}
+                              disabled={cfSaving}
+                              className="w-7 h-7 flex items-center justify-center bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all active:scale-90 disabled:opacity-60"
+                            >
+                              {cfSaving ? <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Check size={12} />}
+                            </button>
+                            <button
+                              onClick={() => { setEditingFieldId(null); setEditingValue(''); }}
+                              className="w-7 h-7 flex items-center justify-center bg-slate-100 text-slate-500 rounded-lg hover:bg-slate-200 transition-all active:scale-90"
+                            >
+                              <XIcon size={12} />
+                            </button>
+                          </div>
+                        ) : (
+                          <div
+                            className="flex items-center justify-between mt-1 cursor-pointer"
+                            onClick={() => {
+                              setEditingFieldId(field.id);
+                              setEditingValue(currentVal?.value ?? '');
+                            }}
+                          >
+                            <p className="text-sm font-bold text-slate-700 truncate">
+                              {currentVal?.value || <span className="text-slate-300 font-medium italic">Click to set value</span>}
+                            </p>
+                            <Pencil size={11} className="text-slate-300 group-hover:text-indigo-400 transition-colors ml-2 shrink-0" />
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </SectionCard>
+            )}
+          </div>
+        )}
       </div>
 
 

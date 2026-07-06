@@ -168,21 +168,26 @@ const Supplier = () => {
           const standardKeys = ["email", "mobile_number", "gst_no"];
           standardKeys.forEach(k => keys.add(k));
 
-          // Map contact_info
-          if (s.contact_info?.name) keys.add("contact_person");
-          if (s.contact_info?.email) keys.add("contact_email");
-          if (s.contact_info?.mobile_number) keys.add("contact_mobile");
+          // Map contact_infos and contact_person_infos
+          if (s.contact_person_infos?.name || s.contact_info?.name) keys.add("contact_person");
+          if (s.contact_person_infos?.email || s.contact_info?.email) keys.add("contact_email");
+          if (s.contact_person_infos?.mobile_number || s.contact_info?.mobile_number) keys.add("contact_mobile");
 
-          // Flatten address
-          if (s.datas?.address) {
+          // Map location_infos
+          if (s.location_infos) {
+            if (s.location_infos.city || s.datas?.address?.city || s.additional_infos?.city) keys.add("city");
+            if (s.location_infos.zipcode) keys.add("zipcode");
+            if (s.location_infos.full_address) keys.add("address");
+          } else if (s.datas?.address) {
             if (s.datas.address.city) keys.add("city");
             if (s.datas.address.zipcode) keys.add("zipcode");
             if (s.datas.address.full_address) keys.add("address");
           }
 
           // Other data fields
-          if (s.datas) {
-            Object.keys(s.datas).forEach(k => {
+          if (s.additional_infos || s.datas) {
+            const dataObj = s.additional_infos || s.datas || {};
+            Object.keys(dataObj).forEach(k => {
               if (k !== "address" && k !== "internal_notes") keys.add(k);
             });
           }
@@ -199,6 +204,7 @@ const Supplier = () => {
       await deleteData(`${ENDPOINTS.SUPPLIERS}/${SHOP_ID}/${supplierToDelete.id}`);
       showToast("Supplier deleted successfully", "success");
       setRefreshKey(prev => prev + 1);
+      setSelectedSupplier(null);
     } catch {
       showToast("Failed to delete supplier", "error");
     } finally {
@@ -362,14 +368,16 @@ const Supplier = () => {
                         let val: any = "—";
 
                         // Handle Specific Column Mappings
-                        if (key === "contact_person") val = sup.contact_info?.name;
-                        else if (key === "contact_email") val = sup.contact_info?.email;
-                        else if (key === "contact_mobile") val = sup.contact_info?.mobile_number;
-                        else if (key === "city") val = sup.datas?.address?.city;
-                        else if (key === "zipcode") val = sup.datas?.address?.zipcode;
-                        else if (key === "address") val = sup.datas?.address?.full_address;
+                        if (key === "email") val = sup.contact_infos?.email ?? sup.email;
+                        else if (key === "mobile_number") val = sup.contact_infos?.mobile_number ?? sup.mobile_number;
+                        else if (key === "contact_person") val = sup.contact_person_infos?.name ?? sup.contact_info?.name;
+                        else if (key === "contact_email") val = sup.contact_person_infos?.email ?? sup.contact_info?.email;
+                        else if (key === "contact_mobile") val = sup.contact_person_infos?.mobile_number ?? sup.contact_info?.mobile_number;
+                        else if (key === "city") val = sup.location_infos?.city ?? sup.additional_infos?.city ?? sup.datas?.address?.city;
+                        else if (key === "zipcode") val = sup.location_infos?.zipcode ?? sup.datas?.address?.zipcode;
+                        else if (key === "address") val = sup.location_infos?.full_address ?? sup.datas?.address?.full_address;
                         else {
-                          val = sup[key] ?? sup.contact_info?.[key] ?? sup.datas?.[key] ?? "—";
+                          val = (sup as any)[key] ?? (sup.contact_person_infos as any)?.[key] ?? (sup.contact_infos as any)?.[key] ?? (sup.contact_info as any)?.[key] ?? (sup.additional_infos as any)?.[key] ?? (sup.datas as any)?.[key] ?? "—";
                         }
 
                         // Final safety check for any remaining objects

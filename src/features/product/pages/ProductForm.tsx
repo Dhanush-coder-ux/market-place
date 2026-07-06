@@ -15,6 +15,8 @@ import { useToast } from "@/context/ToastContext";
 import { Switch } from "@/components/ui/switch";
 import { ReusableSelect } from "@/components/ui/ReusableSelect";
 import { supplierApi } from "@/services/api/supplier";
+import { utilityApi } from "@/services/api/utility";
+import { inventoryApi } from "@/services/api/inventory";
 import { QuickCreateSupplierModal } from "@/features/common/QuickCreate/QuickCreateSupplierModal";
 import { ImageCarousel } from "@/components/common/SuperUI";
 import {
@@ -77,8 +79,6 @@ const CATEGORY_CONFIGS: Record<string, CategoryConfig> = {
   "Juices & Drinks": { suggestedVariantTypes: ["Flavor", "Size"], supportsSerials: false, serialLabel: "Serial Number" },
 };
 
-const CATEGORIES = Object.keys(CATEGORY_CONFIGS);
-const UNITS = ["Piece (pcs)", "Box", "Kilogram (kg)", "Gram (g)", "Litre (L)", "Metre (m)", "Set", "Pair", "Plate", "Cup", "Bottle"];
 const GST_RATES = ["0", "5", "12", "18", "28"];
 const LOW_STOCK_ALERT_OPTIONS = ["Notify me", "Don't notify", "Block sale"];
 
@@ -213,51 +213,35 @@ interface QuickCreateDropdownModalProps {
   isOpen: boolean;
   onClose: () => void;
   type: "categories" | "units";
-  onSuccess: (value: string) => void;
+  onSuccess: (item: { id: string; name: string }) => void;
 }
 
 const QuickCreateDropdownModal: React.FC<QuickCreateDropdownModalProps> = ({ isOpen, onClose, type, onSuccess }) => {
-  const { postData, putData, getData } = useApi();
   const [value, setValue] = useState("");
   const [loading, setLoading] = useState(false);
+  const { showToast } = useToast();
 
   if (!isOpen) return null;
 
   const handleSave = async () => {
     if (!value.trim()) return;
     setLoading(true);
-    
-    // Fetch existing first
-    const res = await getData(`/utilities/dropdowns/custom/by/name/${SHOP_ID}/${type}`);
-    let existingValues: string[] = [];
-    let dropdownId = null;
 
-    if (res?.detail?.success && res.data) {
-      dropdownId = res.data.id;
-      existingValues = res.data.values || [];
+    try {
+      if (type === "categories") {
+        const res = await utilityApi.createShopCategory({ shop_id: SHOP_ID, name: value.trim() });
+        if (res?.data) onSuccess({ id: res.data.id, name: res.data.name });
+      } else {
+        const res = await utilityApi.createShopUnit({ shop_id: SHOP_ID, name: value.trim() });
+        if (res?.data) onSuccess({ id: res.data.id, name: res.data.name });
+      }
+      setValue("");
+      onClose();
+    } catch (err) {
+      showToast(`Failed to create ${type === "categories" ? "category" : "unit"}`, "error");
+    } finally {
+      setLoading(false);
     }
-
-    const newValues = [...existingValues, value.trim()];
-
-    if (dropdownId) {
-      await putData("/utilities/dropdowns/custom", {
-        id: dropdownId,
-        shop_id: SHOP_ID,
-        dd_name: type,
-        values: newValues
-      });
-    } else {
-      await postData("/utilities/dropdowns/custom", {
-        shop_id: SHOP_ID,
-        dd_name: type,
-        values: newValues
-      });
-    }
-
-    setLoading(false);
-    onSuccess(value.trim());
-    setValue("");
-    onClose();
   };
 
   return createPortal(
@@ -283,8 +267,8 @@ const QuickCreateDropdownModal: React.FC<QuickCreateDropdownModalProps> = ({ isO
         </div>
         <div className="px-5 py-4 bg-slate-50/50 border-t border-slate-100 flex justify-end gap-2">
           <button onClick={onClose} className="px-4 h-9 rounded-lg font-semibold text-xs text-slate-600 hover:bg-slate-100 transition-colors">Cancel</button>
-          <button 
-            onClick={handleSave} 
+          <button
+            onClick={handleSave}
             disabled={!value.trim() || loading}
             className="px-4 h-9 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-lg transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
           >
@@ -301,7 +285,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
   const { id } = useParams();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { postData, putData, getData, loading } = useApi();
+  const { postData, getData, loading } = useApi();
   const { showToast } = useToast();
   const isLoading = externalLoading || loading;
 
@@ -350,37 +334,24 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
   const [generatingBarcode, setGeneratingBarcode] = useState(false);
   const [isSavingDraft, setIsSavingDraft] = useState(false);
 
-  const [customCategories, setCustomCategories] = useState<string[]>([]);
-  const [customUnits, setCustomUnits] = useState<string[]>([]);
+  const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
+  const [units, setUnits] = useState<{ id: string; name: string }[]>([]);
 
   useEffect(() => {
     const fetchDropdowns = async () => {
       try {
         const [catRes, unitRes] = await Promise.all([
-          getData(`/utilities/dropdowns/custom/by/name/${SHOP_ID}/categories`),
-          getData(`/utilities/dropdowns/custom/by/name/${SHOP_ID}/units`)
+          utilityApi.getShopCategories(SHOP_ID),
+          utilityApi.getShopUnits(SHOP_ID)
         ]);
-        if (catRes?.detail?.success && catRes.data?.values) {
-          const parsedCategories = typeof catRes.data.values === 'string' 
-            ? JSON.parse(catRes.data.values) 
-            : catRes.data.values;
-          setCustomCategories(Array.isArray(parsedCategories) ? parsedCategories : []);
-        }
-        if (unitRes?.detail?.success && unitRes.data?.values) {
-          const parsedUnits = typeof unitRes.data.values === 'string' 
-            ? JSON.parse(unitRes.data.values) 
-            : unitRes.data.values;
-          setCustomUnits(Array.isArray(parsedUnits) ? parsedUnits : []);
-        }
+        if (catRes?.data) setCategories(catRes.data);
+        if (unitRes?.data) setUnits(unitRes.data);
       } catch (e) {
         console.error("Failed to fetch custom dropdowns", e);
       }
     };
     fetchDropdowns();
-  }, [getData]);
-
-  const availableCategories = Array.from(new Set([...CATEGORIES, ...customCategories]));
-  const availableUnits = Array.from(new Set([...UNITS, ...customUnits]));
+  }, []);
 
   /* ─── Barcode generator ─── */
   const handleGenerateBarcode = async () => {
@@ -438,84 +409,91 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
   useEffect(() => {
     if (id) {
       const fetchProduct = async () => {
-        const res = await getData(`${ENDPOINTS.INVENTORIES}/by/${SHOP_ID}/${id}`);
+        const res = await getData(`${ENDPOINTS.INVENTORIES}/by/id/${SHOP_ID}/${id}`);
         if (res?.data) {
           const prod = Array.isArray(res.data) ? res.data[0] : res.data;
           if (!prod) return;
-          const datas = prod.datas || {};
+          const additional = prod.additional_infos || prod.datas || {};
           setForm({
             name: prod.name || "",
-            stocks: prod.stocks || 0,
-            serial_number: (prod.serial_number && prod.serial_number[0]) || "",
+            stocks: prod.stock_infos?.available_stocks || 0,
+            serial_number: (prod.serialno_infos && prod.serialno_infos.length > 0 ? (typeof prod.serialno_infos[0] === 'string' ? prod.serialno_infos[0] : prod.serialno_infos[0].name || "") : ""),
             barcode: prod.barcode || "",
-            brand: datas.brand || "",
-            category: prod.category || "",
-            unit: datas.unit || "Piece (pcs)",
-            description: prod.description || datas.description || "",
-            is_active: prod.is_active ?? datas.is_active ?? true,
-            mrp: String(datas.mrp || ""),
-            selling_price: String(prod.sell_price || ""),
-            cost_to_make: String(prod.buy_price || ""),
-            gst: String(datas.gst || "18").replace("%", ""),
-            hsn: String(datas.hsn || ""),
-            sku: datas.sku || prod.barcode || "",
-            supplier: datas.supplier || "",
-            opening_stock: String(datas.opening_stock || "0"),
-            reorder_point: String(prod.reorder_point || "5"),
-            max_stock: String(datas.max_stock || ""),
-            location: datas.location || "",
-            has_variants: !!prod.has_variant,
-            batch_tracking: !!prod.has_batch,
-            serial_tracking: !!prod.has_serialno,
-            batch_name: prod.batch?.name || "",
-            mfg_date: prod.batch?.manufacturing_date || "",
-            exp_date: prod.batch?.expiry_date || "",
-            track_stock: datas.track_stock !== false,
-            low_stock_alert: datas.low_stock_alert || "Notify me",
+            brand: additional.brand || "",
+            category: prod.category_id || "",
+            unit: prod.unit_id || "",
+            description: prod.description || "",
+            is_active: prod.is_active ?? true,
+            mrp: String(additional.mrp || ""),
+            selling_price: String(prod.pricing_infos?.sell_price || ""),
+            cost_to_make: String(prod.pricing_infos?.buy_price || ""),
+            gst: String(prod.gst || "18").replace("%", ""),
+            hsn: String(additional.hsn || ""),
+            sku: prod.sku || "",
+            supplier: additional.supplier || "",
+            opening_stock: String(additional.opening_stock || "0"),
+            reorder_point: String(prod.reorder_point_infos?.reorder_point || "5"),
+            max_stock: String(additional.max_stock || ""),
+            location: prod.storage_location_infos?.storage_location || "",
+            has_variants: !!prod.type_infos?.has_variant,
+            batch_tracking: !!prod.type_infos?.has_batch,
+            serial_tracking: !!prod.type_infos?.has_serialno,
+            batch_name: prod.batch_infos?.name || "",
+            mfg_date: prod.batch_infos?.manufacturing_date || "",
+            exp_date: prod.batch_infos?.expiry_date || "",
+            track_stock: prod.have_tracking ?? true,
+            low_stock_alert: additional.low_stock_alert || "Notify me",
           });
-          if (datas.images && Array.isArray(datas.images)) setExistingImages(datas.images);
-          const loadedBrand = datas.brand || "";
+          if (additional.images && Array.isArray(additional.images)) setExistingImages(additional.images);
+          
+          const loadedBrand = additional.brand || "";
           const loadedName = prod.name || "";
           const baseFromLoad = loadedBrand && loadedName.startsWith(loadedBrand + " ")
             ? loadedName.slice(loadedBrand.length + 1) : loadedName;
           setBaseName(baseFromLoad);
-          if (datas.supplier) {
-            supplierApi.searchSuppliers(datas.supplier).then((sups: any[]) => {
-              const matched = sups.find((s: any) => s.id === datas.supplier);
+
+          if (additional.supplier) {
+            supplierApi.searchSuppliers(additional.supplier).then((sups: any[]) => {
+              const matched = sups.find((s: any) => s.id === additional.supplier);
               if (matched) setSupplierDetails(matched);
             });
           }
-          if (datas.variantTypes) setVariantTypes(datas.variantTypes);
-          else if (prod.variants?.length > 0) {
-            const firstVarDatas = prod.variants[0].datas || {};
-            const attributes = firstVarDatas.attributes;
-            if (attributes) {
+
+          if (additional.variant_types) setVariantTypes(additional.variant_types);
+          else if (prod.variant_infos?.length > 0) {
+            const firstVar = prod.variant_infos[0];
+            const attributes = firstVar.additional_infos?.attributes || firstVar.attributes || {};
+            if (attributes && Object.keys(attributes).length > 0) {
               const types = Object.keys(attributes).map(key => ({
                 id: uid(),
                 name: key,
-                values: Array.from(new Set(prod.variants.map((v: any) => v.datas?.attributes?.[key]))).filter(Boolean) as string[],
+                values: Array.from(new Set(prod.variant_infos.map((v: any) => v.additional_infos?.attributes?.[key] || v.attributes?.[key]))).filter(Boolean) as string[],
               }));
               setVariantTypes(types);
             }
           }
-          if (prod.variants) {
-            setCombinations(prod.variants.map((v: any) => ({
-              id: v.id,
-              attributes: v.datas?.attributes || {},
-              barcode: v.datas?.barcode || "",
-              sku: v.datas?.sku || v.datas?.barcode || "",
+
+          if (prod.variant_infos) {
+            setCombinations(prod.variant_infos.map((v: any) => ({
+              id: v.id || uid(),
+              attributes: v.additional_infos?.attributes || v.attributes || {},
+              barcode: v.additional_infos?.barcode || v.barcode || "",
+              sku: v.additional_infos?.sku || v.sku || v.barcode || "",
               price: String(v.sell_price || ""),
               buy_price: String(v.buy_price || ""),
-              mrp: String(v.datas?.mrp || ""),
-              reorder_point: String(v.reorder_point || v.datas?.reorder_point || "5"),
-              stock: String(v.stocks || ""),
+              mrp: String(v.additional_infos?.mrp || ""),
+              reorder_point: String(v.reorder_point || "5"),
+              stock: String(v.stock_infos?.available_stocks || "0"),
               active: true,
-              serials: (v.datas?.serial_numbers || []).map((sn: string) => ({
+              serials: (v.additional_infos?.serial_numbers || v.serial_numbers || []).map((sn: string) => ({
                 id: uid(), serial: sn, status: "available" as const, purchaseDate: "", warrantyMonths: "12",
               })),
             })));
           }
-          if (!prod.has_variant && prod.serial_number) setBaseSerials(prod.serial_number);
+          if (!prod.type_infos?.has_variant && prod.serialno_infos) {
+            const baseSn = prod.serialno_infos.map((s: any) => typeof s === 'string' ? s : s.name);
+            setBaseSerials(baseSn);
+          }
         }
       };
       fetchProduct();
@@ -533,7 +511,8 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
     }
   }, [id, getData, searchParams]);
 
-  const categoryConfig = CATEGORY_CONFIGS[form.category] ?? {
+  const selectedCategoryName = categories.find(c => c.id === form.category)?.name || form.category;
+  const categoryConfig = CATEGORY_CONFIGS[selectedCategoryName] ?? {
     suggestedVariantTypes: [], supportsSerials: false, serialLabel: "Serial Number",
   };
 
@@ -616,60 +595,87 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
     const finalImages = [...existingImages];
     const mappedVarients = activeCombinations.map(combo => {
       const variantName = Object.values(combo.attributes).join(" / ");
-      const v: any = {
-        name: variantName, buy_price: 0, sell_price: 0, stocks: 0,
+      return {
+        name: variantName,
+        storage_location: form.location,
         reorder_point: Number(combo.reorder_point) || 0,
-        serial_numbers: combo.serials.map(s => s.serial),
-        datas: { mrp: 0, attributes: combo.attributes },
-        batch: null,
+        buy_price: 0,
+        sell_price: 0,
+        custom_fields: {
+          serial_numbers: combo.serials.map(s => s.serial),
+          attributes: combo.attributes,
+          barcode: combo.barcode,
+          sku: combo.sku,
+          mrp: 0
+        },
+        additional_infos: {
+          serial_numbers: combo.serials.map(s => s.serial),
+          attributes: combo.attributes,
+          barcode: combo.barcode,
+          sku: combo.sku,
+          mrp: 0
+        }
       };
-      if (combo.barcode?.trim()) v.datas.barcode = combo.barcode;
-      if (combo.sku?.trim()) v.datas.sku = combo.sku;
-      return v;
     });
 
     const payload: any = {
       shop_id: SHOP_ID,
+      category_id: form.category,
+      unit_id: form.unit,
       name: form.name,
-      category: form.category,
       description: form.description,
+      barcode: form.barcode || "",
+      type_infos: {
+        has_batch: form.batch_tracking,
+        has_variant: form.has_variants,
+        has_serialno: form.serial_tracking
+      },
+      have_tracking: form.track_stock,
+      variant_infos: form.has_variants ? mappedVarients : [],
+      storage_location: form.location,
       buy_price: form.track_stock ? 0 : Number(form.cost_to_make) || 0,
       sell_price: form.track_stock ? 0 : Number(form.selling_price) || 0,
-      stocks: 0,
-      has_variant: form.has_variants,
-      has_serialno: form.serial_tracking,
-      has_batch: form.batch_tracking,
-      variants: form.has_variants ? mappedVarients : [],
-      serial_numbers: !form.has_variants ? baseSerials : [],
-      batch: null,
-      reorder_point: Number(form.reorder_point) || 0,
-      datas: {
+      gst: form.gst ? (form.gst.includes("%") ? form.gst : `${form.gst}%`) : "18%",
+      reorder_point: Number(form.reorder_point) || 5,
+      custom_fields: {
         brand: form.brand,
-        unit: form.unit,
         mrp: Number(form.mrp) || 0,
-        gst: form.gst ? (form.gst.includes("%") ? form.gst : `${form.gst}%`) : "18%",
         hsn: form.hsn,
         sku: form.sku,
         supplier: form.supplier,
         opening_stock: 0,
-        storage_location: form.location,
         is_active: form.is_active,
         variant_types: variantTypes,
         images: finalImages,
-        track_stock: form.track_stock,
-        low_stock_alert: form.low_stock_alert,
-        selling_price: form.selling_price,
-        cost_to_make: form.cost_to_make,
+        low_stock_alert: form.low_stock_alert
       },
+      additional_infos: {
+        brand: form.brand,
+        mrp: Number(form.mrp) || 0,
+        hsn: form.hsn,
+        sku: form.sku,
+        supplier: form.supplier,
+        opening_stock: 0,
+        is_active: form.is_active,
+        variant_types: variantTypes,
+        images: finalImages,
+        low_stock_alert: form.low_stock_alert
+      }
     };
-    if (form.barcode?.trim()) payload.barcode = form.barcode;
+    if (!form.has_variants && baseSerials.length > 0) {
+        payload.additional_infos.serial_numbers = baseSerials;
+    }
     if (id) payload.id = id;
 
     let res;
-    if (id) res = await putData(`${ENDPOINTS.INVENTORIES}`, payload);
-    else res = await postData(ENDPOINTS.INVENTORIES, payload);
+    try {
+      if (id) res = await inventoryApi.updateInventory(payload);
+      else res = await inventoryApi.createInventory(payload);
+    } catch (e) {
+      res = null;
+    }
 
-    if (res) {
+    if (res && (res.data || res.success)) {
       showToast(id ? "Product updated successfully" : "Product created successfully", "success");
       const draftId = searchParams.get("draftId");
       if (draftId) {
@@ -719,7 +725,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                     <ReusableSelect
                       value={form.category}
                       onValueChange={(val) => { setForm(p => ({ ...p, category: val })); setVariantTypes([]); setCombinations([]); }}
-                      options={availableCategories.map(c => ({ value: c, label: c }))}
+                      options={categories.map(c => ({ value: c.id, label: c.name }))}
                       placeholder="Select category"
                       footer={
                         <button
@@ -748,7 +754,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                     <ReusableSelect
                       value={form.unit}
                       onValueChange={(val) => setForm(p => ({ ...p, unit: val }))}
-                      options={availableUnits.map(u => ({ value: u, label: u }))}
+                      options={units.map(u => ({ value: u.id, label: u.name }))}
                       placeholder="Select unit"
                       footer={
                         <button
@@ -1211,8 +1217,8 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
         onClose={() => setModalState({ type: null, query: "" })}
         type="categories"
         onSuccess={(val) => {
-          setCustomCategories(prev => [...prev, val]);
-          setForm(p => ({ ...p, category: val }));
+          setCategories(prev => [...prev, val]);
+          setForm(p => ({ ...p, category: val.id }));
         }}
       />
 
@@ -1221,8 +1227,8 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
         onClose={() => setModalState({ type: null, query: "" })}
         type="units"
         onSuccess={(val) => {
-          setCustomUnits(prev => [...prev, val]);
-          setForm(p => ({ ...p, unit: val }));
+          setUnits(prev => [...prev, val]);
+          setForm(p => ({ ...p, unit: val.id }));
         }}
       />
     </>

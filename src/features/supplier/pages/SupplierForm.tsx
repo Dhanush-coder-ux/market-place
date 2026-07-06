@@ -10,7 +10,8 @@ import {
   FileText,
   User,
   Globe,
-  Tag
+  Tag,
+  Layers
 } from "lucide-react";
 import Input from "@/components/ui/Input";
 import { GradientButton } from "@/components/ui/GradientButton";
@@ -20,6 +21,8 @@ import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 import { useHeader } from "@/context/HeaderContext";
 import { useToast } from "@/context/ToastContext";
 import Loader from "@/components/common/Loader";
+import { supplierCustomFieldsApi } from "@/services/api/supplierCustomFields";
+import type { SupplierCustomFieldDefinition } from "../type";
 
 export interface SupplierData {
   supplier_name: string;
@@ -29,7 +32,9 @@ export interface SupplierData {
   email: string;          
   phone: string;
   address: string;        
-  city: string;           
+  city: string;
+  state: string;
+  country: string;
   zipcode: string;
   type: string;
   gst_number: string;
@@ -54,6 +59,8 @@ const SupplierForm = () => {
     phone: "",
     address: "",
     city: "",
+    state: "",
+    country: "India",
     zipcode: "",
     type: "Vendor",
     gst_number: "",
@@ -61,6 +68,17 @@ const SupplierForm = () => {
   };
 
   const [formData, setFormData] = useState<SupplierData>(initialFormData);
+
+  // ── Custom Fields State ────────────────────────────────────────────────────
+  const [customFieldDefs, setCustomFieldDefs] = useState<SupplierCustomFieldDefinition[]>([]);
+  const [customFieldValues, setCustomFieldValues] = useState<Record<string, string>>({});
+
+  // Load custom field definitions for this shop
+  useEffect(() => {
+    supplierCustomFieldsApi.getAllFields(SHOP_ID).then((fields) => {
+      setCustomFieldDefs(fields);
+    });
+  }, []);
 
   // Header Actions
   useEffect(() => {
@@ -97,19 +115,26 @@ const SupplierForm = () => {
           const sup = Array.isArray(res.data) ? res.data[0] : res.data;
           const d = sup.datas || {};
           const contact = sup.contact_info || {};
+          const additional = sup.additional_infos || d || {};
+          const loc = sup.location_infos || d.address || {};
+          const bizContact = sup.contact_infos || sup || {};
+          const personContact = sup.contact_person_infos || contact || {};
+
           setFormData({
             supplier_name: sup.name || d.supplier_name || "",
-            contact_name: contact.name || "",
-            contact_email: contact.email || "",
-            contact_mobile: contact.mobile_number || "",
-            email: sup.email || "",
-            phone: sup.mobile_number || "",
-            address: d.address?.full_address || "",
-            city: d.address?.city || "",
-            zipcode: d.address?.zipcode || "",
-            type: contact.type || "Vendor",
+            contact_name: personContact.name || contact.contact_person || "",
+            contact_email: personContact.email || contact.email || "",
+            contact_mobile: personContact.mobile_number || contact.mobile_number || "",
+            email: bizContact.email || "",
+            phone: bizContact.mobile_number || sup.mobile_number || "",
+            address: loc.full_address || loc.address || "",
+            city: loc.city || additional.city || "",
+            state: loc.state || "",
+            country: loc.country || "India",
+            zipcode: loc.zipcode || "",
+            type: additional.type || contact.type || "Vendor",
             gst_number: sup.gst_no || "",
-            notes: d.internal_notes || ""
+            notes: additional.internal_notes || d.internal_notes || ""
           });
         }
       });
@@ -118,7 +143,10 @@ const SupplierForm = () => {
       if (draftId) {
         const drafts = JSON.parse(localStorage.getItem("supplier_drafts") || "[]");
         const draft = drafts.find((d: any) => d.id === draftId);
-        if (draft) setFormData(draft.data);
+        if (draft) {
+          setFormData(draft.data);
+          if (draft.customFieldValues) setCustomFieldValues(draft.customFieldValues);
+        }
       }
     }
   }, [id, searchParams]);
@@ -136,7 +164,8 @@ const SupplierForm = () => {
       id: draftId,
       timestamp: new Date().toISOString(),
       displayName: formData.supplier_name || "New Supplier",
-      data: formData
+      data: formData,
+      customFieldValues
     };
 
     const existingIndex = drafts.findIndex((d: any) => d.id === draftId);
@@ -158,25 +187,28 @@ const SupplierForm = () => {
     const payload: any = {
       shop_id: SHOP_ID,
       name: formData.supplier_name,
-      email: formData.email || null,
-      mobile_number: formData.phone,
       gst_no: formData.gst_number,
-      // Only include contact_info when a contact name is provided
+      contact_infos: {
+        email: formData.email || undefined,
+        mobile_number: formData.phone || undefined,
+      },
+      location_infos: {
+        zipcode: formData.zipcode,
+        country: formData.country || "India",
+        state: formData.state || "",
+        full_address: formData.address,
+      },
       ...(formData.contact_name.trim() && {
-        contact_info: {
+        contact_person_infos: {
           name: formData.contact_name,
-          mobile_number: formData.contact_mobile || null,
-          email: formData.contact_email || null,
-          type: formData.type,
-        },
-      }),
-      datas: {
-        internal_notes: formData.notes,
-        address: {
-          full_address: formData.address,
-          city: formData.city,
-          zipcode: formData.zipcode
+          email: formData.contact_email || undefined,
+          mobile_number: formData.contact_mobile || undefined,
         }
+      }),
+      additional_infos: {
+        internal_notes: formData.notes,
+        type: formData.type,
+        city: formData.city,
       }
     };
 
@@ -190,6 +222,20 @@ const SupplierForm = () => {
         : await postData(ENDPOINTS.SUPPLIERS, payload);
 
       if (res) {
+        // Bulk upsert custom field values if any are filled
+        const supplierId = res?.data?.id || id;
+        const valuesToSave = Object.entries(customFieldValues)
+          .filter(([, v]) => v !== '')
+          .map(([field_id, value]) => ({ field_id, value }));
+
+        if (supplierId && valuesToSave.length > 0) {
+          await supplierCustomFieldsApi.bulkUpsertValues({
+            shop_id: SHOP_ID,
+            supplier_id: supplierId,
+            values: valuesToSave,
+          });
+        }
+
         showToast(id ? "Supplier updated" : "Supplier registered", "success");
         // Remove draft if it exists
         const draftId = searchParams.get("draftId");
@@ -205,6 +251,17 @@ const SupplierForm = () => {
       setSubmitting(false);
     }
   };
+
+  // Load existing custom field values when editing
+  useEffect(() => {
+    if (id) {
+      supplierCustomFieldsApi.getValuesBySupplier(SHOP_ID, id).then((vals) => {
+        const map: Record<string, string> = {};
+        vals.forEach((v) => { map[v.field_id] = v.value; });
+        setCustomFieldValues(map);
+      });
+    }
+  }, [id]);
 
   if (loading && id) return <div className="py-20 text-center"><Loader /></div>;
 
@@ -322,14 +379,28 @@ const SupplierForm = () => {
                 placeholder="+91 00000 00000"
                 leftIcon={<Phone size={16} className="text-slate-400" />}
               />
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <Input
                   label="City / Region"
                   name="city"
                   value={formData.city}
                   onChange={handleChange}
-                  placeholder="e.g. Mumbai, Maharashtra"
+                  placeholder="e.g. Mumbai"
                   leftIcon={<MapPin size={16} className="text-slate-400" />}
+                />
+                <Input
+                  label="State"
+                  name="state"
+                  value={formData.state}
+                  onChange={handleChange}
+                  placeholder="Maharashtra"
+                />
+                <Input
+                  label="Country"
+                  name="country"
+                  value={formData.country}
+                  onChange={handleChange}
+                  placeholder="India"
                 />
                 <Input
                   label="ZIP Code"
@@ -337,7 +408,6 @@ const SupplierForm = () => {
                   value={formData.zipcode}
                   onChange={handleChange}
                   placeholder="000 000"
-                  leftIcon={<MapPin size={16} className="text-slate-400" />}
                 />
               </div>
               <div className="md:col-span-2 space-y-1.5">
@@ -408,6 +478,57 @@ const SupplierForm = () => {
               placeholder="Additional comments about this partner..."
             />
           </div>
+
+          {/* Custom Fields Box */}
+          {customFieldDefs.length > 0 && (
+            <div className="bg-white rounded-lg border border-slate-200 p-8 shadow-sm space-y-6">
+              <div className="flex items-center gap-3 border-b border-slate-50 pb-4">
+                <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-500">
+                  <Layers size={16} />
+                </div>
+                <div>
+                  <h3 className="text-[10px] font-black text-slate-800">Custom Fields</h3>
+                  <p className="text-[11px] font-bold text-slate-400">Additional supplier attributes</p>
+                </div>
+              </div>
+              <div className="space-y-4">
+                {customFieldDefs.map((field) => (
+                  <div key={field.id} className="space-y-1.5">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">
+                      {field.label_name}
+                      {field.required && <span className="text-rose-500 ml-0.5">*</span>}
+                    </label>
+                    {field.type === 'boolean' ? (
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          id={`cf_${field.id}`}
+                          checked={customFieldValues[field.id] === 'true'}
+                          onChange={(e) =>
+                            setCustomFieldValues((prev) => ({ ...prev, [field.id]: String(e.target.checked) }))
+                          }
+                          className="w-4 h-4 rounded accent-indigo-600"
+                        />
+                        <label htmlFor={`cf_${field.id}`} className="text-xs font-semibold text-slate-600">
+                          {field.label_name}
+                        </label>
+                      </div>
+                    ) : (
+                      <input
+                        type={field.type === 'number' ? 'number' : field.type === 'date' ? 'date' : 'text'}
+                        value={customFieldValues[field.id] || ''}
+                        onChange={(e) =>
+                          setCustomFieldValues((prev) => ({ ...prev, [field.id]: e.target.value }))
+                        }
+                        placeholder={`Enter ${field.label_name.toLowerCase()}…`}
+                        className="w-full h-10 px-3 bg-slate-50 border border-slate-100 rounded-lg text-sm font-semibold text-slate-700 focus:ring-2 focus:ring-indigo-100 focus:outline-none transition-all placeholder:text-slate-300"
+                      />
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
       </div>

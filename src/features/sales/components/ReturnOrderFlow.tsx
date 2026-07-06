@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { SHOP_ID, ENDPOINTS } from "@/services/endpoints";
 import { OrderResponse } from "@/features/order/types";
+import { orderApi } from "@/services/api/order";
 import { inventoryApi } from "@/services/api/inventory";
 import { useToast } from "@/context/ToastContext";
 import { useApi } from "@/context/ApiContext";
@@ -50,13 +51,13 @@ const ITEM_COLORS = ["#dbeafe", "#dcfce7", "#fef3c7", "#fce7f3", "#ede9fe", "#ff
 ═══════════════════════════════════════════════════════════════ */
 const generateItems = (sale: SaleRecord, productMap: Record<string, string> = {}): SaleItem[] =>
   (sale.items || []).map((item, i) => {
-    const rawName = (item as any).name || (item as any).product_name || (item as any).datas?.product_name || (item as any).datas?.name || productMap[item.inventory_id] || item.barcode || `Item ${i + 1}`;
+    const rawName = (item as any).name || (item as any).product_name || (item as any).datas?.product_name || (item as any).datas?.name || productMap[item.inventory_id || (item as any).product_id] || item.barcode || `Item ${i + 1}`;
     const productName = rawName;
     return {
       id: item.id,
-      inventory_id: item.inventory_id,
+      inventory_id: item.inventory_id || (item as any).product_id || "",
       name: item.status === "REFUNDED" ? `(Refunded) ${productName}` : item.status === "EXCHANGED" ? `(Exchanged) ${productName}` : productName,
-      sku: item.barcode?.trim() || item.inventory_id.slice(-6),
+      sku: item.barcode?.trim() || (item.inventory_id || (item as any).product_id || "").slice(-6),
       category: "General", quantity: item.quantity,
       unitPrice: item.sell_price, buyPrice: item.buy_price,
       imageColor: ITEM_COLORS[i % ITEM_COLORS.length],
@@ -462,11 +463,12 @@ const useReturnModalLogic = (sale: SaleRecord | null, productMap: Record<string,
     setState(s => ({ ...s, isSubmitting: true }));
     try {
       const itemsPayload = selectedItems.map(i => ({
-        item_id: i.id,
-        inventory_id: i.inventory_id,
+        order_item_id: i.id,
         quantity: i.returnQty,
         reason: state.itemReasons[i.id] || "Customer Request",
-        serial_numbers: i.selectedSerials?.length ? i.selectedSerials : undefined
+        serialno_infos: i.selectedSerials?.length 
+          ? i.selectedSerials.map(s => ({ id: "", name: s })) 
+          : []
       }));
 
       const paymentsDict: Record<string, number> = {};
@@ -483,30 +485,63 @@ const useReturnModalLogic = (sale: SaleRecord | null, productMap: Record<string,
       }
 
       if (state.mode === "refund") {
-        await inventoryApi.bulkReturnOrder({ 
+        await orderApi.processReturn({ 
           order_id: sale?.id || "", 
           shop_id: SHOP_ID,
-          customer_id: sale?.customer_id || sale?.customer?.customer_id || undefined,
-          payments: paymentsDict,
+          payment_infos: paymentsDict,
           items: itemsPayload 
         });
         showToast("Refund(s) processed successfully", "success");
       } else {
-        const productsMap = new Map<string, any>();
+        const replacementItemsMap = new Map<string, any>();
+        const exchangeItems: any[] = [];
+        
         selectedItems.forEach(item => {
-          const replacement = state.exchangeMap[item.id]; if (!replacement) return;
-          const key = `${replacement.id}-${replacement.variant_id || "none"}-${replacement.batch_id || "none"}-${replacement.serialno_id || "none"}`;
-          if (productsMap.has(key)) { const ex = productsMap.get(key); ex.quantity += replacement.quantity || item.returnQty; if (replacement.serial_numbers) ex.serial_numbers = [...ex.serial_numbers, ...replacement.serial_numbers]; }
-          else productsMap.set(key, { id: replacement.id, variant_id: replacement.variant_id || null, batch_id: replacement.batch_id || null, serialno_id: replacement.serialno_id || null, serial_numbers: replacement.serial_numbers || [], quantity: replacement.quantity || item.returnQty, datas: { product_name: replacement.name?.split(" - ")[0], variant_name: replacement.name?.includes(" - ") ? replacement.name?.split(" - ")[1] : null, batch_no: replacement.batch_id } });
+          const replacement = state.exchangeMap[item.id];
+          if (!replacement) return;
+          
+          exchangeItems.push({
+            return_order_item_id: item.id,
+            replacement_product_id: replacement.id,
+            quantity_returned: item.returnQty,
+            reason: state.itemReasons[item.id] || "Customer Request"
+          });
+          
+          const key = `${replacement.id}-${replacement.variant_id || "none"}-${replacement.batch_id || "none"}`;
+          if (replacementItemsMap.has(key)) {
+            const ex = replacementItemsMap.get(key);
+            ex.quantity += replacement.quantity || item.returnQty;
+          } else {
+            replacementItemsMap.set(key, {
+              product_id: replacement.id,
+              variant_id: replacement.variant_id || "",
+              batch_id: replacement.batch_id || "",
+              serialno_infos: replacement.serial_numbers ? replacement.serial_numbers.join(",") : "",
+              barcode: replacement.barcode || "",
+              quantity: replacement.quantity || item.returnQty
+            });
+          }
         });
 
-        await inventoryApi.bulkExchangeOrder({ 
+        const paymentArray = state.payments.filter(p => p.amount > 0).map(p => ({
+          mode: p.mode,
+          amount: p.amount
+        }));
+
+        await orderApi.processExchange({ 
           shop_id: SHOP_ID, 
-          customer_id: sale?.customer_id || sale?.customer?.customer_id || undefined, 
-          order_id: sale?.id || "", 
-          items: itemsPayload, 
-          payments: paymentsDict, 
-          products: Array.from(productsMap.values()) 
+          original_order_id: sale?.id || "", 
+          customer_id: sale?.customer_id || (sale as any)?.datas?.customer_id || (sale as any)?.customer?.customer_id || "", 
+          customer: {
+            customer_id: sale?.customer_id || (sale as any)?.datas?.customer_id || (sale as any)?.customer?.customer_id || "", 
+            customer_name: (sale as any)?.customer_name || (sale as any)?.datas?.customer_name || (sale as any)?.customer?.customer_name || "Walk-in Customer",
+            customer_mobile_number: (sale as any)?.customer_number || (sale as any)?.datas?.phone || (sale as any)?.customer?.customer_number || ""
+          },
+          reason: state.itemReasons[selectedItems[0]?.id] || "Customer Request",
+          status: "EXCHANGED",
+          payments: paymentArray,
+          replacement_items: Array.from(replacementItemsMap.values()),
+          exchange_items: exchangeItems
         });
         showToast("Exchange(s) processed successfully", "success");
       }
@@ -694,7 +729,7 @@ export const ReturnFlow: React.FC<ReturnFlowProps> = ({ sale, onClose, onRefresh
     try {
       const targetId = ep.inventory_id || ep.id || ep._id;
       if (!targetId) throw new Error("No valid ID found for product");
-      const response = await inventoryApi.getInventoryById(targetId);
+      const response = await inventoryApi.getInventoryById(SHOP_ID, targetId);
       const fullProduct = response?.data || response;
       setPendingProduct(mapToInventoryItem(fullProduct));
       setIsProductModalOpen(true);

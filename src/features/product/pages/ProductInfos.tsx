@@ -175,11 +175,11 @@ const ProductRow = React.memo(
     toggleExpand: (id: string) => void;
     selectedKeys: string[];
   }) => {
-    const datas = (p.datas as any) || {};
+    const datas = (p.additional_infos as any) || (p.datas as any) || {};
 
     const extractSerials = (val: any): string[] => {
       if (!val) return [];
-      if (Array.isArray(val)) return val;
+      if (Array.isArray(val)) return val.map((v: any) => typeof v === 'string' ? v : v.name || "");
       if (val && typeof val === "object") {
         if (Array.isArray(val.serial_numbers)) return val.serial_numbers;
       }
@@ -187,39 +187,46 @@ const ProductRow = React.memo(
     };
 
     const combinations = useMemo(
-      () => (p.variants || []).filter((v: any) => v && v.id !== null),
-      [p.variants]
+      () => (p.variant_infos || p.variants || []).filter((v: any) => v && v.id !== null),
+      [p.variant_infos, p.variants]
     );
 
     const batches = useMemo(
-      () => (p.batches || []).filter((b: any) => b && b.id !== null),
-      [p.batches]
+      () => {
+        const bs = p.batch_infos || p.batches;
+        if (Array.isArray(bs)) return bs.filter((b: any) => b && b.id !== null);
+        if (bs && typeof bs === 'object' && Object.keys(bs).length > 0) return [bs];
+        return [];
+      },
+      [p.batch_infos, p.batches]
     );
 
-    const hasVariants = combinations.length > 0;
-    const hasBatches = batches.length > 0;
-    const hasSerials = extractSerials((p as any).serials || (p as any).serial_number).length > 0;
+    const hasVariants = !!(p.type_infos?.has_variant) || combinations.length > 0;
+    const hasBatches = !!(p.type_infos?.has_batch) || batches.length > 0;
+    
+    const rootSerials = extractSerials((p as any).serialno_infos || (p as any).serials || (p as any).serial_number);
+    const hasSerials = !!(p.type_infos?.has_serialno) || rootSerials.length > 0;
     const isExpandable = hasVariants || hasBatches || hasSerials;
-
-    const rootSerials = extractSerials((p as any).serials || (p as any).serial_number);
 
     const { totalSerials, totalBatches } = useMemo(() => {
       let ts = rootSerials.length;
       let tb = batches.length;
       if (hasVariants) {
         combinations.forEach((c: any) => {
-          const cDatas = c.datas || {};
+          const cDatas = c.additional_infos || c.datas || {};
           const cSerials = extractSerials(
+            c.serialno_infos ||
             c.serial_numbers ||
-              cDatas.serial_numbers ||
-              (cDatas.datas && cDatas.datas.serial_numbers)
+            cDatas.serial_numbers ||
+            (cDatas.datas && cDatas.datas.serial_numbers)
           );
           ts += cSerials.length;
-          const cBatches = c.batches || [];
-          tb += cBatches.length;
-          cBatches.forEach((cb: any) => {
+          const cBatches = c.batch_infos || c.batches;
+          const cBatchesList = Array.isArray(cBatches) ? cBatches : (cBatches && Object.keys(cBatches).length > 0 ? [cBatches] : []);
+          tb += cBatchesList.length;
+          cBatchesList.forEach((cb: any) => {
             ts += extractSerials(
-              cb.serial_numbers || (cb.datas && cb.datas.serial_numbers)
+              cb.serialno_infos || cb.serial_numbers || (cb.additional_infos && cb.additional_infos.serial_numbers)
             ).length;
           });
         });
@@ -338,10 +345,10 @@ const ProductRow = React.memo(
                   })()}
                   <span className="text-slate-200">·</span>
                   <span>{datas.brand || (p as any).brand || "Generic"}</span>
-                  {(datas.gst || (p as any).gst) && (
+                  {(p.gst || datas.gst || (p as any).gst) && (
                     <>
                       <span className="text-slate-200">·</span>
-                      <span>GST {datas.gst || (p as any).gst}</span>
+                      <span>GST {p.gst || datas.gst || (p as any).gst}</span>
                     </>
                   )}
                 </div>
@@ -351,10 +358,15 @@ const ProductRow = React.memo(
 
           {/* Dynamic columns */}
           {selectedKeys.map((key) => {
-            const value =
-              datas[key] !== undefined && datas[key] !== null
-                ? datas[key]
-                : (p as any)[key];
+            let value = datas[key] !== undefined && datas[key] !== null ? datas[key] : (p as any)[key];
+            
+            // Map the nested backend schema properly
+            if (key === "buy_price" && p.pricing_infos) value = p.pricing_infos.buy_price;
+            if (key === "sell_price" && p.pricing_infos) value = p.pricing_infos.sell_price;
+            if (key === "stocks" && p.stock_infos) value = p.stock_infos.available_stocks;
+            if (key === "reorder_point" && p.reorder_point_infos) value = p.reorder_point_infos.reorder_point;
+            if (key === "category") value = p.category_id || p.category;
+            if (key === "unit") value = p.unit_id || p.unit;
 
             if (key === "buy_price" || key === "sell_price" || key === "price") {
               return (
@@ -393,10 +405,9 @@ const ProductRow = React.memo(
             }
 
             if (key === "status") {
-              const stocks =
-                datas.stocks !== undefined ? datas.stocks : (p as any).stocks;
+              const stocks = p.stock_infos?.available_stocks ?? datas.stocks ?? (p as any).stocks ?? 0;
               const reorderPoint = Number(
-                (p as any).reorder_point ?? datas.reorder_point ?? 0
+                p.reorder_point_infos?.reorder_point ?? (p as any).reorder_point ?? datas.reorder_point ?? 0
               );
               const status = getStockStatus(stocks, reorderPoint);
               return (
@@ -412,7 +423,7 @@ const ProductRow = React.memo(
             }
 
             if (key === "serial_number") {
-              const sList = extractSerials((p as any).serials || (p as any).serial_number);
+              const sList = rootSerials;
               if (sList.length === 0 && totalSerials > 0) {
                 return (
                   <td key={key} className="px-3 py-2.5 whitespace-nowrap">
@@ -565,8 +576,8 @@ const ProductRow = React.memo(
                   {hasVariants && (
                     <VariantRows
                       combinations={combinations}
-                      baseSellPrice={datas.sell_price || (p as any).sell_price}
-                      baseBuyPrice={datas.buy_price || (p as any).buy_price}
+                      baseSellPrice={p.pricing_infos?.sell_price || datas.sell_price || (p as any).sell_price}
+                      baseBuyPrice={p.pricing_infos?.buy_price || datas.buy_price || (p as any).buy_price}
                     />
                   )}
                   {!hasVariants && hasBatches && (
@@ -671,11 +682,12 @@ const ProductInfos = () => {
           }
 
           const keys = new Set<string>();
-          data.forEach((p: InventoryRecord) => {
-            if (p.datas) {
-              Object.keys(p.datas).forEach((k) => {
+          data.forEach((p: any) => {
+            const datas = p.additional_infos || p.datas;
+            if (datas) {
+              Object.keys(datas).forEach((k) => {
                 if (
-                  !["name", "id", "shop_id", "variantTypes", "is_active"].includes(k) &&
+                  !["name", "id", "shop_id", "variantTypes", "is_active", "images"].includes(k) &&
                   !hiddenProductColumns.has(k)
                 )
                   keys.add(k);
@@ -784,10 +796,10 @@ const ProductInfos = () => {
 
   const lowStockCount = useMemo(
     () =>
-      products.filter((p) => {
-        const stock = Number(p.stocks || 0);
+      products.filter((p: any) => {
+        const stock = Number(p.stock_infos?.available_stocks ?? p.stocks ?? 0);
         const rp = Number(
-          (p as any).reorder_point ?? p.datas?.reorder_point ?? 10
+          p.reorder_point_infos?.reorder_point ?? (p as any).reorder_point ?? p.additional_infos?.reorder_point ?? p.datas?.reorder_point ?? 10
         );
         return stock <= rp;
       }).length,
@@ -795,7 +807,7 @@ const ProductInfos = () => {
   );
   
   const outOfStockCount = useMemo(
-    () => products.filter((p) => Number(p.stocks || 0) === 0).length,
+    () => products.filter((p: any) => Number(p.stock_infos?.available_stocks ?? p.stocks ?? 0) === 0).length,
     [products]
   );
 

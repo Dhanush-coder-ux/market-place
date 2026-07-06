@@ -3,7 +3,8 @@ import { useParams, useNavigate } from "react-router-dom";
 import {
   DollarSign, AlertCircle, Star,
   Mail, Pencil, User, Phone, Trash2,
-  CreditCard, Database, MapPin, Tag, FileText, Banknote
+  CreditCard, Database, MapPin, Tag, FileText, Banknote,
+  Layers, Check, X as XIcon
 } from "lucide-react";
 import {
   fmt, SectionCard, FormInput, FormTextarea
@@ -21,6 +22,8 @@ import { SearchSelect } from "@/components/inputbuilders/SearchSelect";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { CustomerPurchasesTable, CustomerCollectionsTable } from "@/components/common/HistoryTables";
 import { RecordPaymentModal } from "@/features/customer/components/RecordPaymentModal";
+import { customerCustomFieldsApi } from "@/services/api/customer";
+import type { CustomerCustomFieldDefinition, CustomerCustomFieldValue } from "../type";
 
 // ── Search bar ──────────────────────────────────────────────────────────────
 const CustomerSearch = () => {
@@ -110,9 +113,17 @@ export default function CustomerDetail() {
   const [ordersLoading, setOrdersLoading] = useState(false);
   const [stats, setStats] = useState<any>(null);
 
+  // Custom Fields state
+  const [customFieldDefs, setCustomFieldDefs] = useState<CustomerCustomFieldDefinition[]>([]);
+  const [customFieldValues, setCustomFieldValues] = useState<CustomerCustomFieldValue[]>([]);
+  const [cfLoading, setCfLoading] = useState(false);
+  const [editingFieldId, setEditingFieldId] = useState<string | null>(null);
+  const [editingValue, setEditingValue] = useState<string>('');
+  const [cfSaving, setCfSaving] = useState(false);
+
   const fetchCustomerDetail = () => {
     if (!id) return;
-    getData(`${ENDPOINTS.CUSTOMERS}/by/${SHOP_ID}/${id}`).then((res) => {
+    getData(`${ENDPOINTS.CUSTOMERS}/by/id/${SHOP_ID}/${id}`).then((res) => {
       if (res) setCustomer(Array.isArray(res.data) ? res.data[0] : res.data);
     });
     setOrdersLoading(true);
@@ -135,7 +146,7 @@ export default function CustomerDetail() {
       setOrdersLoading(false);
     });
     setClearingLoading(true);
-    getData(`${ENDPOINTS.CUSTOMERS}/outstanding/clear/${SHOP_ID}/${id}`).then((res) => {
+    getData(`${ENDPOINTS.CUSTOMERS}/cleared-histories/by/id/${SHOP_ID}/${id}`).then((res) => {
       if (res && res.data) {
         let actualData = res.data;
         if (typeof actualData === 'object' && !Array.isArray(actualData) && 'datas' in actualData) {
@@ -165,7 +176,7 @@ export default function CustomerDetail() {
   useEffect(() => {
     if (!id) return;
     setRecordLoading(true);
-    getData(`${ENDPOINTS.CUSTOMERS}/by/${SHOP_ID}/${id}`).then((res) => {
+    getData(`${ENDPOINTS.CUSTOMERS}/by/id/${SHOP_ID}/${id}`).then((res) => {
       if (res) setCustomer(Array.isArray(res.data) ? res.data[0] : res.data);
       setRecordLoading(false);
     });
@@ -208,7 +219,7 @@ export default function CustomerDetail() {
   useEffect(() => {
     if (activeTab === 2 && id) { // Index 2 is Clearing History
       setClearingLoading(true);
-      getData(`${ENDPOINTS.CUSTOMERS}/outstanding/clear/${SHOP_ID}/${id}`).then((res) => {
+      getData(`${ENDPOINTS.CUSTOMERS}/cleared-histories/by/id/${SHOP_ID}/${id}`).then((res) => {
         if (res && res.data) {
           let actualData = res.data;
           if (typeof actualData === 'object' && !Array.isArray(actualData) && 'datas' in actualData) {
@@ -220,6 +231,47 @@ export default function CustomerDetail() {
       });
     }
   }, [activeTab, id, getData]);
+
+  // Load custom field definitions + values when Custom Fields tab is active
+  useEffect(() => {
+    if (!id || activeTab !== 3) return;
+    setCfLoading(true);
+    Promise.all([
+      customerCustomFieldsApi.getAllFields(SHOP_ID),
+      customerCustomFieldsApi.getValuesByCustomer(SHOP_ID, id)
+    ]).then(([defs, vals]) => {
+      setCustomFieldDefs(defs);
+      setCustomFieldValues(vals);
+    }).finally(() => setCfLoading(false));
+  }, [activeTab, id]);
+
+  const handleSaveCustomField = async (fieldId: string) => {
+    if (!id) return;
+    setCfSaving(true);
+    try {
+      await customerCustomFieldsApi.upsertValue({
+        shop_id: SHOP_ID,
+        customer_id: id,
+        field_id: fieldId,
+        value: editingValue,
+      });
+      setCustomFieldValues((prev) => {
+        const existing = prev.findIndex((v) => v.field_id === fieldId);
+        if (existing >= 0) {
+          const updated = [...prev];
+          updated[existing] = { ...updated[existing], value: editingValue };
+          return updated;
+        }
+        return [...prev, { shop_id: SHOP_ID, customer_id: id, field_id: fieldId, value: editingValue }];
+      });
+      showToast('Custom field updated', 'success');
+    } catch {
+      showToast('Failed to update field', 'error');
+    } finally {
+      setCfSaving(false);
+      setEditingFieldId(null);
+    }
+  };
 
   async function handleDelete() {
     const targetId = customer?.id || id;
@@ -259,6 +311,14 @@ export default function CustomerDetail() {
   const datas = customer.datas ?? {};
   const name = customer.name || "Unknown Customer";
   const initials = name.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2);
+  // Support both new nested and legacy flat shapes
+  const customerEmail = (customer as any).contact_infos?.email || customer.email || "";
+  const customerPhone = (customer as any).contact_infos?.mobile_number || customer.mobile_number || "";
+  const customerCreditLimit = (customer as any).credit_infos?.limit ?? customer.credit_limit ?? 0;
+  const customerLocationInfos = (customer as any).location_infos || {};
+  const customerAddress = customerLocationInfos.full_address || (datas.address as any)?.full_address || "";
+  const customerZipcode = customerLocationInfos.zipcode || (datas.address as any)?.zip_code || "";
+  const customerCreditNotes = (customer as any).credit_infos?.notes || datas.additional_notes || "";
 
 
 
@@ -286,8 +346,8 @@ export default function CustomerDetail() {
               }
             ]}
             infoItems={[
-              { icon: Mail, text: String(customer.email || "No email") },
-              { icon: Phone, text: String(customer.mobile_number || "No phone") }
+              { icon: Mail, text: customerEmail || "No email" },
+              { icon: Phone, text: customerPhone || "No phone" }
             ]}
             actions={
               <div className="flex items-center gap-1.5">
@@ -319,7 +379,7 @@ export default function CustomerDetail() {
         {/* Tabs Navigation & Quick Stats Grid (pinned) */}
         <div className="flex-none px-1 py-2 space-y-2">
           <div className="flex gap-2 p-1 bg-slate-100/50 w-fit rounded-lg border border-slate-200/50">
-            {["Overview", "Sales", "Collection History"].map((tab, i) => (
+            {["Overview", "Sales", "Collection History", "Custom Fields"].map((tab, i) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(i)}
@@ -344,7 +404,7 @@ export default function CustomerDetail() {
             <StatCard
               icon={CreditCard}
               label="Credit Limit"
-              value={`₹${(customer.credit_limit || 0).toFixed(2)}`}
+              value={`₹${(customerCreditLimit || 0).toFixed(2)}`}
               iconBg="bg-emerald-50 text-emerald-600"
               className="flex-1 min-w-[140px]"
             />
@@ -358,7 +418,7 @@ export default function CustomerDetail() {
             <StatCard
               icon={Star}
               label="Customer Balance"
-              value={`₹${((customer?.credit_limit ?? 0) - (customer?.outstanding ?? 0)).toFixed(2)}`}
+              value={`₹${((customerCreditLimit || 0) - (customer?.outstanding ?? 0)).toFixed(2)}`}
               iconBg="bg-amber-50 text-amber-600"
               className="flex-1 min-w-[140px]"
             />
@@ -390,16 +450,16 @@ export default function CustomerDetail() {
                           onClick={() => setViewValue({ label: "Full Name", value: name })}
                         />
                         <DetailItem
-                          icon={Mail} label="Email Address" value={String(customer.email || "—")}
-                          onClick={() => setViewValue({ label: "Email Address", value: String(customer.email || "—") })}
+                          icon={Mail} label="Email Address" value={customerEmail || "—"}
+                          onClick={() => setViewValue({ label: "Email Address", value: customerEmail || "—" })}
                         />
                         <DetailItem
-                          icon={Phone} label="Phone Number" value={String(customer.mobile_number || "—")}
-                          onClick={() => setViewValue({ label: "Phone Number", value: String(customer.mobile_number || "—") })}
+                          icon={Phone} label="Phone Number" value={customerPhone || "—"}
+                          onClick={() => setViewValue({ label: "Phone Number", value: customerPhone || "—" })}
                         />
                         <DetailItem
-                          icon={CreditCard} label="Credit Limit" value={fmt(customer.credit_limit || 0)}
-                          onClick={() => setViewValue({ label: "Credit Limit", value: fmt(customer.credit_limit || 0) })}
+                          icon={CreditCard} label="Credit Limit" value={fmt(customerCreditLimit)}
+                          onClick={() => setViewValue({ label: "Credit Limit", value: fmt(customerCreditLimit) })}
                         />
 
                         {/* Dynamically render all other fields */}
@@ -438,14 +498,14 @@ export default function CustomerDetail() {
                         <div className="md:col-span-2">
                           <p className="text-[10px] font-bold text-slate-400   mb-1.5 text-xs font-semibold">Registered Address</p>
                           <p className="text-sm font-semibold text-slate-700 leading-relaxed bg-slate-50 p-3 rounded-lg border border-slate-100">
-                            {String((datas.address as any)?.full_address || "No address provided.")}
+                            {customerAddress || "No address provided."}
                           </p>
                         </div>
                         <div className="space-y-4">
                           <div>
                             <p className="text-[10px] font-bold text-slate-400   mb-1.5 text-xs font-semibold">Zip Code</p>
                             <p className="text-sm font-bold font-mono text-slate-700 tracking-tight bg-slate-50 p-3 rounded-lg border border-slate-100 flex items-center h-[46px]">
-                              {String((datas.address as any)?.zip_code || "—")}
+                              {customerZipcode || "—"}
                             </p>
                           </div>
                         </div>
@@ -483,7 +543,7 @@ export default function CustomerDetail() {
                     <div className="relative">
                       <div className="absolute left-0 top-0 bottom-0 w-1 bg-slate-200 rounded-full" />
                       <p className="pl-4 text-[13px] font-medium text-slate-500 leading-relaxed italic break-words">
-                        {String(datas.additional_notes || "No internal notes registered for this customer.")}
+                        {customerCreditNotes || "No internal notes registered for this customer."}
                       </p>
                     </div>
                   </SectionCard>
@@ -533,6 +593,90 @@ export default function CustomerDetail() {
               </div>
             )}
 
+            {/* TAB 3 — Custom Fields */}
+            {activeTab === 3 && (
+              <div className="space-y-4 animate-in fade-in duration-300">
+                {cfLoading ? (
+                  <div className="py-16 flex justify-center"><Loader /></div>
+                ) : customFieldDefs.length === 0 ? (
+                  <div className="py-16 text-center">
+                    <div className="w-12 h-12 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-400 mx-auto mb-3">
+                      <Layers size={22} />
+                    </div>
+                    <p className="text-sm font-semibold text-slate-400">No custom fields defined for this shop yet.</p>
+                    <p className="text-xs text-slate-300 mt-1">Create field definitions from the Settings panel.</p>
+                  </div>
+                ) : (
+                  <SectionCard className="rounded-lg border-slate-200 shadow-sm p-5">
+                    <div className="flex items-center gap-2 mb-5">
+                      <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-100">
+                        <Layers size={16} />
+                      </div>
+                      <h2 className="text-[10px] font-black text-slate-800 tracking-[0.15em]">CUSTOM ATTRIBUTES</h2>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {customFieldDefs.map((field) => {
+                        const currentVal = customFieldValues.find((v) => v.field_id === field.id);
+                        const isEditing = editingFieldId === field.id;
+                        return (
+                          <div
+                            key={field.id}
+                            className={`group relative p-4 rounded-xl border transition-all ${
+                              isEditing
+                                ? 'border-indigo-200 bg-indigo-50/40'
+                                : 'border-slate-100 bg-white hover:border-indigo-100 hover:bg-indigo-50/20'
+                            }`}
+                          >
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">
+                              {field.label_name}
+                              {field.required && <span className="text-rose-400 ml-0.5">*</span>}
+                            </p>
+
+                            {isEditing ? (
+                              <div className="flex items-center gap-1.5 mt-1">
+                                <input
+                                  autoFocus
+                                  type={field.type === 'number' ? 'number' : field.type === 'date' ? 'date' : 'text'}
+                                  value={editingValue}
+                                  onChange={(e) => setEditingValue(e.target.value)}
+                                  className="flex-1 h-8 px-2 text-xs font-semibold bg-white border border-indigo-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-200 transition-all"
+                                />
+                                <button
+                                  onClick={() => handleSaveCustomField(field.id)}
+                                  disabled={cfSaving}
+                                  className="w-7 h-7 flex items-center justify-center bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all active:scale-90 disabled:opacity-60"
+                                >
+                                  {cfSaving ? <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Check size={12} />}
+                                </button>
+                                <button
+                                  onClick={() => { setEditingFieldId(null); setEditingValue(''); }}
+                                  className="w-7 h-7 flex items-center justify-center bg-slate-100 text-slate-500 rounded-lg hover:bg-slate-200 transition-all active:scale-90"
+                                >
+                                  <XIcon size={12} />
+                                </button>
+                              </div>
+                            ) : (
+                              <div
+                                className="flex items-center justify-between mt-1 cursor-pointer"
+                                onClick={() => {
+                                  setEditingFieldId(field.id);
+                                  setEditingValue(currentVal?.value ?? '');
+                                }}
+                              >
+                                <p className="text-sm font-bold text-slate-700 truncate">
+                                  {currentVal?.value || <span className="text-slate-300 font-medium italic">Click to set value</span>}
+                                </p>
+                                <Pencil size={11} className="text-slate-300 group-hover:text-indigo-400 transition-colors ml-2 shrink-0" />
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </SectionCard>
+                )}
+              </div>
+            )}
 
           </div>
         </div>

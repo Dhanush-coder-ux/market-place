@@ -1,13 +1,13 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   ChevronDown,
-  Save, 
-  AlertTriangle, 
-  Package, 
-  Plus, 
-  Trash2, 
+  Save,
+  AlertTriangle,
+  Package,
+  Plus,
+  Trash2,
   X,
   PackageOpen,
   Check,
@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 
 // Adjust these imports to match your project structure
-import { GradientButton } from '@/components/ui/GradientButton'; 
+import { GradientButton } from '@/components/ui/GradientButton';
 import Input from '@/components/ui/Input';
 import { ReusableSelect } from "@/components/ui/ReusableSelect";
 import { SearchSelect } from "@/components/inputbuilders/SearchSelect";
@@ -29,6 +29,7 @@ import { useToast } from "@/context/ToastContext";
 import { FloatingFormCard } from '@/components/common/FloatingFormCard';
 import { InlineSerialManager } from '@/components/common/InlineSerialManager';
 import { useScrollLock } from '@/hooks/useScrollLock';
+import { stockMovAdjApi } from '@/services/api/stockMovAdj';
 
 // --- Type definitions ---
 interface AdjustmentItem {
@@ -96,16 +97,21 @@ export default function StockAdjustmentPage() {
   const { setBottomActions } = useHeader();
   const { showToast } = useToast();
 
+  // ── Cart Session ────────────────────────────────────────────────────────────
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [cartInitialized, setCartInitialized] = useState(false);
+  const sessionCancelledRef = useRef(false); // prevents double-cancel on unmount
+
   const [items, setItems] = useState<AdjustmentItem[]>([]);
   const [adjustmentDate, setAdjustmentDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [notes, setNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [_submitError, setSubmitError] = useState<string | null>(null);
-  
+
   // --- Dynamic Modal State ---
-  const [variantModal, setVariantModal] = useState<{ 
-    isOpen: boolean; 
-    baseProduct: string; 
+  const [variantModal, setVariantModal] = useState<{
+    isOpen: boolean;
+    baseProduct: string;
     targetRowIndex: number;
     variants: any[];
     baseData: any;
@@ -130,7 +136,51 @@ export default function StockAdjustmentPage() {
 
   useScrollLock(variantModal.isOpen || batchModal.isOpen || isImpactModalOpen);
 
-  // --- Load Draft ---
+  // ── Initialize cart session on mount ────────────────────────────────────────
+  useEffect(() => {
+    let cancelled = false;
+    const initCart = async () => {
+      try {
+        const res = await stockMovAdjApi.initCart();
+        if (!cancelled) {
+          const sid = res?.data?.session_id;
+          if (sid) {
+            setSessionId(sid);
+            setCartInitialized(true);
+          }
+        }
+      } catch (e) {
+        console.error("Failed to init cart session", e);
+        if (!cancelled) showToast("Failed to initialize cart session", "error");
+      }
+    };
+    initCart();
+
+    // Cancel session on unmount (if not already submitted)
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Cancel session when navigating away without submitting
+  useEffect(() => {
+    const handleUnload = () => {
+      if (sessionId && !sessionCancelledRef.current) {
+        // best-effort fire-and-forget
+        stockMovAdjApi.cancelCart({ session_id: sessionId }).catch(() => {});
+      }
+    };
+    window.addEventListener('beforeunload', handleUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleUnload);
+      // Also cancel when component unmounts (e.g. navigating away in SPA)
+      if (sessionId && !sessionCancelledRef.current) {
+        stockMovAdjApi.cancelCart({ session_id: sessionId }).catch(() => {});
+      }
+    };
+  }, [sessionId]);
+
+  // --- Load Draft (keep for compatibility) ---
   useEffect(() => {
     const draftId = searchParams.get("draftId");
     if (draftId) {
@@ -150,18 +200,30 @@ export default function StockAdjustmentPage() {
   useEffect(() => {
     setBottomActions(
       <div className="flex items-center gap-3 animate-in fade-in slide-in-from-right-4 duration-300">
-          <button 
-            type="button"
-            onClick={handleSaveDraft}
-            className="px-4 h-8 rounded-lg border border-blue-100 text-blue-600 font-bold text-xs bg-blue-50/50 hover:bg-blue-100 transition-all flex items-center gap-2 whitespace-nowrap overflow-hidden"
-          >
-            <Bookmark size={14} className="shrink-0" />
-            <span className="truncate">Save Draft</span>
-          </button>
-        <GradientButton 
-          icon={isSubmitting ? <Loader className="h-4 w-4" /> : <Save size={16} />} 
-          onClick={handleSubmit} 
-          disabled={isSubmitting || items.length === 0}
+        {!cartInitialized && (
+          <span className="text-[10px] font-semibold text-slate-400 flex items-center gap-1.5 animate-pulse">
+            <span className="w-2 h-2 rounded-full bg-amber-400 inline-block" />
+            Initializing session...
+          </span>
+        )}
+        {cartInitialized && sessionId && (
+          <span className="text-[10px] font-semibold text-emerald-600 flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
+            Session ready
+          </span>
+        )}
+        <button
+          type="button"
+          onClick={handleSaveDraft}
+          className="px-4 h-8 rounded-lg border border-blue-100 text-blue-600 font-bold text-xs bg-blue-50/50 hover:bg-blue-100 transition-all flex items-center gap-2 whitespace-nowrap overflow-hidden"
+        >
+          <Bookmark size={14} className="shrink-0" />
+          <span className="truncate">Save Draft</span>
+        </button>
+        <GradientButton
+          icon={isSubmitting ? <Loader className="h-4 w-4" /> : <Save size={16} />}
+          onClick={handleSubmit}
+          disabled={isSubmitting || items.length === 0 || !cartInitialized}
           className="rounded-lg shadow-md text-xs px-8 h-8 flex items-center"
         >
           {isSubmitting ? "Saving..." : "Confirm Adjustment"}
@@ -169,7 +231,8 @@ export default function StockAdjustmentPage() {
       </div>
     );
     return () => setBottomActions(null);
-  }, [setBottomActions, items, isSubmitting]);
+  }, [setBottomActions, items, isSubmitting, cartInitialized, sessionId]);
+
 
 
   const handleAddItem = () => {
@@ -197,9 +260,23 @@ export default function StockAdjustmentPage() {
     setItems(prev => [...prev, newItem]);
   };
 
-  const handleRemoveItem = (id: string) => {
+  const handleRemoveItem = async (id: string) => {
     if (items.length <= 1) return;
-    setItems(items.filter(item => item.id !== id));
+    const item = items.find(i => i.id === id);
+    // Call the cart remove endpoint if the item has been reserved
+    if (sessionId && item?.inventory_id) {
+      try {
+        await stockMovAdjApi.removeItem({
+          session_id: sessionId,
+          product_id: item.inventory_id,
+          variant_id: item.variant_id || null,
+          batch_id: item.batch_id || null,
+        });
+      } catch (e) {
+        console.warn("Failed to remove item from cart", e);
+      }
+    }
+    setItems(items.filter(i => i.id !== id));
   };
 
   const updateItem = (id: string, field: keyof AdjustmentItem, value: any) => {
@@ -210,7 +287,7 @@ export default function StockAdjustmentPage() {
   };
 
   const updateMultiple = (id: string, updates: Partial<AdjustmentItem>) => {
-    setItems(prevItems => prevItems.map(item => 
+    setItems(prevItems => prevItems.map(item =>
       item.id === id ? { ...item, ...updates } : item
     ));
   };
@@ -222,7 +299,7 @@ export default function StockAdjustmentPage() {
     if (!variantData) return;
 
     const batches = parseBatches(variantData.batches);
-    
+
     if (batches.length > 0) {
       setBatchModal({
         isOpen: true,
@@ -241,7 +318,7 @@ export default function StockAdjustmentPage() {
 
       const updatedItems = [...items];
       const serialInfo = extractSerials(variantData.serial_numbers);
-      
+
       updatedItems[variantModal.targetRowIndex] = {
         ...updatedItems[variantModal.targetRowIndex],
         inventory_id: variantModal.baseData.id,
@@ -270,9 +347,9 @@ export default function StockAdjustmentPage() {
     const vData = batchModal.variantData;
     const baseD = batchModal.baseData || variantModal.baseData;
     const baseP = batchModal.baseProduct || variantModal.baseProduct;
-    
+
     const serialInfo = extractSerials(batch.serial_numbers || vData.serial_numbers);
-    
+
     updatedItems[batchModal.targetRowIndex] = {
       ...updatedItems[batchModal.targetRowIndex],
       inventory_id: baseD.id,
@@ -292,7 +369,7 @@ export default function StockAdjustmentPage() {
         ? 'INCREMENT'
         : updatedItems[batchModal.targetRowIndex].type
     };
-    
+
     setItems(updatedItems);
     setBatchModal({ isOpen: false, variantName: "", targetRowIndex: -1, batches: [], variantData: null });
     setVariantModal({ isOpen: false, baseProduct: "", targetRowIndex: -1, variants: [], baseData: null });
@@ -302,7 +379,7 @@ export default function StockAdjustmentPage() {
   const handleSaveDraft = () => {
     const drafts = JSON.parse(localStorage.getItem("stock_adjustment_drafts") || "[]");
     const draftId = searchParams.get("draftId") || Date.now().toString();
-    
+
     const newDraft = {
       id: draftId,
       data: { items, adjustmentDate, notes },
@@ -321,9 +398,39 @@ export default function StockAdjustmentPage() {
     showToast("Adjustment saved as draft", "info");
   };
 
+  // ── Reserve a single item in the cart session ────────────────────────────────
+  const reserveCartItem = async (item: AdjustmentItem) => {
+    if (!sessionId || !item.inventory_id) return;
+    try {
+      const serialno_infos = (item.serial_numbers?.length ?? 0) > 0 
+        ? item.serial_numbers.map(sn => ({ id: item.serialno_id || "", name: sn }))
+        : ((item.existing_serial_numbers?.length ?? 0) > 0 
+             ? item.existing_serial_numbers!.map(sn => ({ id: item.serialno_id || "", name: sn }))
+             : null);
+
+      await stockMovAdjApi.reserveItem({
+        session_id: sessionId,
+        shop_id: SHOP_ID,
+        product_id: item.inventory_id,
+        variant_id: item.variant_id || null,
+        batch_id: item.batch_id || null,
+        serialno_infos: serialno_infos,
+        qty: Number(item.stocks) || 0,
+        type: item.type,
+      });
+    } catch (e: any) {
+      showToast(`Reserve failed: ${e?.message || 'Unknown error'}`, "error");
+      throw e;
+    }
+  };
+
   const handleSubmit = async () => {
     if (items.length === 0 || items.some(item => !item.product || item.stocks === '')) {
       showToast("Please ensure all items have a product and quantity.", "error");
+      return;
+    }
+    if (!sessionId) {
+      showToast("Cart session not ready, please wait.", "error");
       return;
     }
 
@@ -331,36 +438,27 @@ export default function StockAdjustmentPage() {
       setIsSubmitting(true);
       setSubmitError(null);
 
-      const products = items.map(item => ({
-        inventory_id: item.inventory_id,
-        variant_id: item.variant_id || null,
-        batch_id: item.batch_id || null,
-        serialno_id: item.serialno_id || null,
-        serial_numbers: item.serial_numbers.length > 0 ? item.serial_numbers : null,
-        stocks: Number(item.stocks) || 0,
-        type: item.type, // INCREMENT or DECREMENT
-        datas: {
-          reason: item.reason,
-          notes: item.internalNote || item.notes,
-          barcode: item.barcode,
-          product_name: item.product,
-          variant_name: item.variant_name,
-          batch_name: item.batch_name
-        }
-      }));
+      // 1. Reserve all items in the cart
+      for (const item of items) {
+        await reserveCartItem(item);
+      }
 
+      // 2. Confirm the adjustment by posting to the main endpoint with session_id
       const payload = {
         shop_id: SHOP_ID,
-        adjusted_date: adjustmentDate,
+        type: "ADJUSTMENT",
         description: notes || `Stock Adjustment - ${new Date().toLocaleDateString()}`,
-        products: products,
-        datas: {}
+        session_id: sessionId,
+        date: adjustmentDate,
       };
 
-      await inventoryApi.createStockAdjustment(payload);
-      
+      await stockMovAdjApi.createStockMovAdj(payload);
+
+      // Mark as cancelled (submitted) so unmount cleanup doesn't re-cancel
+      sessionCancelledRef.current = true;
+
       showToast("Stock Adjustment saved successfully!", "success");
-      
+
       const draftId = searchParams.get("draftId");
       if (draftId) {
         const drafts = JSON.parse(localStorage.getItem("stock_adjustment_drafts") || "[]");
@@ -393,7 +491,7 @@ export default function StockAdjustmentPage() {
       const qty = Number(item.stocks) || 0;
       const changeAmt = item.type === 'INCREMENT' ? qty : -qty;
       netChange += changeAmt;
-      
+
       const displayName = item.variant_name ? `${item.product} (${item.variant_name})` : item.product;
 
       impactList.push({
@@ -413,7 +511,7 @@ export default function StockAdjustmentPage() {
 
   return (
     <div className="min-h-screen bg-slate-50/50 pb-24 md:pb-4 font-sans">
-      
+
       {/* --- IMPACT DETAILS POPUP --- */}
       <FloatingFormCard
         isOpen={isImpactModalOpen}
@@ -469,8 +567,8 @@ export default function StockAdjustmentPage() {
                       onClick={() => setSelectedVariant(variant.id)}
                       className={`relative p-4 rounded-xl border-2 transition-all duration-200 cursor-pointer flex flex-col justify-between h-32
                         ${isSelected
-                            ? 'border-blue-500 bg-blue-50/40 shadow-md shadow-blue-100/30'
-                            : 'border-slate-200/80 hover:border-blue-300 hover:shadow-md bg-white'
+                          ? 'border-blue-500 bg-blue-50/40 shadow-md shadow-blue-100/30'
+                          : 'border-slate-200/80 hover:border-blue-300 hover:shadow-md bg-white'
                         }
                       `}
                     >
@@ -482,12 +580,11 @@ export default function StockAdjustmentPage() {
                         <h4 className="font-bold text-slate-800 text-[13px] leading-tight line-clamp-2">{variant.name}</h4>
                         <p className="text-[9px] text-slate-400 mt-1 font-mono">SKU: {variant.sku}</p>
                       </div>
-                      
+
                       <div className="flex flex-wrap gap-1.5 mt-2">
-                        <span className={`inline-flex px-2 py-0.5 rounded text-[9px] font-extrabold uppercase tracking-wide border leading-none ${
-                            stockNum <= 0 ? 'bg-slate-100 text-slate-550 border-slate-200' : 
-                            isLowStock ? 'bg-amber-50 text-amber-700 border-amber-200' : 
-                            'bg-emerald-50 text-emerald-700 border-emerald-250'
+                        <span className={`inline-flex px-2 py-0.5 rounded text-[9px] font-extrabold uppercase tracking-wide border leading-none ${stockNum <= 0 ? 'bg-slate-100 text-slate-550 border-slate-200' :
+                            isLowStock ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                              'bg-emerald-50 text-emerald-700 border-emerald-250'
                           }`}>
                           Stock: {stockNum}
                         </span>
@@ -508,7 +605,7 @@ export default function StockAdjustmentPage() {
                 {selectedVariant ? <span className="text-blue-600">1 variant selected</span> : "Please pick a variant"}
               </span>
               <div className="flex gap-2.5">
-                <button 
+                <button
                   onClick={() => setVariantModal({ isOpen: false, baseProduct: "", targetRowIndex: -1, variants: [], baseData: null })}
                   className="px-4 h-9 rounded-lg border border-slate-200 text-slate-600 font-bold text-xs hover:bg-slate-50 transition-all shadow-sm"
                 >
@@ -573,7 +670,7 @@ export default function StockAdjustmentPage() {
             </div>
 
             <div className="p-4 border-t border-slate-100 bg-white flex justify-end shrink-0">
-              <button 
+              <button
                 onClick={() => setBatchModal({ ...batchModal, isOpen: false })}
                 className="px-5 h-9 rounded-lg bg-white border border-slate-200 text-slate-600 font-bold text-xs hover:bg-slate-50 transition-all shadow-sm"
               >
@@ -586,7 +683,7 @@ export default function StockAdjustmentPage() {
       )}
 
       <div className="w-full px-4 md:px-6 lg:px-8 space-y-5 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-[2000px] mx-auto pb-12 pt-2">
-        
+
         {/* Header Info Banner */}
         <div className="flex items-start gap-3 rounded-2xl border border-amber-200/80 bg-gradient-to-r from-amber-50/80 to-amber-50/30 p-4 text-[12px] text-amber-900 shadow-sm leading-relaxed">
           <AlertTriangle size={18} className="shrink-0 mt-0.5 text-amber-600" />
@@ -599,11 +696,11 @@ export default function StockAdjustmentPage() {
 
         {/* Main Content Area */}
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 xl:gap-8 items-start">
-          
+
           {/* Items List */}
           <div className="lg:col-span-3">
             <div className="bg-white rounded-3xl border border-slate-200/80 shadow-lg shadow-slate-100/50 overflow-hidden">
-              
+
               {/* Header */}
               <div className="px-4 py-3.5 bg-gradient-to-r from-indigo-50/30 to-transparent border-b border-slate-100 flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
@@ -612,7 +709,7 @@ export default function StockAdjustmentPage() {
                   </div>
                   <h2 className="text-sm font-extrabold text-slate-800 tracking-tight">Inventory Items</h2>
                 </div>
-                <button 
+                <button
                   onClick={handleAddItem}
                   className="flex items-center gap-1 px-3 h-8 rounded-lg bg-blue-600 text-white text-xs font-bold hover:bg-blue-700 transition-all shadow-sm shadow-blue-500/10 active:scale-95"
                 >
@@ -632,7 +729,7 @@ export default function StockAdjustmentPage() {
                       <h3 className="text-sm font-bold text-slate-800">No Products Added</h3>
                       <p className="text-xs text-slate-450 mt-1">Select and add a product below to begin stock adjustment.</p>
                     </div>
-                    <button 
+                    <button
                       onClick={handleAddItem}
                       className="px-5 h-9 rounded-lg bg-white border border-slate-200 text-slate-700 font-extrabold text-xs hover:bg-blue-600 hover:text-white hover:border-blue-600 transition-all shadow-sm active:scale-95"
                     >
@@ -643,13 +740,13 @@ export default function StockAdjustmentPage() {
                   <div className="space-y-4">
                     {items.map((item, index) => {
                       const qtyNum = Number(item.stocks) || 0;
-                      const newStock = item.product 
+                      const newStock = item.product
                         ? (item.type === 'INCREMENT' ? item.currentStock + qtyNum : Math.max(0, item.currentStock - qtyNum))
                         : 0;
 
                       return (
                         <div key={item.id} className="group relative rounded-2xl border border-slate-200/90 bg-white p-4 md:p-5 transition-all hover:shadow-lg hover:shadow-slate-100/50 pf-combo-appear">
-                          
+
                           <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
                             <div className="flex items-center gap-3">
                               <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white text-[11px] font-black shadow-md shadow-blue-100">
@@ -660,12 +757,12 @@ export default function StockAdjustmentPage() {
                                 {item.sku && <span className="ml-2 text-[10px] font-mono font-bold text-slate-505 bg-slate-50 border border-slate-100 px-1.5 py-0.5 rounded">#{item.sku}</span>}
                               </div>
                             </div>
-                            <button 
+                            <button
                               onClick={() => handleRemoveItem(item.id)}
                               disabled={items.length === 1}
                               className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all border
-                                ${items.length === 1 
-                                  ? 'bg-slate-50 text-slate-300 border-slate-100 cursor-not-allowed' 
+                                ${items.length === 1
+                                  ? 'bg-slate-50 text-slate-300 border-slate-100 cursor-not-allowed'
                                   : 'bg-rose-50 text-rose-500 border-rose-100 hover:bg-rose-500 hover:text-white hover:shadow-sm'}
                               `}
                             >
@@ -678,85 +775,85 @@ export default function StockAdjustmentPage() {
                             <div className="xl:col-span-5 space-y-3">
                               <div className="flex flex-col gap-1.5">
                                 <label className="text-[10px] font-bold text-slate-500 ml-1 uppercase tracking-wider">Product Details</label>
-                                  <SearchSelect 
-                                    fetchOptions={async (q) => await inventoryApi.searchInventories(q, true)}
-                                    value={item.product}
-                                    labelKey="name"
-                                    valueKey="name"
-                                    onChange={(val, opt: any) => {
-                                      if (opt) {
-                                        const hasVariants = opt.has_variant || (opt.datas && opt.datas.has_variant);
-                                        const combinations = opt.variants || (opt.datas && opt.datas.variants) || [];
-                                        
-                                        if (hasVariants && combinations.length > 0) {
-                                          const mappedVariants = combinations.map((c: any) => {
-                                            const d = c.datas || {};
-                                            return {
-                                              id: c.id,
-                                              name: d.name || c.name || "Variant",
-                                              sku: c.barcode || d.barcode || opt.barcode,
-                                              stock: c.stocks ?? c.stock ?? d.stocks ?? 0,
-                                              batches: parseBatches(c.batches || d.batches),
-                                              serial_numbers: d.serial_numbers || c.serial_numbers || null,
-                                            };
-                                          });
-                                          
-                                          setVariantModal({
-                                            isOpen: true,
-                                            baseProduct: opt.name || String(val),
-                                            targetRowIndex: index,
-                                            variants: mappedVariants,
-                                            baseData: opt
-                                          });
-                                          setSelectedVariant(null);
-                                        } else {
-                                          // Handle Root level Batches/Serials
-                                          const rootBatches = parseBatches(opt.batches || (opt.datas && opt.datas.batches));
-                                          
-                                          if (rootBatches.length > 0) {
-                                            setBatchModal({
-                                              isOpen: true,
-                                              variantName: '',
-                                              targetRowIndex: index,
-                                              batches: rootBatches,
-                                              variantData: { id: '', name: '', sku: opt.barcode }, 
-                                              baseData: opt,
-                                              baseProduct: opt.name || String(val)
-                                            });
-                                          } else {
-                                            const hasBatchTracking = opt.has_batch || (opt.datas && opt.datas.has_batch) || false;
-                                            if (hasBatchTracking) {
-                                              showToast("This product requires batch tracking but has no existing batches. Please create an initial batch via Purchase first.", "error");
-                                              return;
-                                            }
+                                <SearchSelect
+                                  fetchOptions={async (q) => await inventoryApi.searchInventories(q, true)}
+                                  value={item.product}
+                                  labelKey="name"
+                                  valueKey="name"
+                                  onChange={(val, opt: any) => {
+                                    if (opt) {
+                                      const hasVariants = opt.has_variant || (opt.datas && opt.datas.has_variant);
+                                      const combinations = opt.variants || (opt.datas && opt.datas.variants) || [];
 
-                                            const serialInfo = extractSerials(opt.serial_number || (opt.datas && opt.datas.serial_number));
-                                            updateMultiple(item.id, { 
-                                              inventory_id: opt.id,
-                                              product: opt.name || String(val),
-                                              barcode: opt.barcode || '',
-                                              currentStock: opt.stocks || 0,
-                                              variant_name: '',
-                                              variant_id: '',
-                                              batch_id: '',
-                                              batch_name: '',
-                                              serialno_id: serialInfo.id,
-                                              sku: opt.barcode || '',
-                                              has_serialno_tracking: opt.has_serialno || (opt.datas && opt.datas.has_serialno) || false,
-                                              existing_serial_numbers: serialInfo.list,
-                                              serial_numbers: [],
-                                              type: (opt.has_serialno || (opt.datas && opt.datas.has_serialno)) && serialInfo.list.length === 0
-                                                ? 'INCREMENT'
-                                                : item.type
-                                            });
-                                          }
-                                        }
+                                      if (hasVariants && combinations.length > 0) {
+                                        const mappedVariants = combinations.map((c: any) => {
+                                          const d = c.datas || {};
+                                          return {
+                                            id: c.id,
+                                            name: d.name || c.name || "Variant",
+                                            sku: c.barcode || d.barcode || opt.barcode,
+                                            stock: c.stocks ?? c.stock ?? d.stocks ?? 0,
+                                            batches: parseBatches(c.batches || d.batches),
+                                            serial_numbers: d.serial_numbers || c.serial_numbers || null,
+                                          };
+                                        });
+
+                                        setVariantModal({
+                                          isOpen: true,
+                                          baseProduct: opt.name || String(val),
+                                          targetRowIndex: index,
+                                          variants: mappedVariants,
+                                          baseData: opt
+                                        });
+                                        setSelectedVariant(null);
                                       } else {
-                                        updateItem(item.id, 'product', String(val));
+                                        // Handle Root level Batches/Serials
+                                        const rootBatches = parseBatches(opt.batches || (opt.datas && opt.datas.batches));
+
+                                        if (rootBatches.length > 0) {
+                                          setBatchModal({
+                                            isOpen: true,
+                                            variantName: '',
+                                            targetRowIndex: index,
+                                            batches: rootBatches,
+                                            variantData: { id: '', name: '', sku: opt.barcode },
+                                            baseData: opt,
+                                            baseProduct: opt.name || String(val)
+                                          });
+                                        } else {
+                                          const hasBatchTracking = opt.has_batch || (opt.datas && opt.datas.has_batch) || false;
+                                          if (hasBatchTracking) {
+                                            showToast("This product requires batch tracking but has no existing batches. Please create an initial batch via Purchase first.", "error");
+                                            return;
+                                          }
+
+                                          const serialInfo = extractSerials(opt.serial_number || (opt.datas && opt.datas.serial_number));
+                                          updateMultiple(item.id, {
+                                            inventory_id: opt.id,
+                                            product: opt.name || String(val),
+                                            barcode: opt.barcode || '',
+                                            currentStock: opt.stocks || 0,
+                                            variant_name: '',
+                                            variant_id: '',
+                                            batch_id: '',
+                                            batch_name: '',
+                                            serialno_id: serialInfo.id,
+                                            sku: opt.barcode || '',
+                                            has_serialno_tracking: opt.has_serialno || (opt.datas && opt.datas.has_serialno) || false,
+                                            existing_serial_numbers: serialInfo.list,
+                                            serial_numbers: [],
+                                            type: (opt.has_serialno || (opt.datas && opt.datas.has_serialno)) && serialInfo.list.length === 0
+                                              ? 'INCREMENT'
+                                              : item.type
+                                          });
+                                        }
                                       }
-                                    }}
-                                    placeholder="Search or scan product..."
-                                  />
+                                    } else {
+                                      updateItem(item.id, 'product', String(val));
+                                    }
+                                  }}
+                                  placeholder="Search or scan product..."
+                                />
                               </div>
 
                               {item.product && (
@@ -795,35 +892,35 @@ export default function StockAdjustmentPage() {
                             {/* Config Fields */}
                             <div className="xl:col-span-7 space-y-4">
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <ReusableSelect 
-                                  label="Action Type" 
+                                <ReusableSelect
+                                  label="Action Type"
                                   options={
                                     item.has_serialno_tracking && (!item.existing_serial_numbers || item.existing_serial_numbers.length === 0)
-                                    ? typeOptions.filter(o => o.value === 'INCREMENT')
-                                    : typeOptions
-                                  } 
+                                      ? typeOptions.filter(o => o.value === 'INCREMENT')
+                                      : typeOptions
+                                  }
                                   value={item.type}
                                   onValueChange={(val) => updateItem(item.id, 'type', val)}
                                   className={`text-xs font-semibold ${item.type === 'INCREMENT' ? 'border-emerald-200 bg-emerald-50/20' : 'border-rose-200 bg-rose-50/20'}`}
                                 />
-                                <Input 
-                                  label="Quantity" 
-                                  type="number" 
+                                <Input
+                                  label="Quantity"
+                                  type="number"
                                   value={item.stocks}
                                   onChange={(e) => updateItem(item.id, 'stocks', e.target.value)}
                                   placeholder="0"
                                   className="text-xs font-semibold"
                                 />
-                                <ReusableSelect 
-                                  label="Correction Reason" 
-                                  options={reasonOptions} 
+                                <ReusableSelect
+                                  label="Correction Reason"
+                                  options={reasonOptions}
                                   value={item.reason}
                                   onValueChange={(val) => updateItem(item.id, 'reason', val)}
                                   className="text-xs font-semibold"
                                 />
-                                <Input 
-                                  label="Internal Note" 
-                                  type="text" 
+                                <Input
+                                  label="Internal Note"
+                                  type="text"
                                   placeholder="Reason for adjustment..."
                                   value={item.internalNote}
                                   onChange={(e) => updateItem(item.id, 'internalNote', e.target.value)}
@@ -850,7 +947,7 @@ export default function StockAdjustmentPage() {
                     })}
 
                     <div className="pt-4 flex justify-center w-full">
-                      <button 
+                      <button
                         onClick={handleAddItem}
                         className="w-full group flex items-center justify-center gap-3 px-8 py-4 rounded-xl border-2 border-dashed border-slate-200 text-slate-400 font-extrabold text-xs hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50/30 transition-all active:scale-95 shadow-sm"
                       >
@@ -873,15 +970,15 @@ export default function StockAdjustmentPage() {
                 </div>
                 <h2 className="text-[13px] font-black text-slate-800 uppercase tracking-wider">Summary</h2>
               </div>
-              
+
               <div className="p-4 space-y-3.5">
                 <div className="space-y-3">
-                  <Input 
-                    label="Date" 
-                    type="date" 
-                    value={adjustmentDate} 
-                    required 
-                    onChange={(e) => setAdjustmentDate(e.target.value)} 
+                  <Input
+                    label="Date"
+                    type="date"
+                    value={adjustmentDate}
+                    required
+                    onChange={(e) => setAdjustmentDate(e.target.value)}
                     leftIcon={<Calendar size={13} className="text-slate-400" />}
                     className="text-xs font-semibold"
                   />
@@ -900,7 +997,7 @@ export default function StockAdjustmentPage() {
                 </div>
 
                 {summary.impactList.length > 0 && (
-                  <button 
+                  <button
                     onClick={() => setIsImpactModalOpen(true)}
                     className="w-full flex items-center justify-between p-3 rounded-xl bg-blue-50/50 border border-blue-100/80 hover:bg-blue-100/50 transition-all text-left shadow-sm"
                   >

@@ -5,6 +5,7 @@ import { BillingItem, InventoryItem, ProductVariant } from "../types";
 import ProductSelectionModal from "./ProductSelectionModel";
 import { useToast } from "@/context/ToastContext";
 import { inventoryApi } from "@/services/api/inventory";
+import { SHOP_ID } from "@/services/endpoints";
 
 interface BillingTableProps {
   items: BillingItem[];
@@ -112,11 +113,11 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
         ...p,
         product_name: p.name || "Unknown Product",
         product_barcode: p.barcode || "N/A",
-        category: p.category || "Other",
-        displayName: `${p.name || "Unknown"} • ${p.category || 'Other'}`,
+        category: p.category_infos?.name || p.category || "Other",
+        displayName: `${p.name || "Unknown"} • ${p.category_infos?.name || p.category || 'Other'}`,
         barcodeDisplay: p.barcode || 'N/A',
-        price: p.sell_price || 0,
-        stocks: p.stocks || 0,
+        price: p.pricing_infos?.sell_price || p.sell_price || 0,
+        stocks: p.stock_infos?.available_stocks || p.stocks || 0,
         gst: parseInt(String(p.gst || p.datas?.gst || "18").replace("%", ""))
       }));
       setSearchResults(mapped);
@@ -136,7 +137,7 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
     setLoading(true);
     try {
       // Fetch full product details
-      const response = await inventoryApi.getInventoryById(selectedProduct.id);
+      const response = await inventoryApi.getInventoryById(SHOP_ID, selectedProduct.id);
       const fullProduct = response?.data || response;
       
       if (!fullProduct || !fullProduct.id) {
@@ -147,6 +148,7 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
       // Map variants the same way ProductSelectionModal expects
       let rawVariants: any[] = [];
       const candidateSources = [
+        fullProduct.variant_infos,
         fullProduct.variants,
         fullProduct.varients,
         fullProduct.combinations,
@@ -175,22 +177,23 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
           ...v,
           id: v.id || String(Math.random()),
           name: variantLabel,
-          price: v.sell_price || v.price || combDatas.sell_price || combDatas.price || fullProduct.sell_price || 0,
-          stock: v.stocks !== undefined ? v.stocks : (v.stock !== undefined ? v.stock : (combDatas.stocks !== undefined ? combDatas.stocks : 0)),
-          serialnoId: v.serial_numbers?.id || v.serial_number?.id || v.batches?.[0]?.serial_numbers?.id || combDatas.serial_numbers?.id || fullProduct.serial_number?.id || fullProduct.serials?.id,
-          availableSerials: v.serial_numbers?.serial_numbers || v.serial_number?.serial_numbers || v.batches?.[0]?.serial_numbers?.serial_numbers || combDatas.serial_numbers?.serial_numbers || fullProduct.serial_number?.serial_numbers || fullProduct.serials?.serial_numbers || [],
-          batchId: v.batches?.[0]?.id || v.batchId || combDatas.batches?.[0]?.id,
+          price: v.pricing_infos?.sell_price || v.sell_price || v.price || combDatas.sell_price || combDatas.price || fullProduct.pricing_infos?.sell_price || fullProduct.sell_price || 0,
+          stock: v.stock_infos?.available_stocks !== undefined ? v.stock_infos?.available_stocks : (v.stocks !== undefined ? v.stocks : (v.stock !== undefined ? v.stock : (combDatas.stocks !== undefined ? combDatas.stocks : 0))),
+          serialnoId: v.serial_numbers?.id || v.serial_number?.id || v.batches?.[0]?.serial_numbers?.id || combDatas.serial_numbers?.id || fullProduct.serialno_infos?.[0]?.id || fullProduct.serial_number?.id || fullProduct.serials?.id,
+          availableSerials: v.serial_numbers?.serial_numbers || v.serial_number?.serial_numbers || v.batches?.[0]?.serial_numbers?.serial_numbers || combDatas.serial_numbers?.serial_numbers || fullProduct.serialno_infos?.[0]?.serial_numbers || fullProduct.serial_number?.serial_numbers || fullProduct.serials?.serial_numbers || [],
+          batchId: v.batch_infos?.[0]?.id || v.batches?.[0]?.id || v.batchId || combDatas.batches?.[0]?.id,
         };
       });
 
-      if (mappedVariants.length === 0 && fullProduct.has_batch && Array.isArray(fullProduct.batches) && fullProduct.batches.length > 0) {
-        mappedVariants = fullProduct.batches.map((b: any) => ({
+      if (mappedVariants.length === 0 && (fullProduct.type_infos?.has_batch || fullProduct.has_batch) && (Array.isArray(fullProduct.batches) && fullProduct.batches.length > 0 || Array.isArray(fullProduct.batch_infos) && fullProduct.batch_infos.length > 0)) {
+        const sourceBatches = Array.isArray(fullProduct.batch_infos) && fullProduct.batch_infos.length > 0 ? fullProduct.batch_infos : fullProduct.batches;
+        mappedVariants = sourceBatches.map((b: any) => ({
           id: b.id,
           name: `Batch: ${b.batch_no || b.id.slice(0, 8)}`,
-          price: b.sell_price || fullProduct.sell_price || 0,
-          stock: b.stocks || 0,
-          serialnoId: b.serial_numbers?.id || fullProduct.serial_number?.id || fullProduct.serials?.id,
-          availableSerials: b.serial_numbers?.serial_numbers || fullProduct.serial_number?.serial_numbers || fullProduct.serials?.serial_numbers || [],
+          price: b.pricing_infos?.sell_price || b.sell_price || fullProduct.pricing_infos?.sell_price || fullProduct.sell_price || 0,
+          stock: b.stock_infos?.available_stocks || b.stocks || 0,
+          serialnoId: b.serial_numbers?.id || fullProduct.serialno_infos?.[0]?.id || fullProduct.serial_number?.id || fullProduct.serials?.id,
+          availableSerials: b.serial_numbers?.serial_numbers || fullProduct.serialno_infos?.[0]?.serial_numbers || fullProduct.serial_number?.serial_numbers || fullProduct.serials?.serial_numbers || [],
           batchId: b.id,
           expiryDate: b.expiry_date,
           manufacturingDate: b.manufacturing_date,
@@ -201,17 +204,17 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
         ...fullProduct,
         product_name: fullProduct.name || "Unknown Product",
         product_barcode: fullProduct.barcode || "N/A",
-        category: fullProduct.category || "Other",
+        category: fullProduct.category_infos?.name || fullProduct.category || "Other",
         variants: mappedVariants,
-        requireSerial: fullProduct.has_serialno || false,
-        batchTracking: fullProduct.has_batch || false,
-        manufacturingDate: fullProduct.batches?.[0]?.manufacturing_date,
-        expiryDate: fullProduct.batches?.[0]?.expiry_date,
-        price: fullProduct.sell_price || 0,
-        stocks: fullProduct.stocks || 0,
-        serialnoId: fullProduct.serial_number?.id || fullProduct.serials?.id || fullProduct.batches?.[0]?.serial_numbers?.id,
-        availableSerials: fullProduct.serial_number?.serial_numbers || fullProduct.serials?.serial_numbers || fullProduct.batches?.[0]?.serial_numbers?.serial_numbers || [],
-        batchId: fullProduct.batches?.[0]?.id,
+        requireSerial: fullProduct.type_infos?.has_serialno || fullProduct.has_serialno || false,
+        batchTracking: fullProduct.type_infos?.has_batch || fullProduct.has_batch || false,
+        manufacturingDate: fullProduct.batch_infos?.[0]?.manufacturing_date || fullProduct.batches?.[0]?.manufacturing_date,
+        expiryDate: fullProduct.batch_infos?.[0]?.expiry_date || fullProduct.batches?.[0]?.expiry_date,
+        price: fullProduct.pricing_infos?.sell_price || fullProduct.sell_price || 0,
+        stocks: fullProduct.stock_infos?.available_stocks || fullProduct.stocks || 0,
+        serialnoId: fullProduct.serialno_infos?.[0]?.id || fullProduct.serial_number?.id || fullProduct.serials?.id || fullProduct.batches?.[0]?.serial_numbers?.id,
+        availableSerials: fullProduct.serialno_infos?.[0]?.serial_numbers || fullProduct.serial_number?.serial_numbers || fullProduct.serials?.serial_numbers || fullProduct.batches?.[0]?.serial_numbers?.serial_numbers || [],
+        batchId: fullProduct.batch_infos?.[0]?.id || fullProduct.batches?.[0]?.id,
         gst: parseInt(String(fullProduct.gst || fullProduct.datas?.gst || "18").replace("%", ""))
       };
 

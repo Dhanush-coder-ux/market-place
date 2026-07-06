@@ -270,9 +270,9 @@ const ProductRow = React.memo(
     const hasSerials = serials.length > 0 || (item as any).has_serialno;
     const isExpandable = hasVariants || hasBatches || hasSerials;
 
-    const stockNumber = Number(item.stocks || 0);
+    const stockNumber = Number((item as any).stock_infos?.available_stocks ?? (item as any).stock_infos?.physical_stocks ?? item.stocks ?? 0);
     const reorderPoint = Number(
-      (item as any).reorder_point ?? datas.reorder_point ?? 0
+      (item as any).reorder_point_infos?.reorder_point ?? (item as any).reorder_point ?? datas.reorder_point ?? 0
     );
     const status = getStockStatus(stockNumber, reorderPoint);
 
@@ -428,7 +428,7 @@ const ProductRow = React.memo(
           <td className="px-3 py-2.5">
             <div className="flex flex-col gap-0.5">
               <span className="text-[12px] font-medium text-slate-700 leading-none">
-                {datas.category || item.category || "Uncategorized"}
+                {(item as any).category_infos?.name || datas.category || item.category || "Uncategorized"}
               </span>
               {(() => {
                 const supplier = datas.supplier || item.supplier || "";
@@ -468,7 +468,7 @@ const ProductRow = React.memo(
           {/* Unit */}
           <td className="px-3 py-2.5">
             <span className="text-[12px] font-medium text-slate-600">
-              {datas.unit || (item as any).unit || "—"}
+              {(item as any).unit_infos?.name || datas.unit || (item as any).unit || "—"}
             </span>
           </td>
 
@@ -477,14 +477,14 @@ const ProductRow = React.memo(
           {/* Buy price */}
           <td className="px-3 py-2.5 text-right">
             <span className="text-[13px] font-semibold text-slate-700 tabular-nums">
-              {hasVariants ? "—" : formatCurrency(item.buy_price)}
+              {hasVariants ? "—" : formatCurrency((item as any).pricing_infos?.buy_price ?? item.buy_price)}
             </span>
           </td>
 
           {/* Sell price */}
           <td className="px-3 py-2.5 text-right">
             <span className="text-[13px] font-semibold text-slate-700 tabular-nums">
-              {hasVariants ? "—" : formatCurrency(item.sell_price)}
+              {hasVariants ? "—" : formatCurrency((item as any).pricing_infos?.sell_price ?? item.sell_price)}
             </span>
           </td>
 
@@ -713,9 +713,9 @@ const InventoryPage = () => {
   const stats = useMemo(() => {
     const total = filteredInventory.length;
     const lowStock = filteredInventory.filter((p: InventoryItem) => {
-      const stock = Number(p.stocks || 0);
+      const stock = Number((p as any).stock_infos?.available_stocks ?? p.stocks ?? 0);
       const rp = Number(
-        (p as any).reorder_point ?? p.datas?.reorder_point ?? 10
+        (p as any).reorder_point_infos?.reorder_point ?? (p as any).reorder_point ?? p.datas?.reorder_point ?? 10
       );
       return stock <= rp;
     }).length;
@@ -772,7 +772,7 @@ const InventoryPage = () => {
           <StatCard
             icon={AlertCircle}
             label="Out of Stock"
-            value={overallStats?.no_stocks_count?.toString() || (inventory.filter((p: InventoryItem) => Number(p.stocks || 0) === 0).length).toString()}
+            value={overallStats?.no_stocks_count?.toString() || (inventory.filter((p: InventoryItem) => Number((p as any).stock_infos?.available_stocks ?? p.stocks ?? 0) === 0).length).toString()}
             subValue="items empty"
             iconBg="bg-red-50"
             iconColor="text-red-500"

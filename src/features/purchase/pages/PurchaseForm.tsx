@@ -21,6 +21,7 @@ import { useApi } from "@/context/ApiContext";
 import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 import { SearchSelect } from "@/components/inputbuilders/SearchSelect";
 import { supplierApi } from "@/services/api/supplier";
+import { purchaseApi } from "@/services/api/purchase";
 import { useHeader } from "@/context/HeaderContext";
 import { useToast } from "@/context/ToastContext";
 import Loader from "@/components/common/Loader";
@@ -28,10 +29,12 @@ import { InventoryItemsCard } from "@/features/purchase/components/InventoryItem
 import { useQuickCreate } from "@/features/common/QuickCreate/QuickCreateContext";
 import PurchaseSuccessModal from "../components/purchaseSuccessModal";
 import { parseGst } from "./PurchaseHistory";
-type PaymentMethod = "Cash" | "UPI" | "Card" | "Bank";
+type PaymentMethod = "CASH" | "UPI" | "CARD" | "BANK";
 
 export interface ProductItem {
   id: string;
+  pricing_id?: string;
+  storage_location_id?: string;
   inventory_id?: string;
   variant_id?: string;
   name: string;
@@ -67,7 +70,7 @@ const PurchaseForm = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { postData, getData, putData } = useApi();
+  const { getData } = useApi();
   const { setBottomActions } = useHeader();
   const { showToast } = useToast();
   const [submitting, setSubmitting] = useState(false);
@@ -97,8 +100,7 @@ const PurchaseForm = () => {
     const type = searchParams.get("type");
     return (type as any) || "DIRECT";
   });
-  const [purchaseId, setPurchaseId] = useState<string | null>(null);
-  const [payment, setPayment] = useState({ method: "Cash" as PaymentMethod, amountPaid: "" as number | "" });
+  const [payment, setPayment] = useState({ method: "CASH" as PaymentMethod, amountPaid: "" as number | "" });
   const [costMethod, setCostMethod] = useState("None");
   const [supplierDetails, setSupplierDetails] = useState<any>(null);
   const [isGstExpanded, setIsGstExpanded] = useState(false);
@@ -171,7 +173,7 @@ const PurchaseForm = () => {
   useEffect(() => {
     if (id) {
       const fetchPurchase = async () => {
-        const res = await getData(`${ENDPOINTS.PURCHASES}/by/${SHOP_ID}/${id}`);
+        const res = await getData(`${ENDPOINTS.PURCHASES}/by/id/${SHOP_ID}/${id}`);
         if (res && (res.data || res.id)) {
           const data = res.data ? (Array.isArray(res.data) ? res.data[0] : res.data) : res;
           const loadedSupplierId = data.supplier?.supplier_id || data.supplier?.id || data.supplier_id || "";
@@ -180,49 +182,66 @@ const PurchaseForm = () => {
           setPurchaseDetails(data.purchaseDetails || {
             supplier: loadedSupplierId,
             invoiceNo: data.invoice_no || "",
-            date: data.purchase_date ? data.purchase_date.split("T")[0] : (data.date || new Date().toISOString().split("T")[0]),
+            date: data.purchase_date ? data.purchase_date.split("T")[0] : (data.date ? data.date.split("T")[0] : new Date().toISOString().split("T")[0]),
             referenceNo: data.reference_no || "",
           });
           
           if (loadedSupplierId && !data.purchaseDetails) {
-            setSupplierDetails({
-              id: loadedSupplierId,
-              name: loadedSupplierName
-            });
+            if (!loadedSupplierName) {
+              getData(`${ENDPOINTS.SUPPLIERS}/by/id/${SHOP_ID}/${loadedSupplierId}`).then((supRes) => {
+                if (supRes && (supRes.data || supRes.id)) {
+                  const supData = supRes.data ? (Array.isArray(supRes.data) ? supRes.data[0] : supRes.data) : supRes;
+                  setSupplierDetails({ id: loadedSupplierId, name: supData.name || supData.supplier_name || "Unknown Supplier" });
+                }
+              }).catch(() => {
+                setSupplierDetails({ id: loadedSupplierId, name: "Unknown Supplier" });
+              });
+            } else {
+              setSupplierDetails({
+                id: loadedSupplierId,
+                name: loadedSupplierName
+              });
+            }
           }
 
           setPurchaseType(data.type || "DIRECT");
-          setPurchaseId(data.id || data.purchase_id);
-          const updatedProducts = [...data.products.map((p: any) => {
-            const qty = p.quantity ?? p.stocks_added ?? 0;
+          const itemsSource = data.items || data.products || [];
+          const updatedProducts = [...itemsSource.map((p: any) => {
+            const qty = p.stock_infos?.stocks ?? p.stocks ?? p.quantity ?? p.stocks_added ?? 0;
             const parsedSku = p.sku || p.datas?.sku || p.ui_id || p.barcode || "";
+            const pBuyPrice = p.pricing_infos?.[0]?.buy_price ?? p.pricing_infos?.buy_price ?? p.buy_price;
+            const pSellPrice = p.pricing_infos?.[0]?.sell_price ?? p.pricing_infos?.sell_price ?? p.sell_price;
+            const pStorage = p.storage_locations?.[0]?.name ?? p.storage_location_infos?.name ?? p.datas?.storage_location ?? "";
+            
             return {
-              id: p.id || crypto.randomUUID(),
-              inventory_id: p.inventory_id,
-              name: p.name,
+              id: p.id || `temp-${Math.random().toString(36).substring(2, 9)}`,
+              pricing_id: p.pricing_infos?.[0]?.pricing_id || p.pricing_infos?.[0]?.id || p.pricing_infos?.id,
+              storage_location_id: p.storage_locations?.[0]?.storage_location_id || p.storage_locations?.[0]?.id || p.storage_location_infos?.id,
+              inventory_id: p.product_id || p.inventory_id,
+              name: p.name || "",
               quantity: qty,
               originalQuantity: qty,
-              costPrice: p.buy_price,
-              sellingPrice: p.sell_price,
+              costPrice: pBuyPrice,
+              sellingPrice: pSellPrice,
               marginPercent: "",
               marginAmount: "",
               marginType: "sellingPrice",
               unit: p.unit || "pc",
               taxGst: parseGst(p.gst || p.datas?.gst || p.taxGst || p.tax_gst || 0) || 18,
-              variant_id: (typeof p.variant === 'object' && p.variant !== null) ? p.variant.variant_id : null,
+              variant_id: p.variant_id || ((typeof p.variant === 'object' && p.variant !== null) ? p.variant.variant_id : null),
               variant: (typeof p.variant === 'object' && p.variant !== null ? p.variant.variant_name || p.variant.name : p.variant) || "",
               sku: parsedSku,
-              batchTracking: p.batch_tracking || p.has_batch || !!p.batch || !!p.batch_id,
-              serialTracking: p.serial_tracking || p.has_serialno || !!p.serial_info || !!p.serialno_id || !!(p.serial_number) || !!(p.serial_numbers),
-              batch_id: (typeof p.batch === 'object' && p.batch !== null) ? p.batch.batch_id : null,
-              batchNum: (typeof p.batch === 'object' && p.batch !== null ? p.batch.batch_name || p.batch.name : p.batch) || "",
-              manufacturingDate: (p.manufacturing_date || p.batch?.manufacturing_date || p.batch?.mfg_date || "").split("T")[0],
-              expiryDate: (p.expiry_date || p.batch?.expiry_date || p.batch?.exp_date || "").split("T")[0],
+              batchTracking: p.batchTracking || !!p.batch_infos || p.batch_tracking || p.has_batch || !!p.batch || !!p.batch_id,
+              serialTracking: p.serialTracking || !!p.serialno_infos || p.serial_tracking || p.has_serialno || !!p.serial_info || !!p.serialno_id || !!(p.serial_number) || !!(p.serial_numbers),
+              batch_id: p.batch_infos?.id || ((typeof p.batch === 'object' && p.batch !== null) ? p.batch.batch_id : null),
+              batchNum: p.batch_infos?.name || ((typeof p.batch === 'object' && p.batch !== null ? p.batch.batch_name || p.batch.name : p.batch)) || "",
+              manufacturingDate: (p.batch_infos?.manufacturing_date || p.manufacturing_date || p.batch?.manufacturing_date || p.batch?.mfg_date || "").split("T")[0],
+              expiryDate: (p.batch_infos?.expiry_date || p.expiry_date || p.batch?.expiry_date || p.batch?.exp_date || "").split("T")[0],
               serialno_id: p.serialno_id || p.serial_number?.id || p.serial_numbers?.id || p.serial_info?.serialno_id,
-              storageLoc: p.datas?.storage_location || "",
-              reorderPoint: p.reorder_point ?? p.datas?.reorder_point ?? 5,
-              serialNumbers: Array.isArray(p.serial_numbers) ? p.serial_numbers.join(',') : (p.serial_numbers?.serial_numbers || p.serial_number?.serial_numbers || p.serial_info?.serial_numbers || []).join(','),
-              existingSerials: Array.isArray(p.serial_numbers) ? p.serial_numbers : (p.serial_numbers?.serial_numbers || p.serial_number?.serial_numbers || p.serial_info?.serial_numbers || [])
+              storageLoc: pStorage,
+              reorderPoint: p.reorder_point_infos?.reorder_point ?? p.reorder_point ?? p.datas?.reorder_point ?? 5,
+              serialNumbers: (p.serialno_infos ? p.serialno_infos.map((s:any) => s.name).join(',') : Array.isArray(p.serial_numbers) ? p.serial_numbers.join(',') : (p.serial_numbers?.serial_numbers || p.serial_number?.serial_numbers || p.serial_info?.serial_numbers || []).join(',')),
+              existingSerials: (p.serialno_infos ? p.serialno_infos.map((s:any) => s.name) : Array.isArray(p.serial_numbers) ? p.serial_numbers : (p.serial_numbers?.serial_numbers || p.serial_number?.serial_numbers || p.serial_info?.serial_numbers || []))
             };
           })];
 
@@ -231,7 +250,7 @@ const PurchaseForm = () => {
             const p = updatedProducts[i];
             if (!p.inventory_id) continue;
             try {
-              const invRes = await getData(`${ENDPOINTS.INVENTORIES}/by/${SHOP_ID}/${p.inventory_id}`);
+              const invRes = await getData(`${ENDPOINTS.INVENTORIES}/by/id/${SHOP_ID}/${p.inventory_id}`);
               if (invRes && invRes.data) {
                  const invData = Array.isArray(invRes.data) ? invRes.data[0] : invRes.data;
                  
@@ -240,6 +259,11 @@ const PurchaseForm = () => {
                  p.serialTracking = !!(invData.has_serialno || invData.datas?.has_serialno || p.serialTracking);
                  
                  let currentStock = invData?.stocks ?? invData?.datas?.stocks;
+                 
+                 // Inherit essential fields missing in the purchase items response
+                 if (!p.name) p.name = invData.name || invData.datas?.name || "";
+                 if (!p.unit || p.unit === "pc") p.unit = invData.unit_id || invData.datas?.unit_id || invData.unit || "pc";
+                 
                  if (p.variant_id && invData?.datas?.combinations) {
                     const variant = invData.datas.combinations.find((v: any) => v.id === p.variant_id);
                     if (variant) currentStock = variant.stocks;
@@ -257,20 +281,23 @@ const PurchaseForm = () => {
           setSoldStockWarnings(warnings);
 
           const transportCharge = Number(
+            data.charges_infos?.transport_charge ??
             data.transport_charge ??
             data.additional_charges?.delivery_charge ??
             data.charges?.transport ?? 0
           );
           const otherCharge = Number(
+            data.charges_infos?.other_charge ??
             data.other_charges ??
             data.additional_charges?.other_charge ??
             data.charges?.other ?? 0
           );
           setCharges({ transport: transportCharge || "", other: otherCharge || "" });
 
-          const paidAmount = Number(data.paid_amount ?? data.payment_info?.amountPaid ?? data.payment?.amountPaid ?? 0);
-          const paymentMethod = data.payment_mode ?? data.payment_info?.method ?? data.payment?.method ?? "Cash";
-          setPayment({ amountPaid: paidAmount || "", method: paymentMethod });
+          const paymentInfoObj = Array.isArray(data.payment_infos) ? data.payment_infos[0] : null;
+          const paidAmount = Number(paymentInfoObj?.amount ?? data.paid_amount ?? data.payment_info?.amountPaid ?? data.payment?.amountPaid ?? 0);
+          const paymentMethod = paymentInfoObj?.method ?? data.payment_mode ?? data.payment_info?.method ?? data.payment?.method ?? "CASH";
+          setPayment({ amountPaid: paidAmount || "", method: String(paymentMethod).toUpperCase() as PaymentMethod });
         }
       };
       fetchPurchase();
@@ -381,12 +408,11 @@ const PurchaseForm = () => {
         });
 
         setPayment({
-          method: "Cash",
+          method: "CASH",
           amountPaid: "",
         });
 
         setCostMethod("None");
-        setPurchaseId(null);
         setSoldStockWarnings([]);
 }
 
@@ -461,43 +487,28 @@ const PurchaseForm = () => {
           finalSellPrice = Number(p.sellingPrice) || 0;
         }
 
-        const calculatedMargin = p.marginType === "percent"
-          ? (Number(p.marginPercent) || 0)
-          : (netCostForSp > 0 ? Number((((finalSellPrice - netCostForSp) / netCostForSp) * 100).toFixed(2)) : 0);
+          const serials = p.serialNumbers ? p.serialNumbers.split(",").map(s => ({ name: s.trim() })).filter(s => s.name) : [];
 
-        return {
-          inventory_id: p.inventory_id || null,
-          variant_id: p.variant_id || null,
-          name: p.name,
-          barcode: p.sku,
-          stocks: q,
-          received_stocks: q,
-          stocks_before: p.originalQuantity,
-          original_quantity: p.originalQuantity,
-          buy_price: Number(baseCost.toFixed(2)),
-          sell_price: Number(finalSellPrice.toFixed(2)),
-          margin: calculatedMargin,
-          unit: p.unit || "pc",
-          gst: Number(p.taxGst) || 0,
-          batch_tracking: p.batchTracking || false,
-          serial_tracking: p.serialTracking || false,
-          batch_number: p.batchNum || "",
-          manufacturing_date: p.manufacturingDate || null,
-          expiry_date: p.expiryDate || null,
-          variant: p.variant || "",
-          batch_id: p.batch_id || null,
-          serialno_id: p.serialno_id || null,
-          serial_numbers: p.serialNumbers ? p.serialNumbers.split(",").map(s => s.trim()).filter(Boolean) : [],
-          batch: (!p.batch_id && p.batchTracking && p.batchNum) ? {
-            name: p.batchNum,
-            manufacturing_date: p.manufacturingDate || new Date().toISOString(),
-            expiry_date: p.expiryDate || new Date().toISOString()
-          } : undefined,
-          datas: {
-            storage_location: p.storageLoc || "",
-          },
-          storage_location: p.storageLoc || "",
-          reorder_point: Number(p.reorderPoint) || 0,
+          return {
+            id: id ? p.id : undefined,
+            product_id: p.inventory_id || "unknown",
+            variant_id: p.variant_id || undefined,
+            batch_infos: (!p.batch_id && p.batchTracking && p.batchNum) ? {
+              name: p.batchNum,
+              manufacturing_date: p.manufacturingDate || new Date().toISOString(),
+              expiry_date: p.expiryDate || new Date().toISOString()
+            } : null,
+            serialno_infos: serials.length > 0 ? serials : null,
+            storage_location_infos: p.storageLoc ? { name: p.storageLoc } : null,
+            reorder_point_infos: p.reorderPoint ? { reorder_point: Number(p.reorderPoint) } : null,
+            pricing_infos: {
+              buy_price: Number(baseCost.toFixed(2)),
+              sell_price: Number(finalSellPrice.toFixed(2))
+            },
+          gst: String(p.taxGst || 0).includes("%") ? String(p.taxGst || 0) : `${p.taxGst || 0}%`,
+          stock_infos: {
+            stocks: q
+          }
         };
       });
 
@@ -510,40 +521,35 @@ const PurchaseForm = () => {
 
       const payload = {
         shop_id: SHOP_ID,
-        type: purchaseType,
-        purchase_id: purchaseId || null,
         supplier_id: supplierDetails?.id || "SUP_" + purchaseDetails.supplier.substring(0, 3).toUpperCase(),
-        calculations: {
+        type: purchaseType,
+        calculation_infos: {
           divided_by: costMethodMap[costMethod] || "NONE",
-          gst: {
-            type: gstMode,
-            value: 18,
-            registered: true
-          }
+          gst_type: gstMode
         },
-        additional_charges: {
-          delivery_charge: Number(charges.transport) || 0,
+        gst_infos: {
+          type: gstMode.toUpperCase()
+        },
+        charges_infos: {
+          transport_charge: Number(charges.transport) || 0,
           other_charge: Number(charges.other) || 0
         },
-        datas: {
-          invoice_no: purchaseDetails.invoiceNo || "",
-          supplier_name: supplierDetails?.name || purchaseDetails.supplier,
-          purchaseDetails: { ...purchaseDetails },
-          payment: {
+        payment_infos: [
+          {
             method: payment.method,
-            amountPaid: Number(payment.amountPaid) || 0
-          },
-          storage_location: products[0]?.storageLoc || "",
-        },
-        paid_amount: Number(payment.amountPaid) || 0,
-        products: transformedProducts,
+            amount: Number(payment.amountPaid) || stats.grandTotal
+          }
+        ],
+        purchase_date: purchaseDetails.date,
+        items: transformedProducts,
+        invoice_no: purchaseDetails.invoiceNo || ""
       };
 
       let res;
       if (id) {
-        res = await putData(`${ENDPOINTS.PURCHASES}/${id}`, payload);
+        res = await purchaseApi.updatePurchase({ id: id, ...payload });
       } else {
-        res = await postData(ENDPOINTS.PURCHASES, payload);
+        res = await purchaseApi.createPurchase(payload);
       }
 
       if (res) {
@@ -558,7 +564,7 @@ const PurchaseForm = () => {
     } finally {
       setSubmitting(false);
     }
-  }, [purchaseDetails, products, charges, payment, supplierDetails, id, postData, putData, showToast, navigate, searchParams, costMethod, stats, purchaseType, gstMode]);
+  }, [purchaseDetails, products, charges, payment, supplierDetails, id, showToast, navigate, searchParams, costMethod, stats, purchaseType, gstMode]);
 
   // --- Header Actions ---
   useEffect(() => {
@@ -825,10 +831,10 @@ const PurchaseForm = () => {
                           value={payment.method}
                           onValueChange={(val) => setPayment({ ...payment, method: val as PaymentMethod })}
                           options={[
-                            { value: "Cash", label: "Cash" },
+                            { value: "CASH", label: "Cash" },
                             { value: "UPI", label: "UPI" },
-                            { value: "Card", label: "Credit/Debit Card" },
-                            { value: "Bank", label: "Bank Transfer" }
+                            { value: "CARD", label: "Credit/Debit Card" },
+                            { value: "BANK", label: "Bank Transfer" }
                           ]}
                           placeholder="Select Payment Method"
                         />

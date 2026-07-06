@@ -1,4 +1,4 @@
-﻿import { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Search, Users, Bookmark, Filter,
@@ -282,6 +282,9 @@ const CustomerList = () => {
                   const name = c.name || "Unknown";
                   const initials = name.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2);
                   const outstanding = c.outstanding || 0;
+                  const customerEmail = c.contact_infos?.email || c.email || "";
+                  const customerPhone = c.contact_infos?.mobile_number || c.mobile_number || "";
+                  const customerCreditLimit = c.credit_infos?.limit ?? c.credit_limit ?? 0;
                   const createdDate = c.created_at ? new Date(c.created_at).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "—";
 
                   return (
@@ -306,11 +309,11 @@ const CustomerList = () => {
                         </div>
                       </td>
                       <td className="py-3 px-4">
-                        <p className="text-[12px] font-semibold text-slate-600 truncate">{c.email || "—"}</p>
-                        <p className="text-[11px] font-medium text-slate-400">{c.mobile_number || "—"}</p>
+                        <p className="text-[12px] font-semibold text-slate-600 truncate">{customerEmail || "—"}</p>
+                        <p className="text-[11px] font-medium text-slate-400">{customerPhone || "—"}</p>
                       </td>
                       <td className="py-3 px-4 text-right">
-                        <span className="text-[13px] font-bold text-slate-700 font-mono">{fmt(c.credit_limit || 0)}</span>
+                        <span className="text-[13px] font-bold text-slate-700 font-mono">{fmt(customerCreditLimit)}</span>
                       </td>
                       <td className="py-3 px-4 text-right">
                         <span className={`text-[13px] font-bold font-mono ${outstanding > 0 ? "text-rose-600" : "text-emerald-600"}`}>

@@ -39,10 +39,13 @@ const CustomerFormPage = () => {
     customer_type: "Normal",
     full_address: "",
     zip_code: "",
+    country: "India",
+    state: "",
     notes: "",
     is_active: true,
     credit_limit: "",
-    credit_terms: "7-days",
+    credit_terms: "7_DAYS",
+    can_have_credit: false,
     gst_number: "",
   };
 
@@ -94,10 +97,14 @@ const CustomerFormPage = () => {
   useEffect(() => {
     if (id) {
       const fetchCustomer = async () => {
-        const res = await getData(`${ENDPOINTS.CUSTOMERS}/by/${SHOP_ID}/${id}`);
+        const res = await getData(`${ENDPOINTS.CUSTOMERS}/by/id/${SHOP_ID}/${id}`);
         if (res && res.data) {
           const cust = Array.isArray(res.data) ? res.data[0] : res.data;
           const datas = cust.datas || {};
+          // Support both new nested and legacy flat response shapes
+          const contactInfos = cust.contact_infos || {};
+          const creditInfos = cust.credit_infos || {};
+          const locationInfos = cust.location_infos || {};
           const address = datas.address || {};
 
           setFormData({
@@ -105,15 +112,18 @@ const CustomerFormPage = () => {
             first_name: cust.name?.split(" ")[0] || "",
             last_name: cust.name?.split(" ").slice(1).join(" ") || "",
             company: datas.company || "",
-            email: cust.email || "",
-            phone: cust.mobile_number || "",
+            email: contactInfos.email || cust.email || "",
+            phone: contactInfos.mobile_number || cust.mobile_number || "",
             customer_type: datas.customer_type || "Normal",
-            full_address: address.full_address || "",
-            zip_code: address.zip_code || "",
-            notes: datas.additional_notes || "",
+            full_address: locationInfos.full_address || address.full_address || "",
+            zip_code: locationInfos.zipcode || address.zip_code || "",
+            country: locationInfos.country || "India",
+            state: locationInfos.state || "",
+            notes: creditInfos.notes || datas.additional_notes || "",
             is_active: cust.is_active !== undefined ? cust.is_active : true,
-            credit_limit: String(cust.credit_limit || ""),
-            credit_terms: datas.payment_cycle || "7-days",
+            credit_limit: String(creditInfos.limit || cust.credit_limit || ""),
+            credit_terms: creditInfos.terms || datas.payment_cycle || "7_DAYS",
+            can_have_credit: cust.can_have_credit ?? (Number(creditInfos.limit || cust.credit_limit || 0) > 0),
             gst_number: datas.gst_number || "",
           });
         }
@@ -166,22 +176,33 @@ const CustomerFormPage = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
+
+    const canHaveCredit = formData.can_have_credit || Number(formData.credit_limit) > 0;
+
     const payload: any = {
       shop_id: SHOP_ID,
       name: `${formData.first_name} ${formData.last_name}`.trim(),
-      email: formData.email,
-      mobile_number: formData.phone,
-      credit_limit: Number(formData.credit_limit) || 0,
-      is_active: formData.is_active,
-      datas: {
-        address: {
-          full_address: formData.full_address,
-          zip_code: formData.zip_code,
-        },
-        additional_notes: formData.notes,
-        payment_cycle: formData.credit_terms,
-      }
+      contact_infos: {
+        email: formData.email || undefined,
+        mobile_number: formData.phone || undefined,
+      },
+      location_infos: {
+        full_address: formData.full_address,
+        zipcode: formData.zip_code,
+        country: formData.country || "India",
+        state: formData.state || "",
+      },
+      can_have_credit: canHaveCredit,
     };
+
+    // Only send credit_infos when the customer can have credit
+    if (canHaveCredit) {
+      payload.credit_infos = {
+        limit: Number(formData.credit_limit) || 0,
+        notes: formData.notes || undefined,
+        terms: formData.credit_terms || undefined,
+      };
+    }
 
     if (id) {
       payload.id = id;
@@ -313,16 +334,32 @@ const CustomerFormPage = () => {
                 name="full_address"
                 value={formData.full_address}
                 onChange={handleChange}
-                placeholder="123, Business Park, City, State"
+                placeholder="123, Business Park, City"
                 leftIcon={<MapPin size={16} className="text-slate-400" />}
               />
-              <Input
-                label="ZIP Code"
-                name="zip_code"
-                value={formData.zip_code}
-                onChange={handleChange}
-                placeholder="ZIP"
-              />
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Input
+                  label="State"
+                  name="state"
+                  value={formData.state}
+                  onChange={handleChange}
+                  placeholder="Tamil Nadu"
+                />
+                <Input
+                  label="Country"
+                  name="country"
+                  value={formData.country}
+                  onChange={handleChange}
+                  placeholder="India"
+                />
+                <Input
+                  label="ZIP Code"
+                  name="zip_code"
+                  value={formData.zip_code}
+                  onChange={handleChange}
+                  placeholder="600001"
+                />
+              </div>
             </div>
           </div>
 
@@ -335,30 +372,36 @@ const CustomerFormPage = () => {
               <h2 className="text-xs font-bold text-slate-800  ">Financial & Notes</h2>
             </div>
             <div className="p-8 space-y-6 flex-1 flex flex-col">
-                <Input
-                  label="Credit Limit"
-                  type="number"
-                  name="credit_limit"
-                  value={formData.credit_limit}
-                  onChange={handleChange}
-                  placeholder="0.00"
-                  leftIcon={<DollarSign size={16} className="text-emerald-500" />}
-                />
-                <ReusableSelect
-                  key={`terms-${id || searchParams.get("draftId") || "new"}-${formData.credit_terms}`}
-                  label="Credit Terms"
-                  value={formData.credit_terms}
-                  onValueChange={(val) => handleSelectChange("credit_terms", val)}
-                  options={[
-                    { label: "7 Days", value: "7-days" },
-                    { label: "15 Days", value: "15-days" },
-                    { label: "30 Days", value: "30-days" },
-                    { label: "45 Days", value: "45-days" },
-                    { label: "60 Days", value: "60-days" },
-                    { label: "90 Days", value: "90-days" },
-                  ]}
-                  placeholder="Select Terms"
-                />
+                <div className="flex items-center justify-between p-4 rounded-lg bg-slate-50 border border-slate-100">
+                  <span className="text-xs font-bold text-slate-500">Allow Credit</span>
+                  <Switch
+                    checked={formData.can_have_credit}
+                    onCheckedChange={(checked) => setFormData(prev => ({ ...prev, can_have_credit: checked }))}
+                  />
+                </div>
+                {formData.can_have_credit && (
+                  <Input
+                    label="Credit Limit"
+                    type="number"
+                    name="credit_limit"
+                    value={formData.credit_limit}
+                    onChange={handleChange}
+                    placeholder="0.00"
+                    leftIcon={<DollarSign size={16} className="text-emerald-500" />}
+                  />
+                )}
+                {formData.can_have_credit && (
+                  <ReusableSelect
+                    key={`terms-${id || searchParams.get("draftId") || "new"}-${formData.credit_terms}`}
+                    label="Credit Terms"
+                    value={formData.credit_terms}
+                    onValueChange={(val) => handleSelectChange("credit_terms", val)}
+                    options={[
+                      { label: "7 Days", value: "7_DAYS" },
+                    ]}
+                    placeholder="Select Terms"
+                  />
+                )}
               <div className="flex flex-col gap-1.5 w-full flex-1">
                 <label className="text-[11px] font-bold text-slate-500 ml-1  ">
                   Internal Remarks

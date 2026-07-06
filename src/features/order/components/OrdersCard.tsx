@@ -1,6 +1,6 @@
 import { 
   Phone, User, IndianRupee, Wifi, ArrowRight, 
-  Inbox, CheckCircle, XCircle, Truck, PackageCheck 
+  Inbox, CheckCircle, XCircle, Truck, PackageCheck, Trash2
 } from "lucide-react";
 import { ReusableSelect } from "@/components/ui/ReusableSelect";
 
@@ -17,9 +17,11 @@ interface OrdersCardProps {
   order: any;
   setIsOpen: React.Dispatch<React.SetStateAction<boolean>>;
   viewMode?: "grid" | "list";
+  onStatusChange?: (newStatus: string) => void;
+  onDeleteClick?: (e: React.MouseEvent) => void;
 }
 
-const OrdersCard: React.FC<OrdersCardProps> = ({ order, setIsOpen, viewMode = "grid" }) => {
+const OrdersCard: React.FC<OrdersCardProps> = ({ order, setIsOpen, viewMode = "grid", onStatusChange, onDeleteClick }) => {
   // Fallback to INCOMING if status is missing
   const status = statusConfig[order.status as keyof typeof statusConfig] ?? statusConfig.INCOMING;
 
@@ -78,7 +80,7 @@ const OrdersCard: React.FC<OrdersCardProps> = ({ order, setIsOpen, viewMode = "g
                 { label: "Delivered", value: "DELIVERED" },
               ]}
               value={order.status}
-              onValueChange={() => {}}
+              onValueChange={(val) => onStatusChange?.(val)}
               placeholder="Update Status"
             />
           </div>
@@ -87,6 +89,14 @@ const OrdersCard: React.FC<OrdersCardProps> = ({ order, setIsOpen, viewMode = "g
             <span className={`w-1.5 h-1.5 rounded-full ${status.dot} ${status.pulse ? "animate-pulse" : ""}`} />
             {order.status.replace(/_/g, " ")}
           </span>
+
+          <button
+            onClick={onDeleteClick}
+            className="flex items-center justify-center p-2 rounded-lg text-red-400 bg-red-50/50 hover:bg-red-50 hover:text-red-600 transition-all duration-200"
+            title="Delete Order"
+          >
+            <Trash2 size={16} strokeWidth={2} />
+          </button>
 
           <button
             onClick={() => setIsOpen(true)}
@@ -157,17 +167,26 @@ const OrdersCard: React.FC<OrdersCardProps> = ({ order, setIsOpen, viewMode = "g
               { label: "Delivered", value: "DELIVERED" },
             ]}
             value={order.status}
-            onValueChange={() => {}}
+            onValueChange={(val) => onStatusChange?.(val)}
             placeholder="Update Status"
           />
 
-          <button
-            onClick={() => setIsOpen(true)}
-            className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-medium text-slate-600 bg-slate-50 border border-slate-200 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 transition-all duration-200"
-          >
-            View Details
-            <ArrowRight size={16} strokeWidth={2} className="transition-transform duration-200 group-hover:translate-x-1" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={onDeleteClick}
+              className="flex items-center justify-center p-2.5 rounded-lg text-red-400 bg-red-50/50 hover:bg-red-50 hover:text-red-600 border border-transparent hover:border-red-100 transition-all duration-200"
+              title="Delete Order"
+            >
+              <Trash2 size={16} strokeWidth={2} />
+            </button>
+            <button
+              onClick={() => setIsOpen(true)}
+              className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-medium text-slate-600 bg-slate-50 border border-slate-200 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 transition-all duration-200"
+            >
+              View Details
+              <ArrowRight size={16} strokeWidth={2} className="transition-transform duration-200 group-hover:translate-x-1" />
+            </button>
+          </div>
         </div>
       </div>
     </div>

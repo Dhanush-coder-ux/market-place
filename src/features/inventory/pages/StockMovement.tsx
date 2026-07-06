@@ -12,7 +12,7 @@ import { GradientButton } from "@/components/ui/GradientButton";
 import { StatCard } from "@/components/common/StatsCard";
 import { TypeBadge } from "@/components/common/SuperUI";
 import { useApi } from "@/context/ApiContext";
-import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
+import { SHOP_ID } from "@/services/endpoints";
 import { useHeader } from "@/context/HeaderContext";
 import { ColumnPicker } from "@/components/common/ColumnPicker";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -21,6 +21,7 @@ import { useToast } from "@/context/ToastContext";
 import { createPortal } from "react-dom";
 import { RightSidebarFilter } from "@/components/common/RightSidebarFilter";
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
+import { stockMovAdjApi } from "@/services/api/stockMovAdj";
 
 // ─── Types & Interfaces ──────────────────────────────────────────────────────
 
@@ -54,7 +55,7 @@ export interface Movement {
 // ─── Mock Data ───────────────────────────────────────────────────────────────
 
 const WAREHOUSES = ["All Locations", "Warehouse A", "Warehouse B", "Store Front", "Cold Storage", "Returns Depot"];
-const MOVEMENT_TYPES = ["All", "PURCHASE", "SALES", "STOCK_ADJUSTMENT"];
+const MOVEMENT_TYPES = ["All", "PURCHASE", "SALES", "ONLINE_SALES", "OFFLINE_SALES", "ADJUSTMENT", "SALES_RETURN"];
 
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -204,7 +205,7 @@ function DetailDrawer({ movement, onClose }: DetailDrawerProps) {
                               <div className="pl-2.5 border-l-2 border-blue-200">
                                 <div className="bg-white border border-slate-100 rounded p-2 shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
                                   <p className="text-[9px] font-black text-slate-400 mb-1.5 uppercase tracking-wider flex items-center gap-1">
-                                    Serial Numbers 
+                                    Serial Numbers
                                     <span className="bg-slate-100 text-slate-500 px-1 rounded-full text-[8px]">{p.serial_numbers.length}</span>
                                   </p>
                                   <div className="flex flex-wrap gap-1">
@@ -551,200 +552,101 @@ export default function StockMovementPage() {
   }, [selectedItem, setBottomActions, setSelected]);
 
   const fetchPage = useCallback(async (limit: number, offset: number, filters: any) => {
-      const params: any = { view: "STOCKADJUSTMENT_VIEW", shop_id: SHOP_ID, limit: limit.toString(), offset: offset.toString() };
-      
-      if (filters.search) params.search = filters.search;
-      if (filters.type && filters.type !== "All") {
-        params.movement_type = filters.type === "PURCHASE" ? "DIRECT" : filters.type;
-      }
-      if (filters.dateFrom) params.from_date = filters.dateFrom;
-      if (filters.dateTo) params.to_date = filters.dateTo;
-      
-      const adjRes = await getData(`${ENDPOINTS.S_ADJUSTMENTS}/by/shop/${SHOP_ID}`, params);
-      const aData = Array.isArray(adjRes?.data) ? adjRes.data : (adjRes?.data?.datas ?? adjRes?.data?.movements ?? (Array.isArray(adjRes?.datas) ? adjRes.datas : (adjRes?.datas?.datas ?? adjRes?.datas?.movements ?? [])));
+    const params: any = { limit: limit.toString(), offset: offset.toString() };
 
-      let fetchedStats = null;
-      if (adjRes?.data?.overall_stats) {
-        fetchedStats = adjRes.data.overall_stats;
-      } else if (adjRes?.datas?.overall_stats) {
-        fetchedStats = adjRes.datas.overall_stats;
+    if (filters.search) params.q = filters.search;
+    if (filters.type && filters.type !== "All") params.type = filters.type;
+    if (filters.dateFrom) params.from_date = filters.dateFrom;
+    if (filters.dateTo) params.to_date = filters.dateTo;
+
+    // Use the new StockAdjMov service endpoint
+    const adjRes = await stockMovAdjApi.getStockMovementsByShop(SHOP_ID, params);
+    const aData: any[] = Array.isArray(adjRes?.data) ? adjRes.data : [];
+
+    // Map type string to MovementType
+    const mapType = (t: string): MovementType => {
+      if (t === "PURCHASE") return "PURCHASE";
+      if (t === "SALES" || t === "ONLINE_SALES" || t === "OFFLINE_SALES") return "SALES";
+      if (t === "SALES_RETURN" || t === "ONLINE_SALES_RETURN" || t === "OFFLINE_SALES_RETURN") return "SALE_RETURN";
+      if (t === "ADJUSTMENT") return "STOCK_ADJUSTMENT";
+      if (t === "TRANSFER") return "TRANSFER";
+      if (t === "OPENING") return "OPENING";
+      if (t === "PRODUCTION") return "PRODUCTION";
+      return "STOCK_ADJUSTMENT";
+    };
+
+    const adjMovements: Movement[] = aData.map((a: any) => {
+      const finalType = mapType(a.movement_type || a.type || "");
+      const dateStr = String(a.created_at || new Date().toISOString());
+
+      // Determine source/destination based on type
+      let source = "System";
+      let destination = "Warehouse";
+      if (finalType === "SALES" || finalType === "SALE_RETURN") {
+        source = finalType === "SALES" ? "Warehouse" : "Customer";
+        destination = finalType === "SALES" ? "Customer" : "Warehouse";
+      } else if (finalType === "PURCHASE" || finalType === "PO_PURCHASE") {
+        source = "Supplier";
+        destination = "Warehouse";
+      } else if (finalType === "STOCK_ADJUSTMENT") {
+        source = "Stock";
+        destination = "Adjusted";
       }
 
-      const invRes = await getData(`${ENDPOINTS.INVENTORIES}/by/shop/${SHOP_ID}?limit=100`);
-      const invMap: Record<string, number> = {};
-      
-      const invList = Array.isArray(invRes?.data) ? invRes.data : (invRes?.data?.inventories ?? (Array.isArray(invRes?.datas) ? invRes.datas : (invRes?.datas?.inventories ?? [])));
-      
-      invList.forEach((item: any) => {
-        invMap[item.name] = Number(item.stocks || 0);
-        if (item.variants) {
-          item.variants.forEach((v: any) => {
-            invMap[`${item.name}-${v.name}`] = Number(v.stocks || 0);
-            if (v.batches) {
-              v.batches.forEach((b: any) => {
-                invMap[`${item.name}-${v.name}-${b.name}`] = Number(b.stocks || 0);
-              });
-            }
-          });
-        }
-        if (item.batches && !item.variants) {
-          item.batches.forEach((b: any) => {
-            invMap[`${item.name}-${b.name}`] = Number(b.stocks || 0);
-          });
-        }
+      const items: any[] = Array.isArray(a.products) ? a.products : (Array.isArray(a.items) ? a.items : []);
+      const productsList = items.map((item: any) => {
+        const isDecrement = item.type === "DECREMENT";
+        const stocksAdj = item.stock_infos?.stocks || item.stocks_adjusted || item.stocks || 0;
+        const stocksBefore = item.stock_infos?.stocks_before ?? item.stocks_before ?? 0;
+        const stocksAfter = item.stock_infos?.stocks_after ?? item.stocks_after ?? 0;
+        
+        const qty = isDecrement ? -Math.abs(Number(stocksAdj)) : Math.abs(Number(stocksAdj));
+        return {
+          name: item.name || item.product_id || item.inventory_id || "—",
+          sku: item.ui_id || item.id?.slice(0, 8) || "",
+          qty,
+          stocks_before: Number(stocksBefore),
+          current_stock: Number(stocksAfter),
+          variant: item.variant || item.variant_id || "",
+          batch: item.batch || item.batch_id || "",
+          serial_numbers: Array.isArray(item.serial_numbers) ? item.serial_numbers : Array.isArray(item.serial_info) ? item.serial_info : [],
+        };
       });
 
-      const adjMovements: Movement[] = aData.flatMap((a: any) => {
-        let products = Array.isArray(a.products) ? a.products : [];
-        const dateStr = String(a.adjusted_date || a.created_at || new Date().toISOString());
-        const realId = a.stock_movement_id || a.id || a._id || a.movement_id || "ADJ";
-
-        // Map movement_type from backend
-        let finalType: MovementType = "STOCK_ADJUSTMENT";
-        const mType = a.movement_type || "";
-        if (mType === "DIRECT" || mType === "PURCHASE") finalType = "PURCHASE";
-        else if (mType === "SALES") finalType = "SALES";
-        else if (mType === "RETURN" || mType === "SALE_RETURN") finalType = "SALE_RETURN";
-        else if (mType.includes("PO_")) finalType = "PO_PURCHASE";
-        else if (mType === "OPENING") finalType = "OPENING";
-        else if (mType === "PRODUCTION") finalType = "PRODUCTION";
-        else if (mType === "TRANSFER") finalType = "TRANSFER";
-
-        // Determine source/destination based on type
-        let source = "System";
-        let destination = "Warehouse";
-        if (finalType === "SALES") {
-          source = "Warehouse";
-          destination = "Customer";
-        } else if (finalType === "PURCHASE" || finalType === "PO_PURCHASE") {
-          source = "Supplier";
-          destination = "Warehouse";
-        } else if (finalType === "SALE_RETURN") {
-          source = "Customer";
-          destination = "Warehouse";
-        } else if (finalType === "STOCK_ADJUSTMENT") {
-          source = "Stock";
-          destination = "Adjusted";
-        }
-
-        const productsList: any[] = [];
-        products.forEach((prod: any) => {
-          // NEW FORMAT SUPPORT
-          if (prod.stocks_adjusted !== undefined) {
-            const isDecrement = prod.type === 'DECREMENT' || finalType === "SALES" || finalType === "SALE_RETURN" && prod.stocks_adjusted < 0;
-            const absoluteAdjusted = Math.abs(Number(prod.stocks_adjusted));
-            const qtyVal = isDecrement && prod.type !== 'INCREMENT' ? -absoluteAdjusted : absoluteAdjusted;
-            
-            // Note: finalType 'SALES' is usually decrement, but if type='INCREMENT' it might be a return mapped wrongly? 
-            // We just use the backend's `type` field if available.
-            const finalQtyVal = prod.type === 'DECREMENT' ? -absoluteAdjusted : (prod.type === 'INCREMENT' ? absoluteAdjusted : qtyVal);
-
-            const sns = prod.serial_info?.serial_numbers || [];
-            
-            productsList.push({
-              name: prod.name || "—",
-              sku: prod.barcode || (realId.slice(0, 8) || ""),
-              qty: finalQtyVal,
-              stocks_before: prod.stocks_before,
-              current_stock: prod.stocks_after,
-              variant: prod.variant?.variant_name || "",
-              batch: prod.batch?.batch_name || "",
-              expiry_date: prod.batch?.exp_date,
-              manufacturing_date: prod.batch?.mfg_date,
-              serial_numbers: sns
-            });
-            return;
-          }
-
-          // OLD FORMAT SUPPORT
-          const isDecrement = prod.type === 'DECREMENT' || finalType === "SALES";
-          const baseQty = Number(prod.stocks || 0);
-          const qtyVal = isDecrement ? -baseQty : baseQty;
-
-          if (prod.variants && prod.variants.length > 0) {
-            prod.variants.forEach((v: any) => {
-              if (v.batches && v.batches.length > 0) {
-                v.batches.forEach((b: any) => {
-                  const sns = Array.isArray(b.serial_numbers?.serial_numbers) 
-                    ? b.serial_numbers.serial_numbers 
-                    : (Array.isArray(v.serial_numbers?.serial_numbers) ? v.serial_numbers.serial_numbers : []);
-                  productsList.push({
-                    name: prod.name || "—",
-                    sku: b.barcode || v.sku || prod.barcode || (realId.slice(0, 8) || ""),
-                    qty: isDecrement ? -Number(b.stocks || v.stocks || baseQty) : Number(b.stocks || v.stocks || baseQty),
-                    stocks_before: b.stocks_before ?? v.stocks_before ?? prod.stocks_before,
-                    current_stock: invMap[`${prod.name}-${v.name}-${b.name}`] ?? invMap[`${prod.name}-${v.name}`] ?? invMap[prod.name],
-                    variant: v.name || "",
-                    batch: b.name || "",
-                    expiry_date: b.expiry_date,
-                    manufacturing_date: b.manufacturing_date,
-                    serial_numbers: sns
-                  });
-                });
-              } else {
-                const sns = Array.isArray(v.serial_numbers?.serial_numbers) ? v.serial_numbers.serial_numbers : [];
-                productsList.push({
-                  name: prod.name || "—",
-                  sku: v.sku || prod.barcode || (realId.slice(0, 8) || ""),
-                  qty: isDecrement ? -Number(v.stocks || baseQty) : Number(v.stocks || baseQty),
-                  stocks_before: v.stocks_before ?? prod.stocks_before,
-                  current_stock: invMap[`${prod.name}-${v.name}`] ?? invMap[prod.name],
-                  variant: v.name || "",
-                  batch: "",
-                  serial_numbers: sns
-                });
-              }
-            });
-          } else {
-            const sns = Array.isArray(prod.serial_numbers?.serial_numbers) ? prod.serial_numbers.serial_numbers : [];
-            productsList.push({
-              name: prod.name || "—",
-              sku: prod.barcode || (realId.slice(0, 8) || ""),
-              qty: qtyVal,
-              stocks_before: prod.stocks_before,
-              current_stock: invMap[prod.name],
-              variant: "",
-              batch: "",
-              serial_numbers: sns
-            });
-          }
-        });
-
-        if (productsList.length === 0) return [];
-
-        const firstProd = productsList[0];
-        return [{
-          id: a.ui_id ? String(a.ui_id) : realId.slice(0, 8).toUpperCase(),
-          fullId: realId,
-          product: firstProd.name,
-          sku: firstProd.sku,
-          type: finalType,
-          qty: firstProd.qty,
-          stocks_before: firstProd.stocks_before,
-          source,
-          destination,
-          ref: String(a.ui_id ? `REF-${a.ui_id}` : realId.slice(0, 8).toUpperCase()),
-          date: dateStr.includes("T") ? dateStr : dateStr + "T00:00:00",
-          status: "Completed" as StatusType,
-          user: String(a.added_by || "Admin"),
-          notes: a.description || "",
-          variant: firstProd.variant,
-          batch: firstProd.batch,
-          expiry_date: firstProd.expiry_date,
-          manufacturing_date: firstProd.manufacturing_date,
-          serial_numbers: firstProd.serial_numbers,
-          current_stock: firstProd.current_stock,
-          productsList: productsList
-        }];
-      });
+      const firstItem = productsList[0] ?? { name: "—", sku: "", qty: 0, stocks_before: 0, current_stock: 0, variant: "", batch: "", serial_numbers: [] };
+      const smId = a.stock_movement_id || a.id;
 
       return {
-        items: adjMovements,
-        hasMore: aData.length === limit,
-        stats: fetchedStats,
-        total: adjRes?.data?.total_count || 0
-      }
+        id: a.ui_id || smId?.slice(0, 8).toUpperCase() || "—",
+        fullId: smId,
+        product: firstItem.name,
+        sku: firstItem.sku,
+        type: finalType,
+        qty: firstItem.qty,
+        stocks_before: firstItem.stocks_before,
+        source,
+        destination,
+        ref: a.ui_id ? `REF-${a.ui_id}` : (smId?.slice(0, 8).toUpperCase() || "—"),
+        date: dateStr.includes("T") ? dateStr : dateStr + "T00:00:00",
+        status: "Completed" as StatusType,
+        user: String(a.added_by || "System"),
+        notes: a.description || "",
+        variant: firstItem.variant,
+        batch: firstItem.batch,
+        serial_numbers: firstItem.serial_numbers,
+        current_stock: firstItem.current_stock,
+        productsList,
+      };
+    });
+
+    return {
+      items: adjMovements,
+      hasMore: aData.length === limit,
+      stats: null,
+      total: adjMovements.length
+    };
   }, [getData]);
+
 
   const filters = useMemo(() => ({
     search: debouncedSearch,
@@ -804,40 +706,40 @@ export default function StockMovementPage() {
       {/* ── Summary Cards ── */}
       {!isCleanMode && (
         <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-none">
-          <StatCard 
-            label="Total Stock In" 
-            value={`+${overallStats?.total_stock_in ?? totalIn}`} 
-            icon={TrendingUp} 
-            iconBg="bg-emerald-50" 
-            iconColor="text-emerald-600" 
+          <StatCard
+            label="Total Stock In"
+            value={`+${overallStats?.total_stock_in ?? totalIn}`}
+            icon={TrendingUp}
+            iconBg="bg-emerald-50"
+            iconColor="text-emerald-600"
           />
-          <StatCard 
-            label="Total Stock Out" 
-            value={`-${overallStats?.total_stock_out ?? totalOut}`} 
-            icon={TrendingDown} 
-            iconBg="bg-rose-50" 
-            iconColor="text-rose-600" 
+          <StatCard
+            label="Total Stock Out"
+            value={`-${overallStats?.total_stock_out ?? totalOut}`}
+            icon={TrendingDown}
+            iconBg="bg-rose-50"
+            iconColor="text-rose-600"
           />
-          <StatCard 
-            label="Total Movements" 
-            value={(overallStats?.total_movements_count ?? filtered.length).toString()} 
-            icon={Activity} 
-            iconBg="bg-blue-50" 
-            iconColor="text-blue-600" 
+          <StatCard
+            label="Total Movements"
+            value={(overallStats?.total_movements_count ?? filtered.length).toString()}
+            icon={Activity}
+            iconBg="bg-blue-50"
+            iconColor="text-blue-600"
           />
-          <StatCard 
-            label="Total Purchases" 
-            value={(overallStats?.total_purchase_count ?? 0).toString()} 
-            icon={Package} 
-            iconBg="bg-indigo-50" 
-            iconColor="text-indigo-600" 
+          <StatCard
+            label="Total Purchases"
+            value={(overallStats?.total_purchase_count ?? 0).toString()}
+            icon={Package}
+            iconBg="bg-indigo-50"
+            iconColor="text-indigo-600"
           />
-          <StatCard 
-            label="Total Sales" 
-            value={(overallStats?.total_sales_count ?? 0).toString()} 
-            icon={ShoppingBag} 
-            iconBg="bg-violet-50" 
-            iconColor="text-violet-600" 
+          <StatCard
+            label="Total Sales"
+            value={(overallStats?.total_sales_count ?? 0).toString()}
+            icon={ShoppingBag}
+            iconBg="bg-violet-50"
+            iconColor="text-violet-600"
           />
         </div>
       )}
@@ -884,7 +786,7 @@ export default function StockMovementPage() {
       <RightSidebarFilter
         isOpen={isFilterOpen}
         onClose={() => setIsFilterOpen(false)}
-        onApply={() => {}}
+        onApply={() => { }}
         onClear={resetFilters}
         title="Stock Movement Filters"
       >
@@ -927,7 +829,7 @@ export default function StockMovementPage() {
 
       {/* ── Table Section ── */}
       <div className="bg-white border border-slate-100 rounded-lg shadow-sm min-w-0 overflow-hidden flex flex-col flex-1 min-h-0 mt-2">
-        <div 
+        <div
           className="overflow-auto flex-1 scrollbar-thin scrollbar-thumb-slate-200"
         >
           <table className="w-full text-left border-collapse table-fixed">
@@ -1000,9 +902,8 @@ export default function StockMovementPage() {
                   <React.Fragment key={rowKey}>
                     <tr
                       ref={idx === pageData.length - 1 ? lastElementRef : null}
-                      className={`group transition-all cursor-pointer border-b border-slate-100 last:border-b-0 ${
-                        selectedMvt?.id === m.id ? "bg-blue-50 border-l-2 border-l-blue-500" : "hover:bg-blue-50/30 even:bg-slate-50/20"
-                      }`}
+                      className={`group transition-all cursor-pointer border-b border-slate-100 last:border-b-0 ${selectedMvt?.id === m.id ? "bg-blue-50 border-l-2 border-l-blue-500" : "hover:bg-blue-50/30 even:bg-slate-50/20"
+                        }`}
                       onClick={() => setSelected(prev => prev?.id === m.id ? null : m)}
                     >
                       <td className="px-4 py-3 align-middle border-r border-slate-100 last:border-r-0">
@@ -1084,38 +985,38 @@ export default function StockMovementPage() {
                           {currentStockVal !== null ? currentStockVal : '—'}
                         </span>
                       </td>
-                  {selectedKeys.map(key => {
-                    const value = m[key as keyof Movement];
-                    const displayValue = value === undefined || value === null ? "—" :
-                      typeof value === 'object' ? (Array.isArray(value) ? value.join(", ") : JSON.stringify(value)) :
-                        String(value);
-                    return (
-                      <td key={key} className="px-4 py-3 align-middle border-r border-slate-100 last:border-r-0 truncate">
-                        <p className="text-[12px] font-bold text-slate-600 tracking-tight">
-                          {displayValue}
-                        </p>
+                      {selectedKeys.map(key => {
+                        const value = m[key as keyof Movement];
+                        const displayValue = value === undefined || value === null ? "—" :
+                          typeof value === 'object' ? (Array.isArray(value) ? value.join(", ") : JSON.stringify(value)) :
+                            String(value);
+                        return (
+                          <td key={key} className="px-4 py-3 align-middle border-r border-slate-100 last:border-r-0 truncate">
+                            <p className="text-[12px] font-bold text-slate-600 tracking-tight">
+                              {displayValue}
+                            </p>
+                          </td>
+                        );
+                      })}
+                      <td className="px-4 py-3 align-middle border-r border-slate-100 last:border-r-0">
+                        <div className="flex flex-col gap-0.5">
+                          <span className="text-[13px] font-semibold text-slate-700">
+                            {new Date(m.date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
+                          </span>
+                          <span className="text-[11px] text-slate-400 font-bold">
+                            {new Date(m.date).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}
+                          </span>
+                        </div>
                       </td>
-                    );
-                  })}
-                  <td className="px-4 py-3 align-middle border-r border-slate-100 last:border-r-0">
-                    <div className="flex flex-col gap-0.5">
-                      <span className="text-[13px] font-semibold text-slate-700">
-                        {new Date(m.date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
-                      </span>
-                      <span className="text-[11px] text-slate-400 font-bold">
-                        {new Date(m.date).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}
-                      </span>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-center align-middle w-14">
-                    <ChevronRight size={14} className={`mx-auto transition-all duration-200 ${selectedMvt?.id === m.id ? "text-blue-500 rotate-90" : "text-slate-300 group-hover:text-blue-500"}`} />
-                  </td>
-                </tr>
+                      <td className="px-4 py-3 text-center align-middle w-14">
+                        <ChevronRight size={14} className={`mx-auto transition-all duration-200 ${selectedMvt?.id === m.id ? "text-blue-500 rotate-90" : "text-slate-300 group-hover:text-blue-500"}`} />
+                      </td>
+                    </tr>
 
 
-              </React.Fragment>
-            );
-          })}
+                  </React.Fragment>
+                );
+              })}
             </tbody>
           </table>
         </div>

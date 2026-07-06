@@ -14,6 +14,7 @@ import { useState, useEffect, Fragment } from "react";
 import { createPortal } from "react-dom";
 import { SearchSelect } from "@/components/inputbuilders/SearchSelect";
 import { inventoryApi } from "@/services/api/inventory";
+import { SHOP_ID } from "@/services/endpoints";
 import Input from "@/components/ui/Input";
 import { GradientButton } from "@/components/ui/GradientButton";
 import { useToast } from "@/context/ToastContext";
@@ -527,7 +528,7 @@ export const InventoryItemsCard = ({
                                 // and maps missing properties (like has_variant) to false.
                                 if (opt.id) {
                                   try {
-                                    const fullRes = await inventoryApi.getInventoryById(opt.id);
+                                    const fullRes = await inventoryApi.getInventoryById(SHOP_ID, opt.id);
                                     if (fullRes && fullRes.data) {
                                       const prodData = Array.isArray(fullRes.data) ? fullRes.data[0] : fullRes.data;
                                       if (prodData) {

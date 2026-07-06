@@ -192,8 +192,9 @@ const SalesListPage: React.FC = () => {
 
   const fetchPage = React.useCallback(async (limit: number, offset: number, filters: any) => {
       const params: any = { limit: limit.toString(), offset: offset.toString() };
-      if (filters.search) params.search = filters.search;
-      if (filters.origin) params.origin = filters.origin;
+      if (filters.search) params.q = filters.search;
+      // Always filter to OFFLINE origin — Sales page only shows in-store orders
+      params.origin = "OFFLINE";
       if (filters.payment) params.payment_method = filters.payment;
       if (filters.status) params.status = filters.status;
       if (filters.fromDate) params.from_date = filters.fromDate;
@@ -208,18 +209,48 @@ const SalesListPage: React.FC = () => {
 
       const dataList = Array.isArray(res?.data) ? res.data : (res?.data?.datas ?? []);
       const normalized = dataList.map((s: any) => {
+        // Support new Order Service format: payment_infos can be a dict (Record<string, number>) or an array
         let pm = "Other";
-        if (s.payments && Object.keys(s.payments).length > 0) {
+        if (s.payment_infos && typeof s.payment_infos === 'object' && !Array.isArray(s.payment_infos) && Object.keys(s.payment_infos).length > 0) {
+          pm = Object.keys(s.payment_infos).map(k => {
+            const u = k.toUpperCase();
+            if (u === "CASH") return "Cash";
+            if (u === "CARD") return "Card";
+            if (u === "UPI" || u === "GPAY" || u === "G-PAY") return "UPI";
+            if (u === "PHONEPE") return "PhonePe";
+            if (u === "CREDIT") return "Credit";
+            return k.charAt(0).toUpperCase() + k.slice(1).toLowerCase();
+          }).join(", ");
+        } else if (Array.isArray(s.payment_infos) && s.payment_infos.length > 0) {
+          pm = s.payment_infos.map((p: any) => {
+            const u = (p.method || "").toUpperCase();
+            if (u === "CASH") return "Cash";
+            if (u === "CARD") return "Card";
+            if (u === "UPI" || u === "GPAY" || u === "G-PAY") return "UPI";
+            if (u === "PHONEPE") return "PhonePe";
+            if (u === "CREDIT") return "Credit";
+            return p.method || "Other";
+          }).join(", ");
+        } else if (s.payments && Object.keys(s.payments).length > 0) {
           pm = Object.keys(s.payments).map(k => { const u = k.toUpperCase(); if (u === "CASH") return "Cash"; if (u === "CARD") return "Card"; if (u === "UPI" || u === "G-PAY" || u === "GPAY") return "UPI"; if (u === "PHONEPE") return "PhonePe"; if (u === "CREDIT") return "Credit"; return k.charAt(0).toUpperCase() + k.slice(1).toLowerCase(); }).join(", ");
         } else if (s.payment_method) {
           const r = (s.payment_method || "Other").toUpperCase();
           pm = r === "CASH" ? "Cash" : r === "CARD" ? "Card" : r === "UPI" || r === "G-PAY" || r === "GPAY" ? "UPI" : r === "PHONEPE" ? "PhonePe" : r === "CREDIT" ? "Credit" : s.payment_method;
         }
+
+        // Derive total from calculation_infos if present (new Order Service format)
+        const total = s.total_sellprice ?? s.calculation_infos?.total ?? s.total ?? 0;
+        
+        // Derive total quantity
+        const totalQty = s.total_quantity ?? s.item_infos?.total_order_quantity ?? 0;
+
         return { 
           ...s, 
+          total_sellprice: total,
+          total_quantity: totalQty,
           status: s.status ? s.status.charAt(0).toUpperCase() + s.status.slice(1).toLowerCase() : "Unknown", 
           payment_method: pm, 
-          origin: s.origin === "OFFLINE" ? "Sales" : s.origin 
+          origin: "Sales",  // always OFFLINE so always display as "Sales"
         };
       });
       
@@ -227,9 +258,10 @@ const SalesListPage: React.FC = () => {
         items: normalized,
         hasMore: dataList.length === limit,
         stats: fetchedStats,
-        total: res?.data?.total_count || 0
+        total: res?.data?.total_count || normalized.length
       };
   }, [api]);
+
 
   const fetchDetails = async () => {
     try {
@@ -525,7 +557,7 @@ const SalesListPage: React.FC = () => {
                       </div>
                     </td>
                     <td className="p-2.5 px-3 border-b border-slate-50"><span className="font-mono text-[11px] text-slate-500">{dateStr}</span></td>
-                    <td className="p-2.5 px-3 border-b border-slate-50 text-center"><span className="text-[11px] font-semibold text-slate-600">{Number(sale.total_quantity.toFixed(2))}</span></td>
+                    <td className="p-2.5 px-3 border-b border-slate-50 text-center"><span className="text-[11px] font-semibold text-slate-600">{Number((sale.total_quantity || 0).toFixed(2))}</span></td>
                     <td className="p-2.5 px-3 border-b border-slate-50 text-right"><span className="font-mono text-xs font-bold text-slate-900">{fmt(sale.total_sellprice)}</span></td>
                     <td className="p-2.5 px-3 border-b border-slate-50">{(() => { const cfg = STATUS_CFG[sale.status as SaleStatus] || STATUS_CFG["Pending"]; return <Badge cls={cfg.cls} dot={cfg.dot} label={sale.status} />; })()}</td>
                     <td className="p-2.5 px-3 border-b border-slate-50 text-right">

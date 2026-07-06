@@ -323,7 +323,7 @@ function parseGst(val: any): number {
 /** Fetch PO reference list for SearchSelect */
 const fetchPOOptions = async (query: string, getData: Function) => {
   try {
-    const res = await getData(`${ENDPOINTS.PURCHASES}/search/${SHOP_ID}`, { q: query, limit: "10" });
+    const res = await getData(`${ENDPOINTS.PURCHASES}/by/shop/${SHOP_ID}`, { q: query, limit: "10" });
     let list: any[] = [];
     if (res?.data) {
       list = Array.isArray(res.data) ? res.data : [res.data];
@@ -626,7 +626,7 @@ const ReceiveGoodForm = () => {
       const invFetches = await Promise.all(
         uniqueIds.map(async (invId) => {
           try {
-            const r = await getData(`${ENDPOINTS.INVENTORIES}/by/${SHOP_ID}/${invId}`);
+            const r = await getData(`${ENDPOINTS.INVENTORIES}/by/id/${SHOP_ID}/${invId}`);
             return { invId, data: r?.data || null };
           } catch { return { invId, data: null }; }
         })

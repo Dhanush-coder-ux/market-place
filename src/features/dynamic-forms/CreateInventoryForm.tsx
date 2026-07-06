@@ -20,7 +20,7 @@ export const CreateInventoryForm = () => {
 
   const handleSubmit = async (data: Record<string, any>) => {
     setSuccessData(null);
-    const response = await inventory.createInventory(data);
+    const response = await inventory.createInventory(data as any);
     setSuccessData(response.datas);
   };
 

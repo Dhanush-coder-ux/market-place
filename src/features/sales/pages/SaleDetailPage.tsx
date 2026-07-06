@@ -17,7 +17,7 @@ import { DetailItem, InfoRow, ProfileHeaderCard, SectionCard } from "@/component
 import { OrderResponse } from "@/features/order/types";
 
 /* ── helpers ── */
-const fmt = (n: number) => `₹${n.toLocaleString("en-IN")}`;
+const fmt = (n?: number) => `₹${(n || 0).toLocaleString("en-IN")}`;
 
 type SaleItem = {
   id: string; name: string; sku: string; quantity: number; returnedQty?: number; reason?: string;
@@ -92,6 +92,7 @@ const SaleDetailPage: React.FC = () => {
         if (found) {
           setSale({
             ...found,
+            total_sellprice: found.total_sellprice ?? found.calculation_infos?.total ?? found.total ?? 0,
             status: found.status ? found.status.charAt(0).toUpperCase() + found.status.slice(1).toLowerCase() : "Completed",
             origin: found.origin === "OFFLINE" ? "Sales" : found.origin || "Sales",
           });
@@ -127,9 +128,28 @@ const SaleDetailPage: React.FC = () => {
     }
   };
 
+  const handleDelete = async () => {
+    if (!window.confirm("Are you sure you want to delete this order? This action cannot be undone.")) return;
+    try {
+      const res = await api.deleteData(`${ENDPOINTS.ORDERS}/${SHOP_ID}/${id}`);
+      if (res) {
+        navigate("/sales");
+      }
+    } catch (err) {
+      console.error("Failed to delete order:", err);
+    }
+  };
+
   useEffect(() => {
     setBottomActions(
-      <div className="flex items-center justify-end w-full animate-in fade-in slide-in-from-right-4 duration-300">
+      <div className="flex items-center justify-end w-full animate-in fade-in slide-in-from-right-4 duration-300 gap-2">
+        <button 
+          type="button"
+          onClick={handleDelete}
+          className="px-6 h-8 rounded-lg border border-red-200 bg-red-50 text-red-600 font-bold text-xs hover:bg-red-100 hover:border-red-300 transition-all flex items-center shadow-sm"
+        >
+          Delete Order
+        </button>
         <button 
           type="button"
           onClick={() => navigate("/sales/detail")}
@@ -140,7 +160,7 @@ const SaleDetailPage: React.FC = () => {
       </div>
     );
     return () => setBottomActions(null);
-  }, [setBottomActions, navigate]);
+  }, [setBottomActions, navigate, id, api]);
 
   useEffect(() => {
     if (!sale || !sale.items) fetchSaleDetail();

@@ -15,7 +15,7 @@ export const CustomListSettings: React.FC<CustomListSettingsProps> = ({ type }) 
   const [loading, setLoading] = useState(true);
 
   const title = type === "categories" ? "Product Categories" : "Measurement Units";
-  const desc = type === "categories" 
+  const desc = type === "categories"
     ? "Manage the categories available when creating products."
     : "Manage the measurement units (kg, pcs, box) available for products.";
   const Icon = type === "categories" ? Tag : Ruler;
@@ -117,7 +117,7 @@ export const CustomListSettings: React.FC<CustomListSettingsProps> = ({ type }) 
               {items.length}
             </span>
           </h3>
-          
+
           {items.length === 0 ? (
             <div className="py-8 text-center">
               <p className="text-[13px] font-medium text-slate-400">No items added yet.</p>

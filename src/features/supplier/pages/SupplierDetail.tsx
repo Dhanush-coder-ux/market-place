@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   AlertCircle, Package, Mail, Pencil, User, MapPin, Phone, Trash2,
-  Store, Database, ShoppingBag, History,
+  Store, Database, ShoppingBag, History, Layers, Check, X as XIcon
 } from "lucide-react";
 import {
   SectionCard, DetailItem, InfoRow, Modal,
@@ -18,6 +18,8 @@ import type { SupplierRecord } from "@/types/api";
 import { SearchSelect } from "@/components/inputbuilders/SearchSelect";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { SupplierPurchasesTable } from "@/components/common/HistoryTables";
+import { supplierCustomFieldsApi } from "@/services/api/supplierCustomFields";
+import type { SupplierCustomFieldDefinition, SupplierCustomFieldValue } from "../type";
 
 
 const SupplierSearch = () => {
@@ -27,7 +29,7 @@ const SupplierSearch = () => {
   const fetchSuppliers = async (q: string) => {
 
     try {
-      const res = await getData(`${ENDPOINTS.SUPPLIERS}/search/${SHOP_ID}`, { limit: "8", q });
+      const res = await getData(`${ENDPOINTS.SUPPLIERS}/by/shop/${SHOP_ID}`, { limit: "8", q });
       const rawData = res?.data || [];
       const data = Array.isArray(rawData) ? rawData : (rawData?.datas ?? []);
       return data.map((s: any) => ({
@@ -51,7 +53,7 @@ const SupplierSearch = () => {
   );
 };
 
-const TABS = ["General Info", "Purchases"];
+const TABS = ["General Info", "Custom Fields", "Purchases"];
 
 export default function SupplierDetail() {
   const { id } = useParams<{ id: string }>();
@@ -69,6 +71,14 @@ export default function SupplierDetail() {
   const [viewValue, setViewValue] = useState<{ label: string, value: string } | null>(null);
   const [purchases, setPurchases] = useState<any[]>([]);
   const [purLoading, setPurLoading] = useState(false);
+
+  // Custom Fields state
+  const [customFieldDefs, setCustomFieldDefs] = useState<SupplierCustomFieldDefinition[]>([]);
+  const [customFieldValues, setCustomFieldValues] = useState<SupplierCustomFieldValue[]>([]);
+  const [cfLoading, setCfLoading] = useState(false);
+  const [editingFieldId, setEditingFieldId] = useState<string | null>(null);
+  const [editingValue, setEditingValue] = useState<string>('');
+  const [cfSaving, setCfSaving] = useState(false);
 
   useEffect(() => {
     setBottomActions(
@@ -108,13 +118,54 @@ export default function SupplierDetail() {
   }, [id]);
 
   useEffect(() => {
-    if (!id || activeTab !== 1) return;
+    if (!id || activeTab !== 2) return;
     setPurLoading(true);
     getData(`${ENDPOINTS.PURCHASES}/by/supplier/${SHOP_ID}/${id}`).then((res: any) => {
       setPurchases(res?.data ? (Array.isArray(res.data) ? res.data : [res.data]) : []);
       setPurLoading(false);
     }).catch(() => setPurLoading(false));
   }, [activeTab, id]);
+
+  // Load custom field definitions + values when tab becomes active
+  useEffect(() => {
+    if (!id || activeTab !== 1) return;
+    setCfLoading(true);
+    Promise.all([
+      supplierCustomFieldsApi.getAllFields(SHOP_ID),
+      supplierCustomFieldsApi.getValuesBySupplier(SHOP_ID, id)
+    ]).then(([defs, vals]) => {
+      setCustomFieldDefs(defs);
+      setCustomFieldValues(vals);
+    }).finally(() => setCfLoading(false));
+  }, [activeTab, id]);
+
+  const handleSaveCustomField = async (fieldId: string) => {
+    if (!id) return;
+    setCfSaving(true);
+    try {
+      await supplierCustomFieldsApi.upsertValue({
+        shop_id: SHOP_ID,
+        supplier_id: id,
+        field_id: fieldId,
+        value: editingValue,
+      });
+      setCustomFieldValues((prev) => {
+        const existing = prev.findIndex((v) => v.field_id === fieldId);
+        if (existing >= 0) {
+          const updated = [...prev];
+          updated[existing] = { ...updated[existing], value: editingValue };
+          return updated;
+        }
+        return [...prev, { shop_id: SHOP_ID, supplier_id: id, field_id: fieldId, value: editingValue }];
+      });
+      showToast('Custom field updated', 'success');
+    } catch {
+      showToast('Failed to update field', 'error');
+    } finally {
+      setCfSaving(false);
+      setEditingFieldId(null);
+    }
+  };
 
   async function handleDelete() {
     if (!id) return;
@@ -142,9 +193,18 @@ export default function SupplierDetail() {
   );
 
   const datas = supplier.datas ?? {};
+  const additionalInfos = (supplier as any).additional_infos ?? datas;
   const contact = supplier.contact_info ?? {};
-  const name = String(supplier.name || datas.supplier_name || "Unknown Supplier");
+  const bizContact = (supplier as any).contact_infos ?? supplier;
+  const personContact = (supplier as any).contact_person_infos ?? contact;
+  const loc = (supplier as any).location_infos ?? datas.address ?? {};
+  
+  const name = String(supplier.name || additionalInfos.supplier_name || "Unknown Supplier");
   const initials = name.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2);
+
+  const supplierEmail = bizContact.email || supplier.email || "No email";
+  const supplierPhone = bizContact.mobile_number || supplier.mobile_number || "No phone";
+  const supplierType = additionalInfos.type || contact.type || "Vendor";
 
   return (
     <div className="flex-1 flex flex-col min-h-0 h-full bg-slate-50/50 font-sans overflow-hidden relative">
@@ -156,7 +216,7 @@ export default function SupplierDetail() {
           initials={initials}
           subText={`ID: ${supplier.id}`}
           badges={[
-            { text: String(contact.type || "Vendor"), variant: "primary" },
+            { text: String(supplierType), variant: "primary" },
             {
               text: "Active",
               variant: "success",
@@ -164,8 +224,8 @@ export default function SupplierDetail() {
             }
           ]}
           infoItems={[
-            { icon: Mail, text: String(supplier.email || "No email") },
-            { icon: Phone, text: String(supplier.mobile_number || "No phone") }
+            { icon: Mail, text: String(supplierEmail) },
+            { icon: Phone, text: String(supplierPhone) }
           ]}
           actions={
             <div className="flex items-center gap-2">
@@ -195,8 +255,11 @@ export default function SupplierDetail() {
             <button
               key={tab}
               onClick={() => setActiveTab(i)}
-              className={`px-4 py-1.5 text-[11px] font-bold rounded-lg transition-all ${activeTab === i ? "bg-blue-600 text-white shadow-md shadow-blue-100" : "text-slate-500 hover:bg-slate-50 hover:text-slate-700"
-                }`}
+              className={`px-4 py-1.5 text-[11px] font-bold rounded-lg transition-all ${
+                activeTab === i
+                  ? "bg-blue-600 text-white shadow-md shadow-blue-100"
+                  : "text-slate-500 hover:bg-slate-50 hover:text-slate-700"
+              }`}
             >
               {tab}
             </button>
@@ -211,9 +274,9 @@ export default function SupplierDetail() {
         </div>
       </div>
 
-      {/* Tab Panels (scrollable or flex-locked depending on active tab) */}
-      <div className={`flex-1 min-h-0 ${activeTab === 1 ? "flex flex-col overflow-hidden" : "overflow-y-auto custom-scrollbar"} px-1 pb-6`}>
-        <div className={`animate-in fade-in slide-in-from-bottom-4 duration-500 ${activeTab === 1 ? "flex flex-col flex-1 min-h-0 h-full" : ""}`}>
+      {/* Tab Panels */}
+      <div className={`flex-1 min-h-0 ${activeTab === 2 ? "flex flex-col overflow-hidden" : "overflow-y-auto custom-scrollbar"} px-1 pb-6`}>
+        <div className={`animate-in fade-in slide-in-from-bottom-4 duration-500 ${activeTab === 2 ? "flex flex-col flex-1 min-h-0 h-full" : ""}`}>
           {activeTab === 0 && (
             <div className="grid grid-cols-1 xl:grid-cols-4 gap-4">
               <div className="xl:col-span-3 space-y-4">
@@ -224,37 +287,45 @@ export default function SupplierDetail() {
                       onClick={() => setViewValue({ label: "Business Name", value: name })}
                     />
                     <DetailItem
-                      icon={User} label="Contact Person Name" value={String(contact.name || "—")}
-                      onClick={() => setViewValue({ label: "Contact Person Name", value: String(contact.name || "—") })}
+                      icon={User} label="Contact Person Name" value={String(personContact.name || "—")}
+                      onClick={() => setViewValue({ label: "Contact Person Name", value: String(personContact.name || "—") })}
                     />
                     <DetailItem
-                      icon={Mail} label="Contact Person Email" value={String(contact.email || "—")}
-                      onClick={() => setViewValue({ label: "Contact Person Email", value: String(contact.email || "—") })}
+                      icon={Mail} label="Contact Person Email" value={String(personContact.email || "—")}
+                      onClick={() => setViewValue({ label: "Contact Person Email", value: String(personContact.email || "—") })}
                     />
                     <DetailItem
-                      icon={Phone} label="Contact Person Mobile No." value={String(contact.mobile_number || "—")}
-                      onClick={() => setViewValue({ label: "Contact Person Mobile No.", value: String(contact.mobile_number || "—") })}
+                      icon={Phone} label="Contact Person Mobile No." value={String(personContact.mobile_number || "—")}
+                      onClick={() => setViewValue({ label: "Contact Person Mobile No.", value: String(personContact.mobile_number || "—") })}
                     />
                     <DetailItem
-                      icon={Mail} label="Supplier Email" value={String(supplier.email || "—")}
-                      onClick={() => setViewValue({ label: "Supplier Email", value: String(supplier.email || "—") })}
+                      icon={Mail} label="Supplier Email" value={String(supplierEmail === "No email" ? "—" : supplierEmail)}
+                      onClick={() => setViewValue({ label: "Supplier Email", value: String(supplierEmail) })}
                     />
                     <DetailItem
-                      icon={Phone} label="Supplier Mobile No." value={String(supplier.mobile_number || "—")}
-                      onClick={() => setViewValue({ label: "Supplier Mobile No.", value: String(supplier.mobile_number || "—") })}
+                      icon={Phone} label="Supplier Mobile No." value={String(supplierPhone === "No phone" ? "—" : supplierPhone)}
+                      onClick={() => setViewValue({ label: "Supplier Mobile No.", value: String(supplierPhone) })}
                     />
                     <DetailItem
-                      icon={MapPin} label="City" value={String(datas.address?.city || "—")}
-                      onClick={() => setViewValue({ label: "City", value: String(datas.address?.city || "—") })}
+                      icon={MapPin} label="City" value={String(loc.city || additionalInfos.city || "—")}
+                      onClick={() => setViewValue({ label: "City", value: String(loc.city || additionalInfos.city || "—") })}
                     />
                     <DetailItem
-                      icon={MapPin} label="Zip Code" value={String(datas.address?.zipcode || "—")}
-                      onClick={() => setViewValue({ label: "Zip Code", value: String(datas.address?.zipcode || "—") })}
+                      icon={MapPin} label="State" value={String(loc.state || "—")}
+                      onClick={() => setViewValue({ label: "State", value: String(loc.state || "—") })}
+                    />
+                    <DetailItem
+                      icon={MapPin} label="Country" value={String(loc.country || "—")}
+                      onClick={() => setViewValue({ label: "Country", value: String(loc.country || "—") })}
+                    />
+                    <DetailItem
+                      icon={MapPin} label="Zip Code" value={String(loc.zipcode || "—")}
+                      onClick={() => setViewValue({ label: "Zip Code", value: String(loc.zipcode || "—") })}
                     />
 
-                    {/* Dynamically render all other fields from datas */}
-                    {Object.entries(datas).map(([key, val]) => {
-                      if (["internal_notes", "supplier_name", "address"].includes(key)) return null;
+                    {/* Dynamically render all other fields from additionalInfos */}
+                    {Object.entries(additionalInfos).map(([key, val]) => {
+                      if (["internal_notes", "supplier_name", "address", "city", "type"].includes(key)) return null;
                       const label = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
                       return (
                         <DetailItem
@@ -270,7 +341,7 @@ export default function SupplierDetail() {
                   <div className="space-y-4">
                     <p className="text-[10px] font-bold text-slate-400   text-xs font-semibold">Street Address</p>
                     <p className="text-sm font-semibold text-slate-700 leading-relaxed bg-slate-50 p-4 rounded-lg border border-slate-100">
-                      {String(datas.address?.full_address || "No specific address provided.")}
+                      {String(loc.full_address || "No specific address provided.")}
                     </p>
                   </div>
                 </SectionCard>
@@ -279,7 +350,7 @@ export default function SupplierDetail() {
               <div className="space-y-5">
                 <SectionCard title="Business Identity">
                   <div className="space-y-3">
-                    <InfoRow label="Business Type" value={<span className="text-[12px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md">{String(contact.type || "Vendor")}</span>} />
+                    <InfoRow label="Business Type" value={<span className="text-[12px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md">{String(supplierType)}</span>} />
                     <InfoRow label="GST Number" value={<span className="text-[12px] font-bold text-slate-700 font-mono">{String(supplier.gst_no || "—")}</span>} />
                   </div>
                 </SectionCard>
@@ -287,7 +358,89 @@ export default function SupplierDetail() {
             </div>
           )}
 
-          {activeTab === 1 && (() => {
+          {activeTab === 1 && (
+            <div className="space-y-4 animate-in fade-in duration-300">
+              {cfLoading ? (
+                <div className="py-16 flex justify-center"><Loader /></div>
+              ) : customFieldDefs.length === 0 ? (
+                <div className="py-16 text-center">
+                  <div className="w-12 h-12 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-400 mx-auto mb-3">
+                    <Layers size={22} />
+                  </div>
+                  <p className="text-sm font-semibold text-slate-400">No custom fields defined for this shop yet.</p>
+                  <p className="text-xs text-slate-300 mt-1">Create field definitions from the Settings panel.</p>
+                </div>
+              ) : (
+                <SectionCard title="Custom Attributes" className="p-5">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {customFieldDefs.map((field) => {
+                      const currentVal = customFieldValues.find((v) => v.field_id === field.id);
+                      const isEditing = editingFieldId === field.id;
+                      return (
+                        <div
+                          key={field.id}
+                          className={`group relative p-4 rounded-xl border transition-all ${
+                            isEditing
+                              ? 'border-indigo-200 bg-indigo-50/40'
+                              : 'border-slate-100 bg-white hover:border-indigo-100 hover:bg-indigo-50/20'
+                          }`}
+                        >
+                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">
+                            {field.label_name}
+                            {field.required && <span className="text-rose-400 ml-0.5">*</span>}
+                          </p>
+
+                          {isEditing ? (
+                            <div className="flex items-center gap-1.5 mt-1">
+                              <input
+                                autoFocus
+                                type={field.type === 'number' ? 'number' : field.type === 'date' ? 'date' : 'text'}
+                                value={editingValue}
+                                onChange={(e) => setEditingValue(e.target.value)}
+                                className="flex-1 h-8 px-2 text-xs font-semibold bg-white border border-indigo-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-200 transition-all"
+                              />
+                              <button
+                                onClick={() => handleSaveCustomField(field.id)}
+                                disabled={cfSaving}
+                                className="w-7 h-7 flex items-center justify-center bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shrink-0"
+                              >
+                                {cfSaving ? '…' : <Check size={13} />}
+                              </button>
+                              <button
+                                onClick={() => setEditingFieldId(null)}
+                                className="w-7 h-7 flex items-center justify-center bg-white border border-slate-200 text-slate-400 rounded-lg hover:text-rose-500 hover:border-rose-200 transition-colors shrink-0"
+                              >
+                                <XIcon size={13} />
+                              </button>
+                            </div>
+                          ) : (
+                            <div
+                              className="flex items-center justify-between cursor-pointer"
+                              onClick={() => {
+                                setEditingFieldId(field.id);
+                                setEditingValue(currentVal?.value || '');
+                              }}
+                            >
+                              <p className="text-sm font-semibold text-slate-700 truncate">
+                                {currentVal?.value
+                                  ? (field.type === 'boolean'
+                                      ? (currentVal.value === 'true' ? '✓ Yes' : '✗ No')
+                                      : currentVal.value)
+                                  : <span className="text-slate-300 italic">—</span>}
+                              </p>
+                              <Pencil size={11} className="shrink-0 text-slate-300 group-hover:text-indigo-400 transition-colors ml-2" />
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </SectionCard>
+              )}
+            </div>
+          )}
+
+          {activeTab === 2 && (() => {
             const rows: any[] = [];
             purchases.forEach((p: any) => {
               const d = p.datas ?? {};

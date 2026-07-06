@@ -32,7 +32,7 @@ const PurchaseSearch = () => {
 
   const fetchSearchOptions = async (q: string) => {
     try {
-      const res = await getData(`${ENDPOINTS.PURCHASES}/search/${SHOP_ID}`, { limit: "10", q });
+      const res = await getData(`${ENDPOINTS.PURCHASES}/by/shop/${SHOP_ID}`, { limit: "10", q });
       const rawData = res?.data || [];
       return rawData.map((po: any) => {
         const poLabel = po.invoice_no || po.id;

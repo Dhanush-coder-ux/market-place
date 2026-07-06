@@ -147,12 +147,11 @@ const PurchaseHistoryTab = () => {
   useEffect(() => {
     const params: Record<string, string> = {
       view: "PURCHASE_VIEW",
-      shop_id: SHOP_ID,
       limit: "50",
       offset: "1",
     };
     if (searchTerm) params.q = searchTerm;
-    getData(ENDPOINTS.PURCHASES, params).then((res) => {
+    getData(`${ENDPOINTS.PURCHASES}/by/shop/${SHOP_ID}`, params).then((res) => {
       if (res) setPurchases(Array.isArray(res.data) ? res.data : [res.data]);
     });
   }, [refreshKey, searchTerm]);

@@ -140,7 +140,7 @@ export default function CustomerBalanceSummary() {
       if (!c) return;
       if (c.is_active ?? c.datas?.is_active ?? true) active++;
       outstanding += Number(c.outstanding ?? c.datas?.outstanding_balance ?? 0);
-      credit += Number(c.credit_limit ?? c.datas?.credit_limit ?? 0);
+      credit += Number((c as any).credit_infos?.limit ?? c.credit_limit ?? c.datas?.credit_limit ?? 0);
     });
     return { active, outstanding, credit };
   }, [customers]);
@@ -317,16 +317,16 @@ export default function CustomerBalanceSummary() {
                           <p className="text-sm font-semibold text-slate-700 tracking-tight">
                             {String(c.name || "Untitled")}
                           </p>
-                          {(c.mobile_number || c.email) ? (
+                          {((c as any).contact_infos?.mobile_number || c.mobile_number || (c as any).contact_infos?.email || c.email) ? (
                             <div className="flex flex-col gap-0">
-                              {c.mobile_number && (
+                              {((c as any).contact_infos?.mobile_number || c.mobile_number) && (
                                 <p className="text-[11px] font-semibold text-slate-400">
-                                  {String(c.mobile_number)}
+                                  {String((c as any).contact_infos?.mobile_number || c.mobile_number)}
                                 </p>
                               )}
-                              {c.email && (
+                              {((c as any).contact_infos?.email || c.email) && (
                                 <p className="text-[11px] font-medium text-slate-400 truncate max-w-[180px]">
-                                  {String(c.email)}
+                                  {String((c as any).contact_infos?.email || c.email)}
                                 </p>
                               )}
                             </div>
@@ -339,10 +339,12 @@ export default function CustomerBalanceSummary() {
                     {selectedKeys.map(key => {
                       // Map column key aliases to actual data fields
                       let value: any;
-                      if (key === 'phone') {
-                        value = c.mobile_number ?? c.datas?.mobile_number;
+                      if (key === 'phone' || key === 'mobile_number') {
+                        value = (c as any).contact_infos?.mobile_number ?? c.mobile_number ?? c.datas?.mobile_number;
                       } else if (key === 'email') {
-                        value = c.email ?? c.datas?.email;
+                        value = (c as any).contact_infos?.email ?? c.email ?? c.datas?.email;
+                      } else if (key === 'credit_limit') {
+                        value = (c as any).credit_infos?.limit ?? c.credit_limit ?? c.datas?.credit_limit;
                       } else {
                         value = (c as any).datas?.[key] ?? (c as any)[key];
                       }

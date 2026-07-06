@@ -1,0 +1,1617 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Purchase Service",
+    "description": "This service contains all the CRUD operations for purchase service",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/purchases": {
+      "post": {
+        "tags": [
+          "Purchase Crud's"
+        ],
+        "summary": "Create",
+        "operationId": "create_purchases_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePurchaseSchema"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Purchase Crud's"
+        ],
+        "summary": "Update",
+        "operationId": "update_purchases_put",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdatePurchaseSchema"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Purchase Crud's"
+        ],
+        "summary": "Get",
+        "operationId": "get_purchases_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 10,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1,
+              "title": "Offset"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/purchases/{shop_id}/{id}": {
+      "delete": {
+        "tags": [
+          "Purchase Crud's"
+        ],
+        "summary": "Delete",
+        "operationId": "delete_purchases__shop_id___id__delete",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          },
+          {
+            "name": "shop_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Shop Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/purchases/by/shop/{shop_id}": {
+      "get": {
+        "tags": [
+          "Purchase Crud's"
+        ],
+        "summary": "Search",
+        "operationId": "search_purchases_by_shop__shop_id__get",
+        "parameters": [
+          {
+            "name": "shop_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Shop Id"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 10,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1,
+              "title": "Offset"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/purchases/by/id/{shop_id}/{id}": {
+      "get": {
+        "tags": [
+          "Purchase Crud's"
+        ],
+        "summary": "Get Supplier Stats",
+        "operationId": "get_supplier_stats_purchases_by_id__shop_id___id__get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          },
+          {
+            "name": "shop_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Shop Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/custom-fields": {
+      "post": {
+        "tags": [
+          "Custom Fields"
+        ],
+        "summary": "Create Field",
+        "operationId": "create_field_custom_fields_post",
+        "parameters": [
+          {
+            "name": "shop_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Shop Id"
+            }
+          },
+          {
+            "name": "args",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "title": "Args"
+            }
+          },
+          {
+            "name": "kwargs",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "title": "Kwargs"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCustomFieldSchema"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Custom Fields"
+        ],
+        "summary": "Get All Fields",
+        "operationId": "get_all_fields_custom_fields_get",
+        "parameters": [
+          {
+            "name": "shop_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Shop Id"
+            }
+          },
+          {
+            "name": "args",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "title": "Args"
+            }
+          },
+          {
+            "name": "kwargs",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "title": "Kwargs"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/custom-fields/{field_id}": {
+      "get": {
+        "tags": [
+          "Custom Fields"
+        ],
+        "summary": "Get Field",
+        "operationId": "get_field_custom_fields__field_id__get",
+        "parameters": [
+          {
+            "name": "field_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Field Id"
+            }
+          },
+          {
+            "name": "shop_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Shop Id"
+            }
+          },
+          {
+            "name": "args",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "title": "Args"
+            }
+          },
+          {
+            "name": "kwargs",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "title": "Kwargs"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Custom Fields"
+        ],
+        "summary": "Update Field",
+        "operationId": "update_field_custom_fields__field_id__put",
+        "parameters": [
+          {
+            "name": "field_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Field Id"
+            }
+          },
+          {
+            "name": "shop_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Shop Id"
+            }
+          },
+          {
+            "name": "args",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "title": "Args"
+            }
+          },
+          {
+            "name": "kwargs",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "title": "Kwargs"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateCustomFieldSchema"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Custom Fields"
+        ],
+        "summary": "Delete Field",
+        "operationId": "delete_field_custom_fields__field_id__delete",
+        "parameters": [
+          {
+            "name": "field_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Field Id"
+            }
+          },
+          {
+            "name": "shop_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Shop Id"
+            }
+          },
+          {
+            "name": "args",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "title": "Args"
+            }
+          },
+          {
+            "name": "kwargs",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "title": "Kwargs"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/custom-fields/values": {
+      "post": {
+        "tags": [
+          "Custom Fields"
+        ],
+        "summary": "Upsert Value",
+        "operationId": "upsert_value_custom_fields_values_post",
+        "parameters": [
+          {
+            "name": "shop_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Shop Id"
+            }
+          },
+          {
+            "name": "args",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "title": "Args"
+            }
+          },
+          {
+            "name": "kwargs",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "title": "Kwargs"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCustomFieldValueSchema"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/custom-fields/values/bulk": {
+      "post": {
+        "tags": [
+          "Custom Fields"
+        ],
+        "summary": "Bulk Upsert Values",
+        "operationId": "bulk_upsert_values_custom_fields_values_bulk_post",
+        "parameters": [
+          {
+            "name": "shop_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Shop Id"
+            }
+          },
+          {
+            "name": "args",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "title": "Args"
+            }
+          },
+          {
+            "name": "kwargs",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "title": "Kwargs"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BulkCreateCustomFieldValuesSchema"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/custom-fields/values/{purchase_id}": {
+      "get": {
+        "tags": [
+          "Custom Fields"
+        ],
+        "summary": "Get Values By Purchase",
+        "operationId": "get_values_by_purchase_custom_fields_values__purchase_id__get",
+        "parameters": [
+          {
+            "name": "purchase_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Purchase Id"
+            }
+          },
+          {
+            "name": "shop_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Shop Id"
+            }
+          },
+          {
+            "name": "args",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "title": "Args"
+            }
+          },
+          {
+            "name": "kwargs",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "title": "Kwargs"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "BulkCreateCustomFieldValuesSchema": {
+        "properties": {
+          "purchase_id": {
+            "type": "string",
+            "title": "Purchase Id"
+          },
+          "values": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Values"
+          }
+        },
+        "type": "object",
+        "required": [
+          "purchase_id",
+          "values"
+        ],
+        "title": "BulkCreateCustomFieldValuesSchema"
+      },
+      "CreateCustomFieldSchema": {
+        "properties": {
+          "field_name": {
+            "type": "string",
+            "title": "Field Name"
+          },
+          "label_name": {
+            "type": "string",
+            "title": "Label Name"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type"
+          },
+          "required": {
+            "type": "boolean",
+            "title": "Required",
+            "default": false
+          },
+          "visible_online": {
+            "type": "boolean",
+            "title": "Visible Online",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "field_name",
+          "label_name",
+          "type"
+        ],
+        "title": "CreateCustomFieldSchema"
+      },
+      "CreateCustomFieldValueSchema": {
+        "properties": {
+          "purchase_id": {
+            "type": "string",
+            "title": "Purchase Id"
+          },
+          "field_id": {
+            "type": "string",
+            "title": "Field Id"
+          },
+          "value": {
+            "type": "string",
+            "title": "Value"
+          }
+        },
+        "type": "object",
+        "required": [
+          "purchase_id",
+          "field_id",
+          "value"
+        ],
+        "title": "CreateCustomFieldValueSchema"
+      },
+      "CreatePurchaseItemsSchema": {
+        "properties": {
+          "product_id": {
+            "type": "string",
+            "title": "Product Id"
+          },
+          "variant_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Variant Id"
+          },
+          "batch_infos": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PurchaseBatchInfosType"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "serialno_infos": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/PurchaseSerialnoInfosType"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Serialno Infos"
+          },
+          "storage_location_infos": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PurchaseStorageLocationInfos"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "reorder_point_infos": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PurchaseReorderPointInfosType"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "pricing_infos": {
+            "$ref": "#/components/schemas/PurchasePricingInfos"
+          },
+          "gst": {
+            "type": "string",
+            "title": "Gst"
+          },
+          "stock_infos": {
+            "$ref": "#/components/schemas/PurchaseStocksInfosType"
+          }
+        },
+        "type": "object",
+        "required": [
+          "product_id",
+          "pricing_infos",
+          "gst",
+          "stock_infos"
+        ],
+        "title": "CreatePurchaseItemsSchema"
+      },
+      "CreatePurchaseSchema": {
+        "properties": {
+          "shop_id": {
+            "type": "string",
+            "title": "Shop Id"
+          },
+          "supplier_id": {
+            "type": "string",
+            "title": "Supplier Id"
+          },
+          "type": {
+            "$ref": "#/components/schemas/PurchaseTypeEnums"
+          },
+          "calculation_infos": {
+            "$ref": "#/components/schemas/PurchaseCalculationInfos"
+          },
+          "gst_infos": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Gst Infos"
+          },
+          "charges_infos": {
+            "$ref": "#/components/schemas/PurchaseChargeInfos"
+          },
+          "payment_infos": {
+            "items": {
+              "$ref": "#/components/schemas/PurchasePaymentInfos"
+            },
+            "type": "array",
+            "title": "Payment Infos"
+          },
+          "purchase_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Purchase Date"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/CreatePurchaseItemsSchema"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "invoice_no": {
+            "type": "string",
+            "title": "Invoice No"
+          },
+          "custom_fields": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Custom Fields",
+            "default": {
+
+            }
+          }
+        },
+        "type": "object",
+        "required": [
+          "shop_id",
+          "supplier_id",
+          "type",
+          "calculation_infos",
+          "gst_infos",
+          "charges_infos",
+          "payment_infos",
+          "purchase_date",
+          "items",
+          "invoice_no"
+        ],
+        "title": "CreatePurchaseSchema"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "PurchaseBatchInfosType": {
+        "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "expiry_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expiry Date"
+          },
+          "manufacturing_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Manufacturing Date"
+          }
+        },
+        "type": "object",
+        "title": "PurchaseBatchInfosType"
+      },
+      "PurchaseCalculationInfos": {
+        "properties": {
+
+        },
+        "type": "object",
+        "title": "PurchaseCalculationInfos"
+      },
+      "PurchaseChargeInfos": {
+        "properties": {
+          "transport_charge": {
+            "type": "number",
+            "title": "Transport Charge"
+          },
+          "other_charge": {
+            "type": "number",
+            "title": "Other Charge"
+          }
+        },
+        "type": "object",
+        "required": [
+          "transport_charge",
+          "other_charge"
+        ],
+        "title": "PurchaseChargeInfos"
+      },
+      "PurchasePaymentInfos": {
+        "properties": {
+          "method": {
+            "$ref": "#/components/schemas/PurchasePaymentMethods"
+          },
+          "amount": {
+            "type": "number",
+            "title": "Amount"
+          }
+        },
+        "type": "object",
+        "required": [
+          "method",
+          "amount"
+        ],
+        "title": "PurchasePaymentInfos"
+      },
+      "PurchasePaymentMethods": {
+        "type": "string",
+        "enum": [
+          "UPI",
+          "CASH",
+          "CARD",
+          "BANK"
+        ],
+        "title": "PurchasePaymentMethods"
+      },
+      "PurchasePricingInfos": {
+        "properties": {
+          "buy_price": {
+            "type": "number",
+            "title": "Buy Price"
+          },
+          "sell_price": {
+            "type": "number",
+            "title": "Sell Price"
+          }
+        },
+        "type": "object",
+        "required": [
+          "buy_price",
+          "sell_price"
+        ],
+        "title": "PurchasePricingInfos"
+      },
+      "PurchaseReorderPointInfosType": {
+        "properties": {
+          "reorder_point": {
+            "type": "number",
+            "title": "Reorder Point"
+          }
+        },
+        "type": "object",
+        "required": [
+          "reorder_point"
+        ],
+        "title": "PurchaseReorderPointInfosType"
+      },
+      "PurchaseSerialnoInfosType": {
+        "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "PurchaseSerialnoInfosType"
+      },
+      "PurchaseStocksInfosType": {
+        "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "stocks": {
+            "type": "number",
+            "title": "Stocks"
+          }
+        },
+        "type": "object",
+        "required": [
+          "stocks"
+        ],
+        "title": "PurchaseStocksInfosType"
+      },
+      "PurchaseStorageLocationInfos": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "PurchaseStorageLocationInfos"
+      },
+      "PurchaseTypeEnums": {
+        "type": "string",
+        "enum": [
+          "PO_CREATE",
+          "PO_UPDATE",
+          "DIRECT",
+          "PRODUCTION"
+        ],
+        "title": "PurchaseTypeEnums"
+      },
+      "UpdateCustomFieldSchema": {
+        "properties": {
+          "label_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label Name"
+          },
+          "type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Type"
+          },
+          "required": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Required"
+          },
+          "visible_online": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Visible Online"
+          }
+        },
+        "type": "object",
+        "title": "UpdateCustomFieldSchema"
+      },
+      "UpdatePurchaseItemsSchema": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "product_id": {
+            "type": "string",
+            "title": "Product Id"
+          },
+          "variant_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Variant Id"
+          },
+          "batch_infos": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PurchaseBatchInfosType"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "serialno_infos": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/PurchaseSerialnoInfosType"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Serialno Infos"
+          },
+          "storage_location_infos": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PurchaseStorageLocationInfos"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "reorder_point_infos": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PurchaseReorderPointInfosType"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "pricing_infos": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PurchasePricingInfos"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "gst": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gst"
+          },
+          "stock_infos": {
+            "$ref": "#/components/schemas/PurchaseStocksInfosType"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "product_id",
+          "stock_infos"
+        ],
+        "title": "UpdatePurchaseItemsSchema"
+      },
+      "UpdatePurchaseSchema": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "shop_id": {
+            "type": "string",
+            "title": "Shop Id"
+          },
+          "calculation_infos": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PurchaseCalculationInfos"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "charges_infos": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PurchaseChargeInfos"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "payment_infos": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/PurchasePaymentInfos"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payment Infos"
+          },
+          "purchase_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Purchase Date"
+          },
+          "items": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/UpdatePurchaseItemsSchema"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Items"
+          },
+          "custom_fields": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Custom Fields",
+            "default": {
+
+            }
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "shop_id"
+        ],
+        "title": "UpdatePurchaseSchema"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  },
+  "servers": [
+    {
+      "url": "/inventories"
+    }
+  ]
+}

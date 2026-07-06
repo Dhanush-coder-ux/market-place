@@ -1,12 +1,13 @@
-import { useState, useCallback, useEffect, useMemo } from "react";
+import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 
 import BillingTable from "../components/BillingTable";
 import BillingHeader from "../components/BillingHeader";
 
-import { BillingItem, CreateBillingSchema, CustomerData } from "../types";
+import { BillingItem, CustomerData } from "../types";
 import { useToast } from "@/context/ToastContext";
 import { useApi } from "@/context/ApiContext";
 import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
+import { apiClient } from "@/services/api/apiClient";
 import AttachCustomerModal from "../components/AttachCustomerModal";
 import { usePurchaseSettings } from "@/context/PurchaseContext";
 import { BillingSuccessModal } from "../components/BillingSuccessModal";
@@ -14,7 +15,12 @@ import { BillingSuccessModal } from "../components/BillingSuccessModal";
 // ─── Billing Page ─────────────────────────────────────────────────────────────
 const Billing = () => {
   const { showToast } = useToast();
-  const { postData, loading: isSubmitting } = useApi();
+  const { loading: isSubmitting } = useApi();
+
+  // ── Cart Session (Order Service)
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [cartInitialized, setCartInitialized] = useState(false);
+  const sessionDoneRef = useRef(false); // true after submit or explicit cancel
 
   // ── Cart Items State (Initial empty list)
   const [items, setItems] = useState<BillingItem[]>([]);
@@ -63,6 +69,48 @@ const Billing = () => {
     setPayments(prev => prev.length === 1 ? [{ ...prev[0], amount: finalAmount }] : prev);
   }, [finalAmount]);
 
+  // ─── Initialize Order Cart Session on mount ────────────────────────────────
+  useEffect(() => {
+    let cancelled = false;
+    const initCart = async () => {
+      try {
+        const res = await apiClient.post(`${ENDPOINTS.ORDER_CART}/init`, {});
+        if (!cancelled) {
+          const sid = res?.data?.session_id;
+          if (sid) {
+            setSessionId(sid);
+            setCartInitialized(true);
+          }
+        }
+      } catch (e) {
+        console.error("Failed to init order cart session", e);
+        if (!cancelled) showToast("Failed to initialize cart session", "error");
+      }
+    };
+    initCart();
+    return () => { cancelled = true; };
+  }, []);
+
+  // ─── Cancel session on SPA navigation away (unmount) ──────────────────────
+  useEffect(() => {
+    return () => {
+      if (sessionId && !sessionDoneRef.current) {
+        apiClient.post(`${ENDPOINTS.ORDER_CART}/cancel`, { session_id: sessionId }).catch(() => {});
+      }
+    };
+  }, [sessionId]);
+
+  // ─── Cancel session on browser tab close ──────────────────────────────────
+  useEffect(() => {
+    const handleUnload = () => {
+      if (sessionId && !sessionDoneRef.current) {
+        apiClient.post(`${ENDPOINTS.ORDER_CART}/cancel`, { session_id: sessionId }).catch(() => {});
+      }
+    };
+    window.addEventListener("beforeunload", handleUnload);
+    return () => window.removeEventListener("beforeunload", handleUnload);
+  }, [sessionId]);
+
   // ── Handlers
   const handleItemsChange = useCallback((next: BillingItem[]) => setItems(next), []);
 
@@ -99,56 +147,116 @@ const Billing = () => {
     return () => window.removeEventListener("keydown", handleF4Key);
   }, []);
 
+  // ── Add item to Order Cart (called on every item change from BillingTable)
+  // We add items to the cart when confirmed at checkout, not on every UI change.
+  // (Items are already tracked locally in `items` state)
 
-
-  // ── Confirm Order → POST to Billing API
+  // ── Confirm Order → Order Service Cart flow
   const handleConfirmOrder = useCallback(async (paymentsArg: { mode: string, amount: number }[], _includeGst: boolean, _status: string) => {
     const filledItems = items.filter(i => !!i.name);
     if (filledItems.length === 0) return;
 
-    const paymentDict: Record<string, number> = {};
-    paymentsArg.forEach(p => {
-      const key = p.mode.toUpperCase();
-      paymentDict[key] = (paymentDict[key] || 0) + p.amount;
-    });
-
-    const payload: CreateBillingSchema = {
-      shop_id: SHOP_ID,
-      payment_method: paymentsArg.map(p => p.mode).join(", "),
-      customer_id: customerData?.id || "walk-in",
-      payments: paymentDict,
-      products: filledItems.map(i => ({
-        id: i.inventoryId || "",
-        variant_id: i.variantId || undefined,
-        batch_id: i.batchId,
-        serialno_id: i.serialnoId,
-        serial_numbers: i.serialNumbers || [],
-        quantity: i.qty
-      }))
-    };
-
-    const res = await postData(ENDPOINTS.BILLING, payload);
-    if (res) {
-      setSuccessDetails({
-        items: [...items],
-        payments: [...paymentsArg],
-        totalAmount,
-        gstAmount,
-        finalAmount,
-        customerName: customerName || "Walk-in Customer",
-        phone: phone || "",
-      });
-      showToast("Order confirmed successfully", "success");
+    if (!sessionId) {
+      showToast("Cart session not ready. Please wait a moment.", "error");
+      return;
     }
-  }, [items, customerData, postData, showToast, totalAmount, gstAmount, finalAmount, customerName, phone]);
 
-  const handleNextBill = useCallback(() => {
+    try {
+      // ── Step 1: Reserve all items in the Order Cart ─────────────────────────
+      for (const item of filledItems) {
+        await apiClient.post(`${ENDPOINTS.ORDER_CART}/add`, {
+          session_id: sessionId,
+          shop_id: SHOP_ID,
+          product_id: item.inventoryId || "",
+          variant_id: item.variantId || null,
+          batch_id: item.batchId || null,
+          serialno_infos: item.serialnoId ? { id: item.serialnoId, name: item.name } : null,
+          qty: item.qty,
+        });
+      }
+
+      // ── Step 2: Build payment_infos for the order ───────────────────────────
+      const paymentInfos = paymentsArg.reduce((acc, p) => {
+        const method = p.mode.toUpperCase();
+        acc[method] = (acc[method] || 0) + p.amount;
+        return acc;
+      }, {} as Record<string, number>);
+
+      // ── Step 3: Build calculation_infos ────────────────────────────────────
+      const calcInfos = {
+        subtotal: totalAmount,
+        gst_amount: gstAmount,
+        total: finalAmount,
+        include_gst: includeGst,
+        items: filledItems.map(i => ({
+          product_id: i.inventoryId,
+          name: i.name,
+          qty: i.qty,
+          price: i.price,
+          total: i.tprice,
+          gst: i.gst ?? 0,
+        })),
+      };
+
+      // ── Step 4: POST /orders to confirm the order ───────────────────────────
+      const orderPayload = {
+        shop_id: SHOP_ID,
+        session_id: sessionId,
+        customer_id: customerData?.id || "",
+        status: "COMPLETED",
+        origin: "OFFLINE",
+        type: "IN-STORE",
+        calculation_infos: calcInfos,
+        charges_infos: {},
+        payment_infos: paymentInfos,
+        additional_infos: {
+          customer_name: customerName || "Walk-in Customer",
+          customer_phone: phone || "",
+        },
+      };
+
+      const res = await apiClient.post(ENDPOINTS.ORDERS, orderPayload);
+      if (res) {
+        // Mark session as done so unmount cleanup doesn't cancel it
+        sessionDoneRef.current = true;
+
+        setSuccessDetails({
+          items: [...items],
+          payments: [...paymentsArg],
+          totalAmount,
+          gstAmount,
+          finalAmount,
+          customerName: customerName || "Walk-in Customer",
+          phone: phone || "",
+        });
+        showToast("Order confirmed successfully", "success");
+      }
+    } catch (err: any) {
+      console.error("Order confirmation failed:", err);
+      showToast(err?.message || "Failed to confirm order", "error");
+    }
+  }, [items, customerData, sessionId, showToast, totalAmount, gstAmount, finalAmount, customerName, phone, includeGst]);
+
+  const handleNextBill = useCallback(async () => {
     setItems([]);
     setPhone("");
     setCustomerName("");
     setCustomerData(null);
     setPayments([{ mode: "cash", amount: 0 }]);
     setSuccessDetails(null);
+    sessionDoneRef.current = false;
+
+    // Start a fresh cart session for the next bill
+    try {
+      const res = await apiClient.post(`${ENDPOINTS.ORDER_CART}/init`, {});
+      const sid = res?.data?.session_id;
+      if (sid) {
+        setSessionId(sid);
+        setCartInitialized(true);
+      }
+    } catch (e) {
+      console.error("Failed to re-init cart session", e);
+    }
   }, []);
 
   return (
@@ -169,7 +277,7 @@ const Billing = () => {
             customerName={customerName}
             phone={phone}
             onConfirmOrder={handleConfirmOrder}
-            isSubmitting={isSubmitting}
+            isSubmitting={isSubmitting || !cartInitialized}
             includeGst={includeGst}
             totalAmount={totalAmount}
             gstAmount={gstAmount}
@@ -190,7 +298,7 @@ const Billing = () => {
           customerName={customerName}
           phone={phone}
           onConfirmOrder={handleConfirmOrder}
-          isSubmitting={isSubmitting}
+          isSubmitting={isSubmitting || !cartInitialized}
           includeGst={includeGst}
           totalAmount={totalAmount}
           gstAmount={gstAmount}

@@ -10,7 +10,8 @@ import { DateFilter } from "../components/DateFilter";
 import { StatCard } from "@/components/common/StatsCard";
 import Loader from "@/components/common/Loader";
 import { useApi } from "@/context/ApiContext";
-import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
+import { SHOP_ID } from "@/services/endpoints";
+import { orderApi } from "@/services/api/order";
 import type { OrderRecord } from "@/types/api";
 
 const toCardShape = (o: OrderRecord) => ({
@@ -22,7 +23,7 @@ const toCardShape = (o: OrderRecord) => ({
 });
 
 const Order = () => {
-  const { getData, loading, error, clearError } = useApi();
+  const { loading, error, clearError } = useApi();
 
   const [orders, setOrders] = useState<OrderRecord[]>([]);
   const [status, setStatus] = useState("INCOMING");
@@ -33,10 +34,87 @@ const Order = () => {
   const [refreshKey] = useState(0);
 
   useEffect(() => {
-    getData(`${ENDPOINTS.ORDERS}/${SHOP_ID}`, { limit: "50", offset: "1" }).then((res) => {
+    orderApi.getOrdersByShop(SHOP_ID, { limit: "50", offset: "1" }).then((res: any) => {
       if (res) setOrders(Array.isArray(res.data) ? res.data : [res.data]);
-    });
+    }).catch(console.error);
   }, [refreshKey]);
+
+  const handleStatusChange = async (newStatus: string, originalOrder: OrderRecord) => {
+    try {
+      const payload = {
+        shop_id: SHOP_ID,
+        session_id: (originalOrder as any).session_id || "",
+        customer_id: (originalOrder as any).customer_id || "",
+        status: newStatus,
+        origin: (originalOrder as any).origin || "ONLINE",
+        type: (originalOrder as any).type || "",
+        calculation_infos: (originalOrder as any).calculation_infos || {},
+        charges_infos: (originalOrder as any).charges_infos || {},
+        payment_infos: (originalOrder as any).payment_infos || [],
+        additional_infos: (originalOrder as any).additional_infos || {}
+      };
+      
+      const res = await orderApi.updateOrderStatus(payload);
+      if (res) {
+        setOrders(prev => prev.map(o => o.id === originalOrder.id ? { ...o, status: newStatus } : o));
+      }
+    } catch (e) {
+      console.error("Failed to update status", e);
+    }
+  };
+
+  const handleDeleteOrder = async (orderId: string) => {
+    if (!window.confirm("Are you sure you want to delete this order? This action cannot be undone.")) return;
+    try {
+      const res = await orderApi.deleteOrder(SHOP_ID, orderId);
+      if (res) {
+        setOrders(prev => prev.filter(o => o.id !== orderId));
+      }
+    } catch (e) {
+      console.error("Failed to delete order", e);
+    }
+  };
+
+  const handleOpenDetails = async (order: OrderRecord) => {
+    try {
+      const res = await orderApi.getOrderById(SHOP_ID, order.id);
+      if (res?.data) {
+        const fullOrder = Array.isArray(res.data) ? res.data[0] : res.data;
+        const mappedItems = (fullOrder.items || []).map((i: any) => ({
+          name: i.product_name || i.datas?.product_name || `Item ${i.product_id?.slice(-4)}`,
+          qty: i.quantity,
+          price: i.sell_price || 0,
+          total: (i.sell_price || 0) * i.quantity
+        }));
+        
+        setSelectedOrder({
+          ...toCardShape(order),
+          orderType: fullOrder.origin || "ONLINE",
+          items: mappedItems,
+          subtotal: Number(fullOrder.calculation_infos?.sub_total || order.datas?.total_amount || 0),
+          gstPercent: 0,
+          gstAmount: Number(fullOrder.calculation_infos?.total_tax || 0),
+          grandTotal: Number(fullOrder.calculation_infos?.grand_total || order.datas?.total_amount || 0),
+        });
+        setIsOpen(true);
+        return;
+      }
+    } catch (e) {
+      console.error("Failed to fetch full order details", e);
+    }
+    
+    // Fallback if fetch fails
+    setSelectedOrder({
+      ...toCardShape(order),
+      orderType: order.origin || "ONLINE",
+      items: [],
+      subtotal: Number(order.datas?.total_amount || 0),
+      gstPercent: 0,
+      gstAmount: 0,
+      grandTotal: Number(order.datas?.total_amount || 0),
+    });
+    setIsOpen(true);
+  };
 
   const filteredOrders = status === "ALL"
     ? orders
@@ -105,8 +183,10 @@ const Order = () => {
               <OrdersCard
                 key={order.id}
                 order={toCardShape(order)}
-                setIsOpen={() => { setSelectedOrder(toCardShape(order)); setIsOpen(true); }}
+                setIsOpen={() => handleOpenDetails(order)}
                 viewMode={viewMode}
+                onStatusChange={(newStatus) => handleStatusChange(newStatus, order)}
+                onDeleteClick={(e) => { e.stopPropagation(); handleDeleteOrder(order.id); }}
               />
             ))}
           </div>
@@ -121,15 +201,7 @@ const Order = () => {
       </div>
 
       <Drawer isOpen={isOpen} onClose={() => setIsOpen(false)} title="Order Details">
-        {selectedOrder && <OrderDetailView order={{
-          ...selectedOrder,
-          orderType: "Online",
-          items: [],
-          subtotal: selectedOrder.totalAmount,
-          gstPercent: 0,
-          gstAmount: 0,
-          grandTotal: selectedOrder.totalAmount,
-        }} />}
+        {selectedOrder && <OrderDetailView order={selectedOrder} />}
       </Drawer>
 
       <DateFilter isOpen={open} onClose={() => setOpen(false)} onApply={(range) => { console.log(range); setOpen(false); }} />

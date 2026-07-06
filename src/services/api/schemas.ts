@@ -1,9 +1,9 @@
 export const SCHEMAS = {
-  inventory_create: ['shop_id', 'barcode', 'name', 'category', 'description', 'buy_price', 'sell_price'],
+  inventory_create: ['shop_id', 'name', 'category_id', 'unit_id'],
   inventory_update: ['id', 'shop_id'],
   inventory_delete: ['id', 'shop_id'],
   
-  customer_create: ['shop_id', 'name', 'email', 'mobile_number', 'credit_limit', 'is_active'],
+  customer_create: ['shop_id', 'name', 'contact_infos', 'location_infos', 'can_have_credit'],
   customer_update: ['id', 'shop_id'],
   customer_delete: ['id', 'shop_id'],
   
@@ -17,10 +17,47 @@ export const SCHEMAS = {
   employee_update: ['id', 'shop_id'],
   employee_delete: ['employee_id', 'shop_id'],
   
-  supplier_create: ['shop_id', 'name', 'mobile_number', 'gst_no'],
+  supplier_create: ['shop_id', 'name', 'contact_infos', 'location_infos'],
   supplier_update: ['id', 'shop_id'],
   supplier_delete: ['id', 'shop_id'],
 
   shop_create: ['name', 'category', 'business_infos', 'address'],
-  shop_update: ['id']
+  shop_update: ['id'],
+
+  // ── Utility Service ──────────────────────────────────────────────
+  shop_category_create: ['shop_id', 'name'],
+  shop_category_update: ['id', 'shop_id'],
+  shop_category_delete: ['id', 'shop_id'],
+
+  shop_unit_create: ['shop_id', 'name', 'short_name'],
+  shop_unit_update: ['id', 'shop_id'],
+  shop_unit_delete: ['id', 'shop_id'],
+
+  shop_ui_id_create: ['shop_id', 'entity_type', 'prefix', 'start_from', 'current_number'],
+  shop_ui_id_update: ['id', 'shop_id'],
+  shop_ui_id_delete: ['id', 'shop_id'],
+
+  shop_id_config_upsert: ['shop_id', 'config'],
+
+  base_field_create: ['service_name', 'fields'],
+  base_field_update: ['id', 'field_name', 'fields'],
+
+  custom_field_create: ['shop_id', 'service_name', 'fields'],
+  custom_field_update: ['id', 'shop_id', 'field_name', 'fields'],
+
+  base_dropdown_create: ['dd_name', 'values'],
+  base_dropdown_update: ['id', 'dd_name'],
+
+  custom_dropdown_create: ['shop_id', 'dd_name', 'values'],
+  custom_dropdown_update: ['id', 'shop_id', 'dd_name'],
+
+  activity_log_create: ['shop_id', 'user_name', 'service', 'action', 'entity_type', 'entity_id', 'description'],
+
+  // ── StockAdjMov Service ──────────────────────────────────────────
+  stock_mov_adj_create: ['shop_id', 'type', 'session_id', 'date'],
+  stock_mov_adj_delete: ['id', 'shop_id'],
+
+  cart_reserve: ['session_id', 'shop_id', 'product_id', 'qty', 'type'],
+  cart_cancel: ['session_id'],
+  cart_remove: ['session_id', 'product_id'],
 };

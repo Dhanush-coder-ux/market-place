@@ -32,7 +32,7 @@ const ProductSearch = () => {
 
   const fetchSearchOptions = async (q: string) => {
     try {
-      const res = await getData(`${ENDPOINTS.INVENTORIES}/search/${SHOP_ID}`, { limit: "10", q });
+      const res = await getData(`${ENDPOINTS.INVENTORIES}/by/shop/${SHOP_ID}`, { limit: "10", q });
       const rawData = res?.data || [];
       const list = Array.isArray(rawData) ? rawData : (rawData.datas ?? [rawData]);
       return list.map((p: any) => {

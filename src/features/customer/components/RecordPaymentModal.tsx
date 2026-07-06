@@ -25,7 +25,7 @@ export function RecordPaymentModal({ show, onClose, customer, onSuccess }: Recor
   ]);
   const [isClearing, setIsClearing] = useState(false);
 
-  const maxOutstanding = Number(customer?.outstanding ?? customer?.datas?.outstanding_balance ?? 0);
+  const maxOutstanding = Number(customer?.outstanding ?? (customer as any)?.credit_infos?.outstanding ?? customer?.datas?.outstanding_balance ?? 0);
 
   const addPaymentRow = () => {
     if (payments.length >= 4) return;
@@ -63,21 +63,18 @@ export function RecordPaymentModal({ show, onClose, customer, onSuccess }: Recor
       "Bank Transfer": "BANK"
     };
 
-    const paymentDict: Record<string, number> = {};
-    let totalCleared = 0;
+    // Build payment_infos as a list of { method, amount } objects
+    const paymentInfos = validPayments.map(p => ({
+      method: methodMap[p.mode] || "CASH",
+      amount: parseFloat(p.amount),
+    }));
 
-    validPayments.forEach(p => {
-      const mode = methodMap[p.mode] || "CASH";
-      const amt = parseFloat(p.amount);
-      paymentDict[mode] = (paymentDict[mode] || 0) + amt;
-      totalCleared += amt;
-    });
+    let totalCleared = paymentInfos.reduce((sum, p) => sum + p.amount, 0);
 
     const payload = {
       shop_id: SHOP_ID,
       customer_id: customer.id,
-      payments: paymentDict,
-      cleared_amount: totalCleared
+      payment_infos: paymentInfos,
     };
 
     try {

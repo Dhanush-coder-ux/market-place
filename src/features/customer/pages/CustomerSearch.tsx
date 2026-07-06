@@ -32,7 +32,7 @@ const CustomerSearch = () => {
 
   const fetchSearchOptions = async (q: string) => {
     try {
-      const res = await getData(`${ENDPOINTS.CUSTOMERS}/search/${SHOP_ID}`, { limit: "10", q });
+      const res = await getData(`${ENDPOINTS.CUSTOMERS}/by/shop/${SHOP_ID}`, { limit: "10", q });
       const rawData = res?.data || [];
       const list = Array.isArray(rawData) ? rawData : (rawData.datas ?? [rawData]);
       return list.map((c: any) => ({
@@ -54,7 +54,7 @@ const CustomerSearch = () => {
           <h2 className="text-xl font-bold text-slate-800">Search Customers</h2>
           <p className="text-slate-500 text-sm">Find customers by name, email or phone number</p>
         </div>
-        
+
         <SearchSelect
           labelKey="displayName"
           valueKey="id"

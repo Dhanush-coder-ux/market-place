@@ -34,11 +34,11 @@ async function request(options: RequestOptions): Promise<any> {
         const payload = JSON.parse(atob(token.split('.')[1]));
         if (payload.user_id && !userId) {
           userId = payload.user_id;
-          localStorage.setItem("user_id", userId);
+          if (userId) localStorage.setItem("user_id", userId);
         }
         if (payload.shop_id && !shopId) {
           shopId = payload.shop_id;
-          localStorage.setItem("shop_id", shopId);
+          if (shopId) localStorage.setItem("shop_id", shopId);
         }
       } catch (e) {
         // ignore
@@ -116,11 +116,11 @@ async function requestFormData(endpoint: string, formData: FormData): Promise<an
         const payload = JSON.parse(atob(token.split('.')[1]));
         if (payload.user_id && !userId) {
           userId = payload.user_id;
-          localStorage.setItem("user_id", userId);
+          if (userId) localStorage.setItem("user_id", userId);
         }
         if (payload.shop_id && !shopId) {
           shopId = payload.shop_id;
-          localStorage.setItem("shop_id", shopId);
+          if (shopId) localStorage.setItem("shop_id", shopId);
         }
       } catch (e) {
         // ignore

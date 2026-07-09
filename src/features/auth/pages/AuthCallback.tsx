@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Loader2 } from "lucide-react";
-import { authApi } from "@/services/api/auth";
 import { useToast } from "@/context/ToastContext";
+import { Loader2 } from "lucide-react";
 
 const AuthCallback = () => {
   const [searchParams] = useSearchParams();

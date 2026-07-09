@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Store, Plus, ChevronRight, Check, Loader2 } from "lucide-react";
+import { Store, Plus, ChevronRight, Loader2 } from "lucide-react";
 import { setShopId } from "@/services/endpoints";
 import { fetchMyShops } from "@/services/api/shopHelpers";
 import { useToast } from "@/context/ToastContext";

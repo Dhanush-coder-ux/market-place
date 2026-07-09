@@ -239,7 +239,7 @@ const ProductRow = React.memo(
 
     const badges: React.ReactNode[] = [];
     
-    if (p.visible_online) {
+    if ((p as any).visible_online) {
       badges.push(
         <Pill key="online" variant="emerald">
           <ExternalLink size={9} /> Online

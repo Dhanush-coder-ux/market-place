@@ -128,7 +128,7 @@ const ProfileForm: React.FC = () => {
       getData(`${ENDPOINTS.SHOPS}/${id}`).then((res) => {
         if (res && res.data) {
           const shop = res.data;
-          const d = shop.datas || {};
+
           const b = shop.business_infos || {};
           const a = shop.address || {};
           

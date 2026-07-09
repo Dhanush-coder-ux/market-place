@@ -35,8 +35,7 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 
-import { apiClient } from "@/services/api/apiClient";
-import { ENDPOINTS, setShopId } from "@/services/endpoints";
+import { setShopId } from "@/services/endpoints";
 import { fetchMyShops } from "@/services/api/shopHelpers";
 
 // -----------------------------

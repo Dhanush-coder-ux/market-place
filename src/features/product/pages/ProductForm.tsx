@@ -474,6 +474,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
             exp_date: prod.batch_infos?.expiry_date || "",
             track_stock: prod.have_tracking ?? true,
             low_stock_alert: additional.low_stock_alert || "Notify me",
+            visible_online: prod.visible_online || false,
           });
           if (additional.images && Array.isArray(additional.images)) setExistingImages(additional.images);
           

@@ -401,7 +401,8 @@ export default function AnnouncementsPage() {
   const [ctaUrl, setCtaUrl] = useState("");
   const [focused, setFocused] = useState(false);
   const [sent, setSent] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
+  const [, setIsSaving] = useState(false);
+
   const [showEmoji, setShowEmoji] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
   const [previewMode, setPreviewMode] = useState<PreviewMode>("banner");

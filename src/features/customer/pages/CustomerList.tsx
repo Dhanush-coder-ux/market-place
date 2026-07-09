@@ -7,8 +7,8 @@ import {
 } from "lucide-react";
 import { useHeader } from "@/context/HeaderContext";
 import { GradientButton } from "@/components/ui/GradientButton";
-import { useApi } from "@/context/ApiContext";
-import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
+import { useBusinessApi } from "@/context/BusinessApiContext";
+import { SHOP_ID } from "@/services/endpoints";
 import { StatCard } from "@/components/common/StatsCard";
 import { RightSidebarFilter } from "@/components/common/RightSidebarFilter";
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
@@ -18,7 +18,7 @@ const fmt = (n: number) => `₹${n.toLocaleString("en-IN")}`;
 const CustomerList = () => {
   const navigate = useNavigate();
   const { setActions, setBottomActions } = useHeader();
-  const { getData } = useApi();
+  const { customer } = useBusinessApi();
 
   /* ── State ── */
   const [searchTerm, setSearchTerm] = useState("");
@@ -60,7 +60,7 @@ const CustomerList = () => {
     if (filters.fromDate) params.from_date = filters.fromDate;
     if (filters.toDate) params.to_date = filters.toDate;
 
-    const res = await getData(`${ENDPOINTS.CUSTOMERS}/by/shop/${SHOP_ID}`, params);
+    const res = await customer.getCustomersByShopId(SHOP_ID, params);
 
     let fetchedStats = null;
     if (res?.data?.overall_datas) {
@@ -75,7 +75,7 @@ const CustomerList = () => {
       stats: fetchedStats,
       total: fetchedStats?.total_customers || 0
     };
-  }, [getData]);
+  }, [customer]);
 
   /* ── Filters ── */
   const filters = useMemo(() => ({

@@ -8,7 +8,8 @@ import {
 } from "lucide-react";
 import { GradientButton } from "@/components/ui/GradientButton";
 import { useApi } from "@/context/ApiContext";
-import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
+import { useBusinessApi } from "@/context/BusinessApiContext";
+import { SHOP_ID, ENDPOINTS } from "@/services/endpoints";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useHeader } from "@/context/HeaderContext";
 import { useToast } from "@/context/ToastContext";
@@ -17,6 +18,7 @@ import { ReusableSelect } from "@/components/ui/ReusableSelect";
 import { supplierApi } from "@/services/api/supplier";
 import { utilityApi } from "@/services/api/utility";
 import { inventoryApi } from "@/services/api/inventory";
+import { RightSidebarFilter } from "@/components/common/RightSidebarFilter";
 import { QuickCreateSupplierModal } from "@/features/common/QuickCreate/QuickCreateSupplierModal";
 import { ImageCarousel } from "@/components/common/SuperUI";
 import {
@@ -58,6 +60,7 @@ type FormData = {
   exp_date: string;
   track_stock: boolean;            // true = stocked, false = made-to-order
   low_stock_alert: string;
+  visible_online: boolean;         // toggle for digital store visibility
 };
 
 interface CategoryConfig {
@@ -232,7 +235,11 @@ const QuickCreateDropdownModal: React.FC<QuickCreateDropdownModalProps> = ({ isO
         const res = await utilityApi.createShopCategory({ shop_id: SHOP_ID, name: value.trim() });
         if (res?.data) onSuccess({ id: res.data.id, name: res.data.name });
       } else {
-        const res = await utilityApi.createShopUnit({ shop_id: SHOP_ID, name: value.trim() });
+        const res = await utilityApi.createShopUnit({ 
+          shop_id: SHOP_ID, 
+          name: value.trim(),
+          short_name: value.trim().substring(0, 3).toUpperCase()
+        });
         if (res?.data) onSuccess({ id: res.data.id, name: res.data.name });
       }
       setValue("");
@@ -285,9 +292,23 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
   const { id } = useParams();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { postData, getData, loading } = useApi();
+  const { inventory, inventoryCustomFields } = useBusinessApi();
+  const { postData } = useApi();
   const { showToast } = useToast();
+  const [loading, setLoading] = useState(false);
   const isLoading = externalLoading || loading;
+
+  // ── Custom Fields State ──
+  const [customFieldDefs, setCustomFieldDefs] = useState<any[]>([]);
+  const [customFieldValues, setCustomFieldValues] = useState<Record<string, string>>({});
+
+  // Sidebar creation form state
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [newFieldName, setNewFieldName] = useState("");
+  const [newFieldLabel, setNewFieldLabel] = useState("");
+  const [newFieldType, setNewFieldType] = useState("text");
+  const [newFieldRequired, setNewFieldRequired] = useState(false);
+  const [newFieldVisible, setNewFieldVisible] = useState(false);
 
   const [modalState, setModalState] = useState<{ type: "Supplier" | "Category" | "Unit" | null; query: string }>({ type: null, query: "" });
 
@@ -320,6 +341,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
     exp_date: "",
     track_stock: true,
     low_stock_alert: "Notify me",
+    visible_online: false,
   });
 
   const [variantTypes, setVariantTypes] = useState<VariantType[]>([]);
@@ -405,11 +427,20 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
     return () => setBottomActions(null);
   }, [setBottomActions, isLoading, id, form, variantTypes, combinations, baseSerials, supplierDetails, isSavingDraft, existingImages]);
 
+  // Load custom field definitions
+  useEffect(() => {
+    inventoryCustomFields.getAllFields(SHOP_ID).then((fields) => {
+      setCustomFieldDefs(fields);
+    });
+  }, []);
+
   /* ─── Load existing product ─── */
   useEffect(() => {
     if (id) {
       const fetchProduct = async () => {
-        const res = await getData(`${ENDPOINTS.INVENTORIES}/by/id/${SHOP_ID}/${id}`);
+        setLoading(true);
+        try {
+          const res = await inventory.getInventoryById(SHOP_ID, id);
         if (res?.data) {
           const prod = Array.isArray(res.data) ? res.data[0] : res.data;
           if (!prod) return;
@@ -495,8 +526,24 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
             setBaseSerials(baseSn);
           }
         }
+      } catch (err) {
+        console.error("Failed to load product", err);
+      } finally {
+        setLoading(false);
+      }
       };
+
+      const fetchCustomFieldValues = async () => {
+        const vals = await inventoryCustomFields.getValuesByProduct(SHOP_ID, id);
+        const record: Record<string, string> = {};
+        vals.forEach((v) => {
+          record[v.field_id] = v.value;
+        });
+        setCustomFieldValues(record);
+      };
+
       fetchProduct();
+      fetchCustomFieldValues();
     } else {
       const draftId = searchParams.get("draftId");
       if (draftId) {
@@ -509,7 +556,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
         }
       }
     }
-  }, [id, getData, searchParams]);
+  }, [id, searchParams]);
 
   const selectedCategoryName = categories.find(c => c.id === form.category)?.name || form.category;
   const categoryConfig = CATEGORY_CONFIGS[selectedCategoryName] ?? {
@@ -637,6 +684,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
       sell_price: form.track_stock ? 0 : Number(form.selling_price) || 0,
       gst: form.gst ? (form.gst.includes("%") ? form.gst : `${form.gst}%`) : "18%",
       reorder_point: Number(form.reorder_point) || 5,
+      visible_online: form.visible_online,
       custom_fields: {
         brand: form.brand,
         mrp: Number(form.mrp) || 0,
@@ -676,6 +724,24 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
     }
 
     if (res && (res.data || res.success)) {
+      const savedProductId = res.data?.id || res.id || id;
+      if (savedProductId) {
+        const valueInfos = Object.entries(customFieldValues)
+          .filter(([_, value]) => value !== undefined && value !== "")
+          .map(([field_id, value]) => ({
+            field_id,
+            value: String(value),
+          }));
+
+        if (valueInfos.length > 0) {
+          await inventoryCustomFields.bulkUpsertValues({
+            shop_id: SHOP_ID,
+            product_id: savedProductId,
+            values: valueInfos,
+          });
+        }
+      }
+
       showToast(id ? "Product updated successfully" : "Product created successfully", "success");
       const draftId = searchParams.get("draftId");
       if (draftId) {
@@ -685,6 +751,36 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
       setTimeout(() => navigate("/product/all"), 1000);
     } else {
       showToast("Failed to save product", "error");
+    }
+  };
+
+  const handleCreateCustomField = async () => {
+    if (!newFieldName || !newFieldLabel) {
+      showToast("Field Name and Label are required", "error");
+      return;
+    }
+    try {
+      await inventoryCustomFields.createField({
+        shop_id: SHOP_ID,
+        field_name: newFieldName,
+        label_name: newFieldLabel,
+        type: newFieldType,
+        required: newFieldRequired,
+        visible_online: newFieldVisible,
+      });
+      showToast("Custom field created successfully", "success");
+      // Refresh definitions
+      const fields = await inventoryCustomFields.getAllFields(SHOP_ID);
+      setCustomFieldDefs(fields);
+      // Reset sidebar form
+      setNewFieldName("");
+      setNewFieldLabel("");
+      setNewFieldType("text");
+      setNewFieldRequired(false);
+      setNewFieldVisible(false);
+      setIsSidebarOpen(false);
+    } catch {
+      showToast("Failed to create custom field", "error");
     }
   };
 
@@ -948,8 +1044,8 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                   </div>
                 )}
 
-                {/* Batch & Serial tracking */}
-                <div className="grid grid-cols-2 gap-3 pt-2 border-t border-slate-100">
+                {/* Batch & Serial tracking & Visibility */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2 border-t border-slate-100">
                   <div className="flex items-start gap-3 p-4 rounded-xl border border-slate-200 bg-white">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-0.5">
@@ -969,6 +1065,16 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                       <p className="text-[10px] text-slate-400 leading-relaxed">Track unique ID for each individual unit.</p>
                     </div>
                     <Switch checked={form.serial_tracking} onCheckedChange={(val) => setForm(p => ({ ...p, serial_tracking: val }))} />
+                  </div>
+                  <div className="flex items-start gap-3 p-4 rounded-xl border border-slate-200 bg-white">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <h3 className="text-[12px] font-bold text-slate-700">Visible Online</h3>
+                        {!id && <span className="px-1.5 py-0.5 rounded-md bg-emerald-100 text-emerald-700 text-[9px] font-bold">Store</span>}
+                      </div>
+                      <p className="text-[10px] text-slate-400 leading-relaxed">Show product in digital storefront.</p>
+                    </div>
+                    <Switch checked={form.visible_online} onCheckedChange={(val) => setForm(p => ({ ...p, visible_online: val }))} />
                   </div>
                 </div>
               </div>
@@ -1111,6 +1217,68 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
               )}
             </div>
 
+            {/* SECTION 5: CUSTOM FIELDS */}
+            <SectionCard
+              icon={<Layers size={17} className="text-indigo-600" />}
+              iconBg="bg-indigo-50"
+              title="Custom fields"
+              subtitle="Define and populate additional product properties"
+              extra={
+                <button
+                  type="button"
+                  onClick={() => setIsSidebarOpen(true)}
+                  className="h-8 px-3 rounded-lg border border-indigo-100 text-indigo-600 font-bold text-xs bg-indigo-50/50 hover:bg-indigo-100 transition-all flex items-center gap-1.5"
+                >
+                  <Plus size={14} />
+                  Create Custom Field
+                </button>
+              }
+            >
+              {customFieldDefs.length === 0 ? (
+                <div className="text-center py-6 text-slate-400 text-xs font-medium">
+                  No custom fields defined yet. Click "Create Custom Field" to add one.
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {customFieldDefs.map((field) => (
+                    <div key={field.id} className="space-y-1.5">
+                      <Label
+                        text={field.label_name}
+                        required={field.required}
+                      />
+                      {field.type === 'boolean' ? (
+                        <div className="flex items-center gap-2 h-10 px-4 rounded-lg border border-slate-200 bg-slate-50/30">
+                          <input
+                            type="checkbox"
+                            id={`cf_${field.id}`}
+                            checked={customFieldValues[field.id] === 'true'}
+                            onChange={(e) =>
+                              setCustomFieldValues((prev) => ({ ...prev, [field.id]: String(e.target.checked) }))
+                            }
+                            className="w-4 h-4 rounded accent-indigo-600 cursor-pointer"
+                          />
+                          <label htmlFor={`cf_${field.id}`} className="text-xs font-semibold text-slate-600 cursor-pointer">
+                            {field.label_name}
+                          </label>
+                        </div>
+                      ) : (
+                        <input
+                          type={field.type === 'number' ? 'number' : field.type === 'date' ? 'date' : 'text'}
+                          value={customFieldValues[field.id] || ''}
+                          onChange={(e) =>
+                            setCustomFieldValues((prev) => ({ ...prev, [field.id]: e.target.value }))
+                          }
+                          required={field.required}
+                          placeholder={`Enter ${field.label_name.toLowerCase()}…`}
+                          className="w-full h-10 px-4 rounded-lg border border-slate-200 text-sm text-slate-900 placeholder:text-slate-400 transition-all duration-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 outline-none bg-slate-50/30 font-semibold rounded-lg"
+                        />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </SectionCard>
+
           </form>
 
           {/* ══ RIGHT: Preview Sidebar ══ */}
@@ -1231,6 +1399,64 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
           setForm(p => ({ ...p, unit: val.id }));
         }}
       />
+
+      {/* Sidebar Filter for Custom Field Creation */}
+      <RightSidebarFilter
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
+        onApply={handleCreateCustomField}
+        onClear={() => {
+          setNewFieldName("");
+          setNewFieldLabel("");
+          setNewFieldType("text");
+          setNewFieldRequired(false);
+          setNewFieldVisible(false);
+        }}
+        title="Create Custom Field"
+      >
+        <div className="space-y-5">
+          <InputField
+            label="Field Name (Internal Name)"
+            required
+            value={newFieldName}
+            onChange={(e) => setNewFieldName(e.target.value)}
+            placeholder="e.g. rack_number"
+          />
+          <InputField
+            label="Label Name (Display Name)"
+            required
+            value={newFieldLabel}
+            onChange={(e) => setNewFieldLabel(e.target.value)}
+            placeholder="e.g. Rack Number"
+          />
+          <ReusableSelect
+            label="Field Type"
+            value={newFieldType}
+            onValueChange={(val) => setNewFieldType(val)}
+            options={[
+              { label: "Text", value: "text" },
+              { label: "Number", value: "number" },
+              { label: "Date", value: "date" },
+              { label: "Yes / No (Boolean)", value: "boolean" },
+            ]}
+            placeholder="Select Type"
+          />
+          <div className="flex items-center justify-between p-4 rounded-lg bg-slate-50 border border-slate-100">
+            <span className="text-xs font-bold text-slate-500">Required Field</span>
+            <Switch
+              checked={newFieldRequired}
+              onCheckedChange={(checked: boolean) => setNewFieldRequired(checked)}
+            />
+          </div>
+          <div className="flex items-center justify-between p-4 rounded-lg bg-slate-50 border border-slate-100">
+            <span className="text-xs font-bold text-slate-500">Visible Online</span>
+            <Switch
+              checked={newFieldVisible}
+              onCheckedChange={(checked: boolean) => setNewFieldVisible(checked)}
+            />
+          </div>
+        </div>
+      </RightSidebarFilter>
     </>
   );
 };

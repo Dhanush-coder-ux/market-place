@@ -1,8 +1,8 @@
 import { useState, ReactNode, CSSProperties, useEffect } from "react";
 import { Clock, MapPin, Star, Store, Sun } from "lucide-react";
 import App from "../components/StoreCard";
-import { useApi } from "@/context/ApiContext";
-import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
+import { useBusinessApi } from "@/context/BusinessApiContext";
+import { SHOP_ID } from "@/services/endpoints";
 export interface CloudProps {
   className?: string;
   style?: CSSProperties;
@@ -98,7 +98,7 @@ function SkyLayout({ children }: SkyLayoutProps) {
 ───────────────────────────────────────────── */
 export default function Shop() {
   const [showInfo, setShowInfo] = useState(false);
-  const { getData } = useApi();
+  const { shop } = useBusinessApi();
   const [shopInfo, setShopInfo] = useState<ShopInfo>({
     shopName: "Loading…",
     shopDescription: "",
@@ -108,7 +108,7 @@ export default function Shop() {
   });
 
   useEffect(() => {
-    getData(ENDPOINTS.SHOPS + "/by/" + SHOP_ID).then(res => {
+    shop.getShopById(SHOP_ID).then(res => {
       if (!res) return;
       const d = Array.isArray(res.data) ? res.data[0] : res.data;
       if (!d) return;

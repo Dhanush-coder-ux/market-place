@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { Plus, Bookmark, Search } from "lucide-react";
-import { useApi } from "@/context/ApiContext";
-import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
+import { useBusinessApi } from "@/context/BusinessApiContext";
+import { SHOP_ID } from "@/services/endpoints";
 import { useHeader } from "@/context/HeaderContext";
 import { SearchSelect } from "@/components/inputbuilders/SearchSelect";
 import { useEffect } from "react";
@@ -9,7 +9,7 @@ import { useEffect } from "react";
 const CustomerSearch = () => {
   const navigate = useNavigate();
   const { setActions } = useHeader();
-  const { getData } = useApi();
+  const { customer } = useBusinessApi();
 
   useEffect(() => {
     setActions(
@@ -32,7 +32,7 @@ const CustomerSearch = () => {
 
   const fetchSearchOptions = async (q: string) => {
     try {
-      const res = await getData(`${ENDPOINTS.CUSTOMERS}/by/shop/${SHOP_ID}`, { limit: "10", q });
+      const res = await customer.getCustomersByShopId(SHOP_ID, { limit: '10', q });
       const rawData = res?.data || [];
       const list = Array.isArray(rawData) ? rawData : (rawData.datas ?? [rawData]);
       return list.map((c: any) => ({

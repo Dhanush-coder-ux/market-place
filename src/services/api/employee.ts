@@ -18,6 +18,22 @@ export const employeeApi = {
 
   deleteEmployee: async (data: Record<string, any>) => {
     validateMandatory(data, SCHEMAS.employee_delete);
-    return await apiClient.delete(ENDPOINTS.EMPLOYEES, data);
+    return await apiClient.delete(`${ENDPOINTS.EMPLOYEES}/${data.shop_id}/${data.id}`);
+  },
+
+  getEmployees: async (params?: Record<string, string>) => {
+    return await apiClient.get(ENDPOINTS.EMPLOYEES, params);
+  },
+  
+  getEmployeeById: async (shop_id: string, id: string) => {
+    return await apiClient.get(`${ENDPOINTS.EMPLOYEES}/by/${shop_id}/${id}`);
+  },
+  
+  getEmployeesByShop: async (shop_id: string, params?: Record<string, string>) => {
+    return await apiClient.get(`${ENDPOINTS.EMPLOYEES}/by/shop/${shop_id}`, params);
+  },
+  
+  verifyToken: async (data: Record<string, any>) => {
+    return await apiClient.post(`${ENDPOINTS.EMPLOYEES}/verify/token`, data);
   }
 };

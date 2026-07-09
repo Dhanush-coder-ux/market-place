@@ -7,8 +7,8 @@ import { useHeader } from "@/context/HeaderContext";
 import { StatCard } from "@/components/common/StatsCard";
 
 import { GradientButton } from "@/components/ui/GradientButton";
-import { useApi } from "@/context/ApiContext";
-import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
+import { useBusinessApi } from "@/context/BusinessApiContext";
+import { SHOP_ID } from "@/services/endpoints";
 import type { CustomerRecord } from "@/types/api";
 import { useToast } from "@/context/ToastContext";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
@@ -28,7 +28,7 @@ export default function CustomerBalanceSummary() {
   };
 
   const { setActions } = useHeader();
-  const { getData, deleteData, loading } = useApi();
+  const { customer } = useBusinessApi();
   const { showToast } = useToast();
 
   const [customers, setCustomers] = useState<CustomerRecord[]>([]);
@@ -84,7 +84,7 @@ export default function CustomerBalanceSummary() {
     if (fromDate) params.from_date = fromDate;
     if (toDate) params.to_date = toDate;
 
-    getData(`${ENDPOINTS.CUSTOMERS}/by/shop/${SHOP_ID}`, params).then((res) => {
+    customer.getCustomersByShopId(SHOP_ID, params).then((res) => {
       if (res) {
         let actualData = res.data;
         if (actualData && typeof actualData === 'object' && !Array.isArray(actualData) && 'datas' in actualData) {
@@ -119,7 +119,7 @@ export default function CustomerBalanceSummary() {
   const handleDelete = async () => {
     if (!customerToDelete) return;
     try {
-      await deleteData(`${ENDPOINTS.CUSTOMERS}/${SHOP_ID}/${customerToDelete.id}`);
+      await customer.deleteCustomer(SHOP_ID, customerToDelete.id);
       showToast("Customer deleted successfully", "success");
       setRefreshKey(prev => prev + 1);
     } catch (_err) {
@@ -293,11 +293,7 @@ export default function CustomerBalanceSummary() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
-              {loading ? (
-                <tr>
-                  <td colSpan={selectedKeys.length + 2} className="py-20 text-center text-slate-400 italic">Loading customers...</td>
-                </tr>
-              ) : filteredCustomers.length === 0 ? (
+              {filteredCustomers.length === 0 ? (
                 <tr>
                   <td colSpan={selectedKeys.length + 2} className="py-20 text-center text-slate-400 italic font-medium">No customers found.</td>
                 </tr>

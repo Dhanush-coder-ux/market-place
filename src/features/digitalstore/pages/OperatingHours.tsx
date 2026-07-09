@@ -1,23 +1,49 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Clock, Copy, Check, Timer, Calendar, CheckCircle2, ChevronRight, AlertCircle
 } from "lucide-react";
+import { useBusinessApi } from "@/context/BusinessApiContext";
+import { SHOP_ID } from "@/services/endpoints";
 
 /* ── Types ─────────────────────────────────────────────────────────────────── */
-type Day = "Monday" | "Tuesday" | "Wednesday" | "Thursday" | "Friday" | "Saturday" | "Sunday";
-const DAYS: Day[] = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+type Day = "MONDAY" | "TUESDAY" | "WEDNESDAY" | "THURSDAY" | "FRIDAY" | "SATURDAY" | "SUNDAY";
+const DAYS: Day[] = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY"];
 
 
-type DayHours = { open: string; close: string; closed: boolean };
+type DayHours = { open: string; close: string; closed: boolean; id?: number };
 
 /* ── Main Component ──────────────────────────────────────────────────────────── */
 const OperatingHours = () => {
+  const { shop } = useBusinessApi();
   const [storeHours, setStoreHours] = useState<Record<Day, DayHours>>(
     DAYS.reduce((a, d) => { a[d] = { open: "09:00", close: "18:00", closed: false }; return a; }, {} as Record<Day, DayHours>)
   );
   const [globalOpen, setGlobalOpen] = useState("09:00");
   const [globalClose, setGlobalClose] = useState("18:00");
   const [applied, setApplied] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    shop.getOperatingHours(SHOP_ID).then(res => {
+      if (res && res.data && Array.isArray(res.data)) {
+        const u = { ...storeHours };
+        // Reset to all closed initially if we have data, or let defaults override
+        DAYS.forEach(d => { u[d] = { open: "09:00", close: "18:00", closed: true }; });
+        res.data.forEach((h: any) => {
+          if (DAYS.includes(h.day)) {
+            // Backend formats open_at, close_at as "HH:MM:SS", parse to "HH:MM"
+            u[h.day as Day] = {
+              open: h.open_at ? h.open_at.slice(0, 5) : "09:00",
+              close: h.close_at ? h.close_at.slice(0, 5) : "18:00",
+              closed: false,
+              id: h.id
+            };
+          }
+        });
+        setStoreHours(u);
+      }
+    }).catch(err => console.error("Failed to load operating hours:", err));
+  }, []);
 
   const applyToAll = () => {
     const u = { ...storeHours };
@@ -32,6 +58,43 @@ const OperatingHours = () => {
 
   const updateTime = (day: Day, field: "open" | "close", val: string) =>
     setStoreHours(p => ({ ...p, [day]: { ...p[day], [field]: val } }));
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      const promises = DAYS.map(async (day) => {
+        const h = storeHours[day];
+        if (h.closed) {
+          // If closed and has ID, delete it
+          if (h.id) {
+            await shop.deleteOperatingHours(h.id);
+            setStoreHours(p => ({ ...p, [day]: { ...p[day], id: undefined } }));
+          }
+        } else {
+          const payload = {
+            open_at: `${h.open}:00`,
+            close_at: `${h.close}:00`,
+            day: day
+          };
+          if (h.id) {
+            await shop.updateOperatingHours(h.id, { ...payload, id: h.id });
+          } else {
+            const res = await shop.createOperatingHours(SHOP_ID, payload);
+            if (res && res.data && res.data.id) {
+              setStoreHours(p => ({ ...p, [day]: { ...p[day], id: res.data.id } }));
+            }
+          }
+        }
+      });
+      await Promise.all(promises);
+      alert("Operating hours saved successfully!");
+    } catch (err) {
+      console.error("Failed to save operating hours", err);
+      alert("Failed to save operating hours");
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const openCount = DAYS.filter(d => !storeHours[d].closed).length;
 
@@ -203,11 +266,13 @@ const OperatingHours = () => {
       {/* ── Save Button ── */}
       <div className="flex justify-end pt-2">
         <button
-          className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-[13.5px] font-bold text-white transition-all hover:opacity-90 cursor-pointer shadow-md"
+          onClick={handleSave}
+          disabled={isSaving}
+          className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-[13.5px] font-bold text-white transition-all shadow-md ${isSaving ? 'opacity-70 cursor-not-allowed' : 'hover:opacity-90 cursor-pointer'}`}
           style={{ background: "#3b82f6", boxShadow: "0 4px 14px rgba(59,130,246,0.3)" }}
         >
-          <Check size={15} strokeWidth={3} />
-          Save Operating Hours
+          {isSaving ? <Timer size={15} className="animate-spin" /> : <Check size={15} strokeWidth={3} />}
+          {isSaving ? "Saving..." : "Save Operating Hours"}
         </button>
       </div>
 

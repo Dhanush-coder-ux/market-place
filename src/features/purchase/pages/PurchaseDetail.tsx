@@ -8,10 +8,10 @@ import { toDisplayData } from "./PurchaseHistory";
 import type { DirectPurchaseData } from "./PurchaseHistory";
 import { ProfileHeaderCard, SectionCard, DetailItem, InfoRow } from "@/components/common/SuperUI";
 import { StatCard } from "@/components/common/StatsCard";
-import { useApi } from "@/context/ApiContext";
-import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
-import { purchaseApi } from "@/services/api/purchase";
+import { useBusinessApi } from "@/context/BusinessApiContext";
 import { useHeader } from "@/context/HeaderContext";
+import { useApi } from "@/context/ApiContext";
+import { SHOP_ID, ENDPOINTS } from "@/services/endpoints";
 
 const fmt = (n: number) => `₹${n.toLocaleString("en-IN")}`;
 
@@ -30,6 +30,7 @@ const PurchaseDetail = () => {
   const { id } = useParams<{ id: string }>();
   const location = useLocation();
   const navigate = useNavigate();
+  const { purchase } = useBusinessApi();
   const { getData } = useApi();
   const { setBottomActions } = useHeader();
 
@@ -70,7 +71,7 @@ const PurchaseDetail = () => {
         setLoading(true);
         try {
           // First try the purchases endpoint (direct purchase ID with shop scope)
-          const res = await purchaseApi.getPurchaseById(SHOP_ID, id);
+          const res = await purchase.getPurchaseById(SHOP_ID, id);
           let data = res?.data ? (Array.isArray(res.data) ? res.data[0] : res.data) : null;
           if (!data && res && res.id) {
             data = res;

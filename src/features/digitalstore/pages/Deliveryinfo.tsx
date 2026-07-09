@@ -1,10 +1,12 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Truck, Zap, Globe,
   Info, MapPin, IndianRupee, Timer,
   Store, Users, Check, ChevronDown,
   CheckCircle2, XCircle, Package,
 } from "lucide-react";
+import { useBusinessApi } from "@/context/BusinessApiContext";
+import { SHOP_ID } from "@/services/endpoints";
 
 /* ── Types ──────────────────────────────────────────────────────────────── */
 type DeliveryConfig = {
@@ -13,9 +15,12 @@ type DeliveryConfig = {
   freeThreshold: number;
   manageStore: boolean;
   partners: boolean;
+  id?: number;
 };
 
 /* ── Color Map (blues + muted, no violet) ───────────────────────────────── */
+// ... (omitting replacing all of this, just replacing the page component)
+// Actually I need to replace from the page component start.
 const COLOR_MAP = {
   orange: {
     iconBg:    "#fff7ed",
@@ -303,9 +308,72 @@ function SettingsCard({
 
 /* ── Main Page ───────────────────────────────────────────────────────────── */
 export default function DeliveryPreferences() {
-  const [instant,    setInstant]    = useState<DeliveryConfig>({ enabled: true,  speed: "Within 12 hours",    freeThreshold: 50,  manageStore: true,  partners: true  });
-  const [standard,   setStandard]   = useState<DeliveryConfig>({ enabled: true,  speed: "1–2 Business Days",  freeThreshold: 30,  manageStore: false, partners: true  });
+  const { shop } = useBusinessApi();
+  const [instant,    setInstant]    = useState<DeliveryConfig>({ enabled: false, speed: "Within 12 hours",    freeThreshold: 50,  manageStore: true,  partners: true  });
+  const [standard,   setStandard]   = useState<DeliveryConfig>({ enabled: false, speed: "1–2 Business Days",  freeThreshold: 30,  manageStore: false, partners: true  });
   const [nationwide, setNationwide] = useState<DeliveryConfig>({ enabled: false, speed: "5–7 Business Days",  freeThreshold: 100, manageStore: false, partners: true  });
+  const [isSaving, setIsSaving]     = useState(false);
+
+  useEffect(() => {
+    shop.getDeliveryOptions(SHOP_ID).then(res => {
+      if (res && res.data && Array.isArray(res.data)) {
+        res.data.forEach((d: any) => {
+          const conf = {
+            enabled: true,
+            speed: d.speed || "",
+            freeThreshold: d.free_shipping_amount || 0,
+            manageStore: d.delivery_by === "INHOUSE",
+            partners: d.delivery_by === "PARTNERS",
+            id: d.id
+          };
+          if (d.type === "INSTANT") setInstant(conf);
+          else if (d.type === "STANDARD") setStandard(conf);
+          else if (d.type === "NATIONWIDE") setNationwide(conf);
+        });
+      }
+    }).catch(err => console.error("Failed to fetch delivery options:", err));
+  }, []);
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      const types = [
+        { type: "INSTANT", conf: instant, set: setInstant },
+        { type: "STANDARD", conf: standard, set: setStandard },
+        { type: "NATIONWIDE", conf: nationwide, set: setNationwide }
+      ];
+      const promises = types.map(async ({ type, conf, set }) => {
+        if (!conf.enabled) {
+          if (conf.id) {
+            await shop.deleteDeliveryOption(conf.id);
+            set(p => ({ ...p, id: undefined }));
+          }
+        } else {
+          const payload = {
+            type,
+            speed: conf.speed,
+            free_shipping_amount: conf.freeThreshold,
+            delivery_by: conf.partners ? "PARTNERS" : "INHOUSE" // Pick one, prioritize partners if both checked
+          };
+          if (conf.id) {
+            await shop.updateDeliveryOption(conf.id, { ...payload, id: conf.id });
+          } else {
+            const res = await shop.createDeliveryOption(SHOP_ID, payload);
+            if (res && res.data && res.data.id) {
+              set(p => ({ ...p, id: res.data.id }));
+            }
+          }
+        }
+      });
+      await Promise.all(promises);
+      alert("Delivery preferences saved successfully!");
+    } catch (err) {
+      console.error("Failed to save delivery preferences", err);
+      alert("Failed to save delivery preferences");
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const activeCount = [instant, standard, nationwide].filter((d) => d.enabled).length;
 
@@ -432,11 +500,13 @@ export default function DeliveryPreferences() {
       {/* ── Save Button ── */}
       <div className="flex justify-end pt-2">
         <button
-          className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-[13.5px] font-bold text-white transition-all hover:opacity-90 cursor-pointer shadow-md"
+          onClick={handleSave}
+          disabled={isSaving}
+          className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-[13.5px] font-bold text-white transition-all shadow-md ${isSaving ? 'opacity-70 cursor-not-allowed' : 'hover:opacity-90 cursor-pointer'}`}
           style={{ background: "#3b82f6", boxShadow: "0 4px 14px rgba(59,130,246,0.3)" }}
         >
-          <Check size={15} strokeWidth={3} />
-          Save Preferences
+          {isSaving ? <Timer size={15} className="animate-spin" /> : <Check size={15} strokeWidth={3} />}
+          {isSaving ? "Saving..." : "Save Preferences"}
         </button>
       </div>
     </div>

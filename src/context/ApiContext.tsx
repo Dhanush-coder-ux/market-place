@@ -126,9 +126,40 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
       setError(null);
 
       try {
+        const getHeaders = () => {
+          const token = localStorage.getItem("auth_token");
+          let shopId = localStorage.getItem("shop_id");
+          let userId = localStorage.getItem("user_id");
+          
+          if (token && (!shopId || !userId)) {
+            try {
+              const payload = JSON.parse(atob(token.split('.')[1]));
+              if (payload.user_id && !userId) {
+                userId = payload.user_id;
+                localStorage.setItem("user_id", userId);
+              }
+              if (payload.shop_id && !shopId) {
+                shopId = payload.shop_id;
+                localStorage.setItem("shop_id", shopId);
+              }
+            } catch (e) {
+              // ignore
+            }
+          }
+          
+          const headers: Record<string, string> = { 
+            "Content-Type": "application/json" 
+          };
+          if (token) headers["Authorization"] = `Bearer ${token}`;
+          if (shopId) headers["X-Shop-Id"] = shopId;
+          if (userId) headers["X-User-Id"] = userId;
+          
+          return headers;
+        };
+
         const res = await fetch(url, {
           method,
-          headers: { "Content-Type": "application/json" },
+          headers: getHeaders(),
           ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
           signal: options?.signal,
         });

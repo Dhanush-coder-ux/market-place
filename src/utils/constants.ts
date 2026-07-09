@@ -53,21 +53,35 @@ export interface SidebarLink {
 
 export const sidebarLinks: SidebarLink[] = [
   { name: "Dashboard", icon: LayoutDashboard, path: "/" },
+
   {
-    name: "Sales",
-    icon: IndianRupee,
-    addPath: "/billing",
+    name: "Products",
+    icon: Package,
+    addPath: "/product/add",
     subLinks: [
-      { name: "Sales List", path: "/sales", icon: ClipboardList, addPath: "/billing" },
-      { name: "Sale Detail", path: "/sales/detail", icon: Receipt },
+      { name: "Add Product", path: "/product/add", icon: UserPlus },
+      { name: "Saved Drafts", path: "/product/drafts", icon: Bookmark },
+      { name: "Products List", path: "/product/all", icon: ClipboardList, addPath: "/product/add" },
+      { name: "Product Detail", path: "/product", icon: FileText },
     ],
   },
 
   {
-    name: "Purchase",
+    name: "Suppliers",
+    icon: Wallet,
+    addPath: "/supplier/add",
+    subLinks: [
+      { name: "Add Suppliers", path: "/supplier/add", icon: UserPlus },
+      { name: "Saved Drafts", path: "/supplier/drafts", icon: Bookmark },
+      { name: "Suppliers List", path: "/supplier/all", icon: ClipboardList, addPath: "/supplier/add" },
+      { name: "Supplier Details", path: "/supplier", icon: FileText },
+    ],
+  },
+
+  {
+    name: "Purchases",
     icon: Wallet,
     subLinks: [
-
       { icon: Plus, name: "Add Purchase", path: "/purchase/add" },
       { icon: Bookmark, name: "Saved Drafts", path: "/purchase/drafts" },
       // Purchase Orders group — gated by settings.poGrn
@@ -82,7 +96,6 @@ export const sidebarLinks: SidebarLink[] = [
           { name: "Purchase Order List", path: "/po-grn", icon: ListChecks, addPath: "/po-grn/add" },
         ],
       },
-
       // Production group — gated by settings.productionEntry
       {
         type: "group",
@@ -99,30 +112,6 @@ export const sidebarLinks: SidebarLink[] = [
   },
 
   {
-    name: "Products",
-    icon: Package,
-    addPath: "/product/add",
-    subLinks: [
-      { name: "Add Product", path: "/product/add", icon: UserPlus },
-      { name: "Saved Drafts", path: "/product/drafts", icon: Bookmark },
-      { name: "Products List", path: "/product/all", icon: ClipboardList, addPath: "/product/add" },
-      { name: "Product Detail", path: "/product", icon: FileText },
-    ],
-  },
-
-  {
-    name: "Supplier",
-    icon: Wallet,
-    addPath: "/supplier/add",
-    subLinks: [
-      { name: "Add Suppliers", path: "/supplier/add", icon: UserPlus },
-      { name: "Saved Drafts", path: "/supplier/drafts", icon: Bookmark },
-      { name: "Suppliers List", path: "/supplier/all", icon: ClipboardList, addPath: "/supplier/add" },
-      { name: "Supplier Details", path: "/supplier", icon: FileText },
-    ],
-  },
-
-  {
     name: "Inventory",
     icon: Database,
     subLinks: [
@@ -133,8 +122,17 @@ export const sidebarLinks: SidebarLink[] = [
     ],
   },
 
-  { name: "Orders", icon: ShoppingCart, path: "/orders" },
   { name: "Billing", icon: Printer, path: "/billing", askNewTab: true },
+
+  {
+    name: "Sales",
+    icon: IndianRupee,
+    addPath: "/billing",
+    subLinks: [
+      { name: "Sales List", path: "/sales", icon: ClipboardList, addPath: "/billing" },
+      { name: "Sale Detail", path: "/sales/detail", icon: Receipt },
+    ],
+  },
 
   {
     name: "Customers",
@@ -161,7 +159,10 @@ export const sidebarLinks: SidebarLink[] = [
   },
 
   { name: "Digital Store", icon: Store, path: "/digital-store/profile" },
+
+  { name: "Online Orders", icon: ShoppingCart, path: "/orders" },
 ];
+
 
 export const Rupees = "₹";
 

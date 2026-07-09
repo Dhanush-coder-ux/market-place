@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useHeader } from "@/context/HeaderContext";
-import { useApi } from "@/context/ApiContext";
+import { useBusinessApi } from "@/context/BusinessApiContext";
 import { RightSidebarFilter } from "@/components/common/RightSidebarFilter";
 import { GroupedItemsDrawer } from "@/components/common/HistoryTables";
 import { ReusableSelect } from "@/components/ui/ReusableSelect";
@@ -23,7 +23,6 @@ import { StatCard } from "@/components/common/StatsCard";
 import type { PurchaseRecord } from "@/types/api";
 import { SHOP_ID } from "@/services/endpoints";
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
-import { purchaseApi } from "@/services/api/purchase";
 
 
 /* ================= TYPES ================= */
@@ -701,7 +700,7 @@ const ViewToggle = ({
 
 /* ================= MAIN COMPONENT ================= */
 const PurchaseHistory = () => {
-  const { getData } = useApi();
+  const { purchase } = useBusinessApi();
   const location = useLocation();
   const isCleanMode = new URLSearchParams(location.search).get("mode") === "clean";
   const { setActions, setBottomActions } = useHeader();
@@ -809,7 +808,7 @@ const PurchaseHistory = () => {
     if (filters.fromDate) params.from_date = filters.fromDate;
     if (filters.toDate) params.to_date = filters.toDate;
 
-    const res = await purchaseApi.getPurchasesByShop(SHOP_ID, params);
+    const res = await purchase.getPurchasesByShop(SHOP_ID, params);
     
     const itemsRaw = res ? (Array.isArray(res?.data) ? res.data : (res?.data?.purchases ?? res?.data?.datas ?? [])) : [];
     const parsedItems = itemsRaw.map(toDisplayData);
@@ -820,7 +819,7 @@ const PurchaseHistory = () => {
       stats: res?.data?.overall_stats,
       total: res?.data?.total_count || 0
     };
-  }, [getData]);
+  }, [purchase]);
 
   const filters = useMemo(() => ({
     search: debouncedSearch,

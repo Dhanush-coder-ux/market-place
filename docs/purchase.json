@@ -334,48 +334,40 @@
       }
     },
     "/custom-fields": {
-      "post": {
+      "get": {
         "tags": [
           "Custom Fields"
         ],
-        "summary": "Create Field",
-        "operationId": "create_field_custom_fields_post",
-        "parameters": [
-          {
-            "name": "shop_id",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Shop Id"
-            }
-          },
-          {
-            "name": "args",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "title": "Args"
-            }
-          },
-          {
-            "name": "kwargs",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "title": "Kwargs"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateCustomFieldSchema"
+        "summary": "Get All Fields",
+        "operationId": "get_all_fields_custom_fields_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+
+                }
               }
             }
           }
+        }
+      },
+      "put": {
+        "tags": [
+          "Custom Fields"
+        ],
+        "summary": "Update Field",
+        "operationId": "update_field_custom_fields_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateCustomFieldSchema"
+              }
+            }
+          },
+          "required": true
         },
         "responses": {
           "200": {
@@ -400,36 +392,61 @@
           }
         }
       },
+      "post": {
+        "tags": [
+          "Custom Fields"
+        ],
+        "summary": "Create Field",
+        "operationId": "create_field_custom_fields_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCustomFieldSchema"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/custom-fields/{shop_id}": {
       "get": {
         "tags": [
           "Custom Fields"
         ],
-        "summary": "Get All Fields",
-        "operationId": "get_all_fields_custom_fields_get",
+        "summary": "Get Field By Shop",
+        "operationId": "get_field_by_shop_custom_fields__shop_id__get",
         "parameters": [
           {
             "name": "shop_id",
-            "in": "query",
+            "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "title": "Shop Id"
-            }
-          },
-          {
-            "name": "args",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "title": "Args"
-            }
-          },
-          {
-            "name": "kwargs",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "title": "Kwargs"
             }
           }
         ],
@@ -457,124 +474,33 @@
         }
       }
     },
-    "/custom-fields/{field_id}": {
+    "/custom-fields/{shop_id}/{id}": {
       "get": {
         "tags": [
           "Custom Fields"
         ],
-        "summary": "Get Field",
-        "operationId": "get_field_custom_fields__field_id__get",
+        "summary": "Get Field By Shop",
+        "operationId": "get_field_by_shop_custom_fields__shop_id___id__get",
         "parameters": [
           {
-            "name": "field_id",
+            "name": "id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Field Id"
+              "title": "Id"
             }
           },
           {
             "name": "shop_id",
-            "in": "query",
+            "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "title": "Shop Id"
             }
-          },
-          {
-            "name": "args",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "title": "Args"
-            }
-          },
-          {
-            "name": "kwargs",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "title": "Kwargs"
-            }
           }
         ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
-      "put": {
-        "tags": [
-          "Custom Fields"
-        ],
-        "summary": "Update Field",
-        "operationId": "update_field_custom_fields__field_id__put",
-        "parameters": [
-          {
-            "name": "field_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Field Id"
-            }
-          },
-          {
-            "name": "shop_id",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Shop Id"
-            }
-          },
-          {
-            "name": "args",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "title": "Args"
-            }
-          },
-          {
-            "name": "kwargs",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "title": "Kwargs"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdateCustomFieldSchema"
-              }
-            }
-          }
-        },
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -603,40 +529,24 @@
           "Custom Fields"
         ],
         "summary": "Delete Field",
-        "operationId": "delete_field_custom_fields__field_id__delete",
+        "operationId": "delete_field_custom_fields__shop_id___id__delete",
         "parameters": [
           {
-            "name": "field_id",
+            "name": "id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Field Id"
+              "title": "Id"
             }
           },
           {
             "name": "shop_id",
-            "in": "query",
+            "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "title": "Shop Id"
-            }
-          },
-          {
-            "name": "args",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "title": "Args"
-            }
-          },
-          {
-            "name": "kwargs",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "title": "Kwargs"
             }
           }
         ],
@@ -671,42 +581,15 @@
         ],
         "summary": "Upsert Value",
         "operationId": "upsert_value_custom_fields_values_post",
-        "parameters": [
-          {
-            "name": "shop_id",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Shop Id"
-            }
-          },
-          {
-            "name": "args",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "title": "Args"
-            }
-          },
-          {
-            "name": "kwargs",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "title": "Kwargs"
-            }
-          }
-        ],
         "requestBody": {
-          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/CreateCustomFieldValueSchema"
               }
             }
-          }
+          },
+          "required": true
         },
         "responses": {
           "200": {
@@ -732,114 +615,30 @@
         }
       }
     },
-    "/custom-fields/values/bulk": {
-      "post": {
-        "tags": [
-          "Custom Fields"
-        ],
-        "summary": "Bulk Upsert Values",
-        "operationId": "bulk_upsert_values_custom_fields_values_bulk_post",
-        "parameters": [
-          {
-            "name": "shop_id",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Shop Id"
-            }
-          },
-          {
-            "name": "args",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "title": "Args"
-            }
-          },
-          {
-            "name": "kwargs",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "title": "Kwargs"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/BulkCreateCustomFieldValuesSchema"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/custom-fields/values/{purchase_id}": {
+    "/custom-fields/values/{shop_id}/{id}": {
       "get": {
         "tags": [
           "Custom Fields"
         ],
         "summary": "Get Values By Purchase",
-        "operationId": "get_values_by_purchase_custom_fields_values__purchase_id__get",
+        "operationId": "get_values_by_purchase_custom_fields_values__shop_id___id__get",
         "parameters": [
           {
-            "name": "purchase_id",
+            "name": "id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Purchase Id"
+              "title": "Id"
             }
           },
           {
             "name": "shop_id",
-            "in": "query",
+            "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "title": "Shop Id"
-            }
-          },
-          {
-            "name": "args",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "title": "Args"
-            }
-          },
-          {
-            "name": "kwargs",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "title": "Kwargs"
             }
           }
         ],
@@ -870,81 +669,50 @@
   },
   "components": {
     "schemas": {
-      "BulkCreateCustomFieldValuesSchema": {
-        "properties": {
-          "purchase_id": {
-            "type": "string",
-            "title": "Purchase Id"
-          },
-          "values": {
-            "items": {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            "type": "array",
-            "title": "Values"
-          }
-        },
-        "type": "object",
-        "required": [
-          "purchase_id",
-          "values"
-        ],
-        "title": "BulkCreateCustomFieldValuesSchema"
-      },
       "CreateCustomFieldSchema": {
         "properties": {
-          "field_name": {
+          "shop_id": {
             "type": "string",
-            "title": "Field Name"
+            "title": "Shop Id"
           },
-          "label_name": {
-            "type": "string",
-            "title": "Label Name"
-          },
-          "type": {
-            "type": "string",
-            "title": "Type"
-          },
-          "required": {
-            "type": "boolean",
-            "title": "Required",
-            "default": false
-          },
-          "visible_online": {
-            "type": "boolean",
-            "title": "Visible Online",
-            "default": false
+          "field_infos": {
+            "items": {
+              "$ref": "#/components/schemas/CustomFieldInfos"
+            },
+            "type": "array",
+            "title": "Field Infos"
           }
         },
         "type": "object",
         "required": [
-          "field_name",
-          "label_name",
-          "type"
+          "shop_id",
+          "field_infos"
         ],
         "title": "CreateCustomFieldSchema"
       },
       "CreateCustomFieldValueSchema": {
         "properties": {
+          "shop_id": {
+            "type": "string",
+            "title": "Shop Id"
+          },
           "purchase_id": {
             "type": "string",
             "title": "Purchase Id"
           },
-          "field_id": {
-            "type": "string",
-            "title": "Field Id"
-          },
-          "value": {
-            "type": "string",
-            "title": "Value"
+          "value_infos": {
+            "items": {
+              "$ref": "#/components/schemas/CustomFieldValueInfos"
+            },
+            "type": "array",
+            "title": "Value Infos"
           }
         },
         "type": "object",
         "required": [
+          "shop_id",
           "purchase_id",
-          "field_id",
-          "value"
+          "value_infos"
         ],
         "title": "CreateCustomFieldValueSchema"
       },
@@ -1106,6 +874,57 @@
           "invoice_no"
         ],
         "title": "CreatePurchaseSchema"
+      },
+      "CustomFieldInfos": {
+        "properties": {
+          "field_name": {
+            "type": "string",
+            "title": "Field Name"
+          },
+          "label_name": {
+            "type": "string",
+            "title": "Label Name"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type"
+          },
+          "required": {
+            "type": "boolean",
+            "title": "Required",
+            "default": false
+          },
+          "visible_online": {
+            "type": "boolean",
+            "title": "Visible Online",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "field_name",
+          "label_name",
+          "type"
+        ],
+        "title": "CustomFieldInfos"
+      },
+      "CustomFieldValueInfos": {
+        "properties": {
+          "field_id": {
+            "type": "string",
+            "title": "Field Id"
+          },
+          "value": {
+            "type": "string",
+            "title": "Value"
+          }
+        },
+        "type": "object",
+        "required": [
+          "field_id",
+          "value"
+        ],
+        "title": "CustomFieldValueInfos"
       },
       "HTTPValidationError": {
         "properties": {
@@ -1328,6 +1147,14 @@
       },
       "UpdateCustomFieldSchema": {
         "properties": {
+          "field_id": {
+            "type": "string",
+            "title": "Field Id"
+          },
+          "shop_id": {
+            "type": "string",
+            "title": "Shop Id"
+          },
           "label_name": {
             "anyOf": [
               {
@@ -1374,6 +1201,10 @@
           }
         },
         "type": "object",
+        "required": [
+          "field_id",
+          "shop_id"
+        ],
         "title": "UpdateCustomFieldSchema"
       },
       "UpdatePurchaseItemsSchema": {

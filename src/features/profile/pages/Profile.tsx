@@ -9,7 +9,7 @@
 //  No visual code lives here — all UI is delegated to /components.
 
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { UserCheck2, Edit3, LogOut } from "lucide-react";
 
 import Title from "@/components/common/Title";
@@ -33,6 +33,15 @@ const Profile = () => {
   const { getData, loading } = useApi();
   const [shop, setShop] = useState<NormalisedShop | null>(null);
   const [showOnApp, setShowOnApp] = useState(false);
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    localStorage.removeItem("auth_token");
+    localStorage.removeItem("user_id");
+    localStorage.removeItem("shop_id");
+    localStorage.removeItem("refresh_token");
+    navigate("/login");
+  };
 
   useEffect(() => {
     getData(ENDPOINTS.SHOPS + "/by/" + SHOP_ID).then((res) => {
@@ -73,6 +82,7 @@ const Profile = () => {
             </Link>
             <button
               type="button"
+              onClick={handleLogout}
               className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-red-100 text-red-500 text-xs font-bold hover:bg-red-50 transition-all hover:-translate-y-0.5 active:scale-95"
             >
               <LogOut size={14} />
@@ -102,7 +112,7 @@ const Profile = () => {
         <div className="space-y-5">
           <ProfileBusinessHours shop={data} />
           <ProfileOnlinePresence shop={data} />
-          <ProfileQuickActions />
+          <ProfileQuickActions onLogout={handleLogout} />
         </div>
       </div>
     </div>

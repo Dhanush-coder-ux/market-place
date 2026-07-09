@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { Tooltip } from "@/components/common/Tootlip";
 import { useNavigate } from "react-router-dom";
+import { useBusinessApi } from "@/context/BusinessApiContext";
 
 const INITIAL_STATE: StoreFormData = {
   name: "",
@@ -138,6 +139,7 @@ export default function StoreSetupForm({ existingData }: StoreSetupProps) {
   const bannerInputRef = useRef<HTMLInputElement>(null);
   const logoInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
+  const { shop } = useBusinessApi();
 
   const selectedTheme = THEMES[(form.themeColor as ThemeName) || "Blue"];
 
@@ -285,35 +287,82 @@ export default function StoreSetupForm({ existingData }: StoreSetupProps) {
     setStep((prev) => Math.max(prev - 1, 1));
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (validateStep(4)) {
-      // Final save structure: store to mock profile endpoint / localStorage
-      const finalProfileData = {
-        name: form.name,
-        username: `@${form.name.toLowerCase().replace(/[^a-z0-9]/g, "")}`,
-        location: form.address || "Not specified",
-        tagline: form.tagline || "Fresh picks, fair prices — delivered to your door.",
-        description: form.description || "Your premium storefront, now online.",
-        avatar: form.logoPreview || "https://api.dicebear.com/7.x/shapes/svg?seed=" + form.name,
-        banner: form.bannerPreview || "",
-        category: form.category,
-        themeColor: form.themeColor,
-        followers: 0,
-        rating: 5.0,
-        reviews: 0,
-        verified: false,
-        online: true,
-        memberSince: new Date().toLocaleString('default', { month: 'short', year: 'numeric' }),
-        contactEmail: form.contactEmail,
-        contactPhone: form.contactPhone,
-        website: form.website,
-        instagram: form.instagram,
-        twitter: form.twitter,
-      };
-      
-      localStorage.setItem("active-store-profile", JSON.stringify(finalProfileData));
-      // Navigate to digital store profile page
-      navigate("/digital-store/profile");
+      try {
+        const payload = {
+          name: form.name,
+          description: form.description || null,
+          tagline: form.tagline || null,
+          categories: [form.category],
+          business_infos: {
+            type: "OTHERS",
+            gst_infos: {
+              registered: false,
+              number: null
+            },
+            currency: "INR"
+          },
+          address: {
+            full_address: form.address || "Not specified",
+            zip_code: "000000",
+            landmark: "",
+            latitude: 0,
+            longitude: 0
+          },
+          image_urls: [
+            form.logoPreview || "",
+            form.bannerPreview || ""
+          ].filter(Boolean),
+          datas: {
+            emails: form.contactEmail ? [form.contactEmail] : [],
+            mobile_numbers: form.contactPhone ? [form.contactPhone] : [],
+            website: form.website || null
+          },
+          visible_online: false,
+          operating_hours: [],
+          delivery_options: []
+        };
+
+        const res = await shop.createShop(payload);
+        if (res) {
+          // Final save structure: store to mock profile endpoint / localStorage
+          const finalProfileData = {
+            name: form.name,
+            username: `@${form.name.toLowerCase().replace(/[^a-z0-9]/g, "")}`,
+            location: form.address || "Not specified",
+            tagline: form.tagline || "Fresh picks, fair prices — delivered to your door.",
+            description: form.description || "Your premium storefront, now online.",
+            avatar: form.logoPreview || "https://api.dicebear.com/7.x/shapes/svg?seed=" + form.name,
+            banner: form.bannerPreview || "",
+            category: form.category,
+            themeColor: form.themeColor,
+            followers: 0,
+            rating: 5.0,
+            reviews: 0,
+            verified: false,
+            online: true,
+            memberSince: new Date().toLocaleString('default', { month: 'short', year: 'numeric' }),
+            contactEmail: form.contactEmail,
+            contactPhone: form.contactPhone,
+            website: form.website,
+            instagram: form.instagram,
+            twitter: form.twitter,
+          };
+          
+          localStorage.setItem("active-store-profile", JSON.stringify(finalProfileData));
+          if (res.data && res.data.id) {
+            import('@/services/endpoints').then(module => {
+              module.setShopId(res.data.id);
+            });
+          }
+          // Navigate to digital store profile page
+          navigate("/digital-store/profile");
+        }
+      } catch (err) {
+        console.error("Failed to create shop", err);
+        alert("Failed to create shop");
+      }
     }
   };
 

@@ -13,6 +13,7 @@ import { Modal, ProfileHeaderCard } from "@/components/common/SuperUI";
 import { StatCard } from "@/components/common/StatsCard";
 import { BiLogoWhatsapp } from "react-icons/bi";
 import { useApi } from "@/context/ApiContext";
+import { useBusinessApi } from "@/context/BusinessApiContext";
 import { useToast } from "@/context/ToastContext";
 import { useHeader } from "@/context/HeaderContext";
 import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
@@ -28,12 +29,12 @@ import type { CustomerCustomFieldDefinition, CustomerCustomFieldValue } from "..
 // ── Search bar ──────────────────────────────────────────────────────────────
 const CustomerSearch = () => {
   const navigate = useNavigate();
-  const { getData } = useApi();
+  const { customer: customerApi } = useBusinessApi();
 
   const fetchCustomers = async (q: string) => {
 
     try {
-      const res = await getData(`${ENDPOINTS.CUSTOMERS}/by/shop/${SHOP_ID}`, { limit: "8", offset: "1", q });
+      const res = await customerApi.getCustomersByShopId(SHOP_ID, { limit: '8', offset: '1', q });
       let actualData = res?.data;
       if (actualData && typeof actualData === 'object' && !Array.isArray(actualData) && 'datas' in actualData) {
         actualData = actualData.datas;
@@ -91,7 +92,8 @@ const DetailItem = ({ icon: Icon, label, value, onClick }: { icon: any, label: s
 export default function CustomerDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { getData, deleteData } = useApi();
+  const { getData } = useApi();
+  const { customer: customerApi } = useBusinessApi();
   const { showToast } = useToast();
   const { setBottomActions } = useHeader();
 
@@ -146,7 +148,7 @@ export default function CustomerDetail() {
       setOrdersLoading(false);
     });
     setClearingLoading(true);
-    getData(`${ENDPOINTS.CUSTOMERS}/cleared-histories/by/id/${SHOP_ID}/${id}`).then((res) => {
+    customerApi.getClearingHistoryById(SHOP_ID, id).then((res) => {
       if (res && res.data) {
         let actualData = res.data;
         if (typeof actualData === 'object' && !Array.isArray(actualData) && 'datas' in actualData) {
@@ -176,7 +178,7 @@ export default function CustomerDetail() {
   useEffect(() => {
     if (!id) return;
     setRecordLoading(true);
-    getData(`${ENDPOINTS.CUSTOMERS}/by/id/${SHOP_ID}/${id}`).then((res) => {
+    customerApi.getCustomerById(SHOP_ID, id).then((res) => {
       if (res) setCustomer(Array.isArray(res.data) ? res.data[0] : res.data);
       setRecordLoading(false);
     });
@@ -219,7 +221,7 @@ export default function CustomerDetail() {
   useEffect(() => {
     if (activeTab === 2 && id) { // Index 2 is Clearing History
       setClearingLoading(true);
-      getData(`${ENDPOINTS.CUSTOMERS}/cleared-histories/by/id/${SHOP_ID}/${id}`).then((res) => {
+      customerApi.getClearingHistoryById(SHOP_ID, id).then((res) => {
         if (res && res.data) {
           let actualData = res.data;
           if (typeof actualData === 'object' && !Array.isArray(actualData) && 'datas' in actualData) {
@@ -252,8 +254,10 @@ export default function CustomerDetail() {
       await customerCustomFieldsApi.upsertValue({
         shop_id: SHOP_ID,
         customer_id: id,
-        field_id: fieldId,
-        value: editingValue,
+        value_infos: [{
+          field_id: fieldId,
+          value: editingValue,
+        }],
       });
       setCustomFieldValues((prev) => {
         const existing = prev.findIndex((v) => v.field_id === fieldId);
@@ -279,7 +283,7 @@ export default function CustomerDetail() {
 
     setDeleting(true);
     try {
-      const res = await deleteData(`${ENDPOINTS.CUSTOMERS}/${SHOP_ID}/${targetId}`);
+      const res = await customerApi.deleteCustomer(SHOP_ID, targetId);
       if (res) {
         showToast("Customer deleted successfully!", "success");
         setTimeout(() => navigate("/customers-Summary"), 1500);

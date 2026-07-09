@@ -112,13 +112,14 @@ const Pill = ({
   variant = "default",
 }: {
   children: React.ReactNode;
-  variant?: "default" | "blue" | "purple" | "indigo";
+  variant?: "default" | "blue" | "purple" | "indigo" | "emerald";
 }) => {
   const styles: Record<string, string> = {
     default: "text-slate-500 bg-slate-50 border-slate-100",
     blue: "text-blue-600 bg-blue-50 border-blue-100",
     purple: "text-purple-600 bg-purple-50 border-purple-100",
     indigo: "text-indigo-600 bg-indigo-50 border-indigo-100",
+    emerald: "text-emerald-600 bg-emerald-50 border-emerald-100",
   };
   return (
     <span
@@ -237,6 +238,15 @@ const ProductRow = React.memo(
     const [showAllBadges, setShowAllBadges] = useState(false);
 
     const badges: React.ReactNode[] = [];
+    
+    if (p.visible_online) {
+      badges.push(
+        <Pill key="online" variant="emerald">
+          <ExternalLink size={9} /> Online
+        </Pill>
+      );
+    }
+    
     if (hasVariants)
       badges.push(
         <Pill key="var" variant="blue">

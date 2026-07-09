@@ -260,33 +260,151 @@ export interface StockAdjRecord {
   date?: string;
 }
 
+// --- Enums ---
+export enum DayEnum {
+  MONDAY = "MONDAY",
+  TUESDAY = "TUESDAY",
+  WEDNESDAY = "WEDNESDAY",
+  THURSDAY = "THURSDAY",
+  FRIDAY = "FRIDAY",
+  SATURDAY = "SATURDAY",
+  SUNDAY = "SUNDAY"
+}
+
+export enum DeliveryByEnum {
+  INHOUSE = "INHOUSE",
+  PARTNERS = "PARTNERS"
+}
+
+export enum DeliveryTypeEnum {
+  PICKUP_ONLY = "PICKUP_ONLY",
+  INSTANT = "INSTANT",
+  STANDARD = "STANDARD",
+  NATIONWIDE = "NATIONWIDE"
+}
+
+export enum AnnouncementTypeEnum {
+  ANNOUNCEMENT = "ANNOUNCEMENT",
+  UPDATES = "UPDATES",
+  OFFER = "OFFER"
+}
+
+export enum AnnouncementSendToEnum {
+  ALL_FOLLOWED_USERS = "ALL_FOLLOWED_USERS",
+  NON_FOLLOWING_USERS = "NON_FOLLOWING_USERS",
+  NEW_USER = "NEW_USER",
+  PREMIUM = "PREMIUM"
+}
+
+export enum AnnouncementStatusEnum {
+  DRAFT = "DRAFT",
+  PUBLISHED = "PUBLISHED",
+  EXPIRED = "EXPIRED",
+  SCHEDULED = "SCHEDULED"
+}
+
+export enum EmployeeRoleEnums {
+  OWNER = "OWNER",
+  SUPER_ADMIN = "SUPER_ADMIN",
+  ADMIN = "ADMIN",
+  BILLER = "BILLER",
+  USER = "USER"
+}
+
+export enum EmployeeDepartmentEnums {
+  SALES = "SALES",
+  BILLER = "BILLER",
+  MANAGER = "MANAGER"
+}
+
+export enum ShopBusinessTypeEnums {
+  PRIVATE_LIMITED = "PRIVATE_LIMITED",
+  PARTNERSHIP = "PARTNERSHIP",
+  SOLO_PROPRIETOR = "SOLO_PROPRIETOR",
+  LLP = "LLP",
+  OTHERS = "OTHERS"
+}
+
+export enum ShopBusinessCurrencyEnums {
+  INR = "INR",
+  USD = "USD",
+  EUR = "EUR"
+}
+
+// --- Sub-models ---
+export interface ShopAddressTypDict {
+  full_address: string;
+  zip_code: string;
+  landmark: string;
+  latitude: number;
+  longitude: number;
+}
+
+export interface ShopBusinessGstInfos {
+  registered: boolean;
+  number?: string;
+}
+
+export interface ShopBusinessInfoTypDict {
+  type: ShopBusinessTypeEnums;
+  gst_infos: ShopBusinessGstInfos;
+  currency: ShopBusinessCurrencyEnums;
+}
+
+export interface OperatingHoursRecord {
+  id?: number;
+  open_at: string;
+  close_at: string;
+  day: DayEnum;
+}
+
+export interface DeliveryOptionRecord {
+  id?: number;
+  type: DeliveryTypeEnum;
+  speed: string;
+  free_shipping_amount: number;
+  delivery_by: DeliveryByEnum;
+}
+
+export interface AnnouncementRecord {
+  id?: number;
+  type: AnnouncementTypeEnum;
+  message: string;
+  call_to_action?: string;
+  schedule_at?: string;
+  expire_at?: string;
+  send_to: AnnouncementSendToEnum;
+  status: AnnouncementStatusEnum;
+}
+
+export interface TokenCreateRequest {
+  session_id: string;
+  shop_id: string;
+}
+
+export interface TokenRefreshRequest {
+  refresh_token: string;
+}
+
 export interface ShopRecord {
   id: string;
   ui_id: number;
   name: string;
-  category: string;
-  address: {
-    street: string;
-    city: string;
-    pincode: string;
-    [key: string]: any;
-  };
-  business_infos: {
-    business_type: string;
-    gst?: string;
-    currency: string;
-    open_time?: string;
-    close_time?: string;
-    [key: string]: any;
-  };
-  datas: {
-    description?: string;
+  description?: string;
+  tagline?: string;
+  categories: string[];
+  business_infos: ShopBusinessInfoTypDict;
+  address: ShopAddressTypDict;
+  logo_url?: string;
+  banner_url?: string;
+  additional_infos?: {
     emails?: string[];
     mobile_numbers?: string[];
     website?: string;
-    [key: string]: any;
   };
-  image_urls: string[];
+  visible_online?: boolean;
+  operating_hours?: OperatingHoursRecord[];
+  delivery_options?: DeliveryOptionRecord[];
   created_at: string;
   updated_at: string;
   [key: string]: unknown;

@@ -146,8 +146,10 @@ export default function SupplierDetail() {
       await supplierCustomFieldsApi.upsertValue({
         shop_id: SHOP_ID,
         supplier_id: id,
-        field_id: fieldId,
-        value: editingValue,
+        value_infos: [{
+          field_id: fieldId,
+          value: editingValue,
+        }],
       });
       setCustomFieldValues((prev) => {
         const existing = prev.findIndex((v) => v.field_id === fieldId);

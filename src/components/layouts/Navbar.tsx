@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   Bell,
@@ -21,6 +21,9 @@ import {
   ShoppingCart,
   Command,
   Settings2,
+  LogOut,
+  X,
+  Loader2,
 } from "lucide-react";
 
 import {
@@ -32,14 +35,9 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 
-// -----------------------------
-// Store Data
-// -----------------------------
-const MY_STORES = [
-  { id: 1, name: "Vaathi Mart" },
-  { id: 2, name: "Chennai Super Store" },
-  { id: 3, name: "Digital Bazaar" },
-];
+import { apiClient } from "@/services/api/apiClient";
+import { ENDPOINTS, setShopId } from "@/services/endpoints";
+import { fetchMyShops } from "@/services/api/shopHelpers";
 
 // -----------------------------
 // Route Config
@@ -50,7 +48,6 @@ const SEARCHABLE_ROUTES = [
   { name: "Products", path: "/product", icon: Package },
   { name: "Add Products", path: "/product/add", icon: PlusCircle },
   { name: "Add Employee", path: "/employee/add", icon: UserPlus },
-  { name: "Add Inventory", path: "/inventory/add", icon: PlusCircle },
   { name: "Inventory", path: "/inventory", icon: Boxes },
   { name: "Billing & Invoices", path: "/billing", icon: Receipt },
   { name: "Purchase History", path: "/purchase", icon: History },
@@ -59,24 +56,120 @@ const SEARCHABLE_ROUTES = [
   { name: "Refill Inventory", path: "/inventory/re-fill", icon: RefreshCw },
   { name: "Create Digital Store", path: "/create-digital-store", icon: Plus },
   { name: "Digital Store Profile", path: "/digital-store/profile", icon: Store },
-  { name: "Settings", path: "/profile", icon: Settings2 }
+  { name: "Settings", path: "/profile", icon: Settings2 },
 ];
 
-export const Navbar = () => {
-  const [selectedStore, setSelectedStore] = useState(MY_STORES[0]);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
+// -----------------------------
+// Signout Confirmation Modal
+// -----------------------------
+const SignOutModal = ({
+  onConfirm,
+  onCancel,
+}: {
+  onConfirm: () => void;
+  onCancel: () => void;
+}) => (
+  <div className="fixed inset-0 z-[200] flex items-center justify-center">
+    {/* Backdrop */}
+    <div
+      className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+      onClick={onCancel}
+    />
+    {/* Dialog */}
+    <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 p-6 animate-in fade-in zoom-in-95 duration-200">
+      <button
+        onClick={onCancel}
+        className="absolute top-4 right-4 p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
+      >
+        <X size={16} />
+      </button>
 
+      <div className="flex items-center justify-center w-14 h-14 rounded-full bg-red-50 border border-red-100 mx-auto mb-4">
+        <LogOut className="w-6 h-6 text-red-500" />
+      </div>
+
+      <h2 className="text-center text-base font-black text-slate-800 mb-1">
+        Sign Out?
+      </h2>
+      <p className="text-center text-sm text-slate-500 font-medium mb-6">
+        You'll be redirected to the login page. All unsaved changes will be lost.
+      </p>
+
+      <div className="flex gap-3">
+        <button
+          onClick={onCancel}
+          className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-sm font-bold hover:bg-slate-50 transition-colors"
+        >
+          Cancel
+        </button>
+        <button
+          onClick={onConfirm}
+          className="flex-1 py-2.5 rounded-xl bg-red-500 text-white text-sm font-bold hover:bg-red-600 transition-colors shadow-md shadow-red-100"
+        >
+          Sign Out
+        </button>
+      </div>
+    </div>
+  </div>
+);
+
+// -----------------------------
+// Navbar
+// -----------------------------
+export const Navbar = () => {
   const navigate = useNavigate();
   const searchRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const [shops, setShops] = useState<Array<{ id: string; name: string; logo_url?: string; categories?: string[] }>>([]);
+  const [selectedShopId, setSelectedShopId] = useState<string | null>(
+    localStorage.getItem("shop_id")
+  );
+  const [shopsLoading, setShopsLoading] = useState(true);
+
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [showSignOutModal, setShowSignOutModal] = useState(false);
+
+  // Fetch real shops
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const list = await fetchMyShops();
+        setShops(list);
+      } catch (e) {
+        console.error("Failed to fetch shops for navbar:", e);
+      } finally {
+        setShopsLoading(false);
+      }
+    };
+    load();
+  }, []);
+
+  const selectedShop = shops.find((s) => s.id === selectedShopId) ?? shops[0];
+
+  const handleSelectShop = useCallback((shop: { id: string; name: string }) => {
+    setSelectedShopId(shop.id);
+    setShopId(shop.id);
+    localStorage.setItem("shop_id", shop.id);
+    // Reload to re-fetch data for the newly selected shop
+    window.location.reload();
+  }, []);
+
+  const handleSignOut = useCallback(() => {
+    localStorage.removeItem("auth_token");
+    localStorage.removeItem("user_id");
+    localStorage.removeItem("shop_id");
+    localStorage.removeItem("refresh_token");
+    navigate("/login");
+  }, [navigate]);
 
   // Filter routes
   const filteredRoutes = SEARCHABLE_ROUTES.filter((route) =>
     route.name.toLowerCase().includes(searchQuery.toLowerCase())
   ).slice(0, 5);
 
-  // Close search dropdown on outside click
+  // Close search on outside click
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
@@ -87,22 +180,18 @@ export const Navbar = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Keyboard Shortcuts (Cmd+K / Ctrl+K and Escape)
+  // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Check if Cmd (Mac) or Ctrl (Windows) AND the 'k' key are pressed
       if ((e.metaKey || e.ctrlKey) && e.key === "k") {
-        e.preventDefault(); // Prevents the browser's default search bar from opening
-        inputRef.current?.focus(); // Focus your search input
+        e.preventDefault();
+        inputRef.current?.focus();
       }
-
-      // Pressing 'Escape' closes the search menu and unfocuses
       if (e.key === "Escape") {
         setIsSearchOpen(false);
         inputRef.current?.blur();
       }
     };
-
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, []);
@@ -114,171 +203,221 @@ export const Navbar = () => {
   };
 
   return (
-    <div className="sticky top-0 z-40 w-full flex items-center justify-between px-4 lg:px-6 bg-white/80 backdrop-blur-md border-b border-slate-200/60 shadow-sm">
+    <>
+      {showSignOutModal && (
+        <SignOutModal
+          onConfirm={handleSignOut}
+          onCancel={() => setShowSignOutModal(false)}
+        />
+      )}
 
-      {/* LEFT - Store Selector */}
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <button className="flex items-center gap-3 py-1.5 px-2 md:hover:bg-slate-100 rounded-lg md:transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500/20 group">
-            <div className="w-9 h-9 flex items-center justify-center bg-blue-50 rounded-lg text-blue-600 border border-blue-100 md:group-hover:bg-blue-100 md:transition-colors">
-              <Store className="w-4 h-4" />
-            </div>
-            <div className="flex flex-col items-start text-left hidden sm:flex">
-              <span className="text-slate-800 font-semibold text-sm leading-tight">
-                {selectedStore.name}
-              </span>
-              <span className="text-[11px] font-normal text-slate-400 leading-tight">
-                Switch Workspace
-              </span>
-            </div>
-            <ChevronDown className="w-4 h-4 text-slate-400 md:group-hover:text-slate-600 md:transition-colors hidden sm:block" />
-          </button>
-        </DropdownMenuTrigger>
+      <div className="sticky top-0 z-40 w-full flex items-center justify-between px-4 lg:px-6 bg-white/80 backdrop-blur-md border-b border-slate-200/60 shadow-sm">
 
-        <DropdownMenuContent align="start" className="w-64 p-1.5 rounded-lg shadow-xl border-slate-100">
-          <DropdownMenuLabel className="text-[10px] font-bold text-slate-400   px-2 py-1.5">
-            My Workspaces
-          </DropdownMenuLabel>
-
-          {MY_STORES.map((store) => (
-            <DropdownMenuItem
-              key={store.id}
-              onClick={() => setSelectedStore(store)}
-              className={`flex items-center justify-between cursor-pointer rounded-lg px-2.5 py-2 my-0.5 md:transition-colors ${selectedStore.id === store.id ? "bg-blue-50 text-blue-700" : "md:hover:bg-slate-50 text-slate-700"
-                }`}
-            >
-              <div className="flex items-center gap-3">
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold border ${selectedStore.id === store.id ? "bg-white border-blue-200 text-blue-600" : "bg-slate-100 border-slate-200 text-slate-500"
-                  }`}>
-                  {store.name.charAt(0)}
-                </div>
-                <span className="font-semibold text-sm">{store.name}</span>
+        {/* LEFT - Shop Selector */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="flex items-center gap-3 py-1.5 px-2 md:hover:bg-slate-100 rounded-lg md:transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500/20 group">
+              <div className="w-9 h-9 flex items-center justify-center bg-blue-50 rounded-lg text-blue-600 border border-blue-100 md:group-hover:bg-blue-100 md:transition-colors font-black text-sm">
+                {selectedShop?.logo_url ? (
+                  <img src={selectedShop.logo_url} alt="" className="w-full h-full object-cover rounded-lg" />
+                ) : selectedShop ? (
+                  selectedShop.name.charAt(0).toUpperCase()
+                ) : (
+                  <Store className="w-4 h-4" />
+                )}
               </div>
-              {selectedStore.id === store.id && <Check className="w-4 h-4 text-blue-600" />}
-            </DropdownMenuItem>
-          ))}
+              <div className="flex flex-col items-start text-left hidden sm:flex">
+                <span className="text-slate-800 font-semibold text-sm leading-tight">
+                  {shopsLoading ? "Loading..." : (selectedShop?.name ?? "Select Shop")}
+                </span>
+                <span className="text-[11px] font-normal text-slate-400 leading-tight">
+                  Switch Workspace
+                </span>
+              </div>
+              <ChevronDown className="w-4 h-4 text-slate-400 md:group-hover:text-slate-600 md:transition-colors hidden sm:block" />
+            </button>
+          </DropdownMenuTrigger>
 
-          <DropdownMenuSeparator className="bg-slate-100 my-1.5" />
+          <DropdownMenuContent align="start" className="w-64 p-1.5 rounded-lg shadow-xl border-slate-100">
+            <DropdownMenuLabel className="text-[10px] font-bold text-slate-400 px-2 py-1.5">
+              My Shops
+            </DropdownMenuLabel>
 
-          <Link to="/profile/add">
-            <DropdownMenuItem className="cursor-pointer text-blue-600 rounded-lg px-2.5 py-2 hover:bg-blue-50 font-medium">
-              <PlusCircle className="w-4 h-4 mr-2" />
-              Create New Store
-            </DropdownMenuItem>
-          </Link>
-        </DropdownMenuContent>
-      </DropdownMenu>
-
-      {/* CENTER - Global Search (Command Palette Style) */}
-      <div className="relative flex-1 max-w-lg mx-4 lg:mx-8 hidden md:block" ref={searchRef}>
-        <div className="relative group">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 md:group-focus-within:text-blue-500 md:transition-colors" />
-          <input
-            ref={inputRef}
-            type="text"
-            placeholder="Search pages, orders, products..."
-            className="w-full pl-10 pr-12 py-2 bg-slate-100/70 border border-slate-200/60 rounded-full text-sm font-medium text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white md:transition-all shadow-sm"
-            value={searchQuery}
-            onChange={(e) => {
-              setSearchQuery(e.target.value);
-              setIsSearchOpen(true);
-            }}
-            onFocus={() => setIsSearchOpen(true)}
-          />
-          {/* Fake shortcut hint */}
-          <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-0.5 pointer-events-none">
-            <kbd className="hidden lg:inline-flex items-center gap-1 px-1.5 py-0.5 rounded border border-slate-200 bg-white text-[10px] font-medium text-slate-400 shadow-sm">
-              <Command size={10} /> K
-            </kbd>
-          </div>
-        </div>
-
-        {/* Search Results Dropdown */}
-        {isSearchOpen && searchQuery && (
-          <div className="absolute top-full mt-2 w-full bg-white border border-slate-200 rounded-lg shadow-xl overflow-hidden z-50">
-            {filteredRoutes.length > 0 ? (
-              <div className="p-1.5">
-                <p className="px-3 py-2 text-[10px] font-bold text-slate-400  ">
-                  Quick Navigation
-                </p>
-                {filteredRoutes.map((route) => {
-                  const Icon = route.icon;
-                  return (
-                    <button
-                      key={route.path}
-                      onClick={() => handleNavigate(route.path)}
-                      className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg md:hover:bg-blue-50 text-sm group md:transition-colors"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="p-1.5 rounded-md bg-slate-100 md:group-hover:bg-white md:group-hover:text-blue-600 md:group-hover:shadow-sm md:transition-all">
-                          <Icon className="w-4 h-4 text-slate-500 group-hover:text-blue-600" />
-                        </div>
-                        <span className="text-slate-700 group-hover:text-blue-700 font-semibold">
-                          {route.name}
-                        </span>
-                      </div>
-                      <ArrowRight className="w-4 h-4 opacity-0 -translate-x-2 md:group-hover:opacity-100 md:group-hover:translate-x-0 text-blue-600 md:transition-all md:duration-200" />
-                    </button>
-                  );
-                })}
+            {shopsLoading ? (
+              <div className="flex items-center justify-center py-4">
+                <Loader2 className="w-4 h-4 animate-spin text-slate-400" />
+              </div>
+            ) : shops.length === 0 ? (
+              <div className="px-3 py-3 text-xs text-slate-400 font-medium text-center">
+                No shops found
               </div>
             ) : (
-              <div className="p-8 text-center">
-                <div className="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-3">
-                  <Search className="w-5 h-5 text-slate-300" />
-                </div>
-                <p className="text-sm font-semibold text-slate-700">No results found</p>
-                <p className="text-xs text-slate-400 mt-1">Try searching for something else.</p>
-              </div>
+              shops.map((shop) => (
+                <DropdownMenuItem
+                  key={shop.id}
+                  onClick={() => handleSelectShop(shop)}
+                  className={`flex items-center justify-between cursor-pointer rounded-lg px-2.5 py-2 my-0.5 md:transition-colors ${
+                    selectedShopId === shop.id
+                      ? "bg-blue-50 text-blue-700"
+                      : "md:hover:bg-slate-50 text-slate-700"
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold border ${
+                        selectedShopId === shop.id
+                          ? "bg-white border-blue-200 text-blue-600"
+                          : "bg-slate-100 border-slate-200 text-slate-500"
+                      }`}
+                    >
+                      {shop.name.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="font-semibold text-sm">{shop.name}</span>
+                      {shop.categories && shop.categories.length > 0 && (
+                        <span className="text-[10px] text-slate-400 capitalize">
+                          {shop.categories[0]}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  {selectedShopId === shop.id && <Check className="w-4 h-4 text-blue-600" />}
+                </DropdownMenuItem>
+              ))
             )}
+
+            <DropdownMenuSeparator className="bg-slate-100 my-1.5" />
+
+            <Link to="/profile/add">
+              <DropdownMenuItem className="cursor-pointer text-blue-600 rounded-lg px-2.5 py-2 hover:bg-blue-50 font-medium">
+                <PlusCircle className="w-4 h-4 mr-2" />
+                Create New Shop
+              </DropdownMenuItem>
+            </Link>
+
+            <DropdownMenuSeparator className="bg-slate-100 my-1.5" />
+
+            <DropdownMenuItem
+              onClick={() => setShowSignOutModal(true)}
+              className="cursor-pointer text-red-500 rounded-lg px-2.5 py-2 hover:bg-red-50 font-medium"
+            >
+              <LogOut className="w-4 h-4 mr-2" />
+              Sign Out
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        {/* CENTER - Global Search */}
+        <div className="relative flex-1 max-w-lg mx-4 lg:mx-8 hidden md:block" ref={searchRef}>
+          <div className="relative group">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 md:group-focus-within:text-blue-500 md:transition-colors" />
+            <input
+              ref={inputRef}
+              type="text"
+              placeholder="Search pages, orders, products..."
+              className="w-full pl-10 pr-12 py-2 bg-slate-100/70 border border-slate-200/60 rounded-full text-sm font-medium text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white md:transition-all shadow-sm"
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setIsSearchOpen(true);
+              }}
+              onFocus={() => setIsSearchOpen(true)}
+            />
+            <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-0.5 pointer-events-none">
+              <kbd className="hidden lg:inline-flex items-center gap-1 px-1.5 py-0.5 rounded border border-slate-200 bg-white text-[10px] font-medium text-slate-400 shadow-sm">
+                <Command size={10} /> K
+              </kbd>
+            </div>
           </div>
-        )}
-      </div>
 
-      {/* RIGHT - Actions & Profile */}
-      <div className="flex items-center gap-2 sm:gap-4">
-
-        {/* Create Store Button (Hidden on very small screens) */}
-        <Link
-          to={'/create-digital-store'}
-          className="hidden sm:flex items-center gap-1.5 text-sm font-semibold text-slate-600 px-3 py-1.5 rounded-lg border border-slate-200 bg-white md:hover:bg-slate-50 md:hover:text-blue-600 md:hover:border-blue-200 md:transition-all shadow-sm"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Digital Store</span>
-        </Link>
-
-        {/* Action Icons */}
-        <div className="flex items-center gap-1 sm:gap-2">
-          <button className="relative p-2 text-slate-400 md:hover:bg-slate-100 md:hover:text-slate-700 rounded-full md:transition-colors">
-            <Bell className="w-5 h-5" />
-            <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-rose-500 rounded-full border-2 border-white"></span>
-          </button>
-          <Link to={'/profile'}>
-            <button className="p-2 text-slate-400 md:hover:bg-slate-100 md:hover:text-slate-700 rounded-full md:transition-colors group">
-              <Settings className="w-5 h-5 md:group-hover:rotate-45 md:transition-transform md:duration-300" />
-            </button>
-          </Link>
+          {isSearchOpen && searchQuery && (
+            <div className="absolute top-full mt-2 w-full bg-white border border-slate-200 rounded-lg shadow-xl overflow-hidden z-50">
+              {filteredRoutes.length > 0 ? (
+                <div className="p-1.5">
+                  <p className="px-3 py-2 text-[10px] font-bold text-slate-400">
+                    Quick Navigation
+                  </p>
+                  {filteredRoutes.map((route) => {
+                    const Icon = route.icon;
+                    return (
+                      <button
+                        key={route.path}
+                        onClick={() => handleNavigate(route.path)}
+                        className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg md:hover:bg-blue-50 text-sm group md:transition-colors"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="p-1.5 rounded-md bg-slate-100 md:group-hover:bg-white md:group-hover:text-blue-600 md:group-hover:shadow-sm md:transition-all">
+                            <Icon className="w-4 h-4 text-slate-500 group-hover:text-blue-600" />
+                          </div>
+                          <span className="text-slate-700 group-hover:text-blue-700 font-semibold">
+                            {route.name}
+                          </span>
+                        </div>
+                        <ArrowRight className="w-4 h-4 opacity-0 -translate-x-2 md:group-hover:opacity-100 md:group-hover:translate-x-0 text-blue-600 md:transition-all md:duration-200" />
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="p-8 text-center">
+                  <div className="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <Search className="w-5 h-5 text-slate-300" />
+                  </div>
+                  <p className="text-sm font-semibold text-slate-700">No results found</p>
+                  <p className="text-xs text-slate-400 mt-1">Try searching for something else.</p>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
-        {/* Divider */}
-        <div className="hidden sm:block h-6 w-px bg-slate-200 mx-1"></div>
+        {/* RIGHT - Actions */}
+        <div className="flex items-center gap-2 sm:gap-4">
 
-        {/* Profile Avatar */}
-        <Link
-          to="/profile"
-          className="relative w-9 h-9 rounded-full p-0.5 bg-gradient-to-tr from-indigo-500 to-fuchsia-500 md:hover:scale-105 md:transition-transform cursor-pointer shadow-md"
-        >
-          <div className="w-full h-full bg-white rounded-full p-0.5">
-            <img
-              src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix"
-              alt="Profile"
-              className="w-full h-full rounded-full bg-slate-100 object-cover"
-            />
+          <Link
+            to={"/create-digital-store"}
+            className="hidden sm:flex items-center gap-1.5 text-sm font-semibold text-slate-600 px-3 py-1.5 rounded-lg border border-slate-200 bg-white md:hover:bg-slate-50 md:hover:text-blue-600 md:hover:border-blue-200 md:transition-all shadow-sm"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Digital Store</span>
+          </Link>
+
+          <div className="flex items-center gap-1 sm:gap-2">
+            <button className="relative p-2 text-slate-400 md:hover:bg-slate-100 md:hover:text-slate-700 rounded-full md:transition-colors">
+              <Bell className="w-5 h-5" />
+              <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-rose-500 rounded-full border-2 border-white"></span>
+            </button>
+            <Link to={"/profile"}>
+              <button className="p-2 text-slate-400 md:hover:bg-slate-100 md:hover:text-slate-700 rounded-full md:transition-colors group">
+                <Settings className="w-5 h-5 md:group-hover:rotate-45 md:transition-transform md:duration-300" />
+              </button>
+            </Link>
+            {/* Sign Out button */}
+            <button
+              onClick={() => setShowSignOutModal(true)}
+              className="p-2 text-slate-400 md:hover:bg-red-50 md:hover:text-red-500 rounded-full md:transition-colors"
+              title="Sign Out"
+            >
+              <LogOut className="w-5 h-5" />
+            </button>
           </div>
-        </Link>
 
+          <div className="hidden sm:block h-6 w-px bg-slate-200 mx-1"></div>
+
+          <Link
+            to="/profile"
+            className="relative w-9 h-9 rounded-full p-0.5 bg-gradient-to-tr from-indigo-500 to-fuchsia-500 md:hover:scale-105 md:transition-transform cursor-pointer shadow-md"
+          >
+            <div className="w-full h-full bg-white rounded-full p-0.5">
+              <img
+                src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix"
+                alt="Profile"
+                className="w-full h-full rounded-full bg-slate-100 object-cover"
+              />
+            </div>
+          </Link>
+        </div>
       </div>
-    </div>
+    </>
   );
 };
-

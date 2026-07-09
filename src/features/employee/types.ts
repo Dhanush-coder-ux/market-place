@@ -9,5 +9,10 @@ export interface EmployeeFormData {
   name: string;
   email: string;
   role: string;
-  additionalSettings: Record<string, string>;
+  mobile_number?: string;
+  department?: string;
+  joined_date?: string;
+  shop_id?: string;
+  additional_infos?: Record<string, any>;
+  additionalSettings?: Record<string, string>;
 }

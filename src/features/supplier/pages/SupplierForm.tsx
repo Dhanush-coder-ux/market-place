@@ -17,12 +17,15 @@ import Input from "@/components/ui/Input";
 import { GradientButton } from "@/components/ui/GradientButton";
 import { ReusableSelect } from "@/components/ui/ReusableSelect";
 import { useApi } from "@/context/ApiContext";
+import { useBusinessApi } from "@/context/BusinessApiContext";
 import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 import { useHeader } from "@/context/HeaderContext";
 import { useToast } from "@/context/ToastContext";
 import Loader from "@/components/common/Loader";
-import { supplierCustomFieldsApi } from "@/services/api/supplierCustomFields";
 import type { SupplierCustomFieldDefinition } from "../type";
+import { RightSidebarFilter } from "@/components/common/RightSidebarFilter";
+import { Switch } from "@/components/ui/switch";
+import { Plus } from "lucide-react";
 
 export interface SupplierData {
   supplier_name: string;
@@ -46,9 +49,18 @@ const SupplierForm = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { postData, putData, getData, loading } = useApi();
+  const { supplierCustomFields } = useBusinessApi();
   const { setBottomActions } = useHeader();
   const { showToast } = useToast();
   const [submitting, setSubmitting] = useState(false);
+
+  // ── Custom Fields Form & Sidebar State ──
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [newFieldName, setNewFieldName] = useState("");
+  const [newFieldLabel, setNewFieldLabel] = useState("");
+  const [newFieldType, setNewFieldType] = useState("text");
+  const [newFieldRequired, setNewFieldRequired] = useState(false);
+  const [newFieldVisible, setNewFieldVisible] = useState(false);
 
   const initialFormData: SupplierData = {
     supplier_name: "",
@@ -75,7 +87,7 @@ const SupplierForm = () => {
 
   // Load custom field definitions for this shop
   useEffect(() => {
-    supplierCustomFieldsApi.getAllFields(SHOP_ID).then((fields) => {
+    supplierCustomFields.getAllFields(SHOP_ID).then((fields: any[]) => {
       setCustomFieldDefs(fields);
     });
   }, []);
@@ -137,6 +149,13 @@ const SupplierForm = () => {
             notes: additional.internal_notes || d.internal_notes || ""
           });
         }
+      });
+      supplierCustomFields.getValuesBySupplier(SHOP_ID, id).then((vals) => {
+        const record: Record<string, string> = {};
+        vals.forEach((v) => {
+          record[v.field_id] = v.value;
+        });
+        setCustomFieldValues(record);
       });
     } else {
       const draftId = searchParams.get("draftId");
@@ -222,17 +241,17 @@ const SupplierForm = () => {
         : await postData(ENDPOINTS.SUPPLIERS, payload);
 
       if (res) {
-        // Bulk upsert custom field values if any are filled
-        const supplierId = res?.data?.id || id;
+        // Upsert custom field values if any are filled
+        const supplierId = res?.data?.id || res?.id || id;
         const valuesToSave = Object.entries(customFieldValues)
-          .filter(([, v]) => v !== '')
-          .map(([field_id, value]) => ({ field_id, value }));
+          .filter(([, v]) => v !== undefined && v !== '')
+          .map(([field_id, value]) => ({ field_id, value: String(value) }));
 
         if (supplierId && valuesToSave.length > 0) {
-          await supplierCustomFieldsApi.bulkUpsertValues({
+          await supplierCustomFields.upsertValue({
             shop_id: SHOP_ID,
             supplier_id: supplierId,
-            values: valuesToSave,
+            value_infos: valuesToSave,
           });
         }
 
@@ -252,12 +271,44 @@ const SupplierForm = () => {
     }
   };
 
+  const handleCreateCustomField = async () => {
+    if (!newFieldName || !newFieldLabel) {
+      showToast("Field Name and Label are required", "error");
+      return;
+    }
+    try {
+      await supplierCustomFields.createField({
+        shop_id: SHOP_ID,
+        field_infos: [{
+          field_name: newFieldName,
+          label_name: newFieldLabel,
+          type: newFieldType,
+          required: newFieldRequired,
+          visible_online: newFieldVisible,
+        }]
+      });
+      showToast("Custom field created successfully", "success");
+      // Refresh definitions
+      const fields = await supplierCustomFields.getAllFields(SHOP_ID);
+      setCustomFieldDefs(fields);
+      // Reset sidebar form
+      setNewFieldName("");
+      setNewFieldLabel("");
+      setNewFieldType("text");
+      setNewFieldRequired(false);
+      setNewFieldVisible(false);
+      setIsSidebarOpen(false);
+    } catch {
+      showToast("Failed to create custom field", "error");
+    }
+  };
+
   // Load existing custom field values when editing
   useEffect(() => {
     if (id) {
-      supplierCustomFieldsApi.getValuesBySupplier(SHOP_ID, id).then((vals) => {
+      supplierCustomFields.getValuesBySupplier(SHOP_ID, id).then((vals: any[]) => {
         const map: Record<string, string> = {};
-        vals.forEach((v) => { map[v.field_id] = v.value; });
+        vals.forEach((v: any) => { map[v.field_id] = v.value; });
         setCustomFieldValues(map);
       });
     }
@@ -478,19 +529,31 @@ const SupplierForm = () => {
               placeholder="Additional comments about this partner..."
             />
           </div>
-
-          {/* Custom Fields Box */}
-          {customFieldDefs.length > 0 && (
-            <div className="bg-white rounded-lg border border-slate-200 p-8 shadow-sm space-y-6">
-              <div className="flex items-center gap-3 border-b border-slate-50 pb-4">
+          <div className="bg-white rounded-lg border border-slate-200 p-8 shadow-sm space-y-6">
+            <div className="flex items-center justify-between border-b border-slate-50 pb-4">
+              <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-500">
                   <Layers size={16} />
                 </div>
                 <div>
-                  <h3 className="text-[10px] font-black text-slate-800">Custom Fields</h3>
+                  <h3 className="text-[10px] font-black text-slate-800 uppercase tracking-wide">Custom Fields</h3>
                   <p className="text-[11px] font-bold text-slate-400">Additional supplier attributes</p>
                 </div>
               </div>
+              <button
+                type="button"
+                onClick={() => setIsSidebarOpen(true)}
+                className="h-8 px-3 rounded-lg border border-indigo-100 text-indigo-600 font-bold text-xs bg-indigo-50/50 hover:bg-indigo-100 transition-all flex items-center gap-1.5"
+              >
+                <Plus size={14} />
+                Create Custom Field
+              </button>
+            </div>
+            {customFieldDefs.length === 0 ? (
+              <div className="text-center py-6 text-slate-400 text-xs font-medium">
+                No custom fields defined yet. Click "Create Custom Field" to add one.
+              </div>
+            ) : (
               <div className="space-y-4">
                 {customFieldDefs.map((field) => (
                   <div key={field.id} className="space-y-1.5">
@@ -527,12 +590,73 @@ const SupplierForm = () => {
                   </div>
                 ))}
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
 
       </div>
 
+      {/* Sidebar Filter for Custom Field Creation */}
+      <RightSidebarFilter
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
+        onApply={handleCreateCustomField}
+        onClear={() => {
+          setNewFieldName("");
+          setNewFieldLabel("");
+          setNewFieldType("text");
+          setNewFieldRequired(false);
+          setNewFieldVisible(false);
+        }}
+        title="Create Custom Field"
+      >
+        <div className="space-y-5">
+          <div className="space-y-1">
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">Field Name (Internal Name)</label>
+            <Input
+              value={newFieldName}
+              onChange={(e) => setNewFieldName(e.target.value)}
+              placeholder="e.g. tax_id"
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">Label Name (Display Name)</label>
+            <Input
+              value={newFieldLabel}
+              onChange={(e) => setNewFieldLabel(e.target.value)}
+              placeholder="e.g. Tax ID"
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">Field Type</label>
+            <ReusableSelect
+              value={newFieldType}
+              onValueChange={(val) => setNewFieldType(val)}
+              options={[
+                { label: "Text", value: "text" },
+                { label: "Number", value: "number" },
+                { label: "Date", value: "date" },
+                { label: "Yes / No (Boolean)", value: "boolean" },
+              ]}
+              placeholder="Select Type"
+            />
+          </div>
+          <div className="flex items-center justify-between p-4 rounded-lg bg-slate-50 border border-slate-100">
+            <span className="text-xs font-bold text-slate-500">Required Field</span>
+            <Switch
+              checked={newFieldRequired}
+              onCheckedChange={(checked: boolean) => setNewFieldRequired(checked)}
+            />
+          </div>
+          <div className="flex items-center justify-between p-4 rounded-lg bg-slate-50 border border-slate-100">
+            <span className="text-xs font-bold text-slate-500">Visible Online</span>
+            <Switch
+              checked={newFieldVisible}
+              onCheckedChange={(checked: boolean) => setNewFieldVisible(checked)}
+            />
+          </div>
+        </div>
+      </RightSidebarFilter>
     </div>
   );
 };

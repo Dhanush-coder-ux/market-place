@@ -43,7 +43,7 @@ const InventoryForm = () => {
 
   // ── Dropdown data from Utility Service ─────────────────────────────────────
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
-  const [units, setUnits]           = useState<{ id: string; name: string }[]>([]);
+  const [units, setUnits] = useState<{ id: string; name: string }[]>([]);
   const [dropdownLoading, setDropdownLoading] = useState(false);
 
   useEffect(() => {
@@ -72,7 +72,7 @@ const InventoryForm = () => {
   }, []);
 
   const categoryOptions = categories.map((c) => ({ value: c.id, label: c.name }));
-  const unitOptions     = units.map((u)     => ({ value: u.id, label: u.name }));
+  const unitOptions = units.map((u) => ({ value: u.id, label: u.name }));
 
   // ── Form State ──────────────────────────────────────────────────────────────
   const [formData, setFormData] = useState({
@@ -105,9 +105,9 @@ const InventoryForm = () => {
   // ── Validation ───────────────────────────────────────────────────────────────
   const validate = (): boolean => {
     const newErrors = {
-      name:        !formData.name.trim(),
+      name: !formData.name.trim(),
       category_id: !formData.category_id,
-      unit_id:     !formData.unit_id,
+      unit_id: !formData.unit_id,
     };
     setErrors(newErrors);
     return !Object.values(newErrors).some(Boolean);
@@ -122,21 +122,21 @@ const InventoryForm = () => {
     }
 
     const payload: CreateInventoryPayload = {
-      shop_id:     SHOP_ID,
+      shop_id: SHOP_ID,
       category_id: formData.category_id,
-      unit_id:     formData.unit_id,
-      name:        formData.name.trim(),
+      unit_id: formData.unit_id,
+      name: formData.name.trim(),
       description: formData.description.trim(),
-      barcode:     formData.barcode || undefined,
-      gst:         formData.gst || "0%",
+      barcode: formData.barcode || undefined,
+      gst: formData.gst || "0%",
       type_infos: {
-        has_variant:  formData.has_variant,
-        has_batch:    formData.has_batch,
+        has_variant: formData.has_variant,
+        has_batch: formData.has_batch,
         has_serialno: formData.has_serialno,
       },
       have_tracking: formData.has_variant || formData.has_batch || formData.has_serialno,
-      buy_price:     formData.buy_price  ? Number(formData.buy_price)  : undefined,
-      sell_price:    formData.sell_price ? Number(formData.sell_price) : undefined,
+      buy_price: formData.buy_price ? Number(formData.buy_price) : undefined,
+      sell_price: formData.sell_price ? Number(formData.sell_price) : undefined,
       reorder_point: Number(formData.reorder_point) || 5,
       storage_location: formData.storage_location || undefined,
     };
@@ -313,9 +313,9 @@ const InventoryForm = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 relative z-10">
           {[
-            { id: "has_variant",  label: "Product Variants", icon: ListPlus, desc: "Sizes, Colors, etc." },
-            { id: "has_serialno", label: "Serial Tracking",  icon: Hash,     desc: "Unique ID per unit" },
-            { id: "has_batch",    label: "Batch Tracking",   icon: Calendar, desc: "Expiry & Mfg dates" },
+            { id: "has_variant", label: "Product Variants", icon: ListPlus, desc: "Sizes, Colors, etc." },
+            { id: "has_serialno", label: "Serial Tracking", icon: Hash, desc: "Unique ID per unit" },
+            { id: "has_batch", label: "Batch Tracking", icon: Calendar, desc: "Expiry & Mfg dates" },
           ].map((feature) => (
             <button
               key={feature.id}
@@ -323,18 +323,16 @@ const InventoryForm = () => {
               onClick={() =>
                 setFormData((p) => ({ ...p, [feature.id]: !p[feature.id as keyof typeof p] }))
               }
-              className={`flex items-start gap-4 p-5 rounded-xl border transition-all text-left ${
-                formData[feature.id as keyof typeof formData]
+              className={`flex items-start gap-4 p-5 rounded-xl border transition-all text-left ${formData[feature.id as keyof typeof formData]
                   ? "bg-white border-indigo-200 shadow-sm ring-4 ring-indigo-50"
                   : "bg-white/50 border-slate-100 hover:border-slate-200"
-              }`}
+                }`}
             >
               <div
-                className={`p-2.5 rounded-lg ${
-                  formData[feature.id as keyof typeof formData]
+                className={`p-2.5 rounded-lg ${formData[feature.id as keyof typeof formData]
                     ? "bg-indigo-600 text-white"
                     : "bg-slate-100 text-slate-400"
-                }`}
+                  }`}
               >
                 <feature.icon size={18} />
               </div>

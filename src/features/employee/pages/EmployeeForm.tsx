@@ -14,15 +14,17 @@ import {
 import Input from "@/components/ui/Input"; 
 import { ReusableSelect } from "@/components/ui/ReusableSelect"; 
 import { GradientButton } from "@/components/ui/GradientButton";
-import { useApi } from "@/context/ApiContext";
-import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
+import { useBusinessApi } from "@/context/BusinessApiContext";
+import { SHOP_ID } from "@/services/endpoints";
 import { useHeader } from "@/context/HeaderContext";
 import { useToast } from "@/context/ToastContext";
 
 const roleOptions = [
-  { label: "User", value: "USER" },
-  { label: "Admin", value: "ADMIN" },
+  { label: "Owner", value: "OWNER" },
   { label: "Super Admin", value: "SUPER_ADMIN" },
+  { label: "Admin", value: "ADMIN" },
+  { label: "Biller", value: "BILLER" },
+  { label: "User", value: "USER" },
 ];
 
 const departmentOptions = [
@@ -35,7 +37,7 @@ const EmployeeForm = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { postData, putData, getData } = useApi();
+  const { employee } = useBusinessApi();
   const { setActions, setBottomActions } = useHeader();
   const { showToast } = useToast();
   const [submitting, setSubmitting] = useState(false);
@@ -97,7 +99,7 @@ const EmployeeForm = () => {
         showToast("Draft loaded successfully", "success");
       }
     } else if (id) {
-      getData(`${ENDPOINTS.EMPLOYEES}/by/${SHOP_ID}/${id}`).then(res => {
+      employee.getEmployeeById(SHOP_ID, id).then(res => {
         if (res?.data) {
           const emp = Array.isArray(res.data) ? res.data[0] : res.data;
           const datas = emp.datas || {};
@@ -160,23 +162,27 @@ const EmployeeForm = () => {
       mobile_number: formData.mobile_number,
       joined_date: formData.joinDate,
       department: formData.department,
-      datas: {
-        salary_range: Number(formData.salary_range) || 0,
-        address: { 
-          full_address: formData.address,
-          zip_code: formData.zip_code
-        }
+    };
+    
+    const nestedData = {
+      salary_range: Number(formData.salary_range) || 0,
+      address: { 
+        full_address: formData.address,
+        zip_code: formData.zip_code
       }
     };
 
     if (id) {
       payload.id = id;
+      payload.datas = nestedData;
+    } else {
+      payload.additional_infos = nestedData;
     }
 
     try {
       const res = id 
-        ? await putData(ENDPOINTS.EMPLOYEES, payload)
-        : await postData(ENDPOINTS.EMPLOYEES, payload);
+        ? await employee.updateEmployee(payload)
+        : await employee.createEmployee(payload);
 
       if (res) {
         showToast(`Employee ${id ? 'updated' : 'created'} successfully`, "success");

@@ -58,11 +58,13 @@ export interface CustomerCustomFieldValue {
 
 export interface CreateCustomFieldPayload {
   shop_id: string;
-  field_name: string;
-  label_name: string;
-  type: string;
-  required?: boolean;
-  visible_online?: boolean;
+  field_infos: Array<{
+    field_name: string;
+    label_name: string;
+    type: string;
+    required?: boolean;
+    visible_online?: boolean;
+  }>;
 }
 
 export interface UpdateCustomFieldPayload {
@@ -77,14 +79,10 @@ export interface UpdateCustomFieldPayload {
 export interface UpsertFieldValuePayload {
   shop_id: string;
   customer_id: string;
-  field_id: string;
-  value: string;
-}
-
-export interface BulkUpsertFieldValuesPayload {
-  shop_id: string;
-  customer_id: string;
-  values: Array<{ field_id: string; value: string }>;
+  value_infos: Array<{
+    field_id: string;
+    value: string;
+  }>;
 }
 
 // ─── Customer CRUD ────────────────────────────────────────────────────────────
@@ -216,11 +214,6 @@ export const customerCustomFieldsApi = {
   // POST /customer-fields/values — Upsert a single field value
   upsertValue: async (data: UpsertFieldValuePayload) => {
     return await apiClient.post(`${CF}/values`, data);
-  },
-
-  // POST /customer-fields/values/bulk — Bulk upsert field values for a customer
-  bulkUpsertValues: async (data: BulkUpsertFieldValuesPayload) => {
-    return await apiClient.post(`${CF}/values/bulk`, data);
   },
 
   // GET /customer-fields/values/{shop_id}/{customer_id} — Get all values for a customer

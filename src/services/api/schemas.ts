@@ -15,14 +15,25 @@ export const SCHEMAS = {
   
   employee_create: ['shop_id', 'name', 'role', 'joined_date', 'mobile_number', 'email', 'department'],
   employee_update: ['id', 'shop_id'],
-  employee_delete: ['employee_id', 'shop_id'],
+  employee_delete: ['id', 'shop_id'],
   
   supplier_create: ['shop_id', 'name', 'contact_infos', 'location_infos'],
   supplier_update: ['id', 'shop_id'],
   supplier_delete: ['id', 'shop_id'],
 
-  shop_create: ['name', 'category', 'business_infos', 'address'],
+  shop_create: ['name', 'categories', 'business_infos', 'address'],
   shop_update: ['id'],
+  shop_delete: ['id'],
+
+  operating_hours_create: ['open_at', 'close_at', 'day'],
+  operating_hours_update: ['id'],
+  delivery_create: ['type', 'speed', 'free_shipping_amount', 'delivery_by'],
+  delivery_update: ['id'],
+  announcement_create: ['type', 'message', 'send_to', 'status'],
+  announcement_update: ['id'],
+  auth_token_create: ['session_id', 'shop_id'],
+  auth_token_refresh: ['refresh_token'],
+  employee_verify_token: ['id', 'shop_id'],
 
   // ── Utility Service ──────────────────────────────────────────────
   shop_category_create: ['shop_id', 'name'],

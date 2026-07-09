@@ -11,6 +11,7 @@ import {
 import { SectionCard } from "../components/SectionCard";
 import { CustomTooltip } from "../components/CustomTooltip";
 import { useApi } from "../../../context/ApiContext";
+import { useBusinessApi } from "../../../context/BusinessApiContext";
 import { ENDPOINTS, SHOP_ID } from "../../../services/endpoints";
 import { CATEGORIES } from "../../../utils/constants";
 import { ReusableSelect } from "../../../components/ui/ReusableSelect";
@@ -75,6 +76,7 @@ const DEFAULT_COLOR = "#94a3b8";
 
 const AnalyticsDashboard = () => {
   const { getData } = useApi();
+  const { analytics } = useBusinessApi();
 
   const [activeRange, setActiveRange] = useState<RangeKey>("month");
   const [customStart, setCustomStart] = useState("");
@@ -139,26 +141,23 @@ const AnalyticsDashboard = () => {
     setError(null);
     try {
       const queryParams: Record<string, string> = {
+        shop_id: SHOP_ID,
         start_date: formatDateParam(dateRange.start),
         end_date: formatDateParam(dateRange.end),
       };
       if (selectedSupplier) queryParams.supplier_id = selectedSupplier;
       if (selectedCategory) queryParams.category = selectedCategory;
 
-      const res = await getData(
-        `${ENDPOINTS.ORDERS}/stats/dashboard/${SHOP_ID}`,
-        queryParams,
-        { cacheKey: `dashboard-${activeRange}-${dateRange.start.getTime()}-${selectedSupplier}-${selectedCategory}` }
-      );
-      if (res && res.data) {
-        setStats(res.data);
+      const res = await analytics.getUnifiedDashboard(queryParams);
+      if (res) {
+        setStats(res.data || res);
       }
     } catch (e: any) {
       setError(e.message || "Failed to load dashboard");
     } finally {
       setLoading(false);
     }
-  }, [getData, dateRange, activeRange, selectedSupplier, selectedCategory]);
+  }, [analytics, dateRange, activeRange, selectedSupplier, selectedCategory]);
 
   useEffect(() => {
     if (activeRange !== "custom" || (customStart && customEnd)) {

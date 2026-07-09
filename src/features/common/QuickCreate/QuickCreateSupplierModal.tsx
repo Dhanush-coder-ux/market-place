@@ -301,19 +301,19 @@ export const QuickCreateSupplierModal: React.FC<QuickCreateSupplierModalProps> =
         email: form.email && form.email.includes("@") ? form.email : null,
         mobile_number: form.phone,
         gst_no: form.gst_number,
-        contact_info: {
+        contact_infos: {
           name: form.contact_person,
           email: form.contact_person_email || (form.email && form.email.includes("@") ? form.email : null),
           mobile_number: form.contact_person_phone || form.phone,
           type: form.type,
         },
+        location_infos: {
+          full_address: form.address,
+          city: form.city,
+          zipcode: ""
+        },
         datas: {
           internal_notes: form.notes,
-          address: {
-            full_address: form.address,
-            city: form.city,
-            zipcode: "" // Optional in quick create
-          }
         }
       };
 

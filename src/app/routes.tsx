@@ -9,6 +9,8 @@ import Loader from "@/components/common/Loader";
 // ─── Layout & Auth ───────────────────────────────────────────────────────────
 const MainLayout = React.lazy(() => import("../components/layouts/MainLayout"));
 const Login = React.lazy(() => import("../features/auth/pages/Login"));
+const AuthCallback = React.lazy(() => import("../features/auth/pages/AuthCallback"));
+const ShopSelect = React.lazy(() => import("../features/auth/pages/ShopSelect"));
 
 // ─── Dashboard ───────────────────────────────────────────────────────────────
 const AnalyticsDashboard = React.lazy(() => import("@/features/dashboard/pages/AnalyticDashboard"));
@@ -172,6 +174,22 @@ export const router = createBrowserRouter([
     element: (
       <Suspense fallback={<Loader />}>
         <Login />
+      </Suspense>
+    )
+  },
+  {
+    path: '/auth/callback',
+    element: (
+      <Suspense fallback={<Loader />}>
+        <AuthCallback />
+      </Suspense>
+    )
+  },
+  {
+    path: '/shop-select',
+    element: (
+      <Suspense fallback={<Loader />}>
+        <ShopSelect />
       </Suspense>
     )
   },

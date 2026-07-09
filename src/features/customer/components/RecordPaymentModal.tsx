@@ -3,8 +3,8 @@ import { Modal } from "@/components/common/SuperUI";
 import { ReusableSelect } from "@/components/ui/ReusableSelect";
 import { Wallet, Loader2, Plus, Trash2 } from "lucide-react";
 import { useToast } from "@/context/ToastContext";
-import { useApi } from "@/context/ApiContext";
-import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
+import { useBusinessApi } from "@/context/BusinessApiContext";
+import { SHOP_ID } from "@/services/endpoints";
 import type { CustomerRecord } from "@/types/api";
 
 interface RecordPaymentModalProps {
@@ -17,7 +17,7 @@ interface RecordPaymentModalProps {
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
 export function RecordPaymentModal({ show, onClose, customer, onSuccess }: RecordPaymentModalProps) {
-  const { postData } = useApi();
+  const { customer: customerApi } = useBusinessApi();
   const { showToast } = useToast();
 
   const [payments, setPayments] = useState<{ mode: string; amount: string }[]>([
@@ -65,7 +65,7 @@ export function RecordPaymentModal({ show, onClose, customer, onSuccess }: Recor
 
     // Build payment_infos as a list of { method, amount } objects
     const paymentInfos = validPayments.map(p => ({
-      method: methodMap[p.mode] || "CASH",
+      method: (methodMap[p.mode] || "CASH") as "UPI" | "CASH" | "CARD" | "BANK",
       amount: parseFloat(p.amount),
     }));
 
@@ -78,7 +78,7 @@ export function RecordPaymentModal({ show, onClose, customer, onSuccess }: Recor
     };
 
     try {
-      const res = await postData(`${ENDPOINTS.CUSTOMERS}/outstanding/clear`, payload);
+      const res = await customerApi.clearOutstanding(payload);
       if (res) {
         showToast(`₹${totalCleared.toLocaleString()} collected successfully`, "success");
         onSuccess();

@@ -36,13 +36,17 @@ export interface ProfileData {
   tagline: string;
   email: string;
   phone: string;
-  address: string;
+  full_address: string;
+  landmark: string;
   city: string;
   pincode: string;
+  latitude: string;
+  longitude: string;
   website: string;
   instagram: string;
   facebook: string;
   business_type: string;
+  gst_registered: boolean;
   gst_number: string;
   currency: string;
   open_time: string;
@@ -64,11 +68,11 @@ const categoryOptions = [
 ];
 
 const businessTypeOptions = [
-  { label: "Sole Proprietor", value: "sole" },
-  { label: "Partnership", value: "partnership" },
-  { label: "Private Limited (Pvt. Ltd.)", value: "pvt_ltd" },
-  { label: "LLP", value: "llp" },
-  { label: "NGO / Trust", value: "ngo" },
+  { label: "Sole Proprietor", value: "SOLO_PROPRIETOR" },
+  { label: "Partnership", value: "PARTNERSHIP" },
+  { label: "Private Limited (Pvt. Ltd.)", value: "PRIVATE_LIMITED" },
+  { label: "LLP", value: "LLP" },
+  { label: "Others", value: "OTHERS" },
 ];
 
 const currencyOptions = [
@@ -98,13 +102,17 @@ const ProfileForm: React.FC = () => {
     tagline: "",
     email: "",
     phone: "",
-    address: "",
+    full_address: "",
+    landmark: "",
     city: "",
     pincode: "",
+    latitude: "",
+    longitude: "",
     website: "",
     instagram: "",
     facebook: "",
-    business_type: "",
+    business_type: "SOLO_PROPRIETOR",
+    gst_registered: false,
     gst_number: "",
     currency: "INR",
     open_time: "09:00",
@@ -126,23 +134,27 @@ const ProfileForm: React.FC = () => {
           
           setFormData({
             name: shop.name || "",
-            shop_code: d.shop_code || "",
-            category: shop.category || "",
-            tagline: d.tagline || "",
-            email: d.emails?.[0] || "",
-            phone: d.mobile_numbers?.[0] || "",
-            address: a.street || "",
+            shop_code: shop.additional_infos?.shop_code || "",
+            category: shop.categories?.[0] || "",
+            tagline: shop.tagline || "",
+            description: shop.description || "",
+            email: shop.additional_infos?.emails?.[0] || "",
+            phone: shop.additional_infos?.mobile_numbers?.[0] || "",
+            full_address: a.full_address || "",
+            landmark: a.landmark || "",
             city: a.city || "",
-            pincode: a.pincode || "",
-            website: d.website || "",
-            instagram: d.instagram || "",
-            facebook: d.facebook || "",
-            business_type: b.business_type || "",
-            gst_number: b.gst || "",
+            pincode: a.zip_code || "",
+            latitude: String(a.latitude || ""),
+            longitude: String(a.longitude || ""),
+            website: shop.additional_infos?.website || "",
+            instagram: shop.additional_infos?.instagram || "",
+            facebook: shop.additional_infos?.facebook || "",
+            business_type: b.type || "SOLO_PROPRIETOR",
+            gst_registered: b.gst_infos?.registered ?? false,
+            gst_number: b.gst_infos?.number || "",
             currency: b.currency || "INR",
-            open_time: b.open_time || "09:00",
-            close_time: b.close_time || "21:00",
-            description: d.description || "",
+            open_time: "09:00",
+            close_time: "21:00",
           });
         }
       });
@@ -217,30 +229,30 @@ const ProfileForm: React.FC = () => {
     
     const payload = {
       name: formData.name,
-      category: formData.category,
+      tagline: formData.tagline || undefined,
+      description: formData.description || undefined,
+      categories: [formData.category],
       business_infos: {
-        business_type: formData.business_type,
-        gst: formData.gst_number,
-        currency: formData.currency,
-        open_time: formData.open_time,
-        close_time: formData.close_time,
+        type: formData.business_type || "SOLO_PROPRIETOR",
+        gst_infos: {
+          registered: formData.gst_registered,
+          number: formData.gst_number || null,
+        },
+        currency: formData.currency || "INR",
       },
       address: {
-        street: formData.address,
-        city: formData.city,
-        pincode: formData.pincode,
+        full_address: formData.full_address,
+        zip_code: formData.pincode,
+        landmark: formData.landmark || "",
+        latitude: parseFloat(formData.latitude) || 0,
+        longitude: parseFloat(formData.longitude) || 0,
       },
-      image_urls: [], // Logic for images can be added later
-      datas: {
-        description: formData.description,
-        emails: [formData.email],
-        mobile_numbers: [formData.phone],
-        website: formData.website,
-        tagline: formData.tagline,
-        shop_code: formData.shop_code,
-        instagram: formData.instagram,
-        facebook: formData.facebook,
-      }
+      additional_infos: {
+        emails: formData.email ? [formData.email] : [],
+        mobile_numbers: formData.phone ? [formData.phone] : [],
+        website: formData.website || undefined,
+      },
+      visible_online: false,
     };
 
     try {
@@ -383,15 +395,39 @@ const ProfileForm: React.FC = () => {
                 placeholder="600001"
                 leftIcon={<Hash size={16} className="text-slate-400" />}
               />
+              <Input
+                label="Landmark"
+                name="landmark"
+                value={formData.landmark}
+                onChange={handleChange}
+                placeholder="e.g. Near City Mall"
+                leftIcon={<MapPin size={16} className="text-slate-400" />}
+              />
+              <Input
+                label="Latitude"
+                name="latitude"
+                value={formData.latitude}
+                onChange={handleChange}
+                placeholder="e.g. 9.9252"
+                leftIcon={<MapPin size={16} className="text-slate-400" />}
+              />
+              <Input
+                label="Longitude"
+                name="longitude"
+                value={formData.longitude}
+                onChange={handleChange}
+                placeholder="e.g. 78.1198"
+                leftIcon={<MapPin size={16} className="text-slate-400" />}
+              />
               <div className="md:col-span-2 space-y-1.5">
-                <label className="text-[10px] font-black text-slate-400   ml-1">Street Address</label>
+                <label className="text-[10px] font-black text-slate-400   ml-1">Full Address</label>
                 <textarea
-                  name="address"
-                  value={formData.address}
+                  name="full_address"
+                  value={formData.full_address}
                   onChange={handleChange}
                   rows={3}
                   className="w-full bg-slate-50 border border-slate-100 rounded-lg px-4 py-3 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-blue-100 md:transition-all placeholder:text-slate-300 resize-none outline-none"
-                  placeholder="House No, Street, Area"
+                  placeholder="Full street address including area"
                 />
               </div>
             </div>

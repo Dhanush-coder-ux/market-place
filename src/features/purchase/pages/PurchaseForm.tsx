@@ -17,13 +17,16 @@ import Input from "@/components/ui/Input";
 import { ReusableSelect } from "@/components/ui/ReusableSelect";
 import { Tooltip } from "@/components/common/Tootlip";
 import { GradientButton } from "@/components/ui/GradientButton";
-import { useApi } from "@/context/ApiContext";
-import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
+import { useBusinessApi } from "@/context/BusinessApiContext";
+import { SHOP_ID } from "@/services/endpoints";
 import { SearchSelect } from "@/components/inputbuilders/SearchSelect";
 import { supplierApi } from "@/services/api/supplier";
-import { purchaseApi } from "@/services/api/purchase";
 import { useHeader } from "@/context/HeaderContext";
 import { useToast } from "@/context/ToastContext";
+import { purchaseCustomFieldsApi, type PurchaseCustomFieldDefinition } from "@/services/api/purchaseCustomFields";
+import { RightSidebarFilter } from "@/components/common/RightSidebarFilter";
+import { Layers, Plus } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import Loader from "@/components/common/Loader";
 import { InventoryItemsCard } from "@/features/purchase/components/InventoryItemsCard";
 import { useQuickCreate } from "@/features/common/QuickCreate/QuickCreateContext";
@@ -70,11 +73,23 @@ const PurchaseForm = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { getData } = useApi();
+  const { purchase, inventory } = useBusinessApi();
   const { setBottomActions } = useHeader();
   const { showToast } = useToast();
   const [submitting, setSubmitting] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+
+  // ── Custom Fields State ──
+  const [customFieldDefs, setCustomFieldDefs] = useState<PurchaseCustomFieldDefinition[]>([]);
+  const [customFieldValues, setCustomFieldValues] = useState<Record<string, string>>({});
+
+  // Sidebar creation form state
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [newFieldName, setNewFieldName] = useState("");
+  const [newFieldLabel, setNewFieldLabel] = useState("");
+  const [newFieldType, setNewFieldType] = useState("text");
+  const [newFieldRequired, setNewFieldRequired] = useState(false);
+  const [newFieldVisible, setNewFieldVisible] = useState(false);
 
   const { openQuickCreate } = useQuickCreate();
   const [soldStockWarnings, setSoldStockWarnings] = useState<string[]>([]);
@@ -169,11 +184,18 @@ const PurchaseForm = () => {
     return { totalQty, subtotal, totalGst, gstBreakdown, totalCharges, grandTotal, outstanding, allocations };
   }, [products, charges, payment.amountPaid, costMethod, gstMode]);
 
-  // --- Load Existing Purchase or Draft ---
+  // Load Custom Field definitions
+  useEffect(() => {
+    purchaseCustomFieldsApi.getAllFields(SHOP_ID).then((fields) => {
+      setCustomFieldDefs(fields);
+    });
+  }, []);
+
+  // --- Load Existing Purchase, Draft, and Custom Field values ---
   useEffect(() => {
     if (id) {
       const fetchPurchase = async () => {
-        const res = await getData(`${ENDPOINTS.PURCHASES}/by/id/${SHOP_ID}/${id}`);
+        const res = await purchase.getPurchaseById(SHOP_ID, id);
         if (res && (res.data || res.id)) {
           const data = res.data ? (Array.isArray(res.data) ? res.data[0] : res.data) : res;
           const loadedSupplierId = data.supplier?.supplier_id || data.supplier?.id || data.supplier_id || "";
@@ -188,7 +210,7 @@ const PurchaseForm = () => {
           
           if (loadedSupplierId && !data.purchaseDetails) {
             if (!loadedSupplierName) {
-              getData(`${ENDPOINTS.SUPPLIERS}/by/id/${SHOP_ID}/${loadedSupplierId}`).then((supRes) => {
+              supplierApi.getById(SHOP_ID, loadedSupplierId).then((supRes: any) => {
                 if (supRes && (supRes.data || supRes.id)) {
                   const supData = supRes.data ? (Array.isArray(supRes.data) ? supRes.data[0] : supRes.data) : supRes;
                   setSupplierDetails({ id: loadedSupplierId, name: supData.name || supData.supplier_name || "Unknown Supplier" });
@@ -250,57 +272,34 @@ const PurchaseForm = () => {
             const p = updatedProducts[i];
             if (!p.inventory_id) continue;
             try {
-              const invRes = await getData(`${ENDPOINTS.INVENTORIES}/by/id/${SHOP_ID}/${p.inventory_id}`);
+              const invRes = await inventory.getInventoryById(SHOP_ID, p.inventory_id);
               if (invRes && invRes.data) {
                  const invData = Array.isArray(invRes.data) ? invRes.data[0] : invRes.data;
                  
                  // Update tracking flags from live inventory data
-                 p.batchTracking = !!(invData.has_batch || invData.datas?.has_batch || p.batchTracking);
-                 p.serialTracking = !!(invData.has_serialno || invData.datas?.has_serialno || p.serialTracking);
-                 
-                 let currentStock = invData?.stocks ?? invData?.datas?.stocks;
-                 
-                 // Inherit essential fields missing in the purchase items response
-                 if (!p.name) p.name = invData.name || invData.datas?.name || "";
-                 if (!p.unit || p.unit === "pc") p.unit = invData.unit_id || invData.datas?.unit_id || invData.unit || "pc";
-                 
-                 if (p.variant_id && invData?.datas?.combinations) {
-                    const variant = invData.datas.combinations.find((v: any) => v.id === p.variant_id);
-                    if (variant) currentStock = variant.stocks;
-                 }
-                 if (currentStock !== undefined && currentStock < p.quantity) {
-                    warnings.push(`"${p.name}" (Left in stock: ${currentStock}, Originally bought: ${p.quantity})`);
-                 }
+                  p.batchTracking = !!(invData.has_batch || invData.datas?.has_batch || p.batchTracking);
+                  p.serialTracking = !!(invData.has_serialno || invData.datas?.has_serialno || p.serialTracking);
+                }
+              } catch {
+                // ignore
               }
-            } catch (err) {
-              console.error("Error checking inventory stock", err);
             }
+            setProducts(updatedProducts);
+            setSoldStockWarnings(warnings);
           }
-          
-          setProducts(updatedProducts);
-          setSoldStockWarnings(warnings);
-
-          const transportCharge = Number(
-            data.charges_infos?.transport_charge ??
-            data.transport_charge ??
-            data.additional_charges?.delivery_charge ??
-            data.charges?.transport ?? 0
-          );
-          const otherCharge = Number(
-            data.charges_infos?.other_charge ??
-            data.other_charges ??
-            data.additional_charges?.other_charge ??
-            data.charges?.other ?? 0
-          );
-          setCharges({ transport: transportCharge || "", other: otherCharge || "" });
-
-          const paymentInfoObj = Array.isArray(data.payment_infos) ? data.payment_infos[0] : null;
-          const paidAmount = Number(paymentInfoObj?.amount ?? data.paid_amount ?? data.payment_info?.amountPaid ?? data.payment?.amountPaid ?? 0);
-          const paymentMethod = paymentInfoObj?.method ?? data.payment_mode ?? data.payment_info?.method ?? data.payment?.method ?? "CASH";
-          setPayment({ amountPaid: paidAmount || "", method: String(paymentMethod).toUpperCase() as PaymentMethod });
-        }
       };
+
+      const fetchCustomFieldValues = async () => {
+        const vals = await purchaseCustomFieldsApi.getValuesByPurchase(SHOP_ID, id);
+        const record: Record<string, string> = {};
+        vals.forEach((v) => {
+          record[v.field_id] = v.value;
+        });
+        setCustomFieldValues(record);
+      };
+
       fetchPurchase();
+      fetchCustomFieldValues();
     } else {
       const draftId = searchParams.get("draftId");
       if (draftId) {
@@ -315,7 +314,7 @@ const PurchaseForm = () => {
         }
       }
     }
-  }, [id, getData, searchParams]);
+  }, [id, purchase, searchParams]);
 
   // --- Handlers ---
   const handleProductChange = useCallback((index: number, field: string, value: any) => {
@@ -547,24 +546,71 @@ const PurchaseForm = () => {
 
       let res;
       if (id) {
-        res = await purchaseApi.updatePurchase({ id: id, ...payload });
+        res = await purchase.updatePurchase({ id: id, ...payload });
       } else {
-        res = await purchaseApi.createPurchase(payload);
+        res = await purchase.createPurchase(payload);
       }
 
       if (res) {
-        showToast(id ? "Purchase updated" : "Purchase created", "success");
+        const savedPurchaseId = res.data?.id || res.id || id;
+        if (savedPurchaseId) {
+          const valueInfos = Object.entries(customFieldValues)
+            .filter(([_, value]) => value !== undefined && value !== "")
+            .map(([field_id, value]) => ({
+              field_id,
+              value: String(value),
+            }));
 
-        
+          if (valueInfos.length > 0) {
+            await purchaseCustomFieldsApi.upsertValue({
+              shop_id: SHOP_ID,
+              purchase_id: savedPurchaseId,
+              value_infos: valueInfos,
+            });
+          }
+        }
+
+        showToast(id ? "Purchase updated" : "Purchase created", "success");
         setShowSuccessModal(true);
-        
       }
     } catch (error: any) {
       showToast(error.message || "Failed to save purchase", "error");
     } finally {
       setSubmitting(false);
     }
-  }, [purchaseDetails, products, charges, payment, supplierDetails, id, showToast, navigate, searchParams, costMethod, stats, purchaseType, gstMode]);
+  }, [purchaseDetails, products, charges, payment, supplierDetails, id, showToast, navigate, searchParams, costMethod, stats, purchaseType, gstMode, customFieldValues]);
+
+  const handleCreateCustomField = async () => {
+    if (!newFieldName || !newFieldLabel) {
+      showToast("Field Name and Label are required", "error");
+      return;
+    }
+    try {
+      await purchaseCustomFieldsApi.createField({
+        shop_id: SHOP_ID,
+        field_infos: [{
+          field_name: newFieldName,
+          label_name: newFieldLabel,
+          type: newFieldType,
+          required: newFieldRequired,
+          visible_online: newFieldVisible,
+        }],
+      });
+      showToast("Custom field created successfully", "success");
+      // Refresh definitions
+      const fields = await purchaseCustomFieldsApi.getAllFields(SHOP_ID);
+      setCustomFieldDefs(fields);
+      // Reset sidebar form
+      setNewFieldName("");
+      setNewFieldLabel("");
+      setNewFieldType("text");
+      setNewFieldRequired(false);
+      setNewFieldVisible(false);
+      setIsSidebarOpen(false);
+    } catch {
+      showToast("Failed to create custom field", "error");
+    }
+  };
 
   // --- Header Actions ---
   useEffect(() => {
@@ -948,6 +994,75 @@ const PurchaseForm = () => {
               setGstMode={setGstMode}
             />
 
+            {/* BOX 8: CUSTOM FIELDS */}
+            <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden transition-all hover:shadow-md mt-6">
+              <div className="px-6 py-4 bg-gradient-to-r from-indigo-50/50 to-transparent border-b border-slate-100 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-indigo-100 flex items-center justify-center text-indigo-600 border border-indigo-200 shadow-sm">
+                    <Layers size={16} />
+                  </div>
+                  <div>
+                    <h2 className="text-xs font-black text-slate-800 uppercase tracking-widest">Custom Fields</h2>
+                    <p className="text-[10px] text-slate-400 font-medium">Define and populate additional purchase properties</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsSidebarOpen(true)}
+                  className="h-8 px-3 rounded-lg border border-indigo-100 text-indigo-600 font-bold text-xs bg-indigo-50/50 hover:bg-indigo-100 transition-all flex items-center gap-1.5"
+                >
+                  <Plus size={14} />
+                  Create Custom Field
+                </button>
+              </div>
+              
+              <div className="p-6">
+                {customFieldDefs.length === 0 ? (
+                  <div className="text-center py-6 text-slate-400 text-xs font-medium">
+                    No custom fields defined yet. Click "Create Custom Field" to add one.
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {customFieldDefs.map((field) => (
+                      <div key={field.id} className="space-y-1.5">
+                        <label className="text-[11px] font-bold text-slate-500 ml-1">
+                          {field.label_name}
+                          {field.required && <span className="text-rose-500 ml-0.5">*</span>}
+                        </label>
+                        {field.type === 'boolean' ? (
+                          <div className="flex items-center gap-2 h-10 px-4 rounded-lg border border-slate-200 bg-slate-50/30">
+                            <input
+                              type="checkbox"
+                              id={`cf_${field.id}`}
+                              checked={customFieldValues[field.id] === 'true'}
+                              onChange={(e) =>
+                                setCustomFieldValues((prev) => ({ ...prev, [field.id]: String(e.target.checked) }))
+                              }
+                              className="w-4 h-4 rounded accent-indigo-600 cursor-pointer"
+                            />
+                            <label htmlFor={`cf_${field.id}`} className="text-xs font-semibold text-slate-600 cursor-pointer">
+                              {field.label_name}
+                            </label>
+                          </div>
+                        ) : (
+                          <input
+                            type={field.type === 'number' ? 'number' : field.type === 'date' ? 'date' : 'text'}
+                            value={customFieldValues[field.id] || ''}
+                            onChange={(e) =>
+                              setCustomFieldValues((prev) => ({ ...prev, [field.id]: e.target.value }))
+                            }
+                            required={field.required}
+                            placeholder={`Enter ${field.label_name.toLowerCase()}…`}
+                            className="w-full h-10 px-4 rounded-lg border border-slate-200 text-sm text-slate-900 placeholder:text-slate-400 transition-all duration-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 outline-none bg-slate-50/30 font-semibold"
+                          />
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
           </div>
 
           {/* --- Right Column (Sticky Payment Summary) --- */}
@@ -1022,6 +1137,64 @@ const PurchaseForm = () => {
 
         </div>
       </div>
+
+      {/* Sidebar Filter for Custom Field Creation */}
+      <RightSidebarFilter
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
+        onApply={handleCreateCustomField}
+        onClear={() => {
+          setNewFieldName("");
+          setNewFieldLabel("");
+          setNewFieldType("text");
+          setNewFieldRequired(false);
+          setNewFieldVisible(false);
+        }}
+        title="Create Custom Field"
+      >
+        <div className="space-y-5">
+          <Input
+            label="Field Name (Internal Name)"
+            required
+            value={newFieldName}
+            onChange={(e) => setNewFieldName(e.target.value)}
+            placeholder="e.g. tracking_id"
+          />
+          <Input
+            label="Label Name (Display Name)"
+            required
+            value={newFieldLabel}
+            onChange={(e) => setNewFieldLabel(e.target.value)}
+            placeholder="e.g. Tracking ID"
+          />
+          <ReusableSelect
+            label="Field Type"
+            value={newFieldType}
+            onValueChange={(val) => setNewFieldType(val)}
+            options={[
+              { label: "Text", value: "text" },
+              { label: "Number", value: "number" },
+              { label: "Date", value: "date" },
+              { label: "Yes / No (Boolean)", value: "boolean" },
+            ]}
+            placeholder="Select Type"
+          />
+          <div className="flex items-center justify-between p-4 rounded-lg bg-slate-50 border border-slate-100">
+            <span className="text-xs font-bold text-slate-500">Required Field</span>
+            <Switch
+              checked={newFieldRequired}
+              onCheckedChange={(checked: boolean) => setNewFieldRequired(checked)}
+            />
+          </div>
+          <div className="flex items-center justify-between p-4 rounded-lg bg-slate-50 border border-slate-100">
+            <span className="text-xs font-bold text-slate-500">Visible Online</span>
+            <Switch
+              checked={newFieldVisible}
+              onCheckedChange={(checked: boolean) => setNewFieldVisible(checked)}
+            />
+          </div>
+        </div>
+      </RightSidebarFilter>
 
     </>
   );

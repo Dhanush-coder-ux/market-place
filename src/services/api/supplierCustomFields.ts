@@ -43,11 +43,13 @@ export interface CustomFieldValue {
 
 export interface CreateCustomFieldPayload {
   shop_id: string;
-  field_name: string;
-  label_name: string;
-  type: string;
-  required?: boolean;
-  visible_online?: boolean;
+  field_infos: Array<{
+    field_name: string;
+    label_name: string;
+    type: string;
+    required?: boolean;
+    visible_online?: boolean;
+  }>;
 }
 
 export interface UpdateCustomFieldPayload {
@@ -62,14 +64,10 @@ export interface UpdateCustomFieldPayload {
 export interface UpsertFieldValuePayload {
   shop_id: string;
   supplier_id: string;
-  field_id: string;
-  value: string;
-}
-
-export interface BulkUpsertFieldValuesPayload {
-  shop_id: string;
-  supplier_id: string;
-  values: Array<{ field_id: string; value: string }>;
+  value_infos: Array<{
+    field_id: string;
+    value: string;
+  }>;
 }
 
 // ─── API Service ──────────────────────────────────────────────────────────────
@@ -114,11 +112,6 @@ export const supplierCustomFieldsApi = {
   // POST /custom-fields/values — Upsert a single field value
   upsertValue: async (data: UpsertFieldValuePayload) => {
     return await apiClient.post(`${BASE}/values`, data);
-  },
-
-  // POST /custom-fields/values/bulk — Bulk upsert field values for one supplier
-  bulkUpsertValues: async (data: BulkUpsertFieldValuesPayload) => {
-    return await apiClient.post(`${BASE}/values/bulk`, data);
   },
 
   // GET /custom-fields/values/{shop_id}/{supplier_id} — Get all field values for a supplier

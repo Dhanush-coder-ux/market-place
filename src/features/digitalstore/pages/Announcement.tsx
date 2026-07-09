@@ -1,10 +1,12 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   Megaphone, RefreshCw, Gift, Smile, Sparkles, PenTool,
   History, Inbox, Eye, Send, Clock, Users, TrendingUp,
   Copy, Trash2, Edit3, CheckCircle2, Zap, Bell, MessageCircle,
-  Monitor, Smartphone
+  Monitor, Smartphone, Timer
 } from "lucide-react";
+import { useBusinessApi } from "@/context/BusinessApiContext";
+import { SHOP_ID } from "@/services/endpoints";
 
 // ─── Types & Interfaces ──────────────────────────────────────────────────────
 
@@ -27,6 +29,9 @@ interface AnnouncementItem {
   status: StatusType;
   audience: string;
   views: number;
+  call_to_action?: string;
+  schedule_at?: string | null;
+  expire_at?: string | null;
 }
 
 interface TypeConfigDetails {
@@ -94,10 +99,10 @@ const STATUS_CONFIG: Record<StatusType, { dot: string; bg: string; text: string;
 };
 
 const AUDIENCE_OPTIONS: AudienceOption[] = [
-  { value: "all", label: "All Users", desc: "Everyone sees this", icon: "👥" },
-  { value: "new", label: "New Users", desc: "First-time visitors", icon: "🌱" },
-  { value: "returning", label: "Returning", desc: "Logged-in members", icon: "🔁" },
-  { value: "vip", label: "VIP Members", desc: "Top-tier customers", icon: "👑" },
+  { value: "ALL_FOLLOWED_USERS", label: "All Users", desc: "Everyone sees this", icon: "👥" },
+  { value: "NEW_USER", label: "New Users", desc: "First-time visitors", icon: "🌱" },
+  { value: "NON_FOLLOWING_USERS", label: "Non-Following", desc: "Users not following", icon: "🔁" },
+  { value: "PREMIUM", label: "VIP Members", desc: "Top-tier customers", icon: "👑" },
 ];
 
 const AI_SUGGESTIONS: { text: string; type: AnnouncementType }[] = [
@@ -110,15 +115,6 @@ const AI_SUGGESTIONS: { text: string; type: AnnouncementType }[] = [
 ];
 
 const EMOJI_LIST = ["🎉", "🔥", "⭐", "💥", "🎁", "⚡", "🚀", "💯", "🌟", "👋", "🛍️", "❤️"];
-
-const MOCK_HISTORY: AnnouncementItem[] = [
-  { id: 1, text: "50% off all summer drinks this weekend only!", date: "2024-05-10T10:30:00", type: "Offer", status: "Published", audience: "all", views: 1240 },
-  { id: 2, text: "We are closed this Sunday for maintenance.", date: "2024-05-08T09:00:00", type: "Update", status: "Published", audience: "all", views: 890 },
-  { id: 3, text: "New seasonal menu is here! Come try our new offerings.", date: "2024-05-01T14:00:00", type: "Announcement", status: "Published", audience: "returning", views: 2100 },
-  { id: 4, text: "Extended hours during the festive season.", date: "2024-04-28T08:00:00", type: "Update", status: "Scheduled", audience: "all", views: 0 },
-  { id: 5, text: "Buy 2 get 1 free on all bakery items!", date: "2024-04-20T11:00:00", type: "Offer", status: "Draft", audience: "new", views: 0 },
-  { id: 6, text: "Introducing loyalty points — earn rewards with every purchase.", date: "2024-04-15T10:00:00", type: "Announcement", status: "Published", audience: "returning", views: 3400 },
-];
 
 // ─── Utility ──────────────────────────────────────────────────────────────────
 
@@ -157,10 +153,10 @@ function TypeBadge({ type }: { type: AnnouncementType }) {
   );
 }
 
-function DeleteModal({ item, onConfirm, onCancel }: { item: AnnouncementItem; onConfirm: () => void; onCancel: () => void }) {
+function DeleteModal({ item, onConfirm, onCancel, isSaving }: { item: AnnouncementItem; onConfirm: () => void; onCancel: () => void; isSaving?: boolean }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ animation: "ann-fadeIn 0.15s ease" }}>
-      <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={onCancel} />
+      <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={isSaving ? undefined : onCancel} />
       <div className="relative bg-white rounded-2xl p-8 w-[420px] max-w-[90vw] shadow-[0_32px_80px_rgba(0,0,0,0.2)]" style={{ animation: "ann-slideUp 0.2s ease" }}>
         <div className="w-12 h-12 rounded-2xl bg-red-100 flex items-center justify-center mb-5">
           <Trash2 size={20} className="text-red-500" />
@@ -170,8 +166,11 @@ function DeleteModal({ item, onConfirm, onCancel }: { item: AnnouncementItem; on
           Permanently delete "<strong className="text-slate-700 font-semibold">{item.text.slice(0, 48)}…</strong>"? This cannot be undone.
         </p>
         <div className="flex gap-2.5 justify-end">
-          <button onClick={onCancel} className="px-5 py-2.5 rounded-xl border-[1.5px] border-slate-200 bg-white text-[13.5px] font-semibold text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer">Cancel</button>
-          <button onClick={onConfirm} className="px-5 py-2.5 rounded-xl bg-red-500 text-[13.5px] font-bold text-white hover:bg-red-600 transition-colors cursor-pointer">Delete</button>
+          <button disabled={isSaving} onClick={onCancel} className="px-5 py-2.5 rounded-xl border-[1.5px] border-slate-200 bg-white text-[13.5px] font-semibold text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer disabled:opacity-50">Cancel</button>
+          <button disabled={isSaving} onClick={onConfirm} className="px-5 py-2.5 rounded-xl bg-red-500 text-[13.5px] font-bold text-white hover:bg-red-600 transition-colors cursor-pointer flex items-center gap-2 disabled:opacity-50">
+            {isSaving && <Timer size={14} className="animate-spin" />}
+            Delete
+          </button>
         </div>
       </div>
     </div>
@@ -391,19 +390,22 @@ function PreviewWhatsApp({ announcement, type, cta }: { announcement: string; ty
 // ─── Main Component ────────────────────────────────────────────────────────────
 
 export default function AnnouncementsPage() {
+  const { shop } = useBusinessApi();
+  const [editingId, setEditingId] = useState<number | null>(null);
   const [text, setText] = useState("");
   const [type, setType] = useState<AnnouncementType>("Announcement");
   const [status, setStatus] = useState<StatusType>("Draft");
-  const [audience, setAudience] = useState("all");
+  const [audience, setAudience] = useState("ALL_FOLLOWED_USERS");
   const [scheduleDate, setScheduleDate] = useState("");
   const [ctaLabel, setCtaLabel] = useState("");
   const [ctaUrl, setCtaUrl] = useState("");
   const [focused, setFocused] = useState(false);
   const [sent, setSent] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [showEmoji, setShowEmoji] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
   const [previewMode, setPreviewMode] = useState<PreviewMode>("banner");
-  const [history, setHistory] = useState<AnnouncementItem[]>(MOCK_HISTORY);
+  const [history, setHistory] = useState<AnnouncementItem[]>([]);
   const [filterType, setFilterType] = useState<AnnouncementType | "All">("All");
   const [filterStatus, setFilterStatus] = useState<StatusType | "All">("All");
   const [deleteTarget, setDeleteTarget] = useState<AnnouncementItem | null>(null);
@@ -414,42 +416,137 @@ export default function AnnouncementsPage() {
   const progress = (text.length / MAX) * 100;
   const cfg = TYPE_CONFIG[type];
 
+  // Map API to UI Enums
+  const apiToType = (t: string): AnnouncementType => {
+    if (t === "OFFER") return "Offer";
+    if (t === "UPDATES") return "Update";
+    return "Announcement";
+  };
+  const typeToApi = (t: AnnouncementType) => {
+    if (t === "Update") return "UPDATES";
+    return t.toUpperCase();
+  };
+
+  const apiToStatus = (s: string): StatusType => {
+    if (s === "SCHEDULED") return "Scheduled";
+    if (s === "PUBLISHED") return "Published";
+    return "Draft";
+  };
+  const statusToApi = (s: StatusType) => s.toUpperCase();
+
+  const loadAnnouncements = () => {
+    shop.getAnnouncements(SHOP_ID).then(res => {
+      if (res && res.data && Array.isArray(res.data)) {
+        setHistory(res.data.map((d: any) => ({
+          id: d.id,
+          text: d.message || "",
+          date: d.schedule_at || d.created_at || new Date().toISOString(),
+          type: apiToType(d.type),
+          status: apiToStatus(d.status),
+          audience: d.send_to || "ALL_FOLLOWED_USERS",
+          views: 0,
+          call_to_action: d.call_to_action,
+          schedule_at: d.schedule_at,
+          expire_at: d.expire_at
+        })));
+      }
+    }).catch(console.error);
+  };
+
+  useEffect(() => {
+    loadAnnouncements();
+  }, []);
+
   const filteredHistory = history.filter(h =>
     (filterType === "All" || h.type === filterType) &&
     (filterStatus === "All" || h.status === filterStatus)
   );
 
-  const handlePublish = () => {
+  const handlePublish = async () => {
     if (!text.trim()) return;
-    const newItem: AnnouncementItem = {
-      id: Date.now(), text, type,
-      status: scheduleDate ? "Scheduled" : "Published",
-      date: scheduleDate || new Date().toISOString(),
-      audience, views: 0,
+    setIsSaving(true);
+    const apiType = typeToApi(type);
+    const apiStatus = scheduleDate ? "SCHEDULED" : statusToApi(status);
+    
+    // Simple CTA formatting "Label||Url" if both exist, else string
+    const cta = ctaLabel && ctaUrl ? `${ctaLabel}||${ctaUrl}` : ctaLabel;
+
+    const payload = {
+      type: apiType,
+      message: text,
+      call_to_action: cta || null,
+      schedule_at: scheduleDate ? new Date(scheduleDate).toISOString() : null,
+      send_to: audience,
+      status: apiStatus
     };
-    setHistory(prev => [newItem, ...prev]);
-    setSent(true);
-    setTimeout(() => {
-      setSent(false); setText(""); setCtaLabel(""); setCtaUrl("");
-      setStatus("Draft"); setScheduleDate("");
-    }, 1800);
+
+    try {
+      if (editingId) {
+        await shop.updateAnnouncement(editingId, { ...payload, id: editingId });
+      } else {
+        await shop.createAnnouncement(SHOP_ID, payload);
+      }
+      setSent(true);
+      loadAnnouncements();
+      setTimeout(() => {
+        setSent(false); setText(""); setCtaLabel(""); setCtaUrl("");
+        setStatus("Draft"); setScheduleDate(""); setEditingId(null);
+      }, 1800);
+    } catch (err) {
+      console.error(err);
+      alert("Failed to save announcement.");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleDuplicate = (item: AnnouncementItem) => {
-    const dup: AnnouncementItem = { ...item, id: Date.now(), status: "Draft", date: new Date().toISOString(), views: 0 };
-    setHistory(prev => [dup, ...prev]);
-  };
-
-  const handleEdit = (item: AnnouncementItem) => {
-    setText(item.text); setType(item.type);
-    setStatus(item.status); setActiveTab("editor");
+    setText(item.text); 
+    setType(item.type);
+    setStatus("Draft"); 
+    setAudience(item.audience);
+    setEditingId(null);
+    if (item.call_to_action) {
+      const parts = item.call_to_action.split("||");
+      setCtaLabel(parts[0] || "");
+      setCtaUrl(parts[1] || "");
+    }
+    setActiveTab("editor");
     textRef.current?.focus();
   };
 
-  const handleDelete = () => {
+  const handleEdit = (item: AnnouncementItem) => {
+    setText(item.text); 
+    setType(item.type);
+    setStatus(item.status); 
+    setAudience(item.audience);
+    setEditingId(item.id);
+    if (item.schedule_at) {
+      // slice to drop Z if needed, for datetime-local
+      setScheduleDate(new Date(item.schedule_at).toISOString().slice(0, 16));
+    }
+    if (item.call_to_action) {
+      const parts = item.call_to_action.split("||");
+      setCtaLabel(parts[0] || "");
+      setCtaUrl(parts[1] || "");
+    }
+    setActiveTab("editor");
+    textRef.current?.focus();
+  };
+
+  const handleDelete = async () => {
     if (deleteTarget) {
-      setHistory(prev => prev.filter(h => h.id !== deleteTarget.id));
-      setDeleteTarget(null);
+      setIsSaving(true);
+      try {
+        await shop.deleteAnnouncement(deleteTarget.id);
+        setHistory(prev => prev.filter(h => h.id !== deleteTarget.id));
+        setDeleteTarget(null);
+      } catch (err) {
+        console.error(err);
+        alert("Failed to delete.");
+      } finally {
+        setIsSaving(false);
+      }
     }
   };
 

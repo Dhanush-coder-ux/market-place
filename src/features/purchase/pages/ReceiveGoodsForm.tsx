@@ -16,8 +16,8 @@ import {
   ChevronDown
 } from 'lucide-react';
 import { GradientButton } from '@/components/ui/GradientButton';
-import { useApi } from '@/context/ApiContext';
-import { ENDPOINTS, SHOP_ID } from '@/services/endpoints';
+import { useBusinessApi } from '@/context/BusinessApiContext';
+import { SHOP_ID } from '@/services/endpoints';
 import { useHeader } from '@/context/HeaderContext';
 import { useToast } from '@/context/ToastContext';
 
@@ -321,9 +321,9 @@ function parseGst(val: any): number {
 }
 
 /** Fetch PO reference list for SearchSelect */
-const fetchPOOptions = async (query: string, getData: Function) => {
+const fetchPOOptions = async (query: string, purchase: any) => {
   try {
-    const res = await getData(`${ENDPOINTS.PURCHASES}/by/shop/${SHOP_ID}`, { q: query, limit: "10" });
+    const res = await purchase.getPurchasesByShop(SHOP_ID, { q: query, limit: "10" });
     let list: any[] = [];
     if (res?.data) {
       list = Array.isArray(res.data) ? res.data : [res.data];
@@ -511,7 +511,7 @@ const QtyInput = ({
 const ReceiveGoodForm = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { getData, postData } = useApi();
+  const { purchase, inventory } = useBusinessApi();
   const { setBottomActions } = useHeader();
   const { showToast } = useToast();
 
@@ -571,7 +571,7 @@ const ReceiveGoodForm = () => {
   const loadPO = useCallback(async (poId: string) => {
     setLoadingPO(true);
     try {
-      const res = await getData(`${ENDPOINTS.PURCHASES}/by/${SHOP_ID}/${poId}`);
+      const res = await purchase.getPurchaseById(SHOP_ID, poId);
       const data = res?.data || res?.datas;
       if (!data) { showToast("PO not found", "error"); return; }
 
@@ -626,7 +626,7 @@ const ReceiveGoodForm = () => {
       const invFetches = await Promise.all(
         uniqueIds.map(async (invId) => {
           try {
-            const r = await getData(`${ENDPOINTS.INVENTORIES}/by/id/${SHOP_ID}/${invId}`);
+            const r = await inventory.getInventoryById(SHOP_ID, invId);
             return { invId, data: r?.data || null };
           } catch { return { invId, data: null }; }
         })
@@ -671,7 +671,7 @@ const ReceiveGoodForm = () => {
     } finally {
       setLoadingPO(false);
     }
-  }, [getData, showToast, setSearchParams]);
+  }, [purchase, inventory, showToast, setSearchParams]);
 
   const updateItem = (id: string, updates: Partial<POProduct>) => {
     setItems(prev => prev.map(p => {
@@ -845,7 +845,7 @@ const ReceiveGoodForm = () => {
         products: productLines,
       };
 
-      const res = await postData(ENDPOINTS.PURCHASES, payload);
+      const res = await purchase.createPurchase(payload);
       if (res) {
         showToast("Receipt recorded successfully", "success");
         navigate("/po-grn");
@@ -902,7 +902,7 @@ const ReceiveGoodForm = () => {
                 <SearchSelect
                   labelKey="label"
                   valueKey="id"
-                  fetchOptions={(q) => fetchPOOptions(q, getData)}
+                  fetchOptions={(q) => fetchPOOptions(q, purchase)}
                   value={selectedPORef}
                   onChange={(val, opt: any) => {
                     setSelectedPORef(String(val));

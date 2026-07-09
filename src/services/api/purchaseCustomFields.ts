@@ -1,84 +1,114 @@
 import { apiClient } from "./apiClient";
 import { ENDPOINTS } from "../endpoints";
 
-/**
- * Utility: validate required fields in the payload
- */
-const validateMandatory = (data: Record<string, any>, requiredFields: string[]) => {
-  const missing = requiredFields.filter((field) => {
-    const val = data[field];
-    return val === undefined || val === null || val === "";
-  });
-  if (missing.length > 0) {
-    throw new Error(`Missing mandatory fields: ${missing.join(", ")}`);
-  }
-};
+const CF = ENDPOINTS.PURCHASE_CUSTOM_FIELDS; // '/purchase-fields'
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+export interface PurchaseCustomFieldDefinition {
+  id: string;
+  shop_id: string;
+  field_name: string;
+  label_name: string;
+  type: string;  // 'text' | 'number' | 'date' | 'boolean'
+  required: boolean;
+  visible_online: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface PurchaseCustomFieldValue {
+  id?: string;
+  shop_id: string;
+  purchase_id: string;
+  field_id: string;
+  value: string;
+}
+
+export interface CreatePurchaseCustomFieldPayload {
+  shop_id: string;
+  field_infos: Array<{
+    field_name: string;
+    label_name: string;
+    type: string;
+    required?: boolean;
+    visible_online?: boolean;
+  }>;
+}
+
+export interface UpdatePurchaseCustomFieldPayload {
+  field_id: string;
+  shop_id: string;
+  label_name?: string | null;
+  type?: string | null;
+  required?: boolean | null;
+  visible_online?: boolean | null;
+}
+
+export interface UpsertPurchaseFieldValuePayload {
+  shop_id: string;
+  purchase_id: string;
+  value_infos: Array<{
+    field_id: string;
+    value: string;
+  }>;
+}
+
+// ─── Purchase Custom Fields API ───────────────────────────────────────────────
 
 export const purchaseCustomFieldsApi = {
-  // ─── CUSTOM FIELDS DEFINITIONS ─────────────────────────────────────────────
-
-  /** Create a new custom field definition */
-  createField: async (shopId: string, data: Record<string, any>, args: string = "", kwargs: string = "") => {
-    validateMandatory(data, ["field_name", "label_name", "type"]);
-    return await apiClient.post(ENDPOINTS.PURCHASE_CUSTOM_FIELDS, data, { shop_id: shopId, args, kwargs });
+  // POST /purchase-fields
+  createField: async (data: CreatePurchaseCustomFieldPayload) => {
+    return await apiClient.post(`${CF}`, data);
   },
 
-  /** Get all custom field definitions */
-  getFields: async (shopId: string, args: string = "", kwargs: string = "") => {
-    return await apiClient.get(ENDPOINTS.PURCHASE_CUSTOM_FIELDS, {
-      shop_id: shopId,
-      args,
-      kwargs,
-    });
+  // PUT /purchase-fields
+  updateField: async (data: UpdatePurchaseCustomFieldPayload) => {
+    return await apiClient.put(`${CF}`, data);
   },
 
-  /** Get a specific custom field definition by ID */
-  getField: async (shopId: string, fieldId: string, args: string = "", kwargs: string = "") => {
-    if (!fieldId) throw new Error("Field ID is required");
-    return await apiClient.get(`${ENDPOINTS.PURCHASE_CUSTOM_FIELDS}/${fieldId}`, {
-      shop_id: shopId,
-      args,
-      kwargs,
-    });
+  // GET /purchase-fields/{shop_id} — All field definitions for a shop
+  getAllFields: async (shopId: string): Promise<PurchaseCustomFieldDefinition[]> => {
+    try {
+      const res = await apiClient.get(`${CF}/${shopId}`);
+      const raw = res?.data ?? res;
+      return Array.isArray(raw) ? raw : [];
+    } catch {
+      return [];
+    }
   },
 
-  /** Update a custom field definition */
-  updateField: async (shopId: string, fieldId: string, data: Record<string, any>, args: string = "", kwargs: string = "") => {
-    if (!fieldId) throw new Error("Field ID is required");
-    return await apiClient.put(`${ENDPOINTS.PURCHASE_CUSTOM_FIELDS}/${fieldId}`, data, { shop_id: shopId, args, kwargs });
+  // GET /purchase-fields/{shop_id}/{field_id} — Single field definition
+  getField: async (shopId: string, fieldId: string): Promise<PurchaseCustomFieldDefinition | null> => {
+    try {
+      const res = await apiClient.get(`${CF}/${shopId}/${fieldId}`);
+      return res?.data ?? null;
+    } catch {
+      return null;
+    }
   },
 
-  /** Delete a custom field definition */
-  deleteField: async (shopId: string, fieldId: string, args: string = "", kwargs: string = "") => {
-    if (!fieldId) throw new Error("Field ID is required");
-    return await apiClient.deleteWithParams(`${ENDPOINTS.PURCHASE_CUSTOM_FIELDS}/${fieldId}`, {
-      shop_id: shopId,
-      args,
-      kwargs,
-    });
+  // DELETE /purchase-fields/{shop_id}/{field_id}
+  deleteField: async (shopId: string, fieldId: string) => {
+    return await apiClient.delete(`${CF}/${shopId}/${fieldId}`);
   },
 
-  // ─── CUSTOM FIELD VALUES ───────────────────────────────────────────────────
-
-  /** Upsert a single custom field value */
-  upsertValue: async (shopId: string, data: Record<string, any>, args: string = "", kwargs: string = "") => {
-    validateMandatory(data, ["purchase_id", "field_id", "value"]);
-    return await apiClient.post(`${ENDPOINTS.PURCHASE_CUSTOM_FIELDS}/values`, data, { shop_id: shopId, args, kwargs });
+  // POST /purchase-fields/values — Upsert custom field values
+  upsertValue: async (data: UpsertPurchaseFieldValuePayload) => {
+    return await apiClient.post(`${CF}/values`, data);
   },
 
-  /** Bulk upsert custom field values */
-  bulkUpsertValues: async (shopId: string, data: { purchase_id: string; values: Record<string, any>[] }, args: string = "", kwargs: string = "") => {
-    validateMandatory(data, ["purchase_id", "values"]);
-    return await apiClient.post(`${ENDPOINTS.PURCHASE_CUSTOM_FIELDS}/values/bulk`, data, { shop_id: shopId, args, kwargs });
-  },
-
-  /** Get all custom field values for a specific purchase */
-  getValuesByPurchase: async (shopId: string, purchaseId: string, args: string = "", kwargs: string = "") => {
-    if (!purchaseId) throw new Error("Purchase ID is required");
-    return await apiClient.get(`${ENDPOINTS.PURCHASE_CUSTOM_FIELDS}/values/${purchaseId}`, {
-      shop_id: shopId,
-      args,
-      kwargs,
-    });
+  // GET /purchase-fields/values/{shop_id}/{purchase_id} — Get all values for a purchase
+  getValuesByPurchase: async (
+    shopId: string,
+    purchaseId: string
+  ): Promise<PurchaseCustomFieldValue[]> => {
+    try {
+      const res = await apiClient.get(`${CF}/values/${shopId}/${purchaseId}`);
+      const raw = res?.data ?? res;
+      return Array.isArray(raw) ? raw : [];
+    } catch {
+      return [];
+    }
   },
 };

@@ -1,24 +1,24 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "Customer Service",
-    "description": "This service contains all the CRUD operations for customer service",
+    "title": "Supplier Service",
+    "description": "This service contains all the CRUD operations for supplier service",
     "version": "0.1.0"
   },
   "paths": {
-    "/customers": {
+    "/suppliers": {
       "post": {
         "tags": [
-          "Customer CRUD"
+          "Supplier CRUD"
         ],
         "summary": "Create",
-        "operationId": "create_customers_post",
+        "operationId": "create_suppliers_post",
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CreateCustomerSchema"
+                "$ref": "#/components/schemas/CreateSupplierSchema"
               }
             }
           }
@@ -48,16 +48,16 @@
       },
       "put": {
         "tags": [
-          "Customer CRUD"
+          "Supplier CRUD"
         ],
         "summary": "Update",
-        "operationId": "update_customers_put",
+        "operationId": "update_suppliers_put",
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/UpdateCustomerSchema"
+                "$ref": "#/components/schemas/UpdateSupplierSchema"
               }
             }
           }
@@ -87,10 +87,10 @@
       },
       "get": {
         "tags": [
-          "Customer CRUD"
+          "Supplier CRUD"
         ],
-        "summary": "Get Customers",
-        "operationId": "get_customers_customers_get",
+        "summary": "Get",
+        "operationId": "get_suppliers_get",
         "parameters": [
           {
             "name": "q",
@@ -180,13 +180,13 @@
         }
       }
     },
-    "/customers/{shop_id}/{id}": {
+    "/suppliers/{shop_id}/{id}": {
       "delete": {
         "tags": [
-          "Customer CRUD"
+          "Supplier CRUD"
         ],
         "summary": "Delete",
-        "operationId": "delete_customers__shop_id___id__delete",
+        "operationId": "delete_suppliers__shop_id___id__delete",
         "parameters": [
           {
             "name": "id",
@@ -231,18 +231,18 @@
         }
       }
     },
-    "/customers/outstanding/add": {
-      "post": {
+    "/suppliers/outstanding": {
+      "put": {
         "tags": [
-          "Customer CRUD"
+          "Supplier CRUD"
         ],
-        "summary": "Add Outstanding",
-        "operationId": "add_outstanding_customers_outstanding_add_post",
+        "summary": "Update Outstanding",
+        "operationId": "update_outstanding_suppliers_outstanding_put",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CreateCustomerOutstandingSchema"
+                "$ref": "#/components/schemas/UpdateOutstandingSupplierSchema"
               }
             }
           },
@@ -272,54 +272,13 @@
         }
       }
     },
-    "/customers/outstanding/clear": {
-      "post": {
-        "tags": [
-          "Customer CRUD"
-        ],
-        "summary": "Clear Outstanding",
-        "operationId": "clear_outstanding_customers_outstanding_clear_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateCustomerOutstandingClearedSchema"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/customers/by/shop/{shop_id}": {
+    "/suppliers/by/shop/{shop_id}": {
       "get": {
         "tags": [
-          "Customer CRUD"
+          "Supplier CRUD"
         ],
-        "summary": "Get Cusotmerby Shop Id",
-        "operationId": "get_cusotmerby_shop_id_customers_by_shop__shop_id__get",
+        "summary": "Getby Shop Id",
+        "operationId": "getby_shop_id_suppliers_by_shop__shop_id__get",
         "parameters": [
           {
             "name": "shop_id",
@@ -418,14 +377,23 @@
         }
       }
     },
-    "/customers/by/id/{shop_id}/{id}": {
+    "/suppliers/by/{shop_id}/{id}": {
       "get": {
         "tags": [
-          "Customer CRUD"
+          "Supplier CRUD"
         ],
-        "summary": "Get Customer By Id",
-        "operationId": "get_customer_by_id_customers_by_id__shop_id___id__get",
+        "summary": "Get",
+        "operationId": "get_suppliers_by__shop_id___id__get",
         "parameters": [
+          {
+            "name": "shop_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Shop Id"
+            }
+          },
           {
             "name": "id",
             "in": "path",
@@ -433,267 +401,6 @@
             "schema": {
               "type": "string",
               "title": "Id"
-            }
-          },
-          {
-            "name": "shop_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Shop Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/customers/cleared-histories/by/shop/{shop_id}": {
-      "get": {
-        "tags": [
-          "Customer CRUD"
-        ],
-        "summary": "Get Clr Hist By Shop Id",
-        "operationId": "get_clr_hist_by_shop_id_customers_cleared_histories_by_shop__shop_id__get",
-        "parameters": [
-          {
-            "name": "shop_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Shop Id"
-            }
-          },
-          {
-            "name": "q",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "default": "",
-              "title": "Q"
-            }
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "maximum": 100,
-              "default": 10,
-              "title": "Limit"
-            }
-          },
-          {
-            "name": "offset",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "default": 1,
-              "title": "Offset"
-            }
-          },
-          {
-            "name": "from_date",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "From Date"
-            }
-          },
-          {
-            "name": "to_date",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "To Date"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/customers/cleared-histories/by/id/{shop_id}/{id}": {
-      "get": {
-        "tags": [
-          "Customer CRUD"
-        ],
-        "summary": "Get Clr Hist By Id",
-        "operationId": "get_clr_hist_by_id_customers_cleared_histories_by_id__shop_id___id__get",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "title": "Id"
-            }
-          },
-          {
-            "name": "shop_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Shop Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/customers/cleared-histories": {
-      "get": {
-        "tags": [
-          "Customer CRUD"
-        ],
-        "summary": "Get Clr Hist",
-        "operationId": "get_clr_hist_customers_cleared_histories_get",
-        "parameters": [
-          {
-            "name": "q",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "default": "",
-              "title": "Q"
-            }
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "maximum": 100,
-              "default": 10,
-              "title": "Limit"
-            }
-          },
-          {
-            "name": "offset",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "default": 1,
-              "title": "Offset"
-            }
-          },
-          {
-            "name": "from_date",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "From Date"
-            }
-          },
-          {
-            "name": "to_date",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "To Date"
             }
           }
         ],
@@ -1008,8 +715,8 @@
         "tags": [
           "Custom Fields"
         ],
-        "summary": "Get Values By Customer",
-        "operationId": "get_values_by_customer_custom_fields_values__shop_id___id__get",
+        "summary": "Get Values By Supplier",
+        "operationId": "get_values_by_supplier_custom_fields_values__shop_id___id__get",
         "parameters": [
           {
             "name": "id",
@@ -1084,9 +791,9 @@
             "type": "string",
             "title": "Shop Id"
           },
-          "customer_id": {
+          "supplier_id": {
             "type": "string",
-            "title": "Customer Id"
+            "title": "Supplier Id"
           },
           "value_infos": {
             "items": {
@@ -1099,64 +806,12 @@
         "type": "object",
         "required": [
           "shop_id",
-          "customer_id",
+          "supplier_id",
           "value_infos"
         ],
         "title": "CreateCustomFieldValueSchema"
       },
-      "CreateCustomerOutstandingClearedSchema": {
-        "properties": {
-          "shop_id": {
-            "type": "string",
-            "title": "Shop Id"
-          },
-          "customer_id": {
-            "type": "string",
-            "title": "Customer Id"
-          },
-          "payment_infos": {
-            "items": {
-              "$ref": "#/components/schemas/CustomerPaymentInfosType"
-            },
-            "type": "array",
-            "title": "Payment Infos"
-          }
-        },
-        "type": "object",
-        "required": [
-          "shop_id",
-          "customer_id",
-          "payment_infos"
-        ],
-        "title": "CreateCustomerOutstandingClearedSchema"
-      },
-      "CreateCustomerOutstandingSchema": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "title": "Id"
-          },
-          "shop_id": {
-            "type": "string",
-            "title": "Shop Id"
-          },
-          "outstanding_infos": {
-            "$ref": "#/components/schemas/CustomerOutstandingInfosType"
-          },
-          "type": {
-            "$ref": "#/components/schemas/CustomerOutstandingAddEnums"
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "shop_id",
-          "outstanding_infos",
-          "type"
-        ],
-        "title": "CreateCustomerOutstandingSchema"
-      },
-      "CreateCustomerSchema": {
+      "CreateSupplierSchema": {
         "properties": {
           "shop_id": {
             "type": "string",
@@ -1167,24 +822,46 @@
             "title": "Name"
           },
           "contact_infos": {
-            "$ref": "#/components/schemas/CustomerContactInfosType"
+            "$ref": "#/components/schemas/SupplierContactInfosType"
           },
-          "credit_infos": {
+          "location_infos": {
+            "$ref": "#/components/schemas/SupplierLocationInfosType"
+          },
+          "contact_person_infos": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/CustomerCreditInfosType"
+                "$ref": "#/components/schemas/SupplierContactPersonInfosType"
               },
               {
                 "type": "null"
               }
             ]
           },
-          "location_infos": {
-            "$ref": "#/components/schemas/CustomerLocationInfosType"
+          "gst_no": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gst No"
           },
-          "can_have_credit": {
-            "type": "boolean",
-            "title": "Can Have Credit"
+          "additional_infos": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Additional Infos",
+            "default": {
+
+            }
           },
           "custom_fields": {
             "anyOf": [
@@ -1207,10 +884,9 @@
           "shop_id",
           "name",
           "contact_infos",
-          "location_infos",
-          "can_have_credit"
+          "location_infos"
         ],
-        "title": "CreateCustomerSchema"
+        "title": "CreateSupplierSchema"
       },
       "CustomFieldInfos": {
         "properties": {
@@ -1263,8 +939,33 @@
         ],
         "title": "CustomFieldValueInfos"
       },
-      "CustomerContactInfosType": {
+      "HTTPValidationError": {
         "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "SupplierContactInfosType": {
+        "properties": {
+          "email": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "email"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
           "mobile_number": {
             "anyOf": [
               {
@@ -1275,6 +976,16 @@
               }
             ],
             "title": "Mobile Number"
+          }
+        },
+        "type": "object",
+        "title": "SupplierContactInfosType"
+      },
+      "SupplierContactPersonInfosType": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
           },
           "email": {
             "anyOf": [
@@ -1287,18 +998,8 @@
               }
             ],
             "title": "Email"
-          }
-        },
-        "type": "object",
-        "title": "CustomerContactInfosType"
-      },
-      "CustomerCreditInfosType": {
-        "properties": {
-          "limit": {
-            "type": "number",
-            "title": "Limit"
           },
-          "notes": {
+          "mobile_number": {
             "anyOf": [
               {
                 "type": "string"
@@ -1307,26 +1008,16 @@
                 "type": "null"
               }
             ],
-            "title": "Notes"
-          },
-          "terms": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/CustomerPaymentTermsEnums"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "title": "Mobile Number"
           }
         },
         "type": "object",
         "required": [
-          "limit"
+          "name"
         ],
-        "title": "CustomerCreditInfosType"
+        "title": "SupplierContactPersonInfosType"
       },
-      "CustomerLocationInfosType": {
+      "SupplierLocationInfosType": {
         "properties": {
           "zipcode": {
             "type": "string",
@@ -1352,76 +1043,29 @@
           "state",
           "full_address"
         ],
-        "title": "CustomerLocationInfosType"
+        "title": "SupplierLocationInfosType"
       },
-      "CustomerOutstandingAddEnums": {
+      "SupplierOutstandingInfosType": {
+        "properties": {
+          "amount": {
+            "type": "number",
+            "title": "Amount"
+          }
+        },
+        "type": "object",
+        "required": [
+          "amount"
+        ],
+        "title": "SupplierOutstandingInfosType"
+      },
+      "SupplierOutstandingUpdateTypeEnums": {
         "type": "string",
         "enum": [
           "INCREMENT",
           "DECREMENT",
           "DIRECT"
         ],
-        "title": "CustomerOutstandingAddEnums"
-      },
-      "CustomerOutstandingInfosType": {
-        "properties": {
-          "amount": {
-            "type": "number",
-            "title": "Amount"
-          }
-        },
-        "type": "object",
-        "required": [
-          "amount"
-        ],
-        "title": "CustomerOutstandingInfosType"
-      },
-      "CustomerPaymentInfosType": {
-        "properties": {
-          "method": {
-            "$ref": "#/components/schemas/PaymentMethodsEnums"
-          },
-          "amount": {
-            "type": "number",
-            "title": "Amount"
-          }
-        },
-        "type": "object",
-        "required": [
-          "method",
-          "amount"
-        ],
-        "title": "CustomerPaymentInfosType"
-      },
-      "CustomerPaymentTermsEnums": {
-        "type": "string",
-        "enum": [
-          "7_DAYS"
-        ],
-        "title": "CustomerPaymentTermsEnums"
-      },
-      "HTTPValidationError": {
-        "properties": {
-          "detail": {
-            "items": {
-              "$ref": "#/components/schemas/ValidationError"
-            },
-            "type": "array",
-            "title": "Detail"
-          }
-        },
-        "type": "object",
-        "title": "HTTPValidationError"
-      },
-      "PaymentMethodsEnums": {
-        "type": "string",
-        "enum": [
-          "UPI",
-          "CASH",
-          "CARD",
-          "BANK"
-        ],
-        "title": "PaymentMethodsEnums"
+        "title": "SupplierOutstandingUpdateTypeEnums"
       },
       "UpdateCustomFieldSchema": {
         "properties": {
@@ -1485,7 +1129,33 @@
         ],
         "title": "UpdateCustomFieldSchema"
       },
-      "UpdateCustomerSchema": {
+      "UpdateOutstandingSupplierSchema": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "shop_id": {
+            "type": "string",
+            "title": "Shop Id"
+          },
+          "outstanding_infos": {
+            "$ref": "#/components/schemas/SupplierOutstandingInfosType"
+          },
+          "type": {
+            "$ref": "#/components/schemas/SupplierOutstandingUpdateTypeEnums"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "shop_id",
+          "outstanding_infos",
+          "type"
+        ],
+        "title": "UpdateOutstandingSupplierSchema"
+      },
+      "UpdateSupplierSchema": {
         "properties": {
           "id": {
             "type": "string",
@@ -1509,17 +1179,7 @@
           "contact_infos": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/CustomerContactInfosType"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "credit_infos": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/CustomerCreditInfosType"
+                "$ref": "#/components/schemas/SupplierContactInfosType"
               },
               {
                 "type": "null"
@@ -1529,23 +1189,48 @@
           "location_infos": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/CustomerLocationInfosType"
+                "$ref": "#/components/schemas/SupplierLocationInfosType"
               },
               {
                 "type": "null"
               }
             ]
           },
-          "can_have_credit": {
+          "contact_person_infos": {
             "anyOf": [
               {
-                "type": "boolean"
+                "$ref": "#/components/schemas/SupplierContactPersonInfosType"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "gst_no": {
+            "anyOf": [
+              {
+                "type": "string"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Can Have Credit"
+            "title": "Gst No"
+          },
+          "additional_infos": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Additional Infos",
+            "default": {
+
+            }
           },
           "custom_fields": {
             "anyOf": [
@@ -1557,16 +1242,18 @@
                 "type": "null"
               }
             ],
-            "title": "Custom Fields"
+            "title": "Custom Fields",
+            "default": {
+
+            }
           }
         },
         "type": "object",
         "required": [
           "id",
-          "shop_id",
-          "can_have_credit"
+          "shop_id"
         ],
-        "title": "UpdateCustomerSchema"
+        "title": "UpdateSupplierSchema"
       },
       "ValidationError": {
         "properties": {

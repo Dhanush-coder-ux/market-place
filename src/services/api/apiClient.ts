@@ -24,11 +24,72 @@ async function request(options: RequestOptions): Promise<any> {
     url += `?${new URLSearchParams(params).toString()}`;
   }
 
-  const res = await fetch(url, {
+  const getHeaders = () => {
+    const token = localStorage.getItem("auth_token");
+    let shopId = localStorage.getItem("shop_id");
+    let userId = localStorage.getItem("user_id");
+    
+    if (token && (!shopId || !userId)) {
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        if (payload.user_id && !userId) {
+          userId = payload.user_id;
+          localStorage.setItem("user_id", userId);
+        }
+        if (payload.shop_id && !shopId) {
+          shopId = payload.shop_id;
+          localStorage.setItem("shop_id", shopId);
+        }
+      } catch (e) {
+        // ignore
+      }
+    }
+    
+    const headers: Record<string, string> = { 
+      "Content-Type": "application/json" 
+    };
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+    if (shopId) headers["X-Shop-Id"] = shopId;
+    if (userId) headers["X-User-Id"] = userId;
+    
+    return headers;
+  };
+
+  let res = await fetch(url, {
     method,
-    headers: { "Content-Type": "application/json" },
+    headers: getHeaders(),
     ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
   });
+
+  if (res.status === 401) {
+    const refreshToken = localStorage.getItem("refresh_token");
+    if (refreshToken && !endpoint.includes("/auth/token/refresh")) {
+      try {
+        const refreshRes = await fetch(`${BASE_URL}/auth/token/refresh`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ refresh_token: refreshToken })
+        });
+        
+        if (refreshRes.ok) {
+          const refreshData = await refreshRes.json();
+          localStorage.setItem("auth_token", refreshData.access_token);
+          if (refreshData.refresh_token) {
+            localStorage.setItem("refresh_token", refreshData.refresh_token);
+          }
+          
+          // Retry the original request
+          res = await fetch(url, {
+            method,
+            headers: getHeaders(),
+            ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+          });
+        }
+      } catch (err) {
+        console.error("Token refresh failed:", err);
+      }
+    }
+  }
 
   if (!res.ok) {
     const msg = await parseError(res);
@@ -45,10 +106,69 @@ async function request(options: RequestOptions): Promise<any> {
 async function requestFormData(endpoint: string, formData: FormData): Promise<any> {
   const url = `${BASE_URL}${endpoint}`;
 
-  const res = await fetch(url, {
+  const getHeaders = () => {
+    const token = localStorage.getItem("auth_token");
+    let shopId = localStorage.getItem("shop_id");
+    let userId = localStorage.getItem("user_id");
+    
+    if (token && (!shopId || !userId)) {
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        if (payload.user_id && !userId) {
+          userId = payload.user_id;
+          localStorage.setItem("user_id", userId);
+        }
+        if (payload.shop_id && !shopId) {
+          shopId = payload.shop_id;
+          localStorage.setItem("shop_id", shopId);
+        }
+      } catch (e) {
+        // ignore
+      }
+    }
+    
+    const headers: Record<string, string> = {};
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+    if (shopId) headers["X-Shop-Id"] = shopId;
+    if (userId) headers["X-User-Id"] = userId;
+    
+    return headers;
+  };
+
+  let res = await fetch(url, {
     method: "POST",
+    headers: getHeaders(),
     body: formData,
   });
+
+  if (res.status === 401) {
+    const refreshToken = localStorage.getItem("refresh_token");
+    if (refreshToken) {
+      try {
+        const refreshRes = await fetch(`${BASE_URL}/auth/token/refresh`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ refresh_token: refreshToken })
+        });
+        
+        if (refreshRes.ok) {
+          const refreshData = await refreshRes.json();
+          localStorage.setItem("auth_token", refreshData.access_token);
+          if (refreshData.refresh_token) {
+            localStorage.setItem("refresh_token", refreshData.refresh_token);
+          }
+          
+          res = await fetch(url, {
+            method: "POST",
+            headers: getHeaders(),
+            body: formData,
+          });
+        }
+      } catch (err) {
+        console.error("Token refresh failed:", err);
+      }
+    }
+  }
 
   if (!res.ok) {
     const msg = await parseError(res);

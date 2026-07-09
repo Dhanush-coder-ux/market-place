@@ -15,6 +15,7 @@ export const ENDPOINTS = {
   EXCHANGE: "/exchanges",
   RETURN: "/returns",
   SHOPS: "/shops",
+  MY_SHOPS: "/shops/my-shops",
   OFFERS: "/offers",
   COUPONS: "/coupons",
   UTILITIES: "/utilities",
@@ -54,7 +55,28 @@ export const ENDPOINTS = {
 
   // ── Order Service: Orders + Cart ─────────────────────────────────
   ORDER_CART: "/cart",
+
+  // ── Auth Service ─────────────────────────────────────────────────
+
+  AUTH_USER_CHECK: "/auth/user-check",
+  AUTH_SHOP_CHECK: "/auth/shop-check",
+  AUTH_VERIFY: "/auth/verify",
+  AUTH_INIT: "/auth/init",
+  AUTH_REDIRECT: "/auth/redirect",
+  AUTH_TOKEN_CREATE: "/auth/token/create",
+  AUTH_SHOP_CHECKIN: "/auth/shop-checkin",
+  AUTH_TOKEN_REFRESH: "/auth/token/refresh",
+
+  // ── Analytics Service ────────────────────────────────────────────
+  ANALYTICS_DASHBOARD: "/analytics-dashboard/",
+  ANALYTICS_PRODINV: "/analytics-dashboard/prodinv",
+  ANALYTICS_CUSTOMER: "/analytics-dashboard/customer",
 } as const;
 
-// Hardcoded until auth wires up shop_id from login session
-export const SHOP_ID = "string";
+// Dynamically loaded from local storage or defaults to the actual shop in the DB
+export let SHOP_ID = localStorage.getItem("shop_id") || "8f6aeb11-d5ed-51de-b153-a3ad851ed275";
+
+export const setShopId = (id: string) => {
+  SHOP_ID = id;
+  localStorage.setItem("shop_id", id);
+};

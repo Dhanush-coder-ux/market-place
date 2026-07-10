@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   AlertCircle, Package, Mail, Pencil, User, MapPin, Phone, Trash2,
-  Store, Database, ShoppingBag, History, Layers, Check, X as XIcon
+  Store, Database, ShoppingBag, Layers, Check, X as XIcon
 } from "lucide-react";
 import {
   SectionCard, DetailItem, InfoRow, Modal,
@@ -98,23 +98,22 @@ export default function SupplierDetail() {
   useEffect(() => {
     if (!id) return;
     setRecordLoading(true);
-    
-    import("@/services/api/supplier").then(({ supplierApi }) => {
-      Promise.all([
-        getData(`${ENDPOINTS.SUPPLIERS}/by/${SHOP_ID}/${id}`),
-        supplierApi.getSupplierPurchaseStats(id)
-      ]).then(([res, statsRes]) => {
-        if (res) {
-          let suppData = res.data;
-          if (suppData?.datas && Array.isArray(suppData.datas)) suppData = suppData.datas[0];
-          setSupplier(Array.isArray(suppData) ? suppData[0] : suppData);
-        }
-        if (statsRes) {
-          setStats(statsRes);
-        }
-        setRecordLoading(false);
-      }).catch(() => setRecordLoading(false));
-    });
+    Promise.all([
+      getData(`${ENDPOINTS.SUPPLIERS}/by/${SHOP_ID}/${id}`),
+      getData(`${ENDPOINTS.ANALYTICS_SUPPLIER}/${id}`, { shop_id: SHOP_ID })
+    ]).then(([res, statsRes]) => {
+      if (res) {
+        let suppData = res.data;
+        if (suppData?.datas && Array.isArray(suppData.datas)) suppData = suppData.datas[0];
+        setSupplier(Array.isArray(suppData) ? suppData[0] : suppData);
+      }
+      const statsData = statsRes?.data ?? statsRes;
+      const statsObj = statsData?.supplier ?? statsData;
+      if (statsObj) {
+        setStats(statsObj);
+      }
+      setRecordLoading(false);
+    }).catch(() => setRecordLoading(false));
   }, [id]);
 
   useEffect(() => {
@@ -269,10 +268,9 @@ export default function SupplierDetail() {
         </div>
 
         <div className="flex flex-wrap gap-2">
-          <StatCard icon={ShoppingBag} label="Total Purchases" value={`${stats?.purchase_count || 0} (₹${(stats?.total_purchase_value || 0).toFixed(2)})`} iconBg="bg-blue-50 text-blue-600" className="flex-1 min-w-[140px]" />
-          <StatCard icon={AlertCircle} label="Outstanding" value={`${stats?.outstanding_count || 0} (₹${(stats?.outstanding_value || 0).toFixed(2)})`} iconBg={stats?.outstanding_value > 0 ? "bg-rose-50 text-rose-600" : "bg-emerald-50 text-emerald-600"} className="flex-1 min-w-[140px]" />
-          <StatCard icon={Package} label="Total Stocks" value={String(stats?.total_items_bought || "0")} iconBg="bg-indigo-50 text-indigo-600" className="flex-1 min-w-[140px]" />
-          <StatCard icon={History} label="Last Order" value={stats?.last_order_date ? new Date(stats.last_order_date).toLocaleDateString() : "N/A"} iconBg="bg-amber-50 text-amber-600" className="flex-1 min-w-[140px]" />
+          <StatCard icon={ShoppingBag} label="Total Purchases" value={`${stats?.total_purchases || 0} (₹${(stats?.total_purchase_amounts || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })})`} iconBg="bg-blue-50 text-blue-600" className="flex-1 min-w-[140px]" />
+          <StatCard icon={AlertCircle} label="Outstanding" value={`₹${(stats?.total_outstandings || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} iconBg={(stats?.total_outstandings || 0) > 0 ? "bg-rose-50 text-rose-600" : "bg-emerald-50 text-emerald-600"} className="flex-1 min-w-[140px]" />
+          <StatCard icon={Package} label="Cleared Amount" value={`₹${(stats?.total_cleared_amounts || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} iconBg="bg-indigo-50 text-indigo-600" className="flex-1 min-w-[140px]" />
         </div>
       </div>
 
@@ -451,28 +449,28 @@ export default function SupplierDetail() {
               const charges = p.additional_charges ?? {};
               
               const productsList: any[] = [];
-              (p.products ?? []).forEach((prod: any) => {
+              (p.items ?? p.products ?? []).forEach((prod: any) => {
+                const isNewItemFormat = prod.stocks_infos !== undefined;
                 const baseProd = {
                   productName: prod.name || 'Unknown Product',
-                  stocksBefore: prod.stocks_before ?? null,
-                  receivedStocks: prod.stocks_added ?? prod.received_stocks ?? prod.stocks ?? 0,
+                  stocksBefore: isNewItemFormat ? (prod.stocks_infos?.stocks_before ?? null) : (prod.stocks_before ?? null),
+                  receivedStocks: isNewItemFormat ? (prod.stocks_infos?.stocks ?? 0) : (prod.stocks_added ?? prod.received_stocks ?? prod.stocks ?? 0),
                   buy_price: prod.buy_price,
                   sell_price: prod.sell_price,
                 };
 
-                // PurchaseReadModel provides variant, batch, and serial_info directly on the product
-                const v = prod.variant;
-                const b = prod.batch;
-                const s = prod.serial_info;
-                
+                const v = isNewItemFormat ? prod.variant_infos : prod.variant;
+                const b = isNewItemFormat ? prod.batch_infos : prod.batch;
+                const s_list = isNewItemFormat ? prod.serial_numbers : (prod.serial_info?.serial_numbers || []);
+
                 productsList.push({
                   ...baseProd,
-                  variant: v?.variant_name || null,
-                  batch: b?.batch_name || null,
-                  serials: s?.serial_numbers || [],
+                  variant: v?.variant_name || v?.name || null,
+                  batch: b?.batch_name || b?.name || null,
+                  serials: s_list || [],
                   variant_details: v || null,
                   batch_details: b || null,
-                  serial_info: s || null
+                  serial_info: s_list || null
                 });
               });
 

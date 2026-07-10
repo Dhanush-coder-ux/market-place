@@ -8,7 +8,8 @@ import {
 import { useHeader } from "@/context/HeaderContext";
 import { GradientButton } from "@/components/ui/GradientButton";
 import { useBusinessApi } from "@/context/BusinessApiContext";
-import { SHOP_ID } from "@/services/endpoints";
+import { useApi } from "@/context/ApiContext";
+import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 import { StatCard } from "@/components/common/StatsCard";
 import { RightSidebarFilter } from "@/components/common/RightSidebarFilter";
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
@@ -26,6 +27,20 @@ const CustomerList = () => {
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+
+  const { getData } = useApi();
+  const [analyticsStats, setAnalyticsStats] = useState<any>(null);
+
+  useEffect(() => {
+    getData(ENDPOINTS.ANALYTICS_CUSTOMER_OVERALL, { shop_id: SHOP_ID })
+      .then((res) => {
+        const data = res?.data ?? res;
+        if (data) {
+          setAnalyticsStats(data);
+        }
+      })
+      .catch(() => {});
+  }, [getData]);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(searchTerm), 300);
@@ -84,7 +99,7 @@ const CustomerList = () => {
     toDate
   }), [debouncedSearch, fromDate, toDate]);
 
-  const { items: customers, loading, loadingMore, stats: overallStats, totalCount, lastElementRef } = useInfiniteScroll({
+  const { items: customers, loading, loadingMore, totalCount, lastElementRef } = useInfiniteScroll({
     fetchPage,
     filters,
     limit: 20
@@ -145,42 +160,40 @@ const CustomerList = () => {
     <div className="flex-1 flex flex-col min-h-0 gap-2.5 font-sans w-full overflow-hidden relative">
 
       {/* ── KPI Row ── */}
-      {overallStats && (
-        <div className="flex gap-3 pb-1 overflow-x-auto scrollbar-none">
-          <StatCard
-            label="Total Customers"
-            value={overallStats.total_customers || 0}
-            icon={<Users size={18} />}
-            iconBg="bg-blue-50"
-            iconColor="text-blue-600"
-            subValue="All"
-          />
-          <StatCard
-            label="Active Customers"
-            value={overallStats.active_customers || 0}
-            icon={<UserCheck size={18} />}
-            iconBg="bg-emerald-50"
-            iconColor="text-emerald-600"
-            subValue="With Credit"
-          />
-          <StatCard
-            label="Outstanding Balance"
-            value={fmt(overallStats.outstanding_balance || 0)}
-            icon={<AlertCircle size={18} />}
-            iconBg="bg-rose-50"
-            iconColor="text-rose-500"
-            subValue="Pending"
-          />
-          <StatCard
-            label="Total Credit Limits"
-            value={fmt(overallStats.total_credit_limits || 0)}
-            icon={<CreditCard size={18} />}
-            iconBg="bg-violet-50"
-            iconColor="text-violet-600"
-            subValue="Allocated"
-          />
-        </div>
-      )}
+      <div className="flex gap-3 pb-1 overflow-x-auto scrollbar-none">
+        <StatCard
+          label="Total Customers"
+          value={analyticsStats?.total_customers ?? customers.length}
+          icon={<Users size={18} />}
+          iconBg="bg-blue-50"
+          iconColor="text-blue-600"
+          subValue="All"
+        />
+        <StatCard
+          label="Outstanding Balance"
+          value={fmt(analyticsStats?.total_outstandings ?? 0)}
+          icon={<AlertCircle size={18} />}
+          iconBg="bg-rose-50"
+          iconColor="text-rose-500"
+          subValue="Pending"
+        />
+        <StatCard
+          label="Total Cleared"
+          value={fmt(analyticsStats?.total_cleared_amounts ?? 0)}
+          icon={<UserCheck size={18} />}
+          iconBg="bg-emerald-50"
+          iconColor="text-emerald-600"
+          subValue="Paid"
+        />
+        <StatCard
+          label="Total Credit Limits"
+          value={fmt(analyticsStats?.total_credit_limits ?? 0)}
+          icon={<CreditCard size={18} />}
+          iconBg="bg-violet-50"
+          iconColor="text-violet-600"
+          subValue="Allocated"
+        />
+      </div>
 
       {/* ── Search & Filter Bar ── */}
       <div className="flex items-center gap-2 flex-wrap">

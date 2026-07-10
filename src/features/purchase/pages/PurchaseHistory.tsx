@@ -21,7 +21,8 @@ import { ReusableSelect } from "@/components/ui/ReusableSelect";
 import { SearchSelect } from "@/components/inputbuilders/SearchSelect";
 import { StatCard } from "@/components/common/StatsCard";
 import type { PurchaseRecord } from "@/types/api";
-import { SHOP_ID } from "@/services/endpoints";
+import { useApi } from "@/context/ApiContext";
+import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 
 
@@ -728,6 +729,20 @@ const PurchaseHistory = () => {
 
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
+
+  const { getData } = useApi();
+  const [analyticsStats, setAnalyticsStats] = useState<any>(null);
+
+  useEffect(() => {
+    getData(ENDPOINTS.ANALYTICS_PURCHASE_OVERALL, { shop_id: SHOP_ID })
+      .then((res) => {
+        const data = res?.data ?? res;
+        if (data) {
+          setAnalyticsStats({ overview: { purchase: data } });
+        }
+      })
+      .catch(() => {});
+  }, [getData]);
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(searchTerm), 300);
     return () => clearTimeout(timer);
@@ -829,7 +844,7 @@ const PurchaseHistory = () => {
     toDate
   }), [debouncedSearch, filterType, filterVendor, fromDate, toDate]);
 
-  const { items, loading, loadingMore, stats: overallStats, totalCount, lastElementRef } = useInfiniteScroll<DirectPurchaseData, any>({
+  const { items, loading, loadingMore, totalCount, lastElementRef } = useInfiniteScroll<DirectPurchaseData, any>({
     fetchPage,
     filters,
     limit: 50
@@ -849,34 +864,33 @@ const PurchaseHistory = () => {
 
       <div className="flex-1 flex flex-col min-h-0 gap-2.5 font-sans w-full overflow-hidden relative">
         {/* ── KPI Row ── */}
-        {!isCleanMode && overallStats && (
+        {!isCleanMode && (
           <div className="flex gap-3 pb-1 overflow-x-auto scrollbar-none">
             <StatCard
               label="Total Purchase"
-              value={(overallStats.total_purchase_value || 0).toLocaleString()}
+              value={(analyticsStats?.overview?.purchase?.total_purchase_amounts || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               prefix="₹"
               icon={<ReceiptText size={18} />}
               iconBg="bg-blue-50"
               iconColor="text-blue-600"
-              subValue={`${overallStats.total_purchase_count || 0} Purchases`}
+              subValue={`${analyticsStats?.overview?.purchase?.total_purchase || 0} Purchases`}
             />
             <StatCard
               label="Pending Payment"
-              value={(overallStats.pending_value ?? overallStats.outstanding_value ?? 0).toLocaleString()}
+              value={(analyticsStats?.overview?.purchase?.total_outstanding_amounts || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               prefix="₹"
               icon={<Calendar size={18} />}
               iconBg="bg-amber-50"
               iconColor="text-amber-500"
-              subValue={`${overallStats.pending_count ?? overallStats.outstanding_counts ?? 0} Pending`}
+              subValue="Pending to clear"
             />
             <StatCard
-              label="Completed Payment"
-              value={(overallStats.completed_value ?? overallStats.complete_value ?? 0).toLocaleString()}
-              prefix="₹"
+              label="Total Items Bought"
+              value={(analyticsStats?.overview?.purchase?.total_purchase_stocks || 0).toString()}
               icon={<Package size={18} />}
-              iconBg="bg-emerald-50"
-              iconColor="text-emerald-600"
-              subValue={`${overallStats.completed_count ?? overallStats.complete_counts ?? 0} Completed`}
+              iconBg="bg-rose-50"
+              iconColor="text-rose-550"
+              subValue="Stocks added"
             />
           </div>
         )}

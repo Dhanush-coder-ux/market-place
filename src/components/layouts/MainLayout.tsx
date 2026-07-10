@@ -1,4 +1,5 @@
-import { Outlet, useLocation } from "react-router-dom";
+import { useEffect } from "react";
+import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import Breadcrumb from "../common/BreadCrums";
 import { Navbar } from "./Navbar";
 import Sidebar from "./Sidebar";
@@ -296,7 +297,20 @@ const isDetailsRoute = (pathname: string) => {
 
 const MainLayout = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const { actions, bottomActions } = useHeader();
+
+  useEffect(() => {
+    const token = localStorage.getItem("auth_token");
+    const sessionId = localStorage.getItem("session_id");
+
+    if (!token && !sessionId) {
+      navigate("/login");
+    } else if (!token && sessionId && location.pathname !== "/shop-select" && location.pathname !== "/create-digital-store") {
+      navigate("/shop-select");
+    }
+  }, [location.pathname, navigate]);
+
   const isStorePage =
     location.pathname === "/digital-store" ||
     location.pathname === "/digital-store/profile" ||

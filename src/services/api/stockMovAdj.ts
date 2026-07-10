@@ -76,4 +76,12 @@ export const stockMovAdjApi = {
     validateMandatory(data, SCHEMAS.cart_remove);
     return await apiClient.post(`${ENDPOINTS.STOCK_MOV_ADJ_CART}/remove`, data);
   },
+
+  /**
+   * Get stock movements for a specific product ID
+   */
+  getStockMovementsByProduct: async (shopId: string, productId: string, params?: Record<string, any>) => {
+    if (!shopId || !productId) throw new Error("Shop ID and Product ID are required.");
+    return await apiClient.get(`${ENDPOINTS.STOCK_MOV_ADJ}/by/product/${shopId}/${productId}`, params);
+  },
 };

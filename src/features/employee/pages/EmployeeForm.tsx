@@ -195,8 +195,8 @@ const EmployeeForm = () => {
         }
         navigate("/employee/all");
       }
-    } catch (_err) {
-      showToast("Failed to save employee", "error");
+    } catch (_err: any) {
+      showToast(_err.message || "Failed to save employee", "error");
     } finally {
       setSubmitting(false);
     }

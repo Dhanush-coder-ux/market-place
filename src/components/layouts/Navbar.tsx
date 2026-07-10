@@ -287,7 +287,7 @@ export const Navbar = () => {
 
             <DropdownMenuSeparator className="bg-slate-100 my-1.5" />
 
-            <Link to="/profile/add">
+            <Link to="/create-digital-store">
               <DropdownMenuItem className="cursor-pointer text-blue-600 rounded-lg px-2.5 py-2 hover:bg-blue-50 font-medium">
                 <PlusCircle className="w-4 h-4 mr-2" />
                 Create New Shop

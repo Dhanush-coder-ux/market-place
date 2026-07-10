@@ -28,6 +28,7 @@ async function request(options: RequestOptions): Promise<any> {
     const token = localStorage.getItem("auth_token");
     let shopId = localStorage.getItem("shop_id");
     let userId = localStorage.getItem("user_id");
+    const sessionId = localStorage.getItem("session_id");
     
     if (token && (!shopId || !userId)) {
       try {
@@ -49,8 +50,15 @@ async function request(options: RequestOptions): Promise<any> {
       "Content-Type": "application/json" 
     };
     if (token) headers["Authorization"] = `Bearer ${token}`;
-    if (shopId) headers["X-Shop-Id"] = shopId;
-    if (userId) headers["X-User-Id"] = userId;
+    if (shopId) {
+      headers["x-shop-id"] = shopId;
+    }
+    if (userId) {
+      headers["x-user-id"] = userId;
+    }
+    if (sessionId) {
+      headers["x-session-id"] = sessionId;
+    }
     
     return headers;
   };
@@ -110,6 +118,7 @@ async function requestFormData(endpoint: string, formData: FormData): Promise<an
     const token = localStorage.getItem("auth_token");
     let shopId = localStorage.getItem("shop_id");
     let userId = localStorage.getItem("user_id");
+    const sessionId = localStorage.getItem("session_id");
     
     if (token && (!shopId || !userId)) {
       try {
@@ -129,8 +138,15 @@ async function requestFormData(endpoint: string, formData: FormData): Promise<an
     
     const headers: Record<string, string> = {};
     if (token) headers["Authorization"] = `Bearer ${token}`;
-    if (shopId) headers["X-Shop-Id"] = shopId;
-    if (userId) headers["X-User-Id"] = userId;
+    if (shopId) {
+      headers["x-shop-id"] = shopId;
+    }
+    if (userId) {
+      headers["x-user-id"] = userId;
+    }
+    if (sessionId) {
+      headers["x-session-id"] = sessionId;
+    }
     
     return headers;
   };

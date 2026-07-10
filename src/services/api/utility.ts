@@ -26,7 +26,7 @@ export const utilityApi = {
 
   deleteShopCategory: async (data: { id: string; shop_id: string }) => {
     validateMandatory(data, SCHEMAS.shop_category_delete);
-    return await apiClient.delete(ENDPOINTS.SHOP_CATEGORIES, data);
+    return await apiClient.deleteWithParams(ENDPOINTS.SHOP_CATEGORIES, data);
   },
 
   getShopCategories: async (shopId: string, params?: { limit?: string; offset?: string }) => {
@@ -55,7 +55,7 @@ export const utilityApi = {
 
   deleteShopUnit: async (data: { id: string; shop_id: string }) => {
     validateMandatory(data, SCHEMAS.shop_unit_delete);
-    return await apiClient.delete(ENDPOINTS.SHOP_UNITS, data);
+    return await apiClient.deleteWithParams(ENDPOINTS.SHOP_UNITS, data);
   },
 
   getShopUnits: async (shopId: string, params?: { limit?: string; offset?: string }) => {

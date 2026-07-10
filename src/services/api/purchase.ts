@@ -67,4 +67,20 @@ export const purchaseApi = {
     if (!shopId || !id) throw new Error("Shop ID and Purchase ID are required.");
     return await apiClient.delete(`${ENDPOINTS.PURCHASES}/${shopId}/${id}`);
   },
+
+  /**
+   * Get purchases for a specific product ID
+   */
+  getPurchasesByProduct: async (shopId: string, productId: string, params?: Record<string, any>) => {
+    if (!shopId || !productId) throw new Error("Shop ID and Product ID are required.");
+    return await apiClient.get(`${ENDPOINTS.PURCHASES}/by/product/${shopId}/${productId}`, params);
+  },
+
+  /**
+   * Get purchases for a specific supplier ID
+   */
+  getPurchasesBySupplier: async (shopId: string, supplierId: string, params?: Record<string, any>) => {
+    if (!shopId || !supplierId) throw new Error("Shop ID and Supplier ID are required.");
+    return await apiClient.get(`${ENDPOINTS.PURCHASES}/by/supplier/${shopId}/${supplierId}`, params);
+  },
 };

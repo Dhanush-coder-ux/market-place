@@ -52,6 +52,7 @@ const EmployeeSearch = React.lazy(() => import("../features/employee/pages/Emplo
 const EmployeeForm = React.lazy(() => import("../features/employee/pages/EmployeeForm"));
 const EmployeeDetail = React.lazy(() => import("../features/employee/pages/EmployeeDetail"));
 const EmployeeDraftsPage = React.lazy(() => import("../features/employee/pages/EmployeeDraftsPage"));
+const EmployeeVerifyPage = React.lazy(() => import("../features/employee/pages/EmployeeVerifyPage"));
 
 // ─── Inventory ───────────────────────────────────────────────────────────────
 const Inventory = React.lazy(() => import("../features/inventory/pages/Inventory"));
@@ -99,6 +100,7 @@ export const router = createBrowserRouter([
     ),
     children: [
       { index: true, element: <Page><AnalyticsDashboard /></Page> },
+      { path: '/dashboard', element: <Page><AnalyticsDashboard /></Page> },
       { path: "/sales", element: <Page><SalesListPage /></Page> },
       { path: "/sales/detail", element: <Page><SaleSearch /></Page> },
       { path: "/sales/:id", element: <Page><SaleDetailPage /></Page> },
@@ -190,6 +192,14 @@ export const router = createBrowserRouter([
     element: (
       <Suspense fallback={<Loader />}>
         <ShopSelect />
+      </Suspense>
+    )
+  },
+  {
+    path: '/employee/verify',
+    element: (
+      <Suspense fallback={<Loader />}>
+        <EmployeeVerifyPage />
       </Suspense>
     )
   },

@@ -613,6 +613,19 @@ const InventoryPage = () => {
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
 
+  const [analyticsStats, setAnalyticsStats] = useState<any>(null);
+
+  useEffect(() => {
+    getData(ENDPOINTS.ANALYTICS_PRODINV_OVERALL, { shop_id: SHOP_ID })
+      .then((res) => {
+        const data = res?.data ?? res;
+        if (data) {
+          setAnalyticsStats({ overview: { inventory: data } });
+        }
+      })
+      .catch(() => {});
+  }, [getData]);
+
   useEffect(() => {
     if (selectedItem) {
       setBottomActions(
@@ -747,7 +760,7 @@ const InventoryPage = () => {
           <StatCard
             icon={Package}
             label="Total Products"
-            value={Math.max(Number(overallStats?.total_product_count || 0), stats.total).toString()}
+            value={(analyticsStats?.overview?.inventory?.total_active_products ?? Math.max(Number(overallStats?.total_product_count || 0), stats.total)).toString()}
             subValue="items"
             iconBg="bg-blue-50"
             iconColor="text-blue-600"
@@ -755,7 +768,7 @@ const InventoryPage = () => {
           <StatCard
             icon={IndianRupee}
             label="Total Stock Value"
-            value={(overallStats?.total_stock_value || 0).toLocaleString()}
+            value={(analyticsStats?.overview?.inventory?.total_stocks ?? overallStats?.total_stock_value ?? 0).toLocaleString()}
             prefix="₹"
             subValue="inventory value"
             iconBg="bg-emerald-50"
@@ -764,7 +777,7 @@ const InventoryPage = () => {
           <StatCard
             icon={AlertTriangle}
             label="Low Stock"
-            value={overallStats?.low_stocks_count?.toString() || stats.lowStock.toString()}
+            value={(analyticsStats?.overview?.inventory?.total_low_stocks ?? overallStats?.low_stocks_count ?? stats.lowStock).toString()}
             subValue="priority"
             iconBg="bg-amber-50"
             iconColor="text-amber-500"
@@ -772,7 +785,7 @@ const InventoryPage = () => {
           <StatCard
             icon={AlertCircle}
             label="Out of Stock"
-            value={overallStats?.no_stocks_count?.toString() || (inventory.filter((p: InventoryItem) => Number((p as any).stock_infos?.available_stocks ?? p.stocks ?? 0) === 0).length).toString()}
+            value={(analyticsStats?.overview?.inventory?.total_no_stocks ?? overallStats?.no_stocks_count ?? inventory.filter((p: InventoryItem) => Number((p as any).stock_infos?.available_stocks ?? p.stocks ?? 0) === 0).length).toString()}
             subValue="items empty"
             iconBg="bg-red-50"
             iconColor="text-red-500"

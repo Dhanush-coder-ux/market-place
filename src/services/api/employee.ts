@@ -34,6 +34,12 @@ export const employeeApi = {
   },
   
   verifyToken: async (data: Record<string, any>) => {
+    validateMandatory(data, SCHEMAS.employee_verify_token);
     return await apiClient.post(`${ENDPOINTS.EMPLOYEES}/verify/token`, data);
+  },
+
+  resendVerificationEmail: async (data: Record<string, any>) => {
+    validateMandatory(data, SCHEMAS.employee_resend_verify);
+    return await apiClient.post(`${ENDPOINTS.EMPLOYEES}/verify/resend`, data);
   }
 };

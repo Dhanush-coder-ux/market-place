@@ -12,6 +12,7 @@ import { useToast } from '@/context/ToastContext';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 import { ColumnPicker } from '@/components/common/ColumnPicker';
 import { RightSidebarFilter } from '@/components/common/RightSidebarFilter';
+import { employeeApi } from '@/services/api/employee';
 
 import { useEffect, useMemo, useState } from 'react';
 
@@ -33,6 +34,7 @@ export default function Employee() {
   const [roleFilter, setRoleFilter] = useState<string>('All');
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [resendingVerification, setResendingVerification] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [employeeToDelete, setEmployeeToDelete] = useState<EmployeeRecord | null>(null);
   const [selectedEmployee, setSelectedEmployee] = useState<EmployeeRecord | null>(null);
@@ -73,6 +75,22 @@ export default function Employee() {
 
   useEffect(() => {
     if (selectedEmployee) {
+      const handleResendVerification = async () => {
+        if (!selectedEmployee?.id) return;
+        setResendingVerification(true);
+        try {
+          await employeeApi.resendVerificationEmail({
+            id: selectedEmployee.id,
+            shop_id: selectedEmployee.shop_id || SHOP_ID
+          });
+          showToast("Verification email sent again", "success");
+        } catch (_err) {
+          showToast("Failed to send verification email", "error");
+        } finally {
+          setResendingVerification(false);
+        }
+      };
+
       setBottomActions(
         <div className="flex items-center justify-between w-full animate-in fade-in slide-in-from-right-4 duration-300">
           <div className="flex items-center gap-3">
@@ -85,6 +103,15 @@ export default function Employee() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {!selectedEmployee.accepted && (
+              <button
+                onClick={handleResendVerification}
+                disabled={resendingVerification}
+                className="h-8 px-3 rounded-md border border-amber-200 bg-white hover:bg-amber-50 text-amber-700 font-semibold text-[11px] transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {resendingVerification ? "Sending..." : "Resend Invite"}
+              </button>
+            )}
             <button
               onClick={() => setSelectedEmployee(null)}
               className="h-8 px-3 rounded-md border border-slate-200 bg-white hover:bg-slate-50 text-slate-500 font-semibold text-[11px] transition-colors"
@@ -116,7 +143,7 @@ export default function Employee() {
     } else {
       setBottomActions(null);
     }
-  }, [selectedEmployee, setBottomActions, navigate]);
+  }, [selectedEmployee, setBottomActions, navigate, resendingVerification, showToast]);
 
   useEffect(() => {
     const params: Record<string, string> = { limit: "50", offset: "1" };
@@ -329,10 +356,17 @@ export default function Employee() {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold   border shadow-sm bg-emerald-50 text-emerald-600 border-emerald-100`}>
-                        <div className={`w-1.5 h-1.5 rounded-full bg-emerald-500`} />
-                        Accepted
-                      </span>
+                      {emp.accepted ? (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold border shadow-sm bg-emerald-50 text-emerald-600 border-emerald-100">
+                          <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                          Accepted
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold border shadow-sm bg-amber-50 text-amber-600 border-amber-100">
+                          <div className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                          Pending
+                        </span>
+                      )}
                     </td>
                     {selectedKeys.map(key => {
                       const value = (emp.datas as any)?.[key] ?? (emp as any)[key];

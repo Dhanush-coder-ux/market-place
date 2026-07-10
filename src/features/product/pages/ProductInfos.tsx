@@ -4,7 +4,7 @@ import {
   Package, Search, Filter, Bookmark, Trash2,
   ChevronDown, ChevronRight, Layers, AlertTriangle,
   X, AlertCircle, Calendar, Hash, ExternalLink,
-  Copy, Check, IndianRupee
+  Copy, Check
 } from "lucide-react";
 import { VariantRows, BatchCards, SerialBadgeList } from "../../inventory/components/StockTree";
 import { useHeader } from "@/context/HeaderContext";
@@ -619,11 +619,23 @@ const ProductInfos = () => {
   const { showToast } = useToast();
 
   const [products, setProducts] = useState<InventoryRecord[]>([]);
-  const [overallStats, setOverallStats] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+
+  const [analyticsStats, setAnalyticsStats] = useState<any>(null);
+
+  useEffect(() => {
+    getData(ENDPOINTS.ANALYTICS_PRODINV_OVERALL, { shop_id: SHOP_ID })
+      .then((res) => {
+        const data = res?.data ?? res;
+        if (data) {
+          setAnalyticsStats({ overview: { inventory: data } });
+        }
+      })
+      .catch(() => {});
+  }, [getData]);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [productToDelete, setProductToDelete] = useState<InventoryRecord | null>(null);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
@@ -685,12 +697,6 @@ const ProductInfos = () => {
             : (res?.data?.inventories ?? (Array.isArray(res?.datas) ? res.datas : (res?.datas?.inventories ?? [])));
           setProducts(data);
           
-          if (res?.data?.overall_stats) {
-            setOverallStats(res.data.overall_stats);
-          } else if (res?.datas?.overall_stats) {
-            setOverallStats(res.datas.overall_stats);
-          }
-
           const keys = new Set<string>();
           data.forEach((p: any) => {
             const datas = p.additional_infos || p.datas;
@@ -830,24 +836,23 @@ const ProductInfos = () => {
           <StatCard
             icon={Package}
             label="Total Products"
-            value={Math.max(Number(overallStats?.total_product_count || 0), products.length).toString()}
+            value={(analyticsStats?.overview?.inventory?.total_active_products ?? products.length).toString()}
             subValue="items"
             iconBg="bg-blue-50"
             iconColor="text-blue-600"
           />
           <StatCard
-            icon={IndianRupee}
-            label="Total Stock Value"
-            value={(overallStats?.total_stock_value || 0).toLocaleString()}
-            prefix="₹"
-            subValue="inventory value"
+            icon={Package}
+            label="Total Stocks"
+            value={(analyticsStats?.overview?.inventory?.total_stocks ?? 0).toString()}
+            subValue="in-stock count"
             iconBg="bg-emerald-50"
             iconColor="text-emerald-600"
           />
           <StatCard
             icon={AlertTriangle}
             label="Low Stock"
-            value={overallStats?.low_stocks_count?.toString() || lowStockCount.toString()}
+            value={analyticsStats?.overview?.inventory?.total_low_stocks?.toString() ?? lowStockCount.toString()}
             subValue="items need restock"
             iconBg="bg-amber-50"
             iconColor="text-amber-500"
@@ -855,7 +860,7 @@ const ProductInfos = () => {
           <StatCard
             icon={AlertCircle}
             label="Out of Stock"
-            value={overallStats?.no_stocks_count?.toString() || outOfStockCount.toString()}
+            value={analyticsStats?.overview?.inventory?.total_no_stocks?.toString() ?? outOfStockCount.toString()}
             subValue="items empty"
             iconBg="bg-red-50"
             iconColor="text-red-500"

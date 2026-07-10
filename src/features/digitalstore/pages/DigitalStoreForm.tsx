@@ -22,6 +22,8 @@ import {
 import { Tooltip } from "@/components/common/Tootlip";
 import { useNavigate } from "react-router-dom";
 import { useBusinessApi } from "@/context/BusinessApiContext";
+import { authApi } from "@/services/api/auth";
+import { employeeApi } from "@/services/api/employee";
 
 const INITIAL_STATE: StoreFormData = {
   name: "",
@@ -325,7 +327,67 @@ export default function StoreSetupForm({ existingData }: StoreSetupProps) {
         };
 
         const res = await shop.createShop(payload);
-        if (res) {
+        const resData = res?.data ?? res;
+        if (resData) {
+          const newShopId = resData.id;
+          
+          // 1. Create employee record for owner
+          const userEmail = localStorage.getItem("user_email") || "owner@example.com";
+          const userName = localStorage.getItem("user_name") || "Owner";
+          const userPhone = localStorage.getItem("user_phone") || "";
+          
+          try {
+            await employeeApi.createEmployee({
+              shop_id: newShopId,
+              name: userName,
+              role: "OWNER",
+              joined_date: new Date().toISOString().split('T')[0],
+              mobile_number: userPhone || "0000000000",
+              email: userEmail,
+              department: "MANAGEMENT",
+              additional_infos: {}
+            });
+          } catch (empErr) {
+            console.error("Failed to create default owner employee:", empErr);
+          }
+
+          // 2. Exchange session ID and shop ID for token
+          const sessionId = localStorage.getItem("session_id");
+          if (sessionId && newShopId) {
+            try {
+              const tokenRes = await authApi.createToken(sessionId, newShopId);
+              const tokenData = tokenRes?.data ?? tokenRes;
+              if (tokenData && tokenData.access_token) {
+                localStorage.setItem("auth_token", tokenData.access_token);
+                if (tokenData.refresh_token) {
+                  localStorage.setItem("refresh_token", tokenData.refresh_token);
+                }
+                
+                // Decode access_token and store user_id / shop_id in localStorage
+                try {
+                  const payload = JSON.parse(atob(tokenData.access_token.split('.')[1]));
+                  if (payload.user_id) {
+                    localStorage.setItem("user_id", payload.user_id);
+                  }
+                  if (payload.shop_id) {
+                    localStorage.setItem("shop_id", payload.shop_id);
+                  }
+                } catch (decodeErr) {
+                  console.error("Failed to decode token after shop creation:", decodeErr);
+                }
+              }
+            } catch (tokenErr) {
+              console.error("Failed to exchange tokens after shop creation:", tokenErr);
+            }
+          }
+
+          if (newShopId) {
+            localStorage.setItem("shop_id", newShopId);
+            import('@/services/endpoints').then(module => {
+              module.setShopId(newShopId);
+            });
+          }
+
           // Final save structure: store to mock profile endpoint / localStorage
           const finalProfileData = {
             name: form.name,
@@ -351,11 +413,6 @@ export default function StoreSetupForm({ existingData }: StoreSetupProps) {
           };
           
           localStorage.setItem("active-store-profile", JSON.stringify(finalProfileData));
-          if (res.data && res.data.id) {
-            import('@/services/endpoints').then(module => {
-              module.setShopId(res.data.id);
-            });
-          }
           // Navigate to digital store profile page
           navigate("/digital-store/profile");
         }

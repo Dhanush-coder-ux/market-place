@@ -110,6 +110,7 @@ export interface CreateInventoryPayload {
   custom_fields?: Record<string, any>;
   datas?: Record<string, any>;
   additional_infos?: Record<string, any>;
+  visible_online?: boolean;
 }
 
 /**
@@ -134,6 +135,7 @@ export interface UpdateInventoryPayload {
   reorder_point_id?: string | null;
   reorder_point?: number;
   custom_fields?: Record<string, any>;
+  visible_online?: boolean;
 }
 
 // ─── Inventory Sub-Level Updates (granular) ───────────────────────────────────

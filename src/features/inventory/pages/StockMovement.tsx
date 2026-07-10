@@ -5,14 +5,14 @@ import {
   User, TrendingUp, TrendingDown, Activity,
   Bookmark, Filter,
   FileText, Layers, Hash, Zap, Copy, ExternalLink,
-  ChevronRight, Package, ShoppingBag
+  ChevronRight
 } from "lucide-react";
 
 import { GradientButton } from "@/components/ui/GradientButton";
 import { StatCard } from "@/components/common/StatsCard";
 import { TypeBadge } from "@/components/common/SuperUI";
 import { useApi } from "@/context/ApiContext";
-import { SHOP_ID } from "@/services/endpoints";
+import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 import { useHeader } from "@/context/HeaderContext";
 import { ColumnPicker } from "@/components/common/ColumnPicker";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -512,6 +512,19 @@ export default function StockMovementPage() {
   const { setBottomActions } = useHeader();
   const [selectedItem, setSelectedItem] = useState<Movement | null>(null);
 
+  const [analyticsStats, setAnalyticsStats] = useState<any>(null);
+
+  useEffect(() => {
+    getData(ENDPOINTS.ANALYTICS_STOCKMOVADJ_OVERALL, { shop_id: SHOP_ID })
+      .then((res) => {
+        const data = res?.data ?? res;
+        if (data) {
+          setAnalyticsStats({ overview: { stock_adjustment: data } });
+        }
+      })
+      .catch(() => {});
+  }, [getData]);
+
   useEffect(() => {
     if (selectedItem) {
       setBottomActions(
@@ -659,7 +672,7 @@ export default function StockMovementPage() {
     sortDir
   }), [debouncedSearch, typeFilter, statusFilter, warehouseFilter, dateFrom, dateTo, sortField, sortDir]);
 
-  const { items: filtered, loading, loadingMore, hasMore, stats: overallStats, totalCount, lastElementRef } = useInfiniteScroll({
+  const { items: filtered, loading, loadingMore, hasMore, totalCount, lastElementRef } = useInfiniteScroll({
     fetchPage,
     filters,
     limit: 20
@@ -708,38 +721,24 @@ export default function StockMovementPage() {
         <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-none">
           <StatCard
             label="Total Stock In"
-            value={`+${overallStats?.total_stock_in ?? totalIn}`}
+            value={`+${analyticsStats?.overview?.stock_adjustment?.total_stockmovadj_increments ?? totalIn}`}
             icon={TrendingUp}
             iconBg="bg-emerald-50"
             iconColor="text-emerald-600"
           />
           <StatCard
             label="Total Stock Out"
-            value={`-${overallStats?.total_stock_out ?? totalOut}`}
+            value={`-${analyticsStats?.overview?.stock_adjustment?.total_stockmovadj_decrements ?? totalOut}`}
             icon={TrendingDown}
             iconBg="bg-rose-50"
             iconColor="text-rose-600"
           />
           <StatCard
-            label="Total Movements"
-            value={(overallStats?.total_movements_count ?? filtered.length).toString()}
+            label="Total Adjustments"
+            value={(analyticsStats?.overview?.stock_adjustment?.total_stockmovadj ?? filtered.length).toString()}
             icon={Activity}
             iconBg="bg-blue-50"
             iconColor="text-blue-600"
-          />
-          <StatCard
-            label="Total Purchases"
-            value={(overallStats?.total_purchase_count ?? 0).toString()}
-            icon={Package}
-            iconBg="bg-indigo-50"
-            iconColor="text-indigo-600"
-          />
-          <StatCard
-            label="Total Sales"
-            value={(overallStats?.total_sales_count ?? 0).toString()}
-            icon={ShoppingBag}
-            iconBg="bg-violet-50"
-            iconColor="text-violet-600"
           />
         </div>
       )}

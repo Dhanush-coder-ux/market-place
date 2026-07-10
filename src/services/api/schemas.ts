@@ -33,7 +33,8 @@ export const SCHEMAS = {
   announcement_update: ['id'],
   auth_token_create: ['session_id', 'shop_id'],
   auth_token_refresh: ['refresh_token'],
-  employee_verify_token: ['id', 'shop_id'],
+  employee_verify_token: ['token'],
+  employee_resend_verify: ['id', 'shop_id'],
 
   // ── Utility Service ──────────────────────────────────────────────
   shop_category_create: ['shop_id', 'name'],

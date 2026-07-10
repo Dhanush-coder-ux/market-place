@@ -14,6 +14,7 @@ import { useApi } from "@/context/ApiContext";
 import { useToast } from "@/context/ToastContext";
 import { useHeader } from "@/context/HeaderContext";
 import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
+import { employeeApi } from "@/services/api/employee";
 import Loader from "@/components/common/Loader";
 import type { EmployeeRecord } from "@/types/api";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
@@ -35,6 +36,7 @@ export default function EmployeeDetail() {
   const [activeTab, setActiveTab] = useState(0);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [viewValue, setViewValue] = useState<{ label: string, value: string } | null>(null);
+  const [resendingVerification, setResendingVerification] = useState(false);
 
   useEffect(() => {
     setBottomActions(
@@ -75,6 +77,22 @@ export default function EmployeeDetail() {
     }
   };
 
+  const handleResendVerification = async () => {
+    if (!employee?.id) return;
+    setResendingVerification(true);
+    try {
+      await employeeApi.resendVerificationEmail({
+        id: employee.id,
+        shop_id: employee.shop_id || SHOP_ID
+      });
+      showToast("Verification email sent again", "success");
+    } catch (_err) {
+      showToast("Failed to send verification email", "error");
+    } finally {
+      setResendingVerification(false);
+    }
+  };
+
   // Header Actions
 
   if (recordLoading) return <div className="p-20"><Loader /></div>;
@@ -108,9 +126,9 @@ export default function EmployeeDetail() {
           badges={[
             { text: String(employee.role || "Staff"), variant: "primary" },
             {
-              text: "Accepted",
-              variant: "success",
-              showPulse: false
+              text: employee.accepted ? "Accepted" : "Pending",
+              variant: employee.accepted ? "success" : "warning",
+              showPulse: !employee.accepted
             }
           ]}
           infoItems={[
@@ -119,6 +137,17 @@ export default function EmployeeDetail() {
           ]}
           actions={
             <div className="flex items-center gap-2">
+              {!employee.accepted && (
+                <button
+                  onClick={handleResendVerification}
+                  disabled={resendingVerification}
+                  className="h-10 px-3 flex items-center gap-2 bg-white border border-amber-200 text-amber-700 hover:bg-amber-50 rounded-lg transition-all shadow-sm active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed text-[11px] font-black"
+                  title="Send verification email again"
+                >
+                  <Mail size={16} />
+                  {resendingVerification ? "Sending" : "Resend"}
+                </button>
+              )}
               <button
                 onClick={() => navigate(`/employee/${id}/edit`)}
                 className="w-10 h-10 flex items-center justify-center bg-white border border-slate-200 text-slate-400 hover:text-blue-600 rounded-lg transition-all shadow-sm active:scale-95"

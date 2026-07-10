@@ -11,10 +11,11 @@ const isJwt = (token: string) => token.split(".").length === 3;
 
 export const fetchMyShops = async (): Promise<any[]> => {
   const token = localStorage.getItem("auth_token");
-  if (!token) return [];
+  const sessionId = localStorage.getItem("session_id");
+  if (!token && !sessionId) return [];
 
   try {
-    if (isJwt(token)) {
+    if (token && isJwt(token)) {
       // JWT: extract user_id from payload and call /by/user/{user_id}
       const payload = JSON.parse(atob(token.split(".")[1]));
       const userId = payload.user_id || localStorage.getItem("user_id");
@@ -23,12 +24,13 @@ export const fetchMyShops = async (): Promise<any[]> => {
       const res = await apiClient.get(`${ENDPOINTS.SHOPS}/by/user/${userId}`);
       const data = res?.data ?? res ?? [];
       return Array.isArray(data) ? data.filter(Boolean) : [data].filter(Boolean);
-    } else {
-      // Session ID: use /my-shops with Bearer header
+    } else if (sessionId) {
+      // Session ID: use /my-shops (apiClient automatically sends X-Session-ID)
       const res = await apiClient.get(`${ENDPOINTS.SHOPS}/my-shops`);
       const data = res?.data ?? res ?? [];
       return Array.isArray(data) ? data.filter(Boolean) : [data].filter(Boolean);
     }
+    return [];
   } catch (e) {
     console.error("fetchMyShops error:", e);
     return [];

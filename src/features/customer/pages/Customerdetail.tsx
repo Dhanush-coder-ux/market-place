@@ -137,15 +137,16 @@ export default function CustomerDetail() {
           actualData = actualData.datas;
         }
         const orders = Array.isArray(actualData) ? actualData : [actualData];
-        console.log('PARSED ORDERS:', orders.length, 'total_sellprice values:', orders.map((o: any) => o.total_sellprice));
         setCustomerOrders(orders);
-        // Compute stats from the fetched orders
-        const salesCount = orders.length;
-        const salesValue = orders.reduce((sum: number, o: any) => sum + (o.total_sellprice || 0), 0);
-        console.log('COMPUTED STATS:', { salesCount, salesValue });
-        setStats({ total_sales_count: salesCount, total_sales_value: salesValue });
       }
       setOrdersLoading(false);
+    });
+    getData(`${ENDPOINTS.ANALYTICS_CUSTOMER}/${id}`, { shop_id: SHOP_ID }).then((statsRes) => {
+      const statsData = statsRes?.data ?? statsRes;
+      const statsObj = statsData?.customer ?? statsData;
+      if (statsObj) {
+        setStats(statsObj);
+      }
     });
     setClearingLoading(true);
     customerApi.getClearingHistoryById(SHOP_ID, id).then((res) => {
@@ -401,28 +402,28 @@ export default function CustomerDetail() {
             <StatCard
               icon={DollarSign}
               label="Total Sales"
-              value={`${stats?.total_sales_count || 0} (₹${(stats?.total_sales_value || 0).toFixed(2)})`}
+              value={`${stats?.total_sales || 0} (₹${(stats?.total_sales_amount || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })})`}
               iconBg="bg-blue-50 text-blue-600"
               className="flex-1 min-w-[140px]"
             />
             <StatCard
               icon={CreditCard}
               label="Credit Limit"
-              value={`₹${(customerCreditLimit || 0).toFixed(2)}`}
+              value={`₹${(stats?.total_credit_limits || customerCreditLimit || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
               iconBg="bg-emerald-50 text-emerald-600"
               className="flex-1 min-w-[140px]"
             />
             <StatCard
               icon={AlertCircle}
               label="Outstanding"
-              value={`₹${(customer?.outstanding ?? 0).toFixed(2)}`}
-              iconBg={(customer?.outstanding ?? 0) > 0 ? "bg-rose-50 text-rose-600" : "bg-emerald-50 text-emerald-600"}
+              value={`₹${(stats?.total_outstandings || customer?.outstanding || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+              iconBg={(stats?.total_outstandings || customer?.outstanding || 0) > 0 ? "bg-rose-50 text-rose-600" : "bg-emerald-50 text-emerald-600"}
               className="flex-1 min-w-[140px]"
             />
             <StatCard
               icon={Star}
-              label="Customer Balance"
-              value={`₹${((customerCreditLimit || 0) - (customer?.outstanding ?? 0)).toFixed(2)}`}
+              label="Cleared Amount"
+              value={`₹${(stats?.total_cleared_amounts || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
               iconBg="bg-amber-50 text-amber-600"
               className="flex-1 min-w-[140px]"
             />

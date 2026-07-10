@@ -12,6 +12,7 @@ import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 import Loader from "@/components/common/Loader";
 import { Modal, ProfileHeaderCard, SectionCard, DetailItem } from "@/components/common/SuperUI";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
+import { StatCard } from "@/components/common/StatsCard";
 import { SearchSelect } from "@/components/inputbuilders/SearchSelect";
 import { useHeader } from "@/context/HeaderContext";
 import { VariantRows, SerialBadgeList, BatchCards } from "../../inventory/components/StockTree";
@@ -95,16 +96,26 @@ const ProductDetail = () => {
     return () => setBottomActions(null);
   }, [setBottomActions, navigate]);
 
+  const [stats, setStats] = useState<any>(null);
+
   useEffect(() => {
     if (!id) return;
     setRecordLoading(true);
-    getData(`${ENDPOINTS.INVENTORIES}/by/id/${SHOP_ID}/${id}`).then(async (res) => {
+    Promise.all([
+      getData(`${ENDPOINTS.INVENTORIES}/by/id/${SHOP_ID}/${id}`),
+      getData(`${ENDPOINTS.ANALYTICS_PRODINV}/${id}`, { shop_id: SHOP_ID })
+    ]).then(([res, statsRes]) => {
       if (res) {
         const prod = Array.isArray(res.data) ? res.data[0] : res.data;
         setProduct(prod);
       }
+      const statsData = statsRes?.data ?? statsRes;
+      const statsObj = statsData?.product ?? statsData;
+      if (statsObj) {
+        setStats(statsObj);
+      }
       setRecordLoading(false);
-    });
+    }).catch(() => setRecordLoading(false));
   }, [id]);
 
   // Lazy-load movements/purchases when their tab is activated
@@ -281,7 +292,7 @@ const ProductDetail = () => {
       </div>
 
       {/* ── Tabs + Stats ─────────────────────────────────────── */}
-      <div className="flex-none px-1 py-2">
+      <div className="flex-none px-1 py-2 space-y-2">
         <div className="flex gap-0.5 bg-white p-1 rounded-lg border border-slate-200 w-fit">
           {TABS.map((tab, i) => (
             <button
@@ -295,6 +306,13 @@ const ProductDetail = () => {
               {tab}
             </button>
           ))}
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          <StatCard icon={DollarSign} label="Total Sales (Offline)" value={`₹${(stats?.total_offline_sales_amount || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} iconBg="bg-blue-50 text-blue-600" className="flex-1 min-w-[140px]" />
+          <StatCard icon={DollarSign} label="Total Sales (Online)" value={`₹${(stats?.total_online_sales_amount || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} iconBg="bg-emerald-50 text-emerald-600" className="flex-1 min-w-[140px]" />
+          <StatCard icon={Package} label="Total Purchase Cost" value={`₹${(stats?.total_purchase_amounts || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} iconBg="bg-indigo-50 text-indigo-600" className="flex-1 min-w-[140px]" />
+          <StatCard icon={BarChart2} label="Purchases Count" value={String(stats?.total_purchases || "0")} iconBg="bg-amber-50 text-amber-600" className="flex-1 min-w-[140px]" />
         </div>
       </div>
 
@@ -592,11 +610,27 @@ const ProductDetail = () => {
             const uiId = isNewFormat ? p.purchase_id.split('-')[0].toUpperCase() : p.ui_id;
 
             const productsList: any[] = [];
-            (p.products ?? []).forEach((prod: any) => {
+            (p.items ?? p.products ?? []).forEach((prod: any) => {
               // Ensure we only aggregate for the specific product being viewed
               if (prod.inventory_id !== id && prod.product_id !== id && prod.id !== id) return;
 
               // NEW FORMAT SUPPORT
+              if (prod.stocks_infos !== undefined) {
+                productsList.push({
+                  variant: prod.variant_infos?.variant_name || prod.variant_infos?.name || null,
+                  batch: prod.batch_infos?.batch_name || prod.batch_infos?.name || null,
+                  stocksBefore: prod.stocks_infos?.stocks_before ?? null,
+                  receivedStocks: prod.stocks_infos?.stocks || 0,
+                  buyPrice: prod.buy_price,
+                  sellPrice: prod.sell_price,
+                  serials: prod.serial_numbers || [],
+                  variant_details: prod.variant_infos || null,
+                  batch_details: prod.batch_infos || null,
+                  serial_info: prod.serial_numbers || null
+                });
+                return;
+              }
+
               if (prod.stocks_added !== undefined) {
                 productsList.push({
                   variant: prod.variant?.variant_name || null,

@@ -48,8 +48,6 @@ const Supplier = () => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [supplierToDelete, setSupplierToDelete] = useState<SupplierRecord | null>(null);
   const [selectedSupplier, setSelectedSupplier] = useState<SupplierRecord | null>(null);
-  const [backendStats, setBackendStats] = useState<{total_suppliers: number; contact_persons: number} | null>(null);
-
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -140,6 +138,24 @@ const Supplier = () => {
     }
   }, [selectedSupplier, setBottomActions, navigate]);
 
+  const [analyticsStats, setAnalyticsStats] = useState<any>(null);
+
+  useEffect(() => {
+    getData(ENDPOINTS.ANALYTICS_SUPPLIER_OVERALL, { shop_id: SHOP_ID })
+      .then((res) => {
+        const data = res?.data ?? res;
+        if (data) {
+          setAnalyticsStats({ overview: { supplier: data } });
+        }
+      })
+      .catch(() => {});
+  }, [getData]);
+
+  const fmt = (n: number | undefined | null) => {
+    if (n === undefined || n === null || isNaN(n)) return "₹0.00";
+    return `₹${n.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  };
+
   useEffect(() => {
     const params: Record<string, string> = { limit: "50", offset: "1" };
     if (searchTerm) params.q = searchTerm;
@@ -150,13 +166,6 @@ const Supplier = () => {
       if (res) {
         const rawData = res.data;
         const data: SupplierRecord[] = Array.isArray(rawData) ? rawData : (rawData?.datas ?? []);
-        
-        if (rawData?.overall_datas) {
-          setBackendStats({
-            total_suppliers: rawData.overall_datas.total_suppliers || data.length,
-            contact_persons: rawData.overall_datas.contact_persons || 0
-          });
-        }
         
         setSuppliers(data);
 
@@ -213,8 +222,6 @@ const Supplier = () => {
     }
   };
 
-
-
   return (
     <div className="flex-1 flex flex-col min-h-0 font-sans w-full overflow-hidden relative">
 
@@ -224,14 +231,20 @@ const Supplier = () => {
           <StatCard
             icon={Building2}
             label="Total Suppliers"
-            value={(backendStats?.total_suppliers || suppliers.length).toString()}
+            value={(analyticsStats?.overview?.supplier?.total_suppliers ?? suppliers.length).toString()}
             iconBg="bg-blue-50 text-blue-600"
           />
           <StatCard
             icon={Phone}
-            label="Contact Persons"
-            value={(backendStats?.contact_persons || 0).toString()}
-            iconBg="bg-amber-50 text-amber-600"
+            label="Total Outstanding"
+            value={fmt(analyticsStats?.overview?.supplier?.total_outstandings ?? 0)}
+            iconBg="bg-rose-50 text-rose-600"
+          />
+          <StatCard
+            icon={Phone}
+            label="Total Cleared"
+            value={fmt(analyticsStats?.overview?.supplier?.total_cleared_amounts ?? 0)}
+            iconBg="bg-emerald-50 text-emerald-600"
           />
         </div>
       )}

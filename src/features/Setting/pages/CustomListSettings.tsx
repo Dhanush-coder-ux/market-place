@@ -1,75 +1,103 @@
-import React, { useState, useEffect } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { Plus, X, Tag, Ruler } from "lucide-react";
-import { useApi } from "@/context/ApiContext";
 import { SHOP_ID } from "@/services/endpoints";
+import { utilityApi } from "@/services/api/utility";
 
 interface CustomListSettingsProps {
   type: "categories" | "units";
 }
 
+type ListItem = {
+  id: string;
+  name: string;
+  shortName?: string;
+};
+
+const normalizeItems = (res: any): ListItem[] => {
+  const data = res?.data ?? res;
+  const rawItems = Array.isArray(data)
+    ? data
+    : data?.datas ?? data?.items ?? data?.results ?? [];
+
+  return (Array.isArray(rawItems) ? rawItems : [])
+    .map((item: any) => ({
+      id: String(item.id ?? item.datas?.id ?? ""),
+      name: String(item.name ?? item.datas?.name ?? item.value ?? "").trim(),
+      shortName: item.short_name ?? item.datas?.short_name,
+    }))
+    .filter((item: ListItem) => item.id && item.name);
+};
+
 export const CustomListSettings: React.FC<CustomListSettingsProps> = ({ type }) => {
-  const { getData, postData, putData } = useApi();
-  const [dropdownId, setDropdownId] = useState<string | null>(null);
-  const [items, setItems] = useState<string[]>([]);
+  const [items, setItems] = useState<ListItem[]>([]);
   const [newItem, setNewItem] = useState("");
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
   const title = type === "categories" ? "Product Categories" : "Measurement Units";
   const desc = type === "categories"
     ? "Manage the categories available when creating products."
     : "Manage the measurement units (kg, pcs, box) available for products.";
   const Icon = type === "categories" ? Tag : Ruler;
+  const singular = type === "categories" ? "category" : "unit";
+
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = type === "categories"
+        ? await utilityApi.getShopCategories(SHOP_ID, { limit: "100", offset: "1" })
+        : await utilityApi.getShopUnits(SHOP_ID, { limit: "100", offset: "1" });
+
+      setItems(normalizeItems(res));
+    } catch {
+      setItems([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [type]);
 
   useEffect(() => {
     fetchData();
-  }, [type]);
-
-  const fetchData = async () => {
-    setLoading(true);
-    const res = await getData(`/utilities/dropdowns/custom/by/name/${SHOP_ID}/${type}`);
-    if (res?.detail?.success && res.data) {
-      setDropdownId(res.data.id);
-      setItems(res.data.values || []);
-    } else {
-      setDropdownId(null);
-      setItems([]);
-    }
-    setLoading(false);
-  };
-
-  const saveList = async (newItems: string[]) => {
-    if (dropdownId) {
-      await putData("/utilities/dropdowns/custom", {
-        id: dropdownId,
-        shop_id: SHOP_ID,
-        dd_name: type,
-        values: newItems
-      });
-    } else {
-      const res = await postData("/utilities/dropdowns/custom", {
-        shop_id: SHOP_ID,
-        dd_name: type,
-        values: newItems
-      });
-      // The POST doesn't return the ID cleanly according to typical patterns, so just re-fetch
-      if (res?.detail?.success) {
-        fetchData();
-      }
-    }
-  };
+  }, [fetchData]);
 
   const handleAdd = async () => {
-    if (!newItem.trim() || items.includes(newItem.trim())) return;
-    const newItems = [...items, newItem.trim()];
-    setItems(newItems);
-    setNewItem("");
-    await saveList(newItems);
+    const name = newItem.trim();
+    if (!name || saving) return;
+    if (items.some((item) => item.name.toLowerCase() === name.toLowerCase())) return;
+
+    setSaving(true);
+    try {
+      if (type === "categories") {
+        await utilityApi.createShopCategory({ shop_id: SHOP_ID, name, is_active: true });
+      } else {
+        await utilityApi.createShopUnit({
+          shop_id: SHOP_ID,
+          name,
+          short_name: name,
+          is_active: true,
+        });
+      }
+      setNewItem("");
+      await fetchData();
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const handleDelete = async (itemToRemove: string) => {
-    const newItems = items.filter(item => item !== itemToRemove);
-    setItems(newItems);
-    await saveList(newItems);
+  const handleDelete = async (itemToRemove: ListItem) => {
+    if (saving) return;
+    setItems((prev) => prev.filter((item) => item.id !== itemToRemove.id));
+    setSaving(true);
+    try {
+      if (type === "categories") {
+        await utilityApi.deleteShopCategory({ id: itemToRemove.id, shop_id: SHOP_ID });
+      } else {
+        await utilityApi.deleteShopUnit({ id: itemToRemove.id, shop_id: SHOP_ID });
+      }
+      await fetchData();
+    } finally {
+      setSaving(false);
+    }
   };
 
   if (loading) {
@@ -97,12 +125,12 @@ export const CustomListSettings: React.FC<CustomListSettingsProps> = ({ type }) 
             className="flex-1 h-10 px-3 bg-white border border-slate-200 rounded-lg text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all shadow-sm"
             value={newItem}
             onChange={(e) => setNewItem(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
-            placeholder={`Add a new ${type.slice(0, -1)}...`}
+            onKeyDown={(e) => e.key === "Enter" && handleAdd()}
+            placeholder={`Add a new ${singular}...`}
           />
           <button
             onClick={handleAdd}
-            disabled={!newItem.trim()}
+            disabled={!newItem.trim() || saving}
             className="h-10 px-4 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed text-white text-xs font-bold rounded-lg transition-all flex items-center gap-2 shadow-sm"
           >
             <Plus className="w-4 h-4" />
@@ -126,13 +154,14 @@ export const CustomListSettings: React.FC<CustomListSettingsProps> = ({ type }) 
             <div className="flex flex-wrap gap-2">
               {items.map((item) => (
                 <div
-                  key={item}
+                  key={item.id}
                   className="group flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 rounded-lg shadow-sm hover:border-blue-200 hover:bg-blue-50 transition-all"
                 >
-                  <span className="text-sm font-semibold text-slate-700">{item}</span>
+                  <span className="text-sm font-semibold text-slate-700">{item.name}</span>
                   <button
                     onClick={() => handleDelete(item)}
-                    className="p-1 rounded-md text-slate-400 hover:bg-rose-100 hover:text-rose-600 transition-colors"
+                    disabled={saving}
+                    className="p-1 rounded-md text-slate-400 hover:bg-rose-100 hover:text-rose-600 disabled:opacity-40 transition-colors"
                   >
                     <X className="w-3.5 h-3.5" />
                   </button>

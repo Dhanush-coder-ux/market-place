@@ -6,15 +6,11 @@ import {
   ShoppingBag,
   Percent,
   Activity,
-  Hash,
-  Settings2,
 } from "lucide-react";
 
 import { Switch } from "@/components/ui/switch";
-import { AdditionalSettings } from "@/features/Setting/pages/AdditionalSettings";
 import { ActivityLogPage } from "@/features/Setting/pages/ActivityLogPage";
 import { CustomListSettings } from "@/features/Setting/pages/CustomListSettings";
-import { IdPrefixSettings } from "@/features/Setting/pages/IdPrefixSettings";
 import { usePurchaseSettings } from "@/context/PurchaseContext";
 import { useMediaQuery } from "@/hooks/use-media-query";
 
@@ -22,25 +18,11 @@ import { useMediaQuery } from "@/hooks/use-media-query";
 
 const MENU_ITEMS = [
   {
-    id: "id_prefixes",
-    label: "ID Sequence",
-    icon: Hash,
-    description: "Set module ID prefixes",
-    accent: "blue",
-  },
-  {
     id: "dropdowns",
     label: "Dropdown Settings",
     icon: ListTree,
     description: "Categories & units",
     accent: "violet",
-  },
-  {
-    id: "advanced",
-    label: "Advanced Config",
-    icon: Settings2,
-    description: "System-wide variables",
-    accent: "slate",
   },
   {
     id: "purchasetypes",
@@ -66,9 +48,7 @@ const MENU_ITEMS = [
 ];
 
 const accentClasses: Record<string, { icon: string; badge: string }> = {
-  blue:    { icon: "bg-blue-50    text-blue-600",    badge: "bg-blue-100    text-blue-700"   },
   violet:  { icon: "bg-violet-50  text-violet-600",  badge: "bg-violet-100  text-violet-700" },
-  slate:   { icon: "bg-slate-100  text-slate-600",   badge: "bg-slate-200   text-slate-700"  },
   emerald: { icon: "bg-emerald-50 text-emerald-600", badge: "bg-emerald-100 text-emerald-700" },
   amber:   { icon: "bg-amber-50   text-amber-600",   badge: "bg-amber-100   text-amber-700"  },
   rose:    { icon: "bg-rose-50    text-rose-600",    badge: "bg-rose-100    text-rose-700"   },
@@ -93,18 +73,6 @@ export const ProfileSettingsPage = () => {
     );
 
     switch (activeTab) {
-      case "id_prefixes":
-        return wrapper(<IdPrefixSettings />);
-
-      case "advanced":
-        return wrapper(
-          <AdditionalSettings
-            availableSelectOptions={[]}
-            title="Advanced System Configuration"
-            description="Modify internal variables and feature flags for the entire platform."
-          />
-        );
-
       case "dropdowns":
         return wrapper(
           <div className="space-y-5">

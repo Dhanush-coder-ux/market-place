@@ -1,6 +1,8 @@
 import { createContext, useContext, useState, useRef, useCallback, ReactNode, useEffect } from "react";
+import { ENDPOINTS } from "@/services/endpoints";
 
-const BASE_URL = import.meta.env.VITE_GATEWAY_URL as string;
+const BASE_URL = import.meta.env.VITE_GATEWAY_URL || "http://localhost:8000";
+let refreshPromise: Promise<string | null> | null = null;
 
 // ─── Simple in-memory GET cache ───────────────────────────────────────────────
 // TTL = 60 seconds. Prevents duplicate fetches on fast navigation.
@@ -19,6 +21,60 @@ const getCached = (url: string): unknown | null => {
 
 const setCache = (url: string, data: unknown) => {
   cache.set(url, { data, ts: Date.now() });
+};
+
+const clearAuthTokens = () => {
+  localStorage.removeItem("auth_token");
+  localStorage.removeItem("refresh_token");
+};
+
+const isJwtExpired = (token: string | null): boolean => {
+  if (!token) return false;
+  try {
+    const payload = JSON.parse(atob(token.split(".")[1]));
+    if (!payload?.exp) return false;
+    return payload.exp * 1000 <= Date.now() + 30_000;
+  } catch {
+    return false;
+  }
+};
+
+const refreshAccessToken = async (): Promise<string | null> => {
+  const refreshToken = localStorage.getItem("refresh_token");
+  if (!refreshToken) return null;
+
+  if (!refreshPromise) {
+    refreshPromise = fetch(`${BASE_URL}${ENDPOINTS.AUTH_TOKEN_REFRESH}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ refresh_token: refreshToken }),
+    })
+      .then(async (res) => {
+        if (!res.ok) {
+          clearAuthTokens();
+          return null;
+        }
+        const data = await res.json();
+        if (!data?.access_token) {
+          clearAuthTokens();
+          return null;
+        }
+        localStorage.setItem("auth_token", data.access_token);
+        if (data.refresh_token) {
+          localStorage.setItem("refresh_token", data.refresh_token);
+        }
+        return data.access_token as string;
+      })
+      .catch(() => {
+        clearAuthTokens();
+        return null;
+      })
+      .finally(() => {
+        refreshPromise = null;
+      });
+  }
+
+  return refreshPromise;
 };
 
 /** Manually invalidate cache for a given URL prefix (call after POST/PUT/DELETE) */
@@ -130,6 +186,7 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
           const token = localStorage.getItem("auth_token");
           let shopId = localStorage.getItem("shop_id");
           let userId = localStorage.getItem("user_id");
+          const sessionId = localStorage.getItem("session_id");
           
           if (token && (!shopId || !userId)) {
             try {
@@ -151,18 +208,41 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
             "Content-Type": "application/json" 
           };
           if (token) headers["Authorization"] = `Bearer ${token}`;
-          if (shopId) headers["X-Shop-Id"] = shopId;
-          if (userId) headers["X-User-Id"] = userId;
+          if (shopId) {
+            headers["x-shop-id"] = shopId;
+          }
+          if (userId) {
+            headers["x-user-id"] = userId;
+          }
+          if (sessionId) {
+            headers["x-session-id"] = sessionId;
+          }
           
           return headers;
         };
 
-        const res = await fetch(url, {
+        if (!endpoint.includes(ENDPOINTS.AUTH_TOKEN_REFRESH) && isJwtExpired(localStorage.getItem("auth_token"))) {
+          await refreshAccessToken();
+        }
+
+        let res = await fetch(url, {
           method,
           headers: getHeaders(),
           ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
           signal: options?.signal,
         });
+
+        if (res.status === 401 && !endpoint.includes(ENDPOINTS.AUTH_TOKEN_REFRESH)) {
+          const refreshedToken = await refreshAccessToken();
+          if (refreshedToken) {
+            res = await fetch(url, {
+              method,
+              headers: getHeaders(),
+              ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+              signal: options?.signal,
+            });
+          }
+        }
 
         if (!res.ok) {
           const msg = await parseError(res);

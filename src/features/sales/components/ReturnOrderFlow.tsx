@@ -476,7 +476,7 @@ const useReturnModalLogic = (sale: SaleRecord | null, productMap: Record<string,
         state.payments.forEach(p => {
           if (p.amount > 0) {
             const key = p.mode === "Store Credit" ? "CREDIT" : p.mode.toUpperCase();
-            paymentsDict[key] = totals.diff > 0 ? p.amount : -p.amount;
+            paymentsDict[key] = totals.diff > 0 ? p.amount : p.amount;
           }
         });
       }

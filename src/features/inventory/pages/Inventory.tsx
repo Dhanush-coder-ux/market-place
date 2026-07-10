@@ -139,7 +139,7 @@ const parseData = (val: any) => {
   if (Array.isArray(val)) return val;
   if (val && typeof val === "object") {
     if (Array.isArray(val.serial_numbers)) return val.serial_numbers;
-    return val;
+    return Object.values(val);
   }
   if (typeof val === "string") {
     try {

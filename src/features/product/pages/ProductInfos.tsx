@@ -187,8 +187,16 @@ const ProductRow = React.memo(
       return [];
     };
 
+    // Normalize variants: backend may return a dict {id: {...}} or an array
+    const normalizeVariants = (raw: any): any[] => {
+      if (!raw) return [];
+      if (Array.isArray(raw)) return raw;
+      if (typeof raw === 'object') return Object.values(raw);
+      return [];
+    };
+
     const combinations = useMemo(
-      () => (p.variant_infos || p.variants || []).filter((v: any) => v && v.id !== null),
+      () => normalizeVariants(p.variant_infos || p.variants).filter((v: any) => v && v.id !== null),
       [p.variant_infos, p.variants]
     );
 

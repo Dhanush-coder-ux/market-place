@@ -229,7 +229,14 @@ const ProductDetail = () => {
   const buyingPrice = product.pricing_infos?.buy_price ?? product.buy_price ?? "—";
   const currentStock = product.stock_infos?.available_stocks ?? product.stocks ?? "—";
   const unit = String(product.unit_id || product.unit || datas.unit || "—");
-  const combinations: any[] = product.variant_infos || product.variants || [];
+  // Normalize variants: backend may return a dict {id: {...}} or an array
+  const normalizeVariants = (raw: any): any[] => {
+    if (!raw) return [];
+    if (Array.isArray(raw)) return raw;
+    if (typeof raw === 'object') return Object.values(raw);
+    return [];
+  };
+  const combinations: any[] = normalizeVariants(product.variant_infos || product.variants);
   const variantTypes: any[] = datas.variant_types ?? datas.variantTypes ?? [];
   const batches: any[] = Array.isArray(product.batch_infos) ? product.batch_infos : (product.batch_infos ? [product.batch_infos] : (product.batches || []));
 
@@ -655,7 +662,7 @@ const ProductDetail = () => {
                 sellPrice: prod.sell_price,
               };
 
-              const variants = prod.variants ?? [];
+              const variants = normalizeVariants(prod.variants ?? null);
               if (variants.length > 0) {
                 variants.forEach((v: any) => {
                   const batches = v.batches ?? [];

@@ -33,11 +33,11 @@ export function TypeBadge({ type, labelOverride, icon: Icon }: { type: string, l
   const t = type?.toUpperCase() || "ADJUSTMENT";
   let bg = "bg-violet-50", text = "text-violet-700", border = "border-violet-200", label = "Adjustment";
   
-  if (t === "PURCHASE" || t === "DIRECT" || t.includes("PO_")) { bg = "bg-emerald-50"; text = "text-emerald-700"; border = "border-emerald-200"; label = "Purchase"; }
-  else if (t === "SALES") { bg = "bg-rose-50"; text = "text-rose-700"; border = "border-rose-200"; label = "Sales"; }
-  else if (t === "SALE_RETURN" || t === "RETURN") { bg = "bg-fuchsia-50"; text = "text-fuchsia-700"; border = "border-fuchsia-200"; label = "Return"; }
+  if (t.includes("PURCHASE") || t === "DIRECT" || t.includes("PO_")) { bg = "bg-emerald-50"; text = "text-emerald-700"; border = "border-emerald-200"; label = "Purchase"; }
+  else if (t.includes("SALES_RETURN") || t.includes("SALE_RETURN") || t.includes("RETURN")) { bg = "bg-fuchsia-50"; text = "text-fuchsia-700"; border = "border-fuchsia-200"; label = "Sales Return"; }
+  else if (t.includes("SALES")) { bg = "bg-rose-50"; text = "text-rose-700"; border = "border-rose-200"; label = "Sales"; }
   else if (t === "TRANSFER") { bg = "bg-sky-50"; text = "text-sky-700"; border = "border-sky-200"; label = "Transfer"; }
-  else if (t === "ADJUSTMENT") { bg = "bg-violet-50"; text = "text-violet-700"; border = "border-violet-200"; label = "Adjustment"; }
+  else if (t.includes("ADJUSTMENT")) { bg = "bg-violet-50"; text = "text-violet-700"; border = "border-violet-200"; label = "Adjustment"; }
 
   const displayLabel = labelOverride || label;
 

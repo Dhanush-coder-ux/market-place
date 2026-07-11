@@ -147,19 +147,21 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
 
       // Map variants the same way ProductSelectionModal expects
       let rawVariants: any[] = [];
-      const candidateSources = [
-        fullProduct.variant_infos,
-        fullProduct.variants,
-        fullProduct.varients,
-        fullProduct.combinations,
-        fullProduct.datas?.variants,
-        fullProduct.datas?.varients,
-        fullProduct.datas?.combinations
-      ].filter(arr => Array.isArray(arr) && arr.length > 0);
-
-      if (candidateSources.length > 0) {
-        rawVariants = candidateSources.reduce((max, current) => current.length > max.length ? current : max, candidateSources[0]);
+      let variantsSource = fullProduct.variant_infos || fullProduct.variants || fullProduct.varients || fullProduct.combinations;
+      if (variantsSource && typeof variantsSource === 'object' && !Array.isArray(variantsSource)) {
+        variantsSource = Object.values(variantsSource);
       }
+      if (Array.isArray(variantsSource)) {
+        rawVariants = variantsSource;
+      }
+
+      const getSerialNames = (infos: any): string[] => {
+        if (!infos) return [];
+        if (Array.isArray(infos)) {
+          return infos.map((s: any) => typeof s === 'object' && s !== null ? s.name || s.serial || "" : String(s)).filter(Boolean);
+        }
+        return [];
+      };
 
       let mappedVariants = rawVariants.map((v: any) => {
         const combDatas = v.datas || {};
@@ -179,8 +181,8 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
           name: variantLabel,
           price: v.pricing_infos?.sell_price || v.sell_price || v.price || combDatas.sell_price || combDatas.price || fullProduct.pricing_infos?.sell_price || fullProduct.sell_price || 0,
           stock: v.stock_infos?.available_stocks !== undefined ? v.stock_infos?.available_stocks : (v.stocks !== undefined ? v.stocks : (v.stock !== undefined ? v.stock : (combDatas.stocks !== undefined ? combDatas.stocks : 0))),
-          serialnoId: v.serial_numbers?.id || v.serial_number?.id || v.batches?.[0]?.serial_numbers?.id || combDatas.serial_numbers?.id || fullProduct.serialno_infos?.[0]?.id || fullProduct.serial_number?.id || fullProduct.serials?.id,
-          availableSerials: v.serial_numbers?.serial_numbers || v.serial_number?.serial_numbers || v.batches?.[0]?.serial_numbers?.serial_numbers || combDatas.serial_numbers?.serial_numbers || fullProduct.serialno_infos?.[0]?.serial_numbers || fullProduct.serial_number?.serial_numbers || fullProduct.serials?.serial_numbers || [],
+          serialnoId: v.serial_numbers?.id || v.serialno_infos?.[0]?.id || v.serial_number?.id || v.batches?.[0]?.serial_numbers?.id || combDatas.serial_numbers?.id || fullProduct.serialno_infos?.[0]?.id || fullProduct.serial_number?.id || fullProduct.serials?.id,
+          availableSerials: getSerialNames(v.serialno_infos || v.serial_numbers || v.serial_number || v.batches?.[0]?.serial_numbers || combDatas.serial_numbers || fullProduct.serialno_infos || fullProduct.serial_number || fullProduct.serials),
           batchId: v.batch_infos?.[0]?.id || v.batches?.[0]?.id || v.batchId || combDatas.batches?.[0]?.id,
         };
       });
@@ -192,8 +194,8 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
           name: `Batch: ${b.batch_no || b.id.slice(0, 8)}`,
           price: b.pricing_infos?.sell_price || b.sell_price || fullProduct.pricing_infos?.sell_price || fullProduct.sell_price || 0,
           stock: b.stock_infos?.available_stocks || b.stocks || 0,
-          serialnoId: b.serial_numbers?.id || fullProduct.serialno_infos?.[0]?.id || fullProduct.serial_number?.id || fullProduct.serials?.id,
-          availableSerials: b.serial_numbers?.serial_numbers || fullProduct.serialno_infos?.[0]?.serial_numbers || fullProduct.serial_number?.serial_numbers || fullProduct.serials?.serial_numbers || [],
+          serialnoId: b.serial_numbers?.id || b.serialno_infos?.[0]?.id || fullProduct.serialno_infos?.[0]?.id || fullProduct.serial_number?.id || fullProduct.serials?.id,
+          availableSerials: getSerialNames(b.serialno_infos || b.serial_numbers || fullProduct.serialno_infos || fullProduct.serial_number || fullProduct.serials),
           batchId: b.id,
           expiryDate: b.expiry_date,
           manufacturingDate: b.manufacturing_date,
@@ -213,7 +215,7 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
         price: fullProduct.pricing_infos?.sell_price || fullProduct.sell_price || 0,
         stocks: fullProduct.stock_infos?.available_stocks || fullProduct.stocks || 0,
         serialnoId: fullProduct.serialno_infos?.[0]?.id || fullProduct.serial_number?.id || fullProduct.serials?.id || fullProduct.batches?.[0]?.serial_numbers?.id,
-        availableSerials: fullProduct.serialno_infos?.[0]?.serial_numbers || fullProduct.serial_number?.serial_numbers || fullProduct.serials?.serial_numbers || fullProduct.batches?.[0]?.serial_numbers?.serial_numbers || [],
+        availableSerials: getSerialNames(fullProduct.serialno_infos || fullProduct.serial_number || fullProduct.serials || fullProduct.batches?.[0]?.serial_numbers),
         batchId: fullProduct.batch_infos?.[0]?.id || fullProduct.batches?.[0]?.id,
         gst: parseInt(String(fullProduct.gst || fullProduct.datas?.gst || "18").replace("%", ""))
       };

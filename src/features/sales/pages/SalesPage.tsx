@@ -218,7 +218,7 @@ const SalesListPage: React.FC = () => {
             if (u === "CARD") return "Card";
             if (u === "UPI" || u === "GPAY" || u === "G-PAY") return "UPI";
             if (u === "PHONEPE") return "PhonePe";
-            if (u === "CREDIT") return "Credit";
+            if (u === "CREDIT" || u === "ON_CREDIT") return "Credit";
             return k.charAt(0).toUpperCase() + k.slice(1).toLowerCase();
           }).join(", ");
         } else if (Array.isArray(s.payment_infos) && s.payment_infos.length > 0) {
@@ -228,14 +228,14 @@ const SalesListPage: React.FC = () => {
             if (u === "CARD") return "Card";
             if (u === "UPI" || u === "GPAY" || u === "G-PAY") return "UPI";
             if (u === "PHONEPE") return "PhonePe";
-            if (u === "CREDIT") return "Credit";
+            if (u === "CREDIT" || u === "ON_CREDIT") return "Credit";
             return p.method || "Other";
           }).join(", ");
         } else if (s.payments && Object.keys(s.payments).length > 0) {
-          pm = Object.keys(s.payments).map(k => { const u = k.toUpperCase(); if (u === "CASH") return "Cash"; if (u === "CARD") return "Card"; if (u === "UPI" || u === "G-PAY" || u === "GPAY") return "UPI"; if (u === "PHONEPE") return "PhonePe"; if (u === "CREDIT") return "Credit"; return k.charAt(0).toUpperCase() + k.slice(1).toLowerCase(); }).join(", ");
+          pm = Object.keys(s.payments).map(k => { const u = k.toUpperCase(); if (u === "CASH") return "Cash"; if (u === "CARD") return "Card"; if (u === "UPI" || u === "G-PAY" || u === "GPAY") return "UPI"; if (u === "PHONEPE") return "PhonePe"; if (u === "CREDIT" || u === "ON_CREDIT") return "Credit"; return k.charAt(0).toUpperCase() + k.slice(1).toLowerCase(); }).join(", ");
         } else if (s.payment_method) {
           const r = (s.payment_method || "Other").toUpperCase();
-          pm = r === "CASH" ? "Cash" : r === "CARD" ? "Card" : r === "UPI" || r === "G-PAY" || r === "GPAY" ? "UPI" : r === "PHONEPE" ? "PhonePe" : r === "CREDIT" ? "Credit" : s.payment_method;
+          pm = r === "CASH" ? "Cash" : r === "CARD" ? "Card" : r === "UPI" || r === "G-PAY" || r === "GPAY" ? "UPI" : r === "PHONEPE" ? "PhonePe" : r === "CREDIT" || r === "ON_CREDIT" ? "Credit" : s.payment_method;
         }
 
         // Derive total from calculation_infos if present (new Order Service format)
@@ -481,27 +481,28 @@ const SalesListPage: React.FC = () => {
             <thead className="sticky top-0 z-10 bg-slate-50 border-b border-slate-100">
               <tr>
                 <th className="w-[110px] p-2.5 px-3 text-[10px] font-bold tracking-wider text-slate-400 uppercase text-left">Order ID</th>
-                <th className="w-[160px] p-2.5 px-3 text-[10px] font-bold tracking-wider text-slate-400 uppercase text-left">Customer</th>
-                <th className="w-[100px] p-2.5 px-3 text-[10px] font-bold tracking-wider text-slate-400 uppercase text-left">Origin</th>
-                <th className="w-[110px] p-2.5 px-3 text-[10px] font-bold tracking-wider text-slate-400 uppercase text-left">Payment</th>
+                <th className="w-[140px] p-2.5 px-3 text-[10px] font-bold tracking-wider text-slate-400 uppercase text-left">Customer</th>
+                <th className="w-[180px] p-2.5 px-3 text-[10px] font-bold tracking-wider text-slate-400 uppercase text-left">Items</th>
+                <th className="w-[90px] p-2.5 px-3 text-[10px] font-bold tracking-wider text-slate-400 uppercase text-left">Origin</th>
+                <th className="w-[100px] p-2.5 px-3 text-[10px] font-bold tracking-wider text-slate-400 uppercase text-left">Payment</th>
                 <th className="w-[96px] p-2.5 px-3 text-[10px] font-bold tracking-wider text-slate-400 uppercase text-left">Date</th>
-                <th className="w-[62px] p-2.5 px-3 text-[10px] font-bold tracking-wider text-slate-400 uppercase text-center">Qty</th>
-                <th className="w-[110px] p-2.5 px-3 text-[10px] font-bold tracking-wider text-slate-400 uppercase text-right">Amount</th>
-                <th className="w-[100px] p-2.5 px-3 text-[10px] font-bold tracking-wider text-slate-400 uppercase text-left">Status</th>
+                <th className="w-[50px] p-2.5 px-3 text-[10px] font-bold tracking-wider text-slate-400 uppercase text-center">Qty</th>
+                <th className="w-[90px] p-2.5 px-3 text-[10px] font-bold tracking-wider text-slate-400 uppercase text-right">Amount</th>
+                <th className="w-[90px] p-2.5 px-3 text-[10px] font-bold tracking-wider text-slate-400 uppercase text-left">Status</th>
                 <th className="w-[40px] p-2.5 px-3 text-[10px] font-bold tracking-wider text-slate-400 uppercase text-right"></th>
               </tr>
             </thead>
             <tbody>
               {loading && filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="p-12 text-center">
+                  <td colSpan={10} className="p-12 text-center">
                     <Loader2 size={28} className="text-blue-500 mx-auto animate-spin mb-2" />
                     <p className="text-sm font-medium text-slate-500">Fetching sales records…</p>
                   </td>
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="p-12 text-center">
+                  <td colSpan={10} className="p-12 text-center">
                     <Receipt size={32} className="text-slate-200 mx-auto mb-2" />
                     <p className="text-sm font-bold text-slate-600 mb-1">No sales found</p>
                     <p className="text-xs text-slate-400">Try adjusting your filters</p>
@@ -513,6 +514,13 @@ const SalesListPage: React.FC = () => {
                 const dateStr = sale.created_at.split("T")[0];
                 const refundedCount = (sale.items || []).filter((i: any) => i.status === "REFUNDED").length;
                 const exchangedCount = (sale.items || []).filter((i: any) => i.status === "EXCHANGED").length;
+                const hasReturns = (sale.returns && sale.returns.length > 0) || (sale.items || []).some((i: any) => (i.returned_quantity && i.returned_quantity > 0) || i.status === "REFUNDED" || i.status === "EXCHANGED");
+
+                const itemsList = sale.items || [];
+                const firstItemName = itemsList[0]?.name || itemsList[0]?.product_name || "—";
+                const itemsDisplay = itemsList.length > 1 
+                  ? `${firstItemName} +${itemsList.length - 1} more` 
+                  : firstItemName;
 
                 const isSelected = selectedSale?.id === sale.id;
 
@@ -528,6 +536,7 @@ const SalesListPage: React.FC = () => {
                         <span className="font-mono text-[11px] font-semibold text-slate-800 block">Order #{sale.ui_id}</span>
                         <div className="flex gap-1 mt-1 flex-wrap">
                           {sale.origin === "Sales Return" && <span className="text-[9px] font-bold text-red-600 bg-red-50 px-1 py-0.5 rounded">Return</span>}
+                          {hasReturns && <span className="text-[9px] font-bold text-rose-600 bg-rose-50 px-1 py-0.5 rounded border border-rose-100/50">Returned</span>}
                           {refundedCount > 0 && <span className="text-[9px] font-bold text-orange-600 bg-orange-50 px-1 py-0.5 rounded">{refundedCount} Refunded</span>}
                           {exchangedCount > 0 && <span className="text-[9px] font-bold text-blue-600 bg-blue-50 px-1 py-0.5 rounded">{exchangedCount} Exchanged</span>}
                         </div>
@@ -541,13 +550,18 @@ const SalesListPage: React.FC = () => {
                         <span className="text-[10px] text-slate-500 block mt-0.5 truncate">{sale.customer.customer_mobile_number}</span>
                       )}
                     </td>
+                    <td className="p-2.5 px-3 border-b border-slate-50">
+                      <span className="truncate text-xs font-semibold text-slate-700 block" title={itemsList.map((i: any) => i.name || i.product_name).join(", ")}>
+                        {itemsDisplay}
+                      </span>
+                    </td>
                     <td className="p-2.5 px-3 border-b border-slate-50"><Badge cls={oCfg.cls} dot={oCfg.dot} label={sale.origin} /></td>
                     <td className="p-2.5 px-3 border-b border-slate-50">
                       <div className="flex flex-wrap gap-1">
                         {sale.payments && Object.keys(sale.payments).length > 0 ? (
                           Object.keys(sale.payments).map(k => {
                             const u = k.toUpperCase();
-                            const label = u === "CASH" ? "Cash" : u === "CARD" ? "Card" : u === "UPI" || u === "G-PAY" || u === "GPAY" ? "UPI" : u === "PHONEPE" ? "PhonePe" : u === "CREDIT" ? "Credit" : k;
+                            const label = u === "CASH" ? "Cash" : u === "CARD" ? "Card" : u === "UPI" || u === "G-PAY" || u === "GPAY" ? "UPI" : u === "PHONEPE" ? "PhonePe" : u === "CREDIT" || u === "ON_CREDIT" ? "Credit" : k;
                             const cfg = PAYMENT_CFG[label] || PAYMENT_CFG["Other"];
                             return <Badge key={k} cls={cfg.cls} dot={cfg.dot} label={label} />;
                           })

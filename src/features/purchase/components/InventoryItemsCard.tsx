@@ -621,8 +621,8 @@ export const InventoryItemsCard = ({
                                       id: c.id,
                                       name: c.name || Object.values(c.attributes || c.datas?.attributes || {}).join(" - ") || c.barcode || "Variant",
                                       sku: c.barcode || opt.barcode,
-                                      stock: c.stocks || c.stock || opt.stocks || 0,
-                                      batchCount: Array.isArray(c.batches) ? c.batches.length : 0,
+                                      stock: c.stock_infos?.available_stocks ?? c.stocks ?? c.stock ?? opt.stocks ?? 0,
+                                      batchCount: Array.isArray(c.batch_infos) ? c.batch_infos.length : Array.isArray(c.batches) ? c.batches.length : 0,
                                     }));
                                     setVariantModal({ isOpen: true, baseProduct: opt.name || String(val), targetRowIndex: index, variants: mappedVariants, baseData: opt });
                                     setSelectedVariants(null);
@@ -648,19 +648,19 @@ export const InventoryItemsCard = ({
                                   }
                                   return;
                                 }
-
+ 
                                 if (hasVariants && combinations.length === 0) {
                                   showToast("This product is marked as having variants, but no variants have been generated yet. Please generate variants in the Inventory module before purchasing.", "error");
                                   return;
                                 }
-
+ 
                                 if (hasVariants && combinations.length > 0) {
                                   const mappedVariants = combinations.map((c: any) => ({
                                     id: c.id,
                                     name: c.name || Object.values(c.attributes || c.datas?.attributes || {}).join(" - ") || c.barcode || "Variant",
                                     sku: c.barcode || opt.barcode,
-                                    stock: c.stocks || c.stock || opt.stocks || 0,
-                                    batchCount: Array.isArray(c.batches) ? c.batches.length : (c.batches ? (typeof c.batches === 'string' ? JSON.parse(c.batches).length : 0) : 0),
+                                    stock: c.stock_infos?.available_stocks ?? c.stocks ?? c.stock ?? opt.stocks ?? 0,
+                                    batchCount: Array.isArray(c.batch_infos) ? c.batch_infos.length : Array.isArray(c.batches) ? c.batches.length : (c.batches ? (typeof c.batches === 'string' ? JSON.parse(c.batches).length : 0) : 0),
                                   }));
                                   setVariantModal({ isOpen: true, baseProduct: opt.name || String(val), targetRowIndex: index, variants: mappedVariants, baseData: opt });
                                   setSelectedVariants(null);

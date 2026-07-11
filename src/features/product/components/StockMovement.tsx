@@ -93,10 +93,10 @@ const StockMovementTab = ({ inventoryId, product }: StockMovementTabProps) => {
           const mType = a.movement_type || "";
           let displayType = "Adjustment";
           let source = "stock";
-          if (mType === "DIRECT" || mType === "PURCHASE") { displayType = "Purchase"; source = "purchase"; }
+          if (mType.includes("PURCHASE") || mType === "DIRECT") { displayType = "Purchase"; source = "purchase"; }
           else if (mType.includes("PO_")) { displayType = "PO Purchase"; source = "purchase"; }
-          else if (mType === "SALES") { displayType = "Sales"; source = "sales"; }
-          else if (mType === "SALE_RETURN" || mType === "RETURN") { displayType = "Return"; source = "return"; }
+          else if (mType.includes("SALES_RETURN") || mType.includes("SALE_RETURN") || mType.includes("RETURN")) { displayType = "Sales Return"; source = "return"; }
+          else if (mType.includes("SALES")) { displayType = "Sales"; source = "sales"; }
 
           const sid = a.supplier_id || a.datas?.supplier_id || a.reference_id;
           let finalDesc = a.description || `Stock ${displayType}`;

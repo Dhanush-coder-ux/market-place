@@ -25,7 +25,7 @@ type SaleRecord = OrderResponse;
 interface SaleItem {
   id: string; inventory_id: string; name: string; sku: string; category: string;
   quantity: number; unitPrice: number; buyPrice: number;
-  imageColor: string; status?: string; stocks_before?: number; serial_numbers?: string[];
+  imageColor: string; status?: string; stocks_before?: number; serial_numbers?: string[]; serialno_id?: string;
 }
 interface SelectedReturnItem extends SaleItem { returnQty: number; exchangeItemId?: string; selectedSerials?: string[]; }
 interface ReturnErrors { reason?: string; items?: string; settlement?: string; serials?: string; }
@@ -333,7 +333,7 @@ const useReturnModalLogic = (sale: SaleRecord | null, productMap: Record<string,
       getData(`${ENDPOINTS.CUSTOMERS}/by/${SHOP_ID}/${customerId}`).then(res => {
         if (res && res.data) {
            const c = Array.isArray(res.data) ? res.data[0] : res.data;
-           setCustomerOutstanding(Number(c.outstanding ?? c.datas?.outstanding_balance ?? 0));
+           setCustomerOutstanding(Number(c.outstanding_infos?.amount ?? c.outstanding ?? c.datas?.outstanding_balance ?? 0));
         }
       }).catch(err => console.error("Failed to fetch customer", err));
     } else {
@@ -467,7 +467,7 @@ const useReturnModalLogic = (sale: SaleRecord | null, productMap: Record<string,
         quantity: i.returnQty,
         reason: state.itemReasons[i.id] || "Customer Request",
         serialno_infos: i.selectedSerials?.length 
-          ? i.selectedSerials.map(s => ({ id: "", name: s })) 
+          ? i.selectedSerials.map(s => ({ id: i.serialno_id || "", name: s })) 
           : []
       }));
 

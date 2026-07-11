@@ -42,12 +42,12 @@ const generateItems = (sale: OrderResponse, productMap: Record<string, string> =
     buyPrice: i.buy_price || 0,
     status: i.status || "COMPLETED",
     reason: i.reason,
-    serial_numbers: i.serialno_info?.serial_numbers || i.serial_info?.serial_numbers || i.serial_numbers || [],
+    serial_numbers: Array.isArray(i.serialno_infos) ? i.serialno_infos.map((sn: any) => sn.name || sn) : (i.serialno_info?.serial_numbers || i.serial_info?.serial_numbers || i.serial_numbers || []),
     unit: i.product?.unit || i.unit || i.datas?.unit || "UNIT",
-    variantName: i.variant_info?.variant_name || i.variant?.variant_name,
-    batchName: i.batch_info?.batch_name || i.batch?.batch_name,
-    mfgDate: i.batch_info?.mfg_date || i.batch?.mfg_date,
-    expDate: i.batch_info?.exp_date || i.batch?.exp_date,
+    variantName: i.variant_infos?.variant_name || i.variant_info?.variant_name || i.variant?.variant_name,
+    batchName: i.batch_infos?.batch_name || i.batch_infos?.name || i.batch_info?.batch_name || i.batch?.batch_name,
+    mfgDate: i.batch_infos?.mfg_date || i.batch_infos?.manufacturing_date || i.batch_info?.mfg_date || i.batch?.mfg_date,
+    expDate: i.batch_infos?.exp_date || i.batch_infos?.expiry_date || i.batch_info?.exp_date || i.batch?.exp_date,
     gst: i.gst || i.datas?.gst,
   }));
 
@@ -202,7 +202,7 @@ const SaleDetailPage: React.FC = () => {
   const paymentsDetail = sale.payments && Object.keys(sale.payments).length > 0
     ? Object.entries(sale.payments).map(([k, v]) => {
       const u = k.toUpperCase();
-      const label = u === "CASH" ? "Cash" : u === "CARD" ? "Card" : (u === "UPI" || u === "G-PAY" || u === "GPAY") ? "UPI" : u === "PHONEPE" ? "PhonePe" : u === "CREDIT" ? "Credit" : k;
+      const label = u === "CASH" ? "Cash" : u === "CARD" ? "Card" : (u === "UPI" || u === "G-PAY" || u === "GPAY") ? "UPI" : u === "PHONEPE" ? "PhonePe" : u === "CREDIT" || u === "ON_CREDIT" ? "Credit" : k;
       return { label, amount: v as number };
     })
     : [{ label: sale.payment_method || "Other", amount: sale.total_sellprice }];
@@ -551,6 +551,78 @@ const SaleDetailPage: React.FC = () => {
                 </SectionCard>
               );
             })}
+            {Array.isArray(sale.returns) && sale.returns.length > 0 && (
+              <div className="space-y-4 mt-4">
+                <h3 className="text-sm font-bold text-slate-800 tracking-tight">Processed Returns / Refunds</h3>
+                {sale.returns.map((ret: any, rIdx: number) => (
+                  <SectionCard key={ret.id || rIdx} title={`Return Request #${ret.id?.slice(0, 8).toUpperCase()}`} className="p-0 overflow-hidden border-rose-100">
+                    <div className="p-4 bg-rose-50/50 border-b border-rose-100 flex justify-between items-center text-xs">
+                      <span className="font-bold text-rose-700">Refund Status: {ret.status}</span>
+                      <span className="font-bold text-slate-650">Total Refund: {fmt(ret.total_refund_amount)} (Qty: {ret.total_refund_qty})</span>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left border-collapse">
+                        <thead>
+                          <tr className="bg-slate-50/50 border-b border-slate-100">
+                            <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em]">Returned Product</th>
+                            <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-center">Returned Qty</th>
+                            <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-right">Refund Amount</th>
+                            <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-right">Reason</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-50">
+                          {(ret.items || []).map((retItem: any) => {
+                            const variantN = retItem.variant_infos?.variant_name || retItem.variant_name;
+                            const batchN = retItem.batch_infos?.batch_name || retItem.batch_name;
+                            const serialsList = Array.isArray(retItem.serialno_infos) ? retItem.serialno_infos.map((sn: any) => sn.name || sn) : [];
+                            return (
+                              <tr key={retItem.id} className="hover:bg-slate-50/50 transition-colors">
+                                <td className="px-6 py-4">
+                                  <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-lg flex items-center justify-center font-bold text-slate-700 bg-rose-50 border border-rose-100 shrink-0">
+                                      <Package size={16} className="text-rose-500" />
+                                    </div>
+                                    <div className="min-w-0">
+                                      <p className="text-sm font-bold text-slate-800 truncate">{retItem.name}</p>
+                                      <span className="text-[10px] font-mono font-bold text-slate-400 block mt-0.5">{retItem.ui_id}</span>
+                                      {variantN && (
+                                        <p className="text-[10px] font-extrabold text-indigo-750 bg-indigo-50/50 px-1.5 py-0.5 rounded w-fit mt-1">{variantN}</p>
+                                      )}
+                                      {batchN && (
+                                        <p className="text-[10px] font-extrabold text-amber-700 bg-amber-50/50 px-1.5 py-0.5 rounded w-fit mt-1">Batch: {batchN}</p>
+                                      )}
+                                      {serialsList.length > 0 && (
+                                        <div className="mt-2 bg-slate-50 p-2 rounded border border-slate-100 max-w-md shadow-sm">
+                                          <p className="text-[8px] font-bold text-slate-400 mb-1 uppercase tracking-wider">Returned Serials:</p>
+                                          <div className="flex flex-wrap gap-1">
+                                            {serialsList.map((sn: string, idx: number) => (
+                                              <span key={idx} className="text-[8px] font-mono font-bold px-1.5 py-0.5 rounded bg-white text-rose-600 border border-slate-200 shadow-sm">{sn}</span>
+                                            ))}
+                                          </div>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                </td>
+                                <td className="px-6 py-4 text-center">
+                                  <span className="text-xs font-black text-rose-600">{retItem.quantity}</span>
+                                </td>
+                                <td className="px-6 py-4 text-right">
+                                  <span className="text-sm font-black text-slate-850 tabular-nums">{fmt(retItem.refund_amount)}</span>
+                                </td>
+                                <td className="px-6 py-4 text-right">
+                                  <span className="text-xs font-semibold text-slate-500">{retItem.reason}</span>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </SectionCard>
+                ))}
+              </div>
+            )}
           </div>
           )}
 

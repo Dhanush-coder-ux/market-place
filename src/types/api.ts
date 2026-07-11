@@ -112,6 +112,9 @@ export interface CustomerRecord {
   };
   can_have_credit?: boolean;
   outstanding?: number;
+  outstanding_infos?: {
+    amount?: number;
+  };
   // Legacy flat fields (kept for backward-compatible reads)
   email?: string;
   mobile_number?: string;

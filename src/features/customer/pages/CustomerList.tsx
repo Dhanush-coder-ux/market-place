@@ -294,7 +294,7 @@ const CustomerList = () => {
                   const isSelected = selectedCustomer?.id === c.id;
                   const name = c.name || "Unknown";
                   const initials = name.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2);
-                  const outstanding = c.outstanding || 0;
+                  const outstanding = c.outstanding_infos?.amount ?? c.outstanding ?? 0;
                   const customerEmail = c.contact_infos?.email || c.email || "";
                   const customerPhone = c.contact_infos?.mobile_number || c.mobile_number || "";
                   const customerCreditLimit = c.credit_infos?.limit ?? c.credit_limit ?? 0;

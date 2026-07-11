@@ -25,7 +25,7 @@ export function RecordPaymentModal({ show, onClose, customer, onSuccess }: Recor
   ]);
   const [isClearing, setIsClearing] = useState(false);
 
-  const maxOutstanding = Number(customer?.outstanding ?? (customer as any)?.credit_infos?.outstanding ?? customer?.datas?.outstanding_balance ?? 0);
+  const maxOutstanding = Number(customer?.outstanding_infos?.amount ?? customer?.outstanding ?? (customer as any)?.credit_infos?.outstanding ?? customer?.datas?.outstanding_balance ?? 0);
 
   const addPaymentRow = () => {
     if (payments.length >= 4) return;

@@ -139,7 +139,7 @@ export default function CustomerBalanceSummary() {
     customers.forEach(c => {
       if (!c) return;
       if (c.is_active ?? c.datas?.is_active ?? true) active++;
-      outstanding += Number(c.outstanding ?? c.datas?.outstanding_balance ?? 0);
+      outstanding += Number(c.outstanding_infos?.amount ?? c.outstanding ?? c.datas?.outstanding_balance ?? 0);
       credit += Number((c as any).credit_infos?.limit ?? c.credit_limit ?? c.datas?.credit_limit ?? 0);
     });
     return { active, outstanding, credit };
@@ -370,13 +370,13 @@ export default function CustomerBalanceSummary() {
                       <div className="flex items-center justify-end gap-1">
                         <button
                           onClick={(e) => { e.stopPropagation(); setSelectedCustomerForPayment(c); setShowPaymentModal(true); }}
-                          disabled={Number(c.outstanding ?? c.datas?.outstanding_balance ?? 0) <= 0}
+                          disabled={Number(c.outstanding_infos?.amount ?? c.outstanding ?? c.datas?.outstanding_balance ?? 0) <= 0}
                           className={`p-2 rounded-lg transition-all shadow-sm ${
-                            Number(c.outstanding ?? c.datas?.outstanding_balance ?? 0) > 0 
+                            Number(c.outstanding_infos?.amount ?? c.outstanding ?? c.datas?.outstanding_balance ?? 0) > 0 
                               ? "active:scale-95 text-emerald-500 hover:text-emerald-600 hover:bg-emerald-50" 
                               : "text-slate-300 bg-slate-50 cursor-not-allowed"
                           }`}
-                          title={Number(c.outstanding ?? c.datas?.outstanding_balance ?? 0) > 0 ? "Record Payment" : "No Outstanding"}
+                          title={Number(c.outstanding_infos?.amount ?? c.outstanding ?? c.datas?.outstanding_balance ?? 0) > 0 ? "Record Payment" : "No Outstanding"}
                         >
                           <Banknote size={16} />
                         </button>

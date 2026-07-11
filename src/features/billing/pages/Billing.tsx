@@ -162,6 +162,53 @@ const Billing = () => {
     }
 
     try {
+      const mapSerialsToInfos = (item: any) => {
+        const serialNames = item.serialNumbers || [];
+        if (serialNames.length === 0) return null;
+
+        const prod = item._product || {};
+        let serialObjects: any[] = [];
+
+        const getSerialObjects = (infos: any): any[] => {
+          if (Array.isArray(infos)) return infos;
+          return [];
+        };
+
+        serialObjects = [...serialObjects, ...getSerialObjects(prod.serialno_infos)];
+
+        let variantsSource = prod.variants || prod.variant_infos || prod.varients || prod.combinations;
+        if (variantsSource && typeof variantsSource === 'object' && !Array.isArray(variantsSource)) {
+          variantsSource = Object.values(variantsSource);
+        }
+        if (Array.isArray(variantsSource)) {
+          const matchedVariant = variantsSource.find((v: any) => v.id === item.variantId);
+          if (matchedVariant) {
+            serialObjects = [...serialObjects, ...getSerialObjects(matchedVariant.serialno_infos)];
+            if (item.batchId && matchedVariant.batch_infos) {
+              const matchedBatch = matchedVariant.batch_infos.find((b: any) => b.id === item.batchId);
+              if (matchedBatch) {
+                serialObjects = [...serialObjects, ...getSerialObjects(matchedBatch.serialno_infos)];
+              }
+            }
+          }
+        }
+
+        if (item.batchId && prod.batch_infos) {
+          const matchedBatch = prod.batch_infos.find((b: any) => b.id === item.batchId);
+          if (matchedBatch) {
+            serialObjects = [...serialObjects, ...getSerialObjects(matchedBatch.serialno_infos)];
+          }
+        }
+
+        return serialNames.map((sn: string) => {
+          const foundObj = serialObjects.find(obj => obj && (obj.name === sn || obj.serial === sn));
+          return {
+            id: foundObj?.id || item.serialnoId || "",
+            name: sn
+          };
+        });
+      };
+
       // ── Step 1: Reserve all items in the Order Cart ─────────────────────────
       for (const item of filledItems) {
         await apiClient.post(`${ENDPOINTS.ORDER_CART}/add`, {
@@ -170,14 +217,15 @@ const Billing = () => {
           product_id: item.inventoryId || "",
           variant_id: item.variantId || null,
           batch_id: item.batchId || null,
-          serialno_infos: item.serialnoId ? { id: item.serialnoId, name: item.name } : null,
+          serialno_infos: mapSerialsToInfos(item),
           qty: item.qty,
         });
       }
 
       // ── Step 2: Build payment_infos for the order ───────────────────────────
       const paymentInfos = paymentsArg.reduce((acc, p) => {
-        const method = p.mode.toUpperCase();
+        const rawMethod = p.mode.toUpperCase();
+        const method = rawMethod === "CREDIT" ? "ON_CREDIT" : rawMethod;
         acc[method] = (acc[method] || 0) + p.amount;
         return acc;
       }, {} as Record<string, number>);

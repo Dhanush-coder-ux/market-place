@@ -416,8 +416,8 @@ export default function CustomerDetail() {
             <StatCard
               icon={AlertCircle}
               label="Outstanding"
-              value={`₹${(stats?.total_outstandings || customer?.outstanding || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-              iconBg={(stats?.total_outstandings || customer?.outstanding || 0) > 0 ? "bg-rose-50 text-rose-600" : "bg-emerald-50 text-emerald-600"}
+              value={`₹${(stats?.total_outstandings || customer?.outstanding_infos?.amount || customer?.outstanding || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+              iconBg={(stats?.total_outstandings || customer?.outstanding_infos?.amount || customer?.outstanding || 0) > 0 ? "bg-rose-50 text-rose-600" : "bg-emerald-50 text-emerald-600"}
               className="flex-1 min-w-[140px]"
             />
             <StatCard
@@ -576,12 +576,12 @@ export default function CustomerDetail() {
                     </span>
                   </div>
                   <button 
-                    disabled={Number(customer.outstanding ?? datas.outstanding_balance ?? 0) <= 0}
+                    disabled={Number(customer.outstanding_infos?.amount ?? customer.outstanding ?? datas.outstanding_balance ?? 0) <= 0}
                     onClick={() => {
                       setShowPayment(true);
                     }}
                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black transition-all shadow-md active:scale-95 ${
-                      Number(customer.outstanding ?? datas.outstanding_balance ?? 0) > 0
+                      Number(customer.outstanding_infos?.amount ?? customer.outstanding ?? datas.outstanding_balance ?? 0) > 0
                         ? "bg-emerald-600 text-white hover:bg-emerald-700 shadow-emerald-100"
                         : "bg-slate-50 text-slate-400 cursor-not-allowed border border-slate-200 shadow-none"
                     }`}

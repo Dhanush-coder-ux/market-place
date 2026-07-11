@@ -262,8 +262,8 @@ const PurchaseForm = () => {
               serialno_id: p.serialno_id || p.serial_number?.id || p.serial_numbers?.id || p.serial_info?.serialno_id,
               storageLoc: pStorage,
               reorderPoint: p.reorder_point_infos?.reorder_point ?? p.reorder_point ?? p.datas?.reorder_point ?? 5,
-              serialNumbers: (p.serialno_infos ? p.serialno_infos.map((s:any) => s.name).join(',') : Array.isArray(p.serial_numbers) ? p.serial_numbers.join(',') : (p.serial_numbers?.serial_numbers || p.serial_number?.serial_numbers || p.serial_info?.serial_numbers || []).join(',')),
-              existingSerials: (p.serialno_infos ? p.serialno_infos.map((s:any) => s.name) : Array.isArray(p.serial_numbers) ? p.serial_numbers : (p.serial_numbers?.serial_numbers || p.serial_number?.serial_numbers || p.serial_info?.serial_numbers || []))
+              serialNumbers: (p.serialno_infos ? p.serialno_infos.map((s:any) => s.name).join(',') : Array.isArray(p.serialno_numbers) ? p.serialno_numbers.join(',') : Array.isArray(p.serial_numbers) ? p.serial_numbers.join(',') : (p.serial_numbers?.serial_numbers || p.serial_number?.serial_numbers || p.serial_info?.serial_numbers || []).join(',')),
+              existingSerials: (p.serialno_infos ? p.serialno_infos.map((s:any) => s.name) : Array.isArray(p.serialno_numbers) ? p.serialno_numbers : Array.isArray(p.serial_numbers) ? p.serial_numbers : (p.serial_numbers?.serial_numbers || p.serial_number?.serial_numbers || p.serial_info?.serial_numbers || []))
             };
           })];
 
@@ -486,7 +486,7 @@ const PurchaseForm = () => {
           finalSellPrice = Number(p.sellingPrice) || 0;
         }
 
-          const serials = p.serialNumbers ? p.serialNumbers.split(",").map(s => ({ name: s.trim() })).filter(s => s.name) : [];
+          const serials = p.serialNumbers ? p.serialNumbers.split(",").map(s => s.trim()).filter(Boolean) : [];
 
           return {
             id: id ? p.id : undefined,
@@ -497,7 +497,7 @@ const PurchaseForm = () => {
               manufacturing_date: p.manufacturingDate || new Date().toISOString(),
               expiry_date: p.expiryDate || new Date().toISOString()
             } : null,
-            serialno_infos: serials.length > 0 ? serials : null,
+            serialno_numbers: serials.length > 0 ? serials : null,
             storage_location_infos: p.storageLoc ? { name: p.storageLoc } : null,
             reorder_point_infos: p.reorderPoint ? { reorder_point: Number(p.reorderPoint) } : null,
             pricing_infos: {

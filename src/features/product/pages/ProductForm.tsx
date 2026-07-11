@@ -235,8 +235,8 @@ const QuickCreateDropdownModal: React.FC<QuickCreateDropdownModalProps> = ({ isO
         const res = await utilityApi.createShopCategory({ shop_id: SHOP_ID, name: value.trim() });
         if (res?.data) onSuccess({ id: res.data.id, name: res.data.name });
       } else {
-        const res = await utilityApi.createShopUnit({ 
-          shop_id: SHOP_ID, 
+        const res = await utilityApi.createShopUnit({
+          shop_id: SHOP_ID,
           name: value.trim(),
           short_name: value.trim().substring(0, 3).toUpperCase()
         });
@@ -349,6 +349,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
   const [baseSerials, setBaseSerials] = useState<string[]>([]);
   const [supplierDetails, setSupplierDetails] = useState<any>(null);
   const [existingImages, setExistingImages] = useState<string[]>([]);
+  const [selectedImageFiles, setSelectedImageFiles] = useState<File[]>([]);
   const [isUploadingImages, setIsUploadingImages] = useState(false);
   const [baseName, setBaseName] = useState("");
   const [showBarcodeGen, setShowBarcodeGen] = useState(false);
@@ -396,7 +397,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
   const missingFields: string[] = [];
   if (!form.name.trim()) missingFields.push("name");
   if (!form.category) missingFields.push("category");
-  if (existingImages.length === 0) missingFields.push("image");
+  if (existingImages.length === 0 && selectedImageFiles.length === 0) missingFields.push("image");
   if (!form.track_stock && !form.selling_price) missingFields.push("selling price");
   if (!form.track_stock && !form.cost_to_make) missingFields.push("cost");
 
@@ -425,7 +426,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
       </div>
     );
     return () => setBottomActions(null);
-  }, [setBottomActions, isLoading, id, form, variantTypes, combinations, baseSerials, supplierDetails, isSavingDraft, existingImages]);
+  }, [setBottomActions, isLoading, id, form, variantTypes, combinations, baseSerials, supplierDetails, isSavingDraft, existingImages, selectedImageFiles]);
 
   // Load custom field definitions
   useEffect(() => {
@@ -441,97 +442,97 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
         setLoading(true);
         try {
           const res = await inventory.getInventoryById(SHOP_ID, id);
-        if (res?.data) {
-          const prod = Array.isArray(res.data) ? res.data[0] : res.data;
-          if (!prod) return;
-          const additional = prod.additional_infos || prod.datas || {};
-          setForm({
-            name: prod.name || "",
-            stocks: prod.stock_infos?.available_stocks || 0,
-            serial_number: (prod.serialno_infos && prod.serialno_infos.length > 0 ? (typeof prod.serialno_infos[0] === 'string' ? prod.serialno_infos[0] : prod.serialno_infos[0].name || "") : ""),
-            barcode: prod.barcode || "",
-            brand: additional.brand || "",
-            category: prod.category_id || "",
-            unit: prod.unit_id || "",
-            description: prod.description || "",
-            is_active: prod.is_active ?? true,
-            mrp: String(additional.mrp || ""),
-            selling_price: String(prod.pricing_infos?.sell_price || ""),
-            cost_to_make: String(prod.pricing_infos?.buy_price || ""),
-            gst: String(prod.gst || "18").replace("%", ""),
-            hsn: String(additional.hsn || ""),
-            sku: prod.sku || "",
-            supplier: additional.supplier || "",
-            opening_stock: String(additional.opening_stock || "0"),
-            reorder_point: String(prod.reorder_point_infos?.reorder_point || "5"),
-            max_stock: String(additional.max_stock || ""),
-            location: prod.storage_location_infos?.storage_location || "",
-            has_variants: !!prod.type_infos?.has_variant,
-            batch_tracking: !!prod.type_infos?.has_batch,
-            serial_tracking: !!prod.type_infos?.has_serialno,
-            batch_name: prod.batch_infos?.name || "",
-            mfg_date: prod.batch_infos?.manufacturing_date || "",
-            exp_date: prod.batch_infos?.expiry_date || "",
-            track_stock: prod.have_tracking ?? true,
-            low_stock_alert: additional.low_stock_alert || "Notify me",
-            visible_online: prod.visible_online || false,
-          });
-          if (additional.images && Array.isArray(additional.images)) setExistingImages(additional.images);
-          
-          const loadedBrand = additional.brand || "";
-          const loadedName = prod.name || "";
-          const baseFromLoad = loadedBrand && loadedName.startsWith(loadedBrand + " ")
-            ? loadedName.slice(loadedBrand.length + 1) : loadedName;
-          setBaseName(baseFromLoad);
-
-          if (additional.supplier) {
-            supplierApi.searchSuppliers(additional.supplier).then((sups: any[]) => {
-              const matched = sups.find((s: any) => s.id === additional.supplier);
-              if (matched) setSupplierDetails(matched);
+          if (res?.data) {
+            const prod = Array.isArray(res.data) ? res.data[0] : res.data;
+            if (!prod) return;
+            const additional = prod.additional_infos || prod.datas || {};
+            setForm({
+              name: prod.name || "",
+              stocks: prod.stock_infos?.available_stocks || 0,
+              serial_number: (prod.serialno_infos && prod.serialno_infos.length > 0 ? (typeof prod.serialno_infos[0] === 'string' ? prod.serialno_infos[0] : prod.serialno_infos[0].name || "") : ""),
+              barcode: prod.barcode || "",
+              brand: additional.brand || "",
+              category: prod.category_id || "",
+              unit: prod.unit_id || "",
+              description: prod.description || "",
+              is_active: prod.is_active ?? true,
+              mrp: String(additional.mrp || ""),
+              selling_price: String(prod.pricing_infos?.sell_price || ""),
+              cost_to_make: String(prod.pricing_infos?.buy_price || ""),
+              gst: String(prod.gst || "18").replace("%", ""),
+              hsn: String(additional.hsn || ""),
+              sku: prod.sku || "",
+              supplier: additional.supplier || "",
+              opening_stock: String(additional.opening_stock || "0"),
+              reorder_point: String(prod.reorder_point_infos?.reorder_point || "5"),
+              max_stock: String(additional.max_stock || ""),
+              location: prod.storage_location_infos?.storage_location || "",
+              has_variants: !!prod.type_infos?.has_variant,
+              batch_tracking: !!prod.type_infos?.has_batch,
+              serial_tracking: !!prod.type_infos?.has_serialno,
+              batch_name: prod.batch_infos?.name || "",
+              mfg_date: prod.batch_infos?.manufacturing_date || "",
+              exp_date: prod.batch_infos?.expiry_date || "",
+              track_stock: prod.have_tracking ?? true,
+              low_stock_alert: additional.low_stock_alert || "Notify me",
+              visible_online: prod.visible_online || false,
             });
-          }
+            if (additional.images && Array.isArray(additional.images)) setExistingImages(additional.images);
 
-          if (additional.variant_types) setVariantTypes(additional.variant_types);
-          else if (prod.variant_infos?.length > 0) {
-            const firstVar = prod.variant_infos[0];
-            const attributes = firstVar.additional_infos?.attributes || firstVar.attributes || {};
-            if (attributes && Object.keys(attributes).length > 0) {
-              const types = Object.keys(attributes).map(key => ({
-                id: uid(),
-                name: key,
-                values: Array.from(new Set(prod.variant_infos.map((v: any) => v.additional_infos?.attributes?.[key] || v.attributes?.[key]))).filter(Boolean) as string[],
-              }));
-              setVariantTypes(types);
+            const loadedBrand = additional.brand || "";
+            const loadedName = prod.name || "";
+            const baseFromLoad = loadedBrand && loadedName.startsWith(loadedBrand + " ")
+              ? loadedName.slice(loadedBrand.length + 1) : loadedName;
+            setBaseName(baseFromLoad);
+
+            if (additional.supplier) {
+              supplierApi.searchSuppliers(additional.supplier).then((sups: any[]) => {
+                const matched = sups.find((s: any) => s.id === additional.supplier);
+                if (matched) setSupplierDetails(matched);
+              });
+            }
+
+            if (additional.variant_types) setVariantTypes(additional.variant_types);
+            else if (prod.variant_infos?.length > 0) {
+              const firstVar = prod.variant_infos[0];
+              const attributes = firstVar.additional_infos?.attributes || firstVar.attributes || {};
+              if (attributes && Object.keys(attributes).length > 0) {
+                const types = Object.keys(attributes).map(key => ({
+                  id: uid(),
+                  name: key,
+                  values: Array.from(new Set(prod.variant_infos.map((v: any) => v.additional_infos?.attributes?.[key] || v.attributes?.[key]))).filter(Boolean) as string[],
+                }));
+                setVariantTypes(types);
+              }
+            }
+
+            if (prod.variant_infos) {
+              setCombinations(prod.variant_infos.map((v: any) => ({
+                id: v.id || uid(),
+                attributes: v.additional_infos?.attributes || v.attributes || {},
+                barcode: v.additional_infos?.barcode || v.barcode || "",
+                sku: v.additional_infos?.sku || v.sku || v.barcode || "",
+                price: String(v.sell_price || ""),
+                buy_price: String(v.buy_price || ""),
+                mrp: String(v.additional_infos?.mrp || ""),
+                reorder_point: String(v.reorder_point || "5"),
+                stock: String(v.stock_infos?.available_stocks || "0"),
+                active: true,
+                serials: (v.additional_infos?.serial_numbers || v.serial_numbers || []).map((sn: string) => ({
+                  id: uid(), serial: sn, status: "available" as const, purchaseDate: "", warrantyMonths: "12",
+                })),
+              })));
+            }
+            if (!prod.type_infos?.has_variant && prod.serialno_infos) {
+              const baseSn = prod.serialno_infos.map((s: any) => typeof s === 'string' ? s : s.name);
+              setBaseSerials(baseSn);
             }
           }
-
-          if (prod.variant_infos) {
-            setCombinations(prod.variant_infos.map((v: any) => ({
-              id: v.id || uid(),
-              attributes: v.additional_infos?.attributes || v.attributes || {},
-              barcode: v.additional_infos?.barcode || v.barcode || "",
-              sku: v.additional_infos?.sku || v.sku || v.barcode || "",
-              price: String(v.sell_price || ""),
-              buy_price: String(v.buy_price || ""),
-              mrp: String(v.additional_infos?.mrp || ""),
-              reorder_point: String(v.reorder_point || "5"),
-              stock: String(v.stock_infos?.available_stocks || "0"),
-              active: true,
-              serials: (v.additional_infos?.serial_numbers || v.serial_numbers || []).map((sn: string) => ({
-                id: uid(), serial: sn, status: "available" as const, purchaseDate: "", warrantyMonths: "12",
-              })),
-            })));
-          }
-          if (!prod.type_infos?.has_variant && prod.serialno_infos) {
-            const baseSn = prod.serialno_infos.map((s: any) => typeof s === 'string' ? s : s.name);
-            setBaseSerials(baseSn);
-          }
+        } catch (err) {
+          console.error("Failed to load product", err);
+        } finally {
+          setLoading(false);
         }
-      } catch (err) {
-        console.error("Failed to load product", err);
-      } finally {
-        setLoading(false);
-      }
       };
 
       const fetchCustomFieldValues = async () => {
@@ -592,27 +593,20 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
   };
 
   /* ─── Image upload ─── */
-  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  /* ─── Image Selection ─── */
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files) return;
     const files = Array.from(e.target.files);
-    const allowedCount = 3 - existingImages.length;
-    if (files.length > allowedCount) { showToast(`You can only add ${allowedCount} more image(s).`, "error"); return; }
-    setIsUploadingImages(true);
-    const formData = new FormData();
-    files.slice(0, allowedCount).forEach(file => formData.append("files", file));
-    try {
-      const uploadRes = await fetch(`${import.meta.env.VITE_GATEWAY_URL}${ENDPOINTS.UPLOAD_IMAGES}`, { method: "POST", body: formData });
-      if (!uploadRes.ok) throw new Error("Failed to upload images");
-      const resData = await uploadRes.json();
-      if (resData.detail?.success || resData.success) {
-        setExistingImages(prev => [...prev, ...resData.data]);
-        showToast("Images uploaded successfully", "success");
-      } else throw new Error(resData.detail?.msg || "Upload failed");
-    } catch (err: any) { showToast(err.message || "Failed to upload images", "error"); }
-    finally { setIsUploadingImages(false); }
+    const allowedCount = 3 - (existingImages.length + selectedImageFiles.length);
+    if (files.length > allowedCount) {
+      showToast(`You can only add ${allowedCount} more image(s).`, "error");
+      return;
+    }
+    setSelectedImageFiles(prev => [...prev, ...files.slice(0, allowedCount)]);
   };
 
   const removeExistingImage = (index: number) => setExistingImages(prev => prev.filter((_, i) => i !== index));
+  const removeSelectedImage = (index: number) => setSelectedImageFiles(prev => prev.filter((_, i) => i !== index));
 
   /* ─── Save draft ─── */
   const handleSaveDraft = () => {
@@ -694,10 +688,10 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
         // Store variant attribute map for edit-time reconstruction
         variant_attribute_map: form.has_variants
           ? activeCombinations.reduce((acc, combo, _i) => {
-              const name = Object.values(combo.attributes).join(" / ");
-              acc[name] = { attributes: combo.attributes, barcode: combo.barcode, sku: combo.sku, mrp: combo.mrp };
-              return acc;
-            }, {} as Record<string, any>)
+            const name = Object.values(combo.attributes).join(" / ");
+            acc[name] = { attributes: combo.attributes, barcode: combo.barcode, sku: combo.sku, mrp: combo.mrp };
+            return acc;
+          }, {} as Record<string, any>)
           : undefined,
       },
     };
@@ -728,6 +722,34 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
 
     if (res && (res.data || res.success)) {
       const savedProductId = res.data?.id || res.id || id;
+      
+      // If we have selected local images, upload them with product_id now
+      if (savedProductId && selectedImageFiles.length > 0) {
+        setIsUploadingImages(true);
+        const uploadFormData = new FormData();
+        uploadFormData.append("shop_id", SHOP_ID);
+        uploadFormData.append("product_id", savedProductId);
+        selectedImageFiles.forEach(file => {
+          uploadFormData.append("files", file);
+        });
+        try {
+          const uploadRes = await fetch(`${import.meta.env.VITE_GATEWAY_URL}/inventories/inventories/upload/images`, {
+            method: "POST",
+            body: uploadFormData
+          });
+          if (!uploadRes.ok) {
+            showToast("Product saved, but image upload failed", "warning");
+          } else {
+            showToast("Images uploaded successfully", "success");
+          }
+        } catch (uploadErr) {
+          console.error("Failed to upload images post-creation", uploadErr);
+          showToast("Failed to upload images", "error");
+        } finally {
+          setIsUploadingImages(false);
+        }
+      }
+
       if (savedProductId) {
         const valueInfos = Object.entries(customFieldValues)
           .filter(([_, value]) => value !== undefined && value !== "")
@@ -751,7 +773,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
         const drafts = JSON.parse(localStorage.getItem("product_drafts") || "[]");
         localStorage.setItem("product_drafts", JSON.stringify(drafts.filter((d: any) => d.id !== draftId)));
       }
-      setTimeout(() => navigate("/product/all"), 1000);
+      setTimeout(() => navigate(`/product/${savedProductId}`), 1000);
     } else {
       showToast("Failed to save product", "error");
     }
@@ -891,7 +913,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
               subtitle="Add up to 3 photos"
               extra={
                 <span className="text-[11px] font-semibold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
-                  {existingImages.length} / 3
+                  {existingImages.length + selectedImageFiles.length} / 3
                 </span>
               }
             >
@@ -909,10 +931,25 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                       </button>
                     </div>
                   ))}
+                  {selectedImageFiles.map((file, i) => {
+                    const previewUrl = URL.createObjectURL(file);
+                    const coverIdx = existingImages.length + i;
+                    return (
+                      <div key={`sel-${i}`} className="relative w-20 h-20 rounded-lg border border-slate-200 overflow-hidden group shadow-sm">
+                        <img src={previewUrl} alt="Product Draft" className="w-full h-full object-cover" />
+                        {coverIdx === 0 && (
+                          <span className="absolute bottom-0 left-0 right-0 text-center bg-black/40 text-white text-[9px] font-bold py-0.5">COVER</span>
+                        )}
+                        <button type="button" onClick={() => removeSelectedImage(i)} className="absolute top-1 right-1 bg-white/90 p-0.5 rounded-full text-red-500 opacity-0 group-hover:opacity-100 transition-opacity shadow-sm">
+                          <X size={12} />
+                        </button>
+                      </div>
+                    );
+                  })}
                 </div>
 
                 {/* Upload zone */}
-                {existingImages.length < 3 && (
+                {existingImages.length + selectedImageFiles.length < 3 && (
                   <label className="pf-img-upload flex flex-col items-center justify-center w-full border-2 border-dashed border-slate-200 rounded-xl py-8 cursor-pointer transition-all bg-slate-50/60 text-slate-400 hover:text-indigo-500">
                     {isUploadingImages ? (
                       <div className="w-8 h-8 border-2 border-slate-300 border-t-indigo-500 rounded-full animate-spin" />

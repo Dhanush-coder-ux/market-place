@@ -78,7 +78,7 @@ export interface ProductItem {
   received_stocks?: number;
 }
 
-export type PurchaseType = "Purchase" | "PO Purchase" | "Production";
+export type PurchaseType = "Purchase" | "PO Purchase" | "Production" | "Purchase Return";
 
 export interface DirectPurchaseData {
   id: string;
@@ -133,6 +133,7 @@ export function toDisplayData(p: PurchaseRecord): DirectPurchaseData {
     PO_CREATE: "PO Purchase",
     PO_UPDATE: "PO Purchase",
     PRODUCTION: "Production",
+    PURCHASE_RETURN: "Purchase Return",
   };
 
   // Try to find the vendor name from various possible fields
@@ -307,46 +308,14 @@ const STYLES = `
   .po-card:hover .po-arrow,
   .po-card-flat:hover .po-arrow,
   .po-row:hover .po-arrow { transform: translateX(2px); color: #2563eb; }
+
+
   .po-footer { transition: background-color 0.2s ease; }
   .po-card:hover .po-footer { background-color: #f8faff; }
 `;
 
 /* ================= SHARED HELPERS ================= */
-const fmt = (n: number) => `₹${n.toLocaleString()}`;
-
-const ProductPill = ({ name, qty, stocksBefore, variant, batch }: { name: string; qty: number; stocksBefore?: number; variant?: any; batch?: any }) => {
-  const variantStr = typeof variant === 'object' && variant !== null ? ((variant as any).variant_name || (variant as any).name) : variant;
-  const batchStr = typeof batch === 'object' && batch !== null ? ((batch as any).batch_name || (batch as any).name) : batch;
-  return (
-    <span className="inline-flex flex-col gap-0.5 text-xs font-medium text-zinc-650 bg-zinc-50 border border-zinc-100 px-2.5 py-1.5 rounded-lg">
-      <span className="truncate max-w-[150px] font-bold text-zinc-750">{name}</span>
-      {(variantStr || batchStr) && (
-        <div className="flex flex-wrap gap-1 mt-0.5">
-          {variantStr && (
-            <span className="px-1.5 py-0.5 rounded text-[8px] font-extrabold bg-violet-50 text-violet-700 border border-violet-100 truncate max-w-[110px]">
-              V: {variantStr}
-            </span>
-          )}
-          {batchStr && (
-            <span className="px-1.5 py-0.5 rounded text-[8px] font-extrabold bg-amber-50 text-amber-700 border border-amber-100 truncate max-w-[110px]">
-              B: {batchStr}
-            </span>
-          )}
-        </div>
-      )}
-    <div className="flex items-center gap-1.5 flex-wrap text-[10px] text-zinc-400 font-semibold tabular-nums shrink-0 mt-0.5">
-      <span>Received: {qty}</span>
-      {stocksBefore !== undefined && stocksBefore !== null && (
-        <span className="text-blue-500 font-bold whitespace-nowrap bg-zinc-100/80 px-1 py-0.2 rounded border border-zinc-200/50">
-          Op: {stocksBefore} → Cur: {stocksBefore + qty}
-        </span>
-      )}
-    </div>
-  </span>
-  );
-};
-
-
+const fmt = (n: number) => `₹${n.toLocaleString("en-IN")}`;
 
 const PurchaseTypeBadge = ({ type }: { type: PurchaseType }) => {
   let colors = "bg-zinc-100 text-zinc-600 border-zinc-200"; // Fallback
@@ -354,6 +323,7 @@ const PurchaseTypeBadge = ({ type }: { type: PurchaseType }) => {
   if (type === "Purchase") colors = "bg-blue-50 text-blue-700 border-blue-100";
   if (type === "PO Purchase") colors = "bg-purple-50 text-purple-700 border-purple-100";
   if (type === "Production") colors = "bg-amber-50 text-amber-700 border-amber-100";
+  if (type === "Purchase Return" || type === "Return" as any) colors = "bg-red-50 text-red-700 border-red-100";
 
   return (
     <span className={`px-2 py-0.5 rounded text-[10px] font-bold   border whitespace-nowrap ${colors}`}>
@@ -383,7 +353,15 @@ const GridCard = ({ po, selected, onClick }: { po: DirectPurchaseData; selected?
             )}
           </div>
           <PurchaseTypeBadge type={po.purchaseType} />
-        </div>
+                          {po.purchaseType === "Purchase Return" && (
+                            <span className="text-[9px] font-bold text-red-600 bg-red-50 px-1 py-0.5 rounded border border-red-100/50">Returned</span>
+                          )}
+                          {po.storage_location && (
+                            <span className="text-[9px] font-bold text-zinc-500 bg-zinc-50 border border-zinc-200 px-1.5 py-0.5 rounded uppercase tracking-wider shrink-0">
+                              {po.storage_location}
+                            </span>
+                          )}
+                        </div>
         <span className="shrink-0 text-xs font-medium text-zinc-400 bg-white border border-zinc-200 px-2.5 py-0.5 rounded-full">
           {po.products.length} item{po.products.length !== 1 ? "s" : ""}
         </span>
@@ -583,50 +561,10 @@ const VerticalTable = ({ data, selectedId, onClick, totalCount, lastElementRef, 
                   </td>
 
                   {/* Products */}
-                  <td className="p-2.5 px-3 hidden md:table-cell max-w-[360px]">
-                    <div className="flex flex-wrap gap-1.5">
-                      {po.products.slice(0, 2).map((p, idx) => {
-                        // Get first variant/batch for the pill
-                        const firstVariant = p.variants?.[0]?.name || null;
-                        const firstBatch = p.variants?.[0]?.batches?.[0]?.name || p.batches?.[0]?.name || null;
-                        return (
-                          <ProductPill
-                            key={idx}
-                            name={p.name}
-                            qty={p.quantity}
-                            stocksBefore={p.stocks_before}
-                            variant={firstVariant}
-                            batch={firstBatch}
-                          />
-                        );
-                      })}
-                      {po.products.length > 2 && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setDrawerRecord({
-                              uiId: po.poNumber,
-                              type: undefined,
-                              productsList: po.products.map(p => ({
-                                name: p.name,
-                                receivedStocks: p.quantity,
-                                buyPrice: p.buy_price,
-                                sellPrice: p.sell_price,
-                                variant: p.variants?.[0]?.name,
-                                batch: p.variants?.[0]?.batches?.[0]?.name || p.batches?.[0]?.name,
-                                serials: p.variants?.[0]?.serials?.[0]?.serial_numbers || p.serials?.[0]?.serial_numbers,
-                                stocksBefore: p.stocks_before
-                              }))
-                            });
-                          }}
-                          className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] font-extrabold bg-indigo-50 text-indigo-600 border border-indigo-100 hover:bg-indigo-100 transition-colors shadow-sm ml-1"
-                          title="View Items"
-                        >
-                          <ChevronRight size={10} strokeWidth={3} />
-                          <span>+{po.products.length - 2} more</span>
-                        </button>
-                      )}
-                    </div>
+                  <td className="p-2.5 px-3 border-b border-slate-50 max-w-[200px]">
+                    <span className="truncate text-xs font-semibold text-slate-700 block" title={po.products.map(p => p.name).join(", ")}>
+                      {po.products.length > 1 ? `${po.products[0]?.name || "—"} +${po.products.length - 1} more` : (po.products[0]?.name || "—")}
+                    </span>
                   </td>
 
                   {/* Quantity */}

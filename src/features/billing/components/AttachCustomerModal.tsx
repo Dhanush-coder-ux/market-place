@@ -62,9 +62,9 @@ const AttachCustomerModal: React.FC<AttachCustomerModalProps> = ({
           const list = dataArr.map((c: any) => ({
             id: c.id,
             name: c.name || "Unnamed Customer",
-            phone: c.mobile_number || c.phone || c.mobilenum || "",
-            outstanding: Number(c.outstanding || 0),
-            creditLimit: Number(c.credit_limit || 0),
+            phone: c.contact_infos?.mobile_number || c.mobile_number || c.phone || c.mobilenum || "",
+            outstanding: Number(c.outstanding_infos?.amount ?? c.outstanding ?? 0),
+            creditLimit: Number(c.credit_infos?.limit ?? c.credit_limit ?? 0),
             totalSpent: Number(c.total_spent || 0),
             gstNumber: c.gst_number || c.datas?.gst_number || ""
           }));

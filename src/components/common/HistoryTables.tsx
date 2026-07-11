@@ -813,9 +813,9 @@ export function CustomerPurchasesTable({ rows, loading, onNavigateToSale }: Cust
                       year: 'numeric'
                     })
                     : '—';
-                  const total = Number(order.total_sellprice || order.grand_total || order.total_amount || 0);
+                  const total = Number(order.calculation_infos?.total ?? order.total_sellprice ?? order.grand_total ?? order.total_amount ?? 0);
                   const products = order.items || order.products || [];
-                  const itemCount = order.total_quantity || products.length;
+                  const itemCount = order.item_infos?.total_order_qty ?? order.total_quantity ?? products.length;
                   const unit = products[0]?.product?.unit || products[0]?.unit || products[0]?.datas?.unit || (itemCount === 1 ? "Item" : "Units");
                   const invoiceId = order.ui_id ? `Order #${order.ui_id}` : `#${order.id.slice(0, 8).toUpperCase()}`;
 
@@ -851,9 +851,9 @@ export function CustomerPurchasesTable({ rows, loading, onNavigateToSale }: Cust
                                     name: p.product?.name || p.name || p.product_name,
                                     receivedStocks: p.quantity || 0,
                                     sellPrice: p.sellprice || p.price,
-                                    variant: p.variant || p.variant_details,
-                                    batch: p.batch || p.batch_details,
-                                    serials: p.serials || p.serial_info?.serial_numbers,
+                                    variant: p.variant || p.variant_details || p.variant_infos?.variant_name,
+                                    batch: p.batch || p.batch_details || p.batch_infos?.batch_name,
+                                    serials: p.serials || p.serial_info?.serial_numbers || (p.serialno_infos ? p.serialno_infos.map((x: any) => x.name) : undefined),
                                   }))
                                 });
                               }}
@@ -871,19 +871,24 @@ export function CustomerPurchasesTable({ rows, loading, onNavigateToSale }: Cust
                       </td>
                       <td className="px-5 py-4 whitespace-nowrap">
                         <div className="flex flex-wrap gap-1.5">
-                          {order.payments && Object.entries(order.payments).map(([mode, amount]) => (
-                            <div key={mode} className={`px-2 py-0.5 rounded text-[9px] font-black border flex items-center gap-1.5 ${mode.toUpperCase() === 'CREDIT' ? 'bg-blue-50 text-blue-600 border-blue-100' :
-                                mode.toUpperCase() === 'CASH' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
-                                  'bg-violet-50 text-violet-600 border-violet-100'
-                              }`}>
-                              <div className={`w-1 h-1 rounded-full ${mode.toUpperCase() === 'CREDIT' ? 'bg-blue-400' :
-                                  mode.toUpperCase() === 'CASH' ? 'bg-emerald-400' :
-                                    'bg-violet-400'
-                                }`} />
-                              {mode.toUpperCase()}
-                              <span className="ml-0.5">₹{Number(amount).toLocaleString('en-IN')}</span>
-                            </div>
-                          ))}
+                          {order.payments && Object.entries(order.payments).map(([mode, amount]) => {
+                            const uMode = mode.toUpperCase();
+                            const isCredit = uMode === 'CREDIT' || uMode === 'ON_CREDIT';
+                            const isCash = uMode === 'CASH';
+                            return (
+                              <div key={mode} className={`px-2 py-0.5 rounded text-[9px] font-black border flex items-center gap-1.5 ${isCredit ? 'bg-blue-50 text-blue-600 border-blue-100' :
+                                  isCash ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                                    'bg-violet-50 text-violet-600 border-violet-100'
+                                }`}>
+                                <div className={`w-1 h-1 rounded-full ${isCredit ? 'bg-blue-400' :
+                                    isCash ? 'bg-emerald-400' :
+                                      'bg-violet-400'
+                                  }`} />
+                                {uMode === 'ON_CREDIT' ? 'CREDIT' : uMode}
+                                <span className="ml-0.5">₹{Number(amount).toLocaleString('en-IN')}</span>
+                              </div>
+                            );
+                          })}
                           {!order.payments && <span className="text-[9px] font-bold text-slate-300 italic">No payment record</span>}
                         </div>
                       </td>
@@ -957,8 +962,25 @@ export function CustomerCollectionsTable({ rows, loading }: CustomerCollectionsT
                       year: 'numeric'
                     })
                     : '—';
-                  const clearedAmount = Number(h.cleared_amount || 0);
+                  const paymentInfosArray = Array.isArray(h.payment_infos) ? h.payment_infos : [];
+                  const calculatedCleared = paymentInfosArray.reduce((acc: number, p: any) => acc + Number(p.amount || 0), 0);
+                  const clearedAmount = Number(h.cleared_amount ?? (calculatedCleared > 0 ? calculatedCleared : (h.cleared_infos ? (Number(h.cleared_infos.outstanding_before || 0) - Number(h.cleared_infos.outstanding_after || 0)) : 0)));
                   const refId = `#${String(h.id).padStart(3, '0')}`;
+                  const outstandingBefore = Number(h.cleared_infos?.outstanding_before ?? h.outstanding_before ?? 0);
+                  const outstandingAfter = Number(h.cleared_infos?.outstanding_after ?? h.outstanding_after ?? 0);
+
+                  const paymentsObj: Record<string, number> = {};
+                  if (Array.isArray(h.payment_infos)) {
+                    h.payment_infos.forEach((p: any) => {
+                      if (p && p.method) {
+                        paymentsObj[p.method] = (paymentsObj[p.method] || 0) + Number(p.amount || 0);
+                      }
+                    });
+                  } else if (h.payments) {
+                    Object.entries(h.payments).forEach(([k, v]) => {
+                      paymentsObj[k] = Number(v);
+                    });
+                  }
 
                   return (
                     <tr key={`${h.id}-${i}`} className="hover:bg-indigo-50/20 transition-colors border-l-[3px] border-l-emerald-500">
@@ -973,14 +995,14 @@ export function CustomerCollectionsTable({ rows, loading }: CustomerCollectionsT
                       </td>
                       <td className="px-5 py-4 whitespace-nowrap">
                         <div className="flex items-center gap-2.5 text-sm">
-                          <span className="font-black text-slate-800 line-through decoration-slate-500 decoration-2">₹{Number(h.outstanding_before || 0).toLocaleString('en-IN')}</span>
+                          <span className="font-black text-slate-800 line-through decoration-slate-500 decoration-2">₹{outstandingBefore.toLocaleString('en-IN')}</span>
                           <ArrowRight className="w-4 h-4 text-slate-600 stroke-[4px]" />
-                          <span className="font-black text-emerald-700">₹{Number(h.outstanding_after || 0).toLocaleString('en-IN')}</span>
+                          <span className="font-black text-emerald-700">₹{outstandingAfter.toLocaleString('en-IN')}</span>
                         </div>
                       </td>
                       <td className="px-5 py-4 whitespace-nowrap">
                         <div className="flex flex-wrap gap-1.5">
-                          {h.payments && Object.entries(h.payments).map(([method, amount]) => (
+                          {Object.keys(paymentsObj).length > 0 && Object.entries(paymentsObj).map(([method, amount]) => (
                             <div key={method} className="px-2 py-0.5 rounded text-[9px] font-black border border-slate-100 bg-slate-50 text-slate-600 flex items-center gap-1">
                               <span className="opacity-60 uppercase">{method}</span>
                               <span>₹{Number(amount).toLocaleString('en-IN')}</span>

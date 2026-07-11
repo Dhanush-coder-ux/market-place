@@ -84,9 +84,17 @@ const parseBatches = (batches: any) => {
 
 const extractSerials = (obj: any) => {
   if (!obj) return { id: null, list: [] };
-  if (Array.isArray(obj)) return { id: null, list: obj };
-  if (obj.serial_numbers && Array.isArray(obj.serial_numbers)) {
-    return { id: obj.id || null, list: obj.serial_numbers };
+  const getList = (infos: any): string[] => {
+    if (!infos) return [];
+    if (Array.isArray(infos)) {
+      return infos.map((s: any) => typeof s === 'object' && s !== null ? s.name || s.serial || "" : String(s)).filter(Boolean);
+    }
+    return [];
+  };
+  if (Array.isArray(obj)) return { id: null, list: getList(obj) };
+  if (typeof obj === 'object') {
+    const list = getList(obj.serialno_infos || obj.serial_numbers || obj.serial_number || obj.serials || obj.list || obj);
+    return { id: obj.id || null, list };
   }
   return { id: null, list: [] };
 };
@@ -782,8 +790,11 @@ export default function StockAdjustmentPage() {
                                   valueKey="name"
                                   onChange={(val, opt: any) => {
                                     if (opt) {
-                                      const hasVariants = opt.has_variant || (opt.datas && opt.datas.has_variant);
-                                      const combinations = opt.variants || (opt.datas && opt.datas.variants) || [];
+                                      const hasVariants = opt.type_infos?.has_variant || opt.has_variant || (opt.datas && opt.datas.has_variant);
+                                      let combinations = opt.variants || (opt.datas && opt.datas.variants) || [];
+                                      if (combinations && typeof combinations === 'object' && !Array.isArray(combinations)) {
+                                        combinations = Object.values(combinations);
+                                      }
 
                                       if (hasVariants && combinations.length > 0) {
                                         const mappedVariants = combinations.map((c: any) => {
@@ -792,9 +803,9 @@ export default function StockAdjustmentPage() {
                                             id: c.id,
                                             name: d.name || c.name || "Variant",
                                             sku: c.barcode || d.barcode || opt.barcode,
-                                            stock: c.stocks ?? c.stock ?? d.stocks ?? 0,
-                                            batches: parseBatches(c.batches || d.batches),
-                                            serial_numbers: d.serial_numbers || c.serial_numbers || null,
+                                            stock: c.stock_infos?.available_stocks ?? c.stocks ?? c.stock ?? d.stocks ?? 0,
+                                            batches: parseBatches(c.batch_infos || c.batches || d.batches),
+                                            serial_numbers: c.serialno_infos || d.serial_numbers || c.serial_numbers || null,
                                           };
                                         });
 
@@ -807,8 +818,7 @@ export default function StockAdjustmentPage() {
                                         });
                                         setSelectedVariant(null);
                                       } else {
-                                        // Handle Root level Batches/Serials
-                                        const rootBatches = parseBatches(opt.batches || (opt.datas && opt.datas.batches));
+                                        const rootBatches = parseBatches(opt.batch_infos || opt.batches || (opt.datas && opt.datas.batches));
 
                                         if (rootBatches.length > 0) {
                                           setBatchModal({
@@ -821,28 +831,28 @@ export default function StockAdjustmentPage() {
                                             baseProduct: opt.name || String(val)
                                           });
                                         } else {
-                                          const hasBatchTracking = opt.has_batch || (opt.datas && opt.datas.has_batch) || false;
+                                          const hasBatchTracking = opt.type_infos?.has_batch || opt.has_batch || (opt.datas && opt.datas.has_batch) || false;
                                           if (hasBatchTracking) {
                                             showToast("This product requires batch tracking but has no existing batches. Please create an initial batch via Purchase first.", "error");
                                             return;
                                           }
 
-                                          const serialInfo = extractSerials(opt.serial_number || (opt.datas && opt.datas.serial_number));
+                                          const serialInfo = extractSerials(opt.serialno_infos || opt.serial_number || (opt.datas && opt.datas.serial_number));
                                           updateMultiple(item.id, {
                                             inventory_id: opt.id,
                                             product: opt.name || String(val),
                                             barcode: opt.barcode || '',
-                                            currentStock: opt.stocks || 0,
+                                            currentStock: opt.stock_infos?.available_stocks ?? opt.stocks ?? opt.stock ?? 0,
                                             variant_name: '',
                                             variant_id: '',
                                             batch_id: '',
                                             batch_name: '',
                                             serialno_id: serialInfo.id,
                                             sku: opt.barcode || '',
-                                            has_serialno_tracking: opt.has_serialno || (opt.datas && opt.datas.has_serialno) || false,
+                                            has_serialno_tracking: opt.type_infos?.has_serialno || opt.has_serialno || (opt.datas && opt.datas.has_serialno) || false,
                                             existing_serial_numbers: serialInfo.list,
                                             serial_numbers: [],
-                                            type: (opt.has_serialno || (opt.datas && opt.datas.has_serialno)) && serialInfo.list.length === 0
+                                            type: (opt.type_infos?.has_serialno || opt.has_serialno || (opt.datas && opt.datas.has_serialno)) && serialInfo.list.length === 0
                                               ? 'INCREMENT'
                                               : item.type
                                           });

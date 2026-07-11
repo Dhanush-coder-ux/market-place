@@ -577,15 +577,8 @@ export default function StockMovementPage() {
     const aData: any[] = Array.isArray(adjRes?.data) ? adjRes.data : [];
 
     // Map type string to MovementType
-    const mapType = (t: string): MovementType => {
-      if (t === "PURCHASE") return "PURCHASE";
-      if (t === "SALES" || t === "ONLINE_SALES" || t === "OFFLINE_SALES") return "SALES";
-      if (t === "SALES_RETURN" || t === "ONLINE_SALES_RETURN" || t === "OFFLINE_SALES_RETURN") return "SALE_RETURN";
-      if (t === "ADJUSTMENT") return "STOCK_ADJUSTMENT";
-      if (t === "TRANSFER") return "TRANSFER";
-      if (t === "OPENING") return "OPENING";
-      if (t === "PRODUCTION") return "PRODUCTION";
-      return "STOCK_ADJUSTMENT";
+    const mapType = (t: string): string => {
+      return t ? t.toUpperCase() : "ADJUSTMENT";
     };
 
     const adjMovements: Movement[] = aData.map((a: any) => {
@@ -595,13 +588,13 @@ export default function StockMovementPage() {
       // Determine source/destination based on type
       let source = "System";
       let destination = "Warehouse";
-      if (finalType === "SALES" || finalType === "SALE_RETURN") {
-        source = finalType === "SALES" ? "Warehouse" : "Customer";
-        destination = finalType === "SALES" ? "Customer" : "Warehouse";
-      } else if (finalType === "PURCHASE" || finalType === "PO_PURCHASE") {
+      if (finalType.includes("SALES")) {
+        source = finalType.includes("RETURN") ? "Customer" : "Warehouse";
+        destination = finalType.includes("RETURN") ? "Warehouse" : "Customer";
+      } else if (finalType.includes("PURCHASE") || finalType.includes("PO_")) {
         source = "Supplier";
         destination = "Warehouse";
-      } else if (finalType === "STOCK_ADJUSTMENT") {
+      } else if (finalType.includes("ADJUSTMENT")) {
         source = "Stock";
         destination = "Adjusted";
       }
@@ -620,9 +613,9 @@ export default function StockMovementPage() {
           qty,
           stocks_before: Number(stocksBefore),
           current_stock: Number(stocksAfter),
-          variant: item.variant || item.variant_id || "",
-          batch: item.batch || item.batch_id || "",
-          serial_numbers: Array.isArray(item.serial_numbers) ? item.serial_numbers : Array.isArray(item.serial_info) ? item.serial_info : [],
+          variant: item.variant_infos?.variant_name || item.variant || item.variant_id || "",
+          batch: item.batch_infos?.batch_name || item.batch_infos?.name || item.batch || item.batch_id || "",
+          serial_numbers: Array.isArray(item.serial_numbers) ? item.serial_numbers : (Array.isArray(item.serial_info) ? item.serial_info : []),
         };
       });
 
@@ -634,7 +627,7 @@ export default function StockMovementPage() {
         fullId: smId,
         product: firstItem.name,
         sku: firstItem.sku,
-        type: finalType,
+        type: finalType as MovementType,
         qty: firstItem.qty,
         stocks_before: firstItem.stocks_before,
         source,

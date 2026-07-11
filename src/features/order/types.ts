@@ -68,6 +68,7 @@ export interface OrderResponse {
   };
   items?: OrderItemResponse[];
   exchanged_items?: ExchangeInfo[] | null;
+  returns?: any[];
   created_at: string;
   updated_at: string;
 }

@@ -33,6 +33,13 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
   const [variantSearch, setVariantSearch] = useState("");
   const [serialSearch, setSerialSearch] = useState("");
 
+  const normalizedVariants = useMemo<ProductVariant[]>(() => {
+    if (!product?.variants) return [];
+    if (Array.isArray(product.variants)) return product.variants as ProductVariant[];
+    if (typeof product.variants === 'object') return Object.values(product.variants) as ProductVariant[];
+    return [];
+  }, [product?.variants]);
+
   const executeSubmit = (v: ProductVariant | null, b: any | null, s: string[], qty: number) => {
     const activeV = v || selectedVariant;
     if (!activeV) return;
@@ -50,11 +57,16 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
       if (activeB.stocks !== undefined || activeB.stock !== undefined) {
         finalVariant.stock = activeB.stocks !== undefined ? activeB.stocks : activeB.stock;
       }
-      if (activeB.serial_numbers || activeB.availableSerials) {
-        finalVariant.serialnoId = activeB.serial_numbers?.id || activeB.serialnoId;
-        finalVariant.availableSerials = Array.isArray(activeB.serial_numbers) 
-          ? activeB.serial_numbers 
-          : (activeB.serial_numbers?.serial_numbers || activeB.availableSerials || []);
+      if (activeB.serial_numbers || activeB.serialno_infos || activeB.availableSerials) {
+        finalVariant.serialnoId = activeB.serial_numbers?.id || activeB.serialno_infos?.[0]?.id || activeB.serialnoId;
+        const getNames = (arr: any[]): string[] => {
+          return arr.map((x: any) => typeof x === 'object' && x !== null ? x.name || x.serial || "" : String(x)).filter(Boolean);
+        };
+        finalVariant.availableSerials = Array.isArray(activeB.serialno_infos)
+          ? getNames(activeB.serialno_infos)
+          : Array.isArray(activeB.serial_numbers) 
+            ? getNames(activeB.serial_numbers)
+            : getNames(activeB.serial_numbers?.serial_numbers || activeB.availableSerials || []);
       }
     }
 
@@ -69,7 +81,7 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
   }, [isOpen]);
 
   // Derived properties
-  const hasVariants = product?.variants && product.variants.length > 0 && !product.variants[0].name.startsWith("Batch: ");
+  const hasVariants = normalizedVariants.length > 0 && !normalizedVariants[0].name.startsWith("Batch: ");
   const hasBatches = product?.batchTracking;
   const isElectronics = product?.requireSerial;
 
@@ -91,25 +103,25 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
       return selectedVariant.batches || [];
     }
     // If variants are actually batches:
-    if (product.variants && product.variants.length > 0 && product.variants[0].name.startsWith("Batch: ")) {
-      return product.variants;
+    if (normalizedVariants.length > 0 && normalizedVariants[0].name.startsWith("Batch: ")) {
+      return normalizedVariants;
     }
     return product.batches || [];
-  }, [product, hasVariants, selectedVariant]);
+  }, [product, hasVariants, selectedVariant, normalizedVariants]);
 
   // Reset state when modal opens
   useEffect(() => {
     if (isOpen && product) {
       const isEdit = (() => {
-        const hasV = product.variants && product.variants.length > 0 && !product.variants[0].name.startsWith("Batch: ");
+        const hasV = normalizedVariants.length > 0 && !normalizedVariants[0].name.startsWith("Batch: ");
         if (hasV && !initialVariantId) return false;
         if (product.batchTracking && !initialBatchId) return false;
         return !!initialVariantId || !!initialBatchId || !!initialSerials?.length || !!initialQuantity;
       })();
 
-      if (product.variants && product.variants.length > 0 && !product.variants[0].name.startsWith("Batch: ")) {
+      if (normalizedVariants.length > 0 && !normalizedVariants[0].name.startsWith("Batch: ")) {
         if (initialVariantId) {
-          const v = product.variants.find(x => x.id === initialVariantId);
+          const v = normalizedVariants.find(x => x.id === initialVariantId);
           setSelectedVariant(v || null);
         } else {
           setSelectedVariant(null);
@@ -287,7 +299,7 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
 
                 <div className="flex-1 overflow-y-auto custom-scrollbar modal-content pr-0.5">
                   <div className="grid grid-cols-1 gap-2.5 pb-2">
-                    {product.variants
+                    {normalizedVariants
                       .filter(v => v.name.toLowerCase().includes(variantSearch.toLowerCase()))
                       .map((variant) => {
                       const isSelected = selectedVariant?.id === variant.id;
@@ -328,7 +340,7 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
                         </button>
                       );
                     })}
-                    {product.variants.filter(v => v.name.toLowerCase().includes(variantSearch.toLowerCase())).length === 0 && (
+                    {normalizedVariants.filter(v => v.name.toLowerCase().includes(variantSearch.toLowerCase())).length === 0 && (
                       <div className="py-8 text-center bg-slate-50 rounded-lg border-2 border-dashed border-slate-100">
                         <p className="text-xs text-slate-400 font-medium">No variants match "{variantSearch}"</p>
                       </div>

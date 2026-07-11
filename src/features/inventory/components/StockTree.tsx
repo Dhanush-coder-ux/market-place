@@ -158,8 +158,12 @@ const parseBatches = (b: any) => {
 
 const extractSerials = (val: any): string[] => {
   if (!val) return [];
-  if (Array.isArray(val)) return val;
-  if (val.serial_numbers && Array.isArray(val.serial_numbers)) return val.serial_numbers;
+  const getNames = (arr: any[]): string[] => {
+    return arr.map((v: any) => typeof v === 'object' && v !== null ? v.name || v.serial || "" : String(v)).filter(Boolean);
+  };
+  if (Array.isArray(val)) return getNames(val);
+  if (val.serial_numbers && Array.isArray(val.serial_numbers)) return getNames(val.serial_numbers);
+  if (val.serialno_infos && Array.isArray(val.serialno_infos)) return getNames(val.serialno_infos);
   return [];
 };
 

@@ -310,6 +310,8 @@ export const VariantMatrixTable: React.FC<VariantMatrixTableProps> = ({
                 ))}
                 <th className="px-5 py-4 text-[10px] font-black uppercase text-slate-400 whitespace-nowrap">SKU</th>
                 <th className="px-5 py-4 text-[10px] font-black uppercase text-slate-400 whitespace-nowrap">Barcode</th>
+                <th className="px-5 py-4 text-center text-[10px] font-black uppercase text-slate-400">Buy Price</th>
+                <th className="px-5 py-4 text-center text-[10px] font-black uppercase text-slate-400">Sell Price</th>
                 <th className="px-5 py-4 text-center text-[10px] font-black uppercase text-slate-400">Reorder Pt</th>
                 <th className="px-5 py-4 text-center text-[10px] font-black uppercase text-slate-400">Tracking</th>
                 <th className="px-5 py-4 text-center text-[10px] font-black uppercase text-slate-400">Status</th>
@@ -341,6 +343,28 @@ export const VariantMatrixTable: React.FC<VariantMatrixTableProps> = ({
                           placeholder="SKU-001"
                           value={combo.barcode}
                           onChange={e => update(combo.id, "barcode", e.target.value)}
+                        />
+                      </td>
+                      <td className="px-5 py-4">
+                        <input
+                          className="h-9 px-3 text-xs border border-slate-200 rounded-lg w-20 text-center font-mono focus:ring-2 focus:ring-blue-100 outline-none"
+                          placeholder="0.00"
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={combo.buy_price}
+                          onChange={e => update(combo.id, "buy_price", e.target.value)}
+                        />
+                      </td>
+                      <td className="px-5 py-4">
+                        <input
+                          className="h-9 px-3 text-xs border border-slate-200 rounded-lg w-20 text-center font-mono focus:ring-2 focus:ring-blue-100 outline-none"
+                          placeholder="0.00"
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={combo.price}
+                          onChange={e => update(combo.id, "price", e.target.value)}
                         />
                       </td>
                       <td className="px-5 py-4">

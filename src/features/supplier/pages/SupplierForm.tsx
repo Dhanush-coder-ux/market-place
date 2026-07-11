@@ -220,8 +220,8 @@ const SupplierForm = () => {
       ...(formData.contact_name.trim() && {
         contact_person_infos: {
           name: formData.contact_name,
-          email: formData.contact_email || undefined,
-          mobile_number: formData.contact_mobile || undefined,
+          email: formData.contact_email || formData.email || undefined,
+          mobile_number: formData.contact_mobile || formData.phone || undefined,
         }
       }),
       additional_infos: {

@@ -141,8 +141,8 @@ export const InventoryItemsCard = ({
 
       if (!variantItem) return prev;
 
-      const hasBatchTracking = !!(baseOpt.batch_tracking || baseOpt.has_batch_tracking || baseOpt.has_batch || (baseOpt.datas && (baseOpt.datas.batch_tracking || baseOpt.datas.has_batch_tracking || baseOpt.datas.has_batch)));
-      const hasSerialTracking = !!(baseOpt.serial_tracking || baseOpt.has_serialno_tracking || baseOpt.has_serialno || (baseOpt.datas && (baseOpt.datas.serial_tracking || baseOpt.datas.has_serialno_tracking || baseOpt.datas.has_serialno)));
+      const hasBatchTracking = !!(baseOpt.batch_tracking || baseOpt.has_batch_tracking || baseOpt.has_batch || (baseOpt.datas && (baseOpt.datas.batch_tracking || baseOpt.datas.has_batch_tracking || baseOpt.datas.has_batch)) || baseOpt.type_infos?.has_batch);
+      const hasSerialTracking = !!(baseOpt.serial_tracking || baseOpt.has_serialno_tracking || baseOpt.has_serialno || (baseOpt.datas && (baseOpt.datas.serial_tracking || baseOpt.datas.has_serialno_tracking || baseOpt.datas.has_serialno)) || baseOpt.type_infos?.has_serialno);
 
       // 💡 Prevent selecting same variant already in another row, UNLESS it has batch or serial tracking
       if (!hasBatchTracking && !hasSerialTracking) {
@@ -154,7 +154,8 @@ export const InventoryItemsCard = ({
       }
 
       const d = baseOpt.datas || baseOpt;
-      const allVariants = baseOpt.variants || baseOpt.varients || d.combinations || d.varients || d.variants || [];
+      const rawAllVariants = baseOpt.variants || baseOpt.varients || d.combinations || d.varients || d.variants || [];
+      const allVariants = Array.isArray(rawAllVariants) ? rawAllVariants : Object.values(rawAllVariants);
       const variantData = allVariants.find((v: any) => v.id === selectedId);
 
       const rawSerials = variantData?.serial_numbers || variantData?.serial_number || variantData?.datas?.serial_numbers || variantData?.datas?.serial_number || baseOpt.serials || baseOpt.serial_numbers || baseOpt.serial_number || baseOpt.datas?.serial_numbers || baseOpt.datas?.serial_number;
@@ -543,10 +544,11 @@ export const InventoryItemsCard = ({
                                 const d = opt.datas || {};
                                 const get = (key: string, fallback: any = "") => opt[key] ?? d[key] ?? fallback;
 
-                                const hasBatchTracking = !!(get("batch_tracking") || get("has_batch_tracking") || get("has_batch"));
-                                const hasSerialTracking = !!(get("serial_tracking") || get("has_serialno_tracking") || get("has_serialno"));
-                                const combinations = opt.variants || opt.varients || d.combinations || d.varients || d.variants || [];
-                                const hasVariants = !!(get("has_variants", get("has_variant")) || combinations.length > 0 || opt.is_variant);
+                                const hasBatchTracking = !!(get("batch_tracking") || get("has_batch_tracking") || get("has_batch") || opt.type_infos?.has_batch);
+                                const hasSerialTracking = !!(get("serial_tracking") || get("has_serialno_tracking") || get("has_serialno") || opt.type_infos?.has_serialno);
+                                const rawCombinations = opt.variants || opt.varients || d.combinations || d.varients || d.variants || [];
+                                const combinations = Array.isArray(rawCombinations) ? rawCombinations : Object.values(rawCombinations);
+                                const hasVariants = !!(get("has_variants", get("has_variant")) || combinations.length > 0 || opt.is_variant || opt.type_infos?.has_variant);
 
                                 // 💡 Prevent selecting same product already in another row, UNLESS it has variant, batch or serial tracking
                                 if (!hasVariants && !hasBatchTracking && !hasSerialTracking) {

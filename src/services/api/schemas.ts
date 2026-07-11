@@ -1,5 +1,5 @@
 export const SCHEMAS = {
-  inventory_create: ['shop_id', 'name', 'category_id', 'unit_id'],
+  inventory_create: ['shop_id', 'name', 'category_id', 'unit_id', 'type_infos', 'have_tracking'],
   inventory_update: ['id', 'shop_id'],
   inventory_delete: ['id', 'shop_id'],
   

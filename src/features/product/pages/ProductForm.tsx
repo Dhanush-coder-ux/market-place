@@ -641,51 +641,45 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
       showToast("Please have at least one active variant combination", "error"); return;
     }
     const finalImages = [...existingImages];
+
+    // Build variant_infos — only send fields the backend schema accepts:
+    // name (required), storage_location, reorder_point, buy_price, sell_price, visible_online
     const mappedVarients = activeCombinations.map(combo => {
       const variantName = Object.values(combo.attributes).join(" / ");
       return {
         name: variantName,
-        storage_location: form.location,
-        reorder_point: Number(combo.reorder_point) || 0,
-        buy_price: 0,
-        sell_price: 0,
-        custom_fields: {
-          serial_numbers: combo.serials.map(s => s.serial),
-          attributes: combo.attributes,
-          barcode: combo.barcode,
-          sku: combo.sku,
-          mrp: 0
-        },
-        additional_infos: {
-          serial_numbers: combo.serials.map(s => s.serial),
-          attributes: combo.attributes,
-          barcode: combo.barcode,
-          sku: combo.sku,
-          mrp: 0
-        }
+        storage_location: form.location || null,
+        reorder_point: Number(combo.reorder_point) || 5,
+        buy_price: Number(combo.buy_price) || null,
+        sell_price: Number(combo.price) || null,
+        visible_online: form.visible_online,
       };
     });
 
+    // Build the base payload per CreateProdInvSchema
     const payload: any = {
       shop_id: SHOP_ID,
       category_id: form.category,
       unit_id: form.unit,
       name: form.name,
       description: form.description,
-      barcode: form.barcode || "",
+      barcode: form.barcode || null,
       type_infos: {
         has_batch: form.batch_tracking,
         has_variant: form.has_variants,
-        has_serialno: form.serial_tracking
+        has_serialno: form.serial_tracking,
       },
       have_tracking: form.track_stock,
-      variant_infos: form.has_variants ? mappedVarients : [],
-      storage_location: form.location,
-      buy_price: form.track_stock ? 0 : Number(form.cost_to_make) || 0,
-      sell_price: form.track_stock ? 0 : Number(form.selling_price) || 0,
-      gst: form.gst ? (form.gst.includes("%") ? form.gst : `${form.gst}%`) : "18%",
+      // Send variant_infos only when has_variant is true
+      variant_infos: form.has_variants ? mappedVarients : null,
+      storage_location: form.location || null,
+      // For made-to-order items set price directly; for stocked items price comes from purchase
+      buy_price: !form.track_stock ? (Number(form.cost_to_make) || null) : null,
+      sell_price: !form.track_stock ? (Number(form.selling_price) || null) : null,
+      gst: form.gst ? (form.gst.includes("%") ? form.gst : `${form.gst}%`) : "0%",
       reorder_point: Number(form.reorder_point) || 5,
       visible_online: form.visible_online,
+      // Store UI-only metadata in custom_fields
       custom_fields: {
         brand: form.brand,
         mrp: Number(form.mrp) || 0,
@@ -696,24 +690,32 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
         is_active: form.is_active,
         variant_types: variantTypes,
         images: finalImages,
-        low_stock_alert: form.low_stock_alert
+        low_stock_alert: form.low_stock_alert,
+        // Store variant attribute map for edit-time reconstruction
+        variant_attribute_map: form.has_variants
+          ? activeCombinations.reduce((acc, combo, _i) => {
+              const name = Object.values(combo.attributes).join(" / ");
+              acc[name] = { attributes: combo.attributes, barcode: combo.barcode, sku: combo.sku, mrp: combo.mrp };
+              return acc;
+            }, {} as Record<string, any>)
+          : undefined,
       },
-      additional_infos: {
-        brand: form.brand,
-        mrp: Number(form.mrp) || 0,
-        hsn: form.hsn,
-        sku: form.sku,
-        supplier: form.supplier,
-        opening_stock: 0,
-        is_active: form.is_active,
-        variant_types: variantTypes,
-        images: finalImages,
-        low_stock_alert: form.low_stock_alert
-      }
     };
-    if (!form.has_variants && baseSerials.length > 0) {
-        payload.additional_infos.serial_numbers = baseSerials;
+
+    // For non-variant products with serial tracking, capture serial numbers entered
+    if (!form.has_variants && form.serial_tracking && baseSerials.length > 0) {
+      payload.custom_fields.serial_numbers = baseSerials;
     }
+
+    // For non-variant products with batch tracking, capture batch info
+    if (!form.has_variants && form.batch_tracking) {
+      payload.custom_fields.batch_info = {
+        name: form.batch_name || null,
+        manufacturing_date: form.mfg_date || null,
+        expiry_date: form.exp_date || null,
+      };
+    }
+
     if (id) payload.id = id;
 
     let res;
@@ -1055,7 +1057,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                       </div>
                       <p className="text-[10px] text-slate-400 leading-relaxed">Track manufacturing &amp; expiry dates per batch.</p>
                     </div>
-                    <Switch checked={form.batch_tracking} onCheckedChange={(val) => setForm(p => ({ ...p, batch_tracking: val }))} />
+                    <Switch checked={form.batch_tracking} onCheckedChange={(val) => setForm(p => ({ ...p, batch_tracking: val, serial_tracking: val ? false : p.serial_tracking }))} />
                   </div>
                   <div className="flex items-start gap-3 p-4 rounded-xl border border-slate-200 bg-white">
                     <div className="flex-1">
@@ -1065,7 +1067,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                       </div>
                       <p className="text-[10px] text-slate-400 leading-relaxed">Track unique ID for each individual unit.</p>
                     </div>
-                    <Switch checked={form.serial_tracking} onCheckedChange={(val) => setForm(p => ({ ...p, serial_tracking: val }))} />
+                    <Switch checked={form.serial_tracking} onCheckedChange={(val) => setForm(p => ({ ...p, serial_tracking: val, batch_tracking: val ? false : p.batch_tracking }))} />
                   </div>
                   <div className="flex items-start gap-3 p-4 rounded-xl border border-slate-200 bg-white">
                     <div className="flex-1">
@@ -1078,6 +1080,100 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                     <Switch checked={form.visible_online} onCheckedChange={(val) => setForm(p => ({ ...p, visible_online: val }))} />
                   </div>
                 </div>
+
+                {/* ── Batch info entry (only for non-variant products with batch tracking) ── */}
+                {form.batch_tracking && !form.has_variants && (
+                  <div className="pf-section-enter mt-3 p-4 rounded-xl border border-blue-100 bg-blue-50/40 space-y-3">
+                    <p className="text-[11px] font-bold text-blue-700 flex items-center gap-1.5">
+                      <Info size={12} /> Batch information
+                    </p>
+                    <p className="text-[10px] text-blue-600 -mt-1">Batch details are typically filled in when you record a purchase. You can set defaults here if needed.</p>
+                    <div className="grid grid-cols-3 gap-3">
+                      <InputField
+                        label="Batch name"
+                        hint="optional"
+                        value={form.batch_name}
+                        onChange={handleChange}
+                        name="batch_name"
+                        placeholder="e.g. BATCH-2025-01"
+                      />
+                      <InputField
+                        label="Mfg. date"
+                        hint="optional"
+                        type="date"
+                        value={form.mfg_date}
+                        onChange={handleChange}
+                        name="mfg_date"
+                      />
+                      <InputField
+                        label="Expiry date"
+                        hint="optional"
+                        type="date"
+                        value={form.exp_date}
+                        onChange={handleChange}
+                        name="exp_date"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* ── Serial numbers entry (only for non-variant products with serial tracking) ── */}
+                {form.serial_tracking && !form.has_variants && (
+                  <div className="pf-section-enter mt-3 p-4 rounded-xl border border-violet-100 bg-violet-50/40 space-y-3">
+                    <p className="text-[11px] font-bold text-violet-700 flex items-center gap-1.5">
+                      <Info size={12} /> Serial numbers
+                    </p>
+                    <p className="text-[10px] text-violet-600 -mt-1">Enter serial numbers for the initial stock. More can be added when you record a purchase.</p>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        placeholder="Type a serial number and press Enter or Add"
+                        className="pf-input flex-1 px-3 py-2 text-sm border border-slate-200 rounded-lg bg-white text-slate-800 placeholder-slate-300"
+                        id="serial-input"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            const val = (e.target as HTMLInputElement).value.trim();
+                            if (val && !baseSerials.includes(val)) {
+                              setBaseSerials(prev => [...prev, val]);
+                              (e.target as HTMLInputElement).value = '';
+                            }
+                          }
+                        }}
+                      />
+                      <button
+                        type="button"
+                        className="px-4 py-2 bg-violet-600 text-white text-xs font-bold rounded-lg hover:bg-violet-700 transition-colors"
+                        onClick={() => {
+                          const input = document.getElementById('serial-input') as HTMLInputElement;
+                          const val = input?.value.trim();
+                          if (val && !baseSerials.includes(val)) {
+                            setBaseSerials(prev => [...prev, val]);
+                            input.value = '';
+                          }
+                        }}
+                      >
+                        <Plus size={14} />
+                      </button>
+                    </div>
+                    {baseSerials.length > 0 && (
+                      <div className="flex flex-wrap gap-2">
+                        {baseSerials.map((s, i) => (
+                          <span key={i} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium bg-violet-100 text-violet-800 border border-violet-200">
+                            {s}
+                            <button
+                              type="button"
+                              onClick={() => setBaseSerials(prev => prev.filter((_, idx) => idx !== i))}
+                              className="hover:text-red-500 transition-colors"
+                            >
+                              <X size={10} />
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </SectionCard>
 

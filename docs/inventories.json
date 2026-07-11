@@ -1377,25 +1377,44 @@
       },
       "ProductTypeInfosType": {
         "properties": {
-          "has_batch": {
-            "type": "boolean",
-            "title": "Has Batch"
-          },
           "has_variant": {
-            "type": "boolean",
-            "title": "Has Variant"
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Has Variant",
+            "default": false
+          },
+          "has_batch": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Has Batch",
+            "default": false
           },
           "has_serialno": {
-            "type": "boolean",
-            "title": "Has Serialno"
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Has Serialno",
+            "default": false
           }
         },
         "type": "object",
-        "required": [
-          "has_batch",
-          "has_variant",
-          "has_serialno"
-        ],
         "title": "ProductTypeInfosType"
       },
       "ReleaseInventorySchema": {
@@ -1798,8 +1817,7 @@
                 "type": "null"
               }
             ],
-            "title": "Visible Online",
-            "default": false
+            "title": "Visible Online"
           }
         },
         "type": "object",
@@ -1856,8 +1874,37 @@
             "title": "Reorder Point Id"
           },
           "name": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Name"
+          },
+          "buy_price": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Buy Price"
+          },
+          "sell_price": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sell Price"
           },
           "storage_location": {
             "anyOf": [
@@ -1879,36 +1926,10 @@
                 "type": "null"
               }
             ],
-            "title": "Reorder Point",
-            "default": 5
-          },
-          "buy_price": {
-            "type": "number",
-            "title": "Buy Price"
-          },
-          "sell_price": {
-            "type": "number",
-            "title": "Sell Price"
-          },
-          "visible_online": {
-            "anyOf": [
-              {
-                "type": "boolean"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Visible Online",
-            "default": false
+            "title": "Reorder Point"
           }
         },
         "type": "object",
-        "required": [
-          "name",
-          "buy_price",
-          "sell_price"
-        ],
         "title": "UpdateProdInvVariantType"
       },
       "ValidationError": {

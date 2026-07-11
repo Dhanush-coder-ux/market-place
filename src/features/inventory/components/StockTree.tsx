@@ -188,8 +188,8 @@ export const BatchCards = ({ batches }: { batches: any | any[] }) => {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5">
         {visible.map((batch: any, idx: number) => {
-          const qty = Number(batch.stocks ?? batch.quantity ?? batch.qty ?? 0);
-          const serials = extractSerials(batch.serial_numbers || batch.datas?.serial_numbers);
+          const qty = Number(batch.stock_infos?.available_stocks ?? batch.stock_infos?.physical_stocks ?? batch.stocks ?? batch.quantity ?? batch.qty ?? 0);
+          const serials = extractSerials(batch.serialno_infos ?? batch.serial_numbers ?? batch.datas?.serial_numbers);
           const daysToExpiry = getDaysDiff(batch.expiry_date || batch.expiry);
 
           return (
@@ -303,15 +303,15 @@ export const VariantRows = ({ combinations, baseSellPrice, baseBuyPrice }: { com
 
           const variantId = comb.id || String(idx);
           const isVarExpanded = expandedVariant === variantId;
-          const batches = (comb.batches || []);
-          const serials = extractSerials(comb.serial_numbers || combDatas.serial_numbers || combDatas.datas?.serial_numbers);
+          const batches = comb.batch_infos ?? comb.batches ?? [];
+          const serials = extractSerials(comb.serialno_infos ?? comb.serial_numbers ?? combDatas.serial_numbers ?? combDatas.datas?.serial_numbers);
           const hasBatches = batches.length > 0;
           const hasSerials = serials.length > 0;
-          const stockNum = Number(comb.stocks ?? comb.stock ?? combDatas.stocks ?? combDatas.datas?.stocks ?? 0);
-          const reorderPoint = Number(comb.reorder_point ?? combDatas.reorder_point ?? combDatas.datas?.reorder_point ?? 0);
+          const stockNum = Number(comb.stock_infos?.available_stocks ?? comb.stock_infos?.physical_stocks ?? comb.stocks ?? comb.stock ?? combDatas.stocks ?? combDatas.datas?.stocks ?? 0);
+          const reorderPoint = Number(comb.reorder_point_infos?.reorder_point ?? comb.reorder_point ?? combDatas.reorder_point ?? combDatas.datas?.reorder_point ?? 0);
           const stockStatus = getStockStatus(stockNum, reorderPoint);
-          const sellPrice = comb.sell_price ?? comb.price ?? combDatas.sell_price ?? combDatas.datas?.sell_price ?? baseSellPrice;
-          const buyPrice = comb.buy_price ?? combDatas.buy_price ?? combDatas.datas?.buy_price ?? baseBuyPrice ?? 0;
+          const sellPrice = comb.pricing_infos?.sell_price ?? comb.sell_price ?? comb.price ?? combDatas.sell_price ?? combDatas.datas?.sell_price ?? baseSellPrice;
+          const buyPrice = comb.pricing_infos?.buy_price ?? comb.buy_price ?? combDatas.buy_price ?? combDatas.datas?.buy_price ?? baseBuyPrice ?? 0;
 
           return (
             <div key={variantId} className="relative md:pl-6 pl-4">

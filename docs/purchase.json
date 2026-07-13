@@ -333,6 +333,148 @@
         }
       }
     },
+    "/purchases/by/product/{shop_id}/{product_id}": {
+      "get": {
+        "tags": [
+          "Purchase Crud's"
+        ],
+        "summary": "Get By Product",
+        "operationId": "get_by_product_purchases_by_product__shop_id___product_id__get",
+        "parameters": [
+          {
+            "name": "shop_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Shop Id"
+            }
+          },
+          {
+            "name": "product_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Product Id"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 10,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/purchases/by/supplier/{shop_id}/{supplier_id}": {
+      "get": {
+        "tags": [
+          "Purchase Crud's"
+        ],
+        "summary": "Get By Supplier",
+        "operationId": "get_by_supplier_purchases_by_supplier__shop_id___supplier_id__get",
+        "parameters": [
+          {
+            "name": "shop_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Shop Id"
+            }
+          },
+          {
+            "name": "supplier_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Supplier Id"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 10,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/custom-fields": {
       "get": {
         "tags": [
@@ -743,11 +885,11 @@
               }
             ]
           },
-          "serialno_infos": {
+          "serialno_numbers": {
             "anyOf": [
               {
                 "items": {
-                  "$ref": "#/components/schemas/PurchaseSerialnoInfosType"
+                  "type": "string"
                 },
                 "type": "array"
               },
@@ -755,7 +897,7 @@
                 "type": "null"
               }
             ],
-            "title": "Serialno Infos"
+            "title": "Serialno Numbers"
           },
           "storage_location_infos": {
             "anyOf": [
@@ -814,9 +956,7 @@
             "$ref": "#/components/schemas/PurchaseCalculationInfos"
           },
           "gst_infos": {
-            "additionalProperties": true,
-            "type": "object",
-            "title": "Gst Infos"
+            "$ref": "#/components/schemas/PurchaseGstInfos"
           },
           "charges_infos": {
             "$ref": "#/components/schemas/PurchaseChargeInfos"
@@ -1016,6 +1156,23 @@
         ],
         "title": "PurchaseChargeInfos"
       },
+      "PurchaseGstInfos": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "EXCLUSIVE",
+              "INCLUSIVE"
+            ],
+            "title": "Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "type"
+        ],
+        "title": "PurchaseGstInfos"
+      },
       "PurchasePaymentInfos": {
         "properties": {
           "method": {
@@ -1074,43 +1231,8 @@
         ],
         "title": "PurchaseReorderPointInfosType"
       },
-      "PurchaseSerialnoInfosType": {
-        "properties": {
-          "id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Id"
-          },
-          "name": {
-            "type": "string",
-            "title": "Name"
-          }
-        },
-        "type": "object",
-        "required": [
-          "name"
-        ],
-        "title": "PurchaseSerialnoInfosType"
-      },
       "PurchaseStocksInfosType": {
         "properties": {
-          "id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Id"
-          },
           "stocks": {
             "type": "number",
             "title": "Stocks"
@@ -1217,32 +1339,11 @@
             "type": "string",
             "title": "Product Id"
           },
-          "variant_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Variant Id"
-          },
-          "batch_infos": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/PurchaseBatchInfosType"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "serialno_infos": {
+          "serialno_numbers": {
             "anyOf": [
               {
                 "items": {
-                  "$ref": "#/components/schemas/PurchaseSerialnoInfosType"
+                  "type": "string"
                 },
                 "type": "array"
               },
@@ -1250,7 +1351,7 @@
                 "type": "null"
               }
             ],
-            "title": "Serialno Infos"
+            "title": "Serialno Numbers"
           },
           "storage_location_infos": {
             "anyOf": [

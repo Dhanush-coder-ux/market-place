@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useLocation, useParams } from "react-router-dom";
 import {
   ArrowLeft, Package, User,
@@ -31,25 +31,31 @@ type SaleItem = {
   gst?: string | number;
 };
 
-const generateItems = (sale: OrderResponse, productMap: Record<string, string> = {}): SaleItem[] =>
-  (sale?.items || []).map((i: any) => ({
-    id: i.id,
-    name: i.name || i.product_name || i.datas?.product_name || i.datas?.name || productMap[i.inventory_id] || "Unknown Item",
-    sku: i.barcode?.trim() || i.inventory_id?.slice(-6) || "N/A",
-    quantity: i.quantity || 0,
-    returnedQty: i.returned_quantity || 0,
-    unitPrice: i.sell_price || 0,
-    buyPrice: i.buy_price || 0,
-    status: i.status || "COMPLETED",
-    reason: i.reason,
-    serial_numbers: Array.isArray(i.serialno_infos) ? i.serialno_infos.map((sn: any) => sn.name || sn) : (i.serialno_info?.serial_numbers || i.serial_info?.serial_numbers || i.serial_numbers || []),
-    unit: i.product?.unit || i.unit || i.datas?.unit || "UNIT",
-    variantName: i.variant_infos?.variant_name || i.variant_info?.variant_name || i.variant?.variant_name,
-    batchName: i.batch_infos?.batch_name || i.batch_infos?.name || i.batch_info?.batch_name || i.batch?.batch_name,
-    mfgDate: i.batch_infos?.mfg_date || i.batch_infos?.manufacturing_date || i.batch_info?.mfg_date || i.batch?.mfg_date,
-    expDate: i.batch_infos?.exp_date || i.batch_infos?.expiry_date || i.batch_info?.exp_date || i.batch?.exp_date,
-    gst: i.gst || i.datas?.gst,
-  }));
+const generateItems = (sale: OrderResponse, productMap: Record<string, string> = {}): SaleItem[] => {
+  const calcItems = (sale as any)?.calculation_infos?.items || [];
+  return (sale?.items || []).map((i: any) => {
+    // Attempt to find matching calc item for subunit pricing/qty details
+    const calc = calcItems.find((ci: any) => ci.product_id === i.product_id || ci.product_id === i.inventory_id);
+    return {
+      id: i.id,
+      name: i.name || i.product_name || i.datas?.product_name || i.datas?.name || productMap[i.inventory_id] || "Unknown Item",
+      sku: i.barcode?.trim() || i.inventory_id?.slice(-6) || "N/A",
+      quantity: calc?.qty ?? i.quantity ?? 0,
+      returnedQty: i.returned_quantity || 0,
+      unitPrice: calc?.price ?? i.sell_price ?? 0,
+      buyPrice: i.buy_price || 0,
+      status: i.status || "COMPLETED",
+      reason: i.reason,
+      serial_numbers: Array.isArray(i.serialno_infos) ? i.serialno_infos.map((sn: any) => sn.name || sn) : (i.serialno_info?.serial_numbers || i.serial_info?.serial_numbers || i.serial_numbers || []),
+      unit: i.product?.unit || i.unit || i.datas?.unit || "UNIT",
+      variantName: i.variant_infos?.variant_name || i.variant_info?.variant_name || i.variant?.variant_name,
+      batchName: i.batch_infos?.batch_name || i.batch_infos?.name || i.batch_info?.batch_name || i.batch?.batch_name,
+      mfgDate: i.batch_infos?.mfg_date || i.batch_infos?.manufacturing_date || i.batch_info?.mfg_date || i.batch?.mfg_date,
+      expDate: i.batch_infos?.exp_date || i.batch_infos?.expiry_date || i.batch_info?.exp_date || i.batch?.exp_date,
+      gst: i.gst || i.datas?.gst,
+    };
+  });
+};
 
 const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
   const cfg: Record<string, { bg: string; color: string; icon: React.ReactNode }> = {

@@ -1111,6 +1111,48 @@
         }
       }
     },
+    "/cart/{session_id}": {
+      "get": {
+        "tags": [
+          "Order Cart"
+        ],
+        "summary": "Get Cart Stored Order",
+        "operationId": "get_cart_stored_order_cart__session_id__get",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/returns": {
       "post": {
         "tags": [
@@ -1302,6 +1344,17 @@
           "qty": {
             "type": "number",
             "title": "Qty"
+          },
+          "unit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit"
           }
         },
         "type": "object",

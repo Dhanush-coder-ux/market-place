@@ -587,7 +587,7 @@
             "in": "path",
             "required": true,
             "schema": {
-              "type": "integer",
+              "type": "string",
               "title": "Id"
             }
           },
@@ -721,13 +721,13 @@
         }
       }
     },
-    "/custom-fields": {
+    "/customers/custom-fields": {
       "get": {
         "tags": [
           "Custom Fields"
         ],
         "summary": "Get All Fields",
-        "operationId": "get_all_fields_custom_fields_get",
+        "operationId": "get_all_fields_customers_custom_fields_get",
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -746,7 +746,7 @@
           "Custom Fields"
         ],
         "summary": "Update Field",
-        "operationId": "update_field_custom_fields_put",
+        "operationId": "update_field_customers_custom_fields_put",
         "requestBody": {
           "content": {
             "application/json": {
@@ -785,7 +785,7 @@
           "Custom Fields"
         ],
         "summary": "Create Field",
-        "operationId": "create_field_custom_fields_post",
+        "operationId": "create_field_customers_custom_fields_post",
         "requestBody": {
           "content": {
             "application/json": {
@@ -820,13 +820,13 @@
         }
       }
     },
-    "/custom-fields/{shop_id}": {
+    "/customers/custom-fields/{shop_id}": {
       "get": {
         "tags": [
           "Custom Fields"
         ],
         "summary": "Get Field By Shop",
-        "operationId": "get_field_by_shop_custom_fields__shop_id__get",
+        "operationId": "get_field_by_shop_customers_custom_fields__shop_id__get",
         "parameters": [
           {
             "name": "shop_id",
@@ -862,13 +862,13 @@
         }
       }
     },
-    "/custom-fields/{shop_id}/{id}": {
+    "/customers/custom-fields/{shop_id}/{id}": {
       "get": {
         "tags": [
           "Custom Fields"
         ],
         "summary": "Get Field By Shop",
-        "operationId": "get_field_by_shop_custom_fields__shop_id___id__get",
+        "operationId": "get_field_by_shop_customers_custom_fields__shop_id___id__get",
         "parameters": [
           {
             "name": "id",
@@ -917,7 +917,7 @@
           "Custom Fields"
         ],
         "summary": "Delete Field",
-        "operationId": "delete_field_custom_fields__shop_id___id__delete",
+        "operationId": "delete_field_customers_custom_fields__shop_id___id__delete",
         "parameters": [
           {
             "name": "id",
@@ -962,13 +962,13 @@
         }
       }
     },
-    "/custom-fields/values": {
+    "/customers/custom-fields/values": {
       "post": {
         "tags": [
           "Custom Fields"
         ],
         "summary": "Upsert Value",
-        "operationId": "upsert_value_custom_fields_values_post",
+        "operationId": "upsert_value_customers_custom_fields_values_post",
         "requestBody": {
           "content": {
             "application/json": {
@@ -1003,13 +1003,13 @@
         }
       }
     },
-    "/custom-fields/values/{shop_id}/{id}": {
+    "/customers/custom-fields/values/{shop_id}/{id}": {
       "get": {
         "tags": [
           "Custom Fields"
         ],
         "summary": "Get Values By Customer",
-        "operationId": "get_values_by_customer_custom_fields_values__shop_id___id__get",
+        "operationId": "get_values_by_customer_customers_custom_fields_values__shop_id___id__get",
         "parameters": [
           {
             "name": "id",
@@ -1400,6 +1400,44 @@
         ],
         "title": "CustomerPaymentTermsEnums"
       },
+      "CustomerUpdateCreditInfosType": {
+        "properties": {
+          "limit": {
+            "type": "number",
+            "title": "Limit"
+          },
+          "type": {
+            "$ref": "#/components/schemas/CustomerOutstandingAddEnums"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "terms": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CustomerPaymentTermsEnums"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "limit",
+          "type"
+        ],
+        "title": "CustomerUpdateCreditInfosType"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -1519,7 +1557,7 @@
           "credit_infos": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/CustomerCreditInfosType"
+                "$ref": "#/components/schemas/CustomerUpdateCreditInfosType"
               },
               {
                 "type": "null"

@@ -1,11 +1,10 @@
-import { History, IndianRupee, Plus, UserCircle, Wallet, Bookmark, Receipt } from "lucide-react";
+import { History, IndianRupee, Plus, UserCircle, Wallet, Bookmark, Receipt, Truck } from "lucide-react";
 import {
   Database,
   LayoutDashboard,
   Package,
   Printer,
   ShoppingCart,
-  Store,
   Users,
   ClipboardList,
   Factory,
@@ -68,7 +67,7 @@ export const sidebarLinks: SidebarLink[] = [
 
   {
     name: "Suppliers",
-    icon: Wallet,
+    icon: Truck,
     addPath: "/supplier/add",
     subLinks: [
       { name: "Add Suppliers", path: "/supplier/add", icon: UserPlus },
@@ -158,7 +157,6 @@ export const sidebarLinks: SidebarLink[] = [
     ],
   },
 
-  { name: "Digital Store", icon: Store, path: "/digital-store/profile" },
 
   { name: "Online Orders", icon: ShoppingCart, path: "/orders" },
 ];

@@ -242,7 +242,10 @@ const SalesListPage: React.FC = () => {
         const total = s.total_sellprice ?? s.calculation_infos?.total ?? s.total ?? 0;
         
         // Derive total quantity
-        const totalQty = s.total_quantity ?? s.item_infos?.total_order_quantity ?? 0;
+        let totalQty = s.total_quantity || s.item_infos?.total_order_qty || s.item_infos?.total_order_quantity || 0;
+        if (s.calculation_infos?.items && Array.isArray(s.calculation_infos.items)) {
+          totalQty = s.calculation_infos.items.reduce((sum: number, item: any) => sum + (item.qty || 0), 0);
+        }
 
         return { 
           ...s, 

@@ -19,7 +19,7 @@ export const ENDPOINTS = {
   OFFERS: "/offers",
   COUPONS: "/coupons",
   UTILITIES: "/utilities",
-  UPLOAD_IMAGES: "/utilities/upload/images",
+  UPLOAD_ASSETS: "/utilities/upload/assets",
   GENERATE_BARCODE: "/products/generate-barcode",
 
   // ── Utility Service: Shop Categories ─────────────────────────────
@@ -34,17 +34,6 @@ export const ENDPOINTS = {
   // ── Utility Service: Shop ID Config ──────────────────────────────
   SHOP_ID_CONFIG: "/utilities/shop-id-config",
 
-  // ── Utility Service: Base Fields ─────────────────────────────────
-  BASE_FIELDS: "/utilities/fields/base",
-
-  // ── Utility Service: Custom Fields ───────────────────────────────
-  CUSTOM_FIELDS: "/utilities/fields/custom",
-
-  // ── Utility Service: Base Dropdowns ──────────────────────────────
-  BASE_DROPDOWNS: "/utilities/dropdowns/base",
-
-  // ── Utility Service: Custom Dropdowns ────────────────────────────
-  CUSTOM_DROPDOWNS: "/utilities/dropdowns/custom",
 
   // ── Utility Service: Activity Logs ───────────────────────────────
   ACTIVITY_LOGS: "/utilities/activity-logs",

@@ -100,9 +100,9 @@ const ALL_NAV_GROUPS = [
   {
     label: "Store & Settings",
     items: [
-      { name: "Store Profile", icon: Store, path: "/digital-store/profile" },
-      { name: "Create Store", icon: Plus, path: "/create-digital-store" },
-      { name: "Account Settings", icon: UserCircle, path: "/profile" },
+      { name: "Store Profile", icon: Store, path: "/profile" },
+      { name: "Create Shop", icon: Plus, path: "/create-shop" },
+      { name: "Account Settings", icon: UserCircle, path: "/settings" },
     ],
   },
 ];

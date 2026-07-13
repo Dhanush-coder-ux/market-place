@@ -153,13 +153,13 @@ export const router = createBrowserRouter([
       { path: '/billing', element: <Page><Billing /></Page> },
       { path: '/orders', element: <Page><Order /></Page> },
 
-      // Profile
-      { path: '/profile', element: <Page><ProfileSettingsPage /></Page> },
-      { path: '/profile/add', element: <Page><ProfileForm /></Page> },
+      // Settings
+      { path: '/settings', element: <Page><ProfileSettingsPage /></Page> },
+      { path: '/settings/add', element: <Page><ProfileForm /></Page> },
 
-      // Digital Store
-      { path: '/create-digital-store', element: <Page><StoreSetupForm /></Page> },
-      { path: '/digital-store/profile', element: <Page><DigitalMain /></Page> },
+      // Digital Store / Profile
+      { path: '/create-shop', element: <Page><StoreSetupForm /></Page> },
+      { path: '/profile', element: <Page><DigitalMain /></Page> },
 
       // Customers — static "add" before dynamic ":id"
       { path: "/customers", element: <Page><CustomerSearch /></Page> },

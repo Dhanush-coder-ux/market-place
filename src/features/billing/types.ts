@@ -41,6 +41,7 @@ export interface InventoryItem {
   availableSerials?: string[];
   batches?: any[];
   gst?: number;
+  unitInfos?: any;
 }
 
 export interface BillingItem {
@@ -61,6 +62,10 @@ export interface BillingItem {
   requireSerial?: boolean;
   maxStock?: number;
   gst?: number;
+  unitInfos?: any;
+  selectedUnit?: string | null;
+  factor?: number;
+  basePrice?: number;
   _product?: any;
 }
 

@@ -19,6 +19,7 @@ import { SearchSelect } from "@/components/inputbuilders/SearchSelect";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { SupplierPurchasesTable } from "@/components/common/HistoryTables";
 import { supplierCustomFieldsApi } from "@/services/api/supplierCustomFields";
+import { supplierApi } from "@/services/api/supplier";
 import type { SupplierCustomFieldDefinition, SupplierCustomFieldValue } from "../type";
 
 
@@ -79,6 +80,37 @@ export default function SupplierDetail() {
   const [editingFieldId, setEditingFieldId] = useState<string | null>(null);
   const [editingValue, setEditingValue] = useState<string>('');
   const [cfSaving, setCfSaving] = useState(false);
+
+  // Outstanding update state
+  const [showOutstandingModal, setShowOutstandingModal] = useState(false);
+  const [outstandingType, setOutstandingType] = useState<'INCREMENT' | 'DECREMENT' | 'DIRECT'>('INCREMENT');
+  const [outstandingAmount, setOutstandingAmount] = useState<string>('');
+  const [outstandingSaving, setOutstandingSaving] = useState(false);
+
+  const handleSaveOutstanding = async () => {
+    if (!id || !outstandingAmount) return;
+    setOutstandingSaving(true);
+    try {
+      await supplierApi.updateOutstanding({
+        id,
+        shop_id: SHOP_ID,
+        outstanding_infos: { amount: Number(outstandingAmount) },
+        type: outstandingType
+      });
+      showToast('Outstanding amount updated', 'success');
+      setShowOutstandingModal(false);
+      // Refresh stats
+      const statsRes = await getData(`${ENDPOINTS.ANALYTICS_SUPPLIER}/${id}`, { shop_id: SHOP_ID });
+      const statsData = statsRes?.data ?? statsRes;
+      const statsObj = statsData?.supplier ?? statsData;
+      if (statsObj) setStats(statsObj);
+    } catch {
+      showToast('Failed to update outstanding amount', 'error');
+    } finally {
+      setOutstandingSaving(false);
+      setOutstandingAmount('');
+    }
+  };
 
   useEffect(() => {
     setBottomActions(
@@ -269,7 +301,7 @@ export default function SupplierDetail() {
 
         <div className="flex flex-wrap gap-2">
           <StatCard icon={ShoppingBag} label="Total Purchases" value={`${stats?.total_purchases || 0} (₹${(stats?.total_purchase_amounts || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })})`} iconBg="bg-blue-50 text-blue-600" className="flex-1 min-w-[140px]" />
-          <StatCard icon={AlertCircle} label="Outstanding" value={`₹${(stats?.total_outstandings || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} iconBg={(stats?.total_outstandings || 0) > 0 ? "bg-rose-50 text-rose-600" : "bg-emerald-50 text-emerald-600"} className="flex-1 min-w-[140px]" />
+          <StatCard icon={AlertCircle} label="Outstanding" value={`₹${(stats?.total_outstandings || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} iconBg={(stats?.total_outstandings || 0) > 0 ? "bg-rose-50 text-rose-600" : "bg-emerald-50 text-emerald-600"} className="flex-1 min-w-[140px]" onClick={() => setShowOutstandingModal(true)} />
           <StatCard icon={Package} label="Cleared Amount" value={`₹${(stats?.total_cleared_amounts || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} iconBg="bg-indigo-50 text-indigo-600" className="flex-1 min-w-[140px]" />
         </div>
       </div>
@@ -540,11 +572,65 @@ export default function SupplierDetail() {
           onClose={() => setShowDeleteModal(false)}
           onConfirm={handleDelete}
           title="Delete Supplier"
-          description={`This action cannot be undone. This will permanently delete ${name} and all associated data.`}
-          confirmText="Delete Partner"
+          description="Are you sure you want to delete this supplier? This action cannot be undone."
           loading={deleting}
-          type="danger"
         />
+
+        <Modal show={showOutstandingModal} onClose={() => setShowOutstandingModal(false)} title="Update Outstanding Balance">
+          <div className="space-y-4">
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 mb-1.5">Action</label>
+              <div className="grid grid-cols-3 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setOutstandingType('INCREMENT')}
+                  className={`h-9 text-xs font-bold rounded-lg border transition-all ${outstandingType === 'INCREMENT' ? 'bg-rose-50 border-rose-200 text-rose-600' : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'}`}
+                >
+                  Add
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setOutstandingType('DECREMENT')}
+                  className={`h-9 text-xs font-bold rounded-lg border transition-all ${outstandingType === 'DECREMENT' ? 'bg-emerald-50 border-emerald-200 text-emerald-600' : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'}`}
+                >
+                  Subtract
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setOutstandingType('DIRECT')}
+                  className={`h-9 text-xs font-bold rounded-lg border transition-all ${outstandingType === 'DIRECT' ? 'bg-blue-50 border-blue-200 text-blue-600' : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'}`}
+                >
+                  Set Direct
+                </button>
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 mb-1.5">Amount (₹)</label>
+              <input
+                type="number"
+                value={outstandingAmount}
+                onChange={(e) => setOutstandingAmount(e.target.value)}
+                className="w-full h-9 px-3 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all shadow-sm"
+                placeholder="0.00"
+              />
+            </div>
+            <div className="pt-4 flex justify-end gap-2 border-t border-slate-200">
+              <button
+                onClick={() => setShowOutstandingModal(false)}
+                className="h-9 px-4 text-xs font-bold text-slate-600 hover:bg-slate-200 bg-slate-100 rounded-lg transition-colors border border-slate-200"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveOutstanding}
+                disabled={outstandingSaving || !outstandingAmount || isNaN(Number(outstandingAmount))}
+                className="h-9 px-4 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 disabled:text-slate-500 text-white text-xs font-bold rounded-lg transition-all shadow-sm"
+              >
+                {outstandingSaving ? "Saving..." : "Save Balance"}
+              </button>
+            </div>
+          </div>
+        </Modal>
       </div>
     </div>
   );

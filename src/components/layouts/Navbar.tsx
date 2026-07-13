@@ -24,6 +24,8 @@ import {
   LogOut,
   X,
   Loader2,
+  Users,
+  Printer,
 } from "lucide-react";
 
 import {
@@ -40,22 +42,25 @@ import { fetchMyShops } from "@/services/api/shopHelpers";
 
 // -----------------------------
 // Route Config
-// -----------------------------
 const SEARCHABLE_ROUTES = [
   { name: "Dashboard", path: "/", icon: LayoutDashboard },
   { name: "Orders", path: "/orders", icon: ShoppingCart },
-  { name: "Products", path: "/product", icon: Package },
+  { name: "Sales", path: "/sales", icon: Receipt },
+  { name: "Products List", path: "/product/all", icon: Package },
   { name: "Add Products", path: "/product/add", icon: PlusCircle },
+  { name: "Employee List", path: "/employee/all", icon: Users },
   { name: "Add Employee", path: "/employee/add", icon: UserPlus },
+  { name: "Customers List", path: "/customers/all", icon: Users },
+  { name: "Add Customer", path: "/customers/add", icon: UserPlus },
   { name: "Inventory", path: "/inventory", icon: Boxes },
-  { name: "Billing & Invoices", path: "/billing", icon: Receipt },
-  { name: "Purchase History", path: "/purchase", icon: History },
-  { name: "Suppliers", path: "/supplier", icon: Truck },
+  { name: "Stock Adjustment", path: "/stock-adjustment", icon: RefreshCw },
+  { name: "Billing & Invoices", path: "/billing", icon: Printer },
+  { name: "Purchase History", path: "/purchase-history", icon: History },
+  { name: "Suppliers List", path: "/supplier/all", icon: Truck },
   { name: "Add Suppliers", path: "/supplier/add", icon: PlusCircle },
-  { name: "Refill Inventory", path: "/inventory/re-fill", icon: RefreshCw },
-  { name: "Create Digital Store", path: "/create-digital-store", icon: Plus },
-  { name: "Digital Store Profile", path: "/digital-store/profile", icon: Store },
-  { name: "Settings", path: "/profile", icon: Settings2 },
+  { name: "Create Shop", path: "/create-shop", icon: Plus },
+  { name: "Store Profile", path: "/profile", icon: Store },
+  { name: "Settings", path: "/settings", icon: Settings2 },
 ];
 
 // -----------------------------
@@ -287,7 +292,7 @@ export const Navbar = () => {
 
             <DropdownMenuSeparator className="bg-slate-100 my-1.5" />
 
-            <Link to="/create-digital-store">
+            <Link to="/create-shop">
               <DropdownMenuItem className="cursor-pointer text-blue-600 rounded-lg px-2.5 py-2 hover:bg-blue-50 font-medium">
                 <PlusCircle className="w-4 h-4 mr-2" />
                 Create New Shop
@@ -373,32 +378,17 @@ export const Navbar = () => {
         {/* RIGHT - Actions */}
         <div className="flex items-center gap-2 sm:gap-4">
 
-          <Link
-            to={"/create-digital-store"}
-            className="hidden sm:flex items-center gap-1.5 text-sm font-semibold text-slate-600 px-3 py-1.5 rounded-lg border border-slate-200 bg-white md:hover:bg-slate-50 md:hover:text-blue-600 md:hover:border-blue-200 md:transition-all shadow-sm"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Digital Store</span>
-          </Link>
-
           <div className="flex items-center gap-1 sm:gap-2">
             <button className="relative p-2 text-slate-400 md:hover:bg-slate-100 md:hover:text-slate-700 rounded-full md:transition-colors">
               <Bell className="w-5 h-5" />
               <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-rose-500 rounded-full border-2 border-white"></span>
             </button>
-            <Link to={"/profile"}>
+            <Link to={"/settings"}>
               <button className="p-2 text-slate-400 md:hover:bg-slate-100 md:hover:text-slate-700 rounded-full md:transition-colors group">
                 <Settings className="w-5 h-5 md:group-hover:rotate-45 md:transition-transform md:duration-300" />
               </button>
             </Link>
-            {/* Sign Out button */}
-            <button
-              onClick={() => setShowSignOutModal(true)}
-              className="p-2 text-slate-400 md:hover:bg-red-50 md:hover:text-red-500 rounded-full md:transition-colors"
-              title="Sign Out"
-            >
-              <LogOut className="w-5 h-5" />
-            </button>
+
           </div>
 
           <div className="hidden sm:block h-6 w-px bg-slate-200 mx-1"></div>

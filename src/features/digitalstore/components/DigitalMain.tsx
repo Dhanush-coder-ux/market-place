@@ -1,26 +1,38 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Megaphone,
   Truck,
   Package,
-  MapPin,
-  BadgeCheck,
-  Edit3,
   Timer,
+  Edit3,
   Eye,
   ShoppingBag,
   IndianRupee,
   LayoutGrid,
   TrendingUp,
-  TrendingDown,
-  Star,
   Share2,
   ExternalLink,
-  Wifi,
+  MapPin,
+  BadgeCheck,
+  Settings2,
+  CheckCircle2,
+  AlertCircle,
+  Plus,
+  Boxes,
+  Clock,
+  Store,
   ChevronRight,
-  Users,
+  BarChart2,
+  Wifi,
+  WifiOff,
+  Building2,
+  Calendar,
+  Hash,
+  Tag,
 } from "lucide-react";
+import { shopApi } from "@/services/api/shop";
+import { SHOP_ID } from "@/services/endpoints";
 import DeliveryPreferences from "../pages/Deliveryinfo";
 import ProductDashboard from "../pages/StoreProductManagement";
 import Promotions from "../pages/Promotions";
@@ -28,462 +40,462 @@ import OperatingHours from "../pages/OperatingHours";
 
 type TabType = "Promotions" | "Delivery Preferences" | "Product Dashboard" | "Operating Hours";
 
-const THEMES = {
-  Blue: {
-    primary: "#3b82f6",
-    bg: "#eff6ff",
-    border: "#bfdbfe",
-    text: "#2563eb",
-  },
-  Emerald: {
-    primary: "#10b981",
-    bg: "#ecfdf5",
-    border: "#a7f3d0",
-    text: "#059669",
-  },
-  Violet: {
-    primary: "#8b5cf6",
-    bg: "#f5f3ff",
-    border: "#ddd6fe",
-    text: "#7c3aed",
-  },
-  Indigo: {
-    primary: "#6366f1",
-    bg: "#e0e7ff",
-    border: "#c7d2fe",
-    text: "#4f46e5",
-  },
-  Rose: {
-    primary: "#f43f5e",
-    bg: "#fff1f2",
-    border: "#fecdd3",
-    text: "#e11d48",
-  },
-  Amber: {
-    primary: "#d97706",
-    bg: "#fef3c7",
-    border: "#fde68a",
-    text: "#b45309",
-  },
-};
-
-// ─── Mock Data & Dynamic LocalStorage Loader ──────────────────────────────────
-const storeProfile = (() => {
-  const defaults = {
-    name: "Grace Super Market",
-    username: "@gracemarket",
-    location: "Chennai, Tamil Nadu",
-    tagline: "Fresh picks, fair prices — delivered to your door.",
-    description:
-      "Your trusted neighbourhood supermarket, now online. Shop from 500+ daily essentials, fresh produce, and specialty items with same-day delivery.",
-    avatar: "https://api.dicebear.com/7.x/shapes/svg?seed=grace&backgroundColor=dbeafe",
-    rating: 4.8,
-    reviews: 2340,
-    followers: 12500,
-    verified: true,
-    online: true,
-    memberSince: "Jan 2023",
-    category: "Grocery & Essentials",
-    themeColor: "Blue",
-    banner: "",
+interface ShopData {
+  id: string;
+  name: string;
+  description: string | null;
+  tagline: string | null;
+  categories: string[];
+  visible_online: boolean;
+  banner_url: string | null;
+  logo_url: string | null;
+  business_infos: {
+    type: string;
+    currency: string;
+    gst_infos: { registered: boolean; number?: string | null };
   };
+  address: { full_address: string };
+  created_at: string;
+  sequence_id: number;
+}
 
-  const saved = localStorage.getItem("active-store-profile");
-  if (saved) {
-    try {
-      return { ...defaults, ...JSON.parse(saved) };
-    } catch (e) {
-      console.error("Failed to parse store profile from localStorage", e);
-    }
-  }
-  return defaults;
-})();
+// ─── Skeleton ─────────────────────────────────────────────────────────────────
+const Skeleton = ({ className }: { className?: string }) => (
+  <div className={`animate-pulse bg-slate-200 rounded-lg ${className ?? ""}`} />
+);
 
-const theme = THEMES[(storeProfile.themeColor as keyof typeof THEMES) || "Blue"];
+const HeaderSkeleton = () => (
+  <div className="bg-white border-b border-slate-100">
+    <div className="h-40 bg-gradient-to-r from-slate-200 to-slate-100 animate-pulse" />
+    <div className="px-6 pb-6">
+      <div className="flex items-end gap-5 -mt-12 mb-5">
+        <Skeleton className="w-24 h-24 rounded-2xl shrink-0" />
+        <div className="flex-1 pt-14 space-y-2">
+          <Skeleton className="h-6 w-48" />
+          <Skeleton className="h-4 w-72" />
+        </div>
+      </div>
+      <div className="grid grid-cols-4 gap-3 mt-4">
+        {[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-24 rounded-xl" />)}
+      </div>
+    </div>
+  </div>
+);
 
+// ─── Stat Card ────────────────────────────────────────────────────────────────
+interface StatCardProps {
+  label: string;
+  sublabel: string;
+  value: string;
+  suffix?: string;
+  trend: string;
+  trendUp: boolean;
+  trendDesc?: string;
+  icon: React.ReactNode;
+}
+const StatCard = ({ label, sublabel, value, suffix, trend, trendUp, trendDesc, icon }: StatCardProps) => (
+  <div className="bg-white rounded-xl border border-slate-200 p-4 relative overflow-hidden group hover:border-slate-300 hover:shadow-sm transition-all duration-200">
+    <div className="absolute top-4 right-4 w-8 h-8 rounded-full flex items-center justify-center bg-slate-50 text-slate-500 border border-slate-100">
+      {icon}
+    </div>
+    <p className="text-[11px] font-bold text-slate-500 mb-1">
+      {sublabel ? `${label} · ${sublabel}` : label}
+    </p>
+    <div className="flex items-baseline gap-1.5 mb-2 mt-2">
+      <span className="text-[24px] font-extrabold text-slate-800 leading-none tracking-tight">{value}</span>
+      {suffix && <span className="text-[12px] font-semibold text-slate-400">{suffix}</span>}
+    </div>
+    <div className="flex items-center gap-1.5">
+      <div className={`flex items-center gap-0.5 text-[11px] font-bold px-1.5 py-0.5 rounded-md ${trendUp ? "bg-emerald-50 text-emerald-600" : "bg-slate-100 text-slate-500"}`}>
+        <TrendingUp size={11} className={trendUp ? "text-emerald-500" : "text-slate-400"} />
+        {trend}
+      </div>
+      {trendDesc && <span className="text-[11px] text-slate-400 font-medium">{trendDesc}</span>}
+    </div>
+  </div>
+);
 
-// Stat cards — each has its own muted solid color
-const STORE_STATS = [
-  {
-    id: "views",
-    label: "Store Views",
-    sublabel: "Today",
-    value: "347",
-    suffix: undefined as string | undefined,
-    trend: "+22%",
-    trendUp: true,
-    trendDesc: "from yesterday",
-    icon: <Eye size={17} strokeWidth={2} />,
-    iconColor: "#3b82f6",   // blue-500
-    iconBg:    "#eff6ff",   // blue-50
-    barColor:  "#3b82f6",
-    labelColor:"#3b82f6",
-  },
-  {
-    id: "orders",
-    label: "Orders",
-    sublabel: "Today",
-    value: "12",
-    suffix: undefined as string | undefined,
-    trend: "+3",
-    trendUp: true,
-    trendDesc: "vs yesterday",
-    icon: <ShoppingBag size={17} strokeWidth={2} />,
-    iconColor: "#16a34a",   // green-600
-    iconBg:    "#f0fdf4",   // green-50
-    barColor:  "#16a34a",
-    labelColor:"#16a34a",
-  },
-  {
-    id: "revenue",
-    label: "Revenue",
-    sublabel: "Today",
-    value: "₹4,820",
-    suffix: undefined as string | undefined,
-    trend: "avg ₹402/order",
-    trendUp: true,
-    trendDesc: "",
-    icon: <IndianRupee size={17} strokeWidth={2} />,
-    iconColor: "#ca8a04",   // yellow-600
-    iconBg:    "#fefce8",   // yellow-50
-    barColor:  "#ca8a04",
-    labelColor:"#ca8a04",
-  },
-  {
-    id: "products",
-    label: "Products Live",
-    sublabel: "",
-    value: "18",
-    suffix: "/ 24",
-    trend: "6 hidden",
-    trendUp: false,
-    trendDesc: "from store",
-    icon: <LayoutGrid size={17} strokeWidth={2} />,
-    iconColor: "#ea580c",   // orange-600
-    iconBg:    "#fff7ed",   // orange-50
-    barColor:  "#ea580c",
-    labelColor:"#ea580c",
-  },
-];
-
-const TAB_CONFIG: { tab: TabType; icon: React.ReactNode; desc: string }[] = [
-  { tab: "Promotions",           icon: <Megaphone size={15} strokeWidth={2.5} />, desc: "Announcements & Banners"  },
-  { tab: "Delivery Preferences", icon: <Truck     size={15} strokeWidth={2.5} />, desc: "Zones & timing"      },
-  { tab: "Product Dashboard",    icon: <Package   size={15} strokeWidth={2.5} />, desc: "Manage items"        },
-  { tab: "Operating Hours",      icon: <Timer     size={15} strokeWidth={2.5} />, desc: "Open & close times"  },
-];
-
-// ─── Component ────────────────────────────────────────────────────────────────
-const DigitalMain = () => {
-  const [activeTab, setActiveTab] = useState<TabType>("Promotions");
+// ─── Store Health ─────────────────────────────────────────────────────────────
+const StoreHealthCard = ({ shop }: { shop: ShopData }) => {
+  const checks = [
+    { label: "Logo uploaded", done: !!shop.logo_url },
+    { label: "Banner uploaded", done: !!shop.banner_url },
+    { label: "Description added", done: !!shop.description },
+    { label: "Address set", done: !!shop.address?.full_address && shop.address.full_address !== "Not specified" },
+    { label: "Store visible online", done: shop.visible_online },
+    { label: "Category selected", done: shop.categories && shop.categories.length > 0 },
+  ];
+  const done = checks.filter((c) => c.done).length;
+  const pct = Math.round((done / checks.length) * 100);
 
   return (
-    <>
-      <style>{`
-        @keyframes dm-fadeIn  { from { opacity: 0 } to { opacity: 1 } }
-        @keyframes dm-slideUp { from { opacity: 0; transform: translateY(8px) } to { opacity: 1; transform: translateY(0) } }
-        @keyframes dm-pulse   { 0%,100% { opacity: 1 } 50% { opacity: 0.35 } }
-
-        .dm-stat-card { transition: box-shadow 0.18s ease, transform 0.18s ease; }
-        .dm-stat-card:hover { transform: translateY(-2px); box-shadow: 0 6px 20px ${theme.primary}18; }
-
-        .dm-tab-btn { transition: all 0.14s ease; }
-        .dm-tab-btn:hover:not(.dm-tab-active) { background: ${theme.bg}; color: ${theme.text}; }
-
-        .dm-online-dot { animation: dm-pulse 2s ease infinite; }
-      `}</style>
-
-      <div className="min-h-screen pb-16 bg-slate-50" style={{ fontFamily: "Inter, Poppins, sans-serif" }}>
-
-        {/* ══════════════════════════════════════════════════
-            PROFILE CARD
-        ══════════════════════════════════════════════════ */}
-        <div style={{ animation: "dm-fadeIn 0.3s ease" }}>
-
-          {/* Cover — matches selected theme accent */}
-          <div
-            className="relative h-44 overflow-hidden"
-            style={{ backgroundColor: theme.bg }}
-          >
-            {/* Subtle dot pattern */}
-            <div
-              className="absolute inset-0"
-              style={{
-                backgroundImage: `radial-gradient(circle, ${theme.border} 1.5px, transparent 1.5px)`,
-                backgroundSize: "22px 22px",
-              }}
-            />
-            {/* Soft light circle accent */}
-            <div
-              className="absolute -top-16 -right-16 w-64 h-64 rounded-full"
-              style={{ background: theme.bg, borderColor: theme.border, borderWidth: 1, opacity: 0.6 }}
-            />
-            <div
-              className="absolute -bottom-10 -left-10 w-48 h-48 rounded-full"
-              style={{ background: theme.border, opacity: 0.35 }}
-            />
-
-            {/* Banner image */}
-            <img
-              src={storeProfile.banner || "/Shops_Assets/banner.png"}
-              alt="Store Banner"
-              className={`absolute inset-0 w-full h-full object-cover transition-opacity ${storeProfile.banner ? "opacity-90" : "opacity-10"}`}
-              onError={(e) => (e.currentTarget.style.display = "none")}
-            />
-
-            {/* Action buttons */}
-            <div className="absolute right-5 top-4 flex gap-2 z-10">
-              <button 
-                className="flex items-center gap-1.5 bg-white text-[12px] font-semibold px-3 py-1.5 rounded-lg hover:bg-slate-50 transition-all cursor-pointer shadow-sm border"
-                style={{ color: theme.primary, borderColor: theme.border }}
-              >
-                <Share2 size={12} strokeWidth={2.5} /> Share
-              </button>
-              <Link to="/create-digital-store">
-                <button
-                  className="flex items-center gap-1.5 text-white text-[12px] font-bold px-3 py-1.5 rounded-lg transition-all cursor-pointer shadow-md hover:opacity-90"
-                  style={{ background: theme.primary }}
-                >
-                  <Edit3 size={12} strokeWidth={2.5} /> Edit Profile
-                </button>
-              </Link>
-            </div>
-
-            {/* View public store */}
-            <div className="absolute left-5 bottom-4 z-10">
-              <a
-                href="#"
-                className="flex items-center gap-1.5 text-blue-400 hover:text-blue-600 text-[11.5px] font-medium transition-colors cursor-pointer"
-              >
-                <ExternalLink size={11} /> View public store
-              </a>
-            </div>
+    <div className="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm h-full">
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h3 className="text-sm font-bold text-slate-800">Store Health</h3>
+          <p className="text-xs text-slate-400 mt-0.5">Complete your setup for better visibility</p>
+        </div>
+        <span className="text-lg font-extrabold text-blue-600">{pct}%</span>
+      </div>
+      <div className="w-full bg-slate-100 rounded-full h-2 mb-4 overflow-hidden">
+        <div
+          className="h-2 rounded-full transition-all duration-700"
+          style={{ width: `${pct}%`, background: pct === 100 ? "#16a34a" : "#2563eb" }}
+        />
+      </div>
+      <div className="space-y-2.5">
+        {checks.map((c) => (
+          <div key={c.label} className="flex items-center gap-2.5">
+            {c.done
+              ? <CheckCircle2 size={15} className="text-emerald-500 shrink-0" />
+              : <AlertCircle size={15} className="text-amber-400 shrink-0" />
+            }
+            <span className={`text-xs font-medium ${c.done ? "text-slate-600" : "text-amber-600"}`}>{c.label}</span>
           </div>
+        ))}
+      </div>
+    </div>
+  );
+};
 
-          {/* White body */}
-          <div className="bg-white border-b border-slate-100">
-            <div className="px-6 pb-0">
+// ─── Quick Actions ────────────────────────────────────────────────────────────
+const QUICK_ACTIONS = [
+  { label: "Add Product", desc: "List a new item", icon: Plus, path: "/product/add", color: "#2563eb", bg: "#eff6ff" },
+  { label: "Products", desc: "Manage listings", icon: Package, path: "/product/all", color: "#7c3aed", bg: "#f5f3ff" },
+  { label: "Inventory", desc: "Check stock", icon: Boxes, path: "/inventory", color: "#0891b2", bg: "#ecfeff" },
+  { label: "Orders", desc: "Recent orders", icon: ShoppingBag, path: "/orders", color: "#16a34a", bg: "#f0fdf4" },
+  { label: "Analytics", desc: "View insights", icon: BarChart2, path: "/sales", color: "#d97706", bg: "#fefce8" },
+  { label: "Settings", desc: "Store config", icon: Settings2, path: "/settings", color: "#64748b", bg: "#f8fafc" },
+];
 
-              {/* Avatar + name row */}
-              <div className="flex items-end gap-5 -mt-14 mb-5 relative z-10">
+const QuickActions = ({ navigate }: { navigate: (path: string) => void }) => (
+  <div className="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm h-full flex flex-col">
+    <h3 className="text-sm font-bold text-slate-800 mb-3">Quick Actions</h3>
+    <div className="grid grid-cols-2 gap-2.5">
+      {QUICK_ACTIONS.map((a) => (
+        <button
+          key={a.label}
+          onClick={() => navigate(a.path)}
+          className="flex items-center gap-3 p-3 rounded-xl border border-slate-100 hover:border-blue-100 hover:bg-blue-50/40 transition-all duration-150 group text-left"
+        >
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform" style={{ background: a.bg, color: a.color }}>
+            <a.icon size={15} strokeWidth={2} />
+          </div>
+          <div className="min-w-0">
+            <p className="text-xs font-bold text-slate-700 truncate">{a.label}</p>
+            <p className="text-[10px] text-slate-400 truncate">{a.desc}</p>
+          </div>
+        </button>
+      ))}
+    </div>
+  </div>
+);
 
-                {/* Avatar */}
-                <div className="relative shrink-0">
-                  <div
-                    className="w-28 h-28 rounded-2xl border-4 border-white overflow-hidden bg-slate-50"
-                    style={{ boxShadow: `0 4px 20px ${theme.primary}25` }}
-                  >
-                    <img src={storeProfile.avatar} alt="Store Logo" className="w-full h-full object-cover" />
-                  </div>
-                  {storeProfile.online && (
-                    <div className="absolute -bottom-1.5 -right-1.5 flex items-center gap-1 bg-emerald-500 text-white text-[9px] font-bold px-2 py-0.5 rounded-full border-2 border-white shadow-sm">
-                      <span className="w-1.5 h-1.5 rounded-full bg-white inline-block dm-online-dot" />
-                      OPEN
-                    </div>
-                  )}
-                </div>
+// ─── Info Row ─────────────────────────────────────────────────────────────────
+const InfoRow = ({ icon: Icon, label, value }: { icon: React.ElementType; label: string; value: React.ReactNode }) => (
+  <div className="flex items-start gap-3 py-2.5 border-b border-slate-50 last:border-none">
+    <div className="w-7 h-7 rounded-lg bg-blue-50 flex items-center justify-center shrink-0 mt-0.5">
+      <Icon size={13} className="text-blue-600" />
+    </div>
+    <div className="min-w-0">
+      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">{label}</p>
+      <div className="text-xs font-semibold text-slate-700">{value}</div>
+    </div>
+  </div>
+);
 
-                {/* Name & meta */}
-                <div className="flex-1 pb-3 pt-16">
-                  <div className="flex items-center gap-2.5 flex-wrap mb-1.5">
-                    <h1 className="text-[21px] font-extrabold text-slate-800 tracking-tight leading-none">
-                      {storeProfile.name}
-                    </h1>
-                    {storeProfile.verified && (
-                      <span
-                        className="flex items-center gap-1 text-[10.5px] font-bold px-2 py-0.5 rounded-full border"
-                        style={{ background: theme.bg, color: theme.text, borderColor: theme.border }}
-                      >
-                        <BadgeCheck size={11} /> Verified
-                      </span>
-                    )}
-                    <span
-                      className="flex items-center gap-1 text-[10.5px] font-bold px-2 py-0.5 rounded-full border"
-                      style={{ background: "#f0fdf4", color: "#16a34a", borderColor: "#bbf7d0" }}
-                    >
-                      <Wifi size={10} /> Online
-                    </span>
-                  </div>
+// ─── Tab config ───────────────────────────────────────────────────────────────
+const TAB_CONFIG: { tab: TabType; icon: React.ElementType; desc: string }[] = [
+  { tab: "Promotions", icon: Megaphone, desc: "Announcements & Banners" },
+  { tab: "Delivery Preferences", icon: Truck, desc: "Zones & timing" },
+  { tab: "Product Dashboard", icon: Package, desc: "Manage items" },
+  { tab: "Operating Hours", icon: Timer, desc: "Open & close times" },
+];
 
-                  <div className="flex items-center gap-2.5 flex-wrap text-[13px]">
-                    <span className="text-slate-400 font-medium">{storeProfile.username}</span>
-                    <span className="text-slate-200">·</span>
-                    <span className="flex items-center gap-1 text-slate-500">
-                      <Users size={12} className="text-slate-400" />
-                      <span className="font-bold text-slate-700">{storeProfile.followers.toLocaleString()}</span> Followers
-                    </span>
-                    <span className="text-slate-200">·</span>
-                    <span className="flex items-center gap-1 text-slate-500">
-                      <MapPin size={12} className="text-slate-400" />
-                      {storeProfile.location}
-                    </span>
-                    <span className="text-slate-200">·</span>
-                    <span
-                      className="text-[11.5px] font-medium px-2.5 py-0.5 rounded-lg border"
-                      style={{ background: theme.bg, color: theme.text, borderColor: theme.border }}
-                    >
-                      {storeProfile.category}
-                    </span>
-                  </div>
-                </div>
+// ═══════════════════════════════════════════════════════════════════════════════
+// MAIN COMPONENT
+// ═══════════════════════════════════════════════════════════════════════════════
+const DigitalMain = () => {
+  const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState<TabType>("Promotions");
+  const [shop, setShop] = useState<ShopData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-                {/* Rating */}
-                <div className="pb-3 hidden sm:flex flex-col items-end gap-1.5 shrink-0">
-                  <div className="flex items-center gap-1.5 bg-amber-50 border border-amber-100 px-3 py-1.5 rounded-xl">
-                    <Star size={13} className="text-amber-500 fill-amber-500" />
-                    <span className="text-[15px] font-extrabold text-slate-700">{storeProfile.rating}</span>
-                    <span className="text-[11px] text-slate-400 font-medium">({storeProfile.reviews.toLocaleString()})</span>
-                  </div>
-                  <span className="text-[10.5px] text-slate-400 font-medium">Since {storeProfile.memberSince}</span>
-                </div>
-              </div>
+  useEffect(() => {
+    const fetch = async () => {
+      setLoading(true);
+      try {
+        const res = await shopApi.getShopById(SHOP_ID);
+        const data = res?.data ?? res;
+        if (data) setShop(data);
+        else setError("Shop not found");
+      } catch (e) {
+        console.error(e);
+        setError("Failed to load shop details.");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetch();
+  }, []);
 
-              {/* Description */}
-              <div className="max-w-2xl mb-5">
-                <p className="text-[14px] font-semibold text-slate-700 mb-1">{storeProfile.tagline}</p>
-                <p className="text-[13px] text-slate-400 leading-relaxed">{storeProfile.description}</p>
-              </div>
+  const STATS = [
+    { label: "Store Views", sublabel: "Today", value: "347", trend: "+22%", trendUp: true, trendDesc: "vs yesterday", icon: <Eye size={15} strokeWidth={2} /> },
+    { label: "Orders", sublabel: "Today", value: "12", trend: "+3", trendUp: true, trendDesc: "vs yesterday", icon: <ShoppingBag size={15} strokeWidth={2} /> },
+    { label: "Revenue", sublabel: "Today", value: "₹4,820", trend: "avg ₹402/order", trendUp: true, icon: <IndianRupee size={15} strokeWidth={2} /> },
+    { label: "Products Live", sublabel: "", value: "18", suffix: "/ 24", trend: "6 hidden", trendUp: false, icon: <LayoutGrid size={15} strokeWidth={2} /> },
+  ];
 
-              {/* ── TODAY'S STATS STRIP ── */}
-              <div className="grid grid-cols-4 gap-3 border-t border-slate-100 pt-4 pb-4 -mx-6 px-6">
-                {STORE_STATS.map((stat, idx) => (
-                  <div
-                    key={stat.id}
-                    className="dm-stat-card bg-white rounded-xl border border-slate-200 p-4 relative overflow-hidden"
-                    style={{ animation: `dm-slideUp 0.2s ease ${idx * 0.06}s both` }}
-                  >
-                    {/* Icon */}
-                    <div
-                      className="absolute top-3.5 right-3.5 w-8 h-8 rounded-lg flex items-center justify-center"
-                      style={{ background: stat.iconBg, color: stat.iconColor }}
-                    >
-                      {stat.icon}
-                    </div>
+  if (loading) return (
+    <div className="min-h-screen bg-slate-50/60">
+      <HeaderSkeleton />
+      <div className="px-4 pt-5 grid grid-cols-1 xl:grid-cols-3 gap-4">
+        <div className="xl:col-span-2 space-y-4">
+          <Skeleton className="h-10 rounded-2xl" />
+          <Skeleton className="h-96 rounded-2xl" />
+        </div>
+        <div className="space-y-4">
+          <Skeleton className="h-56 rounded-2xl" />
+          <Skeleton className="h-48 rounded-2xl" />
+        </div>
+      </div>
+    </div>
+  );
 
-                    {/* Label */}
-                    <p
-                      className="m-0 text-[10px] font-black tracking-[0.09em] uppercase mb-2"
-                      style={{ color: stat.labelColor }}
-                    >
-                      {stat.sublabel
-                        ? `${stat.label} (${stat.sublabel})`
-                        : stat.label}
-                    </p>
+  if (error || !shop) return (
+    <div className="min-h-screen bg-slate-50/60 flex items-center justify-center p-6">
+      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-8 max-w-sm w-full text-center">
+        <div className="w-14 h-14 rounded-full bg-red-50 flex items-center justify-center mx-auto mb-4">
+          <AlertCircle size={24} className="text-red-400" />
+        </div>
+        <h3 className="font-bold text-slate-800 mb-1">Failed to load store</h3>
+        <p className="text-sm text-slate-400 mb-4">{error}</p>
+        <button
+          onClick={() => window.location.reload()}
+          className="px-5 py-2 bg-blue-600 text-white text-sm font-bold rounded-xl hover:bg-blue-700 transition-colors"
+        >
+          Retry
+        </button>
+      </div>
+    </div>
+  );
 
-                    {/* Value */}
-                    <div className="flex items-baseline gap-1.5 mb-1.5">
-                      <span className="text-[26px] font-extrabold text-slate-800 leading-none tracking-tight">
-                        {stat.value}
-                      </span>
-                      {stat.suffix && (
-                        <span className="text-[13px] font-semibold text-slate-400">{stat.suffix}</span>
-                      )}
-                    </div>
+  const initials = shop.name?.charAt(0)?.toUpperCase() ?? "S";
 
-                    {/* Trend */}
-                    <div className="flex items-center gap-1">
-                      {stat.trendUp
-                        ? <TrendingUp  size={11} className="text-emerald-500 shrink-0" />
-                        : <TrendingDown size={11} className="text-slate-400 shrink-0" />
-                      }
-                      <span className={`text-[11px] font-bold ${stat.trendUp ? "text-emerald-600" : "text-slate-500"}`}>
-                        {stat.trend}
-                      </span>
-                      {stat.trendDesc && (
-                        <span className="text-[10.5px] text-slate-400 font-medium">{stat.trendDesc}</span>
-                      )}
-                    </div>
+  return (
+    <div className="min-h-screen bg-slate-50/60 pb-16" style={{ fontFamily: "Inter, sans-serif" }}>
 
-                    {/* Colored bottom bar */}
-                    <div
-                      className="absolute bottom-0 left-0 right-0 h-[2.5px]"
-                      style={{ background: stat.barColor }}
-                    />
-                  </div>
-                ))}
-              </div>
+      {/* ─── HEADER ─────────────────────────────────────────────── */}
+      <div className="bg-white border-b border-slate-100 shadow-sm">
+        {/* Banner */}
+        <div className="relative h-40 overflow-hidden">
+          {shop.banner_url ? (
+            <img src={shop.banner_url} alt="Banner" className="w-full h-full object-cover" />
+          ) : (
+            <div
+              className="w-full h-full"
+              style={{
+                background: "linear-gradient(135deg, #dbeafe 0%, #eff6ff 40%, #bfdbfe 100%)",
+              }}
+            >
+              <div
+                className="absolute inset-0"
+                style={{
+                  backgroundImage: "radial-gradient(circle, #93c5fd55 1.5px, transparent 1.5px)",
+                  backgroundSize: "22px 22px",
+                }}
+              />
+              <div className="absolute -top-12 -right-12 w-56 h-56 rounded-full bg-blue-300/20 blur-2xl" />
+              <div className="absolute -bottom-8 -left-8 w-44 h-44 rounded-full bg-blue-400/15 blur-xl" />
             </div>
+          )}
+
+          {/* Action Buttons */}
+          <div className="absolute right-4 top-4 flex gap-2 z-10">
+            <button className="flex items-center gap-1.5 bg-white/90 backdrop-blur-sm text-slate-600 text-xs font-semibold px-3 py-1.5 rounded-lg hover:bg-white shadow-sm border border-white/80 transition-all">
+              <Share2 size={11} strokeWidth={2.5} /> Share
+            </button>
+            <button
+              onClick={() => navigate("/settings")}
+              className="flex items-center gap-1.5 bg-blue-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-blue-700 shadow-md transition-all"
+            >
+              <Edit3 size={11} strokeWidth={2.5} /> Edit Store
+            </button>
+            <button className="flex items-center gap-1.5 bg-white/90 backdrop-blur-sm text-slate-600 text-xs font-semibold px-3 py-1.5 rounded-lg hover:bg-white shadow-sm border border-white/80 transition-all">
+              <ExternalLink size={11} strokeWidth={2.5} /> Preview
+            </button>
           </div>
         </div>
 
-        {/* ══════════════════════════════════════════════════
-            TABS + CONTENT
-        ══════════════════════════════════════════════════ */}
-        <div
-          className="px-4 pt-4 mx-auto"
-          style={{ animation: "dm-slideUp 0.25s ease 0.1s both" }}
-        >
-          {/* Tab Bar */}
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm mb-4 overflow-hidden">
-            <div className="flex items-center gap-1 p-2.5 overflow-x-auto scrollbar-hide">
-              {TAB_CONFIG.map(({ tab, icon, desc }) => {
-                const isActive = activeTab === tab;
-                return (
-                  <button
-                    key={tab}
-                    onClick={() => setActiveTab(tab)}
-                    className={`dm-tab-btn flex items-center gap-2 px-4 py-2.5 rounded-xl text-[12.5px] font-semibold whitespace-nowrap cursor-pointer border flex-shrink-0 ${
-                      isActive ? "dm-tab-active" : "bg-transparent border-transparent text-slate-500"
-                    }`}
-                    style={
-                      isActive
-                        ? { background: theme.bg, color: theme.text, borderColor: theme.border }
-                        : undefined
-                    }
-                  >
-                    <span style={{ color: isActive ? theme.primary : "#94a3b8" }}>{icon}</span>
-                    {tab}
-                    {!isActive && (
-                      <span className="text-[10px] text-slate-300 font-medium hidden md:inline">{desc}</span>
-                    )}
-                  </button>
-                );
-              })}
+        {/* Profile Row */}
+        <div className="px-5 md:px-7 pb-5">
+          <div className="flex flex-col sm:flex-row sm:items-end gap-4 -mt-11 mb-4 relative z-10">
+            {/* Avatar */}
+            <div className="relative shrink-0">
+              <div className="w-22 h-22 w-[88px] h-[88px] rounded-2xl border-4 border-white shadow-lg overflow-hidden bg-blue-50 flex items-center justify-center">
+                {shop.logo_url ? (
+                  <img src={shop.logo_url} alt={shop.name} className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-3xl font-extrabold text-blue-600">{initials}</span>
+                )}
+              </div>
+              {/* Visibility badge */}
+              <div className={`absolute -bottom-2 -right-2 flex items-center gap-1 text-[9px] font-bold px-2 py-0.5 rounded-full border-2 border-white shadow-sm ${shop.visible_online ? "bg-emerald-500 text-white" : "bg-slate-400 text-white"}`}>
+                {shop.visible_online
+                  ? <><span className="w-1.5 h-1.5 rounded-full bg-white inline-block" style={{ animation: "pulse 2s infinite" }} />ONLINE</>
+                  : <><WifiOff size={8} />OFFLINE</>
+                }
+              </div>
+            </div>
 
-              <div className="flex-1" />
-              <div className="hidden lg:flex items-center gap-1 text-[11px] text-slate-300 pr-1 shrink-0">
-                <ChevronRight size={11} />
-                <span>Select a section</span>
+            {/* Info */}
+            <div className="flex-1 pt-2 sm:pt-10">
+              <div className="flex flex-wrap items-center gap-2 mb-1">
+                <h1 className="text-xl font-extrabold text-slate-800 tracking-tight leading-none">{shop.name}</h1>
+                <span className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-100">
+                  <BadgeCheck size={10} /> Verified
+                </span>
+                {shop.categories?.[0] && (
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 border border-slate-200">
+                    <Tag size={9} className="inline mr-0.5" />{shop.categories[0]}
+                  </span>
+                )}
+              </div>
+              {shop.tagline && <p className="text-sm text-slate-500 font-medium">{shop.tagline}</p>}
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5 text-[11px] text-slate-400">
+                <span className="flex items-center gap-1"><Hash size={10} />Store #{shop.sequence_id}</span>
+                <span className="flex items-center gap-1"><MapPin size={10} />{shop.address?.full_address || "Address not set"}</span>
+                <span className="flex items-center gap-1"><Calendar size={10} />Since {shop.created_at}</span>
+              </div>
+            </div>
+
+            {/* Status pill */}
+            <div className="flex items-center gap-2 pb-1">
+              <div className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-bold ${shop.visible_online ? "bg-emerald-50 text-emerald-700 border-emerald-100" : "bg-slate-50 text-slate-500 border-slate-200"}`}>
+                {shop.visible_online ? <Wifi size={12} /> : <WifiOff size={12} />}
+                {shop.visible_online ? "Visible Online" : "Not Visible"}
               </div>
             </div>
           </div>
 
-          {/* Content card */}
-          <div
-            key={activeTab}
-            className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden"
-            style={{ animation: "dm-slideUp 0.18s ease" }}
-          >
-            {/* Strip header */}
-            <div className="flex items-center gap-3 px-5 py-3 border-b border-slate-100" style={{ background: "#f8fafc" }}>
-              <div
-                className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
-                style={{ background: "#eff6ff", color: "#3b82f6" }}
-              >
-                {TAB_CONFIG.find((t) => t.tab === activeTab)?.icon}
-              </div>
-              <div>
-                <p className="m-0 text-[13px] font-bold text-slate-700 leading-none mb-0.5">{activeTab}</p>
-                <p className="m-0 text-[11px] text-slate-400 font-medium">
-                  {TAB_CONFIG.find((t) => t.tab === activeTab)?.desc}
-                </p>
-              </div>
-              <div className="ml-auto flex items-center gap-1.5 bg-emerald-50 border border-emerald-100 px-2.5 py-1 rounded-lg">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block dm-online-dot" />
-                <span className="text-[10.5px] font-bold text-emerald-600">Live</span>
-              </div>
-            </div>
+          {/* Description */}
+          {shop.description && (
+            <p className="text-sm text-slate-500 leading-relaxed mb-4 max-w-2xl">{shop.description}</p>
+          )}
 
-            <div className="min-h-[400px]">
-              {activeTab === "Promotions"           && <Promotions />}
-              {activeTab === "Delivery Preferences" && <DeliveryPreferences />}
-              {activeTab === "Product Dashboard"    && <ProductDashboard />}
-              {activeTab === "Operating Hours"      && <OperatingHours />}
-            </div>
+          {/* Stats strip */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-1">
+            {STATS.map((s, i) => (
+              <StatCard key={i} {...s} />
+            ))}
           </div>
         </div>
       </div>
-    </>
+
+      {/* ─── MAIN CONTENT ──────────────────────────────────────── */}
+      <div className="px-4 md:px-6 pt-5">
+        <div className="flex flex-col gap-5">
+
+          {/* TOP — Store Info & Actions */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            {/* Store Info Card */}
+            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 h-full">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-bold text-slate-800">Store Info</h3>
+                <button
+                  onClick={() => navigate("/settings")}
+                  className="text-[10px] text-blue-600 font-bold flex items-center gap-0.5 hover:underline"
+                >
+                  Edit <ChevronRight size={10} />
+                </button>
+              </div>
+              <div className="space-y-1">
+                <InfoRow icon={Store} label="Store Name" value={shop.name} />
+                <InfoRow icon={Tag} label="Category" value={shop.categories?.join(", ") || "—"} />
+                <InfoRow icon={Building2} label="Business Type" value={shop.business_infos?.type || "—"} />
+                <InfoRow icon={IndianRupee} label="Currency" value={shop.business_infos?.currency || "INR"} />
+                <InfoRow
+                  icon={BadgeCheck}
+                  label="GST Registered"
+                  value={
+                    shop.business_infos?.gst_infos?.registered
+                      ? <span className="text-emerald-600">Yes · {shop.business_infos.gst_infos.number || "—"}</span>
+                      : <span className="text-slate-400">No</span>
+                  }
+                />
+                <InfoRow icon={MapPin} label="Address" value={shop.address?.full_address || "—"} />
+                <InfoRow icon={Clock} label="Member Since" value={shop.created_at} />
+                <InfoRow icon={Hash} label="Store ID" value={<span className="font-mono text-[10px] text-slate-500">{shop.id?.slice(0, 24)}…</span>} />
+              </div>
+            </div>
+
+            {/* Store Health */}
+            <div className="h-full">
+              <StoreHealthCard shop={shop} />
+            </div>
+
+            {/* Quick Actions */}
+            <div className="h-full">
+              <QuickActions navigate={navigate} />
+            </div>
+          </div>
+
+          {/* BOTTOM — Tabs & Content */}
+          <div className="w-full space-y-4">
+            {/* Tab Bar */}
+            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+              <div className="flex items-center gap-1 p-2 overflow-x-auto scrollbar-hide">
+                {TAB_CONFIG.map(({ tab, icon: Icon, desc }) => {
+                  const isActive = activeTab === tab;
+                  return (
+                    <button
+                      key={tab}
+                      onClick={() => setActiveTab(tab)}
+                      className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold whitespace-nowrap flex-shrink-0 transition-all duration-150 border ${
+                        isActive
+                          ? "bg-blue-50 text-blue-700 border-blue-100 shadow-sm"
+                          : "bg-transparent border-transparent text-slate-500 hover:text-blue-600 hover:bg-blue-50/50"
+                      }`}
+                    >
+                      <Icon size={13} strokeWidth={2.5} className={isActive ? "text-blue-600" : "text-slate-400"} />
+                      {tab}
+                      {!isActive && (
+                        <span className="text-[9px] text-slate-300 hidden md:inline">{desc}</span>
+                      )}
+                    </button>
+                  );
+                })}
+                <div className="flex-1" />
+                <span className="text-[10px] text-slate-300 pr-2 hidden lg:flex items-center gap-1 shrink-0">
+                  <ChevronRight size={10} /> section
+                </span>
+              </div>
+            </div>
+
+            {/* Tab Content Card */}
+            <div
+              key={activeTab}
+              className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden"
+              style={{ animation: "slideUp 0.18s ease" }}
+            >
+              <div className="min-h-[360px]">
+                {activeTab === "Promotions" && <Promotions />}
+                {activeTab === "Delivery Preferences" && <DeliveryPreferences />}
+                {activeTab === "Product Dashboard" && <ProductDashboard />}
+                {activeTab === "Operating Hours" && <OperatingHours />}
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <style>{`
+        @keyframes slideUp { from { opacity:0; transform:translateY(6px) } to { opacity:1; transform:translateY(0) } }
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+      `}</style>
+    </div>
   );
 };
 

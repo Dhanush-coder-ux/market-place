@@ -3,7 +3,7 @@ import {
   Edit2, Plus, Search,
   Box, AlertCircle, Wallet, Eye, EyeOff,
   CheckCircle2, XCircle, LayoutGrid, List,
-  Tag, Package, Star, X, Settings2, Sparkles, Loader2
+  Tag, Package, X, Settings2, Sparkles, Loader2
 } from "lucide-react";
 import { inventoryApi, inventoryCustomFieldsApi, type InventoryCustomFieldDefinition } from "../../../services/api/inventory";
 import { SHOP_ID } from "../../../services/endpoints";
@@ -21,7 +21,18 @@ interface Product {
   rating: number;
   sold: number;
   visibleOnApp: boolean;
-  raw: any; // original backend object
+  // Tracking
+  hasBatch: boolean;
+  hasVariant: boolean;
+  hasSerialNo: boolean;
+  batchCount: number;
+  variantCount: number;
+  unit: string;
+  sku: string;
+  uiId: string;
+  gst: string;
+  isActive: boolean;
+  raw: any;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -132,30 +143,56 @@ function ProductCard({
         {/* Category + ID */}
         <div className="flex items-center justify-between">
           <span
-            className="text-[10.5px] font-bold px-2 py-0.5 rounded-lg border max-w-[120px] truncate"
+            className="text-[10.5px] font-bold px-2 py-0.5 rounded-lg border max-w-[110px] truncate"
             style={{ background: "#eff6ff", color: "#3b82f6", borderColor: "#bfdbfe" }}
           >
             {product.category}
           </span>
-          <span className="text-[10.5px] text-slate-400 font-medium truncate">#{product.id.slice(-8)}</span>
+          <span className="text-[10px] text-slate-400 font-mono truncate">{product.uiId || `#${product.id.slice(-6)}`}</span>
         </div>
 
         {/* Name */}
         <p className="text-[13.5px] font-bold text-slate-800 leading-snug line-clamp-2 h-10">{product.name}</p>
 
-        {/* Rating + Sold */}
-        <div className="flex items-center gap-3 text-[11.5px] text-slate-400 font-medium">
-          <span className="flex items-center gap-1">
-            <Star size={11} className="text-amber-400 fill-amber-400" />
-            {product.rating}
-          </span>
-          <span className="text-slate-200">·</span>
-          <span>{product.sold} sold</span>
+        {/* Tracking badges */}
+        <div className="flex flex-wrap gap-1">
+          {product.hasBatch && (
+            <span className="text-[9.5px] font-bold px-1.5 py-0.5 rounded-md border bg-amber-50 text-amber-700 border-amber-200">
+              Batch ·{product.batchCount}
+            </span>
+          )}
+          {product.hasVariant && (
+            <span className="text-[9.5px] font-bold px-1.5 py-0.5 rounded-md border bg-violet-50 text-violet-700 border-violet-200">
+              Variants ·{product.variantCount}
+            </span>
+          )}
+          {product.hasSerialNo && (
+            <span className="text-[9.5px] font-bold px-1.5 py-0.5 rounded-md border bg-sky-50 text-sky-700 border-sky-200">
+              Serial
+            </span>
+          )}
+          {product.unit && (
+            <span className="text-[9.5px] font-bold px-1.5 py-0.5 rounded-md border bg-slate-50 text-slate-500 border-slate-200">
+              {product.unit}
+            </span>
+          )}
+          {!product.isActive && (
+            <span className="text-[9.5px] font-bold px-1.5 py-0.5 rounded-md border bg-slate-100 text-slate-400 border-slate-200">
+              Inactive
+            </span>
+          )}
         </div>
+
+        {/* SKU */}
+        {product.sku && (
+          <p className="text-[10px] font-mono text-slate-400 truncate -mt-1">{product.sku}</p>
+        )}
 
         {/* Price + Stock */}
         <div className="flex items-center justify-between">
-          <span className="text-[18px] font-extrabold text-slate-800">₹{product.price.toLocaleString("en-IN")}</span>
+          <span className="text-[17px] font-extrabold text-slate-800">
+            {product.price > 0 ? `₹${product.price.toLocaleString("en-IN")}` : <span className="text-slate-300 text-[12px]">No price</span>}
+          </span>
           <span
             className="text-[11px] font-bold px-2 py-1 rounded-lg border"
             style={{ background: stock.bg, color: stock.text, borderColor: stock.border }}
@@ -235,26 +272,45 @@ function ProductRow({
       {/* Name + ID */}
       <div className="flex-1 min-w-0">
         <p className="text-[13.5px] font-bold text-slate-800 truncate">{product.name}</p>
-        <div className="flex items-center gap-2 mt-0.5">
-          <span className="text-[10.5px] text-slate-400">#{product.id.slice(-8)}</span>
+        <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
+          <span className="text-[10px] text-slate-400 font-mono">{product.uiId || product.sku || `#${product.id.slice(-6)}`}</span>
           <span
-            className="text-[10px] font-bold px-1.5 py-0.5 rounded-md border max-w-[100px] truncate"
+            className="text-[10px] font-bold px-1.5 py-0.5 rounded-md border"
             style={{ background: "#eff6ff", color: "#3b82f6", borderColor: "#bfdbfe" }}
           >
             {product.category}
           </span>
+          {product.hasBatch && (
+            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md border bg-amber-50 text-amber-700 border-amber-200">
+              Batch·{product.batchCount}
+            </span>
+          )}
+          {product.hasVariant && (
+            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md border bg-violet-50 text-violet-700 border-violet-200">
+              Variants·{product.variantCount}
+            </span>
+          )}
+          {product.hasSerialNo && (
+            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md border bg-sky-50 text-sky-700 border-sky-200">
+              Serial
+            </span>
+          )}
+          {!product.isActive && (
+            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md border bg-slate-100 text-slate-400 border-slate-200">
+              Inactive
+            </span>
+          )}
         </div>
       </div>
 
-      {/* Rating */}
-      <div className="hidden md:flex items-center gap-1 text-[12px] text-slate-500 w-16 shrink-0">
-        <Star size={11} className="text-amber-400 fill-amber-400" />
-        {product.rating}
+      {/* Unit */}
+      <div className="hidden md:flex items-center gap-1 text-[11px] text-slate-400 w-16 shrink-0">
+        {product.unit || "—"}
       </div>
 
       {/* Price */}
       <div className="w-24 shrink-0 text-[14px] font-extrabold text-slate-800">
-        ₹{product.price.toLocaleString("en-IN")}
+        {product.price > 0 ? `₹${product.price.toLocaleString("en-IN")}` : <span className="text-slate-300 text-[12px]">—</span>}
       </div>
 
       {/* Stock */}
@@ -325,18 +381,63 @@ const ProductDashboard = () => {
         : (res?.data?.inventories ?? (Array.isArray(res?.datas) ? res.datas : (res?.datas?.inventories ?? [])));
 
       const mapped: Product[] = (rawList || []).map((p: any) => {
-        const physical = p.stock_infos?.physical_stocks ?? p.stock_infos?.available_stocks ?? 0;
+        // --- IMAGE: API sends image_url (array) ---
+        const image = Array.isArray(p.image_url) && p.image_url.length > 0
+          ? p.image_url[0]
+          : (p.images?.[0] || "https://placehold.co/200x160/f1f5f9/94a3b8?text=No+Image");
+
+        // --- TRACKING TYPE ---
+        const hasBatch    = p.type_infos?.has_batch    ?? false;
+        const hasVariant  = p.type_infos?.has_variant  ?? false;
+        const hasSerialNo = p.type_infos?.has_serialno ?? false;
+
+        // --- STOCK: sum from batch_infos, or from variants, or top-level ---
+        let totalStock = 0;
+        let price = 0;
+
+        if (hasBatch && Array.isArray(p.batch_infos) && p.batch_infos.length > 0) {
+          totalStock = p.batch_infos.reduce((sum: number, b: any) => {
+            return sum + (b.stock_infos?.available_stocks ?? b.stock_infos?.physical_stocks ?? 0);
+          }, 0);
+          // Price from first batch with pricing info
+          const batchWithPrice = p.batch_infos.find((b: any) => b.pricing_infos?.sell_price);
+          price = batchWithPrice?.pricing_infos?.sell_price ?? 0;
+        } else if (hasVariant && p.variants && typeof p.variants === "object") {
+          const variantList = Object.values(p.variants) as any[];
+          totalStock = variantList.reduce((sum: number, v: any) => {
+            return sum + (v.stock_infos?.available_stocks ?? v.stock_infos?.physical_stocks ?? 0);
+          }, 0);
+          const variantWithPrice = variantList.find((v: any) => v.pricing_infos?.sell_price);
+          price = variantWithPrice?.pricing_infos?.sell_price ?? 0;
+        } else {
+          totalStock = p.stock_infos?.available_stocks ?? p.stock_infos?.physical_stocks ?? 0;
+          price = p.pricing_infos?.sell_price ?? p.sell_price ?? 0;
+        }
+
+        const batchCount   = Array.isArray(p.batch_infos) ? p.batch_infos.length : 0;
+        const variantCount = p.variants && typeof p.variants === "object" ? Object.keys(p.variants).length : 0;
+
         return {
           id: p.id,
           name: p.name || "Unnamed Product",
-          price: p.pricing_infos?.sell_price ?? p.sell_price ?? 0,
-          stock: physical,
+          price,
+          stock: Math.floor(totalStock),
           category: p.category_infos?.name || p.category_id || "Uncategorized",
-          status: physical === 0 ? "Out of Stock" : "Active",
-          image: p.images?.[0] || "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=200&h=200&fit=crop",
+          status: !p.is_active ? "Draft" : totalStock === 0 ? "Out of Stock" : "Active",
+          image,
           rating: p.rating || 4.5,
-          sold: p.sold || 12,
+          sold: p.sold || 0,
           visibleOnApp: p.visible_online ?? false,
+          hasBatch,
+          hasVariant,
+          hasSerialNo,
+          batchCount,
+          variantCount,
+          unit: p.unit_infos?.name || "",
+          sku: p.sku || p.barcode || "",
+          uiId: p.ui_id || "",
+          gst: p.gst || "0%",
+          isActive: p.is_active ?? true,
           raw: p
         };
       });
@@ -754,7 +855,7 @@ const ProductDashboard = () => {
                 <div className="w-5 shrink-0" />
                 <div className="w-12 shrink-0" />
                 <div className="flex-1 text-[10.5px] font-black text-slate-400 uppercase tracking-wider">Product</div>
-                <div className="w-16 text-[10.5px] font-black text-slate-400 uppercase tracking-wider hidden md:block">Rating</div>
+                <div className="w-16 text-[10.5px] font-black text-slate-400 uppercase tracking-wider hidden md:block">Unit</div>
                 <div className="w-24 text-[10.5px] font-black text-slate-400 uppercase tracking-wider">Price</div>
                 <div className="w-28 text-[10.5px] font-black text-slate-400 uppercase tracking-wider">Stock</div>
                 <div className="w-24 text-[10.5px] font-black text-slate-400 uppercase tracking-wider">App</div>

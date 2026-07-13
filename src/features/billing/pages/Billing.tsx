@@ -219,13 +219,13 @@ const Billing = () => {
           batch_id: item.batchId || null,
           serialno_infos: mapSerialsToInfos(item),
           qty: item.qty,
+          unit: item.selectedUnit || null,
         });
       }
 
       // ── Step 2: Build payment_infos for the order ───────────────────────────
       const paymentInfos = paymentsArg.reduce((acc, p) => {
-        const rawMethod = p.mode.toUpperCase();
-        const method = rawMethod === "CREDIT" ? "ON_CREDIT" : rawMethod;
+        const method = p.mode.toUpperCase();
         acc[method] = (acc[method] || 0) + p.amount;
         return acc;
       }, {} as Record<string, number>);

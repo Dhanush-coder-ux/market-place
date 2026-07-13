@@ -328,6 +328,86 @@
         }
       }
     },
+    "/shops/upload/images": {
+      "post": {
+        "tags": [
+          "Shop CRUD"
+        ],
+        "summary": "Upload Images",
+        "operationId": "upload_images_shops_upload_images_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_images_shops_upload_images_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Shop CRUD"
+        ],
+        "summary": "Delete Images",
+        "operationId": "delete_images_shops_upload_images_delete",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeleteImagesSchema"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/shops/my-shops": {
       "get": {
         "tags": [
@@ -1625,12 +1705,93 @@
       }
     },
     "/employees/verify/token": {
+      "get": {
+        "tags": [
+          "Employee CRUD"
+        ],
+        "summary": "Verify Token Redirect",
+        "operationId": "verify_token_redirect_employees_verify_token_get",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
       "post": {
         "tags": [
           "Employee CRUD"
         ],
         "summary": "Verify Token",
         "operationId": "verify_token_employees_verify_token_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyEmployeeTokenSchema"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/employees/verify/resend": {
+      "post": {
+        "tags": [
+          "Employee CRUD"
+        ],
+        "summary": "Resend Verify Token",
+        "operationId": "resend_verify_token_employees_verify_resend_post",
         "requestBody": {
           "content": {
             "application/json": {
@@ -2355,6 +2516,42 @@
         ],
         "title": "AnnouncementTypeEnum"
       },
+      "Body_upload_images_shops_upload_images_post": {
+        "properties": {
+          "files": {
+            "items": {
+              "type": "string",
+              "contentMediaType": "application/octet-stream"
+            },
+            "type": "array",
+            "title": "Files"
+          },
+          "shop_id": {
+            "type": "string",
+            "title": "Shop Id"
+          },
+          "image_type": {
+            "type": "string",
+            "enum": [
+              "logo",
+              "banner"
+            ],
+            "title": "Image Type"
+          },
+          "user_id": {
+            "type": "string",
+            "title": "User Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "files",
+          "shop_id",
+          "image_type",
+          "user_id"
+        ],
+        "title": "Body_upload_images_shops_upload_images_post"
+      },
       "CreateAnnouncementSchema": {
         "properties": {
           "type": {
@@ -2562,28 +2759,6 @@
           "address": {
             "$ref": "#/components/schemas/ShopAddressTypDict"
           },
-          "logo_url": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Logo Url"
-          },
-          "banner_url": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Banner Url"
-          },
           "additional_infos": {
             "anyOf": [
               {
@@ -2659,6 +2834,41 @@
           "SUNDAY"
         ],
         "title": "DayEnum"
+      },
+      "DeleteImagesSchema": {
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "title": "User Id"
+          },
+          "shop_id": {
+            "type": "string",
+            "title": "Shop Id"
+          },
+          "urls": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Urls"
+          },
+          "image_type": {
+            "type": "string",
+            "enum": [
+              "logo",
+              "banner"
+            ],
+            "title": "Image Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "user_id",
+          "shop_id",
+          "urls",
+          "image_type"
+        ],
+        "title": "DeleteImagesSchema"
       },
       "DeliveryByEnum": {
         "type": "string",
@@ -3172,7 +3382,7 @@
               }
             ]
           },
-          "datas": {
+          "additional_infos": {
             "anyOf": [
               {
                 "$ref": "#/components/schemas/EmployeeOptionalFieldsSchema"
@@ -3257,16 +3467,19 @@
             ],
             "title": "Name"
           },
-          "category": {
+          "categories": {
             "anyOf": [
               {
-                "type": "string"
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Category"
+            "title": "Categories"
           },
           "business_infos": {
             "anyOf": [
@@ -3288,21 +3501,29 @@
               }
             ]
           },
-          "image_urls": {
+          "logo_url": {
             "anyOf": [
               {
-                "items": {
-
-                },
-                "type": "array"
+                "type": "string"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Image Urls"
+            "title": "Logo Url"
           },
-          "datas": {
+          "banner_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Banner Url"
+          },
+          "additional_infos": {
             "anyOf": [
               {
                 "$ref": "#/components/schemas/ShopOptionalFieldsSchemas"
@@ -3397,6 +3618,19 @@
           "type"
         ],
         "title": "ValidationError"
+      },
+      "VerifyEmployeeTokenSchema": {
+        "properties": {
+          "token": {
+            "type": "string",
+            "title": "Token"
+          }
+        },
+        "type": "object",
+        "required": [
+          "token"
+        ],
+        "title": "VerifyEmployeeTokenSchema"
       }
     }
   }

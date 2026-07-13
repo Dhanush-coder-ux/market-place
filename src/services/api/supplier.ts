@@ -26,7 +26,7 @@ export const supplierApi = {
     id: string;
     shop_id: string;
     outstanding_infos: { amount: number };
-    type: 'add' | 'subtract' | 'set';
+    type: 'INCREMENT' | 'DECREMENT' | 'DIRECT';
   }) => {
     return await apiClient.put(`${ENDPOINTS.SUPPLIERS}/outstanding`, data);
   },

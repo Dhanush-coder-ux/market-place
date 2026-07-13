@@ -428,13 +428,13 @@
         }
       }
     },
-    "/custom-fields": {
+    "/suppliers/custom-fields": {
       "get": {
         "tags": [
           "Custom Fields"
         ],
         "summary": "Get All Fields",
-        "operationId": "get_all_fields_custom_fields_get",
+        "operationId": "get_all_fields_suppliers_custom_fields_get",
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -453,7 +453,7 @@
           "Custom Fields"
         ],
         "summary": "Update Field",
-        "operationId": "update_field_custom_fields_put",
+        "operationId": "update_field_suppliers_custom_fields_put",
         "requestBody": {
           "content": {
             "application/json": {
@@ -492,7 +492,7 @@
           "Custom Fields"
         ],
         "summary": "Create Field",
-        "operationId": "create_field_custom_fields_post",
+        "operationId": "create_field_suppliers_custom_fields_post",
         "requestBody": {
           "content": {
             "application/json": {
@@ -527,13 +527,13 @@
         }
       }
     },
-    "/custom-fields/{shop_id}": {
+    "/suppliers/custom-fields/{shop_id}": {
       "get": {
         "tags": [
           "Custom Fields"
         ],
         "summary": "Get Field By Shop",
-        "operationId": "get_field_by_shop_custom_fields__shop_id__get",
+        "operationId": "get_field_by_shop_suppliers_custom_fields__shop_id__get",
         "parameters": [
           {
             "name": "shop_id",
@@ -569,13 +569,13 @@
         }
       }
     },
-    "/custom-fields/{shop_id}/{id}": {
+    "/suppliers/custom-fields/{shop_id}/{id}": {
       "get": {
         "tags": [
           "Custom Fields"
         ],
         "summary": "Get Field By Shop",
-        "operationId": "get_field_by_shop_custom_fields__shop_id___id__get",
+        "operationId": "get_field_by_shop_suppliers_custom_fields__shop_id___id__get",
         "parameters": [
           {
             "name": "id",
@@ -624,7 +624,7 @@
           "Custom Fields"
         ],
         "summary": "Delete Field",
-        "operationId": "delete_field_custom_fields__shop_id___id__delete",
+        "operationId": "delete_field_suppliers_custom_fields__shop_id___id__delete",
         "parameters": [
           {
             "name": "id",
@@ -669,13 +669,13 @@
         }
       }
     },
-    "/custom-fields/values": {
+    "/suppliers/custom-fields/values": {
       "post": {
         "tags": [
           "Custom Fields"
         ],
         "summary": "Upsert Value",
-        "operationId": "upsert_value_custom_fields_values_post",
+        "operationId": "upsert_value_suppliers_custom_fields_values_post",
         "requestBody": {
           "content": {
             "application/json": {
@@ -710,13 +710,13 @@
         }
       }
     },
-    "/custom-fields/values/{shop_id}/{id}": {
+    "/suppliers/custom-fields/values/{shop_id}/{id}": {
       "get": {
         "tags": [
           "Custom Fields"
         ],
         "summary": "Get Values By Supplier",
-        "operationId": "get_values_by_supplier_custom_fields_values__shop_id___id__get",
+        "operationId": "get_values_by_supplier_suppliers_custom_fields_values__shop_id___id__get",
         "parameters": [
           {
             "name": "id",

@@ -227,9 +227,35 @@ const PurchaseForm = () => {
           }
 
           setPurchaseType(data.type || "DIRECT");
+
+          // Populate additional charges
+          setCharges({
+            transport: data.charges_infos?.transport_charge || "",
+            other: data.charges_infos?.other_charge || ""
+          });
+
+          // Populate payment info
+          const firstPayment = data.payment_infos?.[0];
+          setPayment({
+            method: firstPayment?.method || "CASH",
+            amountPaid: firstPayment?.amount ?? ""
+          });
+
+          // Populate cost method
+          const costMethodValue = data.calculation_infos?.divided_by || data.calculations?.divided_by;
+          setCostMethod(
+            costMethodValue === "BY_QUANTITY" ? "By Unit" :
+            costMethodValue === "BY_VALUE" ? "By Value" :
+            costMethodValue === "BY_EQUAL" ? "Equally" : "None"
+          );
+
+          // Populate gst mode
+          const gstModeValue = data.calculation_infos?.gst_type || data.calculations?.gst_type || data.gst_infos?.type;
+          setGstMode(gstModeValue?.toLowerCase() === "exclusive" ? "exclusive" : "inclusive");
+
           const itemsSource = data.items || data.products || [];
           const updatedProducts = [...itemsSource.map((p: any) => {
-            const qty = p.stock_infos?.stocks ?? p.stocks ?? p.quantity ?? p.stocks_added ?? 0;
+            const qty = p.stocks_infos?.stocks ?? p.stock_infos?.stocks ?? p.stocks ?? p.quantity ?? p.stocks_added ?? 0;
             const parsedSku = p.sku || p.datas?.sku || p.ui_id || p.barcode || "";
             const pBuyPrice = p.pricing_infos?.[0]?.buy_price ?? p.pricing_infos?.buy_price ?? p.buy_price;
             const pSellPrice = p.pricing_infos?.[0]?.sell_price ?? p.pricing_infos?.sell_price ?? p.sell_price;
@@ -276,9 +302,9 @@ const PurchaseForm = () => {
               if (invRes && invRes.data) {
                  const invData = Array.isArray(invRes.data) ? invRes.data[0] : invRes.data;
                  
-                 // Update tracking flags from live inventory data
-                  p.batchTracking = !!(invData.has_batch || invData.datas?.has_batch || p.batchTracking);
-                  p.serialTracking = !!(invData.has_serialno || invData.datas?.has_serialno || p.serialTracking);
+                 // Update tracking flags from live inventory data strictly
+                  p.batchTracking = !!(invData.type_infos?.has_batch || invData.has_batch || invData.datas?.has_batch);
+                  p.serialTracking = !!(invData.type_infos?.has_serialno || invData.has_serialno || invData.datas?.has_serialno);
                 }
               } catch {
                 // ignore
@@ -546,7 +572,36 @@ const PurchaseForm = () => {
 
       let res;
       if (id) {
-        res = await purchase.updatePurchase({ id: id, ...payload });
+        const updatePayload = {
+          id: id,
+          shop_id: SHOP_ID,
+          calculation_infos: {
+            divided_by: costMethodMap[costMethod] || "NONE",
+            gst_type: gstMode
+          },
+          charges_infos: {
+            transport_charge: Number(charges.transport) || 0,
+            other_charge: Number(charges.other) || 0
+          },
+          payment_infos: [
+            {
+              method: payment.method,
+              amount: Number(payment.amountPaid) || stats.grandTotal
+            }
+          ],
+          purchase_date: purchaseDetails.date,
+          items: transformedProducts.map((p: any) => ({
+            id: p.id,
+            product_id: p.product_id,
+            serialno_numbers: p.serialno_numbers,
+            storage_location_infos: p.storage_location_infos,
+            reorder_point_infos: p.reorder_point_infos,
+            pricing_infos: p.pricing_infos,
+            gst: p.gst,
+            stock_infos: p.stock_infos
+          }))
+        };
+        res = await purchase.updatePurchase(updatePayload);
       } else {
         res = await purchase.createPurchase(payload);
       }

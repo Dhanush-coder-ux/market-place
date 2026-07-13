@@ -126,19 +126,19 @@ const getPageHeaderInfo = (pathname: string) => {
       title: "Order Management",
       subtitle: "Track, fulfill, and manage customer orders.",
     },
-    "/profile": {
+    "/settings": {
       title: "User Settings",
       subtitle: "Manage your account preferences and security.",
     },
-    "/profile/add": {
+    "/settings/add": {
       title: "Update Profile",
       subtitle: "Update your personal and professional information.",
     },
-    "/create-digital-store": {
-      title: "Storefront Setup",
+    "/create-shop": {
+      title: "Create Shop",
       subtitle: "Configure your digital sales and brand presence.",
     },
-    "/digital-store/profile": {
+    "/profile": {
       title: "Digital Storefront",
       subtitle: "Overview of your online business operations.",
     },
@@ -306,14 +306,14 @@ const MainLayout = () => {
 
     if (!token && !sessionId) {
       navigate("/login");
-    } else if (!token && sessionId && location.pathname !== "/shop-select" && location.pathname !== "/create-digital-store") {
+    } else if (!token && sessionId && location.pathname !== "/shop-select" && location.pathname !== "/create-shop") {
       navigate("/shop-select");
     }
   }, [location.pathname, navigate]);
 
   const isStorePage =
     location.pathname === "/digital-store" ||
-    location.pathname === "/digital-store/profile" ||
+    location.pathname === "/profile" ||
     location.pathname === "/";
 
   const isBillingPage = location.pathname === "/billing";

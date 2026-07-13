@@ -51,17 +51,6 @@ export const SCHEMAS = {
 
   shop_id_config_upsert: ['shop_id', 'config'],
 
-  base_field_create: ['service_name', 'fields'],
-  base_field_update: ['id', 'field_name', 'fields'],
-
-  custom_field_create: ['shop_id', 'service_name', 'fields'],
-  custom_field_update: ['id', 'shop_id', 'field_name', 'fields'],
-
-  base_dropdown_create: ['dd_name', 'values'],
-  base_dropdown_update: ['id', 'dd_name'],
-
-  custom_dropdown_create: ['shop_id', 'dd_name', 'values'],
-  custom_dropdown_update: ['id', 'shop_id', 'dd_name'],
 
   activity_log_create: ['shop_id', 'user_name', 'service', 'action', 'entity_type', 'entity_id', 'description'],
 

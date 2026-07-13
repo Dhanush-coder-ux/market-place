@@ -48,8 +48,8 @@ const SupplierForm = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { postData, putData, getData, loading } = useApi();
-  const { supplierCustomFields } = useBusinessApi();
+  const { getData, loading } = useApi();
+  const { supplier, supplierCustomFields } = useBusinessApi();
   const { setBottomActions } = useHeader();
   const { showToast } = useToast();
   const [submitting, setSubmitting] = useState(false);
@@ -237,8 +237,8 @@ const SupplierForm = () => {
 
     try {
       const res = id 
-        ? await putData(`${ENDPOINTS.SUPPLIERS}`, payload)
-        : await postData(ENDPOINTS.SUPPLIERS, payload);
+        ? await supplier.updateSupplier(payload)
+        : await supplier.createSupplier(payload);
 
       if (res) {
         // Upsert custom field values if any are filled

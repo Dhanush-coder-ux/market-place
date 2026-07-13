@@ -109,17 +109,34 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
     setLoading(true);
     try {
       const data = await inventoryApi.searchInventories(q, true);
-      const mapped = data.map((p: any) => ({
-        ...p,
-        product_name: p.name || "Unknown Product",
-        product_barcode: p.barcode || "N/A",
-        category: p.category_infos?.name || p.category || "Other",
-        displayName: `${p.name || "Unknown"} • ${p.category_infos?.name || p.category || 'Other'}`,
-        barcodeDisplay: p.barcode || 'N/A',
-        price: p.pricing_infos?.sell_price || p.sell_price || 0,
-        stocks: p.stock_infos?.available_stocks || p.stocks || 0,
-        gst: parseInt(String(p.gst || p.datas?.gst || "18").replace("%", ""))
-      }));
+      const mapped = data.map((p: any) => {
+        let computedStock = Number(p.stock_infos?.available_stocks ?? p.stock_infos?.physical_stocks ?? p.stocks ?? 0);
+        let computedPrice = p.pricing_infos?.sell_price ?? p.sell_price ?? 0;
+        const batches = p.batch_infos || p.batches;
+        const hasVariants = !!(p.type_infos?.has_variant) || (p.variant_infos && p.variant_infos.length > 0) || (p.variants && p.variants.length > 0);
+        const hasBatches = !!(p.type_infos?.has_batch) || (batches && batches.length > 0);
+
+        if (!hasVariants && hasBatches && Array.isArray(batches)) {
+          if (computedStock === 0) {
+            computedStock = batches.reduce((acc: number, b: any) => acc + Number(b.stock_infos?.available_stocks ?? b.stock_infos?.physical_stocks ?? b.stocks ?? 0), 0);
+          }
+          if ((computedPrice === 0 || computedPrice === undefined) && batches.length > 0) {
+            computedPrice = batches[0].pricing_infos?.sell_price ?? batches[0].sell_price ?? 0;
+          }
+        }
+
+        return {
+          ...p,
+          product_name: p.name || "Unknown Product",
+          product_barcode: p.barcode || "N/A",
+          category: p.category_infos?.name || p.category || "Other",
+          displayName: `${p.name || "Unknown"} • ${p.category_infos?.name || p.category || 'Other'}`,
+          barcodeDisplay: p.barcode || 'N/A',
+          price: computedPrice,
+          stocks: computedStock,
+          gst: parseInt(String(p.gst || p.datas?.gst || "18").replace("%", ""))
+        };
+      });
       setSearchResults(mapped);
       setActiveIndex(0);
     } catch (err) {
@@ -191,6 +208,7 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
         const sourceBatches = Array.isArray(fullProduct.batch_infos) && fullProduct.batch_infos.length > 0 ? fullProduct.batch_infos : fullProduct.batches;
         mappedVariants = sourceBatches.map((b: any) => ({
           id: b.id,
+          isBatchOnly: true,
           name: `Batch: ${b.batch_no || b.id.slice(0, 8)}`,
           price: b.pricing_infos?.sell_price || b.sell_price || fullProduct.pricing_infos?.sell_price || fullProduct.sell_price || 0,
           stock: b.stock_infos?.available_stocks || b.stocks || 0,
@@ -200,6 +218,22 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
           expiryDate: b.expiry_date,
           manufacturingDate: b.manufacturing_date,
         }));
+      }
+
+      let computedStock = Number(fullProduct.stock_infos?.available_stocks ?? fullProduct.stock_infos?.physical_stocks ?? fullProduct.stocks ?? 0);
+      let computedPrice = fullProduct.pricing_infos?.sell_price ?? fullProduct.sell_price ?? 0;
+      
+      const batches = fullProduct.batch_infos || fullProduct.batches;
+      const prodHasVariants = !!(fullProduct.type_infos?.has_variant) || (mappedVariants && mappedVariants.length > 0);
+      const prodHasBatches = !!(fullProduct.type_infos?.has_batch) || (batches && batches.length > 0);
+
+      if (!prodHasVariants && prodHasBatches && Array.isArray(batches)) {
+        if (computedStock === 0) {
+          computedStock = batches.reduce((acc: number, b: any) => acc + Number(b.stock_infos?.available_stocks ?? b.stock_infos?.physical_stocks ?? b.stocks ?? 0), 0);
+        }
+        if ((computedPrice === 0 || computedPrice === undefined) && batches.length > 0) {
+          computedPrice = batches[0].pricing_infos?.sell_price ?? batches[0].sell_price ?? 0;
+        }
       }
 
       const pMapped = {
@@ -212,11 +246,12 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
         batchTracking: fullProduct.type_infos?.has_batch || fullProduct.has_batch || false,
         manufacturingDate: fullProduct.batch_infos?.[0]?.manufacturing_date || fullProduct.batches?.[0]?.manufacturing_date,
         expiryDate: fullProduct.batch_infos?.[0]?.expiry_date || fullProduct.batches?.[0]?.expiry_date,
-        price: fullProduct.pricing_infos?.sell_price || fullProduct.sell_price || 0,
-        stocks: fullProduct.stock_infos?.available_stocks || fullProduct.stocks || 0,
+        price: computedPrice,
+        stocks: computedStock,
         serialnoId: fullProduct.serialno_infos?.[0]?.id || fullProduct.serial_number?.id || fullProduct.serials?.id || fullProduct.batches?.[0]?.serial_numbers?.id,
         availableSerials: getSerialNames(fullProduct.serialno_infos || fullProduct.serial_number || fullProduct.serials || fullProduct.batches?.[0]?.serial_numbers),
         batchId: fullProduct.batch_infos?.[0]?.id || fullProduct.batches?.[0]?.id,
+        unitInfos: fullProduct.unit_infos || fullProduct.unit,
         gst: parseInt(String(fullProduct.gst || fullProduct.datas?.gst || "18").replace("%", ""))
       };
 
@@ -266,6 +301,7 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
               price: defaultVariant.price,
               qty: 1,
               tprice: defaultVariant.price,
+              basePrice: defaultVariant.price,
               variantId: null,
               batchId: pMapped.batchId,
               serialnoId: pMapped.serialnoId,
@@ -275,6 +311,9 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
               expiryDate: pMapped.expiryDate,
               maxStock: defaultVariant.stock,
               gst: pMapped.gst,
+              unitInfos: pMapped.unitInfos,
+              selectedUnit: pMapped.unitInfos?.name || null,
+              factor: 1,
               _product: pMapped,
             }
           ];
@@ -441,7 +480,7 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
 
     const existingIndex = items.findIndex((item) =>
       item.inventoryId === pendingProduct.id &&
-      item.variantId === (variant.id === "default" ? null : variant.id) &&
+      item.variantId === (variant.id === "default" || (variant as any).isBatchOnly ? null : variant.id) &&
       item.batchId === (variant.batchId || pendingProduct.batchId)
     );
 
@@ -475,8 +514,9 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
           price: variant.price,
           qty: quantity,
           tprice: quantity * variant.price,
+          basePrice: variant.price,
           serialNumbers: serials,
-          variantId: variant.id === "default" ? null : variant.id,
+          variantId: variant.id === "default" || (variant as any).isBatchOnly ? null : variant.id,
           batchId: variant.batchId || pendingProduct.batchId,
           serialnoId: variant.serialnoId || pendingProduct.serialnoId,
           requireSerial: pendingProduct.requireSerial,
@@ -485,6 +525,9 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
           expiryDate: variant.expiryDate || pendingProduct.expiryDate,
           maxStock: variant.stock,
           gst: pendingProduct.gst,
+          unitInfos: pendingProduct.unitInfos,
+          selectedUnit: pendingProduct.unitInfos?.name || null,
+          factor: 1,
           _product: pendingProduct,
         }
       ];
@@ -721,6 +764,52 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
                               SN: {s}
                             </span>
                           ))}
+                        </div>
+                      )}
+                      
+                      {/* Unit/Sub-Unit Selection */}
+                      {item.unitInfos && (
+                        <div className="flex items-center mt-2">
+                          <select 
+                            className="text-[10px] font-bold py-1 px-2 border border-slate-200 rounded-md bg-slate-50 text-slate-600 outline-none hover:border-blue-300 transition-colors cursor-pointer shadow-sm"
+                            value={item.selectedUnit || item.unitInfos.name}
+                            onChange={(e) => {
+                              const unitName = e.target.value;
+                              let factor = 1;
+                              if (unitName !== item.unitInfos.name) {
+                                const sub = item.unitInfos.sub_units?.find((su: any) => su.name === unitName || su.short_name === unitName);
+                                if (sub) factor = sub.factor;
+                              }
+                              onItemsChange(items.map(it => {
+                                if (it.id === item.id) {
+                                  // Base price refers to the actual unit price of the variant/product
+                                  let basePrice = it.basePrice;
+                                  if (basePrice === undefined) {
+                                    if (it.variantId) {
+                                      const variant = it._product.variants?.find((v: any) => v.id === it.variantId);
+                                      basePrice = variant?.price || it._product.price || 0;
+                                    } else {
+                                      basePrice = it._product.price || 0;
+                                    }
+                                  }
+                                  const newPrice = Number(((basePrice || 0) / factor).toFixed(2));
+                                  return {
+                                    ...it,
+                                    selectedUnit: unitName,
+                                    factor,
+                                    price: newPrice,
+                                    tprice: it.qty * newPrice
+                                  };
+                                }
+                                return it;
+                              }));
+                            }}
+                          >
+                            <option value={item.unitInfos.name}>{item.unitInfos.name}</option>
+                            {item.unitInfos.sub_units?.map((su: any) => (
+                              <option key={su.name} value={su.name}>{su.name} (÷{su.factor})</option>
+                            ))}
+                          </select>
                         </div>
                       )}
                     </div>

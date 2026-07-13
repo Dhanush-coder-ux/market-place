@@ -19,6 +19,7 @@ import {
 import Input from "@/components/ui/Input";
 import { GradientButton } from "@/components/ui/GradientButton";
 import { useApi } from "@/context/ApiContext";
+import { useBusinessApi } from "@/context/BusinessApiContext";
 import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 import { SearchSelect } from "@/components/inputbuilders/SearchSelect";
 import { supplierApi } from "@/services/api/supplier";
@@ -304,6 +305,7 @@ const GrnForm = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { postData, getData, putData } = useApi();
+  const { purchase } = useBusinessApi();
   const { setBottomActions } = useHeader();
   const { showToast } = useToast();
   const [submitting, setSubmitting] = useState(false);
@@ -561,11 +563,32 @@ const GrnForm = () => {
         };
       });
 
+      const itemsForCreate = transformedProducts.map(p => ({
+        product_id: p.inventory_id || "unknown",
+        variant_id: p.variant_id,
+        batch_infos: p.batch_tracking && p.batch_number ? {
+          name: p.batch_number,
+          manufacturing_date: p.manufacturing_date || new Date().toISOString(),
+          expiry_date: p.expiry_date || new Date().toISOString()
+        } : null,
+        serialno_numbers: p.serial_numbers.length > 0 ? p.serial_numbers : null,
+        storage_location_infos: p.storage_location ? { name: p.storage_location } : null,
+        reorder_point_infos: p.reorder_point ? { reorder_point: p.reorder_point } : null,
+        pricing_infos: {
+          buy_price: p.buy_price,
+          sell_price: p.sell_price
+        },
+        gst: p.gst + "%",
+        stock_infos: {
+          stocks: p.stocks
+        }
+      }));
+
       const payload = {
         shop_id: SHOP_ID,
+        supplier_id: supplierDetails?.id || grnDetails.supplier,
         type: "PO_CREATE",
-        supplier_id: supplierDetails?.id || "",
-        calculations: {
+        calculation_infos: {
           divided_by:
             costMethod === "By Unit"
               ? "BY_QUANTITY"
@@ -574,30 +597,39 @@ const GrnForm = () => {
               : costMethod === "Equally"
               ? "BY_EQUAL"
               : "NONE",
-          gst: { type: "inclusive", value: 18, registered: true },
+          gst_type: "inclusive",
         },
-        additional_charges: {
-          delivery_charge: Number(charges.transport) || 0,
+        gst_infos: { type: "INCLUSIVE" },
+        charges_infos: {
+          transport_charge: Number(charges.transport) || 0,
           other_charge: Number(charges.other) || 0,
         },
-        datas: {
-          supplier_name: supplierDetails?.name || grnDetails.supplier,
-          purchaseDetails: {
-            invoiceNo: grnDetails.invoiceNo,
-            date: grnDetails.date,
-            referenceNo: grnDetails.referenceNo,
-            poReference: grnDetails.poReference,
-          },
-          payment: { method: payment.method, amountPaid: Number(payment.amountPaid) || 0 },
-          storage_location: products[0]?.storageLoc || "",
-        },
-        paid_amount: Number(payment.amountPaid) || 0,
-        products: transformedProducts,
+        payment_infos: [
+          { method: payment.method.toUpperCase(), amount: Number(payment.amountPaid) || stats.grandTotal }
+        ],
+        purchase_date: grnDetails.date,
+        items: itemsForCreate,
+        invoice_no: grnDetails.invoiceNo || ""
       };
 
-      const res = id
-        ? await putData(`${ENDPOINTS.PURCHASES}/${id}`, payload)
-        : await postData(ENDPOINTS.PURCHASES, payload);
+      let res;
+      if (id) {
+        const updatePayload = {
+          id: id,
+          shop_id: SHOP_ID,
+          calculation_infos: payload.calculation_infos,
+          charges_infos: payload.charges_infos,
+          payment_infos: payload.payment_infos,
+          purchase_date: payload.purchase_date,
+          items: itemsForCreate.map(item => {
+            const { batch_infos, variant_id, ...rest } = item;
+            return rest;
+          })
+        };
+        res = await purchase.updatePurchase(updatePayload);
+      } else {
+        res = await purchase.createPurchase(payload);
+      }
       if (res) {
         showToast(id ? "GRN updated" : "GRN created", "success");
         navigate("/po-grn");
@@ -618,6 +650,7 @@ const GrnForm = () => {
     id,
     postData,
     putData,
+    purchase,
     navigate,
     showToast,
   ]);

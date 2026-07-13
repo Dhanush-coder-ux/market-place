@@ -78,29 +78,29 @@ const ShopSelect = () => {
   };
 
   const handleCreateShop = () => {
-    navigate("/create-digital-store");
+    navigate("/create-shop");
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950">
-        <Loader2 className="w-10 h-10 text-indigo-500 animate-spin" />
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <Loader2 className="w-10 h-10 text-blue-500 animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 flex items-center justify-center px-4">
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4">
       <div className="w-full max-w-lg">
         {/* Header */}
         <div className="text-center mb-10">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 mb-4">
-            <Store className="w-8 h-8 text-indigo-400" />
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-blue-100 border border-blue-200 mb-4 shadow-sm shadow-blue-500/10">
+            <Store className="w-8 h-8 text-blue-600" />
           </div>
-          <h1 className="text-2xl font-black text-white tracking-tight">
+          <h1 className="text-2xl font-black text-slate-800 tracking-tight">
             {shops.length > 0 ? "Select Your Shop" : "Welcome!"}
           </h1>
-          <p className="text-sm text-slate-400 mt-2 font-medium">
+          <p className="text-sm text-slate-500 mt-2 font-medium">
             {shops.length > 0
               ? "Choose a shop to continue or create a new one"
               : "Let's get started by setting up your first shop"}
@@ -114,10 +114,10 @@ const ShopSelect = () => {
               key={shop.id}
               onClick={() => handleSelectShop(shop)}
               disabled={!!selecting}
-              className="w-full flex items-center gap-4 p-4 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-indigo-500/40 transition-all duration-200 text-left group disabled:opacity-60"
+              className="w-full flex items-center gap-4 p-4 rounded-2xl bg-white border border-slate-200 hover:border-blue-300 hover:bg-slate-50 shadow-sm transition-all duration-200 text-left group disabled:opacity-60"
             >
               {/* Shop avatar */}
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shrink-0 text-white font-black text-lg shadow-lg shadow-indigo-500/20">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shrink-0 text-white font-black text-lg shadow-md shadow-blue-500/20">
                 {shop.logo_url ? (
                   <img
                     src={shop.logo_url}
@@ -131,21 +131,21 @@ const ShopSelect = () => {
 
               {/* Info */}
               <div className="flex-1 min-w-0">
-                <p className="font-bold text-white text-sm truncate">{shop.name}</p>
+                <p className="font-bold text-slate-800 text-sm truncate">{shop.name}</p>
                 {shop.categories && shop.categories.length > 0 && (
-                  <p className="text-xs text-slate-400 font-medium capitalize truncate mt-0.5">
+                  <p className="text-xs text-slate-500 font-medium capitalize truncate mt-0.5">
                     {shop.categories.join(", ")}
                   </p>
                 )}
                 {shop.description && (
-                  <p className="text-xs text-slate-500 truncate mt-0.5">{shop.description}</p>
+                  <p className="text-xs text-slate-400 truncate mt-0.5">{shop.description}</p>
                 )}
               </div>
 
               {/* Arrow / Spinner */}
-              <div className="shrink-0 text-slate-500 group-hover:text-indigo-400 transition-colors">
+              <div className="shrink-0 text-slate-400 group-hover:text-blue-500 transition-colors">
                 {selecting === shop.id ? (
-                  <Loader2 className="w-5 h-5 animate-spin text-indigo-400" />
+                  <Loader2 className="w-5 h-5 animate-spin text-blue-500" />
                 ) : (
                   <ChevronRight className="w-5 h-5" />
                 )}
@@ -156,34 +156,34 @@ const ShopSelect = () => {
           {/* Divider if shops exist */}
           {shops.length > 0 && (
             <div className="relative flex items-center gap-3 py-2">
-              <div className="flex-1 h-px bg-white/10" />
-              <span className="text-xs text-slate-500 font-semibold uppercase tracking-wider">
+              <div className="flex-1 h-px bg-slate-200" />
+              <span className="text-xs text-slate-400 font-semibold uppercase tracking-wider">
                 or
               </span>
-              <div className="flex-1 h-px bg-white/10" />
+              <div className="flex-1 h-px bg-slate-200" />
             </div>
           )}
 
           {/* Create new shop card */}
           <button
             onClick={handleCreateShop}
-            className="w-full flex items-center gap-4 p-4 rounded-2xl border border-dashed border-indigo-500/40 hover:border-indigo-400 hover:bg-indigo-500/5 transition-all duration-200 text-left group"
+            className="w-full flex items-center gap-4 p-4 rounded-2xl border border-dashed border-slate-300 hover:border-blue-400 hover:bg-blue-50 transition-all duration-200 text-left group bg-white/50"
           >
-            <div className="w-12 h-12 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center shrink-0 group-hover:bg-indigo-500/20 transition-colors">
-              <Plus className="w-6 h-6 text-indigo-400" />
+            <div className="w-12 h-12 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center shrink-0 group-hover:bg-blue-100 transition-colors">
+              <Plus className="w-6 h-6 text-blue-600" />
             </div>
             <div className="flex-1">
-              <p className="font-bold text-indigo-300 text-sm">Create New Shop</p>
+              <p className="font-bold text-blue-600 text-sm">Create New Shop</p>
               <p className="text-xs text-slate-500 font-medium mt-0.5">
                 Set up a new shop profile
               </p>
             </div>
-            <ChevronRight className="w-5 h-5 text-slate-600 group-hover:text-indigo-400 transition-colors shrink-0" />
+            <ChevronRight className="w-5 h-5 text-slate-400 group-hover:text-blue-500 transition-colors shrink-0" />
           </button>
         </div>
 
         {/* Footer note */}
-        <p className="text-center text-xs text-slate-600 mt-8 font-medium">
+        <p className="text-center text-xs text-slate-500 mt-8 font-medium">
           You can switch shops anytime from your profile
         </p>
       </div>

@@ -232,45 +232,65 @@ const ProductRow = React.memo(
 
     const combinations = useMemo(() => {
       const raw = parseData(
-        item.variants || datas.combinations || datas.variants
+        item.variants || (item as any).variant_infos || datas.combinations || datas.variants
       );
       return raw.filter((v: any) => v && v.id !== null);
-    }, [item.variants, datas.combinations, datas.variants]);
+    }, [item.variants, (item as any).variant_infos, datas.combinations, datas.variants]);
 
     const batches = useMemo(() => {
       let raw: any[] = [];
       if (
-        !(datas.has_variants || datas.has_varients || item.variants?.length) &&
-        item.variants &&
-        item.variants.length > 0
+        !(datas.has_variants || datas.has_varients || item.variants?.length || (item as any).variant_infos?.length) &&
+        ((item.variants?.length ?? 0) > 0 || ((item as any).variant_infos?.length ?? 0) > 0)
       ) {
-        raw = parseData(item.variants[0].batches);
+        const firstVar = item.variants?.[0] || (item as any).variant_infos?.[0];
+        raw = parseData(firstVar?.batches || firstVar?.batch_infos);
       } else {
-        raw = parseData(item.batches || datas.batches);
+        raw = parseData(item.batches || (item as any).batch_infos || datas.batches);
       }
       return raw.filter((b: any) => b && b.id !== null);
     }, [
       item.variants,
+      (item as any).variant_infos,
       item.batches,
+      (item as any).batch_infos,
       datas.batches,
       datas.has_variants,
       datas.has_varients,
     ]);
 
     const serials = parseData(
-      datas.serial_numbers || item.serial_numbers || item.serial_number
+      datas.serial_numbers || item.serial_numbers || item.serial_number || (item as any).serialno_infos
     );
 
     const hasVariants =
       (datas.has_variants ||
         datas.has_varients ||
-        (item as any).has_variant) &&
+        (item as any).has_variant ||
+        (item as any).type_infos?.has_variant) &&
       combinations.length > 0;
-    const hasBatches = batches.length > 0 || (item as any).has_batch;
-    const hasSerials = serials.length > 0 || (item as any).has_serialno;
+    const hasBatches = batches.length > 0 || (item as any).has_batch || (item as any).type_infos?.has_batch;
+    const hasSerials = serials.length > 0 || (item as any).has_serialno || (item as any).type_infos?.has_serialno;
     const isExpandable = hasVariants || hasBatches || hasSerials;
 
-    const stockNumber = Number((item as any).stock_infos?.available_stocks ?? (item as any).stock_infos?.physical_stocks ?? item.stocks ?? 0);
+    let stockNumber = Number((item as any).stock_infos?.available_stocks ?? (item as any).stock_infos?.physical_stocks ?? item.stocks ?? 0);
+    if (!hasVariants && hasBatches && stockNumber === 0) {
+      stockNumber = batches.reduce((acc, b) => {
+        const bStock = Number(b.stock_infos?.available_stocks ?? b.stock_infos?.physical_stocks ?? b.stocks ?? 0);
+        return acc + bStock;
+      }, 0);
+    }
+    
+    let sellPrice = (item as any).pricing_infos?.sell_price ?? item.sell_price;
+    let buyPrice = (item as any).pricing_infos?.buy_price ?? item.buy_price;
+    if (!hasVariants && hasBatches && (sellPrice === undefined || sellPrice === null)) {
+      const firstBatch = batches[0];
+      if (firstBatch) {
+        sellPrice = firstBatch.pricing_infos?.sell_price ?? firstBatch.sell_price;
+        buyPrice = firstBatch.pricing_infos?.buy_price ?? firstBatch.buy_price;
+      }
+    }
+
     const reorderPoint = Number(
       (item as any).reorder_point_infos?.reorder_point ?? (item as any).reorder_point ?? datas.reorder_point ?? 0
     );
@@ -477,14 +497,14 @@ const ProductRow = React.memo(
           {/* Buy price */}
           <td className="px-3 py-2.5 text-right">
             <span className="text-[13px] font-semibold text-slate-700 tabular-nums">
-              {hasVariants ? "—" : formatCurrency((item as any).pricing_infos?.buy_price ?? item.buy_price)}
+              {hasVariants ? "—" : formatCurrency(buyPrice)}
             </span>
           </td>
 
           {/* Sell price */}
           <td className="px-3 py-2.5 text-right">
             <span className="text-[13px] font-semibold text-slate-700 tabular-nums">
-              {hasVariants ? "—" : formatCurrency((item as any).pricing_infos?.sell_price ?? item.sell_price)}
+              {hasVariants ? "—" : formatCurrency(sellPrice)}
             </span>
           </td>
 

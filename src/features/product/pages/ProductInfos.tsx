@@ -217,6 +217,21 @@ const ProductRow = React.memo(
     const hasSerials = !!(p.type_infos?.has_serialno) || rootSerials.length > 0;
     const isExpandable = hasVariants || hasBatches || hasSerials;
 
+    let computedStock = Number(p.stock_infos?.available_stocks ?? (p.stock_infos as any)?.physical_stocks ?? (p as any).stocks ?? 0);
+    if (!hasVariants && hasBatches && computedStock === 0) {
+      computedStock = batches.reduce((acc, b) => acc + Number(b.stock_infos?.available_stocks ?? b.stock_infos?.physical_stocks ?? b.stocks ?? 0), 0);
+    }
+
+    let computedSellPrice = p.pricing_infos?.sell_price ?? (p as any).sell_price;
+    let computedBuyPrice = p.pricing_infos?.buy_price ?? (p as any).buy_price;
+    if (!hasVariants && hasBatches && (computedSellPrice === undefined || computedSellPrice === null)) {
+      const firstBatch = batches[0];
+      if (firstBatch) {
+        computedSellPrice = firstBatch.pricing_infos?.sell_price ?? firstBatch.sell_price;
+        computedBuyPrice = firstBatch.pricing_infos?.buy_price ?? firstBatch.buy_price;
+      }
+    }
+
     const { totalSerials, totalBatches } = useMemo(() => {
       let ts = rootSerials.length;
       let tb = batches.length;
@@ -255,24 +270,10 @@ const ProductRow = React.memo(
       );
     }
     
-    if (hasVariants)
-      badges.push(
-        <Pill key="var" variant="blue">
-          <Layers size={9} /> {combinations.length} var
-        </Pill>
-      );
-    if (totalBatches > 0)
-      badges.push(
-        <Pill key="batch" variant="indigo">
-          <Calendar size={9} /> {totalBatches} batch
-        </Pill>
-      );
-    if (totalSerials > 0)
-      badges.push(
-        <Pill key="serial" variant="purple">
-          <Hash size={9} /> {totalSerials} serial
-        </Pill>
-      );
+    const trackingInfo = [];
+    if (hasVariants) trackingInfo.push({ label: `${combinations.length} variants`, icon: Layers, color: "blue", bg: "bg-blue-50", text: "text-blue-600", border: "border-blue-200" });
+    if (totalBatches > 0) trackingInfo.push({ label: `${totalBatches} batches`, icon: Calendar, color: "indigo", bg: "bg-indigo-50", text: "text-indigo-600", border: "border-indigo-200" });
+    if (totalSerials > 0) trackingInfo.push({ label: `${totalSerials} serials`, icon: Hash, color: "purple", bg: "bg-purple-50", text: "text-purple-600", border: "border-purple-200" });
 
     const visibleBadges = showAllBadges ? badges : badges.slice(0, 2);
     const remainingBadges = badges.length - 2;
@@ -345,7 +346,39 @@ const ProductRow = React.memo(
                     )}
                   </div>
                 </div>
-                <div className="flex items-center gap-2 text-[11px] text-slate-400 font-medium leading-none">
+                {trackingInfo.length > 0 && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleExpand(p.id);
+                    }}
+                    className={`mt-1 flex items-center gap-2 w-fit px-2 py-1.5 rounded-md border transition-all ${
+                      isExpanded
+                        ? "bg-slate-50 border-slate-200"
+                        : "bg-white border-slate-200 hover:border-blue-300 shadow-sm"
+                    }`}
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Tracking:</span>
+                      {trackingInfo.map((info, idx) => {
+                        const Icon = info.icon;
+                        return (
+                          <span
+                            key={idx}
+                            className={`flex items-center gap-1 text-[10px] font-bold ${info.text} ${info.bg} border ${info.border} px-1.5 py-0.5 rounded leading-none`}
+                          >
+                            <Icon size={10} />
+                            {info.label}
+                          </span>
+                        );
+                      })}
+                    </div>
+                    <div className={`ml-1 p-0.5 rounded transition-colors ${isExpanded ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-slate-400 group-hover:bg-blue-50 group-hover:text-blue-500'}`}>
+                      {isExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+                    </div>
+                  </button>
+                )}
+                <div className="flex items-center gap-2 text-[11px] text-slate-400 font-medium leading-none mt-0.5">
                   {(() => {
                     const rawSku = p.ui_id ? String(p.ui_id) : "";
                     if (!rawSku) {
@@ -379,12 +412,12 @@ const ProductRow = React.memo(
             let value = datas[key] !== undefined && datas[key] !== null ? datas[key] : (p as any)[key];
             
             // Map the nested backend schema properly
-            if (key === "buy_price" && p.pricing_infos) value = p.pricing_infos.buy_price;
-            if (key === "sell_price" && p.pricing_infos) value = p.pricing_infos.sell_price;
-            if (key === "stocks" && p.stock_infos) value = p.stock_infos.available_stocks;
+            if (key === "buy_price") value = computedBuyPrice;
+            if (key === "sell_price") value = computedSellPrice;
+            if (key === "stocks") value = computedStock;
             if (key === "reorder_point" && p.reorder_point_infos) value = p.reorder_point_infos.reorder_point;
-            if (key === "category") value = p.category_id || p.category;
-            if (key === "unit") value = p.unit_id || p.unit;
+            if (key === "category") value = (p as any).category_infos?.name || datas.category || p.category || p.category_id;
+            if (key === "unit") value = (p as any).unit_infos?.name || datas.unit || p.unit || (p as any).unit_id;
 
             if (key === "buy_price" || key === "sell_price" || key === "price") {
               return (
@@ -423,11 +456,10 @@ const ProductRow = React.memo(
             }
 
             if (key === "status") {
-              const stocks = p.stock_infos?.available_stocks ?? datas.stocks ?? (p as any).stocks ?? 0;
               const reorderPoint = Number(
                 p.reorder_point_infos?.reorder_point ?? (p as any).reorder_point ?? datas.reorder_point ?? 0
               );
-              const status = getStockStatus(stocks, reorderPoint);
+              const status = getStockStatus(computedStock, reorderPoint);
               return (
                 <td key={key} className="px-3 py-2.5 whitespace-nowrap">
                   <span
@@ -505,9 +537,7 @@ const ProductRow = React.memo(
                   <td key="cat_sup" className="px-3 py-2.5">
                     <div className="flex flex-col gap-0.5">
                       <span className="text-[12px] font-medium text-slate-700 leading-none">
-                        {datas.category ||
-                          (p as any).category ||
-                          "Uncategorized"}
+                        {value || "Uncategorized"}
                       </span>
                       <span className="text-[11px] text-slate-400 leading-none">
                         {datas.supplier ||

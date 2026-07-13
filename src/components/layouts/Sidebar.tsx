@@ -73,8 +73,8 @@ const Sidebar: FC<{ links: SidebarLink[] }> = ({ links }) => {
         return false;
       }
 
-      // Hide Purchase sub-groups based on settings
-      if (link.name === "Purchase" && isSubGroup(item) && item.settingsKey) {
+      // Hide Purchases sub-groups based on settings
+      if (link.name === "Purchases" && isSubGroup(item) && item.settingsKey) {
         return settings[item.settingsKey] === true;
       }
       

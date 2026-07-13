@@ -32,6 +32,7 @@ import { InventoryItemsCard } from "@/features/purchase/components/InventoryItem
 import { useQuickCreate } from "@/features/common/QuickCreate/QuickCreateContext";
 import PurchaseSuccessModal from "../components/purchaseSuccessModal";
 import { parseGst } from "./PurchaseHistory";
+import { NavigationBlocker } from "@/components/common/NavigationBlocker";
 type PaymentMethod = "CASH" | "UPI" | "CARD" | "BANK";
 
 export interface ProductItem {
@@ -78,6 +79,7 @@ const PurchaseForm = () => {
   const { showToast } = useToast();
   const [submitting, setSubmitting] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [loadingData, setLoadingData] = useState(!!id);
 
   // ── Custom Fields State ──
   const [customFieldDefs, setCustomFieldDefs] = useState<PurchaseCustomFieldDefinition[]>([]);
@@ -324,9 +326,11 @@ const PurchaseForm = () => {
         setCustomFieldValues(record);
       };
 
-      fetchPurchase();
-      fetchCustomFieldValues();
+      Promise.all([fetchPurchase(), fetchCustomFieldValues()]).finally(() => {
+        setLoadingData(false);
+      });
     } else {
+      setLoadingData(false);
       const draftId = searchParams.get("draftId");
       if (draftId) {
         const savedDrafts = JSON.parse(localStorage.getItem("purchase_drafts") || "[]");
@@ -1251,6 +1255,7 @@ const PurchaseForm = () => {
         </div>
       </RightSidebarFilter>
 
+      <NavigationBlocker data={{ purchaseDetails, products, charges, payment, supplierDetails, customFieldValues }} isLoading={loadingData} isSubmitting={submitting} />
     </>
   );
 };

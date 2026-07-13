@@ -11,6 +11,7 @@ import { apiClient } from "@/services/api/apiClient";
 import AttachCustomerModal from "../components/AttachCustomerModal";
 import { usePurchaseSettings } from "@/context/PurchaseContext";
 import { BillingSuccessModal } from "../components/BillingSuccessModal";
+import { NavigationBlocker } from "@/components/common/NavigationBlocker";
 
 // ─── Billing Page ─────────────────────────────────────────────────────────────
 const Billing = () => {
@@ -307,8 +308,11 @@ const Billing = () => {
     }
   }, []);
 
+  const hasItemsForBlocker = items.some(i => i.name && i.qty > 0);
+
   return (
     <div className="flex-1 flex min-h-0 bg-slate-50/80 overflow-hidden h-full">
+      <NavigationBlocker shouldBlock={hasItemsForBlocker} />
 
       {/* ── Left Panel (Global Search + Table list card) ──────────────── */}
       <div className="flex-1 flex flex-col min-h-0 overflow-hidden p-3.5 gap-4">

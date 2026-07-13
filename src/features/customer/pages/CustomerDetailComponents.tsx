@@ -1,4 +1,5 @@
 import React from "react";
+import { createPortal } from "react-dom";
 import { LucideIcon } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -115,7 +116,7 @@ export function Modal({ show, onClose, title, children, footer, className }: Mod
   }, [show]);
 
   if (!show) return null;
-  return (
+  return createPortal(
     <div
       className="fixed inset-0 bg-black/50 z-[1000] flex items-center justify-center"
       onClick={(e) => e.target === e.currentTarget && onClose()}
@@ -142,7 +143,8 @@ export function Modal({ show, onClose, title, children, footer, className }: Mod
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 

@@ -19,6 +19,7 @@ import { supplierApi } from "@/services/api/supplier";
 import { utilityApi } from "@/services/api/utility";
 import { inventoryApi } from "@/services/api/inventory";
 import { RightSidebarFilter } from "@/components/common/RightSidebarFilter";
+import { NavigationBlocker } from "@/components/common/NavigationBlocker";
 import { QuickCreateSupplierModal } from "@/features/common/QuickCreate/QuickCreateSupplierModal";
 import { ImageCarousel } from "@/components/common/SuperUI";
 import {
@@ -296,7 +297,8 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
   const { postData } = useApi();
   const { showToast } = useToast();
   const [loading, setLoading] = useState(false);
-  const isLoading = externalLoading || loading;
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const isLoading = externalLoading || loading || isSubmitting;
 
   // ── Custom Fields State ──
   const [customFieldDefs, setCustomFieldDefs] = useState<any[]>([]);
@@ -630,6 +632,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
   /* ─── Submit ─── */
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
+    setIsSubmitting(true);
     const activeCombinations = combinations.filter(c => c.active);
     if (form.has_variants && activeCombinations.length === 0) {
       showToast("Please have at least one active variant combination", "error"); return;
@@ -776,6 +779,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
       setTimeout(() => navigate(`/product/${savedProductId}`), 1000);
     } else {
       showToast("Failed to save product", "error");
+      setIsSubmitting(false);
     }
   };
 
@@ -811,6 +815,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
 
   return (
     <>
+      <NavigationBlocker data={{ form, variantTypes, combinations, baseSerials, supplierDetails, existingImages, selectedImageFiles }} isLoading={loading} isSubmitting={isSubmitting} />
       <style>{STYLES}</style>
       <div className="pf-root min-h-screen bg-[#f8f9fb]">
 
@@ -1094,7 +1099,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                       </div>
                       <p className="text-[10px] text-slate-400 leading-relaxed">Track manufacturing &amp; expiry dates per batch.</p>
                     </div>
-                    <Switch checked={form.batch_tracking} onCheckedChange={(val) => setForm(p => ({ ...p, batch_tracking: val, serial_tracking: val ? false : p.serial_tracking }))} />
+                    <Switch checked={form.batch_tracking} onCheckedChange={(val) => setForm(p => ({ ...p, batch_tracking: val }))} />
                   </div>
                   <div className="flex items-start gap-3 p-4 rounded-xl border border-slate-200 bg-white">
                     <div className="flex-1">
@@ -1104,7 +1109,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                       </div>
                       <p className="text-[10px] text-slate-400 leading-relaxed">Track unique ID for each individual unit.</p>
                     </div>
-                    <Switch checked={form.serial_tracking} onCheckedChange={(val) => setForm(p => ({ ...p, serial_tracking: val, batch_tracking: val ? false : p.batch_tracking }))} />
+                    <Switch checked={form.serial_tracking} onCheckedChange={(val) => setForm(p => ({ ...p, serial_tracking: val }))} />
                   </div>
                   <div className="flex items-start gap-3 p-4 rounded-xl border border-slate-200 bg-white">
                     <div className="flex-1">

@@ -4,6 +4,7 @@ import { useToast } from "@/context/ToastContext";
 import { SHOP_ID } from "@/services/endpoints";
 import { shopApi } from "@/services/api/shop";
 import Loader from "@/components/common/Loader";
+import { NavigationBlocker } from "@/components/common/NavigationBlocker";
 
 export const ShopProfileForm = () => {
   const { showToast } = useToast();
@@ -72,7 +73,9 @@ export const ShopProfileForm = () => {
   }
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden animate-in fade-in slide-in-from-right-2 duration-300 h-full">
+    <>
+      <NavigationBlocker data={{ name, visibleOnline, address }} isSubmitting={saving} />
+      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden animate-in fade-in slide-in-from-right-2 duration-300 h-full">
       <div className="px-6 py-5 border-b border-slate-50 bg-gradient-to-r from-slate-50/80 to-white flex justify-between items-center">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center">
@@ -155,6 +158,7 @@ export const ShopProfileForm = () => {
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 };

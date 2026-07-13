@@ -18,6 +18,7 @@ import { useBusinessApi } from "@/context/BusinessApiContext";
 import { SHOP_ID } from "@/services/endpoints";
 import { useHeader } from "@/context/HeaderContext";
 import { useToast } from "@/context/ToastContext";
+import { NavigationBlocker } from "@/components/common/NavigationBlocker";
 
 const roleOptions = [
   { label: "Owner", value: "OWNER" },
@@ -41,6 +42,7 @@ const EmployeeForm = () => {
   const { setActions, setBottomActions } = useHeader();
   const { showToast } = useToast();
   const [submitting, setSubmitting] = useState(false);
+  const [loadingData, setLoadingData] = useState(!!id);
   
   const initialFormData = {
     name: "",
@@ -98,27 +100,33 @@ const EmployeeForm = () => {
         setFormData(draft);
         showToast("Draft loaded successfully", "success");
       }
+      setLoadingData(false);
     } else if (id) {
       employee.getEmployeeById(SHOP_ID, id).then(res => {
         if (res?.data) {
-          const emp = Array.isArray(res.data) ? res.data[0] : res.data;
-          const datas = emp.datas || {};
+          const empData = Array.isArray(res.data) ? res.data[0] : res.data;
+          const datas = empData.datas || {};
+          const addr = datas.address || {};
+          const additional = empData.additional_infos || {};
+
           setFormData({
-            name: emp.name || "",
-            email: emp.email || "",
-            role: emp.role || "staff",
-            mobile_number: emp.mobile_number || "",
-            address: datas.address?.full_address || "",
-            zip_code: datas.address?.zip_code || "",
-            joinDate: emp.joined_date || new Date().toISOString().split('T')[0],
-            is_accepted: true,
-            department: emp.department || "",
-            salary_range: String(datas.salary_range || ""),
+            ...initialFormData,
+            name: empData.name || "",
+            email: empData.email || "",
+            role: empData.role || "USER",
+            mobile_number: empData.mobile_number || "",
+            joinDate: empData.joined_date ? empData.joined_date.split('T')[0] : new Date().toISOString().split('T')[0],
+            department: empData.department || "",
+            address: addr.full_address || "",
+            zip_code: addr.zip_code || "",
+            salary_range: String(datas.salary_range || additional.salary_range || ""),
           });
         }
-      });
+      }).finally(() => setLoadingData(false));
+    } else {
+      setLoadingData(false);
     }
-  }, [id, searchParams]);
+  }, [id, employee, searchParams, showToast]);
 
   const handleSaveDraft = () => {
     const drafts = JSON.parse(localStorage.getItem('employee_drafts') || '[]');
@@ -213,6 +221,7 @@ const EmployeeForm = () => {
 
   return (
     <div className="min-h-screen bg-slate-50/50 font-sans">
+      <NavigationBlocker data={formData} isLoading={loadingData} isSubmitting={submitting} />
       <div className="mx-auto space-y-4 relative">
         
 

@@ -26,6 +26,7 @@ import type { SupplierCustomFieldDefinition } from "../type";
 import { RightSidebarFilter } from "@/components/common/RightSidebarFilter";
 import { Switch } from "@/components/ui/switch";
 import { Plus } from "lucide-react";
+import { NavigationBlocker } from "@/components/common/NavigationBlocker";
 
 export interface SupplierData {
   supplier_name: string;
@@ -53,6 +54,7 @@ const SupplierForm = () => {
   const { setBottomActions } = useHeader();
   const { showToast } = useToast();
   const [submitting, setSubmitting] = useState(false);
+  const [loadingData, setLoadingData] = useState(!!id);
 
   // ── Custom Fields Form & Sidebar State ──
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -122,7 +124,8 @@ const SupplierForm = () => {
   // Load Data/Draft
   useEffect(() => {
     if (id) {
-      getData(`${ENDPOINTS.SUPPLIERS}/by/${SHOP_ID}/${id}`).then((res) => {
+      const fetchSupplier = async () => {
+        const res = await getData(`${ENDPOINTS.SUPPLIERS}/by/${SHOP_ID}/${id}`);
         if (res && res.data) {
           const sup = Array.isArray(res.data) ? res.data[0] : res.data;
           const d = sup.datas || {};
@@ -149,15 +152,22 @@ const SupplierForm = () => {
             notes: additional.internal_notes || d.internal_notes || ""
           });
         }
-      });
-      supplierCustomFields.getValuesBySupplier(SHOP_ID, id).then((vals) => {
+      };
+
+      const fetchCustomFields = async () => {
+        const vals = await supplierCustomFields.getValuesBySupplier(SHOP_ID, id);
         const record: Record<string, string> = {};
-        vals.forEach((v) => {
+        vals.forEach((v: any) => {
           record[v.field_id] = v.value;
         });
         setCustomFieldValues(record);
+      };
+
+      Promise.all([fetchSupplier(), fetchCustomFields()]).finally(() => {
+        setLoadingData(false);
       });
     } else {
+      setLoadingData(false);
       const draftId = searchParams.get("draftId");
       if (draftId) {
         const drafts = JSON.parse(localStorage.getItem("supplier_drafts") || "[]");
@@ -318,6 +328,7 @@ const SupplierForm = () => {
 
   return (
     <div className="md:animate-in md:fade-in md:duration-500">
+      <NavigationBlocker data={{ formData, customFieldValues }} isLoading={loadingData} isSubmitting={submitting} />
       <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
         
         {/* Left Column: Main Identity & Contact */}

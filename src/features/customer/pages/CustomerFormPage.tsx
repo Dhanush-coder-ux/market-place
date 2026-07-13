@@ -23,6 +23,7 @@ import { useToast } from "@/context/ToastContext";
 import { customerCustomFieldsApi, type CustomerCustomFieldDefinition } from "@/services/api/customer";
 import { RightSidebarFilter } from "@/components/common/RightSidebarFilter";
 import { Layers, Plus } from "lucide-react";
+import { NavigationBlocker } from "@/components/common/NavigationBlocker";
 
 const CustomerFormPage = () => {
   const { id } = useParams();
@@ -32,6 +33,7 @@ const CustomerFormPage = () => {
   const { setActions, setBottomActions } = useHeader();
   const { showToast } = useToast();
   const [submitting, setSubmitting] = useState(false);
+  const [loadingData, setLoadingData] = useState(!!id);
 
   // ── Custom Fields State ──
   const [customFieldDefs, setCustomFieldDefs] = useState<CustomerCustomFieldDefinition[]>([]);
@@ -149,7 +151,7 @@ const CustomerFormPage = () => {
           });
         }
       };
-      
+
       const fetchCustomFieldValues = async () => {
         const vals = await customerCustomFieldsApi.getValuesByCustomer(SHOP_ID, id);
         const record: Record<string, string> = {};
@@ -159,9 +161,11 @@ const CustomerFormPage = () => {
         setCustomFieldValues(record);
       };
 
-      fetchCustomer();
-      fetchCustomFieldValues();
+      Promise.all([fetchCustomer(), fetchCustomFieldValues()]).finally(() => {
+        setLoadingData(false);
+      });
     } else {
+      setLoadingData(false);
       const draftId = searchParams.get("draftId");
       if (draftId) {
         const drafts = JSON.parse(localStorage.getItem("customer_drafts") || "[]");
@@ -626,6 +630,7 @@ const CustomerFormPage = () => {
           </div>
         </RightSidebarFilter>
       </div>
+      <NavigationBlocker data={{ formData, customFieldValues }} isLoading={loadingData} isSubmitting={submitting} />
     </div>
   );
 };

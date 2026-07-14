@@ -12,6 +12,8 @@ export const ShopProfileForm = () => {
   const [saving, setSaving] = useState(false);
   
   const [name, setName] = useState("");
+  const [tagline, setTagline] = useState("");
+  const [description, setDescription] = useState("");
   const [visibleOnline, setVisibleOnline] = useState(false);
   const [address, setAddress] = useState({
     full_address: "",
@@ -32,6 +34,8 @@ export const ShopProfileForm = () => {
       const data = res?.data ?? res;
       if (data) {
         setName(data.name || "");
+        setTagline(data.tagline || "");
+        setDescription(data.description || "");
         setVisibleOnline(data.visible_online || false);
         if (data.address) {
           setAddress({
@@ -57,6 +61,8 @@ export const ShopProfileForm = () => {
       await shopApi.updateShop({
         id: SHOP_ID,
         name: name,
+        tagline: tagline || null,
+        description: description || null,
         visible_online: visibleOnline,
         address: address,
       });
@@ -74,7 +80,7 @@ export const ShopProfileForm = () => {
 
   return (
     <>
-      <NavigationBlocker data={{ name, visibleOnline, address }} isSubmitting={saving} />
+      <NavigationBlocker data={{ name, tagline, description, visibleOnline, address }} isSubmitting={saving} />
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden animate-in fade-in slide-in-from-right-2 duration-300 h-full">
       <div className="px-6 py-5 border-b border-slate-50 bg-gradient-to-r from-slate-50/80 to-white flex justify-between items-center">
         <div className="flex items-center gap-3">
@@ -108,6 +114,29 @@ export const ShopProfileForm = () => {
               onChange={(e) => setName(e.target.value)}
               className="w-full h-9 px-3 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all shadow-sm"
               placeholder="Enter shop name"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-600 mb-1.5">Tagline</label>
+            <p className="text-[10px] text-slate-400 mb-1">A short, friendly line that describes your storefront</p>
+            <input
+              type="text"
+              value={tagline}
+              onChange={(e) => setTagline(e.target.value)}
+              className="w-full h-9 px-3 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all shadow-sm"
+              placeholder="e.g. A home for makers"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-600 mb-1.5">About your store</label>
+            <p className="text-[10px] text-slate-400 mb-1">Tell customers what you make, where you are, and why they should choose you</p>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              className="w-full min-h-[80px] p-3 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all shadow-sm resize-none"
+              placeholder="Describe your shop..."
             />
           </div>
 

@@ -2,9 +2,9 @@ import React, { useState, useEffect } from "react";
 import { 
   Zap,
   BarChart2,
-  Hash,
   Layers,
-  CheckCircle2
+  CheckCircle2,
+  Barcode
 } from "lucide-react";
 import { QuickCreateModal, QuickCreateStep } from "./QuickCreateModal";
 import Input from "@/components/ui/Input";
@@ -76,7 +76,6 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
     return Array.from(new Set(combined));
   }, [customCategories]);
 
-  // --- Form State ---
   const [form, setForm] = useState({
     name: initialName,
     barcode: "",
@@ -92,6 +91,7 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
     hsn: "",
     opening_stock: "0",
     reorder_point: "5",
+    location: "",
     batch_tracking: false,
     serial_tracking: false,
     has_variants: false,
@@ -108,6 +108,36 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
     suggestedVariantTypes: [],
     supportsSerials: false,
     serialLabel: "Serial Number"
+  };
+
+  const [showBarcodeGen, setShowBarcodeGen] = useState(false);
+  const [barcodePrefix, setBarcodePrefix] = useState("");
+  const [generatingBarcode, setGeneratingBarcode] = useState(false);
+
+  const handleGenerateBarcode = async () => {
+    setGeneratingBarcode(true);
+    try {
+      const res = await postData(ENDPOINTS.GENERATE_BARCODE, { prefix: barcodePrefix || undefined });
+      if (res?.data?.barcode) {
+        setForm(p => ({ ...p, barcode: res.data.barcode }));
+        setShowBarcodeGen(false);
+        showToast("Barcode generated", "success");
+      } else {
+        const localNum = Math.floor(10000000 + Math.random() * 90000000);
+        const prefix = barcodePrefix ? barcodePrefix.toUpperCase().trim() : "BAR";
+        setForm(p => ({ ...p, barcode: `${prefix}${localNum}` }));
+        setShowBarcodeGen(false);
+        showToast("Barcode generated locally", "success");
+      }
+    } catch {
+      const localNum = Math.floor(10000000 + Math.random() * 90000000);
+      const prefix = barcodePrefix ? barcodePrefix.toUpperCase().trim() : "BAR";
+      setForm(p => ({ ...p, barcode: `${prefix}${localNum}` }));
+      setShowBarcodeGen(false);
+      showToast("Barcode generated locally", "success");
+    } finally {
+      setGeneratingBarcode(false);
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -149,7 +179,45 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
             required
           />
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Input label="Barcode / SKU" name="barcode" value={form.barcode} onChange={handleChange} leftIcon={<Hash size={16} />} />
+            <div className="relative">
+              <label className="text-[10px] font-black text-slate-400 ml-1 block mb-1">Barcode / SKU</label>
+              <div className="relative">
+                <input
+                  name="barcode"
+                  value={form.barcode}
+                  onChange={handleChange}
+                  placeholder="Scan or type"
+                  className="w-full h-10 px-3 pr-10 text-sm border border-slate-200 rounded-lg bg-white text-slate-800 placeholder-slate-300 focus:outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-500/5 transition-all shadow-sm"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowBarcodeGen(!showBarcodeGen)}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-indigo-500 transition-colors"
+                  title="Generate barcode"
+                >
+                  <Barcode size={16} />
+                </button>
+              </div>
+              {showBarcodeGen && (
+                <div className="absolute bottom-full right-0 mb-2 w-60 p-3 bg-white border border-slate-200 shadow-2xl rounded-xl z-[100]">
+                  <h4 className="text-xs font-bold text-slate-800 mb-2 flex items-center gap-1.5"><Barcode size={12} className="text-indigo-500" />Generate Barcode</h4>
+                  <div className="space-y-2">
+                    <input
+                      type="text"
+                      placeholder="Prefix (Optional)"
+                      className="w-full text-xs px-2.5 py-1.5 border border-slate-200 rounded-lg outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                      value={barcodePrefix}
+                      onChange={e => setBarcodePrefix(e.target.value)}
+                    />
+                    <div className="flex gap-2">
+                      <button type="button" onClick={() => { setShowBarcodeGen(false); setBarcodePrefix(""); }} className="flex-1 py-1.5 text-[10px] font-bold text-slate-500 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors">Cancel</button>
+                      <button type="button" onClick={handleGenerateBarcode} disabled={generatingBarcode} className="flex-1 py-1.5 text-[10px] font-bold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50">{generatingBarcode ? "…" : "Generate"}</button>
+                    </div>
+                  </div>
+                  <div className="absolute bottom-[-6px] right-4 w-3 h-3 bg-white border-r border-b border-slate-200 rotate-45" />
+                </div>
+              )}
+            </div>
             <Input label="Brand" name="brand" value={form.brand} onChange={handleChange} placeholder="e.g. Apple" />
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -192,6 +260,7 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
         <div className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
              <Input label="Reorder Point" type="number" name="reorder_point" value={form.reorder_point} onChange={handleChange} />
+             <Input label="Storage Location" name="location" value={form.location} onChange={handleChange} placeholder="e.g. Aisle 4, Shelf B" />
           </div>
           
           <div className="space-y-4 pt-2">
@@ -378,57 +447,47 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
 
         const vData: any = {
           name: variantName,
+          storage_location: form.location || null,
+          reorder_point: Number(combo.reorder_point) || 5,
           buy_price: 0,
           sell_price: 0,
-          stocks: 0,
-          reorder_point: Number(combo.reorder_point) || 0,
-          serial_numbers: [],
-          datas: {
-            mrp: 0,
-            attributes: combo.attributes,
-          },
-          batch: null
+          visible_online: false,
         };
 
-        if (combo.barcode && combo.barcode.trim() !== "") {
-          vData.datas.barcode = combo.barcode;
-        }
-
         return vData;
-      }) : [];
+      }) : null;
 
       const payload: any = {
         shop_id: SHOP_ID,
+        category_id: form.category,
+        unit_id: form.unit,
         name: form.name,
-        category: form.category,
         description: form.description,
-        buy_price: 0,
-        sell_price: 0,
-        stocks: 0,
-        has_variant: form.has_variants,
-        has_serialno: form.serial_tracking,
-        has_batch: form.batch_tracking,
-        variants: mappedVariants,
-        reorder_point: Number(form.reorder_point) || 0,
-        serial_numbers: [],
-        batch: null,
-        datas: {
+        barcode: (form.barcode && form.barcode.trim() !== "") ? form.barcode : null,
+        type_infos: {
+          has_batch: form.batch_tracking,
+          has_variant: form.has_variants,
+          has_serialno: form.serial_tracking,
+        },
+        have_tracking: true,
+        variant_infos: mappedVariants,
+        storage_location: form.location || null,
+        buy_price: null,
+        sell_price: null,
+        gst: form.gst ? (form.gst.includes("%") ? form.gst : `${form.gst}%`) : "18%",
+        reorder_point: Number(form.reorder_point) || 5,
+        visible_online: false,
+        custom_fields: {
           brand: form.brand,
-          unit: form.unit,
           mrp: 0,
-          gst: form.gst ? (form.gst.includes("%") ? form.gst : `${form.gst}%`) : "18%",
           hsn: form.hsn,
-          reorder_point: Number(form.reorder_point) || 0,
+          sku: "",
+          supplier: "",
           opening_stock: 0,
-          description: form.description,
           is_active: form.is_active,
           variant_types: form.has_variants ? variantTypes : [],
         }
       };
-
-      if (form.barcode && form.barcode.trim() !== "") {
-        payload.barcode = form.barcode;
-      }
 
       const res = await postData(ENDPOINTS.INVENTORIES, payload);
       

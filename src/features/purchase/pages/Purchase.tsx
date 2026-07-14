@@ -5,7 +5,7 @@ import { Filter, Search, X, ExternalLink, ChevronRight, ReceiptText } from "luci
 
 import Table from "@/components/common/Table";
 import PurchaseHeader from "@/features/purchase/components/PurchaseHeader";
-import Loader from "@/components/common/Loader";
+import SkeletonLoader from "@/components/common/SkeletonLoader";
 import { useApi } from "@/context/ApiContext";
 import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 import type { PurchaseRecord } from "@/types/api";
@@ -193,6 +193,14 @@ const PurchaseHistoryTab = () => {
     }
   }, [selectedPurchase, setBottomActions, navigate]);
 
+  if (loading && purchases.length === 0) {
+    return (
+      <div className="flex-1 p-6">
+        <SkeletonLoader variant="list" rows={8} showStats={true} />
+      </div>
+    );
+  }
+
   return (
     <div className="flex-1 flex flex-col min-h-0 gap-4 font-sans w-full overflow-hidden relative">
       {!isCleanMode && <PurchaseHeader />}
@@ -275,17 +283,13 @@ const PurchaseHistoryTab = () => {
       {/* Main table card */}
       <div className="bg-white border border-slate-100 rounded-lg shadow-sm min-w-0 overflow-hidden flex flex-col flex-1 min-h-0">
         <div className="flex-1 overflow-auto pf-scroll">
-          {loading ? (
-            <div className="p-8"><Loader /></div>
-          ) : (
-            <Table
-              columns={PURCHASE_COLUMNS}
-              data={filteredPurchases}
-              rowKey="id"
-              selectedIds={selectedPurchase ? [selectedPurchase.id] : []}
-              onRowClick={(row) => setSelectedPurchase(prev => prev?.id === row.id ? null : row)}
-            />
-          )}
+          <Table
+            columns={PURCHASE_COLUMNS}
+            data={filteredPurchases}
+            rowKey="id"
+            selectedIds={selectedPurchase ? [selectedPurchase.id] : []}
+            onRowClick={(row) => setSelectedPurchase(prev => prev?.id === row.id ? null : row)}
+          />
 
           {!loading && filteredPurchases.length === 0 && !error && (
             <div className="text-center py-12 text-slate-500 text-sm">No direct purchases found.</div>

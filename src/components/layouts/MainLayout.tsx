@@ -9,158 +9,120 @@ import { useHeader } from "@/context/HeaderContext";
 import MobileBottomBar from "./MobileBottomBar";
 
 const getPageHeaderInfo = (pathname: string) => {
-  const routes: Record<string, { title: string; subtitle?: string; icon?: any }> = {
+  const routes: Record<string, { title: string; icon?: any }> = {
     "/": {
-      title: "Analytics Dashboard",
-      subtitle: "Insights into your key business performance and metrics.",
+      title: "Dashboard",
     },
     "/sales": {
-      title: "Sales Directory",
-      subtitle: "Search, track and manage orders, customer transactions and sales performance.",
+      title: "Sales List",
     },
     "/sales/detail": {
-      title: "Sale Details Search",
-      subtitle: "Search through individual sale details and transactions.",
+      title: "Sale Detail",
     },
     "/product": {
-      title: "Products Directory",
-      subtitle: "Browse and manage your entire product catalog.",
+      title: "Product Detail",
     },
     "/product/detail": {
-      title: "Product Details",
-      subtitle: "In-depth overview of product history and performance.",
+      title: "Product Detail",
     },
     "/product/add": {
-      title: "Create Product",
-      subtitle: "Register and onboard a new product to your inventory.",
+      title: "Add Product",
     },
     "/product/all": {
       title: "Products List",
-      subtitle: "Complete view of products across all locations.",
     },
     "/product/drafts": {
       title: "Product Drafts",
-      subtitle: "Review and finalize pending product entries.",
     },
     "/purchase-order/add": {
-      title: "Purchase Order",
-      subtitle: "Generate official procurement requests for vendors.",
+      title: "Add Purchase Order",
     },
     "/po-grn": {
-      title: "Goods Receiving",
-      subtitle: "Manage and verify Goods Receipt Notes (GRN).",
+      title: "Purchase Order List",
     },
     "/po-grn/add": {
-      title: "Record Receipt",
-      subtitle: "Acknowledge and process incoming shipments.",
+      title: "Add Purchase Order",
     },
     "/po-grn/update": {
-      title: "Update Receipt",
-      subtitle: "Update existing goods receipt documentation.",
+      title: "Update Purchase Order",
     },
     "/purchase-history": {
       title: "Purchase History",
-      subtitle: "Archival record of all procurement transactions.",
     },
     "/production-entry/add": {
       title: "Production Entry",
-      subtitle: "Log completed manufacturing and assembly batches.",
     },
     "/purchase": {
-      title: "Purchase Directory",
-      subtitle: "Search for purchase orders, vendor invoices or view supplier history.",
+      title: "Purchase Detail",
     },
     "/purchase/detail": {
-      title: "Purchase Details",
-      subtitle: "Review transaction specifics and itemized costs.",
+      title: "Purchase Detail",
     },
     "/purchase/add": {
-      title: "Create Purchase",
-      subtitle: "Execute immediate procurement without a purchase order.",
+      title: "Add Purchase",
     },
     "/supplier/all": {
       title: "Suppliers List",
-      subtitle: "Browse and manage your vendor relationships.",
     },
     "/supplier": {
-      title: "Supplier Directory",
-      subtitle: "Search for suppliers or manage your network.",
+      title: "Supplier Details",
     },
     "/supplier/detail": {
       title: "Supplier Details",
-      subtitle: "Detailed ledger and transaction history for this vendor.",
     },
     "/supplier/add": {
-      title: "Create Supplier",
-      subtitle: "Register and onboard a new supplier to your procurement network.",
+      title: "Add Suppliers",
     },
     "/employee": {
-      title: "Employee Directory",
-      subtitle: "Search by name or email to view employee profiles, roles, and status.",
+      title: "Employee Details",
     },
     "/employee/all": {
-      title: "Employees List",
-      subtitle: "Browse and manage your entire staff catalog.",
+      title: "Employee List",
     },
     "/employee/add": {
-      title: "Create Employee",
-      subtitle: "Onboard and register a new staff member to the organization.",
+      title: "Add Employee",
     },
     "/inventory": {
-      title: "Inventory Master",
-      subtitle: "Strategic overview of stock levels and valuations.",
+      title: "Stock Levels",
     },
     "/stock-movement": {
-      title: "Stock Movement",
-      subtitle: "Audit trail of all material transfers and adjustments.",
+      title: "Stock Movements",
     },
     "/stock-adjustment": {
-      title: "Stock Adjustment",
-      subtitle: "Reconcile system inventory with physical counts.",
+      title: "Stock Adjustments",
     },
     "/billing": {
-      title: "Point of Sale",
-      subtitle: "Process retail transactions and generate invoices.",
+      title: "Billing",
     },
     "/orders": {
-      title: "Order Management",
-      subtitle: "Track, fulfill, and manage customer orders.",
+      title: "Online Orders",
     },
     "/settings": {
-      title: "User Settings",
-      subtitle: "Manage your account preferences and security.",
+      title: "Settings",
     },
     "/settings/add": {
       title: "Update Profile",
-      subtitle: "Update your personal and professional information.",
     },
     "/create-shop": {
       title: "Create Shop",
-      subtitle: "Configure your digital sales and brand presence.",
     },
     "/profile": {
       title: "Digital Storefront",
-      subtitle: "Overview of your online business operations.",
     },
     "/customers": {
-      title: "Customer Directory",
-      subtitle: "Search for customers or manage your database.",
+      title: "Customer Details",
     },
     "/customers/all": {
       title: "Customers List",
-      subtitle: "Centralized database of your client relationships.",
     },
     "/customers-Summary": {
       title: "Customers List",
-      subtitle: "Browse customer balances, credit limits, and outstanding receivables.",
     },
     "/customers/add": {
-      title: "Create Customer",
-      subtitle: "Register and onboard a new customer profile in the directory.",
+      title: "Add Customer",
     },
     "/customers/drafts": {
       title: "Customer Drafts",
-      subtitle: "Manage partially completed customer registrations.",
     },
   };
 
@@ -168,100 +130,63 @@ const getPageHeaderInfo = (pathname: string) => {
 
   // Dynamic match for Customer Profile
   if (pathname.match(/^\/customers\/[^/]+$/)) {
-    return {
-      title: "Customer Details",
-      subtitle: "Comprehensive view of customer ledger, balance history, and info.",
-    };
+    return { title: "Customer Details" };
   }
 
   if (pathname.match(/^\/sales\/[^/]+$/)) {
-    return {
-      title: "Customer Details",
-      subtitle: "Comprehensive view of customer ledger, balance history, and info.",
-    };
+    return { title: "Sale Detail" };
   }
   // Dynamic match for Edit Customer
   if (pathname.match(/^\/customers\/[^/]+\/edit$/)) {
-    return {
-      title: "Edit Customer",
-      subtitle: "Modify and update customer profile details.",
-    };
+    return { title: "Edit Customer" };
   }
 
   // Dynamic match for Employee Profile
   if (pathname.match(/^\/employee\/[^/]+$/)) {
-    return {
-      title: "Employee Details",
-      subtitle: "Comprehensive view of staff credentials, history, and status.",
-    };
+    return { title: "Employee Details" };
   }
 
   // Dynamic match for Edit Employee
   if (pathname.match(/^\/employee\/[^/]+\/edit$/)) {
-    return {
-      title: "Edit Employee",
-      subtitle: "Modify and update staff settings.",
-    };
+    return { title: "Edit Employee" };
   }
 
   // Dynamic match for Supplier Profile
   if (pathname.match(/^\/supplier\/[^/]+$/)) {
-    return {
-      title: "Supplier Details",
-      subtitle: "Comprehensive view of supplier ledger, purchases, and logs.",
-    };
+    return { title: "Supplier Details" };
   }
 
   // Dynamic match for Edit Supplier
   if (pathname.match(/^\/supplier\/[^/]+\/edit$/)) {
-    return {
-      title: "Edit Supplier",
-      subtitle: "Modify and update existing vendor details.",
-    };
+    return { title: "Edit Supplier" };
   }
 
   // Dynamic match for Product Profile
   if (pathname.match(/^\/product\/[^/]+$/)) {
-    return {
-      title: "Product Details",
-      subtitle: "Comprehensive view of product specifications, variants, and logs.",
-    };
+    return { title: "Product Detail" };
   }
 
   // Dynamic match for Edit Product
   if (pathname.match(/^\/product\/[^/]+\/edit$/)) {
-    return {
-      title: "Edit Product",
-      subtitle: "Modify and update existing product details.",
-    };
+    return { title: "Edit Product" };
   }
 
   // Dynamic match for Edit Purchase
   if (pathname.match(/^\/purchase\/edit\/[^/]+$/)) {
-    return {
-      title: "Edit Purchase",
-      subtitle: "Modify and update existing purchase details.",
-    };
+    return { title: "Edit Purchase" };
   }
 
   // Drafts Pages
   if (pathname === "/supplier/drafts") {
-    return {
-      title: "Vendor Drafts",
-      subtitle: "Manage your locally saved vendor registrations.",
-    };
+    return { title: "Vendor Drafts" };
   }
 
   if (pathname === "/employee/drafts") {
-    return {
-      title: "Employee Drafts",
-      subtitle: "Manage your locally saved staff records.",
-    };
+    return { title: "Employee Drafts" };
   }
 
   return routes[pathname] || {
     title: pathname.split("/").pop()?.replace(/-/g, " ").replace(/\b\w/g, l => l.toUpperCase()) || "Home",
-    subtitle: ""
   };
 };
 
@@ -279,11 +204,11 @@ const isDetailsRoute = (pathname: string) => {
       return !standardActions.includes(id);
     }
   }
-  
+
   if (parts.length >= 2 && parts[1] === "detail") {
     return true;
   }
-  
+
   if (pathname.startsWith("/purchase/detail/") || pathname.startsWith("/product/detail/")) {
     return true;
   }
@@ -318,7 +243,7 @@ const MainLayout = () => {
 
   const isBillingPage = location.pathname === "/billing";
   const isCleanMode = new URLSearchParams(location.search).get("mode") === "clean";
-  const hideNav = isCleanMode;
+  const hideNav = isCleanMode || isBillingPage;
 
   const listPaths = [
     "/billing",
@@ -340,7 +265,7 @@ const MainLayout = () => {
   const isListPage = listPaths.includes(location.pathname);
 
   const isDetails = isDetailsRoute(location.pathname);
-  const { title, subtitle, icon } = getPageHeaderInfo(location.pathname);
+  const { title, icon } = getPageHeaderInfo(location.pathname);
 
   return (
     <div className="h-screen w-full flex flex-col overflow-hidden bg-slate-50">
@@ -361,9 +286,9 @@ const MainLayout = () => {
               <div className="">
                 {!hideNav && !isDetails && <Breadcrumb />}
 
-                {!isDetails && (
+                {!hideNav && !isDetails && (
                   <div className={isBillingPage ? "pl-3.5 pt-1" : ""}>
-                    <Title title={title} subtitle={subtitle} icon={icon} actions={actions} />
+                    <Title title={title} icon={icon} actions={actions} />
                   </div>
                 )}
               </div>

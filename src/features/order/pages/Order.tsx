@@ -8,7 +8,7 @@ import Drawer from "@/components/common/Drawer";
 import OrderDetailView from "../components/OrdersDetailView";
 import { DateFilter } from "../components/DateFilter";
 import { StatCard } from "@/components/common/StatsCard";
-import Loader from "@/components/common/Loader";
+import SkeletonLoader from "@/components/common/SkeletonLoader";
 import { useApi } from "@/context/ApiContext";
 import { SHOP_ID } from "@/services/endpoints";
 import { orderApi } from "@/services/api/order";
@@ -176,7 +176,9 @@ const Order = () => {
         </div>
 
         {loading ? (
-          <div className="py-8"><Loader /></div>
+          <div className="p-3">
+            <SkeletonLoader variant="card" rows={6} />
+          </div>
         ) : filteredOrders.length > 0 ? (
           <div className={viewMode === "grid" ? "grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4" : "flex flex-col gap-3"}>
             {filteredOrders.map((order) => (

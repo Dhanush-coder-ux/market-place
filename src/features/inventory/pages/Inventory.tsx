@@ -1,7 +1,6 @@
 import React, { useState, useEffect, Fragment, useMemo, useCallback } from "react";
 import {
   X,
-
   Hash,
   ChevronDown,
   ChevronRight,
@@ -16,12 +15,19 @@ import {
   Copy,
   Check,
   IndianRupee,
+  Eye,
+  Pencil,
+  MoreVertical,
+  RefreshCw,
+  Plus,
+  Trash2
 } from "lucide-react";
 import { VariantRows, BatchCards, SerialBadgeList } from "../components/StockTree";
 import { useApi } from "@/context/ApiContext";
 import { useHeader } from "@/context/HeaderContext";
+import { useToast } from "@/context/ToastContext";
 import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
-import Loader from "@/components/common/Loader";
+import SkeletonLoader from "@/components/common/SkeletonLoader";
 import { StatCard } from "@/components/common/StatsCard";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
@@ -102,6 +108,75 @@ const formatDate = (dateStr?: string) => {
   });
 };
 
+const calculateProductStock = (item: any) => {
+  const datas = item.datas || {};
+  const parseDataLocal = (val: any) => {
+    if (Array.isArray(val)) return val;
+    if (val && typeof val === "object") {
+      if (Array.isArray(val.serial_numbers)) return val.serial_numbers;
+      return Object.values(val);
+    }
+    if (typeof val === "string") {
+      try {
+        const parsed = JSON.parse(val);
+        if (parsed && typeof parsed === "object" && Array.isArray(parsed.serial_numbers)) return parsed.serial_numbers;
+        return parsed;
+      } catch (e) {
+        return [];
+      }
+    }
+    return [];
+  };
+
+  const combinations = (() => {
+    const raw = parseDataLocal(item.variants || item.variant_infos || datas.combinations || datas.variants);
+    return raw.filter((v: any) => v && v.id !== null);
+  })();
+
+  const batches = (() => {
+    let raw: any[] = [];
+    if (
+      !(datas.has_variants || datas.has_varients || item.variants?.length || item.variant_infos?.length) &&
+      ((item.variants?.length ?? 0) > 0 || (item.variant_infos?.length ?? 0) > 0)
+    ) {
+      const firstVar = item.variants?.[0] || item.variant_infos?.[0];
+      raw = parseDataLocal(firstVar?.batches || firstVar?.batch_infos);
+    } else {
+      raw = parseDataLocal(item.batches || item.batch_infos || datas.batches);
+    }
+    return raw.filter((b: any) => b && b.id !== null);
+  })();
+
+  const hasVariants =
+    (datas.has_variants ||
+      datas.has_varients ||
+      item.has_variant ||
+      item.type_infos?.has_variant) &&
+    combinations.length > 0;
+  const hasBatches = batches.length > 0 || item.has_batch || item.type_infos?.has_batch;
+
+  const calculateVariantStock = (comb: any) => {
+    const vBatches = comb.batch_infos ?? comb.batches ?? [];
+    const vHasBatches = vBatches.length > 0;
+    let vStock = Number(comb.stock_infos?.available_stocks ?? comb.stock_infos?.physical_stocks ?? comb.stocks ?? comb.stock ?? comb.datas?.stocks ?? comb.datas?.datas?.stocks ?? 0);
+    if (vHasBatches && vStock === 0) {
+      vStock = vBatches.reduce((acc: number, b: any) => acc + Number(b.stock_infos?.available_stocks ?? b.stock_infos?.physical_stocks ?? b.stocks ?? 0), 0);
+    }
+    return vStock;
+  };
+
+  let stockNumber = Number(item.stock_infos?.available_stocks ?? item.stock_infos?.physical_stocks ?? item.stocks ?? item.quantity ?? 0);
+  if (hasVariants) {
+    stockNumber = combinations.reduce((acc: number, comb: any) => acc + calculateVariantStock(comb), 0);
+  } else if (hasBatches && stockNumber === 0) {
+    stockNumber = batches.reduce((acc, b) => {
+      const bStock = Number(b.stock_infos?.available_stocks ?? b.stock_infos?.physical_stocks ?? b.stocks ?? 0);
+      return acc + bStock;
+    }, 0);
+  }
+  return stockNumber;
+};
+
 const getStockStatus = (stock: number, reorderPoint?: number) => {
   const s = Number(stock) || 0;
   const rp = Number(reorderPoint) || 10;
@@ -136,9 +211,14 @@ const formatCurrency = (amount?: number | string) => {
 };
 
 const parseData = (val: any) => {
-  if (Array.isArray(val)) return val;
+  if (!val) return [];
+  const getNames = (arr: any[]): string[] => {
+    return arr.map((v: any) => typeof v === 'object' && v !== null ? v.name || v.serial || "" : String(v)).filter(Boolean);
+  };
+  if (Array.isArray(val)) return getNames(val);
   if (val && typeof val === "object") {
-    if (Array.isArray(val.serial_numbers)) return val.serial_numbers;
+    if (Array.isArray(val.serial_numbers)) return getNames(val.serial_numbers);
+    if (Array.isArray(val.serialno_infos)) return getNames(val.serialno_infos);
     return Object.values(val);
   }
   if (typeof val === "string") {
@@ -149,8 +229,14 @@ const parseData = (val: any) => {
         typeof parsed === "object" &&
         Array.isArray(parsed.serial_numbers)
       )
-        return parsed.serial_numbers;
-      return parsed;
+        return getNames(parsed.serial_numbers);
+      if (
+        parsed &&
+        typeof parsed === "object" &&
+        Array.isArray(parsed.serialno_infos)
+      )
+        return getNames(parsed.serialno_infos);
+      return Array.isArray(parsed) ? getNames(parsed) : parsed;
     } catch (e) {
       return [];
     }
@@ -273,13 +359,7 @@ const ProductRow = React.memo(
     const hasSerials = serials.length > 0 || (item as any).has_serialno || (item as any).type_infos?.has_serialno;
     const isExpandable = hasVariants || hasBatches || hasSerials;
 
-    let stockNumber = Number((item as any).stock_infos?.available_stocks ?? (item as any).stock_infos?.physical_stocks ?? item.stocks ?? 0);
-    if (!hasVariants && hasBatches && stockNumber === 0) {
-      stockNumber = batches.reduce((acc, b) => {
-        const bStock = Number(b.stock_infos?.available_stocks ?? b.stock_infos?.physical_stocks ?? b.stocks ?? 0);
-        return acc + bStock;
-      }, 0);
-    }
+    let stockNumber = calculateProductStock(item);
     
     let sellPrice = (item as any).pricing_infos?.sell_price ?? item.sell_price;
     let buyPrice = (item as any).pricing_infos?.buy_price ?? item.buy_price;
@@ -316,6 +396,8 @@ const ProductRow = React.memo(
       return { totalSerials: ts, totalBatches: tb };
     }, [serials, batches, hasVariants, combinations]);
 
+    const navigate = useNavigate();
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [showAllBadges, setShowAllBadges] = useState(false);
 
     const badges = [];
@@ -354,11 +436,21 @@ const ProductRow = React.memo(
       <Fragment>
         <tr
           ref={innerRef}
-          onClick={() => onSelect(item)}
+          onClick={() => toggleExpand(item.id)}
           className={`group border-b border-slate-50 transition-colors cursor-pointer ${
             isSelected ? "bg-blue-50 border-l-2 border-l-blue-500" : isExpanded ? "bg-slate-50/70" : "hover:bg-slate-50/60"
           }`}
         >
+          {/* Checkbox */}
+          <td className="px-3 py-2.5 w-10 text-center" onClick={(e) => e.stopPropagation()}>
+            <input
+              type="checkbox"
+              checked={isSelected}
+              onChange={() => onSelect(item)}
+              className="rounded border-slate-350 text-blue-600 focus:ring-blue-500/20"
+            />
+          </td>
+
           {/* Expand toggle */}
           <td className="px-3 py-2.5 text-center w-10">
             {isExpandable ? (
@@ -418,24 +510,44 @@ const ProductRow = React.memo(
                 </div>
                 <div className="flex items-center gap-2 text-[11px] text-slate-400 font-medium leading-none">
                   {(() => {
-                    const rawSku = item.barcode || datas.barcode || (item as any).sku || datas.sku || "";
-                    if (!rawSku) {
-                      return <span className="font-mono text-slate-400 tabular-nums">—</span>;
-                    }
-                    const trimmedSku = rawSku.length > 12 ? `${rawSku.slice(0, 8)}...` : rawSku;
+                    const actualSku = (item as any).sku || datas.sku || "";
                     const uiId = (item as any).ui_id || item.id || "";
-                    return (
-                      <span className="flex items-center gap-1">
-                        <span className="font-mono text-slate-400 tabular-nums" title={uiId}>
-                          ID: {uiId}
+                    const barcode = item.barcode || datas.barcode || "";
+                    if (actualSku) {
+                      return (
+                        <span className="flex items-center gap-1">
+                          <span className="font-mono text-slate-400 tabular-nums" title={actualSku}>
+                            SKU: {actualSku}
+                          </span>
+                          {barcode && (
+                            <>
+                              <span className="text-slate-200">·</span>
+                              <span className="font-mono text-slate-400 tabular-nums" title={barcode}>
+                                Barcode: {barcode}
+                              </span>
+                            </>
+                          )}
+                          <CopySKUButton val={actualSku} />
                         </span>
-                        <span className="text-slate-200">·</span>
-                        <span className="font-mono text-slate-400 tabular-nums" title={rawSku}>
-                          {trimmedSku}
+                      );
+                    } else {
+                      return (
+                        <span className="flex items-center gap-1">
+                          <span className="font-mono text-slate-400 tabular-nums" title={uiId}>
+                            ID: {uiId}
+                          </span>
+                          {barcode && (
+                            <>
+                              <span className="text-slate-200">·</span>
+                              <span className="font-mono text-slate-400 tabular-nums" title={barcode}>
+                                Barcode: {barcode}
+                              </span>
+                            </>
+                          )}
+                          <CopySKUButton val={uiId} />
                         </span>
-                        <CopySKUButton val={rawSku} />
-                      </span>
-                    );
+                      );
+                    }
                   })()}
                   <span className="text-slate-200">·</span>
                   <span>{datas.brand || item.brand || "Generic"}</span>
@@ -542,15 +654,66 @@ const ProductRow = React.memo(
           </td>
 
           {/* Actions */}
-          <td className="px-3 py-2.5 text-center">
-            <ChevronRight size={14} className={`mx-auto transition-all duration-200 ${isSelected ? "text-blue-500 rotate-90" : "text-slate-300 group-hover:text-blue-500"}`} />
+          <td className="px-3 py-2.5 text-right whitespace-nowrap sticky right-0 bg-white group-hover:bg-slate-50 border-l border-slate-200 z-10 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.08)] transition-colors" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-end gap-2 relative">
+              <button
+                onClick={() => navigate(`/product/${item.id}`)}
+                className="text-slate-400 hover:text-blue-600 transition-colors p-1"
+                title="View Product"
+              >
+                <Eye size={15} />
+              </button>
+              <button
+                onClick={() => navigate(`/product/${item.id}/edit`)}
+                className="text-slate-400 hover:text-blue-600 transition-colors p-1"
+                title="Edit Product"
+              >
+                <Pencil size={15} />
+              </button>
+              <div className="relative">
+                <button
+                  onClick={() => setIsMenuOpen(!isMenuOpen)}
+                  className="text-slate-400 hover:text-blue-600 transition-colors p-1"
+                  title="More actions"
+                >
+                  <MoreVertical size={15} />
+                </button>
+                {isMenuOpen && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setIsMenuOpen(false)} />
+                    <div className="absolute right-0 mt-1 w-40 bg-white border border-slate-200 rounded-lg shadow-lg py-1 z-50 text-left font-sans animate-in fade-in slide-in-from-top-1 duration-150">
+                      <button
+                        onClick={() => {
+                          setIsMenuOpen(false);
+                          navigate(`/stock-adjustment`);
+                        }}
+                        className="flex items-center gap-2 w-full px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                      >
+                        <RefreshCw size={13} />
+                        Adjust Stock
+                      </button>
+                      <button
+                        onClick={() => {
+                          setIsMenuOpen(false);
+                          navigate(`/purchase/add`);
+                        }}
+                        className="flex items-center gap-2 w-full px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                      >
+                        <Plus size={13} />
+                        Add Purchase
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
           </td>
         </tr>
 
         {/* Expanded row */}
         {isExpanded && isExpandable && (
           <tr className="bg-slate-50/40">
-            <td colSpan={12} className="px-0 py-0">
+            <td colSpan={13} className="px-0 py-0">
               <div className="ml-10 mr-4 my-3 space-y-3 border-l border-slate-100 pl-6">
 
 
@@ -591,9 +754,9 @@ const ProductRow = React.memo(
   }
 );
 
-// --- Main Component ---
 const InventoryPage = () => {
-  const { getData, error, clearError } = useApi();
+  const { getData, deleteData, error, clearError } = useApi();
+  const { showToast } = useToast();
   const location = useLocation();
   const navigate = useNavigate();
   const isCleanMode = new URLSearchParams(location.search).get("mode") === "clean";
@@ -631,7 +794,20 @@ const InventoryPage = () => {
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
+  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  const toggleSelectItem = (id: string) => {
+    setSelectedItems(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
 
   const [analyticsStats, setAnalyticsStats] = useState<any>(null);
 
@@ -646,8 +822,23 @@ const InventoryPage = () => {
       .catch(() => {});
   }, [getData]);
 
+  const handleBulkDelete = async () => {
+    if (selectedItems.size === 0) return;
+    if (!window.confirm(`Are you sure you want to delete these ${selectedItems.size} products?`)) return;
+    try {
+      for (const id of Array.from(selectedItems)) {
+        await deleteData(`${ENDPOINTS.INVENTORIES}/${SHOP_ID}/${id}`);
+      }
+      showToast("Selected products deleted successfully", "success");
+      setSelectedItems(new Set());
+      setRefreshKey((prev: number) => prev + 1);
+    } catch {
+      showToast("Failed to delete some products", "error");
+    }
+  };
+
   useEffect(() => {
-    if (selectedItem) {
+    if (selectedItems.size > 1) {
       setBottomActions(
         <div className="flex items-center justify-between w-full animate-in fade-in slide-in-from-right-4 duration-300">
           <div className="flex items-center gap-3">
@@ -655,27 +846,28 @@ const InventoryPage = () => {
               <Package size={14} />
             </div>
             <div>
-              <p className="text-[12px] font-bold text-slate-800 leading-tight">
-                {selectedItem.datas?.name || selectedItem.name || "N/A"}
-              </p>
-              <p className="text-[10px] font-semibold text-slate-400 font-mono">
-                {selectedItem.barcode || selectedItem.datas?.barcode || (selectedItem as any).sku || selectedItem.datas?.sku || "No SKU"}
-              </p>
+              <p className="text-[12px] font-bold text-slate-800 leading-tight">Selected {selectedItems.size} Products</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setSelectedItem(null)}
-              className="h-8 px-3 rounded-md border border-slate-200 bg-white hover:bg-slate-50 text-slate-500 font-semibold text-[11px] transition-colors"
+              onClick={() => navigate(`/stock-adjustment`)}
+              className="h-8 px-3 rounded-md border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-[11px] transition-colors"
             >
-              Deselect
+              Adjust Stocks
             </button>
             <button
-              onClick={() => navigate(`/product/${selectedItem.id}`)}
-              className="h-8 px-4 rounded-md bg-blue-600 hover:bg-blue-700 text-white font-semibold text-[11px] transition-colors flex items-center gap-1.5"
+              onClick={() => navigate(`/purchase/add`)}
+              className="h-8 px-3 rounded-md border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-[11px] transition-colors"
             >
-              <ChevronRight size={13} />
-              View Details
+              Add Purchase
+            </button>
+            <button
+              onClick={handleBulkDelete}
+              className="h-8 px-3 rounded-md border border-red-200 bg-red-50 hover:bg-red-100 text-red-650 font-bold text-[11px] transition-colors flex items-center gap-1.5"
+            >
+              <Trash2 size={13} />
+              Delete All
             </button>
           </div>
         </div>
@@ -683,7 +875,7 @@ const InventoryPage = () => {
     } else {
       setBottomActions(null);
     }
-  }, [selectedItem, setBottomActions, navigate]);
+  }, [selectedItems, setBottomActions, navigate]);
   
   const activeFiltersCount = [fromDate, toDate].filter(Boolean).length;
   
@@ -730,8 +922,9 @@ const InventoryPage = () => {
   const filters = useMemo(() => ({
     search: debouncedSearch,
     fromDate,
-    toDate
-  }), [debouncedSearch, fromDate, toDate]);
+    toDate,
+    refreshKey
+  }), [debouncedSearch, fromDate, toDate, refreshKey]);
 
   const { items: inventory, loading, loadingMore, stats: overallStats, totalCount, lastElementRef } = useInfiniteScroll({
     fetchPage,
@@ -746,7 +939,7 @@ const InventoryPage = () => {
   const stats = useMemo(() => {
     const total = filteredInventory.length;
     const lowStock = filteredInventory.filter((p: InventoryItem) => {
-      const stock = Number((p as any).stock_infos?.available_stocks ?? p.stocks ?? 0);
+      const stock = calculateProductStock(p);
       const rp = Number(
         (p as any).reorder_point_infos?.reorder_point ?? (p as any).reorder_point ?? p.datas?.reorder_point ?? 10
       );
@@ -770,6 +963,14 @@ const InventoryPage = () => {
       return next;
     });
   }, []);
+
+  if (loading && inventory.length === 0) {
+    return (
+      <div className="flex-1 p-6">
+        <SkeletonLoader variant="list" rows={8} showStats={true} />
+      </div>
+    );
+  }
 
   return (
     <div className="flex-1 flex flex-col min-h-0 font-sans w-full overflow-hidden relative">
@@ -805,7 +1006,7 @@ const InventoryPage = () => {
           <StatCard
             icon={AlertCircle}
             label="Out of Stock"
-            value={(analyticsStats?.overview?.inventory?.total_no_stocks ?? overallStats?.no_stocks_count ?? inventory.filter((p: InventoryItem) => Number((p as any).stock_infos?.available_stocks ?? p.stocks ?? 0) === 0).length).toString()}
+            value={(analyticsStats?.overview?.inventory?.total_no_stocks ?? overallStats?.no_stocks_count ?? inventory.filter((p: InventoryItem) => calculateProductStock(p) === 0).length).toString()}
             subValue="items empty"
             iconBg="bg-red-50"
             iconColor="text-red-500"
@@ -896,12 +1097,7 @@ const InventoryPage = () => {
       <div className="bg-white border border-slate-100 rounded-lg shadow-sm min-w-0 overflow-hidden flex flex-col flex-1 min-h-0 mt-2">
 
         {/* Table */}
-        {loading && inventory.length === 0 ? (
-          <div className="flex-1 flex flex-col items-center justify-center py-20 text-slate-400">
-            <Loader />
-            <p className="text-sm font-medium mt-3">Loading inventory...</p>
-          </div>
-        ) : inventory.length === 0 ? (
+        {inventory.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center py-24 gap-3">
             <div className="w-12 h-12 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center">
               <Package size={22} className="text-slate-300" />
@@ -922,6 +1118,21 @@ const InventoryPage = () => {
               {/* Sticky header */}
               <thead className="sticky top-0 z-20 bg-white border-b border-slate-100">
                 <tr>
+                  <th className="px-3 py-2.5 w-10 text-center">
+                    <input
+                      type="checkbox"
+                      checked={filteredInventory.length > 0 && filteredInventory.every(item => selectedItems.has(item.id))}
+                      onChange={() => {
+                        const allSelected = filteredInventory.length > 0 && filteredInventory.every(item => selectedItems.has(item.id));
+                        if (allSelected) {
+                          setSelectedItems(new Set());
+                        } else {
+                          setSelectedItems(new Set(filteredInventory.map(item => item.id)));
+                        }
+                      }}
+                      className="rounded border-slate-350 text-blue-600 focus:ring-blue-500/20 cursor-pointer"
+                    />
+                  </th>
                   <th className="px-3 py-2.5 w-10" />
                   <th className="px-3 py-2.5 min-w-[280px] text-[10px] font-semibold text-slate-400 uppercase tracking-wide">
                     Product
@@ -953,7 +1164,8 @@ const InventoryPage = () => {
                   <th className="px-3 py-2.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wide text-right">
                     Last updated
                   </th>
-                  <th className="px-3 py-2.5 w-10 text-center text-[10px] font-semibold text-slate-400 uppercase tracking-wide">
+                  <th className="px-3 py-2.5 w-24 text-right text-[10px] font-semibold text-slate-400 uppercase tracking-wide sticky right-0 bg-slate-50 border-l border-slate-200 z-30 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.08)]">
+                    Actions
                   </th>
                 </tr>
               </thead>
@@ -963,8 +1175,8 @@ const InventoryPage = () => {
                   <ProductRow
                     key={item.id}
                     item={item}
-                    isSelected={selectedItem?.id === item.id}
-                    onSelect={(prod) => setSelectedItem(prev => prev?.id === prod.id ? null : prod)}
+                    isSelected={selectedItems.has(item.id)}
+                    onSelect={(prod) => toggleSelectItem(prod.id)}
                     isExpanded={expandedRows.has(item.id)}
                     toggleExpand={toggleExpand}
                     innerRef={index === filteredInventory.length - 1 ? lastElementRef : null}

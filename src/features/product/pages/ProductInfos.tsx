@@ -4,7 +4,7 @@ import {
   Package, Search, Filter, Bookmark, Trash2,
   ChevronDown, ChevronRight, Layers, AlertTriangle,
   X, AlertCircle, Calendar, Hash, ExternalLink,
-  Copy, Check
+  Copy, Check, Pencil, Eye, MoreVertical, RefreshCw, History, Plus
 } from "lucide-react";
 import { VariantRows, BatchCards, SerialBadgeList } from "../../inventory/components/StockTree";
 import { useHeader } from "@/context/HeaderContext";
@@ -15,7 +15,7 @@ import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { GradientButton } from "@/components/ui/GradientButton";
 import { ReusableSelect } from "@/components/ui/ReusableSelect";
 import { StatCard } from "@/components/common/StatsCard";
-import Loader from "@/components/common/Loader";
+import SkeletonLoader from "@/components/common/SkeletonLoader";
 import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 import type { InventoryRecord } from "@/types/api";
 import { RightSidebarFilter } from "@/components/common/RightSidebarFilter";
@@ -80,6 +80,43 @@ const getColumnLabel = (key: string) => {
     .split("_")
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
     .join(" ");
+};
+
+const calculateProductStock = (p: any) => {
+  const normalizeVariants = (raw: any): any[] => {
+    if (!raw) return [];
+    if (Array.isArray(raw)) return raw;
+    if (typeof raw === 'object') return Object.values(raw);
+    return [];
+  };
+  const combinations = normalizeVariants(p.variant_infos || p.variants).filter((v: any) => v && v.id !== null);
+  const batches = (() => {
+    const bs = p.batch_infos || p.batches;
+    if (Array.isArray(bs)) return bs.filter((b: any) => b && b.id !== null);
+    if (bs && typeof bs === 'object' && Object.keys(bs).length > 0) return [bs];
+    return [];
+  })();
+
+  const hasVariants = !!(p.type_infos?.has_variant) || combinations.length > 0;
+  const hasBatches = !!(p.type_infos?.has_batch) || batches.length > 0;
+
+  const calculateVariantStock = (comb: any) => {
+    const vBatches = comb.batch_infos ?? comb.batches ?? [];
+    const vHasBatches = vBatches.length > 0;
+    let vStock = Number(comb.stock_infos?.available_stocks ?? comb.stock_infos?.physical_stocks ?? comb.stocks ?? comb.stock ?? comb.datas?.stocks ?? comb.datas?.datas?.stocks ?? 0);
+    if (vHasBatches && vStock === 0) {
+      vStock = vBatches.reduce((acc: number, b: any) => acc + Number(b.stock_infos?.available_stocks ?? b.stock_infos?.physical_stocks ?? b.stocks ?? 0), 0);
+    }
+    return vStock;
+  };
+
+  let computedStock = Number(p.stock_infos?.available_stocks ?? p.stock_infos?.physical_stocks ?? p.stocks ?? p.quantity ?? 0);
+  if (hasVariants) {
+    computedStock = combinations.reduce((acc: number, comb: any) => acc + calculateVariantStock(comb), 0);
+  } else if (hasBatches && computedStock === 0) {
+    computedStock = batches.reduce((acc: number, b: any) => acc + Number(b.stock_infos?.available_stocks ?? b.stock_infos?.physical_stocks ?? b.stocks ?? 0), 0);
+  }
+  return computedStock;
 };
 
 const getStockStatus = (stock: number, reorderPoint?: number) => {
@@ -168,6 +205,7 @@ const ProductRow = React.memo(
     isExpanded,
     toggleExpand,
     selectedKeys,
+    onDelete,
   }: {
     p: InventoryRecord;
     isSelected: boolean;
@@ -175,14 +213,21 @@ const ProductRow = React.memo(
     isExpanded: boolean;
     toggleExpand: (id: string) => void;
     selectedKeys: string[];
+    onDelete: (p: InventoryRecord) => void;
   }) => {
+    const navigate = useNavigate();
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
     const datas = (p.additional_infos as any) || (p.datas as any) || {};
 
     const extractSerials = (val: any): string[] => {
       if (!val) return [];
-      if (Array.isArray(val)) return val.map((v: any) => typeof v === 'string' ? v : v.name || "");
+      const getNames = (arr: any[]): string[] => {
+        return arr.map((v: any) => typeof v === 'object' && v !== null ? v.name || v.serial || "" : String(v)).filter(Boolean);
+      };
+      if (Array.isArray(val)) return getNames(val);
       if (val && typeof val === "object") {
-        if (Array.isArray(val.serial_numbers)) return val.serial_numbers;
+        if (Array.isArray(val.serial_numbers)) return getNames(val.serial_numbers);
+        if (Array.isArray(val.serialno_infos)) return getNames(val.serialno_infos);
       }
       return [];
     };
@@ -217,10 +262,7 @@ const ProductRow = React.memo(
     const hasSerials = !!(p.type_infos?.has_serialno) || rootSerials.length > 0;
     const isExpandable = hasVariants || hasBatches || hasSerials;
 
-    let computedStock = Number(p.stock_infos?.available_stocks ?? (p.stock_infos as any)?.physical_stocks ?? (p as any).stocks ?? 0);
-    if (!hasVariants && hasBatches && computedStock === 0) {
-      computedStock = batches.reduce((acc, b) => acc + Number(b.stock_infos?.available_stocks ?? b.stock_infos?.physical_stocks ?? b.stocks ?? 0), 0);
-    }
+    let computedStock = calculateProductStock(p);
 
     let computedSellPrice = p.pricing_infos?.sell_price ?? (p as any).sell_price;
     let computedBuyPrice = p.pricing_infos?.buy_price ?? (p as any).buy_price;
@@ -287,8 +329,18 @@ const ProductRow = React.memo(
           className={`group border-b border-slate-50 transition-colors cursor-pointer ${
             isSelected ? "bg-blue-50 border-l-2 border-l-blue-500" : isExpanded ? "bg-slate-50/70" : "hover:bg-slate-50/60"
           }`}
-          onClick={() => onSelect(p)}
+          onClick={() => toggleExpand(p.id)}
         >
+          {/* Checkbox */}
+          <td className="px-3 py-2.5 w-10 text-center" onClick={(e) => e.stopPropagation()}>
+            <input
+              type="checkbox"
+              checked={isSelected}
+              onChange={() => onSelect(p)}
+              className="rounded border-slate-300 text-blue-600 focus:ring-blue-500/20"
+            />
+          </td>
+
           {/* Expand toggle */}
           <td className="px-3 py-2.5 text-center w-10">
             {isExpandable ? (
@@ -503,24 +555,47 @@ const ProductRow = React.memo(
               );
             }
 
-            if (key === "ui_id" || key === "barcode") {
-              const rawSku = key === "ui_id"
-                ? ((p as any).ui_id || datas.ui_id || "")
-                : (p.barcode || datas.barcode || "");
-              if (!rawSku) {
+            if (key === "ui_id") {
+              const actualSku = p.sku || datas.sku || "";
+              const uiId = (p as any).ui_id || p.id || "";
+              const displayLabel = actualSku ? "SKU" : "ID";
+              const displayVal = actualSku ? actualSku : uiId;
+              if (!displayVal) {
                 return (
                   <td key={key} className="px-3 py-2.5 whitespace-nowrap">
                     <span className="text-[12px] font-medium text-slate-400">—</span>
                   </td>
                 );
               }
-              const textValue = String(rawSku);
-              const trimmedSku = textValue.length > 16 ? `${textValue.slice(0, 12)}...` : textValue;
+              const trimmedSku = displayVal.length > 16 ? `${displayVal.slice(0, 12)}...` : displayVal;
+              return (
+                <td key={key} className="px-3 py-2.5 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                  <span className="flex items-center gap-1 text-[12px] font-medium text-slate-600">
+                    <span className="font-mono tabular-nums" title={displayVal}>
+                      {displayLabel}: {trimmedSku}
+                    </span>
+                    <CopySKUButton val={displayVal} />
+                  </span>
+                </td>
+              );
+            }
+
+            if (key === "barcode") {
+              const rawBarcode = p.barcode || datas.barcode || "";
+              if (!rawBarcode) {
+                return (
+                  <td key={key} className="px-3 py-2.5 whitespace-nowrap">
+                    <span className="text-[12px] font-medium text-slate-400">—</span>
+                  </td>
+                );
+              }
+              const textValue = String(rawBarcode);
+              const trimmedBarcode = textValue.length > 16 ? `${textValue.slice(0, 12)}...` : textValue;
               return (
                 <td key={key} className="px-3 py-2.5 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                   <span className="flex items-center gap-1 text-[12px] font-medium text-slate-600">
                     <span className="font-mono tabular-nums" title={textValue}>
-                      {trimmedSku}
+                      {trimmedBarcode}
                     </span>
                     <CopySKUButton val={textValue} />
                   </span>
@@ -592,9 +667,79 @@ const ProductRow = React.memo(
           })}
 
           {/* Actions */}
-          <td className="px-3 py-2.5 text-right whitespace-nowrap">
-            <div className="flex items-center justify-end gap-0.5">
-              <ChevronRight size={14} className={`transition-all duration-200 ${isSelected ? "text-blue-500 rotate-90" : "text-slate-300 group-hover:text-blue-500"}`} />
+          <td className="px-3 py-2.5 text-right whitespace-nowrap sticky right-0 bg-white group-hover:bg-slate-50 border-l border-slate-200 z-10 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.08)] transition-colors" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-end gap-2 relative">
+              <button
+                onClick={() => navigate(`/product/${p.id}`)}
+                className="text-slate-400 hover:text-blue-600 transition-colors p-1"
+                title="View Product"
+              >
+                <Eye size={15} />
+              </button>
+              <button
+                onClick={() => navigate(`/product/${p.id}/edit`)}
+                className="text-slate-400 hover:text-blue-600 transition-colors p-1"
+                title="Edit Product"
+              >
+                <Pencil size={15} />
+              </button>
+              <div className="relative">
+                <button
+                  onClick={() => setIsMenuOpen(!isMenuOpen)}
+                  className="text-slate-400 hover:text-blue-600 transition-colors p-1"
+                  title="More actions"
+                >
+                  <MoreVertical size={15} />
+                </button>
+                {isMenuOpen && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setIsMenuOpen(false)} />
+                    <div className="absolute right-0 mt-1 w-40 bg-white border border-slate-200 rounded-lg shadow-lg py-1 z-50 text-left font-sans animate-in fade-in slide-in-from-top-1 duration-150">
+                      <button
+                        onClick={() => {
+                          setIsMenuOpen(false);
+                          navigate(`/stock-adjustment`);
+                        }}
+                        className="flex items-center gap-2 w-full px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                      >
+                        <RefreshCw size={13} />
+                        Adjust Stock
+                      </button>
+                       <button
+                        onClick={() => {
+                          setIsMenuOpen(false);
+                          navigate(`/stock-movement`);
+                        }}
+                        className="flex items-center gap-2 w-full px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                      >
+                        <History size={13} />
+                        Stock Movements
+                      </button>
+                      <button
+                        onClick={() => {
+                          setIsMenuOpen(false);
+                          navigate(`/purchase/add`);
+                        }}
+                        className="flex items-center gap-2 w-full px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                      >
+                        <Plus size={13} />
+                        Add Purchase
+                      </button>
+                      <div className="border-t border-slate-100 my-1"></div>
+                      <button
+                        onClick={() => {
+                          setIsMenuOpen(false);
+                          onDelete(p);
+                        }}
+                        className="flex items-center gap-2 w-full px-3 py-2 text-xs font-semibold text-red-650 hover:bg-red-50"
+                      >
+                        <Trash2 size={13} />
+                        Delete
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
           </td>
         </tr>
@@ -603,7 +748,7 @@ const ProductRow = React.memo(
         {isExpanded && (
           <tr key={`${p.id}-expand`} className="bg-slate-50/40">
             <td
-              colSpan={selectedKeys.length + 3}
+              colSpan={selectedKeys.length + 4}
               className="px-0 py-0 border-b border-slate-50"
             >
               <div className="ml-10 mr-4 my-3 space-y-3 border-l border-slate-100 pl-6">
@@ -677,7 +822,7 @@ const ProductInfos = () => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [productToDelete, setProductToDelete] = useState<InventoryRecord | null>(null);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
-  const [selectedProduct, setSelectedProduct] = useState<InventoryRecord | null>(null);
+  const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set());
 
   const [availableKeys, setAvailableKeys] = useState<string[]>([]);
   const [selectedKeys, setSelectedKeys] = useState<string[]>(() => {
@@ -727,7 +872,7 @@ const ProductInfos = () => {
     };
     if (searchTerm) params.q = searchTerm;
 
-    getData(`${ENDPOINTS.INVENTORIES}/by/shop/${SHOP_ID}`, params).then(
+    getData(`${ENDPOINTS.INVENTORIES}/by/shop/${SHOP_ID}`, params, { cacheKey: "products-list" }).then(
       (res) => {
         if (res) {
           const data: InventoryRecord[] = Array.isArray(res?.data) 
@@ -755,7 +900,19 @@ const ProductInfos = () => {
         }
       }
     );
-  }, [refreshKey, searchTerm]);
+  }, [refreshKey, searchTerm, getData]);
+
+  const toggleSelectProduct = (id: string) => {
+    setSelectedProducts(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
 
   const handleDelete = async () => {
     if (!productToDelete) return;
@@ -770,9 +927,26 @@ const ProductInfos = () => {
     } finally {
       setIsDeleteDialogOpen(false);
       setProductToDelete(null);
-      if (selectedProduct?.id === productToDelete.id) {
-        setSelectedProduct(null);
+      setSelectedProducts(prev => {
+        const next = new Set(prev);
+        next.delete(productToDelete.id);
+        return next;
+      });
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedProducts.size === 0) return;
+    if (!window.confirm(`Are you sure you want to delete these ${selectedProducts.size} products?`)) return;
+    try {
+      for (const id of Array.from(selectedProducts)) {
+        await deleteData(`${ENDPOINTS.INVENTORIES}/${SHOP_ID}/${id}`);
       }
+      showToast("Selected products deleted successfully", "success");
+      setSelectedProducts(new Set());
+      setRefreshKey((prev: number) => prev + 1);
+    } catch {
+      showToast("Failed to delete some products", "error");
     }
   };
 
@@ -784,7 +958,7 @@ const ProductInfos = () => {
   };
 
   useEffect(() => {
-    if (selectedProduct) {
+    if (selectedProducts.size > 1) {
       setBottomActions(
         <div className="flex items-center justify-between w-full animate-in fade-in slide-in-from-right-4 duration-300">
           <div className="flex items-center gap-3">
@@ -792,35 +966,34 @@ const ProductInfos = () => {
               <Package size={14} />
             </div>
             <div>
-              <p className="text-[12px] font-bold text-slate-800 leading-tight">{selectedProduct.name || "N/A"}</p>
-              <p className="text-[10px] font-semibold text-slate-400 font-mono">
-                {selectedProduct.ui_id || selectedProduct.barcode || "No SKU"}
-              </p>
+              <p className="text-[12px] font-bold text-slate-800 leading-tight">Selected {selectedProducts.size} Products</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setSelectedProduct(null)}
-              className="h-8 px-3 rounded-md border border-slate-200 bg-white hover:bg-slate-50 text-slate-500 font-semibold text-[11px] transition-colors"
+              onClick={() => navigate(`/stock-adjustment`)}
+              className="h-8 px-3 rounded-md border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-[11px] transition-colors"
             >
-              Deselect
+              Adjust Stocks
             </button>
             <button
-              onClick={() => {
-                setProductToDelete(selectedProduct);
-                setIsDeleteDialogOpen(true);
-              }}
+              onClick={() => navigate(`/stock-movement`)}
+              className="h-8 px-3 rounded-md border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-[11px] transition-colors"
+            >
+              Stock Movements
+            </button>
+            <button
+              onClick={() => navigate(`/purchase/add`)}
+              className="h-8 px-3 rounded-md border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-[11px] transition-colors"
+            >
+              Add Purchase
+            </button>
+            <button
+              onClick={handleBulkDelete}
               className="h-8 px-3 rounded-md border border-red-200 bg-red-50 hover:bg-red-100 text-red-600 font-bold text-[11px] transition-colors flex items-center gap-1.5"
             >
               <Trash2 size={13} />
-              Delete
-            </button>
-            <button
-              onClick={() => navigate(`/product/${selectedProduct.id}`)}
-              className="h-8 px-4 rounded-md bg-blue-600 hover:bg-blue-700 text-white font-semibold text-[11px] transition-colors flex items-center gap-1.5"
-            >
-              <ChevronRight size={13} />
-              View Details
+              Delete All
             </button>
           </div>
         </div>
@@ -828,7 +1001,7 @@ const ProductInfos = () => {
     } else {
       setBottomActions(null);
     }
-  }, [selectedProduct, setBottomActions, navigate, setProductToDelete, setIsDeleteDialogOpen]);
+  }, [selectedProducts, setBottomActions, navigate]);
 
   const filteredProducts = useMemo(() => {
     return products.filter((p) => {
@@ -851,7 +1024,7 @@ const ProductInfos = () => {
   const lowStockCount = useMemo(
     () =>
       products.filter((p: any) => {
-        const stock = Number(p.stock_infos?.available_stocks ?? p.stocks ?? 0);
+        const stock = calculateProductStock(p);
         const rp = Number(
           p.reorder_point_infos?.reorder_point ?? (p as any).reorder_point ?? p.additional_infos?.reorder_point ?? p.datas?.reorder_point ?? 10
         );
@@ -861,9 +1034,17 @@ const ProductInfos = () => {
   );
   
   const outOfStockCount = useMemo(
-    () => products.filter((p: any) => Number(p.stock_infos?.available_stocks ?? p.stocks ?? 0) === 0).length,
+    () => products.filter((p: any) => calculateProductStock(p) === 0).length,
     [products]
   );
+
+  if (loading && products.length === 0) {
+    return (
+      <div className="flex-1 p-6">
+        <SkeletonLoader variant="list" rows={8} showStats={true} />
+      </div>
+    );
+  }
 
   return (
     <div className="flex-1 flex flex-col min-h-0 font-sans w-full overflow-hidden relative">
@@ -1008,6 +1189,21 @@ const ProductInfos = () => {
             {/* Sticky header */}
             <thead className="sticky top-0 z-20 bg-white border-b border-slate-100">
               <tr>
+                <th className="px-3 py-2.5 w-10 text-center">
+                  <input
+                    type="checkbox"
+                    checked={filteredProducts.length > 0 && filteredProducts.every(p => selectedProducts.has(p.id))}
+                    onChange={() => {
+                      const allSelected = filteredProducts.length > 0 && filteredProducts.every(p => selectedProducts.has(p.id));
+                      if (allSelected) {
+                        setSelectedProducts(new Set());
+                      } else {
+                        setSelectedProducts(new Set(filteredProducts.map(p => p.id)));
+                      }
+                    }}
+                    className="rounded border-slate-350 text-blue-600 focus:ring-blue-500/20 cursor-pointer"
+                  />
+                </th>
                 <th className="px-3 py-2.5 w-10" />
                 <th className="px-3 py-2.5 min-w-[260px] text-[10px] font-semibold text-slate-400 uppercase tracking-wide">
                   Product
@@ -1040,25 +1236,17 @@ const ProductInfos = () => {
                     </th>
                   );
                 })}
-                <th className="px-3 py-2.5 w-16 text-right text-[10px] font-semibold text-slate-400 uppercase tracking-wide">
+                <th className="px-3 py-2.5 w-24 text-right text-[10px] font-semibold text-slate-400 uppercase tracking-wide sticky right-0 bg-slate-50 border-l border-slate-200 z-30 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.08)]">
+                  Actions
                 </th>
               </tr>
             </thead>
 
             <tbody className="divide-y-0">
-              {loading ? (
+              {filteredProducts.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={selectedKeys.length + 3}
-                    className="py-20 text-center"
-                  >
-                    <Loader />
-                  </td>
-                </tr>
-              ) : filteredProducts.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan={selectedKeys.length + 3}
+                    colSpan={selectedKeys.length + 4}
                     className="py-20 text-center"
                   >
                     <div className="flex flex-col items-center gap-2">
@@ -1093,11 +1281,15 @@ const ProductInfos = () => {
                   <ProductRow
                     key={p.id}
                     p={p}
-                    isSelected={selectedProduct?.id === p.id}
-                    onSelect={(prod) => setSelectedProduct(prev => prev?.id === prod.id ? null : prod)}
+                    isSelected={selectedProducts.has(p.id)}
+                    onSelect={(prod) => toggleSelectProduct(prod.id)}
                     isExpanded={expandedRows.has(p.id)}
                     toggleExpand={toggleExpand}
                     selectedKeys={sortedSelectedKeys}
+                    onDelete={(prod) => {
+                      setProductToDelete(prod);
+                      setIsDeleteDialogOpen(true);
+                    }}
                   />
                 ))
               )}

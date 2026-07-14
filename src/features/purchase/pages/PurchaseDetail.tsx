@@ -12,6 +12,7 @@ import { useBusinessApi } from "@/context/BusinessApiContext";
 import { useHeader } from "@/context/HeaderContext";
 import { useApi } from "@/context/ApiContext";
 import { SHOP_ID, ENDPOINTS } from "@/services/endpoints";
+import SkeletonLoader from "@/components/common/SkeletonLoader";
 
 const fmt = (n: number) => `₹${n.toLocaleString("en-IN")}`;
 
@@ -105,9 +106,8 @@ const PurchaseDetail = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center font-sans">
-        <ReceiptText size={48} className="mb-4 text-slate-300 animate-pulse" />
-        <p className="text-sm font-semibold text-slate-500">Loading purchase details...</p>
+      <div className="flex-1 p-6 bg-slate-50/50">
+        <SkeletonLoader variant="detail" />
       </div>
     );
   }
@@ -160,7 +160,7 @@ const grandTotal =
   otherCharge;
 
 const outstanding =
-  grandTotal - (po.paid_amount || 0);
+  po.outstanding !== undefined ? po.outstanding : Math.max(0, grandTotal - (po.paid_amount || 0));
 
   return (
     <div className="flex-1 flex flex-col min-h-0 h-full bg-slate-50/50 font-sans text-slate-900 overflow-hidden relative">
@@ -170,7 +170,7 @@ const outstanding =
         <ProfileHeaderCard
           name={`Purchase · ${po.systemId}`}
           initials="PO"
-          subText={po.systemId && po.systemId !== po.poNumber ? `Invoice No: ${po.poNumber} • ID: ${po.id}` : `ID: ${po.id}`}
+          subText={po.systemId && po.systemId !== po.poNumber ? `Invoice No: ${po.poNumber}` : ""}
           badges={[
             { text: po.purchaseType, variant: "primary" },
             po.outstanding && po.outstanding > 0

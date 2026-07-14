@@ -35,10 +35,57 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
 
   const normalizedVariants = useMemo<ProductVariant[]>(() => {
     if (!product?.variants) return [];
-    if (Array.isArray(product.variants)) return product.variants as ProductVariant[];
-    if (typeof product.variants === 'object') return Object.values(product.variants) as ProductVariant[];
-    return [];
-  }, [product?.variants]);
+    const raw = Array.isArray(product.variants) 
+      ? product.variants 
+      : (typeof product.variants === 'object' ? Object.values(product.variants) : []);
+    
+    return raw.map((v: any) => {
+      const combDatas = v.datas || {};
+      const attributes = v.attributes || combDatas.attributes || combDatas.datas?.attributes || {};
+      let variantLabel = v.name || combDatas.name;
+      if (variantLabel) {
+        // Keep the defined name
+      } else if (attributes && Object.keys(attributes).length > 0) {
+        variantLabel = Object.values(attributes).join(' / ');
+      } else if (v.barcode && combDatas.barcode && v.barcode !== combDatas.barcode) {
+        variantLabel = v.barcode;
+      } else {
+        variantLabel = v.barcode || "Standard Variant";
+      }
+
+      let price = v.price || v.pricing_infos?.sell_price || v.sell_price || combDatas.sell_price || combDatas.price || product.price || 0;
+      if (!price && Array.isArray(v.batch_infos) && v.batch_infos.length > 0) {
+        price = v.batch_infos[0].pricing_infos?.sell_price || v.batch_infos[0].sell_price;
+      }
+
+      let stock = v.stock;
+      if (stock === undefined) {
+        stock = v.stock_infos?.available_stocks !== undefined 
+          ? v.stock_infos?.available_stocks 
+          : (v.stocks !== undefined ? v.stocks : (v.stock !== undefined ? v.stock : (combDatas.stocks !== undefined ? combDatas.stocks : undefined)));
+      }
+      if (stock === undefined && Array.isArray(v.batch_infos) && v.batch_infos.length > 0) {
+        stock = v.batch_infos.reduce((sum: number, b: any) => sum + (b.stock_infos?.available_stocks || b.stocks || b.stock_infos?.physical_stocks || 0), 0);
+      }
+      if (stock === undefined) stock = 0;
+
+      const batches = (v.batches || v.batch_infos || []).map((b: any) => ({
+        ...b,
+        batchId: b.id,
+        price: b.pricing_infos?.sell_price || b.sell_price || price,
+        stock: b.stock_infos?.available_stocks !== undefined ? b.stock_infos?.available_stocks : (b.stocks !== undefined ? b.stocks : (b.stock !== undefined ? b.stock : 0)),
+      }));
+
+      return {
+        ...v,
+        id: v.id || String(Math.random()),
+        name: variantLabel,
+        price,
+        stock,
+        batches,
+      };
+    });
+  }, [product?.variants, product?.price]);
 
   const executeSubmit = (v: ProductVariant | null, b: any | null, s: string[], qty: number) => {
     const activeV = v || selectedVariant;
@@ -171,31 +218,51 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
 
   const availableSerials = useMemo(() => {
     if (!product) return [];
-    let raw = [];
+
+    // Helper: extract serial name strings from any shape
+    const toNames = (arr: any[]): string[] => {
+      if (!Array.isArray(arr)) return [];
+      return arr
+        .map((x: any) => (typeof x === 'string' ? x : (x?.name || x?.serial || x?.serial_number || '')))
+        .filter(Boolean);
+    };
+
+    let raw: string[] = [];
+
     if (product.batchTracking && selectedBatch) {
-      raw = Array.isArray(selectedBatch.serial_numbers) 
-        ? selectedBatch.serial_numbers 
-        : (selectedBatch.serial_numbers?.serial_numbers || selectedBatch.availableSerials || []);
+      // Batch selected – pull serials from that batch
+      raw = toNames(
+        selectedBatch.serialno_infos ||
+        selectedBatch.serial_numbers ||
+        selectedBatch.availableSerials ||
+        []
+      );
+    } else if (selectedVariant) {
+      // Variant selected – collect serials from variant's batches OR directly from variant
+      const variantBatches: any[] = (selectedVariant as any).batches || (selectedVariant as any).batch_infos || [];
+      if (variantBatches.length > 0) {
+        // Aggregate serials across all batches of this variant
+        raw = variantBatches.flatMap((b: any) =>
+          toNames(b.serialno_infos || b.serial_numbers || b.availableSerials || [])
+        );
+      } else {
+        raw = toNames(
+          (selectedVariant as any).serialno_infos ||
+          (selectedVariant as any).serial_numbers ||
+          selectedVariant.availableSerials ||
+          []
+        );
+      }
     } else {
-      const extractAll = (obj: any): string[] => { 
-        if (!obj) return []; 
-        if (Array.isArray(obj)) return obj.filter(x => typeof x === 'string'); 
-        if (typeof obj === 'object') { 
-          for (const key in obj) { 
-            if (Array.isArray(obj[key])) return obj[key].filter((x: any) => typeof x === 'string'); 
-          } 
-        } 
-        return []; 
-      }; 
-      raw = extractAll((selectedVariant as any)?.serial_numbers).length > 0 
-        ? extractAll((selectedVariant as any)?.serial_numbers) 
-        : extractAll(selectedVariant?.availableSerials).length > 0 
-          ? extractAll(selectedVariant?.availableSerials) 
-          : extractAll(product?.availableSerials).length > 0 
-            ? extractAll(product?.availableSerials) 
-            : [];
+      // No variant/batch – use product-level serials
+      raw = toNames(
+        (product as any).serialno_infos ||
+        product.availableSerials ||
+        []
+      );
     }
-    // Filter out serials that are already used elsewhere, BUT keep those that were initially selected for THIS item (in case of editing)
+
+    // Filter out serials already used elsewhere (but keep initially-selected ones when editing)
     const initialS = Array.isArray(initialSerials) ? initialSerials : [];
     const excludedS = Array.isArray(excludedSerials) ? excludedSerials : [];
     return raw.filter((s: string) => !excludedS.includes(s) || initialS.includes(s));

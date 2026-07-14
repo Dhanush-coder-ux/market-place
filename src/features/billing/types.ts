@@ -61,6 +61,7 @@ export interface BillingItem {
   expiryDate?: string;
   requireSerial?: boolean;
   maxStock?: number;
+  baseStock?: number;
   gst?: number;
   unitInfos?: any;
   selectedUnit?: string | null;

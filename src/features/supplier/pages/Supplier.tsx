@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { Search, X, Bookmark, Building2, Phone, ExternalLink, Filter, ChevronRight } from "lucide-react";
 import { GradientButton } from "@/components/ui/GradientButton";
 import { useNavigate, useLocation } from "react-router-dom";
-import Loader from "@/components/common/Loader";
 import { useApi } from "@/context/ApiContext";
 import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 import type { SupplierRecord } from "@/types/api";
@@ -13,6 +12,7 @@ import { ColumnPicker } from "@/components/common/ColumnPicker";
 import { StatCard } from "@/components/common/StatsCard";
 import { useQuickCreate } from "@/features/common/QuickCreate/QuickCreateContext";
 import { RightSidebarFilter } from "@/components/common/RightSidebarFilter";
+import SkeletonLoader from "@/components/common/SkeletonLoader";
 
 
 // Human-readable labels for every possible dynamic column key
@@ -222,6 +222,14 @@ const Supplier = () => {
     }
   };
 
+  if (loading) {
+    return (
+      <div className="flex-1 p-6">
+        <SkeletonLoader variant="list" rows={8} showStats={true} />
+      </div>
+    );
+  }
+
   return (
     <div className="flex-1 flex flex-col min-h-0 font-sans w-full overflow-hidden relative">
 
@@ -269,7 +277,7 @@ const Supplier = () => {
           onClick={() => setIsFilterOpen(true)}
           className={`h-8 px-3 flex items-center gap-1.5 rounded-md border text-xs font-semibold transition-all active:scale-95 shrink-0 ${activeFilters > 0
             ? "border-blue-200 bg-blue-50 text-blue-600"
-            : "border-slate-200 bg-white text-slate-650 hover:bg-slate-50"
+            : "border-slate-200 bg-white text-slate-655 hover:bg-slate-50"
             }`}
         >
           <Filter size={13} />
@@ -343,15 +351,11 @@ const Supplier = () => {
                     {COLUMN_LABELS[key] ?? key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
                   </th>
                 ))}
-                <th className="px-6 py-5 text-right whitespace-nowrap w-10"></th>
+                <th className="px-6 py-5 text-right whitespace-nowrap w-24 sticky right-0 bg-slate-50 border-l border-slate-200 z-30 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.08)]">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-50">
-              {loading ? (
-                <tr>
-                  <td colSpan={selectedKeys.length + 2} className="py-20 text-center"><Loader /></td>
-                </tr>
-              ) : suppliers.length === 0 ? (
+            <tbody className="divide-y divide-slate-55 bg-white">
+              {suppliers.length === 0 ? (
                 <tr>
                   <td colSpan={selectedKeys.length + 2} className="py-20 text-center text-slate-400 font-medium italic">No suppliers matching your filters.</td>
                 </tr>

@@ -14,6 +14,7 @@ import { ReusableSelect } from "@/components/ui/ReusableSelect";
 import { useApi } from "@/context/ApiContext";
 import { useToast } from "@/context/ToastContext";
 import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
+import { supplierCustomFieldsApi } from "@/services/api/supplierCustomFields";
 
 interface QuickCreateSupplierModalProps {
   isOpen: boolean;
@@ -32,6 +33,21 @@ export const QuickCreateSupplierModal: React.FC<QuickCreateSupplierModalProps> =
   const { showToast } = useToast();
   const [submitting, setSubmitting] = useState(false);
 
+  const [customFieldDefs, setCustomFieldDefs] = useState<any[]>([]);
+  const [customFieldValues, setCustomFieldValues] = useState<Record<string, string>>({});
+
+  React.useEffect(() => {
+    if (isOpen) {
+      supplierCustomFieldsApi.getAllFields(SHOP_ID).then((fields) => {
+        setCustomFieldDefs(fields || []);
+      }).catch(err => {
+        console.error("Failed to load supplier custom fields:", err);
+      });
+    } else {
+      setCustomFieldValues({});
+    }
+  }, [isOpen]);
+
   const [form, setForm] = useState({
     supplier_name: initialName,
     contact_person: "",
@@ -39,7 +55,10 @@ export const QuickCreateSupplierModal: React.FC<QuickCreateSupplierModalProps> =
     email: "",
     phone: "",
     city: "",
+    state: "",
+    country: "India",
     address: "",
+    zipcode: "",
     gst_number: "",
     notes: "",
     contact_person_email: "",
@@ -141,14 +160,39 @@ export const QuickCreateSupplierModal: React.FC<QuickCreateSupplierModalProps> =
               leftIcon={<Phone size={16} className="text-slate-400" />}
             />
           </div>
-          <Input
-            label="City / Region"
-            name="city"
-            value={form.city}
-            onChange={handleChange}
-            placeholder="e.g. Mumbai, Maharashtra"
-            leftIcon={<MapPin size={16} className="text-slate-400" />}
-          />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Input
+              label="City"
+              name="city"
+              value={form.city}
+              onChange={handleChange}
+              placeholder="e.g. Mumbai"
+              leftIcon={<MapPin size={16} className="text-slate-400" />}
+            />
+            <Input
+              label="State"
+              name="state"
+              value={form.state}
+              onChange={handleChange}
+              placeholder="e.g. Maharashtra"
+            />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Input
+              label="Country"
+              name="country"
+              value={form.country}
+              onChange={handleChange}
+              placeholder="e.g. India"
+            />
+            <Input
+              label="Zipcode / PIN"
+              name="zipcode"
+              value={form.zipcode}
+              onChange={handleChange}
+              placeholder="e.g. 600001"
+            />
+          </div>
           <div className="space-y-1.5">
             <label className="text-[10px] font-black text-slate-400 ml-1">
               Street Address
@@ -169,6 +213,9 @@ export const QuickCreateSupplierModal: React.FC<QuickCreateSupplierModalProps> =
       id: 3,
       title: "Tax & Compliance",
       subtitle: "Taxation and Internal Notes",
+      isValid: customFieldDefs
+        .filter((f) => f.required)
+        .every((f) => customFieldValues[f.id] !== undefined && String(customFieldValues[f.id]).trim() !== ""),
       content: (
         <div className="space-y-6">
           <div className="p-4 md:p-6 rounded-lg bg-blue-50 border border-blue-100 flex gap-3 md:gap-4 items-start">
@@ -206,6 +253,47 @@ export const QuickCreateSupplierModal: React.FC<QuickCreateSupplierModalProps> =
               placeholder="Additional comments about this partner..."
             />
           </div>
+
+          {customFieldDefs.length > 0 && (
+            <div className="space-y-4 pt-4 border-t border-slate-200/60">
+              <p className="text-xs font-black text-slate-800 uppercase tracking-wider">Custom Fields</p>
+              {customFieldDefs.map((field) => (
+                <div key={field.id} className="space-y-1.5">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">
+                    {field.label_name}
+                    {field.required && <span className="text-rose-500 ml-0.5">*</span>}
+                  </label>
+                  {field.type === 'boolean' ? (
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        id={`cf_${field.id}`}
+                        checked={customFieldValues[field.id] === 'true'}
+                        onChange={(e) =>
+                          setCustomFieldValues((prev) => ({ ...prev, [field.id]: String(e.target.checked) }))
+                        }
+                        className="w-4 h-4 rounded accent-indigo-600"
+                      />
+                      <label htmlFor={`cf_${field.id}`} className="text-xs font-semibold text-slate-600">
+                        {field.label_name}
+                      </label>
+                    </div>
+                  ) : (
+                    <input
+                      type={field.type === 'number' ? 'number' : field.type === 'date' ? 'date' : 'text'}
+                      value={customFieldValues[field.id] || ''}
+                      onChange={(e) =>
+                        setCustomFieldValues((prev) => ({ ...prev, [field.id]: e.target.value }))
+                      }
+                      placeholder={`Enter ${field.label_name.toLowerCase()}…`}
+                      className="w-full h-10 px-3 bg-slate-50 border border-slate-100 rounded-lg text-sm font-semibold text-slate-700 focus:ring-2 focus:ring-indigo-100 focus:outline-none transition-all placeholder:text-slate-300"
+                      required={field.required}
+                    />
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       ),
     },
@@ -295,6 +383,15 @@ export const QuickCreateSupplierModal: React.FC<QuickCreateSupplierModalProps> =
 
     setSubmitting(true);
     try {
+      // Build custom fields mapping using field name as keys (for backend validation / create payload)
+      const customFieldsPayload: Record<string, string> = {};
+      customFieldDefs.forEach((field) => {
+        const val = customFieldValues[field.id];
+        if (val !== undefined && val !== "") {
+          customFieldsPayload[field.field_name] = String(val);
+        }
+      });
+
       const payload: any = {
         shop_id: SHOP_ID,
         name: form.supplier_name,
@@ -310,22 +407,45 @@ export const QuickCreateSupplierModal: React.FC<QuickCreateSupplierModalProps> =
         location_infos: {
           full_address: form.address,
           city: form.city,
-          zipcode: ""
+          state: form.state || "",
+          country: form.country || "India",
+          zipcode: form.zipcode || ""
         },
         datas: {
           internal_notes: form.notes,
-        }
+        },
+        custom_fields: customFieldsPayload
       };
 
       const res = await postData(ENDPOINTS.SUPPLIERS, payload);
       
       if (res) {
+        const supplierId = res.data?.id || res.id;
+        
+        // Also call upsertValue as a fallback to ensure custom fields are persisted in values table
+        const valuesToSave = Object.entries(customFieldValues)
+          .filter(([, v]) => v !== undefined && v !== '')
+          .map(([field_id, value]) => ({ field_id, value: String(value) }));
+
+        if (supplierId && valuesToSave.length > 0) {
+          try {
+            await supplierCustomFieldsApi.upsertValue({
+              shop_id: SHOP_ID,
+              supplier_id: supplierId,
+              value_infos: valuesToSave,
+            });
+          } catch (e) {
+            console.error("Failed to upsert supplier custom field values:", e);
+          }
+        }
+
         showToast("Supplier registered successfully", "success");
         onSuccess(res.data || res);
         onClose();
       }
-    } catch (error) {
-      showToast("Failed to register supplier", "error");
+    } catch (error: any) {
+      const errMsg = error?.response?.data?.detail?.description || error?.detail?.description || error?.message || "Failed to register supplier";
+      showToast(errMsg, "error");
     } finally {
       setSubmitting(false);
     }

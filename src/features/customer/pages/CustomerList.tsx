@@ -2,9 +2,10 @@ import { useState, useMemo, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Search, Users, Bookmark, Filter,
-  ChevronRight, UserCheck, AlertCircle, CreditCard,
-  Loader2
+  UserCheck, AlertCircle, CreditCard,
+  Loader2, Eye, Pencil, MoreVertical, Trash2, Plus
 } from "lucide-react";
+import SkeletonLoader from "@/components/common/SkeletonLoader";
 import { useHeader } from "@/context/HeaderContext";
 import { GradientButton } from "@/components/ui/GradientButton";
 import { useBusinessApi } from "@/context/BusinessApiContext";
@@ -13,6 +14,7 @@ import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 import { StatCard } from "@/components/common/StatsCard";
 import { RightSidebarFilter } from "@/components/common/RightSidebarFilter";
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
+import { useToast } from "@/context/ToastContext";
 
 const fmt = (n: number) => `₹${n.toLocaleString("en-IN")}`;
 
@@ -20,6 +22,7 @@ const CustomerList = () => {
   const navigate = useNavigate();
   const { setActions, setBottomActions } = useHeader();
   const { customer } = useBusinessApi();
+  const { showToast } = useToast();
 
   /* ── State ── */
   const [searchTerm, setSearchTerm] = useState("");
@@ -27,8 +30,9 @@ const CustomerList = () => {
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
 
-  const { getData } = useApi();
+  const { getData, deleteData } = useApi();
   const [analyticsStats, setAnalyticsStats] = useState<any>(null);
 
   useEffect(() => {
@@ -40,7 +44,7 @@ const CustomerList = () => {
         }
       })
       .catch(() => {});
-  }, [getData]);
+  }, [getData, refreshKey]);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(searchTerm), 300);
@@ -96,8 +100,9 @@ const CustomerList = () => {
   const filters = useMemo(() => ({
     search: debouncedSearch,
     fromDate,
-    toDate
-  }), [debouncedSearch, fromDate, toDate]);
+    toDate,
+    refreshKey
+  }), [debouncedSearch, fromDate, toDate, refreshKey]);
 
   const { items: customers, loading, loadingMore, totalCount, lastElementRef } = useInfiniteScroll({
     fetchPage,
@@ -109,44 +114,71 @@ const CustomerList = () => {
   const clearAll = () => { setFromDate(""); setToDate(""); setSearchTerm(""); };
 
   /* ── Row Selection ── */
-  const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
+  const [selectedCustomers, setSelectedCustomers] = useState<Set<string>>(new Set());
+  const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
 
-  const handleRowClick = (customer: any) => {
-    setSelectedCustomer((prev: any) => prev?.id === customer.id ? null : customer);
+  const toggleSelectCustomer = (id: string) => {
+    setSelectedCustomers(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedCustomers.size === 0) return;
+    if (!window.confirm(`Are you sure you want to delete these ${selectedCustomers.size} customers?`)) return;
+    try {
+      for (const id of Array.from(selectedCustomers)) {
+        await deleteData(`${ENDPOINTS.CUSTOMERS}/${SHOP_ID}/${id}`);
+      }
+      showToast("Selected customers deleted successfully", "success");
+      setSelectedCustomers(new Set());
+      setRefreshKey(prev => prev + 1);
+    } catch {
+      showToast("Failed to delete some customers", "error");
+    }
+  };
+
+  const handleDeleteCustomer = async (id: string) => {
+    if (!window.confirm("Are you sure you want to delete this customer?")) return;
+    try {
+      await deleteData(`${ENDPOINTS.CUSTOMERS}/${SHOP_ID}/${id}`);
+      showToast("Customer deleted successfully", "success");
+      setSelectedCustomers(prev => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+      setRefreshKey(prev => prev + 1);
+    } catch {
+      showToast("Failed to delete customer", "error");
+    }
   };
 
   useEffect(() => {
-    if (selectedCustomer) {
+    if (selectedCustomers.size > 1) {
       setBottomActions(
         <div className="flex items-center justify-between w-full animate-in fade-in slide-in-from-right-4 duration-300">
           <div className="flex items-center gap-3">
             <div className="w-7 h-7 rounded-md bg-blue-500 text-white flex items-center justify-center text-[10px] font-black shrink-0">
-              {(selectedCustomer.name || "?").split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2)}
+              C
             </div>
             <div>
-              <p className="text-[12px] font-bold text-slate-800 leading-tight">{selectedCustomer.name || "Unknown"}</p>
-              <p className="text-[10px] font-semibold text-slate-400 font-mono">{selectedCustomer.ui_id || selectedCustomer.id?.slice(0, 8)}</p>
+              <p className="text-[12px] font-bold text-slate-800 leading-tight">Selected {selectedCustomers.size} Customers</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setSelectedCustomer(null)}
-              className="h-8 px-3 rounded-md border border-slate-200 bg-white hover:bg-slate-50 text-slate-500 font-semibold text-[11px] transition-colors"
+              onClick={handleBulkDelete}
+              className="h-8 px-3 rounded-md border border-red-200 bg-red-50 hover:bg-red-100 text-red-650 font-bold text-[11px] transition-colors flex items-center gap-1.5"
             >
-              Deselect
-            </button>
-            <button
-              onClick={() => navigate(`/customers/${selectedCustomer.id}/edit`)}
-              className="h-8 px-3 rounded-md border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-[11px] transition-colors"
-            >
-              Edit
-            </button>
-            <button
-              onClick={() => navigate(`/customers/${selectedCustomer.id}`)}
-              className="h-8 px-4 rounded-md bg-blue-600 hover:bg-blue-700 text-white font-semibold text-[11px] transition-colors flex items-center gap-1.5"
-            >
-              <ChevronRight size={13} />
-              View Details
+              <Trash2 size={13} />
+              Delete All
             </button>
           </div>
         </div>
@@ -154,7 +186,15 @@ const CustomerList = () => {
     } else {
       setBottomActions(null);
     }
-  }, [selectedCustomer, setBottomActions, navigate]);
+  }, [selectedCustomers, setBottomActions]);
+
+  if (loading && customers.length === 0) {
+    return (
+      <div className="flex-1 p-6">
+        <SkeletonLoader variant="list" rows={8} showStats={true} />
+      </div>
+    );
+  }
 
   return (
     <div className="flex-1 flex flex-col min-h-0 gap-2.5 font-sans w-full overflow-hidden relative">
@@ -204,7 +244,7 @@ const CustomerList = () => {
             placeholder="Search customers..."
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
-            className="w-full h-9 pl-9 pr-3 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 focus:outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-50 transition-all placeholder:text-slate-400"
+            className="w-full h-9 pl-9 pr-3 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 focus:outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-55 transition-all placeholder:text-slate-400"
           />
         </div>
 
@@ -212,7 +252,7 @@ const CustomerList = () => {
           onClick={() => setIsFilterOpen(true)}
           className={`h-9 px-3 flex items-center gap-1.5 rounded-lg border text-xs font-bold transition-all active:scale-95 ${activeFilters > 0
             ? "border-blue-200 bg-blue-50 text-blue-600"
-            : "border-slate-200 bg-white text-slate-500 hover:bg-slate-50"
+            : "border-slate-200 bg-white text-slate-500 hover:bg-slate-55"
             }`}
         >
           <Filter size={13} />
@@ -250,7 +290,7 @@ const CustomerList = () => {
                 type="date"
                 value={toDate}
                 onChange={e => setToDate(e.target.value)}
-                className="w-full h-9 px-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-750 focus:outline-none focus:border-slate-300 focus:bg-white transition-colors"
+                className="w-full h-9 px-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-755 focus:outline-none focus:border-slate-300 focus:bg-white transition-colors"
               />
             </div>
           </div>
@@ -260,38 +300,44 @@ const CustomerList = () => {
       {/* ── Table Card ── */}
       <div className="bg-white border border-slate-100 rounded-lg shadow-sm min-w-0 overflow-hidden flex flex-col flex-1 min-h-0 mt-1">
         <div className="overflow-auto flex-1 scrollbar-thin scrollbar-thumb-slate-100">
-          <table className="w-full text-left min-w-[700px]">
-            <thead className="sticky top-0 z-10 bg-slate-50/95 backdrop-blur-sm border-b border-slate-100">
+          <table className="w-full text-left min-w-[700px] border-collapse relative">
+            <thead className="sticky top-0 z-20 bg-slate-50 border-b border-slate-100">
               <tr>
+                <th className="py-2.5 px-4 text-[10px] font-black text-slate-400 uppercase tracking-wider w-10 text-center">
+                  <input
+                    type="checkbox"
+                    checked={customers.length > 0 && customers.every((c: any) => selectedCustomers.has(c.id))}
+                    onChange={() => {
+                      const allSelected = customers.length > 0 && customers.every((c: any) => selectedCustomers.has(c.id));
+                      if (allSelected) {
+                        setSelectedCustomers(new Set());
+                      } else {
+                        setSelectedCustomers(new Set(customers.map((c: any) => c.id)));
+                      }
+                    }}
+                    className="rounded border-slate-350 text-blue-600 focus:ring-blue-500/20 cursor-pointer"
+                  />
+                </th>
                 <th className="py-2.5 px-4 text-[10px] font-black text-slate-400 uppercase tracking-wider">Customer</th>
                 <th className="py-2.5 px-4 text-[10px] font-black text-slate-400 uppercase tracking-wider">Contact</th>
                 <th className="py-2.5 px-4 text-[10px] font-black text-slate-400 uppercase tracking-wider text-right">Credit Limit</th>
                 <th className="py-2.5 px-4 text-[10px] font-black text-slate-400 uppercase tracking-wider text-right">Outstanding</th>
                 <th className="py-2.5 px-4 text-[10px] font-black text-slate-400 uppercase tracking-wider text-center">Status</th>
                 <th className="py-2.5 px-4 text-[10px] font-black text-slate-400 uppercase tracking-wider">Created</th>
-                <th className="py-2.5 px-4 text-[10px] font-black text-slate-400 uppercase tracking-wider w-10"></th>
+                <th className="py-2.5 px-4 text-[10px] font-black text-slate-400 uppercase tracking-wider text-right w-24 sticky right-0 bg-slate-50 border-l border-slate-200 z-30 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.08)]">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-50">
-              {loading ? (
+            <tbody className="divide-y divide-slate-50 bg-white">
+              {customers.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-16 text-center">
-                    <div className="flex flex-col items-center gap-2 text-slate-400">
-                      <Loader2 size={20} className="animate-spin" />
-                      <p className="text-sm font-medium">Loading customers...</p>
-                    </div>
-                  </td>
-                </tr>
-              ) : customers.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="py-16 text-center text-sm text-slate-400 font-medium">
+                  <td colSpan={8} className="py-16 text-center text-sm text-slate-400 font-medium">
                     No customers found matching your filters.
                   </td>
                 </tr>
               ) : (
                 customers.map((c: any, idx: number) => {
                   const isLast = idx === customers.length - 1;
-                  const isSelected = selectedCustomer?.id === c.id;
+                  const isSelected = selectedCustomers.has(c.id);
                   const name = c.name || "Unknown";
                   const initials = name.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2);
                   const outstanding = c.outstanding_infos?.amount ?? c.outstanding ?? 0;
@@ -304,12 +350,16 @@ const CustomerList = () => {
                     <tr
                       key={c.id}
                       ref={isLast ? lastElementRef : undefined}
-                      onClick={() => handleRowClick(c)}
-                      className={`group cursor-pointer transition-colors ${isSelected
-                        ? "bg-blue-50 border-l-2 border-l-blue-500"
-                        : "hover:bg-blue-50/30"
-                        }`}
+                      className={`group transition-all cursor-default ${isSelected ? "bg-blue-50 border-l-2 border-l-blue-500" : "hover:bg-slate-50/60"}`}
                     >
+                      <td className="py-3 px-4 w-10 text-center">
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => toggleSelectCustomer(c.id)}
+                          className="rounded border-slate-350 text-blue-600 focus:ring-blue-500/20 cursor-pointer"
+                        />
+                      </td>
                       <td className="py-3 px-4">
                         <div className="flex items-center gap-3">
                           <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-[11px] font-black shrink-0 transition-colors ${isSelected ? "bg-blue-500 text-white" : "bg-blue-100 text-blue-600"}`}>
@@ -345,8 +395,70 @@ const CustomerList = () => {
                       <td className="py-3 px-4">
                         <span className="text-[11px] font-semibold text-slate-500">{createdDate}</span>
                       </td>
-                      <td className="py-3 px-4">
-                        <ChevronRight size={14} className={`transition-all duration-200 ${isSelected ? "text-blue-500 rotate-90" : "text-slate-300 group-hover:text-blue-500"}`} />
+                      <td className="py-3 px-4 text-right sticky right-0 bg-white group-hover:bg-slate-50 border-l border-slate-200 z-10 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.08)] transition-colors whitespace-nowrap">
+                        <div className="flex items-center justify-end gap-2 relative">
+                          <button
+                            onClick={() => navigate(`/customers/${c.id}`)}
+                            className="text-slate-400 hover:text-blue-600 transition-colors p-1"
+                            title="View Customer"
+                          >
+                            <Eye size={15} />
+                          </button>
+                          <button
+                            onClick={() => navigate(`/customers/${c.id}/edit`)}
+                            className="text-slate-400 hover:text-blue-600 transition-colors p-1"
+                            title="Edit Customer"
+                          >
+                            <Pencil size={15} />
+                          </button>
+                          <div className="relative">
+                            <button
+                              onClick={() => setActiveMenuId(activeMenuId === c.id ? null : c.id)}
+                              className="text-slate-400 hover:text-blue-600 transition-colors p-1"
+                              title="More actions"
+                            >
+                              <MoreVertical size={15} />
+                            </button>
+                            {activeMenuId === c.id && (
+                              <>
+                                <div className="fixed inset-0 z-40" onClick={() => setActiveMenuId(null)} />
+                                <div className="absolute right-0 mt-1 w-44 bg-white border border-slate-200 rounded-lg shadow-lg py-1 z-50 text-left font-sans animate-in fade-in slide-in-from-top-1 duration-150">
+                                  <button
+                                    onClick={() => {
+                                      setActiveMenuId(null);
+                                      alert("Record payment initiated!");
+                                    }}
+                                    className="flex items-center gap-2 w-full px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                                  >
+                                    <CreditCard size={13} />
+                                    Record Payment
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      setActiveMenuId(null);
+                                      navigate(`/billing?customer_id=${c.id}`);
+                                    }}
+                                    className="flex items-center gap-2 w-full px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                                  >
+                                    <Plus size={13} />
+                                    Record Sale
+                                  </button>
+                                  <div className="border-t border-slate-100 my-1"></div>
+                                  <button
+                                    onClick={() => {
+                                      setActiveMenuId(null);
+                                      handleDeleteCustomer(c.id);
+                                    }}
+                                    className="flex items-center gap-2 w-full px-3 py-2 text-xs font-semibold text-red-650 hover:bg-red-50"
+                                  >
+                                    <Trash2 size={13} />
+                                    Delete
+                                  </button>
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -356,7 +468,7 @@ const CustomerList = () => {
               {/* Loading more indicator */}
               {loadingMore && (
                 <tr>
-                  <td colSpan={7} className="py-4 text-center">
+                  <td colSpan={8} className="py-4 text-center">
                     <Loader2 size={16} className="animate-spin text-blue-500 mx-auto" />
                   </td>
                 </tr>

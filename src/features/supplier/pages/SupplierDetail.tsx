@@ -13,6 +13,7 @@ import { useApi } from "@/context/ApiContext";
 import { useToast } from "@/context/ToastContext";
 import { useHeader } from "@/context/HeaderContext";
 import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
+import SkeletonLoader from "@/components/common/SkeletonLoader";
 import Loader from "@/components/common/Loader";
 import type { SupplierRecord } from "@/types/api";
 import { SearchSelect } from "@/components/inputbuilders/SearchSelect";
@@ -217,7 +218,7 @@ export default function SupplierDetail() {
     }
   }
 
-  if (recordLoading) return <div className="p-12 flex justify-center"><Loader /></div>;
+  if (recordLoading) return <SkeletonLoader variant="detail" />;
   if (!supplier) return (
     <div className="text-center py-20 space-y-4">
       <p className="text-slate-500">Supplier not found.</p>
@@ -247,7 +248,7 @@ export default function SupplierDetail() {
         <ProfileHeaderCard
           name={name}
           initials={initials}
-          subText={`ID: ${supplier.id}`}
+          subText={`Supplier ID: ${supplier.ui_id || supplier.id?.slice(0, 8).toUpperCase()}`}
           badges={[
             { text: String(supplierType), variant: "primary" },
             {
@@ -509,7 +510,7 @@ export default function SupplierDetail() {
               if (productsList.length > 0) {
                 const firstItem = productsList[0];
                 rows.push({
-                  purchaseId: p.id,
+                  purchaseId: p.id || p.purchase_id,
                   type: p.type,
                   productName: firstItem.productName,
                   stocksBefore: firstItem.stocksBefore,
@@ -525,12 +526,12 @@ export default function SupplierDetail() {
                   invoiceNo: p.invoice_no || pd.invoiceNo || '—',
                   referenceNo: pd.referenceNo || '—',
                   purchaseDate: p.purchase_date || pd.date || p.created_at,
-                  paymentMethod: (p.payment_status && p.payment_status.toLowerCase() === "outstanding") ? "Outstanding" : (payment.method || p.payment_status || '—'),
-                  amountPaid: p.paid_amount ?? payment.amountPaid ?? 0,
-                  totalCost: p.total_cost ?? pd.totalAmount ?? 0,
-                  deliveryCharge: p.transport_charge ?? charges.delivery_charge ?? 0,
-                  otherCharge: p.other_charges ?? charges.other_charge ?? 0,
-                  uiId: p.ui_id || p.purchase_id?.slice(-6),
+                  paymentMethod: p.payment_infos?.[0]?.method ?? ((p.payment_status && p.payment_status.toLowerCase() === "outstanding") ? "Outstanding" : (payment.method || p.payment_status || '—')),
+                  amountPaid: p.paid_amount ?? p.payment_infos?.[0]?.amount ?? payment.amountPaid ?? 0,
+                  totalCost: p.total_cost ?? p.item_infos?.total_pur_cost ?? pd.totalAmount ?? 0,
+                  deliveryCharge: p.transport_charge ?? p.charges_infos?.transport_charge ?? charges.delivery_charge ?? 0,
+                  otherCharge: p.other_charges ?? p.charges_infos?.other_charge ?? charges.other_charge ?? 0,
+                  uiId: p.ui_id || p.purchase_id?.split('-')[0].toUpperCase() || p.id?.slice(-6),
                   storageLocation: d.storage_location || p.storage_location || '—',
                   productsList: productsList
                 });

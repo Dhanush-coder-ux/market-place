@@ -20,6 +20,7 @@ import { GradientButton } from "@/components/ui/GradientButton";
 import { useToast } from "@/context/ToastContext";
 import { InlineSerialManager } from "@/components/common/InlineSerialManager";
 import { useQuickCreate } from "@/features/common/QuickCreate/QuickCreateContext";
+import { Tooltip } from "@/components/common/Tootlip";
 
 interface InventoryItemsCardProps {
   products: any[];
@@ -417,29 +418,36 @@ export const InventoryItemsCard = ({
           </div>
           <div className="flex items-center gap-3">
             {type === "PURCHASE" && gstMode && setGstMode && (
-              <div className="flex bg-slate-100 rounded-lg p-0.5 shrink-0 border border-slate-200/55 shadow-inner h-9 items-center select-none">
-                <button
-                  type="button"
-                  onClick={() => setGstMode("inclusive")}
-                  className={`px-3 py-1 flex items-center justify-center rounded-md text-[10px] font-black uppercase tracking-wider transition-all duration-200 cursor-pointer h-7 ${
-                    gstMode === "inclusive" 
-                      ? "bg-white text-blue-600 shadow-sm border border-slate-200/40" 
-                      : "text-slate-500 hover:text-slate-700"
-                  }`}
-                >
-                  Inclusive GST
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setGstMode("exclusive")}
-                  className={`px-3 py-1 flex items-center justify-center rounded-md text-[10px] font-black uppercase tracking-wider transition-all duration-200 cursor-pointer h-7 ${
-                    gstMode === "exclusive" 
-                      ? "bg-white text-blue-600 shadow-sm border border-slate-200/40" 
-                      : "text-slate-500 hover:text-slate-700"
-                  }`}
-                >
-                  Exclusive GST
-                </button>
+              <div className="flex items-center gap-2">
+                <Tooltip message="Inclusive GST: GST is already included in the item's cost price. Exclusive GST: GST rate is calculated and added on top of the item's base cost price.">
+                  <span className="cursor-help flex text-slate-400 hover:text-slate-650 transition-colors">
+                    <Info size={14} />
+                  </span>
+                </Tooltip>
+                <div className="flex bg-slate-100 rounded-lg p-0.5 shrink-0 border border-slate-200/55 shadow-inner h-9 items-center select-none">
+                  <button
+                    type="button"
+                    onClick={() => setGstMode("inclusive")}
+                    className={`px-3 py-1 flex items-center justify-center rounded-md text-[10px] font-black uppercase tracking-wider transition-all duration-200 cursor-pointer h-7 ${
+                      gstMode === "inclusive" 
+                        ? "bg-white text-blue-600 shadow-sm border border-slate-200/40" 
+                        : "text-slate-500 hover:text-slate-700"
+                    }`}
+                  >
+                    Inclusive GST
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setGstMode("exclusive")}
+                    className={`px-3 py-1 flex items-center justify-center rounded-md text-[10px] font-black uppercase tracking-wider transition-all duration-200 cursor-pointer h-7 ${
+                      gstMode === "exclusive" 
+                        ? "bg-white text-blue-600 shadow-sm border border-slate-200/40" 
+                        : "text-slate-500 hover:text-slate-700"
+                    }`}
+                  >
+                    Exclusive GST
+                  </button>
+                </div>
               </div>
             )}
 
@@ -725,6 +733,7 @@ export const InventoryItemsCard = ({
                                 placeholder="Find or add product..."
                                 className="!h-10 text-sm"
                                 entityName="Product"
+                                getPopupContainer={() => document.body}
                               />
                             );
                           })()}
@@ -905,7 +914,7 @@ export const InventoryItemsCard = ({
                           <div className="flex items-center gap-1 px-1.5 py-1 bg-emerald-50/50 border border-emerald-100 rounded-md shrink-0">
                             <span className="text-[9px] font-black text-emerald-600 uppercase tracking-tighter">SP</span>
                             <span className="text-[11px] font-black text-emerald-700 tabular-nums">
-                              ₹{computedSellPrice.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
+                              ₹{computedSellPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </span>
                           </div>
                         </div>
@@ -1070,7 +1079,7 @@ export const InventoryItemsCard = ({
                                     <div className="space-y-1.5">
                                       <div className="flex justify-between text-[11px]">
                                         <span className="text-slate-500">Row Subtotal (Base)</span>
-                                        <span className="font-bold text-slate-700">₹{rowTotal.toLocaleString()}</span>
+                                        <span className="font-bold text-slate-700">₹{rowTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                       </div>
                                       {product.taxGst !== undefined && Number(product.taxGst) > 0 && (
                                         <>

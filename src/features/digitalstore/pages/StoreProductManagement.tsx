@@ -1,9 +1,11 @@
 import { useMemo, useState, useEffect } from "react";
+import { useRef } from "react";
 import {
   Edit2, Plus, Search,
-  Box, AlertCircle, Wallet, Eye, EyeOff,
+  AlertCircle, Eye, EyeOff,
   CheckCircle2, XCircle, LayoutGrid, List,
-  Tag, Package, X, Settings2, Sparkles, Loader2
+  Tag, X, Settings2, Sparkles, Loader2,
+  MoreVertical, ChevronDown, Sliders
 } from "lucide-react";
 import { inventoryApi, inventoryCustomFieldsApi, type InventoryCustomFieldDefinition } from "../../../services/api/inventory";
 import { SHOP_ID } from "../../../services/endpoints";
@@ -207,16 +209,7 @@ function ProductCard({
         {/* App Visibility toggle + actions */}
         <div className="flex items-center justify-between gap-2">
           <AppVisibilityToggle visible={product.visibleOnApp} onChange={onToggleVisibility} loading={actionLoading} />
-
-          <div className="flex items-center gap-1.5">
-            <button
-              onClick={onEdit}
-              className="w-8 h-8 rounded-xl border border-slate-200 bg-white flex items-center justify-center text-slate-400 hover:text-blue-500 hover:border-blue-300 hover:bg-blue-50 transition-all cursor-pointer animate-none"
-              title="Edit & Custom Fields"
-            >
-              <Edit2 size={13} strokeWidth={2.5} />
-            </button>
-          </div>
+          <CardMoreMenu onEdit={onEdit} onToggleVisibility={onToggleVisibility} visible={product.visibleOnApp} actionLoading={actionLoading} />
         </div>
       </div>
     </div>
@@ -328,15 +321,127 @@ function ProductRow({
         <AppVisibilityToggle visible={product.visibleOnApp} onChange={onToggleVisibility} loading={actionLoading} />
       </div>
 
-      {/* Actions */}
-      <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-        <button
-          onClick={onEdit}
-          className="w-8 h-8 rounded-xl border border-slate-200 flex items-center justify-center text-slate-400 hover:text-blue-500 hover:border-blue-300 hover:bg-blue-50 transition-all cursor-pointer"
-        >
-          <Edit2 size={13} strokeWidth={2.5} />
-        </button>
+      {/* Actions - ⋮ More menu */}
+      <div className="w-20 shrink-0 flex justify-end">
+        <RowMoreMenu onEdit={onEdit} onToggleVisibility={onToggleVisibility} visible={product.visibleOnApp} actionLoading={actionLoading} />
       </div>
+    </div>
+  );
+}
+
+// ─── Row More Menu ─────────────────────────────────────────────────────────────
+function RowMoreMenu({ onEdit, onToggleVisibility, visible, actionLoading }: { onEdit: () => void; onToggleVisibility: () => void; visible: boolean; actionLoading?: boolean }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  // close on outside click
+  useState(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  });
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={(e) => { e.stopPropagation(); setOpen(o => !o); }}
+        className="w-8 h-8 rounded-xl border border-slate-200 flex items-center justify-center text-slate-400 hover:text-slate-700 hover:border-slate-300 hover:bg-slate-50 transition-all cursor-pointer"
+        title="More actions"
+      >
+        <MoreVertical size={14} strokeWidth={2.5} />
+      </button>
+      {open && (
+        <div
+          className="absolute right-0 top-10 z-30 bg-white rounded-2xl shadow-xl border border-slate-100 py-1.5 min-w-[170px]"
+          style={{ boxShadow: "0 8px 32px rgba(0,0,0,0.12)" }}
+        >
+          <button
+            onClick={(e) => { e.stopPropagation(); onEdit(); setOpen(false); }}
+            className="w-full flex items-center gap-2.5 px-4 py-2.5 text-[12.5px] font-semibold text-slate-700 hover:bg-slate-50 cursor-pointer transition-colors text-left"
+          >
+            <Sliders size={13} className="text-blue-500" strokeWidth={2.5} />
+            Custom Fields
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); onToggleVisibility(); setOpen(false); }}
+            disabled={actionLoading}
+            className="w-full flex items-center gap-2.5 px-4 py-2.5 text-[12.5px] font-semibold text-slate-700 hover:bg-slate-50 cursor-pointer transition-colors text-left disabled:opacity-50"
+          >
+            {visible
+              ? <><EyeOff size={13} className="text-slate-400" strokeWidth={2.5} /> Hide from App</>
+              : <><Eye size={13} className="text-emerald-500" strokeWidth={2.5} /> Show on App</>
+            }
+          </button>
+          <div className="h-px bg-slate-100 mx-3 my-1" />
+          <button
+            onClick={(e) => { e.stopPropagation(); onEdit(); setOpen(false); }}
+            className="w-full flex items-center gap-2.5 px-4 py-2.5 text-[12.5px] font-semibold text-slate-700 hover:bg-slate-50 cursor-pointer transition-colors text-left"
+          >
+            <Edit2 size={13} className="text-slate-400" strokeWidth={2.5} />
+            Edit Product
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Card More Menu ────────────────────────────────────────────────────────────
+function CardMoreMenu({ onEdit, onToggleVisibility, visible, actionLoading }: { onEdit: () => void; onToggleVisibility: () => void; visible: boolean; actionLoading?: boolean }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useState(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  });
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={(e) => { e.stopPropagation(); setOpen(o => !o); }}
+        className="w-8 h-8 rounded-xl border border-slate-200 bg-white flex items-center justify-center text-slate-400 hover:text-slate-700 hover:border-slate-300 transition-all cursor-pointer"
+        title="More actions"
+      >
+        <MoreVertical size={14} strokeWidth={2.5} />
+      </button>
+      {open && (
+        <div
+          className="absolute right-0 bottom-10 z-30 bg-white rounded-2xl shadow-xl border border-slate-100 py-1.5 min-w-[170px]"
+          style={{ boxShadow: "0 8px 32px rgba(0,0,0,0.12)" }}
+        >
+          <button
+            onClick={(e) => { e.stopPropagation(); onEdit(); setOpen(false); }}
+            className="w-full flex items-center gap-2.5 px-4 py-2.5 text-[12.5px] font-semibold text-slate-700 hover:bg-slate-50 cursor-pointer transition-colors text-left"
+          >
+            <Sliders size={13} className="text-blue-500" strokeWidth={2.5} />
+            Custom Fields
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); onToggleVisibility(); setOpen(false); }}
+            disabled={actionLoading}
+            className="w-full flex items-center gap-2.5 px-4 py-2.5 text-[12.5px] font-semibold text-slate-700 hover:bg-slate-50 cursor-pointer transition-colors text-left disabled:opacity-50"
+          >
+            {visible
+              ? <><EyeOff size={13} className="text-slate-400" strokeWidth={2.5} /> Hide from App</>
+              : <><Eye size={13} className="text-emerald-500" strokeWidth={2.5} /> Show on App</>
+            }
+          </button>
+          <div className="h-px bg-slate-100 mx-3 my-1" />
+          <button
+            onClick={(e) => { e.stopPropagation(); onEdit(); setOpen(false); }}
+            className="w-full flex items-center gap-2.5 px-4 py-2.5 text-[12.5px] font-semibold text-slate-700 hover:bg-slate-50 cursor-pointer transition-colors text-left"
+          >
+            <Edit2 size={13} className="text-slate-400" strokeWidth={2.5} />
+            Edit Product
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -639,21 +744,6 @@ const ProductDashboard = () => {
   return (
     <div className="py-5 px-1 space-y-5" style={{ fontFamily: "Inter, Poppins, sans-serif" }}>
 
-      {/* ── Header ── */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-3 mb-1">
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: "#eff6ff", color: "#3b82f6" }}>
-              <Package size={18} strokeWidth={2.5} />
-            </div>
-            <h1 className="text-[20px] font-extrabold text-slate-800 tracking-tight">Product Dashboard</h1>
-          </div>
-          <p className="text-[13px] text-slate-400 ml-12">
-            Manage inventory, pricing, and control what's visible on the customer app.
-          </p>
-        </div>
-      </div>
-
       {/* Loading state */}
       {loading && products.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 gap-3">
@@ -662,28 +752,6 @@ const ProductDashboard = () => {
         </div>
       ) : (
         <>
-          {/* ── Stats Row ── */}
-          <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
-            {[
-              { label: "Total",       value: stats.total,         icon: <Box size={14} />,          bg: "#eff6ff", color: "#3b82f6",  border: "#bfdbfe" },
-              { label: "Visible",     value: stats.visible,       icon: <Eye size={14} />,           bg: "#f0fdf4", color: "#16a34a",  border: "#bbf7d0" },
-              { label: "Hidden",      value: stats.hidden,        icon: <EyeOff size={14} />,        bg: "#f8fafc", color: "#64748b",  border: "#e2e8f0" },
-              { label: "Low Stock",   value: stats.lowStock,      icon: <AlertCircle size={14} />,   bg: "#fffbeb", color: "#d97706",  border: "#fde68a" },
-              { label: "Out of Stock",value: stats.outOfStock,    icon: <XCircle size={14} />,       bg: "#fef2f2", color: "#dc2626",  border: "#fecaca" },
-              { label: "Inv. Value",  value: `₹${(stats.inventoryValue/1000).toFixed(1)}k`, icon: <Wallet size={14} />, bg: "#f5f3ff", color: "#7c3aed", border: "#ddd6fe" },
-            ].map(s => (
-              <div key={s.label}
-                className="flex items-center gap-2.5 p-3 rounded-xl border-[1.5px]"
-                style={{ background: s.bg, borderColor: s.border }}
-              >
-                <span style={{ color: s.color }}>{s.icon}</span>
-                <div>
-                  <p className="text-[18px] font-extrabold text-slate-800 leading-none">{s.value}</p>
-                  <p className="text-[9.5px] font-bold text-slate-400 uppercase tracking-wide mt-0.5">{s.label}</p>
-                </div>
-              </div>
-            ))}
-          </div>
 
           {/* ── Toolbar ── */}
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm px-4 py-3 flex flex-wrap items-center gap-3">
@@ -700,22 +768,23 @@ const ProductDashboard = () => {
               />
             </div>
 
-            {/* Category pills */}
-            <div className="flex items-center gap-1 bg-slate-50 border border-slate-200 rounded-xl p-1 flex-wrap max-h-32 overflow-y-auto">
-              {categoriesList.slice(0, 8).map(cat => {
-                const active = categoryFilter === cat;
-                return (
-                  <button key={cat} onClick={() => setCategoryFilter(cat)}
-                    className="px-3 py-1.5 rounded-lg text-[11.5px] font-bold cursor-pointer transition-all border"
-                    style={active
-                      ? { background: "#eff6ff", color: "#2563eb", borderColor: "#bfdbfe" }
-                      : { background: "transparent", color: "#94a3b8", borderColor: "transparent" }
-                    }
-                  >
-                    {cat}
-                  </button>
-                );
-              })}
+            {/* Category select dropdown */}
+            <div className="relative min-w-[180px]">
+              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
+                <Tag size={13} strokeWidth={2.5} />
+              </div>
+              <select
+                value={categoryFilter}
+                onChange={(e) => setCategoryFilter(e.target.value)}
+                className="w-full appearance-none bg-slate-50 border border-slate-200 rounded-xl pl-8 pr-8 py-2 text-[12.5px] font-semibold text-slate-700 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-50 transition-all cursor-pointer"
+              >
+                {categoriesList.map(cat => (
+                  <option key={cat} value={cat}>{cat}</option>
+                ))}
+              </select>
+              <div className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
+                <ChevronDown size={13} strokeWidth={2.5} />
+              </div>
             </div>
 
             {/* Visibility filter pills */}

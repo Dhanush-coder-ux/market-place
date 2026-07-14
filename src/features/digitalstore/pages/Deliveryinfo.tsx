@@ -307,7 +307,7 @@ function SettingsCard({
 }
 
 /* ── Main Page ───────────────────────────────────────────────────────────── */
-export default function DeliveryPreferences() {
+export default function DeliveryPreferences({ onStatusChange }: { onStatusChange?: (status: React.ReactNode) => void }) {
   const { shop } = useBusinessApi();
   const [instant,    setInstant]    = useState<DeliveryConfig>({ enabled: false, speed: "Within 12 hours",    freeThreshold: 50,  manageStore: true,  partners: true  });
   const [standard,   setStandard]   = useState<DeliveryConfig>({ enabled: false, speed: "1–2 Business Days",  freeThreshold: 30,  manageStore: false, partners: true  });
@@ -377,24 +377,9 @@ export default function DeliveryPreferences() {
 
   const activeCount = [instant, standard, nationwide].filter((d) => d.enabled).length;
 
-  return (
-    <div className="mx-auto py-6 px-1 space-y-5" style={{ fontFamily: "Inter, Poppins, sans-serif" }}>
-
-      {/* ── Page Header ── */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-3 mb-1">
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: "#eff6ff", color: "#3b82f6" }}>
-              <Truck size={18} strokeWidth={2.5} />
-            </div>
-            <h1 className="text-[20px] font-extrabold text-slate-800 tracking-tight">Delivery Preferences</h1>
-          </div>
-          <p className="text-[13px] text-slate-400 ml-12">
-            Manage fulfillment zones, shipping speeds, and courier partners.
-          </p>
-        </div>
-
-        {/* Summary pills */}
+  useEffect(() => {
+    if (onStatusChange) {
+      onStatusChange(
         <div className="flex items-center gap-2 shrink-0">
           <div className="flex items-center gap-1.5 bg-blue-50 border border-blue-100 px-3 py-1.5 rounded-xl">
             <CheckCircle2 size={12} className="text-blue-500" />
@@ -404,7 +389,40 @@ export default function DeliveryPreferences() {
             <span className="text-[12px] font-bold text-slate-500">{3 - activeCount} Disabled</span>
           </div>
         </div>
-      </div>
+      );
+    }
+  }, [activeCount, onStatusChange]);
+
+  return (
+    <div className="mx-auto py-6 px-1 space-y-5" style={{ fontFamily: "Inter, Poppins, sans-serif" }}>
+
+      {/* ── Page Header ── */}
+      {!onStatusChange && (
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-3 mb-1">
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: "#eff6ff", color: "#3b82f6" }}>
+                <Truck size={18} strokeWidth={2.5} />
+              </div>
+              <h1 className="text-[20px] font-extrabold text-slate-800 tracking-tight">Delivery Preferences</h1>
+            </div>
+            <p className="text-[13px] text-slate-400 ml-12">
+              Manage fulfillment zones, shipping speeds, and courier partners.
+            </p>
+          </div>
+
+          {/* Summary pills */}
+          <div className="flex items-center gap-2 shrink-0">
+            <div className="flex items-center gap-1.5 bg-blue-50 border border-blue-100 px-3 py-1.5 rounded-xl">
+              <CheckCircle2 size={12} className="text-blue-500" />
+              <span className="text-[12px] font-bold text-blue-600">{activeCount} Active</span>
+            </div>
+            <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-xl">
+              <span className="text-[12px] font-bold text-slate-500">{3 - activeCount} Disabled</span>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Pickup Banner ── */}
       <div className="rounded-2xl border-[1.5px] border-amber-200 bg-amber-50 p-4">

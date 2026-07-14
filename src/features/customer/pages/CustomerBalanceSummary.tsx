@@ -186,7 +186,7 @@ export default function CustomerBalanceSummary() {
           />
           <StatCard
             label="Outstanding Balance"
-            value={stats.outstanding.toLocaleString("en-IN")}
+            value={stats.outstanding.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             prefix="₹"
             icon={Banknote}
             iconBg="bg-rose-50"
@@ -195,7 +195,7 @@ export default function CustomerBalanceSummary() {
           />
           <StatCard
             label="Total Credit Limit"
-            value={stats.credit.toLocaleString("en-IN")}
+            value={stats.credit.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             prefix="₹"
             icon={Wallet}
             iconBg="bg-indigo-50"
@@ -355,7 +355,7 @@ export default function CustomerBalanceSummary() {
                           hour: '2-digit', minute: '2-digit'
                         });
                       } else if ((key === 'outstanding' || key === 'credit_limit' || key === 'outstanding_balance') && value != null) {
-                        displayValue = `₹${Number(value).toLocaleString("en-IN")}`;
+                        displayValue = `₹${Number(value).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
                       }
 
                       return (

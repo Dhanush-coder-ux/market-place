@@ -34,9 +34,17 @@ const formatDate = (dateStr?: string) => {
   if (!dateStr) return '—';
   return new Date(dateStr).toLocaleDateString('en-US', { day: '2-digit', month: 'short' });
 };
-
-const formatINR = (amount: number, decimals = 2) =>
-  amount.toLocaleString("en-IN", { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+// Smart price formatter: shows enough decimal places so tiny sub-unit prices never round to 0
+const formatPrice = (amount: number) => {
+  if (amount === 0) return "0.00";
+  const abs = Math.abs(amount);
+  // Figure out how many decimal places needed so we get at least 2 significant digits
+  let decimals = 2;
+  if (abs < 0.01) {
+    decimals = Math.max(2, Math.ceil(-Math.log10(abs)) + 2);
+  }
+  return amount.toLocaleString("en-IN", { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+};
 
 // ─── Quantity Adjuster Component ──────────────────────────────────────────────
 const QtyAdjuster = ({
@@ -112,11 +120,38 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
       const mapped = data.map((p: any) => {
         let computedStock = Number(p.stock_infos?.available_stocks ?? p.stock_infos?.physical_stocks ?? p.stocks ?? 0);
         let computedPrice = p.pricing_infos?.sell_price ?? p.sell_price ?? 0;
+        
+        const rawVariants = Array.isArray(p.variants) 
+          ? p.variants 
+          : (typeof p.variants === "object" && p.variants !== null ? Object.values(p.variants) : (Array.isArray(p.variant_infos) ? p.variant_infos : []));
         const batches = p.batch_infos || p.batches;
-        const hasVariants = !!(p.type_infos?.has_variant) || (p.variant_infos && p.variant_infos.length > 0) || (p.variants && p.variants.length > 0);
+
+        const hasVariants = rawVariants.length > 0;
         const hasBatches = !!(p.type_infos?.has_batch) || (batches && batches.length > 0);
 
-        if (!hasVariants && hasBatches && Array.isArray(batches)) {
+        if (hasVariants) {
+          if (computedStock === 0) {
+            computedStock = rawVariants.reduce((acc: number, v: any) => {
+              let vStock = v.stock_infos?.available_stocks !== undefined 
+                ? v.stock_infos?.available_stocks 
+                : (v.stocks !== undefined ? v.stocks : (v.stock !== undefined ? v.stock : undefined));
+              
+              if (vStock === undefined && Array.isArray(v.batch_infos) && v.batch_infos.length > 0) {
+                vStock = v.batch_infos.reduce((sum: number, b: any) => sum + Number(b.stock_infos?.available_stocks ?? b.stocks ?? b.stock_infos?.physical_stocks ?? 0), 0);
+              }
+              return acc + Number(vStock ?? 0);
+            }, 0);
+          }
+          
+          if ((computedPrice === 0 || computedPrice === undefined) && rawVariants.length > 0) {
+            const firstV = rawVariants[0];
+            let vPrice = firstV.pricing_infos?.sell_price ?? firstV.sell_price ?? firstV.price;
+            if (!vPrice && Array.isArray(firstV.batch_infos) && firstV.batch_infos.length > 0) {
+              vPrice = firstV.batch_infos[0].pricing_infos?.sell_price ?? firstV.batch_infos[0].sell_price;
+            }
+            computedPrice = Number(vPrice ?? 0);
+          }
+        } else if (hasBatches && Array.isArray(batches)) {
           if (computedStock === 0) {
             computedStock = batches.reduce((acc: number, b: any) => acc + Number(b.stock_infos?.available_stocks ?? b.stock_infos?.physical_stocks ?? b.stocks ?? 0), 0);
           }
@@ -184,23 +219,49 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
         const combDatas = v.datas || {};
         const attributes = v.attributes || combDatas.attributes || combDatas.datas?.attributes || {};
         let variantLabel = v.name || combDatas.name;
-        if (attributes && Object.keys(attributes).length > 0) {
+        if (variantLabel) {
+          // Keep the defined name
+        } else if (attributes && Object.keys(attributes).length > 0) {
           variantLabel = Object.values(attributes).join(' / ');
-        } else if (v.barcode && v.barcode !== combDatas.barcode) {
+        } else if (v.barcode && combDatas.barcode && v.barcode !== combDatas.barcode) {
           variantLabel = v.barcode;
         }
         if (!variantLabel) {
           variantLabel = "Standard Variant";
         }
+
+        let calculatedPrice = v.pricing_infos?.sell_price || v.sell_price || v.price || combDatas.sell_price || combDatas.price;
+        if (!calculatedPrice && Array.isArray(v.batch_infos) && v.batch_infos.length > 0) {
+          const firstBatch = v.batch_infos[0];
+          calculatedPrice = firstBatch.pricing_infos?.sell_price || firstBatch.sell_price;
+        }
+        if (!calculatedPrice) {
+          calculatedPrice = fullProduct.pricing_infos?.sell_price || fullProduct.sell_price || 0;
+        }
+
+        let calculatedStock = v.stock_infos?.available_stocks !== undefined ? v.stock_infos?.available_stocks : (v.stocks !== undefined ? v.stocks : (v.stock !== undefined ? v.stock : (combDatas.stocks !== undefined ? combDatas.stocks : undefined)));
+        if (calculatedStock === undefined && Array.isArray(v.batch_infos) && v.batch_infos.length > 0) {
+          calculatedStock = v.batch_infos.reduce((sum: number, b: any) => sum + (b.stock_infos?.available_stocks || b.stocks || b.stock_infos?.physical_stocks || 0), 0);
+        }
+        if (calculatedStock === undefined) {
+          calculatedStock = 0;
+        }
+
         return {
           ...v,
           id: v.id || String(Math.random()),
           name: variantLabel,
-          price: v.pricing_infos?.sell_price || v.sell_price || v.price || combDatas.sell_price || combDatas.price || fullProduct.pricing_infos?.sell_price || fullProduct.sell_price || 0,
-          stock: v.stock_infos?.available_stocks !== undefined ? v.stock_infos?.available_stocks : (v.stocks !== undefined ? v.stocks : (v.stock !== undefined ? v.stock : (combDatas.stocks !== undefined ? combDatas.stocks : 0))),
+          price: calculatedPrice,
+          stock: calculatedStock,
           serialnoId: v.serial_numbers?.id || v.serialno_infos?.[0]?.id || v.serial_number?.id || v.batches?.[0]?.serial_numbers?.id || combDatas.serial_numbers?.id || fullProduct.serialno_infos?.[0]?.id || fullProduct.serial_number?.id || fullProduct.serials?.id,
           availableSerials: getSerialNames(v.serialno_infos || v.serial_numbers || v.serial_number || v.batches?.[0]?.serial_numbers || combDatas.serial_numbers || fullProduct.serialno_infos || fullProduct.serial_number || fullProduct.serials),
           batchId: v.batch_infos?.[0]?.id || v.batches?.[0]?.id || v.batchId || combDatas.batches?.[0]?.id,
+          batches: (v.batch_infos || v.batches || []).map((b: any) => ({
+            ...b,
+            batchId: b.id,
+            price: b.pricing_infos?.sell_price || b.sell_price || calculatedPrice,
+            stock: b.stock_infos?.available_stocks !== undefined ? b.stock_infos?.available_stocks : (b.stocks !== undefined ? b.stocks : (b.stock !== undefined ? b.stock : 0)),
+          })),
         };
       });
 
@@ -310,6 +371,7 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
               manufacturingDate: pMapped.manufacturingDate,
               expiryDate: pMapped.expiryDate,
               maxStock: defaultVariant.stock,
+              baseStock: defaultVariant.stock,
               gst: pMapped.gst,
               unitInfos: pMapped.unitInfos,
               selectedUnit: pMapped.unitInfos?.name || null,
@@ -782,23 +844,36 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
                               }
                               onItemsChange(items.map(it => {
                                 if (it.id === item.id) {
-                                  // Base price refers to the actual unit price of the variant/product
+                                  // basePrice is the price per BASE unit (e.g. per kg)
+                                  // Sub-unit price = basePrice * factor
+                                  // (e.g. ₹150/kg, factor=0.001 for g → ₹0.15/g)
                                   let basePrice = it.basePrice;
                                   if (basePrice === undefined) {
                                     if (it.variantId) {
-                                      const variant = it._product.variants?.find((v: any) => v.id === it.variantId);
-                                      basePrice = variant?.price || it._product.price || 0;
+                                      const variant = (it._product?.variants ?? []).find((v: any) => v.id === it.variantId);
+                                      basePrice = variant?.price || it._product?.price || 0;
                                     } else {
-                                      basePrice = it._product.price || 0;
+                                      basePrice = it._product?.price || 0;
                                     }
                                   }
-                                  const newPrice = Number(((basePrice || 0) / factor).toFixed(2));
+                                  // baseStock is stock in base units (e.g. 100 kg)
+                                  const baseStock = it.baseStock ?? (it.maxStock != null ? it.maxStock : undefined);
+                                  // price per sub-unit = basePrice * factor
+                                  const newPrice = Number(((basePrice || 0) * factor).toFixed(6));
+                                  // max qty in sub-units = baseStock / factor
+                                  const newMax = baseStock != null && factor > 0 ? Math.floor(baseStock / factor) : it.maxStock;
+                                  // clamp qty to new max
+                                  const newQty = newMax != null ? Math.min(it.qty, newMax) : it.qty;
                                   return {
                                     ...it,
                                     selectedUnit: unitName,
                                     factor,
+                                    baseStock: baseStock,
+                                    basePrice,
                                     price: newPrice,
-                                    tprice: it.qty * newPrice
+                                    maxStock: newMax,
+                                    qty: newQty,
+                                    tprice: newQty * newPrice
                                   };
                                 }
                                 return it;
@@ -807,7 +882,7 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
                           >
                             <option value={item.unitInfos.name}>{item.unitInfos.name}</option>
                             {item.unitInfos.sub_units?.map((su: any) => (
-                              <option key={su.name} value={su.name}>{su.name} (÷{su.factor})</option>
+                              <option key={su.name} value={su.name}>{su.name}</option>
                             ))}
                           </select>
                         </div>
@@ -830,8 +905,8 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
                     {/* Unit Price Display */}
                     <div className="text-right w-16">
                       <span className="text-[8px] font-bold text-slate-400 block uppercase tracking-wider mb-0.5">Price</span>
-                      <span className="text-[12px] font-bold text-slate-650 tabular-nums">
-                        ₹{item.price}
+                      <span className="text-[12px] font-bold text-slate-655 tabular-nums">
+                        ₹{formatPrice(item.price)}
                       </span>
                     </div>
 
@@ -839,7 +914,7 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
                     <div className="text-right w-24">
                       <span className="text-[8px] font-bold text-slate-400 block uppercase tracking-wider mb-0.5">Total</span>
                       <span className="text-[13px] font-black text-slate-800 tabular-nums">
-                        ₹{formatINR(item.tprice)}
+                        ₹{formatPrice(item.tprice)}
                       </span>
                     </div>
 

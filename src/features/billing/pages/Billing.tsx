@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 
 import BillingTable from "../components/BillingTable";
 import BillingHeader from "../components/BillingHeader";
@@ -15,6 +16,7 @@ import { NavigationBlocker } from "@/components/common/NavigationBlocker";
 
 // ─── Billing Page ─────────────────────────────────────────────────────────────
 const Billing = () => {
+  const navigate = useNavigate();
   const { showToast } = useToast();
   const { loading: isSubmitting } = useApi();
 
@@ -63,7 +65,10 @@ const Billing = () => {
       }, 0)
     );
   }, [items, includeGst]);
-  const finalAmount = useMemo(() => Math.round(includeGst ? totalAmount + gstAmount : totalAmount), [includeGst, totalAmount, gstAmount]);
+  const finalAmount = useMemo(() => {
+    const rawVal = includeGst ? totalAmount + gstAmount : totalAmount;
+    return rawVal < 0.01 ? Number(rawVal.toFixed(6)) : round2(rawVal);
+  }, [includeGst, totalAmount, gstAmount]);
 
   // Sync single-mode payment amount when total changes
   useEffect(() => {
@@ -311,18 +316,40 @@ const Billing = () => {
   const hasItemsForBlocker = items.some(i => i.name && i.qty > 0);
 
   return (
-    <div className="flex-1 flex min-h-0 bg-slate-50/80 overflow-hidden h-full">
-      <NavigationBlocker shouldBlock={hasItemsForBlocker} />
+    <div className="flex-1 flex flex-col min-h-0 bg-slate-50/80 overflow-hidden h-screen">
+      <div className="flex-1 flex min-h-0 bg-slate-50/80 overflow-hidden">
+        <NavigationBlocker shouldBlock={hasItemsForBlocker} />
 
-      {/* ── Left Panel (Global Search + Table list card) ──────────────── */}
-      <div className="flex-1 flex flex-col min-h-0 overflow-hidden p-3.5 gap-4">
-        {/* Billing Table */}
-        <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-          <BillingTable items={items} onItemsChange={handleItemsChange} />
+        {/* ── Left Panel (Global Search + Table list card) ──────────────── */}
+        <div className="flex-1 flex flex-col min-h-0 overflow-hidden p-3.5 gap-4">
+          {/* Billing Table */}
+          <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+            <BillingTable items={items} onItemsChange={handleItemsChange} />
+          </div>
+
+          {/* ── Mobile Payment Bar (lg:hidden) ────────────────────── */}
+          <div className="lg:hidden shrink-0 flex flex-col border-t border-slate-200 bg-white max-h-[50vh] rounded-2xl overflow-hidden shadow-lg p-2">
+            <BillingHeader
+              items={items}
+              customerData={customerData}
+              customerName={customerName}
+              phone={phone}
+              onConfirmOrder={handleConfirmOrder}
+              isSubmitting={isSubmitting || !cartInitialized}
+              includeGst={includeGst}
+              totalAmount={totalAmount}
+              gstAmount={gstAmount}
+              finalAmount={finalAmount}
+              payments={payments}
+              onPaymentsChange={setPayments}
+              onAddCustomerClick={() => setIsCustomerModalOpen(true)}
+              onDetachCustomer={resetCustomer}
+            />
+          </div>
         </div>
 
-        {/* ── Mobile Payment Bar (lg:hidden) ────────────────────── */}
-        <div className="lg:hidden shrink-0 flex flex-col border-t border-slate-200 bg-white max-h-[50vh] rounded-2xl overflow-hidden shadow-lg p-2">
+        {/* ── Right Sidebar (full height) ────────────────────────── */}
+        <aside className="hidden lg:flex w-[360px] xl:w-[400px] shrink-0 flex-col border-l border-slate-200 bg-white">
           <BillingHeader
             items={items}
             customerData={customerData}
@@ -339,47 +366,38 @@ const Billing = () => {
             onAddCustomerClick={() => setIsCustomerModalOpen(true)}
             onDetachCustomer={resetCustomer}
           />
-        </div>
+        </aside>
+
+        {/* Attach Customer Modal */}
+        <AttachCustomerModal
+          isOpen={isCustomerModalOpen}
+          onClose={() => setIsCustomerModalOpen(false)}
+          onSelect={(customer) => {
+            setCustomerData(customer);
+            setCustomerName(customer.name);
+            setPhone(customer.phone);
+          }}
+        />
+
+        {/* Checkout Success Modal */}
+        <BillingSuccessModal
+          isOpen={!!successDetails}
+          details={successDetails}
+          onClose={() => setSuccessDetails(null)}
+          onNextBill={handleNextBill}
+        />
       </div>
 
-      {/* ── Right Sidebar (full height) ────────────────────────── */}
-      <aside className="hidden lg:flex w-[360px] xl:w-[400px] shrink-0 flex-col border-l border-slate-200 bg-white">
-        <BillingHeader
-          items={items}
-          customerData={customerData}
-          customerName={customerName}
-          phone={phone}
-          onConfirmOrder={handleConfirmOrder}
-          isSubmitting={isSubmitting || !cartInitialized}
-          includeGst={includeGst}
-          totalAmount={totalAmount}
-          gstAmount={gstAmount}
-          finalAmount={finalAmount}
-          payments={payments}
-          onPaymentsChange={setPayments}
-          onAddCustomerClick={() => setIsCustomerModalOpen(true)}
-          onDetachCustomer={resetCustomer}
-        />
-      </aside>
-
-      {/* Attach Customer Modal */}
-      <AttachCustomerModal
-        isOpen={isCustomerModalOpen}
-        onClose={() => setIsCustomerModalOpen(false)}
-        onSelect={(customer) => {
-          setCustomerData(customer);
-          setCustomerName(customer.name);
-          setPhone(customer.phone);
-        }}
-      />
-
-      {/* Checkout Success Modal */}
-      <BillingSuccessModal
-        isOpen={!!successDetails}
-        details={successDetails}
-        onClose={() => setSuccessDetails(null)}
-        onNextBill={handleNextBill}
-      />
+      {/* ── Small Fixed Branded Bottombar ── */}
+      <div className="shrink-0 h-7 bg-white border-t border-slate-200/80 flex items-center justify-center text-[10px] text-slate-400 select-none">
+        <span>Powered by </span>
+        <button 
+          onClick={() => navigate("/")} 
+          className="ml-1 font-bold text-blue-600 hover:text-blue-700 hover:underline cursor-pointer"
+        >
+          marketplace
+        </button>
+      </div>
     </div>
   );
 };

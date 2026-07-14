@@ -1,8 +1,8 @@
-import { Search, Filter, Users, Bookmark, X, AlertCircle, ExternalLink, ChevronRight } from 'lucide-react';
+import { Search, Filter, Users, Bookmark, X, AlertCircle, ExternalLink, Eye, Pencil, MoreVertical, Trash2, Mail } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { StatCard } from '@/components/common/StatsCard';
 import { ReusableSelect } from '@/components/ui/ReusableSelect';
-import Loader from '@/components/common/Loader';
+import SkeletonLoader from "@/components/common/SkeletonLoader";
 import { GradientButton } from '@/components/ui/GradientButton';
 import { useApi } from '@/context/ApiContext';
 import { ENDPOINTS, SHOP_ID } from '@/services/endpoints';
@@ -13,7 +13,6 @@ import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 import { ColumnPicker } from '@/components/common/ColumnPicker';
 import { RightSidebarFilter } from '@/components/common/RightSidebarFilter';
 import { employeeApi } from '@/services/api/employee';
-
 import { useEffect, useMemo, useState } from 'react';
 
 export default function Employee() {
@@ -34,10 +33,10 @@ export default function Employee() {
   const [roleFilter, setRoleFilter] = useState<string>('All');
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
-  const [resendingVerification, setResendingVerification] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [employeeToDelete, setEmployeeToDelete] = useState<EmployeeRecord | null>(null);
-  const [selectedEmployee, setSelectedEmployee] = useState<EmployeeRecord | null>(null);
+  const [selectedEmployees, setSelectedEmployees] = useState<Set<string>>(new Set());
+  const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
 
   // Dynamic Column State
   const [availableKeys, setAvailableKeys] = useState<string[]>([]);
@@ -72,78 +71,6 @@ export default function Employee() {
     );
     return () => setActions(null);
   }, [setActions, navigate, isCleanMode]);
-
-  useEffect(() => {
-    if (selectedEmployee) {
-      const handleResendVerification = async () => {
-        if (!selectedEmployee?.id) return;
-        setResendingVerification(true);
-        try {
-          await employeeApi.resendVerificationEmail({
-            id: selectedEmployee.id,
-            shop_id: selectedEmployee.shop_id || SHOP_ID
-          });
-          showToast("Verification email sent again", "success");
-        } catch (_err) {
-          showToast("Failed to send verification email", "error");
-        } finally {
-          setResendingVerification(false);
-        }
-      };
-
-      setBottomActions(
-        <div className="flex items-center justify-between w-full animate-in fade-in slide-in-from-right-4 duration-300">
-          <div className="flex items-center gap-3">
-            <div className="w-7 h-7 rounded-md bg-blue-500 text-white flex items-center justify-center text-[10px] font-black shrink-0">
-              {(selectedEmployee.name || '?').split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)}
-            </div>
-            <div>
-              <p className="text-[12px] font-bold text-slate-800 leading-tight">{selectedEmployee.name || 'Unknown'}</p>
-              <p className="text-[10px] font-semibold text-slate-400 font-mono">ID: {selectedEmployee.ui_id || selectedEmployee.id?.slice(0, 8)}</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            {!selectedEmployee.accepted && (
-              <button
-                onClick={handleResendVerification}
-                disabled={resendingVerification}
-                className="h-8 px-3 rounded-md border border-amber-200 bg-white hover:bg-amber-50 text-amber-700 font-semibold text-[11px] transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-              >
-                {resendingVerification ? "Sending..." : "Resend Invite"}
-              </button>
-            )}
-            <button
-              onClick={() => setSelectedEmployee(null)}
-              className="h-8 px-3 rounded-md border border-slate-200 bg-white hover:bg-slate-50 text-slate-500 font-semibold text-[11px] transition-colors"
-            >
-              Deselect
-            </button>
-            <button
-              onClick={() => { setEmployeeToDelete(selectedEmployee); setIsDeleteDialogOpen(true); }}
-              className="h-8 px-3 rounded-md border border-slate-200 bg-white hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 text-slate-700 font-semibold text-[11px] transition-colors"
-            >
-              Delete
-            </button>
-            <button
-              onClick={() => navigate(`/employee/${selectedEmployee.id}/edit`)}
-              className="h-8 px-3 rounded-md border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-[11px] transition-colors"
-            >
-              Edit
-            </button>
-            <button
-              onClick={() => navigate(`/employee/${selectedEmployee.id}`)}
-              className="h-8 px-4 rounded-md bg-blue-600 hover:bg-blue-700 text-white font-semibold text-[11px] transition-colors flex items-center gap-1.5"
-            >
-              <ChevronRight size={13} />
-              View Details
-            </button>
-          </div>
-        </div>
-      );
-    } else {
-      setBottomActions(null);
-    }
-  }, [selectedEmployee, setBottomActions, navigate, resendingVerification, showToast]);
 
   useEffect(() => {
     const params: Record<string, string> = { limit: "50", offset: "1" };
@@ -185,6 +112,11 @@ export default function Employee() {
     try {
       await deleteData(`${ENDPOINTS.EMPLOYEES}/${SHOP_ID}/${employeeToDelete.id}`);
       showToast("Employee deleted successfully", "success");
+      setSelectedEmployees(prev => {
+        const next = new Set(prev);
+        next.delete(employeeToDelete.id);
+        return next;
+      });
       setRefreshKey(prev => prev + 1);
     } catch (_err) {
       showToast("Failed to delete employee", "error");
@@ -194,87 +126,142 @@ export default function Employee() {
     }
   };
 
+  const handleBulkDelete = async () => {
+    if (selectedEmployees.size === 0) return;
+    if (!window.confirm(`Are you sure you want to delete these ${selectedEmployees.size} employees?`)) return;
+    try {
+      for (const id of Array.from(selectedEmployees)) {
+        await deleteData(`${ENDPOINTS.EMPLOYEES}/${SHOP_ID}/${id}`);
+      }
+      showToast("Selected employees deleted successfully", "success");
+      setSelectedEmployees(new Set());
+      setRefreshKey(prev => prev + 1);
+    } catch {
+      showToast("Failed to delete some employees", "error");
+    }
+  };
+
+  const handleResendVerification = async (emp: EmployeeRecord) => {
+    if (!emp?.id) return;
+    try {
+      await employeeApi.resendVerificationEmail({
+        id: emp.id,
+        shop_id: emp.shop_id || SHOP_ID
+      });
+      showToast("Verification email sent again", "success");
+    } catch (_err) {
+      showToast("Failed to send verification email", "error");
+    }
+  };
+
+  const toggleSelectEmployee = (id: string) => {
+    setSelectedEmployees(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
   const filteredEmployees = useMemo(() => {
     return employees.filter(emp => {
       if (!emp) return false;
       const matchesRole = roleFilter === 'All' || emp.role === roleFilter;
-      const matchesSearch = (emp.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (emp.email || "").toLowerCase().includes(searchTerm.toLowerCase());
-      return matchesRole && matchesSearch;
+      return matchesRole;
     });
-  }, [employees, roleFilter, searchTerm]);
+  }, [employees, roleFilter]);
 
   const roles = useMemo(() => {
-    const r = new Set(employees.filter(Boolean).map(e => e.role));
-    const uniqueRoles = Array.from(r).filter(Boolean);
-    return [
-      { label: 'All Roles', value: 'All' },
-      ...uniqueRoles.map(role => ({ label: role.charAt(0).toUpperCase() + role.slice(1), value: role }))
-    ];
+    const unique = new Set(employees.map(e => e.role).filter(Boolean));
+    return [{ label: 'All roles', value: 'All' }, ...Array.from(unique).map(r => ({ label: String(r), value: String(r) }))];
   }, [employees]);
 
+  useEffect(() => {
+    if (selectedEmployees.size > 1) {
+      setBottomActions(
+        <div className="flex items-center justify-between w-full animate-in fade-in slide-in-from-right-4 duration-300">
+          <div className="flex items-center gap-3">
+            <div className="w-7 h-7 rounded-md bg-blue-500 text-white flex items-center justify-center text-[10px] font-black shrink-0">
+              E
+            </div>
+            <div>
+              <p className="text-[12px] font-bold text-slate-800 leading-tight">Selected {selectedEmployees.size} Employees</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleBulkDelete}
+              className="h-8 px-3 rounded-md border border-red-200 bg-red-50 hover:bg-red-100 text-red-655 font-bold text-[11px] transition-colors flex items-center gap-1.5"
+            >
+              <Trash2 size={13} />
+              Delete All
+            </button>
+          </div>
+        </div>
+      );
+    } else {
+      setBottomActions(null);
+    }
+  }, [selectedEmployees, setBottomActions]);
+
+  if (loading && employees.length === 0) {
+    return (
+      <div className="flex-1 p-6">
+        <SkeletonLoader variant="list" rows={8} showStats={true} />
+      </div>
+    );
+  }
+
   return (
-    <div className="flex-1 flex flex-col min-h-0 font-sans w-full overflow-hidden relative">
+    <div className="flex-1 flex flex-col min-h-0 gap-2.5 font-sans w-full overflow-hidden relative">
+      <style>{`
+        .pf-scroll::-webkit-scrollbar { width:6px; height:6px; } 
+        .pf-scroll::-webkit-scrollbar-track { background:#f4f7fb } 
+        .pf-scroll::-webkit-scrollbar-thumb { background:#cbd5e1; border-radius:3px }
+        .pf-scroll::-webkit-scrollbar-thumb:hover { background:#94a3b8 }
+      `}</style>
+
       {/* Stats Section */}
       {!isCleanMode && (
         <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-none">
           <StatCard
-            icon={Users}
-            label="Total Employees"
+            icon={<Users size={18} />}
+            iconBg="bg-blue-50 text-blue-650"
+            label="Total Members"
             value={employees.length.toString()}
-          />
-          <StatCard
-            label="Departments"
-            value={new Set(employees.filter(Boolean).map(e => e.department)).size.toString()}
-            iconBg="bg-emerald-50" iconColor="text-emerald-600"
-          />
-          <StatCard
-            icon={Bookmark}
-            label="Active Roles"
-            value={new Set(employees.filter(Boolean).map(e => e.role)).size.toString()}
-            iconBg="bg-amber-50" iconColor="text-amber-600"
+            subValue="active members"
           />
         </div>
       )}
 
-      {/* Filter Section */}
-      <div className="bg-white border border-slate-100 rounded-lg p-2.5 px-3.5 flex flex-nowrap items-center gap-2 shadow-sm overflow-x-auto scrollbar-none mt-2">
+      {/* Toolbar */}
+      <div className="bg-white border border-slate-100 rounded-lg p-2.5 px-3.5 flex flex-wrap items-center gap-2 shadow-sm mt-2">
         <div className="relative w-80 shrink-0">
-          <Search
-            size={13}
-            className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
-          />
+          <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
           <input
             type="text"
-            placeholder="Search employee…"
+            placeholder="Search employee name, department…"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full h-8 pl-8 pr-3 text-[12px] font-medium text-slate-700 bg-slate-50 border border-slate-200 rounded-md placeholder:text-slate-400 focus:outline-none focus:border-slate-300 focus:bg-white transition-colors"
           />
         </div>
-        
-
         <button
-          type="button"
           onClick={() => setIsFilterOpen(true)}
-          className={`h-8 px-3 rounded-md border text-xs font-semibold flex items-center gap-1.5 active:scale-95 transition-all shadow-sm shrink-0 ${
-            roleFilter !== "All"
-              ? "border-slate-200 text-slate-650 bg-white hover:bg-slate-50"
-              : "border-slate-200 text-slate-650 bg-white hover:bg-slate-50"
-          }`}
-          title="Filters"
+          className={`h-8 px-3 rounded-md border text-xs font-semibold flex items-center gap-1.5 active:scale-95 transition-all shadow-sm shrink-0 ${roleFilter !== "All" ? "border-blue-200 text-blue-600 bg-blue-50/50" : "border-slate-200 text-slate-650 bg-white hover:bg-slate-50"}`}
         >
           <Filter size={13} />
-          {roleFilter !== "All" && (
-            <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
-          )}
+          {roleFilter !== "All" && <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />}
         </button>
-          <ColumnPicker
+        <ColumnPicker
           availableKeys={availableKeys}
           selectedKeys={selectedKeys}
           onApply={setSelectedKeys}
           storageKey="employee_table_columns"
-          className="h-8 px-3 rounded-md border border-slate-200 text-slate-650 bg-white hover:bg-slate-50 active:scale-95 transition-all text-xs font-semibold shadow-sm shrink-0 flex items-center justify-center gap-1.5"
+          className="h-8 px-3 rounded-md border border-slate-200 text-slate-655 bg-white hover:bg-slate-50 active:scale-95 transition-all text-xs font-semibold shadow-sm shrink-0 flex items-center justify-center gap-1.5"
         />
         <div className="flex-1" />
       </div>
@@ -314,77 +301,151 @@ export default function Employee() {
 
       {/* Table Section */}
       <div className="bg-white border border-slate-100 rounded-lg shadow-sm min-w-0 overflow-hidden flex flex-col flex-1 min-h-0 mt-2">
-        <div className="overflow-x-auto overflow-y-auto flex-1">
-          <table className="w-full text-left border-collapse">
+        <div className="overflow-x-auto overflow-y-auto flex-1 pf-scroll">
+          <table className="w-full text-left border-collapse relative">
             <thead>
-              <tr className="bg-slate-50/50 text-slate-400 text-[10px] font-bold  tracking-[0.15em] border-b border-slate-100">
+              <tr className="bg-slate-50/50 text-slate-400 text-[10px] font-bold tracking-[0.15em] border-b border-slate-100">
+                <th className="px-6 py-5 w-10 text-center">
+                  <input
+                    type="checkbox"
+                    checked={filteredEmployees.length > 0 && filteredEmployees.every(emp => selectedEmployees.has(emp.id))}
+                    onChange={() => {
+                      const allSelected = filteredEmployees.length > 0 && filteredEmployees.every(emp => selectedEmployees.has(emp.id));
+                      if (allSelected) {
+                        setSelectedEmployees(new Set());
+                      } else {
+                        setSelectedEmployees(new Set(filteredEmployees.map(emp => emp.id)));
+                      }
+                    }}
+                    className="rounded border-slate-350 text-blue-605 focus:ring-blue-500/20 cursor-pointer"
+                  />
+                </th>
                 <th className="px-6 py-5 whitespace-nowrap min-w-[200px]">Employee Name</th>
                 <th className="px-6 py-5 whitespace-nowrap">Status</th>
                 {selectedKeys.map(key => (
                   <th key={key} className="px-6 py-5 capitalize whitespace-nowrap">{key.replace(/_/g, ' ')}</th>
                 ))}
-                <th className="px-6 py-5 text-right whitespace-nowrap w-10"></th>
+                <th className="px-6 py-5 text-right whitespace-nowrap w-24 sticky right-0 bg-slate-50 border-l border-slate-100 z-30">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-50">
-              {loading ? (
+            <tbody className="divide-y divide-slate-50 bg-white">
+              {filteredEmployees.length === 0 ? (
                 <tr>
-                  <td colSpan={selectedKeys.length + 3} className="py-20"><Loader /></td>
-                </tr>
-              ) : filteredEmployees.length === 0 ? (
-                <tr>
-                  <td colSpan={selectedKeys.length + 3} className="py-20 text-center text-slate-400 font-medium italic">No employees matching your filters.</td>
+                  <td colSpan={selectedKeys.length + 4} className="py-20 text-center text-slate-400 font-medium italic">No employees matching your filters.</td>
                 </tr>
               ) : (
                 filteredEmployees.map((emp) => {
-                  const isSelected = selectedEmployee?.id === emp.id;
+                  const isSelected = selectedEmployees.has(emp.id);
+                  const initials = (emp.name || 'Unknown').split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+
                   return (
-                  <tr
-                    key={emp.id}
-                    className={`group transition-all cursor-pointer ${isSelected ? "bg-blue-50 border-l-2 border-l-blue-500" : "hover:bg-blue-50/30"}`}
-                    onClick={() => setSelectedEmployee(prev => prev?.id === emp.id ? null : emp)}
-                  >
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center gap-3">
-                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-sm font-bold shadow-sm transition-colors ${isSelected ? "bg-blue-500 text-white shadow-blue-100" : "bg-gradient-to-br from-blue-600 to-blue-400 text-white shadow-blue-100"}`}>
-                          {(emp.name || 'Unknown').split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
+                    <tr
+                      key={emp.id}
+                      className={`group transition-all cursor-default ${isSelected ? "bg-blue-50 border-l-2 border-l-blue-500" : "hover:bg-slate-50/60"}`}
+                    >
+                      <td className="px-6 py-4 w-10 text-center">
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => toggleSelectEmployee(emp.id)}
+                          className="rounded border-slate-350 text-blue-600 focus:ring-blue-500/20 cursor-pointer"
+                        />
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-sm font-bold shadow-sm transition-colors ${isSelected ? "bg-blue-500 text-white shadow-blue-100" : "bg-gradient-to-br from-blue-600 to-blue-400 text-white shadow-blue-100"}`}>
+                            {initials}
+                          </div>
+                          <div>
+                            <p className="text-sm font-semibold text-slate-700 tracking-tight">{emp.name || 'Unknown'}</p>
+                            <p className="text-[11px] font-semibold text-slate-400 font-mono">ID: {emp.ui_id || emp.id}</p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-sm font-semibold text-slate-700 tracking-tight">{emp.name || 'Unknown'}</p>
-                          <p className="text-[11px] font-semibold text-slate-400 font-mono">ID: {emp.ui_id || emp.id}</p>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {emp.accepted ? (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold border shadow-sm bg-emerald-50 text-emerald-600 border-emerald-100">
+                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                            Accepted
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold border shadow-sm bg-amber-50 text-amber-600 border-amber-100">
+                            <div className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                            Pending
+                          </span>
+                        )}
+                      </td>
+                      {selectedKeys.map(key => {
+                        const value = (emp.datas as any)?.[key] ?? (emp as any)[key];
+                        const displayValue = value === undefined || value === null ? "—" :
+                          typeof value === 'object' ? (Array.isArray(value) ? value.join(", ") : JSON.stringify(value)) :
+                            String(value);
+                        return (
+                          <td key={key} className="px-6 py-4 whitespace-nowrap">
+                            <p className={`text-[12px] font-semibold tracking-tight ${key === 'role' ? 'text-blue-600 bg-blue-50 w-fit px-2 py-0.5 rounded-md' : 'text-slate-650'}`}>
+                              {displayValue}
+                            </p>
+                          </td>
+                        );
+                      })}
+                      <td className="px-6 py-4 text-right sticky right-0 bg-white group-hover:bg-slate-50/60 border-l border-slate-100 z-10 shadow-[-4px_0_8px_-4px_rgba(0,0,0,0.05)] transition-colors whitespace-nowrap">
+                        <div className="flex items-center justify-end gap-2 relative">
+                          <button
+                            onClick={() => navigate(`/employee/${emp.id}`)}
+                            className="text-slate-400 hover:text-blue-600 transition-colors p-1"
+                            title="View Employee"
+                          >
+                            <Eye size={15} />
+                          </button>
+                          <button
+                            onClick={() => navigate(`/employee/${emp.id}/edit`)}
+                            className="text-slate-400 hover:text-blue-600 transition-colors p-1"
+                            title="Edit Employee"
+                          >
+                            <Pencil size={15} />
+                          </button>
+                          <div className="relative">
+                            <button
+                              onClick={() => setActiveMenuId(activeMenuId === emp.id ? null : emp.id)}
+                              className="text-slate-400 hover:text-blue-600 transition-colors p-1"
+                              title="More actions"
+                            >
+                              <MoreVertical size={15} />
+                            </button>
+                            {activeMenuId === emp.id && (
+                              <>
+                                <div className="fixed inset-0 z-40" onClick={() => setActiveMenuId(null)} />
+                                <div className="absolute right-0 mt-1 w-44 bg-white border border-slate-200 rounded-lg shadow-lg py-1 z-50 text-left font-sans animate-in fade-in slide-in-from-top-1 duration-150">
+                                  {!emp.accepted && (
+                                    <button
+                                      onClick={() => {
+                                        setActiveMenuId(null);
+                                        handleResendVerification(emp);
+                                      }}
+                                      className="flex items-center gap-2 w-full px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                                    >
+                                      <Mail size={13} />
+                                      Resend Invite
+                                    </button>
+                                  )}
+                                  <button
+                                    onClick={() => {
+                                      setActiveMenuId(null);
+                                      setEmployeeToDelete(emp);
+                                      setIsDeleteDialogOpen(true);
+                                    }}
+                                    className="flex items-center gap-2 w-full px-3 py-2 text-xs font-semibold text-red-650 hover:bg-red-50"
+                                  >
+                                    <Trash2 size={13} />
+                                    Delete
+                                  </button>
+                                </div>
+                              </>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {emp.accepted ? (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold border shadow-sm bg-emerald-50 text-emerald-600 border-emerald-100">
-                          <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                          Accepted
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold border shadow-sm bg-amber-50 text-amber-600 border-amber-100">
-                          <div className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
-                          Pending
-                        </span>
-                      )}
-                    </td>
-                    {selectedKeys.map(key => {
-                      const value = (emp.datas as any)?.[key] ?? (emp as any)[key];
-                      const displayValue = value === undefined || value === null ? "—" :
-                        typeof value === 'object' ? (Array.isArray(value) ? value.join(", ") : JSON.stringify(value)) :
-                          String(value);
-                      return (
-                        <td key={key} className="px-6 py-4 whitespace-nowrap">
-                          <p className={`text-[12px] font-semibold tracking-tight ${key === 'role' ? 'text-blue-600 bg-blue-50 w-fit px-2 py-0.5 rounded-md' : 'text-slate-600'}`}>
-                            {displayValue}
-                          </p>
-                        </td>
-                      );
-                    })}
-                    <td className="px-6 py-4 text-right">
-                      <ChevronRight size={14} className={`transition-all duration-200 ${isSelected ? "text-blue-500 rotate-90" : "text-slate-300 group-hover:text-blue-500"}`} />
-                    </td>
-                  </tr>
+                      </td>
+                    </tr>
                   );
                 })
               )}
@@ -405,4 +466,3 @@ export default function Employee() {
     </div>
   );
 }
-

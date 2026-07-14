@@ -145,7 +145,7 @@ const StockMovementDetail = () => {
         <ProfileHeaderCard
           name={`Stock Movement · ${refId}`}
           initials="MV"
-          subText={`ID: ${realId}`}
+          subText={`Movement ID: ${adjustment.ui_id || refId}`}
           badges={[
             { text: movementLabel, variant: "primary" }
           ]}

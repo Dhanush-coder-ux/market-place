@@ -1,10 +1,7 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import {
   Megaphone,
-  Truck,
   Package,
-  Timer,
   Edit3,
   Eye,
   ShoppingBag,
@@ -16,29 +13,21 @@ import {
   MapPin,
   BadgeCheck,
   Settings2,
-  CheckCircle2,
   AlertCircle,
-  Plus,
-  Boxes,
-  Clock,
-  Store,
   ChevronRight,
-  BarChart2,
   Wifi,
   WifiOff,
-  Building2,
   Calendar,
   Hash,
   Tag,
 } from "lucide-react";
 import { shopApi } from "@/services/api/shop";
 import { SHOP_ID } from "@/services/endpoints";
-import DeliveryPreferences from "../pages/Deliveryinfo";
 import ProductDashboard from "../pages/StoreProductManagement";
 import Promotions from "../pages/Promotions";
-import OperatingHours from "../pages/OperatingHours";
+import { StoreSettingsLayout } from "./StoreSettingsLayout";
 
-type TabType = "Promotions" | "Delivery Preferences" | "Product Dashboard" | "Operating Hours";
+type TabType = "Announcements" | "Products" | "Settings";
 
 interface ShopData {
   id: string;
@@ -115,109 +104,18 @@ const StatCard = ({ label, sublabel, value, suffix, trend, trendUp, trendDesc, i
   </div>
 );
 
-// ─── Store Health ─────────────────────────────────────────────────────────────
-const StoreHealthCard = ({ shop }: { shop: ShopData }) => {
-  const checks = [
-    { label: "Logo uploaded", done: !!shop.logo_url },
-    { label: "Banner uploaded", done: !!shop.banner_url },
-    { label: "Description added", done: !!shop.description },
-    { label: "Address set", done: !!shop.address?.full_address && shop.address.full_address !== "Not specified" },
-    { label: "Store visible online", done: shop.visible_online },
-    { label: "Category selected", done: shop.categories && shop.categories.length > 0 },
-  ];
-  const done = checks.filter((c) => c.done).length;
-  const pct = Math.round((done / checks.length) * 100);
-
-  return (
-    <div className="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm h-full">
-      <div className="flex items-center justify-between mb-4">
-        <div>
-          <h3 className="text-sm font-bold text-slate-800">Store Health</h3>
-          <p className="text-xs text-slate-400 mt-0.5">Complete your setup for better visibility</p>
-        </div>
-        <span className="text-lg font-extrabold text-blue-600">{pct}%</span>
-      </div>
-      <div className="w-full bg-slate-100 rounded-full h-2 mb-4 overflow-hidden">
-        <div
-          className="h-2 rounded-full transition-all duration-700"
-          style={{ width: `${pct}%`, background: pct === 100 ? "#16a34a" : "#2563eb" }}
-        />
-      </div>
-      <div className="space-y-2.5">
-        {checks.map((c) => (
-          <div key={c.label} className="flex items-center gap-2.5">
-            {c.done
-              ? <CheckCircle2 size={15} className="text-emerald-500 shrink-0" />
-              : <AlertCircle size={15} className="text-amber-400 shrink-0" />
-            }
-            <span className={`text-xs font-medium ${c.done ? "text-slate-600" : "text-amber-600"}`}>{c.label}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-};
-
-// ─── Quick Actions ────────────────────────────────────────────────────────────
-const QUICK_ACTIONS = [
-  { label: "Add Product", desc: "List a new item", icon: Plus, path: "/product/add", color: "#2563eb", bg: "#eff6ff" },
-  { label: "Products", desc: "Manage listings", icon: Package, path: "/product/all", color: "#7c3aed", bg: "#f5f3ff" },
-  { label: "Inventory", desc: "Check stock", icon: Boxes, path: "/inventory", color: "#0891b2", bg: "#ecfeff" },
-  { label: "Orders", desc: "Recent orders", icon: ShoppingBag, path: "/orders", color: "#16a34a", bg: "#f0fdf4" },
-  { label: "Analytics", desc: "View insights", icon: BarChart2, path: "/sales", color: "#d97706", bg: "#fefce8" },
-  { label: "Settings", desc: "Store config", icon: Settings2, path: "/settings", color: "#64748b", bg: "#f8fafc" },
-];
-
-const QuickActions = ({ navigate }: { navigate: (path: string) => void }) => (
-  <div className="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm h-full flex flex-col">
-    <h3 className="text-sm font-bold text-slate-800 mb-3">Quick Actions</h3>
-    <div className="grid grid-cols-2 gap-2.5">
-      {QUICK_ACTIONS.map((a) => (
-        <button
-          key={a.label}
-          onClick={() => navigate(a.path)}
-          className="flex items-center gap-3 p-3 rounded-xl border border-slate-100 hover:border-blue-100 hover:bg-blue-50/40 transition-all duration-150 group text-left"
-        >
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform" style={{ background: a.bg, color: a.color }}>
-            <a.icon size={15} strokeWidth={2} />
-          </div>
-          <div className="min-w-0">
-            <p className="text-xs font-bold text-slate-700 truncate">{a.label}</p>
-            <p className="text-[10px] text-slate-400 truncate">{a.desc}</p>
-          </div>
-        </button>
-      ))}
-    </div>
-  </div>
-);
-
-// ─── Info Row ─────────────────────────────────────────────────────────────────
-const InfoRow = ({ icon: Icon, label, value }: { icon: React.ElementType; label: string; value: React.ReactNode }) => (
-  <div className="flex items-start gap-3 py-2.5 border-b border-slate-50 last:border-none">
-    <div className="w-7 h-7 rounded-lg bg-blue-50 flex items-center justify-center shrink-0 mt-0.5">
-      <Icon size={13} className="text-blue-600" />
-    </div>
-    <div className="min-w-0">
-      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">{label}</p>
-      <div className="text-xs font-semibold text-slate-700">{value}</div>
-    </div>
-  </div>
-);
-
 // ─── Tab config ───────────────────────────────────────────────────────────────
 const TAB_CONFIG: { tab: TabType; icon: React.ElementType; desc: string }[] = [
-  { tab: "Promotions", icon: Megaphone, desc: "Announcements & Banners" },
-  { tab: "Delivery Preferences", icon: Truck, desc: "Zones & timing" },
-  { tab: "Product Dashboard", icon: Package, desc: "Manage items" },
-  { tab: "Operating Hours", icon: Timer, desc: "Open & close times" },
+  { tab: "Announcements", icon: Megaphone, desc: "Announcements & Banners" },
+  { tab: "Products", icon: Package, desc: "Manage items" },
+  { tab: "Settings", icon: Settings2, desc: "Store configuration" },
 ];
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // MAIN COMPONENT
 // ═══════════════════════════════════════════════════════════════════════════════
 const DigitalMain = () => {
-  const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<TabType>("Promotions");
+  const [activeTab, setActiveTab] = useState<TabType>("Announcements");
   const [shop, setShop] = useState<ShopData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -317,7 +215,10 @@ const DigitalMain = () => {
               <Share2 size={11} strokeWidth={2.5} /> Share
             </button>
             <button
-              onClick={() => navigate("/settings")}
+              onClick={() => {
+                setActiveTab("Settings");
+                document.getElementById("digital-store-tabs")?.scrollIntoView({ behavior: "smooth" });
+              }}
               className="flex items-center gap-1.5 bg-blue-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-blue-700 shadow-md transition-all"
             >
               <Edit3 size={11} strokeWidth={2.5} /> Edit Store
@@ -397,54 +298,12 @@ const DigitalMain = () => {
       <div className="px-4 md:px-6 pt-5">
         <div className="flex flex-col gap-5">
 
-          {/* TOP — Store Info & Actions */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-            {/* Store Info Card */}
-            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 h-full">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-bold text-slate-800">Store Info</h3>
-                <button
-                  onClick={() => navigate("/settings")}
-                  className="text-[10px] text-blue-600 font-bold flex items-center gap-0.5 hover:underline"
-                >
-                  Edit <ChevronRight size={10} />
-                </button>
-              </div>
-              <div className="space-y-1">
-                <InfoRow icon={Store} label="Store Name" value={shop.name} />
-                <InfoRow icon={Tag} label="Category" value={shop.categories?.join(", ") || "—"} />
-                <InfoRow icon={Building2} label="Business Type" value={shop.business_infos?.type || "—"} />
-                <InfoRow icon={IndianRupee} label="Currency" value={shop.business_infos?.currency || "INR"} />
-                <InfoRow
-                  icon={BadgeCheck}
-                  label="GST Registered"
-                  value={
-                    shop.business_infos?.gst_infos?.registered
-                      ? <span className="text-emerald-600">Yes · {shop.business_infos.gst_infos.number || "—"}</span>
-                      : <span className="text-slate-400">No</span>
-                  }
-                />
-                <InfoRow icon={MapPin} label="Address" value={shop.address?.full_address || "—"} />
-                <InfoRow icon={Clock} label="Member Since" value={shop.created_at} />
-                <InfoRow icon={Hash} label="Store ID" value={<span className="font-mono text-[10px] text-slate-500">{shop.id?.slice(0, 24)}…</span>} />
-              </div>
-            </div>
 
-            {/* Store Health */}
-            <div className="h-full">
-              <StoreHealthCard shop={shop} />
-            </div>
-
-            {/* Quick Actions */}
-            <div className="h-full">
-              <QuickActions navigate={navigate} />
-            </div>
-          </div>
 
           {/* BOTTOM — Tabs & Content */}
           <div className="w-full space-y-4">
-            {/* Tab Bar */}
-            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+            {/* Tab Bar — sticky when scrolled to top */}
+            <div id="digital-store-tabs" className="sticky top-0 z-30 bg-white/95 backdrop-blur-md rounded-2xl border border-slate-100" style={{ boxShadow: "0 2px 12px rgba(0,0,0,0.06)" }}>
               <div className="flex items-center gap-1 p-2 overflow-x-auto scrollbar-hide">
                 {TAB_CONFIG.map(({ tab, icon: Icon, desc }) => {
                   const isActive = activeTab === tab;
@@ -452,11 +311,10 @@ const DigitalMain = () => {
                     <button
                       key={tab}
                       onClick={() => setActiveTab(tab)}
-                      className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold whitespace-nowrap flex-shrink-0 transition-all duration-150 border ${
-                        isActive
-                          ? "bg-blue-50 text-blue-700 border-blue-100 shadow-sm"
-                          : "bg-transparent border-transparent text-slate-500 hover:text-blue-600 hover:bg-blue-50/50"
-                      }`}
+                      className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold whitespace-nowrap flex-shrink-0 transition-all duration-150 border ${isActive
+                        ? "bg-blue-50 text-blue-700 border-blue-100 shadow-sm"
+                        : "bg-transparent border-transparent text-slate-500 hover:text-blue-600 hover:bg-blue-50/50"
+                        }`}
                     >
                       <Icon size={13} strokeWidth={2.5} className={isActive ? "text-blue-600" : "text-slate-400"} />
                       {tab}
@@ -476,14 +334,13 @@ const DigitalMain = () => {
             {/* Tab Content Card */}
             <div
               key={activeTab}
-              className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden"
+              className="relative z-0 bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden"
               style={{ animation: "slideUp 0.18s ease" }}
             >
               <div className="min-h-[360px]">
-                {activeTab === "Promotions" && <Promotions />}
-                {activeTab === "Delivery Preferences" && <DeliveryPreferences />}
-                {activeTab === "Product Dashboard" && <ProductDashboard />}
-                {activeTab === "Operating Hours" && <OperatingHours />}
+                {activeTab === "Announcements" && <Promotions />}
+                {activeTab === "Products" && <ProductDashboard />}
+                {activeTab === "Settings" && <StoreSettingsLayout shop={shop} />}
               </div>
             </div>
           </div>

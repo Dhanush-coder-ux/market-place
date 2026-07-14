@@ -15,7 +15,7 @@ import { useToast } from "@/context/ToastContext";
 import { useHeader } from "@/context/HeaderContext";
 import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 import { employeeApi } from "@/services/api/employee";
-import Loader from "@/components/common/Loader";
+import SkeletonLoader from "@/components/common/SkeletonLoader";
 import type { EmployeeRecord } from "@/types/api";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 
@@ -95,7 +95,7 @@ export default function EmployeeDetail() {
 
   // Header Actions
 
-  if (recordLoading) return <div className="p-20"><Loader /></div>;
+  if (recordLoading) return <SkeletonLoader variant="detail" />;
   if (!employee) return (
     <div className="p-20 text-center space-y-6">
       <div className="w-20 h-20 bg-rose-50 text-rose-500 rounded-lg flex items-center justify-center mx-auto shadow-xl shadow-rose-100">
@@ -122,7 +122,7 @@ export default function EmployeeDetail() {
         <ProfileHeaderCard
           name={name}
           initials={initials}
-          subText={`ID: ${employee.id}`}
+          subText={`Employee ID: ${employee.ui_id || employee.id?.slice(0, 8).toUpperCase()}`}
           badges={[
             { text: String(employee.role || "Staff"), variant: "primary" },
             {

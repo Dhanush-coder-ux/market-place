@@ -36,6 +36,7 @@ export interface SearchSelectProps<T extends BaseOption> {
   onCreateNew?: (searchValue: string) => void;
   // NEW: Callback for external filtering based on search text
   onSearchChange?: (value: string) => void;
+  getPopupContainer?: (triggerNode: HTMLElement) => HTMLElement;
 }
 
 const EMPTY_ARRAY: any[] = [];
@@ -59,6 +60,7 @@ export function SearchSelect<T extends BaseOption>({
   renderOption,
   onCreateNew,
   onSearchChange,
+  getPopupContainer = (triggerNode) => (triggerNode.parentNode as HTMLElement) || document.body,
 }: SearchSelectProps<T>) {
   const [searchValue, setSearchValue] = useState("");
   const [open, setOpen] = useState(false);
@@ -195,7 +197,7 @@ export function SearchSelect<T extends BaseOption>({
         mode={mode}
         showSearch
         allowClear={allowClear}
-        getPopupContainer={(triggerNode) => triggerNode.parentNode}
+        getPopupContainer={getPopupContainer}
         value={value}
         placeholder={placeholder}
         disabled={disabled}

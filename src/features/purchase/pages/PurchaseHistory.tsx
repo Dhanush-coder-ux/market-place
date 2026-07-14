@@ -8,9 +8,14 @@ import {
   ReceiptText,
   LayoutGrid,
   List,
-
   ExternalLink,
-  Filter
+  Filter,
+  Eye,
+  Pencil,
+  MoreVertical,
+  Printer,
+  Share2,
+  Trash2
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useHeader } from "@/context/HeaderContext";
@@ -24,6 +29,7 @@ import type { PurchaseRecord } from "@/types/api";
 import { useApi } from "@/context/ApiContext";
 import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
+import SkeletonLoader from "@/components/common/SkeletonLoader";
 
 
 /* ================= TYPES ================= */
@@ -183,7 +189,7 @@ export function toDisplayData(p: PurchaseRecord): DirectPurchaseData {
 
   const paymentInfoObj = Array.isArray((p as any).payment_infos) ? (p as any).payment_infos[0] : null;
   const paidAmount = Number(paymentInfoObj?.amount ?? (p as any).paid_amount ?? d2?.payment?.amountPaid ?? d2?.payment_info?.amountPaid ?? d2?.paid_amount ?? 0);
-  const outstanding = Math.max(
+  const outstanding = (p as any).outstanding_amount !== undefined ? Number((p as any).outstanding_amount) : Math.max(
     0,
     grandTotal - paidAmount
   );
@@ -215,9 +221,11 @@ export function toDisplayData(p: PurchaseRecord): DirectPurchaseData {
       has_batch: pr.has_batch,
       has_serialno: pr.has_serialno,
       has_variant: pr.has_variant,
-      variant: pr.variant,
-      batch: pr.batch,
-      serial_info: pr.serial_info,
+      variant: pr.variant || (pr.variant_infos ? { variant_name: pr.variant_infos.name, id: pr.variant_infos.id } : null),
+      batch: pr.batch || (pr.batch_infos ? { batch_name: pr.batch_infos.name || pr.batch_infos.batch_name, mfg_date: pr.batch_infos.mfg_date, exp_date: pr.batch_infos.exp_date } : null),
+      serial_info: pr.serial_info || (pr.serial_numbers ? { serial_numbers: pr.serial_numbers } : null),
+      stocks_added: pr.stocks_added ?? pr.stocks_infos?.stocks ?? pr.stocks ?? 0,
+      received_stocks: pr.received_stocks ?? pr.stocks_infos?.stocks ?? pr.stocks ?? 0,
       variants: Array.isArray(pr.variants) ? pr.variants.map((v: any) => ({
         id: v.id,
         name: v.name,
@@ -489,8 +497,10 @@ const GridCard = ({ po, selected, onClick }: { po: DirectPurchaseData; selected?
 };
 
 
-const VerticalTable = ({ data, selectedId, onClick, totalCount, lastElementRef, loadingMore }: { data: DirectPurchaseData[]; selectedId: string | null; onClick: (po: DirectPurchaseData) => void; totalCount: number; lastElementRef?: any; loadingMore?: boolean }) => {
+const VerticalTable = ({ data, selectedIds, onSelect, totalCount, lastElementRef, loadingMore }: { data: DirectPurchaseData[]; selectedIds: Set<string>; onSelect: (po: DirectPurchaseData) => void; totalCount: number; lastElementRef?: any; loadingMore?: boolean }) => {
+  const navigate = useNavigate();
   const [drawerRecord, setDrawerRecord] = useState<any | null>(null);
+  const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
   
   return (
     <div className="bg-white border border-slate-100 rounded-lg shadow-sm overflow-hidden flex flex-col flex-1 min-h-0">
@@ -498,37 +508,62 @@ const VerticalTable = ({ data, selectedId, onClick, totalCount, lastElementRef, 
         <table className="w-full text-left border-collapse whitespace-nowrap text-sm">
           <thead className="sticky top-0 z-20 bg-slate-50 border-b border-slate-100">
             <tr>
-              <th className="px-3 py-2.5 text-[10px] font-bold tracking-wider text-slate-400 uppercase text-left">Purchase Invoice</th>
-              <th className="px-3 py-2.5 text-[10px] font-bold tracking-wider text-slate-400 uppercase text-left">Vendor</th>
+              <th className="px-3 py-2.5 w-10 text-center">
+                <input
+                  type="checkbox"
+                  checked={data.length > 0 && data.every(po => selectedIds.has(po.id))}
+                  onChange={() => {
+                    const allSelected = data.length > 0 && data.every(po => selectedIds.has(po.id));
+                    if (allSelected) {
+                      data.forEach(po => {
+                        if (selectedIds.has(po.id)) onSelect(po);
+                      });
+                    } else {
+                      data.forEach(po => {
+                        if (!selectedIds.has(po.id)) onSelect(po);
+                      });
+                    }
+                  }}
+                  className="rounded border-slate-355 text-blue-605 focus:ring-blue-500/20 cursor-pointer"
+                />
+              </th>
+              <th className="px-3 py-2.5 text-[10px] font-bold tracking-wider text-slate-400 uppercase text-left">Invoice No</th>
+              <th className="px-3 py-2.5 text-[10px] font-bold tracking-wider text-slate-400 uppercase text-left">Purchase ID</th>
+              <th className="px-3 py-2.5 text-[10px] font-bold tracking-wider text-slate-400 uppercase text-left">Supplier</th>
               <th className="px-3 py-2.5 text-[10px] font-bold tracking-wider text-slate-400 uppercase text-left">Date</th>
               <th className="px-3 py-2.5 text-[10px] font-bold tracking-wider text-slate-400 uppercase text-left hidden md:table-cell">Products</th>
               <th className="px-3 py-2.5 text-[10px] font-bold tracking-wider text-slate-400 uppercase text-right">Qty</th>
               <th className="px-3 py-2.5 text-[10px] font-bold tracking-wider text-slate-400 uppercase text-right">Total</th>
-              <th className="px-3 py-2.5 w-10 text-right"></th>
+              <th className="px-3 py-2.5 w-24 text-right text-[10px] font-bold tracking-wider text-slate-400 uppercase sticky right-0 bg-slate-50 border-l border-slate-200 z-30 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.08)]">Actions</th>
             </tr>
           </thead>
           <tbody>
             {data.map((po, index) => {
               const totalQty = po.products.reduce((s, i) => s + i.quantity, 0);
-              const isSelected = selectedId === po.id;
+              const isSelected = selectedIds.has(po.id);
               return (
                 <tr
                   key={po.id}
                   ref={index === data.length - 1 ? lastElementRef : null}
-                  onClick={() => onClick(po)}
-                  className={`group cursor-pointer transition-colors border-b border-slate-50 ${isSelected ? "bg-blue-50 border-l-2 border-l-blue-500" : "hover:bg-slate-50/60"}`}
+                  className={`group cursor-default transition-colors border-b border-slate-50 ${isSelected ? "bg-blue-50 border-l-2 border-l-blue-500" : "hover:bg-slate-50/60"}`}
                 >
-                  {/* PO Details */}
+                  {/* Checkbox */}
+                  <td className="p-2.5 px-3 w-10 text-center">
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={() => onSelect(po)}
+                      className="rounded border-slate-350 text-blue-600 focus:ring-blue-500/20 cursor-pointer"
+                    />
+                  </td>
+                  {/* Invoice No */}
                   <td className="p-2.5 px-3">
                     <div className="flex items-center gap-2.5">
                       <div className="w-7 h-7 rounded-md bg-blue-50 flex items-center justify-center shrink-0">
                         <ReceiptText size={13} className="text-blue-600" />
                       </div>
                       <div className="flex flex-col gap-0.5">
-                        <span className="font-mono text-[11px] font-semibold text-slate-800">{po.poNumber}</span>
-                        {po.systemId && po.systemId !== po.poNumber && (
-                          <span className="font-mono text-[9px] font-medium text-slate-500">System ID: {po.systemId}</span>
-                        )}
+                        <span className="font-mono text-[11px] font-semibold text-slate-800">{po.poNumber || "—"}</span>
                         <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
                           <PurchaseTypeBadge type={po.purchaseType} />
                           {po.storage_location && (
@@ -541,7 +576,12 @@ const VerticalTable = ({ data, selectedId, onClick, totalCount, lastElementRef, 
                     </div>
                   </td>
 
-                  {/* Vendor */}
+                  {/* Purchase ID */}
+                  <td className="p-2.5 px-3">
+                    <span className="font-mono text-[11px] font-semibold text-slate-700">{po.systemId || "—"}</span>
+                  </td>
+
+                  {/* Supplier */}
                   <td className="p-2.5 px-3">
                     <div className="flex items-center gap-2 text-xs font-medium text-slate-700">
                       <Building2 size={13} className="text-slate-400 shrink-0" />
@@ -581,9 +621,79 @@ const VerticalTable = ({ data, selectedId, onClick, totalCount, lastElementRef, 
                     </span>
                   </td>
 
-                  {/* Action */}
-                  <td className="p-2.5 px-3 text-right">
-                    <ChevronRight size={14} className={`transition-all duration-200 ${isSelected ? "text-blue-500 rotate-90" : "text-slate-300 group-hover:text-blue-500"}`} />
+                  {/* Actions */}
+                  <td className="p-2.5 px-3 text-right whitespace-nowrap sticky right-0 bg-white group-hover:bg-slate-50 border-l border-slate-200 z-10 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.08)] transition-colors">
+                    <div className="flex items-center justify-end gap-2 relative">
+                      <button
+                        onClick={() => navigate(`/purchase/detail/${po.id}`, { state: { po } })}
+                        className="text-slate-400 hover:text-blue-600 transition-colors p-1"
+                        title="View Purchase"
+                      >
+                        <Eye size={15} />
+                      </button>
+                      <div className="relative">
+                        <button
+                          onClick={() => setActiveMenuId(activeMenuId === po.id ? null : po.id)}
+                          className="text-slate-400 hover:text-blue-600 transition-colors p-1"
+                          title="More actions"
+                        >
+                          <MoreVertical size={15} />
+                        </button>
+                        {activeMenuId === po.id && (
+                          <>
+                            <div className="fixed inset-0 z-40" onClick={() => setActiveMenuId(null)} />
+                            <div className="absolute right-0 mt-1 w-44 bg-white border border-slate-200 rounded-lg shadow-lg py-1 z-50 text-left font-sans animate-in fade-in slide-in-from-top-1 duration-150">
+                              {po.purchaseType === 'Purchase' && (
+                                <button
+                                  onClick={() => {
+                                    setActiveMenuId(null);
+                                    navigate(`/purchase/edit/${po.id}`);
+                                  }}
+                                  className="flex items-center gap-2 w-full px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                                >
+                                  <Pencil size={13} />
+                                  Edit
+                                </button>
+                              )}
+                              <button
+                                onClick={() => {
+                                  setActiveMenuId(null);
+                                  alert("Invoice generated and ready to print/share!");
+                                }}
+                                className="flex items-center gap-2 w-full px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                              >
+                                <Printer size={13} />
+                                Print / Share
+                              </button>
+
+                              <button
+                                onClick={() => {
+                                  setActiveMenuId(null);
+                                  alert("Record payment initiated!");
+                                }}
+                                className="flex items-center gap-2 w-full px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                              >
+                                <Share2 size={13} />
+                                Record Payment
+                              </button>
+                              <div className="border-t border-slate-100 my-1"></div>
+                              <button
+                                onClick={() => {
+                                  setActiveMenuId(null);
+                                  if (window.confirm("Are you sure you want to delete this purchase? This will reverse stock and cost changes.")) {
+                                    alert("Purchase deletion requires admin privileges.");
+                                  }
+                                }}
+                                className="flex items-center gap-2 w-full px-3 py-2 text-xs font-semibold text-red-650 hover:bg-red-50"
+                              >
+                                <Trash2 size={13} />
+                                Delete
+                              </button>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </div>
                   </td>
                 </tr>
               );
@@ -668,7 +778,8 @@ const PurchaseHistory = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
 
-  const { getData } = useApi();
+  const { getData, deleteData } = useApi();
+  const [refreshKey, setRefreshKey] = useState(0);
   const [analyticsStats, setAnalyticsStats] = useState<any>(null);
 
   useEffect(() => {
@@ -687,17 +798,43 @@ const PurchaseHistory = () => {
   }, [searchTerm]);
 
   const [viewMode, setViewMode] = useState<ViewMode>("vertical");
-  const navigate = useNavigate();
 
   const [filterType, setFilterType] = useState("");
   const [filterVendor, setFilterVendor] = useState("");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const [selectedPurchase, setSelectedPurchase] = useState<DirectPurchaseData | null>(null);
+  const [selectedPurchases, setSelectedPurchases] = useState<Set<string>>(new Set());
+
+  const toggleSelectPurchase = (id: string) => {
+    setSelectedPurchases(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedPurchases.size === 0) return;
+    if (!window.confirm(`Are you sure you want to delete these ${selectedPurchases.size} purchases?`)) return;
+    try {
+      for (const id of Array.from(selectedPurchases)) {
+        await deleteData(`${ENDPOINTS.PURCHASES}/${SHOP_ID}/${id}`);
+      }
+      alert("Selected purchases deleted successfully");
+      setSelectedPurchases(new Set());
+      setRefreshKey(prev => prev + 1);
+    } catch {
+      alert("Failed to delete some purchases");
+    }
+  };
 
   useEffect(() => {
-    if (selectedPurchase) {
+    if (selectedPurchases.size > 1) {
       setBottomActions(
         <div className="flex items-center justify-between w-full animate-in fade-in slide-in-from-right-4 duration-300">
           <div className="flex items-center gap-3">
@@ -705,31 +842,16 @@ const PurchaseHistory = () => {
               <ReceiptText size={14} />
             </div>
             <div>
-              <p className="text-[12px] font-bold text-slate-800 leading-tight">{selectedPurchase.poNumber}</p>
-              <p className="text-[10px] font-semibold text-slate-400 font-mono">{selectedPurchase.vendor}</p>
+              <p className="text-[12px] font-bold text-slate-800 leading-tight">Selected {selectedPurchases.size} Purchases</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setSelectedPurchase(null)}
-              className="h-8 px-3 rounded-md border border-slate-200 bg-white hover:bg-slate-50 text-slate-500 font-semibold text-[11px] transition-colors"
+              onClick={handleBulkDelete}
+              className="h-8 px-3 rounded-md border border-red-200 bg-red-50 hover:bg-red-100 text-red-655 font-bold text-[11px] transition-colors flex items-center gap-1.5"
             >
-              Deselect
-            </button>
-            {selectedPurchase.purchaseType === 'Purchase' && selectedPurchase.status !== 'cancelled' && (
-              <button
-                onClick={() => navigate(`/purchase/edit/${selectedPurchase.id}`)}
-                className="h-8 px-3 rounded-md border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-[11px] transition-colors"
-              >
-                Edit
-              </button>
-            )}
-            <button
-              onClick={() => navigate(`/purchase/detail/${selectedPurchase.id}`, { state: { po: selectedPurchase } })}
-              className="h-8 px-4 rounded-md bg-blue-600 hover:bg-blue-700 text-white font-semibold text-[11px] transition-colors flex items-center gap-1.5"
-            >
-              <ChevronRight size={13} />
-              View Details
+              <Trash2 size={13} />
+              Delete All
             </button>
           </div>
         </div>
@@ -737,7 +859,7 @@ const PurchaseHistory = () => {
     } else {
       setBottomActions(null);
     }
-  }, [selectedPurchase, setBottomActions, navigate]);
+  }, [selectedPurchases, setBottomActions]);
 
   const activeFiltersCount = [filterType, filterVendor, fromDate, toDate].filter(Boolean).length;
 
@@ -779,8 +901,9 @@ const PurchaseHistory = () => {
     type: filterType,
     supplier_id: filterVendor,
     fromDate,
-    toDate
-  }), [debouncedSearch, filterType, filterVendor, fromDate, toDate]);
+    toDate,
+    refreshKey
+  }), [debouncedSearch, filterType, filterVendor, fromDate, toDate, refreshKey]);
 
   const { items, loading, loadingMore, totalCount, lastElementRef } = useInfiniteScroll<DirectPurchaseData, any>({
     fetchPage,
@@ -793,7 +916,7 @@ const PurchaseHistory = () => {
 
 
   const handleCardClick = (po: DirectPurchaseData) => {
-    setSelectedPurchase(prev => prev?.id === po.id ? null : po);
+    toggleSelectPurchase(po.id);
   };
 
   return (
@@ -938,9 +1061,8 @@ const PurchaseHistory = () => {
 
         {/* ── Content ── */}
         {loading && filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-zinc-400">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-3"></div>
-            <p className="text-sm font-medium">Loading purchases...</p>
+          <div className="p-3">
+            <SkeletonLoader variant="table" rows={8} cols={6} />
           </div>
         ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-zinc-400">
@@ -953,14 +1075,14 @@ const PurchaseHistory = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
               {filtered.map((po, index) => (
                 <div key={po.id} ref={index === filtered.length - 1 ? lastElementRef : null}>
-                  <GridCard po={po} selected={selectedPurchase?.id === po.id} onClick={() => handleCardClick(po)} />
+                  <GridCard po={po} selected={selectedPurchases.has(po.id)} onClick={() => handleCardClick(po)} />
                 </div>
               ))}
             </div>
             {loadingMore && <div className="py-4 text-center text-xs text-slate-500">Loading more...</div>}
           </div>
         ) : (
-          <VerticalTable data={filtered} selectedId={selectedPurchase?.id || null} onClick={handleCardClick} totalCount={totalCount || filtered.length} lastElementRef={lastElementRef} loadingMore={loadingMore} />
+          <VerticalTable data={filtered} selectedIds={selectedPurchases} onSelect={(po) => toggleSelectPurchase(po.id)} totalCount={totalCount || filtered.length} lastElementRef={lastElementRef} loadingMore={loadingMore} />
         )}
       </div>
     </>

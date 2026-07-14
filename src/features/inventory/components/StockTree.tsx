@@ -214,6 +214,18 @@ export const BatchCards = ({ batches }: { batches: any | any[] }) => {
                 <span>EXP: {formatDate(batch.expiry_date || batch.expiry)}</span>
               </div>
 
+              {(() => {
+                const bBuy = batch.pricing_infos?.buy_price ?? batch.buy_price;
+                const bSell = batch.pricing_infos?.sell_price ?? batch.sell_price;
+                if (bBuy === undefined && bSell === undefined) return null;
+                return (
+                  <div className="flex items-center justify-between text-[11px] font-bold border-t border-slate-100 pt-1.5 mt-0.5">
+                    <span className="text-rose-600">Buy: {formatCurrency(bBuy ?? 0)}</span>
+                    <span className="text-emerald-600">Sell: {formatCurrency(bSell ?? 0)}</span>
+                  </div>
+                );
+              })()}
+
               {daysToExpiry !== null && (
                 <div className={`mt-1 p-1 rounded flex items-center gap-1.5 ${daysToExpiry <= 0 ? "bg-rose-50 text-rose-600" : "bg-amber-50 text-amber-600"}`}>
                   <AlertTriangle size={10} className={`shrink-0 ${daysToExpiry <= 0 ? "text-rose-500" : "text-amber-500"}`} />
@@ -298,10 +310,10 @@ export const VariantRows = ({ combinations, baseSellPrice, baseBuyPrice }: { com
           const attributes = comb.attributes || combDatas.attributes || combDatas.datas?.attributes || {};
 
           // Improved variant label extraction based on sample response
-          let variantLabel = comb.name || combDatas.name || 'Standard Variant';
+          let variantLabel = comb.variant_name || comb.name || combDatas.name || 'Standard Variant';
           if (Object.keys(attributes).length > 0) {
             variantLabel = Object.values(attributes).join(' / ');
-          } else if (comb.barcode && comb.barcode !== combDatas.barcode) {
+          } else if (comb.barcode && combDatas.barcode && comb.barcode !== combDatas.barcode) {
             variantLabel = comb.barcode; // Fallback if barcode is used as label
           }
 
@@ -311,9 +323,13 @@ export const VariantRows = ({ combinations, baseSellPrice, baseBuyPrice }: { com
           const serials = extractSerials(comb.serialno_infos ?? comb.serial_numbers ?? combDatas.serial_numbers ?? combDatas.datas?.serial_numbers);
           const hasBatches = batches.length > 0;
           const hasSerials = serials.length > 0;
-          const stockNum = Number(comb.stock_infos?.available_stocks ?? comb.stock_infos?.physical_stocks ?? comb.stocks ?? comb.stock ?? combDatas.stocks ?? combDatas.datas?.stocks ?? 0);
+          let stockNum = Number(comb.stock_infos?.available_stocks ?? comb.stock_infos?.physical_stocks ?? comb.stocks ?? comb.stock ?? combDatas.stocks ?? combDatas.datas?.stocks ?? 0);
+          if (hasBatches && stockNum === 0) {
+            stockNum = batches.reduce((acc: number, b: any) => acc + Number(b.stock_infos?.available_stocks ?? b.stock_infos?.physical_stocks ?? b.stocks ?? 0), 0);
+          }
           const reorderPoint = Number(comb.reorder_point_infos?.reorder_point ?? comb.reorder_point ?? combDatas.reorder_point ?? combDatas.datas?.reorder_point ?? 0);
           const stockStatus = getStockStatus(stockNum, reorderPoint);
+          const statusLabel = stockNum <= 0 ? "Out of Stock" : stockNum <= reorderPoint ? "Low Stock" : "In Stock";
           const sellPrice = comb.pricing_infos?.sell_price ?? comb.sell_price ?? comb.price ?? combDatas.sell_price ?? combDatas.datas?.sell_price ?? baseSellPrice;
           const buyPrice = comb.pricing_infos?.buy_price ?? comb.buy_price ?? combDatas.buy_price ?? combDatas.datas?.buy_price ?? baseBuyPrice ?? 0;
 
@@ -367,22 +383,26 @@ export const VariantRows = ({ combinations, baseSellPrice, baseBuyPrice }: { com
                   </div>
 
                   {/* Stats */}
-                  <div className="flex items-center justify-end gap-6 sm:gap-8 md:gap-10 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-50">
-                    <div className="text-right w-[90px] flex flex-col items-end mr-2">
-                      <p className="text-[9px] font-bold text-slate-400 leading-none mb-1.5 text-right w-full">Stocks</p>
-                      <span className={`inline-flex px-2 py-0.5 rounded-lg text-[10px] font-bold border ${stockStatus.color}`}>
-                        {stockStatus.label}
+                  <div className="flex items-center justify-end gap-5 sm:gap-6 md:gap-7 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-50">
+                    <div className="text-right w-[45px]">
+                      <p className="text-[9px] font-bold text-slate-400 leading-none mb-1.5 text-right w-full">Stock</p>
+                      <p className="text-xs font-bold text-slate-800 tabular-nums">{stockNum}</p>
+                    </div>
+                    <div className="text-center w-[85px] flex flex-col items-center">
+                      <p className="text-[9px] font-bold text-slate-400 leading-none mb-1.5 text-center w-full">Status</p>
+                      <span className={`inline-flex px-1.5 py-0.5 rounded-lg text-[9px] font-bold border leading-none ${stockStatus.color}`}>
+                        {statusLabel}
                       </span>
                     </div>
-                    <div className="text-right w-[70px]">
+                    <div className="text-right w-[65px]">
                       <p className="text-[9px] font-bold text-slate-400 leading-none mb-1">Buy Price</p>
                       <p className="text-xs font-bold text-rose-500 tabular-nums">{formatCurrency(buyPrice)}</p>
                     </div>
-                    <div className="text-right w-[70px]">
+                    <div className="text-right w-[65px]">
                       <p className="text-[9px] font-bold text-slate-400 leading-none mb-1">Sell Price</p>
                       <p className="text-xs font-bold text-emerald-600 tabular-nums">{formatCurrency(sellPrice)}</p>
                     </div>
-                    <div className="text-center w-[70px]">
+                    <div className="text-center w-[65px]">
                       <p className="text-[9px] font-bold text-slate-400 leading-none mb-1">Reorder Point</p>
                       <p className="text-xs font-bold text-slate-700 tabular-nums">{reorderPoint || "—"}</p>
                     </div>

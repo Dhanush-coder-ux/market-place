@@ -14,6 +14,8 @@ export interface StoreFormData {
   logoPreview?: string;
   banner?: File | null;
   bannerPreview?: string;
+  gstRegistered?: boolean;
+  gstNumber?: string;
 }
 
 export interface StoreSetupProps {

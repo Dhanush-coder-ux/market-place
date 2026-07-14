@@ -5,7 +5,10 @@ import {
   Search, X,
   RotateCcw, Receipt,
   ChevronRight, Filter,
-  DollarSign, RefreshCw, TrendingUp, Loader2,
+} from "lucide-react";
+import SkeletonLoader from "@/components/common/SkeletonLoader";
+import {
+  DollarSign, RefreshCw, TrendingUp,
   ExternalLink, User
 } from "lucide-react";
 import { useApi } from "@/context/ApiContext";
@@ -324,6 +327,14 @@ const SalesListPage: React.FC = () => {
     setOrders(filtered);
   }, [filtered]);
 
+  if (loading && filtered.length === 0) {
+    return (
+      <div className="flex-1 p-6">
+        <SkeletonLoader variant="list" rows={8} showStats={true} />
+      </div>
+    );
+  }
+
   return (
     <div className="flex-1 flex flex-col min-h-0 font-sans w-full overflow-hidden relative">
 
@@ -496,14 +507,7 @@ const SalesListPage: React.FC = () => {
               </tr>
             </thead>
             <tbody>
-              {loading && filtered.length === 0 ? (
-                <tr>
-                  <td colSpan={10} className="p-12 text-center">
-                    <Loader2 size={28} className="text-blue-500 mx-auto animate-spin mb-2" />
-                    <p className="text-sm font-medium text-slate-500">Fetching sales records…</p>
-                  </td>
-                </tr>
-              ) : filtered.length === 0 ? (
+              {filtered.length === 0 ? (
                 <tr>
                   <td colSpan={10} className="p-12 text-center">
                     <Receipt size={32} className="text-slate-200 mx-auto mb-2" />

@@ -127,12 +127,12 @@ export function RecordPaymentModal({ show, onClose, customer, onSuccess }: Recor
           <div className="flex gap-8">
             <div>
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Outstanding Balance</p>
-              <p className="text-lg font-bold text-rose-500 tabular-nums">₹{maxOutstanding.toLocaleString("en-IN")}</p>
+              <p className="text-lg font-bold text-rose-500 tabular-nums">₹{maxOutstanding.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
             </div>
             <div>
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Remaining Balance</p>
               <p className="text-lg font-bold text-slate-700 tabular-nums">
-                ₹{remainingBalance.toLocaleString("en-IN")}
+                ₹{remainingBalance.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </p>
             </div>
           </div>

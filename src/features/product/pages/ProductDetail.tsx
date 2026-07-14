@@ -4,7 +4,7 @@ import {
   Package, Edit3, Trash2, DollarSign, Download, Upload,
   Tag, Layers, Info, BarChart2,
   Hash, ShoppingCart, MapPin, FileText,
-  Check, X as XIcon, Pencil,
+  Check, X as XIcon, Pencil, Image as ImageIcon,
 } from "lucide-react";
 import { useApi } from "@/context/ApiContext";
 import { useToast } from "@/context/ToastContext";
@@ -12,6 +12,7 @@ import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 import Loader from "@/components/common/Loader";
 import { Modal, ProfileHeaderCard, SectionCard, DetailItem } from "@/components/common/SuperUI";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
+import SkeletonLoader from "@/components/common/SkeletonLoader";
 import { StatCard } from "@/components/common/StatsCard";
 import { SearchSelect } from "@/components/inputbuilders/SearchSelect";
 import { useHeader } from "@/context/HeaderContext";
@@ -145,14 +146,9 @@ const ProductDetail = () => {
     }).catch(() => setPurLoading(false));
   }, [activeTab, id, product]);
 
-  // Load custom field definitions + values when Custom Fields tab is active
-  // Custom Fields is always the last tab, so compute its index from hasInvTab
+  // Load custom field definitions + values when product is loaded (embedded in General Info sidebar)
   useEffect(() => {
     if (!id || !product) return;
-    const hasInvTab = (product.has_variant === true && (product.variants ?? []).length > 0) || (product.has_batch === true && (product.batches ?? []).length > 0);
-    // Tab order: General(0), [Inventory](optional), Movements, Purchases, Custom Fields
-    const cfIdx = hasInvTab ? 4 : 3;
-    if (activeTab !== cfIdx) return;
     setCfLoading(true);
     Promise.all([
       inventoryCustomFieldsApi.getAllFields(SHOP_ID),
@@ -161,7 +157,7 @@ const ProductDetail = () => {
       setCustomFieldDefs(defs);
       setCustomFieldValues(vals);
     }).finally(() => setCfLoading(false));
-  }, [activeTab, id, product]);
+  }, [id, product]);
 
   const handleSaveCustomField = async (fieldId: string) => {
     if (!id) return;
@@ -206,7 +202,7 @@ const ProductDetail = () => {
     }
   };
 
-  if (recordLoading) return <div className="p-12 flex justify-center"><Loader /></div>;
+  if (recordLoading) return <SkeletonLoader variant="detail" />;
 
   if (!product) {
     return (
@@ -219,16 +215,61 @@ const ProductDetail = () => {
 
   const datas = product.custom_fields || product.additional_infos || product.datas || {};
   const name = String(product.name || "Unknown Product");
-  const reorderPoint = product.reorder_point_infos?.reorder_point ?? product.reorder_point;
+  // Prefer reorder_point_infos from root; batch-level handled in Inventory tab
+  const reorderPoint = (product as any).reorder_point_infos?.reorder_point ?? product.reorder_point ?? null;
   const initials = name.slice(0, 2).toUpperCase();
-  const sku = String(product.ui_id || product.sku || "—");
+  const rawSku = product.sku || datas.sku || "";
+  const uiId = (product as any).ui_id || "";
+  const skuValue = rawSku || uiId || product.id || "—";
   const barcode = String(product.barcode || "—");
-  const category = String(product.category_id || product.category || "—");
+  const categoryName = (product as any).category_infos?.name || product.category || "—";
+  const unitName = (product as any).unit_infos?.name || product.unit || "—";
   const description = String(product.description || "—");
-  const sellingPrice = product.pricing_infos?.sell_price ?? product.sell_price ?? "—";
-  const buyingPrice = product.pricing_infos?.buy_price ?? product.buy_price ?? "—";
-  const currentStock = product.stock_infos?.available_stocks ?? product.stocks ?? "—";
-  const unit = String(product.unit_id || product.unit || datas.unit || "—");
+  const sellingPrice = product.pricing_infos?.sell_price ?? product.sell_price ?? null;
+  const buyingPrice = product.pricing_infos?.buy_price ?? product.buy_price ?? null;
+
+  // ── Compute TOTAL available stocks across all sources ──────────────────────
+  // Root stock_infos is often empty {} for batch/variant products.
+  // We sum: root + all batch stocks + all variant stocks (direct + inside variant batches).
+  const computeTotalStock = (): number | null => {
+    let total = 0;
+    let found = false;
+
+    // Root level
+    const rootStock = product.stock_infos?.available_stocks ?? product.stocks ?? null;
+    if (rootStock !== null && rootStock !== undefined) { total += Number(rootStock); found = true; }
+
+    // Batch level (for simple batch products)
+    const batchList: any[] = Array.isArray((product as any).batch_infos)
+      ? (product as any).batch_infos
+      : ((product as any).batch_infos ? [(product as any).batch_infos] : []);
+    for (const b of batchList) {
+      const bs = b.stock_infos?.available_stocks;
+      if (bs !== null && bs !== undefined) { total += Number(bs); found = true; }
+    }
+
+    // Variant level (direct stock_infos + variant's own batch_infos)
+    const variantMap = (product as any).variant_infos || (product as any).variants;
+    const variantList: any[] = variantMap
+      ? (Array.isArray(variantMap) ? variantMap : Object.values(variantMap))
+      : [];
+    for (const v of variantList) {
+      const vs = v.stock_infos?.available_stocks;
+      if (vs !== null && vs !== undefined) { total += Number(vs); found = true; }
+      const vBatches: any[] = Array.isArray(v.batch_infos) ? v.batch_infos : (v.batch_infos ? [v.batch_infos] : []);
+      for (const vb of vBatches) {
+        const vbs = vb.stock_infos?.available_stocks;
+        if (vbs !== null && vbs !== undefined) { total += Number(vbs); found = true; }
+      }
+    }
+
+    return found ? total : null;
+  };
+  const totalAvailableStock = computeTotalStock();
+
+  // GST is at root level in the new API response
+  const gstValue = (product as any).gst || datas.gst || "—";
+  const storageLocation = (product as any).storage_location_infos?.storage_location || datas.storage_location || null;
   // Normalize variants: backend may return a dict {id: {...}} or an array
   const normalizeVariants = (raw: any): any[] => {
     if (!raw) return [];
@@ -253,7 +294,9 @@ const ProductDetail = () => {
   const isActive = product.is_active === true;
 
 
-  const TABS = ["General Info", ...((hasVariants || hasBatches) ? ["Inventory & Variants"] : []), MOV_TAB_LABEL, PUR_TAB_LABEL, "Custom Fields"];
+  const TABS = ["General Info", ...((hasVariants || hasBatches) ? ["Inventory & Variants"] : []), "Images", MOV_TAB_LABEL, PUR_TAB_LABEL];
+  const IMG_TAB_LABEL = "Images";
+  const inventoryTabIdx = TABS.indexOf("Inventory & Variants");
   const isTableTab = TABS[activeTab] === MOV_TAB_LABEL || TABS[activeTab] === PUR_TAB_LABEL;
 
   // Clickable field definition
@@ -268,14 +311,14 @@ const ProductDetail = () => {
           name={name}
           initials={initials}
           imageUrl={datas.images}
-          subText={`SKU: ${sku} • Barcode: ${barcode}`}
+          subText={`SKU: ${skuValue}${uiId && uiId !== skuValue ? ` • ${uiId}` : ''} • Barcode: ${barcode}`}
           badges={[
-            { text: category, variant: "primary" },
+            { text: categoryName, variant: "primary" },
             { text: isActive ? "Active" : "Inactive", variant: isActive ? "success" : "danger", showPulse: true },
           ]}
           infoItems={[
-            { icon: Tag, text: `Unit: ${unit}` },
-            { icon: ShoppingCart, text: `Available in inventory: ${currentStock}` },
+            { icon: Tag, text: `Unit: ${unitName}` },
+            { icon: ShoppingCart, text: `Available in inventory: ${totalAvailableStock !== null ? totalAvailableStock : "—"}` },
           ]}
           actions={
             <div className="flex items-center gap-1.5">
@@ -288,7 +331,7 @@ const ProductDetail = () => {
               </button>
               <button
                 onClick={() => setShowDeleteModal(true)}
-                className="w-8 h-8 flex items-center justify-center bg-white border border-slate-200 text-slate-300 rounded-lg hover:text-rose-600 hover:border-rose-100 transition-all shadow-sm active:scale-95"
+                className="w-8 h-8 flex items-center justify-center bg-white border border-slate-200 text-slate-300 rounded-lg hover:bg-rose-600 hover:text-white transition-all shadow-sm active:scale-95"
                 title="Delete Product"
               >
                 <Trash2 size={14} />
@@ -345,10 +388,11 @@ const ProductDetail = () => {
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-y-6 gap-x-8">
                     <DetailItem icon={Package} label="Product Name" value={name} onClick={click("Product Name", name)} />
-                    <DetailItem icon={Tag} label="Category" value={category} onClick={click("Category", category)} />
+                    <DetailItem icon={Tag} label="Category" value={categoryName} onClick={click("Category", categoryName)} />
                     <DetailItem icon={Hash} label="Brand" value={String(datas.brand || "—")} onClick={click("Brand", String(datas.brand || "—"))} />
-                    <DetailItem icon={Info} label="Unit" value={unit} onClick={click("Unit", unit)} />
-                    <DetailItem icon={Hash} label="SKU" value={sku} onClick={click("SKU", sku)} />
+                    <DetailItem icon={Info} label="Unit" value={unitName} onClick={click("Unit", unitName)} />
+                    <DetailItem icon={Hash} label="SKU" value={skuValue} onClick={click("SKU", skuValue)} />
+                    {uiId && uiId !== skuValue && <DetailItem icon={Hash} label="Product ID" value={uiId} onClick={click("Product ID", uiId)} />}
                     <DetailItem icon={Hash} label="Barcode" value={barcode} onClick={click("Barcode", barcode)} />
                     <div className="md:col-span-2">
                       <DetailItem icon={Info} label="Description" value={description} onClick={click("Description", description)} />
@@ -363,7 +407,7 @@ const ProductDetail = () => {
                         {product.has_variant === true ? (
                           <div 
                             className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 border border-indigo-100 rounded-lg w-fit cursor-pointer hover:bg-indigo-100 transition-colors"
-                            onClick={() => setActiveTab(1)}
+                            onClick={() => setActiveTab(inventoryTabIdx)}
                           >
                             <Layers size={12} className="text-indigo-500" />
                             <span className="text-[11px] font-bold text-indigo-600">Available in Inventory tab</span>
@@ -380,7 +424,7 @@ const ProductDetail = () => {
                         {product.has_batch === true ? (
                           <div 
                             className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 border border-indigo-100 rounded-lg w-fit cursor-pointer hover:bg-indigo-100 transition-colors"
-                            onClick={() => setActiveTab(1)}
+                            onClick={() => setActiveTab(inventoryTabIdx)}
                           >
                             <Layers size={12} className="text-indigo-500" />
                             <span className="text-[11px] font-bold text-indigo-600">Available in Inventory tab</span>
@@ -399,7 +443,7 @@ const ProductDetail = () => {
                         ) : (!!product.type_infos?.has_serialno) ? (
                           <div 
                             className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 border border-indigo-100 rounded-lg w-fit cursor-pointer hover:bg-indigo-100 transition-colors"
-                            onClick={() => setActiveTab(1)}
+                            onClick={() => setActiveTab(inventoryTabIdx)}
                           >
                             <Layers size={12} className="text-indigo-500" />
                             <span className="text-[11px] font-bold text-indigo-600">Available in Inventory tab</span>
@@ -426,16 +470,18 @@ const ProductDetail = () => {
                     <p className="text-[10px] font-medium text-slate-400 tracking-[0.05em] mb-1.5 flex items-center gap-1.5">
                       <Download size={12} className="text-blue-400" /> Buy Price
                     </p>
-                    {hasVariants ? (
+                    {hasVariants || hasBatches ? (
                       <div 
                         className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 border border-indigo-100 rounded-lg w-fit cursor-pointer hover:bg-indigo-100 transition-colors"
-                        onClick={() => setActiveTab(1)}
+                        onClick={() => setActiveTab(inventoryTabIdx)}
                       >
                         <Layers size={12} className="text-indigo-500" />
                         <span className="text-[11px] font-bold text-indigo-600">Available in Inventory tab</span>
                       </div>
+                    ) : buyingPrice !== null ? (
+                      <p className="text-[13px] font-semibold text-slate-800 tabular-nums">{`₹${buyingPrice}`}</p>
                     ) : (
-                      <p className="text-[13px] font-semibold text-slate-800 tabular-nums">{String(buyingPrice) !== "—" ? `₹${buyingPrice}` : "—"}</p>
+                      <p className="text-[13px] font-semibold text-slate-400">—</p>
                     )}
                   </div>
 
@@ -443,48 +489,58 @@ const ProductDetail = () => {
                     <p className="text-[10px] font-medium text-slate-400 tracking-[0.05em] mb-1.5 flex items-center gap-1.5">
                       <Upload size={12} className="text-blue-400" /> Sell Price
                     </p>
-                    {hasVariants ? (
+                    {hasVariants || hasBatches ? (
                       <div 
                         className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 border border-indigo-100 rounded-lg w-fit cursor-pointer hover:bg-indigo-100 transition-colors"
-                        onClick={() => setActiveTab(1)}
+                        onClick={() => setActiveTab(inventoryTabIdx)}
                       >
                         <Layers size={12} className="text-indigo-500" />
                         <span className="text-[11px] font-bold text-indigo-600">Available in Inventory tab</span>
                       </div>
+                    ) : sellingPrice !== null ? (
+                      <p className="text-[13px] font-semibold text-slate-800 tabular-nums">{`₹${sellingPrice}`}</p>
                     ) : (
-                      <p className="text-[13px] font-semibold text-slate-800 tabular-nums">{String(sellingPrice) !== "—" ? `₹${sellingPrice}` : "—"}</p>
+                      <p className="text-[13px] font-semibold text-slate-400">—</p>
                     )}
                   </div>
                   <DetailItem icon={Tag} label="MRP" value={datas.mrp ? `₹${datas.mrp}` : "—"} onClick={click("MRP", datas.mrp ? `₹${datas.mrp}` : "—")} />
                   <DetailItem icon={Hash} label="HSN Code" value={String(datas.hsn || "—")} onClick={click("HSN Code", String(datas.hsn || "—"))} />
-                  <DetailItem icon={BarChart2} label="GST Rate" value={String(datas.gst || "—")} onClick={click("GST Rate", String(datas.gst || "—"))} />
+                  <DetailItem icon={BarChart2} label="GST Rate" value={gstValue} onClick={click("GST Rate", gstValue)} />
                   <div>
                     <p className="text-[10px] font-medium text-slate-400  tracking-[0.05em] mb-1.5 flex items-center gap-1.5">
                       <Info size={12} className="text-blue-400" /> Reorder Point
                     </p>
-                    {hasVariants || hasBatches ? (
+                    {(hasVariants || hasBatches) ? (
                       <div 
                         className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 border border-indigo-100 rounded-lg w-fit cursor-pointer hover:bg-indigo-100 transition-colors"
-                        onClick={() => setActiveTab(1)}
+                        onClick={() => setActiveTab(inventoryTabIdx)}
                       >
                         <Layers size={12} className="text-indigo-500" />
-                        <span className="text-[11px] font-bold text-indigo-600">Available in Inventory tab</span>
+                        <span className="text-[11px] font-bold text-indigo-600">See Inventory tab</span>
                       </div>
+                    ) : reorderPoint !== null ? (
+                      <p className="text-[13px] font-semibold text-slate-800 tabular-nums">{String(reorderPoint)}</p>
                     ) : (
-                      <p className="text-[13px] font-semibold text-slate-800 tabular-nums">{String(reorderPoint || "—")}</p>
+                      <p className="text-[13px] font-semibold text-slate-400">—</p>
                     )}
                   </div>
                   <div>
                     <p className="text-[10px] font-medium text-slate-400 tracking-[0.05em] mb-1.5 flex items-center gap-1.5">
                       <MapPin size={12} className="text-blue-400" /> Storage Location
                     </p>
-                    <div 
-                      className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 border border-indigo-100 rounded-lg w-fit cursor-pointer hover:bg-indigo-100 transition-colors"
-                      onClick={() => setActiveTab(hasVariants || hasBatches ? 3 : 2)}
-                    >
-                      <ShoppingCart size={12} className="text-indigo-500" />
-                      <span className="text-[11px] font-bold text-indigo-600">Available in Purchases tab</span>
-                    </div>
+                    {storageLocation ? (
+                      <p className="text-[13px] font-semibold text-slate-800">{storageLocation}</p>
+                    ) : (hasVariants || hasBatches) ? (
+                      <div 
+                        className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 border border-indigo-100 rounded-lg w-fit cursor-pointer hover:bg-indigo-100 transition-colors"
+                        onClick={() => setActiveTab(inventoryTabIdx)}
+                      >
+                        <Layers size={12} className="text-indigo-500" />
+                        <span className="text-[11px] font-bold text-indigo-600">See Inventory tab</span>
+                      </div>
+                    ) : (
+                      <p className="text-[13px] font-semibold text-slate-400">—</p>
+                    )}
                   </div>
                 </div>
               </SectionCard>
@@ -501,15 +557,23 @@ const ProductDetail = () => {
                 </div>
                 <div className="divide-y divide-slate-50 space-y-0">
                   {[
+                    { label: "PRODUCT ID", value: uiId || product.id || "—" },
                     { label: "TYPE", value: datas.customer_type || "Product" },
-                    { label: "GSTN", value: datas.gst_number || datas.gst || "—" },
+                    { label: "GST", value: gstValue },
                     { label: "STATUS", value: isActive ? "Active" : "Inactive", isStatus: true },
-                    { label: "VARIANTS", value: hasVariants ? `${combinations.length} combos` : "None" },
+                    { label: "ONLINE", value: (product as any).visible_online ? "Visible" : "Hidden", isOnline: true },
+                    { label: "VARIANTS", value: hasVariants ? `${combinations.length} combo${combinations.length !== 1 ? 's' : ''}` : "None" },
+                    { label: "BATCHES", value: hasBatches ? `${batches.length} batch${batches.length !== 1 ? 'es' : ''}` : "None" },
+                    { label: "SERIALS", value: (product as any).type_infos?.has_serialno ? "Tracked" : "Not tracked" },
                   ].map(row => (
                     <div key={row.label} className="flex items-center justify-between py-2.5">
                       <span className="text-[10px] font-bold text-slate-400  ">{row.label}</span>
-                      {row.isStatus ? (
+                      {(row as any).isStatus ? (
                         <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${isActive ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-600"}`}>
+                          {row.value}
+                        </span>
+                      ) : (row as any).isOnline ? (
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${(product as any).visible_online ? "bg-blue-50 text-blue-600" : "bg-slate-100 text-slate-500"}`}>
                           {row.value}
                         </span>
                       ) : (
@@ -519,6 +583,64 @@ const ProductDetail = () => {
                   ))}
                 </div>
               </SectionCard>
+
+              {/* Custom Fields — separate card below Classification */}
+              {(cfLoading || customFieldDefs.length > 0) && (
+                <SectionCard className="rounded-lg border-slate-200 shadow-sm p-4">
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-100">
+                      <Layers size={16} />
+                    </div>
+                    <h2 className="text-[10px] font-black text-slate-800 tracking-[0.15em]">Custom Attributes</h2>
+                  </div>
+                  {cfLoading ? (
+                    <div className="py-4 flex justify-center"><Loader /></div>
+                  ) : (
+                    <div className="space-y-2">
+                      {customFieldDefs.map((field) => {
+                        const currentVal = customFieldValues.find((v) => v.field_id === field.id);
+                        const isEditing = editingFieldId === field.id;
+                        return (
+                          <div key={field.id} className={`group relative p-3 rounded-lg border transition-all ${
+                            isEditing ? 'border-indigo-200 bg-indigo-50/40' : 'border-slate-100 bg-slate-50 hover:border-indigo-100'
+                          }`}>
+                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-wider mb-0.5">
+                              {field.label_name}{field.required && <span className="text-rose-400 ml-0.5">*</span>}
+                            </p>
+                            {isEditing ? (
+                              <div className="flex items-center gap-1.5 mt-1">
+                                <input
+                                  autoFocus
+                                  type={field.type === 'number' ? 'number' : field.type === 'date' ? 'date' : 'text'}
+                                  value={editingValue}
+                                  onChange={(e) => setEditingValue(e.target.value)}
+                                  className="flex-1 h-7 px-2 text-xs font-semibold bg-white border border-indigo-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                                />
+                                <button onClick={() => handleSaveCustomField(field.id)} disabled={cfSaving}
+                                  className="w-6 h-6 flex items-center justify-center bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all active:scale-90 disabled:opacity-60">
+                                  {cfSaving ? <span className="w-2.5 h-2.5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Check size={11} />}
+                                </button>
+                                <button onClick={() => { setEditingFieldId(null); setEditingValue(''); }}
+                                  className="w-6 h-6 flex items-center justify-center bg-slate-100 text-slate-500 rounded-lg hover:bg-slate-200 transition-all active:scale-90">
+                                  <XIcon size={11} />
+                                </button>
+                              </div>
+                            ) : (
+                              <div className="flex items-center justify-between cursor-pointer"
+                                onClick={() => { setEditingFieldId(field.id); setEditingValue(currentVal?.value ?? ''); }}>
+                                <p className="text-xs font-bold text-slate-700 truncate">
+                                  {currentVal?.value || <span className="text-slate-300 font-medium italic">Click to set</span>}
+                                </p>
+                                <Pencil size={10} className="text-slate-300 group-hover:text-indigo-400 transition-colors ml-2 shrink-0" />
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </SectionCard>
+              )}
 
               {description && description !== "—" && (
                 <SectionCard className="rounded-lg border-slate-200 shadow-sm p-4">
@@ -535,8 +657,83 @@ const ProductDetail = () => {
           </div>
         )}
 
-        {/* TAB 1 — Inventory & Variants */}
-        {activeTab === 1 && (hasVariants || hasBatches) && (
+        {/* TAB — Images */}
+        {TABS[activeTab] === IMG_TAB_LABEL && (() => {
+          // Collect all image URLs from the product
+          const imageUrls: string[] = [];
+          if ((product as any).image_url) imageUrls.push((product as any).image_url);
+          if (datas.images) {
+            if (Array.isArray(datas.images)) imageUrls.push(...datas.images.filter(Boolean));
+            else if (typeof datas.images === 'string') imageUrls.push(datas.images);
+          }
+          // Also look for images from variants if any
+          combinations.forEach((v: any) => {
+            if (v.image_url) imageUrls.push(v.image_url);
+          });
+          const uniqueImages = [...new Set(imageUrls.filter(Boolean))];
+
+          return (
+            <div className="space-y-4 animate-in fade-in slide-in-from-top-4 duration-500">
+              <SectionCard className="rounded-lg border-slate-200 shadow-sm p-6">
+                <div className="flex items-center gap-2 mb-5">
+                  <div className="w-8 h-8 rounded-lg bg-purple-600 flex items-center justify-center text-white shadow-lg shadow-purple-100">
+                    <ImageIcon size={16} />
+                  </div>
+                  <h2 className="text-[10px] font-black text-slate-800 tracking-[0.15em]">Product Images</h2>
+                  {uniqueImages.length > 0 && (
+                    <span className="ml-auto text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
+                      {uniqueImages.length} image{uniqueImages.length !== 1 ? 's' : ''}
+                    </span>
+                  )}
+                </div>
+
+                {uniqueImages.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-20 gap-4">
+                    <div className="w-20 h-20 rounded-2xl bg-slate-100 border-2 border-dashed border-slate-200 flex items-center justify-center">
+                      <ImageIcon size={32} className="text-slate-300" />
+                    </div>
+                    <div className="text-center">
+                      <p className="text-sm font-bold text-slate-400">No images uploaded</p>
+                      <p className="text-xs text-slate-300 mt-1">Edit the product to add images</p>
+                    </div>
+                    <button
+                      onClick={() => navigate(`/product/${id}/edit`)}
+                      className="px-4 py-2 bg-blue-600 text-white text-xs font-bold rounded-lg hover:bg-blue-700 transition-all shadow-sm shadow-blue-100 active:scale-95"
+                    >
+                      Edit Product
+                    </button>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                    {uniqueImages.map((url, idx) => (
+                      <div
+                        key={url + idx}
+                        className="group relative aspect-square rounded-xl overflow-hidden border border-slate-200 bg-slate-50 cursor-pointer hover:border-blue-200 hover:shadow-md transition-all"
+                        onClick={() => window.open(url, '_blank')}
+                      >
+                        <img
+                          src={url}
+                          alt={`Product image ${idx + 1}`}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          onError={(e) => { (e.target as HTMLImageElement).src = ''; (e.target as HTMLImageElement).style.display = 'none'; }}
+                        />
+                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                          <span className="opacity-0 group-hover:opacity-100 text-white text-xs font-bold transition-opacity">Open</span>
+                        </div>
+                        {idx === 0 && (
+                          <span className="absolute top-1.5 left-1.5 bg-blue-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded-md">MAIN</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </SectionCard>
+            </div>
+          );
+        })()}
+
+        {/* TAB — Inventory & Variants */}
+        {TABS[activeTab] === "Inventory & Variants" && (hasVariants || hasBatches) && (
           <div className="space-y-4 animate-in fade-in slide-in-from-top-4 duration-500">
             {/* Variants Section */}
             {hasVariants && (
@@ -721,11 +918,11 @@ const ProductDetail = () => {
                 variant: firstItem.variant,
                 batch: firstItem.batch,
                 serials: firstItem.serials,
-                paymentMethod: isNewFormat ? p.payment_status : (payment.method || "—"),
-                amountPaid: isNewFormat ? p.paid_amount : (payment.amountPaid || 0),
-                totalCost: isNewFormat ? p.total_cost : (pd.totalCost || 0),
-                invoiceNo: isNewFormat ? p.invoice_no : (pd.invoiceNo || "—"),
-                referenceNo: isNewFormat ? p.reference_no : (pd.referenceNo || "—"),
+                paymentMethod: p.payment_infos?.[0]?.method ?? (isNewFormat ? p.payment_status : (payment.method || "—")),
+                amountPaid: p.paid_amount ?? p.payment_infos?.[0]?.amount ?? (isNewFormat ? 0 : (payment.amountPaid || 0)),
+                totalCost: p.total_cost ?? p.item_infos?.total_pur_cost ?? (isNewFormat ? 0 : (pd.totalCost || 0)),
+                invoiceNo: p.invoice_no ?? (isNewFormat ? "" : (pd.invoiceNo || "—")),
+                referenceNo: p.reference_no ?? (isNewFormat ? "" : (pd.referenceNo || "—")),
                 storageLocation: isNewFormat ? productsList[0].storage_location || '—' : (d.storage_location || p.storage_location || '—'),
                 productsList: productsList
               });
@@ -742,91 +939,6 @@ const ProductDetail = () => {
             />
           );
         })()}
-
-        {/* TAB — Custom Fields */}
-        {TABS[activeTab] === 'Custom Fields' && (
-          <div className="space-y-4 animate-in fade-in duration-300">
-            {cfLoading ? (
-              <div className="py-16 flex justify-center"><Loader /></div>
-            ) : customFieldDefs.length === 0 ? (
-              <div className="py-16 text-center">
-                <div className="w-12 h-12 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-400 mx-auto mb-3">
-                  <Layers size={22} />
-                </div>
-                <p className="text-sm font-semibold text-slate-400">No custom fields defined for this shop yet.</p>
-                <p className="text-xs text-slate-300 mt-1">Create field definitions from the Settings panel.</p>
-              </div>
-            ) : (
-              <SectionCard className="rounded-lg border-slate-200 shadow-sm p-5">
-                <div className="flex items-center gap-2 mb-5">
-                  <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-100">
-                    <Layers size={16} />
-                  </div>
-                  <h2 className="text-[10px] font-black text-slate-800 tracking-[0.15em]">CUSTOM ATTRIBUTES</h2>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {customFieldDefs.map((field) => {
-                    const currentVal = customFieldValues.find((v) => v.field_id === field.id);
-                    const isEditing = editingFieldId === field.id;
-                    return (
-                      <div
-                        key={field.id}
-                        className={`group relative p-4 rounded-xl border transition-all ${
-                          isEditing
-                            ? 'border-indigo-200 bg-indigo-50/40'
-                            : 'border-slate-100 bg-white hover:border-indigo-100 hover:bg-indigo-50/20'
-                        }`}
-                      >
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">
-                          {field.label_name}
-                          {field.required && <span className="text-rose-400 ml-0.5">*</span>}
-                        </p>
-
-                        {isEditing ? (
-                          <div className="flex items-center gap-1.5 mt-1">
-                            <input
-                              autoFocus
-                              type={field.type === 'number' ? 'number' : field.type === 'date' ? 'date' : 'text'}
-                              value={editingValue}
-                              onChange={(e) => setEditingValue(e.target.value)}
-                              className="flex-1 h-8 px-2 text-xs font-semibold bg-white border border-indigo-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-200 transition-all"
-                            />
-                            <button
-                              onClick={() => handleSaveCustomField(field.id)}
-                              disabled={cfSaving}
-                              className="w-7 h-7 flex items-center justify-center bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all active:scale-90 disabled:opacity-60"
-                            >
-                              {cfSaving ? <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Check size={12} />}
-                            </button>
-                            <button
-                              onClick={() => { setEditingFieldId(null); setEditingValue(''); }}
-                              className="w-7 h-7 flex items-center justify-center bg-slate-100 text-slate-500 rounded-lg hover:bg-slate-200 transition-all active:scale-90"
-                            >
-                              <XIcon size={12} />
-                            </button>
-                          </div>
-                        ) : (
-                          <div
-                            className="flex items-center justify-between mt-1 cursor-pointer"
-                            onClick={() => {
-                              setEditingFieldId(field.id);
-                              setEditingValue(currentVal?.value ?? '');
-                            }}
-                          >
-                            <p className="text-sm font-bold text-slate-700 truncate">
-                              {currentVal?.value || <span className="text-slate-300 font-medium italic">Click to set value</span>}
-                            </p>
-                            <Pencil size={11} className="text-slate-300 group-hover:text-indigo-400 transition-colors ml-2 shrink-0" />
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </SectionCard>
-            )}
-          </div>
-        )}
       </div>
 
 

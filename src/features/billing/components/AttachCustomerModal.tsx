@@ -29,7 +29,7 @@ const getAvatarBg = (name: string) => {
   return `hsl(${h}, 65%, 42%)`;
 };
 
-const formatINR = (amount: number, decimals = 0) =>
+const formatINR = (amount: number, decimals = 2) =>
   amount.toLocaleString("en-IN", { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
 
 const AttachCustomerModal: React.FC<AttachCustomerModalProps> = ({

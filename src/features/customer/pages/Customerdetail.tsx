@@ -17,6 +17,7 @@ import { useBusinessApi } from "@/context/BusinessApiContext";
 import { useToast } from "@/context/ToastContext";
 import { useHeader } from "@/context/HeaderContext";
 import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
+import SkeletonLoader from "@/components/common/SkeletonLoader";
 import Loader from "@/components/common/Loader";
 import type { CustomerRecord } from "@/types/api";
 import { SearchSelect } from "@/components/inputbuilders/SearchSelect";
@@ -301,7 +302,7 @@ export default function CustomerDetail() {
   }
 
   if (recordLoading) {
-    return <div className="p-12 flex justify-center"><Loader /></div>;
+    return <SkeletonLoader variant="detail" />;
   }
 
   if (!customer) {

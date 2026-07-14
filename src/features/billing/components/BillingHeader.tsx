@@ -29,6 +29,16 @@ interface BillingHeaderProps {
 const formatINR = (amount: number, decimals = 2) => 
   amount.toLocaleString("en-IN", { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
 
+const formatPrice = (amount: number) => {
+  if (amount === 0) return "0.00";
+  const abs = Math.abs(amount);
+  let decimals = 2;
+  if (abs < 0.01) {
+    decimals = Math.max(2, Math.ceil(-Math.log10(abs)) + 2);
+  }
+  return amount.toLocaleString("en-IN", { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+};
+
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
 
@@ -158,16 +168,16 @@ const BillingHeader: React.FC<BillingHeaderProps> = ({
               <div className="p-3.5 border-2 border-blue-500/80 bg-blue-50/20 rounded-xl shadow-sm space-y-1.5">
                 <div className="flex justify-between items-center text-[11px] font-semibold text-slate-600">
                   <span>Credit limit</span>
-                  <span className="font-bold text-blue-600">₹{formatINR(customerData.creditLimit, 0)}</span>
+                  <span className="font-bold text-blue-600">₹{formatINR(customerData.creditLimit)}</span>
                 </div>
                 <div className="flex justify-between items-center text-[11px] font-semibold text-slate-600">
                   <span>Already owed</span>
-                  <span className="font-bold text-slate-550">₹{formatINR(customerData.outstanding, 0)}</span>
+                  <span className="font-bold text-slate-550">₹{formatINR(customerData.outstanding)}</span>
                 </div>
                 <div className="w-full h-px bg-blue-100 my-1.5" />
                 <div className="flex justify-between items-center text-[11px] font-bold text-slate-700">
                   <span>Available to use</span>
-                  <span className="font-extrabold text-emerald-600">₹{formatINR(Math.max(0, customerData.creditLimit - customerData.outstanding), 0)}</span>
+                  <span className="font-extrabold text-emerald-600">₹{formatINR(Math.max(0, customerData.creditLimit - customerData.outstanding))}</span>
                 </div>
               </div>
             </div>
@@ -185,12 +195,12 @@ const BillingHeader: React.FC<BillingHeaderProps> = ({
             </div>
             <div className="flex justify-between">
               <span>Subtotal</span>
-              <span className="font-bold text-slate-800 tabular-nums">₹{formatINR(totalAmount, 0)}</span>
+              <span className="font-bold text-slate-800 tabular-nums">₹{formatPrice(totalAmount)}</span>
             </div>
             {includeGst && (
               <div className="flex justify-between text-indigo-650">
                 <span>Tax / GST</span>
-                <span className="font-bold tabular-nums">+₹{formatINR(gstAmount, 0)}</span>
+                <span className="font-bold tabular-nums">+₹{formatPrice(gstAmount)}</span>
               </div>
             )}
           </div>
@@ -199,7 +209,7 @@ const BillingHeader: React.FC<BillingHeaderProps> = ({
           
           <div className="flex justify-between items-center">
             <span className="text-xs font-black text-slate-700 uppercase tracking-wider">Grand Total</span>
-            <span className="text-base font-black text-blue-600 tabular-nums">₹{formatINR(finalAmount, 0)}</span>
+            <span className="text-base font-black text-blue-600 tabular-nums">₹{formatPrice(finalAmount)}</span>
           </div>
         </div>
 

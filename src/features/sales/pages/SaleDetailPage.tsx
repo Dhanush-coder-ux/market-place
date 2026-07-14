@@ -15,6 +15,7 @@ import { useHeader } from "@/context/HeaderContext";
 import { ReturnModal } from "../components/ReturnOrderFlow";
 import { DetailItem, InfoRow, ProfileHeaderCard, SectionCard } from "@/components/common/SuperUI";
 import { OrderResponse } from "@/features/order/types";
+import SkeletonLoader from "@/components/common/SkeletonLoader";
 
 /* ── helpers ── */
 const fmt = (n?: number) => `₹${(n || 0).toLocaleString("en-IN")}`;
@@ -173,14 +174,13 @@ const SaleDetailPage: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
-  if (loading) return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center font-sans">
-      <div className="text-center flex flex-col items-center">
-        <div className="w-11 h-11 border-4 border-slate-200 border-t-blue-600 rounded-full animate-spin mb-4" />
-        <p className="text-sm text-slate-500 font-medium">Loading sale details…</p>
+  if (loading) {
+    return (
+      <div className="flex-1 p-6 bg-slate-50/50">
+        <SkeletonLoader variant="detail" />
       </div>
-    </div>
-  );
+    );
+  }
 
   if (!sale) return (
     <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center gap-4 font-sans">
@@ -224,7 +224,7 @@ const SaleDetailPage: React.FC = () => {
         <ProfileHeaderCard
           name={`Order #${sale.ui_id}`}
           initials="ORD"
-          subText={`ID: ${sale.id}`}
+          subText={`Order ID: ${sale.ui_id || sale.id?.slice(0, 8).toUpperCase()}`}
           badges={[
             { text: sale.status, variant: sale.status === "Completed" ? "success" : sale.status === "Cancelled" ? "danger" : "warning", showPulse: sale.status === "Pending" },
             { text: sale.origin, variant: "primary" }

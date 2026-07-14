@@ -1,8 +1,8 @@
 import { useState, useRef, useEffect } from "react";
 import {
-  Megaphone, RefreshCw, Gift, Smile, Sparkles, PenTool,
-  History, Inbox, Eye, Send, Clock, Users, TrendingUp,
-  Copy, Trash2, Edit3, CheckCircle2, Zap, Bell, MessageCircle,
+  Megaphone, RefreshCw, Gift, Smile, Sparkles,
+  Inbox, Eye, Send, Clock,
+  Copy, Trash2, Edit3, CheckCircle2, Bell, MessageCircle,
   Monitor, Smartphone, Timer
 } from "lucide-react";
 import { useBusinessApi } from "@/context/BusinessApiContext";
@@ -14,12 +14,6 @@ type AnnouncementType = "Announcement" | "Update" | "Offer";
 type StatusType = "Draft" | "Scheduled" | "Published";
 type PreviewMode = "banner" | "toast" | "whatsapp";
 
-interface AudienceOption {
-  value: string;
-  label: string;
-  desc: string;
-  icon: string;
-}
 
 interface AnnouncementItem {
   id: number;
@@ -98,12 +92,6 @@ const STATUS_CONFIG: Record<StatusType, { dot: string; bg: string; text: string;
   Published: { dot: "bg-emerald-500", bg: "bg-emerald-100", text: "text-emerald-800", icon: <CheckCircle2 size={10} /> },
 };
 
-const AUDIENCE_OPTIONS: AudienceOption[] = [
-  { value: "ALL_FOLLOWED_USERS", label: "All Users", desc: "Everyone sees this", icon: "👥" },
-  { value: "NEW_USER", label: "New Users", desc: "First-time visitors", icon: "🌱" },
-  { value: "NON_FOLLOWING_USERS", label: "Non-Following", desc: "Users not following", icon: "🔁" },
-  { value: "PREMIUM", label: "VIP Members", desc: "Top-tier customers", icon: "👑" },
-];
 
 const AI_SUGGESTIONS: { text: string; type: AnnouncementType }[] = [
   { text: "🎉 Grand sale — up to 50% off this weekend only!", type: "Offer" },
@@ -397,6 +385,7 @@ export default function AnnouncementsPage() {
   const [status, setStatus] = useState<StatusType>("Draft");
   const [audience, setAudience] = useState("ALL_FOLLOWED_USERS");
   const [scheduleDate, setScheduleDate] = useState("");
+  const [scheduleTime, setScheduleTime] = useState("");
   const [ctaLabel, setCtaLabel] = useState("");
   const [ctaUrl, setCtaUrl] = useState("");
   const [focused, setFocused] = useState(false);
@@ -633,25 +622,7 @@ export default function AnnouncementsPage() {
                 </div>
               </div>
 
-              {/* Action buttons */}
-              <div className="flex gap-2 items-center">
-                <button
-                  onClick={() => setActiveTab("history")}
-                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-slate-200 bg-white text-[12.5px] font-semibold text-slate-600 hover:border-slate-300 hover:bg-slate-50 transition-all cursor-pointer"
-                >
-                  <History size={13} strokeWidth={2.5} />
-                  History
-                  <span className="bg-slate-100 rounded-md px-1.5 py-0.5 text-[10.5px] font-bold text-slate-500">{history.length}</span>
-                </button>
-                <button
-                  onClick={() => setActiveTab("editor")}
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl text-white text-[13px] font-bold cursor-pointer transition-all hover:opacity-90 ann-btn-action"
-                  style={{ background: "#3b82f6", boxShadow: "0 4px 16px rgba(59,130,246,0.3)" }}
-                >
-                  <Zap size={13} strokeWidth={2.5} />
-                  New Announcement
-                </button>
-              </div>
+
             </div>
 
             {/* Stat pills */}
@@ -670,22 +641,7 @@ export default function AnnouncementsPage() {
               ))}
             </div>
 
-            {/* Tabs */}
-            <div className="flex gap-0 border-b border-slate-100">
-              {(["editor", "history"] as const).map(tab => (
-                <button
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
-                  className={`relative flex items-center gap-2 px-5 py-2.5 text-[13px] font-semibold transition-all cursor-pointer border-b-2 ${activeTab === tab
-                    ? "text-blue-700 border-blue-600"
-                    : "text-slate-400 border-transparent hover:text-slate-600 hover:border-slate-200"
-                    }`}
-                >
-                  {tab === "editor" ? <PenTool size={14} strokeWidth={2.5} /> : <History size={14} strokeWidth={2.5} />}
-                  <span className="capitalize">{tab === "editor" ? "Compose" : `History (${history.length})`}</span>
-                </button>
-              ))}
-            </div>
+
           </div>
         </div>
 
@@ -759,28 +715,6 @@ export default function AnnouncementsPage() {
                           >
                             <span className={`w-1.5 h-1.5 rounded-full ${isActive ? dot : 'bg-slate-300'} inline-block shrink-0`} />
                             {s}
-                          </button>
-                        );
-                      })}
-                    </div>
-
-                    {/* ── Audience Card Selector ── */}
-                    <div className="flex items-center gap-1 bg-slate-50 border border-slate-200 rounded-xl p-1">
-                      {AUDIENCE_OPTIONS.map(opt => {
-                        const isActive = audience === opt.value;
-                        return (
-                          <button
-                            key={opt.value}
-                            onClick={() => setAudience(opt.value)}
-                            title={opt.desc}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11.5px] font-bold cursor-pointer transition-all ann-btn-action border ${
-                              isActive
-                                ? 'bg-blue-50 text-blue-700 border-blue-300 shadow-sm'
-                                : 'bg-transparent border-transparent text-slate-400 hover:text-slate-600 hover:bg-white'
-                            }`}
-                          >
-                            <span className="text-sm leading-none">{opt.icon}</span>
-                            {opt.label}
                           </button>
                         );
                       })}
@@ -923,79 +857,46 @@ export default function AnnouncementsPage() {
                   </div>
                 </div>
 
-                {/* Schedule Row */}
-                <div className="bg-white rounded-2xl border border-slate-200 p-4 flex items-center gap-4 ann-card">
-                  <div className="w-9 h-9 rounded-xl bg-amber-50 flex items-center justify-center shrink-0">
-                    <Clock size={16} className="text-amber-500" strokeWidth={2.5} />
-                  </div>
-                  <div className="flex-1">
-                    <p className="m-0 text-[13px] font-bold text-slate-800">Schedule for later</p>
-                    <p className="m-0 text-[11.5px] text-slate-400 mt-0.5">Leave empty to publish immediately</p>
-                  </div>
-                  <input
-                    type="datetime-local"
-                    value={scheduleDate}
-                    onChange={e => setScheduleDate(e.target.value)}
-                    className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-[12px] font-medium text-slate-700 outline-none transition-all focus:border-blue-400 focus:bg-white focus:ring-4 focus:ring-blue-500/10 cursor-pointer"
-                  />
-                </div>
-
-                {/* CTA Row */}
-                <div className="bg-white rounded-2xl border border-slate-200 p-4 ann-card">
-                  <div className="flex items-center gap-2.5 mb-3.5">
-                    <div className="w-7 h-7 rounded-lg bg-blue-50 flex items-center justify-center">
-                      <TrendingUp size={13} className="text-blue-500" strokeWidth={2.5} />
+                {/* Conditional Date & Time Picking if Scheduled is selected */}
+                {status === "Scheduled" && (
+                  <div className="bg-white rounded-2xl border border-slate-200 p-4 flex flex-col gap-3 ann-card" style={{ animation: "ann-fadeIn 0.2s ease" }}>
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-7 h-7 rounded-lg bg-amber-50 flex items-center justify-center">
+                        <Clock size={13} className="text-amber-500" strokeWidth={2.5} />
+                      </div>
+                      <div>
+                        <p className="m-0 text-[13px] font-bold text-slate-800">Schedule Date & Time</p>
+                        <p className="m-0 text-[11px] text-slate-400">Pick when this announcement goes live</p>
+                      </div>
                     </div>
-                    <p className="m-0 text-[13px] font-bold text-slate-800">
-                      Call-to-Action <span className="text-slate-400 font-medium text-[12px]">— Optional</span>
-                    </p>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <input
-                      placeholder='Button label, e.g. "Shop Now"'
-                      value={ctaLabel}
-                      onChange={e => setCtaLabel(e.target.value)}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-[13px] font-medium text-slate-800 outline-none transition-all focus:border-blue-400 focus:bg-white focus:ring-4 focus:ring-blue-500/10 placeholder-slate-300"
-                    />
-                    <input
-                      placeholder="Redirect URL"
-                      value={ctaUrl}
-                      onChange={e => setCtaUrl(e.target.value)}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-[13px] font-medium text-slate-800 outline-none transition-all focus:border-blue-400 focus:bg-white focus:ring-4 focus:ring-blue-500/10 placeholder-slate-300"
-                    />
-                  </div>
-                </div>
-
-                {/* Audience Picker */}
-                <div className="bg-white rounded-2xl border border-slate-200 p-4 ann-card">
-                  <div className="flex items-center gap-2.5 mb-3.5">
-                    <div className="w-7 h-7 rounded-lg bg-emerald-50 flex items-center justify-center">
-                      <Users size={13} className="text-emerald-500" strokeWidth={2.5} />
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Date</label>
+                        <input
+                          type="date"
+                          value={scheduleDate}
+                          onChange={e => setScheduleDate(e.target.value)}
+                          className="bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-[13px] font-medium text-slate-700 outline-none transition-all focus:border-blue-400 focus:bg-white focus:ring-4 focus:ring-blue-500/10 cursor-pointer w-full"
+                        />
+                      </div>
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Time</label>
+                        <input
+                          type="time"
+                          value={scheduleTime}
+                          onChange={e => setScheduleTime(e.target.value)}
+                          className="bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-[13px] font-medium text-slate-700 outline-none transition-all focus:border-blue-400 focus:bg-white focus:ring-4 focus:ring-blue-500/10 cursor-pointer w-full"
+                        />
+                      </div>
                     </div>
-                    <p className="m-0 text-[13px] font-bold text-slate-800">Target Audience</p>
+                    {scheduleDate && scheduleTime && (
+                      <p className="m-0 text-[11.5px] text-amber-600 font-semibold flex items-center gap-1.5">
+                        <Clock size={11} strokeWidth={2.5} />
+                        Goes live: {new Date(`${scheduleDate}T${scheduleTime}`).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                      </p>
+                    )}
                   </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    {AUDIENCE_OPTIONS.map(opt => (
-                      <button
-                        key={opt.value}
-                        onClick={() => setAudience(opt.value)}
-                        className={`flex items-center gap-3 px-3.5 py-3 rounded-xl border-[1.5px] transition-all cursor-pointer text-left ann-btn-action ${audience === opt.value
-                          ? "border-blue-400 bg-blue-50"
-                          : "border-slate-200 bg-slate-50 hover:border-slate-300"
-                          }`}
-                      >
-                        <span className="text-lg">{opt.icon}</span>
-                        <div>
-                          <p className={`m-0 text-[12.5px] font-bold leading-none mb-0.5 ${audience === opt.value ? "text-blue-700" : "text-slate-700"}`}>{opt.label}</p>
-                          <p className="m-0 text-[10.5px] text-slate-400">{opt.desc}</p>
-                        </div>
-                        {audience === opt.value && (
-                          <CheckCircle2 size={14} className="text-blue-500 ml-auto shrink-0" />
-                        )}
-                      </button>
-                    ))}
-                  </div>
-                </div>
+                )}
               </div>
 
               {/* ── Right: Live Preview ── */}
@@ -1054,12 +955,6 @@ export default function AnnouncementsPage() {
                       <div className="flex justify-between items-center py-1.5 border-b border-slate-50">
                         <span className="text-[11.5px] text-slate-400 font-medium">Status</span>
                         <StatusBadge status={scheduleDate ? "Scheduled" : status} />
-                      </div>
-                      <div className="flex justify-between items-center py-1.5 border-b border-slate-50">
-                        <span className="text-[11.5px] text-slate-400 font-medium">Audience</span>
-                        <span className="text-[12px] font-bold text-slate-700">
-                          {AUDIENCE_OPTIONS.find(a => a.value === audience)?.icon} {AUDIENCE_OPTIONS.find(a => a.value === audience)?.label}
-                        </span>
                       </div>
                       {ctaLabel && (
                         <div className="flex justify-between items-center py-1.5 border-b border-slate-50">
@@ -1174,8 +1069,8 @@ export default function AnnouncementsPage() {
               </div>
 
               {/* Table Header */}
-              <div className="grid grid-cols-[1fr_110px_110px_120px_90px_130px] gap-3 py-3 px-5 bg-slate-50/80 border-b border-slate-100">
-                {["Message", "Type", "Status", "Audience", "Views", "Actions"].map(h => (
+              <div className="grid grid-cols-[1fr_110px_110px_90px_130px] gap-3 py-3 px-5 bg-slate-50/80 border-b border-slate-100">
+                {["Message", "Type", "Status", "Views", "Actions"].map(h => (
                   <span key={h} className="text-[10.5px] font-black text-slate-400 tracking-[0.08em] uppercase">{h}</span>
                 ))}
               </div>
@@ -1192,7 +1087,7 @@ export default function AnnouncementsPage() {
               ) : filteredHistory.map((item, idx) => (
                 <div
                   key={item.id}
-                  className={`grid grid-cols-[1fr_110px_110px_120px_90px_130px] gap-3 py-4 px-5 items-center ann-history-row ${idx < filteredHistory.length - 1 ? "border-b border-slate-50" : ""}`}
+                  className={`grid grid-cols-[1fr_110px_110px_90px_130px] gap-3 py-4 px-5 items-center ann-history-row ${idx < filteredHistory.length - 1 ? "border-b border-slate-50" : ""}`}
                   style={{ animation: `ann-fadeIn 0.15s ease ${idx * 0.03}s both` }}
                 >
                   {/* Message */}
@@ -1202,9 +1097,6 @@ export default function AnnouncementsPage() {
                   </div>
                   <TypeBadge type={item.type} />
                   <StatusBadge status={item.status} />
-                  <span className="text-[12px] font-semibold text-slate-600">
-                    {AUDIENCE_OPTIONS.find(a => a.value === item.audience)?.icon} {AUDIENCE_OPTIONS.find(a => a.value === item.audience)?.label || "All Users"}
-                  </span>
                   <span className={`text-[13px] font-extrabold font-mono ${item.views > 0 ? "text-slate-800" : "text-slate-300"}`}>
                     {item.views > 0 ? item.views.toLocaleString() : "—"}
                   </span>

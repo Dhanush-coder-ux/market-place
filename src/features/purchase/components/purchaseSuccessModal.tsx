@@ -66,7 +66,7 @@ export default function PurchaseSuccessModal({
                 Total Amount
               </span>
               <span className="font-black text-emerald-600">
-                ₹{total?.toLocaleString() || "0"}
+                ₹{typeof total === 'number' ? total.toFixed(2) : "0.00"}
               </span>
             </div>
           </div>

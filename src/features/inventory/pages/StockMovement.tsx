@@ -5,7 +5,7 @@ import {
   User, TrendingUp, TrendingDown, Activity,
   Bookmark, Filter,
   FileText, Layers, Hash, Zap, Copy, ExternalLink,
-  ChevronRight
+  ChevronRight, Eye, Trash2
 } from "lucide-react";
 
 import { GradientButton } from "@/components/ui/GradientButton";
@@ -22,6 +22,7 @@ import { createPortal } from "react-dom";
 import { RightSidebarFilter } from "@/components/common/RightSidebarFilter";
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 import { stockMovAdjApi } from "@/services/api/stockMovAdj";
+import SkeletonLoader from "@/components/common/SkeletonLoader";
 
 // ─── Types & Interfaces ──────────────────────────────────────────────────────
 
@@ -50,6 +51,8 @@ export interface Movement {
   serial_numbers?: string[];
   current_stock?: number;
   productsList?: any[];
+  skuLabel?: string;
+  skuValue?: string;
 }
 
 // ─── Mock Data ───────────────────────────────────────────────────────────────
@@ -170,7 +173,7 @@ function DetailDrawer({ movement, onClose }: DetailDrawerProps) {
                         <div className="flex justify-between items-start gap-2 mb-1.5">
                           <div>
                             <p className="text-slate-800 font-bold text-xs leading-tight">{p.name}</p>
-                            <span className="text-[9px] font-mono text-slate-400 mt-0.5 block">SKU: {p.sku}</span>
+                            <span className="text-[9px] font-mono text-slate-400 mt-0.5 block">{p.skuLabel}: {p.skuValue}</span>
                           </div>
                           <span className={`text-xs font-black tabular-nums ${p.qty > 0 ? 'text-emerald-650' : 'text-rose-655'}`}>
                             {p.qty > 0 ? `+${p.qty}` : p.qty}
@@ -237,7 +240,7 @@ function DetailDrawer({ movement, onClose }: DetailDrawerProps) {
                       </div>
                       <p className="text-slate-800 font-bold text-base leading-tight">{movement.product}</p>
                       <div className="flex items-center gap-2 mt-2">
-                        <span className="text-[10px] font-mono text-slate-400 bg-white px-2 py-0.5 rounded border border-slate-100">SKU: {movement.sku}</span>
+                        <span className="text-[10px] font-mono text-slate-400 bg-white px-2 py-0.5 rounded border border-slate-100">{movement.skuLabel}: {movement.skuValue}</span>
                         <button onClick={(e) => copyToClipboard(e, movement.id)} className="text-[9px] font-bold text-blue-500 hover:underline">Copy ID</button>
                       </div>
                     </div>
@@ -510,7 +513,19 @@ export default function StockMovementPage() {
   }, [setActions, navigate, isCleanMode]);
 
   const { setBottomActions } = useHeader();
-  const [selectedItem, setSelectedItem] = useState<Movement | null>(null);
+  const [selectedMovements, setSelectedMovements] = useState<Set<string>>(new Set());
+
+  const toggleSelectMovement = (id: string) => {
+    setSelectedMovements(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
 
   const [analyticsStats, setAnalyticsStats] = useState<any>(null);
 
@@ -525,8 +540,15 @@ export default function StockMovementPage() {
       .catch(() => {});
   }, [getData]);
 
+  const handleBulkDelete = () => {
+    if (selectedMovements.size === 0) return;
+    if (window.confirm(`Are you sure you want to delete these ${selectedMovements.size} stock movements?`)) {
+      alert("Delete stock movements requires admin privileges.");
+    }
+  };
+
   useEffect(() => {
-    if (selectedItem) {
+    if (selectedMovements.size > 1) {
       setBottomActions(
         <div className="flex items-center justify-between w-full animate-in fade-in slide-in-from-right-4 duration-300">
           <div className="flex items-center gap-3">
@@ -534,27 +556,16 @@ export default function StockMovementPage() {
               <Activity size={14} />
             </div>
             <div>
-              <p className="text-[12px] font-bold text-slate-800 leading-tight">
-                {selectedItem.product || "N/A"}
-              </p>
-              <p className="text-[10px] font-semibold text-slate-400 font-mono">
-                {selectedItem.id || selectedItem.sku || "No ID"}
-              </p>
+              <p className="text-[12px] font-bold text-slate-800 leading-tight">Selected {selectedMovements.size} Stock Movements</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setSelectedItem(null)}
-              className="h-8 px-3 rounded-md border border-slate-200 bg-white hover:bg-slate-50 text-slate-500 font-semibold text-[11px] transition-colors"
+              onClick={handleBulkDelete}
+              className="h-8 px-3 rounded-md border border-red-200 bg-red-50 hover:bg-red-100 text-red-650 font-bold text-[11px] transition-colors flex items-center gap-1.5"
             >
-              Deselect
-            </button>
-            <button
-              onClick={() => setSelected(selectedItem)}
-              className="h-8 px-4 rounded-md bg-blue-600 hover:bg-blue-700 text-white font-semibold text-[11px] transition-colors flex items-center gap-1.5"
-            >
-              <ChevronRight size={13} />
-              View Details
+              <Trash2 size={13} />
+              Delete All
             </button>
           </div>
         </div>
@@ -562,7 +573,7 @@ export default function StockMovementPage() {
     } else {
       setBottomActions(null);
     }
-  }, [selectedItem, setBottomActions, setSelected]);
+  }, [selectedMovements, setBottomActions]);
 
   const fetchPage = useCallback(async (limit: number, offset: number, filters: any) => {
     const params: any = { limit: limit.toString(), offset: offset.toString() };
@@ -607,9 +618,19 @@ export default function StockMovementPage() {
         const stocksAfter = item.stock_infos?.stocks_after ?? item.stocks_after ?? 0;
         
         const qty = isDecrement ? -Math.abs(Number(stocksAdj)) : Math.abs(Number(stocksAdj));
+        const rawSku = item.sku || item.datas?.sku || item.custom_fields?.sku || "";
+        const uiId = item.ui_id || item.id || "";
+        const hasSku = !!rawSku;
+        const skuLabel = hasSku ? "SKU" : "ID";
+        const skuValue = hasSku ? rawSku : uiId;
+
         return {
           name: item.name || item.product_id || item.inventory_id || "—",
           sku: item.ui_id || item.id?.slice(0, 8) || "",
+          rawSku,
+          uiId,
+          skuLabel,
+          skuValue,
           qty,
           stocks_before: Number(stocksBefore),
           current_stock: Number(stocksAfter),
@@ -619,7 +640,7 @@ export default function StockMovementPage() {
         };
       });
 
-      const firstItem = productsList[0] ?? { name: "—", sku: "", qty: 0, stocks_before: 0, current_stock: 0, variant: "", batch: "", serial_numbers: [] };
+      const firstItem = productsList[0] ?? { name: "—", sku: "", skuLabel: "ID", skuValue: "", qty: 0, stocks_before: 0, current_stock: 0, variant: "", batch: "", serial_numbers: [] };
       const smId = a.stock_movement_id || a.id;
 
       return {
@@ -627,6 +648,8 @@ export default function StockMovementPage() {
         fullId: smId,
         product: firstItem.name,
         sku: firstItem.sku,
+        skuLabel: firstItem.skuLabel,
+        skuValue: firstItem.skuValue,
         type: finalType as MovementType,
         qty: firstItem.qty,
         stocks_before: firstItem.stocks_before,
@@ -697,6 +720,14 @@ export default function StockMovementPage() {
       </span>
     </button>
   );
+
+  if (loading && pageData.length === 0) {
+    return (
+      <div className="flex-1 p-6">
+        <SkeletonLoader variant="list" rows={8} showStats={true} />
+      </div>
+    );
+  }
 
   return (
     <div className="flex-1 flex flex-col min-h-0 font-sans w-full overflow-hidden relative">
@@ -827,6 +858,21 @@ export default function StockMovementPage() {
           <table className="w-full text-left border-collapse table-fixed">
             <thead className="sticky top-0 z-20 bg-slate-50 border-b border-slate-200">
               <tr className="text-slate-400 text-[10px] font-bold tracking-[0.15em]">
+                <th className="px-4 py-3 w-10 text-center border-r border-slate-100">
+                  <input
+                    type="checkbox"
+                    checked={pageData.length > 0 && pageData.every(m => selectedMovements.has(m.id))}
+                    onChange={() => {
+                      const allSelected = pageData.length > 0 && pageData.every(m => selectedMovements.has(m.id));
+                      if (allSelected) {
+                        setSelectedMovements(new Set());
+                      } else {
+                        setSelectedMovements(new Set(pageData.map(m => m.id)));
+                      }
+                    }}
+                    className="rounded border-slate-350 text-blue-600 focus:ring-blue-500/20 cursor-pointer"
+                  />
+                </th>
                 <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500 border-r border-slate-100 last:border-r-0 w-[25%] min-w-[260px]">Product Information</th>
                 <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500 border-r border-slate-100 last:border-r-0 w-[12%] min-w-[125px]">Movement Type</th>
                 <th className="px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-slate-500 border-r border-slate-100 last:border-r-0 w-[10%] min-w-[90px]">Stock In / Out</th>
@@ -842,22 +888,13 @@ export default function StockMovementPage() {
                 <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500 border-r border-slate-100 last:border-r-0 w-[15%] min-w-[150px]">
                   <SortBtn field="date" label="Date & Time" />
                 </th>
-                <th className="px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-slate-500 w-14">Actions</th>
+                <th className="px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-slate-500 w-14 sticky right-0 bg-slate-50 border-l border-slate-200 z-30 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.08)]">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-sm bg-white">
-              {loading && pageData.length === 0 ? (
+              {pageData.length === 0 ? (
                 <tr>
-                  <td colSpan={selectedKeys.length + 6} className="py-20 text-center text-slate-400 font-medium italic bg-white">
-                    <div className="flex flex-col items-center justify-center">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-3"></div>
-                      <p className="text-sm font-medium">Loading movements...</p>
-                    </div>
-                  </td>
-                </tr>
-              ) : pageData.length === 0 ? (
-                <tr>
-                  <td colSpan={selectedKeys.length + 6} className="py-20 text-center text-slate-400 font-medium italic bg-white">
+                  <td colSpan={selectedKeys.length + 7} className="py-20 text-center text-slate-400 font-medium italic bg-white">
                     No movements found matching your filters.
                   </td>
                 </tr>
@@ -894,10 +931,16 @@ export default function StockMovementPage() {
                   <React.Fragment key={rowKey}>
                     <tr
                       ref={idx === pageData.length - 1 ? lastElementRef : null}
-                      className={`group transition-all cursor-pointer border-b border-slate-100 last:border-b-0 ${selectedMvt?.id === m.id ? "bg-blue-50 border-l-2 border-l-blue-500" : "hover:bg-blue-50/30 even:bg-slate-50/20"
-                        }`}
-                      onClick={() => setSelected(prev => prev?.id === m.id ? null : m)}
+                      className={`group transition-all cursor-default border-b border-slate-100 last:border-b-0 ${selectedMovements.has(m.id) ? "bg-blue-50 border-l-2 border-l-blue-500" : "hover:bg-blue-50/30 even:bg-slate-50/20"}`}
                     >
+                      <td className="px-4 py-3 align-middle border-r border-slate-100 text-center">
+                        <input
+                          type="checkbox"
+                          checked={selectedMovements.has(m.id)}
+                          onChange={() => toggleSelectMovement(m.id)}
+                          className="rounded border-slate-350 text-blue-600 focus:ring-blue-500/20 cursor-pointer"
+                        />
+                      </td>
                       <td className="px-4 py-3 align-middle border-r border-slate-100 last:border-r-0">
                         <div className="flex items-center gap-3 min-w-0">
                           <div className={`w-8 h-8 rounded-md bg-gradient-to-br flex items-center justify-center text-white text-xs font-black shrink-0 shadow-sm ${totalQty > 0 ? "from-emerald-500 to-emerald-400 shadow-emerald-50" : "from-rose-500 to-rose-400 shadow-rose-50"}`}>
@@ -915,7 +958,7 @@ export default function StockMovementPage() {
                                 ID: {m.id}
                                 <Copy size={8} className="opacity-0 group-hover:opacity-100 transition-opacity" />
                               </button>
-                              <span className="text-[9px] font-medium text-slate-400 font-mono">SKU: {hasList ? firstProd.sku : m.sku}</span>
+                              <span className="text-[9px] font-medium text-slate-400 font-mono">{hasList ? firstProd.skuLabel : m.skuLabel}: {hasList ? firstProd.skuValue : m.skuValue}</span>
                               {(hasList ? firstProd.variant : m.variant) && (
                                 <button
                                   onClick={(e) => copyToClipboard(e, (hasList ? firstProd.variant : m.variant) || "")}
@@ -1000,8 +1043,14 @@ export default function StockMovementPage() {
                           </span>
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-center align-middle w-14">
-                        <ChevronRight size={14} className={`mx-auto transition-all duration-200 ${selectedMvt?.id === m.id ? "text-blue-500 rotate-90" : "text-slate-300 group-hover:text-blue-500"}`} />
+                      <td className="px-4 py-3 text-center align-middle w-14 whitespace-nowrap sticky right-0 bg-white group-hover:bg-slate-50 border-l border-slate-200 z-10 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.08)] transition-colors" onClick={(e) => e.stopPropagation()}>
+                        <button
+                          onClick={() => setSelected(m)}
+                          className="text-slate-400 hover:text-blue-600 transition-colors p-1"
+                          title="View Details"
+                        >
+                          <Eye size={15} />
+                        </button>
                       </td>
                     </tr>
 

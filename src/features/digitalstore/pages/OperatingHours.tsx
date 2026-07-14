@@ -13,7 +13,7 @@ const DAYS: Day[] = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SA
 type DayHours = { open: string; close: string; closed: boolean; id?: number };
 
 /* ── Main Component ──────────────────────────────────────────────────────────── */
-const OperatingHours = () => {
+const OperatingHours = ({ onStatusChange }: { onStatusChange?: (status: React.ReactNode) => void }) => {
   const { shop } = useBusinessApi();
   const [storeHours, setStoreHours] = useState<Record<Day, DayHours>>(
     DAYS.reduce((a, d) => { a[d] = { open: "09:00", close: "18:00", closed: false }; return a; }, {} as Record<Day, DayHours>)
@@ -98,31 +98,44 @@ const OperatingHours = () => {
 
   const openCount = DAYS.filter(d => !storeHours[d].closed).length;
 
+  useEffect(() => {
+    if (onStatusChange) {
+      onStatusChange(
+        <div className="flex items-center gap-1.5 bg-blue-50 border border-blue-100 px-3 py-1.5 rounded-xl">
+          <CheckCircle2 size={12} className="text-blue-500" />
+          <span className="text-[12px] font-bold text-blue-600">{openCount} Days Open</span>
+        </div>
+      );
+    }
+  }, [openCount, onStatusChange]);
+
   return (
     <div className="py-5 px-1 space-y-5" style={{ fontFamily: "Inter, Poppins, sans-serif" }}>
       
       {/* ── Page Header ── */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-3 mb-1">
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: "#eff6ff", color: "#3b82f6" }}>
-              <Clock size={18} strokeWidth={2.5} />
+      {!onStatusChange && (
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-3 mb-1">
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: "#eff6ff", color: "#3b82f6" }}>
+                <Clock size={18} strokeWidth={2.5} />
+              </div>
+              <h1 className="text-[20px] font-extrabold text-slate-800 tracking-tight">Operating Hours</h1>
             </div>
-            <h1 className="text-[20px] font-extrabold text-slate-800 tracking-tight">Operating Hours</h1>
+            <p className="text-[13px] text-slate-400 ml-12">
+              Set your store's opening and closing times for delivery and pickup.
+            </p>
           </div>
-          <p className="text-[13px] text-slate-400 ml-12">
-            Set your store's opening and closing times for delivery and pickup.
-          </p>
-        </div>
 
-        {/* Summary pills */}
-        <div className="flex items-center gap-2 shrink-0">
-          <div className="flex items-center gap-1.5 bg-blue-50 border border-blue-100 px-3 py-1.5 rounded-xl">
-            <CheckCircle2 size={12} className="text-blue-500" />
-            <span className="text-[12px] font-bold text-blue-600">{openCount} Days Open</span>
+          {/* Summary pills */}
+          <div className="flex items-center gap-2 shrink-0">
+            <div className="flex items-center gap-1.5 bg-blue-50 border border-blue-100 px-3 py-1.5 rounded-xl">
+              <CheckCircle2 size={12} className="text-blue-500" />
+              <span className="text-[12px] font-bold text-blue-600">{openCount} Days Open</span>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* ── Main Card ── */}
       <div className="bg-white rounded-2xl border-[1.5px] border-slate-200 overflow-hidden shadow-sm">

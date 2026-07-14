@@ -23,10 +23,6 @@ import { SearchSelect } from "@/components/inputbuilders/SearchSelect";
 import { supplierApi } from "@/services/api/supplier";
 import { useHeader } from "@/context/HeaderContext";
 import { useToast } from "@/context/ToastContext";
-import { purchaseCustomFieldsApi, type PurchaseCustomFieldDefinition } from "@/services/api/purchaseCustomFields";
-import { RightSidebarFilter } from "@/components/common/RightSidebarFilter";
-import { Layers, Plus } from "lucide-react";
-import { Switch } from "@/components/ui/switch";
 import Loader from "@/components/common/Loader";
 import { InventoryItemsCard } from "@/features/purchase/components/InventoryItemsCard";
 import { useQuickCreate } from "@/features/common/QuickCreate/QuickCreateContext";
@@ -80,18 +76,6 @@ const PurchaseForm = () => {
   const [submitting, setSubmitting] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [loadingData, setLoadingData] = useState(!!id);
-
-  // ── Custom Fields State ──
-  const [customFieldDefs, setCustomFieldDefs] = useState<PurchaseCustomFieldDefinition[]>([]);
-  const [customFieldValues, setCustomFieldValues] = useState<Record<string, string>>({});
-
-  // Sidebar creation form state
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [newFieldName, setNewFieldName] = useState("");
-  const [newFieldLabel, setNewFieldLabel] = useState("");
-  const [newFieldType, setNewFieldType] = useState("text");
-  const [newFieldRequired, setNewFieldRequired] = useState(false);
-  const [newFieldVisible, setNewFieldVisible] = useState(false);
 
   const { openQuickCreate } = useQuickCreate();
   const [soldStockWarnings, setSoldStockWarnings] = useState<string[]>([]);
@@ -185,13 +169,6 @@ const PurchaseForm = () => {
 
     return { totalQty, subtotal, totalGst, gstBreakdown, totalCharges, grandTotal, outstanding, allocations };
   }, [products, charges, payment.amountPaid, costMethod, gstMode]);
-
-  // Load Custom Field definitions
-  useEffect(() => {
-    purchaseCustomFieldsApi.getAllFields(SHOP_ID).then((fields) => {
-      setCustomFieldDefs(fields);
-    });
-  }, []);
 
   // --- Load Existing Purchase, Draft, and Custom Field values ---
   useEffect(() => {
@@ -317,16 +294,7 @@ const PurchaseForm = () => {
           }
       };
 
-      const fetchCustomFieldValues = async () => {
-        const vals = await purchaseCustomFieldsApi.getValuesByPurchase(SHOP_ID, id);
-        const record: Record<string, string> = {};
-        vals.forEach((v) => {
-          record[v.field_id] = v.value;
-        });
-        setCustomFieldValues(record);
-      };
-
-      Promise.all([fetchPurchase(), fetchCustomFieldValues()]).finally(() => {
+      fetchPurchase().finally(() => {
         setLoadingData(false);
       });
     } else {
@@ -611,24 +579,6 @@ const PurchaseForm = () => {
       }
 
       if (res) {
-        const savedPurchaseId = res.data?.id || res.id || id;
-        if (savedPurchaseId) {
-          const valueInfos = Object.entries(customFieldValues)
-            .filter(([_, value]) => value !== undefined && value !== "")
-            .map(([field_id, value]) => ({
-              field_id,
-              value: String(value),
-            }));
-
-          if (valueInfos.length > 0) {
-            await purchaseCustomFieldsApi.upsertValue({
-              shop_id: SHOP_ID,
-              purchase_id: savedPurchaseId,
-              value_infos: valueInfos,
-            });
-          }
-        }
-
         showToast(id ? "Purchase updated" : "Purchase created", "success");
         setShowSuccessModal(true);
       }
@@ -637,39 +587,7 @@ const PurchaseForm = () => {
     } finally {
       setSubmitting(false);
     }
-  }, [purchaseDetails, products, charges, payment, supplierDetails, id, showToast, navigate, searchParams, costMethod, stats, purchaseType, gstMode, customFieldValues]);
-
-  const handleCreateCustomField = async () => {
-    if (!newFieldName || !newFieldLabel) {
-      showToast("Field Name and Label are required", "error");
-      return;
-    }
-    try {
-      await purchaseCustomFieldsApi.createField({
-        shop_id: SHOP_ID,
-        field_infos: [{
-          field_name: newFieldName,
-          label_name: newFieldLabel,
-          type: newFieldType,
-          required: newFieldRequired,
-          visible_online: newFieldVisible,
-        }],
-      });
-      showToast("Custom field created successfully", "success");
-      // Refresh definitions
-      const fields = await purchaseCustomFieldsApi.getAllFields(SHOP_ID);
-      setCustomFieldDefs(fields);
-      // Reset sidebar form
-      setNewFieldName("");
-      setNewFieldLabel("");
-      setNewFieldType("text");
-      setNewFieldRequired(false);
-      setNewFieldVisible(false);
-      setIsSidebarOpen(false);
-    } catch {
-      showToast("Failed to create custom field", "error");
-    }
-  };
+  }, [purchaseDetails, products, charges, payment, supplierDetails, id, showToast, navigate, searchParams, costMethod, stats, purchaseType, gstMode]);
 
   // --- Header Actions ---
   useEffect(() => {
@@ -1053,75 +971,6 @@ const PurchaseForm = () => {
               setGstMode={setGstMode}
             />
 
-            {/* BOX 8: CUSTOM FIELDS */}
-            <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden transition-all hover:shadow-md mt-6">
-              <div className="px-6 py-4 bg-gradient-to-r from-indigo-50/50 to-transparent border-b border-slate-100 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-indigo-100 flex items-center justify-center text-indigo-600 border border-indigo-200 shadow-sm">
-                    <Layers size={16} />
-                  </div>
-                  <div>
-                    <h2 className="text-xs font-black text-slate-800 uppercase tracking-widest">Custom Fields</h2>
-                    <p className="text-[10px] text-slate-400 font-medium">Define and populate additional purchase properties</p>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setIsSidebarOpen(true)}
-                  className="h-8 px-3 rounded-lg border border-indigo-100 text-indigo-600 font-bold text-xs bg-indigo-50/50 hover:bg-indigo-100 transition-all flex items-center gap-1.5"
-                >
-                  <Plus size={14} />
-                  Create Custom Field
-                </button>
-              </div>
-              
-              <div className="p-6">
-                {customFieldDefs.length === 0 ? (
-                  <div className="text-center py-6 text-slate-400 text-xs font-medium">
-                    No custom fields defined yet. Click "Create Custom Field" to add one.
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {customFieldDefs.map((field) => (
-                      <div key={field.id} className="space-y-1.5">
-                        <label className="text-[11px] font-bold text-slate-500 ml-1">
-                          {field.label_name}
-                          {field.required && <span className="text-rose-500 ml-0.5">*</span>}
-                        </label>
-                        {field.type === 'boolean' ? (
-                          <div className="flex items-center gap-2 h-10 px-4 rounded-lg border border-slate-200 bg-slate-50/30">
-                            <input
-                              type="checkbox"
-                              id={`cf_${field.id}`}
-                              checked={customFieldValues[field.id] === 'true'}
-                              onChange={(e) =>
-                                setCustomFieldValues((prev) => ({ ...prev, [field.id]: String(e.target.checked) }))
-                              }
-                              className="w-4 h-4 rounded accent-indigo-600 cursor-pointer"
-                            />
-                            <label htmlFor={`cf_${field.id}`} className="text-xs font-semibold text-slate-600 cursor-pointer">
-                              {field.label_name}
-                            </label>
-                          </div>
-                        ) : (
-                          <input
-                            type={field.type === 'number' ? 'number' : field.type === 'date' ? 'date' : 'text'}
-                            value={customFieldValues[field.id] || ''}
-                            onChange={(e) =>
-                              setCustomFieldValues((prev) => ({ ...prev, [field.id]: e.target.value }))
-                            }
-                            required={field.required}
-                            placeholder={`Enter ${field.label_name.toLowerCase()}…`}
-                            className="w-full h-10 px-4 rounded-lg border border-slate-200 text-sm text-slate-900 placeholder:text-slate-400 transition-all duration-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 outline-none bg-slate-50/30 font-semibold"
-                          />
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-
           </div>
 
           {/* --- Right Column (Sticky Payment Summary) --- */}
@@ -1140,7 +989,7 @@ const PurchaseForm = () => {
                 <div className="space-y-3 mb-6">
                   <div className="flex justify-between items-center text-[13px]">
                     <span className="text-slate-500 font-medium">Subtotal</span>
-                    <span className="font-bold text-slate-800 tabular-nums">₹{stats.subtotal.toLocaleString()}</span>
+                    <span className="font-bold text-slate-800 tabular-nums">₹{stats.subtotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                   </div>
                   <div className="flex justify-between items-center text-[13px]">
                     <span className="text-slate-500 font-medium">Total GST</span>
@@ -1148,14 +997,14 @@ const PurchaseForm = () => {
                   </div>
                   <div className="flex justify-between items-center text-[13px]">
                     <span className="text-slate-500 font-medium">Add. Charges</span>
-                    <span className="font-bold text-slate-800 tabular-nums">₹{stats.totalCharges.toLocaleString()}</span>
+                    <span className="font-bold text-slate-800 tabular-nums">₹{stats.totalCharges.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                   </div>
                 </div>
 
                 <div className="pt-4 border-t-2 border-slate-200/50 mb-6">
                   <div className="flex justify-between items-end">
                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Grand Total</span>
-                    <span className="text-2xl font-black text-slate-900 tracking-tight tabular-nums">₹{stats.grandTotal.toLocaleString()}</span>
+                    <span className="text-2xl font-black text-slate-900 tracking-tight tabular-nums">₹{stats.grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                   </div>
                 </div>
 
@@ -1183,7 +1032,7 @@ const PurchaseForm = () => {
                     <div className={`h-11 px-4 rounded-lg border shadow-sm flex items-center justify-between transition-colors ${stats.outstanding > 0 ? "bg-rose-50 border-rose-200" : "bg-slate-50 border-slate-200"}`}>
                       <span className={`text-[10px] font-bold uppercase tracking-wider ${stats.outstanding > 0 ? "text-rose-400" : "text-slate-400"}`}>Outstanding</span>
                       <span className={`text-lg font-semibold tabular-nums ${stats.outstanding > 0 ? "text-rose-600" : "text-slate-600"}`}>
-                        ₹{stats.outstanding.toLocaleString()}
+                        ₹{stats.outstanding.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </span>
                     </div>
                   </div>
@@ -1197,65 +1046,9 @@ const PurchaseForm = () => {
         </div>
       </div>
 
-      {/* Sidebar Filter for Custom Field Creation */}
-      <RightSidebarFilter
-        isOpen={isSidebarOpen}
-        onClose={() => setIsSidebarOpen(false)}
-        onApply={handleCreateCustomField}
-        onClear={() => {
-          setNewFieldName("");
-          setNewFieldLabel("");
-          setNewFieldType("text");
-          setNewFieldRequired(false);
-          setNewFieldVisible(false);
-        }}
-        title="Create Custom Field"
-      >
-        <div className="space-y-5">
-          <Input
-            label="Field Name (Internal Name)"
-            required
-            value={newFieldName}
-            onChange={(e) => setNewFieldName(e.target.value)}
-            placeholder="e.g. tracking_id"
-          />
-          <Input
-            label="Label Name (Display Name)"
-            required
-            value={newFieldLabel}
-            onChange={(e) => setNewFieldLabel(e.target.value)}
-            placeholder="e.g. Tracking ID"
-          />
-          <ReusableSelect
-            label="Field Type"
-            value={newFieldType}
-            onValueChange={(val) => setNewFieldType(val)}
-            options={[
-              { label: "Text", value: "text" },
-              { label: "Number", value: "number" },
-              { label: "Date", value: "date" },
-              { label: "Yes / No (Boolean)", value: "boolean" },
-            ]}
-            placeholder="Select Type"
-          />
-          <div className="flex items-center justify-between p-4 rounded-lg bg-slate-50 border border-slate-100">
-            <span className="text-xs font-bold text-slate-500">Required Field</span>
-            <Switch
-              checked={newFieldRequired}
-              onCheckedChange={(checked: boolean) => setNewFieldRequired(checked)}
-            />
-          </div>
-          <div className="flex items-center justify-between p-4 rounded-lg bg-slate-50 border border-slate-100">
-            <span className="text-xs font-bold text-slate-500">Visible Online</span>
-            <Switch
-              checked={newFieldVisible}
-              onCheckedChange={(checked: boolean) => setNewFieldVisible(checked)}
-            />
-          </div>
-        </div>
-      </RightSidebarFilter>
+      {/* Sidebar Filter for Custom Field Creation — REMOVED */}
 
-      <NavigationBlocker data={{ purchaseDetails, products, charges, payment, supplierDetails, customFieldValues }} isLoading={loadingData} isSubmitting={submitting} />
+      <NavigationBlocker shouldBlock={!showSuccessModal ? undefined : false} data={{ purchaseDetails, products, charges, payment, supplierDetails }} isLoading={loadingData} isSubmitting={submitting} />
     </>
   );
 };

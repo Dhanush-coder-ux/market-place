@@ -4,7 +4,7 @@ import {
   Package, Save, Cpu, AlertCircle, Layers, Zap, Bookmark,
   Plus, Info, ImagePlus, X, UploadCloud,
   BarChart3, Check, Settings2, FileText,
-  Image as ImageIcon, IndianRupee, Barcode,
+  IndianRupee, Barcode,
 } from "lucide-react";
 import { GradientButton } from "@/components/ui/GradientButton";
 import { useApi } from "@/context/ApiContext";
@@ -21,7 +21,6 @@ import { inventoryApi } from "@/services/api/inventory";
 import { RightSidebarFilter } from "@/components/common/RightSidebarFilter";
 import { NavigationBlocker } from "@/components/common/NavigationBlocker";
 import { QuickCreateSupplierModal } from "@/features/common/QuickCreate/QuickCreateSupplierModal";
-import { ImageCarousel } from "@/components/common/SuperUI";
 import {
   VariantType,
   VariantCombination,
@@ -84,7 +83,6 @@ const CATEGORY_CONFIGS: Record<string, CategoryConfig> = {
 };
 
 const GST_RATES = ["0", "5", "12", "18", "28"];
-const LOW_STOCK_ALERT_OPTIONS = ["Notify me", "Don't notify", "Block sale"];
 
 const uid = () => `id_${Math.random().toString(36).slice(2, 11)}`;
 
@@ -387,9 +385,22 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
         setForm(p => ({ ...p, barcode: res.data.barcode }));
         setShowBarcodeGen(false);
         showToast("Barcode generated", "success");
-      } else showToast("Failed to generate barcode", "error");
-    } catch { showToast("Failed to generate barcode", "error"); }
-    finally { setGeneratingBarcode(false); }
+      } else {
+        const localNum = Math.floor(10000000 + Math.random() * 90000000);
+        const prefix = barcodePrefix ? barcodePrefix.toUpperCase().trim() : "BAR";
+        setForm(p => ({ ...p, barcode: `${prefix}${localNum}` }));
+        setShowBarcodeGen(false);
+        showToast("Barcode generated locally", "success");
+      }
+    } catch {
+      const localNum = Math.floor(10000000 + Math.random() * 90000000);
+      const prefix = barcodePrefix ? barcodePrefix.toUpperCase().trim() : "BAR";
+      setForm(p => ({ ...p, barcode: `${prefix}${localNum}` }));
+      setShowBarcodeGen(false);
+      showToast("Barcode generated locally", "success");
+    } finally {
+      setGeneratingBarcode(false);
+    }
   };
 
   /* ─── Bottom actions (global header bar) ─── */
@@ -725,7 +736,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
 
     if (res && (res.data || res.success)) {
       const savedProductId = res.data?.id || res.id || id;
-      
+
       // If we have selected local images, upload them with product_id now
       if (savedProductId && selectedImageFiles.length > 0) {
         setIsUploadingImages(true);
@@ -826,150 +837,203 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
           {/* ══ LEFT: Main form ══ */}
           <form onSubmit={handleSubmit} className="flex-1 min-w-0 space-y-4">
 
-            {/* SECTION 1: PRODUCT IDENTITY */}
-            <SectionCard
-              icon={<Package size={17} className="text-indigo-600" />}
-              iconBg="bg-indigo-50"
-              title="Product identity"
-              subtitle="The basics — what is this product?"
-            >
-              <div className="space-y-4">
-                <InputField
-                  label="Product name"
-                  name="name"
-                  required
-                  value={form.name}
-                  onChange={handleChange}
-                  placeholder="e.g. Chocolate Brownie Box (6 pc)"
-                  tooltip="The display name shown on invoices and your catalog."
-                />
+            {/* SECTION 1: TOP 2-COLUMN SPLIT (Identity & Images Section with Equal Height) */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 mb-4">
 
-                <div className="grid grid-cols-3 gap-4">
-                  {/* Category */}
-                  <div>
-                    <Label text="Category" required tooltip="Organize your products into categories for easier filtering." />
-                    <ReusableSelect
-                      value={form.category}
-                      onValueChange={(val) => { setForm(p => ({ ...p, category: val })); setVariantTypes([]); setCombinations([]); }}
-                      options={categories.map(c => ({ value: c.id, label: c.name }))}
-                      placeholder="Select category"
-                      footer={
-                        <button
-                          onClick={() => setModalState({ type: "Category", query: "" })}
-                          className="w-full flex items-center justify-center gap-2 py-2 text-xs font-bold text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 rounded-md transition-colors"
-                        >
-                          <Plus size={14} />
-                          Create New Category
-                        </button>
-                      }
+              {/* COL 1: Product Identity (8 cols) */}
+              <div className="lg:col-span-8">
+                <SectionCard
+                  icon={<Package size={17} className="text-indigo-600" />}
+                  iconBg="bg-indigo-50"
+                  title="Product identity"
+                  subtitle="The basics — what is this product?"
+                >
+                  <div className="space-y-4">
+                    <InputField
+                      label="Product name"
+                      name="name"
+                      required
+                      value={form.name}
+                      onChange={handleChange}
+                      placeholder="e.g. Chocolate Brownie Box (6 pc)"
+                      tooltip="The display name shown on invoices and your catalog."
                     />
-                  </div>
-                  {/* Brand */}
-                  <InputField
-                    label="Brand"
-                    name="brand"
-                    hint="optional"
-                    value={form.brand}
-                    onChange={handleChange}
-                    placeholder="e.g. Sweet Cravings"
-                    tooltip="The manufacturer or brand name."
-                  />
-                  {/* Unit */}
-                  <div>
-                    <Label text="Unit" required tooltip="Base unit of measurement." />
-                    <ReusableSelect
-                      value={form.unit}
-                      onValueChange={(val) => setForm(p => ({ ...p, unit: val }))}
-                      options={units.map(u => ({ value: u.id, label: u.name }))}
-                      placeholder="Select unit"
-                      footer={
-                        <button
-                          onClick={() => setModalState({ type: "Unit", query: "" })}
-                          className="w-full flex items-center justify-center gap-2 py-2 text-xs font-bold text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 rounded-md transition-colors"
-                        >
-                          <Plus size={14} />
-                          Create New Unit
-                        </button>
-                      }
-                    />
-                  </div>
-                </div>
 
-                {/* Description */}
-                <div>
-                  <Label text="Description" hint="optional" />
-                  <textarea
-                    name="description"
-                    value={form.description}
-                    onChange={handleChange}
-                    rows={3}
-                    className="pf-input w-full px-4 py-3 text-sm border border-slate-200 rounded-lg bg-white text-slate-800 resize-none placeholder-slate-300"
-                    placeholder="Key ingredients, materials, size, or flavor."
-                  />
-                </div>
-              </div>
-            </SectionCard>
-
-            {/* SECTION 2: PRODUCT IMAGES */}
-            <SectionCard
-              icon={<ImagePlus size={17} className="text-emerald-600" />}
-              iconBg="bg-emerald-50"
-              title="Product images"
-              subtitle="Add up to 3 photos"
-              extra={
-                <span className="text-[11px] font-semibold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
-                  {existingImages.length + selectedImageFiles.length} / 3
-                </span>
-              }
-            >
-              <div>
-                {/* Image grid */}
-                <div className="flex flex-wrap gap-3 mb-4">
-                  {existingImages.map((url, i) => (
-                    <div key={`ext-${i}`} className="relative w-20 h-20 rounded-lg border border-slate-200 overflow-hidden group shadow-sm">
-                      <img src={url} alt="Product" className="w-full h-full object-cover" />
-                      {i === 0 && (
-                        <span className="absolute bottom-0 left-0 right-0 text-center bg-black/40 text-white text-[9px] font-bold py-0.5">COVER</span>
-                      )}
-                      <button type="button" onClick={() => removeExistingImage(i)} className="absolute top-1 right-1 bg-white/90 p-0.5 rounded-full text-red-500 opacity-0 group-hover:opacity-100 transition-opacity shadow-sm">
-                        <X size={12} />
-                      </button>
-                    </div>
-                  ))}
-                  {selectedImageFiles.map((file, i) => {
-                    const previewUrl = URL.createObjectURL(file);
-                    const coverIdx = existingImages.length + i;
-                    return (
-                      <div key={`sel-${i}`} className="relative w-20 h-20 rounded-lg border border-slate-200 overflow-hidden group shadow-sm">
-                        <img src={previewUrl} alt="Product Draft" className="w-full h-full object-cover" />
-                        {coverIdx === 0 && (
-                          <span className="absolute bottom-0 left-0 right-0 text-center bg-black/40 text-white text-[9px] font-bold py-0.5">COVER</span>
-                        )}
-                        <button type="button" onClick={() => removeSelectedImage(i)} className="absolute top-1 right-1 bg-white/90 p-0.5 rounded-full text-red-500 opacity-0 group-hover:opacity-100 transition-opacity shadow-sm">
-                          <X size={12} />
-                        </button>
+                    <div className="grid grid-cols-2 gap-4">
+                      {/* Category */}
+                      <div>
+                        <Label text="Category" required tooltip="Organize your products into categories for easier filtering." />
+                        <ReusableSelect
+                          value={form.category}
+                          onValueChange={(val) => { setForm(p => ({ ...p, category: val })); setVariantTypes([]); setCombinations([]); }}
+                          options={categories.map(c => ({ value: c.id, label: c.name }))}
+                          placeholder="Select category"
+                          footer={
+                            <button
+                              onClick={() => setModalState({ type: "Category", query: "" })}
+                              className="w-full flex items-center justify-center gap-2 py-2 text-xs font-bold text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 rounded-md transition-colors"
+                            >
+                              <Plus size={14} />
+                              Create New Category
+                            </button>
+                          }
+                        />
                       </div>
-                    );
-                  })}
-                </div>
+                      {/* Unit */}
+                      <div>
+                        <Label text="Unit" required tooltip="Base unit of measurement." />
+                        <ReusableSelect
+                          value={form.unit}
+                          onValueChange={(val) => setForm(p => ({ ...p, unit: val }))}
+                          options={units.map(u => ({ value: u.id, label: u.name }))}
+                          placeholder="Select unit"
+                          footer={
+                            <button
+                              onClick={() => setModalState({ type: "Unit", query: "" })}
+                              className="w-full flex items-center justify-center gap-2 py-2 text-xs font-bold text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 rounded-md transition-colors"
+                            >
+                              <Plus size={14} />
+                              Create New Unit
+                            </button>
+                          }
+                        />
+                      </div>
+                    </div>
 
-                {/* Upload zone */}
-                {existingImages.length + selectedImageFiles.length < 3 && (
-                  <label className="pf-img-upload flex flex-col items-center justify-center w-full border-2 border-dashed border-slate-200 rounded-xl py-8 cursor-pointer transition-all bg-slate-50/60 text-slate-400 hover:text-indigo-500">
-                    {isUploadingImages ? (
-                      <div className="w-8 h-8 border-2 border-slate-300 border-t-indigo-500 rounded-full animate-spin" />
-                    ) : (
-                      <>
-                        <UploadCloud size={26} className="mb-2" />
-                        <p className="text-sm font-medium"><span className="text-indigo-500 font-semibold">Click to upload</span> or drag and drop</p>
-                        <p className="text-[11px] text-slate-400 mt-1">PNG, JPG up to 5 MB each · First image becomes the cover</p>
-                      </>
-                    )}
-                    <input type="file" accept="image/jpeg, image/png, image/webp" multiple onChange={handleImageChange} className="hidden" disabled={isUploadingImages} />
-                  </label>
-                )}
+                    <div className="grid grid-cols-1 gap-4">
+                      {/* Brand */}
+                      <InputField
+                        label="Brand"
+                        name="brand"
+                        hint="optional"
+                        value={form.brand}
+                        onChange={handleChange}
+                        placeholder="e.g. Sweet Cravings"
+                        tooltip="The manufacturer or brand name."
+                      />
+                    </div>
+
+                    {/* Description */}
+                    <div>
+                      <Label text="Description" hint="optional" />
+                      <textarea
+                        name="description"
+                        value={form.description}
+                        onChange={handleChange}
+                        rows={2}
+                        className="pf-input w-full px-4 py-3 text-sm border border-slate-200 rounded-lg bg-white text-slate-800 resize-none placeholder-slate-300"
+                        placeholder="Key ingredients, materials, size, or flavor."
+                      />
+                    </div>
+                  </div>
+                </SectionCard>
               </div>
-            </SectionCard>
+
+              {/* COL 2: Images Adding & Small Previews (4 cols) */}
+              <div className="lg:col-span-4">
+                <SectionCard
+                  icon={<ImagePlus size={17} className="text-emerald-600" />}
+                  iconBg="bg-emerald-50"
+                  title="Product images"
+                  subtitle="Add up to 3 photos"
+                  extra={
+                    <span className="text-[11px] font-semibold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
+                      {existingImages.length + selectedImageFiles.length} / 3
+                    </span>
+                  }
+                >
+                  <div className="flex flex-col justify-between gap-4">
+
+
+                    {/* Upload zone */}
+                    {existingImages.length + selectedImageFiles.length < 3 ? (
+                      <label className="pf-img-upload flex flex-col items-center justify-center w-full border-2 border-dashed border-slate-200 rounded-xl py-8 cursor-pointer transition-all bg-slate-50/60 text-slate-400 hover:text-indigo-500 flex-1 min-h-[140px]">
+                        {isUploadingImages ? (
+                          <div className="w-8 h-8 border-2 border-slate-300 border-t-indigo-500 rounded-full animate-spin" />
+                        ) : (
+                          <>
+                            <UploadCloud size={28} className="mb-2 text-slate-400" />
+                            <p className="text-sm font-semibold text-center px-4">
+                              <span className="text-indigo-500">Click to upload</span> or drag and drop
+                            </p>
+                            <p className="text-[10px] text-slate-400 mt-1 text-center px-2">PNG, JPG up to 5 MB</p>
+                          </>
+                        )}
+                        <input type="file" accept="image/jpeg, image/png, image/webp" multiple onChange={handleImageChange} className="hidden" disabled={isUploadingImages} />
+                      </label>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center border border-slate-200 bg-slate-50/30 rounded-xl py-8 flex-1 min-h-[140px] text-slate-400 text-sm font-semibold">
+                        Image limit reached (3/3)
+                      </div>
+                    )}
+
+                    {/* Small previews row */}
+                    <div className="flex flex-wrap gap-2 pt-2 border-t border-slate-100">
+                      {existingImages.map((url, i) => (
+                        <div key={`ext-${i}`} className="relative w-14 h-14 rounded-lg border border-slate-200 overflow-hidden group shadow-sm shrink-0">
+                          <img src={url} alt="Product" className="w-full h-full object-cover" />
+                          {i === 0 && (
+                            <span className="absolute bottom-0 left-0 right-0 text-center bg-black/40 text-white text-[8px] font-bold py-0.2">COVER</span>
+                          )}
+                          <button type="button" onClick={() => removeExistingImage(i)} className="absolute top-0.5 right-0.5 bg-white/90 p-0.5 rounded-full text-red-500 opacity-0 group-hover:opacity-100 transition-opacity shadow-sm">
+                            <X size={10} />
+                          </button>
+                        </div>
+                      ))}
+                      {selectedImageFiles.map((file, i) => {
+                        const previewUrl = URL.createObjectURL(file);
+                        const coverIdx = existingImages.length + i;
+                        return (
+                          <div key={`sel-${i}`} className="relative w-14 h-14 rounded-lg border border-slate-200 overflow-hidden group shadow-sm shrink-0">
+                            <img src={previewUrl} alt="Product Draft" className="w-full h-full object-cover" />
+                            {coverIdx === 0 && (
+                              <span className="absolute bottom-0 left-0 right-0 text-center bg-black/40 text-white text-[8px] font-bold py-0.2">COVER</span>
+                            )}
+                            <button type="button" onClick={() => removeSelectedImage(i)} className="absolute top-0.5 right-0.5 bg-white/90 p-0.5 rounded-full text-red-500 opacity-0 group-hover:opacity-100 transition-opacity shadow-sm">
+                              <X size={10} />
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Helper notes moved from sidebar */}
+                    <div className="mt-3 pt-3 border-t border-slate-100 space-y-2">
+                      <div className="flex items-start gap-2.5 px-3 py-2.5 bg-slate-50 rounded-xl border border-slate-200">
+                        <Info size={12} className="text-slate-400 shrink-0 mt-0.5" />
+                        <p className="text-[10px] text-slate-500 leading-normal">
+                          <span className="font-semibold text-slate-600">SKU</span> will be auto-generated after the product is created.
+                        </p>
+                      </div>
+
+                      <div className={`rounded-xl border p-3 ${form.track_stock ? "bg-amber-50/50 border-amber-100" : "bg-amber-50/50 border-amber-100"}`}>
+                        <div className="flex items-start gap-2">
+                          <div className="w-5 h-5 rounded-full bg-amber-500 flex items-center justify-center shrink-0 mt-0.5">
+                            <span className="text-white text-[9px] font-bold">?</span>
+                          </div>
+                          <div>
+                            {form.track_stock ? (
+                              <>
+                                <p className="text-[10px] font-bold text-amber-800 mb-0.5">Why no price field?</p>
+                                <p className="text-[9px] text-amber-700 leading-normal">Price comes from purchase entries so your costs stay accurate automatically. Toggle off stock tracking for made-to-order items to set prices here.</p>
+                              </>
+                            ) : (
+                              <>
+                                <p className="text-[10px] font-bold text-amber-800 mb-0.5">Pricing made-to-order items.</p>
+                                <p className="text-[9px] text-amber-700 leading-normal">Selling price is what you bill. Cost to make is your estimated recipe cost. Profit is calculated from both.</p>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                  </div>
+                </SectionCard>
+              </div>
+
+            </div>
+
 
             {/* SECTION 3: INVENTORY & STOCK */}
             <SectionCard
@@ -1023,15 +1087,14 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                         rightEl="pcs"
                         tooltip="Alert triggered when stock falls to this level."
                       />
-                      <div>
-                        <Label text="Low-stock alert" tooltip="What happens when stock falls below reorder point." />
-                        <ReusableSelect
-                          value={form.low_stock_alert}
-                          onValueChange={(val) => setForm(p => ({ ...p, low_stock_alert: val }))}
-                          options={LOW_STOCK_ALERT_OPTIONS.map(o => ({ value: o, label: o }))}
-                          placeholder="Notify me"
-                        />
-                      </div>
+                      <InputField
+                        label="Storage Location"
+                        name="location"
+                        value={form.location}
+                        onChange={handleChange}
+                        placeholder="e.g. Aisle 4, Shelf B"
+                        tooltip="Physical location where this product is stored."
+                      />
                     </div>
                     <p className="text-[11px] text-indigo-500 flex items-center gap-1.5">
                       <Info size={11} />
@@ -1090,7 +1153,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                 )}
 
                 {/* Batch & Serial tracking & Visibility */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2 border-t border-slate-100">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2 border-t border-slate-100">
                   <div className="flex items-start gap-3 p-4 rounded-xl border border-slate-200 bg-white">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-0.5">
@@ -1110,16 +1173,6 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                       <p className="text-[10px] text-slate-400 leading-relaxed">Track unique ID for each individual unit.</p>
                     </div>
                     <Switch checked={form.serial_tracking} onCheckedChange={(val) => setForm(p => ({ ...p, serial_tracking: val }))} />
-                  </div>
-                  <div className="flex items-start gap-3 p-4 rounded-xl border border-slate-200 bg-white">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-0.5">
-                        <h3 className="text-[12px] font-bold text-slate-700">Visible Online</h3>
-                        {!id && <span className="px-1.5 py-0.5 rounded-md bg-emerald-100 text-emerald-700 text-[9px] font-bold">Store</span>}
-                      </div>
-                      <p className="text-[10px] text-slate-400 leading-relaxed">Show product in digital storefront.</p>
-                    </div>
-                    <Switch checked={form.visible_online} onCheckedChange={(val) => setForm(p => ({ ...p, visible_online: val }))} />
                   </div>
                 </div>
 
@@ -1327,97 +1380,9 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
             </SectionCard>
 
           </form>
-
-          {/* ══ RIGHT: Preview Sidebar ══ */}
-          <div className="w-[260px] shrink-0 sticky top-4 space-y-3">
-
-            {/* Preview card */}
-            <div className="bg-white rounded-xl border border-slate-200 overflow-hidden pf-card">
-              <div className="flex items-center justify-between px-4 py-2.5 border-b border-slate-100">
-                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Preview</span>
-                {!form.track_stock && (
-                  <span className="text-[9px] font-bold bg-blue-500 text-white px-2 py-0.5 rounded-full">MADE TO ORDER</span>
-                )}
-              </div>
-
-              {/* Cover image */}
-              <div className="mx-4 mt-4 rounded-xl bg-slate-100 overflow-hidden aspect-[4/3] flex items-center justify-center">
-                {existingImages.length > 0 ? (
-                  <ImageCarousel images={existingImages} alt="cover" />
-                ) : (
-                  <div className="flex flex-col items-center text-slate-300">
-                    <ImageIcon size={28} />
-                    <span className="text-[10px] mt-1.5 font-medium">No image yet</span>
-                  </div>
-                )}
-              </div>
-
-              {/* Product preview details */}
-              <div className="px-4 py-3 space-y-1.5">
-                <p className="text-sm font-semibold text-slate-700 leading-snug line-clamp-2">
-                  {form.name || <span className="text-slate-300 font-normal">Product name</span>}
-                </p>
-                {form.category ? (
-                  <span className="inline-block text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full font-medium">{form.category}</span>
-                ) : (
-                  <span className="inline-block text-[10px] bg-slate-100 text-slate-300 px-2 py-0.5 rounded-full font-medium">Category</span>
-                )}
-
-                {!form.track_stock && (form.selling_price || form.cost_to_make) && (
-                  <div className="pt-1.5 space-y-0.5">
-                    {form.selling_price && (
-                      <p className="text-xs text-slate-600"><span className="text-slate-400">Sell price</span> ₹{form.selling_price}</p>
-                    )}
-                    {form.cost_to_make && (
-                      <p className="text-xs text-slate-600"><span className="text-slate-400">Cost price</span> ₹{form.cost_to_make}</p>
-                    )}
-                  </div>
-                )}
-
-                {form.track_stock && (
-                  <p className="text-[10px] text-slate-400 italic flex items-center gap-1 pt-1">
-                    <Info size={10} />
-                    Price will be set when you record this product's first purchase.
-                  </p>
-                )}
-              </div>
-            </div>
-
-            {/* SKU info note */}
-            <div className="flex items-start gap-2.5 px-4 py-3 bg-slate-50 rounded-xl border border-slate-200">
-              <Info size={13} className="text-slate-400 shrink-0 mt-0.5" />
-              <p className="text-[11px] text-slate-500 leading-relaxed">
-                <span className="font-semibold text-slate-600">SKU</span> will be auto-generated after the product is created.
-              </p>
-            </div>
-
-            {/* Contextual info box */}
-            <div className={`rounded-xl border p-4 ${form.track_stock ? "bg-amber-50 border-amber-200" : "bg-amber-50 border-amber-200"}`}>
-              <div className="flex items-start gap-2.5">
-                <div className="w-6 h-6 rounded-full bg-amber-500 flex items-center justify-center shrink-0 mt-0.5">
-                  <span className="text-white text-[10px] font-bold">?</span>
-                </div>
-                <div>
-                  {form.track_stock ? (
-                    <>
-                      <p className="text-[11px] font-bold text-amber-800 mb-1">Why no price field?</p>
-                      <p className="text-[10px] text-amber-700 leading-relaxed">For stocked products, the price comes from your purchase entries — so your costs stay accurate automatically. Toggle off stock tracking for made-to-order items to set prices here.</p>
-                    </>
-                  ) : (
-                    <>
-                      <p className="text-[11px] font-bold text-amber-800 mb-1">Pricing made-to-order items.</p>
-                      <p className="text-[10px] text-amber-700 leading-relaxed">Selling price is what you bill the customer. Cost to make is your estimated recipe cost. Profit is calculated from the two.</p>
-                    </>
-                  )}
-                </div>
-              </div>
-            </div>
-
-          </div>
         </div>
-
-
       </div>
+
 
       {/* Quick Supplier Modal */}
       <QuickCreateSupplierModal

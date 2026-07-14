@@ -378,6 +378,28 @@ export const Navbar = () => {
         {/* RIGHT - Actions */}
         <div className="flex items-center gap-2 sm:gap-4">
 
+          {/* Animated Highlighted Digital Store Button */}
+          <div className="relative group/ds hidden md:block select-none">
+            <Link
+              to="/profile"
+              className="relative inline-flex items-center gap-2 h-9 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md shadow-blue-100/50 hover:shadow-lg hover:shadow-blue-200/50 transition-all hover:-translate-y-0.5 overflow-hidden"
+            >
+              {/* Shine effect ray */}
+              <div className="absolute top-0 -inset-full h-full w-1/2 block transform -skew-x-12 bg-gradient-to-r from-transparent via-white/40 to-transparent animate-[shimmer_2.5s_infinite_linear] pointer-events-none" />
+              
+              <Store size={13} className="relative z-10 shrink-0 text-blue-50" />
+              
+              {/* Slideshow scrolling text container with reduced width */}
+              <div className="relative z-10 overflow-hidden h-4 w-[190px]">
+                <div className="animate-[slideText_9s_infinite] flex flex-col absolute left-0 w-full text-left">
+                  <div className="h-4 leading-4 truncate">Digital Store: 1000+ onboarded</div>
+                  <div className="h-4 leading-4 truncate">Digital Store: Make it yours & grow</div>
+                  <div className="h-4 leading-4 truncate">Digital Store: Start shop in 60s</div>
+                </div>
+              </div>
+            </Link>
+          </div>
+
           <div className="flex items-center gap-1 sm:gap-2">
             <button className="relative p-2 text-slate-400 md:hover:bg-slate-100 md:hover:text-slate-700 rounded-full md:transition-colors">
               <Bell className="w-5 h-5" />
@@ -393,20 +415,22 @@ export const Navbar = () => {
 
           <div className="hidden sm:block h-6 w-px bg-slate-200 mx-1"></div>
 
-          <Link
-            to="/profile"
-            className="relative w-9 h-9 rounded-full p-0.5 bg-gradient-to-tr from-indigo-500 to-fuchsia-500 md:hover:scale-105 md:transition-transform cursor-pointer shadow-md"
-          >
-            <div className="w-full h-full bg-white rounded-full p-0.5">
-              <img
-                src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix"
-                alt="Profile"
-                className="w-full h-full rounded-full bg-slate-100 object-cover"
-              />
-            </div>
-          </Link>
         </div>
       </div>
+      
+      {/* Dynamic CSS animations for Navbar text slideshow and shimmer */}
+      <style>{`
+        @keyframes slideText {
+          0%, 28% { transform: translateY(0); }
+          33%, 61% { transform: translateY(-1rem); }
+          66%, 94% { transform: translateY(-2rem); }
+          100% { transform: translateY(0); }
+        }
+        @keyframes shimmer {
+          0% { left: -100%; }
+          100% { left: 200%; }
+        }
+      `}</style>
     </>
   );
 };

@@ -6,23 +6,67 @@ const Breadcrumb = () => {
   const navigate = useNavigate();
   const paths = location.pathname.split("/").filter(Boolean);
 
-  // Helper to format path segment into user-friendly titles
+  // Full-path overrides for compound paths (checked before segment-level)
+  const fullPathLabels: Record<string, string> = {
+    "/product/all": "Products List",
+    "/product/add": "Add Product",
+    "/product/drafts": "Product Drafts",
+    "/supplier/all": "Suppliers List",
+    "/supplier/add": "Add Suppliers",
+    "/supplier/drafts": "Vendor Drafts",
+    "/customers/all": "Customers List",
+    "/customers/add": "Add Customer",
+    "/customers/drafts": "Customer Drafts",
+    "/employee/all": "Employee List",
+    "/employee/add": "Add Employee",
+    "/employee/drafts": "Employee Drafts",
+    "/purchase/add": "Add Purchase",
+    "/purchase/detail": "Purchase Detail",
+    "/purchase-history": "Purchase History",
+    "/po-grn": "Purchase Order List",
+    "/po-grn/add": "Add Purchase Order",
+    "/po-grn/update": "Update Purchase Order",
+    "/production-entry/add": "Production Entry",
+    "/stock-movement": "Stock Movements",
+    "/stock-adjustment": "Stock Adjustments",
+    "/purchase-order/add": "Add Purchase Order",
+  };
+
+  // Segment-level label overrides (for path portions)
   const formatSegment = (segment: string) => {
-    const customLabels: Record<string, string> = {
-      profile: "Settings",
-      inventory: "Inventory",
-      sales: "Sales",
+    const segmentLabels: Record<string, string> = {
+      profile: "Digital Storefront",
+      inventory: "Stock Levels",
+      sales: "Sales List",
       billing: "Billing",
       customers: "Customers",
       supplier: "Suppliers",
       employee: "Employees",
-      "po-grn": "Purchase Orders",
+      "po-grn": "Purchase Order List",
+      "purchase-history": "Purchase History",
+      "stock-movement": "Stock Movements",
+      "stock-adjustment": "Stock Adjustments",
+      orders: "Online Orders",
+      product: "Products",
+      purchase: "Purchases",
+      all: "List",
+      add: "Add",
+      drafts: "Drafts",
+      detail: "Detail",
+      settings: "Settings",
     };
-    return customLabels[segment.toLowerCase()] || segment.replace(/-/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
+    return segmentLabels[segment.toLowerCase()] || segment.replace(/-/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
+  };
+
+  // Get the final (current page) label — use full-path override if available
+  const getLastLabel = () => {
+    const fullPath = "/" + paths.join("/");
+    if (fullPathLabels[fullPath]) return fullPathLabels[fullPath];
+    return formatSegment(paths[paths.length - 1] || "");
   };
 
   return (
-    <nav className="flex items-center gap-2.5 text-[11px] font-medium text-slate-400 mb-3 overflow-x-auto scrollbar-hide py-1">
+    <nav className="flex items-center gap-2.5 text-[11px] font-medium text-slate-400 mb-2 overflow-x-auto scrollbar-hide py-1">
       {/* Home Link */}
       <button 
         onClick={() => navigate("/")}
@@ -48,31 +92,12 @@ const Breadcrumb = () => {
         </>
       )}
 
-      {/* Current Path */}
-      {paths.map((path, index) => {
-        const isLast = index === paths.length - 1;
-        const href = "/" + paths.slice(0, index + 1).join("/");
-
-        return (
-          <div key={href} className="flex items-center gap-2.5">
-            {isLast ? (
-              <span className="text-blue-600 font-bold whitespace-nowrap  ">
-                {formatSegment(path)}
-              </span>
-            ) : (
-              <>
-                <button
-                  onClick={() => navigate(href)}
-                  className="hover:text-blue-600 transition-colors whitespace-nowrap"
-                >
-                  {formatSegment(path)}
-                </button>
-                <ChevronRight size={10} className="shrink-0 opacity-40" />
-              </>
-            )}
-          </div>
-        );
-      })}
+      {/* Current Path — only show the last (current) segment */}
+      {paths.length > 0 && (
+        <span className="text-blue-600 font-bold whitespace-nowrap">
+          {getLastLabel()}
+        </span>
+      )}
     </nav>
   );
 };

@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import {
   Save,
@@ -74,6 +74,7 @@ const PurchaseForm = () => {
   const { setBottomActions } = useHeader();
   const { showToast } = useToast();
   const [submitting, setSubmitting] = useState(false);
+  const isSubmittingRef = useRef(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [loadingData, setLoadingData] = useState(!!id);
 
@@ -414,6 +415,7 @@ const PurchaseForm = () => {
 }
 
   const handleSavePurchase = useCallback(async () => {
+    if (isSubmittingRef.current) return;
     if (!purchaseDetails.supplier && !supplierDetails?.id) {
       showToast("Please select a supplier.", "error");
       return;
@@ -449,6 +451,7 @@ const PurchaseForm = () => {
       }
     }
 
+    isSubmittingRef.current = true;
     setSubmitting(true);
     try {
       const transformedProducts = products.map((p) => {
@@ -585,6 +588,7 @@ const PurchaseForm = () => {
     } catch (error: any) {
       showToast(error.message || "Failed to save purchase", "error");
     } finally {
+      isSubmittingRef.current = false;
       setSubmitting(false);
     }
   }, [purchaseDetails, products, charges, payment, supplierDetails, id, showToast, navigate, searchParams, costMethod, stats, purchaseType, gstMode]);

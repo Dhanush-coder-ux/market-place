@@ -9,6 +9,7 @@ export interface RightSidebarFilterProps {
   onClear: () => void;
   title?: string;
   children: React.ReactNode;
+  applyLabel?: string;
 }
 
 export const RightSidebarFilter: React.FC<RightSidebarFilterProps> = ({
@@ -18,6 +19,7 @@ export const RightSidebarFilter: React.FC<RightSidebarFilterProps> = ({
   onClear,
   title = "Filters",
   children,
+  applyLabel,
 }) => {
   // Prevent body scroll when filter sidebar is open
   useEffect(() => {
@@ -87,7 +89,7 @@ export const RightSidebarFilter: React.FC<RightSidebarFilterProps> = ({
             }}
             className="h-9 px-4 flex-1 text-white font-semibold bg-blue-600 rounded-lg hover:bg-blue-700 active:scale-95 transition-all text-[11px] uppercase tracking-wider shadow-md shadow-blue-100"
           >
-            Apply Filters
+            {applyLabel || "Apply Filters"}
           </button>
         </div>
       </div>

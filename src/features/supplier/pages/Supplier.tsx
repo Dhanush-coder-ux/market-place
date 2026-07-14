@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Search, X, Bookmark, Building2, Phone, ExternalLink, Filter, ChevronRight } from "lucide-react";
+import { Search, X, Bookmark, Building2, Phone, ExternalLink, Filter, ChevronRight, Eye, Pencil, Trash2 } from "lucide-react";
 import { GradientButton } from "@/components/ui/GradientButton";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useApi } from "@/context/ApiContext";
@@ -409,8 +409,33 @@ const Supplier = () => {
                         );
                       })}
 
-                      <td className="px-6 py-4 text-right">
-                        <ChevronRight size={14} className={`transition-all duration-200 ${isSelected ? "text-blue-500 rotate-90" : "text-slate-300 group-hover:text-blue-500"}`} />
+                      <td className="px-6 py-4 text-right sticky right-0 bg-white group-hover:bg-slate-50/60 border-l border-slate-100 z-10 shadow-[-4px_0_8px_-4px_rgba(0,0,0,0.05)] transition-colors whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-end gap-2 relative">
+                          <button
+                            onClick={() => navigate(`/supplier/${sup.id}`)}
+                            className="text-slate-400 hover:text-blue-600 transition-colors p-1"
+                            title="View Supplier"
+                          >
+                            <Eye size={15} />
+                          </button>
+                          <button
+                            onClick={() => navigate(`/supplier/${sup.id}/edit`)}
+                            className="text-slate-400 hover:text-blue-600 transition-colors p-1"
+                            title="Edit Supplier"
+                          >
+                            <Pencil size={15} />
+                          </button>
+                          <button
+                            onClick={() => {
+                              setSupplierToDelete(sup);
+                              setIsDeleteDialogOpen(true);
+                            }}
+                            className="text-slate-400 hover:text-red-655 transition-colors p-1"
+                            title="Delete Supplier"
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -426,7 +451,7 @@ const Supplier = () => {
         onClose={() => setIsDeleteDialogOpen(false)}
         onConfirm={handleDelete}
         title="Remove Supplier"
-        description={`Are you sure you want to remove ${supplierToDelete?.datas?.supplier_name || 'this supplier'}? This action cannot be undone.`}
+        description={`Are you sure you want to remove ${supplierToDelete?.name || 'this supplier'}? This action cannot be undone.`}
         confirmText="Remove Partner"
         type="danger"
       />

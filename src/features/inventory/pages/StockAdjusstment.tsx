@@ -114,6 +114,7 @@ export default function StockAdjustmentPage() {
   const [adjustmentDate, setAdjustmentDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [notes, setNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const isSubmittingRef = useRef(false);
   const [_submitError, setSubmitError] = useState<string | null>(null);
 
   // --- Dynamic Modal State ---
@@ -433,6 +434,7 @@ export default function StockAdjustmentPage() {
   };
 
   const handleSubmit = async () => {
+    if (isSubmittingRef.current) return;
     if (items.length === 0 || items.some(item => !item.product || item.stocks === '')) {
       showToast("Please ensure all items have a product and quantity.", "error");
       return;
@@ -443,6 +445,7 @@ export default function StockAdjustmentPage() {
     }
 
     try {
+      isSubmittingRef.current = true;
       setIsSubmitting(true);
       setSubmitError(null);
 
@@ -482,6 +485,7 @@ export default function StockAdjustmentPage() {
       setSubmitError(err.message || "Failed to save adjustment.");
       showToast(err.message || "Failed to save adjustment.", "error");
     } finally {
+      isSubmittingRef.current = false;
       setIsSubmitting(false);
     }
   };

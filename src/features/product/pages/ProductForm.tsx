@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import {
   Package, Save, Cpu, AlertCircle, Layers, Zap, Bookmark,
@@ -296,6 +296,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
   const { showToast } = useToast();
   const [loading, setLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const isSubmittingRef = useRef(false);
   const isLoading = externalLoading || loading || isSubmitting;
 
   // ── Custom Fields State ──
@@ -643,6 +644,8 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
   /* ─── Submit ─── */
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
+    if (isSubmittingRef.current) return;
+    isSubmittingRef.current = true;
     setIsSubmitting(true);
     const activeCombinations = combinations.filter(c => c.active);
     if (form.has_variants && activeCombinations.length === 0) {
@@ -732,6 +735,8 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
       else res = await inventoryApi.createInventory(payload);
     } catch (e) {
       res = null;
+      isSubmittingRef.current = false;
+      setIsSubmitting(false);
     }
 
     if (res && (res.data || res.success)) {
@@ -790,6 +795,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
       setTimeout(() => navigate(`/product/${savedProductId}`), 1000);
     } else {
       showToast("Failed to save product", "error");
+      isSubmittingRef.current = false;
       setIsSubmitting(false);
     }
   };
@@ -1417,6 +1423,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
         onApply={handleCreateCustomField}
+        applyLabel="Create"
         onClear={() => {
           setNewFieldName("");
           setNewFieldLabel("");
@@ -1438,7 +1445,11 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
             label="Label Name (Display Name)"
             required
             value={newFieldLabel}
-            onChange={(e) => setNewFieldLabel(e.target.value)}
+            onChange={(e) => {
+              const val = e.target.value;
+              setNewFieldLabel(val);
+              setNewFieldName(val.toLowerCase().replace(/[^a-z0-9\s]/g, "").trim().replace(/\s+/g, "_"));
+            }}
             placeholder="e.g. Rack Number"
           />
           <ReusableSelect

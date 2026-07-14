@@ -155,9 +155,7 @@ const otherCharge = po.charges?.other || 0;
 
 const grandTotal =
   subtotal +
-  totalGst +
-  transportCharge +
-  otherCharge;
+  totalGst;
 
 const outstanding =
   po.outstanding !== undefined ? po.outstanding : Math.max(0, grandTotal - (po.paid_amount || 0));

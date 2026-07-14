@@ -24,6 +24,7 @@ const Billing = () => {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [cartInitialized, setCartInitialized] = useState(false);
   const sessionDoneRef = useRef(false); // true after submit or explicit cancel
+  const isSubmittingRef = useRef(false);
 
   // ── Cart Items State (Initial empty list)
   const [items, setItems] = useState<BillingItem[]>([]);
@@ -159,6 +160,7 @@ const Billing = () => {
 
   // ── Confirm Order → Order Service Cart flow
   const handleConfirmOrder = useCallback(async (paymentsArg: { mode: string, amount: number }[], _includeGst: boolean, _status: string) => {
+    if (isSubmittingRef.current) return;
     const filledItems = items.filter(i => !!i.name);
     if (filledItems.length === 0) return;
 
@@ -167,6 +169,7 @@ const Billing = () => {
       return;
     }
 
+    isSubmittingRef.current = true;
     try {
       const mapSerialsToInfos = (item: any) => {
         const serialNames = item.serialNumbers || [];
@@ -231,7 +234,10 @@ const Billing = () => {
 
       // ── Step 2: Build payment_infos for the order ───────────────────────────
       const paymentInfos = paymentsArg.reduce((acc, p) => {
-        const method = p.mode.toUpperCase();
+        let method = p.mode.toUpperCase();
+        if (method === "CREDIT") {
+          method = "ON_CREDIT";
+        }
         acc[method] = (acc[method] || 0) + p.amount;
         return acc;
       }, {} as Record<string, number>);
@@ -288,6 +294,8 @@ const Billing = () => {
     } catch (err: any) {
       console.error("Order confirmation failed:", err);
       showToast(err?.message || "Failed to confirm order", "error");
+    } finally {
+      isSubmittingRef.current = false;
     }
   }, [items, customerData, sessionId, showToast, totalAmount, gstAmount, finalAmount, customerName, phone, includeGst]);
 

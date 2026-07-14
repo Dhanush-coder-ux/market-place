@@ -198,17 +198,18 @@ const SaleDetailPage: React.FC = () => {
   const items = generateItems(sale, productMap);
   const subtotal = items.reduce((s, i) => s + i.unitPrice * i.quantity, 0);
   const canReturn = sale.status === "Completed" && sale.origin !== "Sales Return";
-  const customerName = sale.customer?.customer_name || customerMap[sale.customer_id] || "Walk-in Customer";
-  const customerMobile = sale.customer?.customer_mobile_number || "";
+  const customerName = (sale as any).additional_infos?.customer_name || (sale as any).datas?.customer_name || sale.customer?.customer_name || customerMap[sale.customer_id] || "Walk-in Customer";
+  const customerMobile = (sale as any).additional_infos?.customer_phone || sale.customer?.customer_mobile_number || "";
   const dateStr = sale.created_at?.split("T")[0] || "N/A";
   const timeStr = sale.created_at?.includes("T") ? sale.created_at.split("T")[1]?.slice(0, 5) || "" : "";
   const refunded = items.filter(i => i.status === "REFUNDED").length;
   const exchanged = items.filter(i => i.status === "EXCHANGED").length;
 
-  const paymentsDetail = sale.payments && Object.keys(sale.payments).length > 0
-    ? Object.entries(sale.payments).map(([k, v]) => {
+  const rawPayments = (sale as any).payment_infos || (sale as any).payment_info || sale.payments || {};
+  const paymentsDetail = rawPayments && Object.keys(rawPayments).length > 0
+    ? Object.entries(rawPayments).map(([k, v]) => {
       const u = k.toUpperCase();
-      const label = u === "CASH" ? "Cash" : u === "CARD" ? "Card" : (u === "UPI" || u === "G-PAY" || u === "GPAY") ? "UPI" : u === "PHONEPE" ? "PhonePe" : u === "CREDIT" || u === "ON_CREDIT" ? "Credit" : k;
+      const label = u === "CASH" ? "Cash" : u === "CARD" ? "Card" : (u === "UPI" || u === "G-PAY" || u === "GPAY") ? "UPI" : u === "PHONEPE" ? "PhonePe" : (u === "CREDIT" || u === "ON_CREDIT") ? "Credit" : k;
       return { label, amount: v as number };
     })
     : [{ label: sale.payment_method || "Other", amount: sale.total_sellprice }];

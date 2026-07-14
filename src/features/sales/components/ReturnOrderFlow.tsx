@@ -460,6 +460,7 @@ const useReturnModalLogic = (sale: SaleRecord | null, productMap: Record<string,
   const goBack = useCallback(() => { if (state.step > 1) setStep((state.step - 1) as ReturnStep); }, [state.step]);
 
   const confirm = useCallback(async (onSuccess?: () => void) => {
+    if (state.isSubmitting) return;
     setState(s => ({ ...s, isSubmitting: true }));
     try {
       const itemsPayload = selectedItems.map(i => ({
@@ -472,16 +473,23 @@ const useReturnModalLogic = (sale: SaleRecord | null, productMap: Record<string,
       }));
 
       const paymentsDict: Record<string, number> = {};
+      const mapPaymentMode = (mode: string) => {
+        const upper = mode.toUpperCase();
+        if (upper === "CREDIT" || upper === "STORE CREDIT" || upper === "STORE_CREDIT") return "ON_CREDIT";
+        return upper;
+      };
+
       if (totals.diff !== 0) {
         state.payments.forEach(p => {
           if (p.amount > 0) {
-            const key = p.mode === "Store Credit" ? "CREDIT" : p.mode.toUpperCase();
+            const key = mapPaymentMode(p.mode);
             paymentsDict[key] = totals.diff > 0 ? p.amount : p.amount;
           }
         });
       }
       if (Object.keys(paymentsDict).length === 0 && totals.diff !== 0) {
-        paymentsDict[sale?.payment_method?.toUpperCase() || "CASH"] = totals.diff;
+        const fallbackMode = sale?.payment_method ? mapPaymentMode(sale.payment_method) : "CASH";
+        paymentsDict[fallbackMode] = totals.diff;
       }
 
       if (state.mode === "refund") {

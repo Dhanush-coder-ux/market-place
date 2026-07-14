@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import {
   Save,
@@ -33,6 +33,7 @@ const CustomerFormPage = () => {
   const { setActions, setBottomActions } = useHeader();
   const { showToast } = useToast();
   const [submitting, setSubmitting] = useState(false);
+  const isSubmittingRef = useRef(false);
   const [loadingData, setLoadingData] = useState(!!id);
 
   // ── Custom Fields State ──
@@ -210,6 +211,8 @@ const CustomerFormPage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmittingRef.current) return;
+    isSubmittingRef.current = true;
     setSubmitting(true);
 
     const canHaveCredit = formData.can_have_credit || Number(formData.credit_limit) > 0;
@@ -282,6 +285,7 @@ const CustomerFormPage = () => {
         showToast("Failed to save customer", "error");
       }
     } finally {
+      isSubmittingRef.current = false;
       setSubmitting(false);
     }
   };
@@ -577,6 +581,7 @@ const CustomerFormPage = () => {
           isOpen={isSidebarOpen}
           onClose={() => setIsSidebarOpen(false)}
           onApply={handleCreateCustomField}
+          applyLabel="Create"
           onClear={() => {
             setNewFieldName("");
             setNewFieldLabel("");
@@ -598,7 +603,11 @@ const CustomerFormPage = () => {
               label="Label Name (Display Name)"
               required
               value={newFieldLabel}
-              onChange={(e) => setNewFieldLabel(e.target.value)}
+              onChange={(e) => {
+                const val = e.target.value;
+                setNewFieldLabel(val);
+                setNewFieldName(val.toLowerCase().replace(/[^a-z0-9\s]/g, "").trim().replace(/\s+/g, "_"));
+              }}
               placeholder="e.g. Loyalty Card ID"
             />
             <ReusableSelect

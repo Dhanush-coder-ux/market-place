@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { 
   Building2, 
@@ -54,6 +54,7 @@ const SupplierForm = () => {
   const { setBottomActions } = useHeader();
   const { showToast } = useToast();
   const [submitting, setSubmitting] = useState(false);
+  const isSubmittingRef = useRef(false);
   const [loadingData, setLoadingData] = useState(!!id);
 
   // ── Custom Fields Form & Sidebar State ──
@@ -208,10 +209,12 @@ const SupplierForm = () => {
 
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
+    if (isSubmittingRef.current) return;
     if (!formData.supplier_name) return showToast("Supplier name is required", "error");
     if (!formData.phone) return showToast("Phone number is required", "error");
     if (!formData.gst_number) return showToast("GSTIN / Tax ID is required", "error");
 
+    isSubmittingRef.current = true;
     setSubmitting(true);
     const payload: any = {
       shop_id: SHOP_ID,
@@ -277,6 +280,7 @@ const SupplierForm = () => {
     } catch {
       showToast("Operation failed", "error");
     } finally {
+      isSubmittingRef.current = false;
       setSubmitting(false);
     }
   };
@@ -441,7 +445,7 @@ const SupplierForm = () => {
                 placeholder="+91 00000 00000"
                 leftIcon={<Phone size={16} className="text-slate-400" />}
               />
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 md:col-span-2">
                 <Input
                   label="City / Region"
                   name="city"
@@ -612,6 +616,7 @@ const SupplierForm = () => {
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
         onApply={handleCreateCustomField}
+        applyLabel="Create"
         onClear={() => {
           setNewFieldName("");
           setNewFieldLabel("");
@@ -634,7 +639,11 @@ const SupplierForm = () => {
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">Label Name (Display Name)</label>
             <Input
               value={newFieldLabel}
-              onChange={(e) => setNewFieldLabel(e.target.value)}
+              onChange={(e) => {
+                const val = e.target.value;
+                setNewFieldLabel(val);
+                setNewFieldName(val.toLowerCase().replace(/[^a-z0-9\s]/g, "").trim().replace(/\s+/g, "_"));
+              }}
               placeholder="e.g. Tax ID"
             />
           </div>

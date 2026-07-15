@@ -325,9 +325,6 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
                   <VariantMatrixTable
                     combinations={combinations}
                     variantTypes={variantTypes}
-                    supportsSerials={form.serial_tracking}
-                    supportsBatch={form.batch_tracking}
-                    serialLabel={config.serialLabel}
                     onChange={setCombinations}
                   />
                 </div>

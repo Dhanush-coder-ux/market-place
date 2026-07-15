@@ -19,7 +19,8 @@ export function ReusableSelect({
   className,
   error,
   required,
-  footer
+  footer,
+  onScrollEnd
 }: ReusableSelectProps) {
   const [open, setOpen] = useState(false);
   const mappedValue = value === "" ? "__EMPTY__" : value;
@@ -52,6 +53,13 @@ export function ReusableSelect({
         <SelectContent 
           position="popper" 
           className="z-[9999] rounded-lg shadow-2xl border-gray-100 overflow-hidden h-64 animate-in fade-in zoom-in-95 duration-200"
+          onViewportScroll={(e) => {
+            if (!onScrollEnd) return;
+            const target = e.currentTarget;
+            if (target.scrollHeight - target.scrollTop <= target.clientHeight + 15) {
+              onScrollEnd();
+            }
+          }}
           footer={
             footer && (
               <div onClick={() => setOpen(false)} className="w-full">

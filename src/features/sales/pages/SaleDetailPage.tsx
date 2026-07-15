@@ -30,6 +30,10 @@ type SaleItem = {
   mfgDate?: string;
   expDate?: string;
   gst?: string | number;
+  categoryName?: string;
+  stockBefore?: number;
+  stockAfter?: number;
+  image?: string;
 };
 
 const generateItems = (sale: OrderResponse, productMap: Record<string, string> = {}): SaleItem[] => {
@@ -48,12 +52,16 @@ const generateItems = (sale: OrderResponse, productMap: Record<string, string> =
       status: i.status || "COMPLETED",
       reason: i.reason,
       serial_numbers: Array.isArray(i.serialno_infos) ? i.serialno_infos.map((sn: any) => sn.name || sn) : (i.serialno_info?.serial_numbers || i.serial_info?.serial_numbers || i.serial_numbers || []),
-      unit: i.product?.unit || i.unit || i.datas?.unit || "UNIT",
+      unit: i.unit_infos?.name || i.unit_info?.name || i.product?.unit || i.unit || i.datas?.unit || "UNIT",
       variantName: i.variant_infos?.variant_name || i.variant_info?.variant_name || i.variant?.variant_name,
       batchName: i.batch_infos?.batch_name || i.batch_infos?.name || i.batch_info?.batch_name || i.batch?.batch_name,
       mfgDate: i.batch_infos?.mfg_date || i.batch_infos?.manufacturing_date || i.batch_info?.mfg_date || i.batch?.mfg_date,
       expDate: i.batch_infos?.exp_date || i.batch_infos?.expiry_date || i.batch_info?.exp_date || i.batch?.exp_date,
       gst: i.gst || i.datas?.gst,
+      categoryName: i.category_infos?.name || i.category_info?.name || i.category || i.datas?.category_name,
+      stockBefore: i.stock_before,
+      stockAfter: i.stock_after,
+      image: i.image_url || i.image || i.product?.image_url || i.product?.image || i.datas?.image_url || i.datas?.image || i.inventory_infos?.image_url || i.inventory_infos?.image || i.inventory_info?.image_url || i.inventory_info?.image || "",
     };
   });
 };
@@ -363,13 +371,32 @@ const SaleDetailPage: React.FC = () => {
                       <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-lg flex items-center justify-center font-bold text-slate-700 bg-slate-100 border border-slate-200">
-                              <Package size={16} className="text-slate-500" />
+                            <div className="w-10 h-10 rounded-lg flex items-center justify-center font-bold text-slate-700 bg-slate-100 border border-slate-200 overflow-hidden shrink-0">
+                              {item.image ? (
+                                <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+                              ) : (
+                                <Package size={16} className="text-slate-500" />
+                              )}
                             </div>
                             <div className="min-w-0">
                               <p className="text-sm font-bold text-slate-800 truncate">{item.name}</p>
-                              <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                              <div className="flex items-center gap-2 mt-1 flex-wrap">
                                 <span className="text-[10px] font-mono font-bold text-slate-400">{item.sku}</span>
+                                {item.categoryName && (
+                                  <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wide bg-purple-50 text-purple-650 border border-purple-100 font-sans">
+                                    {item.categoryName}
+                                  </span>
+                                )}
+                                {item.gst !== undefined && item.gst !== null && (
+                                  <span className="px-1.5 py-0.5 rounded text-[9px] font-extrabold text-indigo-500 bg-indigo-50 border border-indigo-100 uppercase tracking-wider font-sans">
+                                    GST {typeof item.gst === "number" ? `${item.gst}%` : item.gst}
+                                  </span>
+                                )}
+                                {item.stockBefore !== undefined && item.stockAfter !== undefined && (
+                                  <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-50 text-amber-700 border border-amber-100 font-sans">
+                                    Stock: {item.stockBefore} ➔ {item.stockAfter}
+                                  </span>
+                                )}
                                 {item.status && (
                                   <span className={`px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wide ${item.status === "REFUNDED" ? "bg-red-50 text-red-600" : "bg-blue-50 text-blue-600"}`}>
                                     {item.status} {item.returnedQty ? `(${item.returnedQty})` : ""}
@@ -456,16 +483,30 @@ const SaleDetailPage: React.FC = () => {
                           <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
                             <td className="px-6 py-4">
                               <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0 border bg-blue-50 border-blue-100">
-                                  <Package size={16} className="text-blue-500" />
+                                <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0 border bg-blue-50 border-blue-100 overflow-hidden">
+                                  {item.image ? (
+                                    <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+                                  ) : (
+                                    <Package size={16} className="text-blue-500" />
+                                  )}
                                 </div>
                                 <div className="min-w-0">
                                   <p className="text-sm font-bold text-slate-800 truncate">{item.name}</p>
-                                  <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                                  <div className="flex items-center gap-2 mt-1 flex-wrap">
                                     <span className="text-[10px] font-mono font-bold text-slate-400">{item.sku}</span>
-                                    {item.gst && (
-                                      <span className="text-[9px] font-extrabold text-indigo-500 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-100 uppercase tracking-wider font-sans">
-                                        GST {item.gst}
+                                    {item.categoryName && (
+                                      <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wide bg-purple-50 text-purple-650 border border-purple-100 font-sans">
+                                        {item.categoryName}
+                                      </span>
+                                    )}
+                                    {item.gst !== undefined && item.gst !== null && (
+                                      <span className="px-1.5 py-0.5 rounded text-[9px] font-extrabold text-indigo-500 bg-indigo-50 border border-indigo-100 uppercase tracking-wider font-sans">
+                                        GST {typeof item.gst === "number" ? `${item.gst}%` : item.gst}
+                                      </span>
+                                    )}
+                                    {item.stockBefore !== undefined && item.stockAfter !== undefined && (
+                                      <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-50 text-amber-700 border border-amber-100 font-sans">
+                                        Stock: {item.stockBefore} ➔ {item.stockAfter}
                                       </span>
                                     )}
                                     {item.status && (
@@ -586,8 +627,12 @@ const SaleDetailPage: React.FC = () => {
                               <tr key={retItem.id} className="hover:bg-slate-50/50 transition-colors">
                                 <td className="px-6 py-4">
                                   <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-lg flex items-center justify-center font-bold text-slate-700 bg-rose-50 border border-rose-100 shrink-0">
-                                      <Package size={16} className="text-rose-500" />
+                                    <div className="w-10 h-10 rounded-lg flex items-center justify-center font-bold text-slate-700 bg-rose-50 border border-rose-100 shrink-0 overflow-hidden">
+                                      {retItem.image_url || retItem.image || retItem.product?.image_url || retItem.product?.image || retItem.datas?.image_url || retItem.datas?.image ? (
+                                        <img src={retItem.image_url || retItem.image || retItem.product?.image_url || retItem.product?.image || retItem.datas?.image_url || retItem.datas?.image} alt={retItem.name} className="w-full h-full object-cover" />
+                                      ) : (
+                                        <Package size={16} className="text-rose-500" />
+                                      )}
                                     </div>
                                     <div className="min-w-0">
                                       <p className="text-sm font-bold text-slate-800 truncate">{retItem.name}</p>

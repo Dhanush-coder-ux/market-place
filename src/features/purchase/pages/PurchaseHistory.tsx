@@ -527,14 +527,14 @@ const VerticalTable = ({ data, selectedIds, onSelect, totalCount, lastElementRef
                   className="rounded border-slate-355 text-blue-605 focus:ring-blue-500/20 cursor-pointer"
                 />
               </th>
-              <th className="px-3 py-2.5 text-[10px] font-bold tracking-wider text-slate-400 uppercase text-left">Invoice No</th>
-              <th className="px-3 py-2.5 text-[10px] font-bold tracking-wider text-slate-400 uppercase text-left">Purchase ID</th>
-              <th className="px-3 py-2.5 text-[10px] font-bold tracking-wider text-slate-400 uppercase text-left">Supplier</th>
-              <th className="px-3 py-2.5 text-[10px] font-bold tracking-wider text-slate-400 uppercase text-left">Date</th>
-              <th className="px-3 py-2.5 text-[10px] font-bold tracking-wider text-slate-400 uppercase text-left hidden md:table-cell">Products</th>
-              <th className="px-3 py-2.5 text-[10px] font-bold tracking-wider text-slate-400 uppercase text-right">Qty</th>
-              <th className="px-3 py-2.5 text-[10px] font-bold tracking-wider text-slate-400 uppercase text-right">Total</th>
-              <th className="px-3 py-2.5 w-24 text-right text-[10px] font-bold tracking-wider text-slate-400 uppercase sticky right-0 bg-slate-50 border-l border-slate-200 z-30 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.08)]">Actions</th>
+              <th className="px-3 py-2.5 text-[10px] font-bold tracking-wider text-slate-800 uppercase text-left">Invoice No</th>
+              <th className="px-3 py-2.5 text-[10px] font-bold tracking-wider text-slate-800 uppercase text-left">Purchase ID</th>
+              <th className="px-3 py-2.5 text-[10px] font-bold tracking-wider text-slate-800 uppercase text-left">Supplier</th>
+              <th className="px-3 py-2.5 text-[10px] font-bold tracking-wider text-slate-800 uppercase text-left">Date</th>
+              <th className="px-3 py-2.5 text-[10px] font-bold tracking-wider text-slate-800 uppercase text-left hidden md:table-cell">Products</th>
+              <th className="px-3 py-2.5 text-[10px] font-bold tracking-wider text-slate-800 uppercase text-right">Qty</th>
+              <th className="px-3 py-2.5 text-[10px] font-bold tracking-wider text-slate-800 uppercase text-right">Total</th>
+              <th className="px-3 py-2.5 w-24 text-right text-[10px] font-bold tracking-wider text-slate-800 uppercase sticky right-0 bg-slate-50 border-l border-slate-200 z-30 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.08)]">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -626,7 +626,7 @@ const VerticalTable = ({ data, selectedIds, onSelect, totalCount, lastElementRef
                     <div className="flex items-center justify-end gap-2 relative">
                       <button
                         onClick={() => navigate(`/purchase/detail/${po.id}`, { state: { po } })}
-                        className="text-slate-400 hover:text-blue-600 transition-colors p-1"
+                        className="text-emerald-500 hover:text-emerald-600 transition-colors p-1"
                         title="View Purchase"
                       >
                         <Eye size={15} />
@@ -634,7 +634,7 @@ const VerticalTable = ({ data, selectedIds, onSelect, totalCount, lastElementRef
                       <div className="relative">
                         <button
                           onClick={() => setActiveMenuId(activeMenuId === po.id ? null : po.id)}
-                          className="text-slate-400 hover:text-blue-600 transition-colors p-1"
+                          className="text-slate-800 hover:text-slate-900 transition-colors p-1"
                           title="More actions"
                         >
                           <MoreVertical size={15} />

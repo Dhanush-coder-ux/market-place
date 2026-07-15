@@ -125,6 +125,7 @@ export interface ReusableSelectProps {
   className?: string
   error?: string
   footer?: React.ReactNode
+  onScrollEnd?: () => void
 }
 export interface ImageUploadProps {
   label?: string;

@@ -30,7 +30,7 @@ export const utilityApi = {
   },
 
   getShopCategories: async (shopId: string, params?: { limit?: string; offset?: string; is_active?: boolean | null }) => {
-    return await apiClient.get(ENDPOINTS.SHOP_CATEGORIES, { shop_id: shopId, ...(params as any) });
+    return await apiClient.get(ENDPOINTS.SHOP_CATEGORIES, { limit: "100", shop_id: shopId, ...(params as any) });
   },
 
   getShopCategoryById: async (shopId: string, id: string) => {

@@ -310,7 +310,11 @@ const ProductDetail = () => {
         <ProfileHeaderCard
           name={name}
           initials={initials}
-          imageUrl={datas.images}
+          imageUrl={
+            Array.isArray((product as any).image_url) 
+              ? (product as any).image_url[0] 
+              : (product as any).image_url || datas.images?.[0] || datas.images || ""
+          }
           subText={`SKU: ${skuValue}${uiId && uiId !== skuValue ? ` • ${uiId}` : ''} • Barcode: ${barcode}`}
           badges={[
             { text: categoryName, variant: "primary" },
@@ -659,13 +663,19 @@ const ProductDetail = () => {
 
         {/* TAB — Images */}
         {TABS[activeTab] === IMG_TAB_LABEL && (() => {
-          // Collect all image URLs from the product
-          const imageUrls: string[] = [];
-          if ((product as any).image_url) imageUrls.push((product as any).image_url);
-          if (datas.images) {
-            if (Array.isArray(datas.images)) imageUrls.push(...datas.images.filter(Boolean));
-            else if (typeof datas.images === 'string') imageUrls.push(datas.images);
-          }
+           // Collect all image URLs from the product
+           const imageUrls: string[] = [];
+           if ((product as any).image_url) {
+             if (Array.isArray((product as any).image_url)) {
+               imageUrls.push(...(product as any).image_url.filter(Boolean));
+             } else {
+               imageUrls.push((product as any).image_url);
+             }
+           }
+           if (datas.images) {
+             if (Array.isArray(datas.images)) imageUrls.push(...datas.images.filter(Boolean));
+             else if (typeof datas.images === 'string') imageUrls.push(datas.images);
+           }
           // Also look for images from variants if any
           combinations.forEach((v: any) => {
             if (v.image_url) imageUrls.push(v.image_url);

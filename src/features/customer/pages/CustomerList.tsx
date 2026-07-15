@@ -1,10 +1,11 @@
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useRef, useState, useMemo, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Search, Users, Bookmark, Filter,
   UserCheck, AlertCircle, CreditCard,
   Loader2, Eye, Pencil, MoreVertical, Trash2, Plus
 } from "lucide-react";
+import ActionMenu, { ActionMenuItem, ActionMenuDivider } from "@/components/common/ActionMenu";
 import SkeletonLoader from "@/components/common/SkeletonLoader";
 import { useHeader } from "@/context/HeaderContext";
 import { GradientButton } from "@/components/ui/GradientButton";
@@ -116,6 +117,7 @@ const CustomerList = () => {
   /* ── Row Selection ── */
   const [selectedCustomers, setSelectedCustomers] = useState<Set<string>>(new Set());
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
+  const menuBtnRef = useRef<HTMLButtonElement>(null);
 
   const toggleSelectCustomer = (id: string) => {
     setSelectedCustomers(prev => {
@@ -318,13 +320,13 @@ const CustomerList = () => {
                     className="rounded border-slate-350 text-blue-600 focus:ring-blue-500/20 cursor-pointer"
                   />
                 </th>
-                <th className="py-2.5 px-4 text-[10px] font-black text-slate-400 uppercase tracking-wider">Customer</th>
-                <th className="py-2.5 px-4 text-[10px] font-black text-slate-400 uppercase tracking-wider">Contact</th>
-                <th className="py-2.5 px-4 text-[10px] font-black text-slate-400 uppercase tracking-wider text-right">Credit Limit</th>
-                <th className="py-2.5 px-4 text-[10px] font-black text-slate-400 uppercase tracking-wider text-right">Outstanding</th>
-                <th className="py-2.5 px-4 text-[10px] font-black text-slate-400 uppercase tracking-wider text-center">Status</th>
-                <th className="py-2.5 px-4 text-[10px] font-black text-slate-400 uppercase tracking-wider">Created</th>
-                <th className="py-2.5 px-4 text-[10px] font-black text-slate-400 uppercase tracking-wider text-right w-24 sticky right-0 bg-slate-50 border-l border-slate-200 z-30 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.08)]">Actions</th>
+                <th className="py-2.5 px-4 text-[10px] font-black text-slate-800 uppercase tracking-wider">Customer</th>
+                <th className="py-2.5 px-4 text-[10px] font-black text-slate-800 uppercase tracking-wider">Contact</th>
+                <th className="py-2.5 px-4 text-[10px] font-black text-slate-800 uppercase tracking-wider text-right">Credit Limit</th>
+                <th className="py-2.5 px-4 text-[10px] font-black text-slate-800 uppercase tracking-wider text-right">Outstanding</th>
+                <th className="py-2.5 px-4 text-[10px] font-black text-slate-800 uppercase tracking-wider text-center">Credit</th>
+                <th className="py-2.5 px-4 text-[10px] font-black text-slate-800 uppercase tracking-wider">Created</th>
+                <th className="py-2.5 px-4 text-[10px] font-black text-slate-800 uppercase tracking-wider text-right w-24 sticky right-0 bg-slate-50 border-l border-slate-200 z-30 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.08)]">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50 bg-white">
@@ -384,12 +386,13 @@ const CustomerList = () => {
                         </span>
                       </td>
                       <td className="py-3 px-4 text-center">
-                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border ${c.is_active
-                          ? "bg-emerald-50 text-emerald-700 border-emerald-100"
-                          : "bg-slate-50 text-slate-500 border-slate-200"
-                          }`}>
-                          <span className={`w-1.5 h-1.5 rounded-full ${c.is_active ? "bg-emerald-500" : "bg-slate-400"}`} />
-                          {c.is_active ? "Active" : "Inactive"}
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                          c.can_have_credit
+                            ? "bg-emerald-50 text-emerald-700 border-emerald-100"
+                            : "bg-slate-50 text-slate-400 border-slate-200"
+                        }`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${c.can_have_credit ? "bg-emerald-500" : "bg-slate-400"}`} />
+                          {c.can_have_credit ? "Yes" : "No"}
                         </span>
                       </td>
                       <td className="py-3 px-4">
@@ -399,64 +402,44 @@ const CustomerList = () => {
                         <div className="flex items-center justify-end gap-2 relative">
                           <button
                             onClick={() => navigate(`/customers/${c.id}`)}
-                            className="text-slate-400 hover:text-blue-600 transition-colors p-1"
+                            className="text-emerald-500 hover:text-emerald-600 transition-colors p-1"
                             title="View Customer"
                           >
                             <Eye size={15} />
                           </button>
                           <button
                             onClick={() => navigate(`/customers/${c.id}/edit`)}
-                            className="text-slate-400 hover:text-blue-600 transition-colors p-1"
+                            className="text-amber-400 hover:text-amber-500 transition-colors p-1"
                             title="Edit Customer"
                           >
                             <Pencil size={15} />
                           </button>
                           <div className="relative">
                             <button
-                              onClick={() => setActiveMenuId(activeMenuId === c.id ? null : c.id)}
-                              className="text-slate-400 hover:text-blue-600 transition-colors p-1"
+                              ref={activeMenuId === c.id ? menuBtnRef : undefined}
+                              onClick={(e) => { e.stopPropagation(); setActiveMenuId(activeMenuId === c.id ? null : c.id); }}
+                              className="text-slate-800 hover:text-slate-900 transition-colors p-1"
                               title="More actions"
                             >
                               <MoreVertical size={15} />
                             </button>
-                            {activeMenuId === c.id && (
-                              <>
-                                <div className="fixed inset-0 z-40" onClick={() => setActiveMenuId(null)} />
-                                <div className="absolute right-0 mt-1 w-44 bg-white border border-slate-200 rounded-lg shadow-lg py-1 z-50 text-left font-sans animate-in fade-in slide-in-from-top-1 duration-150">
-                                  <button
-                                    onClick={() => {
-                                      setActiveMenuId(null);
-                                      alert("Record payment initiated!");
-                                    }}
-                                    className="flex items-center gap-2 w-full px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-                                  >
-                                    <CreditCard size={13} />
-                                    Record Payment
-                                  </button>
-                                  <button
-                                    onClick={() => {
-                                      setActiveMenuId(null);
-                                      navigate(`/billing?customer_id=${c.id}`);
-                                    }}
-                                    className="flex items-center gap-2 w-full px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-                                  >
-                                    <Plus size={13} />
-                                    Record Sale
-                                  </button>
-                                  <div className="border-t border-slate-100 my-1"></div>
-                                  <button
-                                    onClick={() => {
-                                      setActiveMenuId(null);
-                                      handleDeleteCustomer(c.id);
-                                    }}
-                                    className="flex items-center gap-2 w-full px-3 py-2 text-xs font-semibold text-red-650 hover:bg-red-50"
-                                  >
-                                    <Trash2 size={13} />
-                                    Delete
-                                  </button>
-                                </div>
-                              </>
-                            )}
+                            <ActionMenu
+                              triggerRef={menuBtnRef}
+                              open={activeMenuId === c.id}
+                              onClose={() => setActiveMenuId(null)}
+                              width={176}
+                            >
+                              <ActionMenuItem icon={<CreditCard size={13} />} onClick={() => { setActiveMenuId(null); alert("Record payment initiated!"); }}>
+                                Record Payment
+                              </ActionMenuItem>
+                              <ActionMenuItem icon={<Plus size={13} />} onClick={() => { setActiveMenuId(null); navigate(`/billing?customer_id=${c.id}`); }}>
+                                Record Sale
+                              </ActionMenuItem>
+                              <ActionMenuDivider />
+                              <ActionMenuItem icon={<Trash2 size={13} />} danger onClick={() => { setActiveMenuId(null); handleDeleteCustomer(c.id); }}>
+                                Delete
+                              </ActionMenuItem>
+                            </ActionMenu>
                           </div>
                         </div>
                       </td>

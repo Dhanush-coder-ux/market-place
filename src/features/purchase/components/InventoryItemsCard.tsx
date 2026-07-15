@@ -10,7 +10,7 @@ import {
   X,
   Package
 } from "lucide-react";
-import { useState, useEffect, Fragment } from "react";
+import { useState, useEffect, Fragment, useRef } from "react";
 import { createPortal } from "react-dom";
 import { SearchSelect } from "@/components/inputbuilders/SearchSelect";
 import { inventoryApi } from "@/services/api/inventory";
@@ -20,7 +20,82 @@ import { GradientButton } from "@/components/ui/GradientButton";
 import { useToast } from "@/context/ToastContext";
 import { InlineSerialManager } from "@/components/common/InlineSerialManager";
 import { useQuickCreate } from "@/features/common/QuickCreate/QuickCreateContext";
-import { Tooltip } from "@/components/common/Tootlip";
+
+// ─── Inline Unit Selector ──────────────────────────────────────────────────────
+const UnitDropdown = ({
+  units,
+  current,
+  onChange,
+}: {
+  units: { name: string; factor: number }[];
+  current: string;
+  onChange: (unit: string) => void;
+}) => {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    if (open) document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((p) => !p)}
+        className="flex items-center gap-1 px-2.5 py-0.5 text-[9px] font-black text-slate-500 uppercase bg-slate-100 hover:bg-slate-200 transition-colors rounded-full border border-slate-200 cursor-pointer shadow-sm select-none"
+      >
+        {current}
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="8"
+          height="8"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="3.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className={`transition-transform duration-150 ${open ? "rotate-180" : ""}`}
+        >
+          <polyline points="6 9 12 15 18 9" />
+        </svg>
+      </button>
+
+      {open && (
+        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1.5 z-50 bg-white border border-slate-200 rounded-lg shadow-lg overflow-hidden min-w-[80px] py-1">
+          {units.map((u) => (
+            <button
+              key={u.name}
+              type="button"
+              onClick={() => {
+                onChange(u.name);
+                setOpen(false);
+              }}
+              className={`w-full text-left px-3 py-1.5 text-[11px] font-bold uppercase transition-colors
+                ${u.name === current
+                  ? "bg-blue-50 text-blue-700"
+                  : "text-slate-600 hover:bg-slate-50"
+                }`}
+            >
+              {u.name}
+              {u.factor !== 1 && (
+                <span className="ml-1 text-[9px] text-slate-400 font-normal normal-case">
+                  ×{u.factor}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+// ──────────────────────────────────────────────────────────────────────────────
 
 interface InventoryItemsCardProps {
   products: any[];
@@ -51,7 +126,7 @@ export const InventoryItemsCard = ({
   removeProduct,
   onAddNewProduct,
   purchaseType,
-  gstMode = "inclusive",
+  gstMode = "exclusive",
   setGstMode,
 }: InventoryItemsCardProps) => {
   const [expandedBreakdown, setExpandedBreakdown] = useState<Set<number>>(new Set());
@@ -160,7 +235,7 @@ export const InventoryItemsCard = ({
       const variantData = allVariants.find((v: any) => v.id === selectedId);
 
       const rawSerials = variantData?.serial_numbers || variantData?.serial_number || variantData?.datas?.serial_numbers || variantData?.datas?.serial_number || baseOpt.serials || baseOpt.serial_numbers || baseOpt.serial_number || baseOpt.datas?.serial_numbers || baseOpt.datas?.serial_number;
-      
+
       const parsedSerials = Array.isArray(rawSerials)
         ? rawSerials
         : (rawSerials?.serial_numbers || rawSerials?.serial_number || []);
@@ -177,7 +252,9 @@ export const InventoryItemsCard = ({
         costPrice: getVal("buy_price", getVal("costPrice")),
         sellingPrice: getVal("sell_price", getVal("sellingPrice")),
         taxGst: parseInt(getVal("gst", "18")) || 18,
-        unit: getVal("unit", "pc"),
+        unit: baseOpt.unit_infos?.name || getVal("unit", "pc"),
+        unit_infos: baseOpt.unit_infos || null,
+        selectedUnit: baseOpt.unit_infos?.name || getVal("unit", "pc"),
         category: getVal("category"),
         variant: variantItem.name,
         sku: getVal("ui_id", variantItem.sku || getVal("barcode", getVal("sku"))),
@@ -194,7 +271,7 @@ export const InventoryItemsCard = ({
 
       // If it has batches, show batch modal (Suppressed for PURCHASE type)
       if (hasBatchTracking && (type !== "PURCHASE" || purchaseType !== "PO_CREATE")) {
-        const batches = variantData?.batches || variantData?.datas?.batches || baseOpt.batches || d.batches || [];
+        const batches = variantData?.batch_infos || variantData?.batches || variantData?.datas?.batch_infos || variantData?.datas?.batches || baseOpt.batch_infos || baseOpt.batches || d.batch_infos || d.batches || [];
         const isPoCreate = purchaseType === 'PO_CREATE';
 
         setBatchModal({
@@ -229,13 +306,15 @@ export const InventoryItemsCard = ({
       return;
     }
 
-    const batchSerials = Array.isArray(batch.serial_numbers)
-      ? batch.serial_numbers
-      : Array.isArray(batch.serial_number)
-        ? batch.serial_number
-        : Array.isArray(batch.serials)
-          ? batch.serials
-          : (batch.serial_numbers?.serial_numbers || batch.serial_number?.serial_numbers || batch.serials?.serial_numbers || []);
+    const rawBatchSerials = batch.serialno_infos || batch.serial_numbers || batch.serial_number || batch.serials;
+    const batchSerials = Array.isArray(rawBatchSerials)
+      ? rawBatchSerials.map((s: any) => typeof s === 'object' && s !== null ? s.name || s.serial || "" : String(s)).filter(Boolean)
+      : [];
+
+    const bBuyPrice = batch.pricing_infos?.buy_price ?? batch.buy_price;
+    const bSellPrice = batch.pricing_infos?.sell_price ?? batch.sell_price;
+    const bStorage = batch.storage_location_infos?.storage_location ?? batch.storage_location;
+    const bReorderPoint = batch.reorder_point_infos?.reorder_point ?? batch.reorder_point;
 
     updateProductFields(rowIndex, {
       batchNum: batch.name || batch.batch_number,
@@ -244,6 +323,10 @@ export const InventoryItemsCard = ({
       existingSerials: batchSerials.length > 0 ? batchSerials : batchModal.existingSerials,
       manufacturingDate: (batch.manufacturing_date || batch.mfg_date) ? new Date(batch.manufacturing_date || batch.mfg_date).toISOString().split('T')[0] : "",
       expiryDate: batch.expiry_date ? new Date(batch.expiry_date).toISOString().split('T')[0] : "",
+      costPrice: bBuyPrice !== undefined && bBuyPrice !== null ? bBuyPrice : products[rowIndex]?.costPrice,
+      sellingPrice: bSellPrice !== undefined && bSellPrice !== null ? bSellPrice : products[rowIndex]?.sellingPrice,
+      storageLoc: bStorage || products[rowIndex]?.storageLoc,
+      reorderPoint: bReorderPoint !== undefined && bReorderPoint !== null ? bReorderPoint : products[rowIndex]?.reorderPoint,
       batchNumReadOnly: true
     });
     setBatchModal({ isOpen: false, rowIndex: -1, batches: [], productName: "", variantName: "", existingSerials: [], allowNewBatch: true });
@@ -388,7 +471,9 @@ export const InventoryItemsCard = ({
                       </div>
                       <div className="text-right">
                         <p className="text-[10px] text-slate-400  font-bold ">In Stock</p>
-                        <p className="text-xs font-black text-slate-700">{batch.stocks || 0} pcs</p>
+                        <p className="text-xs font-black text-slate-700">
+                          {Number(batch.stock_infos?.available_stocks ?? batch.stock_infos?.physical_stocks ?? batch.stocks ?? batch.quantity ?? batch.qty ?? 0)} pcs
+                        </p>
                       </div>
                     </button>
                   ))}
@@ -418,36 +503,40 @@ export const InventoryItemsCard = ({
           </div>
           <div className="flex items-center gap-3">
             {type === "PURCHASE" && gstMode && setGstMode && (
-              <div className="flex items-center gap-2">
-                <Tooltip message="Inclusive GST: GST is already included in the item's cost price. Exclusive GST: GST rate is calculated and added on top of the item's base cost price.">
-                  <span className="cursor-help flex text-slate-400 hover:text-slate-650 transition-colors">
-                    <Info size={14} />
-                  </span>
-                </Tooltip>
+              <div className="flex flex-col items-end gap-1">
                 <div className="flex bg-slate-100 rounded-lg p-0.5 shrink-0 border border-slate-200/55 shadow-inner h-9 items-center select-none">
                   <button
                     type="button"
                     onClick={() => setGstMode("inclusive")}
-                    className={`px-3 py-1 flex items-center justify-center rounded-md text-[10px] font-black uppercase tracking-wider transition-all duration-200 cursor-pointer h-7 ${
-                      gstMode === "inclusive" 
-                        ? "bg-white text-blue-600 shadow-sm border border-slate-200/40" 
+                    className={`px-3 py-1 flex items-center justify-center rounded-md text-[10px] font-black uppercase tracking-wider transition-all duration-200 cursor-pointer h-7 ${gstMode === "inclusive"
+                        ? "bg-white text-blue-600 shadow-sm border border-slate-200/40"
                         : "text-slate-500 hover:text-slate-700"
-                    }`}
+                      }`}
                   >
                     Inclusive GST
                   </button>
                   <button
                     type="button"
                     onClick={() => setGstMode("exclusive")}
-                    className={`px-3 py-1 flex items-center justify-center rounded-md text-[10px] font-black uppercase tracking-wider transition-all duration-200 cursor-pointer h-7 ${
-                      gstMode === "exclusive" 
-                        ? "bg-white text-blue-600 shadow-sm border border-slate-200/40" 
+                    className={`px-3 py-1 flex items-center justify-center rounded-md text-[10px] font-black uppercase tracking-wider transition-all duration-200 cursor-pointer h-7 ${gstMode === "exclusive"
+                        ? "bg-white text-blue-600 shadow-sm border border-slate-200/40"
                         : "text-slate-500 hover:text-slate-700"
-                    }`}
+                      }`}
                   >
                     Exclusive GST
                   </button>
                 </div>
+                {gstMode === "inclusive" ? (
+                  <span className="flex items-center gap-1 text-[10px] font-medium text-amber-600 bg-amber-50 border border-amber-100 px-2 py-0.5 rounded-full">
+                    <Info size={10} />
+                    GST is already included in the item's cost price
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-1 text-[10px] font-medium text-emerald-600 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-full">
+                    <Info size={10} />
+                    GST will be added on top of the item's base cost price
+                  </span>
+                )}
               </div>
             )}
 
@@ -463,17 +552,17 @@ export const InventoryItemsCard = ({
 
         {/* Product Table */}
         <div className="overflow-x-auto custom-scrollbar w-full" style={{ position: 'relative', minHeight: '300px' }}>
-          <table className="min-w-[1110px] w-full border-collapse whitespace-nowrap" style={{ tableLayout: 'fixed' }}>
+          <table className="min-w-[1360px] w-full border-collapse whitespace-nowrap" style={{ tableLayout: 'fixed' }}>
             <thead>
               <tr className="bg-slate-50/80 border-b border-slate-200 sticky top-0 z-10">
                 <th className="py-4 px-6 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '60px' }}>#</th>
                 <th className="py-4 px-4 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '300px' }}>Item Description</th>
-                <th className="py-4 px-2 text-center text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '100px' }}>Qty / Unit</th>
-                <th className="py-4 px-4 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '140px' }}>{type === "PURCHASE" ? "Buy Price / Unit" : "Material Cost"}</th>
+                <th className="py-4 px-2 text-center text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '130px' }}>Qty / Unit</th>
+                <th className="py-4 px-4 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '180px' }}>{type === "PURCHASE" ? "Buy Price / Unit" : "Material Cost"}</th>
                 <th className="py-4 px-2 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '120px' }}>Subtotal</th>
                 <th className="py-4 px-2 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '110px' }}>Allocated</th>
-                <th className="py-4 px-2 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '100px' }}>Tax (GST)</th>
-                <th className="py-4 px-4 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '220px' }}>Pricing & Margin / Unit</th>
+                <th className="py-4 px-2 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '110px' }}>Tax (GST)</th>
+                <th className="py-4 px-4 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '280px' }}>Pricing & Margin / Unit</th>
                 <th className="py-4 px-6 text-right text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '120px' }}>Actions</th>
               </tr>
             </thead>
@@ -548,7 +637,7 @@ export const InventoryItemsCard = ({
                                     console.error("Failed to fetch full inventory details", err);
                                   }
                                 }
-                                
+
                                 const d = opt.datas || {};
                                 const get = (key: string, fallback: any = "") => opt[key] ?? d[key] ?? fallback;
 
@@ -589,7 +678,9 @@ export const InventoryItemsCard = ({
                                     sellingPrice: get("sell_price"),
                                     taxGst: parseInt(get("gst", "18")) || 18,
                                     sku: get("ui_id", get("barcode", get("sku"))),
-                                    unit: get("unit", "pc"),
+                                    unit: opt.unit_infos?.name || get("unit", "pc"),
+                                    unit_infos: opt.unit_infos || null,
+                                    selectedUnit: opt.unit_infos?.name || get("unit", "pc"),
                                     category: get("category"),
                                     batchTracking: hasBatchTracking,
                                     serialTracking: hasSerialTracking,
@@ -604,7 +695,7 @@ export const InventoryItemsCard = ({
                                   });
 
                                   if (hasBatchTracking && (type !== "PURCHASE" || purchaseType !== "PO_CREATE")) {
-                                    const batches = opt.batches || d.batches || [];
+                                    const batches = opt.batch_infos || opt.batches || d.batch_infos || d.batches || [];
                                     setBatchModal({
                                       isOpen: true,
                                       rowIndex: index,
@@ -642,7 +733,9 @@ export const InventoryItemsCard = ({
                                       sellingPrice: get("sell_price", get("sellingPrice")),
                                       taxGst: parseInt(get("gst", "18")) || 18,
                                       sku: get("ui_id", get("barcode", get("sku"))),
-                                      unit: get("unit", "pc"),
+                                      unit: opt.unit_infos?.name || get("unit", "pc"),
+                                      unit_infos: opt.unit_infos || null,
+                                      selectedUnit: opt.unit_infos?.name || get("unit", "pc"),
                                       category: get("category"),
                                       batchTracking: hasBatchTracking,
                                       serialTracking: false,
@@ -656,12 +749,12 @@ export const InventoryItemsCard = ({
                                   }
                                   return;
                                 }
- 
+
                                 if (hasVariants && combinations.length === 0) {
                                   showToast("This product is marked as having variants, but no variants have been generated yet. Please generate variants in the Inventory module before purchasing.", "error");
                                   return;
                                 }
- 
+
                                 if (hasVariants && combinations.length > 0) {
                                   const mappedVariants = combinations.map((c: any) => ({
                                     id: c.id,
@@ -681,7 +774,9 @@ export const InventoryItemsCard = ({
                                     sellingPrice: get("sell_price", get("sellingPrice")),
                                     taxGst: parseInt(get("gst", "18")) || 18,
                                     sku: get("barcode", get("sku")),
-                                    unit: get("unit", "pc"),
+                                    unit: opt.unit_infos?.name || get("unit", "pc"),
+                                    unit_infos: opt.unit_infos || null,
+                                    selectedUnit: opt.unit_infos?.name || get("unit", "pc"),
                                     category: get("category"),
                                     batchTracking: hasBatchTracking,
                                     serialTracking: hasSerialTracking,
@@ -696,7 +791,7 @@ export const InventoryItemsCard = ({
                                   });
 
                                   if (hasBatchTracking && (type !== "PURCHASE" || purchaseType !== "PO_CREATE")) {
-                                    const batches = opt.batches || d.batches || [];
+                                    const batches = opt.batch_infos || opt.batches || d.batch_infos || d.batches || [];
                                     setBatchModal({
                                       isOpen: true,
                                       rowIndex: index,
@@ -751,16 +846,16 @@ export const InventoryItemsCard = ({
                               )}
                               {product.batchTracking && (
                                 <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-black border transition-all ${product.batchNum
-                                    ? "bg-amber-50 text-amber-700 border-amber-200"
-                                    : "bg-rose-50/50 text-rose-600 border-rose-100/60 animate-pulse"
+                                  ? "bg-amber-50 text-amber-700 border-amber-200"
+                                  : "bg-rose-50/50 text-rose-600 border-rose-100/60 animate-pulse"
                                   }`}>
                                   <Package size={9} /> {product.batchNum ? `Batch: ${typeof product.batchNum === 'object' && product.batchNum !== null ? (product.batchNum.batch_name || product.batchNum.name) : product.batchNum}` : "Batch Details Required"}
                                 </span>
                               )}
                               {product.serialTracking && (
                                 <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-black border transition-all ${(product.serialNumbers?.split(",").filter(Boolean).length || 0) >= (Number(product.quantity) || 0)
-                                    ? "bg-blue-50 text-blue-700 border-blue-200"
-                                    : "bg-rose-50/50 text-rose-600 border-rose-100/60 animate-pulse"
+                                  ? "bg-blue-50 text-blue-700 border-blue-200"
+                                  : "bg-rose-50/50 text-rose-600 border-rose-100/60 animate-pulse"
                                   }`}>
                                   <Check size={9} /> {
                                     (product.serialNumbers?.split(",").filter(Boolean).length || 0) >= (Number(product.quantity) || 0)
@@ -803,9 +898,27 @@ export const InventoryItemsCard = ({
                             onChange={(e) => handleProductChange(index, "quantity", e.target.value ? Number(e.target.value) : "")}
                             className="!h-9 !w-24 !text-xs font-black rounded-lg border-slate-200 shadow-sm text-center !px-2"
                           />
-                          <span className="text-[9px] text-slate-500 font-bold uppercase bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200 max-w-[80px] truncate" title={product.unit || 'pc'}>
-                            {product.unit || 'pc'}
-                          </span>
+                          {(() => {
+                            const subUnits = product.unit_infos?.sub_units || [];
+                            const hasSubUnits = subUnits.length > 0;
+                            const baseUnit = product.unit_infos?.name || product.unit || 'pc';
+                            const allUnits = hasSubUnits
+                              ? [{ name: baseUnit, factor: 1 }, ...subUnits]
+                              : [{ name: baseUnit, factor: 1 }];
+                            const currentUnit = product.selectedUnit || baseUnit;
+
+                            return hasSubUnits ? (
+                              <UnitDropdown
+                                units={allUnits}
+                                current={currentUnit}
+                                onChange={(u) => handleProductChange(index, "selectedUnit", u)}
+                              />
+                            ) : (
+                              <span className="text-[9px] text-slate-500 font-bold uppercase bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200 max-w-[80px] truncate" title={baseUnit}>
+                                {baseUnit}
+                              </span>
+                            );
+                          })()}
                         </div>
                       </td>
 

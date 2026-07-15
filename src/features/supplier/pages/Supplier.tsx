@@ -344,7 +344,7 @@ const Supplier = () => {
         <div className="overflow-x-auto overflow-y-auto flex-1 pf-scroll">
           <table className="w-full text-left border-separate border-spacing-0">
             <thead className="sticky top-0 z-20 bg-slate-50/95 backdrop-blur-sm shadow-sm">
-              <tr className="text-slate-400 text-[10px] font-bold  tracking-[0.15em] border-b border-slate-100">
+              <tr className="text-slate-800 text-[10px] font-bold  tracking-[0.15em] border-b border-slate-100">
                 <th className="px-6 py-5 whitespace-nowrap min-w-[200px]">Supplier Details</th>
                 {selectedKeys.map(key => (
                   <th key={key} className="px-6 py-5 whitespace-nowrap">
@@ -413,14 +413,14 @@ const Supplier = () => {
                         <div className="flex items-center justify-end gap-2 relative">
                           <button
                             onClick={() => navigate(`/supplier/${sup.id}`)}
-                            className="text-slate-400 hover:text-blue-600 transition-colors p-1"
+                            className="text-emerald-500 hover:text-emerald-600 transition-colors p-1"
                             title="View Supplier"
                           >
                             <Eye size={15} />
                           </button>
                           <button
                             onClick={() => navigate(`/supplier/${sup.id}/edit`)}
-                            className="text-slate-400 hover:text-blue-600 transition-colors p-1"
+                            className="text-amber-400 hover:text-amber-500 transition-colors p-1"
                             title="Edit Supplier"
                           >
                             <Pencil size={15} />

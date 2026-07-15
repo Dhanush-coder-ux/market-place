@@ -3,7 +3,7 @@ export const ENDPOINTS = {
   SUPPLIER_CUSTOM_FIELDS: "/suppliers/custom-fields",
   EMPLOYEES: "/employees",
   CUSTOMERS: "/customers",
-  CUSTOMER_CUSTOM_FIELDS: "/customer-fields",    // gateway rewrites → /custom-fields on port 8007
+  CUSTOMER_CUSTOM_FIELDS: "/customers/custom-fields",    // gateway rewrites → /custom-fields on port 8007
   INVENTORIES: "/inventories/inventories",
   INVENTORY_CUSTOM_FIELDS: "/inventories/custom-fields",  // gateway rewrites → /custom-fields on port 8000
   S_ADJUSTMENTS: "/stockmovadj",

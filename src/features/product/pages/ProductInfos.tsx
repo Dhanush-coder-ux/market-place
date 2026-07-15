@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, Fragment } from "react";
+import React, { useRef, useState, useEffect, useMemo, Fragment } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   Package, Search, Filter, Bookmark, Trash2,
@@ -6,6 +6,7 @@ import {
   X, AlertCircle, Calendar, Hash, ExternalLink,
   Copy, Check, Pencil, Eye, MoreVertical, RefreshCw, History, Plus
 } from "lucide-react";
+import ActionMenu, { ActionMenuItem, ActionMenuDivider } from "@/components/common/ActionMenu";
 import { VariantRows, BatchCards, SerialBadgeList } from "../../inventory/components/StockTree";
 import { useHeader } from "@/context/HeaderContext";
 import { useApi, useApiLoading } from "@/context/ApiContext";
@@ -217,6 +218,7 @@ const ProductRow = React.memo(
   }) => {
     const navigate = useNavigate();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const menuTriggerRef = useRef<HTMLButtonElement>(null);
     const datas = (p.additional_infos as any) || (p.datas as any) || {};
 
     const extractSerials = (val: any): string[] => {
@@ -372,11 +374,15 @@ const ProductRow = React.memo(
           <td className="px-3 py-2.5">
             <div className="flex items-center gap-2.5">
               <div className="w-7 h-7 rounded-md bg-slate-100 flex items-center justify-center text-slate-600 text-[11px] font-semibold shrink-0 select-none overflow-hidden">
-                {datas.images && datas.images.length > 0 ? (
-                  <img src={datas.images[0]} alt={productName} className="w-full h-full object-cover" />
-                ) : (
-                  initial
-                )}
+                {(() => {
+                  const imgUrl = (p as any).image_url || (p as any).image || datas.image_url || datas.image || datas.images;
+                  const singleUrl = Array.isArray(imgUrl) ? imgUrl[0] : imgUrl;
+                  return typeof singleUrl === "string" && singleUrl ? (
+                    <img src={singleUrl} alt={productName} className="w-full h-full object-cover" />
+                  ) : (
+                    initial
+                  );
+                })()}
               </div>
               <div className="flex flex-col gap-0.5 min-w-0">
                 <div className="flex items-center gap-1.5 flex-wrap">
@@ -671,74 +677,47 @@ const ProductRow = React.memo(
             <div className="flex items-center justify-end gap-2 relative">
               <button
                 onClick={() => navigate(`/product/${p.id}`)}
-                className="text-slate-400 hover:text-blue-600 transition-colors p-1"
+                className="text-emerald-500 hover:text-emerald-600 transition-colors p-1"
                 title="View Product"
               >
                 <Eye size={15} />
               </button>
               <button
                 onClick={() => navigate(`/product/${p.id}/edit`)}
-                className="text-slate-400 hover:text-blue-600 transition-colors p-1"
+                className="text-amber-400 hover:text-amber-500 transition-colors p-1"
                 title="Edit Product"
               >
                 <Pencil size={15} />
               </button>
               <div className="relative">
                 <button
-                  onClick={() => setIsMenuOpen(!isMenuOpen)}
-                  className="text-slate-400 hover:text-blue-600 transition-colors p-1"
+                  ref={menuTriggerRef}
+                  onClick={(e) => { e.stopPropagation(); setIsMenuOpen(!isMenuOpen); }}
+                  className="text-slate-800 hover:text-slate-900 transition-colors p-1"
                   title="More actions"
                 >
                   <MoreVertical size={15} />
                 </button>
-                {isMenuOpen && (
-                  <>
-                    <div className="fixed inset-0 z-40" onClick={() => setIsMenuOpen(false)} />
-                    <div className="absolute right-0 mt-1 w-40 bg-white border border-slate-200 rounded-lg shadow-lg py-1 z-50 text-left font-sans animate-in fade-in slide-in-from-top-1 duration-150">
-                      <button
-                        onClick={() => {
-                          setIsMenuOpen(false);
-                          navigate(`/stock-adjustment`);
-                        }}
-                        className="flex items-center gap-2 w-full px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-                      >
-                        <RefreshCw size={13} />
-                        Adjust Stock
-                      </button>
-                       <button
-                        onClick={() => {
-                          setIsMenuOpen(false);
-                          navigate(`/stock-movement`);
-                        }}
-                        className="flex items-center gap-2 w-full px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-                      >
-                        <History size={13} />
-                        Stock Movements
-                      </button>
-                      <button
-                        onClick={() => {
-                          setIsMenuOpen(false);
-                          navigate(`/purchase/add`);
-                        }}
-                        className="flex items-center gap-2 w-full px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-                      >
-                        <Plus size={13} />
-                        Add Purchase
-                      </button>
-                      <div className="border-t border-slate-100 my-1"></div>
-                      <button
-                        onClick={() => {
-                          setIsMenuOpen(false);
-                          onDelete(p);
-                        }}
-                        className="flex items-center gap-2 w-full px-3 py-2 text-xs font-semibold text-red-650 hover:bg-red-50"
-                      >
-                        <Trash2 size={13} />
-                        Delete
-                      </button>
-                    </div>
-                  </>
-                )}
+                <ActionMenu
+                  triggerRef={menuTriggerRef}
+                  open={isMenuOpen}
+                  onClose={() => setIsMenuOpen(false)}
+                  width={164}
+                >
+                  <ActionMenuItem icon={<RefreshCw size={13} />} onClick={() => { setIsMenuOpen(false); navigate(`/stock-adjustment`); }}>
+                    Adjust Stock
+                  </ActionMenuItem>
+                  <ActionMenuItem icon={<History size={13} />} onClick={() => { setIsMenuOpen(false); navigate(`/stock-movement`); }}>
+                    Stock Movements
+                  </ActionMenuItem>
+                  <ActionMenuItem icon={<Plus size={13} />} onClick={() => { setIsMenuOpen(false); navigate(`/purchase/add`); }}>
+                    Add Purchase
+                  </ActionMenuItem>
+                  <ActionMenuDivider />
+                  <ActionMenuItem icon={<Trash2 size={13} />} danger onClick={() => { setIsMenuOpen(false); onDelete(p); }}>
+                    Delete
+                  </ActionMenuItem>
+                </ActionMenu>
               </div>
             </div>
           </td>
@@ -829,7 +808,7 @@ const ProductInfos = () => {
     const saved = localStorage.getItem("product_table_columns");
     return saved
       ? sortKeys(JSON.parse(saved).filter((key: string) => !hiddenProductColumns.has(key)))
-      : ["category", "status", "buy_price", "sell_price", "stocks", "reorder_point", "ui_id", "barcode", "serial_number"];
+      : ["category", "status", "buy_price", "sell_price", "stocks", "reorder_point", "ui_id", "barcode"];
   });
 
   const sortedSelectedKeys = useMemo(() => sortKeys(selectedKeys), [selectedKeys]);
@@ -1205,7 +1184,7 @@ const ProductInfos = () => {
                   />
                 </th>
                 <th className="px-3 py-2.5 w-10" />
-                <th className="px-3 py-2.5 min-w-[260px] text-[10px] font-semibold text-slate-400 uppercase tracking-wide">
+                <th className="px-3 py-2.5 min-w-[260px] text-[10px] font-semibold text-slate-800 uppercase tracking-wide">
                   Product
                 </th>
                 {sortedSelectedKeys.map((key) => {
@@ -1216,7 +1195,7 @@ const ProductInfos = () => {
                     return (
                       <th
                         key="cat_sup"
-                        className="px-3 py-2.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wide"
+                        className="px-3 py-2.5 text-[10px] font-semibold text-slate-800 uppercase tracking-wide"
                       >
                         Category
                       </th>
@@ -1230,13 +1209,13 @@ const ProductInfos = () => {
                   return (
                     <th
                       key={key}
-                      className="px-3 py-2.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wide"
+                      className="px-3 py-2.5 text-[10px] font-semibold text-slate-800 uppercase tracking-wide"
                     >
                       {getColumnLabel(key)}
                     </th>
                   );
                 })}
-                <th className="px-3 py-2.5 w-24 text-right text-[10px] font-semibold text-slate-400 uppercase tracking-wide sticky right-0 bg-slate-50 border-l border-slate-200 z-30 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.08)]">
+                <th className="px-3 py-2.5 w-24 text-right text-[10px] font-semibold text-slate-800 uppercase tracking-wide sticky right-0 bg-slate-50 border-l border-slate-200 z-30 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.08)]">
                   Actions
                 </th>
               </tr>

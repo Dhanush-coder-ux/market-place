@@ -77,5 +77,15 @@ export const shopApi = {
   },
   deleteAnnouncement: async (announcement_id: number) => {
     return await apiClient.delete(`${ENDPOINTS.SHOPS}/announcements/${announcement_id}?shop_id=${SHOP_ID}`);
+  },
+  
+  uploadShopImage: async (file: File, imageType: "logo" | "banner") => {
+    const userId = localStorage.getItem("user_id") || "";
+    const formData = new FormData();
+    formData.append("files", file);
+    formData.append("shop_id", SHOP_ID);
+    formData.append("image_type", imageType);
+    formData.append("user_id", userId);
+    return await apiClient.postFormData(`${ENDPOINTS.SHOPS}/upload/images`, formData);
   }
 };

@@ -46,6 +46,8 @@ export interface ProductItem {
   marginAmount: number | "";
   marginType: "percent" | "amount" | "sellingPrice";
   unit: string;
+  unit_infos?: { name: string; sub_units?: { name: string; factor: number }[] };
+  selectedUnit?: string;
   taxGst: number | "";
   storageLoc: string;
   reorderPoint: number | "";
@@ -92,7 +94,7 @@ const PurchaseForm = () => {
   const defaultProductRow: ProductItem = {
     id: crypto.randomUUID(), name: "", quantity: "", costPrice: "", sellingPrice: "",
     marginPercent: "", marginAmount: "", marginType: "percent",
-    unit: "pc", taxGst: 18, storageLoc: "", reorderPoint: "", expiryDate: "", manufacturingDate: "", batchTracking: false, serialTracking: false, serialNumbers: "", batchNum: "", batch_id: "", serialno_id: "", sku: "", variant: "", size: ""
+    unit: "pc", unit_infos: undefined, selectedUnit: "pc", taxGst: 18, storageLoc: "", reorderPoint: "", expiryDate: "", manufacturingDate: "", batchTracking: false, serialTracking: false, serialNumbers: "", batchNum: "", batch_id: "", serialno_id: "", sku: "", variant: "", size: ""
   };
 
   const [products, setProducts] = useState<ProductItem[]>([defaultProductRow]);
@@ -106,7 +108,7 @@ const PurchaseForm = () => {
   const [costMethod, setCostMethod] = useState("None");
   const [supplierDetails, setSupplierDetails] = useState<any>(null);
   const [isGstExpanded, setIsGstExpanded] = useState(false);
-  const [gstMode, setGstMode] = useState<"inclusive" | "exclusive">("inclusive");
+  const [gstMode, setGstMode] = useState<"inclusive" | "exclusive">("exclusive");
 
   // --- Calculations ---
   const stats = useMemo(() => {
@@ -180,14 +182,14 @@ const PurchaseForm = () => {
           const data = res.data ? (Array.isArray(res.data) ? res.data[0] : res.data) : res;
           const loadedSupplierId = data.supplier?.supplier_id || data.supplier?.id || data.supplier_id || "";
           const loadedSupplierName = data.supplier?.supplier_name || data.supplier?.name || data.supplier_name || "";
-          
+
           setPurchaseDetails(data.purchaseDetails || {
             supplier: loadedSupplierId,
             invoiceNo: data.invoice_no || "",
             date: data.purchase_date ? data.purchase_date.split("T")[0] : (data.date ? data.date.split("T")[0] : new Date().toISOString().split("T")[0]),
             referenceNo: data.reference_no || "",
           });
-          
+
           if (loadedSupplierId && !data.purchaseDetails) {
             if (!loadedSupplierName) {
               supplierApi.getById(SHOP_ID, loadedSupplierId).then((supRes: any) => {
@@ -225,8 +227,8 @@ const PurchaseForm = () => {
           const costMethodValue = data.calculation_infos?.divided_by || data.calculations?.divided_by;
           setCostMethod(
             costMethodValue === "BY_QUANTITY" ? "By Unit" :
-            costMethodValue === "BY_VALUE" ? "By Value" :
-            costMethodValue === "BY_EQUAL" ? "Equally" : "None"
+              costMethodValue === "BY_VALUE" ? "By Value" :
+                costMethodValue === "BY_EQUAL" ? "Equally" : "None"
           );
 
           // Populate gst mode
@@ -240,7 +242,7 @@ const PurchaseForm = () => {
             const pBuyPrice = p.pricing_infos?.[0]?.buy_price ?? p.pricing_infos?.buy_price ?? p.buy_price;
             const pSellPrice = p.pricing_infos?.[0]?.sell_price ?? p.pricing_infos?.sell_price ?? p.sell_price;
             const pStorage = p.storage_locations?.[0]?.name ?? p.storage_location_infos?.name ?? p.datas?.storage_location ?? "";
-            
+
             return {
               id: p.id || `temp-${Math.random().toString(36).substring(2, 9)}`,
               pricing_id: p.pricing_infos?.[0]?.pricing_id || p.pricing_infos?.[0]?.id || p.pricing_infos?.id,
@@ -268,8 +270,8 @@ const PurchaseForm = () => {
               serialno_id: p.serialno_id || p.serial_number?.id || p.serial_numbers?.id || p.serial_info?.serialno_id,
               storageLoc: pStorage,
               reorderPoint: p.reorder_point_infos?.reorder_point ?? p.reorder_point ?? p.datas?.reorder_point ?? 5,
-              serialNumbers: (p.serialno_infos ? p.serialno_infos.map((s:any) => s.name).join(',') : Array.isArray(p.serialno_numbers) ? p.serialno_numbers.join(',') : Array.isArray(p.serial_numbers) ? p.serial_numbers.join(',') : (p.serial_numbers?.serial_numbers || p.serial_number?.serial_numbers || p.serial_info?.serial_numbers || []).join(',')),
-              existingSerials: (p.serialno_infos ? p.serialno_infos.map((s:any) => s.name) : Array.isArray(p.serialno_numbers) ? p.serialno_numbers : Array.isArray(p.serial_numbers) ? p.serial_numbers : (p.serial_numbers?.serial_numbers || p.serial_number?.serial_numbers || p.serial_info?.serial_numbers || []))
+              serialNumbers: (p.serialno_infos ? p.serialno_infos.map((s: any) => s.name).join(',') : Array.isArray(p.serialno_numbers) ? p.serialno_numbers.join(',') : Array.isArray(p.serial_numbers) ? p.serial_numbers.join(',') : (p.serial_numbers?.serial_numbers || p.serial_number?.serial_numbers || p.serial_info?.serial_numbers || []).join(',')),
+              existingSerials: (p.serialno_infos ? p.serialno_infos.map((s: any) => s.name) : Array.isArray(p.serialno_numbers) ? p.serialno_numbers : Array.isArray(p.serial_numbers) ? p.serial_numbers : (p.serial_numbers?.serial_numbers || p.serial_number?.serial_numbers || p.serial_info?.serial_numbers || []))
             };
           })];
 
@@ -280,19 +282,21 @@ const PurchaseForm = () => {
             try {
               const invRes = await inventory.getInventoryById(SHOP_ID, p.inventory_id);
               if (invRes && invRes.data) {
-                 const invData = Array.isArray(invRes.data) ? invRes.data[0] : invRes.data;
-                 
-                 // Update tracking flags from live inventory data strictly
-                  p.batchTracking = !!(invData.type_infos?.has_batch || invData.has_batch || invData.datas?.has_batch);
-                  p.serialTracking = !!(invData.type_infos?.has_serialno || invData.has_serialno || invData.datas?.has_serialno);
-                }
-              } catch {
-                // ignore
+                const invData = Array.isArray(invRes.data) ? invRes.data[0] : invRes.data;
+                p.unit_infos = invData.unit_infos || null;
+                p.selectedUnit = p.unit;
+
+                // Update tracking flags from live inventory data strictly
+                p.batchTracking = !!(invData.type_infos?.has_batch || invData.has_batch || invData.datas?.has_batch);
+                p.serialTracking = !!(invData.type_infos?.has_serialno || invData.has_serialno || invData.datas?.has_serialno);
               }
+            } catch {
+              // ignore
             }
-            setProducts(updatedProducts);
-            setSoldStockWarnings(warnings);
           }
+          setProducts(updatedProducts);
+          setSoldStockWarnings(warnings);
+        }
       };
 
       fetchPurchase().finally(() => {
@@ -371,48 +375,48 @@ const PurchaseForm = () => {
 
 
   const resetForm = () => {
-   // Clear draft
-        const draftId = searchParams.get("draftId");
-        if (draftId) {
-          const savedDrafts = JSON.parse(
-            localStorage.getItem("purchase_drafts") || "[]"
-          );
-          const filtered = savedDrafts.filter((d: any) => d.id !== draftId);
-          localStorage.setItem("purchase_drafts", JSON.stringify(filtered));
-        }
+    // Clear draft
+    const draftId = searchParams.get("draftId");
+    if (draftId) {
+      const savedDrafts = JSON.parse(
+        localStorage.getItem("purchase_drafts") || "[]"
+      );
+      const filtered = savedDrafts.filter((d: any) => d.id !== draftId);
+      localStorage.setItem("purchase_drafts", JSON.stringify(filtered));
+    }
 
-        // Reset form
-        setPurchaseDetails({
-          supplier: "",
-          invoiceNo: "",
-          date: new Date().toISOString().split("T")[0],
-          referenceNo: `PUR-${new Date().getFullYear()}-${String(
-            Math.floor(Math.random() * 10000)
-          ).padStart(4, "0")}`,
-        });
+    // Reset form
+    setPurchaseDetails({
+      supplier: "",
+      invoiceNo: "",
+      date: new Date().toISOString().split("T")[0],
+      referenceNo: `PUR-${new Date().getFullYear()}-${String(
+        Math.floor(Math.random() * 10000)
+      ).padStart(4, "0")}`,
+    });
 
-        setSupplierDetails(null);
+    setSupplierDetails(null);
 
-        setProducts([
-          {
-            ...defaultProductRow,
-            id: crypto.randomUUID(),
-          },
-        ]);
+    setProducts([
+      {
+        ...defaultProductRow,
+        id: crypto.randomUUID(),
+      },
+    ]);
 
-        setCharges({
-          transport: "",
-          other: "",
-        });
+    setCharges({
+      transport: "",
+      other: "",
+    });
 
-        setPayment({
-          method: "CASH",
-          amountPaid: "",
-        });
+    setPayment({
+      method: "CASH",
+      amountPaid: "",
+    });
 
-        setCostMethod("None");
-        setSoldStockWarnings([]);
-}
+    setCostMethod("None");
+    setSoldStockWarnings([]);
+  }
 
   const handleSavePurchase = useCallback(async () => {
     if (isSubmittingRef.current) return;
@@ -487,24 +491,29 @@ const PurchaseForm = () => {
           finalSellPrice = Number(p.sellingPrice) || 0;
         }
 
-          const serials = p.serialNumbers ? p.serialNumbers.split(",").map(s => s.trim()).filter(Boolean) : [];
+        const serials = p.serialNumbers ? p.serialNumbers.split(",").map(s => s.trim()).filter(Boolean) : [];
 
-          return {
-            id: id ? p.id : undefined,
-            product_id: p.inventory_id || "unknown",
-            variant_id: p.variant_id || undefined,
-            batch_infos: (!p.batch_id && p.batchTracking && p.batchNum) ? {
-              name: p.batchNum,
-              manufacturing_date: p.manufacturingDate || new Date().toISOString(),
-              expiry_date: p.expiryDate || new Date().toISOString()
-            } : null,
-            serialno_numbers: serials.length > 0 ? serials : null,
-            storage_location_infos: p.storageLoc ? { name: p.storageLoc } : null,
-            reorder_point_infos: p.reorderPoint ? { reorder_point: Number(p.reorderPoint) } : null,
-            pricing_infos: {
-              buy_price: Number(baseCost.toFixed(2)),
-              sell_price: Number(finalSellPrice.toFixed(2))
-            },
+        return {
+          id: id ? p.id : undefined,
+          product_id: p.inventory_id || "unknown",
+          variant_id: p.variant_id || undefined,
+          batch_infos: p.batchTracking && p.batchNum
+            ? (p.batch_id
+                ? { id: p.batch_id }
+                : {
+                    name: p.batchNum,
+                    manufacturing_date: p.manufacturingDate || new Date().toISOString(),
+                    expiry_date: p.expiryDate || new Date().toISOString()
+                  }
+              )
+            : null,
+          serialno_numbers: serials.length > 0 ? serials : null,
+          storage_location_infos: p.storageLoc ? { name: p.storageLoc } : null,
+          reorder_point_infos: p.reorderPoint ? { reorder_point: Number(p.reorderPoint) } : null,
+          pricing_infos: {
+            buy_price: Number(baseCost.toFixed(2)),
+            sell_price: Number(finalSellPrice.toFixed(2))
+          },
           gst: String(p.taxGst || 0).includes("%") ? String(p.taxGst || 0) : `${p.taxGst || 0}%`,
           stock_infos: {
             stocks: q
@@ -568,6 +577,8 @@ const PurchaseForm = () => {
           items: transformedProducts.map((p: any) => ({
             id: p.id,
             product_id: p.product_id,
+            variant_id: p.variant_id,
+            batch_infos: p.batch_infos,
             serialno_numbers: p.serialno_numbers,
             storage_location_infos: p.storage_location_infos,
             reorder_point_infos: p.reorder_point_infos,
@@ -658,143 +669,143 @@ const PurchaseForm = () => {
 
   return (
     <>
-    <PurchaseSuccessModal
-      open={showSuccessModal}
-      supplier={supplierDetails?.name}
-      invoiceNo={purchaseDetails.invoiceNo}
-      total={stats.grandTotal}
-      onAddAnother={() => {
-        resetForm();
-        setShowSuccessModal(false);
-      }}
-      onViewPurchases={() => {
-        navigate("/purchase-history");
-      }}
-    />
+      <PurchaseSuccessModal
+        open={showSuccessModal}
+        supplier={supplierDetails?.name}
+        invoiceNo={purchaseDetails.invoiceNo}
+        total={stats.grandTotal}
+        onAddAnother={() => {
+          resetForm();
+          setShowSuccessModal(false);
+        }}
+        onViewPurchases={() => {
+          navigate("/purchase-history");
+        }}
+      />
       <div className="min-h-screen bg-slate-50/50 p-4 md:p-6 lg:p-8 font-sans">
         <div className="max-w-[1600px] mx-auto flex flex-col xl:flex-row gap-6 items-start">
 
           {/* --- Left Column (Scrollable Content) --- */}
           <div className="flex-1 w-full space-y-6 min-w-0">
 
-          {soldStockWarnings.length > 0 && (
-            <div className="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-lg shadow-sm animate-in fade-in slide-in-from-top-2">
-              <div className="flex items-start gap-3">
-                <Info className="text-amber-500 shrink-0 mt-0.5" size={20} />
-                <div>
-                  <h3 className="text-amber-800 font-bold text-sm uppercase tracking-wide">Warning: Stock Already Sold</h3>
-                  <p className="text-amber-700 text-xs mt-1 leading-relaxed font-medium">
-                    Some items from this purchase have already been sold. Editing their quantities or prices will retroactively affect historical profit margins.
-                  </p>
-                  <ul className="list-disc list-inside text-amber-700 text-xs mt-2 font-semibold space-y-0.5">
-                    {soldStockWarnings.map((w, i) => (
-                      <li key={i}>{w}</li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* 1. Purchase Details Card */}
-          <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden transition-all hover:shadow-md">
-            <div className="px-8 py-5 bg-gradient-to-r from-blue-50/50 to-transparent border-b border-slate-100 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600 border border-blue-200 shadow-sm">
-                <PackageOpen size={20} />
-              </div>
-              <div>
-                <h2 className="text-sm font-black text-slate-800 uppercase tracking-widest">Purchase Details</h2>
-                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">Basic information & supplier</p>
-              </div>
-
-            </div>
-
-            <div className="p-8 grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="flex flex-col gap-2">
-                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Supplier *</label>
-                <SearchSelect
-                  labelKey="name"
-                  valueKey="id"
-                  fetchOptions={async (q) => await supplierApi.searchSuppliers(q)}
-                  options={supplierDetails ? [supplierDetails] : []}
-                  value={supplierDetails?.id || purchaseDetails.supplier}
-                  onChange={(val, opt: any) => {
-                    setPurchaseDetails({ ...purchaseDetails, supplier: val ? String(val) : "" });
-                    setSupplierDetails(opt || null);
-                  }}
-                  // 💡 Triggers the On-The-Fly Supplier Modal
-                  onCreateNew={(query) => openQuickCreate("SUPPLIER", (newSupplier: any) => {
-                    setPurchaseDetails(prev => ({ ...prev, supplier: String(newSupplier.id) }));
-                    setSupplierDetails(newSupplier);
-                  }, { name: query })}
-                  placeholder="Search Supplier..."
-                  className="w-full h-11"
-                  entityName="Supplier"
-                />
-              </div>
-
-              <Input
-                label="Supplier Invoice #"
-                tooltip="Enter the invoice number provided by the supplier for this purchase."
-                placeholder="INV-2026-..."
-                value={purchaseDetails.invoiceNo}
-                onChange={(e) => setPurchaseDetails({ ...purchaseDetails, invoiceNo: e.target.value })}
-              />
-              <Input
-                label="Purchase Date"
-                tooltip="The date on which the purchase was made."
-                required
-                type="date"
-                value={purchaseDetails.date}
-                onChange={(e) => setPurchaseDetails({ ...purchaseDetails, date: e.target.value })}
-              />
-            </div>
-
-            {supplierDetails && (
-              <div className="px-8 pb-6 animate-in fade-in slide-in-from-top-2 duration-500">
-                <div className="p-3 bg-gradient-to-r from-blue-50/30 via-white to-blue-50/20 border border-blue-100 rounded-lg shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600 border border-blue-200 shadow-inner">
-                      <User size={20} />
-                    </div>
-                    <div>
-                      <p className="text-[9px] font-black text-blue-400 uppercase tracking-widest leading-none mb-0.5">Supplier</p>
-                      <p className="text-base font-black text-slate-800 tracking-tight">{supplierDetails.name || supplierDetails.supplier_name}</p>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-wrap items-center gap-2">
-                    <div className="flex items-center gap-2.5 px-3 py-1.5 bg-white rounded-lg border border-slate-100 transition-all hover:border-blue-200 group">
-                      <div className="w-6 h-6 rounded-md bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-blue-500 transition-colors">
-                        <Mail size={12} />
-                      </div>
-                      <div className="flex flex-col">
-                        <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none">Email</span>
-                        <span className="text-[10px] font-bold text-slate-600 truncate max-w-[150px]">
-                          {supplierDetails.email || "Missing"}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2.5 px-3 py-1.5 bg-white rounded-lg border border-slate-100 transition-all hover:border-emerald-200 group">
-                      <div className="w-6 h-6 rounded-md bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-emerald-500 transition-colors">
-                        <Smartphone size={12} />
-                      </div>
-                      <div className="flex flex-col">
-                        <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none">Phone</span>
-                        <span className="text-[10px] font-bold text-slate-600">
-                          {supplierDetails.phone || supplierDetails.mobile_number || "Missing"}
-                        </span>
-                      </div>
-                    </div>
+            {soldStockWarnings.length > 0 && (
+              <div className="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-lg shadow-sm animate-in fade-in slide-in-from-top-2">
+                <div className="flex items-start gap-3">
+                  <Info className="text-amber-500 shrink-0 mt-0.5" size={20} />
+                  <div>
+                    <h3 className="text-amber-800 font-bold text-sm uppercase tracking-wide">Warning: Stock Already Sold</h3>
+                    <p className="text-amber-700 text-xs mt-1 leading-relaxed font-medium">
+                      Some items from this purchase have already been sold. Editing their quantities or prices will retroactively affect historical profit margins.
+                    </p>
+                    <ul className="list-disc list-inside text-amber-700 text-xs mt-2 font-semibold space-y-0.5">
+                      {soldStockWarnings.map((w, i) => (
+                        <li key={i}>{w}</li>
+                      ))}
+                    </ul>
                   </div>
                 </div>
               </div>
             )}
-          </div>
 
-          {/* Additional Charges Card */}
-          <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col transition-all hover:shadow-md">
+            {/* 1. Purchase Details Card */}
+            <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden transition-all hover:shadow-md">
+              <div className="px-8 py-5 bg-gradient-to-r from-blue-50/50 to-transparent border-b border-slate-100 flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600 border border-blue-200 shadow-sm">
+                  <PackageOpen size={20} />
+                </div>
+                <div>
+                  <h2 className="text-sm font-black text-slate-800 uppercase tracking-widest">Purchase Details</h2>
+                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">Basic information & supplier</p>
+                </div>
+
+              </div>
+
+              <div className="p-8 grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="flex flex-col gap-2">
+                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Supplier *</label>
+                  <SearchSelect
+                    labelKey="name"
+                    valueKey="id"
+                    fetchOptions={async (q) => await supplierApi.searchSuppliers(q)}
+                    options={supplierDetails ? [supplierDetails] : []}
+                    value={supplierDetails?.id || purchaseDetails.supplier}
+                    onChange={(val, opt: any) => {
+                      setPurchaseDetails({ ...purchaseDetails, supplier: val ? String(val) : "" });
+                      setSupplierDetails(opt || null);
+                    }}
+                    // 💡 Triggers the On-The-Fly Supplier Modal
+                    onCreateNew={(query) => openQuickCreate("SUPPLIER", (newSupplier: any) => {
+                      setPurchaseDetails(prev => ({ ...prev, supplier: String(newSupplier.id) }));
+                      setSupplierDetails(newSupplier);
+                    }, { name: query })}
+                    placeholder="Search Supplier..."
+                    className="w-full h-11"
+                    entityName="Supplier"
+                  />
+                </div>
+
+                <Input
+                  label="Supplier Invoice #"
+                  tooltip="Enter the invoice number provided by the supplier for this purchase."
+                  placeholder="INV-2026-..."
+                  value={purchaseDetails.invoiceNo}
+                  onChange={(e) => setPurchaseDetails({ ...purchaseDetails, invoiceNo: e.target.value })}
+                />
+                <Input
+                  label="Purchase Date"
+                  tooltip="The date on which the purchase was made."
+                  required
+                  type="date"
+                  value={purchaseDetails.date}
+                  onChange={(e) => setPurchaseDetails({ ...purchaseDetails, date: e.target.value })}
+                />
+              </div>
+
+              {supplierDetails && (
+                <div className="px-8 pb-6 animate-in fade-in slide-in-from-top-2 duration-500">
+                  <div className="p-3 bg-gradient-to-r from-blue-50/30 via-white to-blue-50/20 border border-blue-100 rounded-lg shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600 border border-blue-200 shadow-inner">
+                        <User size={20} />
+                      </div>
+                      <div>
+                        <p className="text-[9px] font-black text-blue-400 uppercase tracking-widest leading-none mb-0.5">Supplier</p>
+                        <p className="text-base font-black text-slate-800 tracking-tight">{supplierDetails.name || supplierDetails.supplier_name}</p>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2">
+                      <div className="flex items-center gap-2.5 px-3 py-1.5 bg-white rounded-lg border border-slate-100 transition-all hover:border-blue-200 group">
+                        <div className="w-6 h-6 rounded-md bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-blue-500 transition-colors">
+                          <Mail size={12} />
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none">Email</span>
+                          <span className="text-[10px] font-bold text-slate-600 truncate max-w-[150px]">
+                            {supplierDetails.email || "Missing"}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2.5 px-3 py-1.5 bg-white rounded-lg border border-slate-100 transition-all hover:border-emerald-200 group">
+                        <div className="w-6 h-6 rounded-md bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-emerald-500 transition-colors">
+                          <Smartphone size={12} />
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none">Phone</span>
+                          <span className="text-[10px] font-bold text-slate-600">
+                            {supplierDetails.phone || supplierDetails.mobile_number || "Missing"}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Additional Charges Card */}
+            <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col transition-all hover:shadow-md">
               <div className="px-6 py-4 bg-gradient-to-r from-slate-50 to-transparent border-b border-slate-100 flex items-center gap-3">
                 <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-600 border border-slate-200 shadow-sm">
                   <Banknote size={16} />
@@ -804,156 +815,156 @@ const PurchaseForm = () => {
 
               <div className="p-6 flex flex-col gap-6">
 
-                    {/* Row 1 & 2: Transport, Other Charges, Paid By, Distribute By */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                      {/* Transport */}
-                      <div className="flex flex-col gap-2">
-                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5 group cursor-help w-fit">
-                          Transport Charge
-                          <Tooltip message="Delivery or transportation costs charged by the supplier.">
-                            <span className="cursor-help flex"><Info size={12} className="text-slate-400 group-hover:text-blue-500 transition-colors" /></span>
-                          </Tooltip>
-                        </label>
-                        <div className="relative">
-                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-black">₹</span>
-                          <input
-                            type="number"
-                            placeholder="0"
-                            className="w-full h-11 pl-8 pr-3 bg-white border border-slate-200 rounded-lg text-sm font-bold text-slate-700 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-400/10 transition-all tabular-nums shadow-sm"
-                            value={charges.transport as any}
-                            onChange={(e) => setCharges({ ...charges, transport: e.target.value ? Number(e.target.value) : "" })}
-                          />
-                        </div>
-                      </div>
-
-                      {/* Other Charges */}
-                      <div className="flex flex-col gap-2">
-                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5 group cursor-help w-fit">
-                          Other Charges
-                          <Tooltip message="Any additional fees, loading/unloading costs, or miscellaneous charges.">
-                            <span className="cursor-help flex"><Info size={12} className="text-slate-400 group-hover:text-blue-500 transition-colors" /></span>
-                          </Tooltip>
-                        </label>
-                        <div className="relative">
-                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-black">₹</span>
-                          <input
-                            type="number"
-                            placeholder="0"
-                            className="w-full h-11 pl-8 pr-3 bg-white border border-slate-200 rounded-lg text-sm font-bold text-slate-700 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-400/10 transition-all tabular-nums shadow-sm"
-                            value={charges.other as any}
-                            onChange={(e) => setCharges({ ...charges, other: e.target.value ? Number(e.target.value) : "" })}
-                          />
-                        </div>
-                      </div>
-
-                      {/* Paid By (Dropdown) */}
-                      <div className="flex flex-col gap-2">
-                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5 group cursor-help w-fit">
-                          Paid By
-                          <Tooltip message="The method of payment used for this transaction.">
-                            <span className="cursor-help flex"><Info size={12} className="text-slate-400 group-hover:text-blue-500 transition-colors" /></span>
-                          </Tooltip>
-                        </label>
-                        <ReusableSelect
-                          value={payment.method}
-                          onValueChange={(val) => setPayment({ ...payment, method: val as PaymentMethod })}
-                          options={[
-                            { value: "CASH", label: "Cash" },
-                            { value: "UPI", label: "UPI" },
-                            { value: "CARD", label: "Credit/Debit Card" },
-                            { value: "BANK", label: "Bank Transfer" }
-                          ]}
-                          placeholder="Select Payment Method"
-                        />
-                      </div>
-
-
+                {/* Row 1 & 2: Transport, Other Charges, Paid By, Distribute By */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {/* Transport */}
+                  <div className="flex flex-col gap-2">
+                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5 group cursor-help w-fit">
+                      Transport Charge
+                      <Tooltip message="Delivery or transportation costs charged by the supplier.">
+                        <span className="cursor-help flex"><Info size={12} className="text-slate-400 group-hover:text-blue-500 transition-colors" /></span>
+                      </Tooltip>
+                    </label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-black">₹</span>
+                      <input
+                        type="number"
+                        placeholder="0"
+                        className="w-full h-11 pl-8 pr-3 bg-white border border-slate-200 rounded-lg text-sm font-bold text-slate-700 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-400/10 transition-all tabular-nums shadow-sm"
+                        value={charges.transport as any}
+                        onChange={(e) => setCharges({ ...charges, transport: e.target.value ? Number(e.target.value) : "" })}
+                      />
                     </div>
+                  </div>
 
-                    {/* Distribute By */}
-                    <div className="flex flex-col gap-2">
-                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5 group cursor-help w-fit">
-                        Distribute By
-                        <Tooltip message="How the additional charges should be distributed across the purchased items' cost price.">
-                          <span className="cursor-help flex"><Info size={12} className="text-slate-400 group-hover:text-blue-500 transition-colors" /></span>
-                        </Tooltip>
-                      </label>
-                      <div className="flex items-center gap-1.5">
-                        {[
-                          { name: "None", tooltip: "Do not allocate additional charges to product cost" },
-                          { name: "By Unit", tooltip: "Allocate proportionally based on item quantity" },
-                          { name: "By Value", tooltip: "Allocate proportionally based on total item value" },
-                          { name: "Equally", tooltip: "Split additional charges equally across all items" }
-                        ].map((method) => (
-                          <button
-                            key={method.name}
-                            onClick={() => setCostMethod(method.name)}
-                            className={`px-2 py-1.5 h-11 flex items-center justify-center gap-1.5 text-[10px] font-bold uppercase tracking-wider rounded-lg border transition-all flex-1 whitespace-nowrap ${costMethod === method.name
-                              ? "border-blue-500 bg-blue-50 text-blue-700 shadow-sm"
-                              : "border-slate-200 bg-white text-slate-500 hover:border-blue-200 hover:bg-slate-50"
-                              }`}
-                          >
-                            {method.name}
-                            <Tooltip message={method.tooltip}>
-                              <span className="cursor-help flex items-center justify-center group/tooltip relative">
-                                <Info size={12} className={`transition-colors ${costMethod === method.name ? "text-blue-500" : "text-slate-400 group-hover:text-blue-400"}`} />
-                              </span>
-                            </Tooltip>
-                          </button>
-                        ))}
-                      </div>
+                  {/* Other Charges */}
+                  <div className="flex flex-col gap-2">
+                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5 group cursor-help w-fit">
+                      Other Charges
+                      <Tooltip message="Any additional fees, loading/unloading costs, or miscellaneous charges.">
+                        <span className="cursor-help flex"><Info size={12} className="text-slate-400 group-hover:text-blue-500 transition-colors" /></span>
+                      </Tooltip>
+                    </label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-black">₹</span>
+                      <input
+                        type="number"
+                        placeholder="0"
+                        className="w-full h-11 pl-8 pr-3 bg-white border border-slate-200 rounded-lg text-sm font-bold text-slate-700 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-400/10 transition-all tabular-nums shadow-sm"
+                        value={charges.other as any}
+                        onChange={(e) => setCharges({ ...charges, other: e.target.value ? Number(e.target.value) : "" })}
+                      />
                     </div>
+                  </div>
+
+                  {/* Paid By (Dropdown) */}
+                  <div className="flex flex-col gap-2">
+                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5 group cursor-help w-fit">
+                      Paid By
+                      <Tooltip message="The method of payment used for this transaction.">
+                        <span className="cursor-help flex"><Info size={12} className="text-slate-400 group-hover:text-blue-500 transition-colors" /></span>
+                      </Tooltip>
+                    </label>
+                    <ReusableSelect
+                      value={payment.method}
+                      onValueChange={(val) => setPayment({ ...payment, method: val as PaymentMethod })}
+                      options={[
+                        { value: "CASH", label: "Cash" },
+                        { value: "UPI", label: "UPI" },
+                        { value: "CARD", label: "Credit/Debit Card" },
+                        { value: "BANK", label: "Bank Transfer" }
+                      ]}
+                      placeholder="Select Payment Method"
+                    />
+                  </div>
 
 
+                </div>
 
-                    {/* Expandable GST Rate Breakdown */}
-                    {stats.totalGst > 0 && (
-                      <div className="mt-6 border border-slate-200 rounded-xl overflow-hidden bg-white shadow-sm transition-all">
-                        <button
-                          onClick={() => setIsGstExpanded(!isGstExpanded)}
-                          className="w-full flex justify-between items-center p-4 bg-slate-50 hover:bg-slate-100 transition-colors"
-                        >
-                          <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
-                            GST Rate Breakdown
+                {/* Distribute By */}
+                <div className="flex flex-col gap-2">
+                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5 group cursor-help w-fit">
+                    Distribute By
+                    <Tooltip message="How the additional charges should be distributed across the purchased items' cost price.">
+                      <span className="cursor-help flex"><Info size={12} className="text-slate-400 group-hover:text-blue-500 transition-colors" /></span>
+                    </Tooltip>
+                  </label>
+                  <div className="flex items-center gap-1.5">
+                    {[
+                      { name: "None", tooltip: "Do not allocate additional charges to product cost" },
+                      { name: "By Unit", tooltip: "Allocate proportionally based on item quantity" },
+                      { name: "By Value", tooltip: "Allocate proportionally based on total item value" },
+                      { name: "Equally", tooltip: "Split additional charges equally across all items" }
+                    ].map((method) => (
+                      <button
+                        key={method.name}
+                        onClick={() => setCostMethod(method.name)}
+                        className={`px-2 py-1.5 h-11 flex items-center justify-center gap-1.5 text-[10px] font-bold uppercase tracking-wider rounded-lg border transition-all flex-1 whitespace-nowrap ${costMethod === method.name
+                          ? "border-blue-500 bg-blue-50 text-blue-700 shadow-sm"
+                          : "border-slate-200 bg-white text-slate-500 hover:border-blue-200 hover:bg-slate-50"
+                          }`}
+                      >
+                        {method.name}
+                        <Tooltip message={method.tooltip}>
+                          <span className="cursor-help flex items-center justify-center group/tooltip relative">
+                            <Info size={12} className={`transition-colors ${costMethod === method.name ? "text-blue-500" : "text-slate-400 group-hover:text-blue-400"}`} />
                           </span>
-                          <div className="flex items-center gap-3">
-                            <span className="text-xs font-bold text-slate-700 tabular-nums">Total GST: ₹{stats.totalGst.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                            {isGstExpanded ? <ChevronUp size={16} className="text-slate-400" /> : <ChevronDown size={16} className="text-slate-400" />}
-                          </div>
-                        </button>
+                        </Tooltip>
+                      </button>
+                    ))}
+                  </div>
+                </div>
 
-                        {isGstExpanded && (
-                          <div className="p-4 border-t border-slate-100 space-y-3 animate-in fade-in slide-in-from-top-1 duration-200">
-                            {Object.entries(stats.gstBreakdown).map(([rate, amt]) => {
-                              if (Number(amt) <= 0) return null;
-                              const basePriceForRate = products.reduce((acc, p) => {
-                                const q = Number(p.quantity) || 0;
-                                const c = Number(p.costPrice) || 0;
-                                const r = Number(p.taxGst) || 0;
-                                if (r === Number(rate)) {
-                                  return acc + (q * c);
-                                }
-                                return acc;
-                              }, 0);
-                              return (
-                                <div key={rate} className="flex justify-between items-center text-[11px] text-slate-600 font-medium">
-                                  <span className="text-slate-500">
-                                    GST {rate}% (on ₹{basePriceForRate.toLocaleString()})
-                                  </span>
-                                  <span className="text-slate-800 font-bold tabular-nums">
-                                    ₹{Number(amt).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                  </span>
-                                </div>
-                              );
-                            })}
-                            <div className="text-[10px] text-slate-400 italic pt-2 border-t border-slate-200/30 flex flex-col gap-0.5 leading-normal">
-                              <span className="font-semibold text-slate-500">Breakdown explanation:</span>
-                              <span>Product base: ₹{stats.subtotal.toLocaleString()} + GST: ₹{stats.totalGst.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })} = ₹{(stats.subtotal + stats.totalGst).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })} with GST</span>
+
+
+                {/* Expandable GST Rate Breakdown */}
+                {stats.totalGst > 0 && (
+                  <div className="mt-6 border border-slate-200 rounded-xl overflow-hidden bg-white shadow-sm transition-all">
+                    <button
+                      onClick={() => setIsGstExpanded(!isGstExpanded)}
+                      className="w-full flex justify-between items-center p-4 bg-slate-50 hover:bg-slate-100 transition-colors"
+                    >
+                      <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                        GST Rate Breakdown
+                      </span>
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs font-bold text-slate-700 tabular-nums">Total GST: ₹{stats.totalGst.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                        {isGstExpanded ? <ChevronUp size={16} className="text-slate-400" /> : <ChevronDown size={16} className="text-slate-400" />}
+                      </div>
+                    </button>
+
+                    {isGstExpanded && (
+                      <div className="p-4 border-t border-slate-100 space-y-3 animate-in fade-in slide-in-from-top-1 duration-200">
+                        {Object.entries(stats.gstBreakdown).map(([rate, amt]) => {
+                          if (Number(amt) <= 0) return null;
+                          const basePriceForRate = products.reduce((acc, p) => {
+                            const q = Number(p.quantity) || 0;
+                            const c = Number(p.costPrice) || 0;
+                            const r = Number(p.taxGst) || 0;
+                            if (r === Number(rate)) {
+                              return acc + (q * c);
+                            }
+                            return acc;
+                          }, 0);
+                          return (
+                            <div key={rate} className="flex justify-between items-center text-[11px] text-slate-600 font-medium">
+                              <span className="text-slate-500">
+                                GST {rate}% (on ₹{basePriceForRate.toLocaleString()})
+                              </span>
+                              <span className="text-slate-800 font-bold tabular-nums">
+                                ₹{Number(amt).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              </span>
                             </div>
-                          </div>
-                        )}
+                          );
+                        })}
+                        <div className="text-[10px] text-slate-400 italic pt-2 border-t border-slate-200/30 flex flex-col gap-0.5 leading-normal">
+                          <span className="font-semibold text-slate-500">Breakdown explanation:</span>
+                          <span>Product base: ₹{stats.subtotal.toLocaleString()} + GST: ₹{stats.totalGst.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })} = ₹{(stats.subtotal + stats.totalGst).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })} with GST</span>
+                        </div>
                       </div>
                     )}
+                  </div>
+                )}
 
               </div>
             </div>
@@ -988,7 +999,7 @@ const PurchaseForm = () => {
                 </div>
                 <h2 className="text-xs font-black text-slate-800 uppercase tracking-widest">Payment Summary</h2>
               </div>
-              
+
               <div className="p-6 flex flex-col h-full bg-slate-50/50">
                 <div className="space-y-3 mb-6">
                   <div className="flex justify-between items-center text-[13px]">

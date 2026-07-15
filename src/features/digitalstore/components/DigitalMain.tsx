@@ -22,6 +22,7 @@ import {
   Tag,
 } from "lucide-react";
 import { shopApi } from "@/services/api/shop";
+import { inventoryApi } from "@/services/api/inventory";
 import { SHOP_ID } from "@/services/endpoints";
 import ProductDashboard from "../pages/StoreProductManagement";
 import Promotions from "../pages/Promotions";
@@ -117,6 +118,7 @@ const TAB_CONFIG: { tab: TabType; icon: React.ElementType; desc: string }[] = [
 const DigitalMain = () => {
   const [activeTab, setActiveTab] = useState<TabType>("Announcements");
   const [shop, setShop] = useState<ShopData | null>(null);
+  const [fallbackProductImage, setFallbackProductImage] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -124,10 +126,21 @@ const DigitalMain = () => {
     const fetch = async () => {
       setLoading(true);
       try {
-        const res = await shopApi.getShopById(SHOP_ID);
-        const data = res?.data ?? res;
-        if (data) setShop(data);
-        else setError("Shop not found");
+        const [shopRes, productsRes] = await Promise.all([
+          shopApi.getShopById(SHOP_ID),
+          inventoryApi.getInventoriesByShop(SHOP_ID, { limit: "50" })
+        ]);
+        const data = shopRes?.data ?? shopRes;
+        if (data) {
+          setShop(data);
+          const products = productsRes?.data ?? productsRes ?? [];
+          const prodWithImg = products.find((p: any) => p.image_url || p.image || p.datas?.image_url || p.datas?.image);
+          if (prodWithImg) {
+            setFallbackProductImage(prodWithImg.image_url || prodWithImg.image || prodWithImg.datas?.image_url || prodWithImg.datas?.image);
+          }
+        } else {
+          setError("Shop not found");
+        }
       } catch (e) {
         console.error(e);
         setError("Failed to load shop details.");
@@ -237,6 +250,8 @@ const DigitalMain = () => {
               <div className="w-22 h-22 w-[88px] h-[88px] rounded-2xl border-4 border-white shadow-lg overflow-hidden bg-blue-50 flex items-center justify-center">
                 {shop.logo_url ? (
                   <img src={shop.logo_url} alt={shop.name} className="w-full h-full object-cover" />
+                ) : fallbackProductImage ? (
+                  <img src={fallbackProductImage} alt={shop.name} className="w-full h-full object-cover" />
                 ) : (
                   <span className="text-3xl font-extrabold text-blue-600">{initials}</span>
                 )}

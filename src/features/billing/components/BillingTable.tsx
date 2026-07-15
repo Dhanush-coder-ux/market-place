@@ -703,11 +703,15 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
                         className="w-9 h-9 rounded-lg flex items-center justify-center text-white text-[11px] font-black shrink-0 shadow-sm overflow-hidden"
                         style={{ backgroundColor: avatarBg }}
                       >
-                        {(product.images && product.images.length > 0) || (product.datas?.images && product.datas.images.length > 0) ? (
-                          <img src={product.images?.[0] || product.datas?.images?.[0]} alt={product.product_name} className="w-full h-full object-cover" />
-                        ) : (
-                          initials
-                        )}
+                        {(() => {
+                          const imgUrl = product.image_url || product.image || product.images || product.datas?.image_url || product.datas?.image || product.datas?.images;
+                          const singleUrl = Array.isArray(imgUrl) ? imgUrl[0] : imgUrl;
+                          return typeof singleUrl === "string" && singleUrl ? (
+                            <img src={singleUrl} alt={product.product_name} className="w-full h-full object-cover" />
+                          ) : (
+                            initials
+                          );
+                        })()}
                       </div>
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">
@@ -784,11 +788,16 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
                       className="w-10 h-10 rounded-xl flex items-center justify-center text-white text-[12px] font-black shrink-0 shadow-sm overflow-hidden"
                       style={{ backgroundColor: getAvatarBg(item.name) }}
                     >
-                      {(item._product?.images && item._product.images.length > 0) || (item._product?.datas?.images && item._product.datas.images.length > 0) ? (
-                        <img src={item._product?.images?.[0] || item._product?.datas?.images?.[0]} alt={item.name} className="w-full h-full object-cover" />
-                      ) : (
-                        getInitials(item.name)
-                      )}
+                      {(() => {
+                        const prod = item._product || {};
+                        const imgUrl = prod.image_url || prod.image || prod.images || prod.datas?.image_url || prod.datas?.image || prod.datas?.images;
+                        const singleUrl = Array.isArray(imgUrl) ? imgUrl[0] : imgUrl;
+                        return typeof singleUrl === "string" && singleUrl ? (
+                          <img src={singleUrl} alt={item.name} className="w-full h-full object-cover" />
+                        ) : (
+                          getInitials(item.name)
+                        );
+                      })()}
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 flex-wrap">

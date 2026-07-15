@@ -43,6 +43,7 @@ export interface VariantCombination {
     manufacturing_date: string;
   };
   reorder_point: string;
+  location?: string;
 }
 
 // --- Constants ---
@@ -224,14 +225,11 @@ export const VariantBuilder: React.FC<VariantBuilderProps> = ({ variantTypes, on
 interface VariantMatrixTableProps {
   combinations: VariantCombination[];
   variantTypes: VariantType[];
-  supportsSerials: boolean;
-  supportsBatch: boolean;
-  serialLabel: string;
   onChange: (combos: VariantCombination[]) => void;
 }
 
 export const VariantMatrixTable: React.FC<VariantMatrixTableProps> = ({
-  combinations, onChange, supportsSerials, supportsBatch, serialLabel
+  combinations, onChange
 }) => {
 
   const [barcodeBase, setbarcodeBase] = useState("");
@@ -309,11 +307,9 @@ export const VariantMatrixTable: React.FC<VariantMatrixTableProps> = ({
                   </th>
                 ))}
                 <th className="px-5 py-4 text-[10px] font-black uppercase text-slate-400 whitespace-nowrap">Barcode</th>
-                <th className="px-5 py-4 text-center text-[10px] font-black uppercase text-slate-400">Buy Price</th>
-                <th className="px-5 py-4 text-center text-[10px] font-black uppercase text-slate-400">Sell Price</th>
+                <th className="px-5 py-4 text-[10px] font-black uppercase text-slate-400 whitespace-nowrap">Storage Location</th>
                 <th className="px-5 py-4 text-center text-[10px] font-black uppercase text-slate-400">Reorder Pt</th>
-                <th className="px-5 py-4 text-center text-[10px] font-black uppercase text-slate-400">Tracking</th>
-                <th className="px-5 py-4 text-center text-[10px] font-black uppercase text-slate-400">Status</th>
+                <th className="px-5 py-4 text-center text-[10px] font-black uppercase text-slate-400">Active</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
@@ -338,24 +334,10 @@ export const VariantMatrixTable: React.FC<VariantMatrixTableProps> = ({
                       </td>
                       <td className="px-5 py-4">
                         <input
-                          className="h-9 px-3 text-xs border border-slate-200 rounded-lg w-20 text-center font-mono focus:ring-2 focus:ring-blue-100 outline-none"
-                          placeholder="0.00"
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          value={combo.buy_price}
-                          onChange={e => update(combo.id, "buy_price", e.target.value)}
-                        />
-                      </td>
-                      <td className="px-5 py-4">
-                        <input
-                          className="h-9 px-3 text-xs border border-slate-200 rounded-lg w-20 text-center font-mono focus:ring-2 focus:ring-blue-100 outline-none"
-                          placeholder="0.00"
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          value={combo.price}
-                          onChange={e => update(combo.id, "price", e.target.value)}
+                          className="h-9 px-3 text-xs border border-slate-200 rounded-lg w-36 focus:ring-2 focus:ring-blue-100 outline-none"
+                          placeholder="e.g. Aisle 4, Shelf B"
+                          value={combo.location || ""}
+                          onChange={e => update(combo.id, "location", e.target.value)}
                         />
                       </td>
                       <td className="px-5 py-4">
@@ -366,13 +348,6 @@ export const VariantMatrixTable: React.FC<VariantMatrixTableProps> = ({
                           value={combo.reorder_point}
                           onChange={e => update(combo.id, "reorder_point", e.target.value)}
                         />
-                      </td>
-                      <td className="px-5 py-4 text-center">
-                        <div className="flex items-center justify-center gap-1.5">
-                          {supportsSerials && <span className="px-1.5 py-0.5 rounded-md bg-violet-50 text-violet-600 text-[9px] font-bold border border-violet-100" title={serialLabel}>Serial</span>}
-                          {supportsBatch && <span className="px-1.5 py-0.5 rounded-md bg-blue-50 text-blue-600 text-[9px] font-bold border border-blue-100">Batch</span>}
-                          {!supportsSerials && !supportsBatch && <span className="text-[10px] text-slate-300 font-medium">—</span>}
-                        </div>
                       </td>
                       <td className="px-5 py-4 text-center">
                         <button type="button"

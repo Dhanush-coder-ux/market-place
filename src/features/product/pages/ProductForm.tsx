@@ -361,15 +361,83 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
   const [units, setUnits] = useState<{ id: string; name: string }[]>([]);
 
+  // Pagination states for Categories (offset represents page number, 1-indexed)
+  const [categoriesOffset, setCategoriesOffset] = useState(1);
+  const [hasMoreCategories, setHasMoreCategories] = useState(true);
+  const [loadingCategories, setLoadingCategories] = useState(false);
+
+  // Pagination states for Units (offset represents page number, 1-indexed)
+  const [unitsOffset, setUnitsOffset] = useState(1);
+  const [hasMoreUnits, setHasMoreUnits] = useState(true);
+  const [loadingUnits, setLoadingUnits] = useState(false);
+
+  const fetchMoreCategories = async () => {
+    if (loadingCategories || !hasMoreCategories) return;
+    setLoadingCategories(true);
+    try {
+      const nextPage = categoriesOffset + 1;
+      const res = await utilityApi.getShopCategories(SHOP_ID, { limit: "100", offset: String(nextPage) });
+      if (res?.data && res.data.length > 0) {
+        setCategories(prev => {
+          const existingIds = new Set(prev.map(c => c.id));
+          const filtered = res.data.filter((c: any) => !existingIds.has(c.id));
+          return [...prev, ...filtered];
+        });
+        setCategoriesOffset(nextPage);
+        if (res.data.length < 100) {
+          setHasMoreCategories(false);
+        }
+      } else {
+        setHasMoreCategories(false);
+      }
+    } catch (e) {
+      console.error("Failed to fetch more categories", e);
+    } finally {
+      setLoadingCategories(false);
+    }
+  };
+
+  const fetchMoreUnits = async () => {
+    if (loadingUnits || !hasMoreUnits) return;
+    setLoadingUnits(true);
+    try {
+      const nextPage = unitsOffset + 1;
+      const res = await utilityApi.getShopUnits(SHOP_ID, { limit: "100", offset: String(nextPage) });
+      if (res?.data && res.data.length > 0) {
+        setUnits(prev => {
+          const existingIds = new Set(prev.map(u => u.id));
+          const filtered = res.data.filter((u: any) => !existingIds.has(u.id));
+          return [...prev, ...filtered];
+        });
+        setUnitsOffset(nextPage);
+        if (res.data.length < 100) {
+          setHasMoreUnits(false);
+        }
+      } else {
+        setHasMoreUnits(false);
+      }
+    } catch (e) {
+      console.error("Failed to fetch more units", e);
+    } finally {
+      setLoadingUnits(false);
+    }
+  };
+
   useEffect(() => {
     const fetchDropdowns = async () => {
       try {
         const [catRes, unitRes] = await Promise.all([
-          utilityApi.getShopCategories(SHOP_ID),
-          utilityApi.getShopUnits(SHOP_ID)
+          utilityApi.getShopCategories(SHOP_ID, { limit: "100", offset: "1" }),
+          utilityApi.getShopUnits(SHOP_ID, { limit: "100", offset: "1" })
         ]);
-        if (catRes?.data) setCategories(catRes.data);
-        if (unitRes?.data) setUnits(unitRes.data);
+        if (catRes?.data) {
+          setCategories(catRes.data);
+          if (catRes.data.length < 100) setHasMoreCategories(false);
+        }
+        if (unitRes?.data) {
+          setUnits(unitRes.data);
+          if (unitRes.data.length < 100) setHasMoreUnits(false);
+        }
       } catch (e) {
         console.error("Failed to fetch custom dropdowns", e);
       }
@@ -808,11 +876,13 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
     try {
       await inventoryCustomFields.createField({
         shop_id: SHOP_ID,
-        field_name: newFieldName,
-        label_name: newFieldLabel,
-        type: newFieldType,
-        required: newFieldRequired,
-        visible_online: newFieldVisible,
+        field_infos: [{
+          field_name: newFieldName,
+          label_name: newFieldLabel,
+          type: newFieldType,
+          required: newFieldRequired,
+          visible_online: newFieldVisible,
+        }]
       });
       showToast("Custom field created successfully", "success");
       // Refresh definitions
@@ -874,6 +944,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                           onValueChange={(val) => { setForm(p => ({ ...p, category: val })); setVariantTypes([]); setCombinations([]); }}
                           options={categories.map(c => ({ value: c.id, label: c.name }))}
                           placeholder="Select category"
+                          onScrollEnd={fetchMoreCategories}
                           footer={
                             <button
                               onClick={() => setModalState({ type: "Category", query: "" })}
@@ -893,6 +964,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                           onValueChange={(val) => setForm(p => ({ ...p, unit: val }))}
                           options={units.map(u => ({ value: u.id, label: u.name }))}
                           placeholder="Select unit"
+                          onScrollEnd={fetchMoreUnits}
                           footer={
                             <button
                               onClick={() => setModalState({ type: "Unit", query: "" })}
@@ -1090,7 +1162,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                         value={form.reorder_point}
                         onChange={handleChange}
                         placeholder="5"
-                        rightEl="pcs"
+                        rightEl={units.find(u => u.id === form.unit || u.name === form.unit)?.name || "pcs"}
                         tooltip="Alert triggered when stock falls to this level."
                       />
                       <InputField
@@ -1295,9 +1367,6 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                       <VariantMatrixTable
                         combinations={combinations}
                         variantTypes={variantTypes}
-                        supportsSerials={form.serial_tracking}
-                        supportsBatch={form.batch_tracking}
-                        serialLabel={categoryConfig.serialLabel}
                         onChange={setCombinations}
                       />
                     </div>
@@ -1435,13 +1504,6 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
       >
         <div className="space-y-5">
           <InputField
-            label="Field Name (Internal Name)"
-            required
-            value={newFieldName}
-            onChange={(e) => setNewFieldName(e.target.value)}
-            placeholder="e.g. rack_number"
-          />
-          <InputField
             label="Label Name (Display Name)"
             required
             value={newFieldLabel}
@@ -1451,6 +1513,13 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
               setNewFieldName(val.toLowerCase().replace(/[^a-z0-9\s]/g, "").trim().replace(/\s+/g, "_"));
             }}
             placeholder="e.g. Rack Number"
+          />
+          <InputField
+            label="Field Name (Internal Name)"
+            required
+            disabled
+            value={newFieldName}
+            placeholder="Auto-generated from Label Name"
           />
           <ReusableSelect
             label="Field Type"

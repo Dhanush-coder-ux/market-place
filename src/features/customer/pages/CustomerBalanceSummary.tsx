@@ -99,7 +99,7 @@ export default function CustomerBalanceSummary() {
         data.forEach((c: any) => {
           if (!c) return;
           // Root level keys from schema
-          const rootKeys = ["email", "mobile_number", "outstanding", "credit_limit", "is_active", "ui_id", "created_at", "updated_at"];
+          const rootKeys = ["email", "mobile_number", "outstanding", "credit_limit", "can_have_credit", "ui_id", "created_at", "updated_at"];
           rootKeys.forEach(k => keys.add(k));
 
           // Nested datas keys
@@ -133,16 +133,16 @@ export default function CustomerBalanceSummary() {
 
 
   const stats = useMemo(() => {
-    let active = 0;
+    let creditCount = 0;
     let outstanding = 0;
     let credit = 0;
     customers.forEach(c => {
       if (!c) return;
-      if (c.is_active ?? c.datas?.is_active ?? true) active++;
+      if (c.can_have_credit ?? c.datas?.can_have_credit ?? false) creditCount++;
       outstanding += Number(c.outstanding_infos?.amount ?? c.outstanding ?? c.datas?.outstanding_balance ?? 0);
       credit += Number((c as any).credit_infos?.limit ?? c.credit_limit ?? c.datas?.credit_limit ?? 0);
     });
-    return { active, outstanding, credit };
+    return { active: creditCount, outstanding, credit };
   }, [customers]);
 
   const filteredCustomers = useMemo(() => {
@@ -177,7 +177,7 @@ export default function CustomerBalanceSummary() {
             className="flex-1"
           />
           <StatCard
-            label="Active Customers"
+            label="Credit Customers"
             value={stats.active}
             icon={Users}
             iconBg="bg-emerald-50"
@@ -347,8 +347,23 @@ export default function CustomerBalanceSummary() {
 
                       let displayValue = value != null && value !== '' ? String(value) : '—';
 
-                      if (key === 'is_active') {
-                        displayValue = value ? "Active" : "Inactive";
+                      if (key === 'can_have_credit') {
+                        const hasCred = value ?? false;
+                        return (
+                          <td key={key} className="px-6 py-4 whitespace-nowrap">
+                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                              hasCred
+                                ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
+                                : 'bg-slate-50 text-slate-400 border-slate-200'
+                            }`}>
+                              <span className={`w-1.5 h-1.5 rounded-full ${hasCred ? 'bg-emerald-500' : 'bg-slate-400'}`} />
+                              {hasCred ? 'Yes' : 'No'}
+                            </span>
+                          </td>
+                        );
+                      } else if (key === 'outstanding') {
+                        value = (c as any).outstanding_infos?.amount ?? c.outstanding ?? c.datas?.outstanding_balance ?? 0;
+                        displayValue = `₹${Number(value).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
                       } else if ((key === 'created_at' || key === 'updated_at') && value) {
                         displayValue = new Date(value).toLocaleString("en-IN", {
                           year: 'numeric', month: 'short', day: 'numeric',

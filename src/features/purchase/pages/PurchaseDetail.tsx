@@ -396,8 +396,16 @@ const outstanding =
                         <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
                           <td className="px-6 py-4">
                             <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0 border bg-indigo-50 border-indigo-100">
-                                <Package size={16} className="text-indigo-500" />
+                              <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0 border bg-indigo-50 border-indigo-100 overflow-hidden">
+                                {(() => {
+                                  const imgUrl = (product as any).image_url || (product as any).image || (product as any).product?.image_url || (product as any).product?.image || (product as any).datas?.image_url || (product as any).datas?.image;
+                                  const singleUrl = Array.isArray(imgUrl) ? imgUrl[0] : imgUrl;
+                                  return typeof singleUrl === "string" && singleUrl ? (
+                                    <img src={singleUrl} alt={product.name} className="w-full h-full object-cover" />
+                                  ) : (
+                                    <Package size={16} className="text-indigo-500" />
+                                  );
+                                })()}
                               </div>
                               <div className="min-w-0">
                                 <p className="text-sm font-bold text-slate-800 truncate">{product.name}</p>

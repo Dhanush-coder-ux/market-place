@@ -1,4 +1,4 @@
-import React, { useState, useEffect, Fragment, useMemo, useCallback } from "react";
+import React, { useRef, useState, useEffect, Fragment, useMemo, useCallback } from "react";
 import {
   X,
   Hash,
@@ -22,6 +22,7 @@ import {
   Plus,
   Trash2
 } from "lucide-react";
+import ActionMenu, { ActionMenuItem } from "@/components/common/ActionMenu";
 import { VariantRows, BatchCards, SerialBadgeList } from "../components/StockTree";
 import { useApi } from "@/context/ApiContext";
 import { useHeader } from "@/context/HeaderContext";
@@ -398,6 +399,7 @@ const ProductRow = React.memo(
 
     const navigate = useNavigate();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const menuTriggerRef = useRef<HTMLButtonElement>(null);
     const [showAllBadges, setShowAllBadges] = useState(false);
 
     const badges = [];
@@ -482,11 +484,15 @@ const ProductRow = React.memo(
           <td className="px-3 py-2.5">
             <div className="flex items-center gap-2.5">
               <div className="w-7 h-7 rounded-md bg-slate-100 flex items-center justify-center text-slate-600 text-[11px] font-semibold shrink-0 select-none overflow-hidden">
-                {datas.images && datas.images.length > 0 ? (
-                  <img src={datas.images[0]} alt={productName} className="w-full h-full object-cover" />
-                ) : (
-                  initial
-                )}
+                {(() => {
+                  const imgUrl = (item as any).image_url || (item as any).image || (datas as any).image_url || (datas as any).image || datas.images;
+                  const singleUrl = Array.isArray(imgUrl) ? imgUrl[0] : imgUrl;
+                  return typeof singleUrl === "string" && singleUrl ? (
+                    <img src={singleUrl} alt={productName} className="w-full h-full object-cover" />
+                  ) : (
+                    initial
+                  );
+                })()}
               </div>
               <div className="flex flex-col gap-0.5 min-w-0">
                 <div className="flex items-center gap-1.5 flex-wrap">
@@ -549,8 +555,12 @@ const ProductRow = React.memo(
                       );
                     }
                   })()}
-                  <span className="text-slate-200">·</span>
-                  <span>{datas.brand || item.brand || "Generic"}</span>
+                  {(datas.brand || item.brand) && (
+                    <>
+                      <span className="text-slate-200">·</span>
+                      <span>{datas.brand || item.brand}</span>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
@@ -576,25 +586,7 @@ const ProductRow = React.memo(
             </div>
           </td>
 
-          {/* Serial tracking */}
-          <td className="px-3 py-2.5">
-            {serials.length > 0 ? (
-              <div className="flex items-center gap-1">
-                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono font-medium bg-violet-50 text-violet-600 border border-violet-100 leading-none">
-                  {serials[0]}
-                </span>
-                {serials.length > 1 && (
-                  <span className="text-[10px] text-slate-400 font-medium">
-                    +{serials.length - 1}
-                  </span>
-                )}
-              </div>
-            ) : totalSerials > 0 ? (
-              <span className="text-[11px] text-slate-400">See variants</span>
-            ) : (
-              <span className="text-slate-200 text-sm">—</span>
-            )}
-          </td>
+
 
 
           {/* Unit */}
@@ -658,53 +650,40 @@ const ProductRow = React.memo(
             <div className="flex items-center justify-end gap-2 relative">
               <button
                 onClick={() => navigate(`/product/${item.id}`)}
-                className="text-slate-400 hover:text-blue-600 transition-colors p-1"
+                className="text-emerald-500 hover:text-emerald-600 transition-colors p-1"
                 title="View Product"
               >
                 <Eye size={15} />
               </button>
               <button
                 onClick={() => navigate(`/product/${item.id}/edit`)}
-                className="text-slate-400 hover:text-blue-600 transition-colors p-1"
+                className="text-amber-400 hover:text-amber-500 transition-colors p-1"
                 title="Edit Product"
               >
                 <Pencil size={15} />
               </button>
               <div className="relative">
                 <button
-                  onClick={() => setIsMenuOpen(!isMenuOpen)}
-                  className="text-slate-400 hover:text-blue-600 transition-colors p-1"
+                  ref={menuTriggerRef}
+                  onClick={(e) => { e.stopPropagation(); setIsMenuOpen(!isMenuOpen); }}
+                  className="text-slate-800 hover:text-slate-900 transition-colors p-1"
                   title="More actions"
                 >
                   <MoreVertical size={15} />
                 </button>
-                {isMenuOpen && (
-                  <>
-                    <div className="fixed inset-0 z-40" onClick={() => setIsMenuOpen(false)} />
-                    <div className="absolute right-0 mt-1 w-40 bg-white border border-slate-200 rounded-lg shadow-lg py-1 z-50 text-left font-sans animate-in fade-in slide-in-from-top-1 duration-150">
-                      <button
-                        onClick={() => {
-                          setIsMenuOpen(false);
-                          navigate(`/stock-adjustment`);
-                        }}
-                        className="flex items-center gap-2 w-full px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-                      >
-                        <RefreshCw size={13} />
-                        Adjust Stock
-                      </button>
-                      <button
-                        onClick={() => {
-                          setIsMenuOpen(false);
-                          navigate(`/purchase/add`);
-                        }}
-                        className="flex items-center gap-2 w-full px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-                      >
-                        <Plus size={13} />
-                        Add Purchase
-                      </button>
-                    </div>
-                  </>
-                )}
+                <ActionMenu
+                  triggerRef={menuTriggerRef}
+                  open={isMenuOpen}
+                  onClose={() => setIsMenuOpen(false)}
+                  width={160}
+                >
+                  <ActionMenuItem icon={<RefreshCw size={13} />} onClick={() => { setIsMenuOpen(false); navigate(`/stock-adjustment`); }}>
+                    Adjust Stock
+                  </ActionMenuItem>
+                  <ActionMenuItem icon={<Plus size={13} />} onClick={() => { setIsMenuOpen(false); navigate(`/purchase/add`); }}>
+                    Add Purchase
+                  </ActionMenuItem>
+                </ActionMenu>
               </div>
             </div>
           </td>
@@ -1134,37 +1113,34 @@ const InventoryPage = () => {
                     />
                   </th>
                   <th className="px-3 py-2.5 w-10" />
-                  <th className="px-3 py-2.5 min-w-[280px] text-[10px] font-semibold text-slate-400 uppercase tracking-wide">
+                  <th className="px-3 py-2.5 min-w-[280px] text-[10px] font-semibold text-slate-800 uppercase tracking-wide">
                     Product
                   </th>
-                  <th className="px-3 py-2.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wide">
+                  <th className="px-3 py-2.5 text-[10px] font-semibold text-slate-800 uppercase tracking-wide">
                     Category
                   </th>
-                  <th className="px-3 py-2.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wide">
-                    Serials
-                  </th>
-                  <th className="px-3 py-2.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wide">
+                  <th className="px-3 py-2.5 text-[10px] font-semibold text-slate-800 uppercase tracking-wide">
                     Unit
                   </th>
-                  <th className="px-3 py-2.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wide text-right">
+                  <th className="px-3 py-2.5 text-[10px] font-semibold text-slate-800 uppercase tracking-wide text-right">
                     Buy Price
                   </th>
-                  <th className="px-3 py-2.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wide text-right">
+                  <th className="px-3 py-2.5 text-[10px] font-semibold text-slate-800 uppercase tracking-wide text-right">
                     Sell Price
                   </th>
-                  <th className="px-3 py-2.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wide text-right">
+                  <th className="px-3 py-2.5 text-[10px] font-semibold text-slate-800 uppercase tracking-wide text-right">
                     Stock
                   </th>
-                  <th className="px-3 py-2.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wide">
+                  <th className="px-3 py-2.5 text-[10px] font-semibold text-slate-800 uppercase tracking-wide">
                     Status
                   </th>
-                  <th className="px-3 py-2.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wide text-center">
+                  <th className="px-3 py-2.5 text-[10px] font-semibold text-slate-800 uppercase tracking-wide text-center">
                     Reorder Point
                   </th>
-                  <th className="px-3 py-2.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wide text-right">
-                    Last updated
+                  <th className="px-3 py-2.5 text-[10px] font-semibold text-slate-800 uppercase tracking-wide text-right">
+                    Last Updated
                   </th>
-                  <th className="px-3 py-2.5 w-24 text-right text-[10px] font-semibold text-slate-400 uppercase tracking-wide sticky right-0 bg-slate-50 border-l border-slate-200 z-30 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.08)]">
+                  <th className="px-3 py-2.5 w-24 text-right text-[10px] font-semibold text-slate-800 uppercase tracking-wide sticky right-0 bg-slate-50 border-l border-slate-200 z-30 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.08)]">
                     Actions
                   </th>
                 </tr>

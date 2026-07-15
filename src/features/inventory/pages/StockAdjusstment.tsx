@@ -37,7 +37,7 @@ interface AdjustmentItem {
   inventory_id: string; // Product UUID
   variant_id?: string; // Variant UUID
   batch_id?: string; // Batch UUID
-  serialno_id?: string; // Serial record UUID (from serial_numbers.id)
+  serialno_id?: string; // Legacy: single serial UUID (kept for compat)
   product: string; // Display name
   barcode: string;
   currentStock: number;
@@ -48,10 +48,11 @@ interface AdjustmentItem {
   internalNote: string;
   variant_name?: string;
   batch_name?: string;
-  serial_numbers: string[];
+  serial_numbers: string[]; // names of NEW serials to add
   sku?: string;
   has_serialno_tracking?: boolean;
-  existing_serial_numbers?: string[];
+  existing_serial_numbers?: string[]; // display names of existing serials
+  existing_serial_objects?: { id: string; name: string }[]; // full {id,name} pairs for existing serials
   has_batch_tracking?: boolean;
 }
 
@@ -82,21 +83,38 @@ const parseBatches = (batches: any) => {
   return [];
 };
 
+// Returns { id: first-serial-id|null, list: name[], objects: {id,name}[] }
 const extractSerials = (obj: any) => {
-  if (!obj) return { id: null, list: [] };
-  const getList = (infos: any): string[] => {
+  if (!obj) return { id: null, list: [] as string[], objects: [] as { id: string; name: string }[] };
+
+  const getObjects = (infos: any): { id: string; name: string }[] => {
     if (!infos) return [];
     if (Array.isArray(infos)) {
-      return infos.map((s: any) => typeof s === 'object' && s !== null ? s.name || s.serial || "" : String(s)).filter(Boolean);
+      return infos
+        .map((s: any) => {
+          if (typeof s === 'object' && s !== null) {
+            return { id: s.id || '', name: s.name || s.serial || '' };
+          }
+          return { id: '', name: String(s) };
+        })
+        .filter(o => o.name);
     }
     return [];
   };
-  if (Array.isArray(obj)) return { id: null, list: getList(obj) };
-  if (typeof obj === 'object') {
-    const list = getList(obj.serialno_infos || obj.serial_numbers || obj.serial_number || obj.serials || obj.list || obj);
-    return { id: obj.id || null, list };
+
+  let rawArray: any = null;
+  if (Array.isArray(obj)) {
+    rawArray = obj;
+  } else if (typeof obj === 'object') {
+    rawArray = obj.serialno_infos || obj.serial_numbers || obj.serial_number || obj.serials || obj.list || null;
+    if (!rawArray && !Array.isArray(obj)) rawArray = null;
   }
-  return { id: null, list: [] };
+
+  const objects = getObjects(rawArray || (Array.isArray(obj) ? obj : []));
+  const list = objects.map(o => o.name);
+  const firstId = objects.length > 0 ? (objects[0].id || null) : null;
+
+  return { id: firstId, list, objects };
 };
 
 export default function StockAdjustmentPage() {
@@ -333,15 +351,16 @@ export default function StockAdjustmentPage() {
         inventory_id: variantModal.baseData.id,
         product: variantModal.baseProduct,
         barcode: variantData.sku || variantModal.baseData.barcode || '',
-        currentStock: variantData.stocks ?? variantData.stock ?? 0,
+        currentStock: variantData.stock ?? 0,
         variant_name: variantData.name,
         variant_id: variantData.id,
-        serialno_id: serialInfo.id,
+        serialno_id: serialInfo.id ?? undefined,
         sku: variantData.sku || variantData.barcode,
-        has_serialno_tracking: variantModal.baseData.has_serialno || variantModal.baseData.datas?.has_serialno || false,
+        has_serialno_tracking: variantModal.baseData.type_infos?.has_serialno || variantModal.baseData.has_serialno || variantModal.baseData.datas?.has_serialno || false,
         existing_serial_numbers: serialInfo.list,
+        existing_serial_objects: serialInfo.objects,
         serial_numbers: [],
-        type: (variantModal.baseData.has_serialno || variantModal.baseData.datas?.has_serialno) && serialInfo.list.length === 0
+        type: (variantModal.baseData.type_infos?.has_serialno || variantModal.baseData.has_serialno || variantModal.baseData.datas?.has_serialno) && serialInfo.list.length === 0
           ? 'INCREMENT'
           : updatedItems[variantModal.targetRowIndex].type
       };
@@ -357,24 +376,28 @@ export default function StockAdjustmentPage() {
     const baseD = batchModal.baseData || variantModal.baseData;
     const baseP = batchModal.baseProduct || variantModal.baseProduct;
 
-    const serialInfo = extractSerials(batch.serial_numbers || vData.serial_numbers);
+    // Batch serials can be under serialno_infos or serial_numbers
+    const serialInfo = extractSerials(batch.serialno_infos || batch.serial_numbers || vData?.serialno_infos || vData?.serial_numbers);
+    // Batch stock: read from stock_infos first, then fallback
+    const batchStock = batch.stock_infos?.available_stocks ?? batch.stock_infos?.physical_stocks ?? batch.stocks ?? batch.quantity ?? 0;
 
     updatedItems[batchModal.targetRowIndex] = {
       ...updatedItems[batchModal.targetRowIndex],
       inventory_id: baseD.id,
       product: baseP,
-      barcode: batch.barcode || vData.sku || baseD.barcode || '',
-      currentStock: batch.stocks || batch.quantity || 0,
-      variant_name: vData.id ? vData.name : '',
-      variant_id: vData.id || '',
+      barcode: batch.barcode || vData?.sku || baseD.barcode || '',
+      currentStock: batchStock,
+      variant_name: vData?.id ? vData.name : '',
+      variant_id: vData?.id || '',
       batch_id: batch.id,
       batch_name: batch.name || batch.batch,
-      serialno_id: serialInfo.id,
-      sku: vData.sku || vData.barcode || baseD.barcode || '',
-      has_serialno_tracking: baseD.has_serialno || baseD.datas?.has_serialno || false,
+      serialno_id: serialInfo.id ?? undefined,
+      sku: vData?.sku || vData?.barcode || baseD.barcode || '',
+      has_serialno_tracking: baseD.type_infos?.has_serialno || baseD.has_serialno || baseD.datas?.has_serialno || false,
       existing_serial_numbers: serialInfo.list,
+      existing_serial_objects: serialInfo.objects,
       serial_numbers: [],
-      type: (baseD.has_serialno || baseD.datas?.has_serialno) && serialInfo.list.length === 0
+      type: (baseD.type_infos?.has_serialno || baseD.has_serialno || baseD.datas?.has_serialno) && serialInfo.list.length === 0
         ? 'INCREMENT'
         : updatedItems[batchModal.targetRowIndex].type
     };
@@ -411,11 +434,26 @@ export default function StockAdjustmentPage() {
   const reserveCartItem = async (item: AdjustmentItem) => {
     if (!sessionId || !item.inventory_id) return;
     try {
-      const serialno_infos = (item.serial_numbers?.length ?? 0) > 0 
-        ? item.serial_numbers.map(sn => ({ id: item.serialno_id || "", name: sn }))
-        : ((item.existing_serial_numbers?.length ?? 0) > 0 
-             ? item.existing_serial_numbers!.map(sn => ({ id: item.serialno_id || "", name: sn }))
-             : null);
+      const serialno_infos = (item.serial_numbers?.length ?? 0) > 0
+        ? item.serial_numbers.map(sn => {
+            // For DECREMENT: look up the real UUID so backend can UPDATE the row
+            const existing = item.existing_serial_objects?.find(o => o.name === sn);
+            if (existing?.id) {
+              return { id: existing.id, name: sn };
+            }
+            // New serial (INCREMENT): send name only — no id
+            return { name: sn };
+          })
+        : ((item.existing_serial_objects?.length ?? 0) > 0
+            // All existing serials with their UUIDs (used when no specific serial was chosen)
+            ? item.existing_serial_objects!
+            : ((item.existing_serial_numbers?.length ?? 0) > 0
+                // Fallback: names-only list — try to resolve IDs if possible
+                ? item.existing_serial_numbers!.map(sn => {
+                    const existing = item.existing_serial_objects?.find(o => o.name === sn);
+                    return { id: existing?.id || item.serialno_id || '', name: sn };
+                  })
+                : null));
 
       await stockMovAdjApi.reserveItem({
         session_id: sessionId,
@@ -669,7 +707,7 @@ export default function StockAdjustmentPage() {
                     <div className="grid grid-cols-2 gap-y-2 mt-3 pt-2.5 border-t border-slate-100/80">
                       <div className="flex flex-col">
                         <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Available Stock</span>
-                        <span className="text-xs font-extrabold text-emerald-600 mt-0.5">{batch.stocks || batch.quantity || 0} Units</span>
+                        <span className="text-xs font-extrabold text-emerald-600 mt-0.5">{batch.stock_infos?.available_stocks ?? batch.stock_infos?.physical_stocks ?? batch.stocks ?? batch.quantity ?? 0} Units</span>
                       </div>
                       <div className="flex flex-col">
                         <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Expiry</span>
@@ -803,13 +841,24 @@ export default function StockAdjustmentPage() {
                                       if (hasVariants && combinations.length > 0) {
                                         const mappedVariants = combinations.map((c: any) => {
                                           const d = c.datas || {};
+                                          const parsedBatches = parseBatches(c.batch_infos || c.batches || d.batches || d.batch_infos);
+                                          // Sum stock from batches if variant's own stock_infos is empty
+                                          const ownStock = (
+                                            c.stock_infos && Object.keys(c.stock_infos).length > 0
+                                              ? (c.stock_infos.available_stocks ?? c.stock_infos.physical_stocks ?? null)
+                                              : null
+                                          );
+                                          const batchStock = parsedBatches.reduce((sum: number, b: any) => {
+                                            return sum + (b.stock_infos?.available_stocks ?? b.stock_infos?.physical_stocks ?? b.stocks ?? b.quantity ?? 0);
+                                          }, 0);
+                                          const resolvedStock = ownStock !== null ? ownStock : (batchStock || (c.stocks ?? c.stock ?? d.stocks ?? 0));
                                           return {
                                             id: c.id,
                                             name: d.name || c.name || "Variant",
-                                            sku: c.barcode || d.barcode || opt.barcode,
-                                            stock: c.stock_infos?.available_stocks ?? c.stocks ?? c.stock ?? d.stocks ?? 0,
-                                            batches: parseBatches(c.batch_infos || c.batches || d.batches),
-                                            serial_numbers: c.serialno_infos || d.serial_numbers || c.serial_numbers || null,
+                                            sku: c.sku || c.barcode || d.barcode || opt.barcode,
+                                            stock: resolvedStock,
+                                            batches: parsedBatches,
+                                            serial_numbers: c.serialno_infos || d.serialno_infos || d.serial_numbers || c.serial_numbers || null,
                                           };
                                         });
 
@@ -851,10 +900,11 @@ export default function StockAdjustmentPage() {
                                             variant_id: '',
                                             batch_id: '',
                                             batch_name: '',
-                                            serialno_id: serialInfo.id,
+                                            serialno_id: serialInfo.id ?? undefined,
                                             sku: opt.barcode || '',
                                             has_serialno_tracking: opt.type_infos?.has_serialno || opt.has_serialno || (opt.datas && opt.datas.has_serialno) || false,
                                             existing_serial_numbers: serialInfo.list,
+                                            existing_serial_objects: serialInfo.objects,
                                             serial_numbers: [],
                                             type: (opt.type_infos?.has_serialno || opt.has_serialno || (opt.datas && opt.datas.has_serialno)) && serialInfo.list.length === 0
                                               ? 'INCREMENT'

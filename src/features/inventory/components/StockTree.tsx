@@ -188,62 +188,149 @@ export const BatchCards = ({ batches }: { batches: any | any[] }) => {
           <Tag size={18} className="fill-amber-600/10" />
         </div>
         <p className="text-[15px] font-bold text-slate-800 tracking-tight">Product Batches</p>
+        <span className="ml-auto text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
+          {safeBatches.length} {safeBatches.length === 1 ? 'batch' : 'batches'}
+        </span>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
         {visible.map((batch: any, idx: number) => {
-          const qty = Number(batch.stock_infos?.available_stocks ?? batch.stock_infos?.physical_stocks ?? batch.stocks ?? batch.quantity ?? batch.qty ?? 0);
-          const serials = extractSerials(batch.serialno_infos ?? batch.serial_numbers ?? batch.datas?.serial_numbers);
-          const daysToExpiry = getDaysDiff(batch.expiry_date || batch.expiry);
+          const physicalQty   = Number(batch.stock_infos?.physical_stocks   ?? batch.stocks ?? batch.quantity ?? batch.qty ?? 0);
+          const availableQty  = Number(batch.stock_infos?.available_stocks  ?? physicalQty);
+          const reservedQty   = Number(batch.stock_infos?.reserved_stocks   ?? 0);
+          const serials       = extractSerials(batch.serialno_infos ?? batch.serial_numbers ?? batch.datas?.serial_numbers);
+          const daysToExpiry  = getDaysDiff(batch.expiry_date || batch.expiry);
+          const bBuy          = batch.pricing_infos?.buy_price   ?? batch.buy_price;
+          const bSell         = batch.pricing_infos?.sell_price  ?? batch.sell_price;
+          const storageLoc    = batch.storage_location_infos?.storage_location ?? batch.storage_location ?? null;
+          const reorderPt     = batch.reorder_point_infos?.reorder_point       ?? batch.reorder_point    ?? null;
+
+          const stockStatus = availableQty <= 0
+            ? { label: 'Out of Stock', cls: 'text-rose-600 bg-rose-50 border-rose-200' }
+            : reorderPt !== null && availableQty <= reorderPt
+              ? { label: 'Low Stock',    cls: 'text-amber-600 bg-amber-50 border-amber-200' }
+              : { label: 'In Stock',     cls: 'text-emerald-600 bg-emerald-50 border-emerald-200' };
 
           return (
             <div
               key={batch.id || idx}
-              className="bg-white border border-slate-200 rounded-lg p-2.5 shadow-sm hover:shadow-md hover:border-blue-300 transition-all flex flex-col gap-1.5"
+              className="bg-white border border-slate-200 rounded-xl shadow-sm hover:shadow-md hover:border-blue-200 transition-all flex flex-col overflow-hidden"
             >
-              <div className="flex items-center justify-between">
-                <span className="text-[12px] font-bold text-slate-800">
-                  Batch: {batch.name || batch.batch || `BAT-${String(idx + 1).padStart(3, '0')}`}
-                </span>
-                <span className="text-[12px] font-bold text-indigo-600">
-                  Qty: {qty}
-                </span>
-              </div>
-              <div className="flex items-center justify-between text-[11px] font-medium text-slate-400">
-                <span>MFG: {formatDate(batch.manufacturing_date)}</span>
-                <span>EXP: {formatDate(batch.expiry_date || batch.expiry)}</span>
-              </div>
-
-              {(() => {
-                const bBuy = batch.pricing_infos?.buy_price ?? batch.buy_price;
-                const bSell = batch.pricing_infos?.sell_price ?? batch.sell_price;
-                if (bBuy === undefined && bSell === undefined) return null;
-                return (
-                  <div className="flex items-center justify-between text-[11px] font-bold border-t border-slate-100 pt-1.5 mt-0.5">
-                    <span className="text-rose-600">Buy: {formatCurrency(bBuy ?? 0)}</span>
-                    <span className="text-emerald-600">Sell: {formatCurrency(bSell ?? 0)}</span>
-                  </div>
-                );
-              })()}
-
-              {daysToExpiry !== null && (
-                <div className={`mt-1 p-1 rounded flex items-center gap-1.5 ${daysToExpiry <= 0 ? "bg-rose-50 text-rose-600" : "bg-amber-50 text-amber-600"}`}>
-                  <AlertTriangle size={10} className={`shrink-0 ${daysToExpiry <= 0 ? "text-rose-500" : "text-amber-500"}`} />
-                  <span className="text-[9px] font-bold tracking-tight leading-none">
-                    {daysToExpiry < 0 ? `Expired ${Math.abs(daysToExpiry)} days ago` : daysToExpiry === 0 ? "Expired today" : `Expires in ${daysToExpiry} days`}
+              {/* ── Header ─────────────────────────────────────────────── */}
+              <div className="flex items-start justify-between px-3 pt-3 pb-2.5 border-b border-slate-100 bg-slate-50/60">
+                <div className="flex flex-col gap-0.5 min-w-0">
+                  <span className="text-[12px] font-black text-slate-800 truncate">
+                    {batch.name || batch.batch || `BAT-${String(idx + 1).padStart(3, '0')}`}
+                  </span>
+                  {batch.id && (
+                    <span className="text-[9px] text-slate-400 font-mono truncate">{batch.id.slice(0, 8)}…</span>
+                  )}
+                </div>
+                <div className="flex flex-col items-end gap-1 shrink-0 ml-2">
+                  <span className={`text-[10px] font-black px-2 py-0.5 rounded-full border ${stockStatus.cls}`}>
+                    {availableQty} {stockStatus.label}
                   </span>
                 </div>
-              )}
+              </div>
 
-              {serials.length > 0 && (
-                <div className="mt-1 pt-1 border-t border-slate-100">
-                  <div className="flex items-center justify-between mb-1">
-                    <p className="text-[9px] font-bold text-slate-400">Serials</p>
-                    <span className="text-[9px] font-bold text-blue-600 bg-blue-50 px-1 py-0.5 rounded leading-none">{serials.length}</span>
+              <div className="flex flex-col gap-0 px-3 py-2.5 flex-1">
+
+                {/* ── Stock breakdown ─────────────────────────────────── */}
+                {(physicalQty !== availableQty || reservedQty > 0) && (
+                  <div className="flex items-center justify-between text-[10px] mb-2 bg-blue-50/50 border border-blue-100/60 rounded-lg px-2 py-1.5">
+                    <span className="text-slate-500 font-semibold">Physical: <span className="text-slate-700 font-black">{physicalQty}</span></span>
+                    <span className="text-slate-500 font-semibold">Available: <span className="text-emerald-600 font-black">{availableQty}</span></span>
+                    {reservedQty > 0 && (
+                      <span className="text-slate-500 font-semibold">Reserved: <span className="text-amber-600 font-black">{reservedQty}</span></span>
+                    )}
                   </div>
-                  <SerialBadgeList serials={serials} title={`Batch Serials: ${batch.name || batch.batch}`} />
+                )}
+
+                {/* ── MFG / EXP dates ─────────────────────────────────── */}
+                <div className="flex items-center justify-between text-[10.5px] font-medium text-slate-500 mb-2">
+                  <div className="flex items-center gap-1">
+                    <Package size={10} className="text-slate-400 shrink-0" />
+                    <span>MFG: <span className="text-slate-700 font-bold">{formatDate(batch.manufacturing_date)}</span></span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Clock size={10} className="text-slate-400 shrink-0" />
+                    <span>EXP: <span className="text-slate-700 font-bold">{formatDate(batch.expiry_date || batch.expiry)}</span></span>
+                  </div>
                 </div>
-              )}
+
+                {/* ── Pricing ─────────────────────────────────────────── */}
+                {(bBuy !== undefined || bSell !== undefined) && (
+                  <div className="flex items-center justify-between text-[11px] font-bold border-t border-slate-100 pt-2 mb-2">
+                    <div className="flex flex-col">
+                      <span className="text-[8.5px] font-semibold text-slate-400 uppercase tracking-wide">Buy Price</span>
+                      <span className="text-rose-600">{bBuy !== undefined ? formatCurrency(bBuy) : '—'}</span>
+                    </div>
+                    <div className="w-px h-6 bg-slate-100" />
+                    <div className="flex flex-col items-end">
+                      <span className="text-[8.5px] font-semibold text-slate-400 uppercase tracking-wide">Sell Price</span>
+                      <span className="text-emerald-600">{bSell !== undefined ? formatCurrency(bSell) : '—'}</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* ── Storage Location + Reorder Point ───────────────── */}
+                {(storageLoc !== null || reorderPt !== null) && (
+                  <div className="flex items-center gap-2 border-t border-slate-100 pt-2 mb-2">
+                    {storageLoc && (
+                      <div className="flex items-center gap-1 flex-1 bg-violet-50 border border-violet-100 rounded-lg px-2 py-1.5 min-w-0">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-violet-500 shrink-0"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                        <div className="flex flex-col min-w-0">
+                          <span className="text-[8px] font-bold text-violet-400 uppercase tracking-wide leading-none">Location</span>
+                          <span className="text-[10px] font-black text-violet-700 truncate">{storageLoc}</span>
+                        </div>
+                      </div>
+                    )}
+                    {reorderPt !== null && (
+                      <div className="flex items-center gap-1 flex-1 bg-orange-50 border border-orange-100 rounded-lg px-2 py-1.5 min-w-0">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-orange-500 shrink-0"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                        <div className="flex flex-col min-w-0">
+                          <span className="text-[8px] font-bold text-orange-400 uppercase tracking-wide leading-none">Reorder At</span>
+                          <span className="text-[10px] font-black text-orange-700">{reorderPt}</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* ── Expiry alert ────────────────────────────────────── */}
+                {daysToExpiry !== null && (
+                  <div className={`flex items-center gap-1.5 rounded-lg px-2 py-1.5 mb-2
+                    ${daysToExpiry <= 0
+                      ? 'bg-rose-50 border border-rose-200 text-rose-600'
+                      : daysToExpiry <= 7
+                        ? 'bg-amber-50 border border-amber-200 text-amber-600'
+                        : 'bg-green-50 border border-green-100 text-green-600'
+                    }`}>
+                    <AlertTriangle size={10} className="shrink-0" />
+                    <span className="text-[9px] font-bold tracking-tight leading-none">
+                      {daysToExpiry < 0
+                        ? `Expired ${Math.abs(daysToExpiry)} day${Math.abs(daysToExpiry) !== 1 ? 's' : ''} ago`
+                        : daysToExpiry === 0
+                          ? 'Expires today!'
+                          : `Expires in ${daysToExpiry} day${daysToExpiry !== 1 ? 's' : ''}`}
+                    </span>
+                  </div>
+                )}
+
+                {/* ── Serial Numbers ──────────────────────────────────── */}
+                {serials.length > 0 && (
+                  <div className="border-t border-slate-100 pt-2">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <div className="flex items-center gap-1">
+                        <Hash size={9} className="text-blue-400" />
+                        <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wide">Serial Numbers</span>
+                      </div>
+                      <span className="text-[9px] font-black text-blue-600 bg-blue-50 border border-blue-100 px-1.5 py-0.5 rounded-full leading-none">{serials.length}</span>
+                    </div>
+                    <SerialBadgeList serials={serials} title={`Batch Serials: ${batch.name || batch.batch}`} />
+                  </div>
+                )}
+              </div>
             </div>
           );
         })}
@@ -253,9 +340,9 @@ export const BatchCards = ({ batches }: { batches: any | any[] }) => {
         <div className="mt-4 flex justify-center">
           <button
             onClick={() => setShowAll(true)}
-            className="flex items-center gap-2 px-6 py-2.5 bg-white border border-slate-200 text-slate-600 font-bold text-[11px]   rounded-lg hover:bg-slate-50 hover:border-blue-200 transition-all shadow-sm"
+            className="flex items-center gap-2 px-6 py-2.5 bg-white border border-slate-200 text-slate-600 font-bold text-[11px] rounded-lg hover:bg-slate-50 hover:border-blue-200 transition-all shadow-sm"
           >
-            View All {batches.length} Batches
+            View All {safeBatches.length} Batches
             <ChevronDown size={14} />
           </button>
         </div>
@@ -263,6 +350,7 @@ export const BatchCards = ({ batches }: { batches: any | any[] }) => {
     </div>
   );
 };
+
 
 // --- Copy SKU Button with Micro-Animation ---
 const CopySKUButton = ({ val }: { val: string }) => {

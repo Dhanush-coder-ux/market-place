@@ -24,7 +24,7 @@ type SaleRecord = OrderResponse;
 
 interface SaleItem {
   id: string; inventory_id: string; name: string; sku: string; category: string;
-  quantity: number; unitPrice: number; buyPrice: number;
+  quantity: number; returned_quantity: number; unitPrice: number; buyPrice: number;
   imageColor: string; status?: string; stocks_before?: number; serial_numbers?: string[]; serialno_id?: string;
 }
 interface SelectedReturnItem extends SaleItem { returnQty: number; exchangeItemId?: string; selectedSerials?: string[]; }
@@ -59,6 +59,7 @@ const generateItems = (sale: SaleRecord, productMap: Record<string, string> = {}
       name: item.status === "REFUNDED" ? `(Refunded) ${productName}` : item.status === "EXCHANGED" ? `(Exchanged) ${productName}` : productName,
       sku: item.barcode?.trim() || (item.inventory_id || (item as any).product_id || "").slice(-6),
       category: "General", quantity: item.quantity,
+      returned_quantity: Number((item as any).returned_quantity ?? 0),
       unitPrice: item.sell_price, buyPrice: item.buy_price,
       imageColor: ITEM_COLORS[i % ITEM_COLORS.length],
       status: item.status, variant_id: item.variant_id,
@@ -215,7 +216,8 @@ const SerialReturnPicker: React.FC<{ allSerials: string[]; selected: string[]; r
 const ItemSelector: React.FC<{ items: SaleItem[]; returnItems: Record<string, number>; serialReturnMap: Record<string, string[]>; itemReasons: Record<string, ReturnReason>; onToggle: (id: string) => void; onQtyChange: (id: string, v: number) => void; onSerialChange: (id: string, serials: string[]) => void; onReasonChange: (id: string, reason: ReturnReason) => void; onSelectAll: (all: boolean) => void; error?: string; }> = ({ items, returnItems, serialReturnMap, itemReasons, onToggle, onQtyChange, onSerialChange, onReasonChange, onSelectAll, error }) => {
   const [q, setQ] = useState("");
   const filtered = items.filter(i => i.name.toLowerCase().includes(q.toLowerCase()) || i.sku.toLowerCase().includes(q.toLowerCase()));
-  const selectableItems = filtered.filter(i => i.status !== "REFUNDED" && i.status !== "EXCHANGED");
+  // Items that still have returnable quantity (not fully returned, not exchanged/refunded)
+  const selectableItems = filtered.filter(i => i.status !== "REFUNDED" && i.status !== "EXCHANGED" && (i.quantity - i.returned_quantity) > 0);
   const allSelected = selectableItems.length > 0 && selectableItems.every(i => returnItems[i.id] !== undefined);
   return (
     <div className="flex flex-col gap-3">
@@ -245,6 +247,9 @@ const ItemSelector: React.FC<{ items: SaleItem[]; returnItems: Record<string, nu
           const checked = returnItems[item.id] !== undefined;
           const qty = returnItems[item.id] ?? 1;
           const isProcessed = item.status === "REFUNDED" || item.status === "EXCHANGED";
+          const maxReturnable = Math.max(0, item.quantity - item.returned_quantity);
+          const isFullyReturned = maxReturnable <= 0;
+          const isDisabled = isProcessed || isFullyReturned;
           const hasSerials = item.serial_numbers && item.serial_numbers.length > 0;
           const selectedSerials = serialReturnMap[item.id] ?? [];
           const reason = itemReasons[item.id] ?? "";
@@ -252,14 +257,14 @@ const ItemSelector: React.FC<{ items: SaleItem[]; returnItems: Record<string, nu
             <div 
               key={item.id} 
               className={`flex flex-col border p-2.5 px-3 rounded-lg transition-all duration-100 ${
-                isProcessed ? 'bg-slate-50 opacity-60 cursor-not-allowed' : 
+                isDisabled ? 'bg-slate-50 opacity-60 cursor-not-allowed' : 
                 checked ? 'bg-blue-50/50 border-blue-200' : 'bg-white border-slate-100 hover:bg-slate-50/80 cursor-pointer'
               }`}
-              onClick={() => !isProcessed && onToggle(item.id)}
+              onClick={() => !isDisabled && onToggle(item.id)}
             >
               <div className="flex items-center gap-2.5">
                 <div className="flex items-center justify-center relative">
-                  <input type="checkbox" className="peer w-4 h-4 appearance-none rounded border border-slate-300 bg-white checked:bg-blue-600 checked:border-blue-600 transition-all cursor-pointer disabled:cursor-not-allowed" checked={checked} disabled={isProcessed} readOnly onClick={e => e.stopPropagation()} />
+                  <input type="checkbox" className="peer w-4 h-4 appearance-none rounded border border-slate-300 bg-white checked:bg-blue-600 checked:border-blue-600 transition-all cursor-pointer disabled:cursor-not-allowed" checked={checked} disabled={isDisabled} readOnly onClick={e => e.stopPropagation()} />
                   <Check size={10} className="absolute text-white scale-0 peer-checked:scale-100 transition-transform pointer-events-none" />
                 </div>
                 <div className="w-8.5 h-8.5 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: item.imageColor }}>
@@ -271,6 +276,8 @@ const ItemSelector: React.FC<{ items: SaleItem[]; returnItems: Record<string, nu
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <p className="text-xs font-semibold text-slate-800">{item.name}</p>
                         {item.status && <span className={`text-[9px] font-bold px-1 py-0.5 rounded ${item.status === "REFUNDED" ? "bg-red-50 text-red-600" : "bg-blue-50 text-blue-600"}`}>{item.status}</span>}
+                        {isFullyReturned && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-rose-50 text-rose-600">Fully Returned</span>}
+                        {!isFullyReturned && item.returned_quantity > 0 && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-50 text-amber-700">{item.returned_quantity} already returned</span>}
                         {hasSerials && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-violet-50 text-violet-600 flex items-center gap-1"><Hash size={8} />SN</span>}
                       </div>
                       <p className="font-mono text-[10px] text-slate-400 mt-0.5">{item.sku} · {item.category}</p>
@@ -330,7 +337,7 @@ const useReturnModalLogic = (sale: SaleRecord | null, productMap: Record<string,
   useEffect(() => {
     const customerId = sale?.customer_id || sale?.customer?.customer_id;
     if (customerId) {
-      getData(`${ENDPOINTS.CUSTOMERS}/by/${SHOP_ID}/${customerId}`).then(res => {
+      getData(`${ENDPOINTS.CUSTOMERS}/by/id/${SHOP_ID}/${customerId}`).then(res => {
         if (res && res.data) {
            const c = Array.isArray(res.data) ? res.data[0] : res.data;
            setCustomerOutstanding(Number(c.outstanding_infos?.amount ?? c.outstanding ?? c.datas?.outstanding_balance ?? 0));
@@ -350,20 +357,26 @@ const useReturnModalLogic = (sale: SaleRecord | null, productMap: Record<string,
   
   const updatePayment = (index: number, updates: Partial<{ mode: string; amount: number }>) => {
     setState(s => {
-      let newAmount = updates.amount;
-      if (newAmount !== undefined) {
-         const otherSum = s.payments.filter((_, i) => i !== index).reduce((acc, p) => acc + (p.amount || 0), 0);
-         const targetMode = updates.mode || s.payments[index].mode;
-         let maxAllowed = Math.abs(totals.diff) - otherSum;
-         if (targetMode === "Store Credit") {
-            maxAllowed = Math.min(maxAllowed, customerOutstanding);
-         }
-         if (maxAllowed < 0) maxAllowed = 0;
-         if (newAmount > maxAllowed) newAmount = maxAllowed;
+      const currentPayment = s.payments[index];
+      const targetMode = updates.mode ?? currentPayment.mode;
+      const otherSum = s.payments.filter((_, i) => i !== index).reduce((acc, p) => acc + (p.amount || 0), 0);
+      let maxAllowed = Math.abs(totals.diff) - otherSum;
+
+      // Cap On Credit at the customer's outstanding balance
+      if (targetMode === "On Credit" && customerOutstanding > 0) {
+        maxAllowed = Math.min(maxAllowed, customerOutstanding);
       }
+      if (maxAllowed < 0) maxAllowed = 0;
+
+      // Determine the new amount: clamp on explicit change OR when mode just switched to On Credit
+      let newAmount = updates.amount ?? currentPayment.amount;
+      if (updates.amount !== undefined || (updates.mode !== undefined && targetMode === "On Credit")) {
+        if (newAmount > maxAllowed) newAmount = maxAllowed;
+      }
+
       return {
         ...s,
-        payments: s.payments.map((p, i) => i === index ? { ...p, ...updates, ...(newAmount !== undefined && { amount: newAmount }) } : p),
+        payments: s.payments.map((p, i) => i === index ? { ...p, ...updates, amount: newAmount } : p),
         errors: { ...s.errors, settlement: undefined }
       };
     });
@@ -385,7 +398,9 @@ const useReturnModalLogic = (sale: SaleRecord | null, productMap: Record<string,
       if (next[itemId] !== undefined) { delete next[itemId]; delete nextEx[itemId]; delete nextSer[itemId]; }
       else {
         const item = saleItems.find(i => i.id === itemId);
-        next[itemId] = item?.quantity ?? 1;
+        const maxReturnable = Math.max(0, (item?.quantity ?? 1) - (item?.returned_quantity ?? 0));
+        if (maxReturnable <= 0) return s; // already fully returned — ignore
+        next[itemId] = maxReturnable;
         if (item?.serial_numbers?.length) nextSer[itemId] = [...item.serial_numbers];
       }
       return { ...s, returnItems: next, exchangeMap: nextEx, serialReturnMap: nextSer, errors: { ...s.errors, items: undefined } };
@@ -397,7 +412,12 @@ const useReturnModalLogic = (sale: SaleRecord | null, productMap: Record<string,
     setState(s => {
       if (!all) return { ...s, returnItems: {}, exchangeMap: {} };
       const next: Record<string, number> = {};
-      saleItems.forEach(i => { if (i.status !== "REFUNDED" && i.status !== "EXCHANGED") next[i.id] = i.quantity; });
+      saleItems.forEach(i => {
+        if (i.status !== "REFUNDED" && i.status !== "EXCHANGED") {
+          const maxReturnable = Math.max(0, i.quantity - i.returned_quantity);
+          if (maxReturnable > 0) next[i.id] = maxReturnable;
+        }
+      });
       return { ...s, returnItems: next, errors: { ...s.errors, items: undefined } };
     });
   }, [saleItems]);
@@ -405,7 +425,8 @@ const useReturnModalLogic = (sale: SaleRecord | null, productMap: Record<string,
   const updateQty = useCallback((itemId: string, v: number) => {
     const item = saleItems.find(i => i.id === itemId);
     if (!item) return;
-    setState(s => ({ ...s, returnItems: { ...s.returnItems, [itemId]: Math.min(Math.max(1, v), item.quantity) } }));
+    const maxReturnable = Math.max(0, item.quantity - item.returned_quantity);
+    setState(s => ({ ...s, returnItems: { ...s.returnItems, [itemId]: Math.min(Math.max(1, v), maxReturnable) } }));
   }, [saleItems]);
 
   const setExchangeProduct = useCallback((itemId: string, product: any) => setState(s => ({ ...s, exchangeMap: { ...s.exchangeMap, [itemId]: product } })), []);
@@ -428,17 +449,27 @@ const useReturnModalLogic = (sale: SaleRecord | null, productMap: Record<string,
     
     const requiresSettlement = state.mode === "refund" || totals.diff !== 0;
     if (requiresSettlement) {
-      if (state.payments.length === 0) errs.settlement = "Please add at least one payment method.";
-      else if (state.mode === "exchange") {
+      if (state.payments.length === 0) {
+        errs.settlement = "Please add at least one payment method.";
+      } else {
         const sum = state.payments.reduce((acc, p) => acc + p.amount, 0);
-        if (Math.abs(sum - Math.abs(totals.diff)) > 0.01) {
-          errs.settlement = `Total payment must equal ${fmt(Math.abs(totals.diff))}`;
+        const target = Math.abs(totals.diff);
+
+        // Check On Credit amounts don't exceed outstanding
+        const onCreditTotal = state.payments.filter(p => p.mode === "On Credit").reduce((acc, p) => acc + p.amount, 0);
+        if (onCreditTotal > customerOutstanding) {
+          errs.settlement = `"Clear Outstanding" amount cannot exceed customer balance ${fmt(customerOutstanding)}.`;
+        } else if (state.mode === "refund" && Math.abs(sum - target) > 0.01) {
+          errs.settlement = `Total refund must equal ${fmt(target)}. Currently: ${fmt(sum)}.`;
+        } else if (state.mode === "exchange" && Math.abs(sum - target) > 0.01) {
+          errs.settlement = `Total payment must equal ${fmt(target)}`;
         }
       }
     }
     setState(s => ({ ...s, errors: errs }));
     return Object.keys(errs).length === 0;
-  }, [state.itemReasons, state.mode, state.payments, selectedItems, totals]);
+  }, [state.itemReasons, state.mode, state.payments, selectedItems, totals, customerOutstanding]);
+
 
   const goNext = useCallback(() => { 
     if (state.step === 3 && !validate()) return; 
@@ -449,7 +480,7 @@ const useReturnModalLogic = (sale: SaleRecord | null, productMap: Record<string,
         const newPayments = [...s.payments];
         if (newPayments.length === 1 && newPayments[0].amount === 0) {
           let maxAllowed = d;
-          if (newPayments[0].mode === "Store Credit") maxAllowed = Math.min(maxAllowed, customerOutstanding);
+          if (newPayments[0].mode === "On Credit" && customerOutstanding > 0) maxAllowed = Math.min(maxAllowed, customerOutstanding);
           newPayments[0] = { ...newPayments[0], amount: maxAllowed };
         }
         return { ...s, step: 3, payments: newPayments };
@@ -475,7 +506,7 @@ const useReturnModalLogic = (sale: SaleRecord | null, productMap: Record<string,
       const paymentsDict: Record<string, number> = {};
       const mapPaymentMode = (mode: string) => {
         const upper = mode.toUpperCase();
-        if (upper === "CREDIT" || upper === "STORE CREDIT" || upper === "STORE_CREDIT") return "ON_CREDIT";
+        if (upper === "CREDIT" || upper === "ON CREDIT" || upper === "ON_CREDIT") return "ON_CREDIT";
         return upper;
       };
 
@@ -926,27 +957,39 @@ export const ReturnFlow: React.FC<ReturnFlowProps> = ({ sale, onClose, onRefresh
                       )}
                       <div className="space-y-2">
                         {state.payments.map((p, idx) => (
-                          <div key={idx} className="flex items-center gap-2">
-                            <SelectDropdown
-                              value={p.mode}
-                              onChange={mode => m.updatePayment(idx, { mode })}
-                              options={["Cash", "UPI", "Card", "Bank Transfer", ...((sale?.customer_id || sale?.customer?.customer_id) ? ["Store Credit"] : [])]}
-                              displayMap={{ "Store Credit": customerOutstanding > 0 ? "Clear Outstanding" : "Store Credit" }}
-                            />
-                            <input
-                              type="number"
-                              value={p.amount === 0 ? "" : p.amount}
-                              onChange={e => m.updatePayment(idx, { amount: Number(e.target.value) })}
-                              placeholder="Amount"
-                              className="flex-1 h-10 px-3 text-[13px] border-2 border-slate-100 rounded-lg bg-white text-slate-800 outline-none focus:border-blue-500 font-semibold text-right placeholder:text-slate-300"
-                            />
-                            {state.payments.length > 1 && (
-                              <button
-                                onClick={() => m.removePayment(idx)}
-                                className="w-10 h-10 rounded-lg bg-rose-50 text-rose-500 hover:bg-rose-100 flex items-center justify-center transition-all border border-rose-100"
-                              >
-                                <X size={14} />
-                              </button>
+                          <div key={idx} className="flex flex-col gap-1">
+                            <div className="flex items-center gap-2">
+                              <SelectDropdown
+                                value={p.mode}
+                                onChange={mode => m.updatePayment(idx, { mode })}
+                                options={["Cash", "UPI", "Card", "Bank Transfer", ...(customerOutstanding > 0 ? ["On Credit"] : [])]}
+                                displayMap={{ "On Credit": "Clear Outstanding" }}
+                              />
+                              <input
+                                type="number"
+                                value={p.amount === 0 ? "" : p.amount}
+                                max={p.mode === "On Credit" ? customerOutstanding : undefined}
+                                onChange={e => {
+                                  const entered = Number(e.target.value);
+                                  m.updatePayment(idx, { amount: entered });
+                                }}
+                                placeholder="Amount"
+                                className="flex-1 h-10 px-3 text-[13px] border-2 border-slate-100 rounded-lg bg-white text-slate-800 outline-none focus:border-blue-500 font-semibold text-right placeholder:text-slate-300"
+                              />
+                              {state.payments.length > 1 && (
+                                <button
+                                  onClick={() => m.removePayment(idx)}
+                                  className="w-10 h-10 rounded-lg bg-rose-50 text-rose-500 hover:bg-rose-100 flex items-center justify-center transition-all border border-rose-100"
+                                >
+                                  <X size={14} />
+                                </button>
+                              )}
+                            </div>
+                            {p.mode === "On Credit" && customerOutstanding > 0 && (
+                              <p className="text-[10px] text-amber-600 font-semibold flex items-center gap-1 ml-1">
+                                <AlertCircle size={10} />
+                                Max clearable: {fmt(Math.min(Math.abs(totals.diff), customerOutstanding))} (outstanding: {fmt(customerOutstanding)})
+                              </p>
                             )}
                           </div>
                         ))}

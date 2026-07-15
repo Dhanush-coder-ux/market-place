@@ -494,16 +494,16 @@ const SalesListPage: React.FC = () => {
           <table className="w-full border-collapse table-fixed">
             <thead className="sticky top-0 z-10 bg-slate-50 border-b border-slate-100">
               <tr>
-                <th className="w-[110px] p-2.5 px-3 text-[10px] font-bold tracking-wider text-slate-400 uppercase text-left">Order ID</th>
-                <th className="w-[140px] p-2.5 px-3 text-[10px] font-bold tracking-wider text-slate-400 uppercase text-left">Customer</th>
-                <th className="w-[180px] p-2.5 px-3 text-[10px] font-bold tracking-wider text-slate-400 uppercase text-left">Items</th>
-                <th className="w-[90px] p-2.5 px-3 text-[10px] font-bold tracking-wider text-slate-400 uppercase text-left">Origin</th>
-                <th className="w-[100px] p-2.5 px-3 text-[10px] font-bold tracking-wider text-slate-400 uppercase text-left">Payment</th>
-                <th className="w-[96px] p-2.5 px-3 text-[10px] font-bold tracking-wider text-slate-400 uppercase text-left">Date</th>
-                <th className="w-[50px] p-2.5 px-3 text-[10px] font-bold tracking-wider text-slate-400 uppercase text-center">Qty</th>
-                <th className="w-[90px] p-2.5 px-3 text-[10px] font-bold tracking-wider text-slate-400 uppercase text-right">Amount</th>
-                <th className="w-[90px] p-2.5 px-3 text-[10px] font-bold tracking-wider text-slate-400 uppercase text-left">Status</th>
-                <th className="w-[40px] p-2.5 px-3 text-[10px] font-bold tracking-wider text-slate-400 uppercase text-right"></th>
+                <th className="w-[110px] p-2.5 px-3 text-[10px] font-bold tracking-wider text-slate-800 uppercase text-left">Order ID</th>
+                <th className="w-[140px] p-2.5 px-3 text-[10px] font-bold tracking-wider text-slate-800 uppercase text-left">Customer</th>
+                <th className="w-[180px] p-2.5 px-3 text-[10px] font-bold tracking-wider text-slate-800 uppercase text-left">Items</th>
+                <th className="w-[90px] p-2.5 px-3 text-[10px] font-bold tracking-wider text-slate-800 uppercase text-left">Origin</th>
+                <th className="w-[100px] p-2.5 px-3 text-[10px] font-bold tracking-wider text-slate-800 uppercase text-left">Payment</th>
+                <th className="w-[96px] p-2.5 px-3 text-[10px] font-bold tracking-wider text-slate-800 uppercase text-left">Date</th>
+                <th className="w-[50px] p-2.5 px-3 text-[10px] font-bold tracking-wider text-slate-800 uppercase text-center">Qty</th>
+                <th className="w-[90px] p-2.5 px-3 text-[10px] font-bold tracking-wider text-slate-800 uppercase text-right">Amount</th>
+                <th className="w-[90px] p-2.5 px-3 text-[10px] font-bold tracking-wider text-slate-800 uppercase text-left">Status</th>
+                <th className="w-[40px] p-2.5 px-3 text-[10px] font-bold tracking-wider text-slate-800 uppercase text-right"></th>
               </tr>
             </thead>
             <tbody>

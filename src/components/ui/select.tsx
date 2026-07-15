@@ -54,8 +54,9 @@ function SelectContent({
   position = "item-aligned",
   align = "center",
   footer,
+  onViewportScroll,
   ...props
-}: React.ComponentProps<typeof SelectPrimitive.Content> & { footer?: React.ReactNode }) {
+}: React.ComponentProps<typeof SelectPrimitive.Content> & { footer?: React.ReactNode; onViewportScroll?: React.UIEventHandler<HTMLDivElement> }) {
   return (
     <SelectPrimitive.Portal>
       <SelectPrimitive.Content
@@ -72,6 +73,7 @@ function SelectContent({
       >
         <SelectScrollUpButton />
         <SelectPrimitive.Viewport
+          onScroll={onViewportScroll}
           className={cn(
             "p-1 flex-1 overflow-y-auto",
             position === "popper" &&

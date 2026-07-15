@@ -70,19 +70,11 @@ const CustomerFormPage = () => {
   // Form State
   const [formData, setFormData] = useState(initialFormData);
 
-  // Header Actions
+  // Header Actions — nothing to show for customer form
   useEffect(() => {
-    setActions(
-      <div className="flex items-center gap-3 bg-white px-4 h-11 rounded-lg border border-slate-200 shadow-sm scale-90 md:scale-100">
-        <span className="text-[10px] font-bold text-slate-500  ">Active</span>
-        <Switch
-          checked={formData.is_active}
-          onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_active: checked }))}
-        />
-      </div>
-    );
     return () => setActions(null);
-  }, [setActions, formData.is_active]);
+  }, [setActions]);
+
 
   // Bottom Actions
   useEffect(() => {
@@ -237,6 +229,7 @@ const CustomerFormPage = () => {
     if (canHaveCredit) {
       payload.credit_infos = {
         limit: Number(formData.credit_limit) || 0,
+        type: "DIRECT",  // required by CustomerUpdateCreditInfosType — sets limit directly
         notes: formData.notes || undefined,
         terms: formData.credit_terms || undefined,
       };
@@ -280,7 +273,7 @@ const CustomerFormPage = () => {
           const filtered = drafts.filter((d: any) => d.id !== draftId);
           localStorage.setItem("customer_drafts", JSON.stringify(filtered));
         }
-        navigate("/customers-Summary");
+        navigate("/customers/all");
       } else {
         showToast("Failed to save customer", "error");
       }
@@ -386,13 +379,7 @@ const CustomerFormPage = () => {
               <h2 className="text-xs font-bold text-slate-800  ">Classification</h2>
             </div>
             <div className="p-8 space-y-6">
-              <div className="flex items-center justify-between p-4 rounded-lg bg-slate-50 border border-slate-100">
-                <span className="text-xs font-bold text-slate-500  ">Account Active</span>
-                <Switch
-                  checked={formData.is_active}
-                  onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_active: checked }))}
-                />
-              </div>
+
               <ReusableSelect
                 key={`type-${id || searchParams.get("draftId") || "new"}-${formData.customer_type}`}
                 label="Customer Category"
@@ -593,13 +580,6 @@ const CustomerFormPage = () => {
         >
           <div className="space-y-5">
             <Input
-              label="Field Name (Internal Name)"
-              required
-              value={newFieldName}
-              onChange={(e) => setNewFieldName(e.target.value)}
-              placeholder="e.g. loyalty_id"
-            />
-            <Input
               label="Label Name (Display Name)"
               required
               value={newFieldLabel}
@@ -609,6 +589,13 @@ const CustomerFormPage = () => {
                 setNewFieldName(val.toLowerCase().replace(/[^a-z0-9\s]/g, "").trim().replace(/\s+/g, "_"));
               }}
               placeholder="e.g. Loyalty Card ID"
+            />
+            <Input
+              label="Field Name (Internal Name)"
+              required
+              disabled
+              value={newFieldName}
+              placeholder="Auto-generated from Label Name"
             />
             <ReusableSelect
               label="Field Type"

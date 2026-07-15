@@ -628,14 +628,6 @@ const SupplierForm = () => {
       >
         <div className="space-y-5">
           <div className="space-y-1">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">Field Name (Internal Name)</label>
-            <Input
-              value={newFieldName}
-              onChange={(e) => setNewFieldName(e.target.value)}
-              placeholder="e.g. tax_id"
-            />
-          </div>
-          <div className="space-y-1">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">Label Name (Display Name)</label>
             <Input
               value={newFieldLabel}
@@ -645,6 +637,14 @@ const SupplierForm = () => {
                 setNewFieldName(val.toLowerCase().replace(/[^a-z0-9\s]/g, "").trim().replace(/\s+/g, "_"));
               }}
               placeholder="e.g. Tax ID"
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">Field Name (Internal Name)</label>
+            <Input
+              value={newFieldName}
+              disabled
+              placeholder="Auto-generated from Label Name"
             />
           </div>
           <div className="space-y-1">

@@ -873,22 +873,22 @@ export default function StockMovementPage() {
                     className="rounded border-slate-350 text-blue-600 focus:ring-blue-500/20 cursor-pointer"
                   />
                 </th>
-                <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500 border-r border-slate-100 last:border-r-0 w-[25%] min-w-[260px]">Product Information</th>
-                <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500 border-r border-slate-100 last:border-r-0 w-[12%] min-w-[125px]">Movement Type</th>
-                <th className="px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-slate-500 border-r border-slate-100 last:border-r-0 w-[10%] min-w-[90px]">Stock In / Out</th>
-                <th className="px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-slate-500 border-r border-slate-100 last:border-r-0 w-[10%] min-w-[90px]">Stock After</th>
+                <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-800 border-r border-slate-100 last:border-r-0 w-[25%] min-w-[260px]">Product Information</th>
+                <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-800 border-r border-slate-100 last:border-r-0 w-[12%] min-w-[125px]">Movement Type</th>
+                <th className="px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-slate-800 border-r border-slate-100 last:border-r-0 w-[10%] min-w-[90px]">Stock In / Out</th>
+                <th className="px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-slate-800 border-r border-slate-100 last:border-r-0 w-[10%] min-w-[90px]">Stock After</th>
                 {selectedKeys.map(key => {
                   let width = "w-[12%] min-w-[120px]";
                   if (key === "notes") width = "w-[20%] min-w-[180px]";
                   if (key === "user") width = "w-[10%] min-w-[100px]";
                   return (
-                    <th key={key} className={`px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500 border-r border-slate-100 last:border-r-0 ${width}`}>{key.replace(/_/g, ' ')}</th>
+                    <th key={key} className={`px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-800 border-r border-slate-100 last:border-r-0 ${width}`}>{key.replace(/_/g, ' ')}</th>
                   );
                 })}
-                <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500 border-r border-slate-100 last:border-r-0 w-[15%] min-w-[150px]">
+                <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-800 border-r border-slate-100 last:border-r-0 w-[15%] min-w-[150px]">
                   <SortBtn field="date" label="Date & Time" />
                 </th>
-                <th className="px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-slate-500 w-14 sticky right-0 bg-slate-50 border-l border-slate-200 z-30 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.08)]">Actions</th>
+                <th className="px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-slate-800 w-14 sticky right-0 bg-slate-50 border-l border-slate-200 z-30 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.08)]">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-sm bg-white">
@@ -1046,7 +1046,7 @@ export default function StockMovementPage() {
                       <td className="px-4 py-3 text-center align-middle w-14 whitespace-nowrap sticky right-0 bg-white group-hover:bg-slate-50 border-l border-slate-200 z-10 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.08)] transition-colors" onClick={(e) => e.stopPropagation()}>
                         <button
                           onClick={() => setSelected(m)}
-                          className="text-slate-400 hover:text-blue-600 transition-colors p-1"
+                          className="text-emerald-500 hover:text-emerald-600 transition-colors p-1"
                           title="View Details"
                         >
                           <Eye size={15} />

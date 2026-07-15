@@ -608,11 +608,13 @@ const ProductDashboard = () => {
       setCreatingField(true);
       await inventoryCustomFieldsApi.createField({
         shop_id: SHOP_ID,
-        field_name: newFieldName.toLowerCase().replace(/\s+/g, "_"),
-        label_name: newFieldLabel,
-        type: newFieldType,
-        required: newFieldRequired,
-        visible_online: newFieldVisible
+        field_infos: [{
+          field_name: newFieldName,
+          label_name: newFieldLabel,
+          type: newFieldType,
+          required: newFieldRequired,
+          visible_online: newFieldVisible
+        }]
       });
       showToast("Custom field created successfully!", "success");
       setNewFieldName("");
@@ -1039,10 +1041,9 @@ const ProductDashboard = () => {
                           type="text" 
                           value={newFieldLabel} 
                           onChange={(e) => {
-                            setNewFieldLabel(e.target.value);
-                            if (!newFieldName) {
-                              setNewFieldName(e.target.value.toLowerCase().replace(/\s+/g, "_"));
-                            }
+                            const val = e.target.value;
+                            setNewFieldLabel(val);
+                            setNewFieldName(val.toLowerCase().replace(/[^a-z0-9\s]/g, "").trim().replace(/\s+/g, "_"));
                           }}
                           placeholder="Warranty Period"
                           className="w-full mt-1 bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-[12px] outline-none focus:border-blue-400"
@@ -1053,9 +1054,9 @@ const ProductDashboard = () => {
                         <input 
                           type="text" 
                           value={newFieldName}
-                          onChange={(e) => setNewFieldName(e.target.value)}
-                          placeholder="warranty_period"
-                          className="w-full mt-1 bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-[12px] outline-none focus:border-blue-400 font-mono"
+                          disabled
+                          placeholder="Auto-generated from Label"
+                          className="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-[12px] outline-none focus:border-blue-400 font-mono"
                         />
                       </div>
                     </div>

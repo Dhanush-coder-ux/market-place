@@ -246,11 +246,13 @@ export const inventoryApi = {
 
 export interface CreateInventoryCustomFieldPayload {
   shop_id: string;
-  field_name: string;
-  label_name: string;
-  type: string;          // 'text' | 'number' | 'date' | 'boolean'
-  required?: boolean;
-  visible_online?: boolean;
+  field_infos: Array<{
+    field_name: string;
+    label_name: string;
+    type: string;          // 'text' | 'number' | 'date' | 'boolean'
+    required?: boolean;
+    visible_online?: boolean;
+  }>;
 }
 
 export interface UpdateInventoryCustomFieldPayload {

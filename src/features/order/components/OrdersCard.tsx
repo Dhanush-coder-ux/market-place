@@ -6,11 +6,12 @@ import { ReusableSelect } from "@/components/ui/ReusableSelect";
 
 // 1. New Order Lifecycle Configuration
 const statusConfig = {
-  INCOMING: { icon: Inbox, pill: "bg-amber-50 text-amber-700 ring-amber-200", dot: "bg-amber-500", pulse: true },
-  ACCEPTED: { icon: CheckCircle, pill: "bg-blue-50 text-blue-700 ring-blue-200", dot: "bg-blue-500", pulse: false },
-  REJECTED: { icon: XCircle, pill: "bg-rose-50 text-rose-700 ring-rose-200", dot: "bg-rose-500", pulse: false },
-  OUT_FOR_DELIVERY: { icon: Truck, pill: "bg-purple-50 text-purple-700 ring-purple-200", dot: "bg-purple-500", pulse: true },
-  DELIVERED: { icon: PackageCheck, pill: "bg-emerald-50 text-emerald-700 ring-emerald-200", dot: "bg-emerald-500", pulse: false },
+  PENDING: { icon: Inbox, pill: "bg-amber-50 text-amber-700 ring-amber-200", dot: "bg-amber-500", pulse: true },
+  PROCESSING: { icon: CheckCircle, pill: "bg-blue-50 text-blue-700 ring-blue-200", dot: "bg-blue-500", pulse: false },
+  COMPLETED: { icon: PackageCheck, pill: "bg-emerald-50 text-emerald-700 ring-emerald-200", dot: "bg-emerald-500", pulse: false },
+  CANCELED: { icon: XCircle, pill: "bg-rose-50 text-rose-700 ring-rose-200", dot: "bg-rose-500", pulse: false },
+  REFUNDED: { icon: Truck, pill: "bg-purple-50 text-purple-700 ring-purple-200", dot: "bg-purple-500", pulse: false },
+  EXCHANGED: { icon: Truck, pill: "bg-indigo-50 text-indigo-700 ring-indigo-200", dot: "bg-indigo-500", pulse: false },
 };
 
 interface OrdersCardProps {
@@ -22,8 +23,7 @@ interface OrdersCardProps {
 }
 
 const OrdersCard: React.FC<OrdersCardProps> = ({ order, setIsOpen, viewMode = "grid", onStatusChange, onDeleteClick }) => {
-  // Fallback to INCOMING if status is missing
-  const status = statusConfig[order.status as keyof typeof statusConfig] ?? statusConfig.INCOMING;
+  const status = statusConfig[order.status as keyof typeof statusConfig] ?? statusConfig.PENDING;
 
   // ─── HORIZONTAL LIST VIEW ──────────────────────────────────────────────────
   if (viewMode === "list") {
@@ -73,11 +73,12 @@ const OrdersCard: React.FC<OrdersCardProps> = ({ order, setIsOpen, viewMode = "g
           <div className="w-40 hidden sm:block">
             <ReusableSelect
               options={[
-                { label: "Incoming", value: "INCOMING" },
-                { label: "Accepted", value: "ACCEPTED" },
-                { label: "Rejected", value: "REJECTED" },
-                { label: "Out for Delivery", value: "OUT_FOR_DELIVERY" },
-                { label: "Delivered", value: "DELIVERED" },
+                { label: "Pending", value: "PENDING" },
+                { label: "Processing", value: "PROCESSING" },
+                { label: "Completed", value: "COMPLETED" },
+                { label: "Canceled", value: "CANCELED" },
+                { label: "Refunded", value: "REFUNDED" },
+                { label: "Exchanged", value: "EXCHANGED" },
               ]}
               value={order.status}
               onValueChange={(val) => onStatusChange?.(val)}
@@ -160,11 +161,12 @@ const OrdersCard: React.FC<OrdersCardProps> = ({ order, setIsOpen, viewMode = "g
         <div className="flex flex-col gap-3">
           <ReusableSelect
             options={[
-              { label: "Incoming", value: "INCOMING" },
-              { label: "Accepted", value: "ACCEPTED" },
-              { label: "Rejected", value: "REJECTED" },
-              { label: "Out for Delivery", value: "OUT_FOR_DELIVERY" },
-              { label: "Delivered", value: "DELIVERED" },
+              { label: "Pending", value: "PENDING" },
+              { label: "Processing", value: "PROCESSING" },
+              { label: "Completed", value: "COMPLETED" },
+              { label: "Canceled", value: "CANCELED" },
+              { label: "Refunded", value: "REFUNDED" },
+              { label: "Exchanged", value: "EXCHANGED" },
             ]}
             value={order.status}
             onValueChange={(val) => onStatusChange?.(val)}

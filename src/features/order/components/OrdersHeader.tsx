@@ -13,11 +13,11 @@ import {
 // Define the pipeline stages with corresponding icons
 const pipelineTabs = [
   { label: "All Orders", value: "ALL", icon: ListFilter },
-  { label: "New Orders", value: "NEW_ORDER", icon: Inbox },
-  { label: "Confirmed", value: "CONFIRMED", icon: CheckCircle },
-  { label: "Out for Delivery", value: "OUT_FOR_DELIVERY", icon: Truck },
-  { label: "Delivered", value: "DELIVERED", icon: PackageCheck },
-  { label: "Cancelled", value: "CANCELLED", icon: XCircle },
+  { label: "Pending", value: "PENDING", icon: Inbox },
+  { label: "Processing", value: "PROCESSING", icon: CheckCircle },
+  { label: "Completed", value: "COMPLETED", icon: PackageCheck },
+  { label: "Cancelled", value: "CANCELED", icon: XCircle },
+  { label: "Refunded", value: "REFUNDED", icon: Truck },
 ];
 
 const OrdersHeader: React.FC<OrdersHeaderProps> = ({

@@ -234,9 +234,15 @@ export interface OrderRecord {
   shop_id: string;
   status: string;
   origin: string;
-  orders: string[];
+  orders?: string[];
   customer_number?: string;
   customer_name?: string;
+  total_amount?: number;
+  total?: number;
+  items?: any[];
+  calculation_infos?: Record<string, any>;
+  payment_infos?: Record<string, any>;
+  additional_infos?: Record<string, any>;
   datas?: Record<string, unknown>;
 }
 

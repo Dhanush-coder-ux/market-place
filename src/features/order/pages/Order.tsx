@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import {
-  Package, LayoutGrid, List, Inbox, Truck, PackageCheck, X,
+  Package, LayoutGrid, List, Inbox, Truck, PackageCheck, X, CheckCircle
 } from "lucide-react";
 import OrdersHeader from "../components/OrdersHeader";
 import OrdersCard from "../components/OrdersCard";
@@ -16,17 +16,17 @@ import type { OrderRecord } from "@/types/api";
 
 const toCardShape = (o: OrderRecord) => ({
   billNo: o.ui_id || o.id,
-  customerName: o.customer_name ?? String(o.datas?.customer_name ?? "Unknown"),
-  phone: o.customer_number ?? String(o.datas?.phone ?? "—"),
-  totalAmount: Number(o.datas?.total_amount ?? 0),
-  status: o.status ?? "INCOMING",
+  customerName: o.customer_name ?? String(o.additional_infos?.customer_name ?? o.datas?.customer_name ?? "Unknown"),
+  phone: o.customer_number ?? String(o.additional_infos?.customer_phone ?? o.datas?.phone ?? "—"),
+  totalAmount: Number(Number(o.calculation_infos?.total ?? o.calculation_infos?.grand_total ?? o.total_amount ?? o.datas?.total_amount ?? o.item_infos?.total_order_amount ?? o.pending_amount ?? 0).toFixed(2)),
+  status: o.status ?? "PENDING",
 });
 
 const Order = () => {
   const { loading, error, clearError } = useApi();
 
   const [orders, setOrders] = useState<OrderRecord[]>([]);
-  const [status, setStatus] = useState("INCOMING");
+  const [status, setStatus] = useState("PENDING");
   const [isOpen, setIsOpen] = useState(false);
   const [open, setOpen] = useState(false);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
@@ -42,6 +42,7 @@ const Order = () => {
   const handleStatusChange = async (newStatus: string, originalOrder: OrderRecord) => {
     try {
       const payload = {
+        id: originalOrder.id,
         shop_id: SHOP_ID,
         session_id: (originalOrder as any).session_id || "",
         customer_id: (originalOrder as any).customer_id || "",
@@ -80,21 +81,27 @@ const Order = () => {
       const res = await orderApi.getOrderById(SHOP_ID, order.id);
       if (res?.data) {
         const fullOrder = Array.isArray(res.data) ? res.data[0] : res.data;
-        const mappedItems = (fullOrder.items || []).map((i: any) => ({
-          name: i.product_name || i.datas?.product_name || `Item ${i.product_id?.slice(-4)}`,
-          qty: i.quantity,
-          price: i.sell_price || 0,
-          total: (i.sell_price || 0) * i.quantity
-        }));
+        const mappedItems = (fullOrder.items || []).map((i: any) => {
+          let itemName = i.product_name || i.name || i.datas?.product_name || `Item ${i.product_id?.slice(-4)}`;
+          if (i.variant_infos?.variant_name) {
+            itemName += ` (${i.variant_infos.variant_name})`;
+          }
+          return {
+            name: itemName,
+            qty: i.quantity ?? i.qty ?? 1,
+            price: Number((i.unit_price ?? i.sell_price ?? 0).toFixed(2)),
+            total: Number((i.line_total ?? i.total_amount ?? ((i.unit_price ?? i.sell_price ?? 0) * (i.quantity ?? i.qty ?? 1))).toFixed(2))
+          };
+        });
         
         setSelectedOrder({
           ...toCardShape(order),
           orderType: fullOrder.origin || "ONLINE",
           items: mappedItems,
-          subtotal: Number(fullOrder.calculation_infos?.sub_total || order.datas?.total_amount || 0),
+          subtotal: Number(Number(fullOrder.calculation_infos?.sub_total ?? fullOrder.calculation_infos?.total ?? fullOrder.total_amount ?? order.datas?.total_amount ?? fullOrder.item_infos?.total_order_amount ?? fullOrder.pending_amount ?? 0).toFixed(2)),
           gstPercent: 0,
-          gstAmount: Number(fullOrder.calculation_infos?.total_tax || 0),
-          grandTotal: Number(fullOrder.calculation_infos?.grand_total || order.datas?.total_amount || 0),
+          gstAmount: Number(Number(fullOrder.calculation_infos?.total_tax || 0).toFixed(2)),
+          grandTotal: Number(Number(fullOrder.calculation_infos?.grand_total ?? fullOrder.calculation_infos?.total ?? fullOrder.total_amount ?? order.datas?.total_amount ?? fullOrder.item_infos?.total_order_amount ?? fullOrder.pending_amount ?? 0).toFixed(2)),
         });
         setIsOpen(true);
         return;
@@ -108,33 +115,35 @@ const Order = () => {
       ...toCardShape(order),
       orderType: order.origin || "ONLINE",
       items: [],
-      subtotal: Number(order.datas?.total_amount || 0),
+      subtotal: Number(Number(order.calculation_infos?.sub_total ?? order.calculation_infos?.total ?? order.total_amount ?? order.datas?.total_amount ?? order.item_infos?.total_order_amount ?? order.pending_amount ?? 0).toFixed(2)),
       gstPercent: 0,
       gstAmount: 0,
-      grandTotal: Number(order.datas?.total_amount || 0),
+      grandTotal: Number(Number(order.calculation_infos?.grand_total ?? order.calculation_infos?.total ?? order.total_amount ?? order.datas?.total_amount ?? order.item_infos?.total_order_amount ?? order.pending_amount ?? 0).toFixed(2)),
     });
     setIsOpen(true);
   };
 
+  const onlineOrders = orders.filter((o) => o.origin === "ONLINE");
+  
   const filteredOrders = status === "ALL"
-    ? orders
-    : orders.filter((o) => o.status === status);
+    ? onlineOrders
+    : onlineOrders.filter((o) => o.status === status);
 
-  const totalOrders = orders.length;
-  const incoming = orders.filter((o) => o.status === "INCOMING").length;
-  const outForDelivery = orders.filter((o) => o.status === "OUT_FOR_DELIVERY").length;
-  const delivered = orders.filter((o) => o.status === "DELIVERED").length;
+  const totalOrders = onlineOrders.length;
+  const pending = onlineOrders.filter((o) => o.status === "PENDING").length;
+  const processing = onlineOrders.filter((o) => o.status === "PROCESSING").length;
+  const completed = onlineOrders.filter((o) => o.status === "COMPLETED").length;
 
   return (
-    <div className="min-h-screen bg-slate-50/60 font-sans">
+    <div className="h-full overflow-y-auto bg-slate-50/60 font-sans pb-10">
       <div className="space-y-4">
 
         <div className="flex-none overflow-x-auto pb-1">
           <div className="flex gap-4 min-w-max">
             <StatCard label="Total Orders" value={totalOrders} icon={Package} iconBg="bg-slate-100" iconColor="text-slate-600" />
-            <StatCard label="Incoming" value={incoming} icon={Inbox} iconBg="bg-amber-50" iconColor="text-amber-600" />
-            <StatCard label="Out for Delivery" value={outForDelivery} icon={Truck} iconBg="bg-purple-50" iconColor="text-purple-600" />
-            <StatCard label="Delivered" value={delivered} icon={PackageCheck} iconBg="bg-emerald-50" iconColor="text-emerald-600" />
+            <StatCard label="Pending" value={pending} icon={Inbox} iconBg="bg-amber-50" iconColor="text-amber-600" />
+            <StatCard label="Processing" value={processing} icon={CheckCircle} iconBg="bg-blue-50" iconColor="text-blue-600" />
+            <StatCard label="Completed" value={completed} icon={PackageCheck} iconBg="bg-emerald-50" iconColor="text-emerald-600" />
           </div>
         </div>
 

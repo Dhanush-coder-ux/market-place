@@ -120,7 +120,7 @@ const SupplierForm = () => {
       </div>
     );
     return () => setBottomActions(null);
-  }, [setBottomActions, formData, submitting, id, navigate]);
+  }, [setBottomActions, formData, submitting, id, navigate, customFieldDefs, customFieldValues]);
 
   // Load Data/Draft
   useEffect(() => {
@@ -216,6 +216,8 @@ const SupplierForm = () => {
 
     isSubmittingRef.current = true;
     setSubmitting(true);
+    console.log("Supplier handleSubmit - customFieldValues:", customFieldValues);
+    console.log("Supplier handleSubmit - customFieldDefs:", customFieldDefs);
     const payload: any = {
       shop_id: SHOP_ID,
       name: formData.supplier_name,
@@ -241,7 +243,14 @@ const SupplierForm = () => {
         internal_notes: formData.notes,
         type: formData.type,
         city: formData.city,
-      }
+      },
+      custom_fields: Object.entries(customFieldValues).reduce((acc, [fieldId, val]) => {
+        const fieldDef = customFieldDefs.find(fd => fd.id === fieldId);
+        if (fieldDef) {
+          acc[fieldDef.field_name] = val;
+        }
+        return acc;
+      }, {} as Record<string, any>)
     };
 
     if (id) {

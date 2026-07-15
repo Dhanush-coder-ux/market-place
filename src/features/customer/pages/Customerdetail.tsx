@@ -236,9 +236,9 @@ export default function CustomerDetail() {
     }
   }, [activeTab, id, getData]);
 
-  // Load custom field definitions + values when Custom Fields tab is active
+  // Load custom field definitions + values on mount / id change
   useEffect(() => {
-    if (!id || activeTab !== 3) return;
+    if (!id) return;
     setCfLoading(true);
     Promise.all([
       customerCustomFieldsApi.getAllFields(SHOP_ID),
@@ -247,7 +247,7 @@ export default function CustomerDetail() {
       setCustomFieldDefs(defs);
       setCustomFieldValues(vals);
     }).finally(() => setCfLoading(false));
-  }, [activeTab, id]);
+  }, [id]);
 
   const handleSaveCustomField = async (fieldId: string) => {
     if (!id) return;
@@ -385,7 +385,7 @@ export default function CustomerDetail() {
         {/* Tabs Navigation & Quick Stats Grid (pinned) */}
         <div className="flex-none px-1 py-2 space-y-2">
           <div className="flex gap-2 p-1 bg-slate-100/50 w-fit rounded-lg border border-slate-200/50">
-            {["Overview", "Sales", "Collection History", "Custom Fields"].map((tab, i) => (
+            {["Overview", "Sales", "Collection History"].map((tab, i) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(i)}
@@ -495,7 +495,7 @@ export default function CustomerDetail() {
                     <div className="relative z-10">
                       <div className="flex items-center gap-2.5 mb-6">
                         <div className="w-8 h-8 rounded-lg bg-emerald-600 flex items-center justify-center text-white shadow-lg shadow-emerald-100">
-                          <MapPin size={16} />
+                           <MapPin size={16} />
                         </div>
                         <h2 className="text-[10px] font-black text-slate-800  tracking-[0.15em]">Registered Address</h2>
                       </div>
@@ -518,6 +518,81 @@ export default function CustomerDetail() {
                       </div>
                     </div>
                   </SectionCard>
+
+                  {/* Custom Attributes Card */}
+                  {customFieldDefs.length > 0 && (
+                    <SectionCard className="rounded-lg border-slate-200 shadow-sm p-5 relative">
+                      <div className="flex items-center gap-2 mb-5">
+                        <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-100">
+                          <Layers size={16} />
+                        </div>
+                        <h2 className="text-[10px] font-black text-slate-800 tracking-[0.15em]">CUSTOM ATTRIBUTES</h2>
+                      </div>
+                      {cfLoading ? (
+                        <div className="py-8 flex justify-center"><Loader /></div>
+                      ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                          {customFieldDefs.map((field) => {
+                            const currentVal = customFieldValues.find((v) => v.field_id === field.id);
+                            const isEditing = editingFieldId === field.id;
+                            return (
+                              <div
+                                key={field.id}
+                                className={`group relative p-4 rounded-xl border transition-all ${
+                                  isEditing
+                                    ? 'border-indigo-200 bg-indigo-50/40'
+                                    : 'border-slate-100 bg-white hover:border-indigo-100 hover:bg-indigo-50/20'
+                                }`}
+                              >
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">
+                                  {field.label_name}
+                                  {field.required && <span className="text-rose-400 ml-0.5">*</span>}
+                                </p>
+
+                                {isEditing ? (
+                                  <div className="flex items-center gap-1.5 mt-1">
+                                    <input
+                                      autoFocus
+                                      type={field.type === 'number' ? 'number' : field.type === 'date' ? 'date' : 'text'}
+                                      value={editingValue}
+                                      onChange={(e) => setEditingValue(e.target.value)}
+                                      className="flex-1 h-8 px-2 text-xs font-semibold bg-white border border-indigo-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-200 transition-all"
+                                    />
+                                    <button
+                                      onClick={() => handleSaveCustomField(field.id)}
+                                      disabled={cfSaving}
+                                      className="w-7 h-7 flex items-center justify-center bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all active:scale-90 disabled:opacity-60"
+                                    >
+                                      {cfSaving ? <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Check size={12} />}
+                                    </button>
+                                    <button
+                                      onClick={() => { setEditingFieldId(null); setEditingValue(''); }}
+                                      className="w-7 h-7 flex items-center justify-center bg-slate-100 text-slate-500 rounded-lg hover:bg-slate-200 transition-all active:scale-90"
+                                    >
+                                      <XIcon size={12} />
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <div
+                                    className="flex items-center justify-between mt-1 cursor-pointer"
+                                    onClick={() => {
+                                      setEditingFieldId(field.id);
+                                      setEditingValue(currentVal?.value ?? '');
+                                    }}
+                                  >
+                                    <p className="text-sm font-bold text-slate-700 truncate">
+                                      {currentVal?.value || <span className="text-slate-300 font-medium italic">Click to set value</span>}
+                                    </p>
+                                    <Pencil size={11} className="text-slate-300 group-hover:text-indigo-400 transition-colors ml-2 shrink-0" />
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </SectionCard>
+                  )}
                 </div>
 
                 {/* Sidebar Column */}
@@ -599,90 +674,7 @@ export default function CustomerDetail() {
               </div>
             )}
 
-            {/* TAB 3 — Custom Fields */}
-            {activeTab === 3 && (
-              <div className="space-y-4 animate-in fade-in duration-300">
-                {cfLoading ? (
-                  <div className="py-16 flex justify-center"><Loader /></div>
-                ) : customFieldDefs.length === 0 ? (
-                  <div className="py-16 text-center">
-                    <div className="w-12 h-12 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-400 mx-auto mb-3">
-                      <Layers size={22} />
-                    </div>
-                    <p className="text-sm font-semibold text-slate-400">No custom fields defined for this shop yet.</p>
-                    <p className="text-xs text-slate-300 mt-1">Create field definitions from the Settings panel.</p>
-                  </div>
-                ) : (
-                  <SectionCard className="rounded-lg border-slate-200 shadow-sm p-5">
-                    <div className="flex items-center gap-2 mb-5">
-                      <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-100">
-                        <Layers size={16} />
-                      </div>
-                      <h2 className="text-[10px] font-black text-slate-800 tracking-[0.15em]">CUSTOM ATTRIBUTES</h2>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {customFieldDefs.map((field) => {
-                        const currentVal = customFieldValues.find((v) => v.field_id === field.id);
-                        const isEditing = editingFieldId === field.id;
-                        return (
-                          <div
-                            key={field.id}
-                            className={`group relative p-4 rounded-xl border transition-all ${
-                              isEditing
-                                ? 'border-indigo-200 bg-indigo-50/40'
-                                : 'border-slate-100 bg-white hover:border-indigo-100 hover:bg-indigo-50/20'
-                            }`}
-                          >
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">
-                              {field.label_name}
-                              {field.required && <span className="text-rose-400 ml-0.5">*</span>}
-                            </p>
 
-                            {isEditing ? (
-                              <div className="flex items-center gap-1.5 mt-1">
-                                <input
-                                  autoFocus
-                                  type={field.type === 'number' ? 'number' : field.type === 'date' ? 'date' : 'text'}
-                                  value={editingValue}
-                                  onChange={(e) => setEditingValue(e.target.value)}
-                                  className="flex-1 h-8 px-2 text-xs font-semibold bg-white border border-indigo-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-200 transition-all"
-                                />
-                                <button
-                                  onClick={() => handleSaveCustomField(field.id)}
-                                  disabled={cfSaving}
-                                  className="w-7 h-7 flex items-center justify-center bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all active:scale-90 disabled:opacity-60"
-                                >
-                                  {cfSaving ? <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Check size={12} />}
-                                </button>
-                                <button
-                                  onClick={() => { setEditingFieldId(null); setEditingValue(''); }}
-                                  className="w-7 h-7 flex items-center justify-center bg-slate-100 text-slate-500 rounded-lg hover:bg-slate-200 transition-all active:scale-90"
-                                >
-                                  <XIcon size={12} />
-                                </button>
-                              </div>
-                            ) : (
-                              <div
-                                className="flex items-center justify-between mt-1 cursor-pointer"
-                                onClick={() => {
-                                  setEditingFieldId(field.id);
-                                  setEditingValue(currentVal?.value ?? '');
-                                }}
-                              >
-                                <p className="text-sm font-bold text-slate-700 truncate">
-                                  {currentVal?.value || <span className="text-slate-300 font-medium italic">Click to set value</span>}
-                                </p>
-                                <Pencil size={11} className="text-slate-300 group-hover:text-indigo-400 transition-colors ml-2 shrink-0" />
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </SectionCard>
-                )}
-              </div>
-            )}
 
           </div>
         </div>

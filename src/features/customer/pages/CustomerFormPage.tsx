@@ -101,7 +101,7 @@ const CustomerFormPage = () => {
       </div>
     );
     return () => setBottomActions(null);
-  }, [setBottomActions, submitting, id, formData]);
+  }, [setBottomActions, submitting, id, formData, customFieldDefs, customFieldValues]);
 
   // Load Custom Field definitions
   useEffect(() => {
@@ -208,6 +208,8 @@ const CustomerFormPage = () => {
     setSubmitting(true);
 
     const canHaveCredit = formData.can_have_credit || Number(formData.credit_limit) > 0;
+    console.log("Customer handleSubmit - customFieldValues:", customFieldValues);
+    console.log("Customer handleSubmit - customFieldDefs:", customFieldDefs);
 
     const payload: any = {
       shop_id: SHOP_ID,
@@ -223,6 +225,13 @@ const CustomerFormPage = () => {
         state: formData.state || "",
       },
       can_have_credit: canHaveCredit,
+      custom_fields: Object.entries(customFieldValues).reduce((acc, [fieldId, val]) => {
+        const fieldDef = customFieldDefs.find(fd => fd.id === fieldId);
+        if (fieldDef) {
+          acc[fieldDef.field_name] = val;
+        }
+        return acc;
+      }, {} as Record<string, any>)
     };
 
     // Only send credit_infos when the customer can have credit

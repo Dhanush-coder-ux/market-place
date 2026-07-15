@@ -778,6 +778,14 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
             return acc;
           }, {} as Record<string, any>)
           : undefined,
+        // Include dynamic custom created fields with their field name same as key
+        ...Object.entries(customFieldValues).reduce((acc, [fieldId, val]) => {
+          const fieldDef = customFieldDefs.find(fd => fd.id === fieldId);
+          if (fieldDef) {
+            acc[fieldDef.field_name] = val;
+          }
+          return acc;
+        }, {} as Record<string, any>)
       },
     };
 

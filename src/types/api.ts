@@ -244,6 +244,11 @@ export interface OrderRecord {
   payment_infos?: Record<string, any>;
   additional_infos?: Record<string, any>;
   datas?: Record<string, unknown>;
+  item_infos?: {
+    total_order_amount?: number;
+    [key: string]: unknown;
+  };
+  pending_amount?: number;
 }
 
 // Purchase types: DIRECT | PO_CREATE | PO_UPDATE | PRODUCTION

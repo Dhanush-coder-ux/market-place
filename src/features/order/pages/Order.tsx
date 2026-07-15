@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import {
-  Package, LayoutGrid, List, Inbox, Truck, PackageCheck, X, CheckCircle
+  Package, LayoutGrid, List, Inbox, PackageCheck, X, CheckCircle
 } from "lucide-react";
 import OrdersHeader from "../components/OrdersHeader";
 import OrdersCard from "../components/OrdersCard";

@@ -302,7 +302,19 @@ export default function SupplierDetail() {
 
         <div className="flex flex-wrap gap-2">
           <StatCard icon={ShoppingBag} label="Total Purchases" value={`${stats?.total_purchases || 0} (₹${(stats?.total_purchase_amounts || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })})`} iconBg="bg-blue-50 text-blue-600" className="flex-1 min-w-[140px]" />
-          <StatCard icon={AlertCircle} label="Outstanding" value={`₹${(stats?.total_outstandings || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} iconBg={(stats?.total_outstandings || 0) > 0 ? "bg-rose-50 text-rose-600" : "bg-emerald-50 text-emerald-600"} className="flex-1 min-w-[140px]" onClick={() => setShowOutstandingModal(true)} />
+          {(() => {
+            const outstanding = (stats?.total_outstandings || 0) || ((supplier as any)?.outstanding_infos?.amount || 0);
+            return (
+              <StatCard 
+                icon={AlertCircle} 
+                label="Outstanding" 
+                value={`₹${outstanding.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} 
+                iconBg={outstanding > 0 ? "bg-rose-50 text-rose-600" : "bg-emerald-50 text-emerald-600"} 
+                className="flex-1 min-w-[140px]" 
+                onClick={() => setShowOutstandingModal(true)} 
+              />
+            );
+          })()}
           <StatCard icon={Package} label="Cleared Amount" value={`₹${(stats?.total_cleared_amounts || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} iconBg="bg-indigo-50 text-indigo-600" className="flex-1 min-w-[140px]" />
         </div>
       </div>
@@ -527,7 +539,8 @@ export default function SupplierDetail() {
                   referenceNo: pd.referenceNo || '—',
                   purchaseDate: p.purchase_date || pd.date || p.created_at,
                   paymentMethod: p.payment_infos?.[0]?.method ?? ((p.payment_status && p.payment_status.toLowerCase() === "outstanding") ? "Outstanding" : (payment.method || p.payment_status || '—')),
-                  amountPaid: p.paid_amount ?? p.payment_infos?.[0]?.amount ?? payment.amountPaid ?? 0,
+                   amountPaid: p.paid_amount ?? p.payment_infos?.[0]?.amount ?? payment.amountPaid ?? 0,
+                  outstandingAmount: p.outstanding_amount ?? 0,
                   totalCost: p.total_cost ?? p.item_infos?.total_pur_cost ?? pd.totalAmount ?? 0,
                   deliveryCharge: p.transport_charge ?? p.charges_infos?.transport_charge ?? charges.delivery_charge ?? 0,
                   otherCharge: p.other_charges ?? p.charges_infos?.other_charge ?? charges.other_charge ?? 0,

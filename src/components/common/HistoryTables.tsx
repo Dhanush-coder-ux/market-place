@@ -598,6 +598,7 @@ export function SupplierPurchasesTable({ rows, loading, onNavigateToPurchase }: 
                   <th className="px-5 py-3.5 text-center">Stock After</th>
                   <th className="px-5 py-3.5">Total Cost</th>
                   <th className="px-5 py-3.5">Paid</th>
+                  <th className="px-5 py-3.5">Outstanding</th>
                   <th className="px-5 py-3.5">Payment</th>
                   <th className="px-5 py-3.5">Invoice</th>
                   <th className="px-5 py-3.5">Date</th>
@@ -703,6 +704,9 @@ export function SupplierPurchasesTable({ rows, loading, onNavigateToPurchase }: 
                         </td>
                         <td className="px-5 py-4 whitespace-nowrap text-xs font-bold text-emerald-600">
                           ₹{r.amountPaid || 0}
+                        </td>
+                        <td className="px-5 py-4 whitespace-nowrap text-xs font-bold text-rose-600">
+                          ₹{r.outstandingAmount || 0}
                         </td>
                         <td className="px-5 py-4 whitespace-nowrap">
                           <div className="flex flex-col gap-0.5">

@@ -26,6 +26,7 @@ interface SaleItem {
   id: string; inventory_id: string; name: string; sku: string; category: string;
   quantity: number; returned_quantity: number; unitPrice: number; buyPrice: number;
   imageColor: string; status?: string; stocks_before?: number; serial_numbers?: string[]; serialno_id?: string;
+  unit: string; entered_unit: string; entered_qty: number; unit_infos?: any;
 }
 interface SelectedReturnItem extends SaleItem { returnQty: number; exchangeItemId?: string; selectedSerials?: string[]; }
 interface ReturnErrors { reason?: string; items?: string; settlement?: string; serials?: string; }
@@ -35,6 +36,7 @@ interface ReturnState {
   returnItems: Record<string, number>; exchangeMap: Record<string, any>;
   serialReturnMap: Record<string, string[]>;
   itemReasons: Record<string, ReturnReason>;
+  itemUnits: Record<string, string>;
   notes: string;
   payments: { mode: string; amount: number }[];
   errors: ReturnErrors; isSubmitting: boolean;
@@ -66,6 +68,10 @@ const generateItems = (sale: SaleRecord, productMap: Record<string, string> = {}
       batch_id: item.batch_id, serialno_id: item.serialno_id,
       serial_numbers: item.serial_numbers || [],
       stocks_before: (item as any).stocks_before,
+      unit: item.unit || (item as any).entered_unit || "Units",
+      entered_unit: (item as any).entered_unit || item.unit || "Units",
+      entered_qty: Number((item as any).entered_qty ?? item.quantity),
+      unit_infos: (item as any).unit_infos || null
     } as any;
   });
 
@@ -83,7 +89,20 @@ const QuantityStepper: React.FC<{ value: number; min?: number; max: number; onCh
     >
       <Minus size={9} />
     </button>
-    <span className="font-mono w-[28px] text-center text-[11px] font-semibold text-slate-800">{value}</span>
+    <input
+      type="number"
+      value={value}
+      min={min}
+      max={max}
+      onClick={e => e.stopPropagation()}
+      onChange={e => {
+        const val = Number(e.target.value);
+        if (!isNaN(val)) {
+          onChange(Math.min(Math.max(min, val), max));
+        }
+      }}
+      className="font-mono w-[38px] h-[26px] text-center text-[11px] font-semibold text-slate-800 border-none outline-none focus:ring-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+    />
     <button 
       className="w-[26px] h-[26px] flex items-center justify-center border-none bg-transparent cursor-pointer text-slate-400 hover:bg-blue-50 hover:text-blue-600 transition-colors disabled:opacity-30 disabled:cursor-not-allowed" 
       disabled={value >= max} 
@@ -286,11 +305,52 @@ const ItemSelector: React.FC<{ items: SaleItem[]; returnItems: Record<string, nu
                   </div>
                   {checked && (
                     <div className="animate-in fade-in slide-in-from-top-1 duration-200">
-                      <div className="flex items-center gap-2 mt-2" onClick={e => e.stopPropagation()}>
-                        <span className="text-[10px] text-slate-400">Qty</span>
-                        <QuantityStepper value={qty} max={item.quantity} onChange={v => onQtyChange(item.id, v)} />
-                        <span className="text-[10px] text-slate-400 whitespace-nowrap">of {item.quantity}</span>
-                        <span className="font-mono ml-auto text-[10px] font-bold text-blue-600">{fmt(item.unitPrice * qty)}</span>
+                      <div className="flex flex-col gap-2 mt-2" onClick={e => e.stopPropagation()}>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] text-slate-400">Qty</span>
+                          {(() => {
+                            let factor = 1.0;
+                            if (item.entered_unit !== item.unit && item.unit_infos?.sub_units) {
+                              const su = item.unit_infos.sub_units.find((s: any) => s.name === item.entered_unit);
+                              if (su && su.factor) {
+                                factor = su.factor;
+                              }
+                            }
+                            const baseMax = Math.max(0, item.quantity - item.returned_quantity);
+                            const maxLimit = factor > 0 ? baseMax / factor : baseMax;
+                            return (
+                              <>
+                                <QuantityStepper value={qty} max={maxLimit} onChange={v => onQtyChange(item.id, v)} />
+                                <span className="text-[10px] text-slate-400 whitespace-nowrap">
+                                  of {maxLimit} {item.entered_unit || item.unit}
+                                </span>
+                              </>
+                            );
+                          })()}
+                          <span className="font-mono ml-auto text-[10px] font-bold text-blue-600">
+                            {fmt(item.unitPrice * qty * (item.entered_unit !== item.unit && item.unit_infos?.sub_units?.find((su: any) => su.name === item.entered_unit)?.factor ? item.unit_infos.sub_units.find((su: any) => su.name === item.entered_unit).factor : 1))}
+                          </span>
+                        </div>
+                        {item.unit_infos?.sub_units?.length > 0 && (
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-[10px] text-slate-400">Unit</span>
+                            <select
+                              value={item.entered_unit || item.unit}
+                              onChange={e => {
+                                const selectedUnit = e.target.value;
+                                // Automatically update unit in local state map or directly update the item property
+                                item.entered_unit = selectedUnit;
+                                onQtyChange(item.id, qty); // trigger rerender/update
+                              }}
+                              className="h-7 px-2 text-[10px] border border-slate-200 roundedbg-white text-slate-700 outline-none focus:border-blue-500 font-semibold"
+                            >
+                              <option value={item.unit}>{item.unit}</option>
+                              {item.unit_infos.sub_units.map((su: any) => (
+                                <option key={su.name} value={su.name}>{su.name}</option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
                       </div>
                       {hasSerials && <SerialReturnPicker allSerials={item.serial_numbers as string[]} selected={selectedSerials} required={qty} onChange={s => onSerialChange(item.id, s)} />}
                       <div className="mt-2" onClick={e => e.stopPropagation()}>
@@ -325,7 +385,7 @@ const ItemSelector: React.FC<{ items: SaleItem[]; returnItems: Record<string, nu
    USE RETURN HOOK
 ═══════════════════════════════════════════════════════════════ */
 const initialState = (): ReturnState => ({
-  step: 1, mode: "refund", returnItems: {}, exchangeMap: {}, serialReturnMap: {}, itemReasons: {},
+  step: 1, mode: "refund", returnItems: {}, exchangeMap: {}, serialReturnMap: {}, itemReasons: {}, itemUnits: {},
   notes: "", payments: [{ mode: "Cash", amount: 0 }], errors: {}, isSubmitting: false,
 });
 
@@ -425,8 +485,18 @@ const useReturnModalLogic = (sale: SaleRecord | null, productMap: Record<string,
   const updateQty = useCallback((itemId: string, v: number) => {
     const item = saleItems.find(i => i.id === itemId);
     if (!item) return;
-    const maxReturnable = Math.max(0, item.quantity - item.returned_quantity);
-    setState(s => ({ ...s, returnItems: { ...s.returnItems, [itemId]: Math.min(Math.max(1, v), maxReturnable) } }));
+    let factor = 1.0;
+    if (item.entered_unit !== item.unit && item.unit_infos?.sub_units) {
+      const su = item.unit_infos.sub_units.find((s: any) => s.name === item.entered_unit);
+      if (su && su.factor) {
+        factor = su.factor;
+      }
+    }
+    // Calculate max allowed quantity in the selected unit
+    const baseMaxReturnable = Math.max(0, item.quantity - item.returned_quantity);
+    const maxReturnableInSelectedUnit = factor > 0 ? baseMaxReturnable / factor : baseMaxReturnable;
+
+    setState(s => ({ ...s, returnItems: { ...s.returnItems, [itemId]: Math.min(Math.max(1, v), maxReturnableInSelectedUnit) } }));
   }, [saleItems]);
 
   const setExchangeProduct = useCallback((itemId: string, product: any) => setState(s => ({ ...s, exchangeMap: { ...s.exchangeMap, [itemId]: product } })), []);
@@ -437,7 +507,16 @@ const useReturnModalLogic = (sale: SaleRecord | null, productMap: Record<string,
     [saleItems, state.returnItems, state.exchangeMap, state.serialReturnMap]);
 
   const totals = useMemo(() => {
-    const returnValue = selectedItems.reduce((s, i) => s + i.unitPrice * i.returnQty, 0);
+    const returnValue = selectedItems.reduce((s, i) => {
+      let factor = 1.0;
+      if (i.entered_unit !== i.unit && i.unit_infos?.sub_units) {
+        const su = i.unit_infos.sub_units.find((suObj: any) => suObj.name === i.entered_unit);
+        if (su && su.factor) {
+          factor = su.factor;
+        }
+      }
+      return s + i.unitPrice * i.returnQty * factor;
+    }, 0);
     const exchangeValue = state.mode === "exchange" ? selectedItems.reduce((s, i) => { if (!i.exchangeItemId) return s; const ep = i.exchangeItemId as any; return s + ((ep?.sell_price ?? 0) * (ep?.quantity ?? i.returnQty)); }, 0) : 0;
     return { returnValue, exchangeValue, diff: exchangeValue - returnValue };
   }, [selectedItems, state.mode]);
@@ -497,6 +576,7 @@ const useReturnModalLogic = (sale: SaleRecord | null, productMap: Record<string,
       const itemsPayload = selectedItems.map(i => ({
         order_item_id: i.id,
         quantity: i.returnQty,
+        unit: i.entered_unit || i.unit,
         reason: state.itemReasons[i.id] || "Customer Request",
         serialno_infos: i.selectedSerials?.length 
           ? i.selectedSerials.map(s => ({ id: i.serialno_id || "", name: s })) 

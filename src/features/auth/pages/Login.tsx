@@ -11,13 +11,14 @@ const Login = () => {
     setLoading(true);
     try {
       const response = await authApi.getLoginUrl();
-      // Assuming response.data or response is the URL or contains a URL property
-      const url = response?.data?.url || response?.url || response; 
-      
+      // Debugger Auth returns: { signin_url: "https://...", signup_url: "https://..." }
+      const url = response?.signin_url || response?.url || response?.data?.signin_url || response?.data?.url;
+
       if (typeof url === 'string' && url.startsWith('http')) {
         window.location.href = url;
       } else {
-        showToast("Invalid login URL received.", "error");
+        console.error("Unexpected login URL response:", response);
+        showToast("Invalid login URL received from server.", "error");
       }
     } catch (error) {
       console.error(error);

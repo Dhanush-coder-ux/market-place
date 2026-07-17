@@ -453,7 +453,7 @@ const ProductRow = React.memo(
                     );
                   })()}
                   <span className="text-slate-200">·</span>
-                  <span>{datas.brand || (p as any).brand || "Generic"}</span>
+                  <span>{p.brand || datas.brand || (p as any).brand || "Generic"}</span>
                   {(p.gst || datas.gst || (p as any).gst) && (
                     <>
                       <span className="text-slate-200">·</span>

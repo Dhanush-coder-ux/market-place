@@ -393,7 +393,7 @@ const ProductDetail = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-y-6 gap-x-8">
                     <DetailItem icon={Package} label="Product Name" value={name} onClick={click("Product Name", name)} />
                     <DetailItem icon={Tag} label="Category" value={categoryName} onClick={click("Category", categoryName)} />
-                    <DetailItem icon={Hash} label="Brand" value={String(datas.brand || "—")} onClick={click("Brand", String(datas.brand || "—"))} />
+                    <DetailItem icon={Hash} label="Brand" value={String(product.brand || datas.brand || "—")} onClick={click("Brand", String(product.brand || datas.brand || "—"))} />
                     <DetailItem icon={Info} label="Unit" value={unitName} onClick={click("Unit", unitName)} />
                     <DetailItem icon={Hash} label="SKU" value={skuValue} onClick={click("SKU", skuValue)} />
                     {uiId && uiId !== skuValue && <DetailItem icon={Hash} label="Product ID" value={uiId} onClick={click("Product ID", uiId)} />}

@@ -40,6 +40,7 @@ export interface OrderItemResponse {
   sell_price: number;
   gst?: string | null;
   quantity: number;
+  unit?: string;
   status?: string;
 }
 

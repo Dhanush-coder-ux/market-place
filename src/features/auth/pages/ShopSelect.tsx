@@ -4,7 +4,6 @@ import { Store, Plus, ChevronRight, Loader2 } from "lucide-react";
 import { setShopId } from "@/services/endpoints";
 import { fetchMyShops } from "@/services/api/shopHelpers";
 import { useToast } from "@/context/ToastContext";
-import { authApi } from "@/services/api/auth";
 
 interface ShopItem {
   id: string;
@@ -38,40 +37,16 @@ const ShopSelect = () => {
   const handleSelectShop = async (shop: ShopItem) => {
     setSelecting(shop.id);
     try {
-      const sessionId = localStorage.getItem("session_id");
-      if (sessionId) {
-        // Exchange session_id and shop_id for access & refresh tokens
-        const res = await authApi.createToken(sessionId, shop.id);
-        const data = res?.data ?? res;
-        if (data && data.access_token) {
-          localStorage.setItem("auth_token", data.access_token);
-          if (data.refresh_token) {
-            localStorage.setItem("refresh_token", data.refresh_token);
-          }
-          // Decode access_token and store user_id and shop_id
-          try {
-            const payload = JSON.parse(atob(data.access_token.split('.')[1]));
-            if (payload.user_id) {
-              localStorage.setItem("user_id", payload.user_id);
-            }
-            if (payload.shop_id) {
-              localStorage.setItem("shop_id", payload.shop_id);
-            }
-          } catch (e) {
-            console.error("Error decoding access token:", e);
-          }
-        }
-      }
-      
+      // Tokens were already obtained during the /auth/callback step.
+      // Just persist the chosen shop_id and navigate to the dashboard.
       setShopId(shop.id);
       localStorage.setItem("shop_id", shop.id);
       showToast(`Switched to ${shop.name}`, "success");
-      // Small delay for visual feedback
-      await new Promise((r) => setTimeout(r, 400));
+      await new Promise((r) => setTimeout(r, 300));
       navigate("/");
     } catch (err: any) {
-      console.error("Failed to select shop and exchange token:", err);
-      showToast(err.message || "Failed to authenticate for this shop", "error");
+      console.error("Failed to select shop:", err);
+      showToast(err.message || "Failed to switch shop", "error");
     } finally {
       setSelecting(null);
     }

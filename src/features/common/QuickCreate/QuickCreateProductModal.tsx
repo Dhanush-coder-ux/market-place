@@ -459,6 +459,7 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
         category_id: form.category,
         unit_id: form.unit,
         name: form.name,
+        brand: form.brand || null,
         description: form.description,
         barcode: (form.barcode && form.barcode.trim() !== "") ? form.barcode : null,
         type_infos: {

@@ -71,12 +71,19 @@ async function request(options: RequestOptions): Promise<any> {
 
   if (res.status === 401) {
     const refreshToken = localStorage.getItem("refresh_token");
-    if (refreshToken && !endpoint.includes("/auth/token/refresh")) {
+    if (refreshToken && !endpoint.includes("/auth/refresh")) {
       try {
-        const refreshRes = await fetch(`${BASE_URL}/auth/token/refresh`, {
+        // Extract token version from the refresh token payload
+        let tokenVersion = "1";
+        try {
+          const p = JSON.parse(atob(refreshToken.split(".")[1]));
+          if (p.version) tokenVersion = p.version;
+        } catch { /* ignore */ }
+
+        const refreshRes = await fetch(`${BASE_URL}/auth/refresh`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ refresh_token: refreshToken })
+          body: JSON.stringify({ refresh_token: refreshToken, version: tokenVersion })
         });
         
         if (refreshRes.ok) {
@@ -161,10 +168,16 @@ async function requestFormData(endpoint: string, formData: FormData): Promise<an
     const refreshToken = localStorage.getItem("refresh_token");
     if (refreshToken) {
       try {
-        const refreshRes = await fetch(`${BASE_URL}/auth/token/refresh`, {
+        let tokenVersion = "1";
+        try {
+          const p = JSON.parse(atob(refreshToken.split(".")[1]));
+          if (p.version) tokenVersion = p.version;
+        } catch { /* ignore */ }
+
+        const refreshRes = await fetch(`${BASE_URL}/auth/refresh`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ refresh_token: refreshToken })
+          body: JSON.stringify({ refresh_token: refreshToken, version: tokenVersion })
         });
         
         if (refreshRes.ok) {

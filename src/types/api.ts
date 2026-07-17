@@ -196,6 +196,7 @@ export interface InventoryRecord {
   stocks: number;
   barcode: string;
   sku?: string;
+  brand?: string;
   shop_id: string;
   added_by: string;
   datas?: Record<string, any>;

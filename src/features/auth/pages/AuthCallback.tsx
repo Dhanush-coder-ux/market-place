@@ -1,60 +1,91 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useToast } from "@/context/ToastContext";
-import { Loader2 } from "lucide-react";
+import { Loader2, CheckCircle, XCircle } from "lucide-react";
 
+/**
+ * AuthCallback – landed on after the backend's /auth/callback redirects here.
+ *
+ * The backend processes the OAuth token_id, creates/fetches the user, signs
+ * RS256 JWTs and redirects the browser to:
+ *   {FRONTEND_URL}/auth/callback?access_token=xxx&refresh_token=yyy&token_type=bearer&expires_in=3600
+ *
+ * This page reads those params from the URL, stores them in localStorage,
+ * and redirects to /shop-select.
+ */
 const AuthCallback = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { showToast } = useToast();
-  const [status, setStatus] = useState("Authenticating...");
+  const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
+  const [message, setMessage] = useState("Completing sign-in…");
 
   useEffect(() => {
-    const handleAuth = async () => {
-      const token = searchParams.get("token");
+    const handleAuth = () => {
+      const accessToken = searchParams.get("access_token");
+      const refreshToken = searchParams.get("refresh_token");
 
-      if (!token) {
-        showToast("Authentication failed. No token provided.", "error");
-        navigate("/login");
+      if (!accessToken) {
+        setStatus("error");
+        setMessage("Authentication failed — no token received.");
+        showToast("Authentication failed. Please try again.", "error");
+        setTimeout(() => navigate("/login"), 2500);
         return;
       }
 
-      try {
-        // Save the JWT token to localStorage for subsequent API requests
-        localStorage.setItem("auth_token", token);
-        
-        try {
-          const payload = JSON.parse(atob(token.split('.')[1]));
-          if (payload.user_id) {
-            localStorage.setItem("user_id", payload.user_id);
-          }
-          if (payload.shop_id) {
-            localStorage.setItem("shop_id", payload.shop_id);
-          }
-        } catch (e) {
-          console.error("Failed to parse token payload:", e);
-        }
-
-        setStatus("Authentication successful! Redirecting...");
-        showToast("Successfully signed in", "success");
-
-        // Redirect to shop selection page
-        navigate("/shop-select");
-      } catch (error) {
-        console.error("Auth callback error:", error);
-        showToast("Authentication failed. Please try again.", "error");
-        navigate("/login");
+      // Store tokens
+      localStorage.setItem("auth_token", accessToken);
+      if (refreshToken) {
+        localStorage.setItem("refresh_token", refreshToken);
       }
+
+      // Decode JWT payload to extract user_id ("sub" claim)
+      try {
+        const payload = JSON.parse(atob(accessToken.split(".")[1]));
+        const userId = payload.sub || payload.user_id;
+        if (userId) localStorage.setItem("user_id", userId);
+      } catch (e) {
+        console.warn("Could not decode JWT payload:", e);
+      }
+
+      // Clean the tokens from the URL so they aren't in browser history
+      window.history.replaceState({}, "", "/auth/callback");
+
+      setStatus("success");
+      setMessage("Signed in successfully!");
+      showToast("Welcome! Choose a shop to continue.", "success");
+      setTimeout(() => navigate("/shop-select"), 800);
     };
 
     handleAuth();
-  }, [searchParams, navigate, showToast]);
+  // Run once on mount
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-slate-950 font-sans text-white">
-      <div className="flex flex-col items-center gap-4">
-        <Loader2 className="w-10 h-10 text-indigo-500 animate-spin" />
-        <h2 className="text-xl font-bold tracking-tight text-slate-300">{status}</h2>
+      <div className="flex flex-col items-center gap-5 px-6 text-center">
+        {status === "loading" && (
+          <>
+            <Loader2 className="w-12 h-12 text-indigo-400 animate-spin" />
+            <h2 className="text-xl font-bold tracking-tight text-slate-200">{message}</h2>
+            <p className="text-sm text-slate-500">Please wait…</p>
+          </>
+        )}
+        {status === "success" && (
+          <>
+            <CheckCircle className="w-12 h-12 text-emerald-400" />
+            <h2 className="text-xl font-bold tracking-tight text-slate-200">{message}</h2>
+            <p className="text-sm text-slate-500">Redirecting you now…</p>
+          </>
+        )}
+        {status === "error" && (
+          <>
+            <XCircle className="w-12 h-12 text-red-400" />
+            <h2 className="text-xl font-bold tracking-tight text-slate-200">{message}</h2>
+            <p className="text-sm text-slate-500">Taking you back to login…</p>
+          </>
+        )}
       </div>
     </div>
   );

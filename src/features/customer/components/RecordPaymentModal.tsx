@@ -74,6 +74,7 @@ export function RecordPaymentModal({ show, onClose, customer, onSuccess }: Recor
     const payload = {
       shop_id: SHOP_ID,
       customer_id: customer.id,
+      id: customer.id,
       payment_infos: paymentInfos,
     };
 

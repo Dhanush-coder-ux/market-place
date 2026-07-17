@@ -445,10 +445,10 @@ const SaleDetailPage: React.FC = () => {
                           </div>
                         </td>
                         <td className="px-6 py-4 text-center">
-                          <span className="text-xs font-black text-slate-600">{Number((item.quantity || 0).toFixed(2))}</span>
+                          <span className="text-xs font-black text-slate-600">{Number(((item as any).entered_qty !== undefined ? (item as any).entered_qty : (item.quantity || 0)).toFixed(2))}</span>
                         </td>
                         <td className="px-6 py-4 text-center">
-                          <span className="text-[10px] font-black text-slate-500 uppercase px-2 py-0.5 rounded bg-slate-100">{item.unit}</span>
+                          <span className="text-[10px] font-black text-slate-500 uppercase px-2 py-0.5 rounded bg-slate-100">{(item as any).entered_unit || item.unit}</span>
                         </td>
                         <td className="px-6 py-4 text-right">
                           <span className="text-xs font-bold text-slate-500 tabular-nums">{fmt(item.unitPrice)}</span>

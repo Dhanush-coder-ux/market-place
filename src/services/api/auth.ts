@@ -1,39 +1,41 @@
 import { apiClient } from './apiClient';
-import { ENDPOINTS } from '../endpoints';
+
+const AUTH_BASE = '/auth';
+const SERVICE_NAME = 'HYPERLOCAL-INVENTORY';
+const KEY_VERSION = '1';
 
 export const authApi = {
-  userCheck: async (email: string, name?: string, mobile_number?: string) => {
-    const params: Record<string, string> = { email };
-    if (name) params.name = name;
-    if (mobile_number) params.mobile_number = mobile_number;
-    return await apiClient.get(ENDPOINTS.AUTH_USER_CHECK, params);
-  },
-
-  shopCheck: async (user_id: string) => {
-    return await apiClient.get(ENDPOINTS.AUTH_SHOP_CHECK, { user_id });
-  },
-
-  verifyEmployee: async (token: string) => {
-    return await apiClient.get(ENDPOINTS.AUTH_VERIFY, { token });
-  },
-
+  /** Step 1: Get the OAuth login URL from the backend. Redirects user to Debugger Auth. */
   getLoginUrl: async () => {
-    return await apiClient.get(ENDPOINTS.AUTH_INIT);
+    return await apiClient.get(`${AUTH_BASE}/login-url`, {
+      service: SERVICE_NAME,
+      version: KEY_VERSION,
+    });
   },
 
-  createUser: async (token_id: string) => {
-    return await apiClient.get(ENDPOINTS.AUTH_REDIRECT, { token_id });
+  // Step 2 (callback) is handled server-side:
+  // Backend receives token_id from Debugger Auth, generates JWTs,
+  // and redirects browser to {FRONTEND_URL}/auth/callback?access_token=...&refresh_token=...
+  // AuthCallback.tsx reads those params directly — no API call needed.
+
+  /** Refresh an expired access token using the stored refresh token. */
+  refreshToken: async (refresh_token: string, version: string = KEY_VERSION) => {
+    return await apiClient.post(`${AUTH_BASE}/refresh`, { refresh_token, version });
   },
 
+  /** Create token (used in DigitalStoreForm) */
   createToken: async (session_id: string, shop_id: string) => {
-    return await apiClient.post(ENDPOINTS.AUTH_TOKEN_CREATE, { session_id, shop_id });
+    return await apiClient.post(`${AUTH_BASE}/token`, { session_id, shop_id });
   },
 
-  shopCheckin: async (session_id: string, shop_id: string) => {
-    return await apiClient.post(ENDPOINTS.AUTH_SHOP_CHECKIN, { session_id, shop_id });
+
+  /** Revoke a token (logout). */
+  revokeToken: async (token: string) => {
+    return await apiClient.post(`${AUTH_BASE}/revoke`, { token });
   },
 
-  refreshToken: async (refresh_token: string) => {
-    return await apiClient.post(ENDPOINTS.AUTH_TOKEN_REFRESH, { refresh_token });
-  }
+  /** Get public key for a specific version (used by gateway/middleware). */
+  getPublicKey: async (version: string = KEY_VERSION) => {
+    return await apiClient.get(`${AUTH_BASE}/keys/${version}`);
+  },
 };

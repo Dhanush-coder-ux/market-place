@@ -118,6 +118,7 @@ export const customerApi = {
   clearOutstanding: async (data: {
     shop_id: string;
     customer_id: string;
+    id: string;
     payment_infos: Array<{ method: 'UPI' | 'CASH' | 'CARD' | 'BANK'; amount: number }>;
   }) => {
     return await apiClient.post(`${ENDPOINTS.CUSTOMERS}/outstanding/clear`, data);

@@ -26,6 +26,9 @@ const setCache = (url: string, data: unknown) => {
 const clearAuthTokens = () => {
   localStorage.removeItem("auth_token");
   localStorage.removeItem("refresh_token");
+  if (window.location.pathname !== "/login") {
+    window.location.href = "/login";
+  }
 };
 
 const isJwtExpired = (token: string | null): boolean => {
@@ -44,10 +47,16 @@ const refreshAccessToken = async (): Promise<string | null> => {
   if (!refreshToken) return null;
 
   if (!refreshPromise) {
-    refreshPromise = fetch(`${BASE_URL}${ENDPOINTS.AUTH_TOKEN_REFRESH}`, {
+    let tokenVersion = "1";
+    try {
+      const p = JSON.parse(atob(refreshToken.split(".")[1]));
+      if (p.version) tokenVersion = p.version;
+    } catch { /* ignore */ }
+
+    refreshPromise = fetch(`${BASE_URL}/api${ENDPOINTS.AUTH_TOKEN_REFRESH}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ refresh_token: refreshToken }),
+      body: JSON.stringify({ refresh_token: refreshToken, version: tokenVersion }),
     })
       .then(async (res) => {
         if (!res.ok) {
@@ -159,7 +168,12 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
     params?: Record<string, string>,
     options?: { signal?: AbortSignal; cacheKey?: string }
   ): Promise<any> => {
-    let url = `${BASE_URL}${endpoint}`;
+    let cleanBaseUrl = BASE_URL.replace(/\/+$/, "");
+    if (cleanBaseUrl.endsWith("/api")) {
+      cleanBaseUrl = cleanBaseUrl.slice(0, -4);
+    }
+    let url = `${cleanBaseUrl}${endpoint.startsWith("/api") ? endpoint : `/api${endpoint}`}`;
+    
     if (params && Object.keys(params).length > 0) {
       url += `?${new URLSearchParams(params).toString()}`
     }

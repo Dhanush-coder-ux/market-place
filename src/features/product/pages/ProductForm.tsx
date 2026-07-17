@@ -11,6 +11,7 @@ import { useApi } from "@/context/ApiContext";
 import { useBusinessApi } from "@/context/BusinessApiContext";
 import { SHOP_ID, ENDPOINTS } from "@/services/endpoints";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
+import { apiClient } from "@/services/api/apiClient";
 import { useHeader } from "@/context/HeaderContext";
 import { useToast } from "@/context/ToastContext";
 import { Switch } from "@/components/ui/switch";
@@ -533,7 +534,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
               stocks: prod.stock_infos?.available_stocks || 0,
               serial_number: (prod.serialno_infos && prod.serialno_infos.length > 0 ? (typeof prod.serialno_infos[0] === 'string' ? prod.serialno_infos[0] : prod.serialno_infos[0].name || "") : ""),
               barcode: prod.barcode || "",
-              brand: additional.brand || "",
+              brand: prod.brand || additional.brand || "",
               category: prod.category_id || "",
               unit: prod.unit_id || "",
               description: prod.description || "",
@@ -559,7 +560,8 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
               low_stock_alert: additional.low_stock_alert || "Notify me",
               visible_online: prod.visible_online || false,
             });
-            if (additional.images && Array.isArray(additional.images)) setExistingImages(additional.images);
+            const imgList = prod.image_url || additional.images || [];
+            if (imgList && Array.isArray(imgList)) setExistingImages(imgList);
 
             const loadedBrand = additional.brand || "";
             const loadedName = prod.name || "";
@@ -741,6 +743,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
       category_id: form.category,
       unit_id: form.unit,
       name: form.name,
+      brand: form.brand || null,
       description: form.description,
       barcode: form.barcode || null,
       type_infos: {
@@ -828,18 +831,13 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
           uploadFormData.append("files", file);
         });
         try {
-          const uploadRes = await fetch(`${import.meta.env.VITE_GATEWAY_URL}/inventories/inventories/upload/images`, {
-            method: "POST",
-            body: uploadFormData
-          });
-          if (!uploadRes.ok) {
-            showToast("Product saved, but image upload failed", "warning");
-          } else {
+          const res = await apiClient.postFormData("/inventories/inventories/upload/images", uploadFormData);
+          if (res) {
             showToast("Images uploaded successfully", "success");
           }
         } catch (uploadErr) {
           console.error("Failed to upload images post-creation", uploadErr);
-          showToast("Failed to upload images", "error");
+          showToast("Product saved, but image upload failed", "warning");
         } finally {
           setIsUploadingImages(false);
         }

@@ -15,17 +15,24 @@ export function useInfiniteScroll<T, F>({ fetchPage, filters, limit = 50 }: UseI
   const [totalCount, setTotalCount] = useState<number>(0);
   const [stats, setStats] = useState<any>(null);
 
-  // Deep comparison of filters could be needed if filters is a complex object passed directly.
-  // We recommend wrapping filters in useMemo at the consumer level.
+  const fetchPageRef = useRef(fetchPage);
+  useEffect(() => {
+    fetchPageRef.current = fetchPage;
+  }, [fetchPage]);
+
+  // Deep comparison of filters using JSON stringify to avoid infinite loops if the consumer passes a new object every render.
+  const filtersStr = JSON.stringify(filters);
   const filtersRef = useRef<F>(filters);
+  useEffect(() => {
+    filtersRef.current = filters;
+  }, [filters]);
 
   const loadInitial = useCallback(async () => {
     setLoading(true);
     setOffset(1);
-    filtersRef.current = filters;
     
     try {
-      const res = await fetchPage(limit, 1, filters);
+      const res = await fetchPageRef.current(limit, 1, filtersRef.current);
       setItems(res.items || []);
       setHasMore(res.hasMore);
       if (res.total !== undefined) setTotalCount(res.total);
@@ -37,7 +44,7 @@ export function useInfiniteScroll<T, F>({ fetchPage, filters, limit = 50 }: UseI
     } finally {
       setLoading(false);
     }
-  }, [fetchPage, limit, filters]);
+  }, [limit]);
 
   const loadMore = useCallback(async () => {
     if (loading || loadingMore || !hasMore) return;
@@ -46,7 +53,7 @@ export function useInfiniteScroll<T, F>({ fetchPage, filters, limit = 50 }: UseI
     const nextOffset = offset + 1;
     
     try {
-      const res = await fetchPage(limit, nextOffset, filtersRef.current);
+      const res = await fetchPageRef.current(limit, nextOffset, filtersRef.current);
       if (res.items && res.items.length > 0) {
         setItems(prev => [...prev, ...res.items]);
         setOffset(nextOffset);
@@ -62,12 +69,12 @@ export function useInfiniteScroll<T, F>({ fetchPage, filters, limit = 50 }: UseI
     } finally {
       setLoadingMore(false);
     }
-  }, [fetchPage, limit, offset, loading, loadingMore, hasMore]);
+  }, [limit, offset, loading, loadingMore, hasMore]);
 
-  // When fetchPage, limit, or filters change, reload from page 1
+  // When filters or limit change, reload from page 1
   useEffect(() => {
     loadInitial();
-  }, [loadInitial]);
+  }, [loadInitial, filtersStr]);
 
   // The ref callback to attach to the last element in the list
   const observerRef = useRef<IntersectionObserver | null>(null);

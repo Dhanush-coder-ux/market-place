@@ -524,10 +524,17 @@ const SalesListPage: React.FC = () => {
                 const hasReturns = (sale.returns && sale.returns.length > 0) || (sale.items || []).some((i: any) => (i.returned_quantity && i.returned_quantity > 0) || i.status === "REFUNDED" || i.status === "EXCHANGED");
 
                 const itemsList = sale.items || [];
-                const firstItemName = itemsList[0]?.name || itemsList[0]?.product_name || "—";
+                const getFirstItemDisplay = () => {
+                  const firstItem = itemsList[0];
+                  if (!firstItem) return "—";
+                  const name = firstItem.name || firstItem.product_name || "—";
+                  const qty = firstItem.entered_qty !== undefined ? firstItem.entered_qty : firstItem.quantity;
+                  const unit = firstItem.entered_unit || firstItem.unit || "";
+                  return `${name} (${qty} ${unit})`;
+                };
                 const itemsDisplay = itemsList.length > 1 
-                  ? `${firstItemName} +${itemsList.length - 1} more` 
-                  : firstItemName;
+                  ? `${getFirstItemDisplay()} +${itemsList.length - 1} more` 
+                  : getFirstItemDisplay();
 
                 const isSelected = selectedSale?.id === sale.id;
 

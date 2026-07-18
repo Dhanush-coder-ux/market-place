@@ -401,10 +401,12 @@ export const Navbar = () => {
           </div>
 
           <div className="flex items-center gap-1 sm:gap-2">
-            <button className="relative p-2 text-slate-400 md:hover:bg-slate-100 md:hover:text-slate-700 rounded-full md:transition-colors">
-              <Bell className="w-5 h-5" />
-              <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-rose-500 rounded-full border-2 border-white"></span>
-            </button>
+            <Link to="/notifications">
+              <button className="relative p-2 text-slate-400 md:hover:bg-slate-100 md:hover:text-slate-700 rounded-full md:transition-colors">
+                <Bell className="w-5 h-5" />
+                <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-rose-500 rounded-full border-2 border-white"></span>
+              </button>
+            </Link>
             <Link to={"/settings"}>
               <button className="p-2 text-slate-400 md:hover:bg-slate-100 md:hover:text-slate-700 rounded-full md:transition-colors group">
                 <Settings className="w-5 h-5 md:group-hover:rotate-45 md:transition-transform md:duration-300" />

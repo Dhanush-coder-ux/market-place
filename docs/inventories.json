@@ -13,6 +13,24 @@
         ],
         "summary": "Create",
         "operationId": "create_inventories_post",
+        "parameters": [
+          {
+            "name": "x-user-infos",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-User-Infos"
+            }
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -52,6 +70,24 @@
         ],
         "summary": "Update",
         "operationId": "update_inventories_put",
+        "parameters": [
+          {
+            "name": "x-user-infos",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-User-Infos"
+            }
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -320,6 +356,22 @@
             "schema": {
               "type": "string",
               "title": "Shop Id"
+            }
+          },
+          {
+            "name": "x-user-infos",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-User-Infos"
             }
           }
         ],
@@ -1184,6 +1236,17 @@
             "type": "string",
             "title": "Name"
           },
+          "brand": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Brand"
+          },
           "description": {
             "type": "string",
             "title": "Description"
@@ -1265,6 +1328,17 @@
             ],
             "title": "Sell Price"
           },
+          "online_sell_price": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Online Sell Price"
+          },
           "reorder_point": {
             "anyOf": [
               {
@@ -1276,6 +1350,18 @@
             ],
             "title": "Reorder Point",
             "default": 5
+          },
+          "online_reorder_point": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Online Reorder Point",
+            "default": 0
           },
           "custom_fields": {
             "anyOf": [
@@ -1357,6 +1443,18 @@
             "title": "Reorder Point",
             "default": 5
           },
+          "online_reorder_point": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Online Reorder Point",
+            "default": 0
+          },
           "buy_price": {
             "anyOf": [
               {
@@ -1378,6 +1476,17 @@
               }
             ],
             "title": "Sell Price"
+          },
+          "online_sell_price": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Online Sell Price"
           },
           "visible_online": {
             "anyOf": [
@@ -1804,6 +1913,17 @@
             ],
             "title": "Name"
           },
+          "brand": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Brand"
+          },
           "description": {
             "anyOf": [
               {
@@ -1883,6 +2003,17 @@
             ],
             "title": "Sell Price"
           },
+          "online_sell_price": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Online Sell Price"
+          },
           "reorder_point": {
             "anyOf": [
               {
@@ -1894,6 +2025,17 @@
             ],
             "title": "Reorder Point",
             "default": 5
+          },
+          "online_reorder_point": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Online Reorder Point"
           },
           "custom_fields": {
             "anyOf": [
@@ -1932,17 +2074,6 @@
             ],
             "title": "Gst",
             "default": "0%"
-          },
-          "sku": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Sku"
           }
         },
         "type": "object",
@@ -2031,6 +2162,17 @@
             ],
             "title": "Sell Price"
           },
+          "online_sell_price": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Online Sell Price"
+          },
           "storage_location": {
             "anyOf": [
               {
@@ -2053,27 +2195,16 @@
             ],
             "title": "Reorder Point"
           },
-          "sku": {
+          "online_reorder_point": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "number"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Sku"
-          },
-          "barcode": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Barcode"
+            "title": "Online Reorder Point"
           }
         },
         "type": "object",

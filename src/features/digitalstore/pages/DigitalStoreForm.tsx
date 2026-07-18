@@ -1,10 +1,16 @@
-import { useEffect, useState, ChangeEvent } from "react";
-import type { StoreFormData, StoreSetupProps } from "@/features/digitalstore/type"; 
-import { MapPin, Check } from "lucide-react";
+import { useEffect, useState } from "react";
+import { StoreFormData } from "@/features/digitalstore/type"; 
+import { Check, ChevronLeft, ChevronRight, Store, Truck, Package, CheckCircle2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useBusinessApi } from "@/context/BusinessApiContext";
-import { authApi } from "@/services/api/auth";
 import { employeeApi } from "@/services/api/employee";
+import { SHOP_ID } from "@/services/endpoints";
+
+// Import steps (we will create these)
+import Step1BasicDetails from "../components/wizard/Step1BasicDetails";
+import Step2DeliveryHours from "../components/wizard/Step2DeliveryHours";
+import Step3Products from "../components/wizard/Step3Products";
+import Step4Confirmation from "../components/wizard/Step4Confirmation";
 
 const INITIAL_STATE: StoreFormData = {
   name: "",
@@ -24,394 +30,257 @@ const INITIAL_STATE: StoreFormData = {
   bannerPreview: "",
   gstRegistered: false,
   gstNumber: "",
+  operatingHours: [
+    { day: "MONDAY", open_at: "09:00:00+00:00", close_at: "21:00:00+00:00" },
+    { day: "TUESDAY", open_at: "09:00:00+00:00", close_at: "21:00:00+00:00" },
+    { day: "WEDNESDAY", open_at: "09:00:00+00:00", close_at: "21:00:00+00:00" },
+    { day: "THURSDAY", open_at: "09:00:00+00:00", close_at: "21:00:00+00:00" },
+    { day: "FRIDAY", open_at: "09:00:00+00:00", close_at: "21:00:00+00:00" },
+    { day: "SATURDAY", open_at: "09:00:00+00:00", close_at: "21:00:00+00:00" },
+    { day: "SUNDAY", open_at: "09:00:00+00:00", close_at: "21:00:00+00:00" }
+  ],
+  deliveryOptions: {
+    instant: { enabled: true, speed: "Within 12 hours", freeThreshold: 50, manageStore: true, partners: true },
+    standard: { enabled: false, speed: "1–2 Business Days", freeThreshold: 30, manageStore: false, partners: true },
+    nationwide: { enabled: false, speed: "5–7 Business Days", freeThreshold: 100, manageStore: false, partners: true }
+  },
+  selectedProducts: {}
 };
 
-const CATEGORIES = [
-  "Grocery & Essentials",
-  "Fashion & Apparel",
-  "Electronics & Gadgets",
-  "Restaurant & Cafe",
-  "Beauty & Cosmetics",
-  "Home & Living",
-  "Health & Pharmacy",
-  "Books & Stationery",
-  "Other",
+const STEPS = [
+  { id: 1, title: "Basic Details", icon: Store, subtitle: "Name & Images" },
+  { id: 2, title: "Operations", icon: Truck, subtitle: "Delivery & Hours" },
+  { id: 3, title: "Products", icon: Package, subtitle: "Catalog & Pricing" },
+  { id: 4, title: "Review", icon: CheckCircle2, subtitle: "Confirm & Launch" },
 ];
 
-export default function StoreSetupForm({ existingData }: StoreSetupProps) {
+export default function StoreSetupWizard({ existingData }: { existingData?: Partial<StoreFormData> }) {
+  const [currentStep, setCurrentStep] = useState(1);
   const [form, setForm] = useState<StoreFormData>(INITIAL_STATE);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const navigate = useNavigate();
   const { shop } = useBusinessApi();
 
-  const selectedTheme = {
-    primary: "bg-blue-600 hover:bg-blue-700 text-white shadow-sm",
-    text: "text-blue-600",
-    bg: "bg-blue-50/50",
-    border: "border-blue-200",
-    focusBorder: "focus:border-blue-500",
-    focusRing: "focus:ring-blue-500/20",
-    color: "#2563eb",
-    dot: "bg-blue-500",
-    glow: "shadow-[0_0_15px_rgba(59,130,246,0.15)]",
-    cardAccent: "border-l-4 border-l-blue-500",
-  };
-
   useEffect(() => {
-    const draft = localStorage.getItem("store-draft");
-    if (draft) {
-      try {
-        const parsed = JSON.parse(draft);
-        setForm((prev) => ({ ...prev, ...parsed }));
-      } catch (e) {
-        console.error("Failed to parse draft", e);
-      }
-    } else if (existingData) {
+    if (existingData) {
       setForm((prev) => ({ ...prev, ...existingData }));
+      return;
     }
-  }, [existingData]);
 
-  // Autosave draft only textual details
-  useEffect(() => {
-    const { logo, banner, ...textFields } = form;
-    const timer = setTimeout(() => {
-      localStorage.setItem("store-draft", JSON.stringify(textFields));
-    }, 800);
-    return () => clearTimeout(timer);
-  }, [form]);
-
-  const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
-    
-    if (name === "name") {
-      setErrors((prev) => ({ 
-        ...prev, 
-        name: value.trim().length >= 3 ? "" : "Store name must be at least 3 characters" 
-      }));
+    if (SHOP_ID && SHOP_ID !== "string") {
+      setIsLoading(true);
+      shop.getShopById(SHOP_ID).then((res) => {
+        if (res && res.data) {
+          const s = res.data;
+          setForm((prev) => ({
+            ...prev,
+            name: s.name || prev.name,
+            tagline: s.tagline || prev.tagline,
+            description: s.description || prev.description,
+            category: s.categories?.[0] || prev.category,
+            address: s.address?.full_address || prev.address,
+            gstRegistered: !!s.business_infos?.gst_infos?.registered,
+            gstNumber: s.business_infos?.gst_infos?.number || "",
+            logoPreview: s.logo_url || prev.logoPreview,
+            bannerPreview: s.banner_url || prev.bannerPreview,
+            // other mappings if available
+          }));
+        }
+      }).catch(err => console.error("Failed to fetch shop:", err))
+        .finally(() => setIsLoading(false));
     }
-    if (name === "gstNumber") {
-      setErrors((prev) => ({ 
-        ...prev, 
-        gstNumber: value.trim().length === 15 ? "" : "GSTIN must be exactly 15 characters" 
-      }));
-    }
-  };
+  }, [existingData, shop]);
 
-  const validate = (): boolean => {
+  const validateStep1 = () => {
     const stepErrors: Record<string, string> = {};
-    
-    if (!form.name || form.name.trim().length < 3) {
-      stepErrors.name = "Store name must be at least 3 characters";
-    }
-    if (!form.category) {
-      stepErrors.category = "Category is required";
-    }
-    if (form.gstRegistered && (!form.gstNumber || form.gstNumber.trim().length !== 15)) {
-      stepErrors.gstNumber = "Please enter a valid 15-character GSTIN";
-    }
-    
+    if (!form.name || form.name.trim().length < 3) stepErrors.name = "Store name must be at least 3 characters";
+    if (form.gstRegistered && (!form.gstNumber || form.gstNumber.trim().length !== 15)) stepErrors.gstNumber = "Please enter a valid 15-character GSTIN";
     setErrors(stepErrors);
     return Object.keys(stepErrors).length === 0;
   };
 
+  const handleNext = () => {
+    if (currentStep === 1 && !validateStep1()) return;
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    setCurrentStep((prev) => Math.min(prev + 1, STEPS.length));
+  };
+
+  const handlePrev = () => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    setCurrentStep((prev) => Math.max(prev - 1, 1));
+  };
+
   const handleSave = async () => {
-    if (validate()) {
-      setIsLoading(true);
-      try {
-        const payload = {
-          name: form.name,
-          description: form.description || null,
-          tagline: form.tagline || null,
-          categories: [form.category],
-          business_infos: {
-            type: "OTHERS",
-            gst_infos: {
-              registered: !!form.gstRegistered,
-              number: form.gstRegistered ? (form.gstNumber?.toUpperCase().trim() || null) : null
-            },
-            currency: "INR"
+    setIsLoading(true);
+    try {
+      const payload = {
+        name: form.name,
+        description: form.description || null,
+        tagline: form.tagline || null,
+        categories: form.category ? [form.category] : [],
+        business_infos: {
+          type: "OTHERS",
+          gst_infos: {
+            registered: !!form.gstRegistered,
+            number: form.gstRegistered ? (form.gstNumber?.toUpperCase().trim() || null) : null
           },
-          address: {
-            full_address: form.address || "Not specified",
-            zip_code: "000000",
-            landmark: "",
-            latitude: 0,
-            longitude: 0
-          },
-          datas: {
-            emails: [],
-            mobile_numbers: [],
-            website: null
-          },
-          visible_online: false,
-          operating_hours: [],
-          delivery_options: []
-        };
+          currency: "INR"
+        },
+        address: {
+          full_address: form.address || "Not specified",
+          zip_code: "000000",
+          landmark: "",
+          latitude: 0,
+          longitude: 0
+        },
+        datas: {
+          emails: [],
+          mobile_numbers: [],
+          website: null
+        },
+        visible_online: false, // temporarily false to bypass constraint
+      };
 
-        const res = await shop.createShop(payload);
-        const newShopId = res.data?.id || res.id;
+      const fullPayload = {
+        ...payload,
+        operating_hours: form.operatingHours,
+        delivery_options: Object.values(form.deliveryOptions).filter(d => d.enabled).map(d => ({
+          type: d.speed.includes("12 hours") ? "INSTANT" : d.speed.includes("1-2") ? "STANDARD" : "NATIONWIDE",
+          speed: d.speed,
+          free_shipping_amount: d.freeThreshold,
+          delivery_by: d.partners ? "PARTNERS" : "INHOUSE"
+        }))
+      };
 
-        if (newShopId) {
-          // 1. Create employee record for owner
-          const userEmail = localStorage.getItem("user_email") || "owner@example.com";
-          const userName = localStorage.getItem("user_name") || "Owner";
-          const userPhone = localStorage.getItem("user_phone") || "";
-          
+      let newShopId = SHOP_ID;
+      let isNewShop = false;
+      
+      // 1. Create or Update Shop (visible_online = false initially to satisfy constraint)
+      if (SHOP_ID && SHOP_ID !== "string") {
+        await shop.updateShop({ id: SHOP_ID, ...fullPayload, visible_online: false });
+      } else {
+        const res = await shop.createShop({ ...fullPayload, visible_online: false });
+        newShopId = res.data?.id || res.id;
+        isNewShop = true;
+      }
+
+      // 2. Finally, set shop as visible online now that hours/delivery are saved
+      if (newShopId) {
+        await shop.updateShop({ id: newShopId, visible_online: true });
+      }
+
+      if (newShopId) {
+        localStorage.setItem("shop_id", newShopId);
+        import('@/services/endpoints').then(module => { module.setShopId(newShopId); });
+
+        if (isNewShop) {
           try {
             await employeeApi.createEmployee({
               shop_id: newShopId,
-              name: userName,
+              name: localStorage.getItem("user_name") || "Owner",
               role: "OWNER",
               joined_date: new Date().toISOString().split('T')[0],
-              mobile_number: userPhone || "0000000000",
-              email: userEmail,
+              mobile_number: localStorage.getItem("user_phone") || "0000000000",
+              email: localStorage.getItem("user_email") || "owner@example.com",
               department: "MANAGER",
               additional_infos: {}
             });
           } catch (empErr) {
-            console.error("Failed to create default owner employee:", empErr);
+            console.error("Failed to create employee:", empErr);
           }
-
-          // 2. Exchange session ID and shop ID for token
-          const sessionId = localStorage.getItem("session_id");
-          if (sessionId && newShopId) {
-            try {
-              const tokenRes = await authApi.createToken(sessionId, newShopId);
-              const tokenData = tokenRes?.data ?? tokenRes;
-              if (tokenData && tokenData.access_token) {
-                localStorage.setItem("auth_token", tokenData.access_token);
-                if (tokenData.refresh_token) {
-                  localStorage.setItem("refresh_token", tokenData.refresh_token);
-                }
-                
-                try {
-                  const payload = JSON.parse(atob(tokenData.access_token.split('.')[1]));
-                  if (payload.user_id) {
-                    localStorage.setItem("user_id", payload.user_id);
-                  }
-                  if (payload.shop_id) {
-                    localStorage.setItem("shop_id", payload.shop_id);
-                  }
-                } catch (decodeErr) {
-                  console.error("Failed to decode token after shop creation:", decodeErr);
-                }
-              }
-            } catch (tokenErr) {
-              console.error("Failed to exchange tokens after shop creation:", tokenErr);
-            }
-          }
-
-          if (newShopId) {
-            localStorage.setItem("shop_id", newShopId);
-            import('@/services/endpoints').then(module => {
-              module.setShopId(newShopId);
-            });
-          }
-
-          const finalProfileData = {
-            name: form.name,
-            username: `@${form.name.toLowerCase().replace(/[^a-z0-9]/g, "")}`,
-            location: form.address || "Not specified",
-            tagline: form.tagline || "Fresh picks, fair prices — delivered to your door.",
-            description: form.description || "Your premium storefront, now online.",
-            avatar: "https://api.dicebear.com/7.x/shapes/svg?seed=" + form.name,
-            banner: "",
-            category: form.category,
-            themeColor: form.themeColor,
-            followers: 0,
-            rating: 5.0,
-            reviews: 0,
-            verified: false,
-            online: true,
-            memberSince: new Date().toLocaleString('default', { month: 'short', year: 'numeric' }),
-            contactEmail: "",
-            contactPhone: "",
-            website: "",
-            instagram: "",
-            twitter: "",
-          };
-          
-          localStorage.setItem("active-store-profile", JSON.stringify(finalProfileData));
-          localStorage.removeItem("store-draft");
-          navigate("/");
         }
-      } catch (err) {
-        console.error("Failed to create shop", err);
-        alert("Failed to create shop");
-      } finally {
-        setIsLoading(false);
+        
+        // TODO: Handle Products save using newShopId
+        // ...
+        
+        navigate("/");
       }
+    } catch (err) {
+      console.error("Failed to create shop", err);
+      alert("Failed to create shop");
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
-    <div className="w-full min-h-screen bg-slate-50/50 p-2 md:p-6 lg:p-8" style={{ fontFamily: "Inter, sans-serif" }}>
-      <div className="max-w-xl mx-auto w-full space-y-6">
+    <div className="w-full min-h-screen bg-slate-50/50 p-2 md:p-6 lg:p-8 font-sans">
+      <div className="max-w-4xl mx-auto w-full space-y-6">
         
         {/* Onboarding Header */}
         <div className="text-center py-4">
-          <h2 className="text-2xl font-black text-slate-800 tracking-tight">Setup Your Store</h2>
-          <p className="text-xs text-slate-400 mt-1">Let's create your shop profile to get you onboarded.</p>
+          <h2 className="text-2xl font-black text-slate-800 tracking-tight">Setup Your Digital Store</h2>
+          <p className="text-xs text-slate-400 mt-1">Complete these steps to launch your online storefront.</p>
         </div>
+
+        {/* Stepper */}
+        <div className="flex justify-between items-center mb-8 relative">
+          <div className="absolute left-0 top-1/2 w-full h-[2px] bg-slate-200 -z-10 -translate-y-1/2 rounded-full" />
+          <div className="absolute left-0 top-1/2 h-[2px] bg-blue-600 -z-10 -translate-y-1/2 transition-all duration-300" style={{ width: `${((currentStep - 1) / (STEPS.length - 1)) * 100}%` }} />
+          
+          {STEPS.map((step) => {
+            const Icon = step.icon;
+            const isActive = currentStep === step.id;
+            const isCompleted = currentStep > step.id;
+            return (
+              <div key={step.id} className="flex flex-col items-center gap-2 bg-slate-50/50 px-2 relative group cursor-pointer" onClick={() => { if (isCompleted) setCurrentStep(step.id); }}>
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 shadow-sm ${isActive ? "bg-blue-600 text-white shadow-blue-200" : isCompleted ? "bg-blue-100 text-blue-600" : "bg-white border-2 border-slate-200 text-slate-400"}`}>
+                  <Icon size={isActive ? 18 : 16} strokeWidth={isActive ? 2.5 : 2} />
+                </div>
+                <div className="text-center absolute top-12 whitespace-nowrap">
+                  <p className={`text-[11px] font-bold ${isActive ? "text-slate-800" : "text-slate-500"}`}>{step.title}</p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="pt-6" />
 
         {/* Form Card */}
-        <div className="bg-white rounded-2xl border border-slate-200/80 shadow-md p-6 relative overflow-hidden">
-          <div className="absolute top-0 left-0 w-full h-1 bg-blue-600" />
-
-          <div className="space-y-5">
-            {/* GST REGISTRATION OPTIONS */}
-            <div>
-              <label className="block text-xs font-bold text-slate-500 mb-2">GST Registration Status</label>
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  type="button"
-                  onClick={() => setForm((prev) => ({ ...prev, gstRegistered: true }))}
-                  className={`py-3 rounded-lg border text-xs font-bold transition-all ${
-                    form.gstRegistered
-                      ? "bg-blue-50 border-blue-500 text-blue-600 shadow-sm"
-                      : "bg-white border-slate-200 text-slate-500 hover:bg-slate-50"
-                  }`}
-                >
-                  Yes, GST Registered
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setForm((prev) => ({ ...prev, gstRegistered: false, gstNumber: "" }))}
-                  className={`py-3 rounded-lg border text-xs font-bold transition-all ${
-                    !form.gstRegistered
-                      ? "bg-blue-50 border-blue-500 text-blue-600 shadow-sm"
-                      : "bg-white border-slate-200 text-slate-500 hover:bg-slate-50"
-                  }`}
-                >
-                  No GST Registration
-                </button>
-              </div>
-            </div>
-
-            {/* GST NUMBER INPUT */}
-            {form.gstRegistered && (
-              <div className="animate-in fade-in slide-in-from-top-2 duration-200">
-                <div className="flex items-center gap-2 mb-1.5">
-                  <label className="text-xs font-bold text-slate-500">GSTIN / GST Number <span className="text-blue-500">*</span></label>
-                </div>
-                <input 
-                  type="text"
-                  name="gstNumber" 
-                  value={form.gstNumber} 
-                  onChange={handleChange} 
-                  maxLength={15}
-                  placeholder="e.g. 22AAAAA1111A1Z1"
-                  className={`w-full px-4 py-3 rounded-lg border outline-none text-sm transition-all duration-200 uppercase ${
-                    errors.gstNumber 
-                      ? "border-blue-500 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10" 
-                      : `border-slate-200 ${selectedTheme.focusBorder} focus:ring-4 ${selectedTheme.focusRing}`
-                  }`} 
-                />
-                {errors.gstNumber && <p className="text-[10px] text-blue-500 mt-1 font-medium">{errors.gstNumber}</p>}
-              </div>
-            )}
-
-            {/* STORE NAME */}
-            <div>
-              <div className="flex items-center gap-2 mb-1.5">
-                <label className="text-xs font-bold text-slate-500">Store Name <span className="text-blue-500">*</span></label>
-              </div>
-              <input 
-                type="text"
-                name="name" 
-                value={form.name} 
-                onChange={handleChange} 
-                placeholder="e.g. Grace Premium Market"
-                className={`w-full px-4 py-3 rounded-lg border outline-none text-sm transition-all duration-200 ${
-                  errors.name 
-                    ? "border-blue-500 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10" 
-                    : `border-slate-200 ${selectedTheme.focusBorder} focus:ring-4 ${selectedTheme.focusRing}`
-                }`} 
-              />
-              {errors.name && <p className="text-[10px] text-blue-500 mt-1 font-medium">{errors.name}</p>}
-            </div>
-
-            {/* TAGLINE & CATEGORY */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-500 mb-1.5">Tagline / Slogan</label>
-                <input 
-                  type="text"
-                  name="tagline" 
-                  maxLength={60}
-                  value={form.tagline} 
-                  onChange={handleChange} 
-                  placeholder="Fresh picks, fair prices..." 
-                  className={`w-full px-4 py-3 rounded-lg border border-slate-200 outline-none text-sm transition-all duration-200 focus:ring-4 ${selectedTheme.focusBorder} ${selectedTheme.focusRing}`} 
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-500 mb-1.5">Store Category <span className="text-blue-500">*</span></label>
-                <select 
-                  name="category" 
-                  value={form.category} 
-                  onChange={handleChange} 
-                  className={`w-full px-4 py-3 rounded-lg border border-slate-200 outline-none text-sm transition-all duration-200 focus:ring-4 bg-white ${selectedTheme.focusBorder} ${selectedTheme.focusRing}`}
-                >
-                  {CATEGORIES.map((cat) => (
-                    <option key={cat} value={cat}>{cat}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            {/* DESCRIPTION */}
-            <div>
-              <label className="block text-xs font-bold text-slate-500 mb-1.5">Store Description</label>
-              <textarea 
-                name="description" 
-                value={form.description} 
-                onChange={handleChange} 
-                maxLength={200}
-                rows={3} 
-                placeholder="Briefly describe what your store sells..."
-                className={`w-full px-4 py-3 rounded-lg border border-slate-200 outline-none text-sm transition-all duration-200 focus:ring-4 resize-none ${selectedTheme.focusBorder} ${selectedTheme.focusRing}`} 
-              />
-            </div>
-
-            {/* BUSINESS ADDRESS */}
-            <div>
-              <label className="block text-xs font-bold text-slate-500 mb-1.5">Business / Shop Address</label>
-              <div className="relative">
-                <input 
-                  type="text"
-                  name="address" 
-                  value={form.address} 
-                  onChange={handleChange} 
-                  placeholder="Block 4A, Green Street, Chennai, 600001"
-                  className={`w-full pl-10 pr-4 py-3 rounded-lg border border-slate-200 outline-none text-sm transition-all duration-200 focus:ring-4 ${selectedTheme.focusBorder} ${selectedTheme.focusRing}`} 
-                />
-                <MapPin className="absolute left-3.5 top-3.5 text-slate-400" size={16} />
-              </div>
-            </div>
-
+        <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 relative overflow-hidden min-h-[400px] flex flex-col">
+          <div className="flex-1">
+            {currentStep === 1 && <Step1BasicDetails form={form} setForm={setForm} errors={errors} setErrors={setErrors} />}
+            {currentStep === 2 && <Step2DeliveryHours form={form} setForm={setForm} />}
+            {currentStep === 3 && <Step3Products form={form} setForm={setForm} />}
+            {currentStep === 4 && <Step4Confirmation form={form} />}
           </div>
 
-          {/* ACTION BUTTON */}
-          <div className="mt-8 pt-5 border-t border-slate-100 flex justify-end">
+          {/* ACTION BUTTONS */}
+          <div className="mt-8 pt-5 border-t border-slate-100 flex justify-between items-center">
             <button
               type="button"
-              onClick={handleSave}
-              disabled={isLoading}
-              className={`flex items-center justify-center gap-1.5 px-6 py-3 rounded-xl font-bold text-sm transition-all shadow-md w-full md:w-auto ${
-                isLoading ? "bg-slate-400 cursor-not-allowed text-white" : selectedTheme.primary
-              }`}
+              onClick={handlePrev}
+              disabled={currentStep === 1 || isLoading}
+              className={`flex items-center justify-center gap-1.5 px-5 py-2.5 rounded-xl font-bold text-sm transition-all shadow-sm ${currentStep === 1 ? 'opacity-0 pointer-events-none' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}`}
             >
-              {isLoading ? "Creating Store..." : "Create Shop"}
-              {!isLoading && <Check size={16} strokeWidth={2.5} />}
+              <ChevronLeft size={16} strokeWidth={2.5} />
+              Back
             </button>
+            
+            {currentStep < STEPS.length ? (
+              <button
+                type="button"
+                onClick={handleNext}
+                className="flex items-center justify-center gap-1.5 px-6 py-2.5 rounded-xl font-bold text-sm transition-all shadow-sm bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                Continue
+                <ChevronRight size={16} strokeWidth={2.5} />
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={handleSave}
+                disabled={isLoading}
+                className={`flex items-center justify-center gap-1.5 px-6 py-2.5 rounded-xl font-bold text-sm transition-all shadow-sm ${isLoading ? "bg-slate-400 cursor-not-allowed text-white" : "bg-emerald-600 hover:bg-emerald-700 text-white"}`}
+              >
+                {isLoading ? "Creating Store..." : "Launch Store"}
+                {!isLoading && <Check size={16} strokeWidth={2.5} />}
+              </button>
+            )}
           </div>
-
         </div>
-
       </div>
     </div>
   );

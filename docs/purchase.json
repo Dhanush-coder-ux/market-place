@@ -13,6 +13,24 @@
         ],
         "summary": "Create",
         "operationId": "create_purchases_post",
+        "parameters": [
+          {
+            "name": "x-user-infos",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-User-Infos"
+            }
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -52,6 +70,24 @@
         ],
         "summary": "Update",
         "operationId": "update_purchases_put",
+        "parameters": [
+          {
+            "name": "x-user-infos",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-User-Infos"
+            }
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -126,6 +162,22 @@
                 }
               ],
               "title": "Q"
+            }
+          },
+          {
+            "name": "outstanding",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Outstanding"
             }
           }
         ],
@@ -256,6 +308,22 @@
               ],
               "title": "Q"
             }
+          },
+          {
+            "name": "outstanding",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Outstanding"
+            }
           }
         ],
         "responses": {
@@ -378,6 +446,22 @@
               "default": 1,
               "title": "Offset"
             }
+          },
+          {
+            "name": "outstanding",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Outstanding"
+            }
           }
         ],
         "responses": {
@@ -448,6 +532,22 @@
               "type": "integer",
               "default": 1,
               "title": "Offset"
+            }
+          },
+          {
+            "name": "outstanding",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Outstanding"
             }
           }
         ],
@@ -1339,6 +1439,27 @@
             "type": "string",
             "title": "Product Id"
           },
+          "variant_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Variant Id"
+          },
+          "batch_infos": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PurchaseBatchInfosType"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "serialno_numbers": {
             "anyOf": [
               {
@@ -1409,7 +1530,14 @@
       "UpdatePurchaseSchema": {
         "properties": {
           "id": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Id"
           },
           "shop_id": {
@@ -1494,7 +1622,6 @@
         },
         "type": "object",
         "required": [
-          "id",
           "shop_id"
         ],
         "title": "UpdatePurchaseSchema"

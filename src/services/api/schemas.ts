@@ -61,4 +61,7 @@ export const SCHEMAS = {
   cart_reserve: ['session_id', 'shop_id', 'product_id', 'qty', 'type'],
   cart_cancel: ['session_id'],
   cart_remove: ['session_id', 'product_id'],
+
+  // ── Notification Service ──────────────────────────────────────────
+  notification_send: ['title', 'message'],
 };

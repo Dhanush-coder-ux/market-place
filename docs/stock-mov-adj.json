@@ -637,7 +637,14 @@
       "CartSerialNoInfos": {
         "properties": {
           "id": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Id"
           },
           "name": {
@@ -647,7 +654,6 @@
         },
         "type": "object",
         "required": [
-          "id",
           "name"
         ],
         "title": "CartSerialNoInfos"

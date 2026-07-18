@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { Search, X, Bookmark, Building2, Phone, ExternalLink, Filter, ChevronRight, Eye, Pencil, Trash2 } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Search, X, Bookmark, Building2, Phone, ExternalLink, Filter, ChevronRight, Eye, Pencil, Trash2, MoreVertical, Plus } from "lucide-react";
 import { GradientButton } from "@/components/ui/GradientButton";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useApi } from "@/context/ApiContext";
@@ -13,6 +13,7 @@ import { StatCard } from "@/components/common/StatsCard";
 import { useQuickCreate } from "@/features/common/QuickCreate/QuickCreateContext";
 import { RightSidebarFilter } from "@/components/common/RightSidebarFilter";
 import SkeletonLoader from "@/components/common/SkeletonLoader";
+import ActionMenu, { ActionMenuItem } from "@/components/common/ActionMenu";
 
 
 // Human-readable labels for every possible dynamic column key
@@ -26,6 +27,84 @@ const COLUMN_LABELS: Record<string, string> = {
   city:            "City",
   zipcode:         "ZIP Code",
   address:         "Street Address",
+};
+
+const SupplierRow = ({ sup, isSelected, onSelect, onEdit, onView, onDelete, selectedKeys }: any) => {
+  const navigate = useNavigate();
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const menuTriggerRef = useRef<HTMLButtonElement>(null);
+
+  return (
+    <tr
+      className={`group transition-all cursor-pointer ${isSelected ? "bg-blue-50 border-l-2 border-l-blue-500" : "md:hover:bg-blue-50/30"}`}
+      onClick={() => onSelect(sup)}
+    >
+      <td className="px-6 py-4 whitespace-nowrap">
+        <div className="flex items-center gap-3">
+          <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-sm font-black shadow-sm transition-colors ${isSelected ? "bg-blue-500 text-white shadow-blue-100" : "bg-gradient-to-br from-blue-600 to-blue-400 text-white shadow-blue-100"}`}>
+            {(String(sup.name || 'S')).charAt(0).toUpperCase()}
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-slate-700 tracking-tight">{String(sup.name)}</p>
+            <p className="text-[11px] font-semibold text-slate-400 font-mono">ID: {sup.ui_id || sup.id}</p>
+          </div>
+        </div>
+      </td>
+
+      {selectedKeys.map((key: string) => {
+        let val: any = "—";
+        if (key === "email") val = sup.contact_infos?.email ?? sup.email;
+        else if (key === "mobile_number") val = sup.contact_infos?.mobile_number ?? sup.mobile_number;
+        else if (key === "contact_person") val = sup.contact_person_infos?.name ?? sup.contact_info?.name;
+        else if (key === "contact_email") val = sup.contact_person_infos?.email ?? sup.contact_info?.email;
+        else if (key === "contact_mobile") val = sup.contact_person_infos?.mobile_number ?? sup.contact_info?.mobile_number;
+        else if (key === "city") val = sup.location_infos?.city ?? sup.additional_infos?.city ?? sup.datas?.address?.city;
+        else if (key === "zipcode") val = sup.location_infos?.zipcode ?? sup.datas?.address?.zipcode;
+        else if (key === "address") val = sup.location_infos?.full_address ?? sup.datas?.address?.full_address;
+        else {
+          val = (sup as any)[key] ?? (sup.contact_person_infos as any)?.[key] ?? (sup.contact_infos as any)?.[key] ?? (sup.contact_info as any)?.[key] ?? (sup.additional_infos as any)?.[key] ?? (sup.datas as any)?.[key] ?? "—";
+        }
+        const displayVal = (val === null || val === undefined) ? "—" : (typeof val === 'object' ? JSON.stringify(val) : String(val));
+        return (
+          <td key={key} className="px-6 py-4 whitespace-nowrap">
+            <p className="text-[12px] font-semibold tracking-tight text-slate-600">
+              {displayVal}
+            </p>
+          </td>
+        );
+      })}
+
+      <td className="px-6 py-4 text-right sticky right-0 bg-white group-hover:bg-slate-50/60 border-l border-slate-100 z-10 shadow-[-4px_0_8px_-4px_rgba(0,0,0,0.05)] transition-colors whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-end gap-2 relative">
+          <button onClick={() => onView(sup.id)} className="text-emerald-500 hover:text-emerald-600 transition-colors p-1" title="View Supplier">
+            <Eye size={15} />
+          </button>
+          <button onClick={() => onEdit(sup.id)} className="text-amber-400 hover:text-amber-500 transition-colors p-1" title="Edit Supplier">
+            <Pencil size={15} />
+          </button>
+          <button onClick={() => onDelete(sup)} className="text-slate-400 hover:text-red-655 transition-colors p-1" title="Delete Supplier">
+            <Trash2 size={15} />
+          </button>
+          
+          <div className="relative">
+            <button ref={menuTriggerRef} onClick={(e) => { e.stopPropagation(); setIsMenuOpen(!isMenuOpen); }} className="text-slate-800 hover:text-slate-900 transition-colors p-1" title="More actions">
+              <MoreVertical size={15} />
+            </button>
+            <ActionMenu
+              triggerRef={menuTriggerRef}
+              open={isMenuOpen}
+              onClose={() => setIsMenuOpen(false)}
+              width={160}
+            >
+              <ActionMenuItem icon={<Plus size={13} />} onClick={() => { setIsMenuOpen(false); navigate(`/purchase/add`, { state: { supplier: sup } }); }}>
+                Add Purchase
+              </ActionMenuItem>
+            </ActionMenu>
+          </div>
+        </div>
+      </td>
+    </tr>
+  );
 };
 
 const Supplier = () => {
@@ -364,80 +443,16 @@ const Supplier = () => {
                   if (!sup) return null;
                   const isSelected = selectedSupplier?.id === sup.id;
                   return (
-                    <tr
+                    <SupplierRow
                       key={sup.id}
-                      className={`group transition-all cursor-pointer ${isSelected ? "bg-blue-50 border-l-2 border-l-blue-500" : "md:hover:bg-blue-50/30"}`}
-                      onClick={() => setSelectedSupplier(prev => prev?.id === sup.id ? null : sup)}
-                    >
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center gap-3">
-                          <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-sm font-black shadow-sm transition-colors ${isSelected ? "bg-blue-500 text-white shadow-blue-100" : "bg-gradient-to-br from-blue-600 to-blue-400 text-white shadow-blue-100"}`}>
-                            {(String(sup.name || 'S')).charAt(0).toUpperCase()}
-                          </div>
-                          <div>
-                            <p className="text-sm font-semibold text-slate-700 tracking-tight">{String(sup.name)}</p>
-                            <p className="text-[11px] font-semibold text-slate-400 font-mono">ID: {sup.ui_id || sup.id}</p>
-                          </div>
-                        </div>
-                      </td>
-
-                      {selectedKeys.map(key => {
-                        let val: any = "—";
-
-                        // Handle Specific Column Mappings
-                        if (key === "email") val = sup.contact_infos?.email ?? sup.email;
-                        else if (key === "mobile_number") val = sup.contact_infos?.mobile_number ?? sup.mobile_number;
-                        else if (key === "contact_person") val = sup.contact_person_infos?.name ?? sup.contact_info?.name;
-                        else if (key === "contact_email") val = sup.contact_person_infos?.email ?? sup.contact_info?.email;
-                        else if (key === "contact_mobile") val = sup.contact_person_infos?.mobile_number ?? sup.contact_info?.mobile_number;
-                        else if (key === "city") val = sup.location_infos?.city ?? sup.additional_infos?.city ?? sup.datas?.address?.city;
-                        else if (key === "zipcode") val = sup.location_infos?.zipcode ?? sup.datas?.address?.zipcode;
-                        else if (key === "address") val = sup.location_infos?.full_address ?? sup.datas?.address?.full_address;
-                        else {
-                          val = (sup as any)[key] ?? (sup.contact_person_infos as any)?.[key] ?? (sup.contact_infos as any)?.[key] ?? (sup.contact_info as any)?.[key] ?? (sup.additional_infos as any)?.[key] ?? (sup.datas as any)?.[key] ?? "—";
-                        }
-
-                        // Final safety check for any remaining objects
-                        const displayVal = (val === null || val === undefined) ? "—" : (typeof val === 'object' ? JSON.stringify(val) : String(val));
-
-                        return (
-                          <td key={key} className="px-6 py-4 whitespace-nowrap">
-                            <p className="text-[12px] font-semibold tracking-tight text-slate-600">
-                              {displayVal}
-                            </p>
-                          </td>
-                        );
-                      })}
-
-                      <td className="px-6 py-4 text-right sticky right-0 bg-white group-hover:bg-slate-50/60 border-l border-slate-100 z-10 shadow-[-4px_0_8px_-4px_rgba(0,0,0,0.05)] transition-colors whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center justify-end gap-2 relative">
-                          <button
-                            onClick={() => navigate(`/supplier/${sup.id}`)}
-                            className="text-emerald-500 hover:text-emerald-600 transition-colors p-1"
-                            title="View Supplier"
-                          >
-                            <Eye size={15} />
-                          </button>
-                          <button
-                            onClick={() => navigate(`/supplier/${sup.id}/edit`)}
-                            className="text-amber-400 hover:text-amber-500 transition-colors p-1"
-                            title="Edit Supplier"
-                          >
-                            <Pencil size={15} />
-                          </button>
-                          <button
-                            onClick={() => {
-                              setSupplierToDelete(sup);
-                              setIsDeleteDialogOpen(true);
-                            }}
-                            className="text-slate-400 hover:text-red-655 transition-colors p-1"
-                            title="Delete Supplier"
-                          >
-                            <Trash2 size={15} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
+                      sup={sup}
+                      isSelected={isSelected}
+                      onSelect={(s: any) => setSelectedSupplier(prev => prev?.id === s.id ? null : s)}
+                      onEdit={(id: string) => navigate(`/supplier/${id}/edit`)}
+                      onView={(id: string) => navigate(`/supplier/${id}`)}
+                      onDelete={(s: any) => { setSupplierToDelete(s); setIsDeleteDialogOpen(true); }}
+                      selectedKeys={selectedKeys}
+                    />
                   );
                 })
               )}

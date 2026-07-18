@@ -155,149 +155,73 @@ export const ShopProfileForm = () => {
           </div>
         </div>
         <button
-          onClick={handleSave}
-          disabled={saving || !name.trim()}
-          className="h-9 px-4 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-bold rounded-lg transition-all flex items-center gap-2 shadow-sm"
+          onClick={() => navigate("/create-shop")}
+          className="h-9 px-4 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg transition-all flex items-center gap-2 shadow-sm"
         >
-          <Save className="w-4 h-4" />
-          {saving ? "Saving..." : "Save Changes"}
+          <Store className="w-4 h-4" />
+          Edit Digital Store
         </button>
       </div>
 
       <div className="p-6 space-y-5 max-w-2xl">
         <div className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-slate-600 mb-1.5">Shop Name <span className="text-rose-500">*</span></label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full h-9 px-3 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all shadow-sm"
-              placeholder="Enter shop name"
-            />
+            <label className="block text-xs font-semibold text-slate-600 mb-1.5">Shop Name</label>
+            <p className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800 font-medium">
+              {name || "Not set"}
+            </p>
           </div>
 
           <div>
             <label className="block text-xs font-semibold text-slate-600 mb-1.5">Tagline</label>
-            <p className="text-[10px] text-slate-400 mb-1">A short, friendly line that describes your storefront</p>
-            <input
-              type="text"
-              value={tagline}
-              onChange={(e) => setTagline(e.target.value)}
-              className="w-full h-9 px-3 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all shadow-sm"
-              placeholder="e.g. A home for makers"
-            />
+            <p className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800 font-medium">
+              {tagline || "Not set"}
+            </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-semibold text-slate-600 mb-1.5">Shop Logo</label>
-              <div className="flex gap-3 items-center">
-                <div className="w-14 h-14 rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-center overflow-hidden shrink-0">
-                  {logoUrl ? (
-                    <img src={logoUrl} alt="Logo preview" className="w-full h-full object-cover" />
-                  ) : (
-                    <Store className="text-slate-400" size={20} />
-                  )}
-                </div>
-                <div className="flex-1 space-y-1.5">
-                  <input
-                    type="text"
-                    value={logoUrl}
-                    onChange={(e) => setLogoUrl(e.target.value)}
-                    className="w-full h-8 px-3 bg-white border border-slate-200 rounded-lg text-[12px] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all shadow-sm text-slate-700"
-                    placeholder="Or paste Logo URL"
-                  />
-                  <label className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border border-slate-200 text-slate-650 font-bold text-xs bg-slate-50 hover:bg-slate-100 transition-all cursor-pointer">
-                    <input type="file" accept="image/*" className="hidden" onChange={handleUploadLogo} disabled={uploadingLogo} />
-                    {uploadingLogo ? "Uploading..." : "Upload Logo"}
-                  </label>
-                </div>
+              <div className="w-20 h-20 rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-center overflow-hidden shrink-0">
+                {logoUrl ? (
+                  <img src={logoUrl} alt="Logo preview" className="w-full h-full object-cover" />
+                ) : (
+                  <Store className="text-slate-400" size={24} />
+                )}
               </div>
             </div>
 
             <div>
               <label className="block text-xs font-semibold text-slate-600 mb-1.5">Shop Banner</label>
-              <div className="flex gap-3 items-center">
-                <div className="w-24 h-14 rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-center overflow-hidden shrink-0">
-                  {bannerUrl ? (
-                    <img src={bannerUrl} alt="Banner preview" className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full bg-slate-100 flex items-center justify-center text-slate-350 font-bold text-[10px]">No Banner</div>
-                  )}
-                </div>
-                <div className="flex-1 space-y-1.5">
-                  <input
-                    type="text"
-                    value={bannerUrl}
-                    onChange={(e) => setBannerUrl(e.target.value)}
-                    className="w-full h-8 px-3 bg-white border border-slate-200 rounded-lg text-[12px] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all shadow-sm text-slate-700"
-                    placeholder="Or paste Banner URL"
-                  />
-                  <label className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border border-slate-200 text-slate-650 font-bold text-xs bg-slate-50 hover:bg-slate-100 transition-all cursor-pointer">
-                    <input type="file" accept="image/*" className="hidden" onChange={handleUploadBanner} disabled={uploadingBanner} />
-                    {uploadingBanner ? "Uploading..." : "Upload Banner"}
-                  </label>
-                </div>
+              <div className="w-40 h-20 rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-center overflow-hidden shrink-0">
+                {bannerUrl ? (
+                  <img src={bannerUrl} alt="Banner preview" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full bg-slate-100 flex items-center justify-center text-slate-350 font-bold text-[10px]">No Banner</div>
+                )}
               </div>
             </div>
           </div>
 
           <div>
             <label className="block text-xs font-semibold text-slate-600 mb-1.5">About your store</label>
-            <p className="text-[10px] text-slate-400 mb-1">Tell customers what you make, where you are, and why they should choose you</p>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className="w-full min-h-[80px] p-3 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all shadow-sm resize-none"
-              placeholder="Describe your shop..."
-            />
+            <p className="w-full min-h-[80px] p-3 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800 font-medium whitespace-pre-wrap">
+              {description || "No description provided."}
+            </p>
           </div>
 
           <div>
             <label className="block text-xs font-semibold text-slate-600 mb-1.5">Full Address</label>
-            <textarea
-              value={address.full_address}
-              onChange={(e) => setAddress({ ...address, full_address: e.target.value })}
-              className="w-full min-h-[80px] p-3 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all shadow-sm resize-none"
-              placeholder="Enter full address"
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1.5">Zip Code</label>
-              <input
-                type="text"
-                value={address.zip_code}
-                onChange={(e) => setAddress({ ...address, zip_code: e.target.value })}
-                className="w-full h-9 px-3 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all shadow-sm"
-                placeholder="Zip Code"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1.5">Landmark</label>
-              <input
-                type="text"
-                value={address.landmark}
-                onChange={(e) => setAddress({ ...address, landmark: e.target.value })}
-                className="w-full h-9 px-3 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all shadow-sm"
-                placeholder="Landmark"
-              />
-            </div>
+            <p className="w-full min-h-[80px] p-3 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800 font-medium whitespace-pre-wrap">
+              {address.full_address || "No address provided."}
+            </p>
           </div>
 
           <div className="flex items-center gap-3 pt-4 border-t border-slate-100">
-            <input
-              type="checkbox"
-              id="visible_online"
-              checked={visibleOnline}
-              onChange={(e) => setVisibleOnline(e.target.checked)}
-              className="w-4 h-4 text-blue-600 bg-slate-50 border-slate-300 rounded focus:ring-blue-500"
-            />
-            <label htmlFor="visible_online" className="text-sm font-semibold text-slate-700 cursor-pointer">
-              Visible Online
-            </label>
+            <div className={`w-3 h-3 rounded-full ${visibleOnline ? 'bg-green-500' : 'bg-slate-300'}`}></div>
+            <span className="text-sm font-semibold text-slate-700">
+              {visibleOnline ? "Shop is Visible Online" : "Shop is Offline"}
+            </span>
           </div>
         </div>
       </div>

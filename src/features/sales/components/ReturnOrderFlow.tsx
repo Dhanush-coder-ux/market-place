@@ -66,7 +66,7 @@ const generateItems = (sale: SaleRecord, productMap: Record<string, string> = {}
       imageColor: ITEM_COLORS[i % ITEM_COLORS.length],
       status: item.status, variant_id: item.variant_id,
       batch_id: item.batch_id, serialno_id: item.serialno_id,
-      serial_numbers: item.serial_numbers || [],
+      serial_numbers: Array.isArray(item.serialno_infos) && item.serialno_infos.length > 0 ? item.serialno_infos : (item.serial_numbers || []),
       stocks_before: (item as any).stocks_before,
       unit: item.unit || (item as any).entered_unit || "Units",
       entered_unit: (item as any).entered_unit || item.unit || "Units",
@@ -195,10 +195,16 @@ const RefundSummary: React.FC<{ mode: ReturnMode; selectedItems: SelectedReturnI
   );
 };
 
-const SerialReturnPicker: React.FC<{ allSerials: string[]; selected: string[]; required: number; onChange: (serials: string[]) => void; }> = ({ allSerials, selected, required, onChange }) => {
-  const toggle = (sn: string) => {
-    if (selected.includes(sn)) onChange(selected.filter(s => s !== sn));
-    else if (selected.length < required) onChange([...selected, sn]);
+const SerialReturnPicker: React.FC<{ allSerials: any[]; selected: any[]; required: number; onChange: (serials: any[]) => void; }> = ({ allSerials, selected, required, onChange }) => {
+  const getName = (sn: any) => typeof sn === 'object' && sn !== null ? (sn.name || sn.serial_number || "") : String(sn);
+  
+  const toggle = (sn: any) => {
+    const isSelected = selected.some(s => getName(s) === getName(sn));
+    if (isSelected) {
+      onChange(selected.filter(s => getName(s) !== getName(sn)));
+    } else if (selected.length < required) {
+      onChange([...selected, sn]);
+    }
   };
   const ok = selected.length === required;
   return (
@@ -208,12 +214,13 @@ const SerialReturnPicker: React.FC<{ allSerials: string[]; selected: string[]; r
         <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${ok ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`}>{selected.length}/{required}</span>
       </div>
       <div className="flex flex-wrap gap-1.5">
-        {allSerials.map(sn => {
-          const isSel = selected.includes(sn);
+        {allSerials.map((sn, idx) => {
+          const nameStr = getName(sn);
+          const isSel = selected.some(s => getName(s) === nameStr);
           const isDisabled = !isSel && selected.length >= required;
           return (
             <button 
-              key={sn} 
+              key={`${nameStr}-${idx}`} 
               onClick={() => toggle(sn)} 
               disabled={isDisabled}
               className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-mono font-semibold border transition-all duration-100 cursor-pointer ${
@@ -222,7 +229,7 @@ const SerialReturnPicker: React.FC<{ allSerials: string[]; selected: string[]; r
                 'bg-white text-violet-600 border-violet-200 hover:border-violet-300'
               }`}
             >
-              {isSel && <Check size={8} />}{sn}
+              {isSel && <Check size={8} />}{nameStr}
             </button>
           );
         })}
@@ -352,7 +359,7 @@ const ItemSelector: React.FC<{ items: SaleItem[]; returnItems: Record<string, nu
                           </div>
                         )}
                       </div>
-                      {hasSerials && <SerialReturnPicker allSerials={item.serial_numbers as string[]} selected={selectedSerials} required={qty} onChange={s => onSerialChange(item.id, s)} />}
+                      {hasSerials && <SerialReturnPicker allSerials={item.serial_numbers as any[]} selected={selectedSerials as any[]} required={qty} onChange={s => onSerialChange(item.id, s)} />}
                       <div className="mt-2" onClick={e => e.stopPropagation()}>
                         <select
                           value={reason}
@@ -579,7 +586,12 @@ const useReturnModalLogic = (sale: SaleRecord | null, productMap: Record<string,
         unit: i.entered_unit || i.unit,
         reason: state.itemReasons[i.id] || "Customer Request",
         serialno_infos: i.selectedSerials?.length 
-          ? i.selectedSerials.map(s => ({ id: i.serialno_id || "", name: s })) 
+          ? i.selectedSerials.map(s => {
+              if (typeof s === 'object' && s !== null) {
+                return { id: s.id || i.serialno_id || "", name: s.name || s.serial_number || "" };
+              }
+              return { id: i.serialno_id || "", name: String(s) };
+            }) 
           : []
       }));
 

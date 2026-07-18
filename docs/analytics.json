@@ -2687,6 +2687,18 @@
             "type": "string",
             "title": "Shop Id"
           },
+          "action": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Action",
+            "default": "create"
+          },
           "datas": {
             "items": {
               "$ref": "#/components/schemas/CustomerAnalyticsDatas"
@@ -2904,6 +2916,18 @@
           "shop_id": {
             "type": "string",
             "title": "Shop Id"
+          },
+          "total_purchase": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Purchase",
+            "default": 1
           },
           "datas": {
             "items": {
@@ -3142,6 +3166,18 @@
           "shop_id": {
             "type": "string",
             "title": "Shop Id"
+          },
+          "action": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Action",
+            "default": "create"
           },
           "datas": {
             "items": {

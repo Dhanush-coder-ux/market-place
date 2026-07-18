@@ -19,9 +19,9 @@ const parseError = async (res: Response): Promise<string> => {
 async function request(options: RequestOptions): Promise<any> {
   const { method, endpoint, body, params } = options;
   
-  let url = `${BASE_URL}${endpoint}`;
+  let url = endpoint.startsWith("http") ? endpoint : `${BASE_URL}${endpoint}`;
   if (params && Object.keys(params).length > 0) {
-    url += `?${new URLSearchParams(params).toString()}`;
+    url += (url.includes("?") ? "&" : "?") + new URLSearchParams(params).toString();
   }
 
   const getHeaders = () => {
@@ -119,7 +119,7 @@ async function request(options: RequestOptions): Promise<any> {
  * Does NOT set Content-Type — the browser auto-sets it with the boundary.
  */
 async function requestFormData(endpoint: string, formData: FormData): Promise<any> {
-  const url = `${BASE_URL}${endpoint}`;
+  const url = endpoint.startsWith("http") ? endpoint : `${BASE_URL}${endpoint}`;
 
   const getHeaders = () => {
     const token = localStorage.getItem("auth_token");

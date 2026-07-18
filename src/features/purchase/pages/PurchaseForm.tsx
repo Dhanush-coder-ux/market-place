@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
-import { useParams, useNavigate, useSearchParams } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import {
   Save,
   Banknote,
@@ -71,6 +71,7 @@ export interface ProductItem {
 const PurchaseForm = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const { purchase, inventory } = useBusinessApi();
   const { setBottomActions } = useHeader();
@@ -315,9 +316,35 @@ const PurchaseForm = () => {
           setPayment(draft.data.payment);
           setSupplierDetails(draft.data.supplierDetails);
         }
+      } else if (location.state?.product) {
+        const p = location.state.product;
+        const hasBatchTracking = !!p.type_infos?.has_batch || !!p.has_batch || !!p.datas?.has_batch;
+        const hasSerialTracking = !!p.type_infos?.has_serialno || !!p.has_serialno || !!p.datas?.has_serialno;
+        setProducts([{
+          ...defaultProductRow,
+          id: crypto.randomUUID(),
+          inventory_id: p.id,
+          variant_id: p.variant_id || undefined,
+          name: p.variant ? `${p.name} - ${p.variant}` : p.name,
+          costPrice: p.chosen_variant?.buy_price ?? p.chosen_variant?.pricing_infos?.buy_price ?? p.pricing_infos?.buy_price ?? p.buy_price ?? "",
+          sellingPrice: p.chosen_variant?.sell_price ?? p.chosen_variant?.pricing_infos?.sell_price ?? p.pricing_infos?.sell_price ?? p.sell_price ?? "",
+          sku: p.chosen_variant?.barcode ?? (p.sku || p.barcode || ""),
+          unit: p.unit_infos?.name || p.unit || "pc",
+          taxGst: parseInt(p.gst || p.datas?.gst) || 18,
+          batchTracking: hasBatchTracking,
+          serialTracking: hasSerialTracking
+        }]);
+      } else if (location.state?.supplier) {
+        const sup = location.state.supplier;
+        setSupplierDetails({
+          id: sup.id,
+          name: sup.name,
+          ...sup
+        });
+        setPurchaseDetails(prev => ({ ...prev, supplier: sup.id }));
       }
     }
-  }, [id, purchase, searchParams]);
+  }, [id, purchase, searchParams, location.state]);
 
   // --- Handlers ---
   const handleProductChange = useCallback((index: number, field: string, value: any) => {

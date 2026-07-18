@@ -443,7 +443,9 @@ export default function StockMovementPage() {
   };
 
   const { setActions } = useHeader();
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(() => {
+    return location.state?.product?.name || location.state?.product?.ui_id || "";
+  });
   const [typeFilter, setTypeFilter] = useState("All");
   const [statusFilter, setStatus] = useState("All");
   const [warehouseFilter, setWH] = useState("All Locations");

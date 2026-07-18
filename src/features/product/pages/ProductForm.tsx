@@ -525,11 +525,13 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
         setLoading(true);
         try {
           const res = await inventory.getInventoryById(SHOP_ID, id);
+          console.log("=== API RESPONSE ===", res);
           if (res?.data) {
-            const prod = Array.isArray(res.data) ? res.data[0] : res.data;
+            const prod = Array.isArray(res.data) ? (res.data.find((p: any) => p.id === id) || res.data[0]) : res.data;
+            console.log("=== EXTRACTED PROD ===", prod);
             if (!prod) return;
             const additional = prod.additional_infos || prod.datas || {};
-            setForm({
+            const nextForm = {
               name: prod.name || "",
               stocks: prod.stock_infos?.available_stocks || 0,
               serial_number: (prod.serialno_infos && prod.serialno_infos.length > 0 ? (typeof prod.serialno_infos[0] === 'string' ? prod.serialno_infos[0] : prod.serialno_infos[0].name || "") : ""),
@@ -559,7 +561,10 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
               track_stock: prod.have_tracking ?? true,
               low_stock_alert: additional.low_stock_alert || "Notify me",
               visible_online: prod.visible_online || false,
-            });
+            };
+            console.log("=== SETTING FORM ===", nextForm);
+            setForm(nextForm);
+
             const imgList = prod.image_url || additional.images || [];
             if (imgList && Array.isArray(imgList)) setExistingImages(imgList);
 
@@ -576,36 +581,46 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
               });
             }
 
+            const vInfos = prod.variant_infos || (prod.variants ? Object.values(prod.variants) : []);
+
             if (additional.variant_types) setVariantTypes(additional.variant_types);
-            else if (prod.variant_infos?.length > 0) {
-              const firstVar = prod.variant_infos[0];
-              const attributes = firstVar.additional_infos?.attributes || firstVar.attributes || {};
+            else if (vInfos.length > 0) {
+              const firstVar: any = vInfos[0];
+              const attributes = firstVar.additional_infos?.attributes || firstVar.attributes || { "Variant": firstVar.name };
               if (attributes && Object.keys(attributes).length > 0) {
                 const types = Object.keys(attributes).map(key => ({
                   id: uid(),
                   name: key,
-                  values: Array.from(new Set(prod.variant_infos.map((v: any) => v.additional_infos?.attributes?.[key] || v.attributes?.[key]))).filter(Boolean) as string[],
+                  values: Array.from(new Set(vInfos.map((v: any) => 
+                    v.additional_infos?.attributes?.[key] || v.attributes?.[key] || (key === "Variant" ? v.name : "")
+                  ))).filter(Boolean) as string[],
                 }));
                 setVariantTypes(types);
               }
             }
-
-            if (prod.variant_infos) {
-              setCombinations(prod.variant_infos.map((v: any) => ({
-                id: v.id || uid(),
-                attributes: v.additional_infos?.attributes || v.attributes || {},
-                barcode: v.additional_infos?.barcode || v.barcode || "",
-                sku: v.additional_infos?.sku || v.sku || v.barcode || "",
-                price: String(v.sell_price || ""),
-                buy_price: String(v.buy_price || ""),
-                mrp: String(v.additional_infos?.mrp || ""),
-                reorder_point: String(v.reorder_point || "5"),
-                stock: String(v.stock_infos?.available_stocks || "0"),
-                active: true,
-                serials: (v.additional_infos?.serial_numbers || v.serial_numbers || []).map((sn: string) => ({
-                  id: uid(), serial: sn, status: "available" as const, purchaseDate: "", warrantyMonths: "12",
-                })),
-              })));
+            if (vInfos.length > 0) {
+              setCombinations(vInfos.map((v: any) => {
+                const attrs = v.additional_infos?.attributes || v.attributes || { "Variant": v.name };
+                const pricing = v.pricing_infos && Object.keys(v.pricing_infos).length > 0 ? v.pricing_infos : (v.batch_infos?.[0]?.pricing_infos || {});
+                const stockInfo = v.stock_infos && Object.keys(v.stock_infos).length > 0 ? v.stock_infos : (v.batch_infos?.[0]?.stock_infos || {});
+                const reorderInfo = v.reorder_point_infos && Object.keys(v.reorder_point_infos).length > 0 ? v.reorder_point_infos : (v.batch_infos?.[0]?.reorder_point_infos || {});
+                
+                return {
+                  id: v.id || uid(),
+                  attributes: attrs,
+                  barcode: v.additional_infos?.barcode || v.barcode || "",
+                  sku: v.additional_infos?.sku || v.sku || v.barcode || "",
+                  price: String(pricing.sell_price || v.sell_price || ""),
+                  buy_price: String(pricing.buy_price || v.buy_price || ""),
+                  mrp: String(v.additional_infos?.mrp || pricing.mrp || ""),
+                  reorder_point: String(reorderInfo.reorder_point || v.reorder_point || "5"),
+                  stock: String(stockInfo.available_stocks || "0"),
+                  active: true,
+                  serials: (v.additional_infos?.serial_numbers || v.serial_numbers || []).map((sn: string) => ({
+                    id: uid(), serial: sn, status: "available" as const, purchaseDate: "", warrantyMonths: "12",
+                  })),
+                };
+              }));
             }
             if (!prod.type_infos?.has_variant && prod.serialno_infos) {
               const baseSn = prod.serialno_infos.map((s: any) => typeof s === 'string' ? s : s.name);
@@ -724,10 +739,11 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
     const finalImages = [...existingImages];
 
     // Build variant_infos — only send fields the backend schema accepts:
-    // name (required), storage_location, reorder_point, buy_price, sell_price, visible_online
+    // id (if updating), name (required), storage_location, reorder_point, buy_price, sell_price, visible_online
     const mappedVarients = activeCombinations.map(combo => {
       const variantName = Object.values(combo.attributes).join(" / ");
       return {
+        id: combo.id.startsWith("id_") ? undefined : combo.id,
         name: variantName,
         storage_location: form.location || null,
         reorder_point: Number(combo.reorder_point) || 5,

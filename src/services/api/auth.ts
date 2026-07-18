@@ -6,17 +6,21 @@ const KEY_VERSION = '1';
 
 export const authApi = {
   /** Step 1: Get the OAuth login URL from the backend. Redirects user to Debugger Auth. */
-  getLoginUrl: async () => {
+  getLoginUrl: async (version: string = KEY_VERSION) => {
     return await apiClient.get(`${AUTH_BASE}/login-url`, {
       service: SERVICE_NAME,
-      version: KEY_VERSION,
+      version: version,
     });
   },
 
-  // Step 2 (callback) is handled server-side:
-  // Backend receives token_id from Debugger Auth, generates JWTs,
-  // and redirects browser to {FRONTEND_URL}/auth/callback?access_token=...&refresh_token=...
-  // AuthCallback.tsx reads those params directly — no API call needed.
+  /** Step 2 (callback): Exchange token_id for JWTs */
+  callback: async (token_id: string, version: string = KEY_VERSION) => {
+    return await apiClient.get(`${AUTH_BASE}/callback`, {
+      token_id,
+      service: SERVICE_NAME,
+      version,
+    });
+  },
 
   /** Refresh an expired access token using the stored refresh token. */
   refreshToken: async (refresh_token: string, version: string = KEY_VERSION) => {
@@ -28,14 +32,43 @@ export const authApi = {
     return await apiClient.post(`${AUTH_BASE}/token`, { session_id, shop_id });
   },
 
-
   /** Revoke a token (logout). */
   revokeToken: async (token: string) => {
     return await apiClient.post(`${AUTH_BASE}/revoke`, { token });
   },
 
+  /** Generate Keys */
+  generateKeys: async (version: string = KEY_VERSION) => {
+    return await apiClient.post(`${AUTH_BASE}/keys/generate`, { version });
+  },
+
   /** Get public key for a specific version (used by gateway/middleware). */
   getPublicKey: async (version: string = KEY_VERSION) => {
     return await apiClient.get(`${AUTH_BASE}/keys/${version}`);
+  },
+
+  /** User Management */
+  getAllUsers: async () => {
+    return await apiClient.get(`${AUTH_BASE}/users`);
+  },
+
+  createUserManual: async (data: any) => {
+    return await apiClient.post(`${AUTH_BASE}/users`, data);
+  },
+
+  getUserById: async (user_id: string) => {
+    return await apiClient.get(`${AUTH_BASE}/users/by-id/${user_id}`);
+  },
+
+  getUserByEmail: async (email: string) => {
+    return await apiClient.get(`${AUTH_BASE}/users/by-email/${email}`);
+  },
+
+  getUserByMobile: async (mobilenumber: string) => {
+    return await apiClient.get(`${AUTH_BASE}/users/by-mobile/${mobilenumber}`);
+  },
+
+  deleteUser: async (user_id: string) => {
+    return await apiClient.delete(`${AUTH_BASE}/users/${user_id}`);
   },
 };

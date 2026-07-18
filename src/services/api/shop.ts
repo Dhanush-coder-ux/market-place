@@ -20,6 +20,18 @@ export const shopApi = {
     return await apiClient.get(ENDPOINTS.SHOPS, params);
   },
   
+  // ── Operating Hours (Dummy endpoints extracting from Shop) ───────────────
+  getOperatingHours: async (shop_id: string) => {
+    const shopRes = await apiClient.get(`${ENDPOINTS.SHOPS}/by/${shop_id}`);
+    return { data: shopRes?.data?.operating_hours || [] };
+  },
+
+  // ── Delivery Options (Dummy endpoints extracting from Shop) ──────────────
+  getDeliveryOptions: async (shop_id: string) => {
+    const shopRes = await apiClient.get(`${ENDPOINTS.SHOPS}/by/${shop_id}`);
+    return { data: shopRes?.data?.delivery_options || [] };
+  },
+  
   getShopById: async (shop_id: string) => {
     return await apiClient.get(`${ENDPOINTS.SHOPS}/by/${shop_id}`);
   },
@@ -37,34 +49,6 @@ export const shopApi = {
     return await apiClient.delete(`${ENDPOINTS.SHOPS}/${data.id}`);
   },
 
-  // ── Operating Hours ────────────────────────────────────────────────────────
-  getOperatingHours: async (shop_id: string) => {
-    return await apiClient.get(`${ENDPOINTS.SHOPS}/${shop_id}/operating-hours`);
-  },
-  createOperatingHours: async (shop_id: string, data: Record<string, any>) => {
-    return await apiClient.post(`${ENDPOINTS.SHOPS}/${shop_id}/operating-hours`, data);
-  },
-  updateOperatingHours: async (hours_id: number, data: Record<string, any>) => {
-    return await apiClient.put(`${ENDPOINTS.SHOPS}/operating-hours/${hours_id}?shop_id=${SHOP_ID}`, data);
-  },
-  deleteOperatingHours: async (hours_id: number) => {
-    return await apiClient.delete(`${ENDPOINTS.SHOPS}/operating-hours/${hours_id}?shop_id=${SHOP_ID}`);
-  },
-
-  // ── Delivery Options ───────────────────────────────────────────────────────
-  getDeliveryOptions: async (shop_id: string) => {
-    return await apiClient.get(`${ENDPOINTS.SHOPS}/${shop_id}/delivery`);
-  },
-  createDeliveryOption: async (shop_id: string, data: Record<string, any>) => {
-    return await apiClient.post(`${ENDPOINTS.SHOPS}/${shop_id}/delivery`, data);
-  },
-  updateDeliveryOption: async (delivery_id: number, data: Record<string, any>) => {
-    return await apiClient.put(`${ENDPOINTS.SHOPS}/delivery/${delivery_id}?shop_id=${SHOP_ID}`, data);
-  },
-  deleteDeliveryOption: async (delivery_id: number) => {
-    return await apiClient.delete(`${ENDPOINTS.SHOPS}/delivery/${delivery_id}?shop_id=${SHOP_ID}`);
-  },
-
   // ── Announcements ──────────────────────────────────────────────────────────
   getAnnouncements: async (shop_id: string) => {
     return await apiClient.get(`${ENDPOINTS.SHOPS}/${shop_id}/announcements`);
@@ -78,6 +62,7 @@ export const shopApi = {
   deleteAnnouncement: async (announcement_id: number) => {
     return await apiClient.delete(`${ENDPOINTS.SHOPS}/announcements/${announcement_id}?shop_id=${SHOP_ID}`);
   },
+
   
   uploadShopImage: async (file: File, imageType: "logo" | "banner") => {
     const userId = localStorage.getItem("user_id") || "";

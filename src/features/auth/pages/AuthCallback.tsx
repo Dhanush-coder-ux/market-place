@@ -2,16 +2,14 @@ import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useToast } from "@/context/ToastContext";
 import { Loader2, CheckCircle, XCircle } from "lucide-react";
+import { authApi } from "@/services/api/auth";
 
 /**
  * AuthCallback – landed on after the backend's /auth/callback redirects here.
  *
- * The backend processes the OAuth token_id, creates/fetches the user, signs
- * RS256 JWTs and redirects the browser to:
- *   {FRONTEND_URL}/auth/callback?access_token=xxx&refresh_token=yyy&token_type=bearer&expires_in=3600
- *
- * This page reads those params from the URL, stores them in localStorage,
- * and redirects to /shop-select.
+ * This page handles two potential flows:
+ * 1. The URL has `token_id`, which must be exchanged for JWTs via the API.
+ * 2. The URL directly contains `access_token` and `refresh_token` (legacy flow).
  */
 const AuthCallback = () => {
   const [searchParams] = useSearchParams();
@@ -21,9 +19,26 @@ const AuthCallback = () => {
   const [message, setMessage] = useState("Completing sign-in…");
 
   useEffect(() => {
-    const handleAuth = () => {
-      const accessToken = searchParams.get("access_token");
-      const refreshToken = searchParams.get("refresh_token");
+    const handleAuth = async () => {
+      let accessToken = searchParams.get("access_token");
+      let refreshToken = searchParams.get("refresh_token");
+      const tokenId = searchParams.get("token_id");
+
+      if (tokenId) {
+        try {
+          // Exchange token_id for JWTs
+          const response = await authApi.callback(tokenId);
+          accessToken = response.access_token || response.data?.access_token;
+          refreshToken = response.refresh_token || response.data?.refresh_token;
+        } catch (error) {
+          console.error("Token exchange failed", error);
+          setStatus("error");
+          setMessage("Authentication failed during token exchange.");
+          showToast("Authentication failed. Please try again.", "error");
+          setTimeout(() => navigate("/login"), 2500);
+          return;
+        }
+      }
 
       if (!accessToken) {
         setStatus("error");

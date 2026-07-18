@@ -13,6 +13,24 @@
         ],
         "summary": "Create",
         "operationId": "create_orders_post",
+        "parameters": [
+          {
+            "name": "x-user-infos",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-User-Infos"
+            }
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -227,15 +245,33 @@
         ],
         "summary": "Update Status",
         "operationId": "update_status_orders_status_put",
+        "parameters": [
+          {
+            "name": "x-user-infos",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-User-Infos"
+            }
+          }
+        ],
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CreateOrderSchema"
+                "$ref": "#/components/schemas/UpdateOrderStatusSchema"
               }
             }
-          },
-          "required": true
+          }
         },
         "responses": {
           "200": {
@@ -967,6 +1003,109 @@
         }
       }
     },
+    "/orders/get_bulk_orders": {
+      "post": {
+        "tags": [
+          "Orders CRUD"
+        ],
+        "summary": "Get Bulk Orders",
+        "operationId": "get_bulk_orders_orders_get_bulk_orders_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GetBulkOrdersSchema"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/orders/by/user/{user_id}": {
+      "get": {
+        "tags": [
+          "Orders CRUD"
+        ],
+        "summary": "Get By User Id",
+        "operationId": "get_by_user_id_orders_by_user__user_id__get",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "User Id"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 10,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/cart/init": {
       "post": {
         "tags": [
@@ -1160,15 +1299,33 @@
         ],
         "summary": "Create Return",
         "operationId": "create_return_returns_post",
+        "parameters": [
+          {
+            "name": "x-user-infos",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-User-Infos"
+            }
+          }
+        ],
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/CreateReturnSchema"
               }
             }
-          },
-          "required": true
+          }
         },
         "responses": {
           "200": {
@@ -1536,6 +1693,116 @@
               }
             ],
             "title": "Additional Infos"
+          },
+          "user_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Id"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          },
+          "address_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address Id"
+          },
+          "full_address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Full Address"
+          },
+          "latitude": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latitude"
+          },
+          "longitude": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Longitude"
+          },
+          "city": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "City"
+          },
+          "pincode": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pincode"
+          },
+          "state": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State"
           }
         },
         "type": "object",
@@ -1612,6 +1879,27 @@
           "quantity_returned"
         ],
         "title": "ExchangeItemRequestSchema"
+      },
+      "GetBulkOrdersSchema": {
+        "properties": {
+          "shop_id": {
+            "type": "string",
+            "title": "Shop Id"
+          },
+          "order_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Order Ids"
+          }
+        },
+        "type": "object",
+        "required": [
+          "shop_id",
+          "order_ids"
+        ],
+        "title": "GetBulkOrdersSchema"
       },
       "HTTPValidationError": {
         "properties": {
@@ -1767,6 +2055,17 @@
               }
             ],
             "title": "Serialno Infos"
+          },
+          "unit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit"
           }
         },
         "type": "object",
@@ -1805,6 +2104,46 @@
           "America/Los_Angeles"
         ],
         "title": "TimeZoneEnum"
+      },
+      "UpdateOrderStatusSchema": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "shop_id": {
+            "type": "string",
+            "title": "Shop Id"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OrderStatusEnum"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "payment_infos": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payment Infos"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "shop_id"
+        ],
+        "title": "UpdateOrderStatusSchema"
       },
       "ValidationError": {
         "properties": {

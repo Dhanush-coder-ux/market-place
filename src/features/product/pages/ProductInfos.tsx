@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import ActionMenu, { ActionMenuItem, ActionMenuDivider } from "@/components/common/ActionMenu";
 import { VariantRows, BatchCards, SerialBadgeList } from "../../inventory/components/StockTree";
+import { Modal } from "@/components/common/SuperUI";
 import { useHeader } from "@/context/HeaderContext";
 import { useApi, useApiLoading } from "@/context/ApiContext";
 import { useToast } from "@/context/ToastContext";
@@ -218,6 +219,7 @@ const ProductRow = React.memo(
   }) => {
     const navigate = useNavigate();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const [showVariantModal, setShowVariantModal] = useState(false);
     const menuTriggerRef = useRef<HTMLButtonElement>(null);
     const datas = (p.additional_infos as any) || (p.datas as any) || {};
 
@@ -704,13 +706,20 @@ const ProductRow = React.memo(
                   onClose={() => setIsMenuOpen(false)}
                   width={164}
                 >
-                  <ActionMenuItem icon={<RefreshCw size={13} />} onClick={() => { setIsMenuOpen(false); navigate(`/stock-adjustment`); }}>
+                  <ActionMenuItem icon={<RefreshCw size={13} />} onClick={() => { setIsMenuOpen(false); navigate(`/stock-adjustment`, { state: { product: p } }); }}>
                     Adjust Stock
                   </ActionMenuItem>
-                  <ActionMenuItem icon={<History size={13} />} onClick={() => { setIsMenuOpen(false); navigate(`/stock-movement`); }}>
+                  <ActionMenuItem icon={<History size={13} />} onClick={() => { setIsMenuOpen(false); navigate(`/stock-movement`, { state: { product: p } }); }}>
                     Stock Movements
                   </ActionMenuItem>
-                  <ActionMenuItem icon={<Plus size={13} />} onClick={() => { setIsMenuOpen(false); navigate(`/purchase/add`); }}>
+                  <ActionMenuItem icon={<Plus size={13} />} onClick={() => { 
+                    setIsMenuOpen(false); 
+                    if (hasVariants) {
+                      setShowVariantModal(true);
+                    } else {
+                      navigate(`/purchase/add`, { state: { product: p } }); 
+                    }
+                  }}>
                     Add Purchase
                   </ActionMenuItem>
                   <ActionMenuDivider />
@@ -760,6 +769,48 @@ const ProductRow = React.memo(
             </td>
           </tr>
         )}
+
+        <Modal
+          show={showVariantModal}
+          onClose={() => setShowVariantModal(false)}
+          title={`Select Variant for ${p.name}`}
+        >
+          <div className="space-y-2 max-h-[60vh] overflow-y-auto">
+            {combinations.map((comb: any, idx: number) => {
+              const combDatas = comb.datas || {};
+              const attributes = comb.attributes || combDatas.attributes || combDatas.datas?.attributes || {};
+              let variantLabel = comb.variant_name || comb.name || combDatas.name || 'Standard Variant';
+              if (Object.keys(attributes).length > 0) {
+                variantLabel = Object.values(attributes).join(' / ');
+              } else if (comb.barcode && combDatas.barcode && comb.barcode !== combDatas.barcode) {
+                variantLabel = comb.barcode;
+              }
+              const stockNum = Number(comb.stock_infos?.available_stocks ?? comb.stock_infos?.physical_stocks ?? comb.stocks ?? comb.stock ?? combDatas.stocks ?? combDatas.datas?.stocks ?? 0);
+              return (
+                <div
+                  key={comb.id || idx}
+                  className="p-3 border border-slate-200 rounded-lg hover:border-blue-500 cursor-pointer flex justify-between items-center bg-white transition-all shadow-sm hover:shadow-md"
+                  onClick={() => {
+                    setShowVariantModal(false);
+                    const productWithVariant = {
+                      ...p,
+                      variant_id: comb.id || String(idx),
+                      variant: variantLabel,
+                      chosen_variant: comb
+                    };
+                    navigate(`/purchase/add`, { state: { product: productWithVariant } });
+                  }}
+                >
+                  <div>
+                    <p className="font-bold text-sm text-slate-800">{variantLabel}</p>
+                    <p className="text-xs text-slate-500 font-semibold mt-1">Stock: {stockNum}</p>
+                  </div>
+                  <ChevronRight size={16} className="text-slate-400" />
+                </div>
+              );
+            })}
+          </div>
+        </Modal>
       </Fragment>
     );
   }

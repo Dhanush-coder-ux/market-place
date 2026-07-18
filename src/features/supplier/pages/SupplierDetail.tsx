@@ -21,6 +21,7 @@ import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { SupplierPurchasesTable } from "@/components/common/HistoryTables";
 import { supplierCustomFieldsApi } from "@/services/api/supplierCustomFields";
 import { supplierApi } from "@/services/api/supplier";
+import { purchaseApi } from "@/services/api/purchase";
 import type { SupplierCustomFieldDefinition, SupplierCustomFieldValue } from "../type";
 
 
@@ -87,6 +88,99 @@ export default function SupplierDetail() {
   const [outstandingType, setOutstandingType] = useState<'INCREMENT' | 'DECREMENT' | 'DIRECT'>('INCREMENT');
   const [outstandingAmount, setOutstandingAmount] = useState<string>('');
   const [outstandingSaving, setOutstandingSaving] = useState(false);
+
+  // Clear Outstanding Purchases state
+  const [showClearModal, setShowClearModal] = useState(false);
+  const [clearPurchases, setClearPurchases] = useState<any[]>([]);
+  const [clearLoading, setClearLoading] = useState(false);
+  const [clearSearch, setClearSearch] = useState("");
+  const [selectedPurchase, setSelectedPurchase] = useState<any>(null);
+  const [clearAmount, setClearAmount] = useState<string>('');
+  const [clearSaving, setClearSaving] = useState(false);
+
+  const fetchOutstandingPurchases = async () => {
+    if (!id) return;
+    setClearLoading(true);
+    try {
+      const res = await purchaseApi.getPurchasesBySupplier(SHOP_ID, id);
+      let purList = res?.data ? (Array.isArray(res.data) ? res.data : [res.data]) : [];
+      if (res?.data?.datas) purList = res.data.datas;
+      
+      const outstandingOnly = purList.filter((p: any) => {
+        return p.outstanding_amount > 0.01;
+      });
+      setClearPurchases(outstandingOnly);
+    } catch {
+      showToast("Failed to fetch outstanding purchases", "error");
+    } finally {
+      setClearLoading(false);
+    }
+  };
+
+  const handleClearOutstandingPayment = async () => {
+    if (!selectedPurchase || !clearAmount || !id) return;
+    setClearSaving(true);
+    try {
+      const fullRes = await purchaseApi.getPurchaseById(SHOP_ID, selectedPurchase.purchase_id || selectedPurchase.id);
+      const pData = fullRes?.data?.datas?.[0] || fullRes?.data || selectedPurchase;
+      
+      const amountToPay = Number(clearAmount);
+      const newPayment = { method: "CASH", amount: amountToPay, date: new Date().toISOString() };
+      const updatedPaymentInfos = [...(pData.payment_infos || []), newPayment];
+
+      const updatePayload = {
+        id: pData.purchase_id || pData.id,
+        shop_id: SHOP_ID,
+        payment_infos: updatedPaymentInfos,
+        items: (pData.items || []).map((item: any) => ({
+          id: item.id,
+          product_id: item.product_id || item.inventory_id,
+          variant_id: item.variant_id || undefined,
+          batch_infos: item.batch_infos || undefined,
+          serialno_numbers: item.serialno_numbers || undefined,
+          storage_location_infos: item.storage_location_infos || undefined,
+          reorder_point_infos: item.reorder_point_infos || undefined,
+          pricing_infos: item.pricing_infos || { 
+            buy_price: Number(item.buy_price || 0), 
+            sell_price: Number(item.sell_price || 0) 
+          },
+          gst: item.gst || "0%",
+          stock_infos: item.stock_infos || item.stocks_infos || { stocks: 0 }
+        }))
+      };
+      
+      await purchaseApi.updatePurchase(updatePayload);
+      
+      try {
+        await supplierApi.updateOutstanding({
+          id,
+          shop_id: SHOP_ID,
+          outstanding_infos: { amount: amountToPay },
+          type: 'DECREMENT'
+        });
+      } catch (e) {
+        // fail silently for supplier if purchase update succeeds
+      }
+      
+      showToast("Payment applied successfully", "success");
+      setShowClearModal(false);
+      
+      const statsRes = await getData(`${ENDPOINTS.ANALYTICS_SUPPLIER}/${id}`, { shop_id: SHOP_ID });
+      const statsData = statsRes?.data ?? statsRes;
+      if (statsData?.supplier ?? statsData) setStats(statsData?.supplier ?? statsData);
+      
+      if (activeTab === 2) {
+        getData(`${ENDPOINTS.PURCHASES}/by/supplier/${SHOP_ID}/${id}`).then((r: any) => {
+           setPurchases(r?.data ? (Array.isArray(r.data) ? r.data : [r.data]) : []);
+        });
+      }
+
+    } catch {
+      showToast("Failed to apply payment", "error");
+    } finally {
+      setClearSaving(false);
+    }
+  };
 
   const handleSaveOutstanding = async () => {
     if (!id || !outstandingAmount) return;
@@ -317,6 +411,19 @@ export default function SupplierDetail() {
           })()}
           <StatCard icon={Package} label="Cleared Amount" value={`₹${(stats?.total_cleared_amounts || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} iconBg="bg-indigo-50 text-indigo-600" className="flex-1 min-w-[140px]" />
         </div>
+        {/* Clear Outstanding Button */}
+        <button 
+          onClick={() => {
+            setShowClearModal(true);
+            fetchOutstandingPurchases();
+            setSelectedPurchase(null);
+            setClearAmount('');
+            setClearSearch('');
+          }}
+          className="w-full mt-2 h-9 border border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-lg text-xs font-bold transition-colors shadow-sm"
+        >
+          Clear Outstanding
+        </button>
       </div>
 
       {/* Tab Panels */}
@@ -643,6 +750,105 @@ export default function SupplierDetail() {
                 {outstandingSaving ? "Saving..." : "Save Balance"}
               </button>
             </div>
+          </div>
+        </Modal>
+
+        {/* Clear Outstanding Specific Purchases Modal */}
+        <Modal show={showClearModal} onClose={() => setShowClearModal(false)} title="Clear Outstanding Purchase">
+          <div className="space-y-4">
+            {!selectedPurchase ? (
+              <>
+                <div>
+                  <input
+                    type="text"
+                    value={clearSearch}
+                    onChange={e => setClearSearch(e.target.value)}
+                    placeholder="Search invoice or ID..."
+                    className="w-full h-9 px-3 bg-white border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all shadow-sm"
+                  />
+                </div>
+                <div className="max-h-[300px] overflow-y-auto space-y-2 pr-1 custom-scrollbar">
+                  {clearLoading ? (
+                    <div className="p-4 text-center text-xs text-slate-500">Loading purchases...</div>
+                  ) : clearPurchases.length === 0 ? (
+                    <div className="p-4 text-center text-xs text-slate-500">No outstanding purchases found.</div>
+                  ) : (
+                    clearPurchases.filter(p => 
+                      !clearSearch || 
+                      (p.invoice_no && p.invoice_no.toLowerCase().includes(clearSearch.toLowerCase())) || 
+                      (p.ui_id && p.ui_id.toLowerCase().includes(clearSearch.toLowerCase()))
+                    ).map(p => {
+                      const gTotal = p.calculation_infos?.grand_total || 0;
+                      const paid = (p.payment_infos || []).reduce((s: number, pInfo: any) => s + (Number(pInfo.amount) || 0), 0);
+                      const balance = gTotal - paid;
+                      
+                      return (
+                        <div 
+                          key={p.id} 
+                          onClick={() => setSelectedPurchase(p)}
+                          className="p-3 bg-white border border-slate-200 hover:border-blue-400 rounded-lg cursor-pointer transition-all shadow-sm flex justify-between items-center group"
+                        >
+                          <div>
+                            <p className="text-xs font-bold text-slate-800">{p.invoice_no || p.ui_id || "No Invoice"}</p>
+                            <p className="text-[10px] text-slate-500 mt-0.5">{new Date(p.purchase_date || p.created_at).toLocaleDateString()}</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-[10px] text-slate-400">Balance</p>
+                            <p className="text-sm font-black text-rose-600 group-hover:text-blue-600 transition-colors">₹{balance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</p>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </>
+            ) : (
+              <div className="space-y-4 animate-in fade-in zoom-in-95 duration-200">
+                <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg flex justify-between items-center">
+                  <div>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Selected Purchase</p>
+                    <p className="text-sm font-bold text-slate-800 mt-0.5">{selectedPurchase.invoice_no || selectedPurchase.ui_id}</p>
+                  </div>
+                  <button onClick={() => { setSelectedPurchase(null); setClearAmount(''); }} className="text-xs text-blue-600 font-bold hover:underline">Change</button>
+                </div>
+                
+                {(() => {
+                   const balance = selectedPurchase.outstanding_amount || 0;
+                   return (
+                     <div>
+                       <label className="block text-xs font-semibold text-slate-600 mb-1.5 flex justify-between items-end">
+                         Payment Amount
+                         <span className="text-[10px] font-bold text-rose-600">Max: ₹{balance.toLocaleString('en-IN')}</span>
+                       </label>
+                       <input
+                         type="number"
+                         value={clearAmount}
+                         onChange={(e) => setClearAmount(e.target.value)}
+                         max={balance}
+                         className="w-full h-10 px-3 bg-white border border-slate-200 rounded-lg text-sm font-bold focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all shadow-sm"
+                         placeholder="0.00"
+                       />
+                     </div>
+                   );
+                })()}
+
+                <div className="pt-4 flex justify-end gap-2 border-t border-slate-200">
+                  <button
+                    onClick={() => { setSelectedPurchase(null); setClearAmount(''); }}
+                    className="h-9 px-4 text-xs font-bold text-slate-600 hover:bg-slate-200 bg-slate-100 rounded-lg transition-colors border border-slate-200"
+                  >
+                    Back
+                  </button>
+                  <button
+                    onClick={handleClearOutstandingPayment}
+                    disabled={clearSaving || !clearAmount || isNaN(Number(clearAmount)) || Number(clearAmount) <= 0}
+                    className="h-9 px-4 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 disabled:text-slate-500 text-white text-xs font-bold rounded-lg transition-all shadow-sm"
+                  >
+                    {clearSaving ? "Processing..." : "Submit Payment"}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </Modal>
       </div>

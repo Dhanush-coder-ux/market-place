@@ -1020,29 +1020,51 @@
       "SupplierLocationInfosType": {
         "properties": {
           "zipcode": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Zipcode"
           },
           "country": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Country"
           },
           "state": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "State"
           },
           "full_address": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Full Address"
           }
         },
         "type": "object",
-        "required": [
-          "zipcode",
-          "country",
-          "state",
-          "full_address"
-        ],
         "title": "SupplierLocationInfosType"
       },
       "SupplierOutstandingInfosType": {

@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import {
   ChevronDown,
   Save,
@@ -119,6 +119,7 @@ const extractSerials = (obj: any) => {
 
 export default function StockAdjustmentPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const { setBottomActions } = useHeader();
   const { showToast } = useToast();
@@ -219,9 +220,35 @@ export default function StockAdjustmentPage() {
         setNotes(draft.data.notes || '');
       }
     } else if (items.length === 0) {
-      handleAddItem();
+      if (location.state?.product) {
+        const p = location.state.product;
+        const newItem: AdjustmentItem = {
+          id: `item-${Date.now()}`,
+          inventory_id: p.id,
+          product: p.name,
+          barcode: p.sku || p.barcode || '',
+          currentStock: p.stock_infos?.available_stocks ?? p.stocks ?? 0,
+          type: 'DECREMENT',
+          stocks: 1,
+          reason: 'Stock Correction',
+          notes: '',
+          internalNote: '',
+          variant_name: '',
+          variant_id: '',
+          batch_id: '',
+          batch_name: '',
+          serial_numbers: [],
+          sku: p.sku || p.barcode || '',
+          has_serialno_tracking: !!p.type_infos?.has_serialno || !!p.has_serialno || !!p.datas?.has_serialno,
+          existing_serial_numbers: [],
+          has_batch_tracking: !!p.type_infos?.has_batch || !!p.has_batch || !!p.datas?.has_batch
+        };
+        setItems([newItem]);
+      } else {
+        handleAddItem();
+      }
     }
-  }, [searchParams]);
+  }, [searchParams, location.state]);
 
   // --- Header Actions ---
   useEffect(() => {

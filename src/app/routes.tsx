@@ -80,6 +80,9 @@ const Billing = React.lazy(() => import("../features/billing/pages/Billing"));
 const StoreSetupForm = React.lazy(() => import("@/features/digitalstore/pages/DigitalStoreForm"));
 const DigitalMain = React.lazy(() => import("@/features/digitalstore/components/DigitalMain"));
 
+// ─── Notifications ───────────────────────────────────────────────────────────
+const NotificationsPage = React.lazy(() => import("@/features/notifications/pages/NotificationsPage"));
+
 // ─── Shared route Suspense wrapper ───────────────────────────────────────────
 // Wraps each route-level component so navigation shows a per-page spinner
 // instead of unmounting the whole app.
@@ -160,6 +163,9 @@ export const router = createBrowserRouter([
       // Digital Store / Profile
       { path: '/create-shop', element: <Page><StoreSetupForm /></Page> },
       { path: '/profile', element: <Page><DigitalMain /></Page> },
+
+      // Notifications
+      { path: "/notifications", element: <Page><NotificationsPage /></Page> },
 
       // Customers — static "add" before dynamic ":id"
       { path: "/customers", element: <Page><CustomerSearch /></Page> },

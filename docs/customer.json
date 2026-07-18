@@ -1110,9 +1110,9 @@
             "type": "string",
             "title": "Shop Id"
           },
-          "customer_id": {
+          "id": {
             "type": "string",
-            "title": "Customer Id"
+            "title": "Id"
           },
           "payment_infos": {
             "items": {
@@ -1125,7 +1125,7 @@
         "type": "object",
         "required": [
           "shop_id",
-          "customer_id",
+          "id",
           "payment_infos"
         ],
         "title": "CreateCustomerOutstandingClearedSchema"
@@ -1575,14 +1575,7 @@
             ]
           },
           "can_have_credit": {
-            "anyOf": [
-              {
-                "type": "boolean"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "boolean",
             "title": "Can Have Credit"
           },
           "custom_fields": {

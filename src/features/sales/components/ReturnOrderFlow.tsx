@@ -28,7 +28,7 @@ interface SaleItem {
   imageColor: string; status?: string; stocks_before?: number; serial_numbers?: string[]; serialno_id?: string;
   unit: string; entered_unit: string; entered_qty: number; unit_infos?: any;
 }
-interface SelectedReturnItem extends SaleItem { returnQty: number; exchangeItemId?: string; selectedSerials?: string[]; }
+interface SelectedReturnItem extends SaleItem { returnQty: number; exchangeItemId?: string; selectedSerials?: any[]; }
 interface ReturnErrors { reason?: string; items?: string; settlement?: string; serials?: string; }
 type ReturnStep = 1 | 2 | 3 | 4 | 5;
 interface ReturnState {
@@ -66,7 +66,7 @@ const generateItems = (sale: SaleRecord, productMap: Record<string, string> = {}
       imageColor: ITEM_COLORS[i % ITEM_COLORS.length],
       status: item.status, variant_id: item.variant_id,
       batch_id: item.batch_id, serialno_id: item.serialno_id,
-      serial_numbers: Array.isArray(item.serialno_infos) && item.serialno_infos.length > 0 ? item.serialno_infos : (item.serial_numbers || []),
+      serial_numbers: Array.isArray((item as any).serialno_infos) && (item as any).serialno_infos.length > 0 ? (item as any).serialno_infos : (item.serial_numbers || []),
       stocks_before: (item as any).stocks_before,
       unit: item.unit || (item as any).entered_unit || "Units",
       entered_unit: (item as any).entered_unit || item.unit || "Units",

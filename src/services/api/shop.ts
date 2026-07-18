@@ -25,12 +25,18 @@ export const shopApi = {
     const shopRes = await apiClient.get(`${ENDPOINTS.SHOPS}/by/${shop_id}`);
     return { data: shopRes?.data?.operating_hours || [] };
   },
+  createOperatingHours: async (_shop_id: string, data: any) => Promise.resolve({data}),
+  updateOperatingHours: async (_id: string | number, data: any) => Promise.resolve({data}),
+  deleteOperatingHours: async (_id: string | number) => Promise.resolve({}),
 
   // ── Delivery Options (Dummy endpoints extracting from Shop) ──────────────
   getDeliveryOptions: async (shop_id: string) => {
     const shopRes = await apiClient.get(`${ENDPOINTS.SHOPS}/by/${shop_id}`);
     return { data: shopRes?.data?.delivery_options || [] };
   },
+  createDeliveryOption: async (_shop_id: string, data: any) => Promise.resolve({data}),
+  updateDeliveryOption: async (_id: string | number, data: any) => Promise.resolve({data}),
+  deleteDeliveryOption: async (_id: string | number) => Promise.resolve({}),
   
   getShopById: async (shop_id: string) => {
     return await apiClient.get(`${ENDPOINTS.SHOPS}/by/${shop_id}`);

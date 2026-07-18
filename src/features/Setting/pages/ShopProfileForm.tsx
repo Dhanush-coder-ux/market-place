@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { Store, Save } from "lucide-react";
+import { Store } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { useToast } from "@/context/ToastContext";
 import { SHOP_ID } from "@/services/endpoints";
 import { shopApi } from "@/services/api/shop";
@@ -9,7 +10,7 @@ import { NavigationBlocker } from "@/components/common/NavigationBlocker";
 export const ShopProfileForm = () => {
   const { showToast } = useToast();
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [saving, _setSaving] = useState(false);
   
   const [name, setName] = useState("");
   const [tagline, setTagline] = useState("");
@@ -17,8 +18,7 @@ export const ShopProfileForm = () => {
   const [visibleOnline, setVisibleOnline] = useState(false);
   const [logoUrl, setLogoUrl] = useState("");
   const [bannerUrl, setBannerUrl] = useState("");
-  const [uploadingLogo, setUploadingLogo] = useState(false);
-  const [uploadingBanner, setUploadingBanner] = useState(false);
+  const navigate = useNavigate();
   const [address, setAddress] = useState({
     full_address: "",
     zip_code: "",
@@ -60,79 +60,7 @@ export const ShopProfileForm = () => {
     }
   };
 
-  const handleUploadLogo = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setUploadingLogo(true);
-    try {
-      const res = await shopApi.uploadShopImage(file, "logo");
-      const data = res?.data ?? res;
-      if (data && data.logo_url) {
-        setLogoUrl(data.logo_url);
-        showToast("Logo uploaded successfully", "success");
-      } else {
-        const url = typeof data === "string" ? data : (Array.isArray(data) ? data[0] : "");
-        if (url) {
-          setLogoUrl(url);
-          showToast("Logo uploaded successfully", "success");
-        } else {
-          showToast("Failed to upload logo", "error");
-        }
-      }
-    } catch {
-      showToast("Failed to upload logo", "error");
-    } finally {
-      setUploadingLogo(false);
-    }
-  };
 
-  const handleUploadBanner = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setUploadingBanner(true);
-    try {
-      const res = await shopApi.uploadShopImage(file, "banner");
-      const data = res?.data ?? res;
-      if (data && data.banner_url) {
-        setBannerUrl(data.banner_url);
-        showToast("Banner uploaded successfully", "success");
-      } else {
-        const url = typeof data === "string" ? data : (Array.isArray(data) ? data[0] : "");
-        if (url) {
-          setBannerUrl(url);
-          showToast("Banner uploaded successfully", "success");
-        } else {
-          showToast("Failed to upload banner", "error");
-        }
-      }
-    } catch {
-      showToast("Failed to upload banner", "error");
-    } finally {
-      setUploadingBanner(false);
-    }
-  };
-
-  const handleSave = async () => {
-    if (!name.trim()) return;
-    setSaving(true);
-    try {
-      await shopApi.updateShop({
-        id: SHOP_ID,
-        name: name,
-        tagline: tagline || null,
-        description: description || null,
-        visible_online: visibleOnline,
-        address: address,
-        logo_url: logoUrl || null,
-        banner_url: bannerUrl || null,
-      });
-      showToast("Shop profile updated successfully", "success");
-    } catch {
-      showToast("Failed to update shop profile", "error");
-    } finally {
-      setSaving(false);
-    }
-  };
 
   if (loading) {
     return <div className="p-8 flex justify-center"><Loader /></div>;

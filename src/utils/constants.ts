@@ -167,7 +167,7 @@ export const sidebarLinks: SidebarLink[] = [
     addPath: "/create-shop",
     subLinks: [
       { name: "Storefront", path: "/profile", icon: Store },
-      { name: "Setup Wizard", path: "/create-shop", icon: ClipboardList }
+      { name: "Setup Wizard", path: "/setup-digital-store", icon: ClipboardList }
     ]
   },
 ];

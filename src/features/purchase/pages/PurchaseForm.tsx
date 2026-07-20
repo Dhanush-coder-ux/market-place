@@ -266,8 +266,8 @@ const PurchaseForm = () => {
               serialTracking: p.serialTracking || !!p.serialno_infos || p.serial_tracking || p.has_serialno || !!p.serial_info || !!p.serialno_id || !!(p.serial_number) || !!(p.serial_numbers),
               batch_id: p.batch_infos?.id || ((typeof p.batch === 'object' && p.batch !== null) ? p.batch.batch_id : null),
               batchNum: p.batch_infos?.name || ((typeof p.batch === 'object' && p.batch !== null ? p.batch.batch_name || p.batch.name : p.batch)) || "",
-              manufacturingDate: (p.batch_infos?.manufacturing_date || p.manufacturing_date || p.batch?.manufacturing_date || p.batch?.mfg_date || "").split("T")[0],
-              expiryDate: (p.batch_infos?.expiry_date || p.expiry_date || p.batch?.expiry_date || p.batch?.exp_date || "").split("T")[0],
+              manufacturingDate: (p.batch_infos?.manufacturing_date || p.batch_infos?.mfg_date || p.manufacturing_date || p.mfg_date || p.batch?.manufacturing_date || p.batch?.mfg_date || "").split("T")[0],
+              expiryDate: (p.batch_infos?.expiry_date || p.batch_infos?.exp_date || p.expiry_date || p.exp_date || p.batch?.expiry_date || p.batch?.exp_date || "").split("T")[0],
               serialno_id: p.serialno_id || p.serial_number?.id || p.serial_numbers?.id || p.serial_info?.serialno_id,
               storageLoc: pStorage,
               reorderPoint: p.reorder_point_infos?.reorder_point ?? p.reorder_point ?? p.datas?.reorder_point ?? 5,
@@ -332,7 +332,11 @@ const PurchaseForm = () => {
           unit: p.unit_infos?.name || p.unit || "pc",
           taxGst: parseInt(p.gst || p.datas?.gst) || 18,
           batchTracking: hasBatchTracking,
-          serialTracking: hasSerialTracking
+          serialTracking: hasSerialTracking,
+          batch_id: p.chosen_batch?.id || "",
+          batchNum: p.chosen_batch?.name || p.chosen_batch?.batch || p.batchNum || "",
+          serialno_id: p.chosen_serial?.id || "",
+          serialNumbers: p.chosen_serial?.name || p.chosen_serial?.serial || p.serialNumbers || ""
         }]);
       } else if (location.state?.supplier) {
         const sup = location.state.supplier;

@@ -34,6 +34,8 @@ type SaleItem = {
   stockBefore?: number;
   stockAfter?: number;
   image?: string;
+  entered_qty?: number;
+  entered_unit?: string;
 };
 
 const generateItems = (sale: OrderResponse, productMap: Record<string, string> = {}): SaleItem[] => {
@@ -62,6 +64,8 @@ const generateItems = (sale: OrderResponse, productMap: Record<string, string> =
       stockBefore: i.stock_before,
       stockAfter: i.stock_after,
       image: i.image_url || i.image || i.product?.image_url || i.product?.image || i.datas?.image_url || i.datas?.image || i.inventory_infos?.image_url || i.inventory_infos?.image || i.inventory_info?.image_url || i.inventory_info?.image || "",
+      entered_qty: i.entered_qty,
+      entered_unit: i.entered_unit,
     };
   });
 };
@@ -557,10 +561,10 @@ const SaleDetailPage: React.FC = () => {
                               </div>
                             </td>
                             <td className="px-6 py-4 text-center">
-                              <span className="text-xs font-black text-slate-600">{Number((item.quantity || 0).toFixed(2))}</span>
+                              <span className="text-xs font-black text-slate-600">{Number(((item as any).entered_qty !== undefined ? (item as any).entered_qty : (item.quantity || 0)).toFixed(2))}</span>
                             </td>
                             <td className="px-6 py-4 text-center">
-                              <span className="text-[10px] font-black text-blue-500 uppercase px-2 py-0.5 rounded bg-blue-50 border border-blue-100">{item.unit}</span>
+                              <span className="text-[10px] font-black text-blue-500 uppercase px-2 py-0.5 rounded bg-blue-50 border border-blue-100">{(item as any).entered_unit || item.unit}</span>
                             </td>
                             <td className="px-6 py-4 text-right">
                               <span className="text-xs font-bold text-slate-500 tabular-nums">{fmt(item.unitPrice)}</span>
@@ -623,6 +627,17 @@ const SaleDetailPage: React.FC = () => {
                             const variantN = retItem.variant_infos?.variant_name || retItem.variant_name;
                             const batchN = retItem.batch_infos?.batch_name || retItem.batch_name;
                             const serialsList = Array.isArray(retItem.serialno_infos) ? retItem.serialno_infos.map((sn: any) => sn.name || sn) : [];
+                            
+                            const origItem = sale.items?.find((i: any) => i.id === retItem.order_item_id || i.id === retItem.return_order_item_id);
+                            let displayQty = retItem.quantity;
+                            let displayUnit = retItem.unit || origItem?.unit || "";
+
+                            if (origItem && (origItem as any).entered_qty !== undefined && origItem.quantity > 0) {
+                              const factor = (origItem as any).entered_qty / origItem.quantity;
+                              displayQty = Number((retItem.quantity * factor).toFixed(2));
+                              displayUnit = (origItem as any).entered_unit || displayUnit;
+                            }
+
                             return (
                               <tr key={retItem.id} className="hover:bg-slate-50/50 transition-colors">
                                 <td className="px-6 py-4">
@@ -657,7 +672,10 @@ const SaleDetailPage: React.FC = () => {
                                   </div>
                                 </td>
                                 <td className="px-6 py-4 text-center">
-                                  <span className="text-xs font-black text-rose-600">{retItem.quantity}</span>
+                                  <div className="flex flex-col items-center justify-center">
+                                    <span className="text-xs font-black text-rose-600">{displayQty}</span>
+                                    {displayUnit && <span className="text-[9px] font-black text-rose-400 uppercase mt-0.5">{displayUnit}</span>}
+                                  </div>
                                 </td>
                                 <td className="px-6 py-4 text-right">
                                   <span className="text-sm font-black text-slate-850 tabular-nums">{fmt(retItem.refund_amount)}</span>

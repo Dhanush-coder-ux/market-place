@@ -220,6 +220,8 @@ const ProductRow = React.memo(
     const navigate = useNavigate();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [showVariantModal, setShowVariantModal] = useState(false);
+    const [showBatchModal, setShowBatchModal] = useState(false);
+    const [showSerialModal, setShowSerialModal] = useState(false);
     const menuTriggerRef = useRef<HTMLButtonElement>(null);
     const datas = (p.additional_infos as any) || (p.datas as any) || {};
 
@@ -714,8 +716,12 @@ const ProductRow = React.memo(
                   </ActionMenuItem>
                   <ActionMenuItem icon={<Plus size={13} />} onClick={() => { 
                     setIsMenuOpen(false); 
-                    if (hasVariants) {
+                    if (hasVariants && combinations.length > 0) {
                       setShowVariantModal(true);
+                    } else if (hasBatches && batches.length > 0) {
+                      setShowBatchModal(true);
+                    } else if (hasSerials && rootSerials.length > 0) {
+                      setShowSerialModal(true);
                     } else {
                       navigate(`/purchase/add`, { state: { product: p } }); 
                     }
@@ -804,6 +810,71 @@ const ProductRow = React.memo(
                   <div>
                     <p className="font-bold text-sm text-slate-800">{variantLabel}</p>
                     <p className="text-xs text-slate-500 font-semibold mt-1">Stock: {stockNum}</p>
+                  </div>
+                  <ChevronRight size={16} className="text-slate-400" />
+                </div>
+              );
+            })}
+          </div>
+        </Modal>
+
+        {/* Batch Selection Modal */}
+        <Modal
+          show={showBatchModal}
+          onClose={() => setShowBatchModal(false)}
+          title={`Select Batch for ${p.name}`}
+        >
+          <div className="space-y-2 max-h-[60vh] overflow-y-auto">
+            {batches.map((batch: any, idx: number) => {
+              const batchLabel = batch.name || batch.batch || `BAT-${String(idx + 1).padStart(3, '0')}`;
+              const stockNum = Number(batch.stock_infos?.available_stocks ?? batch.stock_infos?.physical_stocks ?? batch.stocks ?? batch.quantity ?? batch.qty ?? 0);
+              return (
+                <div
+                  key={batch.id || idx}
+                  className="p-3 border border-slate-200 rounded-lg hover:border-amber-500 cursor-pointer flex justify-between items-center bg-white transition-all shadow-sm hover:shadow-md"
+                  onClick={() => {
+                    setShowBatchModal(false);
+                    const productWithBatch = {
+                      ...p,
+                      chosen_batch: { ...batch, name: batchLabel }
+                    };
+                    navigate(`/purchase/add`, { state: { product: productWithBatch } });
+                  }}
+                >
+                  <div>
+                    <p className="font-bold text-sm text-slate-800">{batchLabel}</p>
+                    <p className="text-xs text-slate-500 font-semibold mt-1">Stock: {stockNum}</p>
+                  </div>
+                  <ChevronRight size={16} className="text-slate-400" />
+                </div>
+              );
+            })}
+          </div>
+        </Modal>
+
+        {/* Serial Selection Modal */}
+        <Modal
+          show={showSerialModal}
+          onClose={() => setShowSerialModal(false)}
+          title={`Select Serial Number for ${p.name}`}
+        >
+          <div className="space-y-2 max-h-[60vh] overflow-y-auto">
+            {rootSerials.map((serial: string, idx: number) => {
+              return (
+                <div
+                  key={idx}
+                  className="p-3 border border-slate-200 rounded-lg hover:border-emerald-500 cursor-pointer flex justify-between items-center bg-white transition-all shadow-sm hover:shadow-md"
+                  onClick={() => {
+                    setShowSerialModal(false);
+                    const productWithSerial = {
+                      ...p,
+                      chosen_serial: { name: serial }
+                    };
+                    navigate(`/purchase/add`, { state: { product: productWithSerial } });
+                  }}
+                >
+                  <div>
+                    <p className="font-bold text-sm text-slate-800">{serial}</p>
                   </div>
                   <ChevronRight size={16} className="text-slate-400" />
                 </div>

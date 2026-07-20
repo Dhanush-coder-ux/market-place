@@ -349,6 +349,8 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
   const [variantTypes, setVariantTypes] = useState<VariantType[]>([]);
   const [combinations, setCombinations] = useState<VariantCombination[]>([]);
   const [baseSerials, setBaseSerials] = useState<string[]>([]);
+  // Flag: true while combinations were just loaded from server (skip client-side regeneration)
+  const justLoadedCombinationsRef = useRef(false);
   const [supplierDetails, setSupplierDetails] = useState<any>(null);
   const [existingImages, setExistingImages] = useState<string[]>([]);
   const [selectedImageFiles, setSelectedImageFiles] = useState<File[]>([]);
@@ -480,7 +482,8 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
   const missingFields: string[] = [];
   if (!form.name.trim()) missingFields.push("name");
   if (!form.category) missingFields.push("category");
-  if (existingImages.length === 0 && selectedImageFiles.length === 0) missingFields.push("image");
+  // Image is only required for new products; in edit mode the server already has images
+  if (!id && existingImages.length === 0 && selectedImageFiles.length === 0) missingFields.push("image");
   if (!form.track_stock && !form.selling_price) missingFields.push("selling price");
   if (!form.track_stock && !form.cost_to_make) missingFields.push("cost");
 
@@ -565,6 +568,25 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
             console.log("=== SETTING FORM ===", nextForm);
             setForm(nextForm);
 
+            // Ensure the product's category and unit are in the dropdown lists.
+            // They might not be if the shop has >100 of them (pagination) or if
+            // the lists haven't loaded yet. Inject stub entries so ReusableSelect
+            // can resolve the display label immediately.
+            if (prod.category_id) {
+              setCategories(prev => {
+                if (prev.some(c => c.id === prod.category_id)) return prev;
+                const label = prod.category_name || prod.category || prod.additional_infos?.category || prod.category_id;
+                return [{ id: prod.category_id, name: label }, ...prev];
+              });
+            }
+            if (prod.unit_id) {
+              setUnits(prev => {
+                if (prev.some(u => u.id === prod.unit_id)) return prev;
+                const label = prod.unit_name || prod.unit || prod.additional_infos?.unit || prod.unit_id;
+                return [{ id: prod.unit_id, name: label }, ...prev];
+              });
+            }
+
             const imgList = prod.image_url || additional.images || [];
             if (imgList && Array.isArray(imgList)) setExistingImages(imgList);
 
@@ -599,6 +621,9 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
               }
             }
             if (vInfos.length > 0) {
+              // Mark that we're loading combinations from the server so the
+              // generateCombinations useEffect doesn't overwrite prices with zeros.
+              justLoadedCombinationsRef.current = true;
               setCombinations(vInfos.map((v: any) => {
                 const attrs = v.additional_infos?.attributes || v.attributes || { "Variant": v.name };
                 const pricing = v.pricing_infos && Object.keys(v.pricing_infos).length > 0 ? v.pricing_infos : (v.batch_infos?.[0]?.pricing_infos || {});
@@ -664,9 +689,15 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
     suggestedVariantTypes: [], supportsSerials: false, serialLabel: "Serial Number",
   };
 
-  /* Regenerate variant combinations when types change */
+  /* Regenerate variant combinations when types change.
+   * SKIP if combinations were just loaded from the server — we don't want to
+   * overwrite real prices/stock data with zeros during edit-mode init. */
   useEffect(() => {
     if (!form.has_variants) return;
+    if (justLoadedCombinationsRef.current) {
+      justLoadedCombinationsRef.current = false;
+      return;
+    }
     const newCombos = generateCombinations(variantTypes, combinations, {
       buy_price: "0", sell_price: "0", mrp: "0", reorder_point: form.reorder_point || "5",
     });
@@ -730,114 +761,184 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (isSubmittingRef.current) return;
+
+    // ── Validation ──────────────────────────────────────────────────────────
+    if (!form.name.trim()) {
+      showToast("Product name is required", "error");
+      return;
+    }
+    if (!form.category) {
+      showToast("Category is required", "error");
+      return;
+    }
+
     isSubmittingRef.current = true;
     setIsSubmitting(true);
+
     const activeCombinations = combinations.filter(c => c.active);
     if (form.has_variants && activeCombinations.length === 0) {
-      showToast("Please have at least one active variant combination", "error"); return;
+      showToast("Please have at least one active variant combination", "error");
+      isSubmittingRef.current = false;
+      setIsSubmitting(false);
+      return;
     }
+
     const finalImages = [...existingImages];
 
-    // Build variant_infos — only send fields the backend schema accepts:
-    // id (if updating), name (required), storage_location, reorder_point, buy_price, sell_price, visible_online
-    const mappedVarients = activeCombinations.map(combo => {
+    // ── Shared variant_infos builder ─────────────────────────────────────────
+    // For CREATE  → CreateProdInvVariantType  (no id field)
+    // For UPDATE  → UpdateProdInvVariantType  (id field optional, pricing_id etc.)
+    const mappedVariants = activeCombinations.map(combo => {
       const variantName = Object.values(combo.attributes).join(" / ");
+      const isNew = combo.id.startsWith("id_");
       return {
-        id: combo.id.startsWith("id_") ? undefined : combo.id,
+        ...(id && !isNew ? { id: combo.id } : {}),   // only include id on update for existing variants
         name: variantName,
         storage_location: form.location || null,
         reorder_point: Number(combo.reorder_point) || 5,
         buy_price: Number(combo.buy_price) || null,
         sell_price: Number(combo.price) || null,
+        online_sell_price: null,
         visible_online: form.visible_online,
       };
     });
 
-    // Build the base payload per CreateProdInvSchema
-    const payload: any = {
-      shop_id: SHOP_ID,
-      category_id: form.category,
-      unit_id: form.unit,
-      name: form.name,
-      brand: form.brand || null,
-      description: form.description,
-      barcode: form.barcode || null,
-      type_infos: {
-        has_batch: form.batch_tracking,
-        has_variant: form.has_variants,
-        has_serialno: form.serial_tracking,
-      },
-      have_tracking: form.track_stock,
-      // Send variant_infos only when has_variant is true
-      variant_infos: form.has_variants ? mappedVarients : null,
-      storage_location: form.location || null,
-      // For made-to-order items set price directly; for stocked items price comes from purchase
-      buy_price: !form.track_stock ? (Number(form.cost_to_make) || null) : null,
-      sell_price: !form.track_stock ? (Number(form.selling_price) || null) : null,
-      gst: form.gst ? (form.gst.includes("%") ? form.gst : `${form.gst}%`) : "0%",
-      reorder_point: Number(form.reorder_point) || 5,
-      visible_online: form.visible_online,
-      // Store UI-only metadata in custom_fields
-      custom_fields: {
-        brand: form.brand,
-        mrp: Number(form.mrp) || 0,
-        hsn: form.hsn,
-        sku: form.sku,
-        supplier: form.supplier,
-        opening_stock: 0,
-        is_active: form.is_active,
-        variant_types: variantTypes,
-        images: finalImages,
-        low_stock_alert: form.low_stock_alert,
-        // Store variant attribute map for edit-time reconstruction
-        variant_attribute_map: form.has_variants
-          ? activeCombinations.reduce((acc, combo, _i) => {
-            const name = Object.values(combo.attributes).join(" / ");
-            acc[name] = { attributes: combo.attributes, barcode: combo.barcode, sku: combo.sku, mrp: combo.mrp };
-            return acc;
-          }, {} as Record<string, any>)
-          : undefined,
-        // Include dynamic custom created fields with their field name same as key
-        ...Object.entries(customFieldValues).reduce((acc, [fieldId, val]) => {
-          const fieldDef = customFieldDefs.find(fd => fd.id === fieldId);
-          if (fieldDef) {
-            acc[fieldDef.field_name] = val;
-          }
+    // ── Shared custom_fields blob (stored as extra metadata) ─────────────────
+    const customFieldsBlob: Record<string, any> = {
+      brand: form.brand,
+      mrp: Number(form.mrp) || 0,
+      hsn: form.hsn,
+      sku: form.sku,
+      supplier: form.supplier,
+      is_active: form.is_active,
+      variant_types: variantTypes,
+      images: finalImages,
+      low_stock_alert: form.low_stock_alert,
+      // Store variant attribute map for edit-time reconstruction
+      variant_attribute_map: form.has_variants
+        ? activeCombinations.reduce((acc, combo) => {
+          const name = Object.values(combo.attributes).join(" / ");
+          acc[name] = { attributes: combo.attributes, barcode: combo.barcode, sku: combo.sku, mrp: combo.mrp };
           return acc;
         }, {} as Record<string, any>)
-      },
+        : undefined,
+      // Dynamic custom fields keyed by field_name
+      ...Object.entries(customFieldValues).reduce((acc, [fieldId, val]) => {
+        const fieldDef = customFieldDefs.find(fd => fd.id === fieldId);
+        if (fieldDef) acc[fieldDef.field_name] = val;
+        return acc;
+      }, {} as Record<string, any>),
     };
 
-    // For non-variant products with serial tracking, capture serial numbers entered
+    // For non-variant products with serial tracking, embed serial numbers
     if (!form.has_variants && form.serial_tracking && baseSerials.length > 0) {
-      payload.custom_fields.serial_numbers = baseSerials;
+      customFieldsBlob.serial_numbers = baseSerials;
     }
 
-    // For non-variant products with batch tracking, capture batch info
+    // For non-variant products with batch tracking, embed batch info
     if (!form.has_variants && form.batch_tracking) {
-      payload.custom_fields.batch_info = {
+      customFieldsBlob.batch_info = {
         name: form.batch_name || null,
         manufacturing_date: form.mfg_date || null,
         expiry_date: form.exp_date || null,
       };
     }
 
-    if (id) payload.id = id;
+    const gstFormatted = form.gst
+      ? (form.gst.includes("%") ? form.gst : `${form.gst}%`)
+      : "0%";
 
-    let res;
-    try {
-      if (id) res = await inventoryApi.updateInventory(payload);
-      else res = await inventoryApi.createInventory(payload);
-    } catch (e) {
-      res = null;
-      isSubmittingRef.current = false;
-      setIsSubmitting(false);
+    // ── BUILD PAYLOAD ────────────────────────────────────────────────────────
+    let payload: any;
+
+    if (id) {
+      // ── UPDATE: UpdateProdInvSchema ──────────────────────────────────────
+      // Required: id, shop_id. All other fields optional — only send what changed.
+      payload = {
+        id,
+        shop_id: SHOP_ID,
+        name: form.name,
+        brand: form.brand || null,
+        description: form.description || null,
+        barcode: form.barcode || null,
+        category_id: form.category || null,
+        unit_id: form.unit || null,
+        type_infos: {
+          has_batch: form.batch_tracking,
+          has_variant: form.has_variants,
+          has_serialno: form.serial_tracking,
+        },
+        have_tracking: form.track_stock,
+        variant_infos: form.has_variants ? mappedVariants : null,
+        storage_location: form.location || null,
+        gst: gstFormatted,
+        reorder_point: Number(form.reorder_point) || 5,
+        visible_online: form.visible_online,
+        // Preserve pricing: for stocked items, send if the user has provided a value;
+        // for made-to-order items, always send the entered value.
+        buy_price: form.selling_price || form.cost_to_make
+          ? (Number(form.cost_to_make) || null)
+          : null,
+        sell_price: form.selling_price
+          ? (Number(form.selling_price) || null)
+          : null,
+        online_sell_price: null,
+        custom_fields: customFieldsBlob,
+      };
+    } else {
+      // ── CREATE: CreateProdInvSchema ──────────────────────────────────────
+      // Required: shop_id, category_id, unit_id, name, description, type_infos, have_tracking
+      payload = {
+        shop_id: SHOP_ID,
+        category_id: form.category,
+        unit_id: form.unit,
+        name: form.name,
+        brand: form.brand || null,
+        description: form.description,
+        barcode: form.barcode || null,
+        type_infos: {
+          has_batch: form.batch_tracking,
+          has_variant: form.has_variants,
+          has_serialno: form.serial_tracking,
+        },
+        have_tracking: form.track_stock,
+        variant_infos: form.has_variants ? mappedVariants : null,
+        storage_location: form.location || null,
+        // For made-to-order items set price directly; for stocked items price comes from purchase
+        buy_price: !form.track_stock ? (Number(form.cost_to_make) || null) : null,
+        sell_price: !form.track_stock ? (Number(form.selling_price) || null) : null,
+        online_sell_price: null,
+        gst: gstFormatted,
+        reorder_point: Number(form.reorder_point) || 5,
+        visible_online: form.visible_online,
+        custom_fields: {
+          ...customFieldsBlob,
+          opening_stock: 0,
+        },
+      };
     }
 
-    if (res && (res.data || res.success)) {
+    // ── API call ─────────────────────────────────────────────────────────────
+    let res;
+    try {
+      if (id) {
+        res = await inventoryApi.updateInventory(payload);
+      } else {
+        res = await inventoryApi.createInventory(payload);
+      }
+    } catch (e) {
+      console.error("Failed to save product:", e);
+      showToast("Failed to save product. Please try again.", "error");
+      isSubmittingRef.current = false;
+      setIsSubmitting(false);
+      return;
+    }
+
+    // apiClient throws on non-200, so if we reach here with a truthy res, it was successful.
+    if (res) {
       const savedProductId = res.data?.id || res.id || id;
 
-      // If we have selected local images, upload them with product_id now
+      // ── Upload any newly selected images ──────────────────────────────────
       if (savedProductId && selectedImageFiles.length > 0) {
         setIsUploadingImages(true);
         const uploadFormData = new FormData();
@@ -847,48 +948,60 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
           uploadFormData.append("files", file);
         });
         try {
-          const res = await apiClient.postFormData("/inventories/inventories/upload/images", uploadFormData);
-          if (res) {
-            showToast("Images uploaded successfully", "success");
-          }
+          await apiClient.postFormData("/inventories/inventories/upload/images", uploadFormData);
+          showToast("Images uploaded successfully", "success");
         } catch (uploadErr) {
-          console.error("Failed to upload images post-creation", uploadErr);
+          console.error("Failed to upload images:", uploadErr);
           showToast("Product saved, but image upload failed", "warning");
         } finally {
           setIsUploadingImages(false);
         }
       }
 
+      // ── Upsert custom field values ────────────────────────────────────────
       if (savedProductId) {
         const valueInfos = Object.entries(customFieldValues)
-          .filter(([_, value]) => value !== undefined && value !== "")
-          .map(([field_id, value]) => ({
-            field_id,
-            value: String(value),
-          }));
+          .filter(([, value]) => value !== undefined && value !== "")
+          .map(([field_id, value]) => ({ field_id, value: String(value) }));
 
         if (valueInfos.length > 0) {
-          await inventoryCustomFields.bulkUpsertValues({
-            shop_id: SHOP_ID,
-            product_id: savedProductId,
-            values: valueInfos,
-          });
+          try {
+            await inventoryCustomFields.bulkUpsertValues({
+              shop_id: SHOP_ID,
+              product_id: savedProductId,
+              values: valueInfos,
+            });
+          } catch (cfErr) {
+            console.error("Failed to save custom field values:", cfErr);
+          }
         }
       }
 
-      showToast(id ? "Product updated successfully" : "Product created successfully", "success");
+      // ── Clean up draft if applicable ──────────────────────────────────────
       const draftId = searchParams.get("draftId");
       if (draftId) {
         const drafts = JSON.parse(localStorage.getItem("product_drafts") || "[]");
         localStorage.setItem("product_drafts", JSON.stringify(drafts.filter((d: any) => d.id !== draftId)));
       }
-      setTimeout(() => navigate(`/product/${savedProductId}`), 1000);
+
+      showToast(id ? "Product updated successfully" : "Product created successfully", "success");
+
+      // ── Navigate: after update → back to list; after create → product detail ──
+      setTimeout(() => {
+        if (id) {
+          navigate("/product/all");
+        } else {
+          navigate(`/product/${savedProductId}`);
+        }
+      }, 800);
+
     } else {
-      showToast("Failed to save product", "error");
+      showToast("Failed to save product. Server returned an error.", "error");
       isSubmittingRef.current = false;
       setIsSubmitting(false);
     }
   };
+
 
   const handleCreateCustomField = async () => {
     if (!newFieldName || !newFieldLabel) {
@@ -962,6 +1075,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                       <div>
                         <Label text="Category" required tooltip="Organize your products into categories for easier filtering." />
                         <ReusableSelect
+                          key={`cat-${categories.length}`}
                           value={form.category}
                           onValueChange={(val) => { setForm(p => ({ ...p, category: val })); setVariantTypes([]); setCombinations([]); }}
                           options={categories.map(c => ({ value: c.id, label: c.name }))}
@@ -982,6 +1096,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                       <div>
                         <Label text="Unit" required tooltip="Base unit of measurement." />
                         <ReusableSelect
+                          key={`unit-${units.length}`}
                           value={form.unit}
                           onValueChange={(val) => setForm(p => ({ ...p, unit: val }))}
                           options={units.map(u => ({ value: u.id, label: u.name }))}

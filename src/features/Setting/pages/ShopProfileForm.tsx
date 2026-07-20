@@ -83,7 +83,7 @@ export const ShopProfileForm = () => {
           </div>
         </div>
         <button
-          onClick={() => navigate("/create-shop")}
+          onClick={() => navigate("/setup-digital-store")}
           className="h-9 px-4 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg transition-all flex items-center gap-2 shadow-sm"
         >
           <Store className="w-4 h-4" />

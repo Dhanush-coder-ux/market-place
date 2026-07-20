@@ -106,6 +106,9 @@ const getPageHeaderInfo = (pathname: string) => {
     "/create-shop": {
       title: "Create Shop",
     },
+    "/setup-digital-store": {
+      title: "Setup Digital Store",
+    },
     "/profile": {
       title: "Digital Storefront",
     },

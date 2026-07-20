@@ -102,14 +102,11 @@ export default function SupplierDetail() {
     if (!id) return;
     setClearLoading(true);
     try {
-      const res = await purchaseApi.getPurchasesBySupplier(SHOP_ID, id);
+      const res = await purchaseApi.getPurchasesBySupplier(SHOP_ID, id, { outstanding: true });
       let purList = res?.data ? (Array.isArray(res.data) ? res.data : [res.data]) : [];
       if (res?.data?.datas) purList = res.data.datas;
       
-      const outstandingOnly = purList.filter((p: any) => {
-        return p.outstanding_amount > 0.01;
-      });
-      setClearPurchases(outstandingOnly);
+      setClearPurchases(purList);
     } catch {
       showToast("Failed to fetch outstanding purchases", "error");
     } finally {
@@ -778,9 +775,7 @@ export default function SupplierDetail() {
                       (p.invoice_no && p.invoice_no.toLowerCase().includes(clearSearch.toLowerCase())) || 
                       (p.ui_id && p.ui_id.toLowerCase().includes(clearSearch.toLowerCase()))
                     ).map(p => {
-                      const gTotal = p.calculation_infos?.grand_total || 0;
-                      const paid = (p.payment_infos || []).reduce((s: number, pInfo: any) => s + (Number(pInfo.amount) || 0), 0);
-                      const balance = gTotal - paid;
+                      const balance = p.outstanding_amount || 0;
                       
                       return (
                         <div 

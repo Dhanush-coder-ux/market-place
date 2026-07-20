@@ -25,6 +25,7 @@ import { GroupedItemsDrawer } from "@/components/common/HistoryTables";
 import { ReusableSelect } from "@/components/ui/ReusableSelect";
 import { SearchSelect } from "@/components/inputbuilders/SearchSelect";
 import { StatCard } from "@/components/common/StatsCard";
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import type { PurchaseRecord } from "@/types/api";
 import { useApi } from "@/context/ApiContext";
 import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
@@ -500,7 +501,6 @@ const GridCard = ({ po, selected, onClick }: { po: DirectPurchaseData; selected?
 const VerticalTable = ({ data, selectedIds, onSelect, totalCount, lastElementRef, loadingMore }: { data: DirectPurchaseData[]; selectedIds: Set<string>; onSelect: (po: DirectPurchaseData) => void; totalCount: number; lastElementRef?: any; loadingMore?: boolean }) => {
   const navigate = useNavigate();
   const [drawerRecord, setDrawerRecord] = useState<any | null>(null);
-  const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
   
   return (
     <div className="bg-white border border-slate-100 rounded-lg shadow-sm overflow-hidden flex flex-col flex-1 min-h-0">
@@ -631,68 +631,53 @@ const VerticalTable = ({ data, selectedIds, onSelect, totalCount, lastElementRef
                       >
                         <Eye size={15} />
                       </button>
-                      <div className="relative">
-                        <button
-                          onClick={() => setActiveMenuId(activeMenuId === po.id ? null : po.id)}
-                          className="text-slate-800 hover:text-slate-900 transition-colors p-1"
-                          title="More actions"
-                        >
-                          <MoreVertical size={15} />
-                        </button>
-                        {activeMenuId === po.id && (
-                          <>
-                            <div className="fixed inset-0 z-40" onClick={() => setActiveMenuId(null)} />
-                            <div className="absolute right-0 mt-1 w-44 bg-white border border-slate-200 rounded-lg shadow-lg py-1 z-50 text-left font-sans animate-in fade-in slide-in-from-top-1 duration-150">
-                              {po.purchaseType === 'Purchase' && (
-                                <button
-                                  onClick={() => {
-                                    setActiveMenuId(null);
-                                    navigate(`/purchase/edit/${po.id}`);
-                                  }}
-                                  className="flex items-center gap-2 w-full px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-                                >
-                                  <Pencil size={13} />
-                                  Edit
-                                </button>
-                              )}
-                              <button
-                                onClick={() => {
-                                  setActiveMenuId(null);
-                                  alert("Invoice generated and ready to print/share!");
-                                }}
-                                className="flex items-center gap-2 w-full px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-                              >
-                                <Printer size={13} />
-                                Print / Share
-                              </button>
-
-                              <button
-                                onClick={() => {
-                                  setActiveMenuId(null);
-                                  alert("Record payment initiated!");
-                                }}
-                                className="flex items-center gap-2 w-full px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-                              >
-                                <Share2 size={13} />
-                                Record Payment
-                              </button>
-                              <div className="border-t border-slate-100 my-1"></div>
-                              <button
-                                onClick={() => {
-                                  setActiveMenuId(null);
-                                  if (window.confirm("Are you sure you want to delete this purchase? This will reverse stock and cost changes.")) {
-                                    alert("Purchase deletion requires admin privileges.");
-                                  }
-                                }}
-                                className="flex items-center gap-2 w-full px-3 py-2 text-xs font-semibold text-red-650 hover:bg-red-50"
-                              >
-                                <Trash2 size={13} />
-                                Delete
-                              </button>
-                            </div>
-                          </>
-                        )}
-                      </div>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button
+                            className="text-slate-800 hover:text-slate-900 transition-colors p-1 outline-none"
+                            title="More actions"
+                          >
+                            <MoreVertical size={15} />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-44 bg-white border border-slate-200 rounded-lg shadow-lg py-1 z-50 text-left font-sans">
+                          {po.purchaseType === 'Purchase' && (
+                            <DropdownMenuItem
+                              onClick={() => navigate(`/purchase/edit/${po.id}`)}
+                              className="flex items-center gap-2 w-full px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 cursor-pointer outline-none"
+                            >
+                              <Pencil size={13} />
+                              Edit
+                            </DropdownMenuItem>
+                          )}
+                          <DropdownMenuItem
+                            onClick={() => alert("Invoice generated and ready to print/share!")}
+                            className="flex items-center gap-2 w-full px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 cursor-pointer outline-none"
+                          >
+                            <Printer size={13} />
+                            Print / Share
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => alert("Record payment initiated!")}
+                            className="flex items-center gap-2 w-full px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 cursor-pointer outline-none"
+                          >
+                            <Share2 size={13} />
+                            Record Payment
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator className="border-t border-slate-100 my-1 h-0 bg-transparent" />
+                          <DropdownMenuItem
+                            onClick={() => {
+                              if (window.confirm("Are you sure you want to delete this purchase? This will reverse stock and cost changes.")) {
+                                alert("Purchase deletion requires admin privileges.");
+                              }
+                            }}
+                            className="flex items-center gap-2 w-full px-3 py-2 text-xs font-semibold text-red-650 hover:bg-red-50 cursor-pointer outline-none"
+                          >
+                            <Trash2 size={13} />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </td>
                 </tr>

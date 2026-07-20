@@ -68,9 +68,10 @@ export default function StoreSetupWizard({ existingData }: { existingData?: Part
       return;
     }
 
-    if (SHOP_ID && SHOP_ID !== "string") {
+    const currentShopId = localStorage.getItem("shop_id") || SHOP_ID;
+    if (currentShopId && currentShopId !== "string") {
       setIsLoading(true);
-      shop.getShopById(SHOP_ID).then((res) => {
+      shop.getShopById(currentShopId).then((res) => {
         if (res && res.data) {
           const s = res.data;
           setForm((prev) => ({
@@ -84,7 +85,11 @@ export default function StoreSetupWizard({ existingData }: { existingData?: Part
             gstNumber: s.business_infos?.gst_infos?.number || "",
             logoPreview: s.logo_url || prev.logoPreview,
             bannerPreview: s.banner_url || prev.bannerPreview,
-            // other mappings if available
+            contactEmail: s.additional_infos?.emails?.[0] || prev.contactEmail,
+            contactPhone: s.additional_infos?.mobile_numbers?.[0] || prev.contactPhone,
+            website: s.additional_infos?.website || prev.website,
+            instagram: s.additional_infos?.instagram || prev.instagram,
+            twitter: s.additional_infos?.facebook || prev.twitter, // using twitter field for facebook temporarily if needed
           }));
         }
       }).catch(err => console.error("Failed to fetch shop:", err))
@@ -153,16 +158,25 @@ export default function StoreSetupWizard({ existingData }: { existingData?: Part
         }))
       };
 
-      let newShopId = SHOP_ID;
+      const currentShopId = localStorage.getItem("shop_id") || SHOP_ID;
+      let newShopId = currentShopId;
       let isNewShop = false;
       
       // 1. Create or Update Shop (visible_online = false initially to satisfy constraint)
-      if (SHOP_ID && SHOP_ID !== "string") {
-        await shop.updateShop({ id: SHOP_ID, ...fullPayload, visible_online: false });
+      if (currentShopId && currentShopId !== "string") {
+        await shop.updateShop({ id: currentShopId, ...fullPayload, visible_online: false });
       } else {
         const res = await shop.createShop({ ...fullPayload, visible_online: false });
         newShopId = res.data?.id || res.id;
         isNewShop = true;
+      }
+
+      // 1.5 Upload Images if any
+      if (form.logo instanceof File && newShopId) {
+        await shop.uploadShopImage(form.logo, "logo", newShopId);
+      }
+      if (form.banner instanceof File && newShopId) {
+        await shop.uploadShopImage(form.banner, "banner", newShopId);
       }
 
       // 2. Finally, set shop as visible online now that hours/delivery are saved

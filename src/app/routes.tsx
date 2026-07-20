@@ -161,7 +161,8 @@ export const router = createBrowserRouter([
       { path: '/settings/add', element: <Page><ProfileForm /></Page> },
 
       // Digital Store / Profile
-      { path: '/create-shop', element: <Page><StoreSetupForm /></Page> },
+      { path: '/create-shop', element: <Page><ProfileForm /></Page> },
+      { path: '/setup-digital-store', element: <Page><StoreSetupForm /></Page> },
       { path: '/profile', element: <Page><DigitalMain /></Page> },
 
       // Notifications

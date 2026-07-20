@@ -53,6 +53,18 @@ export default function Step1BasicDetails({ form, setForm, errors, setErrors }: 
     }
   };
 
+  const handleImageChange = (e: ChangeEvent<HTMLInputElement>, type: 'logo' | 'banner') => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const previewUrl = URL.createObjectURL(file);
+      if (type === 'logo') {
+        setForm(prev => ({ ...prev, logo: file, logoPreview: previewUrl }));
+      } else {
+        setForm(prev => ({ ...prev, banner: file, bannerPreview: previewUrl }));
+      }
+    }
+  };
+
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
       
@@ -60,7 +72,8 @@ export default function Step1BasicDetails({ form, setForm, errors, setErrors }: 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <label className="block text-xs font-bold text-slate-500 mb-1.5">Store Logo</label>
-          <div className="w-24 h-24 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 flex flex-col items-center justify-center text-slate-400 hover:border-blue-300 hover:bg-blue-50 transition-colors cursor-pointer overflow-hidden">
+          <label className="w-24 h-24 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 flex flex-col items-center justify-center text-slate-400 hover:border-blue-300 hover:bg-blue-50 transition-colors cursor-pointer overflow-hidden">
+            <input type="file" className="hidden" accept="image/*" onChange={(e) => handleImageChange(e, 'logo')} />
             {form.logoPreview ? (
               <img src={form.logoPreview} alt="Logo" className="w-full h-full object-cover" />
             ) : (
@@ -69,11 +82,12 @@ export default function Step1BasicDetails({ form, setForm, errors, setErrors }: 
                 <span className="text-[10px] font-semibold">Upload</span>
               </>
             )}
-          </div>
+          </label>
         </div>
         <div>
           <label className="block text-xs font-bold text-slate-500 mb-1.5">Store Banner</label>
-          <div className="w-full h-24 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 flex flex-col items-center justify-center text-slate-400 hover:border-blue-300 hover:bg-blue-50 transition-colors cursor-pointer overflow-hidden">
+          <label className="w-full h-24 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 flex flex-col items-center justify-center text-slate-400 hover:border-blue-300 hover:bg-blue-50 transition-colors cursor-pointer overflow-hidden">
+            <input type="file" className="hidden" accept="image/*" onChange={(e) => handleImageChange(e, 'banner')} />
             {form.bannerPreview ? (
               <img src={form.bannerPreview} alt="Banner" className="w-full h-full object-cover" />
             ) : (
@@ -82,7 +96,7 @@ export default function Step1BasicDetails({ form, setForm, errors, setErrors }: 
                 <span className="text-[10px] font-semibold">Upload Banner (1200x400)</span>
               </>
             )}
-          </div>
+          </label>
         </div>
       </div>
 

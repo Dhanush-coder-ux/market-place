@@ -1,6 +1,13 @@
 import { Upload } from "lucide-react";
 import React, { useRef, useState, useEffect } from "react";
-import { ImageUploadProps } from "../types";
+export interface ImageUploadProps {
+  label?: string;
+  value: File | null;
+  onChange: (file: File) => void;
+  maxSizeMB?: number;
+  accept?: string;
+  initialPreview?: string | null;
+}
 
 const ImageUpload: React.FC<ImageUploadProps> = ({
   label = "Image",
@@ -8,16 +15,20 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
   onChange,
   maxSizeMB = 5,
   accept = "image/png, image/jpeg",
+  initialPreview = null,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [preview, setPreview] = useState<string | null>(null);
+  const [preview, setPreview] = useState<string | null>(initialPreview);
 
   useEffect(() => {
-    if (!value) return setPreview(null);
+    if (!value) {
+      setPreview(initialPreview);
+      return;
+    }
     const url = URL.createObjectURL(value);
     setPreview(url);
     return () => URL.revokeObjectURL(url);
-  }, [value]);
+  }, [value, initialPreview]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

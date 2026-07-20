@@ -70,11 +70,11 @@ export const shopApi = {
   },
 
   
-  uploadShopImage: async (file: File, imageType: "logo" | "banner") => {
+  uploadShopImage: async (file: File, imageType: "logo" | "banner", customShopId?: string) => {
     const userId = localStorage.getItem("user_id") || "";
     const formData = new FormData();
     formData.append("files", file);
-    formData.append("shop_id", SHOP_ID);
+    formData.append("shop_id", customShopId || SHOP_ID);
     formData.append("image_type", imageType);
     formData.append("user_id", userId);
     return await apiClient.postFormData(`${ENDPOINTS.SHOPS}/upload/images`, formData);

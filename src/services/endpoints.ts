@@ -104,7 +104,7 @@ export const ENDPOINTS = {
   ANALYTICS_SALES_DASHBOARD: "/analytics/sales/dashboard",
 
   // ── Notification Service ──────────────────────────────────────────
-  NOTIFICATIONS: import.meta.env.VITE_NOTIFICATION_URL || "http://localhost:8012/api/v1/notifications",
+  NOTIFICATIONS: "/notifications",
 } as const;
 
 // Dynamically loaded from local storage or defaults to the actual shop in the DB

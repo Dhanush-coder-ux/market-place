@@ -408,7 +408,7 @@ const ProductDetail = () => {
                         <p className="text-[10px] font-medium text-slate-400 tracking-[0.05em] mb-1.5 flex items-center gap-1.5">
                           <Layers size={12} className="text-blue-400" /> Variants
                         </p>
-                        {product.has_variant === true ? (
+                        {hasVariants ? (
                           <div 
                             className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 border border-indigo-100 rounded-lg w-fit cursor-pointer hover:bg-indigo-100 transition-colors"
                             onClick={() => setActiveTab(inventoryTabIdx)}
@@ -425,7 +425,7 @@ const ProductDetail = () => {
                         <p className="text-[10px] font-medium text-slate-400 tracking-[0.05em] mb-1.5 flex items-center gap-1.5">
                           <Layers size={12} className="text-blue-400" /> Batches
                         </p>
-                        {product.has_batch === true ? (
+                        {hasBatches ? (
                           <div 
                             className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 border border-indigo-100 rounded-lg w-fit cursor-pointer hover:bg-indigo-100 transition-colors"
                             onClick={() => setActiveTab(inventoryTabIdx)}
@@ -444,7 +444,7 @@ const ProductDetail = () => {
                         </p>
                         {rootSerials.length > 0 ? (
                           <SerialBadgeList serials={rootSerials} />
-                        ) : (!!product.type_infos?.has_serialno) ? (
+                        ) : (!!product.type_infos?.has_serialno || !!product.has_serialno) ? (
                           <div 
                             className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 border border-indigo-100 rounded-lg w-fit cursor-pointer hover:bg-indigo-100 transition-colors"
                             onClick={() => setActiveTab(inventoryTabIdx)}
@@ -520,7 +520,7 @@ const ProductDetail = () => {
                         onClick={() => setActiveTab(inventoryTabIdx)}
                       >
                         <Layers size={12} className="text-indigo-500" />
-                        <span className="text-[11px] font-bold text-indigo-600">See Inventory tab</span>
+                        <span className="text-[11px] font-bold text-indigo-600">Available in Inventory tab</span>
                       </div>
                     ) : reorderPoint !== null ? (
                       <p className="text-[13px] font-semibold text-slate-800 tabular-nums">{String(reorderPoint)}</p>
@@ -540,7 +540,7 @@ const ProductDetail = () => {
                         onClick={() => setActiveTab(inventoryTabIdx)}
                       >
                         <Layers size={12} className="text-indigo-500" />
-                        <span className="text-[11px] font-bold text-indigo-600">See Inventory tab</span>
+                        <span className="text-[11px] font-bold text-indigo-600">Available in Inventory tab</span>
                       </div>
                     ) : (
                       <p className="text-[13px] font-semibold text-slate-400">—</p>

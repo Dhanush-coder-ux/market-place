@@ -120,9 +120,9 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
       const mapped = data.map((p: any) => {
         let computedStock = Number(p.stock_infos?.available_stocks ?? p.stock_infos?.physical_stocks ?? p.stocks ?? 0);
         let computedPrice = p.pricing_infos?.sell_price ?? p.sell_price ?? 0;
-        
-        const rawVariants = Array.isArray(p.variants) 
-          ? p.variants 
+
+        const rawVariants = Array.isArray(p.variants)
+          ? p.variants
           : (typeof p.variants === "object" && p.variants !== null ? Object.values(p.variants) : (Array.isArray(p.variant_infos) ? p.variant_infos : []));
         const batches = p.batch_infos || p.batches;
 
@@ -132,17 +132,17 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
         if (hasVariants) {
           if (computedStock === 0) {
             computedStock = rawVariants.reduce((acc: number, v: any) => {
-              let vStock = v.stock_infos?.available_stocks !== undefined 
-                ? v.stock_infos?.available_stocks 
+              let vStock = v.stock_infos?.available_stocks !== undefined
+                ? v.stock_infos?.available_stocks
                 : (v.stocks !== undefined ? v.stocks : (v.stock !== undefined ? v.stock : undefined));
-              
+
               if (vStock === undefined && Array.isArray(v.batch_infos) && v.batch_infos.length > 0) {
                 vStock = v.batch_infos.reduce((sum: number, b: any) => sum + Number(b.stock_infos?.available_stocks ?? b.stocks ?? b.stock_infos?.physical_stocks ?? 0), 0);
               }
               return acc + Number(vStock ?? 0);
             }, 0);
           }
-          
+
           if ((computedPrice === 0 || computedPrice === undefined) && rawVariants.length > 0) {
             const firstV = rawVariants[0];
             let vPrice = firstV.pricing_infos?.sell_price ?? firstV.sell_price ?? firstV.price;
@@ -191,7 +191,7 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
       // Fetch full product details
       const response = await inventoryApi.getInventoryById(SHOP_ID, selectedProduct.id);
       const fullProduct = response?.data || response;
-      
+
       if (!fullProduct || !fullProduct.id) {
         showToast("Failed to fetch full product details", "error");
         return;
@@ -283,7 +283,7 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
 
       let computedStock = Number(fullProduct.stock_infos?.available_stocks ?? fullProduct.stock_infos?.physical_stocks ?? fullProduct.stocks ?? 0);
       let computedPrice = fullProduct.pricing_infos?.sell_price ?? fullProduct.sell_price ?? 0;
-      
+
       const batches = fullProduct.batch_infos || fullProduct.batches;
       const prodHasVariants = !!(fullProduct.type_infos?.has_variant) || (mappedVariants && mappedVariants.length > 0);
       const prodHasBatches = !!(fullProduct.type_infos?.has_batch) || (batches && batches.length > 0);
@@ -470,7 +470,7 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
             e.preventDefault();
             const scannedBarcode = buffer.trim();
             buffer = ""; // Clear buffer
-            
+
             setSearchQuery(scannedBarcode);
             if (searchInputRef.current) {
               searchInputRef.current.focus();
@@ -632,13 +632,13 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
 
   return (
     <div className="w-full h-full flex flex-col min-h-0 font-sans gap-4 relative">
-      
+
       {/* Global Product Search Section */}
       <div ref={dropdownRef} className="relative w-full shrink-0 z-30">
         <div className="flex items-center gap-3">
           <div className="flex-1 relative">
             <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-            <input 
+            <input
               ref={searchInputRef}
               type="text"
               value={searchQuery}
@@ -655,9 +655,9 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
               className="w-full h-[46px] pl-11 pr-4 bg-white border border-slate-200 rounded-xl text-[13px] font-medium text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-500/5 transition-all shadow-sm"
             />
           </div>
-          
+
           {/* Barcode Scanner Symbol */}
-          <button 
+          <button
             type="button"
             onClick={() => {
               searchInputRef.current?.focus();
@@ -694,12 +694,11 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
                     key={product.id}
                     onClick={() => handleProductSelect(product)}
                     onMouseEnter={() => setActiveIndex(idx)}
-                    className={`flex items-center justify-between p-3.5 cursor-pointer transition-all duration-100 ${
-                      isHighlighted ? "bg-blue-50/50" : "hover:bg-slate-50/50"
-                    }`}
+                    className={`flex items-center justify-between p-3.5 cursor-pointer transition-all duration-100 ${isHighlighted ? "bg-blue-50/50" : "hover:bg-slate-50/50"
+                      }`}
                   >
                     <div className="flex items-center gap-3.5 min-w-0">
-                      <div 
+                      <div
                         className="w-9 h-9 rounded-lg flex items-center justify-center text-white text-[11px] font-black shrink-0 shadow-sm overflow-hidden"
                         style={{ backgroundColor: avatarBg }}
                       >
@@ -744,14 +743,14 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
 
       {/* Bill Items List Container */}
       <div className="flex-1 flex flex-col min-h-0 bg-white rounded-2xl border border-slate-200/60 shadow-[0_1px_3px_rgba(0,0,0,0.02)] overflow-hidden">
-        
+
         {/* Header section of the bill list */}
         <div className="flex items-center justify-between px-5 py-3 border-b border-slate-100 shrink-0 bg-slate-50/50">
           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
             THIS BILL · {filledRows} ITEM{filledRows !== 1 ? 'S' : ''} · {totalQty} UNIT{totalQty !== 1 ? 'S' : ''}
           </p>
           {items.length > 0 && (
-            <button 
+            <button
               onClick={handleClearAll}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all text-[11px] font-bold uppercase tracking-wider"
             >
@@ -775,16 +774,16 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
           ) : (
             items.map((item) => {
               const [baseName, variantName] = item.name.split(' - ');
-              const isQtyEditable = !item.requireSerial;
+              const isQtyEditable = !item.requireSerial || (!!item.unitInfos && item.selectedUnit !== item.unitInfos.name);
 
               return (
-                <div 
-                  key={item.id} 
+                <div
+                  key={item.id}
                   className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-white rounded-xl border border-slate-150 hover:border-blue-200 hover:shadow-lg hover:shadow-blue-500/2 shadow-sm transition-all duration-200 gap-4"
                 >
                   {/* Left Side: Avatar & Details */}
                   <div className="flex items-center gap-3.5 min-w-0 flex-1">
-                    <div 
+                    <div
                       className="w-10 h-10 rounded-xl flex items-center justify-center text-white text-[12px] font-black shrink-0 shadow-sm overflow-hidden"
                       style={{ backgroundColor: getAvatarBg(item.name) }}
                     >
@@ -813,7 +812,7 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
                           </span>
                         )}
                       </div>
-                      
+
                       <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                         {item.code && (
                           <span className="text-[9px] font-mono font-bold text-slate-400 bg-slate-50 border border-slate-100 px-1.5 py-0.5 rounded leading-none">
@@ -837,79 +836,76 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
                           ))}
                         </div>
                       )}
-                      
-                      {/* Unit/Sub-Unit Selection */}
-                      {item.unitInfos && (
-                        <div className="flex items-center mt-2">
-                          <select 
-                            className="text-[10px] font-bold py-1 px-2 border border-slate-200 rounded-md bg-slate-50 text-slate-600 outline-none hover:border-blue-300 transition-colors cursor-pointer shadow-sm"
-                            value={item.selectedUnit || item.unitInfos.name}
-                            onChange={(e) => {
-                              const unitName = e.target.value;
-                              let factor = 1;
-                              if (unitName !== item.unitInfos.name) {
-                                const sub = item.unitInfos.sub_units?.find((su: any) => su.name === unitName || su.short_name === unitName);
-                                if (sub) factor = sub.factor;
-                              }
-                              onItemsChange(items.map(it => {
-                                if (it.id === item.id) {
-                                  // basePrice is the price per BASE unit (e.g. per kg)
-                                  // Sub-unit price = basePrice * factor
-                                  // (e.g. ₹150/kg, factor=0.001 for g → ₹0.15/g)
-                                  let basePrice = it.basePrice;
-                                  if (basePrice === undefined) {
-                                    if (it.variantId) {
-                                      const variant = (it._product?.variants ?? []).find((v: any) => v.id === it.variantId);
-                                      basePrice = variant?.price || it._product?.price || 0;
-                                    } else {
-                                      basePrice = it._product?.price || 0;
-                                    }
-                                  }
-                                  // baseStock is stock in base units (e.g. 100 kg)
-                                  const baseStock = it.baseStock ?? (it.maxStock != null ? it.maxStock : undefined);
-                                  // price per sub-unit = basePrice * factor
-                                  const newPrice = Number(((basePrice || 0) * factor).toFixed(6));
-                                  // max qty in sub-units = baseStock / factor
-                                  const newMax = baseStock != null && factor > 0 ? Math.floor(baseStock / factor) : it.maxStock;
-                                  // clamp qty to new max
-                                  const newQty = newMax != null ? Math.min(it.qty, newMax) : it.qty;
-                                  return {
-                                    ...it,
-                                    selectedUnit: unitName,
-                                    factor,
-                                    baseStock: baseStock,
-                                    basePrice,
-                                    price: newPrice,
-                                    maxStock: newMax,
-                                    qty: newQty,
-                                    tprice: newQty * newPrice
-                                  };
-                                }
-                                return it;
-                              }));
-                            }}
-                          >
-                            <option value={item.unitInfos.name}>{item.unitInfos.name}</option>
-                            {item.unitInfos.sub_units?.map((su: any) => (
-                              <option key={su.name} value={su.name}>{su.name}</option>
-                            ))}
-                          </select>
-                        </div>
-                      )}
                     </div>
                   </div>
 
                   {/* Right Side: Quantity Adjuster, Price, Total, Trash Button */}
                   <div className="flex items-center justify-between sm:justify-end gap-6 shrink-0">
-                    
+
+                    {/* Unit/Sub-Unit Selection */}
+                    {item.unitInfos && (
+                      <div className="text-right w-20">
+                        <span className="text-[8px] font-bold text-slate-400 block uppercase tracking-wider mb-0.5">Unit</span>
+                        <select
+                          className="w-full text-[11px] font-bold py-1 px-1 border border-slate-200 rounded-md bg-white text-slate-700 outline-none hover:border-blue-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all cursor-pointer shadow-sm"
+                          value={item.selectedUnit || item.unitInfos.name}
+                          onChange={(e) => {
+                            const unitName = e.target.value;
+                            let factor = 1;
+                            if (unitName !== item.unitInfos.name) {
+                              const sub = item.unitInfos.sub_units?.find((su: any) => su.name === unitName || su.short_name === unitName);
+                              if (sub) factor = sub.factor;
+                            }
+                            onItemsChange(items.map(it => {
+                              if (it.id === item.id) {
+                                let basePrice = it.basePrice;
+                                if (basePrice === undefined) {
+                                  if (it.variantId) {
+                                    const variant = (it._product?.variants ?? []).find((v: any) => v.id === it.variantId);
+                                    basePrice = variant?.price || it._product?.price || 0;
+                                  } else {
+                                    basePrice = it._product?.price || 0;
+                                  }
+                                }
+                                const baseStock = it.baseStock ?? (it.maxStock != null ? it.maxStock : undefined);
+                                const newPrice = Number(((basePrice || 0) * factor).toFixed(6));
+                                const newMax = baseStock != null && factor > 0 ? Math.floor(baseStock / factor) : it.maxStock;
+                                const newQty = newMax != null ? Math.min(it.qty, newMax) : it.qty;
+                                return {
+                                  ...it,
+                                  selectedUnit: unitName,
+                                  factor,
+                                  baseStock: baseStock,
+                                  basePrice,
+                                  price: newPrice,
+                                  maxStock: newMax,
+                                  qty: newQty,
+                                  tprice: newQty * newPrice
+                                };
+                              }
+                              return it;
+                            }));
+                          }}
+                        >
+                          <option value={item.unitInfos.name}>{item.unitInfos.name}</option>
+                          {item.unitInfos.sub_units?.map((su: any) => (
+                            <option key={su.name} value={su.name}>{su.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+
                     {/* Quantity Adjustment Controls */}
-                    <QtyAdjuster
-                      value={item.qty}
-                      onChange={(qty) => handleQtyChange(item.id, qty)}
-                      disabled={!isQtyEditable}
-                      isEditable={isQtyEditable}
-                      max={item.maxStock}
-                    />
+                    <div className="flex flex-col items-center">
+                      <span className="text-[8px] font-bold text-slate-400 block uppercase tracking-wider mb-0.5">Qty</span>
+                      <QtyAdjuster
+                        value={item.qty}
+                        onChange={(qty) => handleQtyChange(item.id, qty)}
+                        disabled={!isQtyEditable}
+                        isEditable={isQtyEditable}
+                        max={item.maxStock}
+                      />
+                    </div>
 
                     {/* Unit Price Display */}
                     <div className="text-right w-16">

@@ -132,9 +132,9 @@ export default function SupplierDetail() {
         items: (pData.items || []).map((item: any) => ({
           id: item.id,
           product_id: item.product_id || item.inventory_id,
-          variant_id: item.variant_id || undefined,
+          variant_id: item.variant_id || item.variant_infos?.id || undefined,
           batch_infos: item.batch_infos || undefined,
-          serialno_numbers: item.serialno_numbers || undefined,
+          serialno_numbers: item.serial_numbers || item.serialno_numbers || undefined,
           storage_location_infos: item.storage_location_infos || undefined,
           reorder_point_infos: item.reorder_point_infos || undefined,
           pricing_infos: item.pricing_infos || { 

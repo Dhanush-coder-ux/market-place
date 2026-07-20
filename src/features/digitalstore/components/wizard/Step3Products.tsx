@@ -147,6 +147,7 @@ export default function Step3Products({ form, setForm }: Step3Props) {
         isOpen={!!activeProduct}
         onClose={() => setActiveProduct(null)}
         onApply={handleApplyConfig}
+        applyLabel="Confirm"
         onClear={() => {}} // Not used
         title={`Configure ${activeProduct?.name}`}
       >

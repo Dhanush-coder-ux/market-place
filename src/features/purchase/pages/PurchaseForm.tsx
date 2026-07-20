@@ -530,13 +530,13 @@ const PurchaseForm = () => {
           variant_id: p.variant_id || undefined,
           batch_infos: p.batchTracking && p.batchNum
             ? (p.batch_id
-                ? { id: p.batch_id }
-                : {
-                    name: p.batchNum,
-                    manufacturing_date: p.manufacturingDate || new Date().toISOString(),
-                    expiry_date: p.expiryDate || new Date().toISOString()
-                  }
-              )
+              ? { id: p.batch_id }
+              : {
+                name: p.batchNum,
+                manufacturing_date: p.manufacturingDate || new Date().toISOString(),
+                expiry_date: p.expiryDate || new Date().toISOString()
+              }
+            )
             : null,
           serialno_numbers: serials.length > 0 ? serials : null,
           storage_location_infos: p.storageLoc ? { name: p.storageLoc } : null,

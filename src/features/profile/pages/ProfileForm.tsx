@@ -2,12 +2,9 @@ import React, { useState, useEffect } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import {
   Store,
-  Mail,
-  Phone,
   MapPin,
   FileText,
   Hash,
-  Tag,
   BadgeCheck,
   Save,
   Bookmark,
@@ -17,10 +14,8 @@ import { useHeader } from "@/context/HeaderContext";
 import { useToast } from "@/context/ToastContext";
 import { useApi } from "@/context/ApiContext";
 import { ENDPOINTS } from "@/services/endpoints";
-import { shopApi } from "@/services/api/shop";
 import Input from "@/components/ui/Input";
 import { GradientButton } from "@/components/ui/GradientButton";
-import ImageUpload from "@/components/common/ImageUpload";
 import { ReusableSelect } from "@/components/ui/ReusableSelect";
 import Loader from "@/components/common/Loader";
 
@@ -28,10 +23,7 @@ import Loader from "@/components/common/Loader";
 
 export interface ProfileData {
   name: string;
-  category: string;
-  tagline: string;
-  email: string;
-  phone: string;
+  category: string[];
   full_address: string;
   landmark: string;
   pincode: string;
@@ -81,18 +73,11 @@ const ProfileForm: React.FC = () => {
   const { showToast } = useToast();
   const { postData, putData, getData, loading } = useApi();
 
-  const [logo, setLogo] = useState<File | null>(null);
-  const [banner, setBanner] = useState<File | null>(null);
-  const [logoUrl, setLogoUrl] = useState<string | null>(null);
-  const [bannerUrl, setBannerUrl] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   const initialFormData: ProfileData = {
     name: "",
-    category: "",
-    tagline: "",
-    email: "",
-    phone: "",
+    category: [],
     full_address: "",
     landmark: "",
     pincode: "",
@@ -116,16 +101,10 @@ const ProfileForm: React.FC = () => {
           const b = shop.business_infos || {};
           const a = shop.address || {};
 
-          setLogoUrl(shop.logo_url || null);
-          setBannerUrl(shop.banner_url || null);
-
           setFormData({
             name: shop.name || "",
-            category: shop.categories?.[0] || "",
-            tagline: shop.tagline || "",
+            category: Array.isArray(shop.categories) ? shop.categories : (shop.categories ? [shop.categories] : []),
             description: shop.description || "",
-            email: shop.additional_infos?.emails?.[0] || "",
-            phone: shop.additional_infos?.mobile_numbers?.[0] || "",
             full_address: a.full_address || "",
             landmark: a.landmark || "",
             pincode: a.zip_code || "",
@@ -203,36 +182,19 @@ const ProfileForm: React.FC = () => {
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!formData.name) return showToast("Shop name is required", "error");
-    if (!formData.category) return showToast("Category is required", "error");
+    if (formData.category.length === 0) return showToast("Category is required", "error");
 
     setSubmitting(true);
 
-    let finalLogoUrl = logoUrl;
-    let finalBannerUrl = bannerUrl;
-    try {
-      if (logo) {
-        const res = await shopApi.uploadShopImage(logo, "logo");
-        if (res?.data?.logo_url) finalLogoUrl = res.data.logo_url;
-      }
-      if (banner) {
-        const res = await shopApi.uploadShopImage(banner, "banner");
-        if (res?.data?.banner_url) finalBannerUrl = res.data.banner_url;
-      }
-    } catch (err) {
-      console.error("Image upload failed", err);
-      showToast("Failed to upload images", "error");
-    }
-
     const payload = {
       name: formData.name,
-      tagline: formData.tagline || null,
       description: formData.description || null,
-      categories: [formData.category],
+      categories: formData.category,
       business_infos: {
         type: formData.business_type || "SOLO_PROPRIETOR",
         gst_infos: {
           registered: formData.gst_registered,
-          number: formData.gst_number || null,
+          number: formData.gst_registered ? (formData.gst_number || null) : null,
         },
         currency: formData.currency || "INR",
       },
@@ -243,13 +205,7 @@ const ProfileForm: React.FC = () => {
         latitude: parseFloat(formData.latitude) || 0,
         longitude: parseFloat(formData.longitude) || 0,
       },
-      additional_infos: {
-        emails: formData.email ? [formData.email] : [],
-        mobile_numbers: formData.phone ? [formData.phone] : [],
-      },
       visible_online: false,
-      logo_url: finalLogoUrl,
-      banner_url: finalBannerUrl,
     };
 
     try {
@@ -323,17 +279,6 @@ const ProfileForm: React.FC = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="flex flex-col items-center justify-center py-4 bg-slate-50/50 rounded-lg border border-dashed border-slate-200 gap-2">
-                <span className="text-[10px] font-black text-slate-400">Shop Logo</span>
-                <ImageUpload label="Logo" value={logo} onChange={setLogo} initialPreview={logoUrl} />
-              </div>
-              <div className="flex flex-col items-center justify-center py-4 bg-slate-50/50 rounded-lg border border-dashed border-slate-200 gap-2">
-                <span className="text-[10px] font-black text-slate-400">Banner Image</span>
-                <ImageUpload label="Banner" value={banner} onChange={setBanner} initialPreview={bannerUrl} />
-              </div>
-            </div>
-
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <div className="md:col-span-2">
                 <Input
@@ -346,23 +291,31 @@ const ProfileForm: React.FC = () => {
                   required
                 />
               </div>
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-slate-400 ml-1">Category *</label>
-                <ReusableSelect
-                  value={formData.category}
-                  onValueChange={(val) => setFormData((p) => ({ ...p, category: val }))}
-                  options={categoryOptions}
-                  placeholder="Select Category"
-                />
+              <div className="space-y-2 md:col-span-2">
+                <label className="text-[10px] font-black text-slate-400 ml-1">Categories *</label>
+                <div className="flex flex-wrap gap-2">
+                  {categoryOptions.map(opt => {
+                    const isSelected = formData.category.includes(opt.value);
+                    return (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => {
+                          setFormData(prev => ({
+                            ...prev,
+                            category: isSelected 
+                              ? prev.category.filter(c => c !== opt.value)
+                              : [...prev.category, opt.value]
+                          }))
+                        }}
+                        className={`px-3 py-1.5 rounded-full text-[11px] font-bold border transition-colors ${isSelected ? 'bg-blue-600 border-blue-600 text-white shadow-sm shadow-blue-100' : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'}`}
+                      >
+                        {opt.label}
+                      </button>
+                    )
+                  })}
+                </div>
               </div>
-              <Input
-                label="Tagline"
-                name="tagline"
-                value={formData.tagline}
-                onChange={handleChange}
-                placeholder="e.g. Fresh deals, every day!"
-                leftIcon={<Tag size={16} className="text-slate-400" />}
-              />
             </div>
           </div>
 
@@ -379,23 +332,6 @@ const ProfileForm: React.FC = () => {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <Input
-                label="Email Address"
-                name="email"
-                type="email"
-                value={formData.email}
-                onChange={handleChange}
-                placeholder="shop@example.com"
-                leftIcon={<Mail size={16} className="text-slate-400" />}
-              />
-              <Input
-                label="Phone Number"
-                name="phone"
-                value={formData.phone}
-                onChange={handleChange}
-                placeholder="+91 00000 00000"
-                leftIcon={<Phone size={16} className="text-slate-400" />}
-              />
               <Input
                 label="PIN Code"
                 name="pincode"
@@ -467,14 +403,27 @@ const ProfileForm: React.FC = () => {
                   placeholder="Select Type"
                 />
               </div>
-              <Input
-                label="GST Number"
-                name="gst_number"
-                value={formData.gst_number}
-                onChange={handleChange}
-                placeholder="22AAAAA0000A1Z5"
-                leftIcon={<FileText size={16} className="text-slate-400" />}
-              />
+              <div className="space-y-3">
+                <label className="flex items-center gap-2 cursor-pointer mt-2">
+                  <input 
+                    type="checkbox" 
+                    checked={formData.gst_registered}
+                    onChange={(e) => setFormData(p => ({ ...p, gst_registered: e.target.checked }))}
+                    className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-gray-300"
+                  />
+                  <span className="text-[11px] font-bold text-slate-700">Registered for GST?</span>
+                </label>
+                {formData.gst_registered && (
+                  <Input
+                    label="GST Number"
+                    name="gst_number"
+                    value={formData.gst_number}
+                    onChange={handleChange}
+                    placeholder="22AAAAA0000A1Z5"
+                    leftIcon={<FileText size={16} className="text-slate-400" />}
+                  />
+                )}
+              </div>
               <div className="space-y-1.5">
                 <label className="text-[10px] font-black text-slate-400 ml-1">Currency</label>
                 <ReusableSelect

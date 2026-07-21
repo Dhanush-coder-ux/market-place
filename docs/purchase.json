@@ -575,6 +575,57 @@
         }
       }
     },
+    "/purchases/history/{shop_id}/{id}": {
+      "get": {
+        "tags": [
+          "Purchase Crud's"
+        ],
+        "summary": "Get Purchase History",
+        "operationId": "get_purchase_history_purchases_history__shop_id___id__get",
+        "parameters": [
+          {
+            "name": "shop_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Shop Id"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/custom-fields": {
       "get": {
         "tags": [

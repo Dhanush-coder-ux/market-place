@@ -63,6 +63,7 @@ export interface ProductItem {
   variant: string;
   size: string;
   category?: string;
+  _backendId?: string | null;
 }
 
 
@@ -80,6 +81,7 @@ const PurchaseForm = () => {
   const isSubmittingRef = useRef(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [loadingData, setLoadingData] = useState(!!id);
+  const [purchaseVersion, setPurchaseVersion] = useState<string | null>(null);
 
   const { openQuickCreate } = useQuickCreate();
   const [soldStockWarnings, setSoldStockWarnings] = useState<string[]>([]);
@@ -211,6 +213,9 @@ const PurchaseForm = () => {
 
           setPurchaseType(data.type || "DIRECT");
 
+          // Read the version from the backend response
+          setPurchaseVersion(data.version || "v1");
+
           // Populate additional charges
           setCharges({
             transport: data.charges_infos?.transport_charge || "",
@@ -245,7 +250,10 @@ const PurchaseForm = () => {
             const pStorage = p.storage_locations?.[0]?.name ?? p.storage_location_infos?.name ?? p.datas?.storage_location ?? "";
 
             return {
+              // Store the real backend item ID (used in update payload). Never generate a temp ID here
+              // so we can detect which items are truly persisted vs newly added during edit.
               id: p.id || `temp-${Math.random().toString(36).substring(2, 9)}`,
+              _backendId: p.id || null, // tracks whether this row has a real persisted DB id
               pricing_id: p.pricing_infos?.[0]?.pricing_id || p.pricing_infos?.[0]?.id || p.pricing_infos?.id,
               storage_location_id: p.storage_locations?.[0]?.storage_location_id || p.storage_locations?.[0]?.id || p.storage_location_infos?.id,
               inventory_id: p.product_id || p.inventory_id,
@@ -259,8 +267,8 @@ const PurchaseForm = () => {
               marginType: "sellingPrice",
               unit: p.unit || "pc",
               taxGst: parseGst(p.gst || p.datas?.gst || p.taxGst || p.tax_gst || 0) || 18,
-              variant_id: p.variant_id || ((typeof p.variant === 'object' && p.variant !== null) ? p.variant.variant_id : null),
-              variant: (typeof p.variant === 'object' && p.variant !== null ? p.variant.variant_name || p.variant.name : p.variant) || "",
+              variant_id: p.variant_id || p.variant_infos?.id || ((typeof p.variant === 'object' && p.variant !== null) ? p.variant.variant_id : null),
+              variant: p.variant_infos?.name || (typeof p.variant === 'object' && p.variant !== null ? p.variant.variant_name || p.variant.name : p.variant) || "",
               sku: parsedSku,
               batchTracking: p.batchTracking || !!p.batch_infos || p.batch_tracking || p.has_batch || !!p.batch || !!p.batch_id,
               serialTracking: p.serialTracking || !!p.serialno_infos || p.serial_tracking || p.has_serialno || !!p.serial_info || !!p.serialno_id || !!(p.serial_number) || !!(p.serial_numbers),
@@ -523,9 +531,12 @@ const PurchaseForm = () => {
         }
 
         const serials = p.serialNumbers ? p.serialNumbers.split(",").map(s => s.trim()).filter(Boolean) : [];
+        // Use the actual backend DB id for update payloads, not the local React row id
+        const backendItemId = (p as any)._backendId || (p.id && !p.id.startsWith("temp-") ? p.id : null);
 
         return {
-          id: id ? p.id : undefined,
+          // For update: use the real persisted backend item ID
+          id: id ? (backendItemId || undefined) : undefined,
           product_id: p.inventory_id || "unknown",
           variant_id: p.variant_id || undefined,
           batch_infos: p.batchTracking && p.batchNum
@@ -605,18 +616,26 @@ const PurchaseForm = () => {
             }
           ],
           purchase_date: purchaseDetails.date,
-          items: transformedProducts.map((p: any) => ({
-            id: p.id,
-            product_id: p.product_id,
-            variant_id: p.variant_id,
-            batch_infos: p.batch_infos,
-            serialno_numbers: p.serialno_numbers,
-            storage_location_infos: p.storage_location_infos,
-            reorder_point_infos: p.reorder_point_infos,
-            pricing_infos: p.pricing_infos,
-            gst: p.gst,
-            stock_infos: p.stock_infos
-          }))
+          items: transformedProducts
+            .filter((p: any) => {
+              // Only send items that have a real backend ID. Items without one
+              // (e.g. temp- rows from newly added lines during edit) would cause
+              // a backend conflict when the same product_id appears multiple times.
+              if (!p.id) return false;
+              return true;
+            })
+            .map((p: any) => ({
+              id: p.id,
+              product_id: p.product_id,
+              variant_id: p.variant_id,
+              batch_infos: p.batch_infos,
+              serialno_numbers: p.serialno_numbers,
+              storage_location_infos: p.storage_location_infos,
+              reorder_point_infos: p.reorder_point_infos,
+              pricing_infos: p.pricing_infos,
+              gst: p.gst,
+              stock_infos: p.stock_infos
+            }))
         };
         res = await purchase.updatePurchase(updatePayload);
       } else {
@@ -744,11 +763,18 @@ const PurchaseForm = () => {
                 <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600 border border-blue-200 shadow-sm">
                   <PackageOpen size={20} />
                 </div>
-                <div>
+                <div className="flex-1">
                   <h2 className="text-sm font-black text-slate-800 uppercase tracking-widest">Purchase Details</h2>
                   <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">Basic information & supplier</p>
                 </div>
-
+                {id && purchaseVersion && (
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Current Version</span>
+                    <span className="px-2.5 py-1 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white text-[10px] font-black tracking-widest shadow-sm border border-blue-400/30">
+                      {purchaseVersion.toUpperCase()}
+                    </span>
+                  </div>
+                )}
               </div>
 
               <div className="p-8 grid grid-cols-1 md:grid-cols-3 gap-6">

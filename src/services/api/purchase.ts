@@ -83,4 +83,12 @@ export const purchaseApi = {
     if (!shopId || !supplierId) throw new Error("Shop ID and Supplier ID are required.");
     return await apiClient.get(`${ENDPOINTS.PURCHASES}/by/supplier/${shopId}/${supplierId}`, params);
   },
+
+  /**
+   * Get version history for a specific purchase
+   */
+  getPurchaseHistory: async (shopId: string, purchaseId: string) => {
+    if (!shopId || !purchaseId) throw new Error("Shop ID and Purchase ID are required.");
+    return await apiClient.get(`${ENDPOINTS.PURCHASES}/history/${shopId}/${purchaseId}`);
+  },
 };

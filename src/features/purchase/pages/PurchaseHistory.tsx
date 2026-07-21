@@ -110,6 +110,7 @@ export interface DirectPurchaseData {
   grand_total?: number;
   additional_charges_total?: number;
   status?: string;
+  version?: string;
 }
 
 type ViewMode = "grid" | "horizontal" | "vertical";
@@ -203,6 +204,7 @@ export function toDisplayData(p: PurchaseRecord): DirectPurchaseData {
     time: d.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }),
     vendor: String(vendorName),
     totoalItems:totoalItems,
+    version: (p as any).version || d2?.version || "v1",
     products: (products ?? []).map((pr: any) => {
       const pBuyPrice = pr.pricing_infos?.[0]?.buy_price ?? pr.buy_price;
       const pSellPrice = pr.pricing_infos?.[0]?.sell_price ?? pr.sell_price;
@@ -368,6 +370,11 @@ const GridCard = ({ po, selected, onClick }: { po: DirectPurchaseData; selected?
                           {po.storage_location && (
                             <span className="text-[9px] font-bold text-zinc-500 bg-zinc-50 border border-zinc-200 px-1.5 py-0.5 rounded uppercase tracking-wider shrink-0">
                               {po.storage_location}
+                            </span>
+                          )}
+                          {po.version && (
+                            <span className="text-[9px] font-bold text-blue-600 bg-blue-50 border border-blue-200 px-1.5 py-0.5 rounded uppercase tracking-wider shrink-0">
+                              {po.version}
                             </span>
                           )}
                         </div>
@@ -569,6 +576,11 @@ const VerticalTable = ({ data, selectedIds, onSelect, totalCount, lastElementRef
                           {po.storage_location && (
                             <span className="text-[9px] font-bold text-zinc-500 bg-zinc-50 border border-zinc-200 px-1.5 py-0.5 rounded uppercase tracking-wider shrink-0">
                               {po.storage_location}
+                            </span>
+                          )}
+                          {po.version && (
+                            <span className="text-[9px] font-bold text-blue-600 bg-blue-50 border border-blue-200 px-1.5 py-0.5 rounded uppercase tracking-wider shrink-0">
+                              {po.version}
                             </span>
                           )}
                         </div>

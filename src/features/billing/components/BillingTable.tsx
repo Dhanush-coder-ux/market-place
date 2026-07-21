@@ -60,6 +60,12 @@ const QtyAdjuster = ({
   isEditable: boolean;
   max?: number;
 }) => {
+  const [localValue, setLocalValue] = useState<string>(value.toString());
+
+  useEffect(() => {
+    setLocalValue(value.toString());
+  }, [value]);
+
   if (!isEditable) {
     return (
       <span className="text-[12px] font-bold text-slate-500 tabular-nums px-2.5 py-1 bg-slate-100/70 border border-slate-200/40 rounded-md">
@@ -68,7 +74,7 @@ const QtyAdjuster = ({
     );
   }
   return (
-    <div className={`inline-flex items-center border border-slate-200 rounded-lg overflow-hidden bg-white h-[32px] w-24 shrink-0 shadow-sm ${disabled ? "opacity-40 pointer-events-none" : ""}`}>
+    <div className={`inline-flex items-center border border-slate-200 rounded-lg overflow-hidden bg-white h-[32px] shrink-0 shadow-sm ${disabled ? "opacity-40 pointer-events-none" : ""}`}>
       <button
         type="button"
         className="w-7 h-full flex items-center justify-center border-none bg-transparent cursor-pointer text-slate-400 hover:bg-slate-50 hover:text-slate-650 transition-colors active:scale-90"
@@ -78,15 +84,39 @@ const QtyAdjuster = ({
       </button>
       <input
         type="number"
-        min="1"
-        value={value || ""}
-        onChange={(e) => onChange(Math.max(1, Number(e.target.value)))}
-        className="w-10 bg-transparent text-center outline-none text-[12px] font-bold text-slate-700 tabular-nums border-x border-slate-100 h-full p-0 flex items-center justify-center"
+        step="any"
+        value={localValue}
+        onChange={(e) => {
+          setLocalValue(e.target.value);
+          const num = Number(e.target.value);
+          if (!isNaN(num) && num > 0) {
+            let finalNum = num;
+            if (typeof max === 'number' && finalNum > max) finalNum = max;
+            onChange(finalNum);
+          }
+        }}
+        onBlur={() => {
+          const num = Number(localValue);
+          if (isNaN(num) || num <= 0) {
+            setLocalValue("1");
+            onChange(1);
+          } else {
+            let finalNum = num;
+            if (typeof max === 'number' && finalNum > max) finalNum = max;
+            setLocalValue(finalNum.toString());
+            onChange(finalNum);
+          }
+        }}
+        className="w-14 bg-transparent text-center outline-none text-[12px] font-bold text-slate-700 tabular-nums border-x border-slate-100 h-full p-0 flex items-center justify-center"
       />
       <button
         type="button"
         className="w-7 h-full flex items-center justify-center border-none bg-transparent cursor-pointer text-slate-400 hover:bg-slate-50 hover:text-slate-650 transition-colors active:scale-90"
-        onClick={() => onChange(value + 1)}
+        onClick={() => {
+           let newVal = value + 1;
+           if (typeof max === 'number' && newVal > max) newVal = max;
+           onChange(newVal);
+        }}
         disabled={typeof max === 'number' && value >= max}
       >
         <Plus size={10} />
@@ -842,13 +872,26 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
                   {/* Right Side: Quantity Adjuster, Price, Total, Trash Button */}
                   <div className="flex items-center justify-between sm:justify-end gap-6 shrink-0">
 
+                    {/* Quantity Adjustment Controls */}
+                    <div className="flex flex-col items-center">
+                      <span className="text-[8px] font-bold text-slate-400 block uppercase tracking-wider mb-0.5">Qty</span>
+                      <QtyAdjuster
+                        value={item.qty}
+                        onChange={(qty) => handleQtyChange(item.id, qty)}
+                        disabled={!isQtyEditable}
+                        isEditable={isQtyEditable}
+                        max={item.maxStock}
+                      />
+                    </div>
+
                     {/* Unit/Sub-Unit Selection */}
                     {item.unitInfos && (
                       <div className="text-right w-20">
                         <span className="text-[8px] font-bold text-slate-400 block uppercase tracking-wider mb-0.5">Unit</span>
                         <select
-                          className="w-full text-[11px] font-bold py-1 px-1 border border-slate-200 rounded-md bg-white text-slate-700 outline-none hover:border-blue-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all cursor-pointer shadow-sm"
+                          className="w-full text-[11px] font-bold py-1 px-1 border border-slate-200 rounded-md bg-white text-slate-700 outline-none hover:border-blue-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all cursor-pointer shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                           value={item.selectedUnit || item.unitInfos.name}
+                          disabled={item.requireSerial}
                           onChange={(e) => {
                             const unitName = e.target.value;
                             let factor = 1;
@@ -894,18 +937,6 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
                         </select>
                       </div>
                     )}
-
-                    {/* Quantity Adjustment Controls */}
-                    <div className="flex flex-col items-center">
-                      <span className="text-[8px] font-bold text-slate-400 block uppercase tracking-wider mb-0.5">Qty</span>
-                      <QtyAdjuster
-                        value={item.qty}
-                        onChange={(qty) => handleQtyChange(item.id, qty)}
-                        disabled={!isQtyEditable}
-                        isEditable={isQtyEditable}
-                        max={item.maxStock}
-                      />
-                    </div>
 
                     {/* Unit Price Display */}
                     <div className="text-right w-16">

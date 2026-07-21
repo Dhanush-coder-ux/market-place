@@ -317,7 +317,7 @@ const ItemSelector: React.FC<{ items: SaleItem[]; returnItems: Record<string, nu
                           <span className="text-[10px] text-slate-400">Qty</span>
                           {(() => {
                             let factor = 1.0;
-                            if (item.entered_unit !== item.unit && item.unit_infos?.sub_units) {
+                            if (item.entered_unit !== item.unit_infos?.name && item.unit_infos?.sub_units) {
                               const su = item.unit_infos.sub_units.find((s: any) => s.name === item.entered_unit);
                               if (su && su.factor) {
                                 factor = su.factor;
@@ -335,7 +335,7 @@ const ItemSelector: React.FC<{ items: SaleItem[]; returnItems: Record<string, nu
                             );
                           })()}
                           <span className="font-mono ml-auto text-[10px] font-bold text-blue-600">
-                            {fmt(item.unitPrice * qty * (item.entered_unit !== item.unit && item.unit_infos?.sub_units?.find((su: any) => su.name === item.entered_unit)?.factor ? item.unit_infos.sub_units.find((su: any) => su.name === item.entered_unit).factor : 1))}
+                            {fmt(item.unitPrice * qty * (item.entered_unit !== item.unit_infos?.name && item.unit_infos?.sub_units?.find((su: any) => su.name === item.entered_unit)?.factor ? item.unit_infos.sub_units.find((su: any) => su.name === item.entered_unit).factor : 1))}
                           </span>
                         </div>
                         {item.unit_infos?.sub_units?.length > 0 && (
@@ -465,9 +465,16 @@ const useReturnModalLogic = (sale: SaleRecord | null, productMap: Record<string,
       if (next[itemId] !== undefined) { delete next[itemId]; delete nextEx[itemId]; delete nextSer[itemId]; }
       else {
         const item = saleItems.find(i => i.id === itemId);
+        if (!item) return s;
+        let factor = 1.0;
+        if (item.entered_unit !== item.unit_infos?.name && item.unit_infos?.sub_units) {
+          const su = item.unit_infos.sub_units.find((suObj: any) => suObj.name === item.entered_unit);
+          if (su && su.factor) factor = su.factor;
+        }
         const maxReturnable = Math.max(0, (item?.quantity ?? 1) - (item?.returned_quantity ?? 0));
-        if (maxReturnable <= 0) return s; // already fully returned — ignore
-        next[itemId] = maxReturnable;
+        const maxReturnableInSelectedUnit = factor > 0 ? maxReturnable / factor : maxReturnable;
+        if (maxReturnableInSelectedUnit <= 0) return s; // already fully returned — ignore
+        next[itemId] = maxReturnableInSelectedUnit;
         if (item?.serial_numbers?.length) nextSer[itemId] = [...item.serial_numbers];
       }
       return { ...s, returnItems: next, exchangeMap: nextEx, serialReturnMap: nextSer, errors: { ...s.errors, items: undefined } };
@@ -481,8 +488,14 @@ const useReturnModalLogic = (sale: SaleRecord | null, productMap: Record<string,
       const next: Record<string, number> = {};
       saleItems.forEach(i => {
         if (i.status !== "REFUNDED" && i.status !== "EXCHANGED") {
+          let factor = 1.0;
+          if (i.entered_unit !== i.unit_infos?.name && i.unit_infos?.sub_units) {
+            const su = i.unit_infos.sub_units.find((suObj: any) => suObj.name === i.entered_unit);
+            if (su && su.factor) factor = su.factor;
+          }
           const maxReturnable = Math.max(0, i.quantity - i.returned_quantity);
-          if (maxReturnable > 0) next[i.id] = maxReturnable;
+          const maxReturnableInSelectedUnit = factor > 0 ? maxReturnable / factor : maxReturnable;
+          if (maxReturnableInSelectedUnit > 0) next[i.id] = maxReturnableInSelectedUnit;
         }
       });
       return { ...s, returnItems: next, errors: { ...s.errors, items: undefined } };
@@ -493,7 +506,7 @@ const useReturnModalLogic = (sale: SaleRecord | null, productMap: Record<string,
     const item = saleItems.find(i => i.id === itemId);
     if (!item) return;
     let factor = 1.0;
-    if (item.entered_unit !== item.unit && item.unit_infos?.sub_units) {
+    if (item.entered_unit !== item.unit_infos?.name && item.unit_infos?.sub_units) {
       const su = item.unit_infos.sub_units.find((s: any) => s.name === item.entered_unit);
       if (su && su.factor) {
         factor = su.factor;
@@ -516,7 +529,7 @@ const useReturnModalLogic = (sale: SaleRecord | null, productMap: Record<string,
   const totals = useMemo(() => {
     const returnValue = selectedItems.reduce((s, i) => {
       let factor = 1.0;
-      if (i.entered_unit !== i.unit && i.unit_infos?.sub_units) {
+      if (i.entered_unit !== i.unit_infos?.name && i.unit_infos?.sub_units) {
         const su = i.unit_infos.sub_units.find((suObj: any) => suObj.name === i.entered_unit);
         if (su && su.factor) {
           factor = su.factor;

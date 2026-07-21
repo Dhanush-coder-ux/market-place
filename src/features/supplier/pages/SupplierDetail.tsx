@@ -56,7 +56,7 @@ const SupplierSearch = () => {
   );
 };
 
-const TABS = ["General Info", "Custom Fields", "Purchases"];
+const TABS = ["General Info", "Custom Fields", "Purchases", "Outstanding Cleared Records"];
 
 export default function SupplierDetail() {
   const { id } = useParams<{ id: string }>();
@@ -88,6 +88,10 @@ export default function SupplierDetail() {
   const [outstandingType, setOutstandingType] = useState<'INCREMENT' | 'DECREMENT' | 'DIRECT'>('INCREMENT');
   const [outstandingAmount, setOutstandingAmount] = useState<string>('');
   const [outstandingSaving, setOutstandingSaving] = useState(false);
+
+  // Cleared History state
+  const [clearedHistory, setClearedHistory] = useState<any[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
 
   // Clear Outstanding Purchases state
   const [showClearModal, setShowClearModal] = useState(false);
@@ -248,6 +252,22 @@ export default function SupplierDetail() {
       setPurLoading(false);
     }).catch(() => setPurLoading(false));
   }, [activeTab, id]);
+
+  useEffect(() => {
+    if (!id || activeTab !== 3) return;
+    setHistoryLoading(true);
+    supplierApi.getClearedHistory(SHOP_ID, id)
+      .then((res: any) => {
+        let historyList = res?.data ? (Array.isArray(res.data) ? res.data : [res.data]) : [];
+        if (res?.data?.datas) historyList = res.data.datas;
+        setClearedHistory(historyList);
+        setHistoryLoading(false);
+      })
+      .catch(() => {
+        showToast("Failed to fetch cleared history", "error");
+        setHistoryLoading(false);
+      });
+  }, [activeTab, id, showToast]);
 
   // Load custom field definitions + values when tab becomes active
   useEffect(() => {
@@ -664,6 +684,47 @@ export default function SupplierDetail() {
             );
           })()}
         </div>
+
+          {activeTab === 3 && (
+            <div className="space-y-4 animate-in fade-in duration-300 h-full overflow-y-auto">
+              <SectionCard title="Outstanding Cleared History" className="p-0">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="bg-slate-50 border-b border-slate-200">
+                        <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase">Date</th>
+                        <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase">Amount</th>
+                        <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase">Ref/Invoice No</th>
+                        <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase">Payment Method</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {historyLoading ? (
+                        <tr><td colSpan={4} className="p-8 text-center text-slate-400 text-sm font-semibold">Loading history...</td></tr>
+                      ) : clearedHistory.length === 0 ? (
+                        <tr><td colSpan={4} className="p-8 text-center text-slate-400 text-sm font-semibold">No cleared records found.</td></tr>
+                      ) : (
+                        clearedHistory.map((h, i) => (
+                          <tr key={h.id || i} className="hover:bg-slate-50/50 transition-colors">
+                            <td className="px-4 py-3 text-sm text-slate-600 font-bold">
+                              {new Date(h.created_at || h.date).toLocaleDateString()}
+                            </td>
+                            <td className="px-4 py-3 text-sm text-emerald-600 font-black">
+                              ₹{(h.cleared_amount || h.amount || h.outstanding_amount || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                            </td>
+                            <td className="px-4 py-3 text-sm text-slate-700 font-bold">{h.invoice_no || h.ref_no || h.id || "—"}</td>
+                            <td className="px-4 py-3">
+                              <span className="text-[11px] font-black bg-slate-100 text-slate-600 px-2.5 py-1 rounded-md uppercase">{h.payment_method || h.method || "—"}</span>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </SectionCard>
+            </div>
+          )}
 
         {/* Modal: View Full Value */}
         <Modal

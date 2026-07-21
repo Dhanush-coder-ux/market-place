@@ -127,17 +127,26 @@ const ProductDetail = () => {
   useEffect(() => {
     // The StockMovementTab handles its own loading.
     if (!id || !product) return;
-    const hasInvTab = (product.has_variant === true && (product.variants ?? []).length > 0) || (product.has_batch === true && (product.batches ?? []).length > 0);
-    const movIdx = hasInvTab ? 2 : 1;
-    if (activeTab !== movIdx) return;
+    const hasVariants = !!product.type_infos?.has_variant || (product.variant_infos || product.variants ? Object.values(product.variant_infos || product.variants || {}).length > 0 : false);
+    const batches = Array.isArray(product.batch_infos) ? product.batch_infos : (product.batch_infos ? [product.batch_infos] : (product.batches || []));
+    const hasBatches = !!product.type_infos?.has_batch || batches.length > 0;
+    const dynamicTabs = ["General Info", ...((hasVariants || hasBatches) ? ["Inventory & Variants"] : []), "Images", MOV_TAB_LABEL, PUR_TAB_LABEL];
+    
+    if (dynamicTabs[activeTab] !== MOV_TAB_LABEL) return;
   }, [activeTab, id, product]);
 
   useEffect(() => {
     if (!id || !product) return;
     if (purchases.length > 0) return; // Already loaded from movements tab
-    const hasInvTab = (product.has_variant === true && (product.variants ?? []).length > 0) || (product.has_batch === true && (product.batches ?? []).length > 0);
-    const purIdx = hasInvTab ? 3 : 2;
-    if (activeTab !== purIdx) return;
+    
+    // We can't access TABS here because it's defined lower in the component,
+    // so we recalculate the tabs array to find the correct label
+    const hasVariants = !!product.type_infos?.has_variant || (product.variant_infos || product.variants ? Object.values(product.variant_infos || product.variants || {}).length > 0 : false);
+    const batches = Array.isArray(product.batch_infos) ? product.batch_infos : (product.batch_infos ? [product.batch_infos] : (product.batches || []));
+    const hasBatches = !!product.type_infos?.has_batch || batches.length > 0;
+    const dynamicTabs = ["General Info", ...((hasVariants || hasBatches) ? ["Inventory & Variants"] : []), "Images", MOV_TAB_LABEL, PUR_TAB_LABEL];
+    
+    if (dynamicTabs[activeTab] !== PUR_TAB_LABEL) return;
 
     setPurLoading(true);
     getData(`${ENDPOINTS.PURCHASES}/by/product/${SHOP_ID}/${id}`).then((res: any) => {

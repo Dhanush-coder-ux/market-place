@@ -76,4 +76,9 @@ export const supplierApi = {
       return null;
     }
   },
+
+  // GET /suppliers/cleared-history/{shop_id}/{id} — Get cleared outstanding history
+  getClearedHistory: async (shop_id: string, id: string) => {
+    return await apiClient.get(`${ENDPOINTS.SUPPLIERS}/cleared-history/${shop_id}/${id}`);
+  },
 };

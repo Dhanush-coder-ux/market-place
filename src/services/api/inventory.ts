@@ -141,7 +141,7 @@ export const inventoryApi = {
    */
   searchInventories: async (query: string, isActive?: boolean): Promise<any[]> => {
     try {
-      const params: Record<string, string> = { query, limit: '10', offset: '1' };
+      const params: Record<string, string> = { q: query, limit: '10', offset: '1' };
       if (isActive !== undefined) params.active = isActive ? 'true' : 'false';
       const response = await apiClient.get(`${INV}/by/shop/${SHOP_ID}`, params);
       const raw = response?.data;

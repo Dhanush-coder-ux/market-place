@@ -350,7 +350,7 @@ export const ProfileSettingsPage = () => {
         {/* ── Content Panel ── */}
         <section className="flex-1 min-w-0 h-full flex flex-col">
           {/* Panel header (Title context) */}
-          {activeItem && !isMobile && (
+          {activeItem && !isMobile && activeTab !== "activity" && (
             <div className="flex items-center gap-2 shrink-0 mb-4 px-2">
               <span
                 className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold border ${
@@ -367,7 +367,7 @@ export const ProfileSettingsPage = () => {
           )}
 
           {/* Full height scrollable content area */}
-          <div className="flex-1 overflow-y-auto px-2 pb-6 custom-scrollbar">
+          <div className={`flex-1 ${activeTab === "activity" ? "min-h-0 pb-0" : "overflow-y-auto px-2 pb-6 custom-scrollbar"}`}>
             {renderContent()}
           </div>
         </section>

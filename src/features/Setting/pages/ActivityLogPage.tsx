@@ -10,7 +10,6 @@ import {
   Clock,
   ChevronRight,
   ArrowRight,
-  Filter,
   Inbox,
 } from "lucide-react";
 import { format } from "date-fns";
@@ -34,12 +33,13 @@ const ACTION_CONFIG: Record<
   string,
   { label: string; color: string; dot: string }
 > = {
-  CREATE:        { label: "Create",  color: "bg-emerald-50 text-emerald-700 border-emerald-200", dot: "bg-emerald-500" },
-  CREATE_MANUAL: { label: "Create",  color: "bg-emerald-50 text-emerald-700 border-emerald-200", dot: "bg-emerald-500" },
-  UPDATE:        { label: "Update",  color: "bg-blue-50    text-blue-700    border-blue-200",    dot: "bg-blue-500"    },
-  DELETE:        { label: "Delete",  color: "bg-rose-50    text-rose-700    border-rose-200",    dot: "bg-rose-500"    },
-  EXPORT:        { label: "Export",  color: "bg-violet-50  text-violet-700  border-violet-200",  dot: "bg-violet-500"  },
-  IMPORT:        { label: "Import",  color: "bg-amber-50   text-amber-700   border-amber-200",   dot: "bg-amber-500"   },
+  CREATE:        { label: "Create",  color: "bg-emerald-500/10 text-emerald-700 ring-1 ring-inset ring-emerald-500/20 shadow-sm", dot: "bg-emerald-500" },
+  CREATE_MANUAL: { label: "Create",  color: "bg-emerald-500/10 text-emerald-700 ring-1 ring-inset ring-emerald-500/20 shadow-sm", dot: "bg-emerald-500" },
+  UPDATE:        { label: "Update",  color: "bg-blue-500/10    text-blue-700    ring-1 ring-inset ring-blue-500/20 shadow-sm",    dot: "bg-blue-500"    },
+  DELETE:        { label: "Delete",  color: "bg-rose-500/10    text-rose-700    ring-1 ring-inset ring-rose-500/20 shadow-sm",    dot: "bg-rose-500"    },
+  EXPORT:        { label: "Export",  color: "bg-violet-500/10  text-violet-700  ring-1 ring-inset ring-violet-500/20 shadow-sm",  dot: "bg-violet-500"  },
+  IMPORT:        { label: "Import",  color: "bg-amber-500/10   text-amber-700   ring-1 ring-inset ring-amber-500/20 shadow-sm",   dot: "bg-amber-500"   },
+  RETURN:        { label: "Return",  color: "bg-orange-500/10  text-orange-700  ring-1 ring-inset ring-orange-500/20 shadow-sm",  dot: "bg-orange-500"  },
 };
 
 const getAction = (action?: string) =>
@@ -49,16 +49,20 @@ const getAction = (action?: string) =>
 // ─── Entity colour strip ──────────────────────────────────────────────────────
 
 const ENTITY_COLORS: Record<string, string> = {
-  ORDER:           "bg-blue-100    text-blue-700",
-  STOCKADJUSTMENT: "bg-purple-100  text-purple-700",
-  CUSTOMER:        "bg-emerald-100 text-emerald-700",
-  PURCHASE:        "bg-amber-100   text-amber-700",
-  PRODUCT:         "bg-rose-100    text-rose-700",
-  BILLING:         "bg-indigo-100  text-indigo-700",
+  ORDER:           "bg-blue-500/10 text-blue-700 ring-1 ring-inset ring-blue-500/20 shadow-sm",
+  STOCKADJUSTMENT: "bg-purple-500/10 text-purple-700 ring-1 ring-inset ring-purple-500/20 shadow-sm",
+  CUSTOMER:        "bg-emerald-500/10 text-emerald-700 ring-1 ring-inset ring-emerald-500/20 shadow-sm",
+  PURCHASE:        "bg-amber-500/10 text-amber-700 ring-1 ring-inset ring-amber-500/20 shadow-sm",
+  PRODUCT:         "bg-rose-500/10 text-rose-700 ring-1 ring-inset ring-rose-500/20 shadow-sm",
+  BILLING:         "bg-indigo-500/10 text-indigo-700 ring-1 ring-inset ring-indigo-500/20 shadow-sm",
+  EMPLOYEE:        "bg-teal-500/10 text-teal-700 ring-1 ring-inset ring-teal-500/20 shadow-sm",
+  SUPPLIER:        "bg-orange-500/10 text-orange-700 ring-1 ring-inset ring-orange-500/20 shadow-sm",
+  "SALES-OFFLINE": "bg-cyan-500/10 text-cyan-700 ring-1 ring-inset ring-cyan-500/20 shadow-sm",
+  "SALES-RETURN":  "bg-pink-500/10 text-pink-700 ring-1 ring-inset ring-pink-500/20 shadow-sm",
 };
 
 const getEntityColor = (entity?: string) =>
-  ENTITY_COLORS[entity?.toUpperCase() ?? ""] ?? "bg-slate-100 text-slate-600";
+  ENTITY_COLORS[entity?.toUpperCase() ?? ""] ?? "bg-slate-500/10 text-slate-700 ring-1 ring-inset ring-slate-500/20 shadow-sm";
 
 // ─── Skeleton row ─────────────────────────────────────────────────────────────
 
@@ -92,7 +96,27 @@ export const ActivityLogPage = () => {
         `${ENDPOINTS.UTILITIES}/activity-logs/${SHOP_ID}`,
         { limit: "200" }
       );
-      if (res?.data) setLogs(res.data);
+      if (res?.data && Array.isArray(res.data)) {
+        const normalizedData = res.data.map((log: LogEntry) => {
+          let action = log.action?.toUpperCase() || "CREATE";
+          if (action === "CREATED") action = "CREATE";
+          if (action === "UPDATED") action = "UPDATE";
+          if (action === "DELETED") action = "DELETE";
+          if (action === "RETURNED") action = "RETURN";
+          
+          let parsedChanges = log.changes;
+          if (typeof parsedChanges === "string") {
+            try {
+              parsedChanges = JSON.parse(parsedChanges);
+            } catch (e) {
+              parsedChanges = [];
+            }
+          }
+          
+          return { ...log, action, changes: parsedChanges };
+        });
+        setLogs(normalizedData);
+      }
     } catch (e) {
       console.error(e);
     } finally {
@@ -131,115 +155,94 @@ export const ActivityLogPage = () => {
   // ─── Render ──────────────────────────────────────────────────────────────
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden flex flex-col">
+    <div className="h-full bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden flex flex-col min-h-0">
 
-      {/* ── Header ── */}
-      <div className="px-6 py-5 border-b border-slate-50 bg-gradient-to-r from-slate-50/60 to-white">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          {/* Title */}
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-rose-50 flex items-center justify-center shrink-0">
-              <Activity size={16} className="text-rose-500" />
-            </div>
-            <div>
-              <h3 className="text-sm font-bold text-slate-800 leading-tight">
-                Activity Log
-              </h3>
-              <p className="text-[11px] text-slate-400 font-medium mt-0.5">
-                Track user actions and system changes across the platform
-              </p>
-            </div>
-          </div>
-
-          {/* Toolbar */}
+      {/* ── Compact Header ── */}
+      <div className="flex flex-col xl:flex-row items-start xl:items-center justify-between gap-3 px-5 py-3 border-b border-slate-100 bg-white shrink-0">
+        
+        {/* Left: Title & Compact Stats */}
+        <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
-            {/* Search */}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
-              <input
-                type="text"
-                placeholder="Search logs…"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-8 pr-4 py-2 h-9 text-xs font-medium bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300 transition-all w-48 placeholder:text-slate-400"
-              />
-              {searchTerm && (
-                <button
-                  onClick={() => setSearchTerm("")}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                >
-                  <X size={12} />
-                </button>
-              )}
+            <div className="w-7 h-7 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
+              <Activity size={14} className="text-blue-500" />
             </div>
-
-            {/* Refresh */}
-            <button
-              onClick={fetchLogs}
-              title="Refresh"
-              className="w-9 h-9 flex items-center justify-center border border-slate-200 rounded-xl text-slate-500 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-600 transition-all"
-            >
-              <RefreshCw
-                className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`}
-              />
-            </button>
+            <h1 className="text-sm font-semibold text-slate-800">Activity Log</h1>
+          </div>
+          <div className="hidden md:flex items-center gap-3 border-l border-slate-200 pl-4 text-[11px] text-slate-500">
+            <span><strong className="font-medium text-slate-700">{logs.length}</strong> Total</span>
+            <span><strong className="font-medium text-emerald-600">{logs.filter((l) => l.action?.toUpperCase().includes("CREATE")).length}</strong> Creates</span>
+            <span><strong className="font-medium text-blue-600">{logs.filter((l) => l.action?.toUpperCase() === "UPDATE").length}</strong> Updates</span>
           </div>
         </div>
 
-        {/* ── Action filter chips ── */}
-        <div className="flex items-center gap-1.5 mt-4 flex-wrap">
-          <Filter size={11} className="text-slate-400 shrink-0" />
-          {uniqueActions.map((action) => {
-            const config = action === "ALL" ? null : getAction(action);
-            const isActive = filterAction === action;
-            return (
+        {/* Right: Filters, Search, Refresh */}
+        <div className="flex items-center gap-2.5 w-full xl:w-auto overflow-x-auto pb-1 xl:pb-0 hide-scrollbar">
+          {/* Action filters */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            {uniqueActions.map((action) => {
+              const config = action === "ALL" ? null : getAction(action);
+              const isActive = filterAction === action;
+              return (
+                <button
+                  key={action}
+                  onClick={() => setFilterAction(action)}
+                  className={`px-2 py-1 rounded-md text-[10px] font-medium transition-all ${
+                    isActive
+                      ? action === "ALL"
+                        ? "bg-slate-800 text-white shadow-sm ring-1 ring-inset ring-slate-800"
+                        : `${config?.color}`
+                      : "bg-white text-slate-500 ring-1 ring-inset ring-slate-200 hover:bg-slate-50"
+                  }`}
+                >
+                  {action === "ALL" ? "All" : (config?.label ?? action)}
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="w-px h-5 bg-slate-200 shrink-0 mx-1 hidden sm:block"></div>
+
+          {/* Search */}
+          <div className="relative shrink-0">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400 pointer-events-none" />
+            <input
+              type="text"
+              placeholder="Search..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-7 pr-3 py-1 h-7 text-xs font-medium bg-slate-50 border border-slate-200 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all w-36 placeholder:text-slate-400"
+            />
+            {searchTerm && (
               <button
-                key={action}
-                onClick={() => setFilterAction(action)}
-                className={`px-2.5 py-1 rounded-lg text-[10px] font-bold border transition-all ${
-                  isActive
-                    ? action === "ALL"
-                      ? "bg-slate-800 border-slate-800 text-white"
-                      : `${config?.color} border-current`
-                    : "bg-white border-slate-200 text-slate-500 hover:border-slate-300"
-                }`}
+                onClick={() => setSearchTerm("")}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
               >
-                {action === "ALL" ? "All Actions" : (config?.label ?? action)}
+                <X size={12} />
               </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* ── Stats strip ── */}
-      <div className="grid grid-cols-3 sm:grid-cols-4 border-b border-slate-50 divide-x divide-slate-50">
-        {[
-          { label: "Total Events",   value: logs.length,                                                                    color: "text-slate-700" },
-          { label: "Creates",        value: logs.filter((l) => l.action?.toUpperCase().includes("CREATE")).length,          color: "text-emerald-600" },
-          { label: "Updates",        value: logs.filter((l) => l.action?.toUpperCase() === "UPDATE").length,                color: "text-blue-600" },
-          { label: "Shown",          value: filteredLogs.length,                                                             color: "text-violet-600" },
-        ].map((stat) => (
-          <div key={stat.label} className="px-4 py-3 text-center hidden sm:block first:block last:block">
-            <p className={`text-base font-black tabular-nums ${stat.color}`}>
-              {stat.value}
-            </p>
-            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">
-              {stat.label}
-            </p>
+            )}
           </div>
-        ))}
+
+          {/* Refresh */}
+          <button
+            onClick={fetchLogs}
+            title="Refresh"
+            className="w-7 h-7 flex items-center justify-center border border-slate-200 rounded-md text-slate-500 hover:bg-slate-50 transition-all shrink-0"
+          >
+            <RefreshCw className={`w-3 h-3 ${loading ? "animate-spin" : ""}`} />
+          </button>
+        </div>
       </div>
 
       {/* ── Log list ── */}
-      <div className="flex-1 overflow-auto min-h-[420px] max-h-[520px]">
+      <div className="flex-1 overflow-auto min-h-0 bg-white">
         {/* Desktop table */}
         <table className="w-full text-left hidden sm:table">
           <thead className="sticky top-0 z-10">
-            <tr className="bg-slate-50/80 backdrop-blur border-b border-slate-100">
+            <tr className="bg-slate-50 border-b border-slate-100">
               {["User", "Action", "Entity", "Date & Time", ""].map((h) => (
                 <th
                   key={h}
-                  className="px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap"
+                  className="px-5 py-3 text-[10px] font-medium text-slate-400 uppercase tracking-widest whitespace-nowrap"
                 >
                   {h}
                 </th>
@@ -293,7 +296,7 @@ export const ActivityLogPage = () => {
                           <div className="w-7 h-7 rounded-full bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center shrink-0">
                             <User size={12} className="text-white" />
                           </div>
-                          <span className="text-xs font-bold text-slate-700">
+                          <span className="text-xs font-medium text-slate-700">
                             {log.user_name ?? "System"}
                           </span>
                         </div>
@@ -302,7 +305,7 @@ export const ActivityLogPage = () => {
                       {/* Action */}
                       <td className="px-5 py-3.5 whitespace-nowrap">
                         <span
-                          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[10px] font-black uppercase tracking-wide ${actionCfg.color}`}
+                          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-medium uppercase tracking-wide ${actionCfg.color}`}
                         >
                           <span className={`w-1.5 h-1.5 rounded-full ${actionCfg.dot}`} />
                           {actionCfg.label}
@@ -313,7 +316,7 @@ export const ActivityLogPage = () => {
                       <td className="px-5 py-3.5">
                         <div className="flex flex-col gap-0.5">
                           <span
-                            className={`inline-flex px-2 py-0.5 rounded-md text-[10px] font-black tracking-wider w-fit ${entityColor}`}
+                            className={`inline-flex px-2 py-0.5 rounded-md text-[10px] font-medium tracking-wider w-fit ${entityColor}`}
                           >
                             {log.entity_type ?? "—"}
                           </span>
@@ -338,7 +341,7 @@ export const ActivityLogPage = () => {
                         {hasChanges ? (
                           <button
                             onClick={() => setSelectedLog(log)}
-                            className="inline-flex items-center gap-1 text-[11px] font-bold text-blue-500 hover:text-blue-700 opacity-0 group-hover:opacity-100 transition-all"
+                            className="inline-flex items-center gap-1 text-[11px] font-medium text-blue-500 hover:text-blue-700 "
                           >
                             Details
                             <ChevronRight size={12} />
@@ -371,18 +374,18 @@ export const ActivityLogPage = () => {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between gap-2 mb-1">
-                        <span className="text-xs font-bold text-slate-700">
+                        <span className="text-xs font-medium text-slate-700">
                           {log.user_name ?? "System"}
                         </span>
                         <span
-                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-[9px] font-black ${actionCfg.color}`}
+                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-medium ${actionCfg.color}`}
                         >
                           <span className={`w-1.5 h-1.5 rounded-full ${actionCfg.dot}`} />
                           {actionCfg.label}
                         </span>
                       </div>
                       <div className="flex items-center gap-1.5 mb-1">
-                        <span className={`text-[10px] font-black px-1.5 py-0.5 rounded ${entityColor}`}>
+                        <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${entityColor}`}>
                           {log.entity_type}
                         </span>
                       </div>
@@ -424,7 +427,7 @@ export const ActivityLogPage = () => {
                   <Activity size={15} className="text-blue-500" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-slate-800">
+                  <h3 className="text-sm font-medium text-slate-800">
                     Change Details
                   </h3>
                   <p className="text-[10px] text-slate-400 font-medium">
@@ -455,12 +458,12 @@ export const ActivityLogPage = () => {
                   key={i}
                   className="bg-white rounded-xl border border-slate-100 p-4 shadow-sm"
                 >
-                  <p className="text-xs font-black text-slate-500 uppercase tracking-wider mb-3">
+                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-3">
                     {change.field}
                   </p>
                   <div className="grid grid-cols-[1fr_auto_1fr] gap-3 items-center">
                     <div>
-                      <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider block mb-1">
+                      <span className="text-[9px] font-medium text-slate-400 uppercase tracking-wider block mb-1">
                         Before
                       </span>
                       <div className="bg-rose-50 text-rose-700 border border-rose-100 text-xs px-3 py-2 rounded-lg font-mono break-all min-h-[32px]">
@@ -469,7 +472,7 @@ export const ActivityLogPage = () => {
                     </div>
                     <ArrowRight size={14} className="text-slate-300 shrink-0" />
                     <div>
-                      <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider block mb-1">
+                      <span className="text-[9px] font-medium text-slate-400 uppercase tracking-wider block mb-1">
                         After
                       </span>
                       <div className="bg-emerald-50 text-emerald-700 border border-emerald-100 text-xs px-3 py-2 rounded-lg font-mono break-all min-h-[32px]">
@@ -485,7 +488,7 @@ export const ActivityLogPage = () => {
             <div className="px-6 py-4 border-t border-slate-100 bg-white flex justify-end">
               <button
                 onClick={() => setSelectedLog(null)}
-                className="px-5 py-2 text-xs font-bold text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors"
+                className="px-5 py-2 text-xs font-medium text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors"
               >
                 Close
               </button>

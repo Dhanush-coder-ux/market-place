@@ -2628,6 +2628,48 @@
           }
         }
       }
+    },
+    "/analytics-dashboard/sync": {
+      "post": {
+        "tags": [
+          "Analytics Sync"
+        ],
+        "summary": "Sync Shop Data",
+        "operationId": "sync_shop_data_analytics_dashboard_sync_post",
+        "parameters": [
+          {
+            "name": "shop_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Shop Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -2673,6 +2715,29 @@
             ],
             "title": "Cleared Amounts",
             "default": 0
+          },
+          "settlements": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Settlements",
+            "default": 0
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
           }
         },
         "type": "object",
@@ -2901,6 +2966,17 @@
             ],
             "title": "Outstanding Amounts",
             "default": 0
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
           }
         },
         "type": "object",
@@ -3014,6 +3090,17 @@
           "sales_type": {
             "type": "string",
             "title": "Sales Type"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
           }
         },
         "type": "object",
@@ -3095,6 +3182,17 @@
               }
             ],
             "title": "Type"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
           }
         },
         "type": "object",

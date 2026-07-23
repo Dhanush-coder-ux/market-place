@@ -30,6 +30,7 @@ export default function Employee() {
 
   const [employees, setEmployees] = useState<EmployeeRecord[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('All');
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -73,8 +74,13 @@ export default function Employee() {
   }, [setActions, navigate, isCleanMode]);
 
   useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(searchTerm), 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  useEffect(() => {
     const params: Record<string, string> = { limit: "50", offset: "1" };
-    if (searchTerm) params.q = searchTerm;
+    if (debouncedSearch) params.q = debouncedSearch;
 
     getData(`${ENDPOINTS.EMPLOYEES}/by/shop/${SHOP_ID}`, params).then((res) => {
       if (res) {
@@ -105,7 +111,7 @@ export default function Employee() {
         setAvailableKeys(sortedKeys);
       }
     });
-  }, [refreshKey, searchTerm]);
+  }, [refreshKey, debouncedSearch]);
 
   const handleDelete = async () => {
     if (!employeeToDelete) return;
@@ -207,7 +213,7 @@ export default function Employee() {
     }
   }, [selectedEmployees, setBottomActions]);
 
-  if (loading && employees.length === 0) {
+  if (loading && employees.length === 0 && !searchTerm && !debouncedSearch) {
     return (
       <div className="flex-1 p-6">
         <SkeletonLoader variant="list" rows={8} showStats={true} />

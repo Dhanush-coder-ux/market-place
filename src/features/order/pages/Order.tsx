@@ -34,10 +34,13 @@ const Order = () => {
   const [refreshKey] = useState(0);
 
   useEffect(() => {
-    orderApi.getOrdersByShop(SHOP_ID, { limit: "50", offset: "1" }).then((res: any) => {
+    const params: any = { limit: "50", offset: "1" };
+    if (status && status !== "ALL") params.status = status;
+    
+    orderApi.getOrdersByShop(SHOP_ID, params).then((res: any) => {
       if (res) setOrders(Array.isArray(res.data) ? res.data : [res.data]);
     }).catch(console.error);
-  }, [refreshKey]);
+  }, [refreshKey, status]);
 
   const handleStatusChange = async (newStatus: string, originalOrder: OrderRecord) => {
     try {
@@ -125,9 +128,7 @@ const Order = () => {
 
   const onlineOrders = orders.filter((o) => o.origin === "ONLINE");
   
-  const filteredOrders = status === "ALL"
-    ? onlineOrders
-    : onlineOrders.filter((o) => o.status === status);
+  const filteredOrders = onlineOrders; // status filtering is now handled by the backend
 
   const totalOrders = onlineOrders.length;
   const pending = onlineOrders.filter((o) => o.status === "PENDING").length;

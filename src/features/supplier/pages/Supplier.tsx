@@ -123,6 +123,14 @@ const Supplier = () => {
 
   const [suppliers, setSuppliers] = useState<SupplierRecord[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("All");
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(searchTerm), 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
   const [refreshKey, setRefreshKey] = useState(0);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [supplierToDelete, setSupplierToDelete] = useState<SupplierRecord | null>(null);
@@ -131,7 +139,7 @@ const Supplier = () => {
   const [toDate, setToDate] = useState("");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   
-  const activeFilters = [fromDate, toDate].filter(Boolean).length;
+  const activeFilters = [fromDate, toDate, statusFilter !== "All" ? "status" : ""].filter(Boolean).length;
 
   // Dynamic Column State
   const [availableKeys, setAvailableKeys] = useState<string[]>([]);
@@ -237,9 +245,11 @@ const Supplier = () => {
 
   useEffect(() => {
     const params: Record<string, string> = { limit: "50", offset: "1" };
-    if (searchTerm) params.q = searchTerm;
+    if (debouncedSearch) params.q = debouncedSearch;
     if (fromDate) params.from_date = fromDate;
     if (toDate) params.to_date = toDate;
+    if (statusFilter === "Outstanding") params.has_outstanding = "true";
+    if (statusFilter === "Cleared") params.has_outstanding = "false";
 
     getData(`${ENDPOINTS.SUPPLIERS}/by/shop/${SHOP_ID}`, params).then((res) => {
       if (res) {
@@ -284,7 +294,7 @@ const Supplier = () => {
         setAvailableKeys(sortedKeys);
       }
     });
-  }, [refreshKey, searchTerm, fromDate, toDate]);
+  }, [refreshKey, debouncedSearch, fromDate, toDate, statusFilter]);
 
   const handleDelete = async () => {
     if (!supplierToDelete) return;
@@ -301,7 +311,7 @@ const Supplier = () => {
     }
   };
 
-  if (loading) {
+  if (loading && suppliers.length === 0 && !searchTerm && !debouncedSearch) {
     return (
       <div className="flex-1 p-6">
         <SkeletonLoader variant="list" rows={8} showStats={true} />
@@ -320,18 +330,24 @@ const Supplier = () => {
             label="Total Suppliers"
             value={(analyticsStats?.overview?.supplier?.total_suppliers ?? suppliers.length).toString()}
             iconBg="bg-blue-50 text-blue-600"
+            onClick={() => setStatusFilter("All")}
+            className={statusFilter === "All" ? "ring-2 ring-blue-400 border-transparent shadow-sm" : ""}
           />
           <StatCard
             icon={Phone}
             label="Total Outstanding"
             value={fmt(analyticsStats?.overview?.supplier?.total_outstandings ?? 0)}
             iconBg="bg-rose-50 text-rose-600"
+            onClick={() => setStatusFilter(prev => prev === "Outstanding" ? "All" : "Outstanding")}
+            className={statusFilter === "Outstanding" ? "ring-2 ring-rose-400 border-transparent shadow-sm" : ""}
           />
           <StatCard
             icon={Phone}
             label="Total Cleared"
             value={fmt(analyticsStats?.overview?.supplier?.total_cleared_amounts ?? 0)}
             iconBg="bg-emerald-50 text-emerald-600"
+            onClick={() => setStatusFilter(prev => prev === "Cleared" ? "All" : "Cleared")}
+            className={statusFilter === "Cleared" ? "ring-2 ring-emerald-400 border-transparent shadow-sm" : ""}
           />
         </div>
       )}
@@ -381,10 +397,33 @@ const Supplier = () => {
         isOpen={isFilterOpen}
         onClose={() => setIsFilterOpen(false)}
         onApply={() => { }}
-        onClear={() => { setFromDate(""); setToDate(""); setSearchTerm(""); }}
+        onClear={() => { setFromDate(""); setToDate(""); setStatusFilter("All"); }}
         title="Supplier Filters"
       >
         <div className="space-y-4">
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Payment Status</label>
+            <div className="flex gap-2">
+              <button 
+                onClick={() => setStatusFilter("All")}
+                className={`flex-1 h-9 rounded-md text-xs font-semibold border transition-all ${statusFilter === "All" ? "border-slate-800 bg-slate-800 text-white" : "border-slate-200 text-slate-600 bg-slate-50 hover:bg-slate-100"}`}
+              >
+                All
+              </button>
+              <button 
+                onClick={() => setStatusFilter("Outstanding")}
+                className={`flex-1 h-9 rounded-md text-xs font-semibold border transition-all ${statusFilter === "Outstanding" ? "border-rose-500 bg-rose-50 text-rose-700" : "border-slate-200 text-slate-600 bg-slate-50 hover:bg-slate-100"}`}
+              >
+                Outstanding
+              </button>
+              <button 
+                onClick={() => setStatusFilter("Cleared")}
+                className={`flex-1 h-9 rounded-md text-xs font-semibold border transition-all ${statusFilter === "Cleared" ? "border-emerald-500 bg-emerald-50 text-emerald-700" : "border-slate-200 text-slate-600 bg-slate-50 hover:bg-slate-100"}`}
+              >
+                Cleared
+              </button>
+            </div>
+          </div>
           <div className="flex items-center gap-2">
             <div className="space-y-1.5 flex-1">
               <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">From</label>

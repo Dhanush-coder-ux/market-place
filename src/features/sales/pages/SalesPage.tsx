@@ -8,8 +8,8 @@ import {
 } from "lucide-react";
 import SkeletonLoader from "@/components/common/SkeletonLoader";
 import {
-  DollarSign, RefreshCw, TrendingUp,
-  ExternalLink, User
+  DollarSign, TrendingUp,
+  ExternalLink, Globe, Store
 } from "lucide-react";
 import { useApi } from "@/context/ApiContext";
 import { useHeader } from "@/context/HeaderContext";
@@ -293,6 +293,19 @@ const SalesListPage: React.FC = () => {
   }, []);
 
   /* ── Filters ── */
+  const [analyticsStats, setAnalyticsStats] = useState<any>(null);
+
+  useEffect(() => {
+    api.getData(ENDPOINTS.ANALYTICS_SALES_OVERALL, { shop_id: SHOP_ID })
+      .then((res) => {
+        const data = res?.data ?? res;
+        if (data) {
+          setAnalyticsStats({ overview: { sales: data } });
+        }
+      })
+      .catch(() => {});
+  }, [api]);
+
   const filters = useMemo(() => ({
     search: debouncedSearch,
     origin: filterOrigin,
@@ -327,7 +340,7 @@ const SalesListPage: React.FC = () => {
     setOrders(filtered);
   }, [filtered]);
 
-  if (loading && filtered.length === 0) {
+  if (loading && filtered.length === 0 && !search && !debouncedSearch) {
     return (
       <div className="flex-1 p-6">
         <SkeletonLoader variant="list" rows={8} showStats={true} />
@@ -343,7 +356,7 @@ const SalesListPage: React.FC = () => {
         <div className="flex gap-3 pb-1 overflow-x-auto scrollbar-none">
           <StatCard
             label="Total Revenue"
-            value={(stats?.total_order_value || 0).toLocaleString()}
+            value={(analyticsStats?.overview?.sales?.total_sales_amounts ?? stats?.total_order_value ?? 0).toLocaleString()}
             prefix="₹"
             icon={<DollarSign size={18} />}
             iconBg="bg-emerald-50"
@@ -352,27 +365,29 @@ const SalesListPage: React.FC = () => {
           />
           <StatCard
             label="Total Orders"
-            value={stats?.total_orders || 0}
+            value={analyticsStats?.overview?.sales?.total_sales ?? stats?.total_orders ?? 0}
             icon={<TrendingUp size={18} />}
             iconBg="bg-blue-50"
             iconColor="text-blue-600"
             subValue="All Time"
           />
           <StatCard
-            label="Returns & Exchanges"
-            value={`${stats?.total_returns || 0} / ${stats?.total_exchanged || 0}`}
-            icon={<RefreshCw size={18} />}
+            label="Online Sales"
+            value={(analyticsStats?.overview?.sales?.total_online_sales_amount ?? 0).toLocaleString()}
+            prefix="₹"
+            icon={<Globe size={18} />}
             iconBg="bg-rose-50"
             iconColor="text-rose-500"
-            subValue="Items"
+            subValue={`${analyticsStats?.overview?.sales?.total_online_sales ?? 0} Orders`}
           />
           <StatCard
-            label="Registered / Walk-in"
-            value={`${stats?.registered_customer_count || 0} / ${stats?.walkin_customer_count || 0}`}
-            icon={<User size={18} />}
+            label="Offline Sales"
+            value={(analyticsStats?.overview?.sales?.total_offline_sales_amount ?? 0).toLocaleString()}
+            prefix="₹"
+            icon={<Store size={18} />}
             iconBg="bg-indigo-50"
             iconColor="text-indigo-500"
-            subValue="Customers"
+            subValue={`${analyticsStats?.overview?.sales?.total_offline_sales ?? 0} Orders`}
           />
         </div>
       )}

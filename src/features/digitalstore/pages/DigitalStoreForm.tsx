@@ -144,7 +144,7 @@ export default function StoreSetupWizard({ existingData }: { existingData?: Part
           mobile_numbers: [],
           website: null
         },
-        visible_online: false, // temporarily false to bypass constraint
+        visible_online: true, 
       };
 
       const fullPayload = {
@@ -162,11 +162,11 @@ export default function StoreSetupWizard({ existingData }: { existingData?: Part
       let newShopId = currentShopId;
       let isNewShop = false;
       
-      // 1. Create or Update Shop (visible_online = false initially to satisfy constraint)
+      // 1. Create or Update Shop (visible_online = true now that we have hours and delivery)
       if (currentShopId && currentShopId !== "string") {
-        await shop.updateShop({ id: currentShopId, ...fullPayload, visible_online: false });
+        await shop.updateShop({ id: currentShopId, ...fullPayload, visible_online: true });
       } else {
-        const res = await shop.createShop({ ...fullPayload, visible_online: false });
+        const res = await shop.createShop({ ...fullPayload, visible_online: true });
         newShopId = res.data?.id || res.id;
         isNewShop = true;
       }
@@ -177,11 +177,6 @@ export default function StoreSetupWizard({ existingData }: { existingData?: Part
       }
       if (form.banner instanceof File && newShopId) {
         await shop.uploadShopImage(form.banner, "banner", newShopId);
-      }
-
-      // 2. Finally, set shop as visible online now that hours/delivery are saved
-      if (newShopId) {
-        await shop.updateShop({ id: newShopId, visible_online: true });
       }
 
       if (newShopId) {

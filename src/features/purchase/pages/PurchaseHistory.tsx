@@ -874,7 +874,7 @@ const PurchaseHistory = () => {
       limit: limit.toString(),
       offset: offset.toString()
     };
-    if (filters.search) params.search = filters.search;
+    if (filters.search) params.q = filters.search;
     if (filters.type) params.type = filters.type;
     if (filters.supplier_id) params.supplier_id = filters.supplier_id;
     if (filters.fromDate) params.from_date = filters.fromDate;
@@ -1057,7 +1057,7 @@ const PurchaseHistory = () => {
         </RightSidebarFilter>
 
         {/* ── Content ── */}
-        {loading && filtered.length === 0 ? (
+        {loading && filtered.length === 0 && !searchTerm && !debouncedSearch ? (
           <div className="p-3">
             <SkeletonLoader variant="table" rows={8} cols={6} />
           </div>

@@ -830,6 +830,7 @@ const InventoryPage = () => {
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const [refreshKey, setRefreshKey] = useState(0);
+  const [stockStatus, setStockStatus] = useState<string>("");
 
   const toggleSelectItem = (id: string) => {
     setSelectedItems(prev => {
@@ -917,6 +918,7 @@ const InventoryPage = () => {
     setFromDate("");
     setToDate("");
     setSearchQuery("");
+    setStockStatus("");
   };
 
   const fetchPage = useCallback(async (limit: number, offset: number, filters: any) => {
@@ -925,9 +927,10 @@ const InventoryPage = () => {
       limit: limit.toString(),
       offset: offset.toString()
     };
-    if (filters.search) params.search = filters.search;
+    if (filters.search) params.q = filters.search;
     if (filters.fromDate) params.from_date = filters.fromDate;
     if (filters.toDate) params.to_date = filters.toDate;
+    if (filters.stockStatus) params.stock_status = filters.stockStatus;
 
     const res = await getData(`${ENDPOINTS.INVENTORIES}/by/shop/${SHOP_ID}`, params);
     
@@ -957,8 +960,9 @@ const InventoryPage = () => {
     search: debouncedSearch,
     fromDate,
     toDate,
+    stockStatus,
     refreshKey
-  }), [debouncedSearch, fromDate, toDate, refreshKey]);
+  }), [debouncedSearch, fromDate, toDate, stockStatus, refreshKey]);
 
   const { items: inventory, loading, loadingMore, stats: overallStats, totalCount, lastElementRef } = useInfiniteScroll({
     fetchPage,
@@ -998,7 +1002,7 @@ const InventoryPage = () => {
     });
   }, []);
 
-  if (loading && inventory.length === 0) {
+  if (loading && inventory.length === 0 && !searchQuery) {
     return (
       <div className="flex-1 p-6">
         <SkeletonLoader variant="list" rows={8} showStats={true} />
@@ -1036,6 +1040,8 @@ const InventoryPage = () => {
             subValue="priority"
             iconBg="bg-amber-50"
             iconColor="text-amber-500"
+            onClick={() => setStockStatus(prev => prev === "low" ? "" : "low")}
+            className={stockStatus === "low" ? "ring-2 ring-amber-400 border-transparent shadow-sm" : ""}
           />
           <StatCard
             icon={AlertCircle}
@@ -1044,6 +1050,8 @@ const InventoryPage = () => {
             subValue="items empty"
             iconBg="bg-red-50"
             iconColor="text-red-500"
+            onClick={() => setStockStatus(prev => prev === "out_of_stock" ? "" : "out_of_stock")}
+            className={stockStatus === "out_of_stock" ? "ring-2 ring-red-400 border-transparent shadow-sm" : ""}
           />
         </div>
       )}
@@ -1122,6 +1130,30 @@ const InventoryPage = () => {
                 onChange={e => setToDate(e.target.value)}
                 className="w-full h-9 px-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-750 focus:outline-none focus:border-slate-300 focus:bg-white transition-colors"
               />
+            </div>
+          </div>
+          
+          <div className="space-y-1.5 pt-2">
+            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Stock Status</label>
+            <div className="flex gap-2">
+              <button 
+                onClick={() => setStockStatus("")}
+                className={`flex-1 h-9 rounded-md text-xs font-semibold border transition-all ${stockStatus === "" ? "border-slate-800 bg-slate-800 text-white" : "border-slate-200 text-slate-600 bg-slate-50 hover:bg-slate-100"}`}
+              >
+                All
+              </button>
+              <button 
+                onClick={() => setStockStatus("low")}
+                className={`flex-1 h-9 rounded-md text-xs font-semibold border transition-all ${stockStatus === "low" ? "border-amber-500 bg-amber-50 text-amber-700" : "border-slate-200 text-slate-600 bg-slate-50 hover:bg-slate-100"}`}
+              >
+                Low Stock
+              </button>
+              <button 
+                onClick={() => setStockStatus("out_of_stock")}
+                className={`flex-1 h-9 rounded-md text-xs font-semibold border transition-all ${stockStatus === "out_of_stock" ? "border-red-500 bg-red-50 text-red-700" : "border-slate-200 text-slate-600 bg-slate-50 hover:bg-slate-100"}`}
+              >
+                Out of Stock
+              </button>
             </div>
           </div>
         </div>

@@ -190,7 +190,7 @@ const CustomerList = () => {
     }
   }, [selectedCustomers, setBottomActions]);
 
-  if (loading && customers.length === 0) {
+  if (loading && customers.length === 0 && !searchTerm && !debouncedSearch) {
     return (
       <div className="flex-1 p-6">
         <SkeletonLoader variant="list" rows={8} showStats={true} />

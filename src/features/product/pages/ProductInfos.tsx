@@ -904,9 +904,15 @@ const ProductInfos = () => {
 
   const [products, setProducts] = useState<InventoryRecord[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(searchTerm), 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
 
   const [analyticsStats, setAnalyticsStats] = useState<any>(null);
 
@@ -971,7 +977,9 @@ const ProductInfos = () => {
       limit: "100",
       offset: "1",
     };
-    if (searchTerm) params.q = searchTerm;
+    if (debouncedSearch) params.q = debouncedSearch;
+    if (statusFilter === "Low Stock") params.stock_status = "low";
+    if (statusFilter === "Out of Stock") params.stock_status = "out_of_stock";
 
     getData(`${ENDPOINTS.INVENTORIES}/by/shop/${SHOP_ID}`, params, { cacheKey: "products-list" }).then(
       (res) => {
@@ -1001,7 +1009,7 @@ const ProductInfos = () => {
         }
       }
     );
-  }, [refreshKey, searchTerm, getData]);
+  }, [refreshKey, debouncedSearch, statusFilter, getData]);
 
   const toggleSelectProduct = (id: string) => {
     setSelectedProducts(prev => {
@@ -1105,20 +1113,8 @@ const ProductInfos = () => {
   }, [selectedProducts, setBottomActions, navigate]);
 
   const filteredProducts = useMemo(() => {
-    return products.filter((p) => {
-      const name = String(p.name || "").toLowerCase();
-      const sku = String(
-        p.barcode ||
-          p.datas?.barcode ||
-          (p as any).sku ||
-          p.datas?.sku ||
-          ""
-      ).toLowerCase();
-      const category = String(p.category || "").toLowerCase();
-      const q = searchTerm.toLowerCase();
-      return name.includes(q) || sku.includes(q) || category.includes(q);
-    });
-  }, [products, searchTerm]);
+    return products;
+  }, [products]);
 
 
 
@@ -1139,7 +1135,7 @@ const ProductInfos = () => {
     [products]
   );
 
-  if (loading && products.length === 0) {
+  if (loading && products.length === 0 && !searchTerm && !debouncedSearch) {
     return (
       <div className="flex-1 p-6">
         <SkeletonLoader variant="list" rows={8} showStats={true} />
@@ -1176,6 +1172,8 @@ const ProductInfos = () => {
             subValue="items need restock"
             iconBg="bg-amber-50"
             iconColor="text-amber-500"
+            onClick={() => setStatusFilter(prev => prev === "Low Stock" ? "All" : "Low Stock")}
+            className={statusFilter === "Low Stock" ? "ring-2 ring-amber-400 border-transparent shadow-sm" : ""}
           />
           <StatCard
             icon={AlertCircle}
@@ -1184,6 +1182,8 @@ const ProductInfos = () => {
             subValue="items empty"
             iconBg="bg-red-50"
             iconColor="text-red-500"
+            onClick={() => setStatusFilter(prev => prev === "Out of Stock" ? "All" : "Out of Stock")}
+            className={statusFilter === "Out of Stock" ? "ring-2 ring-red-400 border-transparent shadow-sm" : ""}
           />
         </div>
       )}

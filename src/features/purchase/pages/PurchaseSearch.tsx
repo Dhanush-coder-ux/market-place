@@ -35,10 +35,11 @@ const PurchaseSearch = () => {
       const res = await getData(`${ENDPOINTS.PURCHASES}/by/shop/${SHOP_ID}`, { limit: "10", q });
       const rawData = res?.data || [];
       return rawData.map((po: any) => {
-        const poLabel = po.invoice_no || po.id;
+        const poLabel = po.invoice_no || po.ui_id || po.purchase_id || po.id;
         const vendor = po.supplier?.supplier_name || "Unknown Vendor";
         return {
           ...po,
+          id: po.purchase_id || po.id,
           displayName: `${poLabel} · ${vendor}`
         };
       });

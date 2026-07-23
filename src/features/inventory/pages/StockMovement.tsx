@@ -58,8 +58,6 @@ export interface Movement {
 // ─── Mock Data ───────────────────────────────────────────────────────────────
 
 const WAREHOUSES = ["All Locations", "Warehouse A", "Warehouse B", "Store Front", "Cold Storage", "Returns Depot"];
-const MOVEMENT_TYPES = ["All", "PURCHASE", "SALES", "ONLINE_SALES", "OFFLINE_SALES", "ADJUSTMENT", "SALES_RETURN"];
-
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -696,7 +694,55 @@ export default function StockMovementPage() {
     limit: 20
   });
 
-  const pageData = filtered;
+  const pageData = useMemo(() => {
+    let result = [...filtered];
+
+    if (debouncedSearch) {
+      const lower = debouncedSearch.toLowerCase();
+      result = result.filter(m => 
+        (m.product && m.product.toLowerCase().includes(lower)) ||
+        (m.sku && m.sku.toLowerCase().includes(lower)) ||
+        (m.id && m.id.toLowerCase().includes(lower)) ||
+        (m.fullId && m.fullId.toLowerCase().includes(lower)) ||
+        (m.ref && m.ref.toLowerCase().includes(lower)) ||
+        (m.batch && m.batch.toLowerCase().includes(lower)) ||
+        (m.variant && m.variant.toLowerCase().includes(lower)) ||
+        (m.type && m.type.toLowerCase().includes(lower)) ||
+        (m.skuValue && m.skuValue.toLowerCase().includes(lower))
+      );
+    }
+
+    if (typeFilter && typeFilter !== "All") {
+      result = result.filter(m => m.type.toUpperCase() === typeFilter.toUpperCase());
+    }
+
+    if (dateFrom) {
+      const from = new Date(dateFrom).setHours(0, 0, 0, 0);
+      result = result.filter(m => new Date(m.date).getTime() >= from);
+    }
+    
+    if (dateTo) {
+      const to = new Date(dateTo).setHours(23, 59, 59, 999);
+      result = result.filter(m => new Date(m.date).getTime() <= to);
+    }
+    
+    result.sort((a, b) => {
+      if (sortField === "date") {
+        const diff = new Date(b.date).getTime() - new Date(a.date).getTime();
+        return sortDir === "desc" ? diff : -diff;
+      } else {
+        const diff = Math.abs(b.qty) - Math.abs(a.qty);
+        return sortDir === "desc" ? diff : -diff;
+      }
+    });
+
+    return result;
+  }, [filtered, debouncedSearch, typeFilter, dateFrom, dateTo, sortField, sortDir]);
+
+  const dynamicTypes = useMemo(() => {
+    const s = new Set(filtered.map(m => m.type).filter(Boolean));
+    return ["All", ...Array.from(s)];
+  }, [filtered]);
 
   const today = new Date().toISOString().slice(0, 10);
   const todayMvts = filtered.filter(m => fmtDate(m.date) === today);
@@ -788,14 +834,14 @@ export default function StockMovementPage() {
           <button
             type="button"
             onClick={() => setIsFilterOpen(true)}
-            className={`h-8 px-3 rounded-md border text-xs font-semibold flex items-center gap-1.5 active:scale-95 transition-all shadow-sm shrink-0 ${warehouseFilter !== "All" || typeFilter !== "All" || dateFrom || dateTo
-              ? "border-slate-200 text-slate-650 bg-white hover:bg-slate-50"
+            className={`h-8 px-3 rounded-md border text-xs font-semibold flex items-center gap-1.5 active:scale-95 transition-all shadow-sm shrink-0 ${typeFilter !== "All" || dateFrom || dateTo
+              ? "border-blue-200 text-blue-600 bg-blue-50/50"
               : "border-slate-200 text-slate-650 bg-white hover:bg-slate-50"
               }`}
             title="Filters"
           >
             <Filter size={13} />
-
+            {(typeFilter !== "All" || dateFrom || dateTo) && <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />}
           </button>
 
           <ColumnPicker
@@ -819,7 +865,7 @@ export default function StockMovementPage() {
           <div className="space-y-1.5">
             <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Movement Type</label>
             <ReusableSelect
-              options={MOVEMENT_TYPES.map(t => ({ label: t.replace('_', ' '), value: t }))}
+              options={dynamicTypes.map(t => ({ label: String(t).replace(/_/g, ' '), value: String(t) }))}
               value={typeFilter}
               onValueChange={(val) => setTypeFilter(val)}
               placeholder="Type"

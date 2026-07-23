@@ -32,6 +32,7 @@ const CustomerList = () => {
   const [toDate, setToDate] = useState("");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [filterOutstanding, setFilterOutstanding] = useState("All");
 
   const { getData, deleteData } = useApi();
   const [analyticsStats, setAnalyticsStats] = useState<any>(null);
@@ -70,15 +71,16 @@ const CustomerList = () => {
   }, [setActions, navigate]);
 
   /* ── Fetch Page ── */
-  const fetchPage = useCallback(async (limit: number, offset: number, filters: any) => {
+  const fetchPage = useCallback(async (limit: number, offset: number, _filters: any) => {
     const params: any = {
       shop_id: SHOP_ID,
       limit: limit.toString(),
       offset: offset.toString()
     };
-    if (filters.search) params.q = filters.search;
-    if (filters.fromDate) params.from_date = filters.fromDate;
-    if (filters.toDate) params.to_date = filters.toDate;
+    // We will fetch all and filter locally as per user request to not modify backend code
+    // if (filters.search) params.q = filters.search;
+    // if (filters.fromDate) params.from_date = filters.fromDate;
+    // if (filters.toDate) params.to_date = filters.toDate;
 
     const res = await customer.getCustomersByShopId(SHOP_ID, params);
 
@@ -97,22 +99,52 @@ const CustomerList = () => {
     };
   }, [customer]);
 
-  /* ── Filters ── */
-  const filters = useMemo(() => ({
-    search: debouncedSearch,
-    fromDate,
-    toDate,
+  /* ── API Filters ── */
+  const apiFilters = useMemo(() => ({
     refreshKey
-  }), [debouncedSearch, fromDate, toDate, refreshKey]);
+  }), [refreshKey]);
 
   const { items: customers, loading, loadingMore, totalCount, lastElementRef } = useInfiniteScroll({
     fetchPage,
-    filters,
-    limit: 20
+    filters: apiFilters,
+    limit: 50
   });
 
-  const activeFilters = [fromDate, toDate].filter(Boolean).length;
-  const clearAll = () => { setFromDate(""); setToDate(""); setSearchTerm(""); };
+  /* ── Local Filters ── */
+  const filteredCustomers = useMemo(() => {
+    let result = customers;
+    if (debouncedSearch) {
+      const q = debouncedSearch.toLowerCase();
+      result = result.filter((c: any) => 
+        (c.name && c.name.toLowerCase().includes(q)) ||
+        (c.ui_id && c.ui_id.toLowerCase().includes(q)) ||
+        (c.contact_infos?.mobile_number && c.contact_infos.mobile_number.includes(q)) ||
+        (c.contact_infos?.email && c.contact_infos.email.toLowerCase().includes(q)) ||
+        (c.location_infos?.full_address && c.location_infos.full_address.toLowerCase().includes(q))
+      );
+    }
+    
+    if (fromDate) {
+      const from = new Date(fromDate).getTime();
+      result = result.filter((c: any) => new Date(c.created_at).getTime() >= from);
+    }
+    
+    if (toDate) {
+      const to = new Date(toDate).getTime() + 86400000;
+      result = result.filter((c: any) => new Date(c.created_at).getTime() <= to);
+    }
+    
+    if (filterOutstanding === "Outstanding") {
+      result = result.filter((c: any) => (c.outstanding_infos?.amount ?? c.outstanding ?? 0) > 0);
+    } else if (filterOutstanding === "Cleared") {
+      result = result.filter((c: any) => (c.outstanding_infos?.amount ?? c.outstanding ?? 0) <= 0);
+    }
+
+    return result;
+  }, [customers, debouncedSearch, fromDate, toDate, filterOutstanding]);
+
+  const activeFilters = [fromDate, toDate, filterOutstanding !== "All"].filter(Boolean).length;
+  const clearAll = () => { setFromDate(""); setToDate(""); setSearchTerm(""); setFilterOutstanding("All"); };
 
   /* ── Row Selection ── */
   const [selectedCustomers, setSelectedCustomers] = useState<Set<string>>(new Set());
@@ -205,7 +237,7 @@ const CustomerList = () => {
       <div className="flex gap-3 pb-1 overflow-x-auto scrollbar-none">
         <StatCard
           label="Total Customers"
-          value={analyticsStats?.total_customers ?? customers.length}
+          value={analyticsStats?.total_customers ?? filteredCustomers.length}
           icon={<Users size={18} />}
           iconBg="bg-blue-50"
           iconColor="text-blue-600"
@@ -264,7 +296,7 @@ const CustomerList = () => {
           )}
         </button>
 
-        <span className="font-mono text-[11px] font-medium text-slate-400 shrink-0">{customers.length} {totalCount > 0 ? `/ ${totalCount}` : ''}</span>
+        <span className="font-mono text-[11px] font-medium text-slate-400 shrink-0">{filteredCustomers.length} {totalCount > 0 ? `/ ${totalCount}` : ''}</span>
       </div>
 
       {/* ── Filter Sidebar ── */}
@@ -296,6 +328,19 @@ const CustomerList = () => {
               />
             </div>
           </div>
+
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Outstanding Status</label>
+            <select
+              value={filterOutstanding}
+              onChange={e => setFilterOutstanding(e.target.value)}
+              className="w-full h-9 px-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 focus:outline-none focus:border-slate-300 focus:bg-white transition-colors"
+            >
+              <option value="All">All Statuses</option>
+              <option value="Outstanding">Has Outstanding</option>
+              <option value="Cleared">Cleared</option>
+            </select>
+          </div>
         </div>
       </RightSidebarFilter>
 
@@ -308,13 +353,13 @@ const CustomerList = () => {
                 <th className="py-2.5 px-4 text-[10px] font-black text-slate-400 uppercase tracking-wider w-10 text-center">
                   <input
                     type="checkbox"
-                    checked={customers.length > 0 && customers.every((c: any) => selectedCustomers.has(c.id))}
+                    checked={filteredCustomers.length > 0 && filteredCustomers.every((c: any) => selectedCustomers.has(c.id))}
                     onChange={() => {
-                      const allSelected = customers.length > 0 && customers.every((c: any) => selectedCustomers.has(c.id));
+                      const allSelected = filteredCustomers.length > 0 && filteredCustomers.every((c: any) => selectedCustomers.has(c.id));
                       if (allSelected) {
                         setSelectedCustomers(new Set());
                       } else {
-                        setSelectedCustomers(new Set(customers.map((c: any) => c.id)));
+                        setSelectedCustomers(new Set(filteredCustomers.map((c: any) => c.id)));
                       }
                     }}
                     className="rounded border-slate-350 text-blue-600 focus:ring-blue-500/20 cursor-pointer"
@@ -330,15 +375,15 @@ const CustomerList = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50 bg-white">
-              {customers.length === 0 ? (
+              {filteredCustomers.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="py-16 text-center text-sm text-slate-400 font-medium">
                     No customers found matching your filters.
                   </td>
                 </tr>
               ) : (
-                customers.map((c: any, idx: number) => {
-                  const isLast = idx === customers.length - 1;
+                filteredCustomers.map((c: any, idx: number) => {
+                  const isLast = idx === filteredCustomers.length - 1;
                   const isSelected = selectedCustomers.has(c.id);
                   const name = c.name || "Unknown";
                   const initials = name.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2);

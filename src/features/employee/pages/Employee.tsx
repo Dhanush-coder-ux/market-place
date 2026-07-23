@@ -80,7 +80,7 @@ export default function Employee() {
 
   useEffect(() => {
     const params: Record<string, string> = { limit: "50", offset: "1" };
-    if (debouncedSearch) params.q = debouncedSearch;
+    // Fetch all and perform search locally to avoid backend issues
 
     getData(`${ENDPOINTS.EMPLOYEES}/by/shop/${SHOP_ID}`, params).then((res) => {
       if (res) {
@@ -111,7 +111,7 @@ export default function Employee() {
         setAvailableKeys(sortedKeys);
       }
     });
-  }, [refreshKey, debouncedSearch]);
+  }, [refreshKey]); // Fetch only on refreshKey change
 
   const handleDelete = async () => {
     if (!employeeToDelete) return;
@@ -173,12 +173,36 @@ export default function Employee() {
   };
 
   const filteredEmployees = useMemo(() => {
-    return employees.filter(emp => {
+    let result = employees;
+
+    if (debouncedSearch) {
+      const q = debouncedSearch.toLowerCase();
+      result = result.filter((emp: any) => {
+        if (!emp) return false;
+        const name = emp.name || "";
+        const email = emp.email || "";
+        const mobile = emp.mobile_number || "";
+        const role = emp.role || "";
+        const dept = emp.department || "";
+        const id = emp.ui_id || emp.id || "";
+        
+        return name.toLowerCase().includes(q) ||
+               email.toLowerCase().includes(q) ||
+               mobile.toLowerCase().includes(q) ||
+               role.toLowerCase().includes(q) ||
+               dept.toLowerCase().includes(q) ||
+               id.toLowerCase().includes(q);
+      });
+    }
+
+    result = result.filter((emp: any) => {
       if (!emp) return false;
       const matchesRole = roleFilter === 'All' || emp.role === roleFilter;
       return matchesRole;
     });
-  }, [employees, roleFilter]);
+
+    return result;
+  }, [employees, roleFilter, debouncedSearch]);
 
   const roles = useMemo(() => {
     const unique = new Set(employees.map(e => e.role).filter(Boolean));

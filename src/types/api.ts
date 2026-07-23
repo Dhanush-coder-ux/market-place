@@ -233,6 +233,7 @@ export interface OrderRecord {
   id: string;
   ui_id?: string;
   shop_id: string;
+  customer_id?: string;
   status: string;
   origin: string;
   orders?: string[];

@@ -35,6 +35,7 @@ import { StatCard } from "@/components/common/StatsCard";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 import { RightSidebarFilter } from "@/components/common/RightSidebarFilter";
+import { ReusableSelect } from "@/components/ui/ReusableSelect";
 
 // --- Types (unchanged) ---
 export interface VariantAttribute {
@@ -831,6 +832,12 @@ const InventoryPage = () => {
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const [refreshKey, setRefreshKey] = useState(0);
   const [stockStatus, setStockStatus] = useState<string>("");
+  const [filtersState, setFiltersState] = useState({
+    category: "All",
+    brand: "All",
+    type: "All",
+    visibility: "All"
+  });
 
   const toggleSelectItem = (id: string) => {
     setSelectedItems(prev => {
@@ -912,13 +919,24 @@ const InventoryPage = () => {
     }
   }, [selectedItems, setBottomActions, navigate]);
   
-  const activeFiltersCount = [fromDate, toDate].filter(Boolean).length;
+  const activeFiltersCount = [
+    fromDate, 
+    toDate, 
+    stockStatus,
+    Object.values(filtersState).some(v => v !== "All") ? "true" : ""
+  ].filter(Boolean).length;
   
   const resetFilters = () => {
     setFromDate("");
     setToDate("");
     setSearchQuery("");
     setStockStatus("");
+    setFiltersState({
+      category: "All",
+      brand: "All",
+      type: "All",
+      visibility: "All"
+    });
   };
 
   const fetchPage = useCallback(async (limit: number, offset: number, filters: any) => {
@@ -970,7 +988,59 @@ const InventoryPage = () => {
     limit: 50
   });
   
-  const filteredInventory = inventory;
+  const categories = useMemo(() => {
+    const s = new Set(inventory.map((item: any) => item.category_infos?.name || item.datas?.category || item.category).filter(Boolean));
+    return ["All", ...Array.from(s)];
+  }, [inventory]);
+
+  const brands = useMemo(() => {
+    const s = new Set(inventory.map((item: any) => item.brand || item.datas?.brand).filter(Boolean));
+    return ["All", ...Array.from(s)];
+  }, [inventory]);
+
+  const filteredInventory = useMemo(() => {
+    let result = inventory as InventoryItem[];
+
+    if (filtersState.category !== "All") {
+      result = result.filter((item: any) => {
+        const cat = item.category_infos?.name || item.datas?.category || item.category;
+        return cat === filtersState.category;
+      });
+    }
+
+    if (filtersState.brand !== "All") {
+      result = result.filter((item: any) => {
+        const brand = item.brand || item.datas?.brand;
+        return brand === filtersState.brand;
+      });
+    }
+
+    if (filtersState.type !== "All") {
+      result = result.filter((item: any) => {
+        const hasVariant = item.type_infos?.has_variant || item.has_variant;
+        const hasBatch = item.type_infos?.has_batch || item.has_batch;
+        const hasSerial = item.type_infos?.has_serialno || item.has_serialno;
+        const isSimple = !hasVariant && !hasBatch && !hasSerial;
+
+        if (filtersState.type === "Simple") return isSimple;
+        if (filtersState.type === "Variants") return hasVariant;
+        if (filtersState.type === "Batches") return hasBatch;
+        if (filtersState.type === "Serials") return hasSerial;
+        return true;
+      });
+    }
+
+    if (filtersState.visibility !== "All") {
+      result = result.filter((item: any) => {
+        const isOnline = item.visible_online === true;
+        if (filtersState.visibility === "Online") return isOnline;
+        if (filtersState.visibility === "Offline") return !isOnline;
+        return true;
+      });
+    }
+
+    return result;
+  }, [inventory, filtersState]);
 
 
 
@@ -1153,6 +1223,66 @@ const InventoryPage = () => {
                 className={`flex-1 h-9 rounded-md text-xs font-semibold border transition-all ${stockStatus === "out_of_stock" ? "border-red-500 bg-red-50 text-red-700" : "border-slate-200 text-slate-600 bg-slate-50 hover:bg-slate-100"}`}
               >
                 Out of Stock
+              </button>
+            </div>
+          </div>
+
+          <div className="space-y-1.5 pt-2">
+            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Category</label>
+            <ReusableSelect
+              value={filtersState.category}
+              onValueChange={(val: string) => setFiltersState(prev => ({ ...prev, category: val }))}
+              options={categories.map(c => ({ label: String(c), value: String(c) }))}
+              placeholder="Select Category"
+            />
+          </div>
+
+          <div className="space-y-1.5 pt-2">
+            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Brand</label>
+            <ReusableSelect
+              value={filtersState.brand}
+              onValueChange={(val: string) => setFiltersState(prev => ({ ...prev, brand: val }))}
+              options={brands.map(b => ({ label: String(b), value: String(b) }))}
+              placeholder="Select Brand"
+            />
+          </div>
+
+          <div className="space-y-1.5 pt-2">
+            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Product Type</label>
+            <ReusableSelect
+              value={filtersState.type}
+              onValueChange={(val: string) => setFiltersState(prev => ({ ...prev, type: val }))}
+              options={[
+                { label: "All", value: "All" },
+                { label: "Simple Product", value: "Simple" },
+                { label: "With Variants", value: "Variants" },
+                { label: "With Batches", value: "Batches" },
+                { label: "With Serials", value: "Serials" }
+              ]}
+              placeholder="Product Type"
+            />
+          </div>
+
+          <div className="space-y-1.5 pt-2">
+            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Visibility</label>
+            <div className="flex gap-2">
+              <button 
+                onClick={() => setFiltersState(prev => ({ ...prev, visibility: "All" }))}
+                className={`flex-1 h-9 rounded-md text-xs font-semibold border transition-all ${filtersState.visibility === "All" ? "border-slate-800 bg-slate-800 text-white" : "border-slate-200 text-slate-600 bg-slate-50 hover:bg-slate-100"}`}
+              >
+                All
+              </button>
+              <button 
+                onClick={() => setFiltersState(prev => ({ ...prev, visibility: "Online" }))}
+                className={`flex-1 h-9 rounded-md text-xs font-semibold border transition-all ${filtersState.visibility === "Online" ? "border-blue-500 bg-blue-50 text-blue-700" : "border-slate-200 text-slate-600 bg-slate-50 hover:bg-slate-100"}`}
+              >
+                Online
+              </button>
+              <button 
+                onClick={() => setFiltersState(prev => ({ ...prev, visibility: "Offline" }))}
+                className={`flex-1 h-9 rounded-md text-xs font-semibold border transition-all ${filtersState.visibility === "Offline" ? "border-slate-400 bg-slate-100 text-slate-700" : "border-slate-200 text-slate-600 bg-slate-50 hover:bg-slate-100"}`}
+              >
+                Offline
               </button>
             </div>
           </div>

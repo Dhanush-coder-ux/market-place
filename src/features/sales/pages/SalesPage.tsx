@@ -24,7 +24,7 @@ import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 /* ═══════════════════════════════════════════════════════════════
    TYPES
 ═══════════════════════════════════════════════════════════════ */
-type OriginType = "Sales" | "Sales Return";
+type OriginType = "Sales" | "Sales Return" | "Online Sales";
 type SaleStatus = "Completed" | "Pending" | "Cancelled";
 type SaleRecord = OrderResponse;
 
@@ -37,6 +37,7 @@ type BadgeConfig = { cls: string; dot: string };
 const ORIGIN_CFG: Record<OriginType, BadgeConfig> = {
   "Sales": { cls: "bg-blue-50 text-blue-700 border-blue-100", dot: "bg-blue-400" },
   "Sales Return": { cls: "bg-orange-50 text-orange-700 border-orange-100", dot: "bg-orange-400" },
+  "Online Sales": { cls: "bg-indigo-50 text-indigo-700 border-indigo-100", dot: "bg-indigo-400" },
 };
 const PAYMENT_CFG: Record<string, BadgeConfig> = {
   Cash: { cls: "bg-emerald-50 text-emerald-700 border-emerald-100", dot: "bg-emerald-400" },
@@ -196,8 +197,9 @@ const SalesListPage: React.FC = () => {
   const fetchPage = React.useCallback(async (limit: number, offset: number, filters: any) => {
       const params: any = { limit: limit.toString(), offset: offset.toString() };
       if (filters.search) params.q = filters.search;
-      // Always filter to OFFLINE origin — Sales page only shows in-store orders
-      params.origin = "OFFLINE";
+      if (filters.origin === "Sales") params.origin = "OFFLINE";
+      else if (filters.origin === "Sales Return") params.origin = "OFFLINE_SALES_RETURN";
+      else if (filters.origin === "Online Sales") params.origin = "ONLINE";
       if (filters.payment) params.payment_method = filters.payment;
       if (filters.status) params.status = filters.status;
       if (filters.fromDate) params.from_date = filters.fromDate;
@@ -256,7 +258,7 @@ const SalesListPage: React.FC = () => {
           total_quantity: totalQty,
           status: s.status ? s.status.charAt(0).toUpperCase() + s.status.slice(1).toLowerCase() : "Unknown", 
           payment_method: pm, 
-          origin: "Sales",  // always OFFLINE so always display as "Sales"
+          origin: s.origin === "OFFLINE" || s.origin === "Sales" ? "Sales" : (s.origin === "OFFLINE_SALES_RETURN" || s.origin === "Sales Return" ? "Sales Return" : (s.origin === "ONLINE" || s.origin === "Online Sales" ? "Online Sales" : s.origin)),
         };
       });
       
@@ -321,7 +323,46 @@ const SalesListPage: React.FC = () => {
     limit: 50
   });
 
-  const filtered = items as any[];
+  const filtered = useMemo<any[]>(() => {
+    let result = [...(items as any[])];
+
+    if (debouncedSearch) {
+      const q = debouncedSearch.toLowerCase();
+      result = result.filter((s: any) => 
+        (s.ui_id && s.ui_id.toString().toLowerCase().includes(q)) ||
+        (s.customer?.customer_name && s.customer.customer_name.toLowerCase().includes(q)) ||
+        (s.customer_id && s.customer_id.toLowerCase().includes(q)) ||
+        (s.customer_id && customerMap[s.customer_id] && customerMap[s.customer_id].toLowerCase().includes(q))
+      );
+    }
+
+    if (filterOrigin) {
+      result = result.filter((s: any) => s.origin === filterOrigin);
+    }
+
+    if (filterPayment) {
+      result = result.filter((s: any) => {
+        const pm = s.payment_method || "";
+        return pm === filterPayment || pm.includes(filterPayment);
+      });
+    }
+
+    if (filterStatus) {
+      result = result.filter((s: any) => s.status.toUpperCase() === filterStatus.toUpperCase());
+    }
+
+    if (fromDate) {
+      const f = new Date(fromDate).setHours(0,0,0,0);
+      result = result.filter((s: any) => new Date(s.created_at).getTime() >= f);
+    }
+
+    if (toDate) {
+      const t = new Date(toDate).setHours(23,59,59,999);
+      result = result.filter((s: any) => new Date(s.created_at).getTime() <= t);
+    }
+
+    return result;
+  }, [items, debouncedSearch, filterOrigin, filterPayment, filterStatus, fromDate, toDate, customerMap]);
 
   const activeFilters = [filterOrigin, filterPayment, filterStatus, fromDate, toDate].filter(Boolean).length;
   const clearAll = () => {
@@ -442,6 +483,7 @@ const SalesListPage: React.FC = () => {
               options={[
                 { label: "All Origins", value: "" },
                 { label: "Sales", value: "Sales" },
+                { label: "Online Sales", value: "Online Sales" },
                 { label: "Sales Return", value: "Sales Return" }
               ]}
               value={filterOrigin}

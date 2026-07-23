@@ -12,18 +12,23 @@ import SkeletonLoader from "@/components/common/SkeletonLoader";
 import { useApi } from "@/context/ApiContext";
 import { SHOP_ID } from "@/services/endpoints";
 import { orderApi } from "@/services/api/order";
+import { customerApi } from "@/services/api/customer";
 import type { OrderRecord } from "@/types/api";
 
-const toCardShape = (o: OrderRecord) => ({
-  billNo: o.ui_id || o.id,
-  customerName: o.customer_name ?? String(o.additional_infos?.customer_name ?? o.datas?.customer_name ?? "Unknown"),
-  phone: o.customer_number ?? String(o.additional_infos?.customer_phone ?? o.datas?.phone ?? "—"),
-  totalAmount: Number(Number(o.calculation_infos?.total ?? o.calculation_infos?.grand_total ?? o.total_amount ?? o.datas?.total_amount ?? o.item_infos?.total_order_amount ?? o.pending_amount ?? 0).toFixed(2)),
-  status: o.status ?? "PENDING",
-});
+const toCardShape = (o: OrderRecord, customerMap?: Record<string, { name: string, phone: string }>) => {
+  const c = o.customer_id && customerMap ? customerMap[o.customer_id] : null;
+  return {
+    billNo: o.ui_id || o.id,
+    customerName: o.customer_name || o.additional_infos?.customer_name || o.datas?.customer_name || c?.name || "Unknown",
+    phone: o.customer_number || o.additional_infos?.customer_phone || o.datas?.phone || c?.phone || "—",
+    totalAmount: Number(Number(o.calculation_infos?.total ?? o.calculation_infos?.grand_total ?? o.total_amount ?? o.datas?.total_amount ?? o.item_infos?.total_order_amount ?? o.pending_amount ?? 0).toFixed(2)),
+    status: o.status ?? "PENDING",
+  };
+};
 
 const Order = () => {
   const { loading, error, clearError } = useApi();
+  const [customerMap, setCustomerMap] = useState<Record<string, { name: string, phone: string }>>({});
 
   const [orders, setOrders] = useState<OrderRecord[]>([]);
   const [status, setStatus] = useState("PENDING");
@@ -32,6 +37,24 @@ const Order = () => {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [refreshKey] = useState(0);
+
+  useEffect(() => {
+    customerApi.getCustomersByShopId(SHOP_ID, { limit: "100", offset: "1" })
+      .then((res: any) => {
+        if (res?.data) {
+          const m: Record<string, { name: string, phone: string }> = {};
+          const custList = Array.isArray(res.data) ? res.data : (res.data.datas ?? []);
+          custList.forEach((c: any) => {
+            m[c.id] = {
+              name: c.name || "Unknown",
+              phone: c.contact_infos?.mobile_number || c.mobile_number || "—"
+            };
+          });
+          setCustomerMap(m);
+        }
+      })
+      .catch(console.error);
+  }, []);
 
   useEffect(() => {
     const params: any = { limit: "50", offset: "1" };
@@ -54,7 +77,7 @@ const Order = () => {
         type: (originalOrder as any).type || "",
         calculation_infos: (originalOrder as any).calculation_infos || {},
         charges_infos: (originalOrder as any).charges_infos || {},
-        payment_infos: (originalOrder as any).payment_infos || [],
+        payment_infos: Array.isArray((originalOrder as any).payment_infos) ? {} : ((originalOrder as any).payment_infos || {}),
         additional_infos: (originalOrder as any).additional_infos || {}
       };
       
@@ -98,7 +121,7 @@ const Order = () => {
         });
         
         setSelectedOrder({
-          ...toCardShape(order),
+          ...toCardShape(order, customerMap),
           orderType: fullOrder.origin || "ONLINE",
           items: mappedItems,
           subtotal: Number(Number(fullOrder.calculation_infos?.sub_total ?? fullOrder.calculation_infos?.total ?? fullOrder.total_amount ?? order.datas?.total_amount ?? fullOrder.item_infos?.total_order_amount ?? fullOrder.pending_amount ?? 0).toFixed(2)),
@@ -115,7 +138,7 @@ const Order = () => {
     
     // Fallback if fetch fails
     setSelectedOrder({
-      ...toCardShape(order),
+      ...toCardShape(order, customerMap),
       orderType: order.origin || "ONLINE",
       items: [],
       subtotal: Number(Number(order.calculation_infos?.sub_total ?? order.calculation_infos?.total ?? order.total_amount ?? order.datas?.total_amount ?? order.item_infos?.total_order_amount ?? order.pending_amount ?? 0).toFixed(2)),
@@ -194,7 +217,7 @@ const Order = () => {
             {filteredOrders.map((order) => (
               <OrdersCard
                 key={order.id}
-                order={toCardShape(order)}
+                order={toCardShape(order, customerMap)}
                 setIsOpen={() => handleOpenDetails(order)}
                 viewMode={viewMode}
                 onStatusChange={(newStatus) => handleStatusChange(newStatus, order)}

@@ -110,6 +110,7 @@ export interface DirectPurchaseData {
   grand_total?: number;
   additional_charges_total?: number;
   status?: string;
+  payment_status?: string;
   version?: string;
 }
 
@@ -283,6 +284,7 @@ export function toDisplayData(p: PurchaseRecord): DirectPurchaseData {
     additional_charges_total: additionalChargesTotal,
     storage_location: d2?.storage_location || (p as any).storage_location || "",
     status: d2?.status ?? (p as any).status ?? "completed",
+    payment_status: (p as any).payment_status ?? "PENDING",
   };
 }
 
@@ -796,10 +798,11 @@ const PurchaseHistory = () => {
 
   const [viewMode, setViewMode] = useState<ViewMode>("vertical");
 
-  const [filterType, setFilterType] = useState("");
   const [filterVendor, setFilterVendor] = useState("");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
+  const [filterStatus, setFilterStatus] = useState("");
+  const [filterPaymentMethod, setFilterPaymentMethod] = useState("");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [selectedPurchases, setSelectedPurchases] = useState<Set<string>>(new Set());
 
@@ -858,14 +861,15 @@ const PurchaseHistory = () => {
     }
   }, [selectedPurchases, setBottomActions]);
 
-  const activeFiltersCount = [filterType, filterVendor, fromDate, toDate].filter(Boolean).length;
+  const activeFiltersCount = [filterVendor, fromDate, toDate, filterStatus, filterPaymentMethod].filter(Boolean).length;
 
   const resetFilters = () => {
-    setFilterType("");
     setFilterVendor("");
     setFromDate("");
     setToDate("");
     setSearchTerm("");
+    setFilterStatus("");
+    setFilterPaymentMethod("");
   };
 
   const fetchPage = useCallback(async (limit: number, offset: number, filters: any) => {
@@ -875,10 +879,11 @@ const PurchaseHistory = () => {
       offset: offset.toString()
     };
     if (filters.search) params.q = filters.search;
-    if (filters.type) params.type = filters.type;
     if (filters.supplier_id) params.supplier_id = filters.supplier_id;
     if (filters.fromDate) params.from_date = filters.fromDate;
     if (filters.toDate) params.to_date = filters.toDate;
+    if (filters.payment_status) params.payment_status = filters.payment_status;
+    if (filters.payment_method) params.payment_method = filters.payment_method;
 
     const res = await purchase.getPurchasesByShop(SHOP_ID, params);
     
@@ -895,12 +900,13 @@ const PurchaseHistory = () => {
 
   const filters = useMemo(() => ({
     search: debouncedSearch,
-    type: filterType,
     supplier_id: filterVendor,
     fromDate,
     toDate,
+    payment_status: filterStatus,
+    payment_method: filterPaymentMethod,
     refreshKey
-  }), [debouncedSearch, filterType, filterVendor, fromDate, toDate, refreshKey]);
+  }), [debouncedSearch, filterVendor, fromDate, toDate, filterStatus, filterPaymentMethod, refreshKey]);
 
   const { items, loading, loadingMore, totalCount, lastElementRef } = useInfiniteScroll<DirectPurchaseData, any>({
     fetchPage,
@@ -908,7 +914,19 @@ const PurchaseHistory = () => {
     limit: 50
   });
 
-  const filtered = items as DirectPurchaseData[];
+  const filtered = useMemo(() => {
+    let result = items as DirectPurchaseData[];
+    
+    if (filterStatus) {
+      result = result.filter(po => po.payment_status?.toUpperCase() === filterStatus.toUpperCase());
+    }
+    
+    if (filterPaymentMethod) {
+      result = result.filter(po => po.paymentMethod?.toUpperCase() === filterPaymentMethod.toUpperCase());
+    }
+    
+    return result;
+  }, [items, filterStatus, filterPaymentMethod]);
 
 
 
@@ -1003,16 +1021,47 @@ const PurchaseHistory = () => {
         >
           <div className="space-y-4">
             <div className="space-y-1.5">
-              <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Purchase Type</label>
+              <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Payment Status</label>
+              <div className="flex gap-2">
+                <button 
+                  onClick={() => setFilterStatus("")}
+                  className={`flex-1 h-9 rounded-md text-xs font-semibold border transition-all ${!filterStatus ? "border-slate-800 bg-slate-800 text-white" : "border-slate-200 text-slate-600 bg-slate-50 hover:bg-slate-100"}`}
+                >
+                  All
+                </button>
+                <button 
+                  onClick={() => setFilterStatus("COMPLETED")}
+                  className={`flex-1 h-9 rounded-md text-xs font-semibold border transition-all ${filterStatus === "COMPLETED" ? "border-emerald-500 bg-emerald-50 text-emerald-700" : "border-slate-200 text-slate-600 bg-slate-50 hover:bg-slate-100"}`}
+                >
+                  Completed
+                </button>
+                <button 
+                  onClick={() => setFilterStatus("PARTIALY-PAID")}
+                  className={`flex-1 h-9 rounded-md text-xs font-semibold border transition-all ${filterStatus === "PARTIALY-PAID" ? "border-amber-500 bg-amber-50 text-amber-700" : "border-slate-200 text-slate-600 bg-slate-50 hover:bg-slate-100"}`}
+                >
+                  Partial
+                </button>
+                <button 
+                  onClick={() => setFilterStatus("PENDING")}
+                  className={`flex-1 h-9 rounded-md text-xs font-semibold border transition-all ${filterStatus === "PENDING" ? "border-rose-500 bg-rose-50 text-rose-700" : "border-slate-200 text-slate-600 bg-slate-50 hover:bg-slate-100"}`}
+                >
+                  Pending
+                </button>
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Payment Method</label>
               <ReusableSelect
                 options={[
-                  { label: "All Types", value: "" },
-                  { label: "Direct Purchase", value: "Direct" },
-                  { label: "LPO (Local PO)", value: "LPO" }
+                  { label: "All Methods", value: "" },
+                  { label: "Cash", value: "CASH" },
+                  { label: "UPI", value: "UPI" },
+                  { label: "Bank Transfer", value: "BANK" }
                 ]}
-                value={filterType}
-                onValueChange={setFilterType}
-                placeholder="Type"
+                value={filterPaymentMethod}
+                onValueChange={setFilterPaymentMethod}
+                placeholder="Method"
               />
             </div>
 

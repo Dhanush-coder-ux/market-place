@@ -905,7 +905,13 @@ const ProductInfos = () => {
   const [products, setProducts] = useState<InventoryRecord[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("All");
+  const [filters, setFilters] = useState({
+    status: "All",
+    category: "All",
+    brand: "All",
+    type: "All",
+    visibility: "All"
+  });
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -978,8 +984,8 @@ const ProductInfos = () => {
       offset: "1",
     };
     if (debouncedSearch) params.q = debouncedSearch;
-    if (statusFilter === "Low Stock") params.stock_status = "low";
-    if (statusFilter === "Out of Stock") params.stock_status = "out_of_stock";
+    if (filters.status === "Low stock") params.stock_status = "low";
+    if (filters.status === "Out of stock") params.stock_status = "out_of_stock";
 
     getData(`${ENDPOINTS.INVENTORIES}/by/shop/${SHOP_ID}`, params, { cacheKey: "products-list" }).then(
       (res) => {
@@ -1009,7 +1015,7 @@ const ProductInfos = () => {
         }
       }
     );
-  }, [refreshKey, debouncedSearch, statusFilter, getData]);
+  }, [refreshKey, debouncedSearch, filters.status, getData]);
 
   const toggleSelectProduct = (id: string) => {
     setSelectedProducts(prev => {
@@ -1112,9 +1118,84 @@ const ProductInfos = () => {
     }
   }, [selectedProducts, setBottomActions, navigate]);
 
-  const filteredProducts = useMemo(() => {
-    return products;
+  const categories = useMemo(() => {
+    const cats = new Set(products.map((p: any) => p.category_infos?.name || p.additional_infos?.category || p.datas?.category || p.category || p.category_id).filter(Boolean));
+    return ["All", ...Array.from(cats)];
   }, [products]);
+
+  const brands = useMemo(() => {
+    const brs = new Set(products.map((p: any) => p.brand || p.additional_infos?.brand || p.datas?.brand || p.brand).filter(Boolean));
+    return ["All", ...Array.from(brs)];
+  }, [products]);
+
+  const filteredProducts = useMemo(() => {
+    let result = products;
+
+    if (debouncedSearch) {
+      const lowerSearch = debouncedSearch.toLowerCase();
+      result = result.filter((p: any) => {
+        const name = p.name?.toLowerCase() || "";
+        const sku = p.sku?.toLowerCase() || p.ui_id?.toLowerCase() || "";
+        const category = (p.category_infos?.name || p.additional_infos?.category || p.datas?.category || p.category || "")?.toLowerCase() || "";
+        const brand = (p.brand || p.additional_infos?.brand || p.datas?.brand || "")?.toLowerCase() || "";
+        const barcode = p.barcode?.toLowerCase() || "";
+
+        return (
+          name.includes(lowerSearch) ||
+          sku.includes(lowerSearch) ||
+          category.includes(lowerSearch) ||
+          brand.includes(lowerSearch) ||
+          barcode.includes(lowerSearch)
+        );
+      });
+    }
+
+    if (filters.status !== "All") {
+      result = result.filter((p: any) => {
+        const stock = calculateProductStock(p);
+        const reorderPoint = Number(
+          p.reorder_point_infos?.reorder_point ?? p.reorder_point ?? p.additional_infos?.reorder_point ?? p.datas?.reorder_point ?? 10
+        );
+        const status = getStockStatus(stock, reorderPoint);
+        return status.label === filters.status;
+      });
+    }
+
+    if (filters.category !== "All") {
+      result = result.filter((p: any) => {
+        const cat = p.category_infos?.name || p.additional_infos?.category || p.datas?.category || p.category || p.category_id;
+        return cat === filters.category;
+      });
+    }
+
+    if (filters.brand !== "All") {
+      result = result.filter((p: any) => {
+        const br = p.brand || p.additional_infos?.brand || p.datas?.brand || p.brand;
+        return br === filters.brand;
+      });
+    }
+    
+    if (filters.type !== "All") {
+      result = result.filter((p: any) => {
+        if (filters.type === "Has Variants") return p.type_infos?.has_variant;
+        if (filters.type === "Has Batches") return p.type_infos?.has_batch;
+        if (filters.type === "Has Serials") return p.type_infos?.has_serialno;
+        if (filters.type === "Simple") return !p.type_infos?.has_variant && !p.type_infos?.has_batch && !p.type_infos?.has_serialno;
+        return true;
+      });
+    }
+
+    if (filters.visibility !== "All") {
+      result = result.filter((p: any) => {
+        const isOnline = p.visible_online === true;
+        if (filters.visibility === "Online") return isOnline;
+        if (filters.visibility === "Offline") return !isOnline;
+        return true;
+      });
+    }
+
+    return result;
+  }, [products, debouncedSearch, filters]);
 
 
 
@@ -1172,8 +1253,8 @@ const ProductInfos = () => {
             subValue="items need restock"
             iconBg="bg-amber-50"
             iconColor="text-amber-500"
-            onClick={() => setStatusFilter(prev => prev === "Low Stock" ? "All" : "Low Stock")}
-            className={statusFilter === "Low Stock" ? "ring-2 ring-amber-400 border-transparent shadow-sm" : ""}
+            onClick={() => setFilters(prev => ({ ...prev, status: prev.status === "Low stock" ? "All" : "Low stock" }))}
+            className={filters.status === "Low stock" ? "ring-2 ring-amber-400 border-transparent shadow-sm" : ""}
           />
           <StatCard
             icon={AlertCircle}
@@ -1182,8 +1263,8 @@ const ProductInfos = () => {
             subValue="items empty"
             iconBg="bg-red-50"
             iconColor="text-red-500"
-            onClick={() => setStatusFilter(prev => prev === "Out of Stock" ? "All" : "Out of Stock")}
-            className={statusFilter === "Out of Stock" ? "ring-2 ring-red-400 border-transparent shadow-sm" : ""}
+            onClick={() => setFilters(prev => ({ ...prev, status: prev.status === "Out of stock" ? "All" : "Out of stock" }))}
+            className={filters.status === "Out of stock" ? "ring-2 ring-red-400 border-transparent shadow-sm" : ""}
           />
         </div>
       )}
@@ -1226,14 +1307,14 @@ const ProductInfos = () => {
           type="button"
           onClick={() => setIsFilterOpen(true)}
           className={`h-8 px-3 rounded-md border text-xs font-semibold flex items-center gap-1.5 active:scale-95 transition-all shadow-sm shrink-0 ${
-            statusFilter !== "All"
+            Object.values(filters).some(v => v !== "All")
               ? "border-blue-200 text-blue-600 bg-blue-50/50"
               : "border-slate-200 text-slate-650 bg-white hover:bg-slate-50"
           }`}
           title="Filters"
         >
           <Filter size={13} />
-          {statusFilter !== "All" && (
+          {Object.values(filters).some(v => v !== "All") && (
             <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
           )}
         </button>
@@ -1258,23 +1339,75 @@ const ProductInfos = () => {
       <RightSidebarFilter
         isOpen={isFilterOpen}
         onClose={() => setIsFilterOpen(false)}
-        onApply={() => {}}
-        onClear={() => setStatusFilter("All")}
+        onApply={() => setIsFilterOpen(false)}
+        onClear={() => setFilters({
+          status: "All",
+          category: "All",
+          brand: "All",
+          type: "All",
+          visibility: "All"
+        })}
         title="Product Filters"
       >
         <div className="space-y-4">
           <div className="space-y-1.5">
             <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Stock Status</label>
             <ReusableSelect
-              value={statusFilter}
-              onValueChange={(val) => setStatusFilter(val)}
+              value={filters.status}
+              onValueChange={(val) => setFilters(prev => ({ ...prev, status: val }))}
               options={[
                 { label: "All levels", value: "All" },
-                { label: "In stock", value: "In Stock" },
-                { label: "Low stock", value: "Low Stock" },
-                { label: "Out of stock", value: "Out of Stock" },
+                { label: "In stock", value: "In stock" },
+                { label: "Low stock", value: "Low stock" },
+                { label: "Out of stock", value: "Out of stock" },
               ]}
               placeholder="Status"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Category</label>
+            <ReusableSelect
+              value={filters.category}
+              onValueChange={(val) => setFilters(prev => ({ ...prev, category: val }))}
+              options={categories.map(c => ({ label: String(c), value: String(c) }))}
+              placeholder="Category"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Brand</label>
+            <ReusableSelect
+              value={filters.brand}
+              onValueChange={(val) => setFilters(prev => ({ ...prev, brand: val }))}
+              options={brands.map(b => ({ label: String(b), value: String(b) }))}
+              placeholder="Brand"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Product Type</label>
+            <ReusableSelect
+              value={filters.type}
+              onValueChange={(val) => setFilters(prev => ({ ...prev, type: val }))}
+              options={[
+                { label: "All Types", value: "All" },
+                { label: "Has Variants", value: "Has Variants" },
+                { label: "Has Batches", value: "Has Batches" },
+                { label: "Has Serials", value: "Has Serials" },
+                { label: "Simple Product", value: "Simple" },
+              ]}
+              placeholder="Product Type"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Visibility</label>
+            <ReusableSelect
+              value={filters.visibility}
+              onValueChange={(val) => setFilters(prev => ({ ...prev, visibility: val }))}
+              options={[
+                { label: "All Visibility", value: "All" },
+                { label: "Online Only", value: "Online" },
+                { label: "Offline Only", value: "Offline" },
+              ]}
+              placeholder="Visibility"
             />
           </div>
         </div>

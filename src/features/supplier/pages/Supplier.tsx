@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { Search, X, Bookmark, Building2, Phone, ExternalLink, Filter, ChevronRight, Eye, Pencil, Trash2, MoreVertical, Plus } from "lucide-react";
 import { GradientButton } from "@/components/ui/GradientButton";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -14,6 +14,7 @@ import { useQuickCreate } from "@/features/common/QuickCreate/QuickCreateContext
 import { RightSidebarFilter } from "@/components/common/RightSidebarFilter";
 import SkeletonLoader from "@/components/common/SkeletonLoader";
 import ActionMenu, { ActionMenuItem } from "@/components/common/ActionMenu";
+import { ReusableSelect } from "@/components/ui/ReusableSelect";
 
 
 // Human-readable labels for every possible dynamic column key
@@ -124,7 +125,12 @@ const Supplier = () => {
   const [suppliers, setSuppliers] = useState<SupplierRecord[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("All");
+  const [filters, setFilters] = useState({
+    status: "All",
+    type: "All",
+    city: "All",
+    state: "All"
+  });
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(searchTerm), 300);
@@ -139,7 +145,11 @@ const Supplier = () => {
   const [toDate, setToDate] = useState("");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   
-  const activeFilters = [fromDate, toDate, statusFilter !== "All" ? "status" : ""].filter(Boolean).length;
+  const activeFilters = [
+    fromDate,
+    toDate,
+    Object.values(filters).some(v => v !== "All") ? "true" : ""
+  ].filter(Boolean).length;
 
   // Dynamic Column State
   const [availableKeys, setAvailableKeys] = useState<string[]>([]);
@@ -248,8 +258,8 @@ const Supplier = () => {
     if (debouncedSearch) params.q = debouncedSearch;
     if (fromDate) params.from_date = fromDate;
     if (toDate) params.to_date = toDate;
-    if (statusFilter === "Outstanding") params.has_outstanding = "true";
-    if (statusFilter === "Cleared") params.has_outstanding = "false";
+    if (filters.status === "Outstanding") params.has_outstanding = "true";
+    if (filters.status === "Cleared") params.has_outstanding = "false";
 
     getData(`${ENDPOINTS.SUPPLIERS}/by/shop/${SHOP_ID}`, params).then((res) => {
       if (res) {
@@ -294,7 +304,95 @@ const Supplier = () => {
         setAvailableKeys(sortedKeys);
       }
     });
-  }, [refreshKey, debouncedSearch, fromDate, toDate, statusFilter]);
+  }, [refreshKey, debouncedSearch, fromDate, toDate, filters.status]);
+
+  const types = useMemo(() => {
+    const s = new Set(suppliers.map((sup: any) => sup.additional_infos?.type || sup.datas?.type).filter(Boolean));
+    return ["All", ...Array.from(s)];
+  }, [suppliers]);
+
+  const cities = useMemo(() => {
+    const s = new Set(suppliers.map((sup: any) => sup.additional_infos?.city || sup.datas?.address?.city || sup.location_infos?.city).filter(Boolean));
+    return ["All", ...Array.from(s)];
+  }, [suppliers]);
+
+  const states = useMemo(() => {
+    const s = new Set(suppliers.map((sup: any) => sup.location_infos?.state || sup.datas?.address?.state).filter(Boolean));
+    return ["All", ...Array.from(s)];
+  }, [suppliers]);
+
+  const filteredSuppliers = useMemo(() => {
+    let result = suppliers;
+
+    if (debouncedSearch) {
+      const lower = debouncedSearch.toLowerCase();
+      result = result.filter((sup: any) => {
+        const name = sup.name?.toLowerCase() || "";
+        const id = sup.ui_id?.toLowerCase() || "";
+        const email = (sup.contact_infos?.email || sup.email || "")?.toLowerCase() || "";
+        const mobile = (sup.contact_infos?.mobile_number || sup.mobile_number || "")?.toLowerCase() || "";
+        const contactName = (sup.contact_person_infos?.name || "")?.toLowerCase() || "";
+        const gst = (sup.gst_no || "")?.toLowerCase() || "";
+
+        return (
+          name.includes(lower) ||
+          id.includes(lower) ||
+          email.includes(lower) ||
+          mobile.includes(lower) ||
+          contactName.includes(lower) ||
+          gst.includes(lower)
+        );
+      });
+    }
+
+    if (filters.status !== "All") {
+      result = result.filter((sup: any) => {
+        const outstanding = sup.outstanding_infos?.amount || 0;
+        if (filters.status === "Outstanding") return outstanding > 0;
+        if (filters.status === "Cleared") return outstanding <= 0;
+        return true;
+      });
+    }
+
+    if (filters.type !== "All") {
+      result = result.filter((sup: any) => {
+        const type = sup.additional_infos?.type || sup.datas?.type;
+        return type === filters.type;
+      });
+    }
+
+    if (filters.city !== "All") {
+      result = result.filter((sup: any) => {
+        const city = sup.additional_infos?.city || sup.datas?.address?.city || sup.location_infos?.city;
+        return city === filters.city;
+      });
+    }
+
+    if (filters.state !== "All") {
+      result = result.filter((sup: any) => {
+        const state = sup.location_infos?.state || sup.datas?.address?.state;
+        return state === filters.state;
+      });
+    }
+    
+    if (fromDate) {
+      const from = new Date(fromDate).getTime();
+      result = result.filter((sup: any) => {
+        if (!sup.created_at) return true;
+        return new Date(sup.created_at).getTime() >= from;
+      });
+    }
+    
+    if (toDate) {
+      const to = new Date(toDate).getTime() + 86400000;
+      result = result.filter((sup: any) => {
+        if (!sup.created_at) return true;
+        return new Date(sup.created_at).getTime() <= to;
+      });
+    }
+
+    return result;
+  }, [suppliers, debouncedSearch, filters, fromDate, toDate]);
 
   const handleDelete = async () => {
     if (!supplierToDelete) return;
@@ -330,24 +428,24 @@ const Supplier = () => {
             label="Total Suppliers"
             value={(analyticsStats?.overview?.supplier?.total_suppliers ?? suppliers.length).toString()}
             iconBg="bg-blue-50 text-blue-600"
-            onClick={() => setStatusFilter("All")}
-            className={statusFilter === "All" ? "ring-2 ring-blue-400 border-transparent shadow-sm" : ""}
+            onClick={() => setFilters(prev => ({ ...prev, status: "All" }))}
+            className={filters.status === "All" ? "ring-2 ring-blue-400 border-transparent shadow-sm" : ""}
           />
           <StatCard
             icon={Phone}
             label="Total Outstanding"
             value={fmt(analyticsStats?.overview?.supplier?.total_outstandings ?? 0)}
             iconBg="bg-rose-50 text-rose-600"
-            onClick={() => setStatusFilter(prev => prev === "Outstanding" ? "All" : "Outstanding")}
-            className={statusFilter === "Outstanding" ? "ring-2 ring-rose-400 border-transparent shadow-sm" : ""}
+            onClick={() => setFilters(prev => ({ ...prev, status: prev.status === "Outstanding" ? "All" : "Outstanding" }))}
+            className={filters.status === "Outstanding" ? "ring-2 ring-rose-400 border-transparent shadow-sm" : ""}
           />
           <StatCard
             icon={Phone}
             label="Total Cleared"
             value={fmt(analyticsStats?.overview?.supplier?.total_cleared_amounts ?? 0)}
             iconBg="bg-emerald-50 text-emerald-600"
-            onClick={() => setStatusFilter(prev => prev === "Cleared" ? "All" : "Cleared")}
-            className={statusFilter === "Cleared" ? "ring-2 ring-emerald-400 border-transparent shadow-sm" : ""}
+            onClick={() => setFilters(prev => ({ ...prev, status: prev.status === "Cleared" ? "All" : "Cleared" }))}
+            className={filters.status === "Cleared" ? "ring-2 ring-emerald-400 border-transparent shadow-sm" : ""}
           />
         </div>
       )}
@@ -396,8 +494,8 @@ const Supplier = () => {
       <RightSidebarFilter
         isOpen={isFilterOpen}
         onClose={() => setIsFilterOpen(false)}
-        onApply={() => { }}
-        onClear={() => { setFromDate(""); setToDate(""); setStatusFilter("All"); }}
+        onApply={() => setIsFilterOpen(false)}
+        onClear={() => { setFromDate(""); setToDate(""); setFilters({ status: "All", type: "All", city: "All", state: "All" }); }}
         title="Supplier Filters"
       >
         <div className="space-y-4">
@@ -405,24 +503,51 @@ const Supplier = () => {
             <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Payment Status</label>
             <div className="flex gap-2">
               <button 
-                onClick={() => setStatusFilter("All")}
-                className={`flex-1 h-9 rounded-md text-xs font-semibold border transition-all ${statusFilter === "All" ? "border-slate-800 bg-slate-800 text-white" : "border-slate-200 text-slate-600 bg-slate-50 hover:bg-slate-100"}`}
+                onClick={() => setFilters(prev => ({ ...prev, status: "All" }))}
+                className={`flex-1 h-9 rounded-md text-xs font-semibold border transition-all ${filters.status === "All" ? "border-slate-800 bg-slate-800 text-white" : "border-slate-200 text-slate-600 bg-slate-50 hover:bg-slate-100"}`}
               >
                 All
               </button>
               <button 
-                onClick={() => setStatusFilter("Outstanding")}
-                className={`flex-1 h-9 rounded-md text-xs font-semibold border transition-all ${statusFilter === "Outstanding" ? "border-rose-500 bg-rose-50 text-rose-700" : "border-slate-200 text-slate-600 bg-slate-50 hover:bg-slate-100"}`}
+                onClick={() => setFilters(prev => ({ ...prev, status: "Outstanding" }))}
+                className={`flex-1 h-9 rounded-md text-xs font-semibold border transition-all ${filters.status === "Outstanding" ? "border-rose-500 bg-rose-50 text-rose-700" : "border-slate-200 text-slate-600 bg-slate-50 hover:bg-slate-100"}`}
               >
                 Outstanding
               </button>
               <button 
-                onClick={() => setStatusFilter("Cleared")}
-                className={`flex-1 h-9 rounded-md text-xs font-semibold border transition-all ${statusFilter === "Cleared" ? "border-emerald-500 bg-emerald-50 text-emerald-700" : "border-slate-200 text-slate-600 bg-slate-50 hover:bg-slate-100"}`}
+                onClick={() => setFilters(prev => ({ ...prev, status: "Cleared" }))}
+                className={`flex-1 h-9 rounded-md text-xs font-semibold border transition-all ${filters.status === "Cleared" ? "border-emerald-500 bg-emerald-50 text-emerald-700" : "border-slate-200 text-slate-600 bg-slate-50 hover:bg-slate-100"}`}
               >
                 Cleared
               </button>
             </div>
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Supplier Type</label>
+            <ReusableSelect
+              value={filters.type}
+              onValueChange={(val: string) => setFilters(prev => ({ ...prev, type: val }))}
+              options={types.map((t: any) => ({ label: String(t), value: String(t) }))}
+              placeholder="Supplier Type"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">City</label>
+            <ReusableSelect
+              value={filters.city}
+              onValueChange={(val: string) => setFilters(prev => ({ ...prev, city: val }))}
+              options={cities.map((c: any) => ({ label: String(c), value: String(c) }))}
+              placeholder="City"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">State</label>
+            <ReusableSelect
+              value={filters.state}
+              onValueChange={(val: string) => setFilters(prev => ({ ...prev, state: val }))}
+              options={states.map((s: any) => ({ label: String(s), value: String(s) }))}
+              placeholder="State"
+            />
           </div>
           <div className="flex items-center gap-2">
             <div className="space-y-1.5 flex-1">
@@ -473,12 +598,12 @@ const Supplier = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-55 bg-white">
-              {suppliers.length === 0 ? (
+              {filteredSuppliers.length === 0 ? (
                 <tr>
                   <td colSpan={selectedKeys.length + 2} className="py-20 text-center text-slate-400 font-medium italic">No suppliers matching your filters.</td>
                 </tr>
               ) : (
-                suppliers.map((sup) => {
+                filteredSuppliers.map((sup: any) => {
                   if (!sup) return null;
                   const isSelected = selectedSupplier?.id === sup.id;
                   return (

@@ -79,6 +79,26 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+
+  /* Custom Badge Colors */
+  --color-badge-green-text: #27500A;
+  --color-badge-green-bg: #EAF3DE;
+  --color-badge-blue-text: #0C447C;
+  --color-badge-blue-bg: #E6F1FB;
+  --color-badge-purple-text: #3C3489;
+  --color-badge-purple-bg: #EEEDFE;
+  --color-badge-teal-text: #085041;
+  --color-badge-teal-bg: #E1F5EE;
+  --color-badge-amber-text: #633806;
+  --color-badge-amber-bg: #FAEEDA;
+  --color-badge-coral-text: #712B13;
+  --color-badge-coral-bg: #FAECE7;
+  --color-badge-rose-text: #72243E;
+  --color-badge-rose-bg: #FBEAF0;
+  --color-badge-gray-text: #444441;
+  --color-badge-gray-bg: #F1EFE8;
+  --color-badge-red-text: #791F1F;
+  --color-badge-red-bg: #FCEBEB;
 }
 
 :root {

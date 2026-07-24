@@ -13,7 +13,7 @@ import Loader from "@/components/common/Loader";
 import { Modal, ProfileHeaderCard, SectionCard, DetailItem } from "@/components/common/SuperUI";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import SkeletonLoader from "@/components/common/SkeletonLoader";
-import { StatCard } from "@/components/common/StatsCard";
+
 import { SearchSelect } from "@/components/inputbuilders/SearchSelect";
 import { useHeader } from "@/context/HeaderContext";
 import { VariantRows, SerialBadgeList, BatchCards } from "../../inventory/components/StockTree";
@@ -97,7 +97,6 @@ const ProductDetail = () => {
     return () => setBottomActions(null);
   }, [setBottomActions, navigate]);
 
-  const [stats, setStats] = useState<any>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -105,15 +104,10 @@ const ProductDetail = () => {
     Promise.all([
       getData(`${ENDPOINTS.INVENTORIES}/by/id/${SHOP_ID}/${id}`),
       getData(`${ENDPOINTS.ANALYTICS_PRODINV}/${id}`, { shop_id: SHOP_ID })
-    ]).then(([res, statsRes]) => {
+    ]).then(([res]) => {
       if (res) {
         const prod = Array.isArray(res.data) ? res.data[0] : res.data;
         setProduct(prod);
-      }
-      const statsData = statsRes?.data ?? statsRes;
-      const statsObj = statsData?.product ?? statsData;
-      if (statsObj) {
-        setStats(statsObj);
       }
       setRecordLoading(false);
     }).catch(() => setRecordLoading(false));
@@ -371,12 +365,6 @@ const ProductDetail = () => {
           ))}
         </div>
 
-        <div className="flex flex-wrap gap-2">
-          <StatCard icon={DollarSign} label="Total Sales (Offline)" value={`₹${(stats?.total_offline_sales_amount || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} iconBg="bg-blue-50 text-blue-600" className="flex-1 min-w-[140px]" />
-          <StatCard icon={DollarSign} label="Total Sales (Online)" value={`₹${(stats?.total_online_sales_amount || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} iconBg="bg-emerald-50 text-emerald-600" className="flex-1 min-w-[140px]" />
-          <StatCard icon={Package} label="Total Purchase Cost" value={`₹${(stats?.total_purchase_amounts || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} iconBg="bg-indigo-50 text-indigo-600" className="flex-1 min-w-[140px]" />
-          <StatCard icon={BarChart2} label="Purchases Count" value={String(stats?.total_purchases || "0")} iconBg="bg-amber-50 text-amber-600" className="flex-1 min-w-[140px]" />
-        </div>
       </div>
 
       {/* ── Tab Panels (scrollable or flex-locked depending on active tab) ──────────────────────────── */}

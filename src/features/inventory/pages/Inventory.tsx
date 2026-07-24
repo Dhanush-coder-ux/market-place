@@ -255,13 +255,14 @@ const Pill = ({
   variant = "default",
 }: {
   children: React.ReactNode;
-  variant?: "default" | "blue" | "purple" | "indigo";
+  variant?: "default" | "variant" | "batch" | "serial" | "online";
 }) => {
   const styles: Record<string, string> = {
     default: "text-slate-500 bg-slate-50 border-slate-100",
-    blue: "text-blue-600 bg-blue-50 border-blue-100",
-    purple: "text-purple-600 bg-purple-50 border-purple-100",
-    indigo: "text-indigo-600 bg-indigo-50 border-indigo-100",
+    variant: "text-badge-purple-text bg-badge-purple-bg border-badge-purple-text/20",
+    batch: "text-badge-coral-text bg-badge-coral-bg border-badge-coral-text/20",
+    serial: "text-badge-rose-text bg-badge-rose-bg border-badge-rose-text/20",
+    online: "text-badge-green-text bg-badge-green-bg border-badge-green-text/20",
   };
   return (
     <span
@@ -353,14 +354,9 @@ const ProductRow = React.memo(
       datas.serial_numbers || item.serial_numbers || item.serial_number || (item as any).serialno_infos
     );
 
-    const hasVariants =
-      (datas.has_variants ||
-        datas.has_varients ||
-        (item as any).has_variant ||
-        (item as any).type_infos?.has_variant) &&
-      combinations.length > 0;
-    const hasBatches = batches.length > 0 || (item as any).has_batch || (item as any).type_infos?.has_batch;
-    const hasSerials = serials.length > 0 || (item as any).has_serialno || (item as any).type_infos?.has_serialno;
+    const hasVariants = !!(datas.has_variants || datas.has_varients || (item as any).has_variant || (item as any).type_infos?.has_variant) || combinations.length > 0;
+    const hasBatches = batches.length > 0 || !!((item as any).has_batch || (item as any).type_infos?.has_batch);
+    const hasSerials = serials.length > 0 || !!((item as any).has_serialno || (item as any).type_infos?.has_serialno);
     const isExpandable = hasVariants || hasBatches || hasSerials;
 
     let stockNumber = calculateProductStock(item);
@@ -406,30 +402,28 @@ const ProductRow = React.memo(
     const menuTriggerRef = useRef<HTMLButtonElement>(null);
     const [showAllBadges, setShowAllBadges] = useState(false);
 
-    const badges = [];
+    const badges: React.ReactNode[] = [];
+    if ((item as any).visible_online || (datas as any).visible_online) {
+      badges.push(
+        <Pill key="online" variant="online">
+          <ExternalLink size={9} /> Online
+        </Pill>
+      );
+    }
+    
     if (hasVariants) {
       badges.push(
-        <Pill key="var" variant="blue">
+        <Pill key="var" variant="variant">
           <Layers size={9} />
           {combinations.length} var
         </Pill>
       );
     }
-    if (totalBatches > 0) {
-      badges.push(
-        <Pill key="batch" variant="indigo">
-          <Calendar size={9} />
-          {totalBatches} batch
-        </Pill>
-      );
-    }
-    if (totalSerials > 0) {
-      badges.push(
-        <Pill key="serial" variant="purple">
-          <Hash size={9} />
-          {totalSerials} serial
-        </Pill>
-      );
+    
+    const trackingInfo = [];
+    if (!hasVariants) {
+      if (totalBatches > 0) trackingInfo.push({ label: `${totalBatches} batches`, icon: Calendar, color: "coral", bg: "bg-badge-coral-bg", text: "text-badge-coral-text", border: "border-badge-coral-text/20" });
+      if (totalSerials > 0) trackingInfo.push({ label: `${totalSerials} serials`, icon: Hash, color: "rose", bg: "bg-badge-rose-bg", text: "text-badge-rose-text", border: "border-badge-rose-text/20" });
     }
 
     const visibleBadges = showAllBadges ? badges : badges.slice(0, 2);
@@ -503,22 +497,56 @@ const ProductRow = React.memo(
                   <span className="text-[13px] font-medium text-slate-800 truncate leading-none">
                     {productName}
                   </span>
-                  <div className="flex items-center gap-1 flex-wrap">
-                    {visibleBadges}
-                    {!showAllBadges && remainingBadges > 0 && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setShowAllBadges(true);
-                        }}
-                        className="text-[10px] font-medium text-slate-400 hover:text-slate-600 transition-colors"
-                      >
-                        +{remainingBadges}
-                      </button>
-                    )}
-                  </div>
+                  {visibleBadges.length > 0 && (
+                    <div className="flex items-center gap-1 flex-wrap">
+                      {visibleBadges}
+                      {!showAllBadges && remainingBadges > 0 && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setShowAllBadges(true);
+                          }}
+                          className="text-[10px] font-medium text-slate-400 hover:text-slate-600 transition-colors"
+                        >
+                          +{remainingBadges}
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
-                <div className="flex items-center gap-2 text-[11px] text-slate-400 font-medium leading-none">
+                {trackingInfo.length > 0 && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleExpand(item.id);
+                    }}
+                    className={`mt-1 flex items-center gap-2 w-fit px-2 py-1.5 rounded-md border transition-all ${
+                      isExpanded
+                        ? "bg-slate-50 border-slate-200"
+                        : "bg-white border-slate-200 hover:border-blue-300 shadow-sm"
+                    }`}
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Tracking:</span>
+                      {trackingInfo.map((info, idx) => {
+                        const Icon = info.icon;
+                        return (
+                          <span
+                            key={idx}
+                            className={`flex items-center gap-1 text-[10px] font-bold ${info.text} ${info.bg} border ${info.border} px-1.5 py-0.5 rounded leading-none`}
+                          >
+                            <Icon size={10} />
+                            {info.label}
+                          </span>
+                        );
+                      })}
+                    </div>
+                    <div className={`ml-1 p-0.5 rounded transition-colors ${isExpanded ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-slate-400 group-hover:bg-blue-50 group-hover:text-blue-500'}`}>
+                      {isExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+                    </div>
+                  </button>
+                )}
+                <div className="flex items-center gap-2 text-[11px] text-slate-400 font-medium leading-none mt-0.5">
                   {(() => {
                     const actualSku = (item as any).sku || datas.sku || "";
                     const uiId = (item as any).ui_id || item.id || "";
@@ -707,7 +735,7 @@ const ProductRow = React.memo(
         {isExpanded && isExpandable && (
           <tr className="bg-slate-50/40">
             <td colSpan={13} className="px-0 py-0">
-              <div className="ml-10 mr-4 my-3 space-y-3 border-l border-slate-100 pl-6">
+              <div className="ml-8 mr-3 my-2 space-y-2 border-l-2 border-slate-200 pl-4">
 
 
 
@@ -720,7 +748,6 @@ const ProductRow = React.memo(
                     </p>
                     <SerialBadgeList
                       serials={serials}
-                      title={`Serials: ${datas.name || item.name}`}
                     />
                   </div>
                 )}

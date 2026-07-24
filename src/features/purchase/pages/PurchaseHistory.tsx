@@ -333,10 +333,10 @@ const fmt = (n: number) => `₹${n.toLocaleString("en-IN")}`;
 const PurchaseTypeBadge = ({ type }: { type: PurchaseType }) => {
   let colors = "bg-zinc-100 text-zinc-600 border-zinc-200"; // Fallback
 
-  if (type === "Purchase") colors = "bg-blue-50 text-blue-700 border-blue-100";
-  if (type === "PO Purchase") colors = "bg-purple-50 text-purple-700 border-purple-100";
-  if (type === "Production") colors = "bg-amber-50 text-amber-700 border-amber-100";
-  if (type === "Purchase Return" || type === "Return" as any) colors = "bg-red-50 text-red-700 border-red-100";
+  if (type === "Purchase") colors = "bg-badge-green-bg text-badge-green-text border-badge-green-text/20";
+  if (type === "PO Purchase") colors = "bg-badge-teal-bg text-badge-teal-text border-badge-teal-text/20";
+  if (type === "Production") colors = "bg-badge-amber-bg text-badge-amber-text border-badge-amber-text/20";
+  if (type === "Purchase Return" || type === "Return" as any) colors = "bg-badge-purple-bg text-badge-purple-text border-badge-purple-text/20";
 
   return (
     <span className={`px-2 py-0.5 rounded text-[10px] font-bold   border whitespace-nowrap ${colors}`}>
@@ -451,12 +451,12 @@ const GridCard = ({ po, selected, onClick }: { po: DirectPurchaseData; selected?
                   {(firstRow?.variant || firstRow?.batch) && (
                     <div className="flex flex-wrap gap-1 mt-0.5">
                       {firstRow.variant && (
-                        <span className="px-1.5 py-0.5 rounded text-[8px] font-extrabold bg-violet-50 text-violet-700 border border-violet-100 truncate max-w-[100px]">
+                        <span className="px-1.5 py-0.5 rounded text-[8px] font-extrabold bg-badge-purple-bg text-badge-purple-text border border-badge-purple-text/20 truncate max-w-[100px]">
                           V: {firstRow.variant}
                         </span>
                       )}
                       {firstRow.batch && (
-                        <span className="px-1.5 py-0.5 rounded text-[8px] font-extrabold bg-amber-50 text-amber-700 border border-amber-100 truncate max-w-[100px]">
+                        <span className="px-1.5 py-0.5 rounded text-[8px] font-extrabold bg-badge-coral-bg text-badge-coral-text border border-badge-coral-text/20 truncate max-w-[100px]">
                           B: {firstRow.batch}
                         </span>
                       )}

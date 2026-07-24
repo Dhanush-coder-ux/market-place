@@ -151,14 +151,14 @@ const Pill = ({
   variant = "default",
 }: {
   children: React.ReactNode;
-  variant?: "default" | "blue" | "purple" | "indigo" | "emerald";
+  variant?: "default" | "variant" | "batch" | "serial" | "online";
 }) => {
   const styles: Record<string, string> = {
     default: "text-slate-500 bg-slate-50 border-slate-100",
-    blue: "text-blue-600 bg-blue-50 border-blue-100",
-    purple: "text-purple-600 bg-purple-50 border-purple-100",
-    indigo: "text-indigo-600 bg-indigo-50 border-indigo-100",
-    emerald: "text-emerald-600 bg-emerald-50 border-emerald-100",
+    variant: "text-badge-purple-text bg-badge-purple-bg border-badge-purple-text/20",
+    batch: "text-badge-coral-text bg-badge-coral-bg border-badge-coral-text/20",
+    serial: "text-badge-rose-text bg-badge-rose-bg border-badge-rose-text/20",
+    online: "text-badge-green-text bg-badge-green-bg border-badge-green-text/20",
   };
   return (
     <span
@@ -247,22 +247,22 @@ const ProductRow = React.memo(
     };
 
     const combinations = useMemo(
-      () => normalizeVariants(p.variant_infos || p.variants).filter((v: any) => v && v.id !== null),
-      [p.variant_infos, p.variants]
+      () => normalizeVariants(p.variant_infos || p.variants || datas.variant_infos || datas.variants || datas.combinations).filter((v: any) => v && v.id !== null),
+      [p.variant_infos, p.variants, datas.variant_infos, datas.variants, datas.combinations]
     );
 
     const batches = useMemo(
       () => {
-        const bs = p.batch_infos || p.batches;
+        const bs = p.batch_infos || p.batches || datas.batch_infos || datas.batches;
         if (Array.isArray(bs)) return bs.filter((b: any) => b && b.id !== null);
         if (bs && typeof bs === 'object' && Object.keys(bs).length > 0) return [bs];
         return [];
       },
-      [p.batch_infos, p.batches]
+      [p.batch_infos, p.batches, datas.batch_infos, datas.batches]
     );
 
-    const hasVariants = !!(p.type_infos?.has_variant) || combinations.length > 0;
-    const hasBatches = !!(p.type_infos?.has_batch) || batches.length > 0;
+    const hasVariants = !!(p.type_infos?.has_variant || datas.has_variants || datas.has_varients) || combinations.length > 0;
+    const hasBatches = !!(p.type_infos?.has_batch || datas.has_batch) || batches.length > 0;
     
     const rootSerials = extractSerials((p as any).serialno_infos || (p as any).serials || (p as any).serial_number);
     const hasSerials = !!(p.type_infos?.has_serialno) || rootSerials.length > 0;
@@ -310,18 +310,28 @@ const ProductRow = React.memo(
 
     const badges: React.ReactNode[] = [];
     
-    if ((p as any).visible_online) {
+    if ((p as any).visible_online || datas.visible_online) {
       badges.push(
-        <Pill key="online" variant="emerald">
+        <Pill key="online" variant="online">
           <ExternalLink size={9} /> Online
         </Pill>
       );
     }
     
+    if (hasVariants) {
+      badges.push(
+        <Pill key="var" variant="variant">
+          <Layers size={9} />
+          {combinations.length} var
+        </Pill>
+      );
+    }
+    
     const trackingInfo = [];
-    if (hasVariants) trackingInfo.push({ label: `${combinations.length} variants`, icon: Layers, color: "blue", bg: "bg-blue-50", text: "text-blue-600", border: "border-blue-200" });
-    if (totalBatches > 0) trackingInfo.push({ label: `${totalBatches} batches`, icon: Calendar, color: "indigo", bg: "bg-indigo-50", text: "text-indigo-600", border: "border-indigo-200" });
-    if (totalSerials > 0) trackingInfo.push({ label: `${totalSerials} serials`, icon: Hash, color: "purple", bg: "bg-purple-50", text: "text-purple-600", border: "border-purple-200" });
+    if (!hasVariants) {
+      if (totalBatches > 0) trackingInfo.push({ label: `${totalBatches} batches`, icon: Calendar, color: "coral", bg: "bg-badge-coral-bg", text: "text-badge-coral-text", border: "border-badge-coral-text/20" });
+      if (totalSerials > 0) trackingInfo.push({ label: `${totalSerials} serials`, icon: Hash, color: "rose", bg: "bg-badge-rose-bg", text: "text-badge-rose-text", border: "border-badge-rose-text/20" });
+    }
 
     const visibleBadges = showAllBadges ? badges : badges.slice(0, 2);
     const remainingBadges = badges.length - 2;
@@ -745,7 +755,7 @@ const ProductRow = React.memo(
               colSpan={selectedKeys.length + 4}
               className="px-0 py-0 border-b border-slate-50"
             >
-              <div className="ml-10 mr-4 my-3 space-y-3 border-l border-slate-100 pl-6">
+              <div className="ml-8 mr-3 my-2 space-y-2 border-l-2 border-slate-200 pl-4">
                 {!hasVariants && rootSerials.length > 0 && (
                   <div className="bg-white border border-slate-100 rounded-lg p-3">
                     <p className="text-[10px] font-semibold text-slate-400 mb-2 flex items-center gap-1.5 uppercase tracking-wide">
@@ -754,7 +764,6 @@ const ProductRow = React.memo(
                     </p>
                     <SerialBadgeList
                       serials={rootSerials}
-                      title={`Serials: ${p.name}`}
                     />
                   </div>
                 )}

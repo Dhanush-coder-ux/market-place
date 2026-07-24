@@ -1,14 +1,14 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
-  AlertCircle, Package, Mail, Pencil, User, MapPin, Phone, Trash2,
-  Store, Database, ShoppingBag, Layers, Check, X as XIcon
+  Mail, Pencil, User, MapPin, Phone, Trash2,
+  Store, Database, Layers, Check, X as XIcon
 } from "lucide-react";
 import {
   SectionCard, DetailItem, InfoRow, Modal,
   ProfileHeaderCard
 } from "@/components/common/SuperUI";
-import { StatCard } from "@/components/common/StatsCard";
+
 import { useApi } from "@/context/ApiContext";
 import { useToast } from "@/context/ToastContext";
 import { useHeader } from "@/context/HeaderContext";
@@ -66,7 +66,7 @@ export default function SupplierDetail() {
   const { setBottomActions } = useHeader();
 
   const [supplier, setSupplier] = useState<SupplierRecord | null>(null);
-  const [stats, setStats] = useState<any>(null);
+
   const [recordLoading, setRecordLoading] = useState(true);
   const [activeTab, setActiveTab] = useState(0);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -102,7 +102,7 @@ export default function SupplierDetail() {
   const [clearAmount, setClearAmount] = useState<string>('');
   const [clearSaving, setClearSaving] = useState(false);
 
-  const fetchOutstandingPurchases = async () => {
+  const fetchOutstandingPurchases = useCallback(async () => {
     if (!id) return;
     setClearLoading(true);
     try {
@@ -116,7 +116,7 @@ export default function SupplierDetail() {
     } finally {
       setClearLoading(false);
     }
-  };
+  }, [id]);
 
   const handleClearOutstandingPayment = async () => {
     if (!selectedPurchase || !clearAmount || !id) return;
@@ -165,11 +165,7 @@ export default function SupplierDetail() {
       
       showToast("Payment applied successfully", "success");
       setShowClearModal(false);
-      
-      const statsRes = await getData(`${ENDPOINTS.ANALYTICS_SUPPLIER}/${id}`, { shop_id: SHOP_ID });
-      const statsData = statsRes?.data ?? statsRes;
-      if (statsData?.supplier ?? statsData) setStats(statsData?.supplier ?? statsData);
-      
+
       if (activeTab === 2) {
         getData(`${ENDPOINTS.PURCHASES}/by/supplier/${SHOP_ID}/${id}`).then((r: any) => {
            setPurchases(r?.data ? (Array.isArray(r.data) ? r.data : [r.data]) : []);
@@ -195,11 +191,8 @@ export default function SupplierDetail() {
       });
       showToast('Outstanding amount updated', 'success');
       setShowOutstandingModal(false);
-      // Refresh stats
-      const statsRes = await getData(`${ENDPOINTS.ANALYTICS_SUPPLIER}/${id}`, { shop_id: SHOP_ID });
-      const statsData = statsRes?.data ?? statsRes;
-      const statsObj = statsData?.supplier ?? statsData;
-      if (statsObj) setStats(statsObj);
+
+
     } catch {
       showToast('Failed to update outstanding amount', 'error');
     } finally {
@@ -210,7 +203,19 @@ export default function SupplierDetail() {
 
   useEffect(() => {
     setBottomActions(
-      <div className="flex items-center justify-end w-full animate-in fade-in slide-in-from-right-4 duration-300">
+      <div className="flex items-center justify-end w-full animate-in fade-in slide-in-from-right-4 duration-300 gap-2">
+        <button 
+          onClick={() => {
+            setShowClearModal(true);
+            fetchOutstandingPurchases();
+            setSelectedPurchase(null);
+            setClearAmount('');
+            setClearSearch('');
+          }}
+          className="px-6 h-8 border border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-lg text-xs font-bold transition-colors shadow-sm"
+        >
+          Clear Outstanding
+        </button>
         <button 
           type="button"
           onClick={() => navigate("/supplier")}
@@ -221,7 +226,7 @@ export default function SupplierDetail() {
       </div>
     );
     return () => setBottomActions(null);
-  }, [setBottomActions, navigate]);
+  }, [setBottomActions, navigate, fetchOutstandingPurchases]);
 
   useEffect(() => {
     if (!id) return;
@@ -229,16 +234,11 @@ export default function SupplierDetail() {
     Promise.all([
       getData(`${ENDPOINTS.SUPPLIERS}/by/${SHOP_ID}/${id}`),
       getData(`${ENDPOINTS.ANALYTICS_SUPPLIER}/${id}`, { shop_id: SHOP_ID })
-    ]).then(([res, statsRes]) => {
+    ]).then(([res]) => {
       if (res) {
         let suppData = res.data;
         if (suppData?.datas && Array.isArray(suppData.datas)) suppData = suppData.datas[0];
         setSupplier(Array.isArray(suppData) ? suppData[0] : suppData);
-      }
-      const statsData = statsRes?.data ?? statsRes;
-      const statsObj = statsData?.supplier ?? statsData;
-      if (statsObj) {
-        setStats(statsObj);
       }
       setRecordLoading(false);
     }).catch(() => setRecordLoading(false));
@@ -409,38 +409,7 @@ export default function SupplierDetail() {
               {tab}
             </button>
           ))}
-        </div>
-
-        <div className="flex flex-wrap gap-2">
-          <StatCard icon={ShoppingBag} label="Total Purchases" value={`${stats?.total_purchases || 0} (₹${(stats?.total_purchase_amounts || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })})`} iconBg="bg-blue-50 text-blue-600" className="flex-1 min-w-[140px]" />
-          {(() => {
-            const outstanding = (stats?.total_outstandings || 0) || ((supplier as any)?.outstanding_infos?.amount || 0);
-            return (
-              <StatCard 
-                icon={AlertCircle} 
-                label="Outstanding" 
-                value={`₹${outstanding.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} 
-                iconBg={outstanding > 0 ? "bg-rose-50 text-rose-600" : "bg-emerald-50 text-emerald-600"} 
-                className="flex-1 min-w-[140px]" 
-                onClick={() => setShowOutstandingModal(true)} 
-              />
-            );
-          })()}
-          <StatCard icon={Package} label="Cleared Amount" value={`₹${(stats?.total_cleared_amounts || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} iconBg="bg-indigo-50 text-indigo-600" className="flex-1 min-w-[140px]" />
-        </div>
-        {/* Clear Outstanding Button */}
-        <button 
-          onClick={() => {
-            setShowClearModal(true);
-            fetchOutstandingPurchases();
-            setSelectedPurchase(null);
-            setClearAmount('');
-            setClearSearch('');
-          }}
-          className="w-full mt-2 h-9 border border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-lg text-xs font-bold transition-colors shadow-sm"
-        >
-          Clear Outstanding
-        </button>
+      </div>
       </div>
 
       {/* Tab Panels */}

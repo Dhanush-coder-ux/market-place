@@ -7,11 +7,9 @@ import {
   ChevronDown,
   Hash,
   Package,
-  AlertTriangle,
   Copy,
   Check
 } from "lucide-react";
-import { Modal } from "../../../components/common/SuperUI";
 
 /* ─── Helpers ────────────────────────────────────────────────────────────── */
 const formatCurrency = (amount?: number | string) => {
@@ -83,68 +81,38 @@ export const BatchBadge = ({ expDate, qty }: { expDate?: string; qty: number }) 
   );
 };
 
-export const SerialBadgeList = ({ serials, title = "Serial Numbers" }: { serials: string[], title?: string }) => {
-  const [showModal, setShowModal] = useState(false);
+export const SerialBadgeList = ({ serials }: { serials: string[] }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
   if (!serials || serials.length === 0) return null;
 
-  const limit = 10;
-  const visibleSerials = serials.slice(0, limit);
+  const limit = 12;
+  const showAll = isExpanded || serials.length <= limit;
+  const visibleSerials = showAll ? serials : serials.slice(0, limit);
   const remaining = serials.length - limit;
 
   return (
-    <div className="space-y-2">
-      <div className="flex flex-wrap gap-1.5 mt-2">
-        {visibleSerials.map((s, i) => (
-          <span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-indigo-50 text-indigo-600 border border-indigo-100">
-            <Hash size={8} /> {s}
-          </span>
-        ))}
-        {remaining > 0 && (
-          <button
-            onClick={(e) => { e.stopPropagation(); setShowModal(true); }}
-            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-blue-50 text-blue-600 border border-blue-100 hover:bg-blue-100 transition-colors"
-          >
-            + {remaining} more
-          </button>
-        )}
-      </div>
-
-      <Modal
-        show={showModal}
-        onClose={() => setShowModal(false)}
-        title={title}
-        className="max-w-2xl"
-      >
-        <div className="space-y-4">
-          <div className="flex items-center justify-between bg-slate-50 p-4 rounded-lg border border-slate-100">
-            <div>
-              <p className="text-[10px] font-bold text-slate-400   mb-1">Total Serials</p>
-              <p className="text-xl font-bold text-slate-800">{serials.length}</p>
-            </div>
-            <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600">
-              <Hash size={20} />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 max-h-[50vh] overflow-y-auto p-1 custom-scrollbar">
-            {serials.map((s, i) => (
-              <div key={i} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white border border-slate-200 shadow-sm hover:border-blue-300 transition-colors group">
-                <span className="text-[10px] font-bold text-slate-300 group-hover:text-blue-300">{i + 1}</span>
-                <span className="text-[11px] font-mono font-bold text-slate-700">{s}</span>
-              </div>
-            ))}
-          </div>
-
-          <div className="pt-4 border-t border-slate-100 flex justify-end">
-            <button
-              onClick={() => setShowModal(false)}
-              className="px-6 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-[11px]   rounded-lg transition-all"
-            >
-              Close
-            </button>
-          </div>
-        </div>
-      </Modal>
+    <div className="flex flex-wrap gap-1.5 mt-1">
+      {visibleSerials.map((s, i) => (
+        <span key={i} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-badge-rose-bg text-badge-rose-text border border-badge-rose-text/20">
+          <Hash size={8} /> {s}
+        </span>
+      ))}
+      {!showAll && remaining > 0 && (
+        <button
+          onClick={(e) => { e.stopPropagation(); setIsExpanded(true); }}
+          className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-600 border border-blue-100 hover:bg-blue-100 transition-colors"
+        >
+          + Show {remaining} more
+        </button>
+      )}
+      {isExpanded && serials.length > limit && (
+        <button
+          onClick={(e) => { e.stopPropagation(); setIsExpanded(false); }}
+          className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-50 text-slate-500 border border-slate-200 hover:bg-slate-100 transition-colors"
+        >
+          Show Less
+        </button>
+      )}
     </div>
   );
 };
@@ -182,18 +150,18 @@ export const BatchCards = ({ batches }: { batches: any | any[] }) => {
   };
 
   return (
-    <div className="animate-in fade-in slide-in-from-top-1 duration-300 pt-2 pb-6">
-      <div className="flex items-center gap-2 mb-5 border-b border-slate-100 pb-3">
-        <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center text-amber-600">
-          <Tag size={18} className="fill-amber-600/10" />
+    <div className="animate-in fade-in slide-in-from-top-1 duration-300 pt-1 pb-2">
+      <div className="flex items-center gap-2 mb-3 border-b border-slate-100 pb-2">
+        <div className="w-6 h-6 rounded-md bg-amber-50 flex items-center justify-center text-amber-600">
+          <Tag size={14} className="fill-amber-600/10" />
         </div>
-        <p className="text-[15px] font-bold text-slate-800 tracking-tight">Product Batches</p>
+        <p className="text-[13px] font-bold text-slate-800 tracking-tight">Product Batches</p>
         <span className="ml-auto text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
           {safeBatches.length} {safeBatches.length === 1 ? 'batch' : 'batches'}
         </span>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+      <div className="flex flex-col border border-slate-200 rounded-lg overflow-hidden bg-white shadow-sm">
         {visible.map((batch: any, idx: number) => {
           const physicalQty   = Number(batch.stock_infos?.physical_stocks   ?? batch.stocks ?? batch.quantity ?? batch.qty ?? 0);
           const availableQty  = Number(batch.stock_infos?.available_stocks  ?? physicalQty);
@@ -212,138 +180,105 @@ export const BatchCards = ({ batches }: { batches: any | any[] }) => {
               : { label: 'In Stock',     cls: 'text-emerald-600 bg-emerald-50 border-emerald-200' };
 
           return (
-            <div
-              key={batch.id || idx}
-              className="bg-white border border-slate-200 rounded-xl shadow-sm hover:shadow-md hover:border-blue-200 transition-all flex flex-col overflow-hidden"
-            >
-              {/* ── Header ─────────────────────────────────────────────── */}
-              <div className="flex items-start justify-between px-3 pt-3 pb-2.5 border-b border-slate-100 bg-slate-50/60">
-                <div className="flex flex-col gap-0.5 min-w-0">
-                  <span className="text-[12px] font-black text-slate-800 truncate">
-                    {batch.name || batch.batch || `BAT-${String(idx + 1).padStart(3, '0')}`}
-                  </span>
-                  {batch.id && (
-                    <span className="text-[9px] text-slate-400 font-mono truncate">{batch.id.slice(0, 8)}…</span>
+            <div key={batch.id || idx} className="flex flex-col border-b border-slate-100 last:border-b-0 hover:bg-slate-50/50 transition-colors bg-white">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 px-3 sm:px-4 py-2.5">
+                
+                {/* Batch Info (Name, ID) */}
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                  <div className="w-6 h-6 rounded-md bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-400 shrink-0">
+                    <Package size={12} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[13px] font-bold text-slate-800 truncate">
+                      {batch.name || batch.batch || `BAT-${String(idx + 1).padStart(3, '0')}`}
+                    </p>
+                    <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                      {batch.id && (
+                         <span className="text-[9px] font-mono text-slate-400 font-medium">{batch.id.slice(0, 8)}…</span>
+                      )}
+                      {storageLoc && (
+                         <span className="text-[8px] font-bold px-1 py-0.5 rounded bg-violet-50 text-violet-700 border border-violet-100 tracking-wider">LOC: {storageLoc}</span>
+                      )}
+                      {reorderPt !== null && (
+                         <span className="text-[8px] font-bold px-1 py-0.5 rounded bg-orange-50 text-orange-700 border border-orange-100 tracking-wider">REORDER: {reorderPt}</span>
+                      )}
+                      {daysToExpiry !== null && (
+                         <span className={`text-[8px] font-bold px-1 py-0.5 rounded tracking-wider border ${daysToExpiry <= 0 ? 'bg-rose-50 border-rose-200 text-rose-600' : daysToExpiry <= 7 ? 'bg-amber-50 border-amber-200 text-amber-600' : 'bg-emerald-50 border-emerald-100 text-emerald-600'}`}>
+                            {daysToExpiry < 0 ? `EXP ${Math.abs(daysToExpiry)}D AGO` : daysToExpiry === 0 ? 'EXPIRES TODAY' : `EXP IN ${daysToExpiry}D`}
+                         </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Details (Dates, Prices, Stock) */}
+                <div className="flex items-center justify-end gap-4 sm:gap-6 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-50">
+                  
+                  {/* Dates */}
+                  {(batch.manufacturing_date || batch.expiry_date || batch.expiry) && (
+                    <div className="text-right flex flex-col items-end">
+                      {batch.manufacturing_date && <p className="text-[9px] font-medium text-slate-500 mb-0.5">MFG: <span className="font-bold text-slate-700">{formatDate(batch.manufacturing_date)}</span></p>}
+                      {(batch.expiry_date || batch.expiry) && <p className="text-[9px] font-medium text-slate-500">EXP: <span className="font-bold text-slate-700">{formatDate(batch.expiry_date || batch.expiry)}</span></p>}
+                    </div>
                   )}
-                </div>
-                <div className="flex flex-col items-end gap-1 shrink-0 ml-2">
-                  <span className={`text-[10px] font-black px-2 py-0.5 rounded-full border ${stockStatus.cls}`}>
-                    {availableQty} {stockStatus.label}
-                  </span>
-                </div>
-              </div>
 
-              <div className="flex flex-col gap-0 px-3 py-2.5 flex-1">
-
-                {/* ── Stock breakdown ─────────────────────────────────── */}
-                {(physicalQty !== availableQty || reservedQty > 0) && (
-                  <div className="flex items-center justify-between text-[10px] mb-2 bg-blue-50/50 border border-blue-100/60 rounded-lg px-2 py-1.5">
-                    <span className="text-slate-500 font-semibold">Physical: <span className="text-slate-700 font-black">{physicalQty}</span></span>
-                    <span className="text-slate-500 font-semibold">Available: <span className="text-emerald-600 font-black">{availableQty}</span></span>
-                    {reservedQty > 0 && (
-                      <span className="text-slate-500 font-semibold">Reserved: <span className="text-amber-600 font-black">{reservedQty}</span></span>
-                    )}
-                  </div>
-                )}
-
-                {/* ── MFG / EXP dates ─────────────────────────────────── */}
-                <div className="flex items-center justify-between text-[10.5px] font-medium text-slate-500 mb-2">
-                  <div className="flex items-center gap-1">
-                    <Package size={10} className="text-slate-400 shrink-0" />
-                    <span>MFG: <span className="text-slate-700 font-bold">{formatDate(batch.manufacturing_date)}</span></span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Clock size={10} className="text-slate-400 shrink-0" />
-                    <span>EXP: <span className="text-slate-700 font-bold">{formatDate(batch.expiry_date || batch.expiry)}</span></span>
-                  </div>
-                </div>
-
-                {/* ── Pricing ─────────────────────────────────────────── */}
-                {(bBuy !== undefined || bSell !== undefined) && (
-                  <div className="flex items-center justify-between text-[11px] font-bold border-t border-slate-100 pt-2 mb-2">
-                    <div className="flex flex-col">
-                      <span className="text-[8.5px] font-semibold text-slate-400 uppercase tracking-wide">Buy Price</span>
-                      <span className="text-rose-600">{bBuy !== undefined ? formatCurrency(bBuy) : '—'}</span>
+                  {/* Pricing */}
+                  {(bBuy !== undefined || bSell !== undefined) && (
+                    <div className="text-right flex flex-col items-end hidden md:flex">
+                      {bBuy !== undefined && <p className="text-[9px] font-medium text-slate-500 mb-0.5">Buy: <span className="font-bold text-slate-700">{formatCurrency(bBuy)}</span></p>}
+                      {bSell !== undefined && <p className="text-[9px] font-medium text-slate-500">Sell: <span className="font-bold text-slate-700">{formatCurrency(bSell)}</span></p>}
                     </div>
-                    <div className="w-px h-6 bg-slate-100" />
-                    <div className="flex flex-col items-end">
-                      <span className="text-[8.5px] font-semibold text-slate-400 uppercase tracking-wide">Sell Price</span>
-                      <span className="text-emerald-600">{bSell !== undefined ? formatCurrency(bSell) : '—'}</span>
-                    </div>
-                  </div>
-                )}
+                  )}
 
-                {/* ── Storage Location + Reorder Point ───────────────── */}
-                {(storageLoc !== null || reorderPt !== null) && (
-                  <div className="flex items-center gap-2 border-t border-slate-100 pt-2 mb-2">
-                    {storageLoc && (
-                      <div className="flex items-center gap-1 flex-1 bg-violet-50 border border-violet-100 rounded-lg px-2 py-1.5 min-w-0">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-violet-500 shrink-0"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-                        <div className="flex flex-col min-w-0">
-                          <span className="text-[8px] font-bold text-violet-400 uppercase tracking-wide leading-none">Location</span>
-                          <span className="text-[10px] font-black text-violet-700 truncate">{storageLoc}</span>
-                        </div>
-                      </div>
-                    )}
-                    {reorderPt !== null && (
-                      <div className="flex items-center gap-1 flex-1 bg-orange-50 border border-orange-100 rounded-lg px-2 py-1.5 min-w-0">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-orange-500 shrink-0"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-                        <div className="flex flex-col min-w-0">
-                          <span className="text-[8px] font-bold text-orange-400 uppercase tracking-wide leading-none">Reorder At</span>
-                          <span className="text-[10px] font-black text-orange-700">{reorderPt}</span>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
+                  {/* Stock Breakdown (Physical vs Available vs Reserved) */}
+                  {(physicalQty !== availableQty || reservedQty > 0) && (
+                     <div className="text-right flex flex-col items-end hidden lg:flex">
+                        {physicalQty !== availableQty && <p className="text-[9px] font-medium text-slate-500 mb-0.5">Phy: <span className="font-bold text-slate-700">{physicalQty}</span></p>}
+                        {reservedQty > 0 && <p className="text-[9px] font-medium text-slate-500">Res: <span className="font-bold text-amber-600">{reservedQty}</span></p>}
+                     </div>
+                  )}
 
-                {/* ── Expiry alert ────────────────────────────────────── */}
-                {daysToExpiry !== null && (
-                  <div className={`flex items-center gap-1.5 rounded-lg px-2 py-1.5 mb-2
-                    ${daysToExpiry <= 0
-                      ? 'bg-rose-50 border border-rose-200 text-rose-600'
-                      : daysToExpiry <= 7
-                        ? 'bg-amber-50 border border-amber-200 text-amber-600'
-                        : 'bg-green-50 border border-green-100 text-green-600'
-                    }`}>
-                    <AlertTriangle size={10} className="shrink-0" />
-                    <span className="text-[9px] font-bold tracking-tight leading-none">
-                      {daysToExpiry < 0
-                        ? `Expired ${Math.abs(daysToExpiry)} day${Math.abs(daysToExpiry) !== 1 ? 's' : ''} ago`
-                        : daysToExpiry === 0
-                          ? 'Expires today!'
-                          : `Expires in ${daysToExpiry} day${daysToExpiry !== 1 ? 's' : ''}`}
+                  {/* Stock */}
+                  <div className="text-center w-[40px]">
+                    <p className="text-[9px] font-bold text-slate-400 mb-0.5">Stock</p>
+                    <p className="text-[12px] font-black text-slate-800 tabular-nums">{availableQty}</p>
+                  </div>
+
+                  {/* Status */}
+                  <div className="text-center w-[75px] flex flex-col items-center">
+                    <p className="text-[9px] font-bold text-slate-400 mb-1">Status</p>
+                    <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded border whitespace-nowrap ${stockStatus.cls}`}>
+                      {stockStatus.label}
                     </span>
                   </div>
-                )}
 
-                {/* ── Serial Numbers ──────────────────────────────────── */}
-                {serials.length > 0 && (
-                  <div className="border-t border-slate-100 pt-2">
-                    <div className="flex items-center justify-between mb-1.5">
-                      <div className="flex items-center gap-1">
-                        <Hash size={9} className="text-blue-400" />
-                        <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wide">Serial Numbers</span>
-                      </div>
-                      <span className="text-[9px] font-black text-blue-600 bg-blue-50 border border-blue-100 px-1.5 py-0.5 rounded-full leading-none">{serials.length}</span>
-                    </div>
-                    <SerialBadgeList serials={serials} title={`Batch Serials: ${batch.name || batch.batch}`} />
-                  </div>
-                )}
+                </div>
               </div>
+
+              {/* Serials */}
+              {serials.length > 0 && (
+                <div className="px-4 pb-2 pt-1.5 border-t border-slate-50 bg-slate-50/50">
+                  <div className="flex items-center justify-between mb-0.5">
+                    <p className="text-[9px] font-bold text-slate-400 flex items-center gap-1">
+                      <Hash size={9} className="text-slate-400" /> Serial Numbers ({serials.length})
+                    </p>
+                  </div>
+                  <SerialBadgeList serials={serials} />
+                </div>
+              )}
             </div>
           );
         })}
       </div>
 
       {remaining > 0 && !showAll && (
-        <div className="mt-4 flex justify-center">
+        <div className="mt-3 flex justify-center">
           <button
             onClick={() => setShowAll(true)}
-            className="flex items-center gap-2 px-6 py-2.5 bg-white border border-slate-200 text-slate-600 font-bold text-[11px] rounded-lg hover:bg-slate-50 hover:border-blue-200 transition-all shadow-sm"
+            className="flex items-center gap-1.5 px-4 py-1.5 bg-white border border-slate-200 text-slate-600 font-bold text-[10px] rounded-md hover:bg-slate-50 hover:border-blue-200 transition-all shadow-sm"
           >
-            View All {safeBatches.length} Batches
-            <ChevronDown size={14} />
+            Show All {safeBatches.length} Batches
+            <ChevronDown size={12} />
           </button>
         </div>
       )}
@@ -384,16 +319,15 @@ export const VariantRows = ({ combinations, baseSellPrice, baseBuyPrice }: { com
   const [expandedVariant, setExpandedVariant] = useState<string | null>(null);
 
   return (
-    <div className="animate-in fade-in slide-in-from-top-2 duration-400 pt-2 pb-4">
-      <div className="flex items-center gap-2 mb-5 border-b border-slate-100 pb-3">
-        <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600">
-          <Layers size={18} className="fill-blue-600/10" />
+    <div className="animate-in fade-in slide-in-from-top-2 duration-300 pt-1 pb-2">
+      <div className="flex items-center gap-2 mb-3 border-b border-slate-100 pb-2">
+        <div className="w-6 h-6 rounded-md bg-blue-50 flex items-center justify-center text-blue-600">
+          <Layers size={14} className="fill-blue-600/10" />
         </div>
-        <p className="text-[15px] font-bold text-slate-800 tracking-tight">Product Variants</p>
+        <p className="text-[13px] font-bold text-slate-800 tracking-tight">Product Variants</p>
       </div>
-      <div className="flex flex-col relative gap-3">
+      <div className="flex flex-col border border-slate-200 rounded-lg overflow-hidden bg-white shadow-sm">
         {combinations.map((comb: any, idx: number) => {
-          const isLast = idx === combinations.length - 1;
           const combDatas = comb.datas || {};
           const attributes = comb.attributes || combDatas.attributes || combDatas.datas?.attributes || {};
 
@@ -422,47 +356,41 @@ export const VariantRows = ({ combinations, baseSellPrice, baseBuyPrice }: { com
           const buyPrice = comb.pricing_infos?.buy_price ?? comb.buy_price ?? combDatas.buy_price ?? combDatas.datas?.buy_price ?? baseBuyPrice ?? 0;
 
           return (
-            <div key={variantId} className="relative md:pl-6 pl-4">
-              {/* --- Tree Branches --- */}
-              <div className={`absolute left-[0px] w-[1.5px] bg-slate-200 ${isLast && !isVarExpanded ? 'top-0 h-[32px]' : 'top-0 bottom-[-12px]'}`}></div>
-              <div className="absolute left-[0px] top-[32px] w-[12px] md:w-[16px] h-[1.5px] bg-slate-200"></div>
-
-              {/* Variant Card */}
-              <div className={`border border-slate-200 rounded-[1rem] overflow-hidden bg-white shadow-sm transition-all hover:border-blue-300 ${isVarExpanded ? 'ring-1 ring-blue-500/20 shadow-md' : ''}`}>
+            <div key={variantId} className={`border-b border-slate-100 last:border-b-0 transition-all hover:bg-slate-50/50 ${isVarExpanded ? 'bg-slate-50/80 shadow-inner' : 'bg-white'}`}>
                 <div
-                  className={`flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 px-4 sm:px-5 py-3 ${hasBatches ? 'hover:bg-slate-50 cursor-pointer' : ''}`}
+                  className={`flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 ${hasBatches ? 'hover:bg-slate-50 cursor-pointer' : ''}`}
                   onClick={() => hasBatches && setExpandedVariant(isVarExpanded ? null : variantId)}
                 >
-                  <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
+                  <div className="flex items-center gap-2.5 sm:gap-3 flex-1 min-w-0">
                     {/* Expand Icon for Batches */}
                     {hasBatches ? (
-                      <div className={`w-6 h-6 rounded-lg flex items-center justify-center transition-all shrink-0 ${isVarExpanded ? "bg-blue-600 text-white shadow-lg shadow-blue-200" : "bg-slate-100 text-slate-500"}`}>
-                        {isVarExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                      <div className={`w-5 h-5 rounded-md flex items-center justify-center transition-all shrink-0 ${isVarExpanded ? "bg-blue-600 text-white shadow-lg shadow-blue-200" : "bg-slate-100 text-slate-500"}`}>
+                        {isVarExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
                       </div>
                     ) : (
-                      <div className="w-6 h-6 rounded-lg bg-slate-50 flex items-center justify-center text-slate-300 shrink-0">
-                        <Package size={14} />
+                      <div className="w-5 h-5 rounded-md bg-slate-50 flex items-center justify-center text-slate-300 shrink-0">
+                        <Package size={12} />
                       </div>
                     )}
 
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-bold text-slate-800 truncate">{variantLabel}</p>
-                      <div className="flex items-center gap-2 mt-0.5">
+                      <p className="text-[13px] font-bold text-slate-800 truncate">{variantLabel}</p>
+                      <div className="flex items-center gap-1.5 mt-0.5">
                         {(() => {
                           const rawSku = comb.barcode || combDatas.barcode || "";
                           if (!rawSku) {
-                            return <span className="text-[10px] font-mono text-slate-400 font-medium">No SKU</span>;
+                            return <span className="text-[9px] font-mono text-slate-400 font-medium">No SKU</span>;
                           }
                           const trimmedSku = rawSku.length > 12 ? `${rawSku.slice(0, 8)}...` : rawSku;
                           return (
-                            <span className="flex items-center gap-1 text-[10px] font-mono text-slate-400 font-medium" onClick={(e) => e.stopPropagation()}>
+                            <span className="flex items-center gap-1 text-[9px] font-mono text-slate-400 font-medium" onClick={(e) => e.stopPropagation()}>
                               <span title={rawSku}>{trimmedSku}</span>
                               <CopySKUButton val={rawSku} />
                             </span>
                           );
                         })()}
                         {hasBatches && (
-                          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-600 border border-indigo-100  tracking-tighter shrink-0">
+                          <span className="text-[9px] font-bold px-1 py-0.5 rounded bg-badge-coral-bg text-badge-coral-text border border-badge-coral-text/20 tracking-tighter shrink-0">
                             {batches.length} {batches.length === 1 ? 'Batch' : 'Batches'}
                           </span>
                         )}
@@ -471,52 +399,51 @@ export const VariantRows = ({ combinations, baseSellPrice, baseBuyPrice }: { com
                   </div>
 
                   {/* Stats */}
-                  <div className="flex items-center justify-end gap-5 sm:gap-6 md:gap-7 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-50">
-                    <div className="text-right w-[45px]">
-                      <p className="text-[9px] font-bold text-slate-400 leading-none mb-1.5 text-right w-full">Stock</p>
-                      <p className="text-xs font-bold text-slate-800 tabular-nums">{stockNum}</p>
+                  <div className="flex items-center justify-end gap-3 sm:gap-4 md:gap-5 shrink-0 pt-1.5 sm:pt-0 border-t sm:border-t-0 border-slate-50">
+                    <div className="text-right w-[40px]">
+                      <p className="text-[9px] font-bold text-slate-400 leading-none mb-1 text-right w-full">Stock</p>
+                      <p className="text-[11px] font-bold text-slate-800 tabular-nums">{stockNum}</p>
                     </div>
-                    <div className="text-center w-[85px] flex flex-col items-center">
-                      <p className="text-[9px] font-bold text-slate-400 leading-none mb-1.5 text-center w-full">Status</p>
-                      <span className={`inline-flex px-1.5 py-0.5 rounded-lg text-[9px] font-bold border leading-none ${stockStatus.color}`}>
+                    <div className="text-center w-[75px] flex flex-col items-center">
+                      <p className="text-[9px] font-bold text-slate-400 leading-none mb-1 text-center w-full">Status</p>
+                      <span className={`inline-flex px-1.5 py-0.5 rounded-md text-[9px] font-bold border leading-none ${stockStatus.color}`}>
                         {statusLabel}
                       </span>
                     </div>
-                    <div className="text-right w-[65px]">
+                    <div className="text-right w-[60px]">
                       <p className="text-[9px] font-bold text-slate-400 leading-none mb-1">Buy Price</p>
-                      <p className="text-xs font-bold text-rose-500 tabular-nums">{formatCurrency(buyPrice)}</p>
+                      <p className="text-[11px] font-bold text-rose-500 tabular-nums">{formatCurrency(buyPrice)}</p>
                     </div>
-                    <div className="text-right w-[65px]">
+                    <div className="text-right w-[60px]">
                       <p className="text-[9px] font-bold text-slate-400 leading-none mb-1">Sell Price</p>
-                      <p className="text-xs font-bold text-emerald-600 tabular-nums">{formatCurrency(sellPrice)}</p>
+                      <p className="text-[11px] font-bold text-emerald-600 tabular-nums">{formatCurrency(sellPrice)}</p>
                     </div>
-                    <div className="text-center w-[65px]">
-                      <p className="text-[9px] font-bold text-slate-400 leading-none mb-1">Reorder Point</p>
-                      <p className="text-xs font-bold text-slate-700 tabular-nums">{reorderPoint || "—"}</p>
+                    <div className="text-center w-[55px]">
+                      <p className="text-[9px] font-bold text-slate-400 leading-none mb-1">Reorder Pt</p>
+                      <p className="text-[11px] font-bold text-slate-700 tabular-nums">{reorderPoint || "—"}</p>
                     </div>
                   </div>
                 </div>
 
                 {/* Serial Numbers - Always Visible */}
                 {hasSerials && (
-                  <div className="px-5 pb-3 pt-2 border-t border-slate-50/50 bg-indigo-50/10">
-                    <div className="flex items-center justify-between mb-1">
-                      <p className="text-[9px] font-bold text-slate-400   flex items-center gap-1">
-                        <Hash size={10} className="text-indigo-400" /> Serial Numbers ({serials.length})
+                  <div className="px-4 pb-2 pt-1.5 border-t border-slate-50/50 bg-indigo-50/10">
+                    <div className="flex items-center justify-between mb-0.5">
+                      <p className="text-[9px] font-bold text-slate-400 flex items-center gap-1">
+                        <Hash size={9} className="text-indigo-400" /> Serial Numbers ({serials.length})
                       </p>
                     </div>
-                    <SerialBadgeList serials={serials} title={`Variant Serials: ${variantLabel}`} />
+                    <SerialBadgeList serials={serials} />
                   </div>
                 )}
 
                 {/* Nested Batches Area */}
                 {isVarExpanded && hasBatches && (
-                  <div className="border-t border-slate-100 bg-slate-50/50 p-3 sm:p-4 md:pl-6 pl-4">
+                  <div className="border-t border-slate-100 bg-slate-50/50 p-2 sm:p-3 md:pl-4 pl-3">
                     <BatchCards batches={batches} />
                   </div>
                 )}
               </div>
-            </div>
           );
         })}
       </div>

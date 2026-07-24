@@ -7,7 +7,7 @@ import {
 import { toDisplayData } from "./PurchaseHistory";
 import type { DirectPurchaseData } from "./PurchaseHistory";
 import { ProfileHeaderCard, SectionCard, DetailItem, InfoRow } from "@/components/common/SuperUI";
-import { StatCard } from "@/components/common/StatsCard";
+
 import { useBusinessApi } from "@/context/BusinessApiContext";
 import { useHeader } from "@/context/HeaderContext";
 import { useApi } from "@/context/ApiContext";
@@ -132,7 +132,7 @@ const PurchaseDetail = () => {
     );
   }
 
-  const totalQty = po.products.reduce((s, i) => s + i.quantity, 0);
+
   const subtotal = po.products.reduce(
   (sum, item) => sum + (item.buy_price || 0) * (item.quantity || 0),
   0
@@ -228,37 +228,7 @@ const outstanding =
           {/* TAB 0 — Overview */}
           {activeTab === 0 && (
             <div className="space-y-4">
-              {/* Quick Stats */}
-              <div className="flex flex-wrap gap-2">
-                <StatCard
-                  icon={Banknote}
-                  label="Total Cost"
-                  value={fmt(grandTotal)}
-                  iconBg="bg-blue-50 text-blue-600"
-                  className="flex-1 min-w-[140px]"
-                />
-                <StatCard
-                  icon={Package}
-                  label="Total Items"
-                  value={`${totalQty} Units`}
-                  iconBg="bg-indigo-50 text-indigo-600"
-                  className="flex-1 min-w-[140px]"
-                />
-                <StatCard
-                  icon={TrendingUp}
-                  label="Status"
-                  value="Completed"
-                  iconBg="bg-emerald-50 text-emerald-600"
-                  className="flex-1 min-w-[140px]"
-                />
-                <StatCard
-                  icon={AlertCircle}
-                  label="Outstanding"
-                  value={fmt(outstanding)}
-                  iconBg={po.outstanding && po.outstanding > 0 ? "bg-rose-50 text-rose-600" : "bg-emerald-50 text-emerald-600"}
-                  className="flex-1 min-w-[140px]"
-                />
-              </div>
+
 
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
                 {/* Financial Summary */}

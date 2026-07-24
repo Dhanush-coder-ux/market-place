@@ -8,7 +8,7 @@ import {
   Database,
   Search
 } from "lucide-react";
-import { StatCard } from "@/components/common/StatsCard";
+
 import { useApi } from "@/context/ApiContext";
 import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 import { useHeader } from "@/context/HeaderContext";
@@ -295,30 +295,7 @@ const SaleDetailPage: React.FC = () => {
           {/* TAB 0 — Overview */}
           {activeTab === 0 && (
             <div className="space-y-4">
-              {/* Quick Stats */}
-              <div className="flex flex-wrap gap-2">
-                <StatCard
-                  icon={Banknote}
-                  label="Grand Total"
-                  value={fmt(sale.total_sellprice)}
-                  iconBg="bg-blue-50 text-blue-600"
-                  className="flex-1 min-w-[140px]"
-                />
-                <StatCard
-                  icon={Package}
-                  label="Total Items"
-                  value={String(Number((sale.total_quantity || 0).toFixed(2)))}
-                  iconBg="bg-indigo-50 text-indigo-600"
-                  className="flex-1 min-w-[140px]"
-                />
-                <StatCard
-                  icon={TrendingUp}
-                  label="Status"
-                  value={sale.status}
-                  iconBg="bg-emerald-50 text-emerald-600"
-                  className="flex-1 min-w-[140px]"
-                />
-              </div>
+
 
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
                 {/* Financial Summary */}

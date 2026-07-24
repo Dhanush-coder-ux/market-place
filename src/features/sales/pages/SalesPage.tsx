@@ -35,23 +35,23 @@ const fmt = (n: number) => `₹${n.toLocaleString("en-IN")}`;
 ═══════════════════════════════════════════════════════════════ */
 type BadgeConfig = { cls: string; dot: string };
 const ORIGIN_CFG: Record<OriginType, BadgeConfig> = {
-  "Sales": { cls: "bg-blue-50 text-blue-700 border-blue-100", dot: "bg-blue-400" },
-  "Sales Return": { cls: "bg-orange-50 text-orange-700 border-orange-100", dot: "bg-orange-400" },
-  "Online Sales": { cls: "bg-indigo-50 text-indigo-700 border-indigo-100", dot: "bg-indigo-400" },
+  "Sales": { cls: "bg-badge-blue-bg text-badge-blue-text border-badge-blue-text/20", dot: "bg-blue-400" },
+  "Sales Return": { cls: "bg-badge-purple-bg text-badge-purple-text border-badge-purple-text/20", dot: "bg-purple-400" },
+  "Online Sales": { cls: "bg-badge-teal-bg text-badge-teal-text border-badge-teal-text/20", dot: "bg-teal-400" },
 };
 const PAYMENT_CFG: Record<string, BadgeConfig> = {
-  Cash: { cls: "bg-emerald-50 text-emerald-700 border-emerald-100", dot: "bg-emerald-400" },
-  Card: { cls: "bg-purple-50 text-purple-700 border-purple-100", dot: "bg-purple-400" },
-  UPI: { cls: "bg-indigo-50 text-indigo-700 border-indigo-100", dot: "bg-indigo-400" },
-  "G-Pay": { cls: "bg-blue-50 text-blue-700 border-blue-100", dot: "bg-blue-400" },
-  PhonePe: { cls: "bg-purple-50 text-purple-700 border-purple-100", dot: "bg-purple-400" },
-  Credit: { cls: "bg-amber-50 text-amber-700 border-amber-100", dot: "bg-amber-400" },
-  Other: { cls: "bg-slate-50 text-slate-700 border-slate-100", dot: "bg-slate-400" },
+  Cash: { cls: "bg-badge-green-bg text-badge-green-text border-badge-green-text/20", dot: "bg-green-400" },
+  Card: { cls: "bg-badge-purple-bg text-badge-purple-text border-badge-purple-text/20", dot: "bg-purple-400" },
+  UPI: { cls: "bg-badge-coral-bg text-badge-coral-text border-badge-coral-text/20", dot: "bg-orange-400" },
+  "G-Pay": { cls: "bg-badge-blue-bg text-badge-blue-text border-badge-blue-text/20", dot: "bg-blue-400" },
+  PhonePe: { cls: "bg-badge-purple-bg text-badge-purple-text border-badge-purple-text/20", dot: "bg-purple-400" },
+  Credit: { cls: "bg-badge-amber-bg text-badge-amber-text border-badge-amber-text/20", dot: "bg-amber-400" },
+  Other: { cls: "bg-badge-gray-bg text-badge-gray-text border-badge-gray-text/20", dot: "bg-gray-400" },
 };
 const STATUS_CFG: Record<SaleStatus, BadgeConfig> = {
-  Completed: { cls: "bg-emerald-50 text-emerald-700 border-emerald-100", dot: "bg-emerald-500" },
-  Pending: { cls: "bg-amber-50 text-amber-700 border-amber-100", dot: "bg-amber-400" },
-  Cancelled: { cls: "bg-red-50 text-red-600 border-red-100", dot: "bg-red-400" },
+  Completed: { cls: "bg-badge-green-bg text-badge-green-text border-badge-green-text/20", dot: "bg-emerald-500" },
+  Pending: { cls: "bg-badge-amber-bg text-badge-amber-text border-badge-amber-text/20", dot: "bg-amber-400" },
+  Cancelled: { cls: "bg-badge-red-bg text-badge-red-text border-badge-red-text/20", dot: "bg-red-400" },
 };
 
 /* ═══════════════════════════════════════════════════════════════

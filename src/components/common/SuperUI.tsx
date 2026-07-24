@@ -10,12 +10,16 @@ export const fmt = (n: number) => "₹" + n.toLocaleString("en-IN");
 
 export function StatusBadge({ status }: { status: string }) {
   const colorMap: Record<string, string> = {
-    Paid: "bg-emerald-50 text-emerald-600 border-emerald-100",
-    Partial: "bg-blue-50 text-blue-600 border-blue-100",
-    Pending: "bg-amber-50 text-amber-600 border-amber-100",
-    Accepted: "bg-emerald-50 text-emerald-600 border-emerald-100",
-    Inactive: "bg-rose-50 text-rose-600 border-rose-100",
-    Active: "bg-emerald-50 text-emerald-600 border-emerald-100",
+    Paid: "bg-badge-green-bg text-badge-green-text border-badge-green-text/20",
+    Partial: "bg-badge-amber-bg text-badge-amber-text border-badge-amber-text/20",
+    "Partially Paid": "bg-badge-amber-bg text-badge-amber-text border-badge-amber-text/20",
+    Pending: "bg-badge-coral-bg text-badge-coral-text border-badge-coral-text/20",
+    Accepted: "bg-badge-green-bg text-badge-green-text border-badge-green-text/20",
+    Inactive: "bg-badge-red-bg text-badge-red-text border-badge-red-text/20",
+    Active: "bg-badge-green-bg text-badge-green-text border-badge-green-text/20",
+    Completed: "bg-badge-green-bg text-badge-green-text border-badge-green-text/20",
+    Draft: "bg-badge-gray-bg text-badge-gray-text border-badge-gray-text/20",
+    Cancelled: "bg-badge-red-bg text-badge-red-text border-badge-red-text/20",
   };
   return (
     <span
@@ -31,13 +35,14 @@ export function StatusBadge({ status }: { status: string }) {
 
 export function TypeBadge({ type, labelOverride, icon: Icon }: { type: string, labelOverride?: string, icon?: any }) {
   const t = type?.toUpperCase() || "ADJUSTMENT";
-  let bg = "bg-violet-50", text = "text-violet-700", border = "border-violet-200", label = "Adjustment";
+  let bg = "bg-badge-amber-bg", text = "text-badge-amber-text", border = "border-badge-amber-text/20", label = "Adjustment";
   
-  if (t.includes("PURCHASE") || t === "DIRECT" || t.includes("PO_")) { bg = "bg-emerald-50"; text = "text-emerald-700"; border = "border-emerald-200"; label = "Purchase"; }
-  else if (t.includes("SALES_RETURN") || t.includes("SALE_RETURN") || t.includes("RETURN")) { bg = "bg-fuchsia-50"; text = "text-fuchsia-700"; border = "border-fuchsia-200"; label = "Sales Return"; }
-  else if (t.includes("SALES")) { bg = "bg-rose-50"; text = "text-rose-700"; border = "border-rose-200"; label = "Sales"; }
-  else if (t === "TRANSFER") { bg = "bg-sky-50"; text = "text-sky-700"; border = "border-sky-200"; label = "Transfer"; }
-  else if (t.includes("ADJUSTMENT")) { bg = "bg-violet-50"; text = "text-violet-700"; border = "border-violet-200"; label = "Adjustment"; }
+  if (t.includes("PURCHASE") || t === "DIRECT" || t.includes("PO_")) { bg = "bg-badge-green-bg"; text = "text-badge-green-text"; border = "border-badge-green-text/20"; label = "Purchase"; }
+  else if (t.includes("SALES_RETURN") || t.includes("SALE_RETURN") || t.includes("RETURN")) { bg = "bg-badge-purple-bg"; text = "text-badge-purple-text"; border = "border-badge-purple-text/20"; label = "Sales Return"; }
+  else if (t.includes("SALES")) { bg = "bg-badge-blue-bg"; text = "text-badge-blue-text"; border = "border-badge-blue-text/20"; label = "Sales"; }
+  else if (t === "TRANSFER") { bg = "bg-badge-teal-bg"; text = "text-badge-teal-text"; border = "border-badge-teal-text/20"; label = "Transfer"; }
+  else if (t.includes("OPENING")) { bg = "bg-badge-teal-bg"; text = "text-badge-teal-text"; border = "border-badge-teal-text/20"; label = "Opening"; }
+  else if (t.includes("ADJUSTMENT")) { bg = "bg-badge-amber-bg"; text = "text-badge-amber-text"; border = "border-badge-amber-text/20"; label = "Adjustment"; }
 
   const displayLabel = labelOverride || label;
 

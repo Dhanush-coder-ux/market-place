@@ -84,49 +84,53 @@ const ShopSelect = () => {
 
         <div className="space-y-3">
           {/* Existing shops */}
-          {shops.map((shop) => (
-            <button
-              key={shop.id}
-              onClick={() => handleSelectShop(shop)}
-              disabled={!!selecting}
-              className="w-full flex items-center gap-4 p-4 rounded-2xl bg-white border border-slate-200 hover:border-blue-300 hover:bg-slate-50 shadow-sm transition-all duration-200 text-left group disabled:opacity-60"
-            >
-              {/* Shop avatar */}
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shrink-0 text-white font-black text-lg shadow-md shadow-blue-500/20">
-                {shop.logo_url ? (
-                  <img
-                    src={shop.logo_url}
-                    alt={shop.name}
-                    className="w-full h-full object-cover rounded-xl"
-                  />
-                ) : (
-                  shop.name.charAt(0).toUpperCase()
-                )}
-              </div>
+          {shops.length > 0 && (
+            <div className="max-h-[50vh] overflow-y-auto space-y-3 pr-2 -mr-2 scrollbar-hide">
+              {shops.map((shop) => (
+                <button
+                  key={shop.id}
+                  onClick={() => handleSelectShop(shop)}
+                  disabled={!!selecting}
+                  className="w-full flex items-center gap-4 p-4 rounded-2xl bg-white border border-slate-200 hover:border-blue-300 hover:bg-slate-50 shadow-sm transition-all duration-200 text-left group disabled:opacity-60"
+                >
+                  {/* Shop avatar */}
+                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shrink-0 text-white font-black text-lg shadow-md shadow-blue-500/20">
+                    {shop.logo_url ? (
+                      <img
+                        src={shop.logo_url}
+                        alt={shop.name}
+                        className="w-full h-full object-cover rounded-xl"
+                      />
+                    ) : (
+                      shop.name.charAt(0).toUpperCase()
+                    )}
+                  </div>
 
-              {/* Info */}
-              <div className="flex-1 min-w-0">
-                <p className="font-bold text-slate-800 text-sm truncate">{shop.name}</p>
-                {shop.categories && shop.categories.length > 0 && (
-                  <p className="text-xs text-slate-500 font-medium capitalize truncate mt-0.5">
-                    {shop.categories.join(", ")}
-                  </p>
-                )}
-                {shop.description && (
-                  <p className="text-xs text-slate-400 truncate mt-0.5">{shop.description}</p>
-                )}
-              </div>
+                  {/* Info */}
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-slate-800 text-sm truncate">{shop.name}</p>
+                    {shop.categories && shop.categories.length > 0 && (
+                      <p className="text-xs text-slate-500 font-medium capitalize truncate mt-0.5">
+                        {shop.categories.join(", ")}
+                      </p>
+                    )}
+                    {shop.description && (
+                      <p className="text-xs text-slate-400 truncate mt-0.5">{shop.description}</p>
+                    )}
+                  </div>
 
-              {/* Arrow / Spinner */}
-              <div className="shrink-0 text-slate-400 group-hover:text-blue-500 transition-colors">
-                {selecting === shop.id ? (
-                  <Loader2 className="w-5 h-5 animate-spin text-blue-500" />
-                ) : (
-                  <ChevronRight className="w-5 h-5" />
-                )}
-              </div>
-            </button>
-          ))}
+                  {/* Arrow / Spinner */}
+                  <div className="shrink-0 text-slate-400 group-hover:text-blue-500 transition-colors">
+                    {selecting === shop.id ? (
+                      <Loader2 className="w-5 h-5 animate-spin text-blue-500" />
+                    ) : (
+                      <ChevronRight className="w-5 h-5" />
+                    )}
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
 
           {/* Divider if shops exist */}
           {shops.length > 0 && (

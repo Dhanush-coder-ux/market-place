@@ -187,21 +187,21 @@ const getStockStatus = (stock: number, reorderPoint?: number) => {
   if (s <= 0)
     return {
       label: "Out of stock",
-      color: "text-red-600 bg-red-50 border-red-100",
-      dot: "bg-red-500",
+      color: "text-badge-red-text bg-badge-red-bg border-badge-red-text/20",
+      dot: "bg-badge-red-text",
       icon: AlertCircle,
     };
   if (s <= rp)
     return {
       label: "Low stock",
-      color: "text-amber-600 bg-amber-50 border-amber-100",
-      dot: "bg-amber-400",
+      color: "text-badge-amber-text bg-badge-amber-bg border-badge-amber-text/20",
+      dot: "bg-badge-amber-text",
       icon: AlertTriangle,
     };
   return {
     label: "In stock",
-    color: "text-emerald-700 bg-emerald-50 border-emerald-100",
-    dot: "bg-emerald-500",
+    color: "text-badge-green-text bg-badge-green-bg border-badge-green-text/20",
+    dot: "bg-badge-green-text",
     icon: Package,
   };
 };
@@ -259,10 +259,10 @@ const Pill = ({
 }) => {
   const styles: Record<string, string> = {
     default: "text-slate-500 bg-slate-50 border-slate-100",
-    variant: "text-badge-purple-text bg-badge-purple-bg border-badge-purple-text/20",
-    batch: "text-badge-coral-text bg-badge-coral-bg border-badge-coral-text/20",
-    serial: "text-badge-rose-text bg-badge-rose-bg border-badge-rose-text/20",
-    online: "text-badge-green-text bg-badge-green-bg border-badge-green-text/20",
+    variant: "text-badge-\-text\-badge-\-border",
+    batch: "text-badge-\-text\-badge-\-border",
+    serial: "text-badge-\-text\-badge-\-border",
+    online: "text-badge-\-text\-badge-\-border",
   };
   return (
     <span
@@ -422,8 +422,8 @@ const ProductRow = React.memo(
     
     const trackingInfo = [];
     if (!hasVariants) {
-      if (totalBatches > 0) trackingInfo.push({ label: `${totalBatches} batches`, icon: Calendar, color: "coral", bg: "bg-badge-coral-bg", text: "text-badge-coral-text", border: "border-badge-coral-text/20" });
-      if (totalSerials > 0) trackingInfo.push({ label: `${totalSerials} serials`, icon: Hash, color: "rose", bg: "bg-badge-rose-bg", text: "text-badge-rose-text", border: "border-badge-rose-text/20" });
+      if (totalBatches > 0) trackingInfo.push({ label: `${totalBatches} batches`, icon: Calendar, color: "coral", bg: "bg-badge-coral-bg", text: "text-badge-\-text\-badge-\-border" });
+      if (totalSerials > 0) trackingInfo.push({ label: `${totalSerials} serials`, icon: Hash, color: "rose", bg: "bg-badge-red-bg", text: "text-badge-\-text\-badge-\-border" });
     }
 
     const visibleBadges = showAllBadges ? badges : badges.slice(0, 2);

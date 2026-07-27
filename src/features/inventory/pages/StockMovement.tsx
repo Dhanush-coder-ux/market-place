@@ -99,7 +99,7 @@ function DetailDrawer({ movement, onClose }: DetailDrawerProps) {
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-white/80 sticky top-0 z-20 backdrop-blur-md">
           <div className="flex items-center gap-3">
-            <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-white shadow-lg ${isPositive ? 'bg-emerald-500 shadow-emerald-200' : 'bg-rose-500 shadow-rose-200'}`}>
+            <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-white shadow-lg ${isPositive ? 'bg-badge-success-bg0 shadow-emerald-200' : 'bg-badge-red-bg0 shadow-rose-200'}`}>
               {isPositive ? <TrendingUp size={20} /> : <TrendingDown size={20} />}
             </div>
             <div>
@@ -116,11 +116,11 @@ function DetailDrawer({ movement, onClose }: DetailDrawerProps) {
         <div className="flex-1 p-6 space-y-8">
 
           {/* Main Impact Hero */}
-          <div className={`rounded-lg border-2 p-6 text-center space-y-4 shadow-sm transition-all ${isPositive ? 'bg-emerald-50/50 border-emerald-100/50' : 'bg-rose-50/50 border-rose-100/50'}`}>
+          <div className={`rounded-lg border-2 p-6 text-center space-y-4 shadow-sm transition-all ${isPositive ? 'bg-badge-success-bg border-badge-success-border/50' : 'bg-badge-red-bg border-badge-red-border/50'}`}>
             <div className="space-y-1">
               <p className="text-[10px] font-black text-slate-400  tracking-[0.2em]">Net Stock Impact</p>
               <div className="flex items-center justify-center gap-3">
-                <span className={`text-4xl font-black tabular-nums ${isPositive ? 'text-emerald-600' : 'text-rose-600'}`}>
+                <span className={`text-4xl font-black tabular-nums ${isPositive ? 'text-badge-success-text' : 'text-badge-red-text'}`}>
                   {isPositive ? `+${movement.qty}` : movement.qty}
                 </span>
                 <span className="text-slate-400 font-bold text-sm">Units</span>
@@ -142,13 +142,13 @@ function DetailDrawer({ movement, onClose }: DetailDrawerProps) {
                   <span className={`text-[8px] font-black  tracking-tighter ${isPositive ? 'text-emerald-400' : 'text-rose-400'}`}>
                     {isPositive ? "Stock In" : "Stock Out"}
                   </span>
-                  <span className={`text-xs font-bold ${isPositive ? 'text-emerald-600' : 'text-rose-600'}`}>
+                  <span className={`text-xs font-bold ${isPositive ? 'text-badge-success-text' : 'text-badge-red-text'}`}>
                     {isPositive ? `+${movement.qty}` : movement.qty}
                   </span>
                 </div>
                 <div className="flex flex-col items-center">
                   <span className="text-[8px] font-black text-blue-400  tracking-tighter">Closing Stock</span>
-                  <span className="text-xs font-bold text-blue-600">{(movement.stocks_before ?? 0) + movement.qty}</span>
+                  <span className="text-xs font-bold text-badge-info-text">{(movement.stocks_before ?? 0) + movement.qty}</span>
                 </div>
               </div>
             )}
@@ -181,7 +181,7 @@ function DetailDrawer({ movement, onClose }: DetailDrawerProps) {
                           <div className="flex flex-col gap-2 mt-2 pt-2 border-t border-slate-200/50">
                             {p.variant && (
                               <div className="pl-2.5 border-l-2 border-violet-200">
-                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-violet-50 text-violet-700 border border-violet-100 text-[9px] font-black">
+                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-badge-purple-bg text-badge-purple-text border border-badge-purple-border text-[9px] font-black">
                                   Variant: {p.variant}
                                 </span>
                               </div>
@@ -191,7 +191,7 @@ function DetailDrawer({ movement, onClose }: DetailDrawerProps) {
                                 <div className="bg-white border border-slate-100 rounded p-2 shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
                                   <div className="flex justify-between items-center">
                                     <span className="text-[10px] font-bold text-slate-800">Batch: {p.batch}</span>
-                                    <span className={`text-[10px] font-black ${p.qty > 0 ? 'text-emerald-600' : 'text-rose-600'}`}>Qty: {p.qty}</span>
+                                    <span className={`text-[10px] font-black ${p.qty > 0 ? 'text-badge-success-text' : 'text-badge-red-text'}`}>Qty: {p.qty}</span>
                                   </div>
                                   {(p.expiry_date || p.manufacturing_date) && (
                                     <div className="flex gap-3 text-[9px] text-slate-400 mt-1 font-medium">
@@ -232,8 +232,8 @@ function DetailDrawer({ movement, onClose }: DetailDrawerProps) {
                 <div className="relative pl-6 before:absolute before:left-[11px] before:top-8 before:bottom-0 before:w-0.5 before:bg-slate-100">
                   <div className="relative group mb-4">
                     <div className="absolute -left-[19px] top-1.5 w-4 h-4 rounded-full border-2 border-blue-500 bg-white z-10" />
-                    <div className="bg-blue-50/40 border border-blue-100 rounded-lg p-4 transition-all hover:bg-blue-50 hover:shadow-md hover:shadow-blue-500/5">
-                      <div className="flex items-center gap-2 text-blue-600 font-black text-[10px]   mb-1">
+                    <div className="bg-blue-50/40 border border-badge-info-border rounded-lg p-4 transition-all hover:bg-badge-info-bg hover:shadow-md hover:shadow-blue-500/5">
+                      <div className="flex items-center gap-2 text-badge-info-text font-black text-[10px]   mb-1">
                         <Layers size={12} /> Product Root
                       </div>
                       <p className="text-slate-800 font-bold text-base leading-tight">{movement.product}</p>
@@ -248,8 +248,8 @@ function DetailDrawer({ movement, onClose }: DetailDrawerProps) {
                   {movement.variant && (
                     <div className="relative group mb-4">
                       <div className="absolute -left-[19px] top-1.5 w-4 h-4 rounded-full border-2 border-violet-500 bg-white z-10" />
-                      <div className="bg-violet-50/40 border border-violet-100 rounded-lg p-4 ml-2 transition-all hover:bg-violet-50 hover:shadow-md hover:shadow-violet-500/5">
-                        <div className="flex items-center gap-2 text-violet-600 font-black text-[10px]   mb-1">
+                      <div className="bg-violet-50/40 border border-badge-purple-border rounded-lg p-4 ml-2 transition-all hover:bg-badge-purple-bg hover:shadow-md hover:shadow-violet-500/5">
+                        <div className="flex items-center gap-2 text-badge-purple-text font-black text-[10px]   mb-1">
                           <Activity size={12} /> Variant Configuration
                         </div>
                         <p className="text-slate-800 font-bold text-sm">{movement.variant}</p>
@@ -261,29 +261,29 @@ function DetailDrawer({ movement, onClose }: DetailDrawerProps) {
                   {movement.batch && (
                     <div className="relative group mb-4">
                       <div className="absolute -left-[19px] top-1.5 w-4 h-4 rounded-full border-2 border-amber-500 bg-white z-10" />
-                      <div className="bg-amber-50/40 border border-amber-100 rounded-lg p-4 ml-4 transition-all hover:bg-amber-50 hover:shadow-md hover:shadow-amber-500/5">
-                        <div className="flex items-center gap-2 text-amber-600 font-black text-[10px]   mb-1">
+                      <div className="bg-amber-50/40 border border-badge-amber-border rounded-lg p-4 ml-4 transition-all hover:bg-badge-amber-bg hover:shadow-md hover:shadow-amber-500/5">
+                        <div className="flex items-center gap-2 text-badge-amber-text font-black text-[10px]   mb-1">
                           <Hash size={12} /> Batch Identifier
                         </div>
                         <p className="text-slate-800 font-bold text-sm mb-2">{movement.batch}</p>
 
                         {(movement.expiry_date || movement.manufacturing_date) && (
-                          <div className="space-y-1.5 border-t border-amber-100 pt-2 mt-2">
+                          <div className="space-y-1.5 border-t border-badge-amber-border pt-2 mt-2">
                             {movement.manufacturing_date && (
                               <div className="flex justify-between items-center text-[10px]">
-                                <span className="text-amber-600/70 font-bold  tracking-tight">MFG Date</span>
+                                <span className="text-badge-amber-text/70 font-bold  tracking-tight">MFG Date</span>
                                 <span className="text-slate-700 font-bold">{fmtDate(movement.manufacturing_date)}</span>
                               </div>
                             )}
                             {movement.expiry_date && (
                               <>
                                 <div className="flex justify-between items-center text-[10px]">
-                                  <span className="text-amber-600/70 font-bold  tracking-tight">EXP Date</span>
+                                  <span className="text-badge-amber-text/70 font-bold  tracking-tight">EXP Date</span>
                                   <span className="text-slate-700 font-bold">{fmtDate(movement.expiry_date)}</span>
                                 </div>
                                 <div className="flex justify-between items-center bg-white/50 rounded-lg px-2 py-1 mt-1">
                                   <span className="text-[9px] font-black text-rose-500  ">Remaining</span>
-                                  <span className="text-[10px] font-black text-rose-600 tabular-nums">
+                                  <span className="text-[10px] font-black text-badge-red-text tabular-nums">
                                     {(() => {
                                       const diff = new Date(movement.expiry_date).getTime() - new Date().getTime();
                                       const days = Math.ceil(diff / (1000 * 3600 * 24));
@@ -303,13 +303,13 @@ function DetailDrawer({ movement, onClose }: DetailDrawerProps) {
                   {movement.serial_numbers && movement.serial_numbers.length > 0 && (
                     <div className="relative group">
                       <div className="absolute -left-[19px] top-1.5 w-4 h-4 rounded-full border-2 border-emerald-500 bg-white z-10" />
-                      <div className="bg-emerald-50/30 border border-emerald-100 rounded-lg p-4 ml-6 transition-all hover:bg-emerald-50/50 hover:shadow-md hover:shadow-emerald-500/5">
-                        <div className="flex items-center gap-2 text-emerald-600 font-black text-[10px]   mb-3">
+                      <div className="bg-emerald-50/30 border border-badge-success-border rounded-lg p-4 ml-6 transition-all hover:bg-badge-success-bg hover:shadow-md hover:shadow-emerald-500/5">
+                        <div className="flex items-center gap-2 text-badge-success-text font-black text-[10px]   mb-3">
                           <Zap size={12} fill="currentColor" /> Unique Serials ({movement.serial_numbers.length})
                         </div>
                         <div className="flex flex-wrap gap-1.5 max-h-[120px] overflow-y-auto custom-scrollbar pr-1">
                           {movement.serial_numbers.map((sn, i) => (
-                            <span key={i} className="px-2 py-1 rounded-lg bg-white border border-emerald-100 text-emerald-700 font-mono text-[10px] font-bold shadow-sm">
+                            <span key={i} className="px-2 py-1 rounded-lg bg-white border border-badge-success-border text-emerald-700 font-mono text-[10px] font-bold shadow-sm">
                               {sn}
                             </span>
                           ))}
@@ -356,8 +356,8 @@ function DetailDrawer({ movement, onClose }: DetailDrawerProps) {
 
           {/* Notes Card */}
           {movement.notes && (
-            <div className="bg-blue-50/50 rounded-lg p-4 border border-blue-100/50">
-              <div className="flex items-center gap-2 text-blue-600 font-bold text-[10px]   mb-2">
+            <div className="bg-badge-info-bg rounded-lg p-4 border border-badge-info-border/50">
+              <div className="flex items-center gap-2 text-badge-info-text font-bold text-[10px]   mb-2">
                 <FileText size={14} /> Description / Reason
               </div>
               <p className="text-slate-700 text-xs leading-relaxed font-medium">{movement.notes}</p>
@@ -552,7 +552,7 @@ export default function StockMovementPage() {
       setBottomActions(
         <div className="flex items-center justify-between w-full animate-in fade-in slide-in-from-right-4 duration-300">
           <div className="flex items-center gap-3">
-            <div className="w-7 h-7 rounded-md bg-blue-500 text-white flex items-center justify-center text-[10px] font-black shrink-0">
+            <div className="w-7 h-7 rounded-md bg-badge-info-bg0 text-white flex items-center justify-center text-[10px] font-black shrink-0">
               <Activity size={14} />
             </div>
             <div>
@@ -761,9 +761,9 @@ export default function StockMovementPage() {
 
 
   const SortBtn = ({ field, label, align = "left" }: { field: "date" | "qty", label: string, align?: "left" | "right" }) => (
-    <button onClick={() => toggleSort(field)} className={`flex items-center gap-1 text-slate-500 hover:text-blue-600 transition-colors font-semibold group w-full ${align === "right" ? "justify-end" : "justify-start"}`}>
+    <button onClick={() => toggleSort(field)} className={`flex items-center gap-1 text-slate-500 hover:text-badge-info-text transition-colors font-semibold group w-full ${align === "right" ? "justify-end" : "justify-start"}`}>
       <span>{label}</span>
-      <span className={`transition-opacity ${sortField === field ? "opacity-100 text-blue-600" : "opacity-0 group-hover:opacity-40"}`}>
+      <span className={`transition-opacity ${sortField === field ? "opacity-100 text-badge-info-text" : "opacity-0 group-hover:opacity-40"}`}>
         {sortDir === "asc" && sortField === field ? <ArrowUp className="w-3.5 h-3.5" /> : <ArrowDown className="w-3.5 h-3.5" />}
       </span>
     </button>
@@ -795,22 +795,22 @@ export default function StockMovementPage() {
             label="Total Stock In"
             value={`+${analyticsStats?.overview?.stock_adjustment?.total_stockmovadj_increments ?? totalIn}`}
             icon={TrendingUp}
-            iconBg="bg-emerald-50"
-            iconColor="text-emerald-600"
+            iconBg="bg-badge-success-bg"
+            iconColor="text-badge-success-text"
           />
           <StatCard
             label="Total Stock Out"
             value={`-${analyticsStats?.overview?.stock_adjustment?.total_stockmovadj_decrements ?? totalOut}`}
             icon={TrendingDown}
-            iconBg="bg-rose-50"
-            iconColor="text-rose-600"
+            iconBg="bg-badge-red-bg"
+            iconColor="text-badge-red-text"
           />
           <StatCard
             label="Total Adjustments"
             value={(analyticsStats?.overview?.stock_adjustment?.total_stockmovadj ?? filtered.length).toString()}
             icon={Activity}
-            iconBg="bg-blue-50"
-            iconColor="text-blue-600"
+            iconBg="bg-badge-info-bg"
+            iconColor="text-badge-info-text"
           />
         </div>
       )}
@@ -835,13 +835,13 @@ export default function StockMovementPage() {
             type="button"
             onClick={() => setIsFilterOpen(true)}
             className={`h-8 px-3 rounded-md border text-xs font-semibold flex items-center gap-1.5 active:scale-95 transition-all shadow-sm shrink-0 ${typeFilter !== "All" || dateFrom || dateTo
-              ? "border-blue-200 text-blue-600 bg-blue-50/50"
+              ? "border-blue-200 text-badge-info-text bg-badge-info-bg"
               : "border-slate-200 text-slate-650 bg-white hover:bg-slate-50"
               }`}
             title="Filters"
           >
             <Filter size={13} />
-            {(typeFilter !== "All" || dateFrom || dateTo) && <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />}
+            {(typeFilter !== "All" || dateFrom || dateTo) && <span className="w-1.5 h-1.5 rounded-full bg-badge-info-bg0 animate-pulse" />}
           </button>
 
           <ColumnPicker
@@ -918,7 +918,7 @@ export default function StockMovementPage() {
                         setSelectedMovements(new Set(pageData.map(m => m.id)));
                       }
                     }}
-                    className="rounded border-slate-350 text-blue-600 focus:ring-blue-500/20 cursor-pointer"
+                    className="rounded border-slate-350 text-badge-info-text focus:ring-blue-500/20 cursor-pointer"
                   />
                 </th>
                 <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-800 border-r border-slate-100 last:border-r-0 w-[25%] min-w-[260px]">Product Information</th>
@@ -979,14 +979,14 @@ export default function StockMovementPage() {
                   <React.Fragment key={rowKey}>
                     <tr
                       ref={idx === pageData.length - 1 ? lastElementRef : null}
-                      className={`group transition-all cursor-default border-b border-slate-100 last:border-b-0 ${selectedMovements.has(m.id) ? "bg-blue-50 border-l-2 border-l-blue-500" : "hover:bg-blue-50/30 even:bg-slate-50/20"}`}
+                      className={`group transition-all cursor-default border-b border-slate-100 last:border-b-0 ${selectedMovements.has(m.id) ? "bg-badge-info-bg border-l-2 border-l-blue-500" : "hover:bg-blue-50/30 even:bg-slate-50/20"}`}
                     >
                       <td className="px-4 py-3 align-middle border-r border-slate-100 text-center">
                         <input
                           type="checkbox"
                           checked={selectedMovements.has(m.id)}
                           onChange={() => toggleSelectMovement(m.id)}
-                          className="rounded border-slate-350 text-blue-600 focus:ring-blue-500/20 cursor-pointer"
+                          className="rounded border-slate-350 text-badge-info-text focus:ring-blue-500/20 cursor-pointer"
                         />
                       </td>
                       <td className="px-4 py-3 align-middle border-r border-slate-100 last:border-r-0">
@@ -1010,7 +1010,7 @@ export default function StockMovementPage() {
                               {(hasList ? firstProd.variant : m.variant) && (
                                 <button
                                   onClick={(e) => copyToClipboard(e, (hasList ? firstProd.variant : m.variant) || "")}
-                                  className="group flex items-center gap-0.5 text-[9px] font-extrabold text-violet-600 bg-violet-50/50 px-1 py-0.2 rounded border border-violet-100 hover:bg-violet-100 transition-all leading-none"
+                                  className="group flex items-center gap-0.5 text-[9px] font-extrabold text-badge-purple-text bg-badge-purple-bg px-1 py-0.2 rounded border border-badge-purple-border hover:bg-violet-100 transition-all leading-none"
                                 >
                                   <Layers size={8} /> {truncateId(hasList ? firstProd.variant : m.variant)}
                                   <Copy size={7} className="opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -1019,7 +1019,7 @@ export default function StockMovementPage() {
                               {(hasList ? firstProd.batch : m.batch) && (
                                 <button
                                   onClick={(e) => copyToClipboard(e, (hasList ? firstProd.batch : m.batch) || "")}
-                                  className="group flex items-center gap-0.5 text-[9px] font-extrabold text-amber-600 bg-amber-50/50 px-1 py-0.2 rounded border border-amber-100 hover:bg-amber-100 transition-all leading-none"
+                                  className="group flex items-center gap-0.5 text-[9px] font-extrabold text-badge-amber-text bg-badge-amber-bg px-1 py-0.2 rounded border border-badge-amber-border hover:bg-amber-100 transition-all leading-none"
                                 >
                                   <Hash size={8} /> {truncateId(hasList ? firstProd.batch : m.batch)}
                                   <Copy size={7} className="opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -1031,7 +1031,7 @@ export default function StockMovementPage() {
                                     e.stopPropagation();
                                     setSelected(m);
                                   }}
-                                  className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] font-extrabold bg-blue-50 text-blue-600 border border-blue-100 hover:bg-blue-100 transition-colors shrink-0 shadow-sm"
+                                  className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] font-extrabold bg-badge-info-bg text-badge-info-text border border-badge-info-border hover:bg-blue-100 transition-colors shrink-0 shadow-sm"
                                   title="View Items"
                                 >
                                   <ChevronRight size={10} strokeWidth={3} />
@@ -1040,12 +1040,12 @@ export default function StockMovementPage() {
                               ) : (
                                 <>
                                   {m.serial_numbers && m.serial_numbers.length > 0 && (
-                                    <span className="inline-flex items-center gap-0.5 text-[9px] font-extrabold text-emerald-600 bg-emerald-50/50 px-1 py-0.2 rounded border border-emerald-100 leading-none">
+                                    <span className="inline-flex items-center gap-0.5 text-[9px] font-extrabold text-badge-success-text bg-badge-success-bg px-1 py-0.2 rounded border border-badge-success-border leading-none">
                                       <Zap size={8} fill="currentColor" /> {m.serial_numbers.length} Serials
                                     </span>
                                   )}
                                   {m.current_stock !== undefined && (
-                                    <span className="inline-flex items-center gap-0.5 text-[9px] font-extrabold text-blue-650 bg-blue-50/50 px-1.5 py-0.5 rounded border border-blue-100 leading-none" title="Current Available Stock">
+                                    <span className="inline-flex items-center gap-0.5 text-[9px] font-extrabold text-badge-info-text bg-badge-info-bg px-1.5 py-0.5 rounded border border-badge-info-border leading-none" title="Current Available Stock">
                                       Stock: {m.current_stock}
                                     </span>
                                   )}
@@ -1059,12 +1059,12 @@ export default function StockMovementPage() {
                         <TypeBadge type={m.type} />
                       </td>
                       <td className="px-4 py-3 text-center align-middle border-r border-slate-100 last:border-r-0 bg-slate-50/30">
-                        <span className={`text-[13px] font-black tabular-nums ${totalQty > 0 ? "text-emerald-600" : "text-rose-600"}`}>
+                        <span className={`text-[13px] font-black tabular-nums ${totalQty > 0 ? "text-badge-success-text" : "text-badge-red-text"}`}>
                           {totalQty > 0 ? `+${totalQty}` : totalQty}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-center align-middle border-r border-slate-100 last:border-r-0">
-                        <span className="text-[12px] font-bold text-blue-600 tabular-nums">
+                        <span className="text-[12px] font-bold text-badge-info-text tabular-nums">
                           {currentStockVal !== null ? currentStockVal : '—'}
                         </span>
                       </td>
@@ -1094,7 +1094,7 @@ export default function StockMovementPage() {
                       <td className="px-4 py-3 text-center align-middle w-14 whitespace-nowrap sticky right-0 bg-white group-hover:bg-slate-50 border-l border-slate-200 z-10 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.08)] transition-colors" onClick={(e) => e.stopPropagation()}>
                         <button
                           onClick={() => setSelected(m)}
-                          className="text-emerald-500 hover:text-emerald-600 transition-colors p-1"
+                          className="text-emerald-500 hover:text-badge-success-text transition-colors p-1"
                           title="View Details"
                         >
                           <Eye size={15} />

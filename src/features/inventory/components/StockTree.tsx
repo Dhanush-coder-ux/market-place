@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState, useRef, Fragment } from "react";
 import {
   Layers,
   Tag,
@@ -8,8 +8,13 @@ import {
   Hash,
   Package,
   Copy,
-  Check
+  Check,
+  Pencil,
+  FileText,
+  History,
+  MoreVertical
 } from "lucide-react";
+import ActionMenu, { ActionMenuItem } from "@/components/common/ActionMenu";
 
 /* ─── Helpers ────────────────────────────────────────────────────────────── */
 const formatCurrency = (amount?: number | string) => {
@@ -35,9 +40,9 @@ const formatDate = (dateStr?: string) => {
 const getStockStatus = (stock: number | string, reorderPoint?: number | string) => {
   const stockNum = Number(stock) || 0;
   const rp = Number(reorderPoint) || 10;
-  if (stockNum <= 0) return { label: '0 In Stock', color: 'text-rose-600 bg-rose-50 border-rose-200' };
-  if (stockNum <= rp) return { label: `${stockNum} Low Stock`, color: 'text-amber-600 bg-amber-50 border-amber-200' };
-  return { label: `${stockNum} In Stock`, color: 'text-emerald-600 bg-emerald-50 border-emerald-200' };
+  if (stockNum <= 0) return { label: '0 In Stock', color: 'text-badge-red-text bg-badge-red-bg border-badge-red-text/20' };
+  if (stockNum <= rp) return { label: `${stockNum} Low Stock`, color: 'text-badge-amber-text bg-badge-amber-bg border-badge-amber-text/20' };
+  return { label: `${stockNum} In Stock`, color: 'text-badge-green-text bg-badge-green-bg border-badge-green-text/20' };
 };
 
 const getDaysLeft = (expDate?: string) => {
@@ -54,7 +59,7 @@ export const BatchBadge = ({ expDate, qty }: { expDate?: string; qty: number }) 
   const days = getDaysLeft(expDate);
   if (qty <= 0) {
     return (
-      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold   border bg-slate-50 text-slate-400 border-slate-200">
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold   border bg-badge-gray-bg text-badge-gray-text border-badge-gray-text/20">
         Depleted
       </span>
     );
@@ -62,21 +67,21 @@ export const BatchBadge = ({ expDate, qty }: { expDate?: string; qty: number }) 
   if (days === null) return null;
   if (days < 0) {
     return (
-      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold   border bg-rose-50 text-rose-600 border-rose-200">
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold   border bg-badge-red-bg text-badge-red-text border-badge-red-text/20">
         Expired
       </span>
     );
   }
   if (days <= 90) {
     return (
-      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold   border bg-amber-50 text-amber-600 border-amber-200">
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold   border bg-badge-amber-bg text-badge-amber-text border-badge-amber-text/20">
         <Clock size={10} /> {days}d left
       </span>
     );
   }
   return (
-    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold   border bg-emerald-50 text-emerald-600 border-emerald-200">
-      <span className="w-1 h-1 rounded-full bg-emerald-500 inline-block" /> {days}d left
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold   border bg-badge-green-bg text-badge-green-text border-badge-green-text/20">
+      <span className="w-1 h-1 rounded-full bg-badge-green-text inline-block" /> {days}d left
     </span>
   );
 };
@@ -174,10 +179,10 @@ export const BatchCards = ({ batches }: { batches: any | any[] }) => {
           const reorderPt     = batch.reorder_point_infos?.reorder_point       ?? batch.reorder_point    ?? null;
 
           const stockStatus = availableQty <= 0
-            ? { label: 'Out of Stock', cls: 'text-rose-600 bg-rose-50 border-rose-200' }
+            ? { label: 'Out of Stock', cls: 'text-badge-red-text bg-badge-red-bg border-badge-red-text/20' }
             : reorderPt !== null && availableQty <= reorderPt
-              ? { label: 'Low Stock',    cls: 'text-amber-600 bg-amber-50 border-amber-200' }
-              : { label: 'In Stock',     cls: 'text-emerald-600 bg-emerald-50 border-emerald-200' };
+              ? { label: 'Low Stock',    cls: 'text-badge-amber-text bg-badge-amber-bg border-badge-amber-text/20' }
+              : { label: 'In Stock',     cls: 'text-badge-green-text bg-badge-green-bg border-badge-green-text/20' };
 
           return (
             <div key={batch.id || idx} className="flex flex-col border-b border-slate-100 last:border-b-0 hover:bg-slate-50/50 transition-colors bg-white">
@@ -197,13 +202,13 @@ export const BatchCards = ({ batches }: { batches: any | any[] }) => {
                          <span className="text-[9px] font-mono text-slate-400 font-medium">{batch.id.slice(0, 8)}…</span>
                       )}
                       {storageLoc && (
-                         <span className="text-[8px] font-bold px-1 py-0.5 rounded bg-violet-50 text-violet-700 border border-violet-100 tracking-wider">LOC: {storageLoc}</span>
+                         <span className="text-[8px] font-bold px-1 py-0.5 rounded bg-badge-purple-bg text-badge-purple-text border border-badge-purple-text/20 tracking-wider">LOC: {storageLoc}</span>
                       )}
                       {reorderPt !== null && (
-                         <span className="text-[8px] font-bold px-1 py-0.5 rounded bg-orange-50 text-orange-700 border border-orange-100 tracking-wider">REORDER: {reorderPt}</span>
+                         <span className="text-[8px] font-bold px-1 py-0.5 rounded bg-badge-amber-bg text-badge-amber-text border border-badge-amber-text/20 tracking-wider">REORDER: {reorderPt}</span>
                       )}
                       {daysToExpiry !== null && (
-                         <span className={`text-[8px] font-bold px-1 py-0.5 rounded tracking-wider border ${daysToExpiry <= 0 ? 'bg-rose-50 border-rose-200 text-rose-600' : daysToExpiry <= 7 ? 'bg-amber-50 border-amber-200 text-amber-600' : 'bg-emerald-50 border-emerald-100 text-emerald-600'}`}>
+                         <span className={`text-[8px] font-bold px-1 py-0.5 rounded tracking-wider border ${daysToExpiry <= 0 ? 'bg-badge-red-bg border-badge-red-text/20 text-badge-red-text' : daysToExpiry <= 7 ? 'bg-badge-amber-bg border-badge-amber-text/20 text-badge-amber-text' : 'bg-badge-green-bg border-badge-green-text/20 text-badge-green-text'}`}>
                             {daysToExpiry < 0 ? `EXP ${Math.abs(daysToExpiry)}D AGO` : daysToExpiry === 0 ? 'EXPIRES TODAY' : `EXP IN ${daysToExpiry}D`}
                          </span>
                       )}
@@ -315,6 +320,46 @@ const CopySKUButton = ({ val }: { val: string }) => {
   );
 };
 
+const VariantActions = ({ comb }: { comb: any }) => {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const menuTriggerRef = useRef<HTMLButtonElement>(null);
+  
+  return (
+    <div className="flex items-center justify-end gap-1 relative" onClick={e => e.stopPropagation()}>
+      <button className="p-1.5 text-slate-400 hover:text-amber-500 hover:bg-amber-50 rounded transition-colors" title="Edit">
+        <Pencil size={14} />
+      </button>
+      <button className="p-1.5 text-slate-400 hover:text-blue-500 hover:bg-blue-50 rounded transition-colors" title="Inventory">
+        <Package size={14} />
+      </button>
+      
+      <div className="relative">
+        <button
+          ref={menuTriggerRef}
+          onClick={(e) => { e.stopPropagation(); setIsMenuOpen(!isMenuOpen); }}
+          className="p-1.5 text-slate-400 hover:text-slate-800 hover:bg-slate-100 rounded transition-colors"
+          title="More actions"
+        >
+          <MoreVertical size={14} />
+        </button>
+        <ActionMenu
+          triggerRef={menuTriggerRef}
+          open={isMenuOpen}
+          onClose={() => setIsMenuOpen(false)}
+          width={140}
+        >
+          <ActionMenuItem icon={<History size={13} />} onClick={() => setIsMenuOpen(false)}>
+            History
+          </ActionMenuItem>
+          <ActionMenuItem icon={<FileText size={13} />} onClick={() => setIsMenuOpen(false)}>
+            Batch
+          </ActionMenuItem>
+        </ActionMenu>
+      </div>
+    </div>
+  );
+};
+
 export const VariantRows = ({ combinations, baseSellPrice, baseBuyPrice }: { combinations: any[]; baseSellPrice: any; baseBuyPrice?: any }) => {
   const [expandedVariant, setExpandedVariant] = useState<string | null>(null);
 
@@ -326,126 +371,168 @@ export const VariantRows = ({ combinations, baseSellPrice, baseBuyPrice }: { com
         </div>
         <p className="text-[13px] font-bold text-slate-800 tracking-tight">Product Variants</p>
       </div>
-      <div className="flex flex-col border border-slate-200 rounded-lg overflow-hidden bg-white shadow-sm">
-        {combinations.map((comb: any, idx: number) => {
-          const combDatas = comb.datas || {};
-          const attributes = comb.attributes || combDatas.attributes || combDatas.datas?.attributes || {};
+      <div className="border border-slate-200 rounded-lg overflow-hidden bg-white shadow-sm overflow-x-auto">
+        <table className="w-full text-left border-collapse min-w-[800px]">
+          <thead className="bg-slate-50 border-b border-slate-200 sticky top-0 z-10">
+            <tr>
+              <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-left">Variant</th>
+              <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-left">SKU / Barcode</th>
+              <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-right">Stock</th>
+              <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-right">Buy Price</th>
+              <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-right">Sell Price</th>
+              <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-left">Batch Count</th>
+              <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-center">Status</th>
+              <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {combinations.map((comb: any, idx: number) => {
+              const combDatas = comb.datas || {};
+              const attributes = comb.attributes || combDatas.attributes || combDatas.datas?.attributes || {};
 
-          // Improved variant label extraction based on sample response
-          let variantLabel = comb.variant_name || comb.name || combDatas.name || 'Standard Variant';
-          if (Object.keys(attributes).length > 0) {
-            variantLabel = Object.values(attributes).join(' / ');
-          } else if (comb.barcode && combDatas.barcode && comb.barcode !== combDatas.barcode) {
-            variantLabel = comb.barcode; // Fallback if barcode is used as label
-          }
+              let variantLabel = comb.variant_name || comb.name || combDatas.name || 'Standard Variant';
+              if (Object.keys(attributes).length > 0) {
+                variantLabel = Object.values(attributes).join(' / ');
+              } else if (comb.barcode && combDatas.barcode && comb.barcode !== combDatas.barcode) {
+                variantLabel = comb.barcode; 
+              }
 
-          const variantId = comb.id || String(idx);
-          const isVarExpanded = expandedVariant === variantId;
-          const batches = comb.batch_infos ?? comb.batches ?? [];
-          const serials = extractSerials(comb.serialno_infos ?? comb.serial_numbers ?? combDatas.serial_numbers ?? combDatas.datas?.serial_numbers);
-          const hasBatches = batches.length > 0;
-          const hasSerials = serials.length > 0;
-          let stockNum = Number(comb.stock_infos?.available_stocks ?? comb.stock_infos?.physical_stocks ?? comb.stocks ?? comb.stock ?? combDatas.stocks ?? combDatas.datas?.stocks ?? 0);
-          if (hasBatches && stockNum === 0) {
-            stockNum = batches.reduce((acc: number, b: any) => acc + Number(b.stock_infos?.available_stocks ?? b.stock_infos?.physical_stocks ?? b.stocks ?? 0), 0);
-          }
-          const reorderPoint = Number(comb.reorder_point_infos?.reorder_point ?? comb.reorder_point ?? combDatas.reorder_point ?? combDatas.datas?.reorder_point ?? 0);
-          const stockStatus = getStockStatus(stockNum, reorderPoint);
-          const statusLabel = stockNum <= 0 ? "Out of Stock" : stockNum <= reorderPoint ? "Low Stock" : "In Stock";
-          const sellPrice = comb.pricing_infos?.sell_price ?? comb.sell_price ?? comb.price ?? combDatas.sell_price ?? combDatas.datas?.sell_price ?? baseSellPrice;
-          const buyPrice = comb.pricing_infos?.buy_price ?? comb.buy_price ?? combDatas.buy_price ?? combDatas.datas?.buy_price ?? baseBuyPrice ?? 0;
+              const variantId = comb.id || String(idx);
+              const isVarExpanded = expandedVariant === variantId;
+              const batches = comb.batch_infos ?? comb.batches ?? [];
+              const serials = extractSerials(comb.serialno_infos ?? comb.serial_numbers ?? combDatas.serial_numbers ?? combDatas.datas?.serial_numbers);
+              const hasBatches = batches.length > 0;
+              const hasSerials = serials.length > 0;
+              let stockNum = Number(comb.stock_infos?.available_stocks ?? comb.stock_infos?.physical_stocks ?? comb.stocks ?? comb.stock ?? combDatas.stocks ?? combDatas.datas?.stocks ?? 0);
+              if (hasBatches && stockNum === 0) {
+                stockNum = batches.reduce((acc: number, b: any) => acc + Number(b.stock_infos?.available_stocks ?? b.stock_infos?.physical_stocks ?? b.stocks ?? 0), 0);
+              }
+              const reorderPoint = Number(comb.reorder_point_infos?.reorder_point ?? comb.reorder_point ?? combDatas.reorder_point ?? combDatas.datas?.reorder_point ?? 0);
+              const stockStatus = getStockStatus(stockNum, reorderPoint);
+              const statusLabel = stockNum <= 0 ? "Out of Stock" : stockNum <= reorderPoint ? "Low Stock" : "In Stock";
+              const sellPrice = comb.pricing_infos?.sell_price ?? comb.sell_price ?? comb.price ?? combDatas.sell_price ?? combDatas.datas?.sell_price ?? baseSellPrice;
+              const buyPrice = comb.pricing_infos?.buy_price ?? comb.buy_price ?? combDatas.buy_price ?? combDatas.datas?.buy_price ?? baseBuyPrice ?? 0;
 
-          return (
-            <div key={variantId} className={`border-b border-slate-100 last:border-b-0 transition-all hover:bg-slate-50/50 ${isVarExpanded ? 'bg-slate-50/80 shadow-inner' : 'bg-white'}`}>
-                <div
-                  className={`flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 ${hasBatches ? 'hover:bg-slate-50 cursor-pointer' : ''}`}
-                  onClick={() => hasBatches && setExpandedVariant(isVarExpanded ? null : variantId)}
-                >
-                  <div className="flex items-center gap-2.5 sm:gap-3 flex-1 min-w-0">
-                    {/* Expand Icon for Batches */}
-                    {hasBatches ? (
-                      <div className={`w-5 h-5 rounded-md flex items-center justify-center transition-all shrink-0 ${isVarExpanded ? "bg-blue-600 text-white shadow-lg shadow-blue-200" : "bg-slate-100 text-slate-500"}`}>
-                        {isVarExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-                      </div>
-                    ) : (
-                      <div className="w-5 h-5 rounded-md bg-slate-50 flex items-center justify-center text-slate-300 shrink-0">
-                        <Package size={12} />
-                      </div>
-                    )}
-
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[13px] font-bold text-slate-800 truncate">{variantLabel}</p>
-                      <div className="flex items-center gap-1.5 mt-0.5">
-                        {(() => {
-                          const rawSku = comb.barcode || combDatas.barcode || "";
-                          if (!rawSku) {
-                            return <span className="text-[9px] font-mono text-slate-400 font-medium">No SKU</span>;
-                          }
-                          const trimmedSku = rawSku.length > 12 ? `${rawSku.slice(0, 8)}...` : rawSku;
-                          return (
-                            <span className="flex items-center gap-1 text-[9px] font-mono text-slate-400 font-medium" onClick={(e) => e.stopPropagation()}>
-                              <span title={rawSku}>{trimmedSku}</span>
-                              <CopySKUButton val={rawSku} />
-                            </span>
-                          );
-                        })()}
-                        {hasBatches && (
-                          <span className="text-[9px] font-bold px-1 py-0.5 rounded bg-badge-coral-bg text-badge-coral-text border border-badge-coral-text/20 tracking-tighter shrink-0">
-                            {batches.length} {batches.length === 1 ? 'Batch' : 'Batches'}
-                          </span>
+              return (
+                <Fragment key={variantId}>
+                  <tr 
+                    className={`group transition-colors h-[56px] ${isVarExpanded ? 'bg-slate-50/80 shadow-inner' : 'bg-white hover:bg-slate-50/50'}`}
+                  >
+                    {/* Variant */}
+                    <td className="px-4 py-2 align-middle">
+                      <div className="flex items-center gap-2.5">
+                        {hasBatches ? (
+                          <button 
+                            onClick={() => setExpandedVariant(isVarExpanded ? null : variantId)}
+                            className={`w-5 h-5 rounded flex items-center justify-center transition-colors shrink-0 ${isVarExpanded ? "bg-blue-600 text-white shadow-sm" : "bg-slate-100 text-slate-500 hover:bg-slate-200"}`}
+                          >
+                            {isVarExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+                          </button>
+                        ) : (
+                          <div className="w-5 h-5 rounded bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-300 shrink-0">
+                            <Layers size={11} />
+                          </div>
                         )}
+                        <div className="flex flex-col">
+                          <span className="text-[13px] font-bold text-slate-800 tracking-tight">{variantLabel}</span>
+                          {Object.keys(attributes).length > 0 && (
+                            <span className="text-[11px] text-slate-400 mt-0.5 font-medium">{Object.values(attributes).join(' / ')}</span>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  </div>
+                    </td>
 
-                  {/* Stats */}
-                  <div className="flex items-center justify-end gap-3 sm:gap-4 md:gap-5 shrink-0 pt-1.5 sm:pt-0 border-t sm:border-t-0 border-slate-50">
-                    <div className="text-right w-[40px]">
-                      <p className="text-[9px] font-bold text-slate-400 leading-none mb-1 text-right w-full">Stock</p>
-                      <p className="text-[11px] font-bold text-slate-800 tabular-nums">{stockNum}</p>
-                    </div>
-                    <div className="text-center w-[75px] flex flex-col items-center">
-                      <p className="text-[9px] font-bold text-slate-400 leading-none mb-1 text-center w-full">Status</p>
-                      <span className={`inline-flex px-1.5 py-0.5 rounded-md text-[9px] font-bold border leading-none ${stockStatus.color}`}>
+                    {/* SKU / Barcode */}
+                    <td className="px-4 py-2 align-middle">
+                      {(() => {
+                        const rawSku = comb.barcode || combDatas.barcode || "";
+                        if (!rawSku) {
+                          return <span className="text-[12px] font-mono text-slate-400 font-medium">—</span>;
+                        }
+                        const trimmedSku = rawSku.length > 16 ? `${rawSku.slice(0, 14)}...` : rawSku;
+                        return (
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[12px] font-mono text-slate-600 tracking-tight" title={rawSku}>{trimmedSku}</span>
+                            <CopySKUButton val={rawSku} />
+                          </div>
+                        );
+                      })()}
+                    </td>
+
+                    {/* Stock */}
+                    <td className="px-4 py-2 align-middle text-right">
+                      <span className={`text-[14px] font-bold tabular-nums ${stockNum > 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
+                        {stockNum}
+                      </span>
+                    </td>
+
+                    {/* Buy Price */}
+                    <td className="px-4 py-2 align-middle text-right">
+                      <span className="text-[13px] font-semibold text-slate-700 tabular-nums">
+                        {formatCurrency(buyPrice)}
+                      </span>
+                    </td>
+
+                    {/* Sell Price */}
+                    <td className="px-4 py-2 align-middle text-right">
+                      <span className="text-[13px] font-bold text-slate-800 tabular-nums">
+                        {formatCurrency(sellPrice)}
+                      </span>
+                    </td>
+
+                    {/* Batch Count */}
+                    <td className="px-4 py-2 align-middle">
+                       {hasBatches ? (
+                         <span className="text-[11px] font-medium text-slate-600 bg-slate-100 px-2 py-1 rounded-md whitespace-nowrap">
+                           {batches.length} {batches.length === 1 ? 'Batch' : 'Batches'}
+                         </span>
+                       ) : (
+                         <span className="text-[11px] text-slate-400">—</span>
+                       )}
+                    </td>
+
+                    {/* Status */}
+                    <td className="px-4 py-2 align-middle text-center">
+                      <span className={`inline-flex px-2 py-1 rounded-full text-[10px] font-bold border leading-none whitespace-nowrap ${stockStatus.color}`}>
                         {statusLabel}
                       </span>
-                    </div>
-                    <div className="text-right w-[60px]">
-                      <p className="text-[9px] font-bold text-slate-400 leading-none mb-1">Buy Price</p>
-                      <p className="text-[11px] font-bold text-rose-500 tabular-nums">{formatCurrency(buyPrice)}</p>
-                    </div>
-                    <div className="text-right w-[60px]">
-                      <p className="text-[9px] font-bold text-slate-400 leading-none mb-1">Sell Price</p>
-                      <p className="text-[11px] font-bold text-emerald-600 tabular-nums">{formatCurrency(sellPrice)}</p>
-                    </div>
-                    <div className="text-center w-[55px]">
-                      <p className="text-[9px] font-bold text-slate-400 leading-none mb-1">Reorder Pt</p>
-                      <p className="text-[11px] font-bold text-slate-700 tabular-nums">{reorderPoint || "—"}</p>
-                    </div>
-                  </div>
-                </div>
+                    </td>
 
-                {/* Serial Numbers - Always Visible */}
-                {hasSerials && (
-                  <div className="px-4 pb-2 pt-1.5 border-t border-slate-50/50 bg-indigo-50/10">
-                    <div className="flex items-center justify-between mb-0.5">
-                      <p className="text-[9px] font-bold text-slate-400 flex items-center gap-1">
-                        <Hash size={9} className="text-indigo-400" /> Serial Numbers ({serials.length})
-                      </p>
-                    </div>
-                    <SerialBadgeList serials={serials} />
-                  </div>
-                )}
+                    {/* Actions */}
+                    <td className="px-4 py-2 align-middle text-right">
+                      <VariantActions comb={comb} />
+                    </td>
+                  </tr>
 
-                {/* Nested Batches Area */}
-                {isVarExpanded && hasBatches && (
-                  <div className="border-t border-slate-100 bg-slate-50/50 p-2 sm:p-3 md:pl-4 pl-3">
-                    <BatchCards batches={batches} />
-                  </div>
-                )}
-              </div>
-          );
-        })}
+                  {/* Serials Area */}
+                  {hasSerials && (
+                    <tr className="bg-indigo-50/10">
+                      <td colSpan={8} className="p-0 border-t border-slate-50/50">
+                        <div className="px-4 pb-2 pt-1.5 flex flex-col">
+                          <p className="text-[10px] font-bold text-slate-500 mb-1 flex items-center gap-1 uppercase">
+                            <Hash size={10} className="text-indigo-400" /> Serial Numbers ({serials.length})
+                          </p>
+                          <SerialBadgeList serials={serials} />
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+
+                  {/* Nested Batches Area */}
+                  {isVarExpanded && hasBatches && (
+                    <tr className="bg-slate-50/50">
+                      <td colSpan={8} className="p-0 border-t border-slate-100">
+                        <div className="p-3 md:pl-10 pl-6 border-l-2 border-slate-200 ml-4 my-2">
+                           <BatchCards batches={batches} />
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </Fragment>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
     </div>
   );

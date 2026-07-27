@@ -320,7 +320,7 @@ const CopySKUButton = ({ val }: { val: string }) => {
   );
 };
 
-const VariantActions = ({ comb }: { comb: any }) => {
+const VariantActions = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuTriggerRef = useRef<HTMLButtonElement>(null);
   
@@ -500,7 +500,7 @@ export const VariantRows = ({ combinations, baseSellPrice, baseBuyPrice }: { com
 
                     {/* Actions */}
                     <td className="px-4 py-2 align-middle text-right">
-                      <VariantActions comb={comb} />
+                      <VariantActions />
                     </td>
                   </tr>
 

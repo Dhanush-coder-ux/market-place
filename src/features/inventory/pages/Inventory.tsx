@@ -420,7 +420,7 @@ const ProductRow = React.memo(
       );
     }
     
-    const trackingInfo = [];
+    const trackingInfo: any[] = [];
     if (!hasVariants) {
       if (totalBatches > 0) trackingInfo.push({ label: `${totalBatches} batches`, icon: Calendar, color: "coral", bg: "bg-badge-coral-bg", text: "text-badge-\-text\-badge-\-border" });
       if (totalSerials > 0) trackingInfo.push({ label: `${totalSerials} serials`, icon: Hash, color: "rose", bg: "bg-badge-red-bg", text: "text-badge-\-text\-badge-\-border" });

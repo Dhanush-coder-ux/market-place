@@ -1250,6 +1250,68 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
             </div>
 
 
+            {/* SECTION 2 (Moved): PRODUCT VARIANTS */}
+            <div className="pf-card bg-white rounded-xl border border-slate-200 overflow-hidden mb-4">
+              <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-violet-50 flex items-center justify-center shrink-0">
+                    <Layers size={17} className="text-violet-600" />
+                  </div>
+                  <div>
+                    <h2 className="text-sm font-bold text-slate-800">Product variants</h2>
+                    <p className="text-[11px] text-slate-400 mt-0.5">Manage configurations like size, color, storage</p>
+                  </div>
+                </div>
+                <Switch
+                  checked={form.has_variants}
+                  onCheckedChange={(checked) => { setForm(p => ({ ...p, has_variants: checked })); if (!checked) setCombinations([]); }}
+                />
+              </div>
+
+              {form.has_variants ? (
+                <div className="p-6 space-y-5 pf-section-enter">
+                  <div className="border border-slate-100 rounded-xl p-5 bg-slate-50/40">
+                    <p className="text-[11px] font-semibold text-slate-400 mb-4 uppercase tracking-wide">Define Variant Types</p>
+                    <VariantBuilder
+                      variantTypes={variantTypes}
+                      onChange={setVariantTypes}
+                      suggestedTypes={categoryConfig.suggestedVariantTypes}
+                    />
+                  </div>
+                  {combinations.length > 0 && (
+                    <div>
+                      <div className="flex items-center gap-2 mb-3">
+                        <Cpu size={13} className="text-slate-400" />
+                        <p className="text-[11px] font-semibold text-slate-400">Variant Matrix ({combinations.length} combinations)</p>
+                      </div>
+                      <VariantMatrixTable
+                        combinations={combinations}
+                        variantTypes={variantTypes}
+                        onChange={setCombinations}
+                      />
+                    </div>
+                  )}
+                  {variantTypes.length === 0 && (
+                    <div className="text-center py-10 text-slate-400 border-2 border-dashed border-slate-200 rounded-xl">
+                      <Plus size={24} className="mx-auto mb-2 opacity-30" />
+                      <p className="text-sm">Add your first variant type above to begin</p>
+                    </div>
+                  )}
+                  {variantTypes.length > 0 && combinations.length === 0 && (
+                    <div className="text-center py-10 text-slate-400 border-2 border-dashed border-slate-200 rounded-xl">
+                      <Layers size={24} className="mx-auto mb-2 opacity-30" />
+                      <p className="text-sm">Add values to your variant types to generate combinations</p>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="px-6 py-5 text-slate-400 text-sm flex items-center gap-3">
+                  <Zap size={16} className="text-violet-300" />
+                  Enable variants to manage multiple SKUs per product (e.g. iPhone 15 128GB / Black)
+                </div>
+              )}
+            </div>
+
             {/* SECTION 3: INVENTORY & STOCK */}
             <SectionCard
               icon={<BarChart3 size={17} className="text-blue-600" />}
@@ -1296,6 +1358,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                         name="reorder_point"
                         required
                         type="number"
+                        disabled={form.has_variants}
                         value={form.reorder_point}
                         onChange={handleChange}
                         placeholder="5"
@@ -1305,6 +1368,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                       <InputField
                         label="Storage Location"
                         name="location"
+                        disabled={form.has_variants}
                         value={form.location}
                         onChange={handleChange}
                         placeholder="e.g. Aisle 4, Shelf B"
@@ -1466,68 +1530,6 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                 </div>
               </div>
             </SectionCard>
-
-            {/* SECTION 5: PRODUCT VARIANTS */}
-            <div className="pf-card bg-white rounded-xl border border-slate-200 overflow-hidden">
-              <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-violet-50 flex items-center justify-center shrink-0">
-                    <Layers size={17} className="text-violet-600" />
-                  </div>
-                  <div>
-                    <h2 className="text-sm font-bold text-slate-800">Product variants</h2>
-                    <p className="text-[11px] text-slate-400 mt-0.5">Manage configurations like size, color, storage</p>
-                  </div>
-                </div>
-                <Switch
-                  checked={form.has_variants}
-                  onCheckedChange={(checked) => { setForm(p => ({ ...p, has_variants: checked })); if (!checked) setCombinations([]); }}
-                />
-              </div>
-
-              {form.has_variants ? (
-                <div className="p-6 space-y-5 pf-section-enter">
-                  <div className="border border-slate-100 rounded-xl p-5 bg-slate-50/40">
-                    <p className="text-[11px] font-semibold text-slate-400 mb-4 uppercase tracking-wide">Define Variant Types</p>
-                    <VariantBuilder
-                      variantTypes={variantTypes}
-                      onChange={setVariantTypes}
-                      suggestedTypes={categoryConfig.suggestedVariantTypes}
-                    />
-                  </div>
-                  {combinations.length > 0 && (
-                    <div>
-                      <div className="flex items-center gap-2 mb-3">
-                        <Cpu size={13} className="text-slate-400" />
-                        <p className="text-[11px] font-semibold text-slate-400">Variant Matrix ({combinations.length} combinations)</p>
-                      </div>
-                      <VariantMatrixTable
-                        combinations={combinations}
-                        variantTypes={variantTypes}
-                        onChange={setCombinations}
-                      />
-                    </div>
-                  )}
-                  {variantTypes.length === 0 && (
-                    <div className="text-center py-10 text-slate-400 border-2 border-dashed border-slate-200 rounded-xl">
-                      <Plus size={24} className="mx-auto mb-2 opacity-30" />
-                      <p className="text-sm">Add your first variant type above to begin</p>
-                    </div>
-                  )}
-                  {variantTypes.length > 0 && combinations.length === 0 && (
-                    <div className="text-center py-10 text-slate-400 border-2 border-dashed border-slate-200 rounded-xl">
-                      <Layers size={24} className="mx-auto mb-2 opacity-30" />
-                      <p className="text-sm">Add values to your variant types to generate combinations</p>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="px-6 py-5 text-slate-400 text-sm flex items-center gap-3">
-                  <Zap size={16} className="text-violet-300" />
-                  Enable variants to manage multiple SKUs per product (e.g. iPhone 15 128GB / Black)
-                </div>
-              )}
-            </div>
 
             {/* SECTION 5: CUSTOM FIELDS */}
             <SectionCard

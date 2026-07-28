@@ -80,6 +80,38 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
 
+  
+  /* ============ ANTARIS COLOR SYSTEM (NEW) ============ */
+  --mv-purchase-bg:#DFEECC; --mv-purchase-bd:#A8CC73; --mv-purchase-tx:#1F4207; --mv-purchase-dot:#4F8517;
+  --mv-sales-bg:#D9EAF9;    --mv-sales-bd:#93C1EE;    --mv-sales-tx:#0A3A6B;    --mv-sales-dot:#2779CC;
+  --mv-sreturn-bg:#E4E2FC;  --mv-sreturn-bd:#BAB5F1;  --mv-sreturn-tx:#332B7B;  --mv-sreturn-dot:#6C63D4;
+  --mv-preturn-bg:#F7E0E9;  --mv-preturn-bd:#EAA9C0;  --mv-preturn-tx:#661C36;  --mv-preturn-dot:#B24560;
+  --mv-opening-bg:#D3EFE4;  --mv-opening-bd:#84D4B8;  --mv-opening-tx:#06452F;  --mv-opening-dot:#128A64;
+  --mv-adjust-bg:#F8E6C8;   --mv-adjust-bd:#F0B75C;   --mv-adjust-tx:#553003;   --mv-adjust-dot:#A86A12;
+
+  --dt-purchase-tx:#39670F; --dt-purchase-dot:#67A028;
+  --dt-sales-tx:#1D5FA8;    --dt-sales-dot:#3D8EE0;
+  --dt-sreturn-tx:#4A41A8;  --dt-sreturn-dot:#8B82E8;
+  --dt-preturn-tx:#8F3552;  --dt-preturn-dot:#CC6684;
+  --dt-opening-tx:#0E6B4C;  --dt-opening-dot:#2AAE83;
+  --dt-adjust-tx:#8A5E0E;   --dt-adjust-dot:#D89425;
+
+  --at-variant-bg:#E4E2FC; --at-variant-bd:#BAB5F1; --at-variant-tx:#332B7B;
+  --at-batch-bg:#F9E2D8;   --at-batch-bd:#F0BBA2;   --at-batch-tx:#61250F;
+  --at-serial-bg:#FBE3F2;  --at-serial-bd:#F2AEDB;  --at-serial-tx:#6E1B4E;
+  --at-gst-bg:#D3EFE4;     --at-gst-bd:#84D4B8;     --at-gst-tx:#06452F;
+  --at-brand-bg:#EFEDE6;   --at-brand-bd:#D0CCBE;   --at-brand-tx:#3F3E3A;
+  --at-version-bg:#EFF0F9; --at-version-bd:#D3D6EC; --at-version-tx:#3F4680;
+
+  --ps-completed-bg:#DFEECC; --ps-completed-bd:#A8CC73; --ps-completed-tx:#1F4207; --ps-completed-dot:#4F8517;
+  --ps-draft-bg:#EEECE5;     --ps-draft-bd:#CFCBC0;     --ps-draft-tx:#47463F;     --ps-draft-dot:#8A887E;
+  --ps-cancel-bg:#FADEDE;    --ps-cancel-bd:#F0A8A8;    --ps-cancel-tx:#6E1616;    --ps-cancel-dot:#D93B3B;
+
+  --pay-paid-bg:#DFEECC;    --pay-paid-bd:#A8CC73;    --pay-paid-tx:#1F4207;    --pay-paid-dot:#4F8517;
+  --pay-partial-bg:#F8E6C8; --pay-partial-bd:#F0B75C; --pay-partial-tx:#553003; --pay-partial-dot:#E09A1F;
+  --pay-pending-bg:#F9E2D8; --pay-pending-bd:#F0B29A; --pay-pending-tx:#642612; --pay-pending-dot:#CE5028;
+  --pay-overdue-bd:#F0A8A8; --pay-overdue-tx:#B23A3A;
+
   /* Custom Badge Colors */
   --color-badge-green-text: #27500A;
   --color-badge-green-bg: #EAF3DE;

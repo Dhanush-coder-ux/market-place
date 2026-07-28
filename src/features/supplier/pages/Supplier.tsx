@@ -17,7 +17,6 @@ import ActionMenu, { ActionMenuItem } from "@/components/common/ActionMenu";
 import { ReusableSelect } from "@/components/ui/ReusableSelect";
 
 
-// Human-readable labels for every possible dynamic column key
 const COLUMN_LABELS: Record<string, string> = {
   contact_person:  "Contact Person Name",
   contact_email:   "Contact Person Email",
@@ -28,6 +27,7 @@ const COLUMN_LABELS: Record<string, string> = {
   city:            "City",
   zipcode:         "ZIP Code",
   address:         "Street Address",
+  current_outstanding: "Current Outstanding",
 };
 
 const SupplierRow = ({ sup, isSelected, onSelect, onEdit, onView, onDelete, selectedKeys }: any) => {
@@ -62,13 +62,17 @@ const SupplierRow = ({ sup, isSelected, onSelect, onEdit, onView, onDelete, sele
         else if (key === "city") val = sup.location_infos?.city ?? sup.additional_infos?.city ?? sup.datas?.address?.city;
         else if (key === "zipcode") val = sup.location_infos?.zipcode ?? sup.datas?.address?.zipcode;
         else if (key === "address") val = sup.location_infos?.full_address ?? sup.datas?.address?.full_address;
+        else if (key === "current_outstanding") {
+          const amount = sup.outstanding_infos?.amount || 0;
+          val = `₹${amount.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        }
         else {
           val = (sup as any)[key] ?? (sup.contact_person_infos as any)?.[key] ?? (sup.contact_infos as any)?.[key] ?? (sup.contact_info as any)?.[key] ?? (sup.additional_infos as any)?.[key] ?? (sup.datas as any)?.[key] ?? "—";
         }
         const displayVal = (val === null || val === undefined) ? "—" : (typeof val === 'object' ? JSON.stringify(val) : String(val));
         return (
           <td key={key} className="px-6 py-4 whitespace-nowrap">
-            <p className="text-[12px] font-semibold tracking-tight text-slate-600">
+            <p className={`text-[12px] font-semibold tracking-tight ${key === 'current_outstanding' && (sup.outstanding_infos?.amount || 0) > 0 ? 'text-rose-600' : 'text-slate-600'}`}>
               {displayVal}
             </p>
           </td>
@@ -155,7 +159,22 @@ const Supplier = () => {
   const [availableKeys, setAvailableKeys] = useState<string[]>([]);
   const [selectedKeys, setSelectedKeys] = useState<string[]>(() => {
     const saved = localStorage.getItem('supplier_table_columns');
-    return saved ? JSON.parse(saved) : ["contact_person", "contact_email", "contact_mobile", "email", "mobile_number", "city"];
+    const defaultCols = ["contact_person", "contact_email", "contact_mobile", "email", "mobile_number", "city", "current_outstanding"];
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && !parsed.includes("current_outstanding") && !localStorage.getItem("supplier_outstanding_added")) {
+          parsed.push("current_outstanding");
+          localStorage.setItem("supplier_outstanding_added", "true");
+          localStorage.setItem('supplier_table_columns', JSON.stringify(parsed));
+          return parsed;
+        }
+        return parsed;
+      } catch (e) {
+        return defaultCols;
+      }
+    }
+    return defaultCols;
   });
 
   useEffect(() => {
@@ -273,7 +292,7 @@ const Supplier = () => {
         data.forEach((s: any) => {
           if (!s) return;
           // Root level keys that we want in column picker
-          const standardKeys = ["email", "mobile_number", "gst_no"];
+          const standardKeys = ["email", "mobile_number", "gst_no", "current_outstanding"];
           standardKeys.forEach(k => keys.add(k));
 
           // Map contact_infos and contact_person_infos

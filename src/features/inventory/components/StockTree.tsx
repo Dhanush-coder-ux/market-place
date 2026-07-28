@@ -1,4 +1,4 @@
-import React, { useState, useRef, Fragment } from "react";
+import React, { useState, Fragment } from "react";
 import {
   Layers,
   Tag,
@@ -8,13 +8,9 @@ import {
   Hash,
   Package,
   Copy,
-  Check,
-  Pencil,
-  FileText,
-  History,
-  MoreVertical
+  Check
 } from "lucide-react";
-import ActionMenu, { ActionMenuItem } from "@/components/common/ActionMenu";
+
 
 /* ─── Helpers ────────────────────────────────────────────────────────────── */
 const formatCurrency = (amount?: number | string) => {
@@ -40,9 +36,9 @@ const formatDate = (dateStr?: string) => {
 const getStockStatus = (stock: number | string, reorderPoint?: number | string) => {
   const stockNum = Number(stock) || 0;
   const rp = Number(reorderPoint) || 10;
-  if (stockNum <= 0) return { label: '0 In Stock', color: 'text-badge-red-text bg-badge-red-bg border-badge-red-text/20' };
-  if (stockNum <= rp) return { label: `${stockNum} Low Stock`, color: 'text-badge-amber-text bg-badge-amber-bg border-badge-amber-text/20' };
-  return { label: `${stockNum} In Stock`, color: 'text-badge-green-text bg-badge-green-bg border-badge-green-text/20' };
+  if (stockNum <= 0) return { label: '0 In Stock', color: 'text-[var(--ps-cancel-tx)] bg-[var(--ps-cancel-bg)] border-[var(--ps-cancel-bd)]' };
+  if (stockNum <= rp) return { label: `${stockNum} Low Stock`, color: 'text-[var(--ps-draft-tx)] bg-[var(--ps-draft-bg)] border-[var(--ps-draft-bd)]' };
+  return { label: `${stockNum} In Stock`, color: 'text-[var(--ps-completed-tx)] bg-[var(--ps-completed-bg)] border-[var(--ps-completed-bd)]' };
 };
 
 const getDaysLeft = (expDate?: string) => {
@@ -59,7 +55,7 @@ export const BatchBadge = ({ expDate, qty }: { expDate?: string; qty: number }) 
   const days = getDaysLeft(expDate);
   if (qty <= 0) {
     return (
-      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold   border bg-badge-gray-bg text-badge-gray-text border-badge-gray-text/20">
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold   border bg-[var(--mv-sales-bg)] text-badge-gray-text border-badge-gray-text/20">
         Depleted
       </span>
     );
@@ -67,21 +63,21 @@ export const BatchBadge = ({ expDate, qty }: { expDate?: string; qty: number }) 
   if (days === null) return null;
   if (days < 0) {
     return (
-      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold   border bg-badge-red-bg text-badge-red-text border-badge-red-text/20">
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold   border bg-[var(--mv-sales-bg)] text-[var(--ps-cancel-tx)] border-badge-red-text/20">
         Expired
       </span>
     );
   }
   if (days <= 90) {
     return (
-      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold   border bg-badge-amber-bg text-badge-amber-text border-badge-amber-text/20">
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold   border bg-[var(--at-batch-bg)] text-[var(--at-batch-tx)] border-badge-amber-text/20">
         <Clock size={10} /> {days}d left
       </span>
     );
   }
   return (
-    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold   border bg-badge-green-bg text-badge-green-text border-badge-green-text/20">
-      <span className="w-1 h-1 rounded-full bg-badge-green-text inline-block" /> {days}d left
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold   border bg-[var(--mv-sales-bg)] text-badge-green-text border-badge-green-text/20">
+      <span className="w-1 h-1 rounded-full bg-[var(--ps-completed-dot)] inline-block" /> {days}d left
     </span>
   );
 };
@@ -98,7 +94,7 @@ export const SerialBadgeList = ({ serials }: { serials: string[] }) => {
   return (
     <div className="flex flex-wrap gap-1.5 mt-1">
       {visibleSerials.map((s, i) => (
-        <span key={i} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-badge-rose-bg text-badge-rose-text border border-badge-rose-text/20">
+        <span key={i} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-[var(--mv-sales-bg)] text-badge-rose-text border border-badge-rose-text/20">
           <Hash size={8} /> {s}
         </span>
       ))}
@@ -179,10 +175,10 @@ export const BatchCards = ({ batches }: { batches: any | any[] }) => {
           const reorderPt     = batch.reorder_point_infos?.reorder_point       ?? batch.reorder_point    ?? null;
 
           const stockStatus = availableQty <= 0
-            ? { label: 'Out of Stock', cls: 'text-badge-red-text bg-badge-red-bg border-badge-red-text/20' }
+            ? { label: 'Out of Stock', cls: 'text-[var(--ps-cancel-tx)] bg-[var(--ps-cancel-bg)] border-[var(--ps-cancel-bd)]' }
             : reorderPt !== null && availableQty <= reorderPt
-              ? { label: 'Low Stock',    cls: 'text-badge-amber-text bg-badge-amber-bg border-badge-amber-text/20' }
-              : { label: 'In Stock',     cls: 'text-badge-green-text bg-badge-green-bg border-badge-green-text/20' };
+              ? { label: 'Low Stock',    cls: 'text-[var(--ps-draft-tx)] bg-[var(--ps-draft-bg)] border-[var(--ps-draft-bd)]' }
+              : { label: 'In Stock',     cls: 'text-[var(--ps-completed-tx)] bg-[var(--ps-completed-bg)] border-[var(--ps-completed-bd)]' };
 
           return (
             <div key={batch.id || idx} className="flex flex-col border-b border-slate-100 last:border-b-0 hover:bg-slate-50/50 transition-colors bg-white">
@@ -202,13 +198,13 @@ export const BatchCards = ({ batches }: { batches: any | any[] }) => {
                          <span className="text-[9px] font-mono text-slate-400 font-medium">{batch.id.slice(0, 8)}…</span>
                       )}
                       {storageLoc && (
-                         <span className="text-[8px] font-bold px-1 py-0.5 rounded bg-badge-purple-bg text-badge-purple-text border border-badge-purple-text/20 tracking-wider">LOC: {storageLoc}</span>
+                         <span className="text-[8px] font-bold px-1 py-0.5 rounded bg-[var(--at-variant-bg)] text-[var(--at-variant-tx)] border border-badge-purple-text/20 tracking-wider">LOC: {storageLoc}</span>
                       )}
                       {reorderPt !== null && (
-                         <span className="text-[8px] font-bold px-1 py-0.5 rounded bg-badge-amber-bg text-badge-amber-text border border-badge-amber-text/20 tracking-wider">REORDER: {reorderPt}</span>
+                         <span className="text-[8px] font-bold px-1 py-0.5 rounded bg-[var(--at-batch-bg)] text-[var(--at-batch-tx)] border border-badge-amber-text/20 tracking-wider">REORDER: {reorderPt}</span>
                       )}
                       {daysToExpiry !== null && (
-                         <span className={`text-[8px] font-bold px-1 py-0.5 rounded tracking-wider border ${daysToExpiry <= 0 ? 'bg-badge-red-bg border-badge-red-text/20 text-badge-red-text' : daysToExpiry <= 7 ? 'bg-badge-amber-bg border-badge-amber-text/20 text-badge-amber-text' : 'bg-badge-green-bg border-badge-green-text/20 text-badge-green-text'}`}>
+                         <span className={`text-[8px] font-bold px-1 py-0.5 rounded tracking-wider border ${daysToExpiry <= 0 ? 'bg-[var(--mv-sales-bg)] border-badge-red-text/20 text-[var(--ps-cancel-tx)]' : daysToExpiry <= 7 ? 'bg-[var(--mv-sales-bg)] border-badge-amber-text/20 text-[var(--at-batch-tx)]' : 'bg-[var(--mv-sales-bg)] border-badge-green-text/20 text-badge-green-text'}`}>
                             {daysToExpiry < 0 ? `EXP ${Math.abs(daysToExpiry)}D AGO` : daysToExpiry === 0 ? 'EXPIRES TODAY' : `EXP IN ${daysToExpiry}D`}
                          </span>
                       )}
@@ -320,46 +316,6 @@ const CopySKUButton = ({ val }: { val: string }) => {
   );
 };
 
-const VariantActions = () => {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const menuTriggerRef = useRef<HTMLButtonElement>(null);
-  
-  return (
-    <div className="flex items-center justify-end gap-1 relative" onClick={e => e.stopPropagation()}>
-      <button className="p-1.5 text-slate-400 hover:text-amber-500 hover:bg-amber-50 rounded transition-colors" title="Edit">
-        <Pencil size={14} />
-      </button>
-      <button className="p-1.5 text-slate-400 hover:text-blue-500 hover:bg-blue-50 rounded transition-colors" title="Inventory">
-        <Package size={14} />
-      </button>
-      
-      <div className="relative">
-        <button
-          ref={menuTriggerRef}
-          onClick={(e) => { e.stopPropagation(); setIsMenuOpen(!isMenuOpen); }}
-          className="p-1.5 text-slate-400 hover:text-slate-800 hover:bg-slate-100 rounded transition-colors"
-          title="More actions"
-        >
-          <MoreVertical size={14} />
-        </button>
-        <ActionMenu
-          triggerRef={menuTriggerRef}
-          open={isMenuOpen}
-          onClose={() => setIsMenuOpen(false)}
-          width={140}
-        >
-          <ActionMenuItem icon={<History size={13} />} onClick={() => setIsMenuOpen(false)}>
-            History
-          </ActionMenuItem>
-          <ActionMenuItem icon={<FileText size={13} />} onClick={() => setIsMenuOpen(false)}>
-            Batch
-          </ActionMenuItem>
-        </ActionMenu>
-      </div>
-    </div>
-  );
-};
-
 export const VariantRows = ({ combinations, baseSellPrice, baseBuyPrice }: { combinations: any[]; baseSellPrice: any; baseBuyPrice?: any }) => {
   const [expandedVariant, setExpandedVariant] = useState<string | null>(null);
 
@@ -382,7 +338,6 @@ export const VariantRows = ({ combinations, baseSellPrice, baseBuyPrice }: { com
               <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-right">Sell Price</th>
               <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-left">Batch Count</th>
               <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-center">Status</th>
-              <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-right">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -498,16 +453,12 @@ export const VariantRows = ({ combinations, baseSellPrice, baseBuyPrice }: { com
                       </span>
                     </td>
 
-                    {/* Actions */}
-                    <td className="px-4 py-2 align-middle text-right">
-                      <VariantActions />
-                    </td>
                   </tr>
 
                   {/* Serials Area */}
                   {hasSerials && (
                     <tr className="bg-indigo-50/10">
-                      <td colSpan={8} className="p-0 border-t border-slate-50/50">
+                      <td colSpan={7} className="p-0 border-t border-slate-50/50">
                         <div className="px-4 pb-2 pt-1.5 flex flex-col">
                           <p className="text-[10px] font-bold text-slate-500 mb-1 flex items-center gap-1 uppercase">
                             <Hash size={10} className="text-indigo-400" /> Serial Numbers ({serials.length})
@@ -521,7 +472,7 @@ export const VariantRows = ({ combinations, baseSellPrice, baseBuyPrice }: { com
                   {/* Nested Batches Area */}
                   {isVarExpanded && hasBatches && (
                     <tr className="bg-slate-50/50">
-                      <td colSpan={8} className="p-0 border-t border-slate-100">
+                      <td colSpan={7} className="p-0 border-t border-slate-100">
                         <div className="p-3 md:pl-10 pl-6 border-l-2 border-slate-200 ml-4 my-2">
                            <BatchCards batches={batches} />
                         </div>

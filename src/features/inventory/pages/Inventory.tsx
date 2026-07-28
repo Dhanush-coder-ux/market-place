@@ -187,21 +187,21 @@ const getStockStatus = (stock: number, reorderPoint?: number) => {
   if (s <= 0)
     return {
       label: "Out of stock",
-      color: "text-badge-red-text bg-badge-red-bg border-badge-red-text/20",
-      dot: "bg-badge-red-text",
+      color: "text-[var(--ps-cancel-tx)] bg-[var(--ps-cancel-bg)] border-[var(--ps-cancel-bd)]",
+      dot: "bg-[var(--ps-cancel-dot)]",
       icon: AlertCircle,
     };
   if (s <= rp)
     return {
       label: "Low stock",
-      color: "text-badge-amber-text bg-badge-amber-bg border-badge-amber-text/20",
-      dot: "bg-badge-amber-text",
+      color: "text-[var(--ps-draft-tx)] bg-[var(--ps-draft-bg)] border-[var(--ps-draft-bd)]",
+      dot: "bg-[var(--ps-draft-dot)]",
       icon: AlertTriangle,
     };
   return {
     label: "In stock",
-    color: "text-badge-green-text bg-badge-green-bg border-badge-green-text/20",
-    dot: "bg-badge-green-text",
+    color: "text-[var(--ps-completed-tx)] bg-[var(--ps-completed-bg)] border-[var(--ps-completed-bd)]",
+    dot: "bg-[var(--ps-completed-dot)]",
     icon: Package,
   };
 };
@@ -259,10 +259,10 @@ const Pill = ({
 }) => {
   const styles: Record<string, string> = {
     default: "text-slate-500 bg-slate-50 border-slate-100",
-    variant: "text-badge-\-text\-badge-\-border",
-    batch: "text-badge-\-text\-badge-\-border",
-    serial: "text-badge-\-text\-badge-\-border",
-    online: "text-badge-\-text\-badge-\-border",
+    variant: "text-[var(--at-variant-tx)] bg-[var(--at-variant-bg)] border-[var(--at-variant-bd)]",
+    batch: "text-[var(--at-batch-tx)] bg-[var(--at-batch-bg)] border-[var(--at-batch-bd)]",
+    serial: "text-[var(--at-serial-tx)] bg-[var(--at-serial-bg)] border-[var(--at-serial-bd)]",
+    online: "text-[var(--at-brand-tx)] bg-[var(--at-brand-bg)] border-[var(--at-brand-bd)]",
   };
   return (
     <span
@@ -422,8 +422,8 @@ const ProductRow = React.memo(
     
     const trackingInfo: any[] = [];
     if (!hasVariants) {
-      if (totalBatches > 0) trackingInfo.push({ label: `${totalBatches} batches`, icon: Calendar, color: "coral", bg: "bg-badge-coral-bg", text: "text-badge-\-text\-badge-\-border" });
-      if (totalSerials > 0) trackingInfo.push({ label: `${totalSerials} serials`, icon: Hash, color: "rose", bg: "bg-badge-red-bg", text: "text-badge-\-text\-badge-\-border" });
+      if (totalBatches > 0) trackingInfo.push({ label: `${totalBatches} batches`, icon: Calendar, color: "coral", bg: "bg-[var(--at-batch-bg)]", text: "text-[var(--at-batch-tx)] border-[var(--at-batch-bd)]" });
+      if (totalSerials > 0) trackingInfo.push({ label: `${totalSerials} serials`, icon: Hash, color: "rose", bg: "bg-[var(--at-serial-bg)]", text: "text-[var(--at-serial-tx)] border-[var(--at-serial-bd)]" });
     }
 
     const visibleBadges = showAllBadges ? badges : badges.slice(0, 2);
@@ -476,6 +476,26 @@ const ProductRow = React.memo(
                 <div className="w-1 h-1 rounded-full bg-slate-200" />
               </div>
             )}
+          </td>
+
+          {/* Product ID */}
+          <td className="px-3 py-2.5 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+            {(() => {
+              const actualSku = (item as any).sku || datas.sku || "";
+              const uiId = (item as any).ui_id || item.id || "";
+              const displayLabel = actualSku ? "SKU" : "ID";
+              const displayVal = actualSku ? actualSku : uiId;
+              if (!displayVal) return <span className="text-[12px] font-medium text-slate-400">—</span>;
+              const trimmedSku = displayVal.length > 16 ? `${displayVal.slice(0, 12)}...` : displayVal;
+              return (
+                <span className="flex items-center gap-1 text-[12px] font-medium text-slate-600">
+                  <span className="font-mono tabular-nums" title={displayVal}>
+                    {displayLabel}: {trimmedSku}
+                  </span>
+                  <CopySKUButton val={displayVal} />
+                </span>
+              );
+            })()}
           </td>
 
           {/* Product identity */}
@@ -548,44 +568,15 @@ const ProductRow = React.memo(
                 )}
                 <div className="flex items-center gap-2 text-[11px] text-slate-400 font-medium leading-none mt-0.5">
                   {(() => {
-                    const actualSku = (item as any).sku || datas.sku || "";
-                    const uiId = (item as any).ui_id || item.id || "";
                     const barcode = item.barcode || datas.barcode || "";
-                    if (actualSku) {
-                      return (
-                        <span className="flex items-center gap-1">
-                          <span className="font-mono text-slate-400 tabular-nums" title={actualSku}>
-                            SKU: {actualSku}
-                          </span>
-                          {barcode && (
-                            <>
-                              <span className="text-slate-200">·</span>
-                              <span className="font-mono text-slate-400 tabular-nums" title={barcode}>
-                                Barcode: {barcode}
-                              </span>
-                            </>
-                          )}
-                          <CopySKUButton val={actualSku} />
+                    if (!barcode) return null;
+                    return (
+                      <span className="flex items-center gap-1">
+                        <span className="font-mono text-slate-400 tabular-nums" title={barcode}>
+                          Barcode: {barcode}
                         </span>
-                      );
-                    } else {
-                      return (
-                        <span className="flex items-center gap-1">
-                          <span className="font-mono text-slate-400 tabular-nums" title={uiId}>
-                            ID: {uiId}
-                          </span>
-                          {barcode && (
-                            <>
-                              <span className="text-slate-200">·</span>
-                              <span className="font-mono text-slate-400 tabular-nums" title={barcode}>
-                                Barcode: {barcode}
-                              </span>
-                            </>
-                          )}
-                          <CopySKUButton val={uiId} />
-                        </span>
-                      );
-                    }
+                      </span>
+                    );
                   })()}
                   {(datas.brand || item.brand) && (
                     <>
@@ -734,7 +725,7 @@ const ProductRow = React.memo(
         {/* Expanded row */}
         {isExpanded && isExpandable && (
           <tr className="bg-slate-50/40">
-            <td colSpan={13} className="px-0 py-0">
+            <td colSpan={14} className="px-0 py-0">
               <div className="ml-8 mr-3 my-2 space-y-2 border-l-2 border-slate-200 pl-4">
 
 
@@ -1357,6 +1348,9 @@ const InventoryPage = () => {
                     />
                   </th>
                   <th className="px-3 py-2.5 w-10" />
+                  <th className="px-3 py-2.5 w-40 text-[10px] font-semibold text-slate-800 uppercase tracking-wide">
+                    Product ID
+                  </th>
                   <th className="px-3 py-2.5 min-w-[280px] text-[10px] font-semibold text-slate-800 uppercase tracking-wide">
                     Product
                   </th>

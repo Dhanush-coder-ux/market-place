@@ -63,7 +63,7 @@ const columnOrder = [
   "serial_number"
 ];
 
-const hiddenProductColumns = new Set(["cost_to_make"]);
+const hiddenProductColumns = new Set(["cost_to_make", "ui_id", "stocks", "status", "reorder_point"]);
 
 const sortKeys = (keys: string[]) => {
   return [...keys].sort((a, b) => {
@@ -127,19 +127,19 @@ const getStockStatus = (stock: number, reorderPoint?: number) => {
   if (s <= 0)
     return {
       label: "Out of stock",
-      color: "text-badge-red-text bg-badge-red-bg border-badge-red-text/20",
-      dot: "bg-badge-red-text",
+      color: "text-[var(--ps-cancel-tx)] bg-[var(--ps-cancel-bg)] border-[var(--ps-cancel-bd)]",
+      dot: "bg-[var(--ps-cancel-dot)]",
     };
   if (s <= rp)
     return {
       label: "Low stock",
-      color: "text-badge-amber-text bg-badge-amber-bg border-badge-amber-text/20",
-      dot: "bg-badge-amber-text",
+      color: "text-[var(--ps-draft-tx)] bg-[var(--ps-draft-bg)] border-[var(--ps-draft-bd)]",
+      dot: "bg-[var(--ps-draft-dot)]",
     };
   return {
     label: "In stock",
-    color: "text-badge-green-text bg-badge-green-bg border-badge-green-text/20",
-    dot: "bg-badge-green-text",
+    color: "text-[var(--ps-completed-tx)] bg-[var(--ps-completed-bg)] border-[var(--ps-completed-bd)]",
+    dot: "bg-[var(--ps-completed-dot)]",
   };
 };
 
@@ -155,10 +155,10 @@ const Pill = ({
 }) => {
   const styles: Record<string, string> = {
     default: "text-slate-500 bg-slate-50 border-slate-100",
-    variant: "text-badge-\-text\-badge-\-border",
-    batch: "text-badge-\-text\-badge-\-border",
-    serial: "text-badge-\-text\-badge-\-border",
-    online: "text-badge-\-text\-badge-\-border",
+    variant: "text-[var(--at-variant-tx)] bg-[var(--at-variant-bg)] border-[var(--at-variant-bd)]",
+    batch: "text-[var(--at-batch-tx)] bg-[var(--at-batch-bg)] border-[var(--at-batch-bd)]",
+    serial: "text-[var(--at-serial-tx)] bg-[var(--at-serial-bg)] border-[var(--at-serial-bd)]",
+    online: "text-[var(--at-brand-tx)] bg-[var(--at-brand-bg)] border-[var(--at-brand-bd)]",
   };
   return (
     <span
@@ -329,8 +329,8 @@ const ProductRow = React.memo(
     
     const trackingInfo: any[] = [];
     if (!hasVariants) {
-      if (totalBatches > 0) trackingInfo.push({ label: `${totalBatches} batches`, icon: Calendar, color: "coral", bg: "bg-badge-coral-bg", text: "text-badge-\-text\-badge-\-border" });
-      if (totalSerials > 0) trackingInfo.push({ label: `${totalSerials} serials`, icon: Hash, color: "rose", bg: "bg-badge-red-bg", text: "text-badge-\-text\-badge-\-border" });
+      if (totalBatches > 0) trackingInfo.push({ label: `${totalBatches} batches`, icon: Calendar, color: "coral", bg: "bg-[var(--at-batch-bg)]", text: "text-[var(--at-batch-tx)] border-[var(--at-batch-bd)]" });
+      if (totalSerials > 0) trackingInfo.push({ label: `${totalSerials} serials`, icon: Hash, color: "rose", bg: "bg-[var(--at-serial-bg)]", text: "text-[var(--at-serial-tx)] border-[var(--at-serial-bd)]" });
     }
 
     const visibleBadges = showAllBadges ? badges : badges.slice(0, 2);
@@ -382,6 +382,26 @@ const ProductRow = React.memo(
                 <div className="w-1 h-1 rounded-full bg-slate-200" />
               </div>
             )}
+          </td>
+
+          {/* Product ID */}
+          <td className="px-3 py-2.5 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+            {(() => {
+              const actualSku = p.sku || datas.sku || "";
+              const uiId = (p as any).ui_id || p.id || "";
+              const displayLabel = actualSku ? "SKU" : "ID";
+              const displayVal = actualSku ? actualSku : uiId;
+              if (!displayVal) return <span className="text-[12px] font-medium text-slate-400">—</span>;
+              const trimmedSku = displayVal.length > 16 ? `${displayVal.slice(0, 12)}...` : displayVal;
+              return (
+                <span className="flex items-center gap-1 text-[12px] font-medium text-slate-600">
+                  <span className="font-mono tabular-nums" title={displayVal}>
+                    {displayLabel}: {trimmedSku}
+                  </span>
+                  <CopySKUButton val={displayVal} />
+                </span>
+              );
+            })()}
           </td>
 
           {/* Product identity */}
@@ -575,31 +595,6 @@ const ProductRow = React.memo(
               );
             }
 
-            if (key === "ui_id") {
-              const actualSku = p.sku || datas.sku || "";
-              const uiId = (p as any).ui_id || p.id || "";
-              const displayLabel = actualSku ? "SKU" : "ID";
-              const displayVal = actualSku ? actualSku : uiId;
-              if (!displayVal) {
-                return (
-                  <td key={key} className="px-3 py-2.5 whitespace-nowrap">
-                    <span className="text-[12px] font-medium text-slate-400">—</span>
-                  </td>
-                );
-              }
-              const trimmedSku = displayVal.length > 16 ? `${displayVal.slice(0, 12)}...` : displayVal;
-              return (
-                <td key={key} className="px-3 py-2.5 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-                  <span className="flex items-center gap-1 text-[12px] font-medium text-slate-600">
-                    <span className="font-mono tabular-nums" title={displayVal}>
-                      {displayLabel}: {trimmedSku}
-                    </span>
-                    <CopySKUButton val={displayVal} />
-                  </span>
-                </td>
-              );
-            }
-
             if (key === "barcode") {
               const rawBarcode = p.barcode || datas.barcode || "";
               if (!rawBarcode) {
@@ -752,7 +747,7 @@ const ProductRow = React.memo(
         {isExpanded && (
           <tr key={`${p.id}-expand`} className="bg-slate-50/40">
             <td
-              colSpan={selectedKeys.length + 4}
+              colSpan={selectedKeys.length + 5}
               className="px-0 py-0 border-b border-slate-50"
             >
               <div className="ml-8 mr-3 my-2 space-y-2 border-l-2 border-slate-200 pl-4">
@@ -951,7 +946,7 @@ const ProductInfos = () => {
     const saved = localStorage.getItem("product_table_columns");
     return saved
       ? sortKeys(JSON.parse(saved).filter((key: string) => !hiddenProductColumns.has(key)))
-      : ["category", "status", "buy_price", "sell_price", "stocks", "reorder_point", "ui_id", "barcode"];
+      : ["category", "buy_price", "sell_price", "barcode"];
   });
 
   const sortedSelectedKeys = useMemo(() => sortKeys(selectedKeys), [selectedKeys]);
@@ -1241,14 +1236,22 @@ const ProductInfos = () => {
         <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-none">
           <StatCard
             icon={Package}
-            label="Total Products"
-            value={(analyticsStats?.overview?.inventory?.total_active_products ?? products.length).toString()}
-            subValue="items"
+            label="Active Products"
+            value={(analyticsStats?.overview?.inventory?.total_active_products ?? products.filter((p: any) => p.is_active !== false).length).toString()}
+            subValue="selling items"
             iconBg="bg-blue-50"
             iconColor="text-blue-600"
           />
           <StatCard
             icon={Package}
+            label="Inactive Products"
+            value={(analyticsStats?.overview?.inventory?.total_inactive_product ?? products.filter((p: any) => p.is_active === false).length).toString()}
+            subValue="disabled items"
+            iconBg="bg-slate-100"
+            iconColor="text-slate-600"
+          />
+          <StatCard
+            icon={Layers}
             label="Total Stocks"
             value={(analyticsStats?.overview?.inventory?.total_stocks ?? 0).toString()}
             subValue="in-stock count"
@@ -1448,6 +1451,9 @@ const ProductInfos = () => {
                   />
                 </th>
                 <th className="px-3 py-2.5 w-10" />
+                <th className="px-3 py-2.5 w-40 text-[10px] font-semibold text-slate-800 uppercase tracking-wide">
+                  Product ID
+                </th>
                 <th className="px-3 py-2.5 min-w-[260px] text-[10px] font-semibold text-slate-800 uppercase tracking-wide">
                   Product
                 </th>
@@ -1489,7 +1495,7 @@ const ProductInfos = () => {
               {filteredProducts.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={selectedKeys.length + 4}
+                    colSpan={selectedKeys.length + 5}
                     className="py-20 text-center"
                   >
                     <div className="flex flex-col items-center gap-2">

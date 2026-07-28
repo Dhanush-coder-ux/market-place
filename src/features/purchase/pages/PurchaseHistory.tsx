@@ -333,10 +333,10 @@ const fmt = (n: number) => `₹${n.toLocaleString("en-IN")}`;
 const PurchaseTypeBadge = ({ type }: { type: PurchaseType }) => {
   let colors = "bg-zinc-100 text-zinc-600 border-zinc-200"; // Fallback
 
-  if (type === "Purchase") colors = "bg-badge-success-bg text-badge-\-text\-badge-\-border";
-  if (type === "PO Purchase") colors = "bg-badge-teal-bg text-badge-\-text\-badge-\-border";
-  if (type === "Production") colors = "bg-badge-amber-bg text-badge-\-text\-badge-\-border";
-  if (type === "Purchase Return" || type === "Return" as any) colors = "bg-badge-purple-bg text-badge-\-text\-badge-\-border";
+  if (type === "Purchase") colors = "bg-[var(--pay-paid-bg)] text-[var(--pay-paid-tx)] border border-[var(--pay-paid-bd)]";
+  if (type === "PO Purchase") colors = "bg-[var(--mv-sales-bg)] text-[var(--mv-sales-tx)] border border-[var(--mv-sales-bd)]";
+  if (type === "Production") colors = "bg-[var(--ps-draft-bg)] text-[var(--ps-draft-tx)] border border-[var(--ps-draft-bd)]";
+  if (type === "Purchase Return" || type === "Return" as any) colors = "bg-[var(--mv-sreturn-bg)] text-[var(--mv-sreturn-tx)] border border-[var(--mv-sreturn-bd)]";
 
   return (
     <span className={`px-2 py-0.5 rounded text-[10px] font-bold   border whitespace-nowrap ${colors}`}>
@@ -375,7 +375,7 @@ const GridCard = ({ po, selected, onClick }: { po: DirectPurchaseData; selected?
                             </span>
                           )}
                           {po.version && (
-                            <span className="text-[9px] font-bold text-blue-600 bg-blue-50 border border-blue-200 px-1.5 py-0.5 rounded uppercase tracking-wider shrink-0">
+                            <span className="text-[9px] font-bold text-[var(--at-version-tx)] bg-[var(--at-version-bg)] border border-[var(--at-version-bd)] px-1.5 py-0.5 rounded uppercase tracking-wider shrink-0">
                               {po.version}
                             </span>
                           )}
@@ -451,12 +451,12 @@ const GridCard = ({ po, selected, onClick }: { po: DirectPurchaseData; selected?
                   {(firstRow?.variant || firstRow?.batch) && (
                     <div className="flex flex-wrap gap-1 mt-0.5">
                       {firstRow.variant && (
-                        <span className="px-1.5 py-0.5 rounded text-[8px] font-extrabold bg-badge-purple-bg text-badge-\-text\-badge-\-border truncate max-w-[100px]">
+                        <span className="px-1.5 py-0.5 rounded text-[8px] font-extrabold bg-[var(--mv-sreturn-bg)] text-[var(--mv-sreturn-tx)] border-[var(--mv-sreturn-bd)] truncate max-w-[100px]">
                           V: {firstRow.variant}
                         </span>
                       )}
                       {firstRow.batch && (
-                        <span className="px-1.5 py-0.5 rounded text-[8px] font-extrabold bg-badge-coral-bg text-badge-\-text\-badge-\-border truncate max-w-[100px]">
+                        <span className="px-1.5 py-0.5 rounded text-[8px] font-extrabold bg-[var(--at-batch-bg)] text-[var(--at-batch-tx)] border-[var(--at-batch-bd)] truncate max-w-[100px]">
                           B: {firstRow.batch}
                         </span>
                       )}
@@ -581,7 +581,7 @@ const VerticalTable = ({ data, selectedIds, onSelect, totalCount, lastElementRef
                             </span>
                           )}
                           {po.version && (
-                            <span className="text-[9px] font-bold text-blue-600 bg-blue-50 border border-blue-200 px-1.5 py-0.5 rounded uppercase tracking-wider shrink-0">
+                            <span className="text-[9px] font-bold text-[var(--at-version-tx)] bg-[var(--at-version-bg)] border border-[var(--at-version-bd)] px-1.5 py-0.5 rounded uppercase tracking-wider shrink-0">
                               {po.version}
                             </span>
                           )}

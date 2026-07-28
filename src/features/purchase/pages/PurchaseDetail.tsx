@@ -170,12 +170,12 @@ const outstanding =
           initials="PO"
           subText={po.systemId && po.systemId !== po.poNumber ? `Invoice No: ${po.poNumber}` : ""}
           badges={[
-            { text: po.purchaseType, variant: "primary" },
+            { text: po.purchaseType, variant: "vendor", dotColor: "bg-[var(--mv-purchase-dot)]" },
             po.outstanding && po.outstanding > 0
               ? (po.paid_amount === 0
-                ? { text: "Unpaid", variant: "danger" }
-                : { text: "Partially Paid", variant: "warning" })
-              : { text: "Paid", variant: "success" }
+                ? { text: "Pending", variant: "pay-pending", dotColor: "bg-[var(--pay-pending-dot)]" }
+                : { text: "Partially paid", variant: "pay-partial", dotColor: "bg-[var(--pay-partial-dot)]" })
+              : { text: "Paid", variant: "pay-paid", dotColor: "bg-[var(--pay-paid-dot)]" }
           ]}
           infoItems={[
             { icon: Calendar, text: `${po.date} at ${po.time}` },
@@ -609,34 +609,34 @@ const outstanding =
               <SectionCard title="Payment Status">
                 {outstanding && outstanding > 0 ? (
                   po.paid_amount === 0 ? (
-                    <div className="flex flex-col items-center justify-center p-6 bg-rose-50/50 border border-rose-100 rounded-xl h-full min-h-[160px]">
-                      <div className="w-14 h-14 rounded-full bg-rose-500 text-white flex items-center justify-center mb-4 shadow-sm shadow-rose-200 ring-2 ring-white">
+                    <div className="flex flex-col items-center justify-center p-6 bg-[var(--pay-pending-bg)] border border-[var(--pay-pending-bd)] rounded-xl h-full min-h-[160px]">
+                      <div className="w-14 h-14 rounded-full bg-[var(--pay-pending-dot)] text-white flex items-center justify-center mb-4 shadow-sm ring-2 ring-white">
                         <Clock size={28} />
                       </div>
-                      <span className="text-xl font-black tracking-tight text-rose-700">Unpaid</span>
-                      <p className="text-[10px] font-bold text-slate-400 mt-2 uppercase tracking-widest">{po.paymentMethod || "Pending"}</p>
-                      <p className="text-xs font-bold text-rose-600 mt-1">Outstanding: {fmt(outstanding)}</p>
+                      <span className="text-xl font-black tracking-tight text-[var(--pay-pending-tx)]">Pending</span>
+                      <p className="text-[10px] font-bold text-slate-400 mt-2 uppercase tracking-widest">{po.paymentMethod || "Action Required"}</p>
+                      <p className="text-xs font-bold text-[var(--pay-pending-tx)] mt-1">Outstanding: {fmt(outstanding)}</p>
                     </div>
                   ) : (
-                    <div className="flex flex-col items-center justify-center p-6 bg-amber-50/50 border border-amber-100 rounded-xl h-full min-h-[160px]">
-                      <div className="w-14 h-14 rounded-full bg-amber-500 text-white flex items-center justify-center mb-4 shadow-sm shadow-amber-200 ring-2 ring-white">
+                    <div className="flex flex-col items-center justify-center p-6 bg-[var(--pay-partial-bg)] border border-[var(--pay-partial-bd)] rounded-xl h-full min-h-[160px]">
+                      <div className="w-14 h-14 rounded-full bg-[var(--pay-partial-dot)] text-white flex items-center justify-center mb-4 shadow-sm ring-2 ring-white">
                         <TrendingUp size={28} />
                       </div>
-                      <span className="text-xl font-black tracking-tight text-amber-700">Partially Paid</span>
+                      <span className="text-xl font-black tracking-tight text-[var(--pay-partial-tx)]">Partially paid</span>
                       <p className="text-[10px] font-bold text-slate-400 mt-2 uppercase tracking-widest">{po.paymentMethod || "Partial"}</p>
                       <div className="text-center mt-2 space-y-0.5">
-                        <p className="text-[10px] font-semibold text-slate-500">Paid: {fmt(po.paid_amount || 0)}</p>
-                        <p className="text-xs font-bold text-amber-600">Outstanding: {fmt(outstanding)}</p>
+                        <p className="text-[10px] font-semibold text-[var(--pay-partial-tx)] opacity-80">Paid: {fmt(po.paid_amount || 0)}</p>
+                        <p className="text-xs font-bold text-[var(--pay-partial-tx)]">Outstanding: {fmt(outstanding)}</p>
                       </div>
                     </div>
                   )
                 ) : (
-                  <div className="flex flex-col items-center justify-center p-6 bg-emerald-50/50 border border-emerald-100 rounded-xl h-full min-h-[160px]">
-                    <div className="w-14 h-14 rounded-full bg-emerald-500 text-white flex items-center justify-center mb-4 shadow-sm shadow-emerald-200 ring-2 ring-white">
+                  <div className="flex flex-col items-center justify-center p-6 bg-[var(--pay-paid-bg)] border border-[var(--pay-paid-bd)] rounded-xl h-full min-h-[160px]">
+                    <div className="w-14 h-14 rounded-full bg-[var(--pay-paid-dot)] text-white flex items-center justify-center mb-4 shadow-sm ring-2 ring-white">
                       <CheckCircle2 size={28} />
                     </div>
-                    <span className="text-xl font-black tracking-tight text-emerald-700">Paid</span>
-                    <p className="text-[10px] font-bold text-slate-400 mt-2 uppercase tracking-widest">{po.paymentMethod || "Completed"}</p>
+                    <span className="text-xl font-black tracking-tight text-[var(--pay-paid-tx)]">Paid</span>
+                    <p className="text-[10px] font-bold text-[var(--pay-paid-tx)] opacity-60 mt-2 uppercase tracking-widest">{po.paymentMethod || "Settled"}</p>
                   </div>
                 )}
               </SectionCard>

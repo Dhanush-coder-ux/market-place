@@ -10,16 +10,16 @@ export const fmt = (n: number) => "₹" + n.toLocaleString("en-IN");
 
 export function StatusBadge({ status }: { status: string }) {
   const colorMap: Record<string, string> = {
-    Paid: "bg-badge-green-bg text-badge-green-text border-badge-green-text/20",
-    Partial: "bg-badge-amber-bg text-badge-amber-text border-badge-amber-text/20",
-    "Partially Paid": "bg-badge-amber-bg text-badge-amber-text border-badge-amber-text/20",
-    Pending: "bg-badge-coral-bg text-badge-coral-text border-badge-coral-text/20",
-    Accepted: "bg-badge-green-bg text-badge-green-text border-badge-green-text/20",
-    Inactive: "bg-badge-red-bg text-badge-red-text border-badge-red-text/20",
-    Active: "bg-badge-green-bg text-badge-green-text border-badge-green-text/20",
-    Completed: "bg-badge-green-bg text-badge-green-text border-badge-green-text/20",
-    Draft: "bg-badge-gray-bg text-badge-gray-text border-badge-gray-text/20",
-    Cancelled: "bg-badge-red-bg text-badge-red-text border-badge-red-text/20",
+    Paid: "bg-[var(--pay-paid-bg)] text-[var(--pay-paid-tx)] border-[var(--pay-paid-bd)]",
+    Partial: "bg-[var(--pay-partial-bg)] text-[var(--pay-partial-tx)] border-[var(--pay-partial-bd)]",
+    "Partially Paid": "bg-[var(--pay-partial-bg)] text-[var(--pay-partial-tx)] border-[var(--pay-partial-bd)]",
+    Pending: "bg-[var(--pay-pending-bg)] text-[var(--pay-pending-tx)] border-[var(--pay-pending-bd)]",
+    Accepted: "bg-[var(--ps-completed-bg)] text-[var(--ps-completed-tx)] border-[var(--ps-completed-bd)]",
+    Inactive: "bg-[var(--ps-cancel-bg)] text-[var(--ps-cancel-tx)] border-[var(--ps-cancel-bd)]",
+    Active: "bg-[var(--ps-completed-bg)] text-[var(--ps-completed-tx)] border-[var(--ps-completed-bd)]",
+    Completed: "bg-[var(--ps-completed-bg)] text-[var(--ps-completed-tx)] border-[var(--ps-completed-bd)]",
+    Draft: "bg-[var(--ps-draft-bg)] text-[var(--ps-draft-tx)] border-[var(--ps-draft-bd)]",
+    Cancelled: "bg-[var(--ps-cancel-bg)] text-[var(--ps-cancel-tx)] border-[var(--ps-cancel-bd)]",
   };
   return (
     <span
@@ -35,20 +35,21 @@ export function StatusBadge({ status }: { status: string }) {
 
 export function TypeBadge({ type, labelOverride, icon: Icon }: { type: string, labelOverride?: string, icon?: any }) {
   const t = type?.toUpperCase() || "ADJUSTMENT";
-  let bg = "bg-badge-amber-bg", text = "text-badge-amber-text", border = "border-badge-amber-text/20", label = "Adjustment";
+  let bg = "bg-[var(--mv-adjust-bg)]", text = "text-[var(--mv-adjust-tx)]", border = "border-[var(--mv-adjust-bd)]", dot = "bg-[var(--mv-adjust-dot)]", label = "Adjustment";
   
-  if (t.includes("PURCHASE") || t === "DIRECT" || t.includes("PO_")) { bg = "bg-badge-green-bg"; text = "text-badge-green-text"; border = "border-badge-green-text/20"; label = "Purchase"; }
-  else if (t.includes("SALES_RETURN") || t.includes("SALE_RETURN") || t.includes("RETURN")) { bg = "bg-badge-purple-bg"; text = "text-badge-purple-text"; border = "border-badge-purple-text/20"; label = "Sales Return"; }
-  else if (t.includes("SALES")) { bg = "bg-badge-blue-bg"; text = "text-badge-blue-text"; border = "border-badge-blue-text/20"; label = "Sales"; }
-  else if (t === "TRANSFER") { bg = "bg-badge-teal-bg"; text = "text-badge-teal-text"; border = "border-badge-teal-text/20"; label = "Transfer"; }
-  else if (t.includes("OPENING")) { bg = "bg-badge-teal-bg"; text = "text-badge-teal-text"; border = "border-badge-teal-text/20"; label = "Opening"; }
-  else if (t.includes("ADJUSTMENT")) { bg = "bg-badge-amber-bg"; text = "text-badge-amber-text"; border = "border-badge-amber-text/20"; label = "Adjustment"; }
+  if (t.includes("PURCHASE_RETURN")) { bg = "bg-[var(--mv-preturn-bg)]"; text = "text-[var(--mv-preturn-tx)]"; border = "border-[var(--mv-preturn-bd)]"; dot = "bg-[var(--mv-preturn-dot)]"; label = "Purchase Return"; }
+  else if (t.includes("SALES_RETURN") || t.includes("SALE_RETURN")) { bg = "bg-[var(--mv-sreturn-bg)]"; text = "text-[var(--mv-sreturn-tx)]"; border = "border-[var(--mv-sreturn-bd)]"; dot = "bg-[var(--mv-sreturn-dot)]"; label = "Sales Return"; }
+  else if (t.includes("PURCHASE") || t === "DIRECT" || t.includes("PO_")) { bg = "bg-[var(--mv-purchase-bg)]"; text = "text-[var(--mv-purchase-tx)]"; border = "border-[var(--mv-purchase-bd)]"; dot = "bg-[var(--mv-purchase-dot)]"; label = "Purchase"; }
+  else if (t.includes("SALES")) { bg = "bg-[var(--mv-sales-bg)]"; text = "text-[var(--mv-sales-tx)]"; border = "border-[var(--mv-sales-bd)]"; dot = "bg-[var(--mv-sales-dot)]"; label = "Sales"; }
+  else if (t === "TRANSFER") { bg = "bg-slate-100"; text = "text-slate-700"; border = "border-slate-200"; dot = "bg-slate-400"; label = "Transfer"; }
+  else if (t.includes("OPENING")) { bg = "bg-[var(--mv-opening-bg)]"; text = "text-[var(--mv-opening-tx)]"; border = "border-[var(--mv-opening-bd)]"; dot = "bg-[var(--mv-opening-dot)]"; label = "Opening"; }
+  else if (t.includes("ADJUSTMENT")) { bg = "bg-[var(--mv-adjust-bg)]"; text = "text-[var(--mv-adjust-tx)]"; border = "border-[var(--mv-adjust-bd)]"; dot = "bg-[var(--mv-adjust-dot)]"; label = "Adjustment"; }
 
   const displayLabel = labelOverride || label;
 
   return (
     <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${bg} ${text} ${border}`}>
-      {Icon ? <Icon size={10} className="stroke-[3]" /> : <span className="w-1.5 h-1.5 rounded-full bg-current" />}
+      {Icon ? <Icon size={10} className="stroke-[3]" /> : <span className={`w-1.5 h-1.5 rounded-full ${dot}`} />}
       {displayLabel}
     </span>
   );
@@ -290,8 +291,10 @@ export interface ProfileHeaderCardProps {
   subText?: string;
   badges?: Array<{
     text: string;
-    variant?: "primary" | "success" | "danger" | "warning";
+    variant?: "primary" | "success" | "danger" | "warning" | "pay-paid" | "pay-partial" | "pay-pending" | "pay-overdue" | "vendor";
     showPulse?: boolean;
+    icon?: any;
+    dotColor?: string;
   }>;
   actions?: React.ReactNode;
   infoItems?: Array<{
@@ -330,20 +333,26 @@ export function ProfileHeaderCard({
               <h1 className="text-lg font-semibold text-slate-800 tracking-tight">{name}</h1>
               <div className="flex items-center gap-2">
                 {badges.map((badge, i) => {
-                  const styles = badge.variant === "success"
-                    ? "bg-emerald-50 text-emerald-600 border-emerald-100"
-                    : badge.variant === "danger"
-                      ? "bg-rose-50 text-rose-600 border-rose-100"
-                      : badge.variant === "warning"
-                        ? "bg-amber-50 text-amber-600 border-amber-100"
-                        : "bg-blue-50 text-blue-600 border-blue-100";
+                  let styles = "bg-blue-50 text-blue-600 border-blue-100";
+                  if (badge.variant === "success") styles = "bg-emerald-50 text-emerald-600 border-emerald-100";
+                  else if (badge.variant === "danger") styles = "bg-rose-50 text-rose-600 border-rose-100";
+                  else if (badge.variant === "warning") styles = "bg-amber-50 text-amber-600 border-amber-100";
+                  else if (badge.variant === "pay-paid") styles = "bg-[var(--pay-paid-bg)] text-[var(--pay-paid-tx)] border-[var(--pay-paid-bd)]";
+                  else if (badge.variant === "pay-partial") styles = "bg-[var(--pay-partial-bg)] text-[var(--pay-partial-tx)] border-[var(--pay-partial-bd)]";
+                  else if (badge.variant === "pay-pending") styles = "bg-[var(--pay-pending-bg)] text-[var(--pay-pending-tx)] border-[var(--pay-pending-bd)]";
+                  else if (badge.variant === "pay-overdue") styles = "bg-white text-[var(--pay-overdue-tx)] border-[var(--pay-overdue-bd)]";
+                  else if (badge.variant === "vendor") styles = "bg-[var(--mv-purchase-bg)] text-[var(--mv-purchase-tx)] border-[var(--mv-purchase-bd)]";
 
                   return (
                     <span key={i} className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[9px] font-extrabold   border ${styles}`}>
-                      {badge.showPulse && (
-                        <div className={`w-1.5 h-1.5 rounded-full ${badge.variant === "success" ? "bg-emerald-500" :
+                      {badge.icon && <badge.icon size={10} className="stroke-[2.5]" />}
+                      {badge.dotColor && !badge.showPulse && !badge.icon && (
+                        <div className={`w-1.5 h-1.5 rounded-full ${badge.dotColor}`} />
+                      )}
+                      {badge.showPulse && !badge.icon && (
+                        <div className={`w-1.5 h-1.5 rounded-full ${badge.dotColor || (badge.variant === "success" ? "bg-[var(--ps-completed-dot)]" :
                           badge.variant === "danger" ? "bg-rose-500" :
-                            "bg-blue-500"
+                            "bg-blue-500")
                           } animate-pulse`} />
                       )}
                       {badge.text}

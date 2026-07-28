@@ -490,6 +490,7 @@ export default function SupplierDetail() {
                   <div className="space-y-3">
                     <InfoRow label="Business Type" value={<span className="text-[12px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md">{String(supplierType)}</span>} />
                     <InfoRow label="GST Number" value={<span className="text-[12px] font-bold text-slate-700 font-mono">{String(supplier.gst_no || "—")}</span>} />
+                    <InfoRow label="Outstanding Balance" value={<span className={`text-[12px] font-bold px-2 py-0.5 rounded-md ${((supplier.outstanding_infos as any)?.amount || 0) > 0 ? 'text-rose-600 bg-rose-50' : 'text-slate-600 bg-slate-50'}`}>₹{((supplier.outstanding_infos as any)?.amount || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>} />
                   </div>
                 </SectionCard>
               </div>

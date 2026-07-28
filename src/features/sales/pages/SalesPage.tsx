@@ -35,23 +35,23 @@ const fmt = (n: number) => `₹${n.toLocaleString("en-IN")}`;
 ═══════════════════════════════════════════════════════════════ */
 type BadgeConfig = { cls: string; dot: string };
 const ORIGIN_CFG: Record<OriginType, BadgeConfig> = {
-  "Sales": { cls: "bg-badge-info-bg text-badge-\-text\-badge-\-border", dot: "bg-blue-400" },
-  "Sales Return": { cls: "bg-badge-purple-bg text-badge-\-text\-badge-\-border", dot: "bg-purple-400" },
-  "Online Sales": { cls: "bg-badge-teal-bg text-badge-\-text\-badge-\-border", dot: "bg-teal-400" },
+  "Sales": { cls: "bg-[var(--mv-sales-bg)] text-[var(--mv-sales-tx)] border border-[var(--mv-sales-bd)]", dot: "bg-[var(--mv-sales-dot)]" },
+  "Sales Return": { cls: "bg-[var(--mv-sreturn-bg)] text-[var(--mv-sreturn-tx)] border border-[var(--mv-sreturn-bd)]", dot: "bg-[var(--mv-sreturn-dot)]" },
+  "Online Sales": { cls: "bg-[var(--mv-sales-bg)] text-[var(--mv-sales-tx)] border border-[var(--mv-sales-bd)]", dot: "bg-[var(--mv-sales-dot)]" },
 };
 const PAYMENT_CFG: Record<string, BadgeConfig> = {
-  Cash: { cls: "bg-badge-success-bg text-badge-\-text\-badge-\-border", dot: "bg-green-400" },
-  Card: { cls: "bg-badge-purple-bg text-badge-\-text\-badge-\-border", dot: "bg-purple-400" },
-  UPI: { cls: "bg-badge-coral-bg text-badge-\-text\-badge-\-border", dot: "bg-orange-400" },
-  "G-Pay": { cls: "bg-badge-info-bg text-badge-\-text\-badge-\-border", dot: "bg-blue-400" },
-  PhonePe: { cls: "bg-badge-purple-bg text-badge-\-text\-badge-\-border", dot: "bg-purple-400" },
-  Credit: { cls: "bg-badge-amber-bg text-badge-\-text\-badge-\-border", dot: "bg-amber-400" },
-  Other: { cls: "bg-badge-gray-bg text-badge-\-text\-badge-\-border", dot: "bg-gray-400" },
+  Cash: { cls: "bg-[var(--pay-paid-bg)] text-[var(--pay-paid-tx)] border border-[var(--pay-paid-bd)]", dot: "bg-[var(--pay-paid-dot)]" },
+  Card: { cls: "bg-[var(--mv-sreturn-bg)] text-[var(--mv-sreturn-tx)] border border-[var(--mv-sreturn-bd)]", dot: "bg-[var(--mv-sreturn-dot)]" },
+  UPI: { cls: "bg-[var(--pay-paid-bg)] text-[var(--pay-paid-tx)] border border-[var(--pay-paid-bd)]", dot: "bg-[var(--pay-paid-dot)]" },
+  "G-Pay": { cls: "bg-[var(--mv-sales-bg)] text-[var(--mv-sales-tx)] border border-[var(--mv-sales-bd)]", dot: "bg-[var(--mv-sales-dot)]" },
+  PhonePe: { cls: "bg-[var(--mv-sreturn-bg)] text-[var(--mv-sreturn-tx)] border border-[var(--mv-sreturn-bd)]", dot: "bg-[var(--mv-sreturn-dot)]" },
+  Credit: { cls: "bg-[var(--ps-draft-bg)] text-[var(--ps-draft-tx)] border border-[var(--ps-draft-bd)]", dot: "bg-[var(--ps-draft-dot)]" },
+  Other: { cls: "bg-[var(--pay-pending-bg)] text-[var(--pay-pending-tx)] border border-[var(--pay-pending-bd)]", dot: "bg-[var(--pay-pending-dot)]" },
 };
 const STATUS_CFG: Record<SaleStatus, BadgeConfig> = {
-  Completed: { cls: "bg-badge-success-bg text-badge-\-text\-badge-\-border", dot: "bg-emerald-500" },
-  Pending: { cls: "bg-badge-amber-bg text-badge-\-text\-badge-\-border", dot: "bg-amber-400" },
-  Cancelled: { cls: "bg-badge-red-bg text-badge-\-text\-badge-\-border", dot: "bg-red-400" },
+  Completed: { cls: "bg-[var(--pay-paid-bg)] text-[var(--pay-paid-tx)] border border-[var(--pay-paid-bd)]", dot: "bg-[var(--ps-completed-dot)]" },
+  Pending: { cls: "bg-[var(--ps-draft-bg)] text-[var(--ps-draft-tx)] border border-[var(--ps-draft-bd)]", dot: "bg-[var(--ps-draft-dot)]" },
+  Cancelled: { cls: "bg-[var(--ps-cancel-bg)] text-[var(--ps-cancel-tx)] border border-[var(--ps-cancel-bd)]", dot: "bg-[var(--ps-cancel-dot)]" },
 };
 
 /* ═══════════════════════════════════════════════════════════════

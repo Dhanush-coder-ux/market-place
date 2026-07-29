@@ -266,7 +266,7 @@ const Pill = ({
   };
   return (
     <span
-      className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium border leading-none ${styles[variant]}`}
+      className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-xl text-[10px] font-medium border leading-none ${styles[variant]}`}
     >
       {children}
     </span>
@@ -403,13 +403,7 @@ const ProductRow = React.memo(
     const [showAllBadges, setShowAllBadges] = useState(false);
 
     const badges: React.ReactNode[] = [];
-    if ((item as any).visible_online || (datas as any).visible_online) {
-      badges.push(
-        <Pill key="online" variant="online">
-          <ExternalLink size={9} /> Online
-        </Pill>
-      );
-    }
+
     
     if (hasVariants) {
       badges.push(
@@ -481,18 +475,15 @@ const ProductRow = React.memo(
           {/* Product ID */}
           <td className="px-3 py-2.5 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
             {(() => {
-              const actualSku = (item as any).sku || datas.sku || "";
               const uiId = (item as any).ui_id || item.id || "";
-              const displayLabel = actualSku ? "SKU" : "ID";
-              const displayVal = actualSku ? actualSku : uiId;
-              if (!displayVal) return <span className="text-[12px] font-medium text-slate-400">—</span>;
-              const trimmedSku = displayVal.length > 16 ? `${displayVal.slice(0, 12)}...` : displayVal;
+              if (!uiId) return <span className="text-[12px] font-medium text-slate-400">—</span>;
+              const trimmedId = uiId.length > 16 ? `${uiId.slice(0, 12)}...` : uiId;
               return (
                 <span className="flex items-center gap-1 text-[12px] font-medium text-slate-600">
-                  <span className="font-mono tabular-nums" title={displayVal}>
-                    {displayLabel}: {trimmedSku}
+                  <span className="font-mono tabular-nums" title={uiId}>
+                    {trimmedId}
                   </span>
-                  <CopySKUButton val={displayVal} />
+                  <CopySKUButton val={uiId} />
                 </span>
               );
             })()}
@@ -540,7 +531,7 @@ const ProductRow = React.memo(
                       e.stopPropagation();
                       toggleExpand(item.id);
                     }}
-                    className={`mt-1 flex items-center gap-2 w-fit px-2 py-1.5 rounded-md border transition-all ${
+                    className={`mt-1 flex items-center gap-2 w-fit px-2 py-1.5 rounded-xl border transition-all ${
                       isExpanded
                         ? "bg-slate-50 border-slate-200"
                         : "bg-white border-slate-200 hover:border-blue-300 shadow-sm"
@@ -553,7 +544,7 @@ const ProductRow = React.memo(
                         return (
                           <span
                             key={idx}
-                            className={`flex items-center gap-1 text-[10px] font-bold ${info.text} ${info.bg} border ${info.border} px-1.5 py-0.5 rounded leading-none`}
+                            className={`flex items-center gap-1 text-[10px] font-bold ${info.text} ${info.bg} border ${info.border} px-1.5 py-0.5 rounded-xl leading-none`}
                           >
                             <Icon size={10} />
                             {info.label}
@@ -561,7 +552,7 @@ const ProductRow = React.memo(
                         );
                       })}
                     </div>
-                    <div className={`ml-1 p-0.5 rounded transition-colors ${isExpanded ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-slate-400 group-hover:bg-blue-50 group-hover:text-blue-500'}`}>
+                    <div className={`ml-1 p-0.5 rounded-xl transition-colors ${isExpanded ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-slate-400 group-hover:bg-blue-50 group-hover:text-blue-500'}`}>
                       {isExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
                     </div>
                   </button>
@@ -587,6 +578,22 @@ const ProductRow = React.memo(
                 </div>
               </div>
             </div>
+          </td>
+
+          {/* SKU */}
+          <td className="px-3 py-2.5 whitespace-nowrap">
+            {(() => {
+              const actualSku = (item as any).sku || datas.sku || "";
+              if (!actualSku) return <span className="text-[12px] font-medium text-slate-400">—</span>;
+              return (
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[12px] font-medium text-slate-700 font-mono" title={actualSku}>
+                    {actualSku}
+                  </span>
+                  <CopySKUButton val={actualSku} />
+                </div>
+              );
+            })()}
           </td>
 
           {/* Category */}
@@ -645,7 +652,7 @@ const ProductRow = React.memo(
           {/* Status */}
           <td className="px-3 py-2.5">
             <span
-              className={`inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-medium border leading-none ${status.color}`}
+              className={`inline-flex items-center gap-1 px-2 py-1 rounded-xl text-[10px] font-medium border leading-none ${status.color}`}
             >
               <span className={`w-1.5 h-1.5 rounded-full ${status.dot}`} />
               {status.label}
@@ -1353,6 +1360,9 @@ const InventoryPage = () => {
                   </th>
                   <th className="px-3 py-2.5 min-w-[280px] text-[10px] font-semibold text-slate-800 uppercase tracking-wide">
                     Product
+                  </th>
+                  <th className="px-3 py-2.5 text-[10px] font-semibold text-slate-800 uppercase tracking-wide">
+                    SKU
                   </th>
                   <th className="px-3 py-2.5 text-[10px] font-semibold text-slate-800 uppercase tracking-wide">
                     Category

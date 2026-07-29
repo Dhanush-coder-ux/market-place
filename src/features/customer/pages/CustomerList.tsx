@@ -365,6 +365,7 @@ const CustomerList = () => {
                     className="rounded border-slate-350 text-blue-600 focus:ring-blue-500/20 cursor-pointer"
                   />
                 </th>
+                <th className="py-2.5 px-4 text-[10px] font-black text-slate-800 uppercase tracking-wider">ID</th>
                 <th className="py-2.5 px-4 text-[10px] font-black text-slate-800 uppercase tracking-wider">Customer</th>
                 <th className="py-2.5 px-4 text-[10px] font-black text-slate-800 uppercase tracking-wider">Contact</th>
                 <th className="py-2.5 px-4 text-[10px] font-black text-slate-800 uppercase tracking-wider text-right">Credit Limit</th>
@@ -408,13 +409,15 @@ const CustomerList = () => {
                         />
                       </td>
                       <td className="py-3 px-4">
+                        <span className="text-[11px] font-mono font-semibold text-slate-700">{c.ui_id || c.id?.slice(0, 8)}</span>
+                      </td>
+                      <td className="py-3 px-4">
                         <div className="flex items-center gap-3">
                           <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-[11px] font-black shrink-0 transition-colors ${isSelected ? "bg-blue-500 text-white" : "bg-blue-100 text-blue-600"}`}>
                             {initials}
                           </div>
                           <div className="min-w-0">
                             <p className="text-[13px] font-bold text-slate-800 truncate">{name}</p>
-                            <p className="text-[10px] font-semibold text-slate-400 font-mono">{c.ui_id || c.id?.slice(0, 8)}</p>
                           </div>
                         </div>
                       </td>

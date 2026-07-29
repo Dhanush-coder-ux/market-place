@@ -34,7 +34,6 @@ const formatCurrency = (amount?: any) => {
 };
 
 const columnLabels: Record<string, string> = {
-  ui_id: "SKU",
   barcode: "Barcode",
   buy_price: "Buy Price",
   sell_price: "Sell Price",
@@ -58,12 +57,11 @@ const columnOrder = [
   "stocks",
   "status",
   "reorder_point",
-  "ui_id",
   "barcode",
   "serial_number"
 ];
 
-const hiddenProductColumns = new Set(["cost_to_make", "ui_id", "stocks", "status", "reorder_point"]);
+const hiddenProductColumns = new Set(["cost_to_make", "stocks", "status", "reorder_point"]);
 
 const sortKeys = (keys: string[]) => {
   return [...keys].sort((a, b) => {
@@ -310,13 +308,7 @@ const ProductRow = React.memo(
 
     const badges: React.ReactNode[] = [];
     
-    if ((p as any).visible_online || datas.visible_online) {
-      badges.push(
-        <Pill key="online" variant="online">
-          <ExternalLink size={9} /> Online
-        </Pill>
-      );
-    }
+
     
     if (hasVariants) {
       badges.push(
@@ -387,18 +379,15 @@ const ProductRow = React.memo(
           {/* Product ID */}
           <td className="px-3 py-2.5 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
             {(() => {
-              const actualSku = p.sku || datas.sku || "";
               const uiId = (p as any).ui_id || p.id || "";
-              const displayLabel = actualSku ? "SKU" : "ID";
-              const displayVal = actualSku ? actualSku : uiId;
-              if (!displayVal) return <span className="text-[12px] font-medium text-slate-400">—</span>;
-              const trimmedSku = displayVal.length > 16 ? `${displayVal.slice(0, 12)}...` : displayVal;
+              if (!uiId) return <span className="text-[12px] font-medium text-slate-400">—</span>;
+              const trimmedId = uiId.length > 16 ? `${uiId.slice(0, 12)}...` : uiId;
               return (
                 <span className="flex items-center gap-1 text-[12px] font-medium text-slate-600">
-                  <span className="font-mono tabular-nums" title={displayVal}>
-                    {displayLabel}: {trimmedSku}
+                  <span className="font-mono tabular-nums" title={uiId}>
+                    {trimmedId}
                   </span>
-                  <CopySKUButton val={displayVal} />
+                  <CopySKUButton val={uiId} />
                 </span>
               );
             })()}
@@ -444,7 +433,7 @@ const ProductRow = React.memo(
                       e.stopPropagation();
                       toggleExpand(p.id);
                     }}
-                    className={`mt-1 flex items-center gap-2 w-fit px-2 py-1.5 rounded-md border transition-all ${
+                    className={`mt-1 flex items-center gap-2 w-fit px-2 py-1.5 rounded-xl border transition-all ${
                       isExpanded
                         ? "bg-slate-50 border-slate-200"
                         : "bg-white border-slate-200 hover:border-blue-300 shadow-sm"
@@ -457,7 +446,7 @@ const ProductRow = React.memo(
                         return (
                           <span
                             key={idx}
-                            className={`flex items-center gap-1 text-[10px] font-bold ${info.text} ${info.bg} border ${info.border} px-1.5 py-0.5 rounded leading-none`}
+                            className={`flex items-center gap-1 text-[10px] font-bold ${info.text} ${info.bg} border ${info.border} px-1.5 py-0.5 rounded-xl leading-none`}
                           >
                             <Icon size={10} />
                             {info.label}
@@ -465,24 +454,20 @@ const ProductRow = React.memo(
                         );
                       })}
                     </div>
-                    <div className={`ml-1 p-0.5 rounded transition-colors ${isExpanded ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-slate-400 group-hover:bg-blue-50 group-hover:text-blue-500'}`}>
+                    <div className={`ml-1 p-0.5 rounded-xl transition-colors ${isExpanded ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-slate-400 group-hover:bg-blue-50 group-hover:text-blue-500'}`}>
                       {isExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
                     </div>
                   </button>
                 )}
                 <div className="flex items-center gap-2 text-[11px] text-slate-400 font-medium leading-none mt-0.5">
                   {(() => {
-                    const rawSku = p.ui_id ? String(p.ui_id) : "";
-                    if (!rawSku) {
-                      return <span className="font-mono tabular-nums">—</span>;
-                    }
-                    const trimmedSku = rawSku.length > 12 ? `${rawSku.slice(0, 8)}...` : rawSku;
+                    const barcode = p.barcode || datas.barcode || "";
+                    if (!barcode) return null;
                     return (
                       <span className="flex items-center gap-1">
-                        <span className="font-mono tabular-nums" title={rawSku}>
-                          {trimmedSku}
+                        <span className="font-mono tabular-nums" title={barcode}>
+                          Barcode: {barcode}
                         </span>
-                        <CopySKUButton val={rawSku} />
                       </span>
                     );
                   })()}
@@ -497,6 +482,22 @@ const ProductRow = React.memo(
                 </div>
               </div>
             </div>
+          </td>
+
+          {/* SKU */}
+          <td className="px-3 py-2.5 whitespace-nowrap">
+            {(() => {
+              const actualSku = p.sku || datas.sku || "";
+              if (!actualSku) return <span className="text-[12px] font-medium text-slate-400">—</span>;
+              return (
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[12px] font-medium text-slate-700 font-mono" title={actualSku}>
+                    {actualSku}
+                  </span>
+                  <CopySKUButton val={actualSku} />
+                </div>
+              );
+            })()}
           </td>
 
           {/* Dynamic columns */}
@@ -555,7 +556,7 @@ const ProductRow = React.memo(
               return (
                 <td key={key} className="px-3 py-2.5 whitespace-nowrap">
                   <span
-                    className={`inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-medium border leading-none ${status.color}`}
+                    className={`inline-flex items-center gap-1 px-2 py-1 rounded-xl text-[10px] font-medium border leading-none ${status.color}`}
                   >
                     <span className={`w-1.5 h-1.5 rounded-full ${status.dot}`} />
                     {status.label}
@@ -579,7 +580,7 @@ const ProductRow = React.memo(
                 <td key={key} className="px-3 py-2.5 whitespace-nowrap">
                   {sList.length > 0 ? (
                     <div className="flex items-center gap-1">
-                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono font-medium bg-violet-50 text-violet-600 border border-violet-100 leading-none">
+                      <span className="inline-flex items-center px-1.5 py-0.5 rounded-xl text-[10px] font-mono font-medium bg-violet-50 text-violet-600 border border-violet-100 leading-none">
                         {sList[0]}
                       </span>
                       {sList.length > 1 && (
@@ -1011,7 +1012,7 @@ const ProductInfos = () => {
                   keys.add(k);
               });
             }
-            ["category", "sell_price", "buy_price", "stocks", "reorder_point", "status", "ui_id", "barcode", "serial_number"].forEach((k) =>
+            ["category", "sell_price", "buy_price", "stocks", "reorder_point", "status", "barcode", "serial_number"].forEach((k) =>
               keys.add(k)
             );
           });
@@ -1456,6 +1457,9 @@ const ProductInfos = () => {
                 </th>
                 <th className="px-3 py-2.5 min-w-[260px] text-[10px] font-semibold text-slate-800 uppercase tracking-wide">
                   Product
+                </th>
+                <th className="px-3 py-2.5 text-[10px] font-semibold text-slate-800 uppercase tracking-wide">
+                  SKU
                 </th>
                 {sortedSelectedKeys.map((key) => {
                   if (

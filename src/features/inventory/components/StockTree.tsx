@@ -55,7 +55,7 @@ export const BatchBadge = ({ expDate, qty }: { expDate?: string; qty: number }) 
   const days = getDaysLeft(expDate);
   if (qty <= 0) {
     return (
-      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold   border bg-[var(--mv-sales-bg)] text-badge-gray-text border-badge-gray-text/20">
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-xl text-[10px] font-bold   border bg-[var(--mv-sales-bg)] text-badge-gray-text border-badge-gray-text/20">
         Depleted
       </span>
     );
@@ -63,20 +63,20 @@ export const BatchBadge = ({ expDate, qty }: { expDate?: string; qty: number }) 
   if (days === null) return null;
   if (days < 0) {
     return (
-      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold   border bg-[var(--mv-sales-bg)] text-[var(--ps-cancel-tx)] border-badge-red-text/20">
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-xl text-[10px] font-bold   border bg-[var(--mv-sales-bg)] text-[var(--ps-cancel-tx)] border-badge-red-text/20">
         Expired
       </span>
     );
   }
   if (days <= 90) {
     return (
-      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold   border bg-[var(--at-batch-bg)] text-[var(--at-batch-tx)] border-badge-amber-text/20">
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-xl text-[10px] font-bold   border bg-[var(--at-batch-bg)] text-[var(--at-batch-tx)] border-badge-amber-text/20">
         <Clock size={10} /> {days}d left
       </span>
     );
   }
   return (
-    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold   border bg-[var(--mv-sales-bg)] text-badge-green-text border-badge-green-text/20">
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-xl text-[10px] font-bold   border bg-[var(--mv-sales-bg)] text-badge-green-text border-badge-green-text/20">
       <span className="w-1 h-1 rounded-full bg-[var(--ps-completed-dot)] inline-block" /> {days}d left
     </span>
   );
@@ -94,14 +94,14 @@ export const SerialBadgeList = ({ serials }: { serials: string[] }) => {
   return (
     <div className="flex flex-wrap gap-1.5 mt-1">
       {visibleSerials.map((s, i) => (
-        <span key={i} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-[var(--mv-sales-bg)] text-badge-rose-text border border-badge-rose-text/20">
+        <span key={i} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-xl text-[10px] font-mono font-bold bg-[var(--mv-sales-bg)] text-badge-rose-text border border-badge-rose-text/20">
           <Hash size={8} /> {s}
         </span>
       ))}
       {!showAll && remaining > 0 && (
         <button
           onClick={(e) => { e.stopPropagation(); setIsExpanded(true); }}
-          className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-600 border border-blue-100 hover:bg-blue-100 transition-colors"
+          className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-xl text-[10px] font-bold bg-blue-50 text-blue-600 border border-blue-100 hover:bg-blue-100 transition-colors"
         >
           + Show {remaining} more
         </button>
@@ -109,7 +109,7 @@ export const SerialBadgeList = ({ serials }: { serials: string[] }) => {
       {isExpanded && serials.length > limit && (
         <button
           onClick={(e) => { e.stopPropagation(); setIsExpanded(false); }}
-          className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-50 text-slate-500 border border-slate-200 hover:bg-slate-100 transition-colors"
+          className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-xl text-[10px] font-bold bg-slate-50 text-slate-500 border border-slate-200 hover:bg-slate-100 transition-colors"
         >
           Show Less
         </button>
@@ -162,7 +162,7 @@ export const BatchCards = ({ batches }: { batches: any | any[] }) => {
         </span>
       </div>
 
-      <div className="flex flex-col border border-slate-200 rounded-lg overflow-hidden bg-white shadow-sm">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
         {visible.map((batch: any, idx: number) => {
           const physicalQty   = Number(batch.stock_infos?.physical_stocks   ?? batch.stocks ?? batch.quantity ?? batch.qty ?? 0);
           const availableQty  = Number(batch.stock_infos?.available_stocks  ?? physicalQty);
@@ -181,87 +181,82 @@ export const BatchCards = ({ batches }: { batches: any | any[] }) => {
               : { label: 'In Stock',     cls: 'text-[var(--ps-completed-tx)] bg-[var(--ps-completed-bg)] border-[var(--ps-completed-bd)]' };
 
           return (
-            <div key={batch.id || idx} className="flex flex-col border-b border-slate-100 last:border-b-0 hover:bg-slate-50/50 transition-colors bg-white">
-              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 px-3 sm:px-4 py-2.5">
-                
-                {/* Batch Info (Name, ID) */}
-                <div className="flex items-center gap-3 flex-1 min-w-0">
-                  <div className="w-6 h-6 rounded-md bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-400 shrink-0">
-                    <Package size={12} />
+            <div key={batch.id || idx} className="flex flex-col border border-slate-200 rounded-xl bg-white shadow-sm hover:shadow-md hover:border-blue-200 transition-all p-3.5 relative gap-3">
+              {/* Header: Name and Status */}
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="w-8 h-8 rounded-lg bg-blue-50/50 border border-blue-100/50 flex items-center justify-center text-blue-500 shrink-0">
+                    <Package size={14} />
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[13px] font-bold text-slate-800 truncate">
+                  <div className="min-w-0">
+                    <p className="text-[13px] font-bold text-slate-800 truncate" title={batch.name || batch.batch || `BAT-${String(idx + 1).padStart(3, '0')}`}>
                       {batch.name || batch.batch || `BAT-${String(idx + 1).padStart(3, '0')}`}
                     </p>
-                    <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                      {batch.id && (
-                         <span className="text-[9px] font-mono text-slate-400 font-medium">{batch.id.slice(0, 8)}…</span>
-                      )}
-                      {storageLoc && (
-                         <span className="text-[8px] font-bold px-1 py-0.5 rounded bg-[var(--at-variant-bg)] text-[var(--at-variant-tx)] border border-badge-purple-text/20 tracking-wider">LOC: {storageLoc}</span>
-                      )}
-                      {reorderPt !== null && (
-                         <span className="text-[8px] font-bold px-1 py-0.5 rounded bg-[var(--at-batch-bg)] text-[var(--at-batch-tx)] border border-badge-amber-text/20 tracking-wider">REORDER: {reorderPt}</span>
-                      )}
-                      {daysToExpiry !== null && (
-                         <span className={`text-[8px] font-bold px-1 py-0.5 rounded tracking-wider border ${daysToExpiry <= 0 ? 'bg-[var(--mv-sales-bg)] border-badge-red-text/20 text-[var(--ps-cancel-tx)]' : daysToExpiry <= 7 ? 'bg-[var(--mv-sales-bg)] border-badge-amber-text/20 text-[var(--at-batch-tx)]' : 'bg-[var(--mv-sales-bg)] border-badge-green-text/20 text-badge-green-text'}`}>
-                            {daysToExpiry < 0 ? `EXP ${Math.abs(daysToExpiry)}D AGO` : daysToExpiry === 0 ? 'EXPIRES TODAY' : `EXP IN ${daysToExpiry}D`}
-                         </span>
-                      )}
-                    </div>
+                    {batch.id && (
+                       <p className="text-[9px] font-mono text-slate-400 font-medium">#{batch.id.slice(0, 8)}</p>
+                    )}
                   </div>
                 </div>
-
-                {/* Details (Dates, Prices, Stock) */}
-                <div className="flex items-center justify-end gap-4 sm:gap-6 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-50">
-                  
-                  {/* Dates */}
-                  {(batch.manufacturing_date || batch.expiry_date || batch.expiry) && (
-                    <div className="text-right flex flex-col items-end">
-                      {batch.manufacturing_date && <p className="text-[9px] font-medium text-slate-500 mb-0.5">MFG: <span className="font-bold text-slate-700">{formatDate(batch.manufacturing_date)}</span></p>}
-                      {(batch.expiry_date || batch.expiry) && <p className="text-[9px] font-medium text-slate-500">EXP: <span className="font-bold text-slate-700">{formatDate(batch.expiry_date || batch.expiry)}</span></p>}
-                    </div>
-                  )}
-
-                  {/* Pricing */}
-                  {(bBuy !== undefined || bSell !== undefined) && (
-                    <div className="text-right flex flex-col items-end hidden md:flex">
-                      {bBuy !== undefined && <p className="text-[9px] font-medium text-slate-500 mb-0.5">Buy: <span className="font-bold text-slate-700">{formatCurrency(bBuy)}</span></p>}
-                      {bSell !== undefined && <p className="text-[9px] font-medium text-slate-500">Sell: <span className="font-bold text-slate-700">{formatCurrency(bSell)}</span></p>}
-                    </div>
-                  )}
-
-                  {/* Stock Breakdown (Physical vs Available vs Reserved) */}
-                  {(physicalQty !== availableQty || reservedQty > 0) && (
-                     <div className="text-right flex flex-col items-end hidden lg:flex">
-                        {physicalQty !== availableQty && <p className="text-[9px] font-medium text-slate-500 mb-0.5">Phy: <span className="font-bold text-slate-700">{physicalQty}</span></p>}
-                        {reservedQty > 0 && <p className="text-[9px] font-medium text-slate-500">Res: <span className="font-bold text-amber-600">{reservedQty}</span></p>}
-                     </div>
-                  )}
-
-                  {/* Stock */}
-                  <div className="text-center w-[40px]">
-                    <p className="text-[9px] font-bold text-slate-400 mb-0.5">Stock</p>
-                    <p className="text-[12px] font-black text-slate-800 tabular-nums">{availableQty}</p>
-                  </div>
-
-                  {/* Status */}
-                  <div className="text-center w-[75px] flex flex-col items-center">
-                    <p className="text-[9px] font-bold text-slate-400 mb-1">Status</p>
-                    <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded border whitespace-nowrap ${stockStatus.cls}`}>
-                      {stockStatus.label}
-                    </span>
-                  </div>
-
-                </div>
+                <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-xl border whitespace-nowrap shrink-0 ${stockStatus.cls}`}>
+                  {stockStatus.label}
+                </span>
               </div>
+
+              {/* Tags (Loc, Reorder, Exp) */}
+              <div className="flex flex-wrap gap-1.5">
+                {storageLoc && (
+                   <span className="text-[8px] font-bold px-1.5 py-0.5 rounded-xl bg-[var(--at-variant-bg)] text-[var(--at-variant-tx)] border border-badge-purple-text/20 tracking-wider">LOC: {storageLoc}</span>
+                )}
+                {reorderPt !== null && (
+                   <span className="text-[8px] font-bold px-1.5 py-0.5 rounded-xl bg-[var(--at-batch-bg)] text-[var(--at-batch-tx)] border border-badge-amber-text/20 tracking-wider">REORDER: {reorderPt}</span>
+                )}
+                {daysToExpiry !== null && (
+                   <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded-xl tracking-wider border ${daysToExpiry <= 0 ? 'bg-[var(--mv-sales-bg)] border-badge-red-text/20 text-[var(--ps-cancel-tx)]' : daysToExpiry <= 7 ? 'bg-[var(--mv-sales-bg)] border-badge-amber-text/20 text-[var(--at-batch-tx)]' : 'bg-[var(--mv-sales-bg)] border-badge-green-text/20 text-badge-green-text'}`}>
+                      {daysToExpiry < 0 ? `EXP ${Math.abs(daysToExpiry)}D AGO` : daysToExpiry === 0 ? 'EXPIRES TODAY' : `EXP IN ${daysToExpiry}D`}
+                   </span>
+                )}
+              </div>
+
+              {/* Grid for Stock and Prices */}
+              <div className="grid grid-cols-2 gap-2 bg-slate-50 rounded-lg p-2.5 border border-slate-100">
+                <div className="flex flex-col">
+                  <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Avail. Stock</span>
+                  <span className="text-sm font-black text-blue-600 tabular-nums">{availableQty}</span>
+                </div>
+                {(physicalQty !== availableQty || reservedQty > 0) && (
+                  <div className="flex flex-col border-l border-slate-200 pl-2">
+                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Physical / Res.</span>
+                    <span className="text-xs font-bold text-slate-600 tabular-nums">{physicalQty} <span className="text-amber-500">({reservedQty})</span></span>
+                  </div>
+                )}
+                {(bBuy !== undefined || bSell !== undefined) && (
+                  <>
+                    <div className="flex flex-col pt-2 border-t border-slate-200/60 mt-1">
+                      <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Buy Price</span>
+                      <span className="text-xs font-bold text-slate-700">{formatCurrency(bBuy)}</span>
+                    </div>
+                    <div className="flex flex-col pt-2 border-t border-slate-200/60 mt-1 border-l pl-2">
+                      <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Sell Price</span>
+                      <span className="text-xs font-bold text-slate-700">{formatCurrency(bSell)}</span>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* Dates */}
+              {(batch.manufacturing_date || batch.expiry_date || batch.expiry) && (
+                <div className="flex items-center justify-between text-[10px] bg-white border border-slate-100 rounded-md p-1.5 px-2">
+                  {batch.manufacturing_date && <div><span className="text-slate-400">MFG:</span> <span className="font-bold text-slate-700">{formatDate(batch.manufacturing_date)}</span></div>}
+                  {(batch.expiry_date || batch.expiry) && <div><span className="text-slate-400">EXP:</span> <span className="font-bold text-slate-700">{formatDate(batch.expiry_date || batch.expiry)}</span></div>}
+                </div>
+              )}
 
               {/* Serials */}
               {serials.length > 0 && (
-                <div className="px-4 pb-2 pt-1.5 border-t border-slate-50 bg-slate-50/50">
-                  <div className="flex items-center justify-between mb-0.5">
+                <div className="pt-1.5 border-t border-slate-100/60">
+                  <div className="flex items-center justify-between mb-1">
                     <p className="text-[9px] font-bold text-slate-400 flex items-center gap-1">
-                      <Hash size={9} className="text-slate-400" /> Serial Numbers ({serials.length})
+                      <Hash size={9} /> Serials ({serials.length})
                     </p>
                   </div>
                   <SerialBadgeList serials={serials} />
@@ -276,7 +271,7 @@ export const BatchCards = ({ batches }: { batches: any | any[] }) => {
         <div className="mt-3 flex justify-center">
           <button
             onClick={() => setShowAll(true)}
-            className="flex items-center gap-1.5 px-4 py-1.5 bg-white border border-slate-200 text-slate-600 font-bold text-[10px] rounded-md hover:bg-slate-50 hover:border-blue-200 transition-all shadow-sm"
+            className="flex items-center gap-1.5 px-4 py-1.5 bg-white border border-slate-200 text-slate-600 font-bold text-[10px] rounded-xl hover:bg-slate-50 hover:border-blue-200 transition-all shadow-sm"
           >
             Show All {safeBatches.length} Batches
             <ChevronDown size={12} />
@@ -438,7 +433,7 @@ export const VariantRows = ({ combinations, baseSellPrice, baseBuyPrice }: { com
                     {/* Batch Count */}
                     <td className="px-4 py-2 align-middle">
                        {hasBatches ? (
-                         <span className="text-[11px] font-medium text-slate-600 bg-slate-100 px-2 py-1 rounded-md whitespace-nowrap">
+                         <span className="text-[11px] font-medium text-slate-600 bg-slate-100 px-2 py-1 rounded-xl whitespace-nowrap">
                            {batches.length} {batches.length === 1 ? 'Batch' : 'Batches'}
                          </span>
                        ) : (
@@ -448,7 +443,7 @@ export const VariantRows = ({ combinations, baseSellPrice, baseBuyPrice }: { com
 
                     {/* Status */}
                     <td className="px-4 py-2 align-middle text-center">
-                      <span className={`inline-flex px-2 py-1 rounded-full text-[10px] font-bold border leading-none whitespace-nowrap ${stockStatus.color}`}>
+                      <span className={`inline-flex px-2 py-1 rounded-xl text-[10px] font-bold border leading-none whitespace-nowrap ${stockStatus.color}`}>
                         {statusLabel}
                       </span>
                     </td>

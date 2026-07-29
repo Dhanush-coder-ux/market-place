@@ -181,7 +181,7 @@ function DetailDrawer({ movement, onClose }: DetailDrawerProps) {
                           <div className="flex flex-col gap-2 mt-2 pt-2 border-t border-slate-200/50">
                             {p.variant && (
                               <div className="pl-2.5 border-l-2 border-violet-200">
-                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-[var(--at-variant-bg)] text-[var(--at-variant-tx)] border-[var(--at-variant-bd)] text-[9px] font-black">
+                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-xl bg-[var(--at-variant-bg)] text-[var(--at-variant-tx)] border-[var(--at-variant-bd)] text-[9px] font-black">
                                   Variant: {p.variant}
                                 </span>
                               </div>
@@ -211,7 +211,7 @@ function DetailDrawer({ movement, onClose }: DetailDrawerProps) {
                                   </p>
                                   <div className="flex flex-wrap gap-1">
                                     {p.serial_numbers.map((sn: string, sIdx: number) => (
-                                      <span key={sIdx} className="text-[9px] font-mono text-slate-600 bg-slate-50 border border-slate-200 px-1.5 py-0.5 rounded font-bold">{sn}</span>
+                                      <span key={sIdx} className="text-[9px] font-mono text-slate-600 bg-slate-50 border border-slate-200 px-1.5 py-0.5 rounded-xl font-bold">{sn}</span>
                                     ))}
                                   </div>
                                 </div>
@@ -238,7 +238,7 @@ function DetailDrawer({ movement, onClose }: DetailDrawerProps) {
                       </div>
                       <p className="text-slate-800 font-bold text-base leading-tight">{movement.product}</p>
                       <div className="flex items-center gap-2 mt-2">
-                        <span className="text-[10px] font-mono text-slate-400 bg-white px-2 py-0.5 rounded border border-slate-100">{movement.skuLabel}: {movement.skuValue}</span>
+                        <span className="text-[10px] font-mono text-slate-400 bg-white px-2 py-0.5 rounded-xl border border-slate-100">{movement.skuLabel}: {movement.skuValue}</span>
                         <button onClick={(e) => copyToClipboard(e, movement.id)} className="text-[9px] font-bold text-blue-500 hover:underline">Copy ID</button>
                       </div>
                     </div>
@@ -309,7 +309,7 @@ function DetailDrawer({ movement, onClose }: DetailDrawerProps) {
                         </div>
                         <div className="flex flex-wrap gap-1.5 max-h-[120px] overflow-y-auto custom-scrollbar pr-1">
                           {movement.serial_numbers.map((sn, i) => (
-                            <span key={i} className="px-2 py-1 rounded-lg bg-white border border-[var(--ps-completed-bd)] text-emerald-700 font-mono text-[10px] font-bold shadow-sm">
+                            <span key={i} className="px-2 py-1 rounded-xl bg-white border border-[var(--ps-completed-bd)] text-emerald-700 font-mono text-[10px] font-bold shadow-sm">
                               {sn}
                             </span>
                           ))}
@@ -1001,7 +1001,7 @@ export default function StockMovementPage() {
                             <div className="flex items-center flex-wrap gap-1.5 mt-0.5">
                               <button
                                 onClick={(e) => copyToClipboard(e, m.id)}
-                                className="group flex items-center gap-1 text-[9px] font-extrabold text-slate-400 bg-slate-50 px-1 py-0.2 rounded border border-slate-100 hover:bg-slate-100 hover:text-slate-600 transition-all leading-none"
+                                className="group flex items-center gap-1 text-[9px] font-extrabold text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded-xl border border-slate-100 hover:bg-slate-100 hover:text-slate-600 transition-all leading-none"
                               >
                                 ID: {m.id}
                                 <Copy size={8} className="opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -1010,7 +1010,7 @@ export default function StockMovementPage() {
                               {(hasList ? firstProd.variant : m.variant) && (
                                 <button
                                   onClick={(e) => copyToClipboard(e, (hasList ? firstProd.variant : m.variant) || "")}
-                                  className="group flex items-center gap-0.5 text-[9px] font-extrabold text-[var(--at-variant-tx)] bg-[var(--mv-sales-bg)] px-1 py-0.2 rounded border border-[var(--at-variant-bd)] hover:bg-violet-100 transition-all leading-none"
+                                  className="group flex items-center gap-0.5 text-[9px] font-extrabold text-[var(--at-variant-tx)] bg-[var(--mv-sales-bg)] px-1.5 py-0.5 rounded-xl border border-[var(--at-variant-bd)] hover:bg-violet-100 transition-all leading-none"
                                 >
                                   <Layers size={8} /> {truncateId(hasList ? firstProd.variant : m.variant)}
                                   <Copy size={7} className="opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -1019,7 +1019,7 @@ export default function StockMovementPage() {
                               {(hasList ? firstProd.batch : m.batch) && (
                                 <button
                                   onClick={(e) => copyToClipboard(e, (hasList ? firstProd.batch : m.batch) || "")}
-                                  className="group flex items-center gap-0.5 text-[9px] font-extrabold text-[var(--at-batch-tx)] bg-[var(--mv-sales-bg)] px-1 py-0.2 rounded border border-[var(--at-batch-bd)] hover:bg-amber-100 transition-all leading-none"
+                                  className="group flex items-center gap-0.5 text-[9px] font-extrabold text-[var(--at-batch-tx)] bg-[var(--mv-sales-bg)] px-1.5 py-0.5 rounded-xl border border-[var(--at-batch-bd)] hover:bg-amber-100 transition-all leading-none"
                                 >
                                   <Hash size={8} /> {truncateId(hasList ? firstProd.batch : m.batch)}
                                   <Copy size={7} className="opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -1031,7 +1031,7 @@ export default function StockMovementPage() {
                                     e.stopPropagation();
                                     setSelected(m);
                                   }}
-                                  className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] font-extrabold bg-[var(--mv-sales-bg)] text-[var(--mv-sales-tx)] border border-[var(--mv-sales-bd)] hover:bg-blue-100 transition-colors shrink-0 shadow-sm"
+                                  className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-xl text-[9px] font-extrabold bg-[var(--mv-sales-bg)] text-[var(--mv-sales-tx)] border border-[var(--mv-sales-bd)] hover:bg-blue-100 transition-colors shrink-0 shadow-sm"
                                   title="View Items"
                                 >
                                   <ChevronRight size={10} strokeWidth={3} />
@@ -1040,12 +1040,12 @@ export default function StockMovementPage() {
                               ) : (
                                 <>
                                   {m.serial_numbers && m.serial_numbers.length > 0 && (
-                                    <span className="inline-flex items-center gap-0.5 text-[9px] font-extrabold text-[var(--ps-completed-tx)] bg-[var(--mv-sales-bg)] px-1 py-0.2 rounded border border-[var(--ps-completed-bd)] leading-none">
+                                    <span className="inline-flex items-center gap-0.5 text-[9px] font-extrabold text-[var(--ps-completed-tx)] bg-[var(--mv-sales-bg)] px-1.5 py-0.5 rounded-xl border border-[var(--ps-completed-bd)] leading-none">
                                       <Zap size={8} fill="currentColor" /> {m.serial_numbers.length} Serials
                                     </span>
                                   )}
                                   {m.current_stock !== undefined && (
-                                    <span className="inline-flex items-center gap-0.5 text-[9px] font-extrabold text-[var(--mv-sales-tx)] bg-[var(--mv-sales-bg)] px-1.5 py-0.5 rounded border border-[var(--mv-sales-bd)] leading-none" title="Current Available Stock">
+                                    <span className="inline-flex items-center gap-0.5 text-[9px] font-extrabold text-[var(--mv-sales-tx)] bg-[var(--mv-sales-bg)] px-1.5 py-0.5 rounded-xl border border-[var(--mv-sales-bd)] leading-none" title="Current Available Stock">
                                       Stock: {m.current_stock}
                                     </span>
                                   )}

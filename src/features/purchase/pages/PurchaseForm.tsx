@@ -10,7 +10,10 @@ import {
   User,
   Info,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Search,
+  Plus,
+  Loader2
 } from "lucide-react";
 
 import Input from "@/components/ui/Input";
@@ -21,6 +24,7 @@ import { useBusinessApi } from "@/context/BusinessApiContext";
 import { SHOP_ID } from "@/services/endpoints";
 import { SearchSelect } from "@/components/inputbuilders/SearchSelect";
 import { supplierApi } from "@/services/api/supplier";
+import { inventoryApi } from "@/services/api/inventory";
 import { useHeader } from "@/context/HeaderContext";
 import { useToast } from "@/context/ToastContext";
 import Loader from "@/components/common/Loader";
@@ -66,6 +70,112 @@ export interface ProductItem {
   _backendId?: string | null;
 }
 
+const ProductSearchAutocomplete = ({ onSelect, onCreateNew }: { onSelect: (opt: any) => void, onCreateNew: (q: string) => void }) => {
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(async () => {
+      setLoading(true);
+      try {
+        const res = await inventoryApi.searchInventories(query);
+        setResults(res || []);
+      } catch {
+        setResults([]);
+      } finally {
+        setLoading(false);
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [query]);
+
+  return (
+    <div className="relative w-full" ref={wrapperRef}>
+      <div className="relative">
+         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+         <input
+           type="text"
+           value={query}
+           onChange={(e) => {
+             setQuery(e.target.value);
+             setIsOpen(true);
+           }}
+           onFocus={() => setIsOpen(true)}
+           onClick={() => setIsOpen(true)}
+           placeholder="Search products by name or SKU..."
+           className="w-full h-11 pl-10 pr-3 bg-white border border-slate-200 rounded-lg text-sm font-semibold text-slate-700 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-400/10 transition-all shadow-sm"
+         />
+         {loading && <div className="absolute right-3 top-1/2 -translate-y-1/2"><Loader2 className="w-4 h-4 text-blue-500 animate-spin" /></div>}
+      </div>
+      
+      {isOpen && (
+        <div className="absolute top-full left-0 right-0 mt-1.5 bg-white border border-slate-200 rounded-xl shadow-xl z-50 overflow-hidden flex flex-col max-h-[300px] animate-in fade-in slide-in-from-top-2 duration-200">
+          <div className="overflow-y-auto flex-1">
+            {results.length > 0 ? (
+              results.map((opt) => (
+                <div 
+                  key={opt.id} 
+                  className="px-4 py-3 border-b border-slate-50 hover:bg-slate-50/80 cursor-pointer transition-colors flex items-center gap-3"
+                  onClick={() => {
+                    onSelect(opt);
+                    setQuery("");
+                    setIsOpen(false);
+                  }}
+                >
+                  <div className="w-10 h-10 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center shrink-0">
+                     <PackageOpen size={16} className="text-slate-500" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold text-slate-800 truncate">{opt.name}</p>
+                    <div className="flex gap-2 items-center mt-1 flex-wrap">
+                       <span className="text-[10px] font-mono text-slate-500 bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded">{opt.barcode || opt.sku || "No SKU"}</span>
+                       <span className="text-[10px] font-bold text-slate-500">Stock: <span className="text-blue-600">{opt.stocks ?? 0}</span></span>
+                       <span className="text-[10px] font-bold text-emerald-600 ml-auto">₹{(opt.buy_price || 0).toLocaleString()}</span>
+                    </div>
+                  </div>
+                </div>
+              ))
+            ) : (
+              !loading && query.trim().length > 0 && (
+                <div className="p-4 text-center text-sm font-bold text-slate-400">
+                  No products found for "{query}"
+                </div>
+              )
+            )}
+          </div>
+          
+          <div className="p-2 border-t border-slate-100 bg-slate-50">
+             <button
+                type="button"
+                onClick={() => {
+                  onCreateNew(query);
+                  setIsOpen(false);
+                  setQuery("");
+                }}
+                className="w-full flex items-center justify-center gap-2 py-2.5 bg-blue-50 text-blue-600 rounded-lg text-xs font-bold hover:bg-blue-100 transition-colors"
+             >
+                <Plus size={14} />
+                {query ? `Create New Product "${query}"` : "Create New Product"}
+             </button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
@@ -1024,6 +1134,40 @@ const PurchaseForm = () => {
                 )}
 
               </div>
+            </div>
+
+            {/* Search & Add Product */}
+            <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 mb-6">
+              <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 flex items-center gap-2">
+                <Search size={14} className="text-blue-500" />
+                Search & Add Product from Inventory
+              </label>
+              <ProductSearchAutocomplete
+                onSelect={(opt: any) => {
+                  const hasBatchTracking = !!opt.has_batch;
+                  const hasSerialTracking = !!opt.has_serialno;
+                  const newProd = {
+                    ...defaultProductRow,
+                    id: crypto.randomUUID(),
+                    inventory_id: opt.id,
+                    name: opt.name,
+                    costPrice: opt.buy_price || "",
+                    sellingPrice: opt.sell_price || "",
+                    sku: opt.barcode || "",
+                    unit: opt.unit || "pc",
+                    taxGst: parseInt(opt.gst) || 18,
+                    batchTracking: hasBatchTracking,
+                    serialTracking: hasSerialTracking,
+                  };
+                  
+                  if (products.length === 1 && !products[0].inventory_id && !products[0].name) {
+                    setProducts([newProd]);
+                  } else {
+                    setProducts(prev => [...prev, newProd]);
+                  }
+                }}
+                onCreateNew={(query) => handleAddNewProduct(query)}
+              />
             </div>
 
             <InventoryItemsCard

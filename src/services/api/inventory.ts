@@ -47,7 +47,7 @@ import type {
 } from '../../features/inventory/types';
 
 const INV = ENDPOINTS.INVENTORIES;       // "/inventories/inventories"
-const CF  = ENDPOINTS.INVENTORY_CUSTOM_FIELDS; // "/inventory-fields"
+const CF = ENDPOINTS.INVENTORY_CUSTOM_FIELDS; // "/inventory-fields"
 
 // ─── Custom Field Interface Re-exports (for convenience) ─────────────────────
 

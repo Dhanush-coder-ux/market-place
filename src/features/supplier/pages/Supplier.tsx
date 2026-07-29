@@ -41,13 +41,15 @@ const SupplierRow = ({ sup, isSelected, onSelect, onEdit, onView, onDelete, sele
       onClick={() => onSelect(sup)}
     >
       <td className="px-6 py-4 whitespace-nowrap">
+        <span className="text-[11px] font-mono font-semibold text-slate-700">{sup.ui_id || sup.id?.slice(0, 8)}</span>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap">
         <div className="flex items-center gap-3">
           <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-sm font-black shadow-sm transition-colors ${isSelected ? "bg-blue-500 text-white shadow-blue-100" : "bg-gradient-to-br from-blue-600 to-blue-400 text-white shadow-blue-100"}`}>
             {(String(sup.name || 'S')).charAt(0).toUpperCase()}
           </div>
           <div>
             <p className="text-sm font-semibold text-slate-700 tracking-tight">{String(sup.name)}</p>
-            <p className="text-[11px] font-semibold text-slate-400 font-mono">ID: {sup.ui_id || sup.id}</p>
           </div>
         </div>
       </td>
@@ -79,7 +81,7 @@ const SupplierRow = ({ sup, isSelected, onSelect, onEdit, onView, onDelete, sele
         );
       })}
 
-      <td className="px-6 py-4 text-right sticky right-0 bg-white group-hover:bg-slate-50/60 border-l border-slate-100 z-10 shadow-[-4px_0_8px_-4px_rgba(0,0,0,0.05)] transition-colors whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+      <td className="px-6 py-4 text-right sticky right-0 bg-white group-hover:bg-slate-50 border-l border-slate-100 z-10 shadow-[-4px_0_8px_-4px_rgba(0,0,0,0.05)] transition-colors whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-end gap-2 relative">
           <button onClick={() => onView(sup.id)} className="text-emerald-500 hover:text-emerald-600 transition-colors p-1" title="View Supplier">
             <Eye size={15} />
@@ -607,6 +609,7 @@ const Supplier = () => {
           <table className="w-full text-left border-separate border-spacing-0">
             <thead className="sticky top-0 z-20 bg-slate-50/95 backdrop-blur-sm shadow-sm">
               <tr className="text-slate-800 text-[10px] font-bold  tracking-[0.15em] border-b border-slate-100">
+                <th className="px-6 py-5 whitespace-nowrap">ID</th>
                 <th className="px-6 py-5 whitespace-nowrap min-w-[200px]">Supplier Details</th>
                 {selectedKeys.map(key => (
                   <th key={key} className="px-6 py-5 whitespace-nowrap">
@@ -619,7 +622,7 @@ const Supplier = () => {
             <tbody className="divide-y divide-slate-55 bg-white">
               {filteredSuppliers.length === 0 ? (
                 <tr>
-                  <td colSpan={selectedKeys.length + 2} className="py-20 text-center text-slate-400 font-medium italic">No suppliers matching your filters.</td>
+                  <td colSpan={selectedKeys.length + 3} className="py-20 text-center text-slate-400 font-medium italic">No suppliers matching your filters.</td>
                 </tr>
               ) : (
                 filteredSuppliers.map((sup: any) => {

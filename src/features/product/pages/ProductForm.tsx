@@ -170,13 +170,13 @@ interface InputFieldProps extends React.InputHTMLAttributes<HTMLInputElement> {
   tooltip?: string;
 }
 const InputField: React.FC<InputFieldProps> = ({ label, required, hint, leftEl, rightEl, error, tooltip, className = "", ...rest }) => (
-  <div>
+  <div className={`transition-opacity duration-200 ${rest.disabled ? "opacity-50" : ""}`}>
     {label && <Label text={label} required={required} hint={hint} tooltip={tooltip} />}
     <div className="relative">
       {leftEl && <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm pointer-events-none">{leftEl}</span>}
       <input
         {...rest}
-        className={`pf-input w-full px-3 py-2.5 text-sm border border-slate-200 rounded-lg bg-white text-slate-800 placeholder-slate-300 ${leftEl ? "pl-8" : ""} ${rightEl ? "pr-14" : ""} ${error ? "border-red-300 bg-red-50/30" : ""} ${className}`}
+        className={`pf-input w-full px-3 py-2.5 text-sm border border-slate-200 rounded-lg bg-white text-slate-800 placeholder-slate-300 ${leftEl ? "pl-8" : ""} ${rightEl ? "pr-14" : ""} ${error ? "border-red-300 bg-red-50/30" : ""} ${rest.disabled ? "bg-slate-50 cursor-not-allowed" : ""} ${className}`}
       />
       {rightEl && <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs font-semibold">{rightEl}</span>}
     </div>
@@ -1291,18 +1291,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                       />
                     </div>
                   )}
-                  {variantTypes.length === 0 && (
-                    <div className="text-center py-10 text-slate-400 border-2 border-dashed border-slate-200 rounded-xl">
-                      <Plus size={24} className="mx-auto mb-2 opacity-30" />
-                      <p className="text-sm">Add your first variant type above to begin</p>
-                    </div>
-                  )}
-                  {variantTypes.length > 0 && combinations.length === 0 && (
-                    <div className="text-center py-10 text-slate-400 border-2 border-dashed border-slate-200 rounded-xl">
-                      <Layers size={24} className="mx-auto mb-2 opacity-30" />
-                      <p className="text-sm">Add values to your variant types to generate combinations</p>
-                    </div>
-                  )}
+
                 </div>
               ) : (
                 <div className="px-6 py-5 text-slate-400 text-sm flex items-center gap-3">

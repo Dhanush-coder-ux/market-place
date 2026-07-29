@@ -116,11 +116,12 @@ export default function Employee() {
   const handleDelete = async () => {
     if (!employeeToDelete) return;
     try {
-      await deleteData(`${ENDPOINTS.EMPLOYEES}/${SHOP_ID}/${employeeToDelete.id}`);
+      const targetId = String(employeeToDelete.employee_id || employeeToDelete.id);
+      await deleteData(`${ENDPOINTS.EMPLOYEES}/${SHOP_ID}/${targetId}`);
       showToast("Employee deleted successfully", "success");
       setSelectedEmployees(prev => {
         const next = new Set(prev);
-        next.delete(employeeToDelete.id);
+        next.delete(String(employeeToDelete.employee_id || employeeToDelete.id));
         return next;
       });
       setRefreshKey(prev => prev + 1);
@@ -148,10 +149,10 @@ export default function Employee() {
   };
 
   const handleResendVerification = async (emp: EmployeeRecord) => {
-    if (!emp?.id) return;
+    if (!(emp?.id || emp?.employee_id)) return;
     try {
       await employeeApi.resendVerificationEmail({
-        id: emp.id,
+        id: String(emp.employee_id || emp.id),
         shop_id: emp.shop_id || SHOP_ID
       });
       showToast("Verification email sent again", "success");
@@ -191,7 +192,8 @@ export default function Employee() {
                mobile.toLowerCase().includes(q) ||
                role.toLowerCase().includes(q) ||
                dept.toLowerCase().includes(q) ||
-               id.toLowerCase().includes(q);
+               id.toLowerCase().includes(q) ||
+               (emp.employee_id || "").toLowerCase().includes(q);
       });
     }
 
@@ -338,18 +340,19 @@ export default function Employee() {
                 <th className="px-6 py-5 w-10 text-center">
                   <input
                     type="checkbox"
-                    checked={filteredEmployees.length > 0 && filteredEmployees.every(emp => selectedEmployees.has(emp.id))}
+                    checked={filteredEmployees.length > 0 && filteredEmployees.every(emp => selectedEmployees.has(String(emp.employee_id || emp.id)))}
                     onChange={() => {
-                      const allSelected = filteredEmployees.length > 0 && filteredEmployees.every(emp => selectedEmployees.has(emp.id));
+                      const allSelected = filteredEmployees.length > 0 && filteredEmployees.every(emp => selectedEmployees.has(String(emp.employee_id || emp.id)));
                       if (allSelected) {
                         setSelectedEmployees(new Set());
                       } else {
-                        setSelectedEmployees(new Set(filteredEmployees.map(emp => emp.id)));
+                        setSelectedEmployees(new Set(filteredEmployees.map(emp => String(emp.employee_id || emp.id))));
                       }
                     }}
                     className="rounded border-slate-350 text-blue-605 focus:ring-blue-500/20 cursor-pointer"
                   />
                 </th>
+                <th className="px-6 py-5 whitespace-nowrap">ID</th>
                 <th className="px-6 py-5 whitespace-nowrap min-w-[200px]">Employee Name</th>
                 <th className="px-6 py-5 whitespace-nowrap">Status</th>
                 {selectedKeys.map(key => (
@@ -361,25 +364,30 @@ export default function Employee() {
             <tbody className="divide-y divide-slate-50 bg-white">
               {filteredEmployees.length === 0 ? (
                 <tr>
-                  <td colSpan={selectedKeys.length + 4} className="py-20 text-center text-slate-400 font-medium italic">No employees matching your filters.</td>
+                  <td colSpan={selectedKeys.length + 5} className="py-20 text-center text-slate-400 font-medium italic">No employees matching your filters.</td>
                 </tr>
               ) : (
                 filteredEmployees.map((emp) => {
-                  const isSelected = selectedEmployees.has(emp.id);
+                  const empId = String(emp.employee_id || emp.id);
+                  const isSelected = selectedEmployees.has(empId);
                   const initials = (emp.name || 'Unknown').split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+                  const displayId = emp.ui_id || (emp.employee_id ? String(emp.employee_id).slice(0, 8) : '') || (emp.id ? String(emp.id).slice(0, 8) : '');
 
                   return (
                     <tr
-                      key={emp.id}
+                      key={empId}
                       className={`group transition-all cursor-default ${isSelected ? "bg-blue-50 border-l-2 border-l-blue-500" : "hover:bg-slate-50/60"}`}
                     >
                       <td className="px-6 py-4 w-10 text-center">
                         <input
                           type="checkbox"
                           checked={isSelected}
-                          onChange={() => toggleSelectEmployee(emp.id)}
+                          onChange={() => toggleSelectEmployee(empId)}
                           className="rounded border-slate-350 text-blue-600 focus:ring-blue-500/20 cursor-pointer"
                         />
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className="text-[11px] font-mono font-semibold text-slate-700">{displayId}</span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center gap-3">
@@ -388,7 +396,6 @@ export default function Employee() {
                           </div>
                           <div>
                             <p className="text-sm font-semibold text-slate-700 tracking-tight">{emp.name || 'Unknown'}</p>
-                            <p className="text-[11px] font-semibold text-slate-400 font-mono">ID: {emp.ui_id || emp.id}</p>
                           </div>
                         </div>
                       </td>
@@ -418,17 +425,17 @@ export default function Employee() {
                           </td>
                         );
                       })}
-                      <td className="px-6 py-4 text-right sticky right-0 bg-white group-hover:bg-slate-50/60 border-l border-slate-100 z-10 shadow-[-4px_0_8px_-4px_rgba(0,0,0,0.05)] transition-colors whitespace-nowrap">
+                      <td className="px-6 py-4 text-right sticky right-0 bg-white group-hover:bg-slate-50 border-l border-slate-100 z-10 shadow-[-4px_0_8px_-4px_rgba(0,0,0,0.05)] transition-colors whitespace-nowrap">
                         <div className="flex items-center justify-end gap-2 relative">
                           <button
-                            onClick={() => navigate(`/employee/${emp.id}`)}
+                            onClick={() => navigate(`/employee/${empId}`)}
                             className="text-slate-400 hover:text-blue-600 transition-colors p-1"
                             title="View Employee"
                           >
                             <Eye size={15} />
                           </button>
                           <button
-                            onClick={() => navigate(`/employee/${emp.id}/edit`)}
+                            onClick={() => navigate(`/employee/${empId}/edit`)}
                             className="text-slate-400 hover:text-blue-600 transition-colors p-1"
                             title="Edit Employee"
                           >
@@ -436,13 +443,13 @@ export default function Employee() {
                           </button>
                           <div className="relative">
                             <button
-                              onClick={() => setActiveMenuId(activeMenuId === emp.id ? null : emp.id)}
+                              onClick={() => setActiveMenuId(activeMenuId === empId ? null : empId)}
                               className="text-slate-400 hover:text-blue-600 transition-colors p-1"
                               title="More actions"
                             >
                               <MoreVertical size={15} />
                             </button>
-                            {activeMenuId === emp.id && (
+                            {activeMenuId === empId && (
                               <>
                                 <div className="fixed inset-0 z-40" onClick={() => setActiveMenuId(null)} />
                                 <div className="absolute right-0 mt-1 w-44 bg-white border border-slate-200 rounded-lg shadow-lg py-1 z-50 text-left font-sans animate-in fade-in slide-in-from-top-1 duration-150">

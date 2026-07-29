@@ -369,7 +369,7 @@ const SaleDetailPage: React.FC = () => {
                                   </span>
                                 )}
                                 {item.gst !== undefined && item.gst !== null && (
-                                  <span className="px-1.5 py-0.5 rounded text-[9px] font-extrabold text-indigo-500 bg-indigo-50 border border-indigo-100 uppercase tracking-wider font-sans">
+                                  <span className="px-1.5 py-0.5 rounded-xl text-[9px] font-extrabold text-[#06452F] bg-[#D3EFE4] border border-[#84D4B8] uppercase tracking-wider font-sans">
                                     GST {typeof item.gst === "number" ? `${item.gst}%` : item.gst}
                                   </span>
                                 )}
@@ -481,7 +481,7 @@ const SaleDetailPage: React.FC = () => {
                                       </span>
                                     )}
                                     {item.gst !== undefined && item.gst !== null && (
-                                      <span className="px-1.5 py-0.5 rounded text-[9px] font-extrabold text-indigo-500 bg-indigo-50 border border-indigo-100 uppercase tracking-wider font-sans">
+                                      <span className="px-1.5 py-0.5 rounded-xl text-[9px] font-extrabold text-[#06452F] bg-[#D3EFE4] border border-[#84D4B8] uppercase tracking-wider font-sans">
                                         GST {typeof item.gst === "number" ? `${item.gst}%` : item.gst}
                                       </span>
                                     )}

@@ -339,7 +339,7 @@ const PurchaseTypeBadge = ({ type }: { type: PurchaseType }) => {
   if (type === "Purchase Return" || type === "Return" as any) colors = "bg-[var(--mv-sreturn-bg)] text-[var(--mv-sreturn-tx)] border border-[var(--mv-sreturn-bd)]";
 
   return (
-    <span className={`px-2 py-0.5 rounded text-[10px] font-bold   border whitespace-nowrap ${colors}`}>
+    <span className={`px-2 py-0.5 rounded-xl text-[10px] font-bold   border whitespace-nowrap ${colors}`}>
       {type}
     </span>
   );
@@ -367,15 +367,15 @@ const GridCard = ({ po, selected, onClick }: { po: DirectPurchaseData; selected?
           </div>
           <PurchaseTypeBadge type={po.purchaseType} />
                           {po.purchaseType === "Purchase Return" && (
-                            <span className="text-[9px] font-bold text-red-600 bg-red-50 px-1 py-0.5 rounded border border-red-100/50">Returned</span>
+                            <span className="text-[9px] font-bold text-red-600 bg-red-50 px-1.5 py-0.5 rounded-xl border border-red-100/50">Returned</span>
                           )}
                           {po.storage_location && (
-                            <span className="text-[9px] font-bold text-zinc-500 bg-zinc-50 border border-zinc-200 px-1.5 py-0.5 rounded uppercase tracking-wider shrink-0">
+                            <span className="text-[9px] font-bold text-zinc-500 bg-zinc-50 border border-zinc-200 px-1.5 py-0.5 rounded-xl uppercase tracking-wider shrink-0">
                               {po.storage_location}
                             </span>
                           )}
                           {po.version && (
-                            <span className="text-[9px] font-bold text-[var(--at-version-tx)] bg-[var(--at-version-bg)] border border-[var(--at-version-bd)] px-1.5 py-0.5 rounded uppercase tracking-wider shrink-0">
+                            <span className="text-[9px] font-bold text-[var(--at-version-tx)] bg-[var(--at-version-bg)] border border-[var(--at-version-bd)] px-1.5 py-0.5 rounded-xl uppercase tracking-wider shrink-0">
                               {po.version}
                             </span>
                           )}
@@ -407,7 +407,7 @@ const GridCard = ({ po, selected, onClick }: { po: DirectPurchaseData; selected?
             <Building2 size={14} className="text-zinc-400 mt-0.5 shrink-0" />
             <div>
               <p className="text-[10px] font-semibold text-zinc-400 mb-0.5">Storage Location</p>
-              <p className="text-xs font-semibold text-zinc-650 uppercase tracking-wide bg-zinc-50 border border-zinc-200 px-2 py-0.5 rounded w-fit">
+              <p className="text-xs font-semibold text-zinc-650 uppercase tracking-wide bg-zinc-50 border border-zinc-200 px-2 py-0.5 rounded-xl w-fit">
                 {po.storage_location}
               </p>
             </div>
@@ -451,17 +451,17 @@ const GridCard = ({ po, selected, onClick }: { po: DirectPurchaseData; selected?
                   {(firstRow?.variant || firstRow?.batch) && (
                     <div className="flex flex-wrap gap-1 mt-0.5">
                       {firstRow.variant && (
-                        <span className="px-1.5 py-0.5 rounded text-[8px] font-extrabold bg-[var(--mv-sreturn-bg)] text-[var(--mv-sreturn-tx)] border-[var(--mv-sreturn-bd)] truncate max-w-[100px]">
+                        <span className="px-1.5 py-0.5 rounded-xl text-[8px] font-extrabold bg-[var(--mv-sreturn-bg)] text-[var(--mv-sreturn-tx)] border-[var(--mv-sreturn-bd)] truncate max-w-[100px]">
                           V: {firstRow.variant}
                         </span>
                       )}
                       {firstRow.batch && (
-                        <span className="px-1.5 py-0.5 rounded text-[8px] font-extrabold bg-[var(--at-batch-bg)] text-[var(--at-batch-tx)] border-[var(--at-batch-bd)] truncate max-w-[100px]">
+                        <span className="px-1.5 py-0.5 rounded-xl text-[8px] font-extrabold bg-[var(--at-batch-bg)] text-[var(--at-batch-tx)] border-[var(--at-batch-bd)] truncate max-w-[100px]">
                           B: {firstRow.batch}
                         </span>
                       )}
                       {variantRows.length > 1 && (
-                        <span className="text-[8px] font-bold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
+                        <span className="text-[8px] font-bold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded-xl border border-slate-200">
                           +{variantRows.length - 1} more
                         </span>
                       )}
@@ -469,7 +469,7 @@ const GridCard = ({ po, selected, onClick }: { po: DirectPurchaseData; selected?
                   )}
                 </div>
                 <div className="shrink-0 flex flex-col items-end gap-1">
-                  <span className="text-[10px] font-bold text-zinc-500 bg-zinc-50 border border-zinc-100 px-1.5 py-0.5 rounded">
+                  <span className="text-[10px] font-bold text-zinc-500 bg-zinc-50 border border-zinc-100 px-1.5 py-0.5 rounded-xl">
                     Recv: {p.quantity}
                   </span>
                   {p.stocks_before !== undefined && p.stocks_before !== null && (
@@ -576,12 +576,12 @@ const VerticalTable = ({ data, selectedIds, onSelect, totalCount, lastElementRef
                         <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
                           <PurchaseTypeBadge type={po.purchaseType} />
                           {po.storage_location && (
-                            <span className="text-[9px] font-bold text-zinc-500 bg-zinc-50 border border-zinc-200 px-1.5 py-0.5 rounded uppercase tracking-wider shrink-0">
+                            <span className="text-[9px] font-bold text-zinc-500 bg-zinc-50 border border-zinc-200 px-1.5 py-0.5 rounded-xl uppercase tracking-wider shrink-0">
                               {po.storage_location}
                             </span>
                           )}
                           {po.version && (
-                            <span className="text-[9px] font-bold text-[var(--at-version-tx)] bg-[var(--at-version-bg)] border border-[var(--at-version-bd)] px-1.5 py-0.5 rounded uppercase tracking-wider shrink-0">
+                            <span className="text-[9px] font-bold text-[var(--at-version-tx)] bg-[var(--at-version-bg)] border border-[var(--at-version-bd)] px-1.5 py-0.5 rounded-xl uppercase tracking-wider shrink-0">
                               {po.version}
                             </span>
                           )}
@@ -645,6 +645,15 @@ const VerticalTable = ({ data, selectedIds, onSelect, totalCount, lastElementRef
                       >
                         <Eye size={15} />
                       </button>
+                      {po.purchaseType === 'Purchase' && (
+                        <button
+                          onClick={() => navigate(`/purchase/edit/${po.id}`)}
+                          className="text-amber-400 hover:text-amber-500 transition-colors p-1"
+                          title="Edit Purchase"
+                        >
+                          <Pencil size={15} />
+                        </button>
+                      )}
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <button
@@ -655,15 +664,6 @@ const VerticalTable = ({ data, selectedIds, onSelect, totalCount, lastElementRef
                           </button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-44 bg-white border border-slate-200 rounded-lg shadow-lg py-1 z-50 text-left font-sans">
-                          {po.purchaseType === 'Purchase' && (
-                            <DropdownMenuItem
-                              onClick={() => navigate(`/purchase/edit/${po.id}`)}
-                              className="flex items-center gap-2 w-full px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 cursor-pointer outline-none"
-                            >
-                              <Pencil size={13} />
-                              Edit
-                            </DropdownMenuItem>
-                          )}
                           <DropdownMenuItem
                             onClick={() => alert("Invoice generated and ready to print/share!")}
                             className="flex items-center gap-2 w-full px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 cursor-pointer outline-none"

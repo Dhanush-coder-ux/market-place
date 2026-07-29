@@ -4,7 +4,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import {
   Search, X,
   RotateCcw, Receipt,
-  ChevronRight, Filter,
+  ChevronRight, Filter, Eye
 } from "lucide-react";
 import SkeletonLoader from "@/components/common/SkeletonLoader";
 import {
@@ -24,7 +24,7 @@ import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 /* ═══════════════════════════════════════════════════════════════
    TYPES
 ═══════════════════════════════════════════════════════════════ */
-type OriginType = "Sales" | "Sales Return" | "Online Sales";
+type OriginType = "Offline" | "Offline Return" | "Online";
 type SaleStatus = "Completed" | "Pending" | "Cancelled";
 type SaleRecord = OrderResponse;
 
@@ -35,9 +35,9 @@ const fmt = (n: number) => `₹${n.toLocaleString("en-IN")}`;
 ═══════════════════════════════════════════════════════════════ */
 type BadgeConfig = { cls: string; dot: string };
 const ORIGIN_CFG: Record<OriginType, BadgeConfig> = {
-  "Sales": { cls: "bg-[var(--mv-sales-bg)] text-[var(--mv-sales-tx)] border border-[var(--mv-sales-bd)]", dot: "bg-[var(--mv-sales-dot)]" },
-  "Sales Return": { cls: "bg-[var(--mv-sreturn-bg)] text-[var(--mv-sreturn-tx)] border border-[var(--mv-sreturn-bd)]", dot: "bg-[var(--mv-sreturn-dot)]" },
-  "Online Sales": { cls: "bg-[var(--mv-sales-bg)] text-[var(--mv-sales-tx)] border border-[var(--mv-sales-bd)]", dot: "bg-[var(--mv-sales-dot)]" },
+  "Offline": { cls: "bg-[var(--mv-sales-bg)] text-[var(--mv-sales-tx)] border border-[var(--mv-sales-bd)]", dot: "bg-[var(--mv-sales-dot)]" },
+  "Offline Return": { cls: "bg-[var(--mv-sreturn-bg)] text-[var(--mv-sreturn-tx)] border border-[var(--mv-sreturn-bd)]", dot: "bg-[var(--mv-sreturn-dot)]" },
+  "Online": { cls: "bg-[var(--mv-sales-bg)] text-[var(--mv-sales-tx)] border border-[var(--mv-sales-bd)]", dot: "bg-[var(--mv-sales-dot)]" },
 };
 const PAYMENT_CFG: Record<string, BadgeConfig> = {
   Cash: { cls: "bg-[var(--pay-paid-bg)] text-[var(--pay-paid-tx)] border border-[var(--pay-paid-bd)]", dot: "bg-[var(--pay-paid-dot)]" },
@@ -148,7 +148,7 @@ const SalesListPage: React.FC = () => {
               <Receipt size={14} />
             </div>
             <div>
-              <p className="text-[12px] font-bold text-slate-800 leading-tight">Order #{selectedSale.ui_id}</p>
+              <p className="text-[12px] font-bold text-slate-800 leading-tight">#{selectedSale.ui_id}</p>
               <p className="text-[10px] font-semibold text-slate-400 font-mono">
                 {selectedSale.customer?.customer_name || (selectedSale.customer_id ? (customerMap[selectedSale.customer_id] || selectedSale.customer_id) : "Walk in Customer")}
               </p>
@@ -197,9 +197,9 @@ const SalesListPage: React.FC = () => {
   const fetchPage = React.useCallback(async (limit: number, offset: number, filters: any) => {
       const params: any = { limit: limit.toString(), offset: offset.toString() };
       if (filters.search) params.q = filters.search;
-      if (filters.origin === "Sales") params.origin = "OFFLINE";
-      else if (filters.origin === "Sales Return") params.origin = "OFFLINE_SALES_RETURN";
-      else if (filters.origin === "Online Sales") params.origin = "ONLINE";
+      if (filters.origin === "Offline") params.origin = "OFFLINE";
+      else if (filters.origin === "Offline Return") params.origin = "OFFLINE_SALES_RETURN";
+      else if (filters.origin === "Online") params.origin = "ONLINE";
       if (filters.payment) params.payment_method = filters.payment;
       if (filters.status) params.status = filters.status;
       if (filters.fromDate) params.from_date = filters.fromDate;
@@ -228,13 +228,14 @@ const SalesListPage: React.FC = () => {
           }).join(", ");
         } else if (Array.isArray(s.payment_infos) && s.payment_infos.length > 0) {
           pm = s.payment_infos.map((p: any) => {
-            const u = (p.method || "").toUpperCase();
+            const methodStr = typeof p === 'string' ? p : (p.method || "");
+            const u = methodStr.toUpperCase();
             if (u === "CASH") return "Cash";
             if (u === "CARD") return "Card";
             if (u === "UPI" || u === "GPAY" || u === "G-PAY") return "UPI";
             if (u === "PHONEPE") return "PhonePe";
             if (u === "CREDIT" || u === "ON_CREDIT") return "Credit";
-            return p.method || "Other";
+            return methodStr || "Other";
           }).join(", ");
         } else if (s.payments && Object.keys(s.payments).length > 0) {
           pm = Object.keys(s.payments).map(k => { const u = k.toUpperCase(); if (u === "CASH") return "Cash"; if (u === "CARD") return "Card"; if (u === "UPI" || u === "G-PAY" || u === "GPAY") return "UPI"; if (u === "PHONEPE") return "PhonePe"; if (u === "CREDIT" || u === "ON_CREDIT") return "Credit"; return k.charAt(0).toUpperCase() + k.slice(1).toLowerCase(); }).join(", ");
@@ -258,7 +259,7 @@ const SalesListPage: React.FC = () => {
           total_quantity: totalQty,
           status: s.status ? s.status.charAt(0).toUpperCase() + s.status.slice(1).toLowerCase() : "Unknown", 
           payment_method: pm, 
-          origin: s.origin === "OFFLINE" || s.origin === "Sales" ? "Sales" : (s.origin === "OFFLINE_SALES_RETURN" || s.origin === "Sales Return" ? "Sales Return" : (s.origin === "ONLINE" || s.origin === "Online Sales" ? "Online Sales" : s.origin)),
+          origin: s.origin === "ONLINE" || s.origin === "Online Sales" ? "Online" : (s.origin === "OFFLINE_SALES_RETURN" || s.origin === "Sales Return" ? "Offline Return" : "Offline"),
         };
       });
       
@@ -482,9 +483,9 @@ const SalesListPage: React.FC = () => {
             <ReusableSelect
               options={[
                 { label: "All Origins", value: "" },
-                { label: "Sales", value: "Sales" },
-                { label: "Online Sales", value: "Online Sales" },
-                { label: "Sales Return", value: "Sales Return" }
+                { label: "Offline", value: "Offline" },
+                { label: "Online", value: "Online" },
+                { label: "Offline Return", value: "Offline Return" }
               ]}
               value={filterOrigin}
               onValueChange={setFilterOrigin}
@@ -560,7 +561,7 @@ const SalesListPage: React.FC = () => {
                 <th className="w-[50px] p-2.5 px-3 text-[10px] font-bold tracking-wider text-slate-800 uppercase text-center">Qty</th>
                 <th className="w-[90px] p-2.5 px-3 text-[10px] font-bold tracking-wider text-slate-800 uppercase text-right">Amount</th>
                 <th className="w-[90px] p-2.5 px-3 text-[10px] font-bold tracking-wider text-slate-800 uppercase text-left">Status</th>
-                <th className="w-[40px] p-2.5 px-3 text-[10px] font-bold tracking-wider text-slate-800 uppercase text-right"></th>
+                <th className="w-[90px] p-2.5 px-3 text-[10px] font-bold tracking-wider text-slate-800 uppercase text-right">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -573,7 +574,7 @@ const SalesListPage: React.FC = () => {
                   </td>
                 </tr>
               ) : filtered.map((sale, index) => {
-                const oCfg = ORIGIN_CFG[sale.origin as OriginType] || ORIGIN_CFG["Sales"];
+                const oCfg = ORIGIN_CFG[sale.origin as OriginType] || ORIGIN_CFG["Offline"];
 
                 const dateStr = sale.created_at.split("T")[0];
                 const refundedCount = (sale.items || []).filter((i: any) => i.status === "REFUNDED").length;
@@ -604,7 +605,7 @@ const SalesListPage: React.FC = () => {
                   >
                     <td className="p-2.5 px-3 border-b border-slate-50">
                       <div>
-                        <span className="font-mono text-[11px] font-semibold text-slate-800 block">Order #{sale.ui_id}</span>
+                        <span className="font-mono text-[11px] font-semibold text-slate-800 block">#{sale.ui_id}</span>
                         <div className="flex gap-1 mt-1 flex-wrap">
                           {sale.origin === "Sales Return" && <span className="text-[9px] font-bold text-red-600 bg-red-50 px-1 py-0.5 rounded">Return</span>}
                           {hasReturns && <span className="text-[9px] font-bold text-rose-600 bg-rose-50 px-1 py-0.5 rounded border border-rose-100/50">Returned</span>}
@@ -645,8 +646,25 @@ const SalesListPage: React.FC = () => {
                     <td className="p-2.5 px-3 border-b border-slate-50 text-center"><span className="text-[11px] font-semibold text-slate-600">{Number((sale.total_quantity || 0).toFixed(2))}</span></td>
                     <td className="p-2.5 px-3 border-b border-slate-50 text-right"><span className="font-mono text-xs font-bold text-slate-900">{fmt(sale.total_sellprice)}</span></td>
                     <td className="p-2.5 px-3 border-b border-slate-50">{(() => { const cfg = STATUS_CFG[sale.status as SaleStatus] || STATUS_CFG["Pending"]; return <Badge cls={cfg.cls} dot={cfg.dot} label={sale.status} />; })()}</td>
-                    <td className="p-2.5 px-3 border-b border-slate-50 text-right">
-                      <ChevronRight size={14} className={`transition-all duration-200 ${isSelected ? "text-blue-500 rotate-90" : "text-slate-300 group-hover:text-blue-500"}`} />
+                    <td className="p-2.5 px-3 border-b border-slate-50 text-right whitespace-nowrap">
+                      <div className="flex items-center justify-end gap-2">
+                        {sale.status === "Completed" && sale.origin !== "Offline Return" && sale.origin !== "Sales Return" && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); openReturn(sale); }}
+                            className="text-rose-500 hover:text-rose-600 transition-colors p-1"
+                            title="Process Return"
+                          >
+                            <RotateCcw size={15} />
+                          </button>
+                        )}
+                        <button
+                          onClick={(e) => { e.stopPropagation(); openDetail(sale); }}
+                          className="text-emerald-500 hover:text-emerald-600 transition-colors p-1"
+                          title="View Details"
+                        >
+                          <Eye size={15} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );

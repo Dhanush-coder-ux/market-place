@@ -91,4 +91,12 @@ export const purchaseApi = {
     if (!shopId || !purchaseId) throw new Error("Shop ID and Purchase ID are required.");
     return await apiClient.get(`${ENDPOINTS.PURCHASES}/history/${shopId}/${purchaseId}`);
   },
+
+  /**
+   * Cancel a purchase order
+   */
+  cancelPurchase: async (shopId: string, id: string) => {
+    if (!shopId || !id) throw new Error("Shop ID and Purchase ID are required.");
+    return await apiClient.post(`${ENDPOINTS.PURCHASES}/cancel`, { id, shop_id: shopId });
+  },
 };

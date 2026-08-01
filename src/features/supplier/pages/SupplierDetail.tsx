@@ -170,9 +170,15 @@ export default function SupplierDetail() {
 
       refreshSupplierData();
 
-      if (activeTab === 2) {
+      if (activeTab === 1) {
         getData(`${ENDPOINTS.PURCHASES}/by/supplier/${SHOP_ID}/${id}`).then((r: any) => {
            setPurchases(r?.data ? (Array.isArray(r.data) ? r.data : [r.data]) : []);
+        });
+      } else if (activeTab === 2) {
+        supplierApi.getClearedHistory(SHOP_ID, id).then((res: any) => {
+          let historyList = res?.data ? (Array.isArray(res.data) ? res.data : [res.data]) : [];
+          if (res?.data?.datas) historyList = res.data.datas;
+          setClearedHistory(historyList);
         });
       }
 
@@ -259,7 +265,7 @@ export default function SupplierDetail() {
   }, [id, refreshSupplierData]);
 
   useEffect(() => {
-    if (!id || activeTab !== 2) return;
+    if (!id || activeTab !== 1) return;
     setPurLoading(true);
     getData(`${ENDPOINTS.PURCHASES}/by/supplier/${SHOP_ID}/${id}`).then((res: any) => {
       setPurchases(res?.data ? (Array.isArray(res.data) ? res.data : [res.data]) : []);
@@ -268,7 +274,7 @@ export default function SupplierDetail() {
   }, [activeTab, id]);
 
   useEffect(() => {
-    if (!id || activeTab !== 3) return;
+    if (!id || activeTab !== 2) return;
     setHistoryLoading(true);
     supplierApi.getClearedHistory(SHOP_ID, id)
       .then((res: any) => {
@@ -673,29 +679,41 @@ export default function SupplierDetail() {
                   <table className="w-full text-left border-collapse">
                     <thead>
                       <tr className="bg-slate-50 border-b border-slate-200">
-                        <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase">Date</th>
-                        <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase">Amount</th>
-                        <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase">Ref/Invoice No</th>
-                        <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase">Payment Method</th>
+                        <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase whitespace-nowrap">Date</th>
+                        <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase whitespace-nowrap">Ref / Invoice No</th>
+                        <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase whitespace-nowrap">Cleared Amount</th>
+                        <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase whitespace-nowrap">Remaining Outstanding</th>
+                        <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase whitespace-nowrap">Payment Method</th>
+                        <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase whitespace-nowrap">Notes</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
                       {historyLoading ? (
-                        <tr><td colSpan={4} className="p-8 text-center text-slate-400 text-sm font-semibold">Loading history...</td></tr>
+                        <tr><td colSpan={6} className="p-8 text-center text-slate-400 text-sm font-semibold">Loading history...</td></tr>
                       ) : clearedHistory.length === 0 ? (
-                        <tr><td colSpan={4} className="p-8 text-center text-slate-400 text-sm font-semibold">No cleared records found.</td></tr>
+                        <tr><td colSpan={6} className="p-8 text-center text-slate-400 text-sm font-semibold">No cleared records found.</td></tr>
                       ) : (
                         clearedHistory.map((h, i) => (
                           <tr key={h.id || i} className="hover:bg-slate-50/50 transition-colors">
-                            <td className="px-4 py-3 text-sm text-slate-600 font-bold">
-                              {new Date(h.created_at || h.date).toLocaleDateString()}
+                            <td className="px-4 py-3 text-xs font-bold text-slate-600 whitespace-nowrap">
+                              {h.created_at || h.date ? new Date(h.created_at || h.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
                             </td>
-                            <td className="px-4 py-3 text-sm text-emerald-600 font-black">
-                              ₹{(h.cleared_amount || h.amount || h.outstanding_amount || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                            <td className="px-4 py-3 text-xs font-black text-indigo-600 whitespace-nowrap font-mono">
+                              {h.invoice_no || h.ref_no || h.entity_id || "—"}
                             </td>
-                            <td className="px-4 py-3 text-sm text-slate-700 font-bold">{h.invoice_no || h.ref_no || h.id || "—"}</td>
-                            <td className="px-4 py-3">
-                              <span className="text-[11px] font-black bg-slate-100 text-slate-600 px-2.5 py-1 rounded-md uppercase">{h.payment_method || h.method || "—"}</span>
+                            <td className="px-4 py-3 text-sm text-emerald-600 font-black whitespace-nowrap">
+                              ₹{Number(h.cleared_amount ?? h.amount ?? 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </td>
+                            <td className="px-4 py-3 text-sm text-slate-700 font-bold whitespace-nowrap">
+                              ₹{Number(h.outstanding_amount ?? 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap">
+                              <span className="text-[11px] font-black bg-slate-100 text-slate-700 px-2.5 py-1 rounded-md uppercase tracking-wider">
+                                {h.payment_method || h.method || "CASH"}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-xs font-medium text-slate-500 max-w-xs truncate" title={h.notes}>
+                              {h.notes || "—"}
                             </td>
                           </tr>
                         ))

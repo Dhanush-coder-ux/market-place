@@ -380,6 +380,21 @@ const PaymentStatusBadge = ({ status, outstanding, grandTotal }: { status?: stri
   );
 };
 
+const PurchaseStatusBadge = ({ status }: { status?: string }) => {
+  const st = (status || "COMPLETED").toUpperCase();
+  let colors = "bg-emerald-50 text-emerald-700 border-emerald-200";
+  if (st === "CANCELED" || st === "CANCELLED") {
+    colors = "bg-rose-50 text-rose-700 border-rose-200";
+  } else if (st === "DRAFT" || st === "PENDING") {
+    colors = "bg-amber-50 text-amber-700 border-amber-200";
+  }
+  return (
+    <span className={`px-2 py-0.5 rounded-xl text-[10px] font-bold border whitespace-nowrap uppercase tracking-wider ${colors}`}>
+      {st}
+    </span>
+  );
+};
+
 /* ================= GRID CARD ================= */
 const GridCard = ({ po, selected, onClick }: { po: DirectPurchaseData; selected?: boolean; onClick: () => void }) => {
   const totalQty = po.products.reduce((s, i) => s + i.quantity, 0);
@@ -401,6 +416,7 @@ const GridCard = ({ po, selected, onClick }: { po: DirectPurchaseData; selected?
             )}
           </div>
           <PurchaseTypeBadge type={po.purchaseType} />
+          <PurchaseStatusBadge status={po.status} />
           <PaymentStatusBadge status={po.payment_status} outstanding={po.outstanding} grandTotal={po.grand_total || po.total_cost} />
                           {po.purchaseType === "Purchase Return" && (
                             <span className="text-[9px] font-bold text-red-600 bg-red-50 px-1.5 py-0.5 rounded-xl border border-red-100/50">Returned</span>
@@ -543,9 +559,9 @@ const GridCard = ({ po, selected, onClick }: { po: DirectPurchaseData; selected?
 };
 
 
-const VerticalTable = ({ data, selectedIds, onSelect, totalCount, lastElementRef, loadingMore }: { data: DirectPurchaseData[]; selectedIds: Set<string>; onSelect: (po: DirectPurchaseData) => void; totalCount: number; lastElementRef?: any; loadingMore?: boolean }) => {
+const VerticalTable = ({ data, selectedIds, onSelect, totalCount, lastElementRef, loadingMore, onRefresh }: { data: DirectPurchaseData[]; selectedIds: Set<string>; onSelect: (po: DirectPurchaseData) => void; totalCount: number; lastElementRef?: any; loadingMore?: boolean; onRefresh?: () => void }) => {
   const navigate = useNavigate();
-  const { deleteData } = useApi();
+  const { purchase } = useBusinessApi();
   const [drawerRecord, setDrawerRecord] = useState<any | null>(null);
   
   return (
@@ -580,6 +596,7 @@ const VerticalTable = ({ data, selectedIds, onSelect, totalCount, lastElementRef
               <th className="px-3 py-2.5 text-[10px] font-bold tracking-wider text-slate-800 uppercase text-left hidden md:table-cell">Products</th>
               <th className="px-3 py-2.5 text-[10px] font-bold tracking-wider text-slate-800 uppercase text-right">Qty</th>
               <th className="px-3 py-2.5 text-[10px] font-bold tracking-wider text-slate-800 uppercase text-right">Total</th>
+              <th className="px-3 py-2.5 text-[10px] font-bold tracking-wider text-slate-800 uppercase text-center">Status</th>
               <th className="px-3 py-2.5 text-[10px] font-bold tracking-wider text-slate-800 uppercase text-center">Payment Status</th>
               <th className="px-3 py-2.5 w-24 text-right text-[10px] font-bold tracking-wider text-slate-800 uppercase sticky right-0 bg-slate-50 border-l border-slate-200 z-30 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.08)]">Actions</th>
             </tr>
@@ -673,6 +690,11 @@ const VerticalTable = ({ data, selectedIds, onSelect, totalCount, lastElementRef
                     </span>
                   </td>
 
+                  {/* Purchase Status */}
+                  <td className="p-2.5 px-3 text-center">
+                    <PurchaseStatusBadge status={po.status} />
+                  </td>
+
                   {/* Payment Status */}
                   <td className="p-2.5 px-3 text-center">
                     <PaymentStatusBadge status={po.payment_status} outstanding={po.outstanding} grandTotal={po.grand_total || po.total_cost} />
@@ -688,7 +710,7 @@ const VerticalTable = ({ data, selectedIds, onSelect, totalCount, lastElementRef
                       >
                         <Eye size={15} />
                       </button>
-                      {po.purchaseType === 'Purchase' && (
+                      {po.purchaseType === 'Purchase' && po.status?.toUpperCase() !== 'CANCELED' && po.status?.toUpperCase() !== 'CANCELLED' && (
                         <button
                           onClick={() => navigate(`/purchase/edit/${po.id}`)}
                           className="text-amber-400 hover:text-amber-500 transition-colors p-1"
@@ -721,25 +743,31 @@ const VerticalTable = ({ data, selectedIds, onSelect, totalCount, lastElementRef
                             <Share2 size={13} />
                             Record Payment
                           </DropdownMenuItem>
-                          <DropdownMenuSeparator className="border-t border-slate-100 my-1 h-0 bg-transparent" />
-                          <DropdownMenuItem
-                            onClick={async () => {
-                              if (window.confirm("Are you sure you want to cancel this purchase? This action will reverse stock and cost changes.")) {
-                                try {
-                                  await deleteData(`${ENDPOINTS.PURCHASES}/${SHOP_ID}/${po.id}`);
-                                  alert("Purchase cancelled successfully.");
-                                  window.location.reload();
-                                } catch (err) {
-                                  console.error("Failed to cancel purchase:", err);
-                                  alert("Failed to cancel purchase.");
-                                }
-                              }
-                            }}
-                            className="flex items-center gap-2 w-full px-3 py-2 text-xs font-semibold text-red-650 hover:bg-red-50 cursor-pointer outline-none"
-                          >
-                            <XCircle size={13} />
-                            Cancel purchase
-                          </DropdownMenuItem>
+                          {po.status?.toUpperCase() !== 'CANCELED' && po.status?.toUpperCase() !== 'CANCELLED' && (
+                            <>
+                              <DropdownMenuSeparator className="border-t border-slate-100 my-1 h-0 bg-transparent" />
+                              <DropdownMenuItem
+                                onClick={async () => {
+                                  if (window.confirm("Are you sure you want to cancel this purchase? This action will reverse stock and cost changes.")) {
+                                    try {
+                                      await purchase.cancelPurchase(SHOP_ID, po.id);
+                                      alert("Purchase cancelled successfully.");
+                                      if (onRefresh) onRefresh();
+                                      else window.location.reload();
+                                    } catch (err: any) {
+                                      console.error("Failed to cancel purchase:", err);
+                                      const msg = err?.response?.data?.detail?.msg || err?.response?.data?.detail || "Failed to cancel purchase.";
+                                      alert(typeof msg === 'string' ? msg : "Failed to cancel purchase.");
+                                    }
+                                  }
+                                }}
+                                className="flex items-center gap-2 w-full px-3 py-2 text-xs font-semibold text-red-650 hover:bg-red-50 cursor-pointer outline-none"
+                              >
+                                <XCircle size={13} />
+                                Cancel purchase
+                              </DropdownMenuItem>
+                            </>
+                          )}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
@@ -827,7 +855,7 @@ const PurchaseHistory = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
 
-  const { getData, deleteData } = useApi();
+  const { getData } = useApi();
   const [refreshKey, setRefreshKey] = useState(0);
   const [analyticsStats, setAnalyticsStats] = useState<any>(null);
 
@@ -873,12 +901,13 @@ const PurchaseHistory = () => {
     if (!window.confirm(`Are you sure you want to cancel these ${selectedPurchases.size} purchases? This action will reverse stock and cost changes.`)) return;
     try {
       for (const id of Array.from(selectedPurchases)) {
-        await deleteData(`${ENDPOINTS.PURCHASES}/${SHOP_ID}/${id}`);
+        await purchase.cancelPurchase(SHOP_ID, id);
       }
       alert("Selected purchases cancelled successfully");
       setSelectedPurchases(new Set());
       setRefreshKey(prev => prev + 1);
-    } catch {
+    } catch (err) {
+      console.error("Failed to cancel purchases:", err);
       alert("Failed to cancel some purchases");
     }
   };
@@ -1178,7 +1207,7 @@ const PurchaseHistory = () => {
             {loadingMore && <div className="py-4 text-center text-xs text-slate-500">Loading more...</div>}
           </div>
         ) : (
-          <VerticalTable data={filtered} selectedIds={selectedPurchases} onSelect={(po) => toggleSelectPurchase(po.id)} totalCount={totalCount || filtered.length} lastElementRef={lastElementRef} loadingMore={loadingMore} />
+          <VerticalTable data={filtered} selectedIds={selectedPurchases} onSelect={(po) => toggleSelectPurchase(po.id)} totalCount={totalCount || filtered.length} lastElementRef={lastElementRef} loadingMore={loadingMore} onRefresh={() => setRefreshKey(prev => prev + 1)} />
         )}
       </div>
     </>

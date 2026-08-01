@@ -968,7 +968,8 @@ export function CustomerCollectionsTable({ rows, loading }: CustomerCollectionsT
                     : '—';
                   const paymentInfosArray = Array.isArray(h.payment_infos) ? h.payment_infos : [];
                   const calculatedCleared = paymentInfosArray.reduce((acc: number, p: any) => acc + Number(p.amount || 0), 0);
-                  const clearedAmount = Number(h.cleared_amount ?? (calculatedCleared > 0 ? calculatedCleared : (h.cleared_infos ? (Number(h.cleared_infos.outstanding_before || 0) - Number(h.cleared_infos.outstanding_after || 0)) : 0)));
+                  const rawCleared = h.cleared_amount ?? h.additional_infos?.paid_amount ?? (calculatedCleared > 0 ? calculatedCleared : (h.cleared_infos ? (Number(h.cleared_infos.outstanding_before || 0) - Number(h.cleared_infos.outstanding_after || 0)) : 0));
+                  const clearedAmount = Math.max(0, Number(rawCleared || 0));
                   const refId = `#${String(h.id).padStart(3, '0')}`;
                   const outstandingBefore = Number(h.cleared_infos?.outstanding_before ?? h.outstanding_before ?? 0);
                   const outstandingAfter = Number(h.cleared_infos?.outstanding_after ?? h.outstanding_after ?? 0);

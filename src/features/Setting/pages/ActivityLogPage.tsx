@@ -79,6 +79,53 @@ const SkeletonRow = () => (
   </div>
 );
 
+// ─── Formatted Value Component ────────────────────────────────────────────────
+
+const FormattedValue = ({ value }: { value: any }) => {
+  let val = value;
+  if (typeof val === 'string' && (val.startsWith('[{') || val.startsWith('{'))) {
+    try {
+      val = JSON.parse(val.replace(/'/g, '"'));
+    } catch (e) {}
+  }
+
+  if (Array.isArray(val)) {
+    return (
+      <div className="flex flex-col gap-2">
+        {val.map((item, index) => (
+          <div key={index} className="bg-white/50 rounded border border-slate-200/50 p-2 space-y-1">
+            {typeof item === 'object' && item !== null ? (
+              Object.entries(item).map(([k, v]) => (
+                <div key={k} className="flex gap-2 text-[10px]">
+                  <span className="font-medium opacity-70 min-w-[100px] shrink-0">{k}:</span>
+                  <span className="font-mono break-all">{String(v ?? "—")}</span>
+                </div>
+              ))
+            ) : (
+              <span className="font-mono text-[10px]">{String(item)}</span>
+            )}
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (typeof val === 'object' && val !== null) {
+    return (
+      <div className="bg-white/50 rounded border border-slate-200/50 p-2 space-y-1">
+        {Object.entries(val).map(([k, v]) => (
+          <div key={k} className="flex gap-2 text-[10px]">
+            <span className="font-medium opacity-70 min-w-[100px] shrink-0">{k}:</span>
+            <span className="font-mono break-all">{String(v ?? "—")}</span>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  return <span>{String(val ?? "—")}</span>;
+};
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export const ActivityLogPage = () => {
@@ -288,7 +335,8 @@ export const ActivityLogPage = () => {
                   return (
                     <tr
                       key={log.id ?? idx}
-                      className="border-b border-slate-50 hover:bg-slate-50/60 transition-colors group"
+                      onClick={() => hasChanges && setSelectedLog(log)}
+                      className={`border-b border-slate-50 transition-colors group ${hasChanges ? 'cursor-pointer hover:bg-slate-50/60' : 'hover:bg-slate-50/60'}`}
                     >
                       {/* User */}
                       <td className="px-5 py-3.5 whitespace-nowrap">
@@ -367,7 +415,8 @@ export const ActivityLogPage = () => {
                 return (
                   <div
                     key={log.id ?? idx}
-                    className="flex items-start gap-3 px-4 py-3.5 hover:bg-slate-50/60 transition-colors"
+                    onClick={() => hasChanges && setSelectedLog(log)}
+                    className={`flex items-start gap-3 px-4 py-3.5 transition-colors ${hasChanges ? 'cursor-pointer hover:bg-slate-50/60' : 'hover:bg-slate-50/60'}`}
                   >
                     <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center shrink-0 mt-0.5">
                       <User size={13} className="text-white" />
@@ -466,8 +515,8 @@ export const ActivityLogPage = () => {
                       <span className="text-[9px] font-medium text-slate-400 uppercase tracking-wider block mb-1">
                         Before
                       </span>
-                      <div className="bg-rose-50 text-rose-700 border border-rose-100 text-xs px-3 py-2 rounded-lg font-mono break-all min-h-[32px]">
-                        {String(change.before ?? "—")}
+                      <div className="bg-rose-50 text-rose-700 border border-rose-100 text-[11px] px-3 py-2 rounded-lg break-all min-h-[32px] overflow-auto max-h-[300px]">
+                        <FormattedValue value={change.before} />
                       </div>
                     </div>
                     <ArrowRight size={14} className="text-slate-300 shrink-0" />
@@ -475,8 +524,8 @@ export const ActivityLogPage = () => {
                       <span className="text-[9px] font-medium text-slate-400 uppercase tracking-wider block mb-1">
                         After
                       </span>
-                      <div className="bg-emerald-50 text-emerald-700 border border-emerald-100 text-xs px-3 py-2 rounded-lg font-mono break-all min-h-[32px]">
-                        {String(change.after ?? "—")}
+                      <div className="bg-emerald-50 text-emerald-700 border border-emerald-100 text-[11px] px-3 py-2 rounded-lg break-all min-h-[32px] overflow-auto max-h-[300px]">
+                        <FormattedValue value={change.after} />
                       </div>
                     </div>
                   </div>

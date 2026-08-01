@@ -629,6 +629,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                 const pricing = v.pricing_infos && Object.keys(v.pricing_infos).length > 0 ? v.pricing_infos : (v.batch_infos?.[0]?.pricing_infos || {});
                 const stockInfo = v.stock_infos && Object.keys(v.stock_infos).length > 0 ? v.stock_infos : (v.batch_infos?.[0]?.stock_infos || {});
                 const reorderInfo = v.reorder_point_infos && Object.keys(v.reorder_point_infos).length > 0 ? v.reorder_point_infos : (v.batch_infos?.[0]?.reorder_point_infos || {});
+                const stlInfo = v.storage_location_infos && Object.keys(v.storage_location_infos).length > 0 ? v.storage_location_infos : (v.batch_infos?.[0]?.storage_location_infos || {});
                 
                 return {
                   id: v.id || uid(),
@@ -639,6 +640,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                   buy_price: String(pricing.buy_price || v.buy_price || ""),
                   mrp: String(v.additional_infos?.mrp || pricing.mrp || ""),
                   reorder_point: String(reorderInfo.reorder_point || v.reorder_point || "5"),
+                  location: stlInfo.storage_location || stlInfo.name || v.storage_location || prod.storage_location_infos?.storage_location || "",
                   stock: String(stockInfo.available_stocks || "0"),
                   active: true,
                   serials: (v.additional_infos?.serial_numbers || v.serial_numbers || []).map((sn: string) => ({
@@ -794,11 +796,11 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
       return {
         ...(id && !isNew ? { id: combo.id } : {}),   // only include id on update for existing variants
         name: variantName,
-        storage_location: form.location || null,
-        reorder_point: Number(combo.reorder_point) || 5,
+        storage_location: combo.location?.trim() || (combo as any).storage_location?.trim() || (form.location?.trim() ? form.location.trim() : null),
+        reorder_point: Number(combo.reorder_point) || Number(form.reorder_point) || 5,
         buy_price: Number(combo.buy_price) || null,
         sell_price: Number(combo.price) || null,
-        online_sell_price: null,
+        online_sell_price: Number(combo.price) || 0,
         visible_online: form.visible_online,
       };
     });
@@ -870,7 +872,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
         },
         have_tracking: form.track_stock,
         variant_infos: form.has_variants ? mappedVariants : null,
-        storage_location: form.location || null,
+        storage_location: form.location?.trim() || null,
         gst: gstFormatted,
         reorder_point: Number(form.reorder_point) || 5,
         visible_online: form.visible_online,
@@ -882,7 +884,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
         sell_price: form.selling_price
           ? (Number(form.selling_price) || null)
           : null,
-        online_sell_price: null,
+        online_sell_price: form.selling_price ? (Number(form.selling_price) || 0) : 0,
         custom_fields: customFieldsBlob,
       };
     } else {
@@ -907,7 +909,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
         // For made-to-order items set price directly; for stocked items price comes from purchase
         buy_price: !form.track_stock ? (Number(form.cost_to_make) || null) : null,
         sell_price: !form.track_stock ? (Number(form.selling_price) || null) : null,
-        online_sell_price: null,
+        online_sell_price: !form.track_stock ? (Number(form.selling_price) || 0) : 0,
         gst: gstFormatted,
         reorder_point: Number(form.reorder_point) || 5,
         visible_online: form.visible_online,

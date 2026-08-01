@@ -39,11 +39,12 @@ export function TypeBadge({ type, labelOverride, icon: Icon }: { type: string, l
   
   if (t.includes("PURCHASE_RETURN")) { bg = "bg-[var(--mv-preturn-bg)]"; text = "text-[var(--mv-preturn-tx)]"; border = "border-[var(--mv-preturn-bd)]"; dot = "bg-[var(--mv-preturn-dot)]"; label = "Purchase Return"; }
   else if (t.includes("SALES_RETURN") || t.includes("SALE_RETURN")) { bg = "bg-[var(--mv-sreturn-bg)]"; text = "text-[var(--mv-sreturn-tx)]"; border = "border-[var(--mv-sreturn-bd)]"; dot = "bg-[var(--mv-sreturn-dot)]"; label = "Sales Return"; }
-  else if (t.includes("PURCHASE") || t === "DIRECT" || t.includes("PO_")) { bg = "bg-[var(--mv-purchase-bg)]"; text = "text-[var(--mv-purchase-tx)]"; border = "border-[var(--mv-purchase-bd)]"; dot = "bg-[var(--mv-purchase-dot)]"; label = "Purchase"; }
+  else if (t.includes("PO_PURCHASE") || t.includes("STOCK_UPDATE")) { bg = "bg-[var(--mv-purchase-bg)]"; text = "text-[var(--mv-purchase-tx)]"; border = "border-[var(--mv-purchase-bd)]"; dot = "bg-[var(--mv-purchase-dot)]"; label = "Stock updated via purchase"; }
+  else if (t.includes("PURCHASE") || t === "DIRECT") { bg = "bg-[var(--mv-purchase-bg)]"; text = "text-[var(--mv-purchase-tx)]"; border = "border-[var(--mv-purchase-bd)]"; dot = "bg-[var(--mv-purchase-dot)]"; label = "Stock added via purchase"; }
   else if (t.includes("SALES")) { bg = "bg-[var(--mv-sales-bg)]"; text = "text-[var(--mv-sales-tx)]"; border = "border-[var(--mv-sales-bd)]"; dot = "bg-[var(--mv-sales-dot)]"; label = "Sales"; }
   else if (t === "TRANSFER") { bg = "bg-slate-100"; text = "text-slate-700"; border = "border-slate-200"; dot = "bg-slate-400"; label = "Transfer"; }
   else if (t.includes("OPENING")) { bg = "bg-[var(--mv-opening-bg)]"; text = "text-[var(--mv-opening-tx)]"; border = "border-[var(--mv-opening-bd)]"; dot = "bg-[var(--mv-opening-dot)]"; label = "Opening"; }
-  else if (t.includes("ADJUSTMENT")) { bg = "bg-[var(--mv-adjust-bg)]"; text = "text-[var(--mv-adjust-tx)]"; border = "border-[var(--mv-adjust-bd)]"; dot = "bg-[var(--mv-adjust-dot)]"; label = "Adjustment"; }
+  else if (t.includes("ADJUSTMENT")) { bg = "bg-[var(--mv-adjust-bg)]"; text = "text-[var(--mv-adjust-tx)]"; border = "border-[var(--mv-adjust-bd)]"; dot = "bg-[var(--mv-adjust-dot)]"; label = "Stock adjusted"; }
 
   const displayLabel = labelOverride || label;
 

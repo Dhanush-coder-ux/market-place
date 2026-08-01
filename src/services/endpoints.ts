@@ -54,7 +54,7 @@ export const ENDPOINTS = {
   AUTH_REDIRECT: "/auth/redirect",
   AUTH_TOKEN_CREATE: "/auth/token/create",
   AUTH_SHOP_CHECKIN: "/auth/shop-checkin",
-  AUTH_TOKEN_REFRESH: "/auth/token/refresh",
+  AUTH_TOKEN_REFRESH: "/auth/refresh",
 
   // ── Analytics Service ────────────────────────────────────────────
   // Unified dashboard (dashboard screen only)

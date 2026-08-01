@@ -165,6 +165,22 @@
             }
           },
           {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
             "name": "outstanding",
             "in": "query",
             "required": false,
@@ -178,6 +194,38 @@
                 }
               ],
               "title": "Outstanding"
+            }
+          },
+          {
+            "name": "from_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From Date"
+            }
+          },
+          {
+            "name": "to_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To Date"
             }
           }
         ],
@@ -310,6 +358,38 @@
             }
           },
           {
+            "name": "supplier_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Supplier Id"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
             "name": "outstanding",
             "in": "query",
             "required": false,
@@ -323,6 +403,38 @@
                 }
               ],
               "title": "Outstanding"
+            }
+          },
+          {
+            "name": "from_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From Date"
+            }
+          },
+          {
+            "name": "to_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To Date"
             }
           }
         ],
@@ -958,6 +1070,65 @@
           }
         }
       }
+    },
+    "/purchases/returns": {
+      "post": {
+        "tags": [
+          "Purchase Returns"
+        ],
+        "summary": "Create Return",
+        "operationId": "create_return_purchases_returns_post",
+        "parameters": [
+          {
+            "name": "x-user-infos",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-User-Infos"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePurchaseReturnSchema"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1040,7 +1211,18 @@
             "anyOf": [
               {
                 "items": {
-                  "type": "string"
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "$ref": "#/components/schemas/PurchaseSerialnoInfosType"
+                    },
+                    {
+                      "additionalProperties": true,
+                      "type": "object"
+                    }
+                  ]
                 },
                 "type": "array"
               },
@@ -1090,8 +1272,57 @@
         ],
         "title": "CreatePurchaseItemsSchema"
       },
+      "CreatePurchaseReturnSchema": {
+        "properties": {
+          "purchase_id": {
+            "type": "string",
+            "title": "Purchase Id"
+          },
+          "shop_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Shop Id"
+          },
+          "payment_infos": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Payment Infos"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ReturnItemRequestSchema"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "purchase_id",
+          "payment_infos",
+          "items"
+        ],
+        "title": "CreatePurchaseReturnSchema"
+      },
       "CreatePurchaseSchema": {
         "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
           "shop_id": {
             "type": "string",
             "title": "Shop Id"
@@ -1102,6 +1333,18 @@
           },
           "type": {
             "$ref": "#/components/schemas/PurchaseTypeEnums"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status",
+            "default": "COMPLETED"
           },
           "calculation_infos": {
             "$ref": "#/components/schemas/PurchaseCalculationInfos"
@@ -1132,7 +1375,14 @@
             "title": "Items"
           },
           "invoice_no": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Invoice No"
           },
           "custom_fields": {
@@ -1161,8 +1411,7 @@
           "charges_infos",
           "payment_infos",
           "purchase_date",
-          "items",
-          "invoice_no"
+          "items"
         ],
         "title": "CreatePurchaseSchema"
       },
@@ -1382,6 +1631,30 @@
         ],
         "title": "PurchaseReorderPointInfosType"
       },
+      "PurchaseSerialnoInfosType": {
+        "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "PurchaseSerialnoInfosType"
+      },
       "PurchaseStocksInfosType": {
         "properties": {
           "stocks": {
@@ -1417,6 +1690,73 @@
           "PRODUCTION"
         ],
         "title": "PurchaseTypeEnums"
+      },
+      "ReturnItemRequestSchema": {
+        "properties": {
+          "purchase_item_id": {
+            "type": "string",
+            "title": "Purchase Item Id"
+          },
+          "quantity": {
+            "type": "number",
+            "title": "Quantity"
+          },
+          "unit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "serialno_infos": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ReturnSerialnoInfoSchema"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Serialno Infos"
+          }
+        },
+        "type": "object",
+        "required": [
+          "purchase_item_id",
+          "quantity"
+        ],
+        "title": "ReturnItemRequestSchema"
+      },
+      "ReturnSerialnoInfoSchema": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "title": "ReturnSerialnoInfoSchema"
       },
       "UpdateCustomFieldSchema": {
         "properties": {
@@ -1515,7 +1855,18 @@
             "anyOf": [
               {
                 "items": {
-                  "type": "string"
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "$ref": "#/components/schemas/PurchaseSerialnoInfosType"
+                    },
+                    {
+                      "additionalProperties": true,
+                      "type": "object"
+                    }
+                  ]
                 },
                 "type": "array"
               },
@@ -1594,6 +1945,39 @@
           "shop_id": {
             "type": "string",
             "title": "Shop Id"
+          },
+          "supplier_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Supplier Id"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "invoice_no": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Invoice No"
           },
           "calculation_infos": {
             "anyOf": [

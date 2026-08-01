@@ -40,8 +40,28 @@ export interface SupplierCustomFieldValue {
   value: string;
 }
 
-// Merged view: field definition + its current value for a supplier
-export interface SupplierCustomFieldMerged {
-  field: SupplierCustomFieldDefinition;
-  value: string;
-}
+// Helper function to extract supplier outstanding amount safely from any structure
+export const getSupplierOutstanding = (sup: any, stats?: any): number => {
+  if (sup) {
+    if (typeof sup.outstanding_infos === 'number') return sup.outstanding_infos;
+    if (sup.outstanding_infos?.amount !== undefined && sup.outstanding_infos?.amount !== null) {
+      return Number(sup.outstanding_infos.amount) || 0;
+    }
+    if (sup.outstanding !== undefined && sup.outstanding !== null) {
+      return Number(sup.outstanding) || 0;
+    }
+    if (sup.outstanding_amount !== undefined && sup.outstanding_amount !== null) {
+      return Number(sup.outstanding_amount) || 0;
+    }
+    if (sup.datas?.outstanding_balance !== undefined && sup.datas?.outstanding_balance !== null) {
+      return Number(sup.datas.outstanding_balance) || 0;
+    }
+    if (sup.datas?.outstanding !== undefined && sup.datas?.outstanding !== null) {
+      return Number(sup.datas.outstanding) || 0;
+    }
+  }
+  if (stats?.total_outstandings !== undefined && stats?.total_outstandings !== null) {
+    return Number(stats.total_outstandings) || 0;
+  }
+  return 0;
+};

@@ -15,7 +15,7 @@ import {
   MoreVertical,
   Printer,
   Share2,
-  Trash2
+  XCircle
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useHeader } from "@/context/HeaderContext";
@@ -36,6 +36,7 @@ import SkeletonLoader from "@/components/common/SkeletonLoader";
 /* ================= TYPES ================= */
 export interface ProductItem {
   name: string;
+  id?: string;
   quantity: number;
   stocks?: number;
   stocks_before?: number;
@@ -112,6 +113,7 @@ export interface DirectPurchaseData {
   status?: string;
   payment_status?: string;
   version?: string;
+  returns?: any[];
 }
 
 type ViewMode = "grid" | "horizontal" | "vertical";
@@ -212,6 +214,7 @@ export function toDisplayData(p: PurchaseRecord): DirectPurchaseData {
       const pStorage = pr.storage_location_infos?.name ?? pr.storage_locations?.[0]?.name ?? pr.storage_location ?? pr.datas?.storage_location;
       
       return {
+      id: pr.id || pr.purchase_item_id || "",
       name: String(pr.name ?? pr.product_name ?? pr.product_id ?? "Item"),
       quantity: Number(pr.stocks_infos?.stocks ?? pr.stocks ?? pr.received_stocks ?? pr.received_qty ?? pr.quantity ?? pr.qty ?? pr.stocks_added ?? 1),
       stocks: Number(pr.stocks_infos?.stocks ?? pr.stocks ?? 0),
@@ -285,6 +288,7 @@ export function toDisplayData(p: PurchaseRecord): DirectPurchaseData {
     storage_location: d2?.storage_location || (p as any).storage_location || "",
     status: d2?.status ?? (p as any).status ?? "completed",
     payment_status: (p as any).payment_status ?? "PENDING",
+    returns: (p as any).returns || d2?.returns || (p as any).purchase_returns || d2?.purchase_returns || [],
   };
 }
 
@@ -345,6 +349,37 @@ const PurchaseTypeBadge = ({ type }: { type: PurchaseType }) => {
   );
 };
 
+const PaymentStatusBadge = ({ status, outstanding, grandTotal }: { status?: string; outstanding?: number; grandTotal?: number }) => {
+  let displayStatus = (status || "UNPAID").toUpperCase();
+  
+  if (outstanding !== undefined && grandTotal !== undefined && grandTotal > 0) {
+    if (outstanding <= 0) {
+      displayStatus = "PAID";
+    } else if (outstanding > 0 && grandTotal > outstanding) {
+      displayStatus = "PARTIAL";
+    } else if (outstanding >= grandTotal) {
+      displayStatus = "UNPAID";
+    }
+  }
+
+  let colors = "bg-amber-50 text-amber-700 border-amber-200";
+  if (displayStatus === "PAID" || displayStatus === "COMPLETED") {
+    colors = "bg-emerald-50 text-emerald-700 border-emerald-200";
+  } else if (displayStatus === "PARTIAL" || displayStatus === "PARTIALLY_PAID" || displayStatus === "PARTIALLY PAID") {
+    colors = "bg-blue-50 text-blue-700 border-blue-200";
+  } else if (displayStatus === "UNPAID" || displayStatus === "DUE" || displayStatus === "PENDING") {
+    colors = "bg-rose-50 text-rose-700 border-rose-200";
+  }
+
+  const label = displayStatus === "PARTIALLY_PAID" || displayStatus === "PARTIALLY PAID" ? "PARTIAL" : displayStatus;
+
+  return (
+    <span className={`px-2 py-0.5 rounded-xl text-[10px] font-bold border whitespace-nowrap uppercase tracking-wider ${colors}`}>
+      {label}
+    </span>
+  );
+};
+
 /* ================= GRID CARD ================= */
 const GridCard = ({ po, selected, onClick }: { po: DirectPurchaseData; selected?: boolean; onClick: () => void }) => {
   const totalQty = po.products.reduce((s, i) => s + i.quantity, 0);
@@ -366,6 +401,7 @@ const GridCard = ({ po, selected, onClick }: { po: DirectPurchaseData; selected?
             )}
           </div>
           <PurchaseTypeBadge type={po.purchaseType} />
+          <PaymentStatusBadge status={po.payment_status} outstanding={po.outstanding} grandTotal={po.grand_total || po.total_cost} />
                           {po.purchaseType === "Purchase Return" && (
                             <span className="text-[9px] font-bold text-red-600 bg-red-50 px-1.5 py-0.5 rounded-xl border border-red-100/50">Returned</span>
                           )}
@@ -509,6 +545,7 @@ const GridCard = ({ po, selected, onClick }: { po: DirectPurchaseData; selected?
 
 const VerticalTable = ({ data, selectedIds, onSelect, totalCount, lastElementRef, loadingMore }: { data: DirectPurchaseData[]; selectedIds: Set<string>; onSelect: (po: DirectPurchaseData) => void; totalCount: number; lastElementRef?: any; loadingMore?: boolean }) => {
   const navigate = useNavigate();
+  const { deleteData } = useApi();
   const [drawerRecord, setDrawerRecord] = useState<any | null>(null);
   
   return (
@@ -543,6 +580,7 @@ const VerticalTable = ({ data, selectedIds, onSelect, totalCount, lastElementRef
               <th className="px-3 py-2.5 text-[10px] font-bold tracking-wider text-slate-800 uppercase text-left hidden md:table-cell">Products</th>
               <th className="px-3 py-2.5 text-[10px] font-bold tracking-wider text-slate-800 uppercase text-right">Qty</th>
               <th className="px-3 py-2.5 text-[10px] font-bold tracking-wider text-slate-800 uppercase text-right">Total</th>
+              <th className="px-3 py-2.5 text-[10px] font-bold tracking-wider text-slate-800 uppercase text-center">Payment Status</th>
               <th className="px-3 py-2.5 w-24 text-right text-[10px] font-bold tracking-wider text-slate-800 uppercase sticky right-0 bg-slate-50 border-l border-slate-200 z-30 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.08)]">Actions</th>
             </tr>
           </thead>
@@ -635,6 +673,11 @@ const VerticalTable = ({ data, selectedIds, onSelect, totalCount, lastElementRef
                     </span>
                   </td>
 
+                  {/* Payment Status */}
+                  <td className="p-2.5 px-3 text-center">
+                    <PaymentStatusBadge status={po.payment_status} outstanding={po.outstanding} grandTotal={po.grand_total || po.total_cost} />
+                  </td>
+
                   {/* Actions */}
                   <td className="p-2.5 px-3 text-right whitespace-nowrap sticky right-0 bg-white group-hover:bg-slate-50 border-l border-slate-200 z-10 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.08)] transition-colors">
                     <div className="flex items-center justify-end gap-2 relative">
@@ -680,15 +723,22 @@ const VerticalTable = ({ data, selectedIds, onSelect, totalCount, lastElementRef
                           </DropdownMenuItem>
                           <DropdownMenuSeparator className="border-t border-slate-100 my-1 h-0 bg-transparent" />
                           <DropdownMenuItem
-                            onClick={() => {
-                              if (window.confirm("Are you sure you want to delete this purchase? This will reverse stock and cost changes.")) {
-                                alert("Purchase deletion requires admin privileges.");
+                            onClick={async () => {
+                              if (window.confirm("Are you sure you want to cancel this purchase? This action will reverse stock and cost changes.")) {
+                                try {
+                                  await deleteData(`${ENDPOINTS.PURCHASES}/${SHOP_ID}/${po.id}`);
+                                  alert("Purchase cancelled successfully.");
+                                  window.location.reload();
+                                } catch (err) {
+                                  console.error("Failed to cancel purchase:", err);
+                                  alert("Failed to cancel purchase.");
+                                }
                               }
                             }}
                             className="flex items-center gap-2 w-full px-3 py-2 text-xs font-semibold text-red-650 hover:bg-red-50 cursor-pointer outline-none"
                           >
-                            <Trash2 size={13} />
-                            Delete
+                            <XCircle size={13} />
+                            Cancel purchase
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -818,18 +868,18 @@ const PurchaseHistory = () => {
     });
   };
 
-  const handleBulkDelete = async () => {
+  const handleBulkCancel = async () => {
     if (selectedPurchases.size === 0) return;
-    if (!window.confirm(`Are you sure you want to delete these ${selectedPurchases.size} purchases?`)) return;
+    if (!window.confirm(`Are you sure you want to cancel these ${selectedPurchases.size} purchases? This action will reverse stock and cost changes.`)) return;
     try {
       for (const id of Array.from(selectedPurchases)) {
         await deleteData(`${ENDPOINTS.PURCHASES}/${SHOP_ID}/${id}`);
       }
-      alert("Selected purchases deleted successfully");
+      alert("Selected purchases cancelled successfully");
       setSelectedPurchases(new Set());
       setRefreshKey(prev => prev + 1);
     } catch {
-      alert("Failed to delete some purchases");
+      alert("Failed to cancel some purchases");
     }
   };
 
@@ -847,11 +897,11 @@ const PurchaseHistory = () => {
           </div>
           <div className="flex items-center gap-2">
             <button
-              onClick={handleBulkDelete}
+              onClick={handleBulkCancel}
               className="h-8 px-3 rounded-md border border-red-200 bg-red-50 hover:bg-red-100 text-red-655 font-bold text-[11px] transition-colors flex items-center gap-1.5"
             >
-              <Trash2 size={13} />
-              Delete All
+              <XCircle size={13} />
+              Cancel Purchases
             </button>
           </div>
         </div>

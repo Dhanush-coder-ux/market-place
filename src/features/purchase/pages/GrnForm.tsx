@@ -420,7 +420,7 @@ const GrnForm = () => {
               marginAmount: "",
               marginType: "sellingPrice" as const,
               unit: p.unit || "pc",
-              taxGst: p.gst || 18,
+              taxGst: p.gst !== undefined && p.gst !== null && p.gst !== "" ? Number(p.gst) : 18,
               sku: p.barcode,
               variant: p.variant || "",
               batchTracking: p.batch_tracking || false,
@@ -672,7 +672,7 @@ const GrnForm = () => {
             sellingPrice: newProduct.sell_price,
             sku: newProduct.barcode,
             unit: newProduct.datas?.unit || "pc",
-            taxGst: parseInt(newProduct.datas?.gst) || 18,
+            taxGst: newProduct.datas?.gst !== undefined && newProduct.datas?.gst !== null && newProduct.datas?.gst !== "" ? parseInt(newProduct.datas?.gst) : 18,
             batchTracking: hasBatchTracking,
             serialTracking: hasSerialTracking,
           };

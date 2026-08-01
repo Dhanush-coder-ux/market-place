@@ -362,12 +362,10 @@ const ProductRow = React.memo(
     let stockNumber = calculateProductStock(item);
     
     let sellPrice = (item as any).pricing_infos?.sell_price ?? item.sell_price;
-    let buyPrice = (item as any).pricing_infos?.buy_price ?? item.buy_price;
     if (!hasVariants && hasBatches && (sellPrice === undefined || sellPrice === null)) {
       const firstBatch = batches[0];
       if (firstBatch) {
         sellPrice = firstBatch.pricing_infos?.sell_price ?? firstBatch.sell_price;
-        buyPrice = firstBatch.pricing_infos?.buy_price ?? firstBatch.buy_price;
       }
     }
 
@@ -628,13 +626,6 @@ const ProductRow = React.memo(
 
           
 
-          {/* Buy price */}
-          <td className="px-3 py-2.5 text-right">
-            <span className="text-[13px] font-semibold text-slate-700 tabular-nums">
-              {hasVariants ? "—" : formatCurrency(buyPrice)}
-            </span>
-          </td>
-
           {/* Sell price */}
           <td className="px-3 py-2.5 text-right">
             <span className="text-[13px] font-semibold text-slate-700 tabular-nums">
@@ -732,7 +723,7 @@ const ProductRow = React.memo(
         {/* Expanded row */}
         {isExpanded && isExpandable && (
           <tr className="bg-slate-50/40">
-            <td colSpan={14} className="px-0 py-0">
+            <td colSpan={13} className="px-0 py-0">
               <div className="ml-8 mr-3 my-2 space-y-2 border-l-2 border-slate-200 pl-4">
 
 
@@ -757,6 +748,8 @@ const ProductRow = React.memo(
                       combinations={combinations}
                       baseSellPrice={item.sell_price}
                       baseBuyPrice={item.buy_price}
+                      parentStorageLocation={(item as any).storage_location_infos?.storage_location ?? (item as any).storage_location_infos?.name ?? (item as any).storage_location ?? (item as any).location ?? (datas as any).storage_location ?? null}
+                      parentReorderPoint={(item as any).reorder_point_infos?.reorder_point ?? (item as any).reorder_point ?? datas.reorder_point ?? null}
                     />
                   )}
                   {!hasVariants && hasBatches && (
@@ -777,11 +770,21 @@ const ProductRow = React.memo(
             {combinations.map((comb: any, idx: number) => {
               const combDatas = comb.datas || {};
               const attributes = comb.attributes || combDatas.attributes || combDatas.datas?.attributes || {};
-              let variantLabel = comb.variant_name || comb.name || combDatas.name || 'Standard Variant';
-              if (Object.keys(attributes).length > 0) {
-                variantLabel = Object.values(attributes).join(' / ');
-              } else if (comb.barcode && combDatas.barcode && comb.barcode !== combDatas.barcode) {
-                variantLabel = comb.barcode;
+              let variantLabel = "";
+              if (attributes && Object.keys(attributes).length > 0) {
+                const entries = Object.entries(attributes);
+                if (entries.length === 1) {
+                  variantLabel = String(entries[0][1]);
+                } else {
+                  variantLabel = entries.map(([k, v]) => `${k}: ${v}`).join(' · ');
+                }
+              } else {
+                const rawName = comb.variant_name || comb.name || combDatas.variant_name || combDatas.name;
+                if (rawName && typeof rawName === 'string' && rawName.trim() !== '' && rawName !== comb.barcode && rawName !== comb.sku) {
+                  variantLabel = rawName;
+                } else {
+                  variantLabel = `Variant ${idx + 1}`;
+                }
               }
               const stockNum = Number(comb.stock_infos?.available_stocks ?? comb.stock_infos?.physical_stocks ?? comb.stocks ?? comb.stock ?? combDatas.stocks ?? combDatas.datas?.stocks ?? 0);
               return (
@@ -1369,9 +1372,6 @@ const InventoryPage = () => {
                   </th>
                   <th className="px-3 py-2.5 text-[10px] font-semibold text-slate-800 uppercase tracking-wide">
                     Unit
-                  </th>
-                  <th className="px-3 py-2.5 text-[10px] font-semibold text-slate-800 uppercase tracking-wide text-right">
-                    Buy Price
                   </th>
                   <th className="px-3 py-2.5 text-[10px] font-semibold text-slate-800 uppercase tracking-wide text-right">
                     Sell Price

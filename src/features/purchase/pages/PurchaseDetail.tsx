@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import {
   Printer, Building2, Calendar, Package, TrendingUp,
-  ReceiptText, ArrowLeft, User, FileText, CheckCircle2, Clock, Banknote, AlertCircle
+  ReceiptText, ArrowLeft, User, FileText, CheckCircle2, Clock, Banknote, AlertCircle,
+  RotateCcw, X, ChevronRight, Info, Minus, Plus, CornerDownLeft
 } from "lucide-react";
 import { toDisplayData } from "./PurchaseHistory";
 import type { DirectPurchaseData } from "./PurchaseHistory";
@@ -13,6 +14,7 @@ import { useHeader } from "@/context/HeaderContext";
 import { useApi } from "@/context/ApiContext";
 import { SHOP_ID, ENDPOINTS } from "@/services/endpoints";
 import SkeletonLoader from "@/components/common/SkeletonLoader";
+import { useToast } from "@/context/ToastContext";
 
 const fmt = (n: number) => `₹${n.toLocaleString("en-IN")}`;
 
@@ -27,6 +29,429 @@ const formatBatchDate = (dateStr?: string) => {
   });
 };
 
+const RETURN_REASONS = [
+  "Damaged in transit",
+  "Wrong item supplied",
+  "Quality issue",
+  "Excess quantity",
+  "Expired",
+  "Other",
+];
+
+// ─── Purchase Return Dialog ────────────────────────────────────────────────────
+interface ReturnItem {
+  purchase_item_id: string;
+  name: string;
+  quantity: number;
+  maxQuantity: number;
+  buy_price: number;
+  returnQty: number;
+  reason: string;
+}
+
+interface PurchaseReturnDialogProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSuccess: () => void;
+  purchaseId: string;
+  shopId: string;
+  outstanding: number;
+}
+
+const PurchaseReturnDialog = ({
+  isOpen,
+  onClose,
+  onSuccess,
+  purchaseId,
+  shopId,
+  outstanding,
+}: PurchaseReturnDialogProps) => {
+  const { postData, getData, error: apiError } = useApi();
+  const { showToast } = useToast();
+  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [submitting, setSubmitting] = useState(false);
+  const [loadingItems, setLoadingItems] = useState(false);
+
+  const [returnItems, setReturnItems] = useState<ReturnItem[]>([]);
+  const [globalReason, setGlobalReason] = useState("");
+
+  // Always fetch fresh purchase data from API when dialog opens
+  // so we always have correct backend item IDs (not stale location.state data)
+  useEffect(() => {
+    if (!isOpen) return;
+    setStep(1);
+    setGlobalReason("");
+    setReturnItems([]);
+    setLoadingItems(true);
+
+    getData(`${ENDPOINTS.PURCHASES}/by/id/${shopId}/${purchaseId}`, { shop_id: shopId })
+      .then((res: any) => {
+        const raw = res?.data ? (Array.isArray(res.data) ? res.data[0] : res.data) : (res?.id ? res : null);
+        const rawItems: any[] = raw?.items ?? raw?.products ?? [];
+        setReturnItems(
+          rawItems
+            .filter((p: any) => {
+              const qty = Number(p.stocks_infos?.stocks ?? p.stocks ?? p.quantity ?? p.stocks_added ?? 0);
+              return qty > 0;
+            })
+            .map((p: any) => ({
+              purchase_item_id: p.id || p.purchase_item_id || "",
+              name: String(p.name || p.product_name || p.product_id || "Unknown"),
+              quantity: Number(p.stocks_infos?.stocks ?? p.stocks ?? p.quantity ?? p.stocks_added ?? 0),
+              maxQuantity: Number(p.stocks_infos?.stocks ?? p.stocks ?? p.quantity ?? p.stocks_added ?? 0),
+              buy_price: Number(p.buy_price ?? p.pricing_infos?.[0]?.buy_price ?? 0),
+              returnQty: 0,
+              reason: "",
+            }))
+        );
+      })
+      .catch(() => {
+        showToast("Failed to load purchase items. Please close and try again.", "error");
+      })
+      .finally(() => setLoadingItems(false));
+  }, [isOpen, purchaseId, shopId]);
+
+  if (!isOpen) return null;
+
+  const updateQty = (idx: number, val: number) => {
+    setReturnItems((prev) =>
+      prev.map((item, i) =>
+        i === idx
+          ? { ...item, returnQty: Math.max(0, Math.min(val, item.maxQuantity)) }
+          : item
+      )
+    );
+  };
+
+  const selectedItems = returnItems.filter((r) => r.returnQty > 0);
+  const returnValue = selectedItems.reduce(
+    (sum, r) => sum + r.returnQty * r.buy_price,
+    0
+  );
+  const adjustedAgainstOutstanding = Math.min(outstanding, returnValue);
+  const cashRefund = Math.max(0, returnValue - adjustedAgainstOutstanding);
+
+  const canProceed1 = selectedItems.length > 0;
+  const canProceed2 = globalReason.trim().length > 0;
+
+  const handleSubmit = async () => {
+    if (!canProceed2) return;
+
+    // Guard: ensure all selected items have a valid purchase_item_id
+    const missingId = selectedItems.find((r) => !r.purchase_item_id);
+    if (missingId) {
+      showToast(`Item "${missingId.name}" is missing its backend ID. Please refresh the page and try again.`, "error");
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const payload = {
+        purchase_id: purchaseId,
+        shop_id: SHOP_ID,
+        payment_infos: {
+          reason: globalReason,
+          return_value: returnValue,
+          adjusted_against_outstanding: adjustedAgainstOutstanding,
+          cash_refund: cashRefund,
+        },
+        items: selectedItems.map((r) => ({
+          purchase_item_id: r.purchase_item_id,
+          quantity: r.returnQty,
+          reason: globalReason,
+        })),
+      };
+      const result = await postData(`${ENDPOINTS.PURCHASES}/returns`, payload);
+      if (result === null) {
+        // postData sets error state on failure and returns null
+        const errMsg = apiError || "Failed to record return — check item quantities and try again.";
+        showToast(errMsg, "error");
+        return;
+      }
+      showToast("Purchase return recorded successfully", "success");
+      onSuccess();
+      onClose();
+    } catch (err: any) {
+      showToast(err?.message || "Failed to record return", "error");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      {/* Backdrop */}
+      <div
+        className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
+        onClick={onClose}
+      />
+
+      {/* Dialog */}
+      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-gradient-to-r from-rose-50 to-white flex-none">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-rose-100 flex items-center justify-center">
+              <RotateCcw size={15} className="text-rose-600" />
+            </div>
+            <div>
+              <h2 className="text-sm font-black text-slate-800">Purchase Return</h2>
+              <p className="text-[10px] text-slate-400 font-medium">
+                Step {step} of 3 —{" "}
+                {step === 1 ? "Select items" : step === 2 ? "Reason" : "Review & confirm"}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-all"
+          >
+            <X size={14} />
+          </button>
+        </div>
+
+        {/* Step indicator */}
+        <div className="px-6 py-3 flex items-center gap-2 border-b border-slate-50 flex-none">
+          {[1, 2, 3].map((s) => (
+            <div key={s} className="flex items-center gap-2">
+              <div
+                className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-black transition-all ${
+                  step >= s
+                    ? "bg-rose-600 text-white"
+                    : "bg-slate-100 text-slate-400"
+                }`}
+              >
+                {step > s ? <CheckCircle2 size={10} /> : s}
+              </div>
+              {s < 3 && (
+                <div
+                  className={`h-0.5 w-10 rounded-full transition-all ${
+                    step > s ? "bg-rose-400" : "bg-slate-100"
+                  }`}
+                />
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* Body */}
+        <div className="flex-1 overflow-y-auto custom-scrollbar">
+          {/* Step 1 — Select items */}
+          {step === 1 && (
+            <div className="p-6 space-y-3">
+              {loadingItems ? (
+                <div className="flex flex-col items-center justify-center py-12 gap-3">
+                  <div className="w-8 h-8 border-2 border-rose-200 border-t-rose-600 rounded-full animate-spin" />
+                  <p className="text-xs text-slate-400 font-medium">Loading items from server...</p>
+                </div>
+              ) : (
+                <>
+                  <p className="text-xs font-bold text-slate-500 mb-4">
+                    Enter the quantity to return for each item. You cannot return more than the original purchase quantity.
+                  </p>
+                  {returnItems.map((item, idx) => (
+                    <div
+                      key={idx}
+                      className={`p-4 rounded-xl border transition-all ${
+                        item.returnQty > 0
+                          ? "border-rose-200 bg-rose-50"
+                          : "border-slate-100 bg-slate-50/50"
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-bold text-slate-800 truncate">{item.name}</p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-[10px] text-slate-400 font-medium">
+                              Purchased: {item.maxQuantity}
+                            </span>
+                            <span className="text-[10px] text-slate-300">•</span>
+                            <span className="text-[10px] text-slate-500 font-semibold">
+                              {fmt(item.buy_price)} / unit
+                            </span>
+                            {item.returnQty > 0 && (
+                              <>
+                                <span className="text-[10px] text-slate-300">•</span>
+                                <span className="text-[10px] text-rose-600 font-bold">
+                                  Return value: {fmt(item.returnQty * item.buy_price)}
+                                </span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1.5 flex-none">
+                          <button
+                            onClick={() => updateQty(idx, item.returnQty - 1)}
+                            className="w-7 h-7 rounded-lg border border-slate-200 bg-white flex items-center justify-center text-slate-500 hover:bg-slate-50 hover:border-slate-300 transition-all active:scale-95 disabled:opacity-40"
+                            disabled={item.returnQty === 0}
+                          >
+                            <Minus size={12} />
+                          </button>
+                          <input
+                            type="number"
+                            min={0}
+                            max={item.maxQuantity}
+                            value={item.returnQty}
+                            onChange={(e) => updateQty(idx, parseInt(e.target.value) || 0)}
+                            className="w-12 h-7 text-center text-xs font-black rounded-lg border border-slate-200 focus:outline-none focus:border-rose-400 focus:ring-1 focus:ring-rose-100"
+                          />
+                          <button
+                            onClick={() => updateQty(idx, item.returnQty + 1)}
+                            className="w-7 h-7 rounded-lg border border-slate-200 bg-white flex items-center justify-center text-slate-500 hover:bg-slate-50 hover:border-slate-300 transition-all active:scale-95 disabled:opacity-40"
+                            disabled={item.returnQty >= item.maxQuantity}
+                          >
+                            <Plus size={12} />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  {returnItems.length === 0 && (
+                    <p className="text-xs text-slate-400 text-center py-8">No returnable items found.</p>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+
+
+          {/* Step 2 — Reason */}
+          {step === 2 && (
+            <div className="p-6 space-y-4">
+              <p className="text-xs font-bold text-slate-500">
+                Select a reason for returning {selectedItems.length} item(s) worth {fmt(returnValue)}.
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                {RETURN_REASONS.map((reason) => (
+                  <button
+                    key={reason}
+                    onClick={() => setGlobalReason(reason)}
+                    className={`px-3 py-2.5 rounded-xl text-xs font-bold text-left border transition-all ${
+                      globalReason === reason
+                        ? "border-rose-400 bg-rose-50 text-rose-700"
+                        : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
+                    }`}
+                  >
+                    {globalReason === reason && (
+                      <span className="mr-1">✓</span>
+                    )}
+                    {reason}
+                  </button>
+                ))}
+              </div>
+              <div className="mt-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider block mb-1.5">Custom reason (optional)</label>
+                <textarea
+                  value={RETURN_REASONS.includes(globalReason) ? "" : globalReason}
+                  onChange={(e) => setGlobalReason(e.target.value)}
+                  onFocus={() => {
+                    if (RETURN_REASONS.includes(globalReason)) setGlobalReason("");
+                  }}
+                  placeholder="Or type a custom reason..."
+                  rows={2}
+                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs text-slate-700 placeholder:text-slate-300 focus:outline-none focus:border-rose-400 focus:ring-1 focus:ring-rose-100 resize-none"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Step 3 — Review */}
+          {step === 3 && (
+            <div className="p-6 space-y-4">
+              <div className="bg-rose-50 border border-rose-100 rounded-xl p-4 space-y-2">
+                <p className="text-[10px] font-black text-rose-600 uppercase tracking-wider mb-3">Return Summary</p>
+                {selectedItems.map((item, idx) => (
+                  <div key={idx} className="flex justify-between items-center text-xs">
+                    <span className="text-slate-700 font-medium">
+                      {item.name} × {item.returnQty}
+                    </span>
+                    <span className="font-black text-slate-800">{fmt(item.returnQty * item.buy_price)}</span>
+                  </div>
+                ))}
+                <div className="pt-2 mt-2 border-t border-rose-200 flex justify-between items-center">
+                  <span className="text-xs font-black text-rose-700">Total Return Value</span>
+                  <span className="text-sm font-black text-rose-700">{fmt(returnValue)}</span>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Settlement Split</p>
+                {adjustedAgainstOutstanding > 0 && (
+                  <div className="flex items-center justify-between p-3 rounded-xl bg-amber-50 border border-amber-100">
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 rounded-full bg-amber-200 flex items-center justify-center">
+                        <Info size={11} className="text-amber-700" />
+                      </div>
+                      <div>
+                        <p className="text-[11px] font-bold text-amber-800">Adjusted against outstanding</p>
+                        <p className="text-[9px] text-amber-600">No cash movement</p>
+                      </div>
+                    </div>
+                    <span className="text-sm font-black text-amber-700">{fmt(adjustedAgainstOutstanding)}</span>
+                  </div>
+                )}
+                {cashRefund > 0 && (
+                  <div className="flex items-center justify-between p-3 rounded-xl bg-emerald-50 border border-emerald-100">
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 rounded-full bg-emerald-200 flex items-center justify-center">
+                        <Banknote size={11} className="text-emerald-700" />
+                      </div>
+                      <div>
+                        <p className="text-[11px] font-bold text-emerald-800">Cash refund to receive</p>
+                        <p className="text-[9px] text-emerald-600">Real money returned</p>
+                      </div>
+                    </div>
+                    <span className="text-sm font-black text-emerald-700">{fmt(cashRefund)}</span>
+                  </div>
+                )}
+                {adjustedAgainstOutstanding === 0 && cashRefund === 0 && (
+                  <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 text-xs text-slate-500 font-medium text-center">
+                    Full return value will be refunded in cash.
+                  </div>
+                )}
+              </div>
+
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-100">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">Reason</p>
+                <p className="text-xs text-slate-700 font-medium">{globalReason}</p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-between px-6 py-4 border-t border-slate-100 bg-slate-50/50 flex-none">
+          <button
+            onClick={step === 1 ? onClose : () => setStep((s) => (s - 1) as 1 | 2 | 3)}
+            className="px-4 h-8 rounded-lg border border-slate-200 bg-white text-slate-600 text-xs font-bold hover:bg-slate-50 transition-all"
+          >
+            {step === 1 ? "Cancel" : "Back"}
+          </button>
+          <div className="flex items-center gap-2">
+            {step < 3 ? (
+              <button
+                onClick={() => setStep((s) => (s + 1) as 1 | 2 | 3)}
+                disabled={(step === 1 && !canProceed1) || (step === 2 && !canProceed2)}
+                className="px-5 h-8 rounded-lg bg-rose-600 text-white text-xs font-bold hover:bg-rose-700 transition-all flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed active:scale-95"
+              >
+                Next <ChevronRight size={12} />
+              </button>
+            ) : (
+              <button
+                onClick={handleSubmit}
+                disabled={submitting}
+                className="px-5 h-8 rounded-lg bg-rose-600 text-white text-xs font-bold hover:bg-rose-700 transition-all flex items-center gap-1.5 disabled:opacity-60 active:scale-95"
+              >
+                {submitting ? "Processing..." : "Confirm Return"}
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const PurchaseDetail = () => {
   const { id } = useParams<{ id: string }>();
   const location = useLocation();
@@ -39,6 +464,10 @@ const PurchaseDetail = () => {
   const [po, setPo] = useState<DirectPurchaseData | undefined>(location.state?.po);
   const [loading, setLoading] = useState(!po);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [showReturnDialog, setShowReturnDialog] = useState(false);
+  const [returns, setReturns] = useState<any[]>([]);
+  const [returnsLoading, setReturnsLoading] = useState(false);
+  const hasRefreshedReturnsRef = useRef<Record<string, boolean>>({});
 
   const [activeTab, setActiveTab] = useState(0);
 
@@ -66,43 +495,66 @@ const PurchaseDetail = () => {
     return () => setBottomActions(null);
   }, [setBottomActions, navigate, po]);
 
+  const fetchPo = useCallback(async () => {
+    if (!id) return;
+    setLoading(true);
+    try {
+      // First try the purchases endpoint (direct purchase ID with shop scope)
+      const res = await purchase.getPurchaseById(SHOP_ID, id);
+      let data = res?.data ? (Array.isArray(res.data) ? res.data[0] : res.data) : null;
+      if (!data && res && res.id) {
+        data = res;
+      }
+      if (data) {
+        setPo(toDisplayData(data));
+        return;
+      }
+      // Fallback: try the stock adjustments endpoint by shop list (used when navigating from Stock Movements tab)
+      // Since GET /inventories/s-adjustments/:id throws 405 Method Not Allowed, we fetch by shop list and find the record
+      const adjRes = await getData(`${ENDPOINTS.S_ADJUSTMENTS}/by/shop/${SHOP_ID}`, { view: "STOCKADJUSTMENT_VIEW", shop_id: SHOP_ID, limit: "100" });
+      let adjList: any[] = [];
+      if (Array.isArray(adjRes)) adjList = adjRes;
+      else if (Array.isArray(adjRes?.data)) adjList = adjRes.data;
+      else if (Array.isArray(adjRes?.data?.datas)) adjList = adjRes.data.datas;
+      else if (Array.isArray(adjRes?.datas)) adjList = adjRes.datas;
+      const adjData = adjList.find((a: any) => a.id === id);
+      if (adjData) {
+        setPo(toDisplayData(adjData));
+      }
+    } catch (err: any) {
+      console.error("Failed to fetch purchase:", err);
+      setErrorMsg(err.message || String(err));
+    } finally {
+      setLoading(false);
+    }
+  }, [id, purchase, getData]);
+
   useEffect(() => {
     if (!po && id) {
-      const fetchPo = async () => {
-        setLoading(true);
-        try {
-          // First try the purchases endpoint (direct purchase ID with shop scope)
-          const res = await purchase.getPurchaseById(SHOP_ID, id);
-          let data = res?.data ? (Array.isArray(res.data) ? res.data[0] : res.data) : null;
-          if (!data && res && res.id) {
-            data = res;
-          }
-          if (data) {
-            setPo(toDisplayData(data));
-            return;
-          }
-          // Fallback: try the stock adjustments endpoint by shop list (used when navigating from Stock Movements tab)
-          // Since GET /inventories/s-adjustments/:id throws 405 Method Not Allowed, we fetch by shop list and find the record
-          const adjRes = await getData(`${ENDPOINTS.S_ADJUSTMENTS}/by/shop/${SHOP_ID}`, { view: "STOCKADJUSTMENT_VIEW", shop_id: SHOP_ID, limit: "100" });
-          let adjList: any[] = [];
-          if (Array.isArray(adjRes)) adjList = adjRes;
-          else if (Array.isArray(adjRes?.data)) adjList = adjRes.data;
-          else if (Array.isArray(adjRes?.data?.datas)) adjList = adjRes.data.datas;
-          else if (Array.isArray(adjRes?.datas)) adjList = adjRes.datas;
-          const adjData = adjList.find((a: any) => a.id === id);
-          if (adjData) {
-            setPo(toDisplayData(adjData));
-          }
-        } catch (err: any) {
-          console.error("Failed to fetch purchase:", err);
-          setErrorMsg(err.message || String(err));
-        } finally {
-          setLoading(false);
-        }
-      };
       fetchPo();
     }
-  }, [id, po, getData]);
+  }, [id, po, fetchPo]);
+
+  useEffect(() => {
+    if (activeTab === 3) {
+      const currentReturns = po?.returns || (po as any)?.purchase_returns || [];
+      setReturns(currentReturns);
+      
+      // If returns array is empty and we haven't retried for this PO yet, retry once after 600ms
+      if (currentReturns.length === 0 && id && !hasRefreshedReturnsRef.current[id]) {
+        hasRefreshedReturnsRef.current[id] = true;
+        setReturnsLoading(true);
+        const timer = setTimeout(async () => {
+          try {
+            await fetchPo();
+          } finally {
+            setReturnsLoading(false);
+          }
+        }, 600);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [activeTab, po, id, fetchPo]);
 
   if (loading) {
     return (
@@ -185,6 +637,15 @@ const outstanding =
           ]}
           actions={
             <div className="flex items-center gap-2">
+              {po && po.purchaseType !== 'Purchase Return' && po.status !== 'cancelled' && (
+                <button
+                  onClick={() => setShowReturnDialog(true)}
+                  className="h-8 px-3 rounded-lg border border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 font-bold text-[11px] transition-all shadow-sm flex items-center gap-1.5 active:scale-95"
+                  title="Record Purchase Return"
+                >
+                  <RotateCcw size={13} /> Purchase Return
+                </button>
+              )}
               <button
                 className="h-8 px-3 rounded-lg border border-slate-200 text-slate-600 bg-white hover:bg-slate-50 font-bold text-[11px] uppercase tracking-wider transition-all shadow-sm flex items-center gap-1.5 active:scale-95"
                 title="Print"
@@ -206,16 +667,23 @@ const outstanding =
       {/* Tabs Navigation */}
       <div className="flex-none px-1 py-2">
         <div className="flex gap-2 p-1 bg-slate-100/50 w-fit rounded-lg border border-slate-200/50">
-          {["Overview", "Items", "Vendor & Payments"].map((tab, i) => (
+          {["Overview", "Items", "Vendor & Payments", "Returns"].map((tab, i) => (
             <button
               key={tab}
               onClick={() => setActiveTab(i)}
-              className={`px-4 py-1.5 text-[11px] font-bold rounded-lg transition-all ${activeTab === i
-                ? "bg-blue-600 text-white shadow-md shadow-blue-100"
-                : "text-slate-500 hover:bg-slate-50 hover:text-slate-700"
-                }`}
+              className={`px-4 py-1.5 text-[11px] font-bold rounded-lg transition-all ${
+                activeTab === i
+                  ? "bg-blue-600 text-white shadow-md shadow-blue-100"
+                  : "text-slate-500 hover:bg-slate-50 hover:text-slate-700"
+              } ${i === 3 ? "flex items-center gap-1" : ""}`}
             >
+              {i === 3 && <RotateCcw size={10} />}
               {tab}
+              {i === 3 && returns.length > 0 && (
+                <span className="ml-1 min-w-[16px] h-4 px-1 rounded-full bg-rose-500 text-white text-[9px] font-black flex items-center justify-center">
+                  {returns.length}
+                </span>
+              )}
             </button>
           ))}
         </div>
@@ -398,7 +866,7 @@ const outstanding =
                                 {/* Flat Format (PurchaseReadModel) Batches & Serials */}
                                 {product.variant && (
                                   <div className="mt-2 pl-3 border-l-2 border-indigo-100 space-y-2.5">
-                                    <p className="text-[10px] font-extrabold text-indigo-750 bg-indigo-50/50 px-1.5 py-0.5 rounded w-fit">• {product.variant.variant_name}</p>
+                                    <p className="text-[10px] font-extrabold text-[var(--at-variant-tx)] bg-[var(--at-variant-bg)] border border-[var(--at-variant-bd)] px-1.5 py-0.5 rounded-xl w-fit">• {product.variant.variant_name}</p>
                                   </div>
                                 )}
                                 
@@ -437,7 +905,7 @@ const outstanding =
                                   <div className="mt-2 pl-3 border-l-2 border-indigo-100 space-y-2.5">
                                     {product.variants?.map((v, vIdx) => (
                                       <div key={vIdx} className="space-y-1">
-                                        <p className="text-[10px] font-extrabold text-indigo-750 bg-indigo-50/50 px-1.5 py-0.5 rounded w-fit">• {v.name} {v.buy_price !== undefined ? `(Buy: ${fmt(v.buy_price)})` : ""}</p>
+                                        <p className="text-[10px] font-extrabold text-[var(--at-variant-tx)] bg-[var(--at-variant-bg)] border border-[var(--at-variant-bd)] px-1.5 py-0.5 rounded-xl w-fit">• {v.name} {v.buy_price !== undefined ? `(Buy: ${fmt(v.buy_price)})` : ""}</p>
 
                                         {/* Variant Batches */}
                                         {v.batches && v.batches.length > 0 && (
@@ -643,9 +1111,137 @@ const outstanding =
             </div>
           )}
 
+          {/* TAB 3 — Returns */}
+          {activeTab === 3 && (
+            <div className="space-y-4">
+              <SectionCard
+                title="Purchase Returns"
+                className="p-0 overflow-hidden"
+              >
+                {returnsLoading ? (
+                  <div className="p-8 flex items-center justify-center">
+                    <div className="w-6 h-6 border-2 border-rose-200 border-t-rose-600 rounded-full animate-spin" />
+                  </div>
+                ) : returns.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-16 text-center">
+                    <div className="w-14 h-14 rounded-2xl bg-rose-50 flex items-center justify-center mb-4">
+                      <CornerDownLeft size={24} className="text-rose-300" />
+                    </div>
+                    <p className="text-sm font-bold text-slate-600">No returns recorded</p>
+                    <p className="text-xs text-slate-400 mt-1 max-w-xs">
+                      When a purchase return is recorded, it will appear here.
+                    </p>
+                    {po && po.purchaseType !== 'Purchase Return' && po.status !== 'cancelled' && (
+                      <button
+                        onClick={() => setShowReturnDialog(true)}
+                        className="mt-5 px-4 h-8 rounded-lg bg-rose-600 text-white text-xs font-bold hover:bg-rose-700 transition-all flex items-center gap-1.5 active:scale-95"
+                      >
+                        <RotateCcw size={12} /> Record a Return
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="bg-slate-50/50 border-b border-slate-100">
+                          <th className="px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em]">Return ID</th>
+                          <th className="px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em]">Date</th>
+                          <th className="px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em]">Items</th>
+                          <th className="px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em]">Reason</th>
+                          <th className="px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-right">Return Value</th>
+                          <th className="px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-right">Adjusted</th>
+                          <th className="px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-right">Cash Refund</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-50">
+                        {returns.map((ret: any, idx: number) => {
+                          const retDate = ret.created_at || ret.date || ret.return_date;
+                          const formattedDate = retDate
+                            ? new Date(retDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })
+                            : "—";
+                          const payInfo = ret.payment_infos || {};
+                          const returnValue = Number(payInfo.return_value ?? ret.total_refund_amount ?? ret.return_value ?? 0);
+                          const adjusted = Number(payInfo.adjusted_against_outstanding ?? ret.adjusted_amount ?? 0);
+                          const cashRefund = Number(payInfo.cash_refund ?? ret.cash_refund ?? ret.total_refund_amount ?? 0);
+                          const reason = payInfo.reason || ret.reason || "—";
+                          const itemCount = Array.isArray(ret.items) ? ret.items.length : (ret.total_refund_qty ?? ret.total_items ?? "—");
+                          const retId = ret.ui_id || ret.sequence_id || ret.return_id || ret.id || `PRET-${idx + 1}`;
+                          return (
+                            <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
+                              <td className="px-5 py-4">
+                                <span className="text-xs font-mono font-black text-rose-600 bg-rose-50 px-2 py-0.5 rounded border border-rose-100">
+                                  {retId}
+                                </span>
+                              </td>
+                              <td className="px-5 py-4">
+                                <span className="text-xs font-semibold text-slate-600">{formattedDate}</span>
+                              </td>
+                              <td className="px-5 py-4">
+                                <span className="text-xs font-bold text-slate-700">{itemCount} item(s)</span>
+                                {Array.isArray(ret.items) && ret.items.length > 0 && (
+                                  <div className="mt-0.5 space-y-0.5">
+                                    {ret.items.slice(0, 3).map((item: any, iIdx: number) => (
+                                      <p key={iIdx} className="text-[10px] text-slate-400 font-medium">
+                                        {item.inventory_name || item.name || "Item"} × {item.quantity || item.returned_qty || "?"}
+                                      </p>
+                                    ))}
+                                    {ret.items.length > 3 && (
+                                      <p className="text-[10px] text-slate-300">+{ret.items.length - 3} more</p>
+                                    )}
+                                  </div>
+                                )}
+                              </td>
+                              <td className="px-5 py-4">
+                                <span className="text-xs text-slate-600 font-medium">{reason}</span>
+                              </td>
+                              <td className="px-5 py-4 text-right">
+                                <span className="text-xs font-black text-rose-700 tabular-nums">{fmt(returnValue)}</span>
+                              </td>
+                              <td className="px-5 py-4 text-right">
+                                {adjusted > 0 ? (
+                                  <span className="text-xs font-bold text-amber-600 tabular-nums">{fmt(adjusted)}</span>
+                                ) : (
+                                  <span className="text-xs text-slate-300">—</span>
+                                )}
+                              </td>
+                              <td className="px-5 py-4 text-right">
+                                {cashRefund > 0 ? (
+                                  <span className="text-xs font-bold text-emerald-600 tabular-nums">{fmt(cashRefund)}</span>
+                                ) : (
+                                  <span className="text-xs text-slate-300">—</span>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </SectionCard>
+            </div>
+          )}
+
         </div>
       </div>
 
+      {/* Purchase Return Dialog */}
+      <PurchaseReturnDialog
+        isOpen={showReturnDialog}
+        onClose={() => setShowReturnDialog(false)}
+        onSuccess={() => {
+          if (id) hasRefreshedReturnsRef.current[id] = false;
+          fetchPo();
+          setActiveTab(3);
+          setTimeout(() => {
+            fetchPo();
+          }, 800);
+        }}
+        purchaseId={po.id}
+        shopId={SHOP_ID}
+        outstanding={outstanding}
+      />
 
     </div>
   );

@@ -1010,7 +1010,7 @@ export default function StockMovementPage() {
                               {(hasList ? firstProd.variant : m.variant) && (
                                 <button
                                   onClick={(e) => copyToClipboard(e, (hasList ? firstProd.variant : m.variant) || "")}
-                                  className="group flex items-center gap-0.5 text-[9px] font-extrabold text-[var(--at-variant-tx)] bg-[var(--mv-sales-bg)] px-1.5 py-0.5 rounded-xl border border-[var(--at-variant-bd)] hover:bg-violet-100 transition-all leading-none"
+                                  className="group flex items-center gap-0.5 text-[9px] font-extrabold text-[var(--at-variant-tx)] bg-[var(--at-variant-bg)] px-1.5 py-0.5 rounded-xl border border-[var(--at-variant-bd)] hover:bg-[var(--at-variant-bg)] transition-all leading-none"
                                 >
                                   <Layers size={8} /> {truncateId(hasList ? firstProd.variant : m.variant)}
                                   <Copy size={7} className="opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -1019,7 +1019,7 @@ export default function StockMovementPage() {
                               {(hasList ? firstProd.batch : m.batch) && (
                                 <button
                                   onClick={(e) => copyToClipboard(e, (hasList ? firstProd.batch : m.batch) || "")}
-                                  className="group flex items-center gap-0.5 text-[9px] font-extrabold text-[var(--at-batch-tx)] bg-[var(--mv-sales-bg)] px-1.5 py-0.5 rounded-xl border border-[var(--at-batch-bd)] hover:bg-amber-100 transition-all leading-none"
+                                  className="group flex items-center gap-0.5 text-[9px] font-extrabold text-[var(--at-batch-tx)] bg-[var(--at-batch-bg)] px-1.5 py-0.5 rounded-xl border border-[var(--at-batch-bd)] hover:bg-[var(--at-batch-bg)] transition-all leading-none"
                                 >
                                   <Hash size={8} /> {truncateId(hasList ? firstProd.batch : m.batch)}
                                   <Copy size={7} className="opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -1040,7 +1040,7 @@ export default function StockMovementPage() {
                               ) : (
                                 <>
                                   {m.serial_numbers && m.serial_numbers.length > 0 && (
-                                    <span className="inline-flex items-center gap-0.5 text-[9px] font-extrabold text-[var(--ps-completed-tx)] bg-[var(--mv-sales-bg)] px-1.5 py-0.5 rounded-xl border border-[var(--ps-completed-bd)] leading-none">
+                                    <span className="inline-flex items-center gap-0.5 text-[9px] font-extrabold text-[var(--ps-completed-tx)] bg-[var(--ps-completed-bg)] px-1.5 py-0.5 rounded-xl border border-[var(--ps-completed-bd)] leading-none">
                                       <Zap size={8} fill="currentColor" /> {m.serial_numbers.length} Serials
                                     </span>
                                   )}

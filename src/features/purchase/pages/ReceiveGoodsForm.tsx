@@ -820,7 +820,7 @@ const ReceiveGoodForm = () => {
         supplier_id: poSummary.supplierId,
         calculations: {
           divided_by: "NONE",
-          gst: { type: "inclusive", value: Number(items.filter(p => Number(p.receivedQty) > 0)[0]?.gst) || 18, registered: true }
+          gst: { type: "inclusive", value: (() => { const val = items.find(p => Number(p.receivedQty) > 0)?.gst; return val !== undefined && val !== null && String(val) !== "" ? Number(val) : 18; })(), registered: true }
         },
         additional_charges: {
           delivery_charge: 0,

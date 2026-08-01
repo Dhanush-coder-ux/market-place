@@ -136,6 +136,105 @@ const extractSerials = (val: any): string[] => {
   return [];
 };
 
+const extractReorderPoint = (comb: any, parentReorderPoint?: number | null): number | null => {
+  if (!comb) return parentReorderPoint ?? null;
+  const combDatas = comb.datas || {};
+  const addInfos = comb.additional_infos || combDatas.additional_infos || {};
+  const nestedDatas = combDatas.datas || {};
+  const batches = comb.batch_infos || comb.batches || combDatas.batch_infos || combDatas.batches || [];
+
+  const parseVal = (val: any): number | null => {
+    if (val === undefined || val === null || val === "") return null;
+    if (typeof val === 'object') {
+      const numVal = val.reorder_point ?? val.point ?? val.value;
+      if (numVal !== undefined && numVal !== null && numVal !== "") {
+        const n = Number(numVal);
+        return isNaN(n) ? null : n;
+      }
+      return null;
+    }
+    const n = Number(val);
+    return isNaN(n) ? null : n;
+  };
+
+  const getFromBatches = (arr: any[]): number | null => {
+    if (!Array.isArray(arr) || arr.length === 0) return null;
+    for (const b of arr) {
+      const v = parseVal(b.reorder_point_infos) ?? parseVal(b.reorder_point) ?? parseVal(b.additional_infos?.reorder_point);
+      if (v !== null) return v;
+    }
+    return null;
+  };
+
+  const val =
+    parseVal(comb.reorder_point_infos) ??
+    parseVal(comb.reorder_point) ??
+    parseVal(addInfos.reorder_point_infos) ??
+    parseVal(addInfos.reorder_point) ??
+    getFromBatches(batches) ??
+    parseVal(combDatas.reorder_point_infos) ??
+    parseVal(combDatas.reorder_point) ??
+    parseVal(nestedDatas.reorder_point_infos) ??
+    parseVal(nestedDatas.reorder_point);
+
+  if (val !== null) return val;
+  return parentReorderPoint ?? null;
+};
+
+const extractStorageLocation = (comb: any, parentStorageLocation?: string | null): string | null => {
+  if (!comb) return parentStorageLocation || null;
+  const combDatas = comb.datas || {};
+  const addInfos = comb.additional_infos || combDatas.additional_infos || {};
+  const nestedDatas = combDatas.datas || {};
+  const batches = comb.batch_infos || comb.batches || combDatas.batch_infos || combDatas.batches || [];
+
+  const getFromObj = (obj: any): string | null => {
+    if (!obj) return null;
+    if (typeof obj === 'string' && obj.trim() !== '' && obj.trim() !== '{}') return obj.trim();
+    if (typeof obj === 'number') return String(obj);
+    if (typeof obj === 'object') {
+      const name = obj.storage_location || obj.name || obj.location || obj.storage_location_name;
+      if (name && typeof name === 'string' && name.trim() !== '' && name.trim() !== '{}') return name.trim();
+      if (typeof name === 'number') return String(name);
+    }
+    return null;
+  };
+
+  const getFromArray = (arr: any): string | null => {
+    if (!Array.isArray(arr) || arr.length === 0) return null;
+    for (const item of arr) {
+      const res = getFromObj(item) || getFromObj(item?.storage_location_infos) || getFromObj(item?.additional_infos?.storage_location_infos);
+      if (res) return res;
+    }
+    return null;
+  };
+
+  const candidate =
+    getFromObj(comb.storage_location_infos) ||
+    getFromObj(comb.storage_location) ||
+    getFromObj(comb.location) ||
+    getFromArray(comb.storage_locations) ||
+    getFromObj(addInfos.storage_location_infos) ||
+    getFromObj(addInfos.storage_location) ||
+    getFromObj(addInfos.location) ||
+    getFromArray(addInfos.storage_locations) ||
+    getFromArray(batches) ||
+    getFromObj(combDatas.storage_location_infos) ||
+    getFromObj(combDatas.storage_location) ||
+    getFromObj(combDatas.location) ||
+    getFromArray(combDatas.storage_locations) ||
+    getFromObj(nestedDatas.storage_location_infos) ||
+    getFromObj(nestedDatas.storage_location) ||
+    getFromObj(nestedDatas.location) ||
+    getFromArray(nestedDatas.storage_locations);
+
+  if (candidate && candidate !== '—' && candidate !== 'null' && candidate !== 'undefined') {
+    return candidate;
+  }
+
+  return parentStorageLocation || null;
+};
+
 export const BatchCards = ({ batches }: { batches: any | any[] }) => {
   const safeBatches = parseBatches(batches);
   const [showAll, setShowAll] = useState(false);
@@ -298,7 +397,7 @@ const CopySKUButton = ({ val }: { val: string }) => {
     <button
       type="button"
       onClick={handleCopy}
-      className={`inline-flex items-center justify-center p-0.5 rounded transition-all duration-200 ${copied ? "text-emerald-500 bg-emerald-55" : "text-slate-350 hover:text-blue-600 hover:bg-slate-100/80"
+      className={`inline-flex items-center justify-center p-0.5 rounded transition-all duration-200 ${copied ? "text-emerald-500 bg-emerald-50" : "text-slate-350 hover:text-blue-600 hover:bg-slate-100/80"
         }`}
       title="Copy SKU"
     >
@@ -311,7 +410,19 @@ const CopySKUButton = ({ val }: { val: string }) => {
   );
 };
 
-export const VariantRows = ({ combinations, baseSellPrice, baseBuyPrice }: { combinations: any[]; baseSellPrice: any; baseBuyPrice?: any }) => {
+export const VariantRows = ({
+  combinations,
+  baseSellPrice,
+  baseBuyPrice,
+  parentStorageLocation,
+  parentReorderPoint
+}: {
+  combinations: any[];
+  baseSellPrice: any;
+  baseBuyPrice?: any;
+  parentStorageLocation?: string | null;
+  parentReorderPoint?: number | null;
+}) => {
   const [expandedVariant, setExpandedVariant] = useState<string | null>(null);
 
   return (
@@ -340,11 +451,21 @@ export const VariantRows = ({ combinations, baseSellPrice, baseBuyPrice }: { com
               const combDatas = comb.datas || {};
               const attributes = comb.attributes || combDatas.attributes || combDatas.datas?.attributes || {};
 
-              let variantLabel = comb.variant_name || comb.name || combDatas.name || 'Standard Variant';
-              if (Object.keys(attributes).length > 0) {
-                variantLabel = Object.values(attributes).join(' / ');
-              } else if (comb.barcode && combDatas.barcode && comb.barcode !== combDatas.barcode) {
-                variantLabel = comb.barcode; 
+              let variantLabel = "";
+              if (attributes && Object.keys(attributes).length > 0) {
+                const entries = Object.entries(attributes);
+                if (entries.length === 1) {
+                  variantLabel = String(entries[0][1]);
+                } else {
+                  variantLabel = entries.map(([k, v]) => `${k}: ${v}`).join(' · ');
+                }
+              } else {
+                const rawName = comb.variant_name || comb.name || combDatas.variant_name || combDatas.name;
+                if (rawName && typeof rawName === 'string' && rawName.trim() !== '' && rawName !== comb.barcode && rawName !== comb.sku) {
+                  variantLabel = rawName;
+                } else {
+                  variantLabel = `Variant ${idx + 1}`;
+                }
               }
 
               const variantId = comb.id || String(idx);
@@ -357,9 +478,10 @@ export const VariantRows = ({ combinations, baseSellPrice, baseBuyPrice }: { com
               if (hasBatches && stockNum === 0) {
                 stockNum = batches.reduce((acc: number, b: any) => acc + Number(b.stock_infos?.available_stocks ?? b.stock_infos?.physical_stocks ?? b.stocks ?? 0), 0);
               }
-              const reorderPoint = Number(comb.reorder_point_infos?.reorder_point ?? comb.reorder_point ?? combDatas.reorder_point ?? combDatas.datas?.reorder_point ?? 0);
-              const stockStatus = getStockStatus(stockNum, reorderPoint);
-              const statusLabel = stockNum <= 0 ? "Out of Stock" : stockNum <= reorderPoint ? "Low Stock" : "In Stock";
+              const reorderPoint = extractReorderPoint(comb, parentReorderPoint);
+              const storageLoc = extractStorageLocation(comb, parentStorageLocation);
+              const stockStatus = getStockStatus(stockNum, reorderPoint ?? 0);
+              const statusLabel = stockNum <= 0 ? "Out of Stock" : (reorderPoint !== null && stockNum <= reorderPoint) ? "Low Stock" : "In Stock";
               const sellPrice = comb.pricing_infos?.sell_price ?? comb.sell_price ?? comb.price ?? combDatas.sell_price ?? combDatas.datas?.sell_price ?? baseSellPrice;
               const buyPrice = comb.pricing_infos?.buy_price ?? comb.buy_price ?? combDatas.buy_price ?? combDatas.datas?.buy_price ?? baseBuyPrice ?? 0;
 
@@ -385,8 +507,15 @@ export const VariantRows = ({ combinations, baseSellPrice, baseBuyPrice }: { com
                         )}
                         <div className="flex flex-col">
                           <span className="text-[13px] font-bold text-slate-800 tracking-tight">{variantLabel}</span>
-                          {Object.keys(attributes).length > 0 && (
-                            <span className="text-[11px] text-slate-400 mt-0.5 font-medium">{Object.values(attributes).join(' / ')}</span>
+                          {(storageLoc || reorderPoint !== null) && (
+                            <div className="flex flex-wrap gap-1.5 mt-1">
+                              {storageLoc && (
+                                <span className="text-[8px] font-bold px-1.5 py-0.5 rounded-xl bg-[var(--at-variant-bg)] text-[var(--at-variant-tx)] border border-[var(--at-variant-bd)] tracking-wider">LOC: {storageLoc}</span>
+                              )}
+                              {reorderPoint !== null && (
+                                <span className="text-[8px] font-bold px-1.5 py-0.5 rounded-xl bg-[var(--at-batch-bg)] text-[var(--at-batch-tx)] border border-[var(--at-batch-bd)] tracking-wider">REORDER: {reorderPoint}</span>
+                              )}
+                            </div>
                           )}
                         </div>
                       </div>
@@ -395,15 +524,30 @@ export const VariantRows = ({ combinations, baseSellPrice, baseBuyPrice }: { com
                     {/* SKU / Barcode */}
                     <td className="px-4 py-2 align-middle">
                       {(() => {
-                        const rawSku = comb.barcode || combDatas.barcode || "";
-                        if (!rawSku) {
+                        const rawSku = comb.sku || comb.additional_infos?.sku || combDatas.sku || combDatas.datas?.sku || "";
+                        const rawBarcode = comb.barcode || comb.additional_infos?.barcode || combDatas.barcode || combDatas.datas?.barcode || "";
+
+                        if (!rawSku && !rawBarcode) {
                           return <span className="text-[12px] font-mono text-slate-400 font-medium">—</span>;
                         }
-                        const trimmedSku = rawSku.length > 16 ? `${rawSku.slice(0, 14)}...` : rawSku;
+
+                        const primaryText = rawSku || rawBarcode;
+                        const secondaryText = rawSku && rawBarcode && rawBarcode !== rawSku ? rawBarcode : null;
+                        const trimmedPrimary = primaryText.length > 16 ? `${primaryText.slice(0, 14)}...` : primaryText;
+
                         return (
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-[12px] font-mono text-slate-600 tracking-tight" title={rawSku}>{trimmedSku}</span>
-                            <CopySKUButton val={rawSku} />
+                          <div className="flex flex-col gap-0.5">
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-[12px] font-mono font-medium text-slate-700 tracking-tight" title={primaryText}>
+                                {trimmedPrimary}
+                              </span>
+                              <CopySKUButton val={primaryText} />
+                            </div>
+                            {secondaryText && (
+                              <span className="text-[10px] font-mono text-slate-400" title={`Barcode: ${secondaryText}`}>
+                                BC: {secondaryText.length > 14 ? `${secondaryText.slice(0, 12)}...` : secondaryText}
+                              </span>
+                            )}
                           </div>
                         );
                       })()}

@@ -15,6 +15,7 @@ import { RightSidebarFilter } from "@/components/common/RightSidebarFilter";
 import SkeletonLoader from "@/components/common/SkeletonLoader";
 import ActionMenu, { ActionMenuItem } from "@/components/common/ActionMenu";
 import { ReusableSelect } from "@/components/ui/ReusableSelect";
+import { getSupplierOutstanding } from "../type";
 
 
 const COLUMN_LABELS: Record<string, string> = {
@@ -65,16 +66,16 @@ const SupplierRow = ({ sup, isSelected, onSelect, onEdit, onView, onDelete, sele
         else if (key === "zipcode") val = sup.location_infos?.zipcode ?? sup.datas?.address?.zipcode;
         else if (key === "address") val = sup.location_infos?.full_address ?? sup.datas?.address?.full_address;
         else if (key === "current_outstanding") {
-          const amount = sup.outstanding_infos?.amount || 0;
+          const amount = getSupplierOutstanding(sup);
           val = `₹${amount.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
         }
         else {
-          val = (sup as any)[key] ?? (sup.contact_person_infos as any)?.[key] ?? (sup.contact_infos as any)?.[key] ?? (sup.contact_info as any)?.[key] ?? (sup.additional_infos as any)?.[key] ?? (sup.datas as any)?.[key] ?? "—";
+          val = (sup as any)[key] ?? (sup.contact_person_infos as any)?.[key] ?? (sup.contact_info as any)?.[key] ?? (sup.additional_infos as any)?.[key] ?? (sup.datas as any)?.[key] ?? "—";
         }
         const displayVal = (val === null || val === undefined) ? "—" : (typeof val === 'object' ? JSON.stringify(val) : String(val));
         return (
           <td key={key} className="px-6 py-4 whitespace-nowrap">
-            <p className={`text-[12px] font-semibold tracking-tight ${key === 'current_outstanding' && (sup.outstanding_infos?.amount || 0) > 0 ? 'text-rose-600' : 'text-slate-600'}`}>
+            <p className={`text-[12px] font-semibold tracking-tight ${key === 'current_outstanding' && getSupplierOutstanding(sup) > 0 ? 'text-rose-600' : 'text-slate-600'}`}>
               {displayVal}
             </p>
           </td>
@@ -368,7 +369,7 @@ const Supplier = () => {
 
     if (filters.status !== "All") {
       result = result.filter((sup: any) => {
-        const outstanding = sup.outstanding_infos?.amount || 0;
+        const outstanding = getSupplierOutstanding(sup);
         if (filters.status === "Outstanding") return outstanding > 0;
         if (filters.status === "Cleared") return outstanding <= 0;
         return true;
@@ -455,7 +456,7 @@ const Supplier = () => {
           <StatCard
             icon={Phone}
             label="Total Outstanding"
-            value={fmt(analyticsStats?.overview?.supplier?.total_outstandings ?? 0)}
+            value={String(analyticsStats?.overview?.supplier?.total_outstanding_suppliers ?? analyticsStats?.overview?.supplier?.outstanding_count ?? suppliers.filter((s: any) => getSupplierOutstanding(s) > 0).length)}
             iconBg="bg-rose-50 text-rose-600"
             onClick={() => setFilters(prev => ({ ...prev, status: prev.status === "Outstanding" ? "All" : "Outstanding" }))}
             className={filters.status === "Outstanding" ? "ring-2 ring-rose-400 border-transparent shadow-sm" : ""}

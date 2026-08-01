@@ -11,9 +11,6 @@ import {
   Info,
   ChevronDown,
   ChevronUp,
-  Search,
-  Plus,
-  Loader2
 } from "lucide-react";
 
 import Input from "@/components/ui/Input";
@@ -24,7 +21,6 @@ import { useBusinessApi } from "@/context/BusinessApiContext";
 import { SHOP_ID } from "@/services/endpoints";
 import { SearchSelect } from "@/components/inputbuilders/SearchSelect";
 import { supplierApi } from "@/services/api/supplier";
-import { inventoryApi } from "@/services/api/inventory";
 import { useHeader } from "@/context/HeaderContext";
 import { useToast } from "@/context/ToastContext";
 import Loader from "@/components/common/Loader";
@@ -70,112 +66,6 @@ export interface ProductItem {
   _backendId?: string | null;
 }
 
-const ProductSearchAutocomplete = ({ onSelect, onCreateNew }: { onSelect: (opt: any) => void, onCreateNew: (q: string) => void }) => {
-  const [query, setQuery] = useState("");
-  const [results, setResults] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [isOpen, setIsOpen] = useState(false);
-  const wrapperRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  useEffect(() => {
-    const timer = setTimeout(async () => {
-      setLoading(true);
-      try {
-        const res = await inventoryApi.searchInventories(query);
-        setResults(res || []);
-      } catch {
-        setResults([]);
-      } finally {
-        setLoading(false);
-      }
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [query]);
-
-  return (
-    <div className="relative w-full" ref={wrapperRef}>
-      <div className="relative">
-         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-         <input
-           type="text"
-           value={query}
-           onChange={(e) => {
-             setQuery(e.target.value);
-             setIsOpen(true);
-           }}
-           onFocus={() => setIsOpen(true)}
-           onClick={() => setIsOpen(true)}
-           placeholder="Search products by name or SKU..."
-           className="w-full h-11 pl-10 pr-3 bg-white border border-slate-200 rounded-lg text-sm font-semibold text-slate-700 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-400/10 transition-all shadow-sm"
-         />
-         {loading && <div className="absolute right-3 top-1/2 -translate-y-1/2"><Loader2 className="w-4 h-4 text-blue-500 animate-spin" /></div>}
-      </div>
-      
-      {isOpen && (
-        <div className="absolute top-full left-0 right-0 mt-1.5 bg-white border border-slate-200 rounded-xl shadow-xl z-50 overflow-hidden flex flex-col max-h-[300px] animate-in fade-in slide-in-from-top-2 duration-200">
-          <div className="overflow-y-auto flex-1">
-            {results.length > 0 ? (
-              results.map((opt) => (
-                <div 
-                  key={opt.id} 
-                  className="px-4 py-3 border-b border-slate-50 hover:bg-slate-50/80 cursor-pointer transition-colors flex items-center gap-3"
-                  onClick={() => {
-                    onSelect(opt);
-                    setQuery("");
-                    setIsOpen(false);
-                  }}
-                >
-                  <div className="w-10 h-10 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center shrink-0">
-                     <PackageOpen size={16} className="text-slate-500" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold text-slate-800 truncate">{opt.name}</p>
-                    <div className="flex gap-2 items-center mt-1 flex-wrap">
-                       <span className="text-[10px] font-mono text-slate-500 bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded">{opt.barcode || opt.sku || "No SKU"}</span>
-                       <span className="text-[10px] font-bold text-slate-500">Stock: <span className="text-blue-600">{opt.stocks ?? 0}</span></span>
-                       <span className="text-[10px] font-bold text-emerald-600 ml-auto">₹{(opt.buy_price || 0).toLocaleString()}</span>
-                    </div>
-                  </div>
-                </div>
-              ))
-            ) : (
-              !loading && query.trim().length > 0 && (
-                <div className="p-4 text-center text-sm font-bold text-slate-400">
-                  No products found for "{query}"
-                </div>
-              )
-            )}
-          </div>
-          
-          <div className="p-2 border-t border-slate-100 bg-slate-50">
-             <button
-                type="button"
-                onClick={() => {
-                  onCreateNew(query);
-                  setIsOpen(false);
-                  setQuery("");
-                }}
-                className="w-full flex items-center justify-center gap-2 py-2.5 bg-blue-50 text-blue-600 rounded-lg text-xs font-bold hover:bg-blue-100 transition-colors"
-             >
-                <Plus size={14} />
-                {query ? `Create New Product "${query}"` : "Create New Product"}
-             </button>
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
@@ -217,7 +107,7 @@ const PurchaseForm = () => {
     const type = searchParams.get("type");
     return (type as any) || "DIRECT";
   });
-  const [payment, setPayment] = useState({ method: "CASH" as PaymentMethod, amountPaid: "" as number | "" });
+  const [payment, setPayment] = useState({ method: "CASH" as PaymentMethod, amountPaid: "" as number | string });
   const [costMethod, setCostMethod] = useState("None");
   const [supplierDetails, setSupplierDetails] = useState<any>(null);
   const [isGstExpanded, setIsGstExpanded] = useState(false);
@@ -376,10 +266,11 @@ const PurchaseForm = () => {
               marginAmount: "",
               marginType: "sellingPrice",
               unit: p.unit || "pc",
-              taxGst: parseGst(p.gst || p.datas?.gst || p.taxGst || p.tax_gst || 0) || 18,
+              taxGst: (p.gst ?? p.datas?.gst ?? p.taxGst ?? p.tax_gst) !== undefined ? parseGst(p.gst ?? p.datas?.gst ?? p.taxGst ?? p.tax_gst) : 18,
               variant_id: p.variant_id || p.variant_infos?.id || ((typeof p.variant === 'object' && p.variant !== null) ? p.variant.variant_id : null),
               variant: p.variant_infos?.name || (typeof p.variant === 'object' && p.variant !== null ? p.variant.variant_name || p.variant.name : p.variant) || "",
               sku: parsedSku,
+              category: p.category_infos?.name || p.category_infos?.category_name || (typeof p.category === 'object' && p.category !== null ? p.category.name : p.category) || "",
               batchTracking: p.batchTracking || !!p.batch_infos || p.batch_tracking || p.has_batch || !!p.batch || !!p.batch_id,
               serialTracking: p.serialTracking || !!p.serialno_infos || p.serial_tracking || p.has_serialno || !!p.serial_info || !!p.serialno_id || !!(p.serial_number) || !!(p.serial_numbers),
               batch_id: p.batch_infos?.id || ((typeof p.batch === 'object' && p.batch !== null) ? p.batch.batch_id : null),
@@ -448,7 +339,7 @@ const PurchaseForm = () => {
           sellingPrice: p.chosen_variant?.sell_price ?? p.chosen_variant?.pricing_infos?.sell_price ?? p.pricing_infos?.sell_price ?? p.sell_price ?? "",
           sku: p.chosen_variant?.barcode ?? (p.sku || p.barcode || ""),
           unit: p.unit_infos?.name || p.unit || "pc",
-          taxGst: parseInt(p.gst || p.datas?.gst) || 18,
+          taxGst: (p.gst ?? p.datas?.gst) !== undefined ? parseInt(p.gst ?? p.datas?.gst) : 18,
           batchTracking: hasBatchTracking,
           serialTracking: hasSerialTracking,
           batch_id: p.chosen_batch?.id || "",
@@ -480,7 +371,14 @@ const PurchaseForm = () => {
   const updateProductFields = useCallback((index: number, updates: Partial<ProductItem>) => {
     setProducts(prev => {
       const next = [...prev];
-      next[index] = { ...next[index], ...updates };
+      if (index === -1) {
+        next.push({ ...defaultProductRow, id: crypto.randomUUID(), ...updates });
+      } else {
+        if (!next[index]) {
+          next[index] = { ...defaultProductRow, id: crypto.randomUUID() };
+        }
+        next[index] = { ...next[index], ...updates };
+      }
       return next;
     });
   }, []);
@@ -804,8 +702,9 @@ const PurchaseForm = () => {
           costPrice: newProduct.buy_price,
           sellingPrice: newProduct.sell_price,
           sku: newProduct.barcode,
-          unit: newProduct.datas?.unit || "pc",
-          taxGst: parseInt(newProduct.datas?.gst) || 18,
+          unit: newProduct.unit_name || newProduct.datas?.unit || "pc",
+          category: newProduct.category_name || newProduct.category_id || "",
+          taxGst: newProduct.datas?.gst !== undefined && newProduct.datas?.gst !== null ? parseInt(newProduct.datas?.gst) : 18,
           batchTracking: hasBatchTracking,
           serialTracking: hasSerialTracking
         });
@@ -818,8 +717,9 @@ const PurchaseForm = () => {
           costPrice: newProduct.buy_price,
           sellingPrice: newProduct.sell_price,
           sku: newProduct.barcode,
-          unit: newProduct.datas?.unit || "pc",
-          taxGst: parseInt(newProduct.datas?.gst) || 18,
+          unit: newProduct.unit_name || newProduct.datas?.unit || "pc",
+          category: newProduct.category_name || newProduct.category_id || "",
+          taxGst: newProduct.datas?.gst !== undefined && newProduct.datas?.gst !== null ? parseInt(newProduct.datas?.gst) : 18,
           batchTracking: hasBatchTracking,
           serialTracking: hasSerialTracking
         }]);
@@ -1136,39 +1036,7 @@ const PurchaseForm = () => {
               </div>
             </div>
 
-            {/* Search & Add Product */}
-            <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 mb-6">
-              <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 flex items-center gap-2">
-                <Search size={14} className="text-blue-500" />
-                Search & Add Product from Inventory
-              </label>
-              <ProductSearchAutocomplete
-                onSelect={(opt: any) => {
-                  const hasBatchTracking = !!opt.has_batch;
-                  const hasSerialTracking = !!opt.has_serialno;
-                  const newProd = {
-                    ...defaultProductRow,
-                    id: crypto.randomUUID(),
-                    inventory_id: opt.id,
-                    name: opt.name,
-                    costPrice: opt.buy_price || "",
-                    sellingPrice: opt.sell_price || "",
-                    sku: opt.barcode || "",
-                    unit: opt.unit || "pc",
-                    taxGst: parseInt(opt.gst) || 18,
-                    batchTracking: hasBatchTracking,
-                    serialTracking: hasSerialTracking,
-                  };
-                  
-                  if (products.length === 1 && !products[0].inventory_id && !products[0].name) {
-                    setProducts([newProd]);
-                  } else {
-                    setProducts(prev => [...prev, newProd]);
-                  }
-                }}
-                onCreateNew={(query) => handleAddNewProduct(query)}
-              />
-            </div>
+
 
             <InventoryItemsCard
               products={products}
@@ -1237,8 +1105,8 @@ const PurchaseForm = () => {
                         type="number"
                         placeholder={stats.grandTotal.toString()}
                         className="w-full h-11 pl-8 pr-3 bg-white border border-emerald-200 rounded-lg text-sm font-medium text-emerald-700 outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/20 transition-all tabular-nums shadow-sm placeholder:text-gray-100"
-                        value={payment.amountPaid as any}
-                        onChange={(e) => setPayment({ ...payment, amountPaid: e.target.value ? Number(e.target.value) : "" })}
+                        value={payment.amountPaid}
+                        onChange={(e) => setPayment({ ...payment, amountPaid: e.target.value })}
                       />
                     </div>
                   </div>

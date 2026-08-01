@@ -2,19 +2,19 @@ import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   Mail, Pencil, User, MapPin, Phone, Trash2,
-  Store, Database, Layers, Check, X as XIcon
+  Store, Database, AlertCircle, Layers, Check, X as XIcon
 } from "lucide-react";
 import {
   SectionCard, DetailItem, InfoRow, Modal,
   ProfileHeaderCard
 } from "@/components/common/SuperUI";
+import Loader from "@/components/common/Loader";
 
 import { useApi } from "@/context/ApiContext";
 import { useToast } from "@/context/ToastContext";
 import { useHeader } from "@/context/HeaderContext";
 import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 import SkeletonLoader from "@/components/common/SkeletonLoader";
-import Loader from "@/components/common/Loader";
 import type { SupplierRecord } from "@/types/api";
 import { SearchSelect } from "@/components/inputbuilders/SearchSelect";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
@@ -22,6 +22,7 @@ import { SupplierPurchasesTable } from "@/components/common/HistoryTables";
 import { supplierCustomFieldsApi } from "@/services/api/supplierCustomFields";
 import { supplierApi } from "@/services/api/supplier";
 import { purchaseApi } from "@/services/api/purchase";
+import { getSupplierOutstanding } from "../type";
 import type { SupplierCustomFieldDefinition, SupplierCustomFieldValue } from "../type";
 
 
@@ -56,7 +57,7 @@ const SupplierSearch = () => {
   );
 };
 
-const TABS = ["General Info", "Custom Fields", "Purchases", "Outstanding Cleared Records"];
+const TABS = ["General Info", "Purchases", "Payment Ledger"];
 
 export default function SupplierDetail() {
   const { id } = useParams<{ id: string }>();
@@ -66,6 +67,7 @@ export default function SupplierDetail() {
   const { setBottomActions } = useHeader();
 
   const [supplier, setSupplier] = useState<SupplierRecord | null>(null);
+  const [analyticsStats, setAnalyticsStats] = useState<any>(null);
 
   const [recordLoading, setRecordLoading] = useState(true);
   const [activeTab, setActiveTab] = useState(0);
@@ -166,6 +168,8 @@ export default function SupplierDetail() {
       showToast("Payment applied successfully", "success");
       setShowClearModal(false);
 
+      refreshSupplierData();
+
       if (activeTab === 2) {
         getData(`${ENDPOINTS.PURCHASES}/by/supplier/${SHOP_ID}/${id}`).then((r: any) => {
            setPurchases(r?.data ? (Array.isArray(r.data) ? r.data : [r.data]) : []);
@@ -191,8 +195,7 @@ export default function SupplierDetail() {
       });
       showToast('Outstanding amount updated', 'success');
       setShowOutstandingModal(false);
-
-
+      refreshSupplierData();
     } catch {
       showToast('Failed to update outstanding amount', 'error');
     } finally {
@@ -214,7 +217,7 @@ export default function SupplierDetail() {
           }}
           className="px-6 h-8 border border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-lg text-xs font-bold transition-colors shadow-sm"
         >
-          Clear Outstanding
+          Record payment
         </button>
         <button 
           type="button"
@@ -228,21 +231,32 @@ export default function SupplierDetail() {
     return () => setBottomActions(null);
   }, [setBottomActions, navigate, fetchOutstandingPurchases]);
 
-  useEffect(() => {
+  const refreshSupplierData = useCallback(async () => {
     if (!id) return;
-    setRecordLoading(true);
-    Promise.all([
-      getData(`${ENDPOINTS.SUPPLIERS}/by/${SHOP_ID}/${id}`),
-      getData(`${ENDPOINTS.ANALYTICS_SUPPLIER}/${id}`, { shop_id: SHOP_ID })
-    ]).then(([res]) => {
+    try {
+      const [res, analyticsRes] = await Promise.all([
+        getData(`${ENDPOINTS.SUPPLIERS}/by/${SHOP_ID}/${id}`),
+        getData(`${ENDPOINTS.ANALYTICS_SUPPLIER}/${id}`, { shop_id: SHOP_ID })
+      ]);
       if (res) {
         let suppData = res.data;
         if (suppData?.datas && Array.isArray(suppData.datas)) suppData = suppData.datas[0];
         setSupplier(Array.isArray(suppData) ? suppData[0] : suppData);
       }
+      if (analyticsRes) {
+        setAnalyticsStats(analyticsRes.data ?? analyticsRes);
+      }
+    } catch {
+    } finally {
       setRecordLoading(false);
-    }).catch(() => setRecordLoading(false));
-  }, [id]);
+    }
+  }, [id, getData]);
+
+  useEffect(() => {
+    if (!id) return;
+    setRecordLoading(true);
+    refreshSupplierData();
+  }, [id, refreshSupplierData]);
 
   useEffect(() => {
     if (!id || activeTab !== 2) return;
@@ -269,9 +283,9 @@ export default function SupplierDetail() {
       });
   }, [activeTab, id, showToast]);
 
-  // Load custom field definitions + values when tab becomes active
+  // Load custom field definitions + values when supplier is loaded (embedded in General Info sidebar)
   useEffect(() => {
-    if (!id || activeTab !== 1) return;
+    if (!id || !supplier) return;
     setCfLoading(true);
     Promise.all([
       supplierCustomFieldsApi.getAllFields(SHOP_ID),
@@ -280,7 +294,7 @@ export default function SupplierDetail() {
       setCustomFieldDefs(defs);
       setCustomFieldValues(vals);
     }).finally(() => setCfLoading(false));
-  }, [activeTab, id]);
+  }, [id, supplier]);
 
   const handleSaveCustomField = async (fieldId: string) => {
     if (!id) return;
@@ -294,8 +308,8 @@ export default function SupplierDetail() {
           value: editingValue,
         }],
       });
-      setCustomFieldValues((prev) => {
-        const existing = prev.findIndex((v) => v.field_id === fieldId);
+      setCustomFieldValues((prev: any[]) => {
+        const existing = prev.findIndex((v: any) => v.field_id === fieldId);
         if (existing >= 0) {
           const updated = [...prev];
           updated[existing] = { ...updated[existing], value: editingValue };
@@ -350,6 +364,7 @@ export default function SupplierDetail() {
   const supplierEmail = bizContact.email || supplier.email || "No email";
   const supplierPhone = bizContact.mobile_number || supplier.mobile_number || "No phone";
   const supplierType = additionalInfos.type || contact.type || "Vendor";
+  const currentOutstandingVal = getSupplierOutstanding(supplier, analyticsStats);
 
   return (
     <div className="flex-1 flex flex-col min-h-0 h-full bg-slate-50/50 font-sans overflow-hidden relative">
@@ -393,8 +408,8 @@ export default function SupplierDetail() {
         />
       </div>
 
-      {/* Tabs Navigation & Quick Stats Grid (pinned) */}
-      <div className="flex-none px-1 py-2 space-y-2">
+      {/* Tabs Navigation (pinned) */}
+      <div className="flex-none px-1 py-2">
         <div className="flex gap-0.5 bg-white p-1 rounded-lg border border-slate-200 w-fit">
           {TABS.map((tab, i) => (
             <button
@@ -409,7 +424,7 @@ export default function SupplierDetail() {
               {tab}
             </button>
           ))}
-      </div>
+        </div>
       </div>
 
       {/* Tab Panels */}
@@ -460,6 +475,10 @@ export default function SupplierDetail() {
                       icon={MapPin} label="Zip Code" value={String(loc.zipcode || "—")}
                       onClick={() => setViewValue({ label: "Zip Code", value: String(loc.zipcode || "—") })}
                     />
+                    <DetailItem
+                      icon={AlertCircle} label="Outstanding Balance" value={`₹${currentOutstandingVal.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                      onClick={() => setShowOutstandingModal(true)}
+                    />
 
                     {/* Dynamically render all other fields from additionalInfos */}
                     {Object.entries(additionalInfos).map(([key, val]) => {
@@ -490,96 +509,88 @@ export default function SupplierDetail() {
                   <div className="space-y-3">
                     <InfoRow label="Business Type" value={<span className="text-[12px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md">{String(supplierType)}</span>} />
                     <InfoRow label="GST Number" value={<span className="text-[12px] font-bold text-slate-700 font-mono">{String(supplier.gst_no || "—")}</span>} />
-                    <InfoRow label="Outstanding Balance" value={<span className={`text-[12px] font-bold px-2 py-0.5 rounded-md ${((supplier.outstanding_infos as any)?.amount || 0) > 0 ? 'text-rose-600 bg-rose-50' : 'text-slate-600 bg-slate-50'}`}>₹{((supplier.outstanding_infos as any)?.amount || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>} />
+                    <InfoRow
+                      label="Outstanding Balance"
+                      value={
+                        <div className="flex items-center gap-2">
+                          <span className={`text-[12px] font-bold px-2 py-0.5 rounded-md ${currentOutstandingVal > 0 ? 'text-rose-600 bg-rose-50' : 'text-slate-600 bg-slate-50'}`}>
+                            ₹{currentOutstandingVal.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setShowOutstandingModal(true)}
+                            className="text-[11px] font-bold text-blue-600 hover:text-blue-700 hover:underline transition-colors"
+                          >
+                            Edit
+                          </button>
+                        </div>
+                      }
+                    />
                   </div>
                 </SectionCard>
+
+                {/* Custom Fields — separate card below Business Identity */}
+                {(cfLoading || customFieldDefs.length > 0) && (
+                  <SectionCard className="rounded-lg border-slate-200 shadow-sm p-4">
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-100">
+                        <Layers size={16} />
+                      </div>
+                      <h2 className="text-[10px] font-black text-slate-800 tracking-[0.15em]">Custom Attributes</h2>
+                    </div>
+                    {cfLoading ? (
+                      <div className="py-4 flex justify-center"><Loader /></div>
+                    ) : (
+                      <div className="space-y-2">
+                        {customFieldDefs.map((field) => {
+                          const currentVal = customFieldValues.find((v) => v.field_id === field.id);
+                          const isEditing = editingFieldId === field.id;
+                          return (
+                            <div key={field.id} className={`group relative p-3 rounded-lg border transition-all ${
+                              isEditing ? 'border-indigo-200 bg-indigo-50/40' : 'border-slate-100 bg-slate-50 hover:border-indigo-100'
+                            }`}>
+                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-wider mb-0.5">
+                                {field.label_name}{field.required && <span className="text-rose-400 ml-0.5">*</span>}
+                              </p>
+                              {isEditing ? (
+                                <div className="flex items-center gap-1.5 mt-1">
+                                  <input
+                                    autoFocus
+                                    type={field.type === 'number' ? 'number' : field.type === 'date' ? 'date' : 'text'}
+                                    value={editingValue}
+                                    onChange={(e) => setEditingValue(e.target.value)}
+                                    className="flex-1 h-7 px-2 text-xs font-semibold bg-white border border-indigo-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                                  />
+                                  <button onClick={() => handleSaveCustomField(field.id)} disabled={cfSaving}
+                                    className="w-6 h-6 flex items-center justify-center bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all active:scale-90 disabled:opacity-60">
+                                    {cfSaving ? <span className="w-2.5 h-2.5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Check size={11} />}
+                                  </button>
+                                  <button onClick={() => { setEditingFieldId(null); setEditingValue(''); }}
+                                    className="w-6 h-6 flex items-center justify-center bg-slate-100 text-slate-500 rounded-lg hover:bg-slate-200 transition-all active:scale-90">
+                                    <XIcon size={11} />
+                                  </button>
+                                </div>
+                              ) : (
+                                <div className="flex items-center justify-between cursor-pointer"
+                                  onClick={() => { setEditingFieldId(field.id); setEditingValue(currentVal?.value ?? ''); }}>
+                                  <p className="text-xs font-bold text-slate-700 truncate">
+                                    {currentVal?.value || <span className="text-slate-300 font-medium italic">Click to set</span>}
+                                  </p>
+                                  <Pencil size={10} className="text-slate-300 group-hover:text-indigo-400 transition-colors ml-2 shrink-0" />
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </SectionCard>
+                )}
               </div>
             </div>
           )}
 
-          {activeTab === 1 && (
-            <div className="space-y-4 animate-in fade-in duration-300">
-              {cfLoading ? (
-                <div className="py-16 flex justify-center"><Loader /></div>
-              ) : customFieldDefs.length === 0 ? (
-                <div className="py-16 text-center">
-                  <div className="w-12 h-12 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-400 mx-auto mb-3">
-                    <Layers size={22} />
-                  </div>
-                  <p className="text-sm font-semibold text-slate-400">No custom fields defined for this shop yet.</p>
-                  <p className="text-xs text-slate-300 mt-1">Create field definitions from the Settings panel.</p>
-                </div>
-              ) : (
-                <SectionCard title="Custom Attributes" className="p-5">
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {customFieldDefs.map((field) => {
-                      const currentVal = customFieldValues.find((v) => v.field_id === field.id);
-                      const isEditing = editingFieldId === field.id;
-                      return (
-                        <div
-                          key={field.id}
-                          className={`group relative p-4 rounded-xl border transition-all ${
-                            isEditing
-                              ? 'border-indigo-200 bg-indigo-50/40'
-                              : 'border-slate-100 bg-white hover:border-indigo-100 hover:bg-indigo-50/20'
-                          }`}
-                        >
-                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">
-                            {field.label_name}
-                            {field.required && <span className="text-rose-400 ml-0.5">*</span>}
-                          </p>
-
-                          {isEditing ? (
-                            <div className="flex items-center gap-1.5 mt-1">
-                              <input
-                                autoFocus
-                                type={field.type === 'number' ? 'number' : field.type === 'date' ? 'date' : 'text'}
-                                value={editingValue}
-                                onChange={(e) => setEditingValue(e.target.value)}
-                                className="flex-1 h-8 px-2 text-xs font-semibold bg-white border border-indigo-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-200 transition-all"
-                              />
-                              <button
-                                onClick={() => handleSaveCustomField(field.id)}
-                                disabled={cfSaving}
-                                className="w-7 h-7 flex items-center justify-center bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shrink-0"
-                              >
-                                {cfSaving ? '…' : <Check size={13} />}
-                              </button>
-                              <button
-                                onClick={() => setEditingFieldId(null)}
-                                className="w-7 h-7 flex items-center justify-center bg-white border border-slate-200 text-slate-400 rounded-lg hover:text-rose-500 hover:border-rose-200 transition-colors shrink-0"
-                              >
-                                <XIcon size={13} />
-                              </button>
-                            </div>
-                          ) : (
-                            <div
-                              className="flex items-center justify-between cursor-pointer"
-                              onClick={() => {
-                                setEditingFieldId(field.id);
-                                setEditingValue(currentVal?.value || '');
-                              }}
-                            >
-                              <p className="text-sm font-semibold text-slate-700 truncate">
-                                {currentVal?.value
-                                  ? (field.type === 'boolean'
-                                      ? (currentVal.value === 'true' ? '✓ Yes' : '✗ No')
-                                      : currentVal.value)
-                                  : <span className="text-slate-300 italic">—</span>}
-                              </p>
-                              <Pencil size={11} className="shrink-0 text-slate-300 group-hover:text-indigo-400 transition-colors ml-2" />
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </SectionCard>
-              )}
-            </div>
-          )}
-
-          {activeTab === 2 && (() => {
+          {activeTab === 1 && (() => {
             const rows: any[] = [];
             purchases.forEach((p: any) => {
               const d = p.datas ?? {};
@@ -655,7 +666,7 @@ export default function SupplierDetail() {
           })()}
         </div>
 
-          {activeTab === 3 && (
+          {activeTab === 2 && (
             <div className="space-y-4 animate-in fade-in duration-300 h-full overflow-y-auto">
               <SectionCard title="Outstanding Cleared History" className="p-0">
                 <div className="overflow-x-auto">
@@ -781,8 +792,8 @@ export default function SupplierDetail() {
           </div>
         </Modal>
 
-        {/* Clear Outstanding Specific Purchases Modal */}
-        <Modal show={showClearModal} onClose={() => setShowClearModal(false)} title="Clear Outstanding Purchase">
+        {/* Record Payment Specific Purchases Modal */}
+        <Modal show={showClearModal} onClose={() => setShowClearModal(false)} title="Record Payment">
           <div className="space-y-4">
             {!selectedPurchase ? (
               <>

@@ -212,7 +212,6 @@ const SupplierForm = () => {
     if (isSubmittingRef.current) return;
     if (!formData.supplier_name) return showToast("Supplier name is required", "error");
     if (!formData.phone) return showToast("Phone number is required", "error");
-    if (!formData.gst_number) return showToast("GSTIN / Tax ID is required", "error");
 
     isSubmittingRef.current = true;
     setSubmitting(true);
@@ -519,7 +518,6 @@ const SupplierForm = () => {
             <div className="space-y-6">
               <Input
                 label="GSTIN / Tax ID"
-                required
                 tooltip="Goods and Services Tax Identification Number of the supplier."
                 name="gst_number"
                 value={formData.gst_number}

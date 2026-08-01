@@ -21,6 +21,8 @@ import {
   generateCombinations 
 } from "@/features/product/components/VariantManager";
 
+import { utilityApi } from "@/services/api/utility";
+
 // --- Constants (Shared with ProductForm) ---
 
 const CATEGORY_CONFIGS: Record<string, { suggestedVariantTypes: string[]; supportsSerials: boolean; serialLabel: string }> = {
@@ -33,8 +35,6 @@ const CATEGORY_CONFIGS: Record<string, { suggestedVariantTypes: string[]; suppor
   "Tablets": { suggestedVariantTypes: ["Storage", "Connectivity", "Color"], supportsSerials: true, serialLabel: "IMEI / Serial" },
 };
 
-const CATEGORIES = Object.keys(CATEGORY_CONFIGS);
-const UNITS = ["Piece (pcs)", "Box", "Kilogram (kg)", "Gram (g)", "Litre (L)", "Metre (m)", "Set", "Pair"];
 
 interface QuickCreateProductModalProps {
   isOpen: boolean;
@@ -49,39 +49,43 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
   initialName = "",
   onSuccess,
 }) => {
-  const { postData, getData } = useApi();
+  const { postData } = useApi();
   const { showToast } = useToast();
   const [submitting, setSubmitting] = useState(false);
-  const [customCategories, setCustomCategories] = useState<string[]>([]);
+  
+  const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
+  const [units, setUnits] = useState<{ id: string; name: string }[]>([]);
 
   useEffect(() => {
-    const fetchCustomCategories = async () => {
+    const fetchDropdowns = async () => {
       try {
-        const res = await getData(`${ENDPOINTS.UTILITIES}/dropdowns/custom/by/name/${SHOP_ID}/categories`);
-        if (res?.data?.values) {
-          const parsedValues = typeof res.data.values === 'string' 
-            ? JSON.parse(res.data.values) 
-            : res.data.values;
-          if (Array.isArray(parsedValues)) {
-            setCustomCategories(parsedValues);
-          }
+        const [catRes, unitRes] = await Promise.all([
+          utilityApi.getShopCategories(SHOP_ID, { limit: "100", offset: "1" }),
+          utilityApi.getShopUnits(SHOP_ID, { limit: "100", offset: "1" })
+        ]);
+        if (catRes?.data && catRes.data.length > 0) {
+          setCategories(catRes.data);
+          setForm(p => ({ ...p, category: p.category && catRes.data.some((c: any) => c.id === p.category) ? p.category : catRes.data[0].id }));
         }
-      } catch (e) {}
+        if (unitRes?.data && unitRes.data.length > 0) {
+          setUnits(unitRes.data);
+          setForm(p => ({ ...p, unit: p.unit && unitRes.data.some((u: any) => u.id === p.unit) ? p.unit : unitRes.data[0].id }));
+        }
+      } catch (e) {
+        console.error("Failed to fetch shop categories/units", e);
+      }
     };
-    fetchCustomCategories();
-  }, [getData]);
-
-  const allCategories = React.useMemo(() => {
-    const combined = [...CATEGORIES, ...customCategories];
-    return Array.from(new Set(combined));
-  }, [customCategories]);
+    if (isOpen) {
+      fetchDropdowns();
+    }
+  }, [isOpen]);
 
   const [form, setForm] = useState({
     name: initialName,
     barcode: "",
     brand: "",
-    category: "Electronics",
-    unit: "Piece (pcs)",
+    category: "",
+    unit: "",
     description: "",
     is_active: true,
     buy_price: "",
@@ -226,7 +230,7 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
               <ReusableSelect
                 value={form.category}
                 onValueChange={(val) => setForm(p => ({ ...p, category: val }))}
-                options={allCategories.map(c => ({ label: c, value: c }))}
+                options={categories.map(c => ({ label: c.name, value: c.id }))}
               />
             </div>
             <div className="space-y-1.5">
@@ -234,7 +238,7 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
               <ReusableSelect
                 value={form.unit}
                 onValueChange={(val) => setForm(p => ({ ...p, unit: val }))}
-                options={UNITS.map(u => ({ label: u, value: u }))}
+                options={units.map(u => ({ label: u.name, value: u.id }))}
               />
             </div>
             <div className="space-y-1.5">
@@ -358,7 +362,9 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
             <div className="flex items-start justify-between">
               <div>
                 <h4 className="text-lg md:text-2xl font-black text-slate-800 tracking-tight">{form.name || "Untitled Product"}</h4>
-                <p className="text-xs font-bold text-slate-400 mt-1">{form.category} • {form.brand || "No Brand"}</p>
+                <p className="text-xs font-bold text-slate-400 mt-1">
+                  {(categories.find(c => c.id === form.category)?.name || form.category)} • {form.brand || "No Brand"}
+                </p>
               </div>
             </div>
 
@@ -436,6 +442,8 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
 
   const handleSubmit = async () => {
     if (!form.name) return showToast("Product name is required", "error");
+    if (!form.category) return showToast("Category is required", "error");
+    if (!form.unit) return showToast("Unit is required", "error");
 
     setSubmitting(true);
     try {
@@ -491,7 +499,16 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
       
       if (res) {
         showToast("Product created successfully", "success");
-        onSuccess(res.data || res);
+        const createdProduct = res.data || res;
+        
+        // Inject names so the caller can use them
+        const selectedCat = categories.find(c => c.id === form.category);
+        const selectedUnit = units.find(u => u.id === form.unit);
+        
+        if (selectedCat) createdProduct.category_name = selectedCat.name;
+        if (selectedUnit) createdProduct.unit_name = selectedUnit.name;
+
+        onSuccess(createdProduct);
         onClose();
       }
     } catch (error) {

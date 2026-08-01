@@ -549,7 +549,7 @@ const ProductionForm = () => {
             sellingPrice: newProduct.sell_price,
             sku: newProduct.barcode,
             unit: newProduct.datas?.unit || "pc",
-            taxGst: parseInt(newProduct.datas?.gst) || 18,
+            taxGst: newProduct.datas?.gst !== undefined && newProduct.datas?.gst !== null && newProduct.datas?.gst !== "" ? parseInt(newProduct.datas?.gst) : 18,
             batchTracking: hasBatchTracking,
             serialTracking: hasSerialTracking
           };

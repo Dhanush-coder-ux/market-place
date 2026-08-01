@@ -6,7 +6,8 @@ import {
   XCircle, AlertCircle, Banknote, Smartphone,
   TrendingUp,
   Database,
-  Search
+  Search,
+  Layers
 } from "lucide-react";
 
 import { useApi } from "@/context/ApiContext";
@@ -147,37 +148,8 @@ const SaleDetailPage: React.FC = () => {
     }
   };
 
-  const handleDelete = async () => {
-    if (!window.confirm("Are you sure you want to delete this order? This action cannot be undone.")) return;
-    try {
-      const res = await api.deleteData(`${ENDPOINTS.ORDERS}/${SHOP_ID}/${id}`);
-      if (res) {
-        navigate("/sales");
-      }
-    } catch (err) {
-      console.error("Failed to delete order:", err);
-    }
-  };
-
   useEffect(() => {
-    setBottomActions(
-      <div className="flex items-center justify-end w-full animate-in fade-in slide-in-from-right-4 duration-300 gap-2">
-        <button 
-          type="button"
-          onClick={handleDelete}
-          className="px-6 h-8 rounded-lg border border-red-200 bg-red-50 text-red-600 font-bold text-xs hover:bg-red-100 hover:border-red-300 transition-all flex items-center shadow-sm"
-        >
-          Delete Order
-        </button>
-        <button 
-          type="button"
-          onClick={() => navigate("/sales/detail")}
-          className="px-6 h-8 rounded-lg border border-slate-200 bg-white text-slate-700 font-bold text-xs hover:bg-slate-50 transition-all flex items-center shadow-sm"
-        >
-          Clear
-        </button>
-      </div>
-    );
+    setBottomActions(null);
     return () => setBottomActions(null);
   }, [setBottomActions, navigate, id, api]);
 
@@ -273,7 +245,7 @@ const SaleDetailPage: React.FC = () => {
       {/* Tabs Navigation */}
       <div className="flex-none px-1 py-2">
         <div className="flex gap-2 p-1 bg-slate-100/50 w-fit rounded-lg border border-slate-200/50">
-          {["Overview", "Items", "Customer & Payments"].map((tab, i) => (
+          {["Overview", "Items", "Customer & Payments", "Returns & Refunds"].map((tab, i) => (
             <button
               key={tab}
               onClick={() => setActiveTab(i)}
@@ -373,11 +345,6 @@ const SaleDetailPage: React.FC = () => {
                                     GST {typeof item.gst === "number" ? `${item.gst}%` : item.gst}
                                   </span>
                                 )}
-                                {item.stockBefore !== undefined && item.stockAfter !== undefined && (
-                                  <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-50 text-amber-700 border border-amber-100 font-sans">
-                                    Stock: {item.stockBefore} ➔ {item.stockAfter}
-                                  </span>
-                                )}
                                 {item.status && (
                                   <span className={`px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wide ${item.status === "REFUNDED" ? "bg-red-50 text-red-600" : "bg-blue-50 text-blue-600"}`}>
                                     {item.status} {item.returnedQty ? `(${item.returnedQty})` : ""}
@@ -390,8 +357,11 @@ const SaleDetailPage: React.FC = () => {
                                 )}
                               </div>
                               {item.variantName && (
-                                <div className="mt-2 pl-3 border-l-2 border-indigo-100 space-y-2.5">
-                                  <p className="text-[10px] font-extrabold text-indigo-750 bg-indigo-50/50 px-1.5 py-0.5 rounded w-fit">• {item.variantName}</p>
+                                <div className="mt-2">
+                                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-xl text-[10px] font-medium leading-none text-[#332B7B] bg-[#E4E2FC] border border-[#BAB5F1] w-fit">
+                                    <Layers size={10} />
+                                    {item.variantName}
+                                  </span>
                                 </div>
                               )}
                               {item.batchName && (
@@ -485,11 +455,6 @@ const SaleDetailPage: React.FC = () => {
                                         GST {typeof item.gst === "number" ? `${item.gst}%` : item.gst}
                                       </span>
                                     )}
-                                    {item.stockBefore !== undefined && item.stockAfter !== undefined && (
-                                      <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-50 text-amber-700 border border-amber-100 font-sans">
-                                        Stock: {item.stockBefore} ➔ {item.stockAfter}
-                                      </span>
-                                    )}
                                     {item.status && (
                                       <span className={`px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wide ${item.status === "REFUNDED" ? "bg-red-50 text-red-600" : "bg-blue-50 text-blue-600"}`}>
                                         {item.status} {item.returnedQty ? `(${item.returnedQty})` : ""}
@@ -502,8 +467,11 @@ const SaleDetailPage: React.FC = () => {
                                     )}
                                   </div>
                                   {item.variantName && (
-                                    <div className="mt-2 pl-3 border-l-2 border-indigo-100 space-y-2.5">
-                                      <p className="text-[10px] font-extrabold text-indigo-750 bg-indigo-50/50 px-1.5 py-0.5 rounded w-fit">• {item.variantName}</p>
+                                    <div className="mt-2">
+                                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-xl text-[10px] font-medium leading-none text-[#332B7B] bg-[#E4E2FC] border border-[#BAB5F1] w-fit">
+                                        <Layers size={10} />
+                                        {item.variantName}
+                                      </span>
                                     </div>
                                   )}
                                   {item.batchName && (
@@ -580,96 +548,6 @@ const SaleDetailPage: React.FC = () => {
                 </SectionCard>
               );
             })}
-            {Array.isArray(sale.returns) && sale.returns.length > 0 && (
-              <div className="space-y-4 mt-4">
-                <h3 className="text-sm font-bold text-slate-800 tracking-tight">Processed Returns / Refunds</h3>
-                {sale.returns.map((ret: any, rIdx: number) => (
-                  <SectionCard key={ret.id || rIdx} title={`Return Request #${ret.id?.slice(0, 8).toUpperCase()}`} className="p-0 overflow-hidden border-rose-100">
-                    <div className="p-4 bg-rose-50/50 border-b border-rose-100 flex justify-between items-center text-xs">
-                      <span className="font-bold text-rose-700">Refund Status: {ret.status}</span>
-                      <span className="font-bold text-slate-650">Total Refund: {fmt(ret.total_refund_amount)} (Qty: {ret.total_refund_qty})</span>
-                    </div>
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-left border-collapse">
-                        <thead>
-                          <tr className="bg-slate-50/50 border-b border-slate-100">
-                            <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em]">Returned Product</th>
-                            <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-center">Returned Qty</th>
-                            <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-right">Refund Amount</th>
-                            <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-right">Reason</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-50">
-                          {(ret.items || []).map((retItem: any) => {
-                            const variantN = retItem.variant_infos?.variant_name || retItem.variant_name;
-                            const batchN = retItem.batch_infos?.batch_name || retItem.batch_name;
-                            const serialsList = Array.isArray(retItem.serialno_infos) ? retItem.serialno_infos.map((sn: any) => sn.name || sn) : [];
-                            
-                            const origItem = sale.items?.find((i: any) => i.id === retItem.order_item_id || i.id === retItem.return_order_item_id);
-                            let displayQty = retItem.quantity;
-                            let displayUnit = retItem.unit || origItem?.unit || "";
-
-                            if (origItem && (origItem as any).entered_qty !== undefined && origItem.quantity > 0) {
-                              const factor = (origItem as any).entered_qty / origItem.quantity;
-                              displayQty = Number((retItem.quantity * factor).toFixed(2));
-                              displayUnit = (origItem as any).entered_unit || displayUnit;
-                            }
-
-                            return (
-                              <tr key={retItem.id} className="hover:bg-slate-50/50 transition-colors">
-                                <td className="px-6 py-4">
-                                  <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-lg flex items-center justify-center font-bold text-slate-700 bg-rose-50 border border-rose-100 shrink-0 overflow-hidden">
-                                      {retItem.image_url || retItem.image || retItem.product?.image_url || retItem.product?.image || retItem.datas?.image_url || retItem.datas?.image ? (
-                                        <img src={retItem.image_url || retItem.image || retItem.product?.image_url || retItem.product?.image || retItem.datas?.image_url || retItem.datas?.image} alt={retItem.name} className="w-full h-full object-cover" />
-                                      ) : (
-                                        <Package size={16} className="text-rose-500" />
-                                      )}
-                                    </div>
-                                    <div className="min-w-0">
-                                      <p className="text-sm font-bold text-slate-800 truncate">{retItem.name}</p>
-                                      <span className="text-[10px] font-mono font-bold text-slate-400 block mt-0.5">{retItem.ui_id}</span>
-                                      {variantN && (
-                                        <p className="text-[10px] font-extrabold text-indigo-750 bg-indigo-50/50 px-1.5 py-0.5 rounded w-fit mt-1">{variantN}</p>
-                                      )}
-                                      {batchN && (
-                                        <p className="text-[10px] font-extrabold text-amber-700 bg-amber-50/50 px-1.5 py-0.5 rounded w-fit mt-1">Batch: {batchN}</p>
-                                      )}
-                                      {serialsList.length > 0 && (
-                                        <div className="mt-2 bg-slate-50 p-2 rounded border border-slate-100 max-w-md shadow-sm">
-                                          <p className="text-[8px] font-bold text-slate-400 mb-1 uppercase tracking-wider">Returned Serials:</p>
-                                          <div className="flex flex-wrap gap-1">
-                                            {serialsList.map((sn: string, idx: number) => (
-                                              <span key={idx} className="text-[8px] font-mono font-bold px-1.5 py-0.5 rounded bg-white text-rose-600 border border-slate-200 shadow-sm">{sn}</span>
-                                            ))}
-                                          </div>
-                                        </div>
-                                      )}
-                                    </div>
-                                  </div>
-                                </td>
-                                <td className="px-6 py-4 text-center">
-                                  <div className="flex flex-col items-center justify-center">
-                                    <span className="text-xs font-black text-rose-600">{displayQty}</span>
-                                    {displayUnit && <span className="text-[9px] font-black text-rose-400 uppercase mt-0.5">{displayUnit}</span>}
-                                  </div>
-                                </td>
-                                <td className="px-6 py-4 text-right">
-                                  <span className="text-sm font-black text-slate-850 tabular-nums">{fmt(retItem.refund_amount)}</span>
-                                </td>
-                                <td className="px-6 py-4 text-right">
-                                  <span className="text-xs font-semibold text-slate-500">{retItem.reason}</span>
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
-                  </SectionCard>
-                ))}
-              </div>
-            )}
           </div>
           )}
 
@@ -735,6 +613,110 @@ const SaleDetailPage: React.FC = () => {
                   </div>
                 </SectionCard>
               </div>
+            </div>
+          )}
+
+          {/* TAB 3 — Returns & Refunds */}
+          {activeTab === 3 && (
+            <div className="space-y-4">
+              {Array.isArray(sale.returns) && sale.returns.length > 0 ? (
+                sale.returns.map((ret: any, rIdx: number) => (
+                  <SectionCard key={ret.id || rIdx} title={`Return Request #${ret.id?.slice(0, 8).toUpperCase()}`} className="p-0 overflow-hidden border-rose-100">
+                    <div className="p-4 bg-rose-50/50 border-b border-rose-100 flex justify-between items-center text-xs">
+                      <span className="font-bold text-rose-700">Refund Status: {ret.status}</span>
+                      <span className="font-bold text-slate-650">Total Refund: {fmt(ret.total_refund_amount)} (Qty: {ret.total_refund_qty})</span>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left border-collapse">
+                        <thead>
+                          <tr className="bg-slate-50/50 border-b border-slate-100">
+                            <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em]">Returned Product</th>
+                            <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-center">Returned Qty</th>
+                            <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-right">Refund Amount</th>
+                            <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-right">Reason</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-50">
+                          {(ret.items || []).map((retItem: any) => {
+                            const variantN = retItem.variant_infos?.variant_name || retItem.variant_name;
+                            const batchN = retItem.batch_infos?.batch_name || retItem.batch_name;
+                            const serialsList = Array.isArray(retItem.serialno_infos) ? retItem.serialno_infos.map((sn: any) => sn.name || sn) : [];
+                            
+                            const origItem = sale.items?.find((i: any) => i.id === retItem.order_item_id || i.id === retItem.return_order_item_id);
+                            let displayQty = retItem.quantity;
+                            let displayUnit = retItem.unit || origItem?.unit || "";
+
+                            if (origItem && (origItem as any).entered_qty !== undefined && origItem.quantity > 0) {
+                              const factor = (origItem as any).entered_qty / origItem.quantity;
+                              displayQty = Number((retItem.quantity * factor).toFixed(2));
+                              displayUnit = (origItem as any).entered_unit || displayUnit;
+                            }
+
+                            return (
+                              <tr key={retItem.id} className="hover:bg-slate-50/50 transition-colors">
+                                <td className="px-6 py-4">
+                                  <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-lg flex items-center justify-center font-bold text-slate-700 bg-rose-50 border border-rose-100 shrink-0 overflow-hidden">
+                                      {retItem.image_url || retItem.image || retItem.product?.image_url || retItem.product?.image || retItem.datas?.image_url || retItem.datas?.image ? (
+                                        <img src={retItem.image_url || retItem.image || retItem.product?.image_url || retItem.product?.image || retItem.datas?.image_url || retItem.datas?.image} alt={retItem.name} className="w-full h-full object-cover" />
+                                      ) : (
+                                        <Package size={16} className="text-rose-500" />
+                                      )}
+                                    </div>
+                                    <div className="min-w-0">
+                                      <p className="text-sm font-bold text-slate-800 truncate">{retItem.name}</p>
+                                      <span className="text-[10px] font-mono font-bold text-slate-400 block mt-0.5">{retItem.ui_id}</span>
+                                      {variantN && (
+                                        <div className="mt-1">
+                                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-xl text-[10px] font-medium leading-none text-[#332B7B] bg-[#E4E2FC] border border-[#BAB5F1] w-fit">
+                                            <Layers size={10} />
+                                            {variantN}
+                                          </span>
+                                        </div>
+                                      )}
+                                      {batchN && (
+                                        <p className="text-[10px] font-extrabold text-amber-700 bg-amber-50/50 px-1.5 py-0.5 rounded w-fit mt-1">Batch: {batchN}</p>
+                                      )}
+                                      {serialsList.length > 0 && (
+                                        <div className="mt-2 bg-slate-50 p-2 rounded border border-slate-100 max-w-md shadow-sm">
+                                          <p className="text-[8px] font-bold text-slate-400 mb-1 uppercase tracking-wider">Returned Serials:</p>
+                                          <div className="flex flex-wrap gap-1">
+                                            {serialsList.map((sn: string, idx: number) => (
+                                              <span key={idx} className="text-[8px] font-mono font-bold px-1.5 py-0.5 rounded bg-white text-rose-600 border border-slate-200 shadow-sm">{sn}</span>
+                                            ))}
+                                          </div>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                </td>
+                                <td className="px-6 py-4 text-center">
+                                  <div className="flex flex-col items-center justify-center">
+                                    <span className="text-xs font-black text-rose-600">{displayQty}</span>
+                                    {displayUnit && <span className="text-[9px] font-black text-rose-400 uppercase mt-0.5">{displayUnit}</span>}
+                                  </div>
+                                </td>
+                                <td className="px-6 py-4 text-right">
+                                  <span className="text-sm font-black text-slate-850 tabular-nums">{fmt(retItem.refund_amount)}</span>
+                                </td>
+                                <td className="px-6 py-4 text-right">
+                                  <span className="text-xs font-semibold text-slate-500">{retItem.reason}</span>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </SectionCard>
+                ))
+              ) : (
+                <SectionCard title="Processed Returns / Refunds">
+                  <div className="p-8 text-center text-slate-400 font-medium text-xs">
+                    No returns or refunds have been processed for this order.
+                  </div>
+                </SectionCard>
+              )}
             </div>
           )}
 

@@ -770,6 +770,8 @@ const ProductRow = React.memo(
                       combinations={combinations}
                       baseSellPrice={p.pricing_infos?.sell_price || datas.sell_price || (p as any).sell_price}
                       baseBuyPrice={p.pricing_infos?.buy_price || datas.buy_price || (p as any).buy_price}
+                      parentStorageLocation={(p as any).storage_location_infos?.storage_location ?? (p as any).storage_location_infos?.name ?? (p as any).storage_location ?? (p as any).location ?? datas.storage_location ?? null}
+                      parentReorderPoint={p.reorder_point_infos?.reorder_point ?? (p as any).reorder_point ?? datas.reorder_point ?? null}
                     />
                   )}
                   {!hasVariants && hasBatches && (
@@ -790,11 +792,21 @@ const ProductRow = React.memo(
             {combinations.map((comb: any, idx: number) => {
               const combDatas = comb.datas || {};
               const attributes = comb.attributes || combDatas.attributes || combDatas.datas?.attributes || {};
-              let variantLabel = comb.variant_name || comb.name || combDatas.name || 'Standard Variant';
-              if (Object.keys(attributes).length > 0) {
-                variantLabel = Object.values(attributes).join(' / ');
-              } else if (comb.barcode && combDatas.barcode && comb.barcode !== combDatas.barcode) {
-                variantLabel = comb.barcode;
+              let variantLabel = "";
+              if (attributes && Object.keys(attributes).length > 0) {
+                const entries = Object.entries(attributes);
+                if (entries.length === 1) {
+                  variantLabel = String(entries[0][1]);
+                } else {
+                  variantLabel = entries.map(([k, v]) => `${k}: ${v}`).join(' · ');
+                }
+              } else {
+                const rawName = comb.variant_name || comb.name || combDatas.variant_name || combDatas.name;
+                if (rawName && typeof rawName === 'string' && rawName.trim() !== '' && rawName !== comb.barcode && rawName !== comb.sku) {
+                  variantLabel = rawName;
+                } else {
+                  variantLabel = `Variant ${idx + 1}`;
+                }
               }
               const stockNum = Number(comb.stock_infos?.available_stocks ?? comb.stock_infos?.physical_stocks ?? comb.stocks ?? comb.stock ?? combDatas.stocks ?? combDatas.datas?.stocks ?? 0);
               return (

@@ -53,7 +53,12 @@ const refreshAccessToken = async (): Promise<string | null> => {
       if (p.version) tokenVersion = p.version;
     } catch { /* ignore */ }
 
-    refreshPromise = fetch(`${BASE_URL}/api${ENDPOINTS.AUTH_TOKEN_REFRESH}`, {
+    let cleanBaseUrl = BASE_URL.replace(/\/+$/, "");
+    if (cleanBaseUrl.endsWith("/api")) {
+      cleanBaseUrl = cleanBaseUrl.slice(0, -4);
+    }
+
+    refreshPromise = fetch(`${cleanBaseUrl}/api${ENDPOINTS.AUTH_TOKEN_REFRESH}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ refresh_token: refreshToken, version: tokenVersion }),

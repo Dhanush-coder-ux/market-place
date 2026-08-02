@@ -209,7 +209,7 @@ const Billing = () => {
           }
         }
 
-        return serialNames.map((sn: string) => {
+        return serialNames.map((sn: any) => {
           const foundObj = serialObjects.find(obj => obj && (obj.name === sn || obj.serial === sn));
           return {
             id: foundObj?.id || item.serialnoId || "",

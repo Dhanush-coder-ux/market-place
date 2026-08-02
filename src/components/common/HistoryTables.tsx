@@ -179,8 +179,8 @@ const RichProductDetails = ({ p }: { p: any }) => {
           <div className="bg-slate-50 p-2 rounded border border-slate-100 w-full shadow-sm">
             <p className="text-[8px] font-bold text-slate-400 mb-1 uppercase tracking-wider">Serial Numbers:</p>
             <div className="flex flex-wrap gap-1">
-              {p.serial_info.serial_numbers.map((sn: string) => (
-                <span key={sn} className="text-[8px] font-mono font-bold px-1.5 py-0.5 rounded bg-white text-indigo-600 border border-slate-200 shadow-sm">{sn}</span>
+              {p.serial_info.serial_numbers.map((sn: any, idx: number) => (
+                <span key={typeof sn === 'object' ? (sn.id || sn.name || idx) : sn} className="text-[8px] font-mono font-bold px-1.5 py-0.5 rounded bg-white text-indigo-600 border border-slate-200 shadow-sm">{typeof sn === 'object' ? ((sn as any).name || (sn as any).id) : sn}</span>
               ))}
             </div>
           </div>
@@ -309,8 +309,8 @@ export function StockMovementsTable({ rows, loading, onViewDetails }: StockMovem
                               {((firstProd?.serials || r.serials) && (firstProd?.serials || r.serials)!.length > 0) && (
                                 <div className="flex flex-wrap gap-1">
                                   <span className="text-[9px] text-slate-400 font-bold">SN: </span>
-                                  {(firstProd?.serials || r.serials)!.slice(0, 2).map((s: string, si: number) => (
-                                    <span key={si} className="text-[9px] font-mono font-bold text-slate-500">{s}{si === 0 && (firstProd?.serials || r.serials)!.length > 1 ? ',' : ''}</span>
+                                  {(firstProd?.serials || r.serials)!.slice(0, 2).map((s: any, si: number) => (
+                                    <span key={si} className="text-[9px] font-mono font-bold text-slate-500">{typeof s === 'object' ? ((s as any).name || (s as any).id) : s}{si === 0 && (firstProd?.serials || r.serials)!.length > 1 ? ',' : ''}</span>
                                   ))}
                                   {(firstProd?.serials || r.serials)!.length > 2 && <span className="text-[9px] font-bold text-slate-400">+{(firstProd?.serials || r.serials)!.length - 2}</span>}
                                 </div>
@@ -490,8 +490,8 @@ export function ProductPurchasesTable({ rows, loading, onNavigateToPurchase }: P
                                   {((firstProd.serials || r.serials) && (firstProd.serials || r.serials)!.length > 0) && (
                                     <div className="flex flex-wrap gap-1 mt-0.5">
                                       <span className="text-[9px] text-slate-400 font-bold">SN: </span>
-                                      {(firstProd.serials || r.serials)!.slice(0, 2).map((s: string, si: number) => (
-                                        <span key={si} className="text-[9px] font-mono font-bold text-slate-500">{s}{si === 0 && (firstProd.serials || r.serials)!.length > 1 ? ',' : ''}</span>
+                                      {(firstProd.serials || r.serials)!.slice(0, 2).map((s: any, si: number) => (
+                                        <span key={si} className="text-[9px] font-mono font-bold text-slate-500">{typeof s === 'object' ? ((s as any).name || (s as any).id) : s}{si === 0 && (firstProd.serials || r.serials)!.length > 1 ? ',' : ''}</span>
                                       ))}
                                       {(firstProd.serials || r.serials)!.length > 2 && <span className="text-[9px] font-bold text-slate-400">+{(firstProd.serials || r.serials)!.length - 2}</span>}
                                     </div>
@@ -680,8 +680,8 @@ export function SupplierPurchasesTable({ rows, loading, onNavigateToPurchase }: 
                                   {((firstProd.serials || r.serials) && (firstProd.serials || r.serials)!.length > 0) && (
                                     <div className="flex flex-wrap gap-1 mt-0.5">
                                       <span className="text-[9px] text-slate-400 font-bold">SN: </span>
-                                      {(firstProd.serials || r.serials)!.slice(0, 2).map((s: string, si: number) => (
-                                        <span key={si} className="text-[9px] font-mono font-bold text-slate-500">{s}{si === 0 && (firstProd.serials || r.serials)!.length > 1 ? ',' : ''}</span>
+                                      {(firstProd.serials || r.serials)!.slice(0, 2).map((s: any, si: number) => (
+                                        <span key={si} className="text-[9px] font-mono font-bold text-slate-500">{typeof s === 'object' ? ((s as any).name || (s as any).id) : s}{si === 0 && (firstProd.serials || r.serials)!.length > 1 ? ',' : ''}</span>
                                       ))}
                                       {(firstProd.serials || r.serials)!.length > 2 && <span className="text-[9px] font-bold text-slate-400">+{(firstProd.serials || r.serials)!.length - 2}</span>}
                                     </div>

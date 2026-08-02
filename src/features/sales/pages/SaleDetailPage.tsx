@@ -385,8 +385,8 @@ const SaleDetailPage: React.FC = () => {
                                   <div className="bg-slate-50 p-2 rounded border border-slate-100 max-w-md shadow-sm">
                                     <p className="text-[8px] font-bold text-slate-400 mb-1 uppercase tracking-wider">Serial Numbers:</p>
                                     <div className="flex flex-wrap gap-1">
-                                      {item.serial_numbers.map((sn: string, idx: number) => (
-                                        <span key={idx} className="text-[8px] font-mono font-bold px-1.5 py-0.5 rounded bg-white text-indigo-600 border border-slate-200 shadow-sm">{sn}</span>
+                                      {item.serial_numbers.map((sn: any, idx: number) => (
+                                        <span key={idx} className="text-[8px] font-mono font-bold px-1.5 py-0.5 rounded bg-white text-indigo-600 border border-slate-200 shadow-sm">{typeof sn === 'object' ? ((sn as any).name || (sn as any).id) : sn}</span>
                                       ))}
                                     </div>
                                   </div>
@@ -495,8 +495,8 @@ const SaleDetailPage: React.FC = () => {
                                       <div className="bg-slate-50 p-2 rounded border border-slate-100 max-w-md shadow-sm">
                                         <p className="text-[8px] font-bold text-slate-400 mb-1 uppercase tracking-wider">Serial Numbers:</p>
                                         <div className="flex flex-wrap gap-1">
-                                          {item.serial_numbers.map((sn: string, idx: number) => (
-                                            <span key={idx} className="text-[8px] font-mono font-bold px-1.5 py-0.5 rounded bg-white text-indigo-600 border border-slate-200 shadow-sm">{sn}</span>
+                                          {item.serial_numbers.map((sn: any, idx: number) => (
+                                            <span key={idx} className="text-[8px] font-mono font-bold px-1.5 py-0.5 rounded bg-white text-indigo-600 border border-slate-200 shadow-sm">{typeof sn === 'object' ? ((sn as any).name || (sn as any).id) : sn}</span>
                                           ))}
                                         </div>
                                       </div>
@@ -681,8 +681,8 @@ const SaleDetailPage: React.FC = () => {
                                         <div className="mt-2 bg-slate-50 p-2 rounded border border-slate-100 max-w-md shadow-sm">
                                           <p className="text-[8px] font-bold text-slate-400 mb-1 uppercase tracking-wider">Returned Serials:</p>
                                           <div className="flex flex-wrap gap-1">
-                                            {serialsList.map((sn: string, idx: number) => (
-                                              <span key={idx} className="text-[8px] font-mono font-bold px-1.5 py-0.5 rounded bg-white text-rose-600 border border-slate-200 shadow-sm">{sn}</span>
+                                            {serialsList.map((sn: any, idx: number) => (
+                                              <span key={idx} className="text-[8px] font-mono font-bold px-1.5 py-0.5 rounded bg-white text-rose-600 border border-slate-200 shadow-sm">{typeof sn === 'object' ? ((sn as any).name || (sn as any).id) : sn}</span>
                                             ))}
                                           </div>
                                         </div>

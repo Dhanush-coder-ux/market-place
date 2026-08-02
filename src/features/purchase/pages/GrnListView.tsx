@@ -436,9 +436,9 @@ const GRNCardView = () => {
                                       )}
                                       {batch.serial_numbers && batch.serial_numbers.length > 0 && (
                                         <div className="flex flex-wrap gap-1 mt-1.5">
-                                          {batch.serial_numbers.map((sn: string, snIdx: number) => (
+                                          {batch.serial_numbers.map((sn: any, snIdx: number) => (
                                             <span key={snIdx} className="text-[9px] font-mono bg-white border border-zinc-200 px-1.5 py-0.5 rounded text-zinc-500">
-                                              {sn}
+                                              {typeof sn === 'object' ? ((sn as any).name || (sn as any).id) : sn}
                                             </span>
                                           ))}
                                         </div>
@@ -469,9 +469,9 @@ const GRNCardView = () => {
                               )}
                               {batch.serial_numbers && batch.serial_numbers.length > 0 && (
                                 <div className="flex flex-wrap gap-1 mt-1.5">
-                                  {batch.serial_numbers.map((sn: string, snIdx: number) => (
+                                  {batch.serial_numbers.map((sn: any, snIdx: number) => (
                                     <span key={snIdx} className="text-[9px] font-mono bg-white border border-zinc-200 px-1.5 py-0.5 rounded text-zinc-500">
-                                      {sn}
+                                      {typeof sn === 'object' ? ((sn as any).name || (sn as any).id) : sn}
                                     </span>
                                   ))}
                                 </div>

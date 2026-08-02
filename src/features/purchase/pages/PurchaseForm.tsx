@@ -557,7 +557,7 @@ const PurchaseForm = () => {
               }
             )
             : null,
-          serialno_numbers: serials.length > 0 ? serials : null,
+          serialno_numbers: serials.length > 0 ? serials.map(s => ({ name: s })) : null,
           storage_location_infos: p.storageLoc ? { name: p.storageLoc } : null,
           reorder_point_infos: p.reorderPoint ? { reorder_point: Number(p.reorderPoint) } : null,
           pricing_infos: {

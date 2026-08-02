@@ -33,7 +33,7 @@ const SupplierSearch = () => {
       const data = await supplierApi.searchSuppliers(q);
       return data.map((s: any) => ({
         ...s,
-        displayName: String(s.name || s.id)
+        displayName: String((s as any).name || (s as any).id)
       }));
     } catch {
       return [];

@@ -210,8 +210,8 @@ function DetailDrawer({ movement, onClose }: DetailDrawerProps) {
                                     <span className="bg-slate-100 text-slate-500 px-1 rounded-full text-[8px]">{p.serial_numbers.length}</span>
                                   </p>
                                   <div className="flex flex-wrap gap-1">
-                                    {p.serial_numbers.map((sn: string, sIdx: number) => (
-                                      <span key={sIdx} className="text-[9px] font-mono text-slate-600 bg-slate-50 border border-slate-200 px-1.5 py-0.5 rounded-xl font-bold">{sn}</span>
+                                    {p.serial_numbers.map((sn: any, sIdx: number) => (
+                                      <span key={sIdx} className="text-[9px] font-mono text-slate-600 bg-slate-50 border border-slate-200 px-1.5 py-0.5 rounded-xl font-bold">{typeof sn === 'object' ? ((sn as any).name || (sn as any).id) : sn}</span>
                                     ))}
                                   </div>
                                 </div>
@@ -310,7 +310,7 @@ function DetailDrawer({ movement, onClose }: DetailDrawerProps) {
                         <div className="flex flex-wrap gap-1.5 max-h-[120px] overflow-y-auto custom-scrollbar pr-1">
                           {movement.serial_numbers.map((sn, i) => (
                             <span key={i} className="px-2 py-1 rounded-xl bg-white border border-[var(--ps-completed-bd)] text-emerald-700 font-mono text-[10px] font-bold shadow-sm">
-                              {sn}
+                              {typeof sn === 'object' ? ((sn as any).name || (sn as any).id) : sn}
                             </span>
                           ))}
                         </div>

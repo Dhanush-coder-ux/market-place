@@ -892,8 +892,8 @@ const outstanding =
                                     <div className="bg-slate-50 p-2 rounded border border-slate-100 max-w-md shadow-sm">
                                       <p className="text-[8px] font-bold text-slate-400 mb-1 uppercase tracking-wider">Serial Numbers:</p>
                                       <div className="flex flex-wrap gap-1">
-                                        {product.serial_info.serial_numbers.map((sn: string) => (
-                                          <span key={sn} className="text-[8px] font-mono font-bold px-1.5 py-0.5 rounded bg-white text-indigo-600 border border-slate-200 shadow-sm">{sn}</span>
+                                        {product.serial_info.serial_numbers.map((sn: any) => (
+                                          <span key={typeof sn === 'object' ? ((sn as any).id || (sn as any).name) : sn} className="text-[8px] font-mono font-bold px-1.5 py-0.5 rounded bg-white text-indigo-600 border border-slate-200 shadow-sm">{typeof sn === 'object' ? ((sn as any).name || (sn as any).id) : sn}</span>
                                         ))}
                                       </div>
                                     </div>
@@ -927,7 +927,7 @@ const outstanding =
                                                     <p className="text-[8px] font-bold text-slate-400 mb-1 uppercase tracking-wider">Serials:</p>
                                                     <div className="flex flex-wrap gap-1">
                                                       {b.serial_numbers.map(sn => (
-                                                        <span key={sn} className="text-[8px] font-mono font-bold px-1.5 py-0.5 rounded bg-white text-indigo-600 border border-slate-200 shadow-sm">{sn}</span>
+                                                        <span key={typeof sn === 'object' ? ((sn as any).id || (sn as any).name) : sn} className="text-[8px] font-mono font-bold px-1.5 py-0.5 rounded bg-white text-indigo-600 border border-slate-200 shadow-sm">{typeof sn === 'object' ? ((sn as any).name || (sn as any).id) : sn}</span>
                                                       ))}
                                                     </div>
                                                   </div>
@@ -945,7 +945,7 @@ const outstanding =
                                                 <p className="text-[8px] font-bold text-slate-400 mb-1 uppercase tracking-wider">Serial Numbers:</p>
                                                 <div className="flex flex-wrap gap-1">
                                                   {sObj.serial_numbers?.map(sn => (
-                                                    <span key={sn} className="text-[8px] font-mono font-bold px-1.5 py-0.5 rounded bg-white text-indigo-600 border border-slate-200 shadow-sm">{sn}</span>
+                                                    <span key={typeof sn === 'object' ? ((sn as any).id || (sn as any).name) : sn} className="text-[8px] font-mono font-bold px-1.5 py-0.5 rounded bg-white text-indigo-600 border border-slate-200 shadow-sm">{typeof sn === 'object' ? ((sn as any).name || (sn as any).id) : sn}</span>
                                                   ))}
                                                 </div>
                                               </div>
@@ -977,7 +977,7 @@ const outstanding =
                                             <p className="text-[8px] font-bold text-slate-400 mb-1 uppercase tracking-wider">Serials:</p>
                                             <div className="flex flex-wrap gap-1">
                                               {b.serial_numbers.map(sn => (
-                                                <span key={sn} className="text-[8px] font-mono font-bold px-1.5 py-0.5 rounded bg-white text-indigo-600 border border-slate-200 shadow-sm">{sn}</span>
+                                                <span key={typeof sn === 'object' ? ((sn as any).id || (sn as any).name) : sn} className="text-[8px] font-mono font-bold px-1.5 py-0.5 rounded bg-white text-indigo-600 border border-slate-200 shadow-sm">{typeof sn === 'object' ? ((sn as any).name || (sn as any).id) : sn}</span>
                                               ))}
                                             </div>
                                           </div>
@@ -995,7 +995,7 @@ const outstanding =
                                         <p className="text-[8px] font-bold text-slate-400 mb-1 uppercase tracking-wider">Serial Numbers:</p>
                                         <div className="flex flex-wrap gap-1">
                                           {sObj.serial_numbers?.map(sn => (
-                                            <span key={sn} className="text-[8px] font-mono font-bold px-1.5 py-0.5 rounded bg-white text-indigo-600 border border-slate-200 shadow-sm">{sn}</span>
+                                            <span key={typeof sn === 'object' ? ((sn as any).id || (sn as any).name) : sn} className="text-[8px] font-mono font-bold px-1.5 py-0.5 rounded bg-white text-indigo-600 border border-slate-200 shadow-sm">{typeof sn === 'object' ? ((sn as any).name || (sn as any).id) : sn}</span>
                                           ))}
                                         </div>
                                       </div>

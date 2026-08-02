@@ -65,8 +65,8 @@ function ProductDetailsList({ prod }: { prod: any }) {
           <div className="bg-slate-50 p-2 rounded border border-slate-100 max-w-md shadow-sm">
             <p className="text-[8px] font-bold text-slate-400 mb-1 uppercase tracking-wider flex items-center gap-1"><Zap size={8} /> Serial Numbers:</p>
             <div className="flex flex-wrap gap-1">
-              {serialList.map((sn: string) => (
-                <span key={sn} className="text-[8px] font-mono font-bold px-1.5 py-0.5 rounded bg-white text-blue-600 border border-slate-200 shadow-sm">{sn}</span>
+              {serialList.map((sn: any) => (
+                <span key={typeof sn === 'object' ? ((sn as any).id || (sn as any).name) : sn} className="text-[8px] font-mono font-bold px-1.5 py-0.5 rounded bg-white text-blue-600 border border-slate-200 shadow-sm">{typeof sn === 'object' ? ((sn as any).name || (sn as any).id) : sn}</span>
               ))}
             </div>
           </div>

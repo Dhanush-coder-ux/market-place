@@ -604,7 +604,7 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
                       <div className="grid grid-cols-2 gap-2 pb-2">
                         {availableSerials
                           .filter((s: string) => s.toLowerCase().includes(serialSearch.toLowerCase()))
-                          .map((s: string) => {
+                          .map((s: any) => {
                           const isSelected = Array.isArray(selectedSerials) && selectedSerials.includes(s);
                           const isInitial = Array.isArray(initialSerials) && initialSerials.includes(s);
                           
@@ -623,7 +623,7 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
 
                           return (
                             <button
-                              key={s}
+                              key={typeof s === 'object' ? ((s as any).id || (s as any).name) : s}
                               disabled={isDisabled}
                               onClick={() => toggleSerial(s)}
                               className={`px-3 py-2.5 rounded-lg text-xs font-semibold border-2 transition-all duration-150 text-left relative overflow-hidden ${
@@ -636,7 +636,7 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
                                     : "border-slate-100 bg-white text-slate-600 hover:border-slate-200"
                               }`}
                             >
-                              <span className="truncate block pr-4">{s}</span>
+                              <span className="truncate block pr-4">{typeof s === 'object' ? ((s as any).name || (s as any).id) : s}</span>
                               {isSelected && <Check size={12} className={`absolute right-2 top-1/2 -translate-y-1/2 ${
                                 isDisabled && isInitial && quantity > (initialSerials?.length || 0) ? "text-slate-300" : "text-blue-500"
                               }`} />}

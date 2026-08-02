@@ -643,7 +643,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                   location: stlInfo.storage_location || stlInfo.name || v.storage_location || prod.storage_location_infos?.storage_location || "",
                   stock: String(stockInfo.available_stocks || "0"),
                   active: true,
-                  serials: (v.additional_infos?.serial_numbers || v.serial_numbers || []).map((sn: string) => ({
+                  serials: (v.additional_infos?.serial_numbers || v.serial_numbers || []).map((sn: any) => ({
                     id: uid(), serial: sn, status: "available" as const, purchaseDate: "", warrantyMonths: "12",
                   })),
                 };

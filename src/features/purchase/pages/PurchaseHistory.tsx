@@ -15,7 +15,8 @@ import {
   MoreVertical,
   Printer,
   Share2,
-  XCircle
+  XCircle,
+  RotateCw
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useHeader } from "@/context/HeaderContext";
@@ -524,10 +525,7 @@ const GridCard = ({ po, selected, onClick }: { po: DirectPurchaseData; selected?
         <div>
           <p className="text-[10px] font-semibold   text-zinc-400 mb-0.5">Total Amount</p>
           <div className="flex items-center gap-2">
-            <p className="text-xl font-semibold text-zinc-900 tracking-tight tabular-nums">{fmt(po.total_cost)}</p>
-            {po.returns && po.returns.length > 0 && (
-              <ReturnAmountHover returns={po.returns} />
-            )}
+            <AmountWithReturnHover total={po.total_cost} returns={po.returns || []} />
           </div>
         </div>
         <div className="flex items-center gap-4">
@@ -545,53 +543,40 @@ const GridCard = ({ po, selected, onClick }: { po: DirectPurchaseData; selected?
 };
 
 
-const ReturnAmountHover = ({ returns }: { returns: any[] }) => {
-  if (!returns || returns.length === 0) return <span className="text-slate-300">—</span>;
-
-  // sum total return amount
-  const totalReturn = returns.reduce((sum, r) => {
+const AmountWithReturnHover = ({ total, returns }: { total: number; returns: any[] }) => {
+  const totalReturn = returns?.reduce((sum, r) => {
     return sum + Number(r.return_value || r.totalAmount || r.amount || r.total_cost || r.return_cost || 0);
-  }, 0);
+  }, 0) || 0;
 
-  if (totalReturn === 0) return <span className="text-slate-300">—</span>;
+  if (!returns || returns.length === 0 || totalReturn === 0) {
+    return <span className="font-mono text-xs font-bold text-slate-900 tabular-nums">{fmt(total)}</span>;
+  }
+
+  const netAmount = Math.max(0, total - totalReturn);
 
   return (
-    <div className="relative group flex justify-end">
-      <span className="font-mono text-xs font-bold text-rose-600 tabular-nums cursor-help border-b border-dashed border-rose-300 pb-0.5">
-        -₹{totalReturn.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+    <div className="relative group inline-flex items-center justify-end gap-1.5 cursor-help">
+      <span className="font-mono text-xs font-bold text-slate-900 tabular-nums">
+        {fmt(netAmount)}
       </span>
       
-      {/* Hover Timeline */}
-      <div className="absolute right-0 top-full mt-2 w-72 bg-white rounded-xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-slate-100 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-[100] pointer-events-none text-left flex flex-col">
-        <div className="p-3 border-b border-slate-100 bg-slate-50/50 rounded-t-xl shrink-0">
-          <h4 className="text-xs font-bold text-slate-800">Return History</h4>
-          <p className="text-[10px] text-slate-500 mt-0.5">Total Returns: ₹{totalReturn.toLocaleString("en-IN")}</p>
+      <div className="w-3.5 h-3.5 rounded-full bg-rose-50 text-rose-500 border border-rose-200 flex items-center justify-center shrink-0">
+        <RotateCw size={8} />
+      </div>
+      
+      {/* Dark Tooltip */}
+      <div className="absolute right-0 top-full mt-2 w-48 bg-slate-900 rounded-lg shadow-xl border border-slate-800 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-[100] text-left flex flex-col p-3 pointer-events-none">
+        <div className="flex justify-between items-center text-xs font-medium text-slate-400 mb-1">
+          <span>Original</span>
+          <span className="tabular-nums font-mono">{fmt(total)}</span>
         </div>
-        <div className="p-3 max-h-60 overflow-y-auto space-y-4 custom-scrollbar">
-          {returns.map((r, i) => {
-            const rAmt = Number(r.return_value || r.totalAmount || r.amount || r.total_cost || r.return_cost || 0);
-            const rDate = r.date || r.created_at || r.return_date || "—";
-            const d = new Date(rDate);
-            const dateStr = !isNaN(d.getTime()) ? d.toLocaleDateString("en-IN", { day: '2-digit', month: 'short', year: 'numeric' }) : rDate;
-            const rId = r.ui_id || r.uiId || r.id || `RET-${i+1}`;
-            const reason = r.reason || r.return_reason;
-            
-            return (
-              <div key={i} className="relative pl-4 border-l-2 border-rose-100 last:border-transparent pb-2 last:pb-0">
-                <div className="absolute w-2.5 h-2.5 bg-rose-500 rounded-full -left-[5.5px] top-1 shadow-sm ring-2 ring-white"></div>
-                <div className="flex justify-between items-start mb-1 gap-2">
-                  <span className="text-[10px] font-bold text-slate-600 truncate">{rId}</span>
-                  <span className="text-[10px] font-bold text-rose-600 tabular-nums shrink-0">-₹{rAmt.toLocaleString("en-IN")}</span>
-                </div>
-                <div className="text-[9px] text-slate-400 font-medium mb-1.5">{dateStr}</div>
-                {reason && (
-                  <div className="text-[10px] bg-rose-50 text-rose-700 px-1.5 py-0.5 rounded border border-rose-100 w-fit line-clamp-2">
-                    {reason}
-                  </div>
-                )}
-              </div>
-            );
-          })}
+        <div className="flex justify-between items-center text-xs font-medium text-rose-400 mb-1.5">
+          <span>Returned</span>
+          <span className="tabular-nums font-mono">- {fmt(totalReturn)}</span>
+        </div>
+        <div className="flex justify-between items-center text-xs font-bold text-white border-t border-slate-700 pt-2 mt-0.5">
+          <span>Net</span>
+          <span className="tabular-nums font-mono">{fmt(netAmount)}</span>
         </div>
       </div>
     </div>
@@ -634,8 +619,7 @@ const VerticalTable = ({ data, selectedIds, onSelect, totalCount, lastElementRef
               <th className="px-3 py-2.5 text-[10px] font-bold tracking-wider text-slate-800 uppercase text-left">Date</th>
               <th className="px-3 py-2.5 text-[10px] font-bold tracking-wider text-slate-800 uppercase text-left hidden md:table-cell">Products</th>
               <th className="px-3 py-2.5 text-[10px] font-bold tracking-wider text-slate-800 uppercase text-right">Qty</th>
-              <th className="px-3 py-2.5 text-[10px] font-bold tracking-wider text-slate-800 uppercase text-right">Total</th>
-              <th className="px-3 py-2.5 text-[10px] font-bold tracking-wider text-slate-800 uppercase text-right">Return</th>
+              <th className="px-3 py-2.5 text-[10px] font-bold tracking-wider text-slate-800 uppercase text-right">Amount</th>
               <th className="px-3 py-2.5 text-[10px] font-bold tracking-wider text-slate-800 uppercase text-center">Status</th>
               <th className="px-3 py-2.5 text-[10px] font-bold tracking-wider text-slate-800 uppercase text-center">Payment Status</th>
               <th className="px-3 py-2.5 w-24 text-right text-[10px] font-bold tracking-wider text-slate-800 uppercase sticky right-0 bg-slate-50 border-l border-slate-200 z-30 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.08)]">Actions</th>
@@ -721,16 +705,9 @@ const VerticalTable = ({ data, selectedIds, onSelect, totalCount, lastElementRef
                     </span>
                   </td>
 
-                  {/* Total */}
+                  {/* Amount */}
                   <td className="p-2.5 px-3 text-right">
-                    <span className="font-mono text-xs font-bold text-slate-900 tabular-nums">
-                      {fmt(po.total_cost)}
-                    </span>
-                  </td>
-
-                  {/* Return Amount */}
-                  <td className="p-2.5 px-3 text-right relative">
-                    <ReturnAmountHover returns={po.returns || []} />
+                    <AmountWithReturnHover total={po.total_cost} returns={po.returns || []} />
                   </td>
 
                   {/* Purchase Status */}

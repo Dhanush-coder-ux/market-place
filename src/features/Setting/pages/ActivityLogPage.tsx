@@ -69,6 +69,82 @@ interface LogEntry {
   };
 }
 
+const StructuredValueViewer = ({ data, level = 0 }: { data: any; level?: number }) => {
+  if (data === null || data === undefined) return <span className="text-slate-400 italic font-medium">—</span>;
+  if (typeof data === "boolean") return <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 text-[10px] font-bold uppercase">{data ? "Yes" : "No"}</span>;
+  if (typeof data === "number") return <span className="text-slate-800 font-bold">{data}</span>;
+  if (typeof data === "string") return <span className="text-slate-700 font-medium break-words w-full inline-block">{data}</span>;
+
+  if (Array.isArray(data)) {
+    if (data.length === 0) return <span className="text-slate-400 italic">Empty</span>;
+    return (
+      <div className="flex flex-col gap-2 w-full mt-1">
+        {data.map((val, idx) => (
+          <div key={idx} className="bg-white border border-slate-200 rounded-md p-2.5 shadow-sm w-full overflow-hidden">
+            <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-2 pb-1 border-b border-slate-100">
+              Item {idx + 1}
+            </div>
+            <StructuredValueViewer data={val} level={level + 1} />
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (typeof data === "object") {
+    const keys = Object.keys(data);
+    if (keys.length === 0) return <span className="text-slate-400 italic">Empty</span>;
+    return (
+      <div className="grid grid-cols-1 2xl:grid-cols-2 gap-x-4 gap-y-2.5 w-full">
+        {keys.map((key) => (
+          <div key={key} className="flex flex-col w-full overflow-hidden">
+            <span className="font-semibold text-slate-400 text-[9px] uppercase tracking-wide truncate mb-0.5">
+              {key.replace(/_/g, ' ')}
+            </span>
+            <div className="text-[12px] text-slate-800 break-words w-full leading-snug">
+              <StructuredValueViewer data={(data as any)[key]} level={level + 1} />
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  return <span className="break-words">{String(data)}</span>;
+};
+
+const ChangeValueRenderer = ({ val, isDeleted }: { val: unknown, isDeleted?: boolean }) => {
+  let parsedVal = val;
+  
+  if (typeof val === 'string') {
+    try {
+      parsedVal = JSON.parse(val);
+    } catch (e) {
+      try {
+        const fixed = val
+          .replace(/'/g, '"')
+          .replace(/\bTrue\b/g, 'true')
+          .replace(/\bFalse\b/g, 'false')
+          .replace(/\bNone\b/g, 'null');
+        parsedVal = JSON.parse(fixed);
+      } catch (err) {
+        // Fallback to original string if it wasn't a parsable object
+      }
+    }
+  }
+
+  if (typeof parsedVal === 'object' && parsedVal !== null) {
+    return (
+      <div className={`custom-scrollbar p-2.5 rounded-xl border max-h-[260px] overflow-y-auto overflow-x-hidden w-full ${isDeleted ? 'bg-rose-50/50 border-rose-100 opacity-90' : 'bg-slate-50/70 border-slate-200'}`}>
+        <StructuredValueViewer data={parsedVal} />
+      </div>
+    );
+  }
+  
+  // Primitives
+  return <>{String(val ?? "—")}</>;
+};
+
 export const ActivityLogPage = () => {
   const { getData } = useApi();
   const [logs, setLogs] = useState<LogEntry[]>([]);
@@ -90,13 +166,13 @@ export const ActivityLogPage = () => {
           if (action === "deleted") action = "delete";
           if (action === "returned") action = "return";
           if (action.includes("sales")) action = "sales";
-          
+
           let parsedChanges = log.changes;
           if (typeof parsedChanges === "string") {
-            try { parsedChanges = JSON.parse(parsedChanges); } 
+            try { parsedChanges = JSON.parse(parsedChanges); }
             catch (_) { parsedChanges = []; }
           }
-          
+
           return { ...log, id: log.id || `fallback-${i}`, action, changes: parsedChanges || [] };
         });
         setLogs(normalizedData);
@@ -151,14 +227,14 @@ export const ActivityLogPage = () => {
     let updatesCount = 0;
     let createCount = 0;
     const users = new Set<string>();
-    
+
     logs.forEach(l => {
       if (l.action === "sales") salesCount++;
       if (l.action === "update") updatesCount++;
       if (l.action === "create") createCount++;
       if (l.user_name && l.user_name !== "System") users.add(l.user_name);
     });
-    
+
     return {
       total: logs.length,
       sales: salesCount,
@@ -169,7 +245,7 @@ export const ActivityLogPage = () => {
   }, [logs]);
 
   const formatChangeValue = (val: unknown) => {
-    if (typeof val === 'object' && val !== null) return JSON.stringify(val);
+    if (typeof val === 'object' && val !== null) return "Complex Object";
     return String(val ?? "—");
   };
 
@@ -181,11 +257,11 @@ export const ActivityLogPage = () => {
   return (
     <div className="activity-log-wrapper bg-[#FBFBFD] h-full overflow-y-auto w-full">
       <div className="shell">
-        
+
         <div className="context">
           <span className="ws"><span className="logo">V</span>Vaathi Mart</span>
           <span className="sep">/</span><span>Settings</span>
-          <span className="sep">/</span><span style={{color: "var(--body)"}}>Activity Log</span>
+          <span className="sep">/</span><span style={{ color: "var(--body)" }}>Activity Log</span>
         </div>
 
         <div className="head">
@@ -195,11 +271,11 @@ export const ActivityLogPage = () => {
           </div>
           <div className="search">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+              <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
             </svg>
-            <input 
-              type="text" 
-              placeholder="Search by user, product or field…" 
+            <input
+              type="text"
+              placeholder="Search by user, product or field…"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -215,11 +291,11 @@ export const ActivityLogPage = () => {
 
         <div className="toolbar" id="filters">
           <div className={`chip ${filterAction === "all" ? "active" : ""}`} onClick={() => setFilterAction("all")}>All actions</div>
-          <div className={`chip ${filterAction === "create" ? "active" : ""}`} onClick={() => setFilterAction("create")}><span className="cdot" style={{background: "var(--create-dot)"}}></span>Create</div>
-          <div className={`chip ${filterAction === "update" ? "active" : ""}`} onClick={() => setFilterAction("update")}><span className="cdot" style={{background: "var(--update-dot)"}}></span>Update</div>
-          <div className={`chip ${filterAction === "sales" ? "active" : ""}`} onClick={() => setFilterAction("sales")}><span className="cdot" style={{background: "var(--sales-dot)"}}></span>Sales</div>
-          <div className={`chip ${filterAction === "return" ? "active" : ""}`} onClick={() => setFilterAction("return")}><span className="cdot" style={{background: "var(--return-dot)"}}></span>Sales return</div>
-          <div className={`chip ${filterAction === "delete" ? "active" : ""}`} onClick={() => setFilterAction("delete")}><span className="cdot" style={{background: "var(--delete-dot)"}}></span>Delete</div>
+          <div className={`chip ${filterAction === "create" ? "active" : ""}`} onClick={() => setFilterAction("create")}><span className="cdot" style={{ background: "var(--create-dot)" }}></span>Create</div>
+          <div className={`chip ${filterAction === "update" ? "active" : ""}`} onClick={() => setFilterAction("update")}><span className="cdot" style={{ background: "var(--update-dot)" }}></span>Update</div>
+          <div className={`chip ${filterAction === "sales" ? "active" : ""}`} onClick={() => setFilterAction("sales")}><span className="cdot" style={{ background: "var(--sales-dot)" }}></span>Sales</div>
+          <div className={`chip ${filterAction === "return" ? "active" : ""}`} onClick={() => setFilterAction("return")}><span className="cdot" style={{ background: "var(--return-dot)" }}></span>Sales return</div>
+          <div className={`chip ${filterAction === "delete" ? "active" : ""}`} onClick={() => setFilterAction("delete")}><span className="cdot" style={{ background: "var(--delete-dot)" }}></span>Delete</div>
           <div className="spacer"></div>
           <div className="count">{filteredLogs.length} event{filteredLogs.length !== 1 ? "s" : ""}</div>
         </div>
@@ -237,9 +313,9 @@ export const ActivityLogPage = () => {
           </div>
           <div id="list">
             {loading ? (
-               <div className="empty">Loading activity logs...</div>
+              <div className="empty">Loading activity logs...</div>
             ) : filteredLogs.length === 0 ? (
-               <div className="empty">No matching activity. Try a different search or filter.</div>
+              <div className="empty">No matching activity. Try a different search or filter.</div>
             ) : (
               filteredLogs.map((e, i) => {
                 const open = openSet.has(e.id);
@@ -252,29 +328,29 @@ export const ActivityLogPage = () => {
 
                 const txnMeta = e.action === "sales" || e.action === "return";
                 const amtClass = e.action === "return" ? "return" : "sales";
-                
+
                 return (
-                  <div key={e.id} className={`rowwrap ${open ? 'open' : ''}`} style={{animationDelay: `${i * 28}ms`}}>
+                  <div key={e.id} className={`rowwrap ${open ? 'open' : ''}`} style={{ animationDelay: `${i * 28}ms` }}>
                     <div className="row" onClick={() => toggleOpen(e.id)}>
                       <div className="c-date">
                         <div className="d">{dateStr}</div>
-                        <div className="t">#{e.entity_id?.substring(0,8) || e.id.substring(0,8)}</div>
+                        <div className="t">#{e.entity_id?.substring(0, 8) || e.id.substring(0, 8)}</div>
                       </div>
-                      
+
                       <div className="c-user">
-                        <div className="avatar" style={{background: avatarColor(user)}}>{initials(user)}</div>
+                        <div className="avatar" style={{ background: avatarColor(user) }}>{initials(user)}</div>
                         <div className="u">
                           <div className="un">{user}</div>
                           <div className="ur">{role}</div>
                         </div>
                       </div>
-                      
+
                       <div className="c-action">
                         <span className={`badge ${e.action}`}>
                           <span className="bdot"></span>{e.action.toUpperCase()}
                         </span>
                       </div>
-                      
+
                       <div className="c-details">
                         {e.action === "delete" ? (
                           <>
@@ -296,7 +372,7 @@ export const ActivityLogPage = () => {
                                 <>
                                   <span className="pchip">
                                     <span className="f">Items</span>
-                                    <span className="v" style={{background: "var(--panel)", color: "var(--body)", fontWeight: 500}}>
+                                    <span className="v" style={{ background: "var(--panel)", color: "var(--body)", fontWeight: 500 }}>
                                       {e.lines[0].name} · {e.lines[0].qty}
                                     </span>
                                   </span>
@@ -332,21 +408,21 @@ export const ActivityLogPage = () => {
                           </>
                         )}
                       </div>
-                      
+
                       <div className="c-time">{timeStr}</div>
-                      
+
                       <div className="c-exp">
                         <button className="expbtn" aria-label="Toggle details">
                           <ChevD />
                         </button>
                       </div>
                     </div>
-                    
+
                     <div className="drawer">
                       <div className="inner">
                         <div className="drawer-pad">
                           <div className="drawer-grid">
-                            
+
                             {/* Left Panel */}
                             {txnMeta ? (
                               <div className="dpanel">
@@ -381,7 +457,7 @@ export const ActivityLogPage = () => {
                                       <span className="dfield">Record</span>
                                       <span className="dwas">{record}</span>
                                       <span className="darr"><ArrIcon /></span>
-                                      <span className="dnow" style={{background: "var(--was-bg)", color: "var(--was-tx)"}}>Deleted</span>
+                                      <span className="dnow" style={{ background: "var(--was-bg)", color: "var(--was-tx)" }}>Deleted</span>
                                     </div>
                                   ) : e.changes && e.changes.length > 0 ? (
                                     e.changes.map((c, idx) => (
@@ -390,14 +466,18 @@ export const ActivityLogPage = () => {
                                         {c.before === undefined || c.before === null || c.before === "" ? (
                                           <span className="dnew">— not set —</span>
                                         ) : (
-                                          <span className="dwas">{formatChangeValue(c.before)}</span>
+                                          <span className={`dwas ${typeof c.before === 'object' || (typeof c.before === 'string' && c.before.includes('[{')) ? 'd-obj' : ''}`}>
+                                            <ChangeValueRenderer val={c.before} isDeleted />
+                                          </span>
                                         )}
                                         <span className="darr"><ArrIcon /></span>
-                                        <span className="dnow">{formatChangeValue(c.after)}</span>
+                                        <span className={`dnow ${typeof c.after === 'object' || (typeof c.after === 'string' && c.after.includes('[{')) ? 'd-obj' : ''}`}>
+                                          <ChangeValueRenderer val={c.after} />
+                                        </span>
                                       </div>
                                     ))
                                   ) : (
-                                    <div className="empty" style={{padding: "20px"}}>No field-level changes recorded.</div>
+                                    <div className="empty" style={{ padding: "20px" }}>No field-level changes recorded.</div>
                                   )}
                                 </div>
                               </div>
@@ -413,18 +493,18 @@ export const ActivityLogPage = () => {
                                 </div>
                                 <div className="mrow">
                                   <span className="mk">Performed by</span>
-                                  <span className="mv" style={{fontFamily: "var(--font-body)"}}>{user} · {role}</span>
+                                  <span className="mv" style={{ fontFamily: "var(--font-body)" }}>{user} · {role}</span>
                                 </div>
                                 {txnMeta && e.meta?.customer && (
                                   <div className="mrow">
                                     <span className="mk">Customer</span>
-                                    <span className="mv" style={{fontFamily: "var(--font-body)"}}>{e.meta.customer}</span>
+                                    <span className="mv" style={{ fontFamily: "var(--font-body)" }}>{e.meta.customer}</span>
                                   </div>
                                 )}
                                 {txnMeta && e.meta?.payment && (
                                   <div className="mrow">
                                     <span className="mk">Payment</span>
-                                    <span className="mv" style={{fontFamily: "var(--font-body)"}}>{e.meta.payment}</span>
+                                    <span className="mv" style={{ fontFamily: "var(--font-body)" }}>{e.meta.payment}</span>
                                   </div>
                                 )}
                                 <div className="mrow">

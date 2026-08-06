@@ -216,19 +216,17 @@ const PurchaseReturnDialog = ({
           {[1, 2, 3].map((s) => (
             <div key={s} className="flex items-center gap-2">
               <div
-                className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-black transition-all ${
-                  step >= s
-                    ? "bg-rose-600 text-white"
-                    : "bg-slate-100 text-slate-400"
-                }`}
+                className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-black transition-all ${step >= s
+                  ? "bg-rose-600 text-white"
+                  : "bg-slate-100 text-slate-400"
+                  }`}
               >
                 {step > s ? <CheckCircle2 size={10} /> : s}
               </div>
               {s < 3 && (
                 <div
-                  className={`h-0.5 w-10 rounded-full transition-all ${
-                    step > s ? "bg-rose-400" : "bg-slate-100"
-                  }`}
+                  className={`h-0.5 w-10 rounded-full transition-all ${step > s ? "bg-rose-400" : "bg-slate-100"
+                    }`}
                 />
               )}
             </div>
@@ -253,11 +251,10 @@ const PurchaseReturnDialog = ({
                   {returnItems.map((item, idx) => (
                     <div
                       key={idx}
-                      className={`p-4 rounded-xl border transition-all ${
-                        item.returnQty > 0
-                          ? "border-rose-200 bg-rose-50"
-                          : "border-slate-100 bg-slate-50/50"
-                      }`}
+                      className={`p-4 rounded-xl border transition-all ${item.returnQty > 0
+                        ? "border-rose-200 bg-rose-50"
+                        : "border-slate-100 bg-slate-50/50"
+                        }`}
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex-1 min-w-0">
@@ -327,11 +324,10 @@ const PurchaseReturnDialog = ({
                   <button
                     key={reason}
                     onClick={() => setGlobalReason(reason)}
-                    className={`px-3 py-2.5 rounded-xl text-xs font-bold text-left border transition-all ${
-                      globalReason === reason
-                        ? "border-rose-400 bg-rose-50 text-rose-700"
-                        : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
-                    }`}
+                    className={`px-3 py-2.5 rounded-xl text-xs font-bold text-left border transition-all ${globalReason === reason
+                      ? "border-rose-400 bg-rose-50 text-rose-700"
+                      : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
+                      }`}
                   >
                     {globalReason === reason && (
                       <span className="mr-1">✓</span>
@@ -476,7 +472,7 @@ const PurchaseDetail = () => {
     setBottomActions(
       <div className="flex items-center justify-end w-full animate-in fade-in slide-in-from-right-4 duration-300 gap-2">
         {po && po.purchaseType === 'Purchase' && po.status !== 'cancelled' && (
-          <button 
+          <button
             type="button"
             onClick={() => navigate(`/purchase/edit/${po.id}`)}
             className="px-6 h-8 rounded-lg border border-blue-600 bg-blue-600 text-white font-bold text-xs hover:bg-blue-700 transition-all flex items-center shadow-sm"
@@ -484,7 +480,7 @@ const PurchaseDetail = () => {
             Edit Purchase
           </button>
         )}
-        <button 
+        <button
           type="button"
           onClick={() => navigate("/purchase/detail")}
           className="px-6 h-8 rounded-lg border border-slate-200 bg-white text-slate-700 font-bold text-xs hover:bg-slate-50 transition-all flex items-center shadow-sm"
@@ -537,10 +533,10 @@ const PurchaseDetail = () => {
   }, [id, po, fetchPo]);
 
   useEffect(() => {
-    if (activeTab === 3) {
+    if (activeTab === 2) {
       const currentReturns = po?.returns || (po as any)?.purchase_returns || [];
       setReturns(currentReturns);
-      
+
       // If returns array is empty and we haven't retried for this PO yet, retry once after 600ms
       if (currentReturns.length === 0 && id && !hasRefreshedReturnsRef.current[id]) {
         hasRefreshedReturnsRef.current[id] = true;
@@ -587,31 +583,31 @@ const PurchaseDetail = () => {
 
 
   const subtotal = po.products.reduce(
-  (sum, item) => sum + (item.buy_price || 0) * (item.quantity || 0),
-  0
-);
+    (sum, item) => sum + (item.buy_price || 0) * (item.quantity || 0),
+    0
+  );
 
-const totalGst = po.products.reduce((sum, item) => {
-  let gst = 0;
+  const totalGst = po.products.reduce((sum, item) => {
+    let gst = 0;
 
-  if (typeof item.gst === "string") {
-    gst = parseFloat(String(item.gst).replace("%", ""));
-  } else {
-    gst = Number(item.gst ?? 0);
-  }
+    if (typeof item.gst === "string") {
+      gst = parseFloat(String(item.gst).replace("%", ""));
+    } else {
+      gst = Number(item.gst ?? 0);
+    }
 
-  return sum + ((item.buy_price || 0) * (item.quantity || 0) * gst) / 100;
-}, 0);
+    return sum + ((item.buy_price || 0) * (item.quantity || 0) * gst) / 100;
+  }, 0);
 
-const transportCharge = po.charges?.transport || 0;
-const otherCharge = po.charges?.other || 0;
+  const transportCharge = po.charges?.transport || 0;
+  const otherCharge = po.charges?.other || 0;
 
-const grandTotal =
-  subtotal +
-  totalGst;
+  const grandTotal =
+    subtotal +
+    totalGst;
 
-const outstanding =
-  po.outstanding !== undefined ? po.outstanding : Math.max(0, grandTotal - (po.paid_amount || 0));
+  const outstanding =
+    po.outstanding !== undefined ? po.outstanding : Math.max(0, grandTotal - (po.paid_amount || 0));
 
   return (
     <div className="flex-1 flex flex-col min-h-0 h-full bg-slate-50/50 font-sans text-slate-900 overflow-hidden relative">
@@ -681,11 +677,10 @@ const outstanding =
             <button
               key={tab}
               onClick={() => setActiveTab(i)}
-              className={`px-4 py-1.5 text-[11px] font-bold rounded-lg transition-all ${
-                activeTab === i
-                  ? "bg-blue-600 text-white shadow-md shadow-blue-100"
-                  : "text-slate-500 hover:bg-slate-50 hover:text-slate-700"
-              } ${i === 2 ? "flex items-center gap-1" : ""}`}
+              className={`px-4 py-1.5 text-[11px] font-bold rounded-lg transition-all ${activeTab === i
+                ? "bg-blue-600 text-white shadow-md shadow-blue-100"
+                : "text-slate-500 hover:bg-slate-50 hover:text-slate-700"
+                } ${i === 2 ? "flex items-center gap-1" : ""}`}
             >
               {i === 2 && <RotateCcw size={10} />}
               {tab}
@@ -909,7 +904,7 @@ const outstanding =
                                     <p className="text-[10px] font-extrabold text-[var(--at-variant-tx)] bg-[var(--at-variant-bg)] border border-[var(--at-variant-bd)] px-1.5 py-0.5 rounded-xl w-fit">• {product.variant.variant_name}</p>
                                   </div>
                                 )}
-                                
+
                                 {product.batch && (
                                   <div className="mt-2 pl-3 border-l-2 border-indigo-150 space-y-1.5">
                                     <div className="bg-slate-50 p-2 rounded border border-slate-100 max-w-md text-[10px] text-slate-650 shadow-sm">
@@ -1130,6 +1125,7 @@ const outstanding =
                       <thead>
                         <tr className="bg-slate-50/50 border-b border-slate-100">
                           <th className="px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em]">Return ID</th>
+                          <th className="px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em]">Status</th>
                           <th className="px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em]">Date</th>
                           <th className="px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em]">Items</th>
                           <th className="px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em]">Reason</th>
@@ -1140,7 +1136,7 @@ const outstanding =
                       </thead>
                       <tbody className="divide-y divide-slate-50">
                         {returns.map((ret: any, idx: number) => {
-                          const retDate = ret.created_at || ret.date || ret.return_date;
+                          const retDate = ret.created_at || ret.updated_at || ret.date || ret.return_date || po?.date;
                           const formattedDate = retDate
                             ? new Date(retDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })
                             : "—";
@@ -1149,6 +1145,7 @@ const outstanding =
                           const adjusted = Number(payInfo.adjusted_against_outstanding ?? ret.adjusted_amount ?? 0);
                           const cashRefund = Number(payInfo.cash_refund ?? ret.cash_refund ?? ret.total_refund_amount ?? 0);
                           const reason = payInfo.reason || ret.reason || "—";
+                          const status = ret.status || "—";
                           const itemCount = Array.isArray(ret.items) ? ret.items.length : (ret.total_refund_qty ?? ret.total_items ?? "—");
                           const retId = ret.ui_id || ret.sequence_id || ret.return_id || ret.id || `PRET-${idx + 1}`;
                           return (
@@ -1156,6 +1153,12 @@ const outstanding =
                               <td className="px-5 py-4">
                                 <span className="text-xs font-mono font-black text-rose-600 bg-rose-50 px-2 py-0.5 rounded border border-rose-100">
                                   {retId}
+                                </span>
+                              </td>
+                              <td className="px-5 py-4">
+                                <span className={`text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wider ${status === 'COMPLETED' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'
+                                  }`}>
+                                  {status}
                                 </span>
                               </td>
                               <td className="px-5 py-4">
@@ -1167,7 +1170,7 @@ const outstanding =
                                   <div className="mt-0.5 space-y-0.5">
                                     {ret.items.slice(0, 3).map((item: any, iIdx: number) => (
                                       <p key={iIdx} className="text-[10px] text-slate-400 font-medium">
-                                        {item.inventory_name || item.name || "Item"} × {item.quantity || item.returned_qty || "?"}
+                                        {item.inventory_name || item.name || "Item"} × {item.entered_qty || item.quantity || item.returned_qty || "?"} {item.entered_unit || ""}
                                       </p>
                                     ))}
                                     {ret.items.length > 3 && (
@@ -1217,7 +1220,7 @@ const outstanding =
         onSuccess={() => {
           if (id) hasRefreshedReturnsRef.current[id] = false;
           fetchPo();
-          setActiveTab(3);
+          setActiveTab(2);
           setTimeout(() => {
             fetchPo();
           }, 800);

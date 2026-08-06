@@ -253,6 +253,65 @@
         }
       }
     },
+    "/purchases/cancel": {
+      "post": {
+        "tags": [
+          "Purchase Crud's"
+        ],
+        "summary": "Cancel",
+        "operationId": "cancel_purchases_cancel_post",
+        "parameters": [
+          {
+            "name": "x-user-infos",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-User-Infos"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CancelPurchaseSchema"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/purchases/{shop_id}/{id}": {
       "delete": {
         "tags": [
@@ -1133,6 +1192,24 @@
   },
   "components": {
     "schemas": {
+      "CancelPurchaseSchema": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "shop_id": {
+            "type": "string",
+            "title": "Shop Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "shop_id"
+        ],
+        "title": "CancelPurchaseSchema"
+      },
       "CreateCustomFieldSchema": {
         "properties": {
           "shop_id": {

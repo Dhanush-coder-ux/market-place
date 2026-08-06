@@ -1,5 +1,6 @@
 import React from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { AntBadge } from "@/components/ui/AntBadge";
 
 // ─── Utility ──────────────────────────────────────────────────────────────────
 
@@ -9,25 +10,23 @@ export const fmt = (n: number) => "₹" + n.toLocaleString("en-IN");
 // ─── StatusBadge ──────────────────────────────────────────────────────────────
 
 export function StatusBadge({ status }: { status: string }) {
-  const colorMap: Record<string, string> = {
-    Paid: "bg-[var(--pay-paid-bg)] text-[var(--pay-paid-tx)] border-[var(--pay-paid-bd)]",
-    Partial: "bg-[var(--pay-partial-bg)] text-[var(--pay-partial-tx)] border-[var(--pay-partial-bd)]",
-    "Partially Paid": "bg-[var(--pay-partial-bg)] text-[var(--pay-partial-tx)] border-[var(--pay-partial-bd)]",
-    Pending: "bg-[var(--pay-pending-bg)] text-[var(--pay-pending-tx)] border-[var(--pay-pending-bd)]",
-    Accepted: "bg-[var(--ps-completed-bg)] text-[var(--ps-completed-tx)] border-[var(--ps-completed-bd)]",
-    Inactive: "bg-[var(--ps-cancel-bg)] text-[var(--ps-cancel-tx)] border-[var(--ps-cancel-bd)]",
-    Active: "bg-[var(--ps-completed-bg)] text-[var(--ps-completed-tx)] border-[var(--ps-completed-bd)]",
-    Completed: "bg-[var(--ps-completed-bg)] text-[var(--ps-completed-tx)] border-[var(--ps-completed-bd)]",
-    Draft: "bg-[var(--ps-draft-bg)] text-[var(--ps-draft-tx)] border-[var(--ps-draft-bd)]",
-    Cancelled: "bg-[var(--ps-cancel-bg)] text-[var(--ps-cancel-tx)] border-[var(--ps-cancel-bd)]",
+  const colorMap: Record<string, any> = {
+    Paid: "pay-paid",
+    Partial: "pay-partial",
+    "Partially Paid": "pay-partial",
+    Pending: "pay-pending",
+    Accepted: "ps-completed",
+    Inactive: "ps-cancelled",
+    Active: "ps-completed",
+    Completed: "ps-completed",
+    Draft: "ps-draft",
+    Cancelled: "ps-cancelled",
   };
+  const variant = colorMap[status] || "ps-draft";
   return (
-    <span
-      className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold   border ${colorMap[status] ?? "bg-slate-50 text-slate-500 border-slate-100"
-        }`}
-    >
+    <AntBadge variant={variant} type="pill" dot>
       {status}
-    </span>
+    </AntBadge>
   );
 }
 
@@ -35,24 +34,24 @@ export function StatusBadge({ status }: { status: string }) {
 
 export function TypeBadge({ type, labelOverride, icon: Icon }: { type: string, labelOverride?: string, icon?: any }) {
   const t = type?.toUpperCase() || "ADJUSTMENT";
-  let bg = "bg-[var(--mv-adjust-bg)]", text = "text-[var(--mv-adjust-tx)]", border = "border-[var(--mv-adjust-bd)]", dot = "bg-[var(--mv-adjust-dot)]", label = "Adjustment";
+  let variant: any = "tx-adjustment";
+  let label = "Adjustment";
   
-  if (t.includes("PURCHASE_RETURN")) { bg = "bg-[var(--mv-preturn-bg)]"; text = "text-[var(--mv-preturn-tx)]"; border = "border-[var(--mv-preturn-bd)]"; dot = "bg-[var(--mv-preturn-dot)]"; label = "Purchase Return"; }
-  else if (t.includes("SALES_RETURN") || t.includes("SALE_RETURN")) { bg = "bg-[var(--mv-sreturn-bg)]"; text = "text-[var(--mv-sreturn-tx)]"; border = "border-[var(--mv-sreturn-bd)]"; dot = "bg-[var(--mv-sreturn-dot)]"; label = "Sales Return"; }
-  else if (t.includes("PO_PURCHASE") || t.includes("STOCK_UPDATE")) { bg = "bg-[var(--mv-purchase-bg)]"; text = "text-[var(--mv-purchase-tx)]"; border = "border-[var(--mv-purchase-bd)]"; dot = "bg-[var(--mv-purchase-dot)]"; label = "Stock updated via purchase"; }
-  else if (t.includes("PURCHASE") || t === "DIRECT") { bg = "bg-[var(--mv-purchase-bg)]"; text = "text-[var(--mv-purchase-tx)]"; border = "border-[var(--mv-purchase-bd)]"; dot = "bg-[var(--mv-purchase-dot)]"; label = "Stock added via purchase"; }
-  else if (t.includes("SALES")) { bg = "bg-[var(--mv-sales-bg)]"; text = "text-[var(--mv-sales-tx)]"; border = "border-[var(--mv-sales-bd)]"; dot = "bg-[var(--mv-sales-dot)]"; label = "Sales"; }
-  else if (t === "TRANSFER") { bg = "bg-slate-100"; text = "text-slate-700"; border = "border-slate-200"; dot = "bg-slate-400"; label = "Transfer"; }
-  else if (t.includes("OPENING")) { bg = "bg-[var(--mv-opening-bg)]"; text = "text-[var(--mv-opening-tx)]"; border = "border-[var(--mv-opening-bd)]"; dot = "bg-[var(--mv-opening-dot)]"; label = "Opening"; }
-  else if (t.includes("ADJUSTMENT")) { bg = "bg-[var(--mv-adjust-bg)]"; text = "text-[var(--mv-adjust-tx)]"; border = "border-[var(--mv-adjust-bd)]"; dot = "bg-[var(--mv-adjust-dot)]"; label = "Stock adjusted"; }
+  if (t.includes("PURCHASE_RETURN")) { variant = "tx-purchase-return"; label = "Purchase Return"; }
+  else if (t.includes("SALES_RETURN") || t.includes("SALE_RETURN")) { variant = "tx-sales-return"; label = "Sales Return"; }
+  else if (t.includes("PO_PURCHASE") || t.includes("STOCK_UPDATE")) { variant = "tx-purchase"; label = "PO Purchase"; }
+  else if (t.includes("PURCHASE") || t === "DIRECT") { variant = "tx-purchase"; label = "Purchase"; }
+  else if (t.includes("SALES")) { variant = "tx-sales"; label = "Sales"; }
+  else if (t === "TRANSFER") { variant = "tx-opening"; label = "Transfer"; }
+  else if (t.includes("OPENING")) { variant = "tx-opening"; label = "Opening"; }
+  else if (t.includes("ADJUSTMENT")) { variant = "tx-adjustment"; label = "Adjustment"; }
 
   const displayLabel = labelOverride || label;
 
   return (
-    <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${bg} ${text} ${border}`}>
-      {Icon ? <Icon size={10} className="stroke-[3]" /> : <span className={`w-1.5 h-1.5 rounded-full ${dot}`} />}
+    <AntBadge variant={variant} type="pill" icon={Icon ? <Icon size={10} className="stroke-[3]" /> : undefined} dot={!Icon}>
       {displayLabel}
-    </span>
+    </AntBadge>
   );
 }
 
@@ -286,13 +285,13 @@ export function ImageCarousel({ images, alt, className = "" }: { images: string[
 // ─── ProfileHeaderCard ────────────────────────────────────────────────────────
 
 export interface ProfileHeaderCardProps {
-  name: string;
+  name: string | React.ReactNode;
   initials: string;
   imageUrl?: string | string[];
   subText?: string;
   badges?: Array<{
     text: string;
-    variant?: "primary" | "success" | "danger" | "warning" | "pay-paid" | "pay-partial" | "pay-pending" | "pay-overdue" | "vendor";
+    variant?: any;
     showPulse?: boolean;
     icon?: any;
     dotColor?: string;
@@ -322,7 +321,7 @@ export function ProfileHeaderCard({
       <div className="relative flex flex-col md:flex-row items-start md:items-center gap-4">
         <div className="w-16 h-16 rounded-lg bg-gradient-to-br from-blue-600 to-blue-400 flex items-center justify-center text-xl font-bold text-white shadow-lg shadow-blue-200 ring-2 ring-white overflow-hidden shrink-0">
           {imageUrl && (Array.isArray(imageUrl) ? imageUrl.length > 0 : true) ? (
-            <ImageCarousel images={Array.isArray(imageUrl) ? imageUrl : [imageUrl]} alt={name} />
+            <ImageCarousel images={Array.isArray(imageUrl) ? imageUrl : [imageUrl]} alt={typeof name === 'string' ? name : 'Profile Image'} />
           ) : (
             initials
           )}
@@ -334,16 +333,23 @@ export function ProfileHeaderCard({
               <h1 className="text-lg font-semibold text-slate-800 tracking-tight">{name}</h1>
               <div className="flex items-center gap-2">
                 {badges.map((badge, i) => {
+                  const antBadgeVariants = ["tx-purchase", "tx-sales", "tx-purchase-return", "tx-sales-return", "tx-opening", "tx-adjustment", "ps-completed", "ps-cancelled", "ps-draft", "pay-paid", "pay-partial", "pay-pending"];
+                  let mappedVariant = badge.variant;
+                  if (badge.variant === "vendor") mappedVariant = "tx-purchase";
+                  
+                  if (mappedVariant && antBadgeVariants.includes(mappedVariant)) {
+                    return (
+                      <AntBadge key={i} variant={mappedVariant} type="pill" dot={!badge.icon} icon={badge.icon ? <badge.icon size={10} className="stroke-[2.5]" /> : undefined}>
+                        {badge.text}
+                      </AntBadge>
+                    );
+                  }
+
                   let styles = "bg-blue-50 text-blue-600 border-blue-100";
                   if (badge.variant === "success") styles = "bg-emerald-50 text-emerald-600 border-emerald-100";
                   else if (badge.variant === "danger") styles = "bg-rose-50 text-rose-600 border-rose-100";
                   else if (badge.variant === "warning") styles = "bg-amber-50 text-amber-600 border-amber-100";
-                  else if (badge.variant === "pay-paid") styles = "bg-[var(--pay-paid-bg)] text-[var(--pay-paid-tx)] border-[var(--pay-paid-bd)]";
-                  else if (badge.variant === "pay-partial") styles = "bg-[var(--pay-partial-bg)] text-[var(--pay-partial-tx)] border-[var(--pay-partial-bd)]";
-                  else if (badge.variant === "pay-pending") styles = "bg-[var(--pay-pending-bg)] text-[var(--pay-pending-tx)] border-[var(--pay-pending-bd)]";
-                  else if (badge.variant === "pay-overdue") styles = "bg-white text-[var(--pay-overdue-tx)] border-[var(--pay-overdue-bd)]";
-                  else if (badge.variant === "vendor") styles = "bg-[var(--mv-purchase-bg)] text-[var(--mv-purchase-tx)] border-[var(--mv-purchase-bd)]";
-
+                  
                   return (
                     <span key={i} className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[9px] font-extrabold   border ${styles}`}>
                       {badge.icon && <badge.icon size={10} className="stroke-[2.5]" />}

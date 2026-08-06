@@ -10,6 +10,7 @@ import {
   Copy,
   Check
 } from "lucide-react";
+import { AntBadge } from "@/components/ui/AntBadge";
 
 
 /* ─── Helpers ────────────────────────────────────────────────────────────── */
@@ -36,9 +37,9 @@ const formatDate = (dateStr?: string) => {
 const getStockStatus = (stock: number | string, reorderPoint?: number | string) => {
   const stockNum = Number(stock) || 0;
   const rp = Number(reorderPoint) || 10;
-  if (stockNum <= 0) return { label: '0 In Stock', color: 'text-[var(--ps-cancel-tx)] bg-[var(--ps-cancel-bg)] border-[var(--ps-cancel-bd)]' };
-  if (stockNum <= rp) return { label: `${stockNum} Low Stock`, color: 'text-[var(--ps-draft-tx)] bg-[var(--ps-draft-bg)] border-[var(--ps-draft-bd)]' };
-  return { label: `${stockNum} In Stock`, color: 'text-[var(--ps-completed-tx)] bg-[var(--ps-completed-bg)] border-[var(--ps-completed-bd)]' };
+  if (stockNum <= 0) return { label: '0 In Stock', variant: 'ps-cancelled' };
+  if (stockNum <= rp) return { label: `${stockNum} Low Stock`, variant: 'ps-draft' };
+  return { label: `${stockNum} In Stock`, variant: 'ps-completed' };
 };
 
 const getDaysLeft = (expDate?: string) => {
@@ -55,30 +56,30 @@ export const BatchBadge = ({ expDate, qty }: { expDate?: string; qty: number }) 
   const days = getDaysLeft(expDate);
   if (qty <= 0) {
     return (
-      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-xl text-[10px] font-bold   border bg-[var(--mv-sales-bg)] text-badge-gray-text border-badge-gray-text/20">
+      <AntBadge variant="mv-sales" type="tag">
         Depleted
-      </span>
+      </AntBadge>
     );
   }
   if (days === null) return null;
   if (days < 0) {
     return (
-      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-xl text-[10px] font-bold   border bg-[var(--mv-sales-bg)] text-[var(--ps-cancel-tx)] border-badge-red-text/20">
+      <AntBadge variant="ps-cancelled" type="tag">
         Expired
-      </span>
+      </AntBadge>
     );
   }
   if (days <= 90) {
     return (
-      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-xl text-[10px] font-bold   border bg-[var(--at-batch-bg)] text-[var(--at-batch-tx)] border-badge-amber-text/20">
-        <Clock size={10} /> {days}d left
-      </span>
+      <AntBadge variant="at-batch" type="tag" icon={<Clock size={10} />}>
+        {days}d left
+      </AntBadge>
     );
   }
   return (
-    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-xl text-[10px] font-bold   border bg-[var(--mv-sales-bg)] text-badge-green-text border-badge-green-text/20">
-      <span className="w-1 h-1 rounded-full bg-[var(--ps-completed-dot)] inline-block" /> {days}d left
-    </span>
+    <AntBadge variant="ps-completed" type="tag" dot>
+      {days}d left
+    </AntBadge>
   );
 };
 
@@ -268,16 +269,15 @@ export const BatchCards = ({ batches }: { batches: any | any[] }) => {
           const reservedQty   = Number(batch.stock_infos?.reserved_stocks   ?? 0);
           const serials       = extractSerials(batch.serialno_infos ?? batch.serial_numbers ?? batch.datas?.serial_numbers);
           const daysToExpiry  = getDaysDiff(batch.expiry_date || batch.expiry);
-          const bBuy          = batch.pricing_infos?.buy_price   ?? batch.buy_price;
           const bSell         = batch.pricing_infos?.sell_price  ?? batch.sell_price;
           const storageLoc    = batch.storage_location_infos?.storage_location ?? batch.storage_location ?? null;
           const reorderPt     = batch.reorder_point_infos?.reorder_point       ?? batch.reorder_point    ?? null;
 
           const stockStatus = availableQty <= 0
-            ? { label: 'Out of Stock', cls: 'text-[var(--ps-cancel-tx)] bg-[var(--ps-cancel-bg)] border-[var(--ps-cancel-bd)]' }
+            ? { label: 'Out of Stock', variant: 'ps-cancelled' }
             : reorderPt !== null && availableQty <= reorderPt
-              ? { label: 'Low Stock',    cls: 'text-[var(--ps-draft-tx)] bg-[var(--ps-draft-bg)] border-[var(--ps-draft-bd)]' }
-              : { label: 'In Stock',     cls: 'text-[var(--ps-completed-tx)] bg-[var(--ps-completed-bg)] border-[var(--ps-completed-bd)]' };
+              ? { label: 'Low Stock',    variant: 'ps-draft' }
+              : { label: 'In Stock',     variant: 'ps-completed' };
 
           return (
             <div key={batch.id || idx} className="flex flex-col border border-slate-200 rounded-xl bg-white shadow-sm hover:shadow-md hover:border-blue-200 transition-all p-3.5 relative gap-3">
@@ -296,23 +296,23 @@ export const BatchCards = ({ batches }: { batches: any | any[] }) => {
                     )}
                   </div>
                 </div>
-                <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-xl border whitespace-nowrap shrink-0 ${stockStatus.cls}`}>
+                <AntBadge variant={stockStatus.variant} type="pill" dot>
                   {stockStatus.label}
-                </span>
+                </AntBadge>
               </div>
 
               {/* Tags (Loc, Reorder, Exp) */}
               <div className="flex flex-wrap gap-1.5">
                 {storageLoc && (
-                   <span className="text-[8px] font-bold px-1.5 py-0.5 rounded-xl bg-[var(--at-variant-bg)] text-[var(--at-variant-tx)] border border-badge-purple-text/20 tracking-wider">LOC: {storageLoc}</span>
+                  <AntBadge variant="at-variant" type="tag">LOC: {storageLoc}</AntBadge>
                 )}
                 {reorderPt !== null && (
-                   <span className="text-[8px] font-bold px-1.5 py-0.5 rounded-xl bg-[var(--at-batch-bg)] text-[var(--at-batch-tx)] border border-badge-amber-text/20 tracking-wider">REORDER: {reorderPt}</span>
+                  <AntBadge variant="at-batch" type="tag">REORDER: {reorderPt}</AntBadge>
                 )}
                 {daysToExpiry !== null && (
-                   <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded-xl tracking-wider border ${daysToExpiry <= 0 ? 'bg-[var(--mv-sales-bg)] border-badge-red-text/20 text-[var(--ps-cancel-tx)]' : daysToExpiry <= 7 ? 'bg-[var(--mv-sales-bg)] border-badge-amber-text/20 text-[var(--at-batch-tx)]' : 'bg-[var(--mv-sales-bg)] border-badge-green-text/20 text-badge-green-text'}`}>
-                      {daysToExpiry < 0 ? `EXP ${Math.abs(daysToExpiry)}D AGO` : daysToExpiry === 0 ? 'EXPIRES TODAY' : `EXP IN ${daysToExpiry}D`}
-                   </span>
+                  <AntBadge variant={daysToExpiry <= 0 ? 'ps-cancelled' : daysToExpiry <= 7 ? 'at-batch' : 'ps-completed'} type="tag">
+                    {daysToExpiry < 0 ? `EXP ${Math.abs(daysToExpiry)}D AGO` : daysToExpiry === 0 ? 'EXPIRES TODAY' : `EXP IN ${daysToExpiry}D`}
+                  </AntBadge>
                 )}
               </div>
 
@@ -328,13 +328,9 @@ export const BatchCards = ({ batches }: { batches: any | any[] }) => {
                     <span className="text-xs font-bold text-slate-600 tabular-nums">{physicalQty} <span className="text-amber-500">({reservedQty})</span></span>
                   </div>
                 )}
-                {(bBuy !== undefined || bSell !== undefined) && (
+                {(bSell !== undefined) && (
                   <>
                     <div className="flex flex-col pt-2 border-t border-slate-200/60 mt-1">
-                      <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Buy Price</span>
-                      <span className="text-xs font-bold text-slate-700">{formatCurrency(bBuy)}</span>
-                    </div>
-                    <div className="flex flex-col pt-2 border-t border-slate-200/60 mt-1 border-l pl-2">
                       <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Sell Price</span>
                       <span className="text-xs font-bold text-slate-700">{formatCurrency(bSell)}</span>
                     </div>
@@ -413,13 +409,11 @@ const CopySKUButton = ({ val }: { val: string }) => {
 export const VariantRows = ({
   combinations,
   baseSellPrice,
-  baseBuyPrice,
   parentStorageLocation,
   parentReorderPoint
 }: {
   combinations: any[];
   baseSellPrice: any;
-  baseBuyPrice?: any;
   parentStorageLocation?: string | null;
   parentReorderPoint?: number | null;
 }) => {
@@ -440,7 +434,6 @@ export const VariantRows = ({
               <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-left">Variant</th>
               <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-left">SKU / Barcode</th>
               <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-right">Stock</th>
-              <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-right">Buy Price</th>
               <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-right">Sell Price</th>
               <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-left">Batch Count</th>
               <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-center">Status</th>
@@ -483,7 +476,6 @@ export const VariantRows = ({
               const stockStatus = getStockStatus(stockNum, reorderPoint ?? 0);
               const statusLabel = stockNum <= 0 ? "Out of Stock" : (reorderPoint !== null && stockNum <= reorderPoint) ? "Low Stock" : "In Stock";
               const sellPrice = comb.pricing_infos?.sell_price ?? comb.sell_price ?? comb.price ?? combDatas.sell_price ?? combDatas.datas?.sell_price ?? baseSellPrice;
-              const buyPrice = comb.pricing_infos?.buy_price ?? comb.buy_price ?? combDatas.buy_price ?? combDatas.datas?.buy_price ?? baseBuyPrice ?? 0;
 
               return (
                 <Fragment key={variantId}>
@@ -510,10 +502,10 @@ export const VariantRows = ({
                           {(storageLoc || reorderPoint !== null) && (
                             <div className="flex flex-wrap gap-1.5 mt-1">
                               {storageLoc && (
-                                <span className="text-[8px] font-bold px-1.5 py-0.5 rounded-xl bg-[var(--at-variant-bg)] text-[var(--at-variant-tx)] border border-[var(--at-variant-bd)] tracking-wider">LOC: {storageLoc}</span>
+                                <AntBadge variant="at-variant" type="tag">LOC: {storageLoc}</AntBadge>
                               )}
                               {reorderPoint !== null && (
-                                <span className="text-[8px] font-bold px-1.5 py-0.5 rounded-xl bg-[var(--at-batch-bg)] text-[var(--at-batch-tx)] border border-[var(--at-batch-bd)] tracking-wider">REORDER: {reorderPoint}</span>
+                                <AntBadge variant="at-batch" type="tag">REORDER: {reorderPoint}</AntBadge>
                               )}
                             </div>
                           )}
@@ -560,13 +552,6 @@ export const VariantRows = ({
                       </span>
                     </td>
 
-                    {/* Buy Price */}
-                    <td className="px-4 py-2 align-middle text-right">
-                      <span className="text-[13px] font-semibold text-slate-700 tabular-nums">
-                        {formatCurrency(buyPrice)}
-                      </span>
-                    </td>
-
                     {/* Sell Price */}
                     <td className="px-4 py-2 align-middle text-right">
                       <span className="text-[13px] font-bold text-slate-800 tabular-nums">
@@ -587,9 +572,9 @@ export const VariantRows = ({
 
                     {/* Status */}
                     <td className="px-4 py-2 align-middle text-center">
-                      <span className={`inline-flex px-2 py-1 rounded-xl text-[10px] font-bold border leading-none whitespace-nowrap ${stockStatus.color}`}>
+                      <AntBadge variant={stockStatus.variant} type="pill" dot>
                         {statusLabel}
-                      </span>
+                      </AntBadge>
                     </td>
 
                   </tr>

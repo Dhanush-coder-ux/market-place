@@ -17,6 +17,7 @@ import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 import { OrderResponse } from "@/features/order/types";
 import { ReturnModal } from "../components/ReturnOrderFlow";
 import { StatCard } from "@/components/common/StatsCard";
+import { AntBadge } from "@/components/ui/AntBadge";
 import { RightSidebarFilter } from "@/components/common/RightSidebarFilter";
 import { ReusableSelect } from "@/components/ui/ReusableSelect";
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
@@ -607,10 +608,10 @@ const SalesListPage: React.FC = () => {
                       <div>
                         <span className="font-mono text-[11px] font-semibold text-slate-800 block">#{sale.ui_id}</span>
                         <div className="flex gap-1 mt-1 flex-wrap">
-                          {sale.origin === "Sales Return" && <span className="text-[9px] font-bold text-red-600 bg-red-50 px-1 py-0.5 rounded">Return</span>}
-                          {hasReturns && <span className="text-[9px] font-bold text-rose-600 bg-rose-50 px-1 py-0.5 rounded border border-rose-100/50">Returned</span>}
-                          {refundedCount > 0 && <span className="text-[9px] font-bold text-orange-600 bg-orange-50 px-1 py-0.5 rounded">{refundedCount} Refunded</span>}
-                          {exchangedCount > 0 && <span className="text-[9px] font-bold text-blue-600 bg-blue-50 px-1 py-0.5 rounded">{exchangedCount} Exchanged</span>}
+                          {sale.origin === "Sales Return" && <AntBadge variant="tx-sales-return" type="tag">Return</AntBadge>}
+                          {hasReturns && <AntBadge variant="tx-sales-return" type="tag">Returned</AntBadge>}
+                          {refundedCount > 0 && <AntBadge variant="pay-partial" type="tag">{refundedCount} Refunded</AntBadge>}
+                          {exchangedCount > 0 && <AntBadge variant="tx-sales" type="tag">{exchangedCount} Exchanged</AntBadge>}
                         </div>
                       </div>
                     </td>

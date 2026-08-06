@@ -13,10 +13,12 @@ import {
 import { useHeader } from "@/context/HeaderContext";
 import { useToast } from "@/context/ToastContext";
 import { useApi } from "@/context/ApiContext";
+import { usePurchaseSettings } from "@/context/PurchaseContext";
 import { ENDPOINTS } from "@/services/endpoints";
 import Input from "@/components/ui/Input";
 import { GradientButton } from "@/components/ui/GradientButton";
 import { ReusableSelect } from "@/components/ui/ReusableSelect";
+import { SearchSelect } from "@/components/inputbuilders/SearchSelect";
 import Loader from "@/components/common/Loader";
 
 // ─── Interfaces ─────────────────────────────────────────────────────────────
@@ -72,6 +74,7 @@ const ProfileForm: React.FC = () => {
   const { setBottomActions } = useHeader();
   const { showToast } = useToast();
   const { postData, putData, getData, loading } = useApi();
+  const { setGstType } = usePurchaseSettings();
 
   const [submitting, setSubmitting] = useState(false);
 
@@ -115,6 +118,7 @@ const ProfileForm: React.FC = () => {
             gst_number: b.gst_infos?.number || "",
             currency: b.currency || "INR",
           });
+          setGstType(b.gst_infos?.registered ? "registered" : "non-registered");
         }
       });
     } else {
@@ -227,6 +231,7 @@ const ProfileForm: React.FC = () => {
           );
         }
         // After creating → go to shop-select; after editing → stay on profile
+        setGstType(formData.gst_registered ? "registered" : "non-registered");
         navigate(id ? "/profile" : "/shop-select");
       }
     } catch {
@@ -292,29 +297,16 @@ const ProfileForm: React.FC = () => {
                 />
               </div>
               <div className="space-y-2 md:col-span-2">
-                <label className="text-[10px] font-black text-slate-400 ml-1">Categories *</label>
-                <div className="flex flex-wrap gap-2">
-                  {categoryOptions.map(opt => {
-                    const isSelected = formData.category.includes(opt.value);
-                    return (
-                      <button
-                        key={opt.value}
-                        type="button"
-                        onClick={() => {
-                          setFormData(prev => ({
-                            ...prev,
-                            category: isSelected 
-                              ? prev.category.filter(c => c !== opt.value)
-                              : [...prev.category, opt.value]
-                          }))
-                        }}
-                        className={`px-3 py-1.5 rounded-full text-[11px] font-bold border transition-colors ${isSelected ? 'bg-blue-600 border-blue-600 text-white shadow-sm shadow-blue-100' : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'}`}
-                      >
-                        {opt.label}
-                      </button>
-                    )
-                  })}
-                </div>
+                <SearchSelect
+                  label="Categories *"
+                  value={formData.category}
+                  onChange={(val) => setFormData(prev => ({ ...prev, category: val as string[] }))}
+                  options={categoryOptions}
+                  labelKey="label"
+                  valueKey="value"
+                  multiple
+                  placeholder="Search and select categories..."
+                />
               </div>
             </div>
           </div>

@@ -22,11 +22,6 @@ export const InventoryDetailContent = ({ item }: { item: InventoryRecord | null 
       icon: <Layers size={20} className={stocks < 15 ? "text-red-500" : "text-green-500"} />,
     },
     {
-      label: "Buy Price",
-      value: `₹${buyPrice.toFixed(2)}`,
-      icon: <IndianRupee size={20} className="text-gray-500" />,
-    },
-    {
       label: "Selling Price",
       value: `₹${sellPrice.toFixed(2)}`,
       icon: <IndianRupee size={20} className="text-green-600" />,
@@ -155,7 +150,6 @@ export const InventoryDetailContent = ({ item }: { item: InventoryRecord | null 
               <thead>
                 <tr className="bg-slate-50/50 border-b border-slate-100">
                   <th className="px-6 py-4 text-[11px] font-black text-slate-500 tracking-tight">Variant</th>
-                  <th className="px-6 py-4 text-[11px] font-black text-slate-500 tracking-tight text-right">Buy Price</th>
                   <th className="px-6 py-4 text-[11px] font-black text-slate-500 tracking-tight text-right">Sell Price</th>
                   <th className="px-6 py-4 text-[11px] font-black text-slate-500 tracking-tight text-right">Stock</th>
                 </tr>
@@ -164,7 +158,6 @@ export const InventoryDetailContent = ({ item }: { item: InventoryRecord | null 
                 {item.variants.map((variant, idx) => (
                   <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
                     <td className="px-6 py-4 text-[13px] font-black text-slate-800">{variant.name || `Variant ${idx + 1}`}</td>
-                    <td className="px-6 py-4 text-[13px] text-slate-600 font-bold tabular-nums text-right">₹{(variant.buy_price || 0).toLocaleString()}</td>
                     <td className="px-6 py-4 text-[13px] text-emerald-600 font-black tabular-nums text-right">₹{(variant.sell_price || 0).toLocaleString()}</td>
                     <td className="px-6 py-4 text-[13px] text-right">
                       <span className={`px-2.5 py-1 rounded-lg font-black tabular-nums ${variant.stocks < 10 ? "text-rose-600 bg-rose-50 border border-rose-100" : "text-slate-600 bg-slate-50 border border-slate-100"}`}>{variant.stocks || 0}</span>

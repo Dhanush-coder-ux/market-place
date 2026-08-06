@@ -1,5 +1,6 @@
 import React from "react";
 import { Phone, User, ShoppingBag, IndianRupee } from "lucide-react";
+import { AntBadge } from "@/components/ui/AntBadge";
 
 type OrderItem = {
   name: string;
@@ -58,9 +59,19 @@ const OrderDetailView: React.FC<{ order: OrderDetailType }> = ({ order }) => {
           Order Summary
         </h3>
 
-        <div className="grid grid-cols-2 gap-3 text-gray-700 text-sm">
-          <p>Status: <span className="font-semibold">{order.status}</span></p>
-          <p>Type: <span className="font-semibold">{order.orderType}</span></p>
+        <div className="grid grid-cols-2 gap-4 text-gray-700 text-sm items-center">
+          <p className="flex items-center gap-2">Status: 
+            <AntBadge 
+              variant={order.status === "PENDING" ? "pay-pending" : order.status === "COMPLETED" ? "ps-completed" : order.status === "CANCELED" || order.status === "REFUNDED" ? "ps-cancelled" : order.status === "EXCHANGED" ? "tx-adjustment" : "lb-brand"} 
+              type="pill" 
+              dot
+            >
+              {order.status}
+            </AntBadge>
+          </p>
+          <p className="flex items-center gap-2">Type: 
+            <AntBadge variant="lb-brand" type="tag">{order.orderType}</AntBadge>
+          </p>
           <p>Subtotal: <span className="font-semibold">₹{order.subtotal}</span></p>
           <p>GST: <span className="font-semibold">{order.gstPercent}% (₹{order.gstAmount})</span></p>
         </div>

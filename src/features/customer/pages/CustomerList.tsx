@@ -26,6 +26,7 @@ const CustomerList = () => {
   const { showToast } = useToast();
 
   /* ── State ── */
+  const [activeKpi, _setActiveKpi] = useState("All Customers");
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [fromDate, setFromDate] = useState("");
@@ -113,6 +114,10 @@ const CustomerList = () => {
   /* ── Local Filters ── */
   const filteredCustomers = useMemo(() => {
     let result = customers;
+
+    if (activeKpi === "Outstanding Due") {
+      result = result.filter((c: any) => (c.dues || 0) > 0);
+    }
     if (debouncedSearch) {
       const q = debouncedSearch.toLowerCase();
       result = result.filter((c: any) => 

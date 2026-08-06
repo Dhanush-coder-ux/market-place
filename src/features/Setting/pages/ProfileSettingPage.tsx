@@ -15,6 +15,9 @@ import { CustomListSettings } from "@/features/Setting/pages/CustomListSettings"
 import { ShopProfileForm } from "@/features/Setting/pages/ShopProfileForm";
 import { usePurchaseSettings } from "@/context/PurchaseContext";
 import { useMediaQuery } from "@/hooks/use-media-query";
+import { shopApi } from "@/services/api/shop";
+import { SHOP_ID } from "@/services/endpoints";
+import { useToast } from "@/context/ToastContext";
 
 // ─── Menu config ─────────────────────────────────────────────────────────────
 
@@ -57,11 +60,11 @@ const MENU_ITEMS = [
 ];
 
 const accentClasses: Record<string, { icon: string; badge: string }> = {
-  blue:    { icon: "bg-blue-50    text-blue-600",    badge: "bg-blue-100    text-blue-700"   },
-  violet:  { icon: "bg-violet-50  text-violet-600",  badge: "bg-violet-100  text-violet-700" },
+  blue: { icon: "bg-blue-50    text-blue-600", badge: "bg-blue-100    text-blue-700" },
+  violet: { icon: "bg-violet-50  text-violet-600", badge: "bg-violet-100  text-violet-700" },
   emerald: { icon: "bg-emerald-50 text-emerald-600", badge: "bg-emerald-100 text-emerald-700" },
-  amber:   { icon: "bg-amber-50   text-amber-600",   badge: "bg-amber-100   text-amber-700"  },
-  rose:    { icon: "bg-rose-50    text-rose-600",    badge: "bg-rose-100    text-rose-700"   },
+  amber: { icon: "bg-amber-50   text-amber-600", badge: "bg-amber-100   text-amber-700" },
+  rose: { icon: "bg-rose-50    text-rose-600", badge: "bg-rose-100    text-rose-700" },
 };
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -70,6 +73,43 @@ export const ProfileSettingsPage = () => {
   const [activeTab, setActiveTab] = useState("dropdowns");
   const { settings, toggleSetting, setGstType } = usePurchaseSettings();
   const isMobile = useMediaQuery("(max-width: 768px)");
+  const { showToast } = useToast();
+
+  React.useEffect(() => {
+    // Sync GST setting with backend when Settings page is opened
+    shopApi.getShopById(SHOP_ID).then((res) => {
+      const shop = res?.data ?? res;
+      if (shop && shop.business_infos?.gst_infos) {
+        setGstType(shop.business_infos.gst_infos.registered ? "registered" : "non-registered");
+      }
+    }).catch((err) => {
+      console.error("Failed to sync initial GST settings", err);
+    });
+  }, [setGstType]);
+
+  const handleGstChange = async (value: "registered" | "non-registered") => {
+    setGstType(value);
+    try {
+      const shopRes = await shopApi.getShopById(SHOP_ID);
+      const shop = shopRes?.data ?? shopRes;
+      if (shop) {
+        const payload = { ...shop, id: SHOP_ID };
+        payload.business_infos = {
+          ...(payload.business_infos || {}),
+          gst_infos: {
+            ...(payload.business_infos?.gst_infos || {}),
+            registered: value === "registered",
+            number: value === "registered" ? payload.business_infos?.gst_infos?.number : null
+          }
+        };
+        await shopApi.updateShop(payload);
+        showToast("GST configuration updated successfully", "success");
+      }
+    } catch (err) {
+      console.error(err);
+      showToast("Failed to sync GST configuration with backend", "error");
+    }
+  };
 
   const activeItem = MENU_ITEMS.find((i) => i.id === activeTab);
 
@@ -196,21 +236,19 @@ export const ProfileSettingsPage = () => {
                   return (
                     <div
                       key={opt.value}
-                      onClick={() => setGstType(opt.value as any)}
-                      className={`flex flex-col p-5 rounded-2xl border-2 cursor-pointer transition-all duration-200 ${
-                        isActive
+                      onClick={() => handleGstChange(opt.value as any)}
+                      className={`flex flex-col p-5 rounded-2xl border-2 cursor-pointer transition-all duration-200 ${isActive
                           ? "border-blue-500 bg-blue-50/30 ring-4 ring-blue-500/5"
                           : "border-slate-100 bg-white hover:border-slate-200"
-                      }`}
+                        }`}
                     >
                       <div className="flex items-center justify-between mb-3">
                         <span className="text-sm font-bold text-slate-800">
                           {opt.label}
                         </span>
                         <div
-                          className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors ${
-                            isActive ? "border-blue-500 bg-blue-500" : "border-slate-300"
-                          }`}
+                          className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors ${isActive ? "border-blue-500 bg-blue-500" : "border-slate-300"
+                            }`}
                         >
                           {isActive && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
                         </div>
@@ -239,9 +277,8 @@ export const ProfileSettingsPage = () => {
             {activeItem && (
               <>
                 <div
-                  className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-5 ${
-                    accentClasses[activeItem.accent].icon
-                  }`}
+                  className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-5 ${accentClasses[activeItem.accent].icon
+                    }`}
                 >
                   <activeItem.icon size={24} />
                 </div>
@@ -262,7 +299,7 @@ export const ProfileSettingsPage = () => {
 
   return (
     <div className="flex flex-col h-full overflow-hidden animate-in fade-in duration-400">
-  
+
 
       <div className="flex flex-col md:flex-row gap-6 flex-1 min-h-0">
         {/* ── Sidebar ── */}
@@ -276,11 +313,10 @@ export const ProfileSettingsPage = () => {
                 <button
                   key={item.id}
                   onClick={() => setActiveTab(item.id)}
-                  className={`flex items-center gap-2 px-3.5 py-2 rounded-xl border text-xs font-bold whitespace-nowrap shrink-0 transition-all ${
-                    isActive
+                  className={`flex items-center gap-2 px-3.5 py-2 rounded-xl border text-xs font-bold whitespace-nowrap shrink-0 transition-all ${isActive
                       ? "bg-blue-600 border-blue-500 text-white shadow-md shadow-blue-200"
                       : "bg-white border-slate-200 text-slate-600 hover:border-slate-300"
-                  }`}
+                    }`}
                 >
                   <Icon size={13} />
                   {item.label}
@@ -305,19 +341,17 @@ export const ProfileSettingsPage = () => {
                   <button
                     key={item.id}
                     onClick={() => setActiveTab(item.id)}
-                    className={`group w-full flex items-center gap-3 px-3 py-3 rounded-xl text-left transition-all duration-200 ${
-                      isActive
+                    className={`group w-full flex items-center gap-3 px-3 py-3 rounded-xl text-left transition-all duration-200 ${isActive
                         ? "bg-slate-50 shadow-[0_2px_8px_rgba(0,0,0,0.02)] border border-slate-200/50"
                         : "border border-transparent hover:bg-slate-50/50 hover:border-slate-100"
-                    }`}
+                      }`}
                   >
                     {/* Icon */}
                     <div
-                      className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
-                        isActive
+                      className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-colors ${isActive
                           ? accent.icon
                           : "bg-white border border-slate-100 text-slate-400 group-hover:text-slate-600 shadow-sm"
-                      }`}
+                        }`}
                     >
                       <Icon size={16} />
                     </div>
@@ -325,9 +359,8 @@ export const ProfileSettingsPage = () => {
                     {/* Label + desc */}
                     <div className="flex-1 min-w-0">
                       <p
-                        className={`text-[13px] font-semibold leading-tight mb-1 ${
-                          isActive ? "text-slate-900" : "text-slate-600"
-                        }`}
+                        className={`text-[13px] font-semibold leading-tight mb-1 ${isActive ? "text-slate-900" : "text-slate-600"
+                          }`}
                       >
                         {item.label}
                       </p>
@@ -353,9 +386,8 @@ export const ProfileSettingsPage = () => {
           {activeItem && !isMobile && activeTab !== "activity" && (
             <div className="flex items-center gap-2 shrink-0 mb-4 px-2">
               <span
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold border ${
-                  accentClasses[activeItem.accent].badge
-                } border-current/20`}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold border ${accentClasses[activeItem.accent].badge
+                  } border-current/20`}
               >
                 <activeItem.icon size={13} />
                 {activeItem.label}

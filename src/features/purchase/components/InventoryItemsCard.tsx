@@ -964,7 +964,13 @@ const executeProductSelect = async (targetIndex: number, val: any, initialOpt: a
                             <Input
                               type="number"
                               value={product.costPrice as any}
-                              onChange={(e) => handleProductChange(index, "costPrice", e.target.value ? Number(e.target.value) : "")}
+                              onChange={(e) => {
+                                let val = e.target.value;
+                                if (val.length > 1 && val.startsWith("0") && val[1] !== ".") {
+                                  val = val.replace(/^0+/, "");
+                                }
+                                handleProductChange(index, "costPrice", val);
+                              }}
                               className="!h-9 !text-xs font-black rounded-lg border-slate-200 shadow-sm min-w-[90px] !pl-7 !pr-2"
                               leftIcon={<span className="text-[10px] text-slate-400 font-black absolute left-1">₹</span>}
                             />
@@ -1021,10 +1027,11 @@ const executeProductSelect = async (targetIndex: number, val: any, initialOpt: a
                               type="number"
                               value={product.taxGst ?? ""}
                               onChange={(e) => handleProductChange(index, "taxGst", e.target.value ? Number(e.target.value) : 0)}
-                              className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs font-black text-center focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none pr-6 bg-white"
+                              className={`w-full px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs font-black text-center focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none pr-6 ${!!product.inventory_id ? "bg-slate-50 opacity-60 cursor-not-allowed" : "bg-white"}`}
                               min="0"
                               max="100"
                               placeholder="GST"
+                              disabled={!!product.inventory_id}
                             />
                             <span className="absolute right-2.5 text-[10px] text-slate-400 font-black pointer-events-none">%</span>
                           </div>
@@ -1054,7 +1061,13 @@ const executeProductSelect = async (targetIndex: number, val: any, initialOpt: a
                             <Input
                               type="number"
                               value={(product.marginType === "percent" ? product.marginPercent : product.marginType === "amount" ? product.marginAmount : product.sellingPrice) as any}
-                              onChange={(e) => handleProductChange(index, product.marginType === "percent" ? "marginPercent" : product.marginType === "amount" ? "marginAmount" : "sellingPrice", e.target.value ? Number(e.target.value) : "")}
+                              onChange={(e) => {
+                                let val = e.target.value;
+                                if (val.length > 1 && val.startsWith("0") && val[1] !== ".") {
+                                  val = val.replace(/^0+/, "");
+                                }
+                                handleProductChange(index, product.marginType === "percent" ? "marginPercent" : product.marginType === "amount" ? "marginAmount" : "sellingPrice", val);
+                              }}
                               className="!h-7 !text-[11px] !font-bold !w-full"
                               placeholder={product.marginType === "sellingPrice" ? "Price" : "Margin"}
                             />

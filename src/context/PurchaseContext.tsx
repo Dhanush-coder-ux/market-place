@@ -38,13 +38,13 @@ export const PurchaseSettingsProvider = ({ children }: { children: React.ReactNo
     localStorage.setItem("purchaseSettings", JSON.stringify(settings));
   }, [settings]);
 
-  const toggleSetting = (key: keyof Omit<PurchaseSettings, "gstType">) => {
+  const toggleSetting = React.useCallback((key: keyof Omit<PurchaseSettings, "gstType">) => {
     setSettings((prev) => ({ ...prev, [key]: !prev[key] } as any));
-  };
+  }, []);
 
-  const setGstType = (type: "registered" | "non-registered") => {
+  const setGstType = React.useCallback((type: "registered" | "non-registered") => {
     setSettings((prev) => ({ ...prev, gstType: type }));
-  };
+  }, []);
 
   return (
     <PurchaseSettingsContext.Provider value={{ settings, toggleSetting, setGstType }}>

@@ -64,7 +64,7 @@ export const ToastProvider = ({ children }: { children: ReactNode }) => {
                   {toast.type === "warning" && <AlertCircle size={20} />}
                 </div>
                 <p className="text-[14px] font-bold flex-1">{toast.message}</p>
-                <button 
+                <button
                   onClick={() => removeToast(toast.id)}
                   className="text-slate-400 hover:text-slate-600 transition-colors"
                 >

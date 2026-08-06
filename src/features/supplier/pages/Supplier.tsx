@@ -130,6 +130,7 @@ const Supplier = () => {
   };
 
   const [suppliers, setSuppliers] = useState<SupplierRecord[]>([]);
+  const [activeKpi, _setActiveKpi] = useState("All Suppliers");
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [filters, setFilters] = useState({
@@ -345,6 +346,10 @@ const Supplier = () => {
 
   const filteredSuppliers = useMemo(() => {
     let result = suppliers;
+
+    if (activeKpi === "Outstanding Due") {
+      result = result.filter((s: any) => getSupplierOutstanding(s) > 0);
+    }
 
     if (debouncedSearch) {
       const lower = debouncedSearch.toLowerCase();

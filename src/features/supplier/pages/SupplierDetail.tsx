@@ -8,6 +8,7 @@ import {
   SectionCard, DetailItem, InfoRow, Modal,
   ProfileHeaderCard
 } from "@/components/common/SuperUI";
+import { AntBadge } from "@/components/ui/AntBadge";
 import Loader from "@/components/common/Loader";
 
 import { useApi } from "@/context/ApiContext";
@@ -513,7 +514,7 @@ export default function SupplierDetail() {
               <div className="space-y-5">
                 <SectionCard title="Business Identity">
                   <div className="space-y-3">
-                    <InfoRow label="Business Type" value={<span className="text-[12px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md">{String(supplierType)}</span>} />
+                    <InfoRow label="Business Type" value={<AntBadge variant="lb-brand" type="pill">{String(supplierType)}</AntBadge>} />
                     <InfoRow label="GST Number" value={<span className="text-[12px] font-bold text-slate-700 font-mono">{String(supplier.gst_no || "—")}</span>} />
                     <InfoRow
                       label="Outstanding Balance"
@@ -657,6 +658,7 @@ export default function SupplierDetail() {
                   otherCharge: p.other_charges ?? p.charges_infos?.other_charge ?? charges.other_charge ?? 0,
                   uiId: p.ui_id || p.purchase_id?.split('-')[0].toUpperCase() || p.id?.slice(-6),
                   storageLocation: d.storage_location || p.storage_location || '—',
+                  version: p.version || d?.version || p.datas?.version || "v1",
                   productsList: productsList
                 });
               }

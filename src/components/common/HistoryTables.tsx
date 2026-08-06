@@ -444,7 +444,14 @@ export function ProductPurchasesTable({ rows, loading, onNavigateToPurchase }: P
                     <Fragment key={rowKey}>
                       <tr className="hover:bg-indigo-50/20 transition-colors border-l-[3px] border-l-indigo-400">
                         <td className="px-5 py-4 whitespace-nowrap">
-                          <span className="text-[10px] font-black text-slate-400 font-mono">#{r.uiId}</span>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="text-[10px] font-black text-slate-400 font-mono">#{r.uiId}</span>
+                            {(r.version || (r.datas && r.datas.version)) && (
+                              <span className="text-[9px] font-bold text-[var(--at-version-tx)] bg-[var(--at-version-bg)] border border-[var(--at-version-bd)] px-1.5 py-0.5 rounded-xl uppercase tracking-wider shrink-0">
+                                {r.version || r.datas?.version}
+                              </span>
+                            )}
+                          </div>
                         </td>
                         <td className="px-5 py-4 text-xs text-slate-500 font-medium whitespace-nowrap">
                           {r.date ? new Date(r.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
@@ -635,7 +642,14 @@ export function SupplierPurchasesTable({ rows, loading, onNavigateToPurchase }: 
                     <Fragment key={rowKey}>
                       <tr className="hover:bg-indigo-50/20 transition-colors border-l-[3px] border-l-indigo-400">
                         <td className="px-5 py-4 whitespace-nowrap">
-                          <span className="text-[10px] font-black text-slate-400 font-mono">#{r.uiId}</span>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="text-[10px] font-black text-slate-400 font-mono">#{r.uiId}</span>
+                            {(r.version || (r.datas && r.datas.version)) && (
+                              <span className="text-[9px] font-bold text-[var(--at-version-tx)] bg-[var(--at-version-bg)] border border-[var(--at-version-bd)] px-1.5 py-0.5 rounded-xl uppercase tracking-wider shrink-0">
+                                {r.version || r.datas?.version}
+                              </span>
+                            )}
+                          </div>
                         </td>
                         <td className="px-5 py-4 whitespace-nowrap">
                           <TypeBadge type={r.type || "PURCHASE"} labelOverride={r.type === 'DIRECT' ? 'Purchase' : (r.type || '').replace(/_/g, ' ')} />

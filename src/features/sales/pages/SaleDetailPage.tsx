@@ -15,6 +15,7 @@ import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 import { useHeader } from "@/context/HeaderContext";
 import { ReturnModal } from "../components/ReturnOrderFlow";
 import { DetailItem, InfoRow, ProfileHeaderCard, SectionCard } from "@/components/common/SuperUI";
+import { AntBadge } from "@/components/ui/AntBadge";
 import { OrderResponse } from "@/features/order/types";
 import SkeletonLoader from "@/components/common/SkeletonLoader";
 
@@ -341,9 +342,7 @@ const SaleDetailPage: React.FC = () => {
                                   </span>
                                 )}
                                 {item.gst !== undefined && item.gst !== null && (
-                                  <span className="px-1.5 py-0.5 rounded-xl text-[9px] font-extrabold text-[#06452F] bg-[#D3EFE4] border border-[#84D4B8] uppercase tracking-wider font-sans">
-                                    GST {typeof item.gst === "number" ? `${item.gst}%` : item.gst}
-                                  </span>
+                                  <AntBadge variant="lb-gst" type="tag">GST {typeof item.gst === "number" ? `${item.gst}%` : item.gst}</AntBadge>
                                 )}
                                 {item.status && (
                                   <span className={`px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wide ${item.status === "REFUNDED" ? "bg-red-50 text-red-600" : "bg-blue-50 text-blue-600"}`}>
@@ -358,10 +357,7 @@ const SaleDetailPage: React.FC = () => {
                               </div>
                               {item.variantName && (
                                 <div className="mt-2">
-                                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-xl text-[10px] font-medium leading-none text-[#332B7B] bg-[#E4E2FC] border border-[#BAB5F1] w-fit">
-                                    <Layers size={10} />
-                                    {item.variantName}
-                                  </span>
+                                  <AntBadge variant="at-variant" type="tag" icon={<Layers size={9} />}>{item.variantName}</AntBadge>
                                 </div>
                               )}
                               {item.batchName && (
@@ -451,9 +447,7 @@ const SaleDetailPage: React.FC = () => {
                                       </span>
                                     )}
                                     {item.gst !== undefined && item.gst !== null && (
-                                      <span className="px-1.5 py-0.5 rounded-xl text-[9px] font-extrabold text-[#06452F] bg-[#D3EFE4] border border-[#84D4B8] uppercase tracking-wider font-sans">
-                                        GST {typeof item.gst === "number" ? `${item.gst}%` : item.gst}
-                                      </span>
+                                      <AntBadge variant="lb-gst" type="tag">GST {typeof item.gst === "number" ? `${item.gst}%` : item.gst}</AntBadge>
                                     )}
                                     {item.status && (
                                       <span className={`px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wide ${item.status === "REFUNDED" ? "bg-red-50 text-red-600" : "bg-blue-50 text-blue-600"}`}>
@@ -468,10 +462,7 @@ const SaleDetailPage: React.FC = () => {
                                   </div>
                                   {item.variantName && (
                                     <div className="mt-2">
-                                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-xl text-[10px] font-medium leading-none text-[#332B7B] bg-[#E4E2FC] border border-[#BAB5F1] w-fit">
-                                        <Layers size={10} />
-                                        {item.variantName}
-                                      </span>
+                                      <AntBadge variant="at-variant" type="tag" icon={<Layers size={9} />}>{item.variantName}</AntBadge>
                                     </div>
                                   )}
                                   {item.batchName && (
@@ -668,10 +659,7 @@ const SaleDetailPage: React.FC = () => {
                                       <span className="text-[10px] font-mono font-bold text-slate-400 block mt-0.5">{retItem.ui_id}</span>
                                       {variantN && (
                                         <div className="mt-1">
-                                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-xl text-[10px] font-medium leading-none text-[#332B7B] bg-[#E4E2FC] border border-[#BAB5F1] w-fit">
-                                            <Layers size={10} />
-                                            {variantN}
-                                          </span>
+                                          <AntBadge variant="at-variant" type="tag" icon={<Layers size={9} />}>{variantN}</AntBadge>
                                         </div>
                                       )}
                                       {batchN && (

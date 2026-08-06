@@ -1,166 +1,103 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useApi } from "@/context/ApiContext";
 import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
-import {
-  Search,
-  RefreshCw,
-  X,
-  Activity,
-  User,
-  Clock,
-  ChevronRight,
-  ArrowRight,
-  Inbox,
-} from "lucide-react";
 import { format } from "date-fns";
+import "./ActivityLog.css";
 
-// ─── Types ───────────────────────────────────────────────────────────────────
+// SVG Icons
+const ArrIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+    <line x1="5" y1="12" x2="19" y2="12" />
+    <polyline points="12 5 19 12 12 19" />
+  </svg>
+);
+const ChevD = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
+    <polyline points="6 9 12 15 18 9" />
+  </svg>
+);
+const IconDiff = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 3v18" />
+    <path d="M5 8l7-5 7 5" />
+    <path d="M5 16l7 5 7-5" />
+  </svg>
+);
+const IconInfo = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <circle cx="12" cy="12" r="9" />
+    <line x1="12" y1="11" x2="12" y2="16" />
+    <line x1="12" y1="8" x2="12.01" y2="8" />
+  </svg>
+);
+const IconCart = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="9" cy="21" r="1" />
+    <circle cx="20" cy="21" r="1" />
+    <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
+  </svg>
+);
+
+// Helpers
+function initials(n: string = "System") {
+  return n.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
+}
+function avatarColor(n: string = "System") {
+  const c = ["#5B63D3", "#1D9E75", "#D85A30", "#C0506B", "#B9821C"];
+  let s = 0;
+  for (const ch of n) s += ch.charCodeAt(0);
+  return c[s % c.length];
+}
 
 interface LogEntry {
-  id?: string;
+  id: string;
   user_name?: string;
-  action?: string;
+  action: string;
   entity_type?: string;
   entity_id?: string;
   created_at?: string;
   description?: string;
-  changes?: { field: string; before: any; after: any }[];
+  changes?: { field: string; before: unknown; after: unknown }[];
+  lines?: { name: string; qty: string; value: string }[];
+  amount?: string;
+  meta?: {
+    ip?: string;
+    device?: string;
+    reason?: string;
+    customer?: string;
+    payment?: string;
+  };
 }
-
-// ─── Action Config ───────────────────────────────────────────────────────────
-
-const ACTION_CONFIG: Record<
-  string,
-  { label: string; color: string; dot: string }
-> = {
-  CREATE:        { label: "Create",  color: "bg-emerald-500/10 text-emerald-700 ring-1 ring-inset ring-emerald-500/20 shadow-sm", dot: "bg-emerald-500" },
-  CREATE_MANUAL: { label: "Create",  color: "bg-emerald-500/10 text-emerald-700 ring-1 ring-inset ring-emerald-500/20 shadow-sm", dot: "bg-emerald-500" },
-  UPDATE:        { label: "Update",  color: "bg-blue-500/10    text-blue-700    ring-1 ring-inset ring-blue-500/20 shadow-sm",    dot: "bg-blue-500"    },
-  DELETE:        { label: "Delete",  color: "bg-rose-500/10    text-rose-700    ring-1 ring-inset ring-rose-500/20 shadow-sm",    dot: "bg-rose-500"    },
-  EXPORT:        { label: "Export",  color: "bg-violet-500/10  text-violet-700  ring-1 ring-inset ring-violet-500/20 shadow-sm",  dot: "bg-violet-500"  },
-  IMPORT:        { label: "Import",  color: "bg-amber-500/10   text-amber-700   ring-1 ring-inset ring-amber-500/20 shadow-sm",   dot: "bg-amber-500"   },
-  RETURN:        { label: "Return",  color: "bg-orange-500/10  text-orange-700  ring-1 ring-inset ring-orange-500/20 shadow-sm",  dot: "bg-orange-500"  },
-};
-
-const getAction = (action?: string) =>
-  ACTION_CONFIG[action?.toUpperCase() ?? ""] ??
-  ACTION_CONFIG["CREATE"];
-
-// ─── Entity colour strip ──────────────────────────────────────────────────────
-
-const ENTITY_COLORS: Record<string, string> = {
-  ORDER:           "bg-blue-500/10 text-blue-700 ring-1 ring-inset ring-blue-500/20 shadow-sm",
-  STOCKADJUSTMENT: "bg-purple-500/10 text-purple-700 ring-1 ring-inset ring-purple-500/20 shadow-sm",
-  CUSTOMER:        "bg-emerald-500/10 text-emerald-700 ring-1 ring-inset ring-emerald-500/20 shadow-sm",
-  PURCHASE:        "bg-amber-500/10 text-amber-700 ring-1 ring-inset ring-amber-500/20 shadow-sm",
-  PRODUCT:         "bg-rose-500/10 text-rose-700 ring-1 ring-inset ring-rose-500/20 shadow-sm",
-  BILLING:         "bg-indigo-500/10 text-indigo-700 ring-1 ring-inset ring-indigo-500/20 shadow-sm",
-  EMPLOYEE:        "bg-teal-500/10 text-teal-700 ring-1 ring-inset ring-teal-500/20 shadow-sm",
-  SUPPLIER:        "bg-orange-500/10 text-orange-700 ring-1 ring-inset ring-orange-500/20 shadow-sm",
-  "SALES-OFFLINE": "bg-cyan-500/10 text-cyan-700 ring-1 ring-inset ring-cyan-500/20 shadow-sm",
-  "SALES-RETURN":  "bg-pink-500/10 text-pink-700 ring-1 ring-inset ring-pink-500/20 shadow-sm",
-};
-
-const getEntityColor = (entity?: string) =>
-  ENTITY_COLORS[entity?.toUpperCase() ?? ""] ?? "bg-slate-500/10 text-slate-700 ring-1 ring-inset ring-slate-500/20 shadow-sm";
-
-// ─── Skeleton row ─────────────────────────────────────────────────────────────
-
-const SkeletonRow = () => (
-  <div className="flex items-center gap-4 px-5 py-4 border-b border-slate-50 animate-pulse">
-    <div className="w-7 h-7 rounded-full bg-slate-100 shrink-0" />
-    <div className="flex-1 space-y-1.5">
-      <div className="h-3 w-24 bg-slate-100 rounded" />
-      <div className="h-2.5 w-40 bg-slate-100 rounded" />
-    </div>
-    <div className="h-5 w-14 rounded-full bg-slate-100" />
-    <div className="h-5 w-20 rounded-full bg-slate-100" />
-    <div className="h-3 w-28 bg-slate-100 rounded ml-auto" />
-  </div>
-);
-
-// ─── Formatted Value Component ────────────────────────────────────────────────
-
-const FormattedValue = ({ value }: { value: any }) => {
-  let val = value;
-  if (typeof val === 'string' && (val.startsWith('[{') || val.startsWith('{'))) {
-    try {
-      val = JSON.parse(val.replace(/'/g, '"'));
-    } catch (e) {}
-  }
-
-  if (Array.isArray(val)) {
-    return (
-      <div className="flex flex-col gap-2">
-        {val.map((item, index) => (
-          <div key={index} className="bg-white/50 rounded border border-slate-200/50 p-2 space-y-1">
-            {typeof item === 'object' && item !== null ? (
-              Object.entries(item).map(([k, v]) => (
-                <div key={k} className="flex gap-2 text-[10px]">
-                  <span className="font-medium opacity-70 min-w-[100px] shrink-0">{k}:</span>
-                  <span className="font-mono break-all">{String(v ?? "—")}</span>
-                </div>
-              ))
-            ) : (
-              <span className="font-mono text-[10px]">{String(item)}</span>
-            )}
-          </div>
-        ))}
-      </div>
-    );
-  }
-
-  if (typeof val === 'object' && val !== null) {
-    return (
-      <div className="bg-white/50 rounded border border-slate-200/50 p-2 space-y-1">
-        {Object.entries(val).map(([k, v]) => (
-          <div key={k} className="flex gap-2 text-[10px]">
-            <span className="font-medium opacity-70 min-w-[100px] shrink-0">{k}:</span>
-            <span className="font-mono break-all">{String(v ?? "—")}</span>
-          </div>
-        ))}
-      </div>
-    );
-  }
-
-  return <span>{String(val ?? "—")}</span>;
-};
-
-// ─── Main Component ───────────────────────────────────────────────────────────
 
 export const ActivityLogPage = () => {
   const { getData } = useApi();
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterAction, setFilterAction] = useState<string>("ALL");
-  const [selectedLog, setSelectedLog] = useState<LogEntry | null>(null);
+  const [filterAction, setFilterAction] = useState<string>("all");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+  const [openSet, setOpenSet] = useState<Set<string>>(new Set());
 
   const fetchLogs = async () => {
     setLoading(true);
     try {
-      const res = await getData(
-        `${ENDPOINTS.UTILITIES}/activity-logs/${SHOP_ID}`,
-        { limit: "200" }
-      );
+      const res = await getData(`${ENDPOINTS.UTILITIES}/activity-logs/${SHOP_ID}`, { limit: "200" });
       if (res?.data && Array.isArray(res.data)) {
-        const normalizedData = res.data.map((log: LogEntry) => {
-          let action = log.action?.toUpperCase() || "CREATE";
-          if (action === "CREATED") action = "CREATE";
-          if (action === "UPDATED") action = "UPDATE";
-          if (action === "DELETED") action = "DELETE";
-          if (action === "RETURNED") action = "RETURN";
+        const normalizedData = res.data.map((log: LogEntry, i: number) => {
+          let action = (log.action || "create").toLowerCase();
+          if (action === "created" || action === "create_manual") action = "create";
+          if (action === "updated") action = "update";
+          if (action === "deleted") action = "delete";
+          if (action === "returned") action = "return";
+          if (action.includes("sales")) action = "sales";
           
           let parsedChanges = log.changes;
           if (typeof parsedChanges === "string") {
-            try {
-              parsedChanges = JSON.parse(parsedChanges);
-            } catch (e) {
-              parsedChanges = [];
-            }
+            try { parsedChanges = JSON.parse(parsedChanges); } 
+            catch (_) { parsedChanges = []; }
           }
           
-          return { ...log, action, changes: parsedChanges };
+          return { ...log, id: log.id || `fallback-${i}`, action, changes: parsedChanges || [] };
         });
         setLogs(normalizedData);
       }
@@ -173,378 +110,348 @@ export const ActivityLogPage = () => {
 
   useEffect(() => {
     fetchLogs();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ── Filtered list ──────────────────────────────────────────────────────────
+  const toggleOpen = (id: string) => {
+    const newSet = new Set(openSet);
+    if (newSet.has(id)) newSet.delete(id);
+    else newSet.add(id);
+    setOpenSet(newSet);
+  };
 
-  const filteredLogs = logs.filter((log) => {
-    const matchSearch =
-      !searchTerm ||
-      log.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      log.user_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      log.entity_type?.toLowerCase().includes(searchTerm.toLowerCase());
+  const filteredLogs = useMemo(() => {
+    let items = logs.filter((log) => {
+      if (filterAction !== "all" && log.action !== filterAction) return false;
+      if (searchTerm) {
+        const q = searchTerm.toLowerCase();
+        const hay = (
+          (log.user_name || "System") + " " +
+          (log.description || "") + " " +
+          (log.entity_type || "") + " " +
+          (log.entity_id || "") + " " +
+          (log.changes || []).map((c: { field: string; before: unknown; after: unknown }) => c.field + " " + (c.before || "") + " " + c.after).join(" ")
+        ).toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      return true;
+    });
 
-    const matchFilter =
-      filterAction === "ALL" ||
-      log.action?.toUpperCase() === filterAction ||
-      (filterAction === "CREATE" && log.action?.toUpperCase() === "CREATE_MANUAL");
+    items = items.slice().sort((a, b) => {
+      const dA = a.created_at ? new Date(a.created_at).getTime() : 0;
+      const dB = b.created_at ? new Date(b.created_at).getTime() : 0;
+      return sortOrder === "desc" ? dB - dA : dA - dB;
+    });
 
-    return matchSearch && matchFilter;
-  });
+    return items;
+  }, [logs, filterAction, searchTerm, sortOrder]);
 
-  const uniqueActions = [
-    "ALL",
-    ...Array.from(
-      new Set(logs.map((l) => l.action?.toUpperCase()).filter(Boolean))
-    ),
-  ] as string[];
+  const stats = useMemo(() => {
+    let salesCount = 0;
+    let updatesCount = 0;
+    let createCount = 0;
+    const users = new Set<string>();
+    
+    logs.forEach(l => {
+      if (l.action === "sales") salesCount++;
+      if (l.action === "update") updatesCount++;
+      if (l.action === "create") createCount++;
+      if (l.user_name && l.user_name !== "System") users.add(l.user_name);
+    });
+    
+    return {
+      total: logs.length,
+      sales: salesCount,
+      updates: updatesCount,
+      creates: createCount,
+      members: users.size || 1,
+    };
+  }, [logs]);
 
-  // ─── Render ──────────────────────────────────────────────────────────────
+  const formatChangeValue = (val: unknown) => {
+    if (typeof val === 'object' && val !== null) return JSON.stringify(val);
+    return String(val ?? "—");
+  };
+
+  const getRecordTitle = (e: LogEntry) => {
+    if (e.entity_type === "PRODUCT") return e.description?.split(" ")[1] || e.entity_id;
+    return e.description || e.entity_id || e.entity_type;
+  };
 
   return (
-    <div className="h-full bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden flex flex-col min-h-0">
-
-      {/* ── Compact Header ── */}
-      <div className="flex flex-col xl:flex-row items-start xl:items-center justify-between gap-3 px-5 py-3 border-b border-slate-100 bg-white shrink-0">
+    <div className="activity-log-wrapper bg-[#FBFBFD] h-full overflow-y-auto w-full">
+      <div className="shell">
         
-        {/* Left: Title & Compact Stats */}
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
-              <Activity size={14} className="text-blue-500" />
-            </div>
-            <h1 className="text-sm font-semibold text-slate-800">Activity Log</h1>
-          </div>
-          <div className="hidden md:flex items-center gap-3 border-l border-slate-200 pl-4 text-[11px] text-slate-500">
-            <span><strong className="font-medium text-slate-700">{logs.length}</strong> Total</span>
-            <span><strong className="font-medium text-emerald-600">{logs.filter((l) => l.action?.toUpperCase().includes("CREATE")).length}</strong> Creates</span>
-            <span><strong className="font-medium text-blue-600">{logs.filter((l) => l.action?.toUpperCase() === "UPDATE").length}</strong> Updates</span>
-          </div>
+        <div className="context">
+          <span className="ws"><span className="logo">V</span>Vaathi Mart</span>
+          <span className="sep">/</span><span>Settings</span>
+          <span className="sep">/</span><span style={{color: "var(--body)"}}>Activity Log</span>
         </div>
 
-        {/* Right: Filters, Search, Refresh */}
-        <div className="flex items-center gap-2.5 w-full xl:w-auto overflow-x-auto pb-1 xl:pb-0 hide-scrollbar">
-          {/* Action filters */}
-          <div className="flex items-center gap-1.5 shrink-0">
-            {uniqueActions.map((action) => {
-              const config = action === "ALL" ? null : getAction(action);
-              const isActive = filterAction === action;
-              return (
-                <button
-                  key={action}
-                  onClick={() => setFilterAction(action)}
-                  className={`px-2 py-1 rounded-md text-[10px] font-medium transition-all ${
-                    isActive
-                      ? action === "ALL"
-                        ? "bg-slate-800 text-white shadow-sm ring-1 ring-inset ring-slate-800"
-                        : `${config?.color}`
-                      : "bg-white text-slate-500 ring-1 ring-inset ring-slate-200 hover:bg-slate-50"
-                  }`}
-                >
-                  {action === "ALL" ? "All" : (config?.label ?? action)}
-                </button>
-              );
-            })}
+        <div className="head">
+          <div>
+            <h1>Activity Log</h1>
+            <div className="sub">Every change to your data — who did it, what changed, and when.</div>
           </div>
-
-          <div className="w-px h-5 bg-slate-200 shrink-0 mx-1 hidden sm:block"></div>
-
-          {/* Search */}
-          <div className="relative shrink-0">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400 pointer-events-none" />
-            <input
-              type="text"
-              placeholder="Search..."
+          <div className="search">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            <input 
+              type="text" 
+              placeholder="Search by user, product or field…" 
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-7 pr-3 py-1 h-7 text-xs font-medium bg-slate-50 border border-slate-200 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all w-36 placeholder:text-slate-400"
             />
-            {searchTerm && (
-              <button
-                onClick={() => setSearchTerm("")}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-              >
-                <X size={12} />
-              </button>
-            )}
           </div>
-
-          {/* Refresh */}
-          <button
-            onClick={fetchLogs}
-            title="Refresh"
-            className="w-7 h-7 flex items-center justify-center border border-slate-200 rounded-md text-slate-500 hover:bg-slate-50 transition-all shrink-0"
-          >
-            <RefreshCw className={`w-3 h-3 ${loading ? "animate-spin" : ""}`} />
-          </button>
         </div>
-      </div>
 
-      {/* ── Log list ── */}
-      <div className="flex-1 overflow-auto min-h-0 bg-white">
-        {/* Desktop table */}
-        <table className="w-full text-left hidden sm:table">
-          <thead className="sticky top-0 z-10">
-            <tr className="bg-slate-50 border-b border-slate-100">
-              {["User", "Action", "Entity", "Date & Time", ""].map((h) => (
-                <th
-                  key={h}
-                  className="px-5 py-3 text-[10px] font-medium text-slate-400 uppercase tracking-widest whitespace-nowrap"
-                >
-                  {h}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {loading
-              ? Array.from({ length: 7 }).map((_, i) => (
-                  <tr key={i}>
-                    <td colSpan={5} className="px-0 py-0">
-                      <SkeletonRow />
-                    </td>
-                  </tr>
-                ))
-              : filteredLogs.length === 0
-              ? (
-                  <tr>
-                    <td colSpan={5} className="py-20 text-center">
-                      <div className="flex flex-col items-center gap-3">
-                        <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center">
-                          <Inbox size={20} className="text-slate-300" />
-                        </div>
-                        <p className="text-sm font-semibold text-slate-400">
-                          No activity logs found
-                        </p>
-                        {searchTerm && (
-                          <button
-                            onClick={() => setSearchTerm("")}
-                            className="text-xs text-blue-500 hover:underline font-medium"
-                          >
-                            Clear search
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                )
-              : filteredLogs.map((log, idx) => {
-                  const actionCfg = getAction(log.action);
-                  const entityColor = getEntityColor(log.entity_type);
-                  const hasChanges = log.changes && log.changes.length > 0;
-                  return (
-                    <tr
-                      key={log.id ?? idx}
-                      onClick={() => hasChanges && setSelectedLog(log)}
-                      className={`border-b border-slate-50 transition-colors group ${hasChanges ? 'cursor-pointer hover:bg-slate-50/60' : 'hover:bg-slate-50/60'}`}
-                    >
-                      {/* User */}
-                      <td className="px-5 py-3.5 whitespace-nowrap">
-                        <div className="flex items-center gap-2.5">
-                          <div className="w-7 h-7 rounded-full bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center shrink-0">
-                            <User size={12} className="text-white" />
-                          </div>
-                          <span className="text-xs font-medium text-slate-700">
-                            {log.user_name ?? "System"}
-                          </span>
-                        </div>
-                      </td>
+        <div className="stats">
+          <div className="stat"><div className="v">{stats.total}</div><div className="k">Total events</div></div>
+          <div className="stat"><div className="v sales">{stats.sales}</div><div className="k">Sales</div></div>
+          <div className="stat"><div className="v update">{stats.updates}</div><div className="k">Updated</div></div>
+          <div className="stat"><div className="v brand">{stats.members}</div><div className="k">Team members</div></div>
+        </div>
 
-                      {/* Action */}
-                      <td className="px-5 py-3.5 whitespace-nowrap">
-                        <span
-                          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-medium uppercase tracking-wide ${actionCfg.color}`}
-                        >
-                          <span className={`w-1.5 h-1.5 rounded-full ${actionCfg.dot}`} />
-                          {actionCfg.label}
-                        </span>
-                      </td>
+        <div className="toolbar" id="filters">
+          <div className={`chip ${filterAction === "all" ? "active" : ""}`} onClick={() => setFilterAction("all")}>All actions</div>
+          <div className={`chip ${filterAction === "create" ? "active" : ""}`} onClick={() => setFilterAction("create")}><span className="cdot" style={{background: "var(--create-dot)"}}></span>Create</div>
+          <div className={`chip ${filterAction === "update" ? "active" : ""}`} onClick={() => setFilterAction("update")}><span className="cdot" style={{background: "var(--update-dot)"}}></span>Update</div>
+          <div className={`chip ${filterAction === "sales" ? "active" : ""}`} onClick={() => setFilterAction("sales")}><span className="cdot" style={{background: "var(--sales-dot)"}}></span>Sales</div>
+          <div className={`chip ${filterAction === "return" ? "active" : ""}`} onClick={() => setFilterAction("return")}><span className="cdot" style={{background: "var(--return-dot)"}}></span>Sales return</div>
+          <div className={`chip ${filterAction === "delete" ? "active" : ""}`} onClick={() => setFilterAction("delete")}><span className="cdot" style={{background: "var(--delete-dot)"}}></span>Delete</div>
+          <div className="spacer"></div>
+          <div className="count">{filteredLogs.length} event{filteredLogs.length !== 1 ? "s" : ""}</div>
+        </div>
 
-                      {/* Entity */}
-                      <td className="px-5 py-3.5">
-                        <div className="flex flex-col gap-0.5">
-                          <span
-                            className={`inline-flex px-2 py-0.5 rounded-md text-[10px] font-medium tracking-wider w-fit ${entityColor}`}
-                          >
-                            {log.entity_type ?? "—"}
-                          </span>
-                          <span className="text-[10px] text-slate-400 font-mono truncate max-w-[180px]">
-                            {log.entity_id}
-                          </span>
-                        </div>
-                      </td>
+        <div className="tablecard">
+          <div className="thead">
+            <div className={`sortable ${sortOrder}`} onClick={() => setSortOrder(s => s === "desc" ? "asc" : "desc")}>
+              Date &amp; time <ChevD />
+            </div>
+            <div>User</div>
+            <div>Action</div>
+            <div>Details</div>
+            <div className="r">Time</div>
+            <div></div>
+          </div>
+          <div id="list">
+            {loading ? (
+               <div className="empty">Loading activity logs...</div>
+            ) : filteredLogs.length === 0 ? (
+               <div className="empty">No matching activity. Try a different search or filter.</div>
+            ) : (
+              filteredLogs.map((e, i) => {
+                const open = openSet.has(e.id);
+                const user = e.user_name || "System";
+                const role = user === "System" ? "Automated" : "User";
+                const dateStr = e.created_at ? format(new Date(e.created_at), "dd MMM yyyy") : "—";
+                const timeStr = e.created_at ? format(new Date(e.created_at), "hh:mm a") : "—";
+                const record = getRecordTitle(e);
+                const entity = e.entity_type || e.action.toUpperCase();
 
-                      {/* Date */}
-                      <td className="px-5 py-3.5 whitespace-nowrap">
-                        <div className="flex items-center gap-1.5 text-[11px] text-slate-500">
-                          <Clock size={11} className="text-slate-300 shrink-0" />
-                          {log.created_at
-                            ? format(new Date(log.created_at), "MMM dd, yyyy · hh:mm a")
-                            : "—"}
-                        </div>
-                      </td>
-
-                      {/* Action */}
-                      <td className="px-5 py-3.5 text-right whitespace-nowrap">
-                        {hasChanges ? (
-                          <button
-                            onClick={() => setSelectedLog(log)}
-                            className="inline-flex items-center gap-1 text-[11px] font-medium text-blue-500 hover:text-blue-700 "
-                          >
-                            Details
-                            <ChevronRight size={12} />
-                          </button>
-                        ) : (
-                          <span className="text-[11px] text-slate-200">—</span>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-          </tbody>
-        </table>
-
-        {/* Mobile card list */}
-        <div className="sm:hidden divide-y divide-slate-50">
-          {loading
-            ? Array.from({ length: 5 }).map((_, i) => <SkeletonRow key={i} />)
-            : filteredLogs.map((log, idx) => {
-                const actionCfg = getAction(log.action);
-                const entityColor = getEntityColor(log.entity_type);
-                const hasChanges = log.changes && log.changes.length > 0;
+                const txnMeta = e.action === "sales" || e.action === "return";
+                const amtClass = e.action === "return" ? "return" : "sales";
+                
                 return (
-                  <div
-                    key={log.id ?? idx}
-                    onClick={() => hasChanges && setSelectedLog(log)}
-                    className={`flex items-start gap-3 px-4 py-3.5 transition-colors ${hasChanges ? 'cursor-pointer hover:bg-slate-50/60' : 'hover:bg-slate-50/60'}`}
-                  >
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center shrink-0 mt-0.5">
-                      <User size={13} className="text-white" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between gap-2 mb-1">
-                        <span className="text-xs font-medium text-slate-700">
-                          {log.user_name ?? "System"}
-                        </span>
-                        <span
-                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-medium ${actionCfg.color}`}
-                        >
-                          <span className={`w-1.5 h-1.5 rounded-full ${actionCfg.dot}`} />
-                          {actionCfg.label}
+                  <div key={e.id} className={`rowwrap ${open ? 'open' : ''}`} style={{animationDelay: `${i * 28}ms`}}>
+                    <div className="row" onClick={() => toggleOpen(e.id)}>
+                      <div className="c-date">
+                        <div className="d">{dateStr}</div>
+                        <div className="t">#{e.entity_id?.substring(0,8) || e.id.substring(0,8)}</div>
+                      </div>
+                      
+                      <div className="c-user">
+                        <div className="avatar" style={{background: avatarColor(user)}}>{initials(user)}</div>
+                        <div className="u">
+                          <div className="un">{user}</div>
+                          <div className="ur">{role}</div>
+                        </div>
+                      </div>
+                      
+                      <div className="c-action">
+                        <span className={`badge ${e.action}`}>
+                          <span className="bdot"></span>{e.action.toUpperCase()}
                         </span>
                       </div>
-                      <div className="flex items-center gap-1.5 mb-1">
-                        <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${entityColor}`}>
-                          {log.entity_type}
-                        </span>
+                      
+                      <div className="c-details">
+                        {e.action === "delete" ? (
+                          <>
+                            <div className="det-top">
+                              <span className="entity-tag">{entity}</span>
+                              <span className="det-rec">{record}</span>
+                            </div>
+                            <div className="det-plain">Record removed{e.description ? ` — ${e.description}` : ""}</div>
+                          </>
+                        ) : txnMeta ? (
+                          <>
+                            <div className="det-top">
+                              <span className="entity-tag">{entity}</span>
+                              <span className="det-rec">{record}</span>
+                              <span className={`txn-amt ${amtClass}`}>{e.amount || "—"}</span>
+                            </div>
+                            <div className="det-chips">
+                              {e.lines && e.lines.length > 0 ? (
+                                <>
+                                  <span className="pchip">
+                                    <span className="f">Items</span>
+                                    <span className="v" style={{background: "var(--panel)", color: "var(--body)", fontWeight: 500}}>
+                                      {e.lines[0].name} · {e.lines[0].qty}
+                                    </span>
+                                  </span>
+                                  {e.lines.length - 1 > 0 && (
+                                    <span className="pchip more">+{e.lines.length - 1} more</span>
+                                  )}
+                                </>
+                              ) : (
+                                <span className="det-plain">{e.description}</span>
+                              )}
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <div className="det-top">
+                              <span className="entity-tag">{entity}</span>
+                              <span className="det-rec">{record}</span>
+                            </div>
+                            <div className="det-chips">
+                              {e.changes && e.changes.slice(0, 2).map((c, idx) => (
+                                <span key={idx} className="pchip">
+                                  <span className="f">{c.field}</span>
+                                  <span className="v">{formatChangeValue(c.after)}</span>
+                                </span>
+                              ))}
+                              {e.changes && e.changes.length > 2 && (
+                                <span className="pchip more">+{e.changes.length - 2} more</span>
+                              )}
+                              {(!e.changes || e.changes.length === 0) && (
+                                <span className="det-plain">{e.description || "Updated"}</span>
+                              )}
+                            </div>
+                          </>
+                        )}
                       </div>
-                      <p className="text-[10px] text-slate-400 font-mono truncate">
-                        {log.entity_id}
-                      </p>
-                      <p className="text-[10px] text-slate-400 mt-0.5">
-                        {log.created_at
-                          ? format(new Date(log.created_at), "MMM dd, yyyy · hh:mm a")
-                          : "—"}
-                      </p>
+                      
+                      <div className="c-time">{timeStr}</div>
+                      
+                      <div className="c-exp">
+                        <button className="expbtn" aria-label="Toggle details">
+                          <ChevD />
+                        </button>
+                      </div>
                     </div>
-                    {hasChanges && (
-                      <button
-                        onClick={() => setSelectedLog(log)}
-                        className="p-1.5 rounded-lg bg-blue-50 text-blue-500 shrink-0 mt-0.5"
-                      >
-                        <ChevronRight size={13} />
-                      </button>
-                    )}
+                    
+                    <div className="drawer">
+                      <div className="inner">
+                        <div className="drawer-pad">
+                          <div className="drawer-grid">
+                            
+                            {/* Left Panel */}
+                            {txnMeta ? (
+                              <div className="dpanel">
+                                <div className="dpanel-h"><IconCart /> Line items</div>
+                                <div className="ltable">
+                                  <div className="lhdr">
+                                    <span>Item</span><span>Qty</span><span>Amount</span>
+                                  </div>
+                                  {e.lines?.map((l, idx) => (
+                                    <div key={idx} className="lrow">
+                                      <span className="lname">{l.name}</span>
+                                      <span className="lqty">{l.qty}</span>
+                                      <span className="lval">{l.value}</span>
+                                    </div>
+                                  ))}
+                                  <div className="lrow ltotal">
+                                    <span className="lname">Total</span>
+                                    <span className="lqty"></span>
+                                    <span className={`lval ${amtClass}`}>{e.amount}</span>
+                                  </div>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="dpanel">
+                                <div className="dpanel-h"><IconDiff /> What changed</div>
+                                <div className="dtable">
+                                  <div className="dhdr">
+                                    <span>Field</span><span>Was</span><span></span><span>Changed to</span>
+                                  </div>
+                                  {e.action === "delete" ? (
+                                    <div className="drow">
+                                      <span className="dfield">Record</span>
+                                      <span className="dwas">{record}</span>
+                                      <span className="darr"><ArrIcon /></span>
+                                      <span className="dnow" style={{background: "var(--was-bg)", color: "var(--was-tx)"}}>Deleted</span>
+                                    </div>
+                                  ) : e.changes && e.changes.length > 0 ? (
+                                    e.changes.map((c, idx) => (
+                                      <div key={idx} className="drow">
+                                        <span className="dfield">{c.field}</span>
+                                        {c.before === undefined || c.before === null || c.before === "" ? (
+                                          <span className="dnew">— not set —</span>
+                                        ) : (
+                                          <span className="dwas">{formatChangeValue(c.before)}</span>
+                                        )}
+                                        <span className="darr"><ArrIcon /></span>
+                                        <span className="dnow">{formatChangeValue(c.after)}</span>
+                                      </div>
+                                    ))
+                                  ) : (
+                                    <div className="empty" style={{padding: "20px"}}>No field-level changes recorded.</div>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Right Panel: Metadata */}
+                            <div className="dpanel">
+                              <div className="dpanel-h"><IconInfo /> Event details</div>
+                              <div className="metabox">
+                                <div className="mrow">
+                                  <span className="mk">Record ID</span>
+                                  <span className="mv">{e.entity_id || e.id}</span>
+                                </div>
+                                <div className="mrow">
+                                  <span className="mk">Performed by</span>
+                                  <span className="mv" style={{fontFamily: "var(--font-body)"}}>{user} · {role}</span>
+                                </div>
+                                {txnMeta && e.meta?.customer && (
+                                  <div className="mrow">
+                                    <span className="mk">Customer</span>
+                                    <span className="mv" style={{fontFamily: "var(--font-body)"}}>{e.meta.customer}</span>
+                                  </div>
+                                )}
+                                {txnMeta && e.meta?.payment && (
+                                  <div className="mrow">
+                                    <span className="mk">Payment</span>
+                                    <span className="mv" style={{fontFamily: "var(--font-body)"}}>{e.meta.payment}</span>
+                                  </div>
+                                )}
+                                <div className="mrow">
+                                  <span className="mk">Timestamp</span>
+                                  <span className="mv">{dateStr} · {timeStr}</span>
+                                </div>
+                                {e.description && (
+                                  <div className="mrow">
+                                    <span className="mk">Description</span>
+                                    <span className="mv reason">{e.description}</span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
                   </div>
                 );
-              })}
-        </div>
-      </div>
-
-      {/* ── Details Drawer / Modal ── */}
-      {selectedLog && (
-        <div
-          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200 p-4"
-          onClick={(e) => e.target === e.currentTarget && setSelectedLog(null)}
-        >
-          <div className="bg-white w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 slide-in-from-bottom-4 sm:slide-in-from-bottom-0 duration-200 flex flex-col max-h-[85vh]">
-
-            {/* Modal header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-xl bg-blue-50 flex items-center justify-center">
-                  <Activity size={15} className="text-blue-500" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-medium text-slate-800">
-                    Change Details
-                  </h3>
-                  <p className="text-[10px] text-slate-400 font-medium">
-                    {selectedLog.entity_type} — {selectedLog.action}
-                    {selectedLog.created_at && (
-                      <> · {format(new Date(selectedLog.created_at), "MMM dd, yyyy · hh:mm a")}</>
-                    )}
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={() => setSelectedLog(null)}
-                className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"
-              >
-                <X size={16} />
-              </button>
-            </div>
-
-            {/* Change rows */}
-            <div className="flex-1 overflow-y-auto p-5 space-y-3 bg-slate-50/40">
-              {selectedLog.changes?.length === 0 && (
-                <p className="text-sm text-slate-400 text-center py-8">
-                  No field-level changes recorded.
-                </p>
-              )}
-              {selectedLog.changes?.map((change, i) => (
-                <div
-                  key={i}
-                  className="bg-white rounded-xl border border-slate-100 p-4 shadow-sm"
-                >
-                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-3">
-                    {change.field}
-                  </p>
-                  <div className="grid grid-cols-[1fr_auto_1fr] gap-3 items-center">
-                    <div>
-                      <span className="text-[9px] font-medium text-slate-400 uppercase tracking-wider block mb-1">
-                        Before
-                      </span>
-                      <div className="bg-rose-50 text-rose-700 border border-rose-100 text-[11px] px-3 py-2 rounded-lg break-all min-h-[32px] overflow-auto max-h-[300px]">
-                        <FormattedValue value={change.before} />
-                      </div>
-                    </div>
-                    <ArrowRight size={14} className="text-slate-300 shrink-0" />
-                    <div>
-                      <span className="text-[9px] font-medium text-slate-400 uppercase tracking-wider block mb-1">
-                        After
-                      </span>
-                      <div className="bg-emerald-50 text-emerald-700 border border-emerald-100 text-[11px] px-3 py-2 rounded-lg break-all min-h-[32px] overflow-auto max-h-[300px]">
-                        <FormattedValue value={change.after} />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Footer */}
-            <div className="px-6 py-4 border-t border-slate-100 bg-white flex justify-end">
-              <button
-                onClick={() => setSelectedLog(null)}
-                className="px-5 py-2 text-xs font-medium text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors"
-              >
-                Close
-              </button>
-            </div>
+              })
+            )}
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 };

@@ -36,7 +36,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 import { RightSidebarFilter } from "@/components/common/RightSidebarFilter";
 import { ReusableSelect } from "@/components/ui/ReusableSelect";
-
+import { AntBadge } from "@/components/ui/AntBadge";
 // --- Types (unchanged) ---
 export interface VariantAttribute {
   [key: string]: string;
@@ -187,21 +187,18 @@ const getStockStatus = (stock: number, reorderPoint?: number) => {
   if (s <= 0)
     return {
       label: "Out of stock",
-      color: "text-[var(--ps-cancel-tx)] bg-[var(--ps-cancel-bg)] border-[var(--ps-cancel-bd)]",
-      dot: "bg-[var(--ps-cancel-dot)]",
+      variant: "ps-cancelled",
       icon: AlertCircle,
     };
   if (s <= rp)
     return {
       label: "Low stock",
-      color: "text-[var(--ps-draft-tx)] bg-[var(--ps-draft-bg)] border-[var(--ps-draft-bd)]",
-      dot: "bg-[var(--ps-draft-dot)]",
+      variant: "ps-draft",
       icon: AlertTriangle,
     };
   return {
     label: "In stock",
-    color: "text-[var(--ps-completed-tx)] bg-[var(--ps-completed-bg)] border-[var(--ps-completed-bd)]",
-    dot: "bg-[var(--ps-completed-dot)]",
+    variant: "ps-completed",
     icon: Package,
   };
 };
@@ -249,29 +246,7 @@ const parseData = (val: any) => {
 };
 
 
-// --- Compact badge ---
-const Pill = ({
-  children,
-  variant = "default",
-}: {
-  children: React.ReactNode;
-  variant?: "default" | "variant" | "batch" | "serial" | "online";
-}) => {
-  const styles: Record<string, string> = {
-    default: "text-slate-500 bg-slate-50 border-slate-100",
-    variant: "text-[var(--at-variant-tx)] bg-[var(--at-variant-bg)] border-[var(--at-variant-bd)]",
-    batch: "text-[var(--at-batch-tx)] bg-[var(--at-batch-bg)] border-[var(--at-batch-bd)]",
-    serial: "text-[var(--at-serial-tx)] bg-[var(--at-serial-bg)] border-[var(--at-serial-bd)]",
-    online: "text-[var(--at-brand-tx)] bg-[var(--at-brand-bg)] border-[var(--at-brand-bd)]",
-  };
-  return (
-    <span
-      className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-xl text-[10px] font-medium border leading-none ${styles[variant]}`}
-    >
-      {children}
-    </span>
-  );
-};
+
 
 // --- Copy SKU Button with Micro-Animation ---
 const CopySKUButton = ({ val }: { val: string }) => {
@@ -405,10 +380,9 @@ const ProductRow = React.memo(
     
     if (hasVariants) {
       badges.push(
-        <Pill key="var" variant="variant">
-          <Layers size={9} />
-          {combinations.length} var
-        </Pill>
+        <AntBadge key="var" variant="at-variant" type="tag" icon={<Layers size={9} />}>
+          {combinations.length} variants
+        </AntBadge>
       );
     }
     
@@ -642,12 +616,9 @@ const ProductRow = React.memo(
 
           {/* Status */}
           <td className="px-3 py-2.5">
-            <span
-              className={`inline-flex items-center gap-1 px-2 py-1 rounded-xl text-[10px] font-medium border leading-none ${status.color}`}
-            >
-              <span className={`w-1.5 h-1.5 rounded-full ${status.dot}`} />
+            <AntBadge variant={status.variant} type="pill" dot>
               {status.label}
-            </span>
+            </AntBadge>
           </td>
 
           
@@ -747,7 +718,6 @@ const ProductRow = React.memo(
                     <VariantRows
                       combinations={combinations}
                       baseSellPrice={item.sell_price}
-                      baseBuyPrice={item.buy_price}
                       parentStorageLocation={(item as any).storage_location_infos?.storage_location ?? (item as any).storage_location_infos?.name ?? (item as any).storage_location ?? (item as any).location ?? (datas as any).storage_location ?? null}
                       parentReorderPoint={(item as any).reorder_point_infos?.reorder_point ?? (item as any).reorder_point ?? datas.reorder_point ?? null}
                     />

@@ -44,7 +44,7 @@ export const CustomListSettings: React.FC<CustomListSettingsProps> = ({ type }) 
   const [name, setName] = useState("");
   const [shortName, setShortName] = useState("");
   const [description, setDescription] = useState("");
-  const [subUnits, setSubUnits] = useState<{name: string, factor: string}[]>([]);
+  const [subUnits, setSubUnits] = useState<{ name: string, factor: string }[]>([]);
 
   const title = type === "categories" ? "Product Categories" : "Measurement Units";
   const desc = type === "categories"
@@ -194,7 +194,7 @@ export const CustomListSettings: React.FC<CustomListSettingsProps> = ({ type }) 
       </div>
 
       <div className="p-6 space-y-6">
-        
+
         {isFormOpen ? (
           <div className="bg-slate-50/70 border border-slate-200 rounded-xl p-5 shadow-sm transition-all">
             <div className="flex justify-between items-center mb-4">
@@ -203,7 +203,7 @@ export const CustomListSettings: React.FC<CustomListSettingsProps> = ({ type }) 
                 <X className="w-4 h-4" />
               </button>
             </div>
-            
+
             <div className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
@@ -252,7 +252,7 @@ export const CustomListSettings: React.FC<CustomListSettingsProps> = ({ type }) 
                       <Plus className="w-3 h-3" /> Add Sub Unit
                     </button>
                   </div>
-                  
+
                   {subUnits.length === 0 ? (
                     <div className="text-xs text-slate-400 italic bg-white border border-slate-200 border-dashed rounded-lg p-3 text-center">
                       No sub units added. Click the button above to add one.
@@ -299,8 +299,8 @@ export const CustomListSettings: React.FC<CustomListSettingsProps> = ({ type }) 
                 <button
                   onClick={handleAdd}
                   disabled={
-                    !name.trim() || 
-                    (type === "units" && !shortName.trim()) || 
+                    !name.trim() ||
+                    (type === "units" && !shortName.trim()) ||
                     saving ||
                     (type === "units" && subUnits.some(su => !su.name.trim() || !su.factor.trim() || isNaN(parseFloat(su.factor)) || parseFloat(su.factor) <= 0))
                   }

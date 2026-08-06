@@ -1,17 +1,17 @@
 import { 
   Phone, User, IndianRupee, Wifi, ArrowRight, 
-  Inbox, CheckCircle, XCircle, Truck, PackageCheck, Trash2
+  Trash2
 } from "lucide-react";
 import { ReusableSelect } from "@/components/ui/ReusableSelect";
+import { AntBadge } from "@/components/ui/AntBadge";
 
-// 1. New Order Lifecycle Configuration
-const statusConfig = {
-  PENDING: { icon: Inbox, pill: "bg-amber-50 text-amber-700 ring-amber-200", dot: "bg-amber-500", pulse: true },
-  PROCESSING: { icon: CheckCircle, pill: "bg-blue-50 text-blue-700 ring-blue-200", dot: "bg-blue-500", pulse: false },
-  COMPLETED: { icon: PackageCheck, pill: "bg-emerald-50 text-emerald-700 ring-emerald-200", dot: "bg-emerald-500", pulse: false },
-  CANCELED: { icon: XCircle, pill: "bg-rose-50 text-rose-700 ring-rose-200", dot: "bg-rose-500", pulse: false },
-  REFUNDED: { icon: Truck, pill: "bg-purple-50 text-purple-700 ring-purple-200", dot: "bg-purple-500", pulse: false },
-  EXCHANGED: { icon: Truck, pill: "bg-indigo-50 text-indigo-700 ring-indigo-200", dot: "bg-indigo-500", pulse: false },
+const statusConfig: Record<string, string> = {
+  PENDING: "pay-pending",
+  PROCESSING: "lb-brand",
+  COMPLETED: "ps-completed",
+  CANCELED: "ps-cancelled",
+  REFUNDED: "ps-cancelled",
+  EXCHANGED: "tx-adjustment",
 };
 
 interface OrdersCardProps {
@@ -23,7 +23,7 @@ interface OrdersCardProps {
 }
 
 const OrdersCard: React.FC<OrdersCardProps> = ({ order, setIsOpen, viewMode = "grid", onStatusChange, onDeleteClick }) => {
-  const status = statusConfig[order.status as keyof typeof statusConfig] ?? statusConfig.PENDING;
+  const variant = statusConfig[order.status] ?? "ps-draft";
 
   // ─── HORIZONTAL LIST VIEW ──────────────────────────────────────────────────
   if (viewMode === "list") {
@@ -33,10 +33,9 @@ const OrdersCard: React.FC<OrdersCardProps> = ({ order, setIsOpen, viewMode = "g
         {/* Left Section */}
         <div className="flex items-center gap-6 min-w-[240px]">
           <div>
-            <span className="inline-flex items-center gap-1.5 px-2 py-1 mb-1.5 rounded-md text-[10px] font-medium tracking-wide bg-blue-50 text-blue-600 ring-1 ring-blue-100/50">
-              <Wifi size={10} strokeWidth={2} />
-              Online
-            </span>
+            <div className="mb-1.5 inline-block">
+              <AntBadge variant="lb-brand" type="tag" icon={<Wifi size={10} strokeWidth={2} />}>Online</AntBadge>
+            </div>
             <p className="text-xs font-normal text-slate-400 mb-0.5">#{order.billNo}</p>
             <div className="flex items-baseline gap-0.5">
               <IndianRupee size={14} className="text-slate-800" strokeWidth={2} />
@@ -47,10 +46,9 @@ const OrdersCard: React.FC<OrdersCardProps> = ({ order, setIsOpen, viewMode = "g
           </div>
         </div>
         <div>
-           <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium ring-1 ${status.pill}`}>
-            <span className={`w-1.5 h-1.5 rounded-full ${status.dot} ${status.pulse ? "animate-pulse" : ""}`} />
+          <AntBadge variant={variant} type="pill" dot pulse={order.status === "PENDING"}>
             {order.status.replace(/_/g, " ")}
-          </span>
+          </AntBadge>
         </div>
         {/* Middle Section: Customer */}
         <div className="flex flex-col gap-2 flex-1 md:border-l md:border-slate-100 md:pl-6 min-w-[200px]">
@@ -86,10 +84,11 @@ const OrdersCard: React.FC<OrdersCardProps> = ({ order, setIsOpen, viewMode = "g
             />
           </div>
           
-          <span className={`sm:hidden inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium ring-1 mr-auto ${status.pill}`}>
-            <span className={`w-1.5 h-1.5 rounded-full ${status.dot} ${status.pulse ? "animate-pulse" : ""}`} />
-            {order.status.replace(/_/g, " ")}
-          </span>
+          <div className="sm:hidden mr-auto">
+            <AntBadge variant={variant} type="pill" dot pulse={order.status === "PENDING"}>
+              {order.status.replace(/_/g, " ")}
+            </AntBadge>
+          </div>
 
           <button
             onClick={onDeleteClick}
@@ -118,17 +117,15 @@ const OrdersCard: React.FC<OrdersCardProps> = ({ order, setIsOpen, viewMode = "g
       <div className="p-5">
         <div className="flex items-start justify-between mb-5">
           <div className="flex items-center gap-2.5">
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium tracking-wide bg-blue-50 text-blue-600 ring-1 ring-blue-100/50">
-              <Wifi size={12} strokeWidth={2} />
-              Online
-            </span>
+            <AntBadge variant="lb-brand" type="tag" icon={<Wifi size={10} strokeWidth={2} />}>Online</AntBadge>
             <span className="text-xs font-normal text-slate-400">#{order.billNo}</span>
           </div>
 
-          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium ring-1 ${status.pill}`}>
-            <span className={`w-1.5 h-1.5 rounded-full ${status.dot} ${status.pulse ? "animate-pulse" : ""}`} />
-            {order.status.replace(/_/g, " ")}
-          </span>
+          <div>
+            <AntBadge variant={variant} type="pill" dot pulse={order.status === "PENDING"}>
+              {order.status.replace(/_/g, " ")}
+            </AntBadge>
+          </div>
         </div>
 
         <div className="mb-5">

@@ -2,7 +2,7 @@ import React, { useRef, useState, useEffect, useMemo, Fragment } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   Package, Search, Filter, Bookmark, Trash2,
-  ChevronDown, ChevronRight, Layers, AlertTriangle,
+  ChevronDown, ChevronRight, Layers,
   X, AlertCircle, Calendar, Hash, ExternalLink,
   Copy, Check, Pencil, Eye, MoreVertical, RefreshCw, History, Plus
 } from "lucide-react";
@@ -21,6 +21,7 @@ import SkeletonLoader from "@/components/common/SkeletonLoader";
 import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 import type { InventoryRecord } from "@/types/api";
 import { RightSidebarFilter } from "@/components/common/RightSidebarFilter";
+import { AntBadge } from "@/components/ui/AntBadge";
 
 // --- Helpers (logic unchanged) ---
 const formatCurrency = (amount?: any) => {
@@ -125,47 +126,22 @@ const getStockStatus = (stock: number, reorderPoint?: number) => {
   if (s <= 0)
     return {
       label: "Out of stock",
-      color: "text-[var(--ps-cancel-tx)] bg-[var(--ps-cancel-bg)] border-[var(--ps-cancel-bd)]",
-      dot: "bg-[var(--ps-cancel-dot)]",
+      variant: "ps-cancelled",
     };
   if (s <= rp)
     return {
       label: "Low stock",
-      color: "text-[var(--ps-draft-tx)] bg-[var(--ps-draft-bg)] border-[var(--ps-draft-bd)]",
-      dot: "bg-[var(--ps-draft-dot)]",
+      variant: "ps-draft",
     };
   return {
     label: "In stock",
-    color: "text-[var(--ps-completed-tx)] bg-[var(--ps-completed-bg)] border-[var(--ps-completed-bd)]",
-    dot: "bg-[var(--ps-completed-dot)]",
+    variant: "ps-completed",
   };
 };
 
 
 
-// --- Compact pill ---
-const Pill = ({
-  children,
-  variant = "default",
-}: {
-  children: React.ReactNode;
-  variant?: "default" | "variant" | "batch" | "serial" | "online";
-}) => {
-  const styles: Record<string, string> = {
-    default: "text-slate-500 bg-slate-50 border-slate-100",
-    variant: "text-[var(--at-variant-tx)] bg-[var(--at-variant-bg)] border-[var(--at-variant-bd)]",
-    batch: "text-[var(--at-batch-tx)] bg-[var(--at-batch-bg)] border-[var(--at-batch-bd)]",
-    serial: "text-[var(--at-serial-tx)] bg-[var(--at-serial-bg)] border-[var(--at-serial-bd)]",
-    online: "text-[var(--at-brand-tx)] bg-[var(--at-brand-bg)] border-[var(--at-brand-bd)]",
-  };
-  return (
-    <span
-      className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium border leading-none ${styles[variant]}`}
-    >
-      {children}
-    </span>
-  );
-};
+
 
 // --- Copy SKU Button with Micro-Animation ---
 const CopySKUButton = ({ val }: { val: string }) => {
@@ -182,9 +158,8 @@ const CopySKUButton = ({ val }: { val: string }) => {
     <button
       type="button"
       onClick={handleCopy}
-      className={`inline-flex items-center justify-center p-0.5 rounded transition-all duration-200 ${
-        copied ? "text-emerald-500 bg-emerald-50" : "text-slate-350 hover:text-blue-600 hover:bg-slate-100/80"
-      }`}
+      className={`inline-flex items-center justify-center p-0.5 rounded transition-all duration-200 ${copied ? "text-emerald-500 bg-emerald-50" : "text-slate-350 hover:text-blue-600 hover:bg-slate-100/80"
+        }`}
       title="Copy SKU"
     >
       {copied ? (
@@ -261,7 +236,7 @@ const ProductRow = React.memo(
 
     const hasVariants = !!(p.type_infos?.has_variant || datas.has_variants || datas.has_varients) || combinations.length > 0;
     const hasBatches = !!(p.type_infos?.has_batch || datas.has_batch) || batches.length > 0;
-    
+
     const rootSerials = extractSerials((p as any).serialno_infos || (p as any).serials || (p as any).serial_number);
     const hasSerials = !!(p.type_infos?.has_serialno) || rootSerials.length > 0;
     const isExpandable = hasVariants || hasBatches || hasSerials;
@@ -307,18 +282,17 @@ const ProductRow = React.memo(
     const [showAllBadges, setShowAllBadges] = useState(false);
 
     const badges: React.ReactNode[] = [];
-    
 
-    
+
+
     if (hasVariants) {
       badges.push(
-        <Pill key="var" variant="variant">
-          <Layers size={9} />
-          {combinations.length} var
-        </Pill>
+        <AntBadge key="var" variant="at-variant" type="tag" icon={<Layers size={9} />}>
+          {combinations.length} variants
+        </AntBadge>
       );
     }
-    
+
     const trackingInfo: any[] = [];
     if (!hasVariants) {
       if (totalBatches > 0) trackingInfo.push({ label: `${totalBatches} batches`, icon: Calendar, color: "coral", bg: "bg-[var(--at-batch-bg)]", text: "text-[var(--at-batch-tx)] border-[var(--at-batch-bd)]" });
@@ -334,9 +308,8 @@ const ProductRow = React.memo(
     return (
       <Fragment key={p.id}>
         <tr
-          className={`group border-b border-slate-50 transition-colors cursor-pointer ${
-            isSelected ? "bg-blue-50 border-l-2 border-l-blue-500" : isExpanded ? "bg-slate-50/70" : "hover:bg-slate-50/60"
-          }`}
+          className={`group border-b border-slate-50 transition-colors cursor-pointer ${isSelected ? "bg-blue-50 border-l-2 border-l-blue-500" : isExpanded ? "bg-slate-50/70" : "hover:bg-slate-50/60"
+            }`}
           onClick={() => toggleExpand(p.id)}
         >
           {/* Checkbox */}
@@ -357,11 +330,10 @@ const ProductRow = React.memo(
                   e.stopPropagation();
                   toggleExpand(p.id);
                 }}
-                className={`w-5 h-5 mx-auto rounded flex items-center justify-center transition-colors ${
-                  isExpanded
-                    ? "bg-blue-600 text-white"
-                    : "text-blue-300 hover:text-blue-500"
-                }`}
+                className={`w-5 h-5 mx-auto rounded flex items-center justify-center transition-colors ${isExpanded
+                  ? "bg-blue-600 text-white"
+                  : "text-blue-300 hover:text-blue-500"
+                  }`}
               >
                 {isExpanded ? (
                   <ChevronDown size={12} />
@@ -433,11 +405,10 @@ const ProductRow = React.memo(
                       e.stopPropagation();
                       toggleExpand(p.id);
                     }}
-                    className={`mt-1 flex items-center gap-2 w-fit px-2 py-1.5 rounded-xl border transition-all ${
-                      isExpanded
-                        ? "bg-slate-50 border-slate-200"
-                        : "bg-white border-slate-200 hover:border-blue-300 shadow-sm"
-                    }`}
+                    className={`mt-1 flex items-center gap-2 w-fit px-2 py-1.5 rounded-xl border transition-all ${isExpanded
+                      ? "bg-slate-50 border-slate-200"
+                      : "bg-white border-slate-200 hover:border-blue-300 shadow-sm"
+                      }`}
                   >
                     <div className="flex items-center gap-1.5">
                       <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Tracking:</span>
@@ -503,7 +474,7 @@ const ProductRow = React.memo(
           {/* Dynamic columns */}
           {selectedKeys.map((key) => {
             let value = datas[key] !== undefined && datas[key] !== null ? datas[key] : (p as any)[key];
-            
+
             // Map the nested backend schema properly
             if (key === "buy_price") value = computedBuyPrice;
             if (key === "sell_price") value = computedSellPrice;
@@ -516,11 +487,10 @@ const ProductRow = React.memo(
               return (
                 <td key={key} className="px-3 py-2.5 whitespace-nowrap">
                   <span
-                    className={`tabular-nums ${
-                      key === "sell_price"
-                        ? "text-[13px] font-bold text-slate-800"
-                        : "text-[13px] font-semibold text-slate-700"
-                    }`}
+                    className={`tabular-nums ${key === "sell_price"
+                      ? "text-[13px] font-bold text-slate-800"
+                      : "text-[13px] font-semibold text-slate-700"
+                      }`}
                   >
                     {hasVariants ? "—" : formatCurrency(value)}
                   </span>
@@ -555,12 +525,9 @@ const ProductRow = React.memo(
               const status = getStockStatus(computedStock, reorderPoint);
               return (
                 <td key={key} className="px-3 py-2.5 whitespace-nowrap">
-                  <span
-                    className={`inline-flex items-center gap-1 px-2 py-1 rounded-xl text-[10px] font-medium border leading-none ${status.color}`}
-                  >
-                    <span className={`w-1.5 h-1.5 rounded-full ${status.dot}`} />
+                  <AntBadge variant={status.variant} type="pill" dot>
                     {status.label}
-                  </span>
+                  </AntBadge>
                 </td>
               );
             }
@@ -720,8 +687,8 @@ const ProductRow = React.memo(
                   <ActionMenuItem icon={<History size={13} />} onClick={() => { setIsMenuOpen(false); navigate(`/stock-movement`, { state: { product: p } }); }}>
                     Stock Movements
                   </ActionMenuItem>
-                  <ActionMenuItem icon={<Plus size={13} />} onClick={() => { 
-                    setIsMenuOpen(false); 
+                  <ActionMenuItem icon={<Plus size={13} />} onClick={() => {
+                    setIsMenuOpen(false);
                     if (hasVariants && combinations.length > 0) {
                       setShowVariantModal(true);
                     } else if (hasBatches && batches.length > 0) {
@@ -729,7 +696,7 @@ const ProductRow = React.memo(
                     } else if (hasSerials && rootSerials.length > 0) {
                       setShowSerialModal(true);
                     } else {
-                      navigate(`/purchase/add`, { state: { product: p } }); 
+                      navigate(`/purchase/add`, { state: { product: p } });
                     }
                   }}>
                     Add Purchase
@@ -769,7 +736,6 @@ const ProductRow = React.memo(
                     <VariantRows
                       combinations={combinations}
                       baseSellPrice={p.pricing_infos?.sell_price || datas.sell_price || (p as any).sell_price}
-                      baseBuyPrice={p.pricing_infos?.buy_price || datas.buy_price || (p as any).buy_price}
                       parentStorageLocation={(p as any).storage_location_infos?.storage_location ?? (p as any).storage_location_infos?.name ?? (p as any).storage_location ?? (p as any).location ?? datas.storage_location ?? null}
                       parentReorderPoint={p.reorder_point_infos?.reorder_point ?? (p as any).reorder_point ?? datas.reorder_point ?? null}
                     />
@@ -920,6 +886,7 @@ const ProductInfos = () => {
   const { showToast } = useToast();
 
   const [products, setProducts] = useState<InventoryRecord[]>([]);
+  const [activeKpi, setActiveKpi] = useState("All Products");
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [filters, setFilters] = useState({
@@ -937,18 +904,7 @@ const ProductInfos = () => {
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
-  const [analyticsStats, setAnalyticsStats] = useState<any>(null);
 
-  useEffect(() => {
-    getData(ENDPOINTS.ANALYTICS_PRODINV_OVERALL, { shop_id: SHOP_ID })
-      .then((res) => {
-        const data = res?.data ?? res;
-        if (data) {
-          setAnalyticsStats({ overview: { inventory: data } });
-        }
-      })
-      .catch(() => {});
-  }, [getData]);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [productToDelete, setProductToDelete] = useState<InventoryRecord | null>(null);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
@@ -1007,11 +963,11 @@ const ProductInfos = () => {
     getData(`${ENDPOINTS.INVENTORIES}/by/shop/${SHOP_ID}`, params, { cacheKey: "products-list" }).then(
       (res) => {
         if (res) {
-          const data: InventoryRecord[] = Array.isArray(res?.data) 
-            ? res.data 
+          const data: InventoryRecord[] = Array.isArray(res?.data)
+            ? res.data
             : (res?.data?.inventories ?? (Array.isArray(res?.datas) ? res.datas : (res?.datas?.inventories ?? [])));
           setProducts(data);
-          
+
           const keys = new Set<string>();
           data.forEach((p: any) => {
             const datas = p.additional_infos || p.datas;
@@ -1148,6 +1104,12 @@ const ProductInfos = () => {
   const filteredProducts = useMemo(() => {
     let result = products;
 
+    if (activeKpi === "Inactive Products") {
+      result = result.filter((p: any) => p.is_active === false);
+    } else if (activeKpi === "Stock Not Tracking") {
+      result = result.filter((p: any) => p.track_stock === false || p.is_stock_tracked === false || p.type === "service");
+    }
+
     if (debouncedSearch) {
       const lowerSearch = debouncedSearch.toLowerCase();
       result = result.filter((p: any) => {
@@ -1191,7 +1153,7 @@ const ProductInfos = () => {
         return br === filters.brand;
       });
     }
-    
+
     if (filters.type !== "All") {
       result = result.filter((p: any) => {
         if (filters.type === "Has Variants") return p.type_infos?.has_variant;
@@ -1212,26 +1174,7 @@ const ProductInfos = () => {
     }
 
     return result;
-  }, [products, debouncedSearch, filters]);
-
-
-
-  const lowStockCount = useMemo(
-    () =>
-      products.filter((p: any) => {
-        const stock = calculateProductStock(p);
-        const rp = Number(
-          p.reorder_point_infos?.reorder_point ?? (p as any).reorder_point ?? p.additional_infos?.reorder_point ?? p.datas?.reorder_point ?? 10
-        );
-        return stock <= rp;
-      }).length,
-    [products]
-  );
-  
-  const outOfStockCount = useMemo(
-    () => products.filter((p: any) => calculateProductStock(p) === 0).length,
-    [products]
-  );
+  }, [products, debouncedSearch, filters, activeKpi]);
 
   if (loading && products.length === 0 && !searchTerm && !debouncedSearch) {
     return (
@@ -1249,47 +1192,33 @@ const ProductInfos = () => {
         <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-none">
           <StatCard
             icon={Package}
-            label="Active Products"
-            value={(analyticsStats?.overview?.inventory?.total_active_products ?? products.filter((p: any) => p.is_active !== false).length).toString()}
-            subValue="selling items"
+            label="All Products"
+            value={products.length.toString()}
+            subValue="total records"
             iconBg="bg-blue-50"
             iconColor="text-blue-600"
+            onClick={() => setActiveKpi("All Products")}
+            className={activeKpi === "All Products" ? "ring-2 ring-blue-400 border-transparent shadow-sm" : ""}
           />
           <StatCard
             icon={Package}
             label="Inactive Products"
-            value={(analyticsStats?.overview?.inventory?.total_inactive_product ?? products.filter((p: any) => p.is_active === false).length).toString()}
+            value={(products.filter((p: any) => p.is_active === false).length).toString()}
             subValue="disabled items"
             iconBg="bg-slate-100"
             iconColor="text-slate-600"
-          />
-          <StatCard
-            icon={Layers}
-            label="Total Stocks"
-            value={(analyticsStats?.overview?.inventory?.total_stocks ?? 0).toString()}
-            subValue="in-stock count"
-            iconBg="bg-emerald-50"
-            iconColor="text-emerald-600"
-          />
-          <StatCard
-            icon={AlertTriangle}
-            label="Low Stock"
-            value={analyticsStats?.overview?.inventory?.total_low_stocks?.toString() ?? lowStockCount.toString()}
-            subValue="items need restock"
-            iconBg="bg-amber-50"
-            iconColor="text-amber-500"
-            onClick={() => setFilters(prev => ({ ...prev, status: prev.status === "Low stock" ? "All" : "Low stock" }))}
-            className={filters.status === "Low stock" ? "ring-2 ring-amber-400 border-transparent shadow-sm" : ""}
+            onClick={() => setActiveKpi("Inactive Products")}
+            className={activeKpi === "Inactive Products" ? "ring-2 ring-slate-400 border-transparent shadow-sm" : ""}
           />
           <StatCard
             icon={AlertCircle}
-            label="Out of Stock"
-            value={analyticsStats?.overview?.inventory?.total_no_stocks?.toString() ?? outOfStockCount.toString()}
-            subValue="items empty"
-            iconBg="bg-red-50"
-            iconColor="text-red-500"
-            onClick={() => setFilters(prev => ({ ...prev, status: prev.status === "Out of stock" ? "All" : "Out of stock" }))}
-            className={filters.status === "Out of stock" ? "ring-2 ring-red-400 border-transparent shadow-sm" : ""}
+            label="Stock Not Tracking"
+            value={(products.filter((p: any) => p.track_stock === false || p.is_stock_tracked === false || p.type === "service").length).toString()}
+            subValue="untracked items"
+            iconBg="bg-amber-50"
+            iconColor="text-amber-500"
+            onClick={() => setActiveKpi("Stock Not Tracking")}
+            className={activeKpi === "Stock Not Tracking" ? "ring-2 ring-amber-400 border-transparent shadow-sm" : ""}
           />
         </div>
       )}
@@ -1326,16 +1255,15 @@ const ProductInfos = () => {
           />
         </div>
 
-        
+
 
         <button
           type="button"
           onClick={() => setIsFilterOpen(true)}
-          className={`h-8 px-3 rounded-md border text-xs font-semibold flex items-center gap-1.5 active:scale-95 transition-all shadow-sm shrink-0 ${
-            Object.values(filters).some(v => v !== "All")
-              ? "border-blue-200 text-blue-600 bg-blue-50/50"
-              : "border-slate-200 text-slate-650 bg-white hover:bg-slate-50"
-          }`}
+          className={`h-8 px-3 rounded-md border text-xs font-semibold flex items-center gap-1.5 active:scale-95 transition-all shadow-sm shrink-0 ${Object.values(filters).some(v => v !== "All")
+            ? "border-blue-200 text-blue-600 bg-blue-50/50"
+            : "border-slate-200 text-slate-650 bg-white hover:bg-slate-50"
+            }`}
           title="Filters"
         >
           <Filter size={13} />
@@ -1343,7 +1271,7 @@ const ProductInfos = () => {
             <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
           )}
         </button>
-          <ColumnPicker
+        <ColumnPicker
           availableKeys={availableKeys}
           selectedKeys={selectedKeys}
           onApply={(keys) => setSelectedKeys(sortKeys(keys.filter((key) => !hiddenProductColumns.has(key))))}

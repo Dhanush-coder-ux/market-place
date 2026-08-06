@@ -613,7 +613,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                 const types = Object.keys(attributes).map(key => ({
                   id: uid(),
                   name: key,
-                  values: Array.from(new Set(vInfos.map((v: any) => 
+                  values: Array.from(new Set(vInfos.map((v: any) =>
                     v.additional_infos?.attributes?.[key] || v.attributes?.[key] || (key === "Variant" ? v.name : "")
                   ))).filter(Boolean) as string[],
                 }));
@@ -630,7 +630,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                 const stockInfo = v.stock_infos && Object.keys(v.stock_infos).length > 0 ? v.stock_infos : (v.batch_infos?.[0]?.stock_infos || {});
                 const reorderInfo = v.reorder_point_infos && Object.keys(v.reorder_point_infos).length > 0 ? v.reorder_point_infos : (v.batch_infos?.[0]?.reorder_point_infos || {});
                 const stlInfo = v.storage_location_infos && Object.keys(v.storage_location_infos).length > 0 ? v.storage_location_infos : (v.batch_infos?.[0]?.storage_location_infos || {});
-                
+
                 return {
                   id: v.id || uid(),
                   attributes: attrs,

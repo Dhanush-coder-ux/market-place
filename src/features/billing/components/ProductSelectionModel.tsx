@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { X, CheckCircle2, AlertCircle, Barcode, CalendarDays, ChevronRight, ArrowLeft, Package, Check, Search } from "lucide-react";
 import { InventoryItem, ProductVariant } from "../types";
+import { AntBadge } from "@/components/ui/AntBadge";
 
 const formatDate = (dateStr?: string) => {
   if (!dateStr) return '—';
@@ -483,9 +484,11 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
                               <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                                 <span className="text-xs font-medium text-slate-400">Stock: {batchStock} units</span>
                                 {(batch.expiry_date || batch.expiryDate) && (
-                                  <span className="inline-flex items-center text-[9px] font-semibold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">
-                                    EXP: {formatDate(batch.expiry_date || batch.expiryDate)}
-                                  </span>
+                                  <div className="flex items-center">
+                                    <AntBadge variant="ps-completed" type="tag">
+                                      Exp: {formatDate(batch.expiry_date || batch.expiryDate)}
+                                    </AntBadge>
+                                  </div>
                                 )}
                               </div>
                             </div>
@@ -580,11 +583,9 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
                     <p className="text-[11px] font-bold text-slate-400 flex items-center gap-1.5">
                       <Barcode size={14} /> Select {quantity} Serial{quantity !== 1 ? 's' : ''}
                     </p>
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full transition-colors ${
-                      selectedSerials.length === quantity ? "bg-emerald-50 text-emerald-600" : "bg-blue-50 text-blue-600"
-                    }`}>
+                    <AntBadge variant={selectedSerials.length === quantity ? "ps-completed" : "lb-brand"} type="pill">
                       {selectedSerials.length} / {quantity}
-                    </span>
+                    </AntBadge>
                   </div>
 
                   {/* Serial Search */}
@@ -710,9 +711,10 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
                             </div>
                           )}
                           {(selectedBatch.expiry_date || selectedBatch.expiryDate) && (
-                            <div className="text-[10px] font-semibold text-emerald-600 flex flex-col gap-0.5 bg-emerald-50/50 border border-emerald-100 px-2 py-0.5 rounded shadow-sm">
-                              <span className="text-[8px] font-bold text-emerald-500 uppercase tracking-tight">Exp Date</span>
-                              {formatDate(selectedBatch.expiry_date || selectedBatch.expiryDate)}
+                            <div className="flex items-center">
+                              <AntBadge variant="ps-completed" type="tag">
+                                Exp: {formatDate(selectedBatch.expiry_date || selectedBatch.expiryDate)}
+                              </AntBadge>
                             </div>
                           )}
                         </div>

@@ -102,7 +102,7 @@ const AnalyticsDashboard = () => {
           const arr = Array.isArray(res.data) ? res.data : (res.data.datas || []);
           setProductsList(arr);
         }
-      } catch (e) {}
+      } catch (e) { }
     };
     fetchProducts();
   }, [getData]);
@@ -116,7 +116,7 @@ const AnalyticsDashboard = () => {
           const arr = Array.isArray(res.data) ? res.data : (res.data.datas || []);
           setSuppliers(arr);
         }
-      } catch (e) {}
+      } catch (e) { }
     };
 
     const fetchCustomCategories = async () => {
@@ -127,7 +127,7 @@ const AnalyticsDashboard = () => {
           const names = arr.map((c: any) => c.name).filter(Boolean);
           setCustomCategories(names);
         }
-      } catch (e) {}
+      } catch (e) { }
     };
 
     fetchSuppliers();
@@ -185,7 +185,7 @@ const AnalyticsDashboard = () => {
 
   const totalOrders = salesOverall.total_sales ?? 0;
   const netRevenue = salesOverall.total_sales_amounts ?? 0;
-  
+
   const totalCost = selectedSupplier && stats?.supplier
     ? (stats.supplier.total_purchase_amounts ?? 0)
     : (purchaseOverall.total_purchase_amounts ?? 0);
@@ -326,11 +326,10 @@ const AnalyticsDashboard = () => {
                   <button
                     key={r}
                     onClick={() => setActiveRange(r)}
-                    className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                      activeRange === r
+                    className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${activeRange === r
                         ? "bg-white text-blue-600 shadow-sm"
                         : "text-slate-500 hover:text-slate-700"
-                    }`}
+                      }`}
                   >
                     {RANGE_LABELS[r]}
                   </button>
@@ -362,51 +361,51 @@ const AnalyticsDashboard = () => {
               </div>
               <span className="text-xs text-slate-400">to</span>
               <input
-                  type="date"
-                  value={customEnd}
-                  onChange={(e) => setCustomEnd(e.target.value)}
-                  className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                type="date"
+                value={customEnd}
+                onChange={(e) => setCustomEnd(e.target.value)}
+                className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-200"
+              />
+            </div>
+          )}
+
+          {/* Additional Filters */}
+          <div className="px-6 pb-4 pt-2 border-t border-slate-100 flex items-center gap-4 bg-slate-50/50">
+            <div className="flex items-center gap-2 z-50">
+              <span className="text-xs font-medium text-slate-500">Supplier:</span>
+              <div className="w-48">
+                <ReusableSelect
+                  value={selectedSupplier}
+                  onValueChange={setSelectedSupplier}
+                  options={[
+                    { label: "All Suppliers", value: "" },
+                    ...suppliers.map(s => ({ label: String(s.name || s.business_name || s.id), value: s.id }))
+                  ]}
+                  placeholder="All Suppliers"
+                  className="h-9 py-0 px-3 min-h-0 text-xs font-medium"
                 />
               </div>
-            )}
+            </div>
 
-            {/* Additional Filters */}
-            <div className="px-6 pb-4 pt-2 border-t border-slate-100 flex items-center gap-4 bg-slate-50/50">
-              <div className="flex items-center gap-2 z-50">
-                <span className="text-xs font-medium text-slate-500">Supplier:</span>
-                <div className="w-48">
-                  <ReusableSelect
-                    value={selectedSupplier}
-                    onValueChange={setSelectedSupplier}
-                    options={[
-                      { label: "All Suppliers", value: "" },
-                      ...suppliers.map(s => ({ label: String(s.name || s.business_name || s.id), value: s.id }))
-                    ]}
-                    placeholder="All Suppliers"
-                    className="h-9 py-0 px-3 min-h-0 text-xs font-medium"
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2 z-50">
-                <span className="text-xs font-medium text-slate-500">Category:</span>
-                <div className="w-48">
-                  <ReusableSelect
-                    value={selectedCategory}
-                    onValueChange={setSelectedCategory}
-                    options={[
-                      { label: "All Categories", value: "" },
-                      ...allCategories.map(c => ({ label: c, value: c }))
-                    ]}
-                    placeholder="All Categories"
-                    className="h-9 py-0 px-3 min-h-0 text-xs font-medium"
-                  />
-                </div>
+            <div className="flex items-center gap-2 z-50">
+              <span className="text-xs font-medium text-slate-500">Category:</span>
+              <div className="w-48">
+                <ReusableSelect
+                  value={selectedCategory}
+                  onValueChange={setSelectedCategory}
+                  options={[
+                    { label: "All Categories", value: "" },
+                    ...allCategories.map(c => ({ label: c, value: c }))
+                  ]}
+                  placeholder="All Categories"
+                  className="h-9 py-0 px-3 min-h-0 text-xs font-medium"
+                />
               </div>
             </div>
           </div>
+        </div>
 
-          {/* ── ERROR STATE ── */}
+        {/* ── ERROR STATE ── */}
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-600">
             {error}
@@ -438,7 +437,7 @@ const AnalyticsDashboard = () => {
                 )}
               </div>
             </div>
-            
+
             <div className="mt-4 pt-4 border-t border-slate-100 space-y-2.5">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -480,7 +479,7 @@ const AnalyticsDashboard = () => {
                 )}
               </div>
             </div>
-            
+
             <div className="mt-4 pt-4 border-t border-slate-100">
               <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
                 Total Cost: <span className="text-slate-600">{fmt(totalCost)}</span>
@@ -506,7 +505,7 @@ const AnalyticsDashboard = () => {
                 </span>
               </div>
             </div>
-            
+
             <div className="mt-4 pt-4 border-t border-slate-100 flex gap-2 flex-wrap">
               {totalReturnsCount > 0 && (
                 <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md text-rose-600 bg-rose-50 border border-rose-100">
@@ -544,7 +543,7 @@ const AnalyticsDashboard = () => {
                 </span>
               </div>
             </div>
-            
+
             <div className="mt-4 pt-4 border-t border-slate-100">
               <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
                 Gross Margin: <span className="text-slate-600">{loading ? "—" : `${grossMargin.toFixed(1)}%`}</span>

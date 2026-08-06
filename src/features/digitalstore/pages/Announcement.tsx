@@ -625,20 +625,47 @@ export default function AnnouncementsPage() {
 
             </div>
 
-            {/* Stat pills */}
-            <div className="flex items-center gap-4 mb-4">
-              {[
-                { label: "Total Views", value: totalViews.toLocaleString(), icon: <Eye size={12} />, color: "text-blue-600", bg: "bg-blue-50" },
-                { label: "Published", value: publishedCount, icon: <CheckCircle2 size={12} />, color: "text-emerald-600", bg: "bg-emerald-50" },
-                { label: "Scheduled", value: scheduledCount, icon: <Clock size={12} />, color: "text-amber-600", bg: "bg-amber-50" },
-                { label: "Drafts", value: draftCount, icon: <Edit3 size={12} />, color: "text-slate-500", bg: "bg-slate-100" },
-              ].map(stat => (
-                <div key={stat.label} className={`flex items-center gap-2 px-3 py-1.5 rounded-xl ${stat.bg}`}>
-                  <span className={stat.color}>{stat.icon}</span>
-                  <span className={`text-[11.5px] font-extrabold ${stat.color}`}>{stat.value}</span>
-                  <span className="text-[11px] text-slate-400 font-medium">{stat.label}</span>
-                </div>
-              ))}
+            {/* Action Tabs & Stats */}
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-4">
+              <div className="flex items-center gap-4 overflow-x-auto pb-1 lg:pb-0 scrollbar-hide">
+                {[
+                  { label: "Total Views", value: totalViews.toLocaleString(), icon: <Eye size={12} />, color: "text-blue-600", bg: "bg-blue-50" },
+                  { label: "Published", value: publishedCount, icon: <CheckCircle2 size={12} />, color: "text-emerald-600", bg: "bg-emerald-50" },
+                  { label: "Scheduled", value: scheduledCount, icon: <Clock size={12} />, color: "text-amber-600", bg: "bg-amber-50" },
+                  { label: "Drafts", value: draftCount, icon: <Edit3 size={12} />, color: "text-slate-500", bg: "bg-slate-100" },
+                ].map(stat => (
+                  <div key={stat.label} className={`flex items-center gap-2 px-3 py-1.5 rounded-xl ${stat.bg} shrink-0`}>
+                    <span className={stat.color}>{stat.icon}</span>
+                    <span className={`text-[11.5px] font-extrabold ${stat.color}`}>{stat.value}</span>
+                    <span className="text-[11px] text-slate-400 font-medium">{stat.label}</span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex bg-slate-100/80 p-1 rounded-xl shrink-0 self-start lg:self-auto">
+                <button
+                  onClick={() => setActiveTab("editor")}
+                  className={`flex items-center gap-2 px-5 py-2 rounded-lg text-[13px] font-bold transition-all cursor-pointer ${
+                    activeTab === "editor"
+                      ? "bg-white text-blue-600 shadow-sm border border-slate-200/50"
+                      : "text-slate-500 hover:text-slate-700 hover:bg-slate-200/50"
+                  }`}
+                >
+                  <Edit3 size={16} strokeWidth={2.5} />
+                  Create Announcement
+                </button>
+                <button
+                  onClick={() => setActiveTab("history")}
+                  className={`flex items-center gap-2 px-5 py-2 rounded-lg text-[13px] font-bold transition-all cursor-pointer ${
+                    activeTab === "history"
+                      ? "bg-white text-blue-600 shadow-sm border border-slate-200/50"
+                      : "text-slate-500 hover:text-slate-700 hover:bg-slate-200/50"
+                  }`}
+                >
+                  <Clock size={16} strokeWidth={2.5} />
+                  History
+                </button>
+              </div>
             </div>
 
 

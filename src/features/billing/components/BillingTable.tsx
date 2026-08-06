@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from "react";
-import { Trash2, Package, Plus, RotateCcw, Minus, Search, Barcode } from "lucide-react";
+import { Package, Trash2, Barcode, Search, Plus, Minus, RotateCcw } from "lucide-react";
+import { AntBadge } from "@/components/ui/AntBadge";
 import { v4 as uuidv4 } from "uuid";
 import { BillingItem, InventoryItem, ProductVariant } from "../types";
 import ProductSelectionModal from "./ProductSelectionModel";
@@ -850,9 +851,11 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
                           </span>
                         )}
                         {item.batchTracking && item.expiryDate && (
-                          <span className="text-[9px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-100 px-1.5 py-0.5 rounded leading-none">
-                            EXP: {formatDate(item.expiryDate)}
-                          </span>
+                          <div className="flex items-center">
+                            <AntBadge variant="ps-completed" type="tag">
+                              EXP: {formatDate(item.expiryDate)}
+                            </AntBadge>
+                          </div>
                         )}
                       </div>
 

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import {
-  Printer, Building2, Calendar, Package, TrendingUp,
+  Printer, Building2, Calendar, Package,
   ReceiptText, ArrowLeft, User, FileText, CheckCircle2, Clock, Banknote, AlertCircle,
   RotateCcw, X, ChevronRight, Info, Minus, Plus, CornerDownLeft
 } from "lucide-react";
@@ -15,6 +15,7 @@ import { useApi } from "@/context/ApiContext";
 import { SHOP_ID, ENDPOINTS } from "@/services/endpoints";
 import SkeletonLoader from "@/components/common/SkeletonLoader";
 import { useToast } from "@/context/ToastContext";
+import { AntBadge } from "@/components/ui/AntBadge";
 
 const fmt = (n: number) => `₹${n.toLocaleString("en-IN")}`;
 
@@ -618,7 +619,16 @@ const outstanding =
       {/* Profile Header Card */}
       <div className="flex-none p-1 pb-0">
         <ProfileHeaderCard
-          name={`Purchase · ${po.systemId}`}
+          name={
+            <div className="flex items-center gap-2 flex-wrap">
+              <span>Purchase · {po.systemId}</span>
+              {po.version && (
+                <div className="mt-0.5">
+                  <AntBadge variant="meta-version" type="tag">{po.version}</AntBadge>
+                </div>
+              )}
+            </div>
+          }
           initials="PO"
           subText={po.systemId && po.systemId !== po.poNumber ? `Invoice No: ${po.poNumber}` : ""}
           badges={[
@@ -667,7 +677,7 @@ const outstanding =
       {/* Tabs Navigation */}
       <div className="flex-none px-1 py-2">
         <div className="flex gap-2 p-1 bg-slate-100/50 w-fit rounded-lg border border-slate-200/50">
-          {["Overview", "Items", "Vendor & Payments", "Returns"].map((tab, i) => (
+          {["Overview", "Items", "Returns"].map((tab, i) => (
             <button
               key={tab}
               onClick={() => setActiveTab(i)}
@@ -675,11 +685,11 @@ const outstanding =
                 activeTab === i
                   ? "bg-blue-600 text-white shadow-md shadow-blue-100"
                   : "text-slate-500 hover:bg-slate-50 hover:text-slate-700"
-              } ${i === 3 ? "flex items-center gap-1" : ""}`}
+              } ${i === 2 ? "flex items-center gap-1" : ""}`}
             >
-              {i === 3 && <RotateCcw size={10} />}
+              {i === 2 && <RotateCcw size={10} />}
               {tab}
-              {i === 3 && returns.length > 0 && (
+              {i === 2 && returns.length > 0 && (
                 <span className="ml-1 min-w-[16px] h-4 px-1 rounded-full bg-rose-500 text-white text-[9px] font-black flex items-center justify-center">
                   {returns.length}
                 </span>
@@ -699,8 +709,26 @@ const outstanding =
 
 
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-                {/* Financial Summary */}
-                <div className="lg:col-span-8">
+                {/* Left Column */}
+                <div className="lg:col-span-8 space-y-4">
+                  {/* Vendor Information */}
+                  <SectionCard title="Vendor Information">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-6 gap-x-8">
+                      <DetailItem icon={Building2} label="Vendor Name" value={po.vendor} />
+                      <DetailItem icon={FileText} label="Purchase Invoice" value={po.poNumber} />
+                      {po.systemId && po.systemId !== po.poNumber && (
+                        <DetailItem icon={FileText} label="System ID" value={po.systemId} />
+                      )}
+                      <DetailItem icon={Calendar} label="Date" value={po.date} />
+                      <DetailItem icon={Clock} label="Time" value={po.time} />
+                      <DetailItem icon={User} label="Purchase Type" value={po.purchaseType} />
+                      {po.storage_location && (
+                        <DetailItem icon={Building2} label="Storage Location" value={po.storage_location} />
+                      )}
+                    </div>
+                  </SectionCard>
+
+                  {/* Financial Summary */}
                   <SectionCard title="Financial Summary">
                     <div className="space-y-1">
                       <InfoRow
@@ -761,7 +789,7 @@ const outstanding =
                   </SectionCard>
                 </div>
 
-                {/* Status & Actions */}
+                {/* Right Column */}
                 <div className="lg:col-span-4 space-y-4">
                   <SectionCard title="Purchase Info">
                     <div className="space-y-3">
@@ -792,14 +820,26 @@ const outstanding =
 
                   <SectionCard title="Payment Summary">
                     <div className="space-y-3">
+                      <div className="flex justify-between items-center pb-2 border-b border-slate-100/50">
+                        <span className="text-[11px] font-medium text-slate-400 uppercase tracking-tight">Status</span>
+                        {outstanding && outstanding > 0 ? (
+                          po.paid_amount === 0 ? (
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-[var(--pay-pending-bg)] text-[var(--pay-pending-tx)] border border-[var(--pay-pending-bd)]">Pending</span>
+                          ) : (
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-[var(--pay-partial-bg)] text-[var(--pay-partial-tx)] border border-[var(--pay-partial-bd)]">Partially Paid</span>
+                          )
+                        ) : (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-[var(--pay-paid-bg)] text-[var(--pay-paid-tx)] border border-[var(--pay-paid-bd)]">Paid</span>
+                        )}
+                      </div>
                       {po.paid_amount !== undefined && (
-                        <div className="flex justify-between items-center text-sm font-semibold text-slate-600">
+                        <div className="flex justify-between items-center text-sm font-semibold text-slate-600 pt-1">
                           <span>Paid Amount</span>
                           <span className="tabular-nums text-slate-800">{fmt(po.paid_amount)}</span>
                         </div>
                       )}
                       {po.outstanding !== undefined && (
-                        <div className="flex justify-between items-center text-sm font-bold pt-3 border-t border-slate-100">
+                        <div className="flex justify-between items-center text-sm font-bold pt-2 border-t border-slate-100">
                           <span className="text-slate-600">Outstanding</span>
                           <span className={`tabular-nums ${po.outstanding > 0 ? "text-amber-600" : "text-emerald-600"}`}>
                             {fmt(outstanding)}
@@ -1055,64 +1095,8 @@ const outstanding =
             </div>
           )}
 
-          {/* TAB 2 — Vendor & Payments */}
+          {/* TAB 2 — Returns */}
           {activeTab === 2 && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <SectionCard title="Vendor Information">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-6 gap-x-8">
-                  <DetailItem icon={Building2} label="Vendor Name" value={po.vendor} />
-                  <DetailItem icon={FileText} label="Purchase Invoice" value={po.poNumber} />
-                  {po.systemId && po.systemId !== po.poNumber && (
-                    <DetailItem icon={FileText} label="System ID" value={po.systemId} />
-                  )}
-                  <DetailItem icon={Calendar} label="Date" value={po.date} />
-                  <DetailItem icon={Clock} label="Time" value={po.time} />
-                  <DetailItem icon={User} label="Purchase Type" value={po.purchaseType} />
-                  {po.storage_location && (
-                    <DetailItem icon={Building2} label="Storage Location" value={po.storage_location} />
-                  )}
-                </div>
-              </SectionCard>
-
-              <SectionCard title="Payment Status">
-                {outstanding && outstanding > 0 ? (
-                  po.paid_amount === 0 ? (
-                    <div className="flex flex-col items-center justify-center p-6 bg-[var(--pay-pending-bg)] border border-[var(--pay-pending-bd)] rounded-xl h-full min-h-[160px]">
-                      <div className="w-14 h-14 rounded-full bg-[var(--pay-pending-dot)] text-white flex items-center justify-center mb-4 shadow-sm ring-2 ring-white">
-                        <Clock size={28} />
-                      </div>
-                      <span className="text-xl font-black tracking-tight text-[var(--pay-pending-tx)]">Pending</span>
-                      <p className="text-[10px] font-bold text-slate-400 mt-2 uppercase tracking-widest">{po.paymentMethod || "Action Required"}</p>
-                      <p className="text-xs font-bold text-[var(--pay-pending-tx)] mt-1">Outstanding: {fmt(outstanding)}</p>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-center justify-center p-6 bg-[var(--pay-partial-bg)] border border-[var(--pay-partial-bd)] rounded-xl h-full min-h-[160px]">
-                      <div className="w-14 h-14 rounded-full bg-[var(--pay-partial-dot)] text-white flex items-center justify-center mb-4 shadow-sm ring-2 ring-white">
-                        <TrendingUp size={28} />
-                      </div>
-                      <span className="text-xl font-black tracking-tight text-[var(--pay-partial-tx)]">Partially paid</span>
-                      <p className="text-[10px] font-bold text-slate-400 mt-2 uppercase tracking-widest">{po.paymentMethod || "Partial"}</p>
-                      <div className="text-center mt-2 space-y-0.5">
-                        <p className="text-[10px] font-semibold text-[var(--pay-partial-tx)] opacity-80">Paid: {fmt(po.paid_amount || 0)}</p>
-                        <p className="text-xs font-bold text-[var(--pay-partial-tx)]">Outstanding: {fmt(outstanding)}</p>
-                      </div>
-                    </div>
-                  )
-                ) : (
-                  <div className="flex flex-col items-center justify-center p-6 bg-[var(--pay-paid-bg)] border border-[var(--pay-paid-bd)] rounded-xl h-full min-h-[160px]">
-                    <div className="w-14 h-14 rounded-full bg-[var(--pay-paid-dot)] text-white flex items-center justify-center mb-4 shadow-sm ring-2 ring-white">
-                      <CheckCircle2 size={28} />
-                    </div>
-                    <span className="text-xl font-black tracking-tight text-[var(--pay-paid-tx)]">Paid</span>
-                    <p className="text-[10px] font-bold text-[var(--pay-paid-tx)] opacity-60 mt-2 uppercase tracking-widest">{po.paymentMethod || "Settled"}</p>
-                  </div>
-                )}
-              </SectionCard>
-            </div>
-          )}
-
-          {/* TAB 3 — Returns */}
-          {activeTab === 3 && (
             <div className="space-y-4">
               <SectionCard
                 title="Purchase Returns"

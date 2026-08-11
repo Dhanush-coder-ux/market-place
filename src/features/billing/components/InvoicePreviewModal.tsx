@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { X, Loader2, CheckCircle2, Banknote, Smartphone, Wallet } from "lucide-react";
 import { BillingItem } from "../types";
+import { shopApi } from "../../../services/api/shop";
 
 type BillStatus = "COMPLETED" | "PENDING" | "CANCELLED";
 
@@ -44,6 +45,18 @@ const InvoicePreviewModal: React.FC<InvoicePreviewModalProps> = ({
 
   const primaryPayment = payments[0] || { mode: "cash" };
   const modeInfo = payMeta[primaryPayment.mode] || payMeta.cash;
+
+  const [shopData, setShopData] = useState<any>(null);
+
+  useEffect(() => {
+    const shopId = localStorage.getItem("shop_id");
+    if (isOpen && shopId) {
+      shopApi.getShopById(shopId).then(res => {
+        const data = res?.data ?? res;
+        setShopData(data);
+      }).catch(console.error);
+    }
+  }, [isOpen]);
 
   // Body Scroll Lock
   useEffect(() => {
@@ -111,16 +124,16 @@ const InvoicePreviewModal: React.FC<InvoicePreviewModalProps> = ({
                 <div>
                   <div className="flex items-center gap-2 mb-1">
                     <div className="w-8 h-8 rounded-lg bg-blue-500 flex items-center justify-center print:bg-blue-600">
-                      <span className="text-white text-[11px] font-semibold">MP</span>
+                      <span className="text-white text-[11px] font-semibold">{shopData?.name?.substring(0, 2)?.toUpperCase() || "MP"}</span>
                     </div>
                     <div>
-                      <p className="text-[14px] font-semibold text-slate-800 leading-tight">MarketPlace</p>
-                      <p className="text-[10px] text-slate-400 font-normal">Retail & Distribution</p>
+                      <p className="text-[14px] font-semibold text-slate-800 leading-tight">{shopData?.name || shopData?.shop_name || "MarketPlace"}</p>
+                      <p className="text-[10px] text-slate-400 font-normal">{shopData?.category_infos?.name || "Retail & Distribution"}</p>
                     </div>
                   </div>
                   <p className="text-[10px] text-slate-400 mt-2 leading-relaxed">
-                    GSTIN: 29ABCDE1234F1Z5<br />
-                    123 Commerce Street, Bengaluru
+                    GSTIN: {shopData?.gst_number || shopData?.gst || "N/A"}<br />
+                    {shopData?.address_infos?.address_line_1 || "Address N/A"}
                   </p>
                 </div>
 

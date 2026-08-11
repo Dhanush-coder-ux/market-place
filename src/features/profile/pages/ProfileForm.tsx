@@ -8,7 +8,6 @@ import {
   BadgeCheck,
   Save,
   Bookmark,
-  ChevronRight,
 } from "lucide-react";
 import { useHeader } from "@/context/HeaderContext";
 import { useToast } from "@/context/ToastContext";
@@ -244,29 +243,7 @@ const ProfileForm: React.FC = () => {
   if (loading && id) return <div className="py-20 text-center"><Loader /></div>;
 
   return (
-    <div className="max-w-4xl mx-auto p-4 md:p-8 md:animate-in md:fade-in md:duration-500">
-      {/* Page Header — only on create */}
-      {!id && (
-        <div className="mb-8">
-          <div className="flex items-center gap-3 mb-1">
-            <div className="w-9 h-9 rounded-xl bg-blue-100 flex items-center justify-center text-blue-600 border border-blue-200">
-              <Store size={18} />
-            </div>
-            <h1 className="text-xl font-black text-slate-800 tracking-tight">Create Your Shop</h1>
-          </div>
-          <p className="text-sm text-slate-500 font-medium ml-12">
-            Set up your basic shop info. You can launch your digital store later via the Setup Wizard.
-          </p>
-          <div className="mt-4 ml-12 flex items-center gap-2 text-xs font-semibold text-blue-600 bg-blue-50 rounded-lg px-3 py-2 w-fit border border-blue-100">
-            <span className="w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center text-[10px] font-black">1</span>
-            Create Shop
-            <ChevronRight size={14} className="text-blue-400" />
-            <span className="text-slate-400">2. Select Shop</span>
-            <ChevronRight size={14} className="text-slate-300" />
-            <span className="text-slate-400">3. Setup Wizard</span>
-          </div>
-        </div>
-      )}
+    <div className="w-full max-w-7xl mx-auto p-4 md:p-8 md:animate-in md:fade-in md:duration-500">
 
       <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
         {/* Left Column */}

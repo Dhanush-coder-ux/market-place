@@ -3,8 +3,9 @@ import { useNavigate } from "react-router-dom";
 import {
   Search, Users, Bookmark, Filter,
   UserCheck, AlertCircle, CreditCard,
-  Loader2, Eye, Pencil, MoreVertical, Trash2, Plus
+  Loader2, Eye, Pencil, MoreVertical, Trash2, Plus, FileUp
 } from "lucide-react";
+import ExcelImportModal from "@/components/common/ExcelImportModal";
 import ActionMenu, { ActionMenuItem, ActionMenuDivider } from "@/components/common/ActionMenu";
 import SkeletonLoader from "@/components/common/SkeletonLoader";
 import { useHeader } from "@/context/HeaderContext";
@@ -34,6 +35,7 @@ const CustomerList = () => {
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [filterOutstanding, setFilterOutstanding] = useState("All");
+  const [isImportOpen, setIsImportOpen] = useState(false);
 
   const { getData, deleteData } = useApi();
   const [analyticsStats, setAnalyticsStats] = useState<any>(null);
@@ -58,6 +60,13 @@ const CustomerList = () => {
   useEffect(() => {
     setActions(
       <div className="flex items-center gap-2">
+        <button
+          onClick={() => setIsImportOpen(true)}
+          className="h-8 px-3 rounded-md border border-slate-200 text-slate-650 font-medium text-[12px] bg-white hover:bg-slate-50 transition-colors flex items-center gap-1.5"
+        >
+          <FileUp size={13} />
+          Import
+        </button>
         <button
           onClick={() => navigate("/customers/drafts")}
           className="h-8 px-3 rounded-md border border-slate-200 text-slate-650 font-medium text-[12px] bg-white hover:bg-slate-50 transition-colors flex items-center gap-1.5"
@@ -236,7 +245,8 @@ const CustomerList = () => {
   }
 
   return (
-    <div className="flex-1 flex flex-col min-h-0 gap-2.5 font-sans w-full overflow-hidden relative">
+    <>
+      <div className="flex-1 flex flex-col min-h-0 gap-2.5 font-sans w-full overflow-hidden relative">
 
       {/* ── KPI Row ── */}
       <div className="flex gap-3 pb-1 overflow-x-auto scrollbar-none">
@@ -513,7 +523,16 @@ const CustomerList = () => {
           </table>
         </div>
       </div>
-    </div>
+      </div>
+
+      {/* ── Excel Import Modal ── */}
+      <ExcelImportModal
+        open={isImportOpen}
+        onClose={() => setIsImportOpen(false)}
+        onSuccess={() => { setIsImportOpen(false); setRefreshKey(prev => prev + 1); }}
+        entityType="customer"
+      />
+    </>
   );
 };
 

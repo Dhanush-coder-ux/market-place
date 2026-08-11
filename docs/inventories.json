@@ -129,7 +129,7 @@
         "operationId": "get_all_inventories_get",
         "parameters": [
           {
-            "name": "query",
+            "name": "q",
             "in": "query",
             "required": false,
             "schema": {
@@ -141,7 +141,7 @@
                   "type": "null"
                 }
               ],
-              "title": "Query"
+              "title": "Q"
             }
           },
           {
@@ -226,8 +226,135 @@
               ],
               "title": "Visible Online"
             }
+          },
+          {
+            "name": "from_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From Date"
+            }
+          },
+          {
+            "name": "to_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To Date"
+            }
+          },
+          {
+            "name": "stock_status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Stock Status"
+            }
+          },
+          {
+            "name": "have_tracking",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Have Tracking"
+            }
           }
         ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/inventories/bulk": {
+      "post": {
+        "tags": [
+          "Inventory CRUD's"
+        ],
+        "summary": "Create Bulk",
+        "operationId": "create_bulk_inventories_bulk_post",
+        "parameters": [
+          {
+            "name": "x-user-infos",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-User-Infos"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/CreateProdInvSchema"
+                },
+                "title": "Data"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -417,7 +544,7 @@
             }
           },
           {
-            "name": "query",
+            "name": "q",
             "in": "query",
             "required": false,
             "schema": {
@@ -429,7 +556,7 @@
                   "type": "null"
                 }
               ],
-              "title": "Query"
+              "title": "Q"
             }
           },
           {
@@ -513,6 +640,70 @@
                 }
               ],
               "title": "Visible Online"
+            }
+          },
+          {
+            "name": "from_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From Date"
+            }
+          },
+          {
+            "name": "to_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To Date"
+            }
+          },
+          {
+            "name": "stock_status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Stock Status"
+            }
+          },
+          {
+            "name": "have_tracking",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Have Tracking"
             }
           }
         ],
@@ -616,6 +807,47 @@
             }
           }
         ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/inventories/by/ids": {
+      "post": {
+        "tags": [
+          "Inventory CRUD's"
+        ],
+        "summary": "Get Bulk By Ids",
+        "operationId": "get_bulk_by_ids_inventories_by_ids_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GetBulkProductsById"
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -1158,6 +1390,17 @@
             "type": "string",
             "title": "Entity Name"
           },
+          "entity_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Entity Id"
+          },
           "record_stock": {
             "type": "boolean",
             "title": "Record Stock",
@@ -1606,6 +1849,67 @@
         ],
         "title": "DeleteImagesSchema"
       },
+      "GetBulkProductsById": {
+        "properties": {
+          "shop_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Shop Id"
+          },
+          "include_serialno": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Include Serialno",
+            "default": false
+          },
+          "active": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Active"
+          },
+          "id": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Id"
+          },
+          "visible_online": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Visible Online"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "title": "GetBulkProductsById"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -1798,14 +2102,18 @@
             "title": "Id"
           },
           "name": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Name"
           }
         },
         "type": "object",
-        "required": [
-          "name"
-        ],
         "title": "SerialnoInfosProdInvType"
       },
       "UpdateCustomFieldSchema": {

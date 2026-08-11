@@ -21,8 +21,10 @@ import {
   RefreshCw,
   Plus,
   Trash2,
-  History
+  History,
+  FileUp
 } from "lucide-react";
+import ExcelImportModal from "@/components/common/ExcelImportModal";
 import ActionMenu, { ActionMenuItem } from "@/components/common/ActionMenu";
 import { VariantRows, BatchCards, SerialBadgeList } from "../components/StockTree";
 import { Modal } from "@/components/common/SuperUI";
@@ -630,6 +632,24 @@ const ProductRow = React.memo(
             </span>
           </td>
 
+          {/* Storage Location */}
+          <td className="px-3 py-2.5">
+            {(() => {
+              const sl = (item as any).storage_location_infos || (datas as any).storage_location_infos;
+              let displayText = "—";
+              if (sl && typeof sl === 'object' && Object.keys(sl).length > 0) {
+                 displayText = sl.name || sl.storage_location || sl.location || "—";
+              } else if ((item as any).storage_location || (datas as any).storage_location) {
+                 displayText = (item as any).storage_location || (datas as any).storage_location;
+              }
+              return (
+                <span className="text-[12px] font-medium text-slate-700">
+                  {displayText}
+                </span>
+              );
+            })()}
+          </td>
+
           {/* Updated */}
           <td className="px-3 py-2.5 text-right">
             <span className="text-[11px] text-slate-400 font-medium tabular-nums">
@@ -694,7 +714,7 @@ const ProductRow = React.memo(
         {/* Expanded row */}
         {isExpanded && isExpandable && (
           <tr className="bg-slate-50/40">
-            <td colSpan={13} className="px-0 py-0">
+            <td colSpan={14} className="px-0 py-0">
               <div className="ml-8 mr-3 my-2 space-y-2 border-l-2 border-slate-200 pl-4">
 
 
@@ -799,6 +819,8 @@ const InventoryPage = () => {
     window.open(`${window.location.pathname}?mode=clean`, "_blank", "noopener,noreferrer");
   };
 
+  const [isImportOpen, setIsImportOpen] = useState(false);
+
   useEffect(() => {
     setActions(
       <div className="flex items-center gap-2">
@@ -811,6 +833,13 @@ const InventoryPage = () => {
             <ExternalLink size={13} />
           </button>
         )}
+        <button
+          onClick={() => setIsImportOpen(true)}
+          className="h-8 px-3 rounded-md border border-slate-200 text-slate-600 font-medium text-[12px] bg-white hover:bg-slate-50 transition-colors flex items-center gap-1.5"
+        >
+          <FileUp size={13} />
+          Import
+        </button>
       </div>
     );
     return () => setActions(null);
@@ -1355,6 +1384,9 @@ const InventoryPage = () => {
                   <th className="px-3 py-2.5 text-[10px] font-semibold text-slate-800 uppercase tracking-wide text-center">
                     Reorder Point
                   </th>
+                  <th className="px-3 py-2.5 text-[10px] font-semibold text-slate-800 uppercase tracking-wide">
+                    Location
+                  </th>
                   <th className="px-3 py-2.5 text-[10px] font-semibold text-slate-800 uppercase tracking-wide text-right">
                     Last Updated
                   </th>
@@ -1406,6 +1438,14 @@ const InventoryPage = () => {
           </div>
         )}
       </div>
+
+      {/* ── Excel Import Modal ── */}
+      <ExcelImportModal
+        open={isImportOpen}
+        onClose={() => setIsImportOpen(false)}
+        onSuccess={() => { setIsImportOpen(false); setRefreshKey((prev: number) => prev + 1); }}
+        entityType="inventory"
+      />
     </div>
   );
 };

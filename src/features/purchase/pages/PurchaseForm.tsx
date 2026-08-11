@@ -11,6 +11,8 @@ import {
   Info,
   ChevronDown,
   ChevronUp,
+  FileText,
+  MapPin,
 } from "lucide-react";
 
 import Input from "@/components/ui/Input";
@@ -265,7 +267,9 @@ const PurchaseForm = () => {
               marginPercent: "",
               marginAmount: "",
               marginType: "sellingPrice",
-              unit: p.unit || "pc",
+              unit: p.unit || p.unit_infos?.name || "pc",
+              unit_infos: p.unit_infos || null,
+              selectedUnit: p.unit || p.selectedUnit || p.unit_infos?.name || "pc",
               taxGst: (p.gst ?? p.datas?.gst ?? p.taxGst ?? p.tax_gst) !== undefined ? parseGst(p.gst ?? p.datas?.gst ?? p.taxGst ?? p.tax_gst) : 18,
               variant_id: p.variant_id || p.variant_infos?.id || ((typeof p.variant === 'object' && p.variant !== null) ? p.variant.variant_id : null),
               variant: p.variant_infos?.name || (typeof p.variant === 'object' && p.variant !== null ? p.variant.variant_name || p.variant.name : p.variant) || "",
@@ -293,8 +297,8 @@ const PurchaseForm = () => {
               const invRes = await inventory.getInventoryById(SHOP_ID, p.inventory_id);
               if (invRes && invRes.data) {
                 const invData = Array.isArray(invRes.data) ? invRes.data[0] : invRes.data;
-                p.unit_infos = invData.unit_infos || null;
-                p.selectedUnit = p.unit;
+                p.unit_infos = invData.unit_infos || p.unit_infos || null;
+                p.selectedUnit = p.selectedUnit || p.unit || p.unit_infos?.name || "pc";
 
                 // Update tracking flags from live inventory data strictly
                 p.batchTracking = !!(invData.type_infos?.has_batch || invData.has_batch || invData.datas?.has_batch);
@@ -849,7 +853,7 @@ const PurchaseForm = () => {
                         <div className="flex flex-col">
                           <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none">Email</span>
                           <span className="text-[10px] font-bold text-slate-600 truncate max-w-[150px]">
-                            {supplierDetails.email || "Missing"}
+                            {supplierDetails.contact_infos?.email || supplierDetails.email || "Missing"}
                           </span>
                         </div>
                       </div>
@@ -861,7 +865,31 @@ const PurchaseForm = () => {
                         <div className="flex flex-col">
                           <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none">Phone</span>
                           <span className="text-[10px] font-bold text-slate-600">
-                            {supplierDetails.phone || supplierDetails.mobile_number || "Missing"}
+                            {supplierDetails.contact_infos?.mobile_number || supplierDetails.phone || supplierDetails.mobile_number || "Missing"}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2.5 px-3 py-1.5 bg-white rounded-lg border border-slate-100 transition-all hover:border-amber-200 group">
+                        <div className="w-6 h-6 rounded-md bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-amber-500 transition-colors">
+                          <FileText size={12} />
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none">GST</span>
+                          <span className="text-[10px] font-bold text-slate-600 uppercase">
+                            {supplierDetails.gst_no || supplierDetails.gst_number || supplierDetails.gst || "Missing"}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2.5 px-3 py-1.5 bg-white rounded-lg border border-slate-100 transition-all hover:border-violet-200 group">
+                        <div className="w-6 h-6 rounded-md bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-violet-500 transition-colors">
+                          <MapPin size={12} />
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none">Address</span>
+                          <span className="text-[10px] font-bold text-slate-600 truncate max-w-[200px]" title={supplierDetails.location_infos?.full_address || supplierDetails.address || "Missing"}>
+                            {supplierDetails.location_infos?.full_address || supplierDetails.address || "Missing"}
                           </span>
                         </div>
                       </div>

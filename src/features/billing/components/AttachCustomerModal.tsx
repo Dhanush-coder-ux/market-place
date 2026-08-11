@@ -4,6 +4,8 @@ import { X, Search } from "lucide-react";
 import { useApi } from "@/context/ApiContext";
 import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 import { CustomerData } from "../types";
+import CustomerCreateModal from "./CustomerCreateModal";
+import { useToast } from "@/context/ToastContext";
 
 interface AttachCustomerModalProps {
   isOpen: boolean;
@@ -37,11 +39,14 @@ const AttachCustomerModal: React.FC<AttachCustomerModalProps> = ({
   onClose,
   onSelect
 }) => {
-  const { getData } = useApi();
+  const { getData, postData } = useApi();
+  const { showToast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [customers, setCustomers] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
 
   const searchInputRef = useRef<HTMLInputElement>(null);
   const modalRef = useRef<HTMLDivElement>(null);
@@ -111,12 +116,54 @@ const AttachCustomerModal: React.FC<AttachCustomerModalProps> = ({
     onSelect({
       id: cust.id,
       name: cust.name,
-      phone: cust.phone,
-      outstanding: cust.outstanding,
-      creditLimit: cust.creditLimit,
-      totalSpent: cust.totalSpent
+      phone: cust.phone || "",
+      outstanding: cust.outstanding || 0,
+      creditLimit: cust.creditLimit || 0,
+      totalSpent: cust.totalSpent || 0
     });
     onClose();
+  };
+
+  const handleCreateCustomer = async (formData: any) => {
+    setIsCreating(true);
+    try {
+      const payload = { 
+        name: formData.name,
+        shop_id: SHOP_ID,
+        is_active: formData.is_active ?? true,
+        can_have_credit: Number(formData.credit_limit) > 0,
+        contact_infos: {
+          mobile_number: formData.mobile_number,
+          email: formData.email ? formData.email : null
+        },
+        location_infos: {
+          state: "",
+          country: "",
+          zipcode: "",
+          full_address: ""
+        },
+        credit_infos: {
+          limit: Number(formData.credit_limit) || 0
+        }
+      };
+      const res = await postData(ENDPOINTS.CUSTOMERS, payload);
+      const newCust = res?.data || res;
+      if (newCust && newCust.id) {
+        showToast("Customer created successfully", "success");
+        setIsCreateOpen(false);
+        handleSelectCustomer({
+          id: newCust.id,
+          name: newCust.name,
+          phone: newCust.contact_infos?.mobile_number || newCust.mobile_number || newCust.phone || "",
+          outstanding: 0,
+          creditLimit: newCust.credit_infos?.limit || newCust.credit_limit || formData.credit_limit || 0
+        });
+      }
+    } catch (err: any) {
+      showToast(err?.message || "Failed to create customer", "error");
+    } finally {
+      setIsCreating(false);
+    }
   };
 
   // Keyboard navigation
@@ -213,8 +260,16 @@ const AttachCustomerModal: React.FC<AttachCustomerModalProps> = ({
               Loading customer results...
             </div>
           ) : customers.length === 0 ? (
-            <div className="py-12 text-center text-slate-400 text-xs italic font-medium">
-              No matching customers found. Register a new one below.
+            <div className="py-12 flex flex-col items-center text-center">
+              <p className="text-slate-400 text-xs italic font-medium mb-3">
+                No matching customers found.
+              </p>
+              <button
+                onClick={() => setIsCreateOpen(true)}
+                className="px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-650 rounded-lg text-[11px] font-bold transition-colors"
+              >
+                + Register "{searchQuery}"
+              </button>
             </div>
           ) : (
             customers.map((cust, idx) => {
@@ -281,13 +336,30 @@ const AttachCustomerModal: React.FC<AttachCustomerModalProps> = ({
 
 
         {/* Modal Footer Keyboard Guide */}
-        <div className="px-6 py-3.5 bg-slate-50 border-t border-slate-100 flex items-center gap-4 shrink-0 text-[10px] text-slate-400 font-bold uppercase tracking-wider">
-          <span className="flex items-center gap-1"><kbd className="px-1.5 py-0.5 bg-white border rounded font-mono text-[9px] text-slate-500 shadow-sm">↑↓</kbd> Navigate</span>
-          <span className="flex items-center gap-1"><kbd className="px-1.5 py-0.5 bg-white border rounded font-mono text-[9px] text-slate-500 shadow-sm">Enter</kbd> Select</span>
-          <span className="flex items-center gap-1"><kbd className="px-1.5 py-0.5 bg-white border rounded font-mono text-[9px] text-slate-500 shadow-sm">Esc</kbd> Cancel</span>
+        <div className="px-6 py-3.5 bg-slate-50 border-t border-slate-100 flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-4 text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+            <span className="flex items-center gap-1"><kbd className="px-1.5 py-0.5 bg-white border rounded font-mono text-[9px] text-slate-500 shadow-sm">↑↓</kbd> Navigate</span>
+            <span className="flex items-center gap-1"><kbd className="px-1.5 py-0.5 bg-white border rounded font-mono text-[9px] text-slate-500 shadow-sm">Enter</kbd> Select</span>
+            <span className="flex items-center gap-1"><kbd className="px-1.5 py-0.5 bg-white border rounded font-mono text-[9px] text-slate-500 shadow-sm">Esc</kbd> Cancel</span>
+          </div>
+          <button
+            onClick={() => setIsCreateOpen(true)}
+            className="text-[11px] font-extrabold text-blue-600 hover:text-blue-700 transition-colors"
+          >
+            + Create New Customer
+          </button>
         </div>
 
       </div>
+
+      {/* Customer Create Modal */}
+      <CustomerCreateModal
+        isOpen={isCreateOpen}
+        onClose={() => setIsCreateOpen(false)}
+        onCreated={handleCreateCustomer}
+        initialName={searchQuery}
+        isSubmitting={isCreating}
+      />
     </div>,
     document.body
   );

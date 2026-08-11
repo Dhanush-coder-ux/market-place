@@ -434,8 +434,9 @@ export const VariantRows = ({
               <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-left">Variant</th>
               <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-left">SKU / Barcode</th>
               <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-right">Stock</th>
-              <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-right">Sell Price</th>
+              <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-left">Sell Price</th>
               <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-left">Batch Count</th>
+              <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-left">Location</th>
               <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-center">Status</th>
             </tr>
           </thead>
@@ -568,6 +569,15 @@ export const VariantRows = ({
                        ) : (
                          <span className="text-[11px] text-slate-400">—</span>
                        )}
+                    </td>
+
+                    {/* Location */}
+                    <td className="px-4 py-2 align-middle">
+                      {storageLoc ? (
+                        <span className="text-[12px] font-medium text-slate-700">{storageLoc}</span>
+                      ) : (
+                        <span className="text-[11px] text-slate-400">—</span>
+                      )}
                     </td>
 
                     {/* Status */}

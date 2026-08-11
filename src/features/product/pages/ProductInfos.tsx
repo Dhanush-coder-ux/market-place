@@ -46,6 +46,7 @@ const columnLabels: Record<string, string> = {
   supplier: "Supplier",
   serial_number: "Serials",
   reorder_point: "Reorder Point",
+  storage_location: "Storage Location",
 };
 
 const columnOrder = [
@@ -58,6 +59,7 @@ const columnOrder = [
   "stocks",
   "status",
   "reorder_point",
+  "storage_location",
   "barcode",
   "serial_number"
 ];
@@ -514,6 +516,21 @@ const ProductRow = React.memo(
                   <span className="text-[13px] font-semibold text-slate-700 tabular-nums">
                     {hasVariants ? "—" : (value !== undefined && value !== null ? value : "—")}
                   </span>
+                </td>
+              );
+            }
+
+            if (key === "storage_location") {
+              const sl = (p as any).storage_location_infos || (datas as any).storage_location_infos;
+              let displayText = "—";
+              if (sl && typeof sl === 'object' && Object.keys(sl).length > 0) {
+                 displayText = sl.name || sl.storage_location || sl.location || "—";
+              }
+              return (
+                <td key={key} className="px-3 py-2.5 whitespace-nowrap">
+                   <span className="text-[12px] font-medium text-slate-700">
+                     {displayText}
+                   </span>
                 </td>
               );
             }

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from "react";
-import { Search, X, Bookmark, Building2, Phone, ExternalLink, Filter, ChevronRight, Eye, Pencil, Trash2, MoreVertical, Plus } from "lucide-react";
+import { Search, X, Bookmark, Building2, Phone, ExternalLink, Filter, ChevronRight, Eye, Pencil, Trash2, MoreVertical, Plus, FileUp } from "lucide-react";
+import ExcelImportModal from "@/components/common/ExcelImportModal";
 import { GradientButton } from "@/components/ui/GradientButton";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useApi } from "@/context/ApiContext";
@@ -152,6 +153,7 @@ const Supplier = () => {
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [isImportOpen, setIsImportOpen] = useState(false);
   
   const activeFilters = [
     fromDate,
@@ -193,6 +195,13 @@ const Supplier = () => {
             <ExternalLink size={13} />
           </button>
         )}
+        <button
+          onClick={() => setIsImportOpen(true)}
+          className="h-8 px-3 rounded-md border border-slate-200 text-slate-650 font-medium text-[12px] bg-white hover:bg-slate-50 transition-colors flex items-center gap-1.5"
+        >
+          <FileUp size={13} />
+          Import
+        </button>
         <button
           onClick={() => navigate("/supplier/drafts")}
           className="h-8 px-3 rounded-md border border-slate-200 text-slate-650 font-medium text-[12px] bg-white hover:bg-slate-50 transition-colors flex items-center gap-1.5"
@@ -662,10 +671,16 @@ const Supplier = () => {
         confirmText="Remove Partner"
         type="danger"
       />
+
+      {/* ── Excel Import Modal ── */}
+      <ExcelImportModal
+        open={isImportOpen}
+        onClose={() => setIsImportOpen(false)}
+        onSuccess={() => { setIsImportOpen(false); setRefreshKey(prev => prev + 1); }}
+        entityType="supplier"
+      />
     </div>
   );
 };
 
 export default Supplier;
-
-

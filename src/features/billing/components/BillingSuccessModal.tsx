@@ -152,13 +152,32 @@ export const BillingSuccessModal: React.FC<BillingSuccessModalProps> = ({
           </div>
           <div className="w-full h-px bg-slate-200/50 my-1" />
           
-          <div className="flex justify-between items-center">
+          {/* Items List */}
+          <div className="flex flex-col gap-1.5 pt-1">
+            <div className="flex justify-between items-center mb-1">
+              <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wide">Billed Items</span>
+              <span className="text-[9px] font-bold text-slate-500">{itemsCount} items ({totalQty} units)</span>
+            </div>
+            <div className="max-h-[140px] overflow-y-auto custom-scrollbar pr-1.5 space-y-2.5">
+              {details.items.map((item, idx) => (
+                <div key={idx} className="flex justify-between items-start text-[11.5px]">
+                  <div className="flex flex-col flex-1 pr-3">
+                    <span className="font-bold text-slate-700 leading-tight">{item.name}</span>
+                    <span className="text-[10px] font-medium text-slate-400 mt-0.5">
+                      {item.qty} {item.selectedUnit || 'units'} x ₹{item.price?.toLocaleString("en-IN")}
+                    </span>
+                  </div>
+                  <span className="font-bold text-slate-800 whitespace-nowrap">₹{item.tprice?.toLocaleString("en-IN")}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex justify-between items-center pt-1 border-t border-dashed border-slate-200">
             <div>
-              <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wide block">Cart Items</span>
-              <span className="text-xs font-bold text-slate-800 mt-0.5 block">{itemsCount} items ({totalQty} units)</span>
+              <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wide block">Grand Total</span>
             </div>
             <div className="text-right">
-              <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wide block">Grand Total</span>
               <span className="text-base font-black text-blue-650 mt-0.5 block">₹{details.finalAmount.toLocaleString("en-IN")}</span>
             </div>
           </div>

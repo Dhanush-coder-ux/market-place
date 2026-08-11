@@ -21,7 +21,7 @@ interface ProductSelectionModalProps {
   excludedSerials?: string[];
 }
 
-const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({ 
+const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
   isOpen, product, onClose, onSuccess,
   initialQuantity, initialSerials, initialVariantId, initialBatchId,
   excludedSerials = []
@@ -36,10 +36,10 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
 
   const normalizedVariants = useMemo<ProductVariant[]>(() => {
     if (!product?.variants) return [];
-    const raw = Array.isArray(product.variants) 
-      ? product.variants 
+    const raw = Array.isArray(product.variants)
+      ? product.variants
       : (typeof product.variants === 'object' ? Object.values(product.variants) : []);
-    
+
     return raw.map((v: any) => {
       const combDatas = v.datas || {};
       const attributes = v.attributes || combDatas.attributes || combDatas.datas?.attributes || {};
@@ -61,8 +61,8 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
 
       let stock = v.stock;
       if (stock === undefined) {
-        stock = v.stock_infos?.available_stocks !== undefined 
-          ? v.stock_infos?.available_stocks 
+        stock = v.stock_infos?.available_stocks !== undefined
+          ? v.stock_infos?.available_stocks
           : (v.stocks !== undefined ? v.stocks : (v.stock !== undefined ? v.stock : (combDatas.stocks !== undefined ? combDatas.stocks : undefined)));
       }
       if (stock === undefined && Array.isArray(v.batch_infos) && v.batch_infos.length > 0) {
@@ -112,7 +112,7 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
         };
         finalVariant.availableSerials = Array.isArray(activeB.serialno_infos)
           ? getNames(activeB.serialno_infos)
-          : Array.isArray(activeB.serial_numbers) 
+          : Array.isArray(activeB.serial_numbers)
             ? getNames(activeB.serial_numbers)
             : getNames(activeB.serial_numbers?.serial_numbers || activeB.availableSerials || []);
       }
@@ -187,7 +187,7 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
       }
       setSelectedSerials(Array.isArray(initialSerials) ? initialSerials : []);
       setQuantity(initialQuantity || 1);
-      
+
       // If editing, skip to the relevant step
       if (isEdit) {
         if (isElectronics) setStepIndex(steps.indexOf("serial"));
@@ -270,7 +270,7 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
   }, [selectedVariant, selectedBatch, product, excludedSerials, initialSerials]);
 
   if (!isOpen || !product) return null;
-  
+
   const canGoNext = (() => {
     if (currentStep === "variant") return !!selectedVariant;
     if (currentStep === "batch") return !!selectedBatch;
@@ -280,10 +280,10 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
 
   const toggleSerial = (s: string) => {
     const isInitial = Array.isArray(initialSerials) && initialSerials.includes(s);
-    
+
     // If increasing: lock initial ones
     if (Array.isArray(initialSerials) && quantity > initialSerials.length && isInitial) return;
-    
+
     // If decreasing: only allow toggling initial ones
     if (Array.isArray(initialSerials) && quantity < initialSerials.length && !isInitial) return;
 
@@ -309,14 +309,14 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
     <div className="fixed inset-0 z-[1100] overflow-y-auto overflow-x-hidden scrollbar-none flex flex-col items-center justify-center pointer-events-none">
       {/* Backdrop */}
       <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-all duration-300 pointer-events-auto" onClick={onClose} />
-      
+
       {/* Centering Wrapper */}
       <div className="relative w-full h-full flex items-center justify-center p-4 pointer-events-none">
-        <div 
+        <div
           className="relative bg-white w-full max-w-md rounded-lg shadow-[0_24px_80px_rgba(0,0,0,0.3)] border border-slate-100 overflow-hidden transform scale-100 animate-in fade-in zoom-in-95 duration-300 pointer-events-auto flex flex-col"
           style={{ display: "flex", flexDirection: "column", maxHeight: "80vh" }}
         >
-          
+
           {/* Header */}
           <div className="px-6 py-5 border-b border-slate-100 bg-white relative shrink-0">
             <div className="flex items-center justify-between mb-4">
@@ -333,18 +333,17 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
             <div className="flex items-center gap-1.5">
               {steps.map((s, idx) => (
                 <React.Fragment key={s}>
-                  <div className={`h-1.5 rounded-full transition-all duration-300 ${
-                    idx === stepIndex ? "w-8 bg-blue-500" : idx < stepIndex ? "w-4 bg-emerald-400" : "w-4 bg-slate-100"
-                  }`} />
+                  <div className={`h-1.5 rounded-full transition-all duration-300 ${idx === stepIndex ? "w-8 bg-blue-500" : idx < stepIndex ? "w-4 bg-emerald-400" : "w-4 bg-slate-100"
+                    }`} />
                   {idx < steps.length - 1 && <div className="w-1 h-1 rounded-full bg-slate-200" />}
                 </React.Fragment>
               ))}
             </div>
-          </div>          <div 
-            className="p-6 flex flex-col flex-1 min-h-0 overflow-hidden" 
+          </div>          <div
+            className="p-6 flex flex-col flex-1 min-h-0 overflow-hidden"
             style={{ maxHeight: "calc(80vh - 200px)" }}
           >
-            
+
             {/* STEP: VARIANT */}
             {currentStep === "variant" && (
               <div className="flex flex-col flex-1 min-h-0 space-y-4 animate-in slide-in-from-right-4 duration-300">
@@ -370,44 +369,42 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
                     {normalizedVariants
                       .filter(v => v.name.toLowerCase().includes(variantSearch.toLowerCase()))
                       .map((variant) => {
-                      const isSelected = selectedVariant?.id === variant.id;
-                      const isOutOfStock = variant.stock === 0;
+                        const isSelected = selectedVariant?.id === variant.id;
+                        const isOutOfStock = variant.stock === 0;
 
-                      return (
-                        <button
-                          key={variant.id}
-                          disabled={isOutOfStock}
-                          onClick={() => {
-                            setSelectedVariant(variant);
-                            if (steps.length === 1) {
-                              executeSubmit(variant, selectedBatch, selectedSerials, quantity);
-                            } else {
-                              setStepIndex(1);
-                            }
-                          }}
-                          className={`group flex items-center gap-4 p-4 rounded-lg border-2 text-left transition-all duration-200 ${
-                            isOutOfStock ? "opacity-40 cursor-not-allowed border-slate-50 bg-slate-50/50" :
-                            isSelected ? "border-blue-500 bg-blue-50/50 shadow-md shadow-blue-100" : "border-slate-100 hover:border-slate-200 hover:bg-slate-50"
-                          }`}
-                        >
-                          <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 transition-colors ${
-                            isSelected ? "bg-blue-500 text-white" : "bg-slate-100 text-slate-400 group-hover:bg-slate-200"
-                          }`}>
-                            <Package size={18} />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className={`text-sm font-bold ${isSelected ? "text-blue-900" : "text-slate-700"}`}>
-                              {variant.name}
-                            </p>
-                            <p className="text-xs font-medium text-slate-400 mt-0.5">Stock: {variant.stock} units</p>
-                          </div>
-                          <div className="text-right">
-                            <p className={`text-sm font-bold ${isSelected ? "text-blue-700" : "text-slate-900"}`}>{fmt(variant.price)}</p>
-                            {isSelected && <CheckCircle2 size={16} className="text-blue-500 ml-auto mt-1" />}
-                          </div>
-                        </button>
-                      );
-                    })}
+                        return (
+                          <button
+                            key={variant.id}
+                            disabled={isOutOfStock}
+                            onClick={() => {
+                              setSelectedVariant(variant);
+                              if (steps.length === 1) {
+                                executeSubmit(variant, selectedBatch, selectedSerials, quantity);
+                              } else {
+                                setStepIndex(1);
+                              }
+                            }}
+                            className={`group flex items-center gap-4 p-4 rounded-lg border-2 text-left transition-all duration-200 ${isOutOfStock ? "opacity-40 cursor-not-allowed border-slate-50 bg-slate-50/50" :
+                                isSelected ? "border-blue-500 bg-blue-50/50 shadow-md shadow-blue-100" : "border-slate-100 hover:border-slate-200 hover:bg-slate-50"
+                              }`}
+                          >
+                            <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 transition-colors ${isSelected ? "bg-blue-500 text-white" : "bg-slate-100 text-slate-400 group-hover:bg-slate-200"
+                              }`}>
+                              <Package size={18} />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className={`text-sm font-bold ${isSelected ? "text-blue-900" : "text-slate-700"}`}>
+                                {variant.name}
+                              </p>
+                              <p className="text-xs font-medium text-slate-400 mt-0.5">Stock: {variant.stock} units</p>
+                            </div>
+                            <div className="text-right">
+                              <p className={`text-sm font-bold ${isSelected ? "text-blue-700" : "text-slate-900"}`}>{fmt(variant.price)}</p>
+                              {isSelected && <CheckCircle2 size={16} className="text-blue-500 ml-auto mt-1" />}
+                            </div>
+                          </button>
+                        );
+                      })}
                     {normalizedVariants.filter(v => v.name.toLowerCase().includes(variantSearch.toLowerCase())).length === 0 && (
                       <div className="py-8 text-center bg-slate-50 rounded-lg border-2 border-dashed border-slate-100">
                         <p className="text-xs text-slate-400 font-medium">No variants match "{variantSearch}"</p>
@@ -467,14 +464,12 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
                                 }
                               }
                             }}
-                            className={`group flex items-center gap-4 p-4 rounded-lg border-2 text-left transition-all duration-200 ${
-                              isOutOfStock ? "opacity-40 cursor-not-allowed border-slate-50 bg-slate-50/50" :
-                              isSelected ? "border-blue-500 bg-blue-50/50 shadow-md shadow-blue-100" : "border-slate-100 hover:border-slate-200 hover:bg-slate-50"
-                            }`}
+                            className={`group flex items-center gap-4 p-4 rounded-lg border-2 text-left transition-all duration-200 ${isOutOfStock ? "opacity-40 cursor-not-allowed border-slate-50 bg-slate-50/50" :
+                                isSelected ? "border-blue-500 bg-blue-50/50 shadow-md shadow-blue-100" : "border-slate-100 hover:border-slate-200 hover:bg-slate-50"
+                              }`}
                           >
-                            <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 transition-colors ${
-                              isSelected ? "bg-blue-500 text-white" : "bg-slate-100 text-slate-400 group-hover:bg-slate-200"
-                            }`}>
+                            <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 transition-colors ${isSelected ? "bg-blue-500 text-white" : "bg-slate-100 text-slate-400 group-hover:bg-slate-200"
+                              }`}>
                               <CalendarDays size={18} />
                             </div>
                             <div className="flex-1 min-w-0">
@@ -503,10 +498,10 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
                       const name = b.name || b.batch_no || b.id;
                       return name.toLowerCase().includes(variantSearch.toLowerCase());
                     }).length === 0 && (
-                      <div className="py-8 text-center bg-slate-50 rounded-lg border-2 border-dashed border-slate-100">
-                        <p className="text-xs text-slate-400 font-medium">No batches match "{variantSearch}"</p>
-                      </div>
-                    )}
+                        <div className="py-8 text-center bg-slate-50 rounded-lg border-2 border-dashed border-slate-100">
+                          <p className="text-xs text-slate-400 font-medium">No batches match "{variantSearch}"</p>
+                        </div>
+                      )}
                     {batchesToSelect.length === 0 && (
                       <div className="flex flex-col items-center gap-3 py-10 px-6 rounded-lg border-2 border-dashed border-slate-100 text-center">
                         <AlertCircle size={32} className="text-amber-500" />
@@ -561,13 +556,12 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
                         const isLocked = Array.isArray(initialSerials) && quantity > initialSerials.length && isInitial;
 
                         return (
-                          <span key={s} 
+                          <span key={s}
                             onClick={() => !isLocked && toggleSerial(s)}
-                            className={`group px-2 py-1 rounded-lg border text-[10px] font-bold flex items-center gap-1 transition-all ${
-                              isLocked 
-                                ? "bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed" 
+                            className={`group px-2 py-1 rounded-lg border text-[10px] font-bold flex items-center gap-1 transition-all ${isLocked
+                                ? "bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed"
                                 : "cursor-pointer bg-white border-blue-200 text-blue-700 hover:bg-red-50 hover:border-red-200 hover:text-red-600"
-                            }`}
+                              }`}
                           >
                             {s}
                             {!isLocked && <X size={10} className="text-blue-400 group-hover:text-red-400" />}
@@ -599,51 +593,49 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
                       className="w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-100 rounded-lg text-xs text-slate-700 focus:bg-white focus:border-blue-300 transition-all outline-none"
                     />
                   </div>
-                  
+
                   <div className="flex-1 overflow-y-auto custom-scrollbar modal-content pr-0.5">
                     {availableSerials.length > 0 ? (
                       <div className="grid grid-cols-2 gap-2 pb-2">
                         {availableSerials
                           .filter((s: string) => s.toLowerCase().includes(serialSearch.toLowerCase()))
                           .map((s: any) => {
-                          const isSelected = Array.isArray(selectedSerials) && selectedSerials.includes(s);
-                          const isInitial = Array.isArray(initialSerials) && initialSerials.includes(s);
-                          
-                          const isDisabled = (() => {
-                            // Basic: reached quantity limit
-                            if (!isSelected && selectedSerials.length >= quantity) return true;
-                            
-                            // Increasing: lock initial ones
-                            if (initialSerials && quantity > initialSerials.length && isInitial) return true;
-                            
-                            // Decreasing: disable non-initial ones
-                            if (initialSerials && quantity < initialSerials.length && !isInitial) return true;
-                            
-                            return false;
-                          })();
+                            const isSelected = Array.isArray(selectedSerials) && selectedSerials.includes(s);
+                            const isInitial = Array.isArray(initialSerials) && initialSerials.includes(s);
 
-                          return (
-                            <button
-                              key={typeof s === 'object' ? ((s as any).id || (s as any).name) : s}
-                              disabled={isDisabled}
-                              onClick={() => toggleSerial(s)}
-                              className={`px-3 py-2.5 rounded-lg text-xs font-semibold border-2 transition-all duration-150 text-left relative overflow-hidden ${
-                                isSelected 
-                                  ? isDisabled && isInitial && quantity > (initialSerials?.length || 0)
-                                    ? "border-slate-200 bg-slate-50 text-slate-400" // Locked style
-                                    : "border-blue-500 bg-blue-50 text-blue-700 shadow-sm" 
-                                  : isDisabled
-                                    ? "border-slate-50 bg-slate-50 text-slate-300 cursor-not-allowed opacity-50"
-                                    : "border-slate-100 bg-white text-slate-600 hover:border-slate-200"
-                              }`}
-                            >
-                              <span className="truncate block pr-4">{typeof s === 'object' ? ((s as any).name || (s as any).id) : s}</span>
-                              {isSelected && <Check size={12} className={`absolute right-2 top-1/2 -translate-y-1/2 ${
-                                isDisabled && isInitial && quantity > (initialSerials?.length || 0) ? "text-slate-300" : "text-blue-500"
-                              }`} />}
-                            </button>
-                          );
-                        })}
+                            const isDisabled = (() => {
+                              // Basic: reached quantity limit
+                              if (!isSelected && selectedSerials.length >= quantity) return true;
+
+                              // Increasing: lock initial ones
+                              if (initialSerials && quantity > initialSerials.length && isInitial) return true;
+
+                              // Decreasing: disable non-initial ones
+                              if (initialSerials && quantity < initialSerials.length && !isInitial) return true;
+
+                              return false;
+                            })();
+
+                            return (
+                              <button
+                                key={typeof s === 'object' ? ((s as any).id || (s as any).name) : s}
+                                disabled={isDisabled}
+                                onClick={() => toggleSerial(s)}
+                                className={`px-3 py-2.5 rounded-lg text-xs font-semibold border-2 transition-all duration-150 text-left relative overflow-hidden ${isSelected
+                                    ? isDisabled && isInitial && quantity > (initialSerials?.length || 0)
+                                      ? "border-slate-200 bg-slate-50 text-slate-400" // Locked style
+                                      : "border-blue-500 bg-blue-50 text-blue-700 shadow-sm"
+                                    : isDisabled
+                                      ? "border-slate-50 bg-slate-50 text-slate-300 cursor-not-allowed opacity-50"
+                                      : "border-slate-100 bg-white text-slate-600 hover:border-slate-200"
+                                  }`}
+                              >
+                                <span className="truncate block pr-4">{typeof s === 'object' ? ((s as any).name || (s as any).id) : s}</span>
+                                {isSelected && <Check size={12} className={`absolute right-2 top-1/2 -translate-y-1/2 ${isDisabled && isInitial && quantity > (initialSerials?.length || 0) ? "text-slate-300" : "text-blue-500"
+                                  }`} />}
+                              </button>
+                            );
+                          })}
                         {availableSerials.filter((s: string) => s.toLowerCase().includes(serialSearch.toLowerCase())).length === 0 && (
                           <div className="col-span-2 py-8 text-center bg-slate-50 rounded-lg border-2 border-dashed border-slate-100">
                             <p className="text-xs text-slate-400 font-medium">No serials match "{serialSearch}"</p>
@@ -668,7 +660,7 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
             {currentStep === "summary" && (
               <div className="flex flex-col flex-1 min-h-0 space-y-3 animate-in slide-in-from-right-4 duration-300">
                 <p className="text-[11px] font-bold text-slate-400 shrink-0">Review Selection</p>
-                
+
                 <div className="flex-1 overflow-y-auto custom-scrollbar modal-content pr-0.5 space-y-3">
                   <div className="p-4 bg-slate-50 rounded-lg border border-slate-100 flex items-center justify-between">
                     <div>
@@ -702,7 +694,7 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
                         <p className="text-[10px] font-mono font-medium text-indigo-500/80 mt-1 select-all">
                           ID: {selectedBatch.id || selectedBatch.batchId}
                         </p>
-                        
+
                         <div className="flex items-center gap-3 mt-2 flex-wrap">
                           {(selectedBatch.manufacturing_date || selectedBatch.manufacturingDate) && (
                             <div className="text-[10px] font-semibold text-slate-500 flex flex-col gap-0.5 bg-white border border-slate-100 px-2 py-0.5 rounded shadow-sm">
@@ -743,16 +735,16 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
           {/* Footer Actions */}
           <div className="p-6 border-t border-slate-100 bg-white flex gap-3 shrink-0">
             {stepIndex > 0 ? (
-              <button 
-                onClick={handleBack} 
+              <button
+                onClick={handleBack}
                 className="flex items-center justify-center gap-2 px-6 py-3 rounded-lg text-sm font-bold text-slate-500 hover:bg-slate-100 transition-all"
               >
                 <ArrowLeft size={18} />
                 Back
               </button>
             ) : (
-              <button 
-                onClick={onClose} 
+              <button
+                onClick={onClose}
                 className="flex-1 px-6 py-3 rounded-lg text-sm font-bold text-slate-500 hover:bg-slate-50 transition-all border border-slate-100"
               >
                 Cancel
@@ -763,9 +755,8 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
               <button
                 disabled={!canGoNext}
                 onClick={handleNext}
-                className={`flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-lg text-sm font-bold text-white transition-all duration-300 ${
-                  canGoNext ? "bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-200" : "bg-slate-200 cursor-not-allowed"
-                }`}
+                className={`flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-lg text-sm font-bold text-white transition-all duration-300 ${canGoNext ? "bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-200" : "bg-slate-200 cursor-not-allowed"
+                  }`}
               >
                 Continue
                 <ChevronRight size={18} />
@@ -776,11 +767,10 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
                 onClick={() => {
                   executeSubmit(selectedVariant, selectedBatch, selectedSerials, quantity);
                 }}
-                className={`flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-lg text-sm font-bold text-white transition-all duration-300 ${
-                  canGoNext 
-                    ? "bg-emerald-500 hover:bg-emerald-600 shadow-lg shadow-emerald-200" 
+                className={`flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-lg text-sm font-bold text-white transition-all duration-300 ${canGoNext
+                    ? "bg-emerald-500 hover:bg-emerald-600 shadow-lg shadow-emerald-200"
                     : "bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed"
-                }`}
+                  }`}
               >
                 Add to Bill
                 <Check size={18} />

@@ -208,6 +208,7 @@ export interface InventoryRecord {
   is_active?: boolean;
   variants?: any[];
   batches?: any[];
+
   batch?: InventoryBatch;
   serial_number?: any;
   serial_numbers?: string[];
@@ -226,6 +227,7 @@ export interface InventoryRecord {
   batch_infos?: any;
   serialno_infos?: any;
   type_infos?: { has_batch: boolean; has_variant: boolean; has_serialno: boolean };
+  
   gst?: string;
 }
 

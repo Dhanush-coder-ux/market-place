@@ -70,9 +70,12 @@ interface LogEntry {
 }
 
 const StructuredValueViewer = ({ data, level = 0 }: { data: any; level?: number }) => {
-  if (data === null || data === undefined) return <span className="text-slate-400 italic font-medium">—</span>;
-  if (typeof data === "boolean") return <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 text-[10px] font-bold uppercase">{data ? "Yes" : "No"}</span>;
-  if (typeof data === "number") return <span className="text-slate-800 font-bold">{data}</span>;
+  if (data === null || data === undefined || data === "null" || data === "None") return <span className="text-slate-400 italic font-medium">—</span>;
+  if (typeof data === "boolean" || data === "true" || data === "false" || data === "True" || data === "False") {
+    const isTrue = data === true || data === "true" || data === "True";
+    return <span className={`px-1.5 py-0.5 rounded ${isTrue ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'} text-[10px] font-bold uppercase`}>{isTrue ? "Yes" : "No"}</span>;
+  }
+  if (typeof data === "number") return <span className="text-slate-800 font-bold">{data.toLocaleString()}</span>;
   if (typeof data === "string") return <span className="text-slate-700 font-medium break-words w-full inline-block">{data}</span>;
 
   if (Array.isArray(data)) {
@@ -98,7 +101,7 @@ const StructuredValueViewer = ({ data, level = 0 }: { data: any; level?: number 
       <div className="grid grid-cols-1 2xl:grid-cols-2 gap-x-4 gap-y-2.5 w-full">
         {keys.map((key) => (
           <div key={key} className="flex flex-col w-full overflow-hidden">
-            <span className="font-semibold text-slate-400 text-[9px] uppercase tracking-wide truncate mb-0.5">
+            <span className="font-semibold text-slate-400 text-[9px] uppercase tracking-wide truncate mb-0.5" title={key.replace(/_/g, ' ')}>
               {key.replace(/_/g, ' ')}
             </span>
             <div className="text-[12px] text-slate-800 break-words w-full leading-snug">
@@ -114,35 +117,27 @@ const StructuredValueViewer = ({ data, level = 0 }: { data: any; level?: number 
 };
 
 const ChangeValueRenderer = ({ val, isDeleted }: { val: unknown, isDeleted?: boolean }) => {
-  let parsedVal = val;
-  
-  if (typeof val === 'string') {
-    try {
-      parsedVal = JSON.parse(val);
-    } catch (e) {
-      try {
-        const fixed = val
-          .replace(/'/g, '"')
-          .replace(/\bTrue\b/g, 'true')
-          .replace(/\bFalse\b/g, 'false')
-          .replace(/\bNone\b/g, 'null');
-        parsedVal = JSON.parse(fixed);
-      } catch (err) {
-        // Fallback to original string if it wasn't a parsable object
-      }
-    }
-  }
-
-  if (typeof parsedVal === 'object' && parsedVal !== null) {
+  if (typeof val === 'object' && val !== null) {
     return (
       <div className={`custom-scrollbar p-2.5 rounded-xl border max-h-[260px] overflow-y-auto overflow-x-hidden w-full ${isDeleted ? 'bg-rose-50/50 border-rose-100 opacity-90' : 'bg-slate-50/70 border-slate-200'}`}>
-        <StructuredValueViewer data={parsedVal} />
+        <StructuredValueViewer data={val} />
       </div>
     );
   }
   
-  // Primitives
-  return <>{String(val ?? "—")}</>;
+  // Primitives - apply formatting
+  if (val === null || val === undefined || val === "null" || val === "None" || val === "") {
+    return <span className="opacity-60 italic font-medium">—</span>;
+  }
+  if (typeof val === "boolean" || val === "true" || val === "false" || val === "True" || val === "False") {
+    const isTrue = val === true || val === "true" || val === "True";
+    return <span className={`px-1.5 py-0.5 rounded ${isTrue ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'} text-[10px] font-bold uppercase`}>{isTrue ? "Yes" : "No"}</span>;
+  }
+  if (typeof val === "number") {
+    return <span className="font-bold">{val.toLocaleString()}</span>;
+  }
+  
+  return <>{String(val)}</>;
 };
 
 export const ActivityLogPage = () => {
@@ -460,22 +455,39 @@ export const ActivityLogPage = () => {
                                       <span className="dnow" style={{ background: "var(--was-bg)", color: "var(--was-tx)" }}>Deleted</span>
                                     </div>
                                   ) : e.changes && e.changes.length > 0 ? (
-                                    e.changes.map((c, idx) => (
-                                      <div key={idx} className="drow">
-                                        <span className="dfield">{c.field}</span>
-                                        {c.before === undefined || c.before === null || c.before === "" ? (
-                                          <span className="dnew">— not set —</span>
-                                        ) : (
-                                          <span className={`dwas ${typeof c.before === 'object' || (typeof c.before === 'string' && c.before.includes('[{')) ? 'd-obj' : ''}`}>
-                                            <ChangeValueRenderer val={c.before} isDeleted />
+                                    e.changes.map((c, idx) => {
+                                      const tryParse = (val: unknown) => {
+                                        if (typeof val === 'string' && ((val.startsWith('{') && val.endsWith('}')) || (val.startsWith('[') && val.endsWith(']')))) {
+                                          try { return JSON.parse(val); } catch (e) {
+                                            try { return JSON.parse(val.replace(/'/g, '"').replace(/\bTrue\b/g, 'true').replace(/\bFalse\b/g, 'false').replace(/\bNone\b/g, 'null')); } 
+                                            catch (err) { return val; }
+                                          }
+                                        }
+                                        return val;
+                                      };
+                                      
+                                      const parsedBefore = tryParse(c.before);
+                                      const parsedAfter = tryParse(c.after);
+                                      const isObjBefore = typeof parsedBefore === 'object' && parsedBefore !== null;
+                                      const isObjAfter = typeof parsedAfter === 'object' && parsedAfter !== null;
+
+                                      return (
+                                        <div key={idx} className="drow">
+                                          <span className="dfield">{c.field}</span>
+                                          {parsedBefore === undefined || parsedBefore === null || parsedBefore === "" || parsedBefore === "null" || parsedBefore === "None" ? (
+                                            <span className="dnew">— not set —</span>
+                                          ) : (
+                                            <span className={`dwas ${isObjBefore ? 'd-obj' : ''}`}>
+                                              <ChangeValueRenderer val={parsedBefore} isDeleted />
+                                            </span>
+                                          )}
+                                          <span className="darr"><ArrIcon /></span>
+                                          <span className={`dnow ${isObjAfter ? 'd-obj' : ''}`}>
+                                            <ChangeValueRenderer val={parsedAfter} />
                                           </span>
-                                        )}
-                                        <span className="darr"><ArrIcon /></span>
-                                        <span className={`dnow ${typeof c.after === 'object' || (typeof c.after === 'string' && c.after.includes('[{')) ? 'd-obj' : ''}`}>
-                                          <ChangeValueRenderer val={c.after} />
-                                        </span>
-                                      </div>
-                                    ))
+                                        </div>
+                                      );
+                                    })
                                   ) : (
                                     <div className="empty" style={{ padding: "20px" }}>No field-level changes recorded.</div>
                                   )}

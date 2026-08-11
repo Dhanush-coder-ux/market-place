@@ -114,9 +114,9 @@ const QtyAdjuster = ({
         type="button"
         className="w-7 h-full flex items-center justify-center border-none bg-transparent cursor-pointer text-slate-400 hover:bg-slate-50 hover:text-slate-650 transition-colors active:scale-90"
         onClick={() => {
-           let newVal = value + 1;
-           if (typeof max === 'number' && newVal > max) newVal = max;
-           onChange(newVal);
+          let newVal = value + 1;
+          if (typeof max === 'number' && newVal > max) newVal = max;
+          onChange(newVal);
         }}
         disabled={typeof max === 'number' && value >= max}
       >

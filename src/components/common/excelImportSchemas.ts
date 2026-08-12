@@ -211,9 +211,16 @@ export const INVENTORY_IMPORT_COLUMNS: ImportColumnDef[] = [
   {
     key: "description",
     label: "Description",
-    required: true,
+    required: false,
     type: "string",
     example: "High quality wireless headphones with noise cancellation",
+  },
+  {
+    key: "stocks",
+    label: "Number of stocks",
+    required: true,
+    type: "number",
+    example: "50",
   },
   {
     key: "brand",

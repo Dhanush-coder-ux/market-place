@@ -232,11 +232,11 @@ const PurchaseForm = () => {
           });
 
           // Populate cost method
-          const costMethodValue = data.calculation_infos?.divided_by || data.calculations?.divided_by;
+          const costMethodValue = data.calculation_infos?.distribute_by || data.calculations?.distribute_by;
           setCostMethod(
-            costMethodValue === "BY_QUANTITY" ? "By Unit" :
+            costMethodValue === "BY_UNIT" ? "By Unit" :
               costMethodValue === "BY_VALUE" ? "By Value" :
-                costMethodValue === "BY_EQUAL" ? "Equally" : "None"
+                costMethodValue === "EQUALLY" ? "Equally" : "None"
           );
 
           // Populate gst mode
@@ -577,9 +577,9 @@ const PurchaseForm = () => {
 
       const costMethodMap: Record<string, any> = {
         "None": "NONE",
-        "By Unit": "BY_QUANTITY",
+        "By Unit": "BY_UNIT",
         "By Value": "BY_VALUE",
-        "Equally": "BY_EQUAL"
+        "Equally": "EQUALLY"
       };
 
       const payload = {
@@ -587,7 +587,7 @@ const PurchaseForm = () => {
         supplier_id: supplierDetails?.id || "SUP_" + purchaseDetails.supplier.substring(0, 3).toUpperCase(),
         type: purchaseType,
         calculation_infos: {
-          divided_by: costMethodMap[costMethod] || "NONE",
+          distribute_by: costMethodMap[costMethod] || "NONE",
           gst_type: gstMode
         },
         gst_infos: {
@@ -614,7 +614,7 @@ const PurchaseForm = () => {
           id: id,
           shop_id: SHOP_ID,
           calculation_infos: {
-            divided_by: costMethodMap[costMethod] || "NONE",
+            distribute_by: costMethodMap[costMethod] || "NONE",
             gst_type: gstMode
           },
           charges_infos: {

@@ -204,7 +204,7 @@ const SaleDetailPage: React.FC = () => {
 
   return (
     <div className="flex-1 flex flex-col min-h-0 h-full bg-slate-50/50 font-sans text-slate-900 overflow-hidden relative">
-      
+
       {/* Profile Header Card */}
       <div className="flex-none p-1 pb-0">
         <ProfileHeaderCard
@@ -246,7 +246,7 @@ const SaleDetailPage: React.FC = () => {
       {/* Tabs Navigation */}
       <div className="flex-none px-1 py-2">
         <div className="flex gap-2 p-1 bg-slate-100/50 w-fit rounded-lg border border-slate-200/50">
-          {["Overview", "Items", "Customer & Payments", "Returns & Refunds"].map((tab, i) => (
+          {["Overview", "Items", "Returns & Refunds"].map((tab, i) => (
             <button
               key={tab}
               onClick={() => setActiveTab(i)}
@@ -264,299 +264,51 @@ const SaleDetailPage: React.FC = () => {
       {/* Tab Panels */}
       <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar px-1 pb-6">
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-          
+
           {/* TAB 0 — Overview */}
           {activeTab === 0 && (
-            <div className="space-y-4">
-
-
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-                {/* Financial Summary */}
-                <div className="lg:col-span-8">
-                  <SectionCard title="Financial Summary">
-                    <div className="space-y-1">
-                      <InfoRow label="Subtotal" value={fmt(subtotal)} />
-                      <div className="mt-4 pt-4 border-t-2 border-slate-100 border-dashed flex justify-between items-center">
-                        <span className="text-sm font-black text-slate-800 uppercase tracking-wider">Grand Total</span>
-                        <span className="text-xl font-black text-blue-600 tabular-nums">{fmt(sale.total_sellprice)}</span>
-                      </div>
-                    </div>
-                  </SectionCard>
-                </div>
-
-                {/* Status & Actions */}
-                <div className="lg:col-span-4 space-y-4">
-                  <SectionCard title="Status Overview">
-                    <div className="space-y-3">
-                      <div className="flex justify-between items-center">
-                        <span className="text-[11px] font-medium text-slate-400 uppercase tracking-tight">Status</span>
-                        <StatusBadge status={sale.status} />
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-[11px] font-medium text-slate-400 uppercase tracking-tight">Origin</span>
-                        <span className="text-xs font-bold text-slate-700">{sale.origin}</span>
-                      </div>
-                      {refunded > 0 && <InfoRow label="Refunded Items" value={<span className="text-red-600 bg-red-50 px-2 py-0.5 rounded-md text-[10px] font-black">{refunded}</span>} />}
-                      {exchanged > 0 && <InfoRow label="Exchanged Items" value={<span className="text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md text-[10px] font-black">{exchanged}</span>} />}
-                    </div>
-                  </SectionCard>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* TAB 1 — Items */}
-          {activeTab === 1 && (
-            <div className="space-y-4">
-              <SectionCard title="Order Items" className="p-0 overflow-hidden">
-                <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="bg-slate-50/50 border-b border-slate-100">
-                      <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em]">Product Details</th>
-                      <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-center">Qty</th>
-                      <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-center">Unit</th>
-                      <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-right">Unit Price</th>
-                      <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-right">Total</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-50">
-                    {items.map((item) => (
-                      <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
-                        <td className="px-6 py-4">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-lg flex items-center justify-center font-bold text-slate-700 bg-slate-100 border border-slate-200 overflow-hidden shrink-0">
-                              {item.image ? (
-                                <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
-                              ) : (
-                                <Package size={16} className="text-slate-500" />
-                              )}
-                            </div>
-                            <div className="min-w-0">
-                              <p className="text-sm font-bold text-slate-800 truncate">{item.name}</p>
-                              <div className="flex items-center gap-2 mt-1 flex-wrap">
-                                <span className="text-[10px] font-mono font-bold text-slate-400">{item.sku}</span>
-                                {item.categoryName && (
-                                  <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wide bg-purple-50 text-purple-650 border border-purple-100 font-sans">
-                                    {item.categoryName}
-                                  </span>
-                                )}
-                                {item.gst !== undefined && item.gst !== null && (
-                                  <AntBadge variant="lb-gst" type="tag">GST {typeof item.gst === "number" ? `${item.gst}%` : item.gst}</AntBadge>
-                                )}
-                                {item.status && (
-                                  <span className={`px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wide ${item.status === "REFUNDED" ? "bg-red-50 text-red-600" : "bg-blue-50 text-blue-600"}`}>
-                                    {item.status} {item.returnedQty ? `(${item.returnedQty})` : ""}
-                                  </span>
-                                )}
-                                {item.reason && (
-                                  <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wide bg-slate-100 text-slate-500">
-                                    Reason: {item.reason}
-                                  </span>
-                                )}
-                              </div>
-                              {item.variantName && (
-                                <div className="mt-2">
-                                  <AntBadge variant="at-variant" type="tag" icon={<Layers size={9} />}>{item.variantName}</AntBadge>
-                                </div>
-                              )}
-                              {item.batchName && (
-                                <div className="mt-2 pl-3 border-l-2 border-indigo-150 space-y-1.5">
-                                  <div className="bg-slate-50 p-2 rounded border border-slate-100 max-w-md text-[10px] text-slate-650 shadow-sm">
-                                    <div className="flex justify-between items-center font-bold">
-                                      <span className="text-slate-800">Batch: {item.batchName || "Default"}</span>
-                                      <span className="text-indigo-600">Qty: {item.quantity}</span>
-                                    </div>
-                                    {(item.mfgDate || item.expDate) && (
-                                      <div className="flex gap-3 text-[9px] text-slate-400 mt-1 font-medium">
-                                        {item.mfgDate && <span>MFG: {item.mfgDate}</span>}
-                                        {item.expDate && <span>EXP: {item.expDate}</span>}
-                                      </div>
-                                    )}
-                                  </div>
-                                </div>
-                              )}
-                              {item.serial_numbers && item.serial_numbers.length > 0 && (
-                                <div className="mt-2 pl-3 border-l-2 border-indigo-150 space-y-1.5">
-                                  <div className="bg-slate-50 p-2 rounded border border-slate-100 max-w-md shadow-sm">
-                                    <p className="text-[8px] font-bold text-slate-400 mb-1 uppercase tracking-wider">Serial Numbers:</p>
-                                    <div className="flex flex-wrap gap-1">
-                                      {item.serial_numbers.map((sn: any, idx: number) => (
-                                        <span key={idx} className="text-[8px] font-mono font-bold px-1.5 py-0.5 rounded bg-white text-indigo-600 border border-slate-200 shadow-sm">{typeof sn === 'object' ? ((sn as any).name || (sn as any).id) : sn}</span>
-                                      ))}
-                                    </div>
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 text-center">
-                          <span className="text-xs font-black text-slate-600">{Number(((item as any).entered_qty !== undefined ? (item as any).entered_qty : (item.quantity || 0)).toFixed(2))}</span>
-                        </td>
-                        <td className="px-6 py-4 text-center">
-                          <span className="text-[10px] font-black text-slate-500 uppercase px-2 py-0.5 rounded bg-slate-100">{(item as any).entered_unit || item.unit}</span>
-                        </td>
-                        <td className="px-6 py-4 text-right">
-                          <span className="text-xs font-bold text-slate-500 tabular-nums">{fmt(item.unitPrice)}</span>
-                        </td>
-                        <td className="px-6 py-4 text-right">
-                          <span className="text-sm font-black text-slate-800 tabular-nums">{fmt(item.unitPrice * item.quantity)}</span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </SectionCard>
-            
-            {sale.exchanged_items?.map((exch, idx) => {
-              const replacementItems = generateItems(exch.replacement_order, productMap);
-              return (
-                <SectionCard key={idx} title={`Replacement Order #${exch.replacement_order.ui_id}`} className="p-0 overflow-hidden border-blue-100">
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse">
-                      <thead>
-                        <tr className="bg-blue-50/30 border-b border-blue-100/50">
-                          <th className="px-6 py-3 text-[10px] font-black text-blue-400 uppercase tracking-[0.15em]">Replacement Product</th>
-                          <th className="px-6 py-3 text-[10px] font-black text-blue-400 uppercase tracking-[0.15em] text-center">Qty</th>
-                          <th className="px-6 py-3 text-[10px] font-black text-blue-400 uppercase tracking-[0.15em] text-center">Unit</th>
-                          <th className="px-6 py-3 text-[10px] font-black text-blue-400 uppercase tracking-[0.15em] text-right">Unit Price</th>
-                          <th className="px-6 py-3 text-[10px] font-black text-blue-400 uppercase tracking-[0.15em] text-right">Total</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-50">
-                        {replacementItems.map((item) => (
-                          <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
-                            <td className="px-6 py-4">
-                              <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0 border bg-blue-50 border-blue-100 overflow-hidden">
-                                  {item.image ? (
-                                    <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
-                                  ) : (
-                                    <Package size={16} className="text-blue-500" />
-                                  )}
-                                </div>
-                                <div className="min-w-0">
-                                  <p className="text-sm font-bold text-slate-800 truncate">{item.name}</p>
-                                  <div className="flex items-center gap-2 mt-1 flex-wrap">
-                                    <span className="text-[10px] font-mono font-bold text-slate-400">{item.sku}</span>
-                                    {item.categoryName && (
-                                      <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wide bg-purple-50 text-purple-650 border border-purple-100 font-sans">
-                                        {item.categoryName}
-                                      </span>
-                                    )}
-                                    {item.gst !== undefined && item.gst !== null && (
-                                      <AntBadge variant="lb-gst" type="tag">GST {typeof item.gst === "number" ? `${item.gst}%` : item.gst}</AntBadge>
-                                    )}
-                                    {item.status && (
-                                      <span className={`px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wide ${item.status === "REFUNDED" ? "bg-red-50 text-red-600" : "bg-blue-50 text-blue-600"}`}>
-                                        {item.status} {item.returnedQty ? `(${item.returnedQty})` : ""}
-                                      </span>
-                                    )}
-                                    {item.reason && (
-                                      <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wide bg-slate-100 text-slate-500">
-                                        Reason: {item.reason}
-                                      </span>
-                                    )}
-                                  </div>
-                                  {item.variantName && (
-                                    <div className="mt-2">
-                                      <AntBadge variant="at-variant" type="tag" icon={<Layers size={9} />}>{item.variantName}</AntBadge>
-                                    </div>
-                                  )}
-                                  {item.batchName && (
-                                    <div className="mt-2 pl-3 border-l-2 border-indigo-150 space-y-1.5">
-                                      <div className="bg-slate-50 p-2 rounded border border-slate-100 max-w-md text-[10px] text-slate-650 shadow-sm">
-                                        <div className="flex justify-between items-center font-bold">
-                                          <span className="text-slate-800">Batch: {item.batchName || "Default"}</span>
-                                          <span className="text-indigo-600">Qty: {item.quantity}</span>
-                                        </div>
-                                        {(item.mfgDate || item.expDate) && (
-                                          <div className="flex gap-3 text-[9px] text-slate-400 mt-1 font-medium">
-                                            {item.mfgDate && <span>MFG: {item.mfgDate}</span>}
-                                            {item.expDate && <span>EXP: {item.expDate}</span>}
-                                          </div>
-                                        )}
-                                      </div>
-                                    </div>
-                                  )}
-                                  {item.serial_numbers && item.serial_numbers.length > 0 && (
-                                    <div className="mt-2 pl-3 border-l-2 border-indigo-150 space-y-1.5">
-                                      <div className="bg-slate-50 p-2 rounded border border-slate-100 max-w-md shadow-sm">
-                                        <p className="text-[8px] font-bold text-slate-400 mb-1 uppercase tracking-wider">Serial Numbers:</p>
-                                        <div className="flex flex-wrap gap-1">
-                                          {item.serial_numbers.map((sn: any, idx: number) => (
-                                            <span key={idx} className="text-[8px] font-mono font-bold px-1.5 py-0.5 rounded bg-white text-indigo-600 border border-slate-200 shadow-sm">{typeof sn === 'object' ? ((sn as any).name || (sn as any).id) : sn}</span>
-                                          ))}
-                                        </div>
-                                      </div>
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 text-center">
-                              <span className="text-xs font-black text-slate-600">{Number(((item as any).entered_qty !== undefined ? (item as any).entered_qty : (item.quantity || 0)).toFixed(2))}</span>
-                            </td>
-                            <td className="px-6 py-4 text-center">
-                              <span className="text-[10px] font-black text-blue-500 uppercase px-2 py-0.5 rounded bg-blue-50 border border-blue-100">{(item as any).entered_unit || item.unit}</span>
-                            </td>
-                            <td className="px-6 py-4 text-right">
-                              <span className="text-xs font-bold text-slate-500 tabular-nums">{fmt(item.unitPrice)}</span>
-                            </td>
-                            <td className="px-6 py-4 text-right">
-                              <span className="text-sm font-black text-slate-800 tabular-nums">{fmt(item.unitPrice * item.quantity)}</span>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+              {/* Left Column */}
+              <div className="lg:col-span-7 xl:col-span-8 space-y-4">
+                <SectionCard title="Customer Information">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-6 gap-x-8">
+                    <DetailItem icon={User} label="Customer Name" value={customerName} />
+                    {customerMobile && <DetailItem icon={Smartphone} label="Customer Mobile" value={customerMobile} />}
+                    <DetailItem icon={Database} label="Customer ID" value={sale.customer_id} />
+                    <DetailItem icon={Calendar} label="Order Date" value={dateStr} />
+                    <DetailItem icon={Clock} label="Order Time" value={timeStr || "—"} />
+                    <DetailItem icon={Search} label="Origin" value={sale.origin} />
                   </div>
-                  <div className="p-4 bg-slate-50 border-t border-slate-100 flex justify-between items-center">
-                    <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Replacement Value</span>
-                    <div className="flex items-center gap-6 text-right">
-                      <div className="flex flex-col">
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Payment Collected / Refunded</span>
-                        {(() => {
-                          const paymentSum = Object.values(exch.replacement_order.payments || {}).reduce((sum: number, val: any) => sum + Number(val), 0);
-                          if (paymentSum < 0) {
-                            return <span className="text-sm font-black tabular-nums text-red-600">Refund: {fmt(Math.abs(paymentSum))}</span>;
-                          } else if (paymentSum > 0) {
-                            return <span className="text-sm font-black tabular-nums text-emerald-600">Collected: {fmt(paymentSum)}</span>;
-                          } else {
-                            return <span className="text-sm font-black tabular-nums text-slate-500">₹0</span>;
-                          }
-                        })()}
-                      </div>
-                      <div className="h-8 w-px bg-slate-200"></div>
-                      <div className="flex flex-col">
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Total Value</span>
-                        <span className="text-sm font-black text-blue-600 tabular-nums">{fmt(exch.replacement_order.total_sellprice)}</span>
-                      </div>
+                </SectionCard>
+
+                <SectionCard title="Financial Summary">
+                  <div className="space-y-1">
+                    <InfoRow label="Subtotal" value={fmt(subtotal)} />
+                    <div className="mt-4 pt-4 border-t-2 border-slate-100 border-dashed flex justify-between items-center">
+                      <span className="text-sm font-black text-slate-800 uppercase tracking-wider">Grand Total</span>
+                      <span className="text-xl font-black text-blue-600 tabular-nums">{fmt(sale.total_sellprice)}</span>
                     </div>
                   </div>
                 </SectionCard>
-              );
-            })}
-          </div>
-          )}
+              </div>
 
-          {/* TAB 2 — Customer & Payments */}
-          {activeTab === 2 && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <SectionCard title="Customer Information">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-6 gap-x-8">
-                  <DetailItem icon={User} label="Customer Name" value={customerName} />
-                  {customerMobile && <DetailItem icon={Smartphone} label="Customer Mobile" value={customerMobile} />}
-                  <DetailItem icon={Database} label="Customer ID" value={sale.customer_id} />
-                  <DetailItem icon={Calendar} label="Order Date" value={dateStr} />
-                  <DetailItem icon={Clock} label="Order Time" value={timeStr || "—"} />
-                  <DetailItem icon={Search} label="Origin" value={sale.origin} />
-                </div>
-              </SectionCard>
+              {/* Right Column */}
+              <div className="lg:col-span-5 xl:col-span-4 space-y-4">
+                <SectionCard title="Status Overview">
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-[11px] font-medium text-slate-400 uppercase tracking-tight">Status</span>
+                      <StatusBadge status={sale.status} />
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[11px] font-medium text-slate-400 uppercase tracking-tight">Origin</span>
+                      <span className="text-xs font-bold text-slate-700">{sale.origin}</span>
+                    </div>
+                    {refunded > 0 && <InfoRow label="Refunded Items" value={<span className="text-red-600 bg-red-50 px-2 py-0.5 rounded-md text-[10px] font-black">{refunded}</span>} />}
+                    {exchanged > 0 && <InfoRow label="Exchanged Items" value={<span className="text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md text-[10px] font-black">{exchanged}</span>} />}
+                  </div>
+                </SectionCard>
 
-              <div className="space-y-4">
                 <SectionCard title="Payment Status">
                   {outstanding > 0 ? (
                     totalPaid === 0 ? (
@@ -607,8 +359,245 @@ const SaleDetailPage: React.FC = () => {
             </div>
           )}
 
-          {/* TAB 3 — Returns & Refunds */}
-          {activeTab === 3 && (
+          {/* TAB 1 — Items */}
+          {activeTab === 1 && (
+            <div className="space-y-4">
+              <SectionCard title="Order Items" className="p-0 overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="bg-slate-50/50 border-b border-slate-100">
+                        <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em]">Product Details</th>
+                        <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-center">Qty</th>
+                        <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-center">Unit</th>
+                        <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-right">Unit Price</th>
+                        <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-right">Total</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-50">
+                      {items.map((item) => (
+                        <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 rounded-lg flex items-center justify-center font-bold text-slate-700 bg-slate-100 border border-slate-200 overflow-hidden shrink-0">
+                                {item.image ? (
+                                  <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+                                ) : (
+                                  <Package size={16} className="text-slate-500" />
+                                )}
+                              </div>
+                              <div className="min-w-0">
+                                <p className="text-sm font-bold text-slate-800 truncate">{item.name}</p>
+                                <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                  <span className="text-[10px] font-mono font-bold text-slate-400">{item.sku}</span>
+                                  {item.categoryName && (
+                                    <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wide bg-purple-50 text-purple-650 border border-purple-100 font-sans">
+                                      {item.categoryName}
+                                    </span>
+                                  )}
+                                  {item.gst !== undefined && item.gst !== null && (
+                                    <AntBadge variant="lb-gst" type="tag">GST {typeof item.gst === "number" ? `${item.gst}%` : item.gst}</AntBadge>
+                                  )}
+                                  {item.status && (
+                                    <span className={`px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wide ${item.status === "REFUNDED" ? "bg-red-50 text-red-600" : "bg-blue-50 text-blue-600"}`}>
+                                      {item.status} {item.returnedQty ? `(${item.returnedQty})` : ""}
+                                    </span>
+                                  )}
+                                  {item.reason && (
+                                    <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wide bg-slate-100 text-slate-500">
+                                      Reason: {item.reason}
+                                    </span>
+                                  )}
+                                </div>
+                                {item.variantName && (
+                                  <div className="mt-2">
+                                    <AntBadge variant="at-variant" type="tag" icon={<Layers size={9} />}>{item.variantName}</AntBadge>
+                                  </div>
+                                )}
+                                {item.batchName && (
+                                  <div className="mt-2 pl-3 border-l-2 border-indigo-150 space-y-1.5">
+                                    <div className="bg-slate-50 p-2 rounded border border-slate-100 max-w-md text-[10px] text-slate-650 shadow-sm">
+                                      <div className="flex justify-between items-center font-bold">
+                                        <span className="text-slate-800">Batch: {item.batchName || "Default"}</span>
+                                        <span className="text-indigo-600">Qty: {item.quantity}</span>
+                                      </div>
+                                      {(item.mfgDate || item.expDate) && (
+                                        <div className="flex gap-3 text-[9px] text-slate-400 mt-1 font-medium">
+                                          {item.mfgDate && <span>MFG: {item.mfgDate}</span>}
+                                          {item.expDate && <span>EXP: {item.expDate}</span>}
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
+                                {item.serial_numbers && item.serial_numbers.length > 0 && (
+                                  <div className="mt-2 pl-3 border-l-2 border-indigo-150 space-y-1.5">
+                                    <div className="bg-slate-50 p-2 rounded border border-slate-100 max-w-md shadow-sm">
+                                      <p className="text-[8px] font-bold text-slate-400 mb-1 uppercase tracking-wider">Serial Numbers:</p>
+                                      <div className="flex flex-wrap gap-1">
+                                        {item.serial_numbers.map((sn: any, idx: number) => (
+                                          <span key={idx} className="text-[8px] font-mono font-bold px-1.5 py-0.5 rounded bg-white text-indigo-600 border border-slate-200 shadow-sm">{typeof sn === 'object' ? ((sn as any).name || (sn as any).id) : sn}</span>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 text-center">
+                            <span className="text-xs font-black text-slate-600">{Number(((item as any).entered_qty !== undefined ? (item as any).entered_qty : (item.quantity || 0)).toFixed(2))}</span>
+                          </td>
+                          <td className="px-6 py-4 text-center">
+                            <span className="text-[10px] font-black text-slate-500 uppercase px-2 py-0.5 rounded bg-slate-100">{(item as any).entered_unit || item.unit}</span>
+                          </td>
+                          <td className="px-6 py-4 text-right">
+                            <span className="text-xs font-bold text-slate-500 tabular-nums">{fmt(item.unitPrice)}</span>
+                          </td>
+                          <td className="px-6 py-4 text-right">
+                            <span className="text-sm font-black text-slate-800 tabular-nums">{fmt(item.unitPrice * item.quantity)}</span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </SectionCard>
+
+              {sale.exchanged_items?.map((exch, idx) => {
+                const replacementItems = generateItems(exch.replacement_order, productMap);
+                return (
+                  <SectionCard key={idx} title={`Replacement Order #${exch.replacement_order.ui_id}`} className="p-0 overflow-hidden border-blue-100">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left border-collapse">
+                        <thead>
+                          <tr className="bg-blue-50/30 border-b border-blue-100/50">
+                            <th className="px-6 py-3 text-[10px] font-black text-blue-400 uppercase tracking-[0.15em]">Replacement Product</th>
+                            <th className="px-6 py-3 text-[10px] font-black text-blue-400 uppercase tracking-[0.15em] text-center">Qty</th>
+                            <th className="px-6 py-3 text-[10px] font-black text-blue-400 uppercase tracking-[0.15em] text-center">Unit</th>
+                            <th className="px-6 py-3 text-[10px] font-black text-blue-400 uppercase tracking-[0.15em] text-right">Unit Price</th>
+                            <th className="px-6 py-3 text-[10px] font-black text-blue-400 uppercase tracking-[0.15em] text-right">Total</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-50">
+                          {replacementItems.map((item) => (
+                            <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
+                              <td className="px-6 py-4">
+                                <div className="flex items-center gap-3">
+                                  <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0 border bg-blue-50 border-blue-100 overflow-hidden">
+                                    {item.image ? (
+                                      <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+                                    ) : (
+                                      <Package size={16} className="text-blue-500" />
+                                    )}
+                                  </div>
+                                  <div className="min-w-0">
+                                    <p className="text-sm font-bold text-slate-800 truncate">{item.name}</p>
+                                    <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                      <span className="text-[10px] font-mono font-bold text-slate-400">{item.sku}</span>
+                                      {item.categoryName && (
+                                        <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wide bg-purple-50 text-purple-650 border border-purple-100 font-sans">
+                                          {item.categoryName}
+                                        </span>
+                                      )}
+                                      {item.gst !== undefined && item.gst !== null && (
+                                        <AntBadge variant="lb-gst" type="tag">GST {typeof item.gst === "number" ? `${item.gst}%` : item.gst}</AntBadge>
+                                      )}
+                                      {item.status && (
+                                        <span className={`px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wide ${item.status === "REFUNDED" ? "bg-red-50 text-red-600" : "bg-blue-50 text-blue-600"}`}>
+                                          {item.status} {item.returnedQty ? `(${item.returnedQty})` : ""}
+                                        </span>
+                                      )}
+                                      {item.reason && (
+                                        <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wide bg-slate-100 text-slate-500">
+                                          Reason: {item.reason}
+                                        </span>
+                                      )}
+                                    </div>
+                                    {item.variantName && (
+                                      <div className="mt-2">
+                                        <AntBadge variant="at-variant" type="tag" icon={<Layers size={9} />}>{item.variantName}</AntBadge>
+                                      </div>
+                                    )}
+                                    {item.batchName && (
+                                      <div className="mt-2 pl-3 border-l-2 border-indigo-150 space-y-1.5">
+                                        <div className="bg-slate-50 p-2 rounded border border-slate-100 max-w-md text-[10px] text-slate-650 shadow-sm">
+                                          <div className="flex justify-between items-center font-bold">
+                                            <span className="text-slate-800">Batch: {item.batchName || "Default"}</span>
+                                            <span className="text-indigo-600">Qty: {item.quantity}</span>
+                                          </div>
+                                          {(item.mfgDate || item.expDate) && (
+                                            <div className="flex gap-3 text-[9px] text-slate-400 mt-1 font-medium">
+                                              {item.mfgDate && <span>MFG: {item.mfgDate}</span>}
+                                              {item.expDate && <span>EXP: {item.expDate}</span>}
+                                            </div>
+                                          )}
+                                        </div>
+                                      </div>
+                                    )}
+                                    {item.serial_numbers && item.serial_numbers.length > 0 && (
+                                      <div className="mt-2 pl-3 border-l-2 border-indigo-150 space-y-1.5">
+                                        <div className="bg-slate-50 p-2 rounded border border-slate-100 max-w-md shadow-sm">
+                                          <p className="text-[8px] font-bold text-slate-400 mb-1 uppercase tracking-wider">Serial Numbers:</p>
+                                          <div className="flex flex-wrap gap-1">
+                                            {item.serial_numbers.map((sn: any, idx: number) => (
+                                              <span key={idx} className="text-[8px] font-mono font-bold px-1.5 py-0.5 rounded bg-white text-indigo-600 border border-slate-200 shadow-sm">{typeof sn === 'object' ? ((sn as any).name || (sn as any).id) : sn}</span>
+                                            ))}
+                                          </div>
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 text-center">
+                                <span className="text-xs font-black text-slate-600">{Number(((item as any).entered_qty !== undefined ? (item as any).entered_qty : (item.quantity || 0)).toFixed(2))}</span>
+                              </td>
+                              <td className="px-6 py-4 text-center">
+                                <span className="text-[10px] font-black text-blue-500 uppercase px-2 py-0.5 rounded bg-blue-50 border border-blue-100">{(item as any).entered_unit || item.unit}</span>
+                              </td>
+                              <td className="px-6 py-4 text-right">
+                                <span className="text-xs font-bold text-slate-500 tabular-nums">{fmt(item.unitPrice)}</span>
+                              </td>
+                              <td className="px-6 py-4 text-right">
+                                <span className="text-sm font-black text-slate-800 tabular-nums">{fmt(item.unitPrice * item.quantity)}</span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    <div className="p-4 bg-slate-50 border-t border-slate-100 flex justify-between items-center">
+                      <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Replacement Value</span>
+                      <div className="flex items-center gap-6 text-right">
+                        <div className="flex flex-col">
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Payment Collected / Refunded</span>
+                          {(() => {
+                            const paymentSum = Object.values(exch.replacement_order.payments || {}).reduce((sum: number, val: any) => sum + Number(val), 0);
+                            if (paymentSum < 0) {
+                              return <span className="text-sm font-black tabular-nums text-red-600">Refund: {fmt(Math.abs(paymentSum))}</span>;
+                            } else if (paymentSum > 0) {
+                              return <span className="text-sm font-black tabular-nums text-emerald-600">Collected: {fmt(paymentSum)}</span>;
+                            } else {
+                              return <span className="text-sm font-black tabular-nums text-slate-500">₹0</span>;
+                            }
+                          })()}
+                        </div>
+                        <div className="h-8 w-px bg-slate-200"></div>
+                        <div className="flex flex-col">
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Total Value</span>
+                          <span className="text-sm font-black text-blue-600 tabular-nums">{fmt(exch.replacement_order.total_sellprice)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </SectionCard>
+                );
+              })}
+            </div>
+          )}
+
+          {/* TAB 2 — Returns & Refunds */}
+          {activeTab === 2 && (
             <div className="space-y-4">
               {Array.isArray(sale.returns) && sale.returns.length > 0 ? (
                 sale.returns.map((ret: any, rIdx: number) => (
@@ -632,7 +621,7 @@ const SaleDetailPage: React.FC = () => {
                             const variantN = retItem.variant_infos?.variant_name || retItem.variant_name;
                             const batchN = retItem.batch_infos?.batch_name || retItem.batch_name;
                             const serialsList = Array.isArray(retItem.serialno_infos) ? retItem.serialno_infos.map((sn: any) => sn.name || sn) : [];
-                            
+
                             const origItem = sale.items?.find((i: any) => i.id === retItem.order_item_id || i.id === retItem.return_order_item_id);
                             let displayQty = retItem.quantity;
                             let displayUnit = retItem.unit || origItem?.unit || "";

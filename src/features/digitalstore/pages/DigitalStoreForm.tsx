@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { StoreFormData } from "@/features/digitalstore/type"; 
+import { StoreFormData } from "@/features/digitalstore/type";
 import { Check, ChevronLeft, ChevronRight, Store, Truck, Package, CheckCircle2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useBusinessApi } from "@/context/BusinessApiContext";
@@ -144,7 +144,7 @@ export default function StoreSetupWizard({ existingData }: { existingData?: Part
           mobile_numbers: [],
           website: null
         },
-        visible_online: true, 
+        visible_online: true,
       };
 
       const fullPayload = {
@@ -161,7 +161,7 @@ export default function StoreSetupWizard({ existingData }: { existingData?: Part
       const currentShopId = localStorage.getItem("shop_id") || SHOP_ID;
       let newShopId = currentShopId;
       let isNewShop = false;
-      
+
       // 1. Create or Update Shop (visible_online = true now that we have hours and delivery)
       if (currentShopId && currentShopId !== "string") {
         await shop.updateShop({ id: currentShopId, ...fullPayload, visible_online: true });
@@ -199,11 +199,11 @@ export default function StoreSetupWizard({ existingData }: { existingData?: Part
             console.error("Failed to create employee:", empErr);
           }
         }
-        
+
         // TODO: Handle Products save using newShopId
         // ...
-        
-        navigate("/");
+
+        navigate("/profile");
       }
     } catch (err) {
       console.error("Failed to create shop", err);
@@ -216,7 +216,7 @@ export default function StoreSetupWizard({ existingData }: { existingData?: Part
   return (
     <div className="w-full min-h-screen bg-slate-50/50 p-2 md:p-6 lg:p-8 font-sans">
       <div className="max-w-4xl mx-auto w-full space-y-6">
-        
+
         {/* Onboarding Header */}
         <div className="text-center py-4">
           <h2 className="text-2xl font-black text-slate-800 tracking-tight">Setup Your Digital Store</h2>
@@ -227,7 +227,7 @@ export default function StoreSetupWizard({ existingData }: { existingData?: Part
         <div className="flex justify-between items-center mb-8 relative">
           <div className="absolute left-0 top-1/2 w-full h-[2px] bg-slate-200 -z-10 -translate-y-1/2 rounded-full" />
           <div className="absolute left-0 top-1/2 h-[2px] bg-blue-600 -z-10 -translate-y-1/2 transition-all duration-300" style={{ width: `${((currentStep - 1) / (STEPS.length - 1)) * 100}%` }} />
-          
+
           {STEPS.map((step) => {
             const Icon = step.icon;
             const isActive = currentStep === step.id;
@@ -267,7 +267,7 @@ export default function StoreSetupWizard({ existingData }: { existingData?: Part
               <ChevronLeft size={16} strokeWidth={2.5} />
               Back
             </button>
-            
+
             {currentStep < STEPS.length ? (
               <button
                 type="button"

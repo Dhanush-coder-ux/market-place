@@ -124,7 +124,8 @@ const ProductDetail = () => {
     const hasVariants = !!product.type_infos?.has_variant || (product.variant_infos || product.variants ? Object.values(product.variant_infos || product.variants || {}).length > 0 : false);
     const batches = Array.isArray(product.batch_infos) ? product.batch_infos : (product.batch_infos ? [product.batch_infos] : (product.batches || []));
     const hasBatches = !!product.type_infos?.has_batch || batches.length > 0;
-    const dynamicTabs = ["General Info", ...((hasVariants || hasBatches) ? ["Inventory & Variants"] : []), "Images", MOV_TAB_LABEL, PUR_TAB_LABEL];
+    const isStockTracked = (product as any).have_tracking !== false && (product as any).is_stock_tracked !== false && (product as any).track_stock !== false && (product as any).type !== "service";
+    const dynamicTabs = ["General Info", ...((hasVariants || hasBatches) ? ["Inventory & Variants"] : []), "Images", MOV_TAB_LABEL, ...(isStockTracked ? [PUR_TAB_LABEL] : [])];
 
     if (dynamicTabs[activeTab] !== MOV_TAB_LABEL) return;
   }, [activeTab, id, product]);
@@ -138,7 +139,8 @@ const ProductDetail = () => {
     const hasVariants = !!product.type_infos?.has_variant || (product.variant_infos || product.variants ? Object.values(product.variant_infos || product.variants || {}).length > 0 : false);
     const batches = Array.isArray(product.batch_infos) ? product.batch_infos : (product.batch_infos ? [product.batch_infos] : (product.batches || []));
     const hasBatches = !!product.type_infos?.has_batch || batches.length > 0;
-    const dynamicTabs = ["General Info", ...((hasVariants || hasBatches) ? ["Inventory & Variants"] : []), "Images", MOV_TAB_LABEL, PUR_TAB_LABEL];
+    const isStockTracked = (product as any).have_tracking !== false && (product as any).is_stock_tracked !== false && (product as any).track_stock !== false && (product as any).type !== "service";
+    const dynamicTabs = ["General Info", ...((hasVariants || hasBatches) ? ["Inventory & Variants"] : []), "Images", MOV_TAB_LABEL, ...(isStockTracked ? [PUR_TAB_LABEL] : [])];
 
     if (dynamicTabs[activeTab] !== PUR_TAB_LABEL) return;
 
@@ -295,9 +297,9 @@ const ProductDetail = () => {
   const hasVariants = !!product.type_infos?.has_variant || combinations.length > 0;
   const hasBatches = !!product.type_infos?.has_batch || batches.length > 0;
   const isActive = product.is_active === true;
+  const isStockTracked = (product as any).have_tracking !== false && (product as any).is_stock_tracked !== false && (product as any).track_stock !== false && (product as any).type !== "service";
 
-
-  const TABS = ["General Info", ...((hasVariants || hasBatches) ? ["Inventory & Variants"] : []), "Images", MOV_TAB_LABEL, PUR_TAB_LABEL];
+  const TABS = ["General Info", ...((hasVariants || hasBatches) ? ["Inventory & Variants"] : []), "Images", MOV_TAB_LABEL, ...(isStockTracked ? [PUR_TAB_LABEL] : [])];
   const IMG_TAB_LABEL = "Images";
   const inventoryTabIdx = TABS.indexOf("Inventory & Variants");
   const isTableTab = TABS[activeTab] === MOV_TAB_LABEL || TABS[activeTab] === PUR_TAB_LABEL;
@@ -325,7 +327,7 @@ const ProductDetail = () => {
           ]}
           infoItems={[
             { icon: Tag, text: `Unit: ${unitName}` },
-            { icon: ShoppingCart, text: `Available in inventory: ${totalAvailableStock !== null ? totalAvailableStock : "—"}` },
+            ...(isStockTracked ? [{ icon: ShoppingCart, text: `Available in inventory: ${totalAvailableStock !== null ? totalAvailableStock : "—"}` }] : []),
           ]}
           actions={
             <div className="flex items-center gap-1.5">

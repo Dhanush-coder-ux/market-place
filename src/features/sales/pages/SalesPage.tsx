@@ -130,8 +130,8 @@ const SalesListPage: React.FC = () => {
   const searchSalesForReturn = useMemo(() => {
     if (!returnSearchQuery) return [];
     const q = returnSearchQuery.toLowerCase();
-    return orders.filter(s => 
-      s.ui_id?.toString().toLowerCase().includes(q) || 
+    return orders.filter(s =>
+      s.ui_id?.toString().toLowerCase().includes(q) ||
       (s.customer_id && s.customer_id.toLowerCase().includes(q))
     ).slice(0, 5);
   }, [returnSearchQuery, orders]);
@@ -196,98 +196,98 @@ const SalesListPage: React.FC = () => {
   const closeReturn = () => setReturnSale(null);
 
   const fetchPage = React.useCallback(async (limit: number, offset: number, filters: any) => {
-      const params: any = { limit: limit.toString(), offset: offset.toString() };
-      if (filters.search) params.q = filters.search;
-      if (filters.origin === "Offline") params.origin = "OFFLINE";
-      else if (filters.origin === "Offline Return") params.origin = "OFFLINE_SALES_RETURN";
-      else if (filters.origin === "Online") params.origin = "ONLINE";
-      if (filters.payment) params.payment_method = filters.payment;
-      if (filters.status) params.status = filters.status;
-      if (filters.fromDate) params.from_date = filters.fromDate;
-      if (filters.toDate) params.to_date = filters.toDate;
+    const params: any = { limit: limit.toString(), offset: offset.toString() };
+    if (filters.search) params.q = filters.search;
+    if (filters.origin === "Offline") params.origin = "OFFLINE";
+    else if (filters.origin === "Offline Return") params.origin = "OFFLINE_SALES_RETURN";
+    else if (filters.origin === "Online") params.origin = "ONLINE";
+    if (filters.payment) params.payment_method = filters.payment;
+    if (filters.status) params.status = filters.status;
+    if (filters.fromDate) params.from_date = filters.fromDate;
+    if (filters.toDate) params.to_date = filters.toDate;
 
-      const res = await api.getData(`${ENDPOINTS.ORDERS}/${SHOP_ID}`, params);
-      
-      let fetchedStats = null;
-      if (res?.data?.overall_datas) {
-        fetchedStats = res.data.overall_datas;
+    const res = await api.getData(`${ENDPOINTS.ORDERS}/${SHOP_ID}`, params);
+
+    let fetchedStats = null;
+    if (res?.data?.overall_datas) {
+      fetchedStats = res.data.overall_datas;
+    }
+
+    const dataList = Array.isArray(res?.data) ? res.data : (res?.data?.datas ?? []);
+    const normalized = dataList.map((s: any) => {
+      // Support new Order Service format: payment_infos can be a dict (Record<string, number>) or an array
+      let pm = "Other";
+      if (s.payment_infos && typeof s.payment_infos === 'object' && !Array.isArray(s.payment_infos) && Object.keys(s.payment_infos).length > 0) {
+        pm = Object.keys(s.payment_infos).map(k => {
+          const u = k.toUpperCase();
+          if (u === "CASH") return "Cash";
+          if (u === "CARD") return "Card";
+          if (u === "UPI" || u === "GPAY" || u === "G-PAY") return "UPI";
+          if (u === "PHONEPE") return "PhonePe";
+          if (u === "CREDIT" || u === "ON_CREDIT") return "Credit";
+          return k.charAt(0).toUpperCase() + k.slice(1).toLowerCase();
+        }).join(", ");
+      } else if (Array.isArray(s.payment_infos) && s.payment_infos.length > 0) {
+        pm = s.payment_infos.map((p: any) => {
+          const methodStr = typeof p === 'string' ? p : (p.method || "");
+          const u = methodStr.toUpperCase();
+          if (u === "CASH") return "Cash";
+          if (u === "CARD") return "Card";
+          if (u === "UPI" || u === "GPAY" || u === "G-PAY") return "UPI";
+          if (u === "PHONEPE") return "PhonePe";
+          if (u === "CREDIT" || u === "ON_CREDIT") return "Credit";
+          return methodStr || "Other";
+        }).join(", ");
+      } else if (s.payments && Object.keys(s.payments).length > 0) {
+        pm = Object.keys(s.payments).map(k => { const u = k.toUpperCase(); if (u === "CASH") return "Cash"; if (u === "CARD") return "Card"; if (u === "UPI" || u === "G-PAY" || u === "GPAY") return "UPI"; if (u === "PHONEPE") return "PhonePe"; if (u === "CREDIT" || u === "ON_CREDIT") return "Credit"; return k.charAt(0).toUpperCase() + k.slice(1).toLowerCase(); }).join(", ");
+      } else if (s.payment_method) {
+        const r = (s.payment_method || "Other").toUpperCase();
+        pm = r === "CASH" ? "Cash" : r === "CARD" ? "Card" : r === "UPI" || r === "G-PAY" || r === "GPAY" ? "UPI" : r === "PHONEPE" ? "PhonePe" : r === "CREDIT" || r === "ON_CREDIT" ? "Credit" : s.payment_method;
       }
 
-      const dataList = Array.isArray(res?.data) ? res.data : (res?.data?.datas ?? []);
-      const normalized = dataList.map((s: any) => {
-        // Support new Order Service format: payment_infos can be a dict (Record<string, number>) or an array
-        let pm = "Other";
-        if (s.payment_infos && typeof s.payment_infos === 'object' && !Array.isArray(s.payment_infos) && Object.keys(s.payment_infos).length > 0) {
-          pm = Object.keys(s.payment_infos).map(k => {
-            const u = k.toUpperCase();
-            if (u === "CASH") return "Cash";
-            if (u === "CARD") return "Card";
-            if (u === "UPI" || u === "GPAY" || u === "G-PAY") return "UPI";
-            if (u === "PHONEPE") return "PhonePe";
-            if (u === "CREDIT" || u === "ON_CREDIT") return "Credit";
-            return k.charAt(0).toUpperCase() + k.slice(1).toLowerCase();
-          }).join(", ");
-        } else if (Array.isArray(s.payment_infos) && s.payment_infos.length > 0) {
-          pm = s.payment_infos.map((p: any) => {
-            const methodStr = typeof p === 'string' ? p : (p.method || "");
-            const u = methodStr.toUpperCase();
-            if (u === "CASH") return "Cash";
-            if (u === "CARD") return "Card";
-            if (u === "UPI" || u === "GPAY" || u === "G-PAY") return "UPI";
-            if (u === "PHONEPE") return "PhonePe";
-            if (u === "CREDIT" || u === "ON_CREDIT") return "Credit";
-            return methodStr || "Other";
-          }).join(", ");
-        } else if (s.payments && Object.keys(s.payments).length > 0) {
-          pm = Object.keys(s.payments).map(k => { const u = k.toUpperCase(); if (u === "CASH") return "Cash"; if (u === "CARD") return "Card"; if (u === "UPI" || u === "G-PAY" || u === "GPAY") return "UPI"; if (u === "PHONEPE") return "PhonePe"; if (u === "CREDIT" || u === "ON_CREDIT") return "Credit"; return k.charAt(0).toUpperCase() + k.slice(1).toLowerCase(); }).join(", ");
-        } else if (s.payment_method) {
-          const r = (s.payment_method || "Other").toUpperCase();
-          pm = r === "CASH" ? "Cash" : r === "CARD" ? "Card" : r === "UPI" || r === "G-PAY" || r === "GPAY" ? "UPI" : r === "PHONEPE" ? "PhonePe" : r === "CREDIT" || r === "ON_CREDIT" ? "Credit" : s.payment_method;
-        }
+      // Derive total from calculation_infos if present (new Order Service format)
+      const total = s.total_sellprice ?? s.calculation_infos?.total ?? s.total ?? 0;
 
-        // Derive total from calculation_infos if present (new Order Service format)
-        const total = s.total_sellprice ?? s.calculation_infos?.total ?? s.total ?? 0;
-        
-        // Derive total quantity
-        let totalQty = s.total_quantity || s.item_infos?.total_order_qty || s.item_infos?.total_order_quantity || 0;
-        if (s.calculation_infos?.items && Array.isArray(s.calculation_infos.items)) {
-          totalQty = s.calculation_infos.items.reduce((sum: number, item: any) => sum + (item.qty || 0), 0);
-        }
+      // Derive total quantity
+      let totalQty = s.total_quantity || s.item_infos?.total_order_qty || s.item_infos?.total_order_quantity || 0;
+      if (s.calculation_infos?.items && Array.isArray(s.calculation_infos.items)) {
+        totalQty = s.calculation_infos.items.reduce((sum: number, item: any) => sum + (item.qty || 0), 0);
+      }
 
-        return { 
-          ...s, 
-          total_sellprice: total,
-          total_quantity: totalQty,
-          status: s.status ? s.status.charAt(0).toUpperCase() + s.status.slice(1).toLowerCase() : "Unknown", 
-          payment_method: pm, 
-          origin: s.origin === "ONLINE" || s.origin === "Online Sales" ? "Online" : (s.origin === "OFFLINE_SALES_RETURN" || s.origin === "Sales Return" ? "Offline Return" : "Offline"),
-        };
-      });
-      
       return {
-        items: normalized,
-        hasMore: dataList.length === limit,
-        stats: fetchedStats,
-        total: res?.data?.total_count || normalized.length
+        ...s,
+        total_sellprice: total,
+        total_quantity: totalQty,
+        status: s.status ? s.status.charAt(0).toUpperCase() + s.status.slice(1).toLowerCase() : "Unknown",
+        payment_method: pm,
+        origin: s.origin === "ONLINE" || s.origin === "Online Sales" ? "Online" : (s.origin === "OFFLINE_SALES_RETURN" || s.origin === "Sales Return" ? "Offline Return" : "Offline"),
       };
+    });
+
+    return {
+      items: normalized,
+      hasMore: dataList.length === limit,
+      stats: fetchedStats,
+      total: res?.data?.total_count || normalized.length
+    };
   }, [api]);
 
 
   const fetchDetails = async () => {
     try {
       const custRes = await api.getData(`${ENDPOINTS.CUSTOMERS}/by/shop/${SHOP_ID}`);
-      if (custRes?.data) { 
-        const m: Record<string, string> = {}; 
+      if (custRes?.data) {
+        const m: Record<string, string> = {};
         const custList = Array.isArray(custRes.data) ? custRes.data : (custRes.data.datas ?? []);
-        custList.forEach((c: any) => { m[c.id] = c.name; }); 
-        setCustomerMap(m); 
+        custList.forEach((c: any) => { m[c.id] = c.name; });
+        setCustomerMap(m);
       }
       const invRes = await api.getData(ENDPOINTS.INVENTORIES);
-      if (invRes?.data) { 
-        const m: Record<string, string> = {}; 
+      if (invRes?.data) {
+        const m: Record<string, string> = {};
         const invList = Array.isArray(invRes.data) ? invRes.data : (invRes.data.inventories ?? invRes.data.datas ?? []);
-        invList.forEach((p: any) => { m[p.id] = p.name; }); 
-        setProductMap(m); 
+        invList.forEach((p: any) => { m[p.id] = p.name; });
+        setProductMap(m);
       }
     } catch (err) { console.error("Failed to fetch details:", err); }
   };
@@ -307,7 +307,7 @@ const SalesListPage: React.FC = () => {
           setAnalyticsStats({ overview: { sales: data } });
         }
       })
-      .catch(() => {});
+      .catch(() => { });
   }, [api]);
 
   const filters = useMemo(() => ({
@@ -330,7 +330,7 @@ const SalesListPage: React.FC = () => {
 
     if (debouncedSearch) {
       const q = debouncedSearch.toLowerCase();
-      result = result.filter((s: any) => 
+      result = result.filter((s: any) =>
         (s.ui_id && s.ui_id.toString().toLowerCase().includes(q)) ||
         (s.customer?.customer_name && s.customer.customer_name.toLowerCase().includes(q)) ||
         (s.customer_id && s.customer_id.toLowerCase().includes(q)) ||
@@ -354,12 +354,12 @@ const SalesListPage: React.FC = () => {
     }
 
     if (fromDate) {
-      const f = new Date(fromDate).setHours(0,0,0,0);
+      const f = new Date(fromDate).setHours(0, 0, 0, 0);
       result = result.filter((s: any) => new Date(s.created_at).getTime() >= f);
     }
 
     if (toDate) {
-      const t = new Date(toDate).setHours(23,59,59,999);
+      const t = new Date(toDate).setHours(23, 59, 59, 999);
       result = result.filter((s: any) => new Date(s.created_at).getTime() <= t);
     }
 
@@ -451,8 +451,8 @@ const SalesListPage: React.FC = () => {
           type="button"
           onClick={() => setIsFilterOpen(true)}
           className={`h-8 px-3 rounded-md border text-xs font-semibold flex items-center gap-1.5 active:scale-95 transition-all shadow-sm shrink-0 ${activeFilters > 0
-              ? "border-blue-200 text-blue-600 bg-blue-50/50"
-              : "border-slate-200 text-slate-650 bg-white hover:bg-slate-50"
+            ? "border-blue-200 text-blue-600 bg-blue-50/50"
+            : "border-slate-200 text-slate-650 bg-white hover:bg-slate-50"
             }`}
           title="Filters"
         >
@@ -468,7 +468,7 @@ const SalesListPage: React.FC = () => {
         <button className="inline-flex items-center gap-1.5 h-8 px-3.5 text-xs font-bold bg-blue-600 text-white border-none rounded-md cursor-pointer transition-all hover:bg-blue-700 hover:shadow-lg shadow-blue-500/20 active:scale-95 whitespace-nowrap shrink-0" onClick={() => setIsReturnSearchOpen(true)}>
           <RotateCcw size={13} />Process Return
         </button>
-     
+
       </div>
 
       <RightSidebarFilter
@@ -580,7 +580,7 @@ const SalesListPage: React.FC = () => {
                 const dateStr = sale.created_at.split("T")[0];
                 const refundedCount = (sale.items || []).filter((i: any) => i.status === "REFUNDED").length;
                 const exchangedCount = (sale.items || []).filter((i: any) => i.status === "EXCHANGED").length;
-                const hasReturns = (sale.returns && sale.returns.length > 0) || (sale.items || []).some((i: any) => (i.returned_quantity && i.returned_quantity > 0) || i.status === "REFUNDED" || i.status === "EXCHANGED");
+                const hasReturns = (sale.returns && sale.returns.length > 0) || (sale.items || []).some((i: any) => (i.returned_quantity && i.returned_quantity > 0) || i.status === "REFUNDED" || i.status === "EXCHANGED") || sale.status === "Returned" || sale.status === "RETURNED";
 
                 const itemsList = sale.items || [];
                 const getFirstItemDisplay = () => {
@@ -591,8 +591,8 @@ const SalesListPage: React.FC = () => {
                   const unit = firstItem.entered_unit || firstItem.unit || "";
                   return `${name} (${qty} ${unit})`;
                 };
-                const itemsDisplay = itemsList.length > 1 
-                  ? `${getFirstItemDisplay()} +${itemsList.length - 1} more` 
+                const itemsDisplay = itemsList.length > 1
+                  ? `${getFirstItemDisplay()} +${itemsList.length - 1} more`
                   : getFirstItemDisplay();
 
                 const isSelected = selectedSale?.id === sale.id;
@@ -608,7 +608,7 @@ const SalesListPage: React.FC = () => {
                       <div>
                         <span className="font-mono text-[11px] font-semibold text-slate-800 block">#{sale.ui_id}</span>
                         <div className="flex gap-1 mt-1 flex-wrap">
-                          {sale.origin === "Sales Return" && <AntBadge variant="tx-sales-return" type="tag">Return</AntBadge>}
+                          {sale.origin === "Offline Return" && <AntBadge variant="tx-sales-return" type="tag">Return</AntBadge>}
                           {hasReturns && <AntBadge variant="tx-sales-return" type="tag">Returned</AntBadge>}
                           {refundedCount > 0 && <AntBadge variant="pay-partial" type="tag">{refundedCount} Refunded</AntBadge>}
                           {exchangedCount > 0 && <AntBadge variant="tx-sales" type="tag">{exchangedCount} Exchanged</AntBadge>}
@@ -697,7 +697,7 @@ const SalesListPage: React.FC = () => {
       </div>
 
       {/* ── Return Modal ── */}
-      {returnSale && <ReturnModal sale={returnSale} onClose={closeReturn} onRefresh={() => {}} productMap={productMap} />}
+      {returnSale && <ReturnModal sale={returnSale} onClose={closeReturn} onRefresh={() => { }} productMap={productMap} />}
 
       {/* ── Return Search Modal ── */}
       <ReturnSearchPortal

@@ -3,11 +3,6 @@ import {
   Megaphone,
   Package,
   Edit3,
-  Eye,
-  ShoppingBag,
-  IndianRupee,
-  LayoutGrid,
-  TrendingUp,
   Share2,
   ExternalLink,
   MapPin,
@@ -20,6 +15,8 @@ import {
   Calendar,
   Hash,
   Tag,
+  QrCode,
+  Users,
 } from "lucide-react";
 import { shopApi } from "@/services/api/shop";
 import { inventoryApi } from "@/services/api/inventory";
@@ -27,7 +24,7 @@ import { SHOP_ID } from "@/services/endpoints";
 import ProductDashboard from "../pages/StoreProductManagement";
 import Promotions from "../pages/Promotions";
 import { StoreSettingsLayout } from "./StoreSettingsLayout";
-
+import { useNavigate } from "react-router-dom";
 type TabType = "Announcements" | "Products" | "Settings";
 
 interface ShopData {
@@ -72,38 +69,6 @@ const HeaderSkeleton = () => (
   </div>
 );
 
-// ─── Stat Card ────────────────────────────────────────────────────────────────
-interface StatCardProps {
-  label: string;
-  sublabel: string;
-  value: string;
-  suffix?: string;
-  trend: string;
-  trendUp: boolean;
-  trendDesc?: string;
-  icon: React.ReactNode;
-}
-const StatCard = ({ label, sublabel, value, suffix, trend, trendUp, trendDesc, icon }: StatCardProps) => (
-  <div className="bg-white rounded-xl border border-slate-200 p-4 relative overflow-hidden group hover:border-slate-300 hover:shadow-sm transition-all duration-200">
-    <div className="absolute top-4 right-4 w-8 h-8 rounded-full flex items-center justify-center bg-slate-50 text-slate-500 border border-slate-100">
-      {icon}
-    </div>
-    <p className="text-[11px] font-bold text-slate-500 mb-1">
-      {sublabel ? `${label} · ${sublabel}` : label}
-    </p>
-    <div className="flex items-baseline gap-1.5 mb-2 mt-2">
-      <span className="text-[24px] font-extrabold text-slate-800 leading-none tracking-tight">{value}</span>
-      {suffix && <span className="text-[12px] font-semibold text-slate-400">{suffix}</span>}
-    </div>
-    <div className="flex items-center gap-1.5">
-      <div className={`flex items-center gap-0.5 text-[11px] font-bold px-1.5 py-0.5 rounded-md ${trendUp ? "bg-emerald-50 text-emerald-600" : "bg-slate-100 text-slate-500"}`}>
-        <TrendingUp size={11} className={trendUp ? "text-emerald-500" : "text-slate-400"} />
-        {trend}
-      </div>
-      {trendDesc && <span className="text-[11px] text-slate-400 font-medium">{trendDesc}</span>}
-    </div>
-  </div>
-);
 
 // ─── Tab config ───────────────────────────────────────────────────────────────
 const TAB_CONFIG: { tab: TabType; icon: React.ElementType; desc: string }[] = [
@@ -116,6 +81,7 @@ const TAB_CONFIG: { tab: TabType; icon: React.ElementType; desc: string }[] = [
 // MAIN COMPONENT
 // ═══════════════════════════════════════════════════════════════════════════════
 const DigitalMain = () => {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<TabType>("Announcements");
   const [shop, setShop] = useState<ShopData | null>(null);
   const [fallbackProductImage, setFallbackProductImage] = useState<string | null>(null);
@@ -123,6 +89,10 @@ const DigitalMain = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!SHOP_ID || SHOP_ID === "string") {
+      navigate("/setup-digital-store");
+      return;
+    }
     const fetch = async () => {
       setLoading(true);
       try {
@@ -149,14 +119,9 @@ const DigitalMain = () => {
       }
     };
     fetch();
-  }, []);
+  }, [navigate]);
 
-  const STATS = [
-    { label: "Store Views", sublabel: "Today", value: "347", trend: "+22%", trendUp: true, trendDesc: "vs yesterday", icon: <Eye size={15} strokeWidth={2} /> },
-    { label: "Orders", sublabel: "Today", value: "12", trend: "+3", trendUp: true, trendDesc: "vs yesterday", icon: <ShoppingBag size={15} strokeWidth={2} /> },
-    { label: "Revenue", sublabel: "Today", value: "₹4,820", trend: "avg ₹402/order", trendUp: true, icon: <IndianRupee size={15} strokeWidth={2} /> },
-    { label: "Products Live", sublabel: "", value: "18", suffix: "/ 24", trend: "6 hidden", trendUp: false, icon: <LayoutGrid size={15} strokeWidth={2} /> },
-  ];
+
 
   if (loading) return (
     <div className="min-h-screen bg-slate-50/60">
@@ -300,12 +265,32 @@ const DigitalMain = () => {
             <p className="text-sm text-slate-500 leading-relaxed mb-4 max-w-2xl">{shop.description}</p>
           )}
 
-          {/* Stats strip */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-1">
-            {STATS.map((s, i) => (
-              <StatCard key={i} {...s} />
-            ))}
+          {/* QR Code & Followers */}
+          <div className="flex flex-wrap items-center gap-4 pt-2 pb-2">
+            <div className="flex items-center gap-3 bg-white px-4 py-2.5 rounded-xl border border-slate-200 shadow-sm cursor-pointer hover:border-blue-300 transition-all">
+              <div className="p-1.5 bg-blue-50 rounded-lg border border-blue-100">
+                <QrCode size={20} className="text-blue-600" />
+              </div>
+              <div>
+                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-0.5">Store QR</p>
+                <p className="text-sm font-extrabold text-slate-800 leading-none">View & Share</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 bg-white px-4 py-2.5 rounded-xl border border-slate-200 shadow-sm">
+              <div className="p-1.5 bg-indigo-50 rounded-lg border border-indigo-100">
+                <Users size={20} className="text-indigo-600" />
+              </div>
+              <div>
+                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-0.5">Followers</p>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-sm font-extrabold text-slate-800 leading-none">1.2K</span>
+                  <span className="text-[10px] font-bold text-emerald-500 bg-emerald-50 px-1.5 py-0.5 rounded-md">+12 new</span>
+                </div>
+              </div>
+            </div>
           </div>
+
         </div>
       </div>
 

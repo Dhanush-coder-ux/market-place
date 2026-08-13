@@ -732,9 +732,25 @@ const VerticalTable = ({ data, selectedIds, onSelect, totalCount, lastElementRef
                       </button>
                       {po.purchaseType === 'Purchase' && po.status?.toUpperCase() !== 'CANCELED' && po.status?.toUpperCase() !== 'CANCELLED' && (
                         <button
-                          onClick={() => navigate(`/purchase/edit/${po.id}`)}
-                          className="text-amber-400 hover:text-amber-500 transition-colors p-1"
-                          title="Edit Purchase"
+                          onClick={() => {
+                            const hasReturns = (po.returns?.length || 0) > 0 || ((po as any).purchase_returns?.length || 0) > 0;
+                            if (hasReturns) {
+                              alert("Cannot edit purchase because items have been returned.");
+                              return;
+                            }
+                            navigate(`/purchase/edit/${po.id}`);
+                          }}
+                          className={`p-1 transition-colors ${
+                            ((po.returns?.length || 0) > 0 || ((po as any).purchase_returns?.length || 0) > 0)
+                              ? 'text-slate-300 cursor-not-allowed'
+                              : 'text-amber-400 hover:text-amber-500'
+                          }`}
+                          title={
+                            ((po.returns?.length || 0) > 0 || ((po as any).purchase_returns?.length || 0) > 0)
+                              ? "Cannot edit because items have been returned"
+                              : "Edit Purchase"
+                          }
+                          disabled={((po.returns?.length || 0) > 0 || ((po as any).purchase_returns?.length || 0) > 0)}
                         >
                           <Pencil size={15} />
                         </button>

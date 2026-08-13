@@ -3,27 +3,19 @@ import {
   Store, 
   Clock, 
   Truck, 
-  CreditCard, 
   Palmtree, 
   AlertTriangle,
   Save,
   Trash2,
   CheckCircle2,
-  AlertCircle,
-  Plus,
-  Package,
-  Boxes,
-  ShoppingBag,
-  BarChart2,
-  Settings2
+  AlertCircle
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
 import { ShopProfileForm } from "../../Setting/pages/ShopProfileForm";
 import OperatingHours from "../pages/OperatingHours";
 import DeliveryPreferences from "../pages/Deliveryinfo";
 import { useToast } from "@/context/ToastContext";
 
-type SettingSection = "details" | "hours" | "delivery" | "payments" | "vacation" | "danger";
+type SettingSection = "details" | "hours" | "delivery" | "vacation" | "danger";
 
 interface SidebarItem {
   id: SettingSection;
@@ -31,29 +23,14 @@ interface SidebarItem {
   icon: React.ElementType;
 }
 
-const QUICK_ACTIONS = [
-  { label: "Add Product", desc: "List a new item", icon: Plus, path: "/product/add", color: "#2563eb", bg: "#eff6ff" },
-  { label: "Products", desc: "Manage listings", icon: Package, path: "/product/all", color: "#7c3aed", bg: "#f5f3ff" },
-  { label: "Inventory", desc: "Check stock", icon: Boxes, path: "/inventory", color: "#0891b2", bg: "#ecfeff" },
-  { label: "Orders", desc: "Recent orders", icon: ShoppingBag, path: "/orders", color: "#16a34a", bg: "#f0fdf4" },
-  { label: "Analytics", desc: "View insights", icon: BarChart2, path: "/sales", color: "#d97706", bg: "#fefce8" },
-  { label: "Settings", desc: "Store config", icon: Settings2, path: "/settings", color: "#64748b", bg: "#f8fafc" },
-];
-
 export function StoreSettingsLayout({ shop }: { shop: any }) {
-  const navigate = useNavigate();
   const [activeSection, setActiveSection] = useState<SettingSection>("details");
   const { showToast } = useToast();
 
   const [hoursStatus, setHoursStatus] = useState<React.ReactNode>(null);
   const [deliveryStatus, setDeliveryStatus] = useState<React.ReactNode>(null);
 
-  // Payments State
-  const [codEnabled, setCodEnabled] = useState(true);
-  const [upiEnabled, setUpiEnabled] = useState(true);
-  const [upiId, setUpiId] = useState("store@upi");
-  const [cardEnabled, setCardEnabled] = useState(false);
-  const [savingPayments, setSavingPayments] = useState(false);
+
 
   // Vacation Mode State
   const [vacationEnabled, setVacationEnabled] = useState(false);
@@ -69,18 +46,11 @@ export function StoreSettingsLayout({ shop }: { shop: any }) {
     { id: "details", label: "Store details", icon: Store },
     { id: "hours", label: "Store hours", icon: Clock },
     { id: "delivery", label: "Delivery", icon: Truck },
-    { id: "payments", label: "Payments", icon: CreditCard },
     { id: "vacation", label: "Vacation mode", icon: Palmtree },
     { id: "danger", label: "Danger zone", icon: AlertTriangle },
   ];
 
-  const handleSavePayments = () => {
-    setSavingPayments(true);
-    setTimeout(() => {
-      setSavingPayments(false);
-      showToast("Payment options updated successfully", "success");
-    }, 800);
-  };
+
 
   const handleSaveVacation = () => {
     setSavingVacation(true);
@@ -138,26 +108,7 @@ export function StoreSettingsLayout({ shop }: { shop: any }) {
           })}
         </div>
 
-        {/* Quick Actions inside settings sidebar */}
-        <div className="mt-8 border-t border-slate-100 pt-4 space-y-2.5">
-          <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-2">Quick Actions</h4>
-          <div className="grid grid-cols-1 gap-1.5">
-            {QUICK_ACTIONS.map((a) => (
-              <button
-                key={a.label}
-                onClick={() => navigate(a.path)}
-                className="flex items-center gap-2.5 p-2 rounded-xl border border-slate-50 hover:border-blue-100 hover:bg-blue-50/40 transition-all duration-150 group text-left"
-              >
-                <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0" style={{ background: a.bg, color: a.color }}>
-                  <a.icon size={13} strokeWidth={2.5} />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-[11px] font-bold text-slate-700 truncate">{a.label}</p>
-                </div>
-              </button>
-            ))}
-          </div>
-        </div>
+
       </div>
 
       {/* Right Content Panel */}
@@ -266,84 +217,6 @@ export function StoreSettingsLayout({ shop }: { shop: any }) {
           </div>
         )}
 
-        {activeSection === "payments" && (
-          <div className="max-w-2xl space-y-6 animate-in fade-in duration-200">
-            <div className="border-b border-slate-100 pb-4 flex justify-between items-center">
-              <div>
-                <h3 className="text-sm font-bold text-slate-800">Payment Options</h3>
-                <p className="text-[11px] text-slate-400 font-medium mt-0.5">
-                  Select and configure the payment methods accepted by your online store.
-                </p>
-              </div>
-              <button
-                onClick={handleSavePayments}
-                disabled={savingPayments}
-                className="h-9 px-4 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-bold rounded-lg transition-all flex items-center gap-2 shadow-sm"
-              >
-                <Save className="w-4 h-4" />
-                {savingPayments ? "Saving..." : "Save Changes"}
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              {/* COD */}
-              <div className="flex items-start justify-between p-4 rounded-xl border border-slate-100 bg-slate-50/40">
-                <div className="space-y-1">
-                  <span className="text-xs font-bold text-slate-700 block">Cash on Delivery (COD)</span>
-                  <span className="text-[11px] text-slate-400 block">Allow customers to pay in cash upon receiving order.</span>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={codEnabled}
-                  onChange={(e) => setCodEnabled(e.target.checked)}
-                  className="w-4 h-4 text-blue-600 bg-slate-50 border-slate-300 rounded focus:ring-blue-500 mt-1 cursor-pointer"
-                />
-              </div>
-
-              {/* UPI */}
-              <div className="p-4 rounded-xl border border-slate-100 bg-slate-50/40 space-y-4">
-                <div className="flex items-start justify-between">
-                  <div className="space-y-1">
-                    <span className="text-xs font-bold text-slate-700 block">UPI Payments</span>
-                    <span className="text-[11px] text-slate-400 block">Allow direct instant transfers via UPI ID or QR Code.</span>
-                  </div>
-                  <input
-                    type="checkbox"
-                    checked={upiEnabled}
-                    onChange={(e) => setUpiEnabled(e.target.checked)}
-                    className="w-4 h-4 text-blue-600 bg-slate-50 border-slate-300 rounded focus:ring-blue-500 mt-1 cursor-pointer"
-                  />
-                </div>
-                {upiEnabled && (
-                  <div className="pt-3 border-t border-slate-100/70">
-                    <label className="block text-[11px] font-semibold text-slate-600 mb-1.5">UPI ID (for payments)</label>
-                    <input
-                      type="text"
-                      value={upiId}
-                      onChange={(e) => setUpiId(e.target.value)}
-                      className="w-full max-w-md h-9 px-3 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all shadow-sm"
-                      placeholder="e.g. storename@upi"
-                    />
-                  </div>
-                )}
-              </div>
-
-              {/* Credit/Debit Cards */}
-              <div className="flex items-start justify-between p-4 rounded-xl border border-slate-100 bg-slate-50/40">
-                <div className="space-y-1">
-                  <span className="text-xs font-bold text-slate-700 block">Credit / Debit Cards</span>
-                  <span className="text-[11px] text-slate-400 block">Accept Visa, Mastercard, RuPay, and Net Banking.</span>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={cardEnabled}
-                  onChange={(e) => setCardEnabled(e.target.checked)}
-                  className="w-4 h-4 text-blue-600 bg-slate-50 border-slate-300 rounded focus:ring-blue-500 mt-1 cursor-pointer"
-                />
-              </div>
-            </div>
-          </div>
-        )}
 
         {activeSection === "vacation" && (
           <div className="max-w-2xl space-y-6 animate-in fade-in duration-200">

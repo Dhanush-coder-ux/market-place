@@ -38,17 +38,17 @@ export default function Step1BasicDetails({ form, setForm, errors, setErrors }: 
   const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
-    
+
     if (name === "name") {
-      setErrors((prev) => ({ 
-        ...prev, 
-        name: value.trim().length >= 3 ? "" : "Store name must be at least 3 characters" 
+      setErrors((prev) => ({
+        ...prev,
+        name: value.trim().length >= 3 ? "" : "Store name must be at least 3 characters"
       }));
     }
     if (name === "gstNumber") {
-      setErrors((prev) => ({ 
-        ...prev, 
-        gstNumber: value.trim().length === 15 ? "" : "GSTIN must be exactly 15 characters" 
+      setErrors((prev) => ({
+        ...prev,
+        gstNumber: value.trim().length === 15 ? "" : "GSTIN must be exactly 15 characters"
       }));
     }
   };
@@ -67,7 +67,7 @@ export default function Step1BasicDetails({ form, setForm, errors, setErrors }: 
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
-      
+
       {/* Logos & Banners (New fields) */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
@@ -107,22 +107,20 @@ export default function Step1BasicDetails({ form, setForm, errors, setErrors }: 
           <button
             type="button"
             onClick={() => setForm((prev) => ({ ...prev, gstRegistered: true }))}
-            className={`py-3 rounded-lg border text-xs font-bold transition-all ${
-              form.gstRegistered
+            className={`py-3 rounded-lg border text-xs font-bold transition-all ${form.gstRegistered
                 ? "bg-blue-50 border-blue-500 text-blue-600 shadow-sm"
                 : "bg-white border-slate-200 text-slate-500 hover:bg-slate-50"
-            }`}
+              }`}
           >
             Yes, GST Registered
           </button>
           <button
             type="button"
             onClick={() => setForm((prev) => ({ ...prev, gstRegistered: false, gstNumber: "" }))}
-            className={`py-3 rounded-lg border text-xs font-bold transition-all ${
-              !form.gstRegistered
+            className={`py-3 rounded-lg border text-xs font-bold transition-all ${!form.gstRegistered
                 ? "bg-blue-50 border-blue-500 text-blue-600 shadow-sm"
                 : "bg-white border-slate-200 text-slate-500 hover:bg-slate-50"
-            }`}
+              }`}
           >
             No GST Registration
           </button>
@@ -135,18 +133,17 @@ export default function Step1BasicDetails({ form, setForm, errors, setErrors }: 
           <div className="flex items-center gap-2 mb-1.5">
             <label className="text-xs font-bold text-slate-500">GSTIN / GST Number <span className="text-blue-500">*</span></label>
           </div>
-          <input 
+          <input
             type="text"
-            name="gstNumber" 
-            value={form.gstNumber} 
-            onChange={handleChange} 
+            name="gstNumber"
+            value={form.gstNumber}
+            onChange={handleChange}
             maxLength={15}
             placeholder="e.g. 22AAAAA1111A1Z1"
-            className={`w-full px-4 py-3 rounded-lg border outline-none text-sm transition-all duration-200 uppercase ${
-              errors.gstNumber 
-                ? "border-blue-500 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10" 
+            className={`w-full px-4 py-3 rounded-lg border outline-none text-sm transition-all duration-200 uppercase ${errors.gstNumber
+                ? "border-blue-500 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
                 : `border-slate-200 ${selectedTheme.focusBorder} focus:ring-4 ${selectedTheme.focusRing}`
-            }`} 
+              }`}
           />
           {errors.gstNumber && <p className="text-[10px] text-blue-500 mt-1 font-medium">{errors.gstNumber}</p>}
         </div>
@@ -157,17 +154,16 @@ export default function Step1BasicDetails({ form, setForm, errors, setErrors }: 
         <div className="flex items-center gap-2 mb-1.5">
           <label className="text-xs font-bold text-slate-500">Store Name <span className="text-blue-500">*</span></label>
         </div>
-        <input 
+        <input
           type="text"
-          name="name" 
-          value={form.name} 
-          onChange={handleChange} 
+          name="name"
+          value={form.name}
+          onChange={handleChange}
           placeholder="e.g. Grace Premium Market"
-          className={`w-full px-4 py-3 rounded-lg border outline-none text-sm transition-all duration-200 ${
-            errors.name 
-              ? "border-blue-500 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10" 
+          className={`w-full px-4 py-3 rounded-lg border outline-none text-sm transition-all duration-200 ${errors.name
+              ? "border-blue-500 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
               : `border-slate-200 ${selectedTheme.focusBorder} focus:ring-4 ${selectedTheme.focusRing}`
-          }`} 
+            }`}
         />
         {errors.name && <p className="text-[10px] text-blue-500 mt-1 font-medium">{errors.name}</p>}
       </div>
@@ -176,23 +172,23 @@ export default function Step1BasicDetails({ form, setForm, errors, setErrors }: 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <label className="block text-xs font-bold text-slate-500 mb-1.5">Tagline / Slogan</label>
-          <input 
+          <input
             type="text"
-            name="tagline" 
+            name="tagline"
             maxLength={60}
-            value={form.tagline} 
-            onChange={handleChange} 
-            placeholder="Fresh picks, fair prices..." 
-            className={`w-full px-4 py-3 rounded-lg border border-slate-200 outline-none text-sm transition-all duration-200 focus:ring-4 ${selectedTheme.focusBorder} ${selectedTheme.focusRing}`} 
+            value={form.tagline}
+            onChange={handleChange}
+            placeholder="Fresh picks, fair prices..."
+            className={`w-full px-4 py-3 rounded-lg border border-slate-200 outline-none text-sm transition-all duration-200 focus:ring-4 ${selectedTheme.focusBorder} ${selectedTheme.focusRing}`}
           />
         </div>
 
         <div>
           <label className="block text-xs font-bold text-slate-500 mb-1.5">Store Category <span className="text-blue-500">*</span></label>
-          <select 
-            name="category" 
-            value={form.category} 
-            onChange={handleChange} 
+          <select
+            name="category"
+            value={form.category}
+            onChange={handleChange}
             className={`w-full px-4 py-3 rounded-lg border border-slate-200 outline-none text-sm transition-all duration-200 focus:ring-4 bg-white ${selectedTheme.focusBorder} ${selectedTheme.focusRing}`}
           >
             {CATEGORIES.map((cat) => (
@@ -205,14 +201,14 @@ export default function Step1BasicDetails({ form, setForm, errors, setErrors }: 
       {/* DESCRIPTION */}
       <div>
         <label className="block text-xs font-bold text-slate-500 mb-1.5">Store Description</label>
-        <textarea 
-          name="description" 
-          value={form.description} 
-          onChange={handleChange} 
+        <textarea
+          name="description"
+          value={form.description}
+          onChange={handleChange}
           maxLength={200}
-          rows={3} 
+          rows={3}
           placeholder="Briefly describe what your store sells..."
-          className={`w-full px-4 py-3 rounded-lg border border-slate-200 outline-none text-sm transition-all duration-200 focus:ring-4 resize-none ${selectedTheme.focusBorder} ${selectedTheme.focusRing}`} 
+          className={`w-full px-4 py-3 rounded-lg border border-slate-200 outline-none text-sm transition-all duration-200 focus:ring-4 resize-none ${selectedTheme.focusBorder} ${selectedTheme.focusRing}`}
         />
       </div>
 
@@ -220,13 +216,13 @@ export default function Step1BasicDetails({ form, setForm, errors, setErrors }: 
       <div>
         <label className="block text-xs font-bold text-slate-500 mb-1.5">Business / Shop Address</label>
         <div className="relative">
-          <input 
+          <input
             type="text"
-            name="address" 
-            value={form.address} 
-            onChange={handleChange} 
+            name="address"
+            value={form.address}
+            onChange={handleChange}
             placeholder="Block 4A, Green Street, Chennai, 600001"
-            className={`w-full pl-10 pr-4 py-3 rounded-lg border border-slate-200 outline-none text-sm transition-all duration-200 focus:ring-4 ${selectedTheme.focusBorder} ${selectedTheme.focusRing}`} 
+            className={`w-full pl-10 pr-4 py-3 rounded-lg border border-slate-200 outline-none text-sm transition-all duration-200 focus:ring-4 ${selectedTheme.focusBorder} ${selectedTheme.focusRing}`}
           />
           <MapPin className="absolute left-3.5 top-3.5 text-slate-400" size={16} />
         </div>

@@ -257,13 +257,7 @@ export const INVENTORY_IMPORT_COLUMNS: ImportColumnDef[] = [
     type: "number",
     example: "12000",
   },
-  {
-    key: "online_sell_price",
-    label: "Online Sell Price",
-    required: false,
-    type: "number",
-    example: "11500",
-  },
+
   {
     key: "gst",
     label: "GST (%)",
@@ -292,13 +286,7 @@ export const INVENTORY_IMPORT_COLUMNS: ImportColumnDef[] = [
     type: "boolean",
     example: "false",
   },
-  {
-    key: "visible_online",
-    label: "Visible Online (true/false)",
-    required: false,
-    type: "boolean",
-    example: "false",
-  },
+
 ];
 
 // ────────────────────────────────────────────────────────────────────────────────
@@ -402,6 +390,9 @@ export function transformRowToPayload(
   }
 
   if (entity === "inventory") {
+    if (payload.brand && payload.name && !payload.name.toLowerCase().includes(payload.brand.toLowerCase())) {
+      payload.name = `${payload.brand} ${payload.name}`;
+    }
     // Required fields defaults
     if (!payload.description) payload.description = payload.name || "";
     if (!payload.category_id) payload.category_id = "";
@@ -415,7 +406,6 @@ export function transformRowToPayload(
       };
     if (!payload.gst) payload.gst = "0%";
     if (payload.reorder_point === undefined) payload.reorder_point = 5;
-    if (payload.visible_online === undefined) payload.visible_online = false;
   }
 
   return payload;

@@ -1,5 +1,6 @@
 import { useMemo, useState, useEffect } from "react";
 import { useRef } from "react";
+import { createPortal } from "react-dom";
 import {
   Edit2, Plus, Search,
   AlertCircle, Eye, EyeOff,
@@ -948,10 +949,14 @@ const ProductDashboard = () => {
         </>
       )}
 
-      {/* ── Product & Custom Fields Modal ── */}
-      {editingProduct && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
-          <div className="bg-white rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+      {/* ── Product & Custom Fields Sidebar ── */}
+      {editingProduct && createPortal(
+        <>
+          <div 
+            className="fixed inset-0 z-[9999] bg-slate-900/40 backdrop-blur-sm transition-opacity duration-300 animate-fade-in"
+            onClick={() => setEditingProduct(null)}
+          />
+          <div className="fixed top-0 right-0 h-full z-[10000] bg-white shadow-2xl w-full max-w-[420px] flex flex-col animate-[slideLeft_0.25s_ease-out] border-l border-slate-100">
             
             {/* Modal Header */}
             <div className="px-6 py-4 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
@@ -1189,7 +1194,8 @@ const ProductDashboard = () => {
             </div>
 
           </div>
-        </div>
+        </>,
+        document.body
       )}
 
     </div>

@@ -684,7 +684,7 @@ export default function SupplierDetail() {
                         <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase whitespace-nowrap">Date</th>
                         <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase whitespace-nowrap">Ref / Invoice No</th>
                         <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase whitespace-nowrap">Cleared Amount</th>
-                        <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase whitespace-nowrap">Remaining Outstanding</th>
+                        <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase whitespace-nowrap">Invoice Outstanding</th>
                         <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase whitespace-nowrap">Payment Method</th>
                         <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase whitespace-nowrap">Notes</th>
                       </tr>

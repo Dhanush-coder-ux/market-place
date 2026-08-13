@@ -520,10 +520,19 @@ export default function StockAdjustmentPage() {
       }
 
       // 2. Confirm the adjustment by posting to the main endpoint with session_id
+      const itemReasons = items
+        .filter(item => item.reason || item.internalNote)
+        .map(item => `${item.product || 'Item'}: ${item.reason || ''} ${item.internalNote ? `(${item.internalNote})` : ''}`.trim())
+        .join(' | ');
+        
+      const finalDescription = notes 
+        ? (itemReasons ? `${notes}\n\nReasons: ${itemReasons}` : notes)
+        : (itemReasons ? `Reasons: ${itemReasons}` : `Stock Adjustment - ${new Date().toLocaleDateString()}`);
+
       const payload = {
         shop_id: SHOP_ID,
         type: "ADJUSTMENT",
-        description: notes || `Stock Adjustment - ${new Date().toLocaleDateString()}`,
+        description: finalDescription,
         session_id: sessionId,
         date: adjustmentDate,
       };

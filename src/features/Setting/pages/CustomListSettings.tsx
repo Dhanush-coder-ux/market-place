@@ -230,16 +230,7 @@ export const CustomListSettings: React.FC<CustomListSettingsProps> = ({ type }) 
                 )}
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1.5">Description (Optional)</label>
-                <input
-                  type="text"
-                  className="w-full h-9 px-3 bg-white border border-slate-200 rounded-lg text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all shadow-sm"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Enter a brief description"
-                />
-              </div>
+
 
               {type === "units" && (
                 <div className="pt-3 border-t border-slate-200 mt-2">

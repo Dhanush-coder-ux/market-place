@@ -164,11 +164,6 @@ export const sidebarLinks: SidebarLink[] = [
     name: "Digital Store",
     icon: Store,
     path: "/profile",
-    addPath: "/create-shop",
-    subLinks: [
-      { name: "Storefront", path: "/profile", icon: Store },
-      { name: "Setup Wizard", path: "/setup-digital-store", icon: ClipboardList }
-    ]
   },
 ];
 

@@ -16,7 +16,7 @@ export interface StoreFormData {
   bannerPreview?: string;
   gstRegistered?: boolean;
   gstNumber?: string;
-  
+
   // Step 2 Additions
   operatingHours: any[];
   deliveryOptions: {
@@ -24,7 +24,7 @@ export interface StoreFormData {
     standard: DeliveryConfig;
     nationwide: DeliveryConfig;
   };
-  
+
   // Step 3 Additions
   selectedProducts: Record<string, SelectedProductConfig>;
 }

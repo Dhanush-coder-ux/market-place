@@ -256,7 +256,8 @@ const DataTable: FC<{
   units: BackendRecord[];
   categoryMapping: Record<string, string>;
   unitMapping: Record<string, string>;
-}> = ({ rows, columns, hasCategoryUnit, rowErrors, categories, units, categoryMapping, unitMapping }) => {
+  onRowChange?: (rowIndex: number, key: string, value: any) => void;
+}> = ({ rows, columns, hasCategoryUnit, rowErrors, categories, units, categoryMapping, unitMapping, onRowChange }) => {
   const displayCols = columns.slice(0, 7);
 
   return (
@@ -328,8 +329,8 @@ const DataTable: FC<{
                 <tr
                   key={row._rowIndex}
                   className={`border-t border-slate-100 transition-colors ${isValid && catResolved && unitResolved
-                      ? "hover:bg-emerald-50/30"
-                      : "bg-red-50/40 hover:bg-red-50/60"
+                    ? "hover:bg-emerald-50/30"
+                    : "bg-red-50/40 hover:bg-red-50/60"
                     }`}
                 >
                   <td className="px-3 py-2 font-mono text-slate-400 text-[10px]">{row._rowIndex}</td>
@@ -347,6 +348,21 @@ const DataTable: FC<{
                   {displayCols.map((col) => {
                     const cellErr = rowErr?.errors[col.key];
                     const val = row[col.key];
+
+                    if (col.key === "stocks" && (val === 0 || val === "0" || val === "" || val === undefined || val === null)) {
+                      return (
+                        <td key={col.key} className="px-3 py-2 whitespace-nowrap">
+                          <input
+                            type="number"
+                            className={`w-20 text-[11px] border ${cellErr ? 'border-red-400' : 'border-slate-200'} rounded px-2 py-1 focus:border-blue-400 focus:outline-none`}
+                            value={val === undefined || val === null ? "" : val}
+                            onChange={(e) => onRowChange && onRowChange(row._rowIndex, col.key, e.target.value)}
+                            placeholder="Stock"
+                          />
+                        </td>
+                      );
+                    }
+
                     return (
                       <td key={col.key} className="px-3 py-2 whitespace-nowrap max-w-[160px]" title={cellErr || String(val || "")}>
                         {cellErr ? (
@@ -513,8 +529,8 @@ const MappingPanel: FC<{
                       value={mappedId || ""}
                       onChange={(e) => onCategoryMap(text, e.target.value)}
                       className={`w-full text-[11px] border rounded-lg px-2.5 py-2 focus:outline-none transition-colors ${mappedId
-                          ? "border-emerald-300 bg-emerald-50/50 text-emerald-800 focus:border-emerald-400"
-                          : "border-amber-300 bg-amber-50/50 text-slate-700 focus:border-amber-400"
+                        ? "border-emerald-300 bg-emerald-50/50 text-emerald-800 focus:border-emerald-400"
+                        : "border-amber-300 bg-amber-50/50 text-slate-700 focus:border-amber-400"
                         }`}
                     >
                       <option value="">— Choose category —</option>
@@ -574,8 +590,8 @@ const MappingPanel: FC<{
                       value={mappedId || ""}
                       onChange={(e) => onUnitMap(text, e.target.value)}
                       className={`w-full text-[11px] border rounded-lg px-2.5 py-2 focus:outline-none transition-colors ${mappedId
-                          ? "border-emerald-300 bg-emerald-50/50 text-emerald-800 focus:border-emerald-400"
-                          : "border-amber-300 bg-amber-50/50 text-slate-700 focus:border-amber-400"
+                        ? "border-emerald-300 bg-emerald-50/50 text-emerald-800 focus:border-emerald-400"
+                        : "border-amber-300 bg-amber-50/50 text-slate-700 focus:border-amber-400"
                         }`}
                     >
                       <option value="">— Choose unit —</option>
@@ -638,6 +654,26 @@ const ExcelImportModal: FC<ExcelImportModalProps> = ({
   const [submitResult, setSubmitResult] = useState<{ success: boolean; message: string; count?: number } | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleRowChange = useCallback((rowIndex: number, key: string, value: any) => {
+    setRows((prev) => {
+      const newRows = [...prev];
+      const rowIdx = newRows.findIndex((r) => r._rowIndex === rowIndex);
+      if (rowIdx > -1) {
+        newRows[rowIdx] = { ...newRows[rowIdx], [key]: value };
+
+        const newErr = validateRow(newRows[rowIdx], columns);
+        setRowErrors((prevErrs) => {
+          const otherErrs = prevErrs.filter((e) => e.rowIndex !== rowIndex);
+          if (Object.keys(newErr).length > 0) {
+            return [...otherErrs, { rowIndex, errors: newErr }];
+          }
+          return otherErrs;
+        });
+      }
+      return newRows;
+    });
+  }, [columns]);
 
   // ── Reset on open/close ───────────────────────────────────────────────────
   useEffect(() => {
@@ -988,6 +1024,7 @@ const ExcelImportModal: FC<ExcelImportModalProps> = ({
                   units={units}
                   categoryMapping={categoryMapping}
                   unitMapping={unitMapping}
+                  onRowChange={handleRowChange}
                 />
               </div>
 

@@ -381,7 +381,7 @@ export const Navbar = () => {
           {/* Animated Highlighted Digital Store Button */}
           <div className="relative group/ds hidden md:block select-none">
             <Link
-              to="/profile"
+              to="/setup-digital-store"
               className="relative inline-flex items-center gap-2 h-9 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md shadow-blue-100/50 hover:shadow-lg hover:shadow-blue-200/50 transition-all hover:-translate-y-0.5 overflow-hidden"
             >
               {/* Shine effect ray */}

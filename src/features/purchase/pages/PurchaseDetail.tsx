@@ -456,6 +456,7 @@ const PurchaseDetail = () => {
   const { purchase } = useBusinessApi();
   const { getData } = useApi();
   const { setBottomActions } = useHeader();
+  const { showToast } = useToast();
 
   // Retrieve po from state or use state fetched from API
   const [po, setPo] = useState<DirectPurchaseData | undefined>(location.state?.po);
@@ -474,8 +475,21 @@ const PurchaseDetail = () => {
         {po && po.purchaseType === 'Purchase' && po.status !== 'cancelled' && (
           <button
             type="button"
-            onClick={() => navigate(`/purchase/edit/${po.id}`)}
-            className="px-6 h-8 rounded-lg border border-blue-600 bg-blue-600 text-white font-bold text-xs hover:bg-blue-700 transition-all flex items-center shadow-sm"
+            onClick={() => {
+              const hasReturns = (po?.returns?.length || 0) > 0 || ((po as any)?.purchase_returns?.length || 0) > 0;
+              if (hasReturns) {
+                showToast("Cannot edit purchase because items have been returned.", "warning");
+                return;
+              }
+              navigate(`/purchase/edit/${po.id}`);
+            }}
+            disabled={(po?.returns?.length || 0) > 0 || ((po as any)?.purchase_returns?.length || 0) > 0}
+            title={((po?.returns?.length || 0) > 0 || ((po as any)?.purchase_returns?.length || 0) > 0) ? "Cannot edit because items have been returned" : "Edit Purchase"}
+            className={`px-6 h-8 rounded-lg border font-bold text-xs transition-all flex items-center shadow-sm ${
+              ((po?.returns?.length || 0) > 0 || ((po as any)?.purchase_returns?.length || 0) > 0)
+                ? "border-slate-300 bg-slate-100 text-slate-400 cursor-not-allowed" 
+                : "border-blue-600 bg-blue-600 text-white hover:bg-blue-700"
+            }`}
           >
             Edit Purchase
           </button>
@@ -490,7 +504,7 @@ const PurchaseDetail = () => {
       </div>
     );
     return () => setBottomActions(null);
-  }, [setBottomActions, navigate, po]);
+  }, [setBottomActions, navigate, po, showToast]);
 
   const fetchPo = useCallback(async () => {
     if (!id) return;

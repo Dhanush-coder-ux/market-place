@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import {
   IndianRupee, TrendingUp, ShoppingCart, Zap,
   BarChart2, ArrowUpRight, ArrowDownRight, Package,
-  Calendar, RefreshCw
+  Calendar, RefreshCw, ShoppingBag
 } from "lucide-react";
 import {
   AreaChart, Area, PieChart, Pie, Cell,
@@ -180,8 +180,8 @@ const AnalyticsDashboard = () => {
   }, [fetchStats, activeRange, customStart, customEnd, selectedSupplier, selectedCategory]);
 
   // ── Derived metrics ──
-  const salesOverall = stats?.dashboard?.sales?.overall ?? stats?.overview?.sales ?? {};
-  const purchaseOverall = stats?.dashboard?.purchase?.overall ?? stats?.overview?.purchase ?? {};
+  const salesOverall = stats?.dashboard?.sales?.overall ?? stats?.overview?.sales ?? stats?.sales ?? {};
+  const purchaseOverall = stats?.purchase ?? stats?.dashboard?.purchase?.overall ?? stats?.overview?.purchase ?? {};
 
   const totalOrders = salesOverall.total_sales ?? 0;
   const netRevenue = salesOverall.total_sales_amounts ?? 0;
@@ -189,6 +189,10 @@ const AnalyticsDashboard = () => {
   const totalCost = selectedSupplier && stats?.supplier
     ? (stats.supplier.total_purchase_amounts ?? 0)
     : (purchaseOverall.total_purchase_amounts ?? 0);
+
+  const totalPurchaseCount = purchaseOverall.total_purchase ?? 0;
+  const totalPurchaseStocks = purchaseOverall.total_purchase_stocks ?? 0;
+  const totalPurchaseOutstanding = purchaseOverall.total_outstanding_amounts ?? 0;
 
   const totalProfit = Math.max(0, netRevenue - totalCost);
   const aov = totalOrders > 0 ? netRevenue / totalOrders : 0;
@@ -413,7 +417,7 @@ const AnalyticsDashboard = () => {
         )}
 
         {/* ── STAT CARDS ── */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
           {/* Net Revenue */}
           <div className="bg-white rounded-xl p-5 border border-slate-100 shadow-sm hover:shadow-md transition-all duration-200 group flex flex-col justify-between">
             <div>
@@ -484,6 +488,37 @@ const AnalyticsDashboard = () => {
               <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
                 Total Cost: <span className="text-slate-600">{fmt(totalCost)}</span>
               </p>
+            </div>
+          </div>
+
+          {/* Total Purchase */}
+          <div className="bg-white rounded-xl p-5 border border-slate-100 shadow-sm hover:shadow-md transition-all duration-200 group flex flex-col justify-between">
+            <div>
+              <div className="flex items-start justify-between mb-3">
+                <div>
+                  <h3 className="text-[12px] font-bold uppercase tracking-wider text-slate-500">Total Purchase</h3>
+                  <p className="text-[11px] text-slate-400 font-medium mt-0.5">Procurement spend</p>
+                </div>
+                <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-indigo-50 shrink-0">
+                  <ShoppingBag className="w-5 h-5 text-indigo-600" />
+                </div>
+              </div>
+              <div className="flex items-end gap-2 mb-1">
+                <span className="text-[26px] font-bold text-slate-800 tracking-tight leading-none">
+                  {loading ? "—" : fmtShort(totalCost)}
+                </span>
+              </div>
+            </div>
+
+            <div className="mt-4 pt-4 border-t border-slate-100 space-y-1.5">
+              <div className="flex items-center justify-between text-[11px]">
+                <span className="font-bold text-slate-400 uppercase tracking-wider">Purchases:</span>
+                <span className="font-bold text-slate-700">{loading ? "—" : `${totalPurchaseCount} (${totalPurchaseStocks} stocks)`}</span>
+              </div>
+              <div className="flex items-center justify-between text-[11px]">
+                <span className="font-bold text-slate-400 uppercase tracking-wider">Outstanding:</span>
+                <span className="font-bold text-amber-600">{loading ? "—" : fmt(totalPurchaseOutstanding)}</span>
+              </div>
             </div>
           </div>
 

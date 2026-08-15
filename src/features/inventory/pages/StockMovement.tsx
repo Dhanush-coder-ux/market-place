@@ -26,7 +26,7 @@ import SkeletonLoader from "@/components/common/SkeletonLoader";
 
 // ─── Types & Interfaces ──────────────────────────────────────────────────────
 
-export type MovementType = "OPENING" | "PURCHASE" | "SALES" | "TRANSFER" | "STOCK_ADJUSTMENT" | "PO_PURCHASE" | "PRODUCTION" | "SALE_RETURN";
+export type MovementType = "OPENING" | "PURCHASE" | "PURCHASE_UPDATE" | "SALES" | "TRANSFER" | "STOCK_ADJUSTMENT" | "PO_PURCHASE" | "PRODUCTION" | "SALE_RETURN";
 export type StatusType = "Completed" | "Pending";
 
 export interface Movement {
@@ -384,7 +384,7 @@ function DetailDrawer({ movement, onClose }: DetailDrawerProps) {
 
 function AddMovementModal({ onClose }: { onClose: () => void }) {
   // Use real types for the form dropdown
-  const formTypes = ["PURCHASE", "PO_PURCHASE", "SALES", "TRANSFER", "STOCK_ADJUSTMENT", "SALE_RETURN"];
+  const formTypes = ["PURCHASE", "PO_PURCHASE", "PURCHASE_UPDATE", "SALES", "TRANSFER", "STOCK_ADJUSTMENT", "SALE_RETURN"];
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={onClose}>
@@ -746,7 +746,7 @@ export default function StockMovementPage() {
 
   const today = new Date().toISOString().slice(0, 10);
   const todayMvts = filtered.filter(m => fmtDate(m.date) === today);
-  const totalIn = todayMvts.filter(m => ["PURCHASE", "PO_PURCHASE"].includes(m.type)).reduce((s, m) => s + m.qty, 0);
+  const totalIn = todayMvts.filter(m => ["PURCHASE", "PO_PURCHASE", "PURCHASE_UPDATE"].includes(m.type)).reduce((s, m) => s + m.qty, 0);
   const totalOut = todayMvts.filter(m => m.type === "SALES").reduce((s, m) => s + Math.abs(m.qty), 0);
 
   function toggleSort(field: "date" | "qty") {

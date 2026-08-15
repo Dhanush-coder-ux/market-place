@@ -116,6 +116,7 @@ export interface DirectPurchaseData {
   payment_status?: string;
   version?: string;
   returns?: any[];
+  refund_amount?: number;
 }
 
 type ViewMode = "grid" | "horizontal" | "vertical";
@@ -291,6 +292,7 @@ export function toDisplayData(p: PurchaseRecord): DirectPurchaseData {
     status: d2?.status ?? (p as any).status ?? "completed",
     payment_status: (p as any).payment_status ?? "PENDING",
     returns: (p as any).returns || d2?.returns || (p as any).purchase_returns || d2?.purchase_returns || [],
+    refund_amount: Number((p as any).refund_amount || (p as any).return?.refund_amount || 0),
   };
 }
 
@@ -525,7 +527,7 @@ const GridCard = ({ po, selected, onClick }: { po: DirectPurchaseData; selected?
         <div>
           <p className="text-[10px] font-semibold   text-zinc-400 mb-0.5">Total Amount</p>
           <div className="flex items-center gap-2">
-            <AmountWithReturnHover total={po.total_cost} returns={po.returns || []} />
+            <AmountWithReturnHover total={po.total_cost} returns={po.returns || []} refundAmount={po.refund_amount} />
           </div>
         </div>
         <div className="flex items-center gap-4">
@@ -543,12 +545,12 @@ const GridCard = ({ po, selected, onClick }: { po: DirectPurchaseData; selected?
 };
 
 
-const AmountWithReturnHover = ({ total, returns }: { total: number; returns: any[] }) => {
-  const totalReturn = returns?.reduce((sum, r) => {
-    return sum + Number(r.return_value || r.totalAmount || r.amount || r.total_cost || r.return_cost || 0);
-  }, 0) || 0;
+const AmountWithReturnHover = ({ total, returns, refundAmount }: { total: number; returns?: any[]; refundAmount?: number }) => {
+  const totalReturn = (returns?.reduce((sum, r) => {
+    return sum + Number(r.total_refund_amount || r.refund_amount || r.return_value || r.totalAmount || r.amount || r.total_cost || r.return_cost || 0);
+  }, 0) || 0) + Number(refundAmount || 0);
 
-  if (!returns || returns.length === 0 || totalReturn === 0) {
+  if (totalReturn === 0) {
     return <span className="font-mono text-xs font-bold text-slate-900 tabular-nums">{fmt(total)}</span>;
   }
 
@@ -707,7 +709,7 @@ const VerticalTable = ({ data, selectedIds, onSelect, totalCount, lastElementRef
 
                   {/* Amount */}
                   <td className="p-2.5 px-3 text-right">
-                    <AmountWithReturnHover total={po.total_cost} returns={po.returns || []} />
+                    <AmountWithReturnHover total={po.total_cost} returns={po.returns || []} refundAmount={po.refund_amount} />
                   </td>
 
                   {/* Purchase Status */}

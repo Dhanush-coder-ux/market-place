@@ -74,6 +74,7 @@ const SalesListPage = React.lazy(() => import("@/features/sales/pages/SalesPage"
 const SaleDetailPage = React.lazy(() => import("@/features/sales/pages/SaleDetailPage"));
 const SaleSearch = React.lazy(() => import("@/features/sales/pages/SaleSearch"));
 const Order = React.lazy(() => import("../features/order/pages/Order"));
+const DeliveryVerifyPage = React.lazy(() => import("../features/order/pages/DeliveryVerifyPage"));
 const Billing = React.lazy(() => import("../features/billing/pages/Billing"));
 
 // ─── Digital Store ───────────────────────────────────────────────────────────
@@ -207,6 +208,14 @@ export const router = createBrowserRouter([
     element: (
       <Suspense fallback={<Loader />}>
         <EmployeeVerifyPage />
+      </Suspense>
+    )
+  },
+  {
+    path: '/verify-delivery',
+    element: (
+      <Suspense fallback={<Loader />}>
+        <DeliveryVerifyPage />
       </Suspense>
     )
   },

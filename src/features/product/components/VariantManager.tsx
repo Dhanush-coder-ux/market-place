@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { 
   Plus, 
   Trash2, 
@@ -82,12 +82,17 @@ export const VariantBuilder: React.FC<VariantBuilderProps> = ({ variantTypes, on
   const [newTypeName, setNewTypeName] = useState("");
   const [valueInputs, setValueInputs] = useState<Record<string, string>>({});
   const [showPresets, setShowPresets] = useState<Record<string, boolean>>({});
+  const valueInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   const addType = (name: string) => {
     if (!name.trim()) return;
     if (variantTypes.find(t => t.name.toLowerCase() === name.toLowerCase())) return;
-    onChange([...variantTypes, { id: uid(), name: name.trim(), values: [] }]);
+    const newId = uid();
+    onChange([...variantTypes, { id: newId, name: name.trim(), values: [] }]);
     setNewTypeName("");
+    setTimeout(() => {
+      valueInputRefs.current[newId]?.focus();
+    }, 50);
   };
 
   const removeType = (id: string) => onChange(variantTypes.filter(t => t.id !== id));
@@ -170,6 +175,7 @@ export const VariantBuilder: React.FC<VariantBuilderProps> = ({ variantTypes, on
 
             <div className="flex gap-2">
               <input
+                ref={el => { valueInputRefs.current[vt.id] = el; }}
                 className="flex-1 h-10 px-4 text-xs border border-slate-200 rounded-lg bg-white text-slate-800 placeholder-slate-300 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
                 placeholder={`Add ${vt.name} value`}
                 value={inputVal}

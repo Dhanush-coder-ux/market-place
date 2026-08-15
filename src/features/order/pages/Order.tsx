@@ -14,15 +14,19 @@ import { SHOP_ID } from "@/services/endpoints";
 import { orderApi } from "@/services/api/order";
 import { customerApi } from "@/services/api/customer";
 import type { OrderRecord } from "@/types/api";
+import { VerifyDeliveryModal } from "../components/VerifyDeliveryModal";
 
 const toCardShape = (o: OrderRecord, customerMap?: Record<string, { name: string, phone: string }>) => {
   const c = o.customer_id && customerMap ? customerMap[o.customer_id] : null;
   return {
+    id: o.id,
     billNo: o.ui_id || o.id,
     customerName: o.customer_name || o.additional_infos?.customer_name || o.datas?.customer_name || c?.name || "Unknown",
     phone: o.customer_number || o.additional_infos?.customer_phone || o.datas?.phone || c?.phone || "—",
     totalAmount: Number(Number(o.calculation_infos?.total ?? o.calculation_infos?.grand_total ?? o.total_amount ?? o.datas?.total_amount ?? o.item_infos?.total_order_amount ?? o.pending_amount ?? 0).toFixed(2)),
     status: o.status ?? "PENDING",
+    origin: o.origin || "OFFLINE",
+    deliveryCode: (o as any).delivery_code || null,
   };
 };
 
@@ -36,7 +40,10 @@ const Order = () => {
   const [open, setOpen] = useState(false);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
-  const [refreshKey] = useState(0);
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  // Verify delivery state
+  const [verifyingOrder, setVerifyingOrder] = useState<{ id: string; billNo: string; customerName: string } | null>(null);
 
   useEffect(() => {
     customerApi.getCustomersByShopId(SHOP_ID, { limit: "100", offset: "1" })
@@ -150,9 +157,7 @@ const Order = () => {
   };
 
   const onlineOrders = orders.filter((o) => o.origin === "ONLINE");
-  
-  const filteredOrders = onlineOrders; // status filtering is now handled by the backend
-
+  const filteredOrders = onlineOrders;
   const totalOrders = onlineOrders.length;
   const pending = onlineOrders.filter((o) => o.status === "PENDING").length;
   const processing = onlineOrders.filter((o) => o.status === "PROCESSING").length;
@@ -214,16 +219,20 @@ const Order = () => {
           </div>
         ) : filteredOrders.length > 0 ? (
           <div className={viewMode === "grid" ? "grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4" : "flex flex-col gap-3"}>
-            {filteredOrders.map((order) => (
-              <OrdersCard
-                key={order.id}
-                order={toCardShape(order, customerMap)}
-                setIsOpen={() => handleOpenDetails(order)}
-                viewMode={viewMode}
-                onStatusChange={(newStatus) => handleStatusChange(newStatus, order)}
-                onDeleteClick={(e) => { e.stopPropagation(); handleDeleteOrder(order.id); }}
-              />
-            ))}
+            {filteredOrders.map((order) => {
+              const cardData = toCardShape(order, customerMap);
+              return (
+                <OrdersCard
+                  key={order.id}
+                  order={cardData}
+                  setIsOpen={() => handleOpenDetails(order)}
+                  viewMode={viewMode}
+                  onStatusChange={(newStatus) => handleStatusChange(newStatus, order)}
+                  onDeleteClick={(e) => { e.stopPropagation(); handleDeleteOrder(order.id); }}
+                  onVerifyDelivery={() => setVerifyingOrder({ id: order.id, billNo: cardData.billNo, customerName: cardData.customerName })}
+                />
+              );
+            })}
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center bg-white rounded-lg border border-slate-200 shadow-sm py-20 gap-3">
@@ -240,9 +249,23 @@ const Order = () => {
       </Drawer>
 
       <DateFilter isOpen={open} onClose={() => setOpen(false)} onApply={(range) => { console.log(range); setOpen(false); }} />
+
+      {/* Verify Delivery Modal */}
+      <VerifyDeliveryModal
+        isOpen={!!verifyingOrder}
+        onClose={() => setVerifyingOrder(null)}
+        orderId={verifyingOrder?.id || ""}
+        billNo={verifyingOrder?.billNo || ""}
+        customerName={verifyingOrder?.customerName || ""}
+        onVerified={() => {
+          // Update order status in local state to DELIVERED
+          setOrders(prev => prev.map(o => o.id === verifyingOrder?.id ? { ...o, status: "DELIVERED" } : o));
+          setVerifyingOrder(null);
+          setRefreshKey(k => k + 1);
+        }}
+      />
     </div>
   );
 };
 
 export default Order;
-

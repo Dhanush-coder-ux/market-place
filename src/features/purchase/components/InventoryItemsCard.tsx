@@ -1,4 +1,4 @@
-import { Search,
+import {
   Plus,
   Trash2,
   Settings,
@@ -528,36 +528,7 @@ const executeProductSelect = async (targetIndex: number, val: any, initialOpt: a
   return (
     <>
 
-      {/* Search & Add Product */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 mb-6">
-        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 flex items-center gap-2">
-          <Search size={14} className="text-blue-500" />
-          Search & Add Product from Inventory
-        </label>
-        <SearchSelect
-            labelKey="name"
-            valueKey="id"
-            fetchOptions={async (q) => await inventoryApi.searchInventories(q)}
-            options={[]}
-            value={""}
-            onCreateNew={(query) => {
-              if (onAddNewProduct) {
-                onAddNewProduct(query);
-              }
-            }}
-            onChange={async (val, opt) => {
-               // Find first empty row
-               let targetIndex = products.findIndex(p => !p.inventory_id && !p.name);
-               if (targetIndex === -1) {
-                  targetIndex = products.length;
-               }
-               await executeProductSelect(targetIndex, val, opt);
-            }}
-            placeholder="Search products by name or SKU..."
-            className="!h-11 text-sm bg-white"
-            entityName="Product"
-        />
-      </div>
+
 
       {/* Variant Modal — rendered outside the card to avoid overflow clipping */}
       {variantModal.isOpen && createPortal(

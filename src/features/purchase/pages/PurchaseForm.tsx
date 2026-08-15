@@ -152,7 +152,7 @@ const PurchaseForm = () => {
     const otherCost = Number(charges.other) || 0;
     const totalCharges = transportCost + otherCost;
 
-    const grandTotal = Math.round(subtotal + totalGst);
+    const grandTotal = subtotal + totalGst;
     const paid = Number(payment.amountPaid) || 0;
     const outstanding = grandTotal - paid;
 
@@ -462,7 +462,7 @@ const PurchaseForm = () => {
 
     setPayment({
       method: "CASH",
-      amountPaid: "",
+      amountPaid: ""
     });
 
     setCostMethod("None");
@@ -582,9 +582,20 @@ const PurchaseForm = () => {
         "Equally": "EQUALLY"
       };
 
+      const hasPaidAmount = payment.amountPaid !== "" && payment.amountPaid !== null && payment.amountPaid !== undefined && Number(payment.amountPaid) > 0;
+      const paymentInfosPayload = hasPaidAmount
+        ? [
+            {
+              method: payment.method,
+              amount: Number(payment.amountPaid)
+            }
+          ]
+        : [];
+
       const payload = {
+        purchase_id: id || undefined,
         shop_id: SHOP_ID,
-        supplier_id: supplierDetails?.id || "SUP_" + purchaseDetails.supplier.substring(0, 3).toUpperCase(),
+        supplier_id: supplierDetails?.id || "SUP_" + (purchaseDetails?.supplier?.substring(0, 3)?.toUpperCase() || "UNK"),
         type: purchaseType,
         calculation_infos: {
           distribute_by: costMethodMap[costMethod] || "NONE",
@@ -597,12 +608,7 @@ const PurchaseForm = () => {
           transport_charge: Number(charges.transport) || 0,
           other_charge: Number(charges.other) || 0
         },
-        payment_infos: [
-          {
-            method: payment.method,
-            amount: Number(payment.amountPaid) || stats.grandTotal
-          }
-        ],
+        payment_infos: paymentInfosPayload,
         purchase_date: purchaseDetails.date,
         items: transformedProducts,
         invoice_no: purchaseDetails.invoiceNo || ""
@@ -910,8 +916,8 @@ const PurchaseForm = () => {
 
               <div className="p-6 flex flex-col gap-6">
 
-                {/* Row 1 & 2: Transport, Other Charges, Paid By, Distribute By */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {/* Row 1: Transport & Other Charges */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* Transport */}
                   <div className="flex flex-col gap-2">
                     <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5 group cursor-help w-fit">
@@ -951,29 +957,6 @@ const PurchaseForm = () => {
                       />
                     </div>
                   </div>
-
-                  {/* Paid By (Dropdown) */}
-                  <div className="flex flex-col gap-2">
-                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5 group cursor-help w-fit">
-                      Paid By
-                      <Tooltip message="The method of payment used for this transaction.">
-                        <span className="cursor-help flex"><Info size={12} className="text-slate-400 group-hover:text-blue-500 transition-colors" /></span>
-                      </Tooltip>
-                    </label>
-                    <ReusableSelect
-                      value={payment.method}
-                      onValueChange={(val) => setPayment({ ...payment, method: val as PaymentMethod })}
-                      options={[
-                        { value: "CASH", label: "Cash" },
-                        { value: "UPI", label: "UPI" },
-                        { value: "CARD", label: "Credit/Debit Card" },
-                        { value: "BANK", label: "Bank Transfer" }
-                      ]}
-                      placeholder="Select Payment Method"
-                    />
-                  </div>
-
-
                 </div>
 
                 {/* Distribute By */}
@@ -988,7 +971,7 @@ const PurchaseForm = () => {
                     {[
                       { name: "None", tooltip: "Do not allocate additional charges to product cost" },
                       { name: "By Unit", tooltip: "Allocate proportionally based on item quantity" },
-                      { name: "By Value", tooltip: "Allocate proportionally based on total item value" },
+                      { name: "By Value", tooltip: "Allocate proportionally based on total item value", recommended: true },
                       { name: "Equally", tooltip: "Split additional charges equally across all items" }
                     ].map((method) => (
                       <button
@@ -999,7 +982,10 @@ const PurchaseForm = () => {
                           : "border-slate-200 bg-white text-slate-500 hover:border-blue-200 hover:bg-slate-50"
                           }`}
                       >
-                        {method.name}
+                        <span>{method.name}</span>
+                        {method.recommended && (
+                          <span className="text-[8px] font-black text-blue-600 bg-blue-100/90 px-1 py-0.5 rounded shadow-2xs lowercase tracking-normal">Recommended</span>
+                        )}
                         <Tooltip message={method.tooltip}>
                           <span className="cursor-help flex items-center justify-center group/tooltip relative">
                             <Info size={12} className={`transition-colors ${costMethod === method.name ? "text-blue-500" : "text-slate-400 group-hover:text-blue-400"}`} />
@@ -1120,8 +1106,30 @@ const PurchaseForm = () => {
                   </div>
                 </div>
 
-                {/* Paid Amount */}
+                {/* Paid By & Paid Amount */}
                 <div className="space-y-4 pt-4 border-t border-slate-200/50 mt-auto">
+                  {/* Paid By (Dropdown) */}
+                  <div className="flex flex-col gap-2">
+                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5 group cursor-help w-fit">
+                      Paid By
+                      <Tooltip message="The method of payment used for this transaction.">
+                        <span className="cursor-help flex"><Info size={12} className="text-slate-400 group-hover:text-blue-500 transition-colors" /></span>
+                      </Tooltip>
+                    </label>
+                    <ReusableSelect
+                      value={payment.method}
+                      onValueChange={(val) => setPayment({ ...payment, method: val as PaymentMethod })}
+                      options={[
+                        { value: "CASH", label: "Cash" },
+                        { value: "UPI", label: "UPI" },
+                        { value: "CARD", label: "Credit/Debit Card" },
+                        { value: "BANK", label: "Bank Transfer" }
+                      ]}
+                      placeholder="Select Payment Method"
+                    />
+                  </div>
+
+                  {/* Paid Amount */}
                   <div className="flex flex-col gap-2">
                     <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center justify-between">
                       <span>Paid Amount</span>
@@ -1131,9 +1139,14 @@ const PurchaseForm = () => {
                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-emerald-600 text-sm font-bold">₹</span>
                       <input
                         type="number"
-                        placeholder={stats.grandTotal.toString()}
-                        className="w-full h-11 pl-8 pr-3 bg-white border border-emerald-200 rounded-lg text-sm font-medium text-emerald-700 outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/20 transition-all tabular-nums shadow-sm placeholder:text-gray-100"
-                        value={payment.amountPaid}
+                        placeholder="0"
+                        className="w-full h-11 pl-8 pr-3 bg-white border border-emerald-200 rounded-lg text-sm font-medium text-emerald-700 outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/20 transition-all tabular-nums shadow-sm"
+                        value={payment.amountPaid === 0 || payment.amountPaid === "0" ? "" : payment.amountPaid}
+                        onFocus={() => {
+                          if (payment.amountPaid === 0 || payment.amountPaid === "0") {
+                            setPayment({ ...payment, amountPaid: "" });
+                          }
+                        }}
                         onChange={(e) => setPayment({ ...payment, amountPaid: e.target.value })}
                       />
                     </div>

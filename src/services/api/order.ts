@@ -66,6 +66,13 @@ export const orderApi = {
   },
 
   /**
+   * Verify delivery using a 6-digit OTP code. Marks order as DELIVERED.
+   */
+  verifyDelivery: async (data: { shop_id: string; order_id: string; code: string }) => {
+    return await apiClient.post(`${ENDPOINTS.ORDERS}/verify-delivery`, data);
+  },
+
+  /**
    * Get customer stats
    */
   getCustomerStats: async (shopId: string, customerId: string) => {

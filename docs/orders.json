@@ -72,6 +72,22 @@
         "operationId": "get_all_orders_get",
         "parameters": [
           {
+            "name": "shop_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Shop Id"
+            }
+          },
+          {
             "name": "q",
             "in": "query",
             "required": false,
@@ -212,6 +228,38 @@
               ],
               "title": "Payment Method"
             }
+          },
+          {
+            "name": "payment_status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Payment Status"
+            }
+          },
+          {
+            "name": "online_only",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Online Only"
+            }
           }
         ],
         "responses": {
@@ -269,6 +317,65 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/UpdateOrderStatusSchema"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/orders/verify-delivery": {
+      "post": {
+        "tags": [
+          "Orders CRUD"
+        ],
+        "summary": "Verify Delivery",
+        "operationId": "verify_delivery_orders_verify_delivery_post",
+        "parameters": [
+          {
+            "name": "x-user-infos",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-User-Infos"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyDeliverySchema"
               }
             }
           }
@@ -724,6 +831,38 @@
               ],
               "title": "Payment Method"
             }
+          },
+          {
+            "name": "payment_status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Payment Status"
+            }
+          },
+          {
+            "name": "online_only",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Online Only"
+            }
           }
         ],
         "responses": {
@@ -976,6 +1115,38 @@
                 }
               ],
               "title": "Payment Method"
+            }
+          },
+          {
+            "name": "payment_status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Payment Status"
+            }
+          },
+          {
+            "name": "online_only",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Online Only"
             }
           }
         ],
@@ -1292,6 +1463,74 @@
         }
       }
     },
+    "/returns/{shop_id}": {
+      "post": {
+        "tags": [
+          "Returns"
+        ],
+        "summary": "Create Return By Shop Id",
+        "operationId": "create_return_by_shop_id_returns__shop_id__post",
+        "parameters": [
+          {
+            "name": "shop_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Shop Id"
+            }
+          },
+          {
+            "name": "x-user-infos",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-User-Infos"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateReturnSchema"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/returns": {
       "post": {
         "tags": [
@@ -1358,15 +1597,33 @@
         ],
         "summary": "Create Exchange",
         "operationId": "create_exchange_exchanges_post",
+        "parameters": [
+          {
+            "name": "x-user-infos",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-User-Infos"
+            }
+          }
+        ],
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/CreateExchangeSchema"
               }
             }
-          },
-          "required": true
+          }
         },
         "responses": {
           "200": {
@@ -1562,16 +1819,6 @@
             ],
             "title": "Customer Id"
           },
-          "customer": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/OrderCustomerSchema"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
           "reason": {
             "anyOf": [
               {
@@ -1583,40 +1830,35 @@
             ],
             "title": "Reason"
           },
-          "status": {
-            "$ref": "#/components/schemas/OrderStatusEnum",
-            "default": "EXCHANGED"
-          },
           "payments": {
             "items": {
-              "additionalProperties": true,
-              "type": "object"
+              "$ref": "#/components/schemas/ExchangePaymentSchema"
             },
             "type": "array",
             "title": "Payments",
             "default": []
           },
-          "replacement_items": {
-            "items": {
-              "$ref": "#/components/schemas/OrderItemsSchema"
-            },
-            "type": "array",
-            "title": "Replacement Items"
-          },
           "exchange_items": {
             "items": {
-              "$ref": "#/components/schemas/ExchangeItemRequestSchema"
+              "$ref": "#/components/schemas/ExchangeItemSchema"
             },
             "type": "array",
             "title": "Exchange Items"
+          },
+          "replacement_items": {
+            "items": {
+              "$ref": "#/components/schemas/ReplacementItemSchema"
+            },
+            "type": "array",
+            "title": "Replacement Items"
           }
         },
         "type": "object",
         "required": [
           "shop_id",
           "original_order_id",
-          "replacement_items",
-          "exchange_items"
+          "exchange_items",
+          "replacement_items"
         ],
         "title": "CreateExchangeSchema"
       },
@@ -1846,19 +2088,26 @@
         ],
         "title": "CreateReturnSchema"
       },
-      "ExchangeItemRequestSchema": {
+      "ExchangeItemSchema": {
         "properties": {
-          "return_order_item_id": {
+          "order_item_id": {
             "type": "string",
-            "title": "Return Order Item Id"
+            "title": "Order Item Id"
           },
-          "replacement_product_id": {
-            "type": "string",
-            "title": "Replacement Product Id"
-          },
-          "quantity_returned": {
+          "quantity": {
             "type": "number",
-            "title": "Quantity Returned"
+            "title": "Quantity"
+          },
+          "unit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit"
           },
           "reason": {
             "anyOf": [
@@ -1870,15 +2119,47 @@
               }
             ],
             "title": "Reason"
+          },
+          "serialno_infos": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ReturnSerialnoInfoSchema"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Serialno Infos"
           }
         },
         "type": "object",
         "required": [
-          "return_order_item_id",
-          "replacement_product_id",
-          "quantity_returned"
+          "order_item_id",
+          "quantity"
         ],
-        "title": "ExchangeItemRequestSchema"
+        "title": "ExchangeItemSchema",
+        "description": "Item the customer is returning (exchanging OUT)"
+      },
+      "ExchangePaymentSchema": {
+        "properties": {
+          "method": {
+            "type": "string",
+            "title": "Method"
+          },
+          "amount": {
+            "type": "number",
+            "title": "Amount"
+          }
+        },
+        "type": "object",
+        "required": [
+          "method",
+          "amount"
+        ],
+        "title": "ExchangePaymentSchema"
       },
       "GetBulkOrdersSchema": {
         "properties": {
@@ -1914,30 +2195,31 @@
         "type": "object",
         "title": "HTTPValidationError"
       },
-      "OrderCustomerSchema": {
-        "properties": {
-          "customer_id": {
-            "type": "string",
-            "title": "Customer Id"
-          },
-          "customer_name": {
-            "type": "string",
-            "title": "Customer Name"
-          },
-          "customer_mobile_number": {
-            "type": "string",
-            "title": "Customer Mobile Number"
-          }
-        },
-        "type": "object",
-        "required": [
-          "customer_id",
-          "customer_name",
-          "customer_mobile_number"
+      "OrderOriginEnum": {
+        "type": "string",
+        "enum": [
+          "ONLINE",
+          "OFFLINE",
+          "IN_STORE",
+          "PHONE"
         ],
-        "title": "OrderCustomerSchema"
+        "title": "OrderOriginEnum"
       },
-      "OrderItemsSchema": {
+      "OrderStatusEnum": {
+        "type": "string",
+        "enum": [
+          "PENDING",
+          "PROCESSING",
+          "SHIPPED",
+          "DELIVERED",
+          "COMPLETED",
+          "CANCELED",
+          "REFUNDED",
+          "EXCHANGED"
+        ],
+        "title": "OrderStatusEnum"
+      },
+      "ReplacementItemSchema": {
         "properties": {
           "product_id": {
             "type": "string",
@@ -1965,31 +2247,34 @@
             ],
             "title": "Batch Id"
           },
-          "serialno_infos": {
+          "quantity": {
+            "type": "number",
+            "title": "Quantity"
+          },
+          "unit": {
             "anyOf": [
               {
                 "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit"
+          },
+          "serialno_infos": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ReturnSerialnoInfoSchema"
+                },
+                "type": "array"
               },
               {
                 "type": "null"
               }
             ],
             "title": "Serialno Infos"
-          },
-          "barcode": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Barcode"
-          },
-          "quantity": {
-            "type": "number",
-            "title": "Quantity"
           }
         },
         "type": "object",
@@ -1997,29 +2282,8 @@
           "product_id",
           "quantity"
         ],
-        "title": "OrderItemsSchema"
-      },
-      "OrderOriginEnum": {
-        "type": "string",
-        "enum": [
-          "ONLINE",
-          "OFFLINE",
-          "IN_STORE",
-          "PHONE"
-        ],
-        "title": "OrderOriginEnum"
-      },
-      "OrderStatusEnum": {
-        "type": "string",
-        "enum": [
-          "PENDING",
-          "PROCESSING",
-          "COMPLETED",
-          "CANCELED",
-          "REFUNDED",
-          "EXCHANGED"
-        ],
-        "title": "OrderStatusEnum"
+        "title": "ReplacementItemSchema",
+        "description": "Item the customer is receiving (exchanging IN)"
       },
       "ReturnItemRequestSchema": {
         "properties": {
@@ -2184,6 +2448,29 @@
           "type"
         ],
         "title": "ValidationError"
+      },
+      "VerifyDeliverySchema": {
+        "properties": {
+          "shop_id": {
+            "type": "string",
+            "title": "Shop Id"
+          },
+          "order_id": {
+            "type": "string",
+            "title": "Order Id"
+          },
+          "code": {
+            "type": "string",
+            "title": "Code"
+          }
+        },
+        "type": "object",
+        "required": [
+          "shop_id",
+          "order_id",
+          "code"
+        ],
+        "title": "VerifyDeliverySchema"
       }
     }
   }

@@ -147,7 +147,7 @@ export const inventoryApi = {
       const raw = response?.data;
       const items: any[] = Array.isArray(raw)
         ? raw
-        : (raw?.inventories ?? raw?.datas ?? []);
+        : (raw?.inventories ?? raw?.data ?? raw?.datas ?? []);
 
       return items.map((i: any) => {
         const d = i.datas || {};

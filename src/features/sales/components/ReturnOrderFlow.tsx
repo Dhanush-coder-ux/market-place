@@ -1,8 +1,8 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { 
-  X, Package, AlertCircle, CheckCircle2, 
-  ChevronRight, Minus, Plus, ArrowRight, RefreshCw, Banknote, 
+import {
+  X, Package, AlertCircle, CheckCircle2,
+  ChevronRight, Minus, Plus, ArrowRight, RefreshCw, Banknote,
   Gift, ArrowLeft, Check, Loader2, Hash, Search
 } from "lucide-react";
 import { SHOP_ID, ENDPOINTS } from "@/services/endpoints";
@@ -82,9 +82,9 @@ const fmt = (n: number) => `₹${n.toLocaleString("en-IN")}`;
 ═══════════════════════════════════════════════════════════════ */
 const QuantityStepper: React.FC<{ value: number; min?: number; max: number; onChange: (v: number) => void; onClick?: (e: React.MouseEvent) => void; }> = ({ value, min = 1, max, onChange, onClick }) => (
   <div className="inline-flex items-center border border-slate-200 rounded-lg overflow-hidden bg-white" onClick={onClick}>
-    <button 
-      className="w-[26px] h-[26px] flex items-center justify-center border-none bg-transparent cursor-pointer text-slate-400 hover:bg-blue-50 hover:text-blue-600 transition-colors disabled:opacity-30 disabled:cursor-not-allowed" 
-      disabled={value <= min} 
+    <button
+      className="w-[26px] h-[26px] flex items-center justify-center border-none bg-transparent cursor-pointer text-slate-400 hover:bg-blue-50 hover:text-blue-600 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+      disabled={value <= min}
       onClick={e => { e.stopPropagation(); onChange(Math.max(min, value - 1)); }}
     >
       <Minus size={9} />
@@ -103,9 +103,9 @@ const QuantityStepper: React.FC<{ value: number; min?: number; max: number; onCh
       }}
       className="font-mono w-[38px] h-[26px] text-center text-[11px] font-semibold text-slate-800 border-none outline-none focus:ring-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
     />
-    <button 
-      className="w-[26px] h-[26px] flex items-center justify-center border-none bg-transparent cursor-pointer text-slate-400 hover:bg-blue-50 hover:text-blue-600 transition-colors disabled:opacity-30 disabled:cursor-not-allowed" 
-      disabled={value >= max} 
+    <button
+      className="w-[26px] h-[26px] flex items-center justify-center border-none bg-transparent cursor-pointer text-slate-400 hover:bg-blue-50 hover:text-blue-600 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+      disabled={value >= max}
       onClick={e => { e.stopPropagation(); onChange(Math.min(max, value + 1)); }}
     >
       <Plus size={9} />
@@ -197,7 +197,7 @@ const RefundSummary: React.FC<{ mode: ReturnMode; selectedItems: SelectedReturnI
 
 const SerialReturnPicker: React.FC<{ allSerials: any[]; selected: any[]; required: number; onChange: (serials: any[]) => void; }> = ({ allSerials, selected, required, onChange }) => {
   const getName = (sn: any) => typeof sn === 'object' && sn !== null ? (sn.name || sn.serial_number || "") : String(sn);
-  
+
   const toggle = (sn: any) => {
     const isSelected = selected.some(s => getName(s) === getName(sn));
     if (isSelected) {
@@ -219,15 +219,14 @@ const SerialReturnPicker: React.FC<{ allSerials: any[]; selected: any[]; require
           const isSel = selected.some(s => getName(s) === nameStr);
           const isDisabled = !isSel && selected.length >= required;
           return (
-            <button 
-              key={`${nameStr}-${idx}`} 
-              onClick={() => toggle(sn)} 
+            <button
+              key={`${nameStr}-${idx}`}
+              onClick={() => toggle(sn)}
               disabled={isDisabled}
-              className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-mono font-semibold border transition-all duration-100 cursor-pointer ${
-                isSel ? 'bg-violet-600 text-white border-violet-600' : 
-                isDisabled ? 'bg-white text-slate-300 border-slate-100 cursor-not-allowed' : 
-                'bg-white text-violet-600 border-violet-200 hover:border-violet-300'
-              }`}
+              className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-mono font-semibold border transition-all duration-100 cursor-pointer ${isSel ? 'bg-violet-600 text-white border-violet-600' :
+                  isDisabled ? 'bg-white text-slate-300 border-slate-100 cursor-not-allowed' :
+                    'bg-white text-violet-600 border-violet-200 hover:border-violet-300'
+                }`}
             >
               {isSel && <Check size={8} />}{nameStr}
             </button>
@@ -250,19 +249,18 @@ const ItemSelector: React.FC<{ items: SaleItem[]; returnItems: Record<string, nu
       <div className="flex items-center gap-2">
         <div className="relative flex-1">
           <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
-          <input 
-            type="text" 
-            placeholder="Search items..." 
-            value={q} 
+          <input
+            type="text"
+            placeholder="Search items..."
+            value={q}
             onChange={e => setQ(e.target.value)}
             className="w-full h-[34px] px-3 pl-8 text-xs text-slate-800 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:bg-white focus:border-blue-300 focus:ring-4 focus:ring-blue-500/10 transition-all placeholder:text-slate-400"
           />
         </div>
-        <button 
+        <button
           onClick={() => onSelectAll(!allSelected)}
-          className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold border transition-all duration-150 cursor-pointer ${
-            allSelected ? 'bg-blue-600 text-white border-blue-600 shadow-sm' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
-          }`}
+          className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold border transition-all duration-150 cursor-pointer ${allSelected ? 'bg-blue-600 text-white border-blue-600 shadow-sm' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
+            }`}
         >
           {allSelected ? <Check size={11} /> : <div className="w-[11px] h-[11px] rounded-[3px] border-[1.5px] border-slate-300" />}
           All
@@ -280,12 +278,11 @@ const ItemSelector: React.FC<{ items: SaleItem[]; returnItems: Record<string, nu
           const selectedSerials = serialReturnMap[item.id] ?? [];
           const reason = itemReasons[item.id] ?? "";
           return (
-            <div 
-              key={item.id} 
-              className={`flex flex-col border p-2.5 px-3 rounded-lg transition-all duration-100 ${
-                isDisabled ? 'bg-slate-50 opacity-60 cursor-not-allowed' : 
-                checked ? 'bg-blue-50/50 border-blue-200' : 'bg-white border-slate-100 hover:bg-slate-50/80 cursor-pointer'
-              }`}
+            <div
+              key={item.id}
+              className={`flex flex-col border p-2.5 px-3 rounded-lg transition-all duration-100 ${isDisabled ? 'bg-slate-50 opacity-60 cursor-not-allowed' :
+                  checked ? 'bg-blue-50/50 border-blue-200' : 'bg-white border-slate-100 hover:bg-slate-50/80 cursor-pointer'
+                }`}
               onClick={() => !isDisabled && onToggle(item.id)}
             >
               <div className="flex items-center gap-2.5">
@@ -406,8 +403,8 @@ const useReturnModalLogic = (sale: SaleRecord | null, productMap: Record<string,
     if (customerId) {
       getData(`${ENDPOINTS.CUSTOMERS}/by/id/${SHOP_ID}/${customerId}`).then(res => {
         if (res && res.data) {
-           const c = Array.isArray(res.data) ? res.data[0] : res.data;
-           setCustomerOutstanding(Number(c.outstanding_infos?.amount ?? c.outstanding ?? c.datas?.outstanding_balance ?? 0));
+          const c = Array.isArray(res.data) ? res.data[0] : res.data;
+          setCustomerOutstanding(Number(c.outstanding_infos?.amount ?? c.outstanding ?? c.datas?.outstanding_balance ?? 0));
         }
       }).catch(err => console.error("Failed to fetch customer", err));
     } else {
@@ -421,7 +418,7 @@ const useReturnModalLogic = (sale: SaleRecord | null, productMap: Record<string,
   const setMode = (mode: ReturnMode) => setState(s => ({ ...s, mode, payments: [{ mode: "Cash", amount: 0 }] }));
   const setReason = (id: string, reason: ReturnReason) => setState(s => ({ ...s, itemReasons: { ...s.itemReasons, [id]: reason }, errors: { ...s.errors, items: undefined } }));
   const setNotes = (notes: string) => setState(s => ({ ...s, notes }));
-  
+
   const updatePayment = (index: number, updates: Partial<{ mode: string; amount: number }>) => {
     setState(s => {
       const currentPayment = s.payments[index];
@@ -448,14 +445,14 @@ const useReturnModalLogic = (sale: SaleRecord | null, productMap: Record<string,
       };
     });
   };
-  
+
   const addPayment = () => setState(s => {
     const currentSum = s.payments.reduce((acc, p) => acc + (p.amount || 0), 0);
     const d = Math.abs(totals.diff);
     const remaining = Math.max(0, d - currentSum);
     return { ...s, payments: [...s.payments, { mode: "UPI", amount: remaining }] };
   });
-  
+
   const removePayment = (index: number) => setState(s => ({ ...s, payments: s.payments.filter((_, i) => i !== index) }));
   const { showToast } = useToast();
 
@@ -545,7 +542,7 @@ const useReturnModalLogic = (sale: SaleRecord | null, productMap: Record<string,
     const errs: ReturnErrors = {};
     if (selectedItems.length === 0) errs.items = "Select at least one item.";
     if (selectedItems.some(i => !state.itemReasons[i.id])) errs.items = "Please select a return reason for all selected items.";
-    
+
     const requiresSettlement = state.mode === "refund" || totals.diff !== 0;
     if (requiresSettlement) {
       if (state.payments.length === 0) {
@@ -570,9 +567,9 @@ const useReturnModalLogic = (sale: SaleRecord | null, productMap: Record<string,
   }, [state.itemReasons, state.mode, state.payments, selectedItems, totals, customerOutstanding]);
 
 
-  const goNext = useCallback(() => { 
-    if (state.step === 3 && !validate()) return; 
-    
+  const goNext = useCallback(() => {
+    if (state.step === 3 && !validate()) return;
+
     setState(s => {
       if (s.step === 2) {
         const d = Math.abs(totals.diff);
@@ -598,13 +595,13 @@ const useReturnModalLogic = (sale: SaleRecord | null, productMap: Record<string,
         quantity: i.returnQty,
         unit: i.entered_unit || i.unit,
         reason: state.itemReasons[i.id] || "Customer Request",
-        serialno_infos: i.selectedSerials?.length 
+        serialno_infos: i.selectedSerials?.length
           ? i.selectedSerials.map(s => {
-              if (typeof s === 'object' && s !== null) {
-                return { id: s.id || i.serialno_id || "", name: s.name || s.serial_number || "" };
-              }
-              return { id: i.serialno_id || "", name: String(s) };
-            }) 
+            if (typeof s === 'object' && s !== null) {
+              return { id: s.id || i.serialno_id || "", name: s.name || s.serial_number || "" };
+            }
+            return { id: i.serialno_id || "", name: String(s) };
+          })
           : []
       }));
 
@@ -629,28 +626,36 @@ const useReturnModalLogic = (sale: SaleRecord | null, productMap: Record<string,
       }
 
       if (state.mode === "refund") {
-        await orderApi.processReturn({ 
-          order_id: sale?.id || "", 
+        await orderApi.processReturn({
+          order_id: sale?.id || "",
           shop_id: SHOP_ID,
           payment_infos: paymentsDict,
-          items: itemsPayload 
+          items: itemsPayload
         });
         showToast("Refund(s) processed successfully", "success");
       } else {
         const replacementItemsMap = new Map<string, any>();
         const exchangeItems: any[] = [];
-        
+
         selectedItems.forEach(item => {
           const replacement = state.exchangeMap[item.id];
           if (!replacement) return;
-          
+
           exchangeItems.push({
-            return_order_item_id: item.id,
-            replacement_product_id: replacement.id,
-            quantity_returned: item.returnQty,
-            reason: state.itemReasons[item.id] || "Customer Request"
+            order_item_id: item.id,
+            quantity: item.returnQty,
+            unit: item.entered_unit || item.unit,
+            reason: state.itemReasons[item.id] || "Customer Request",
+            serialno_infos: item.selectedSerials?.length
+              ? item.selectedSerials.map(s => {
+                  if (typeof s === 'object' && s !== null) {
+                    return { id: s.id || item.serialno_id || "", name: s.name || s.serial_number || "" };
+                  }
+                  return { id: item.serialno_id || "", name: String(s) };
+                })
+              : []
           });
-          
+
           const key = `${replacement.id}-${replacement.variant_id || "none"}-${replacement.batch_id || "none"}`;
           if (replacementItemsMap.has(key)) {
             const ex = replacementItemsMap.get(key);
@@ -658,31 +663,32 @@ const useReturnModalLogic = (sale: SaleRecord | null, productMap: Record<string,
           } else {
             replacementItemsMap.set(key, {
               product_id: replacement.id,
-              variant_id: replacement.variant_id || "",
-              batch_id: replacement.batch_id || "",
-              serialno_infos: replacement.serial_numbers ? replacement.serial_numbers.join(",") : "",
-              barcode: replacement.barcode || "",
-              quantity: replacement.quantity || item.returnQty
+              variant_id: replacement.variant_id || null,
+              batch_id: replacement.batch_id || null,
+              quantity: replacement.quantity || item.returnQty,
+              unit: replacement.unit || "Units",
+              serialno_infos: replacement.serial_numbers?.length
+                ? replacement.serial_numbers.map((s: any) => {
+                    if (typeof s === 'object' && s !== null) {
+                      return { id: s.id || "", name: s.name || s.serial_number || "" };
+                    }
+                    return { id: "", name: String(s) };
+                  })
+                : []
             });
           }
         });
 
         const paymentArray = state.payments.filter(p => p.amount > 0).map(p => ({
-          mode: p.mode,
+          method: p.mode,
           amount: p.amount
         }));
 
-        await orderApi.processExchange({ 
-          shop_id: SHOP_ID, 
-          original_order_id: sale?.id || "", 
-          customer_id: sale?.customer_id || (sale as any)?.datas?.customer_id || (sale as any)?.customer?.customer_id || "", 
-          customer: {
-            customer_id: sale?.customer_id || (sale as any)?.datas?.customer_id || (sale as any)?.customer?.customer_id || "", 
-            customer_name: (sale as any)?.customer_name || (sale as any)?.datas?.customer_name || (sale as any)?.customer?.customer_name || "Walk-in Customer",
-            customer_mobile_number: (sale as any)?.customer_number || (sale as any)?.datas?.phone || (sale as any)?.customer?.customer_number || ""
-          },
+        await orderApi.processExchange({
+          shop_id: SHOP_ID,
+          original_order_id: sale?.id || "",
+          customer_id: sale?.customer_id || (sale as any)?.datas?.customer_id || (sale as any)?.customer?.customer_id || null,
           reason: state.itemReasons[selectedItems[0]?.id] || "Customer Request",
-          status: "EXCHANGED",
           payments: paymentArray,
           replacement_items: Array.from(replacementItemsMap.values()),
           exchange_items: exchangeItems
@@ -733,8 +739,8 @@ const SelectDropdown = ({ value, options, onChange, displayMap }: { value: strin
 
   return (
     <div className="relative w-full sm:w-[180px]" ref={ref}>
-      <button 
-        type="button" 
+      <button
+        type="button"
         onClick={() => setOpen(!open)}
         className="w-full h-10 px-3 text-[12px] border-2 border-slate-100 rounded-lg bg-white text-slate-800 outline-none focus:border-blue-500 font-semibold flex items-center justify-between"
       >
@@ -809,7 +815,7 @@ export const ReturnFlow: React.FC<ReturnFlowProps> = ({ sale, onClose, onRefresh
       if (!variantLabel) {
         variantLabel = "Standard Variant";
       }
-      
+
       const extractSerialsStr = (obj: any): string[] => {
         if (!obj) return [];
         if (Array.isArray(obj)) return obj.filter(x => typeof x === 'string');
@@ -868,7 +874,7 @@ export const ReturnFlow: React.FC<ReturnFlowProps> = ({ sale, onClose, onRefresh
     } as InventoryItem;
   };
 
-  const handleExchangeClick = async (ep: any) => { 
+  const handleExchangeClick = async (ep: any) => {
     setLoadingExch(true);
     try {
       const targetId = ep.inventory_id || ep.id || ep._id;
@@ -936,9 +942,8 @@ export const ReturnFlow: React.FC<ReturnFlowProps> = ({ sale, onClose, onRefresh
                       { id: "exchange" as ReturnMode, icon: <RefreshCw size={24} />, label: "Exchange", desc: "Swap for other products" },
                     ].map(opt => (
                       <button key={opt.id} onClick={() => m.setMode(opt.id)}
-                        className={`text-left p-4 border-2 rounded-lg transition-all duration-200 cursor-pointer ${
-                          state.mode === opt.id ? "bg-white border-blue-500 text-blue-700 shadow-xl shadow-blue-500/10 scale-[1.02]" : "bg-slate-50/50 border-slate-50 hover:border-slate-200"
-                        }`}
+                        className={`text-left p-4 border-2 rounded-lg transition-all duration-200 cursor-pointer ${state.mode === opt.id ? "bg-white border-blue-500 text-blue-700 shadow-xl shadow-blue-500/10 scale-[1.02]" : "bg-slate-50/50 border-slate-50 hover:border-slate-200"
+                          }`}
                       >
                         <div className={`mb-3 ${state.mode === opt.id ? "text-blue-600" : "text-slate-400"}`}>{opt.icon}</div>
                         <p className="text-[14px] font-bold text-slate-800 mb-1">{opt.label}</p>
@@ -960,9 +965,8 @@ export const ReturnFlow: React.FC<ReturnFlowProps> = ({ sale, onClose, onRefresh
                           const isAct = activeReplaceId === si.id;
                           return (
                             <button key={si.id} onClick={() => setActiveReplaceId(si.id)}
-                              className={`flex items-center gap-2 px-3 py-2 rounded-lg text-[11px] font-bold border transition-all duration-200 cursor-pointer ${
-                                isAct ? 'bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-600/20' : 'bg-white border-slate-200 text-slate-600 hover:border-blue-400'
-                              }`}
+                              className={`flex items-center gap-2 px-3 py-2 rounded-lg text-[11px] font-bold border transition-all duration-200 cursor-pointer ${isAct ? 'bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-600/20' : 'bg-white border-slate-200 text-slate-600 hover:border-blue-400'
+                                }`}
                             >
                               {si.name}
                               {hasRep && <CheckCircle2 size={12} className={isAct ? "text-white" : "text-emerald-500"} />}
@@ -972,10 +976,10 @@ export const ReturnFlow: React.FC<ReturnFlowProps> = ({ sale, onClose, onRefresh
                       </div>
                       <div className="relative mb-4">
                         <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                        <input 
-                          type="text" 
-                          placeholder="Search replacement catalog..." 
-                          value={exchSearch} 
+                        <input
+                          type="text"
+                          placeholder="Search replacement catalog..."
+                          value={exchSearch}
                           onChange={e => setExchSearch(e.target.value)}
                           className="w-full h-11 px-4 pl-10 text-[13px] text-slate-800 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:bg-white focus:border-blue-400 focus:ring-4 focus:ring-blue-500/10 transition-all placeholder:text-slate-400 font-sans shadow-sm"
                         />
@@ -1005,14 +1009,13 @@ export const ReturnFlow: React.FC<ReturnFlowProps> = ({ sale, onClose, onRefresh
                                   const sel = state.exchangeMap[activeReplaceId]?.id === ep.id;
                                   const inStock = (ep.stocks || 0) > 0;
                                   return (
-                                    <div 
-                                      key={ep.id} 
+                                    <div
+                                      key={ep.id}
                                       onClick={() => inStock && handleExchangeClick(ep)}
-                                      className={`flex items-center gap-3 p-3 px-4 border rounded-lg transition-all duration-200 cursor-pointer ${
-                                        sel ? "bg-blue-50 border-blue-500 shadow-md scale-[0.99]" : 
-                                        !inStock ? "opacity-50 grayscale cursor-not-allowed border-slate-100" : 
-                                        "bg-white border-slate-100 hover:border-blue-400 hover:shadow-lg"
-                                      }`}
+                                      className={`flex items-center gap-3 p-3 px-4 border rounded-lg transition-all duration-200 cursor-pointer ${sel ? "bg-blue-50 border-blue-500 shadow-md scale-[0.99]" :
+                                          !inStock ? "opacity-50 grayscale cursor-not-allowed border-slate-100" :
+                                            "bg-white border-slate-100 hover:border-blue-400 hover:shadow-lg"
+                                        }`}
                                     >
                                       <div className="w-10 h-10 rounded-lg bg-slate-50 flex items-center justify-center flex-shrink-0 group-hover:bg-blue-50 transition-colors">
                                         <Package size={16} className="text-slate-400" />
@@ -1046,13 +1049,13 @@ export const ReturnFlow: React.FC<ReturnFlowProps> = ({ sale, onClose, onRefresh
                     <div className="animate-in fade-in slide-in-from-top-2 duration-300">
                       <div className="flex items-center justify-between mb-2.5">
                         <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                          {state.mode === "refund" || totals.diff < 0 ? "Refund Via" : "Collect Via" } <span className="text-red-500">*</span>
+                          {state.mode === "refund" || totals.diff < 0 ? "Refund Via" : "Collect Via"} <span className="text-red-500">*</span>
                         </label>
                         {totals.diff !== 0 && state.mode === "exchange" && (
                           <span className={`text-[11px] font-black px-3 py-1 rounded-full border-2 ${totals.diff > 0 ? 'bg-amber-50 text-amber-800 border-amber-200' : 'bg-emerald-50 text-emerald-800 border-emerald-200'}`}>Balance: {fmt(Math.abs(totals.diff))}</span>
                         )}
                       </div>
-                      
+
                       {/* Split Payment UI */}
                       {(sale?.customer_id || sale?.customer?.customer_id) && customerOutstanding > 0 && (
                         <div className="mb-3 p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-center justify-between shadow-sm">
@@ -1111,10 +1114,10 @@ export const ReturnFlow: React.FC<ReturnFlowProps> = ({ sale, onClose, onRefresh
                   )}
                   <div>
                     <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Notes <span className="text-[10px] text-slate-300 font-normal lowercase tracking-normal">(optional)</span></label>
-                    <textarea 
-                      value={state.notes} 
-                      onChange={e => m.setNotes(e.target.value)} 
-                      rows={3} 
+                    <textarea
+                      value={state.notes}
+                      onChange={e => m.setNotes(e.target.value)}
+                      rows={3}
                       placeholder="Any additional context…"
                       className="w-full p-4 text-[13px] border-2 border-slate-100 rounded-lg bg-white text-slate-800 outline-none focus:border-blue-400 transition-all resize-none placeholder:text-slate-300 font-semibold shadow-sm"
                     />
@@ -1190,17 +1193,17 @@ export const ReturnFlow: React.FC<ReturnFlowProps> = ({ sale, onClose, onRefresh
                 </button>
               )}
               {state.step < 4 ? (
-                <button 
-                  onClick={m.goNext} 
-                  disabled={!m.canProceed} 
+                <button
+                  onClick={m.goNext}
+                  disabled={!m.canProceed}
                   className="flex-1 h-12 bg-blue-600 text-white border-none rounded-lg text-[14px] font-black cursor-pointer transition-all active:scale-95 disabled:opacity-40 disabled:grayscale disabled:cursor-not-allowed hover:bg-blue-700 shadow-lg shadow-blue-600/25 flex items-center justify-center gap-2"
                 >
                   Continue to {STEP_LABELS[(state.step + 1) as ReturnStep]} <ChevronRight size={16} />
                 </button>
               ) : (
-                <button 
-                  onClick={() => m.confirm(onRefresh)} 
-                  disabled={state.isSubmitting} 
+                <button
+                  onClick={() => m.confirm(onRefresh)}
+                  disabled={state.isSubmitting}
                   className="flex-1 h-12 bg-blue-600 text-white border-none rounded-lg text-[14px] font-black cursor-pointer transition-all active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed hover:bg-blue-700 shadow-lg shadow-blue-600/25 flex items-center justify-center gap-2"
                 >
                   {state.isSubmitting ? <><Loader2 size={16} className="animate-spin" />Processing Return…</> : <>{state.mode === "refund" ? "Confirm & Refund" : "Confirm & Exchange"}<CheckCircle2 size={16} /></>}
@@ -1226,11 +1229,11 @@ export const ReturnModal: React.FC<ReturnFlowProps> = (props) => {
   return createPortal(
     <div className="fixed inset-0 z-[1000] overflow-y-auto overflow-x-hidden scrollbar-none flex flex-col items-center justify-center">
       {/* Backdrop */}
-      <div 
-        className="fixed inset-0 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-300" 
-        onClick={props.onClose} 
+      <div
+        className="fixed inset-0 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-300"
+        onClick={props.onClose}
       />
-      
+
       {/* Centering Wrapper */}
       <div className="relative w-full h-full flex items-center justify-center p-4 sm:p-6 pointer-events-none">
         <div className="relative w-full max-w-[540px] animate-in zoom-in-95 slide-in-from-bottom-4 duration-300 ease-out pointer-events-auto">

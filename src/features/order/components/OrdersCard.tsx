@@ -1,6 +1,6 @@
 import { 
   Phone, User, IndianRupee, Wifi, ArrowRight, 
-  Trash2
+  Trash2, Truck
 } from "lucide-react";
 import { ReusableSelect } from "@/components/ui/ReusableSelect";
 import { AntBadge } from "@/components/ui/AntBadge";
@@ -12,6 +12,7 @@ const statusConfig: Record<string, string> = {
   CANCELED: "ps-cancelled",
   REFUNDED: "ps-cancelled",
   EXCHANGED: "tx-adjustment",
+  DELIVERED: "ps-completed",
 };
 
 interface OrdersCardProps {
@@ -20,10 +21,24 @@ interface OrdersCardProps {
   viewMode?: "grid" | "list";
   onStatusChange?: (newStatus: string) => void;
   onDeleteClick?: (e: React.MouseEvent) => void;
+  onVerifyDelivery?: () => void;
 }
 
-const OrdersCard: React.FC<OrdersCardProps> = ({ order, setIsOpen, viewMode = "grid", onStatusChange, onDeleteClick }) => {
+const DeliveryBadge = ({ onClick }: { onClick?: () => void }) => (
+  <button
+    type="button"
+    onClick={(e) => { e.stopPropagation(); onClick?.(); }}
+    title="Verify Delivery — click to confirm"
+    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-700 text-[10px] font-black uppercase tracking-wider hover:bg-amber-100 hover:border-amber-300 transition-all duration-200 animate-pulse hover:animate-none"
+  >
+    <Truck size={10} strokeWidth={2.5} />
+    Verify
+  </button>
+);
+
+const OrdersCard: React.FC<OrdersCardProps> = ({ order, setIsOpen, viewMode = "grid", onStatusChange, onDeleteClick, onVerifyDelivery }) => {
   const variant = statusConfig[order.status] ?? "ps-draft";
+  const showDeliveryVerify = order.origin === "ONLINE" && !["COMPLETED", "CANCELED", "REFUNDED", "DELIVERED"].includes(order.status);
 
   // ─── HORIZONTAL LIST VIEW ──────────────────────────────────────────────────
   if (viewMode === "list") {
@@ -33,13 +48,14 @@ const OrdersCard: React.FC<OrdersCardProps> = ({ order, setIsOpen, viewMode = "g
         {/* Left Section */}
         <div className="flex items-center gap-6 min-w-[240px]">
           <div>
-            <div className="mb-1.5 inline-block">
+            <div className="mb-1.5 flex items-center gap-2">
               <AntBadge variant="lb-brand" type="tag" icon={<Wifi size={10} strokeWidth={2} />}>Online</AntBadge>
+              {showDeliveryVerify && <DeliveryBadge onClick={onVerifyDelivery} />}
             </div>
             <p className="text-xs font-normal text-slate-400 mb-0.5">#{order.billNo}</p>
             <div className="flex items-baseline gap-0.5">
               <IndianRupee size={14} className="text-slate-800" strokeWidth={2} />
-              <span className="text-xl font-medium text-slate-800" >
+              <span className="text-xl font-medium text-slate-800">
                 {order.totalAmount.toLocaleString("en-IN")}
               </span>
             </div>
@@ -77,6 +93,7 @@ const OrdersCard: React.FC<OrdersCardProps> = ({ order, setIsOpen, viewMode = "g
                 { label: "Canceled", value: "CANCELED" },
                 { label: "Refunded", value: "REFUNDED" },
                 { label: "Exchanged", value: "EXCHANGED" },
+                { label: "Delivered", value: "DELIVERED" },
               ]}
               value={order.status}
               onValueChange={(val) => onStatusChange?.(val)}
@@ -116,9 +133,10 @@ const OrdersCard: React.FC<OrdersCardProps> = ({ order, setIsOpen, viewMode = "g
     <div className="w-full bg-white rounded-lg border border-slate-200 shadow-sm hover:shadow-md transition-all duration-200 group font-sans">
       <div className="p-5">
         <div className="flex items-start justify-between mb-5">
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2.5 flex-wrap">
             <AntBadge variant="lb-brand" type="tag" icon={<Wifi size={10} strokeWidth={2} />}>Online</AntBadge>
             <span className="text-xs font-normal text-slate-400">#{order.billNo}</span>
+            {showDeliveryVerify && <DeliveryBadge onClick={onVerifyDelivery} />}
           </div>
 
           <div>
@@ -129,7 +147,7 @@ const OrdersCard: React.FC<OrdersCardProps> = ({ order, setIsOpen, viewMode = "g
         </div>
 
         <div className="mb-5">
-          <p className="text-[10px] font-medium text-slate-400   mb-1">Total Amount</p>
+          <p className="text-[10px] font-medium text-slate-400 mb-1">Total Amount</p>
           <div className="flex items-baseline gap-0.5">
             <IndianRupee size={20} className="text-slate-800" strokeWidth={2} />
             <span className="text-3xl font-medium text-slate-800 tracking-tight" style={{ fontVariantNumeric: "tabular-nums" }}>
@@ -142,13 +160,13 @@ const OrdersCard: React.FC<OrdersCardProps> = ({ order, setIsOpen, viewMode = "g
 
         <div className="flex gap-4 mb-5">
           <div className="flex-1 min-w-0">
-            <p className="text-[10px] font-medium text-slate-400   mb-1.5 flex items-center gap-1.5">
+            <p className="text-[10px] font-medium text-slate-400 mb-1.5 flex items-center gap-1.5">
               <User size={12} strokeWidth={2} /> Customer
             </p>
             <p className="text-sm font-medium text-slate-800 truncate">{order.customerName}</p>
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-[10px] font-medium text-slate-400   mb-1.5 flex items-center gap-1.5">
+            <p className="text-[10px] font-medium text-slate-400 mb-1.5 flex items-center gap-1.5">
               <Phone size={12} strokeWidth={2} /> Contact
             </p>
             <p className="text-sm font-medium text-slate-800 truncate">{order.phone}</p>
@@ -164,6 +182,7 @@ const OrdersCard: React.FC<OrdersCardProps> = ({ order, setIsOpen, viewMode = "g
               { label: "Canceled", value: "CANCELED" },
               { label: "Refunded", value: "REFUNDED" },
               { label: "Exchanged", value: "EXCHANGED" },
+              { label: "Delivered", value: "DELIVERED" },
             ]}
             value={order.status}
             onValueChange={(val) => onStatusChange?.(val)}
@@ -193,4 +212,3 @@ const OrdersCard: React.FC<OrdersCardProps> = ({ order, setIsOpen, viewMode = "g
 };
 
 export default OrdersCard;
-

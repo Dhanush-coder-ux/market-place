@@ -39,6 +39,7 @@ export function TypeBadge({ type, labelOverride, icon: Icon }: { type: string, l
   
   if (t.includes("PURCHASE_RETURN")) { variant = "tx-purchase-return"; label = "Purchase Return"; }
   else if (t.includes("SALES_RETURN") || t.includes("SALE_RETURN")) { variant = "tx-sales-return"; label = "Sales Return"; }
+  else if (t.includes("PURCHASE_UPDATE")) { variant = "tx-purchase"; label = "Purchase Update"; }
   else if (t.includes("PO_PURCHASE") || t.includes("STOCK_UPDATE")) { variant = "tx-purchase"; label = "PO Purchase"; }
   else if (t.includes("PURCHASE") || t === "DIRECT") { variant = "tx-purchase"; label = "Purchase"; }
   else if (t.includes("SALES")) { variant = "tx-sales"; label = "Sales"; }
